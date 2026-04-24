@@ -465,7 +465,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                     <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Depósitos</span>
                   </div>
                   <p className="text-lg font-bold text-foreground">
-                    {formatVal(metrics?.depositosTotal || 0)}
+                    {formatConsolidated(metrics?.depositosTotal || 0)}
                   </p>
                   {isMultiCurrency && metrics?.byCurrency && (
                     <div className="mt-1 flex flex-wrap gap-1">
@@ -476,12 +476,24 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                       ))}
                     </div>
                   )}
+                  {!!metrics?.baselineExcluidoCount && (
+                    <p className="mt-1 text-[9px] text-muted-foreground/70">
+                      +{metrics.baselineExcluidoCount} baseline(s) virtual(is) excluído(s) ({formatConsolidated(metrics.baselineExcluidoTotalConvertido)})
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             </TooltipTrigger>
-            {isMultiCurrency && (
+            {(isMultiCurrency || !!metrics?.baselineExcluidoCount) && (
               <TooltipContent side="bottom" className="text-xs">
-                {renderCurrencyBreakdown(metrics?.byCurrency, "depositos")}
+                <div className="space-y-1">
+                  <p className="font-semibold">Depósitos efetivos</p>
+                  <p className="text-muted-foreground">
+                    DEPOSITO real + DEPOSITO_VIRTUAL (MIGRACAO).{"\n"}
+                    Baselines de vinculação não contam (evita duplicação).
+                  </p>
+                  {renderCurrencyBreakdown(metrics?.byCurrency, "depositos")}
+                </div>
               </TooltipContent>
             )}
           </Tooltip>
@@ -497,7 +509,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                     <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Saques</span>
                   </div>
                   <p className="text-lg font-bold text-foreground">
-                    {formatVal(metrics?.saquesTotal || 0)}
+                    {formatConsolidated(metrics?.saquesTotal || 0)}
                   </p>
                   {isMultiCurrency && metrics?.byCurrency && (
                     <div className="mt-1 flex flex-wrap gap-1">
@@ -513,7 +525,11 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
             </TooltipTrigger>
             {isMultiCurrency && (
               <TooltipContent side="bottom" className="text-xs">
-                {renderCurrencyBreakdown(metrics?.byCurrency, "saques")}
+                <div className="space-y-1">
+                  <p className="font-semibold">Saques efetivos</p>
+                  <p className="text-muted-foreground">SAQUE real + SAQUE_VIRTUAL (MIGRACAO).</p>
+                  {renderCurrencyBreakdown(metrics?.byCurrency, "saques")}
+                </div>
               </TooltipContent>
             )}
           </Tooltip>
@@ -526,7 +542,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
               <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Saldo Casas</span>
             </div>
             <p className="text-lg font-bold text-foreground">
-              {formatVal(metrics?.saldoCasasTotal || 0)}
+              {formatConsolidated(metrics?.saldoCasasTotal || 0)}
             </p>
           </CardContent>
         </Card>
@@ -538,7 +554,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
               <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Extras</span>
             </div>
             <p className={`text-lg font-bold ${(metrics?.ajustesTotal || 0) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-              {formatVal(metrics?.ajustesTotal || 0)}
+              {formatConsolidated(metrics?.ajustesTotal || 0)}
             </p>
             {isMultiCurrency && metrics?.byCurrency && (
               <div className="mt-1 flex flex-wrap gap-1">
@@ -556,10 +572,13 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
           <CardContent className="p-3">
             <div className="flex items-center gap-2 mb-1">
               <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
-              <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Lucro Consolidado</span>
+              <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Resultado de Caixa</span>
             </div>
-            <p className={`text-lg font-bold ${(metrics?.lucroConsolidado || 0) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-              {formatVal(metrics?.lucroConsolidado || 0)}
+            <p className={`text-lg font-bold ${(metrics?.resultadoCaixa || 0) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+              {formatConsolidated(metrics?.resultadoCaixa || 0)}
+            </p>
+            <p className="mt-1 text-[9px] text-muted-foreground/70">
+              saques + saldo + extras − depósitos · não é Lucro Operacional
             </p>
           </CardContent>
         </Card>
