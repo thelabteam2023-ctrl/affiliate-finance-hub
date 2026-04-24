@@ -230,7 +230,7 @@ function useProjetoExtrato(
       const { data: ledger, error } = await supabase
         .from("cash_ledger")
         .select(
-          "tipo_transacao, valor, valor_confirmado, valor_destino, moeda, tipo_moeda, valor_usd, cotacao, ajuste_direcao, origem_tipo, descricao"
+          "tipo_transacao, valor, valor_confirmado, valor_destino, moeda, tipo_moeda, valor_usd, valor_usd_referencia, cotacao_origem_usd, cotacao_destino_usd, cotacao_snapshot_at, cotacao, ajuste_direcao, origem_tipo, descricao"
         )
         .eq("projeto_id_snapshot", projetoId)
         .eq("status", "CONFIRMADO");
