@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useProjectCurrencyFormat } from "@/hooks/useProjectCurrencyFormat";
@@ -15,6 +15,16 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
+import { invalidateCanonicalCaches } from "@/lib/invalidateCanonicalCaches";
 import {
   Select,
   SelectContent,
@@ -37,6 +47,10 @@ import {
   RefreshCcw,
   Eye,
   EyeOff,
+  Wrench,
+  Globe,
+  AlertTriangle,
+  ChevronDown,
 } from "lucide-react";
 import { CURRENCY_SYMBOLS, type SupportedCurrency } from "@/types/currency";
 
@@ -67,6 +81,8 @@ interface ProjetoTransaction {
   destino_tipo: string | null;
   ajuste_motivo: string | null;
   ajuste_direcao: string | null;
+  /** Classificação de AJUSTE_SALDO: define em qual KPI ele entra */
+  ajuste_natureza: 'RECONCILIACAO_OPERACIONAL' | 'EFEITO_FINANCEIRO' | 'EXTRAORDINARIO' | null;
   evento_promocional_tipo: string | null;
   /**
    * Classificação de auditoria — define visualização e KPIs.
