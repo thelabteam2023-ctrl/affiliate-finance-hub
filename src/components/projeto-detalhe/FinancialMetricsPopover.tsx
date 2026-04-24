@@ -1282,7 +1282,10 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
             )}
           </div>
         )}
-      </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
 
       {/* Drill-Down Modal */}
       {drillDownKey && (
