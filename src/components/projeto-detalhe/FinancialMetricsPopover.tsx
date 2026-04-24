@@ -856,6 +856,9 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
   const breakEvenInternoReached = metrics.fluxoInternoLiquido >= 0;
   const hasExtras = Math.abs(metrics.extrasPositivos) >= 0.01;
 
+  const fmtSigned = (v: number) =>
+    v < 0 ? `−${formatCurrency(Math.abs(v))}` : formatCurrency(v);
+
   return (
     <div className="p-4 w-[340px] space-y-0">
       {/* Header */}
