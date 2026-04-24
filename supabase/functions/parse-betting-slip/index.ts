@@ -30,6 +30,13 @@ interface ParsedSelecao {
   resultado: ParsedField;
 }
 
+interface ParsedMultiplaBetSlip {
+  tipo: ParsedField;
+  stake: ParsedField;
+  retornoPotencial: ParsedField;
+  selecoes: ParsedSelecao[];
+}
+
 const SPORTS_LIST = [
   "Futebol", "Basquete", "Tênis", "Baseball", "Hockey", "Handebol",
   "Futebol Americano", "Vôlei", "MMA/UFC", "Boxe", "Golfe", "Rugby",

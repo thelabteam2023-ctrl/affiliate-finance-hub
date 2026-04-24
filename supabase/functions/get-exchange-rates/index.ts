@@ -44,24 +44,34 @@ function getSupabaseClient() {
   );
 }
 
-async function getCachedRates(): Promise<Record<string, { rate: number; source: string; expires_at: string }>> {
+type CachedRate = {
+  rate: number;
+  source: string;
+  expires_at: string;
+  fetched_at?: string;
+  failure_count?: number;
+};
+
+async function getCachedRates(): Promise<Record<string, CachedRate>> {
   const supabase = getSupabaseClient();
   
   const { data, error } = await supabase
     .from('exchange_rate_cache')
-    .select('currency_pair, rate, source, expires_at');
+    .select('currency_pair, rate, source, fetched_at, expires_at, failure_count');
   
   if (error) {
     console.error('Erro ao buscar cache:', error);
     return {};
   }
   
-  const cached: Record<string, { rate: number; source: string; expires_at: string }> = {};
+  const cached: Record<string, CachedRate> = {};
   for (const row of data || []) {
     cached[row.currency_pair] = { 
       rate: Number(row.rate), 
       source: row.source,
+      fetched_at: row.fetched_at,
       expires_at: row.expires_at,
+      failure_count: Number(row.failure_count || 0),
     };
   }
   
@@ -72,7 +82,15 @@ async function getCachedRates(): Promise<Record<string, { rate: number; source: 
   return cached;
 }
 
-async function saveCachedRates(rates: Record<string, { rate: number; source: string }>) {
+function getCacheStatus(lastSuccessAt: Date): string {
+  const ageHours = (Date.now() - lastSuccessAt.getTime()) / (60 * 60 * 1000);
+  if (ageHours > 24) return 'critical';
+  if (ageHours > 12) return 'degraded';
+  if (ageHours > 2) return 'stale';
+  return 'active';
+}
+
+async function saveCachedRates(rates: Record<string, { rate: number; source: string }>, refreshReason: string) {
   const supabase = getSupabaseClient();
   const now = new Date();
   const expiresAt = new Date(now.getTime() + CACHE_TTL_MINUTES * 60 * 1000);
@@ -83,7 +101,21 @@ async function saveCachedRates(rates: Record<string, { rate: number; source: str
     source: data.source,
     fetched_at: now.toISOString(),
     expires_at: expiresAt.toISOString(),
+    status: 'active',
+    failure_count: 0,
+    last_success_at: now.toISOString(),
+    last_error_at: null,
+    last_error_message: null,
     updated_at: now.toISOString(),
+  }));
+
+  const historyRows = Object.entries(rates).map(([currencyPair, data]) => ({
+    currency_pair: currencyPair,
+    rate: data.rate,
+    source: data.source,
+    fetched_at: now.toISOString(),
+    refresh_reason: refreshReason,
+    is_fallback: data.source.includes('FALLBACK'),
   }));
   
   const { error } = await supabase
@@ -95,6 +127,39 @@ async function saveCachedRates(rates: Record<string, { rate: number; source: str
   } else {
     console.log(`Cache salvo: ${Object.keys(rates).length} cotações (expira em ${CACHE_TTL_MINUTES}min)`);
   }
+
+  const { error: historyError } = await supabase
+    .from('exchange_rate_history')
+    .insert(historyRows);
+
+  if (historyError) {
+    console.error('Erro ao salvar histórico de cotações:', historyError);
+  }
+}
+
+async function markRefreshFailures(currencyPairs: string[], cachedRates: Record<string, CachedRate>, message: string) {
+  if (currencyPairs.length === 0) return;
+
+  const supabase = getSupabaseClient();
+  const nowIso = new Date().toISOString();
+
+  await Promise.all(currencyPairs.map(async (currencyPair) => {
+    const cached = cachedRates[currencyPair];
+    if (!cached) return;
+
+    const lastSuccess = cached.fetched_at ? new Date(cached.fetched_at) : new Date();
+    const { error } = await supabase
+      .from('exchange_rate_cache')
+      .update({
+        status: getCacheStatus(lastSuccess),
+        failure_count: (cached.failure_count || 0) + 1,
+        last_error_at: nowIso,
+        last_error_message: message,
+      })
+      .eq('currency_pair', currencyPair);
+
+    if (error) console.error(`Erro ao marcar falha em ${currencyPair}:`, error);
+  }));
 }
 
 /**
@@ -181,6 +246,10 @@ serve(async (req) => {
   try {
     console.log('Fetching exchange rates');
 
+    const requestBody = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
+    const refreshReason = typeof requestBody?.reason === 'string' ? requestBody.reason : 'on_demand';
+    const forceRefresh = requestBody?.forceRefresh === true;
+
     // 1. Verificar cache no banco de dados
     const cachedRates = await getCachedRates();
     const allCurrencies = Object.keys(CURRENCIES);
@@ -188,7 +257,7 @@ serve(async (req) => {
 
     const currenciesToRefresh = allCurrencies.filter((c) => {
       const entry = cachedRates[`${c}BRL`];
-      return !entry || entry.expires_at <= nowIso;
+      return forceRefresh || !entry || entry.expires_at <= nowIso;
     });
     
     // Se temos todas as moedas em cache válido, retornar direto
@@ -293,8 +362,13 @@ serve(async (req) => {
 
     // 4. Salvar novas cotações no cache
     if (Object.keys(newRatesToCache).length > 0) {
-      await saveCachedRates(newRatesToCache);
+      await saveCachedRates(newRatesToCache, refreshReason);
     }
+
+    const unresolvedPairs = currenciesToRefresh
+      .map((currency) => `${currency}BRL`)
+      .filter((rateKey) => !newRatesToCache[rateKey] && cachedRates[rateKey]);
+    await markRefreshFailures(unresolvedPairs, cachedRates, 'Fontes externas indisponíveis; mantendo última cotação válida conhecida.');
 
     // 5. Preparar resposta final
     const finalRates: Record<string, number | null> = {};
@@ -343,13 +417,20 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in get-exchange-rates function:', error);
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    const cachedRates = await getCachedRates();
     
     const fallbackRates: Record<string, number | null> = {};
     const sources: Record<string, string> = {};
     
     for (const [key, config] of Object.entries(CURRENCIES)) {
-      fallbackRates[`${key}BRL`] = config.fallback;
-      sources[key] = 'FALLBACK_ERRO';
+      const rateKey = `${key}BRL`;
+      if (cachedRates[rateKey]) {
+        fallbackRates[rateKey] = cachedRates[rateKey].rate;
+        sources[key] = cachedRates[rateKey].source + '_CACHE_ERROR';
+      } else {
+        fallbackRates[rateKey] = config.fallback;
+        sources[key] = 'FALLBACK_ERRO';
+      }
     }
     
     return new Response(
