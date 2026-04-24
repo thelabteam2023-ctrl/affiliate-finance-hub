@@ -1,80 +1,71 @@
 
 
-## Diagnóstico Final
+## Auditoria: MULTIBET / Juliana Costa de Oliveira / Projeto SUREBET LIVE
 
-A re-liquidação de Surebets falha silenciosamente porque `reliquidarAposta()` desvia para `liquidarSurebetSimples()`, que faz `UPDATE` direto em `apostas_unificada` (status, resultado, lucro_prejuizo) **sem tocar nas pernas e sem gerar eventos no ledger**.
+### Linha do tempo real do ledger (3 eventos, todos CONFIRMADOS)
 
-Consequências:
-- As `apostas_pernas` continuam com `resultado=NULL` → o trigger `fn_recalc_pai_surebet` recalcula o pai e pode sobrescrever ou divergir do valor "manual".
-- Nenhum `PAYOUT`/`VOID_REFUND` é criado → saldo do bookmaker não muda.
-- Nenhum `REVERSAL` da liquidação anterior → double-counting silencioso quando há re-liquidação.
-- A UI parece "não atualizar" porque a verdade (pernas) permanece intacta e o trigger volta a recalcular o pai.
+| Data | Evento | Valor | Scope | Efeito em `saldo_atual` |
+|---|---|---|---|---|
+| 06/04 14:53:35 | `DEPOSITO` (real, manual) | +R$ 3.000,00 | REAL | +3.000 → saldo = **3.000** |
+| 06/04 14:53:41 | `DEPOSITO_VIRTUAL` (Baseline automático ao vincular) | +R$ 3.000,00 | VIRTUAL | 0 (correto: virtual não impacta) |
+| 12/04 17:36:15 | `AJUSTE_RECONCILIACAO` (SAIDA) | −R$ 3.000,00 | REAL | −3.000 → saldo = **0,00** |
 
-A arquitetura correta de Surebet (já documentada em `architecture/surebet-engine-and-liquidation-standard`) diz: **a verdade da surebet vive nas pernas**. Toda liquidação deve passar por `liquidar_perna_surebet_v1`, e o pai é recalculado automaticamente por `fn_recalc_pai_surebet`.
+### Diagnóstico — o que realmente aconteceu
 
-## Solução Proposta
+1. **O depósito de R$ 3.000 existe e foi processado** (evento `369071ed…`, scope REAL). Não houve perda de dado.
+2. **6 segundos depois**, o gatilho `fn_ensure_deposito_virtual_on_link` criou o **baseline virtual** de R$ 3.000 (correto, padrão arquitetural — não afeta saldo).
+3. **No dia 12/04**, alguém abriu o **diálogo de Ajuste de Saldo / Reconciliação** (`AjusteSaldoDialog` → `registrarAjusteViaLedger`) e informou que o **saldo real na casa era R$ 3.000**, enquanto **o sistema mostrava R$ 6.000**.
+   - O sistema então gravou um `AJUSTE_RECONCILIACAO` de SAIDA de R$ 3.000.
+   - Texto registrado: *“Saldo sistema: 6000.00 → Saldo real: 3000.00 | Diferença: -3000.00”*.
+   - Motivo digitado: apenas *“ajuste”*.
 
-Substituir o caminho `liquidarSurebetSimples` por um **orquestrador por perna** — sem criar nova RPC, reutilizando a infra atômica que já existe (`liquidar_perna_surebet_v1`). Isso elimina o desvio "raw update" e alinha 100% com o padrão Surebet.
+### Causa raiz da inconsistência
 
-### Mudanças
+O usuário que fez a reconciliação **leu o saldo errado na tela**. O sistema mostrava R$ 6.000 porque **estava somando o DEPOSITO real (R$ 3.000) + o DEPOSITO_VIRTUAL baseline (R$ 3.000)** em algum ponto da UI no momento da reconciliação — clássico sintoma do incidente `0904` (contaminação real x virtual). Resultado: o operador “ajustou para baixo” um saldo que na verdade já estava correto, **drenando os R$ 3.000 reais legítimos**.
 
-**1. `src/services/aposta/ApostaService.ts` — `reliquidarAposta()` (caso `isArbitragem`)**
+Conforme as policies `virtual-contamination-remediation-policy` e `safe-balance-reset-policy`, **a remediação é feita exclusivamente via novo lançamento de ajuste no ledger**. Proibido editar/deletar o evento original.
 
-Substituir a chamada `liquidarSurebetSimples()` por um orquestrador:
+### Plano de correção
 
-```text
-SE forma_registro = ARBITRAGEM:
-  1. Buscar todas as pernas (apostas_pernas) ordenadas por `ordem`
-  2. Mapear novoResultado global → resultado por perna:
-       GREEN  → primeira perna GREEN, demais RED   (ou política a confirmar — ver pergunta)
-       VOID   → todas as pernas VOID
-       RED    → todas as pernas RED
-  3. Para cada perna, chamar `liquidarPernaSurebet({ pernaId, resultado })`
-     em paralelo (Promise.all, skipRefresh:true)
-  4. Recalcular pai é automático via fn_recalc_pai_surebet
-  5. Um único invalidateCanonicalCaches no final
+**Etapa 1 — Remediação imediata do saldo (1 lançamento no ledger, com sua aprovação)**
+
+Criar uma migration que insere **um único** `AJUSTE_RECONCILIACAO` de **ENTRADA de R$ 3.000** no bookmaker `29e3ff3c…`:
+
+- `tipo_transacao = 'AJUSTE_RECONCILIACAO'`
+- `ajuste_direcao = 'ENTRADA'`
+- `destino_bookmaker_id = 29e3ff3c-a2d3-4547-a02f-7f3179812956`
+- `valor = 3000.00`, `moeda = BRL`
+- `status = 'CONFIRMADO'`, `transit_status = 'CONFIRMED'`
+- `projeto_id_snapshot = adccc507…` (SUREBET LIVE)
+- `descricao`: *“Estorno de reconciliação indevida 49c47685… — depósito real de 06/04 nunca foi gasto, ajuste anterior decorreu de leitura de saldo contaminado (real+virtual baseline)”*
+- `referencia_transacao_id = 49c47685-34f4-42b0-a7a8-88a139af2f29` (link com o ajuste original para rastreabilidade)
+
+O trigger `tr_cash_ledger_generate_financial_events` materializa o `financial_events` e re-credita os R$ 3.000 em `bookmakers.saldo_atual`. Saldo final esperado: **R$ 3.000,00**.
+
+**Etapa 2 — Investigação preventiva (read-only, sem alteração de dados)**
+
+Identificar **onde na UI** o saldo apareceu como R$ 6.000 no dia 12/04 (provavelmente em algum card/listagem de bookmaker que ainda soma scope VIRTUAL no display de “saldo total”). Auditar:
+- `useBookmakerSaldos` / `get_bookmaker_saldos` RPC
+- Qualquer view que materialize saldo somando `event_scope` REAL + VIRTUAL sem segregação
+- Card que o operador viu antes de abrir o `AjusteSaldoDialog`
+
+Se a contaminação visual ainda existir, **abriremos um plano separado** para corrigir a fonte (sem migration retroativa de dados, conforme política anti-retrofix).
+
+**Etapa 3 — Validação pós-correção**
+
+```sql
+-- Esperado: saldo_atual = 3000.00
+SELECT saldo_atual FROM bookmakers WHERE id = '29e3ff3c-a2d3-4547-a02f-7f3179812956';
+
+-- Esperado: soma de financial_events REAL = 3000.00
+SELECT SUM(valor) FROM financial_events
+WHERE bookmaker_id = '29e3ff3c-a2d3-4547-a02f-7f3179812956' AND event_scope = 'REAL';
 ```
 
-**2. Depreciar `liquidarSurebetSimples()`**
+### Detalhes técnicos
 
-Manter exportado por compatibilidade, mas marcar `@deprecated` e logar warning. Nenhum chamador novo deve usar.
-
-**3. `SurebetRowActionsMenu` — opção "Liquidar Pai" (liquidação simples global)**
-
-Avaliar se faz sentido manter "Liquidar (resultado simples)" em surebets quando existe o submenu Quick Resolve por cenário. Proposta: **remover** essa opção do menu de surebet, deixando apenas o Quick Resolve (que já passa por `liquidar_perna_surebet_v1`). Isso elimina o caminho ambíguo.
-
-**4. Validação no banco (defesa em profundidade)**
-
-Trigger `BEFORE UPDATE ON apostas_unificada` que bloqueia mudança direta de `resultado`/`lucro_prejuizo` em registros com `forma_registro='ARBITRAGEM'` quando feita fora do contexto da RPC `fn_recalc_pai_surebet`. Implementação: a função `fn_recalc_pai_surebet` seta uma `SET LOCAL` flag de sessão que o trigger consulta. Se a flag não está setada e é arbitragem, RAISE EXCEPTION. Garante que nenhum UPDATE raw passe.
-
-**5. Testes de cenário (sem tocar dados reais)**
-
-Replicar via `read_query` os 3 cenários:
-- Surebet nunca liquidada → quick resolve
-- Surebet liquidada uma vez → re-liquidação pelo mesmo cenário (idempotência)
-- Surebet liquidada → re-liquidação por cenário diferente (REVERSAL + novo PAYOUT)
-
-Validar que o saldo do bookmaker fecha em todos os casos via `financial_events`.
-
-## Arquivos afetados
-
-- `src/services/aposta/ApostaService.ts` — refator de `reliquidarAposta` no ramo arbitragem
-- `src/components/apostas/SurebetRowActionsMenu.tsx` — remover ação "Liquidar Pai"
-- Migration nova — trigger guard contra UPDATE raw em arbitragem
-- Sem mudança em `liquidarPernaSurebet` (já é a fonte canônica)
-
-## Pergunta de regra de negócio
-
-Para o caminho legado "Liquidar Pai com GREEN/RED/VOID global" em surebets, qual é o mapeamento esperado para as pernas?
-
-- **GREEN global**: qual perna ganha? A primeira? A de maior odd? Não temos como saber sem heurística — esse é exatamente o motivo pelo qual o Quick Resolve por cenário existe.
-
-Sugestão: **bloquear** essa ação em surebets (forçar uso do Quick Resolve), ao invés de inferir.
-
-## Riscos e mitigação
-
-- **Regressão em fluxos legados**: se algum lugar antigo chama `liquidarSurebetSimples` direto (ex.: import de planilha), continuará funcionando mas com warning. Auditar via `code--search_files` antes de remover.
-- **Pernas com freebet**: o orquestrador delega 100% para `liquidar_perna_surebet_v1`, que já trata `tipo_uso=FREEBET` e direção do payout (`freebet-snr-payout-direction-standard`).
-- **Multimoeda**: `fn_recalc_pai_surebet` já consolida via `cotacao_snapshot`. Sem mudança aqui.
-- **Cache UI**: usar o padrão `surebet-quick-resolve-batch-refresh` (Promise.all + skipRefresh + único invalidate).
+- **Sem hard-delete, sem UPDATE direto em `saldo_atual`** (respeita `balance-sync-trigger-exclusive-standard` e `safe-balance-reset-policy`).
+- **Sem retrofix em massa** — apenas 1 lançamento cirúrgico para 1 bookmaker (respeita `governance/incidente-contaminacao-financeira-0904`).
+- O evento original (`49c47685…`) permanece intacto no histórico, com `referencia_transacao_id` apontando para ele a partir do estorno → trilha de auditoria completa preservada.
+- O Histórico de Movimentações passará a mostrar os 4 eventos: depósito original, baseline virtual, ajuste indevido e estorno do ajuste — com explicação clara em `descricao`.
 
