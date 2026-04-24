@@ -375,8 +375,12 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
 
       toast({ title: "Projeto vinculado", description: `Casa vinculada ao projeto "${projetoNome}"` });
       queryClient.invalidateQueries({ queryKey: ["parceiro-financeiro"] });
+      queryClient.invalidateQueries({ queryKey: ["bookmakers"] });
+      // Recarrega status de uso por bookmaker_id para atualizar o menu de contexto
+      // (fonte: useBookmakerUsageStatus mantém estado local, não passa pelo react-query)
+      refetchUsageMap();
     }
-  }, [toast, queryClient]);
+  }, [toast, queryClient, refetchUsageMap]);
 
   const handleDesvincularProjeto = useCallback(async (bookmakerId: string, projetoNome: string) => {
     try {
@@ -413,10 +417,12 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
         toast({ title: "Projeto desvinculado", description: `Casa desvinculada do projeto "${projetoNome}"` });
       }
       queryClient.invalidateQueries({ queryKey: ["parceiro-financeiro"] });
+      queryClient.invalidateQueries({ queryKey: ["bookmakers"] });
+      refetchUsageMap();
     } catch (err: any) {
       toast({ title: "Erro ao desvincular", description: err.message, variant: "destructive" });
     }
-  }, [toast, queryClient]);
+  }, [toast, queryClient, refetchUsageMap]);
 
   // Reset currency filter when partner changes to prevent filtering with a currency
   // that may not exist for the new partner
