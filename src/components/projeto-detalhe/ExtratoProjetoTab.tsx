@@ -700,6 +700,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                     <p>Soma do que <strong>realmente entrou na casa</strong> em cada depósito (já descontando taxas de trânsito), usando a <strong>cotação do dia</strong>.</p>
                     <p>Se você lançou 200 e a casa creditou 198, o card mostra 198. Os 2 perdidos no caminho aparecem como diferença no Resultado de Caixa.</p>
                     <p>Esse valor é histórico: não muda com o câmbio depois.</p>
+                    <p className="text-[10px] text-muted-foreground/80">Reconciliações automáticas (revínculo da mesma casa ao mesmo projeto sem operações entre) <strong>não entram aqui</strong> — você pode visualizá-las marcando “Mostrar reconciliações” nos filtros.</p>
                   </>
                 }
                 divergencia={
@@ -738,6 +739,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                   <>
                     <p>Soma de tudo que saiu das casas para o seu caixa, usando a <strong>cotação do dia de cada saque</strong>.</p>
                     <p>Também é histórico: não recalcula com a cotação de hoje.</p>
+                    <p className="text-[10px] text-muted-foreground/80">Reconciliações automáticas (revínculo da mesma casa ao mesmo projeto sem operações entre) <strong>não entram aqui</strong> — você pode visualizá-las marcando “Mostrar reconciliações” nos filtros.</p>
                   </>
                 }
                 divergencia={
