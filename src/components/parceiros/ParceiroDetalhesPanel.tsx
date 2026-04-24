@@ -503,7 +503,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     data?.bookmakers.map(b => b.bookmaker_id) ?? [], 
     [data?.bookmakers]
   );
-  const { usageMap } = useBookmakerUsageStatus(bookmakerIds);
+  const { usageMap, refetch: refetchUsageMap } = useBookmakerUsageStatus(bookmakerIds);
 
   // Lista de moedas únicas para o filtro
   const moedasDisponiveis = useMemo(() => {
