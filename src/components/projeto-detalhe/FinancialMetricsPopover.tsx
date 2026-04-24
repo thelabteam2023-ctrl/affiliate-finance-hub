@@ -1095,6 +1095,9 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           ajustesFinanceiro={metrics.ajustes}
           perdaOpFinanceiro={metrics.perdaOp}
           resultadoFxFinanceiro={metrics.ganhoFx - metrics.perdaFx}
+          performancePura={metrics.performancePura}
+          efeitosFinanceiros={metrics.efeitosFinanceiros}
+          ajustesExtraordinarios={metrics.ajustesExtraordinarios}
         />
       )}
     </div>
