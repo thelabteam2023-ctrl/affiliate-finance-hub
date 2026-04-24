@@ -646,7 +646,7 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
         if (!matchesMain && !matchesOutros) return false;
       }
       if (dateRange?.from) {
-        const tDate = parseLocalDateTime(t.data_transacao);
+        const tDate = parseLocalDateTime(getTransactionDisplayTimestamp(t));
         if (tDate < dateRange.from) return false;
         if (dateRange.to) {
           const endOfDay = new Date(dateRange.to);
@@ -777,7 +777,7 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
       network,
       amount: transacao.qtd_coin ?? transacao.valor,
       amount_usd: transacao.valor_usd,
-      date: transacao.data_transacao,
+      date: getTransactionDisplayTimestamp(transacao),
       description: transacao.descricao,
       status: transacao.status,
       from,
@@ -972,7 +972,7 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
                     )}
                   </div>
                   <span className="text-[10px] text-muted-foreground shrink-0">
-                    {formatDate(transacao.data_transacao)}
+                    {formatTransacaoDate(transacao)}
                   </span>
                 </div>
 
