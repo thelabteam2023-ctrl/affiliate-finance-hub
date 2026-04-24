@@ -112,7 +112,7 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
       .eq("tipo_transacao", "GIRO_GRATIS").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange).limit(10000),
     applyDateFilter(supabase.from("cash_ledger").select("valor, moeda")
       .eq("tipo_transacao", "GIRO_GRATIS_ESTORNO").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange).limit(10000),
-    applyDateFilter(supabase.from("cash_ledger").select("valor, moeda, ajuste_direcao")
+    applyDateFilter(supabase.from("cash_ledger").select("valor, moeda, ajuste_direcao, ajuste_natureza")
       .eq("tipo_transacao", "AJUSTE_SALDO").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange).limit(10000),
     applyDateFilter(supabase.from("cash_ledger").select("valor, moeda")
       .eq("tipo_transacao", "PERDA_OPERACIONAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange).limit(10000),
@@ -182,7 +182,7 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
       cashbackEstorno: (cashbackE.data || []) as { valor: number; moeda: string }[],
       girosGratis: (giros.data || []) as { valor: number; moeda: string }[],
       girosGratisEstorno: (girosEstorno.data || []) as { valor: number; moeda: string }[],
-      ajusteSaldo: (ajustes.data || []) as { valor: number; moeda: string; ajuste_direcao?: string | null }[],
+      ajusteSaldo: (ajustes.data || []) as { valor: number; moeda: string; ajuste_direcao?: string | null; ajuste_natureza?: string | null }[],
       perdaOperacional: (perdasOp.data || []) as { valor: number; moeda: string }[],
       perdaCambial: (perdasFx.data || []) as { valor: number; moeda: string }[],
       ganhoCambial: (ganhosFx.data || []) as { valor: number; moeda: string }[],
@@ -703,10 +703,19 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
 
     const cashbackLiquido = sumConvert(r.cashbackManual) - sumConvert(r.cashbackEstorno);
     const girosGratis = sumConvert(r.girosGratis) - sumConvert(r.girosGratisEstorno);
-    const ajustes = r.ajusteSaldo.reduce((acc, e) => {
-      const sinal = e.ajuste_direcao === 'SAIDA' ? -1 : 1;
-      return acc + convertToConsolidationOficial(e.valor * sinal, e.moeda);
-    }, 0);
+    // Particionar AJUSTE_SALDO por natureza (default: RECONCILIACAO_OPERACIONAL)
+    const sumAjustePorNatureza = (natureza: string) =>
+      r.ajusteSaldo
+        .filter(e => (e.ajuste_natureza || 'RECONCILIACAO_OPERACIONAL') === natureza)
+        .reduce((acc, e) => {
+          const sinal = e.ajuste_direcao === 'SAIDA' ? -1 : 1;
+          return acc + convertToConsolidationOficial(e.valor * sinal, e.moeda);
+        }, 0);
+    const ajustesOperacionais = sumAjustePorNatureza('RECONCILIACAO_OPERACIONAL');
+    const ajustesFx = sumAjustePorNatureza('EFEITO_FINANCEIRO');
+    const ajustesExtraord = sumAjustePorNatureza('EXTRAORDINARIO');
+    // Total agregado (mantido para retrocompatibilidade com FinancialDrillDownModal)
+    const ajustes = ajustesOperacionais + ajustesFx + ajustesExtraord;
     const perdaOp = sumConvert(r.perdaOperacional);
     const perdaFx = sumConvert(r.perdaCambial);
     const ganhoFx = sumConvert(r.ganhoCambial);
