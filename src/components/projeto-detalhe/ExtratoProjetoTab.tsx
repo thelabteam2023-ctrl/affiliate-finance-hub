@@ -965,17 +965,35 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                 {txns.map((t) => {
                   const sign = getTransactionSign(t.tipo_transacao, t.ajuste_direcao);
                   const isForeign = t.moeda !== "BRL";
+                  const isReconciled = t.audit_class.startsWith("RECONCILED_");
+                  const isBaselineExcluded = t.audit_class === "BASELINE_EXCLUDED";
+                  const reconciledLabel =
+                    t.audit_class === "RECONCILED_PHANTOM"
+                      ? "🔁 Reconciliada (revínculo)"
+                      : t.audit_class === "RECONCILED_DUPLICATE"
+                        ? "🧹 Baseline limpo (duplicava depósito)"
+                        : "⊘ Cancelada";
+                  const reconciledTooltip =
+                    t.audit_class === "RECONCILED_PHANTOM"
+                      ? "Esta transação foi neutralizada automaticamente: a casa foi desvinculada e revinculada ao mesmo projeto sem operações entre. Mantida no histórico para auditoria. NÃO entra em Saques / Depósitos / Resultado de Caixa."
+                      : t.audit_class === "RECONCILED_DUPLICATE"
+                        ? "Saldo inicial de vinculação cancelado pelo motor (já contado pelo depósito real correspondente). NÃO entra em Saques / Depósitos / Resultado de Caixa."
+                        : "Transação cancelada. NÃO entra em Saques / Depósitos / Resultado de Caixa.";
 
                   return (
                     <Card
                       key={t.id}
-                      className="border-border/30 hover:border-border/60 transition-colors"
+                      className={`border-border/30 hover:border-border/60 transition-colors ${
+                        isReconciled ? "opacity-60 border-dashed border-amber-500/30" : ""
+                      }`}
                     >
                       <CardContent className="p-3">
                         {/* Mobile-first: ícone + título/valor empilhado em 2 linhas; desktop volta a 1 linha */}
                         <div className="flex items-start gap-3">
                           {/* Icon */}
-                          <div className="shrink-0 h-8 w-8 rounded-full flex items-center justify-center bg-muted/50">
+                          <div className={`shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${
+                            isReconciled ? "bg-amber-500/10" : "bg-muted/50"
+                          }`}>
                             {getTransactionIcon(t.tipo_transacao)}
                           </div>
 
@@ -1000,6 +1018,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                               </div>
                               <div className="text-right shrink-0">
                                 <p className={`text-sm font-semibold whitespace-nowrap ${
+                                  isReconciled ? "line-through text-muted-foreground" :
                                   sign === "positive" ? "text-emerald-400" :
                                   sign === "negative" ? "text-red-400" : "text-foreground"
                                 }`}>
@@ -1021,16 +1040,46 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                               {t.bookmaker_nome || "—"}
                               {t.parceiro_nome && ` · ${t.parceiro_nome}`}
                               {t.tipo_transacao === "DEPOSITO_VIRTUAL"
-                                ? " · Saldo existente incorporado ao projeto na vinculação"
+                                ? t.origem_tipo === "MIGRACAO"
+                                  ? " · Saldo migrado de outro projeto"
+                                  : " · Saldo inicial da vinculação"
                                 : t.tipo_transacao === "SAQUE_VIRTUAL"
-                                ? " · Saldo transferido para fora do projeto na desvinculação"
+                                ? " · Saldo transferido (desvinculação)"
                                 : t.descricao ? ` · ${t.descricao}` : ""}
                               {t.ajuste_motivo && ` · ${t.ajuste_motivo}`}
                             </p>
 
                             {/* Linha 3: status + horário */}
                             <div className="flex items-center justify-between gap-2 mt-1.5">
-                              {getStatusBadge(t.status)}
+                              {isReconciled ? (
+                                <TooltipProvider delayDuration={150}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Badge className="bg-amber-500/15 text-amber-300 border-amber-500/30 text-[10px] cursor-help">
+                                        {reconciledLabel}
+                                      </Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-xs text-xs">
+                                      {reconciledTooltip}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              ) : isBaselineExcluded ? (
+                                <TooltipProvider delayDuration={150}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Badge className="bg-blue-500/15 text-blue-300 border-blue-500/30 text-[10px] cursor-help">
+                                        📥 Saldo inicial · não contabilizado
+                                      </Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-xs text-xs">
+                                      Saldo já existente na casa no momento da vinculação. Como não saiu do caixa do projeto, NÃO entra em Depósitos / Resultado de Caixa. Aparece aqui apenas para transparência da formação do saldo da casa.
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              ) : (
+                                getStatusBadge(t.status)
+                              )}
                               <span className="text-[10px] text-muted-foreground">
                                 {new Date(t.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                               </span>
