@@ -1,77 +1,113 @@
+
 ## Objetivo
 
-Criar uma **4ª camada de leitura financeira** no `FinancialMetricsPopover` que torne explícita a diferença entre:
+Eliminar a redundância visual do `FinancialMetricsPopover.tsx` (mesmas informações repetidas em até 3 seções) aplicando **progressive disclosure**: o usuário vê a leitura essencial imediatamente e expande detalhes apenas quando precisa auditar.
 
-1. **Lucro de Performance** (mérito do operador — apostas + créditos promocionais)
-2. **Lucro de Câmbio** (efeito macro fora do controle — variação cambial + ganho de confirmação)
-3. **Lucro de Ajustes** (eventos administrativos — ajustes manuais − perdas operacionais)
-4. **Lucro Real Ajustado** = soma dos 3 = deveria convergir com Patrimônio Líquido
+## Decisões aprovadas
 
-> **Não há novos cálculos no backend.** Todos os campos (`performancePura`, `efeitosFinanceiros`, `ajustesExtraordinarios`, `resultadoOperacionalTotal`) já existem em `metrics`. A mudança é **puramente de UI/destaque**.
+- **Layout**: 2 cards sempre visíveis no topo + accordions colapsados abaixo
+- **Cards de topo**: Sempre separados (didático), mesmo quando convergem
+- **Lucro em Caixa**: Mantém no popover, mas dentro de accordion fechado por padrão
 
-## Mudanças
+---
 
-### 1. `src/components/projeto-detalhe/FinancialMetricsPopover.tsx`
+## Layout final (top → bottom)
 
-**1.1 — Adicionar segundo card-resumo no topo (gêmeo do "Lucro se sacar tudo")**
+### 1. Header educacional (compacto)
+- Reduzir o tooltip atual (que explica 4 perspectivas) a uma linha curta + ícone 💡 com tooltip
+- Remover textos longos da área visível
 
-Logo abaixo do card "💰 Lucro se sacar tudo hoje" (linha ~926), inserir um novo card-resumo:
+### 2. Cards de topo (sempre visíveis, lado-a-lado)
 
-- **Título:** `🎯 Lucro Real Ajustado`
-- **Valor:** `metrics.resultadoOperacionalTotal`
-- **Subtítulo:** "Performance + Câmbio + Ajustes (decomposto abaixo)"
-- **Visual:** mesmo padrão do card existente (gradiente emerald/red + borda + clique abre `LucroOperacionalCollapsible` aberto)
-- **Mini-decomposição inline em 3 chips:**
-  - `📊 Perf: {performancePura}` (verde se positivo)
-  - `💱 FX: {efeitosFinanceiros}` (âmbar se ≠ 0)
-  - `⚙️ Ajustes: {ajustesExtraordinarios}` (cinza se ≠ 0)
-- **Badge de paridade no canto:** mesma lógica do existente (🟢 Convergente vs 🟡 Δ vs Patrimônio)
+**Grid `grid-cols-2 gap-3`** com 2 cards primários:
 
-**1.2 — Tooltip educacional**
+#### Card A — `💰 Lucro se sacar tudo hoje` (Patrimônio)
+- Mantém o design atual (gradiente emerald/red, ícone `PiggyBank`)
+- Valor: `metrics.lucroFinanceiro`
+- Subtítulo: "Patrimônio se liquidar tudo agora"
 
-Atualizar o tooltip do header de "3 perspectivas" (linha ~882) para "**4 perspectivas de lucro**" e adicionar bullet do Lucro Real Ajustado:
+#### Card B — `🎯 Lucro Real Ajustado` (Operacional reconciliado)
+- Mantém o design atual (gradiente sky/red, ícone `Target`)
+- Valor: `metrics.resultadoOperacionalTotal`
+- 3 chips inline (Performance · FX · Ajustes) — mantidos
+- Badge de paridade (CheckCircle2 verde / Δ âmbar) — mantido
 
-> 🎯 **Real Ajustado:** mesma resposta do Patrimônio, mas decomposta — quanto veio de operação, quanto de câmbio, quanto de ajustes.
+### 3. Accordions colapsados (`defaultOpen={false}`)
 
-**1.3 — Garantir separação visual de Ajustes vs FX**
+Usar `Accordion type="multiple"` de `@/components/ui/accordion` para permitir expandir múltiplos simultaneamente.
 
-A função `efeitosFinanceiros` (linha 778) hoje é: `(ganhoFx − perdaFx) + ganhoConfirmacao + ajustesFx`
+#### Accordion 1 — `🏦 Lucro em Caixa`
+- **Trigger**: Label + valor preview à direita (ex: `R$ -899,50`)
+- **Content**: Conteúdo atual da seção "Lucro em Caixa" (Saques – Depósitos + Extras)
 
-→ **Manter como está** (ajustes classificados como FX seguem em FX, ajustes administrativos seguem em `ajustesExtraordinarios`). Isso já respeita "ajustes em categoria própria" porque a UI mostra os 3 blocos segregados em `LucroOperacionalCollapsible` (linhas 263-380).
+#### Accordion 2 — `📐 Composição do Patrimônio`
+- **Trigger**: Label + valor preview = `lucroFinanceiro`
+- **Content**: Detalhamento atual (Saldos + Valores em Trânsito + Bônus + ... = Patrimônio)
+- Esta seção responde "como cheguei no número do Card A"
 
-**1.4 — Reordenação visual final do popover:**
+#### Accordion 3 — `📊 Detalhe da Performance`
+- **Trigger**: Label + valor preview = `performancePura`
+- **Content**: 
+  - `LucroOperacionalCollapsible` (decomposição apostas/bônus/cashback/etc)
+  - `SegregatedExtrasBlock` (créditos, FX, extraordinários expansíveis)
+  - Status de Recuperação de Capital (movido para o final deste accordion)
+
+---
+
+## Mudanças concretas no código
+
+### `src/components/projeto-detalhe/FinancialMetricsPopover.tsx`
+
+1. **Importar Accordion**:
+   ```tsx
+   import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+   ```
+
+2. **Reestruturar JSX principal** (linha ~899 em diante):
+   - Manter o header educacional (mais enxuto)
+   - Manter os 2 cards de topo dentro de `<div className="grid grid-cols-2 gap-3">`
+   - Substituir as 3 seções soltas (`Lucro em Caixa`, `Composição do Patrimônio`, `Performance da Operação`) por `<Accordion type="multiple">` contendo 3 `<AccordionItem>`
+   - Cada `AccordionTrigger` mostra: ícone + label à esquerda, valor formatado à direita (estilo "preview")
+   - Cada `AccordionContent` recebe o conteúdo correspondente que já existe no componente
+
+3. **Remover duplicação**: 
+   - O bloco `MetricRow label="= Lucro se sacar tudo hoje"` dentro de "Composição do Patrimônio" pode ser mantido (é o totalizador da fórmula), mas com tooltip atualizado para evitar redundância narrativa
+   - O badge "Em uma operação saudável, a Performance da Operação deve bater com o Lucro se sacar tudo" da seção Performance pode ser removido (essa convergência já é mostrada no Card B via badge de paridade)
+
+4. **Status de Recuperação de Capital**: mover para dentro do Accordion 3 (Performance), no final, ou para um quarto accordion opcional `🎯 Recuperação de Capital` se ficar pesado dentro de Performance.
+
+### `mem://finance/lucro-real-ajustado-quarta-camada.md`
+
+Atualizar a seção **"Layout obrigatório do popover"** para refletir o novo padrão:
 
 ```
-[Header educacional 4 perspectivas]
-[💰 Card-resumo: Lucro se sacar tudo hoje]   ← já existe
-[🎯 Card-resumo: Lucro Real Ajustado]         ← NOVO (gêmeo)
-─────────────────────────────────
-[🏦 Camada 1: Lucro em Caixa]                 ← já existe
-[📐 Camada 2: Composição do Patrimônio]       ← já existe
-[📊 Camada 3: Performance da Operação]        ← já existe (mantém colapsável detalhado)
-[Status de Recuperação de Capital]            ← já existe
+1. Header educacional compacto (1 linha + tooltip)
+2. Grid 2 colunas:
+   - Card A: 💰 Lucro se sacar tudo hoje (Patrimônio)
+   - Card B: 🎯 Lucro Real Ajustado (com chips e badge de paridade)
+3. Accordions colapsados (defaultOpen=false):
+   - 🏦 Lucro em Caixa
+   - 📐 Composição do Patrimônio
+   - 📊 Detalhe da Performance (inclui Status de Recuperação)
 ```
 
-### 2. Documentação — `mem://finance/lucro-real-ajustado-quarta-camada.md`
+Adicionar regra:
+> **Proibido** abrir accordions por padrão. O popover deve caber em uma leitura curta sem rolagem, com os 2 cards principais como entrada e os accordions como caminho de auditoria.
 
-Novo memory documentando o padrão das 4 camadas:
+---
 
-- **Camada 1 (Caixa):** `saquesRecebidos − depositosEfetivos` — pergunta: *"O que voltou pro meu bolso?"*
-- **Camada 2 (Patrimônio):** `saldoCasas + saquesRecebidos − depositosEfetivos` — pergunta: *"E se eu sacasse tudo agora?"*
-- **Camada 3 (Performance Pura):** `lucroApostas + bônus + cashback + giros + ajustesOp` — pergunta: *"O quanto a operação realmente performou?"*
-- **Camada 4 (Real Ajustado):** `performancePura + efeitosFinanceiros + ajustesExtraordinarios` — pergunta: *"Qual o lucro real considerando câmbio e ajustes?"*
+## Resultado esperado
 
-Mapear cada campo ao componente UI e estabelecer a regra: **Camada 4 deve convergir com Camada 2** (delta < 0,01). Divergências indicam saldos não realizados, FX em trânsito ou eventos recém-lançados.
+- **Antes**: 5+ seções verticais, mesmas informações em 3 lugares, popover com rolagem longa
+- **Depois**: 2 cards de leitura imediata + 3 trilhas de auditoria sob demanda
+- **Benefícios**: 
+  - Leitura rápida do "estou ganhando?" em <2 segundos
+  - Detalhes preservados para auditoria
+  - Eliminação da sensação de redundância
+  - Mantém didática (Card A vs Card B sempre visíveis)
 
-### 3. Atualizar `mem://index.md`
+## Riscos / mitigações
 
-Adicionar referência ao novo memory na seção `## Memories`:
-- `[Lucro Real Ajustado 4 Camadas](mem://finance/lucro-real-ajustado-quarta-camada) — 4ª perspectiva no FinancialMetricsPopover decompondo Performance × FX × Ajustes; deve convergir com Patrimônio`
+- **Risco**: Usuário acostumado pode estranhar accordions fechados → mitigado pelos previews de valor no trigger (vê o número sem expandir)
+- **Risco**: Parity badge no Card B pode ficar redundante com o totalizador da Composição → manter ambos pois respondem a perguntas distintas (badge = "está convergindo?", totalizador = "qual a fórmula?")
 
-## Garantias
-
-- ✅ **Zero novos cálculos** — apenas reuso de campos já existentes em `metrics`
-- ✅ **Zero migração de banco** — view de patrimônio e operacional já consolida tudo
-- ✅ **Compatibilidade total** com `useKpiBreakdowns` e `fetchProjetoExtras`
-- ✅ **Respeita a regra anti-double-counting** consolidada no Extrato (bônus/cashback no `saldo_atual` via triggers)
-- ✅ **Respeita memória existente** "Resultado Cambial NÃO entra no Lucro Operacional da Visão Geral" — porque esse padrão é da **Visão Geral** (KPI canônico server-side), não do popover financeiro detalhado, que sempre teve a missão de mostrar reconciliação completa
