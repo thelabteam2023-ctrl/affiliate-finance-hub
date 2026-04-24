@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthContext } from "@/contexts/AuthContext";
+import { useExchangeRates } from "@/contexts/ExchangeRatesContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,13 @@ import {
   clearRpcLogs,
   type RpcCallLog,
 } from "@/lib/dev/rpcInterceptor";
-import { Activity, Database, Receipt, Wallet, Zap, Trash2, Pause, Play } from "lucide-react";
+import { Activity, AlertTriangle, Database, Receipt, Wallet, Zap, Trash2, Pause, Play } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const POLL_MS = 3000;
 
