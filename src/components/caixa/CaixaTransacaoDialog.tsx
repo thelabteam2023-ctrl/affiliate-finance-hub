@@ -96,6 +96,12 @@ interface CaixaTransacaoDialogProps {
   entryPoint?: string;
   /** Restrict which transaction types are shown in the selector */
   allowedTipoTransacao?: string[];
+  /**
+   * When true and a destination bookmaker is pre-set (DEPOSITO contextual flow),
+   * the BookmakerSelect is rendered in read-only mode and the auto-focus chain
+   * does NOT re-open the bookmaker popover.
+   */
+  lockBookmakerDestino?: boolean;
 }
 
 interface BancoTaxa {
