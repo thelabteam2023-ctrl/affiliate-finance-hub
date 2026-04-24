@@ -103,6 +103,45 @@ function useBookmakerSaldos(enabled: boolean) {
   });
 }
 
+// ─── Snapshots de Cotação por Bookmaker ───
+// Para cada bookmaker, busca o ÚLTIMO cash_ledger confirmado onde ele foi destino,
+// extraindo cotacao_destino_usd (cotação CONGELADA no momento da operação).
+// Isso garante que o "≈ USD/BRL" no monitor reflita a cotação histórica fixa,
+// não a cotação live (que muda a cada segundo).
+function useBookmakerCotacaoSnapshots(bookmakerIds: string[], enabled: boolean) {
+  return useQuery({
+    queryKey: ["dev-monitor", "bookmaker-cotacao-snapshots", bookmakerIds.sort().join(",")],
+    queryFn: async () => {
+      if (bookmakerIds.length === 0) return {} as Record<string, { cotacaoUsd: number; capturedAt: string; source: "snapshot" }>;
+      const { data, error } = await supabase
+        .from("cash_ledger")
+        .select("destino_bookmaker_id, cotacao_destino_usd, cotacao_snapshot_at, created_at, status")
+        .in("destino_bookmaker_id", bookmakerIds)
+        .eq("status", "CONFIRMADO")
+        .not("cotacao_destino_usd", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (error) throw error;
+      const map: Record<string, { cotacaoUsd: number; capturedAt: string; source: "snapshot" }> = {};
+      for (const row of data ?? []) {
+        const id = row.destino_bookmaker_id as string | null;
+        if (!id || map[id]) continue;
+        const rate = Number(row.cotacao_destino_usd);
+        if (!isFinite(rate) || rate <= 0) continue;
+        map[id] = {
+          cotacaoUsd: rate,
+          capturedAt: (row.cotacao_snapshot_at as string) ?? (row.created_at as string),
+          source: "snapshot",
+        };
+      }
+      return map;
+    },
+    enabled: enabled && bookmakerIds.length > 0,
+    refetchInterval: enabled ? POLL_MS * 4 : false, // snapshots mudam pouco, refresh menor
+    staleTime: POLL_MS * 2,
+  });
+}
+
 // ─── Hook RPC Logs (subscribe to in-memory store) ───
 function useRpcLogs(): RpcCallLog[] {
   return useSyncExternalStore(
