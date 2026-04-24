@@ -180,6 +180,13 @@ export default function DevLedgerMonitor() {
   const bookmakers = useBookmakerSaldos(enabled);
   const rpcLogs = useRpcLogs();
 
+  // Snapshots de cotação congelados por bookmaker (último ledger CONFIRMADO)
+  const bookmakerIds = useMemo(
+    () => (bookmakers.data ?? []).map((b) => b.id),
+    [bookmakers.data]
+  );
+  const cotacaoSnapshots = useBookmakerCotacaoSnapshots(bookmakerIds, enabled);
+
   const filterFn = (text: string) => {
     if (!filter.trim()) return true;
     return text.toLowerCase().includes(filter.toLowerCase().trim());
@@ -538,20 +545,48 @@ export default function DevLedgerMonitor() {
                   </thead>
                   <tbody className="font-mono">
                     {bookmakersFiltered.map((r) => {
-                      // Converte saldo nativo → USD e → BRL via cotações de Trabalho (BRL pivô)
-                      const fromRate = getRate(r.moeda);
-                      const usdRate = getRate("USD");
+                      // Conversão usa SNAPSHOT congelado (cotacao_destino_usd do último cash_ledger
+                      // confirmado) para garantir paridade com o histórico. Fallback: cotação live.
                       const saldo = Number(r.saldo_atual ?? 0);
-                      const valorBRL =
-                        fromRate && fromRate > 0 ? saldo * fromRate : null;
-                      const valorUSD =
-                        valorBRL != null && usdRate && usdRate > 0
-                          ? valorBRL / usdRate
-                          : null;
+                      const snap = cotacaoSnapshots.data?.[r.id] ?? null;
+                      const usdRateLive = getRate("USD");
+                      const fromRateLive = getRate(r.moeda);
+
+                      let valorUSD: number | null = null;
+                      let valorBRL: number | null = null;
+                      let cotacaoSource: "snapshot" | "live" | "none" = "none";
+                      let cotacaoUsadaUsd: number | null = null;
+                      let cotacaoCapturedAt: string | null = null;
+
+                      if (snap) {
+                        // SNAPSHOT: cotação congelada (1 unidade da moeda nativa = X USD)
+                        cotacaoSource = "snapshot";
+                        cotacaoUsadaUsd = snap.cotacaoUsd;
+                        cotacaoCapturedAt = snap.capturedAt;
+                        if (r.moeda === "USD") {
+                          valorUSD = saldo;
+                        } else {
+                          valorUSD = saldo * snap.cotacaoUsd;
+                        }
+                        if (usdRateLive && usdRateLive > 0) {
+                          valorBRL = (valorUSD ?? 0) * usdRateLive;
+                        }
+                      } else if (fromRateLive && fromRateLive > 0) {
+                        // LIVE fallback (sem snapshot histórico)
+                        cotacaoSource = "live";
+                        valorBRL = saldo * fromRateLive;
+                        valorUSD =
+                          usdRateLive && usdRateLive > 0 ? valorBRL / usdRateLive : null;
+                        cotacaoUsadaUsd =
+                          usdRateLive && usdRateLive > 0 ? fromRateLive / usdRateLive : null;
+                      }
+
                       const rateInfo =
-                        fromRate && usdRate
-                          ? `Cotação: 1 ${r.moeda} = ${fromRate.toFixed(4)} BRL · 1 USD = ${usdRate.toFixed(4)} BRL`
-                          : "Cotação indisponível";
+                        cotacaoSource === "snapshot" && cotacaoUsadaUsd
+                          ? `📌 Snapshot: 1 ${r.moeda} = ${cotacaoUsadaUsd.toFixed(4)} USD${cotacaoCapturedAt ? ` · capturado ${new Date(cotacaoCapturedAt).toLocaleString("pt-BR")}` : ""}`
+                          : cotacaoSource === "live" && cotacaoUsadaUsd
+                            ? `⚡ Cotação live: 1 ${r.moeda} = ${cotacaoUsadaUsd.toFixed(4)} USD (sem snapshot histórico)`
+                            : "Cotação indisponível";
                       return (
                         <tr key={r.id} className="border-b hover:bg-accent/30">
                           <td className="px-2 py-1 whitespace-nowrap text-muted-foreground">{fmtTime(r.updated_at)}</td>
@@ -565,8 +600,10 @@ export default function DevLedgerMonitor() {
                           <td className="px-2 py-1 text-right tabular-nums text-muted-foreground">
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <span className="cursor-help">
+                                <span className={`cursor-help inline-flex items-center gap-1 ${cotacaoSource === "live" ? "text-amber-500/80" : ""}`}>
                                   {valorUSD != null ? fmtMoney(valorUSD, "USD") : "—"}
+                                  {cotacaoSource === "live" && <span className="text-[9px]">⚡</span>}
+                                  {cotacaoSource === "snapshot" && <span className="text-[9px] opacity-60">📌</span>}
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent side="left" className="text-xs">
