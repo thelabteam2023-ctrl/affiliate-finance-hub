@@ -733,7 +733,11 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                 body={
                   <>
                     <p><strong>Conta:</strong> Saques + Saldo Casas + Extras − Depósitos.</p>
-                    <p>Mostra a realidade do caixa hoje. Se ficar negativo antes de operar, é <strong>variação cambial</strong>: o dinheiro que está nas casas vale menos hoje do que custou para colocar lá. Se positivo, valorizou.</p>
+                    <p>Mostra a realidade do caixa hoje. Pode ficar negativo antes de operar por dois motivos:</p>
+                    <ul className="list-disc pl-4 space-y-0.5">
+                      <li><strong>Perda no recebimento:</strong> a casa creditou menos do que você enviou (taxa de rede, fee da casa). Esse é o valor real que você tem para operar.</li>
+                      <li><strong>Variação cambial:</strong> o dinheiro nas casas vale menos hoje do que custou para colocar lá (ou mais, se valorizou).</li>
+                    </ul>
                     {metrics && Math.abs(metrics.variacaoCambialDepositos) > 0.01 && (
                       <div className="mt-2 p-2 rounded bg-muted/50 space-y-1">
                         <p className="text-[10px] uppercase tracking-wide font-semibold">Variação cambial estimada</p>
