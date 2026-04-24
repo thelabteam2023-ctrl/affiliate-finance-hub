@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useProjectCurrencyFormat } from "@/hooks/useProjectCurrencyFormat";
+import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -72,11 +73,16 @@ interface CurrencyMetrics {
 
 interface ProjetoFlowMetrics {
   byCurrency: CurrencyMetrics[];
+  /** Totais já convertidos para a moeda de consolidação do projeto via Cotação de Trabalho */
   depositosTotal: number;
   saquesTotal: number;
   ajustesTotal: number;
   saldoCasasTotal: number;
-  lucroConsolidado: number;
+  resultadoCaixa: number;
+  /** Quantidade de DEPOSITO_VIRTUAL classificados como BASELINE (excluídos do KPI) */
+  baselineExcluidoCount: number;
+  /** Soma (já convertida) dos baselines excluídos — apenas para tooltip informativo */
+  baselineExcluidoTotalConvertido: number;
 }
 
 function getSymbol(moeda: string) {
@@ -140,7 +146,11 @@ function getTransactionSign(tipo: string, ajusteDirecao?: string | null): "posit
   return "neutral";
 }
 
-function useProjetoExtrato(projetoId: string) {
+function useProjetoExtrato(
+  projetoId: string,
+  convertToConsolidation: (valor: number, moedaOrigem: string) => number,
+  moedaConsolidacao: string,
+) {
   const { workspaceId } = useWorkspace();
 
   const historyQuery = useQuery({
@@ -214,58 +224,125 @@ function useProjetoExtrato(projetoId: string) {
   });
 
   const metricsQuery = useQuery({
-    queryKey: ["projeto-extrato-metrics", projetoId],
+    queryKey: ["projeto-extrato-metrics", projetoId, moedaConsolidacao],
     queryFn: async () => {
       // Get confirmed ledger entries for metrics
       const { data: ledger, error } = await supabase
         .from("cash_ledger")
-        .select("tipo_transacao, valor, moeda, tipo_moeda, valor_usd, cotacao, ajuste_direcao")
+        .select(
+          "tipo_transacao, valor, valor_confirmado, moeda, tipo_moeda, valor_usd, cotacao, ajuste_direcao, origem_tipo, descricao"
+        )
         .eq("projeto_id_snapshot", projetoId)
         .eq("status", "CONFIRMADO");
       if (error) throw error;
 
-      // Aggregate by currency
+      // === CLASSIFICAÇÃO CANÔNICA (memory: virtual-deposit-origin-classification) ===
+      // Depósitos efetivos = DEPOSITO real + DEPOSITO_VIRTUAL onde origem_tipo='MIGRACAO'
+      // Saques efetivos    = SAQUE real    + SAQUE_VIRTUAL    onde origem_tipo='MIGRACAO'
+      // EXCLUI: BASELINE (primeira vinculação) e NULL (rebaselines antigos sem classificação)
+      // ============================================================================
+      const isBaselineDV = (e: any) =>
+        e.tipo_transacao === "DEPOSITO_VIRTUAL" &&
+        (e.origem_tipo === "BASELINE" || e.origem_tipo == null);
+
+      const isMigracaoDV = (e: any) =>
+        e.tipo_transacao === "DEPOSITO_VIRTUAL" && e.origem_tipo === "MIGRACAO";
+
+      const isMigracaoSV = (e: any) =>
+        e.tipo_transacao === "SAQUE_VIRTUAL" && e.origem_tipo === "MIGRACAO";
+
+      // Aggregate by currency (apenas o que conta como movimento efetivo)
       const currencyMap = new Map<string, CurrencyMetrics>();
-      
-      (ledger || []).forEach((e: any) => {
-        const moeda = e.moeda || "BRL";
+      const ensureCM = (moeda: string) => {
         if (!currencyMap.has(moeda)) {
           currencyMap.set(moeda, { moeda, depositos: 0, saques: 0, ajustes: 0 });
         }
-        const cm = currencyMap.get(moeda)!;
-        
-        if (e.tipo_transacao === "DEPOSITO" || e.tipo_transacao === "DEPOSITO_VIRTUAL") {
-          cm.depositos += e.valor;
-        } else if (e.tipo_transacao === "SAQUE" || e.tipo_transacao === "SAQUE_VIRTUAL") {
-          cm.saques += e.valor;
+        return currencyMap.get(moeda)!;
+      };
+
+      let baselineExcluidoCount = 0;
+      let baselineExcluidoTotalConvertido = 0;
+
+      (ledger || []).forEach((e: any) => {
+        const moeda = e.moeda || "BRL";
+        const valorBase = Number(e.valor_confirmado ?? e.valor ?? 0);
+
+        // 1) Baseline DV: NÃO entra no KPI (seria duplicação do DEPOSITO real)
+        if (isBaselineDV(e)) {
+          baselineExcluidoCount += 1;
+          baselineExcluidoTotalConvertido += convertToConsolidation(valorBase, moeda);
+          return;
+        }
+
+        // 2) Depósito efetivo
+        if (e.tipo_transacao === "DEPOSITO" || isMigracaoDV(e)) {
+          ensureCM(moeda).depositos += valorBase;
+          return;
+        }
+
+        // 3) Saque efetivo
+        if (e.tipo_transacao === "SAQUE" || isMigracaoSV(e)) {
+          ensureCM(moeda).saques += valorBase;
+          return;
+        }
+
+        // 4) SAQUE_VIRTUAL não-MIGRACAO (raros) — ignora no KPI; aparece só no histórico
+        if (e.tipo_transacao === "SAQUE_VIRTUAL") return;
+
+        // 5) Demais (AJUSTE_*, CASHBACK, etc) — somente se tiverem direção/sinal claro
+        const cm = ensureCM(moeda);
+        if (e.ajuste_direcao === "ENTRADA" || e.ajuste_direcao === "CREDITO") {
+          cm.ajustes += valorBase;
+        } else if (e.ajuste_direcao === "SAIDA" || e.ajuste_direcao === "DEBITO") {
+          cm.ajustes -= valorBase;
         } else {
-          // AJUSTE, CASHBACK, etc
-          if (e.ajuste_direcao === "CREDITO") {
-            cm.ajustes += e.valor;
-          } else if (e.ajuste_direcao === "DEBITO") {
-            cm.ajustes -= e.valor;
-          } else {
-            cm.ajustes += e.valor;
-          }
+          cm.ajustes += valorBase;
         }
       });
 
-      // Get active bookmaker balances
+      // Saldo REAL atual das casas vinculadas (somente saldo_atual; freebet à parte)
       const { data: balances } = await supabase
         .from("bookmakers")
         .select("saldo_atual, moeda")
         .eq("projeto_id", projetoId)
-        .in("status", ["ativo", "ATIVO", "EM_USO", "limitada", "LIMITADA", "AGUARDANDO_SAQUE"]);
+        .in("status", [
+          "ativo",
+          "ATIVO",
+          "EM_USO",
+          "limitada",
+          "LIMITADA",
+          "AGUARDANDO_SAQUE",
+        ]);
 
+      // Saldo Casas convertido p/ moeda de consolidação
       let saldoCasasTotal = 0;
       (balances || []).forEach((b: any) => {
-        saldoCasasTotal += b.saldo_atual || 0;
+        saldoCasasTotal += convertToConsolidation(
+          Number(b.saldo_atual || 0),
+          b.moeda || "BRL"
+        );
       });
 
       const byCurrency = Array.from(currencyMap.values());
-      const depositosTotal = byCurrency.reduce((s, c) => s + c.depositos, 0);
-      const saquesTotal = byCurrency.reduce((s, c) => s + c.saques, 0);
-      const ajustesTotal = byCurrency.reduce((s, c) => s + c.ajustes, 0);
+
+      // Totais GLOBAIS já convertidos para a moeda de consolidação (USD, BRL, etc)
+      const depositosTotal = byCurrency.reduce(
+        (s, c) => s + convertToConsolidation(c.depositos, c.moeda),
+        0
+      );
+      const saquesTotal = byCurrency.reduce(
+        (s, c) => s + convertToConsolidation(c.saques, c.moeda),
+        0
+      );
+      const ajustesTotal = byCurrency.reduce(
+        (s, c) => s + convertToConsolidation(c.ajustes, c.moeda),
+        0
+      );
+
+      // Resultado de Caixa (NÃO é Lucro Operacional canônico — é fluxo de caixa do projeto):
+      //   saques + saldo casas + ajustes − depósitos
+      const resultadoCaixa =
+        saquesTotal + saldoCasasTotal + ajustesTotal - depositosTotal;
 
       return {
         byCurrency,
@@ -273,7 +350,9 @@ function useProjetoExtrato(projetoId: string) {
         saquesTotal,
         ajustesTotal,
         saldoCasasTotal,
-        lucroConsolidado: saquesTotal - depositosTotal + saldoCasasTotal + ajustesTotal,
+        resultadoCaixa,
+        baselineExcluidoCount,
+        baselineExcluidoTotalConvertido,
       } as ProjetoFlowMetrics;
     },
     enabled: !!projetoId && !!workspaceId,
@@ -288,7 +367,18 @@ function useProjetoExtrato(projetoId: string) {
 }
 
 export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
-  const { transactions, metrics, isLoading } = useProjetoExtrato(projetoId);
+  const {
+    convertToConsolidation,
+    moedaConsolidacao,
+    formatCurrency: formatConsolidated,
+    getSymbol: getConsolidatedSymbol,
+  } = useProjetoCurrency(projetoId);
+
+  const { transactions, metrics, isLoading } = useProjetoExtrato(
+    projetoId,
+    convertToConsolidation,
+    moedaConsolidacao,
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<string>("todos");
   const [filterStatus, setFilterStatus] = useState<string>("todos");
@@ -375,7 +465,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                     <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Depósitos</span>
                   </div>
                   <p className="text-lg font-bold text-foreground">
-                    {formatVal(metrics?.depositosTotal || 0)}
+                    {formatConsolidated(metrics?.depositosTotal || 0)}
                   </p>
                   {isMultiCurrency && metrics?.byCurrency && (
                     <div className="mt-1 flex flex-wrap gap-1">
@@ -386,12 +476,24 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                       ))}
                     </div>
                   )}
+                  {!!metrics?.baselineExcluidoCount && (
+                    <p className="mt-1 text-[9px] text-muted-foreground/70">
+                      +{metrics.baselineExcluidoCount} baseline(s) virtual(is) excluído(s) ({formatConsolidated(metrics.baselineExcluidoTotalConvertido)})
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             </TooltipTrigger>
-            {isMultiCurrency && (
+            {(isMultiCurrency || !!metrics?.baselineExcluidoCount) && (
               <TooltipContent side="bottom" className="text-xs">
-                {renderCurrencyBreakdown(metrics?.byCurrency, "depositos")}
+                <div className="space-y-1">
+                  <p className="font-semibold">Depósitos efetivos</p>
+                  <p className="text-muted-foreground">
+                    DEPOSITO real + DEPOSITO_VIRTUAL (MIGRACAO).{"\n"}
+                    Baselines de vinculação não contam (evita duplicação).
+                  </p>
+                  {renderCurrencyBreakdown(metrics?.byCurrency, "depositos")}
+                </div>
               </TooltipContent>
             )}
           </Tooltip>
@@ -407,7 +509,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                     <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Saques</span>
                   </div>
                   <p className="text-lg font-bold text-foreground">
-                    {formatVal(metrics?.saquesTotal || 0)}
+                    {formatConsolidated(metrics?.saquesTotal || 0)}
                   </p>
                   {isMultiCurrency && metrics?.byCurrency && (
                     <div className="mt-1 flex flex-wrap gap-1">
@@ -423,7 +525,11 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
             </TooltipTrigger>
             {isMultiCurrency && (
               <TooltipContent side="bottom" className="text-xs">
-                {renderCurrencyBreakdown(metrics?.byCurrency, "saques")}
+                <div className="space-y-1">
+                  <p className="font-semibold">Saques efetivos</p>
+                  <p className="text-muted-foreground">SAQUE real + SAQUE_VIRTUAL (MIGRACAO).</p>
+                  {renderCurrencyBreakdown(metrics?.byCurrency, "saques")}
+                </div>
               </TooltipContent>
             )}
           </Tooltip>
@@ -436,7 +542,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
               <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Saldo Casas</span>
             </div>
             <p className="text-lg font-bold text-foreground">
-              {formatVal(metrics?.saldoCasasTotal || 0)}
+              {formatConsolidated(metrics?.saldoCasasTotal || 0)}
             </p>
           </CardContent>
         </Card>
@@ -448,7 +554,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
               <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Extras</span>
             </div>
             <p className={`text-lg font-bold ${(metrics?.ajustesTotal || 0) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-              {formatVal(metrics?.ajustesTotal || 0)}
+              {formatConsolidated(metrics?.ajustesTotal || 0)}
             </p>
             {isMultiCurrency && metrics?.byCurrency && (
               <div className="mt-1 flex flex-wrap gap-1">
@@ -466,10 +572,13 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
           <CardContent className="p-3">
             <div className="flex items-center gap-2 mb-1">
               <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
-              <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Lucro Consolidado</span>
+              <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Resultado de Caixa</span>
             </div>
-            <p className={`text-lg font-bold ${(metrics?.lucroConsolidado || 0) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-              {formatVal(metrics?.lucroConsolidado || 0)}
+            <p className={`text-lg font-bold ${(metrics?.resultadoCaixa || 0) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+              {formatConsolidated(metrics?.resultadoCaixa || 0)}
+            </p>
+            <p className="mt-1 text-[9px] text-muted-foreground/70">
+              saques + saldo + extras − depósitos · não é Lucro Operacional
             </p>
           </CardContent>
         </Card>
