@@ -966,7 +966,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
         )}
         <div className="border-t border-border/30 mt-1.5 pt-1.5">
           <MetricRow 
-            label="Resultado Realizado" 
+            label="Lucro em Caixa" 
             value={formatCurrency(hasExtras ? metrics.fluxoLiquidoAjustado : metrics.fluxoCaixaLiquido)} 
             colorClass={(hasExtras ? metrics.fluxoLiquidoAjustado : metrics.fluxoCaixaLiquido) >= 0 ? "text-emerald-500" : "text-red-500"}
             bold
