@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useProjectCurrencyFormat } from "@/hooks/useProjectCurrencyFormat";
@@ -15,6 +15,16 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
+import { invalidateCanonicalCaches } from "@/lib/invalidateCanonicalCaches";
 import {
   Select,
   SelectContent,
@@ -37,6 +47,10 @@ import {
   RefreshCcw,
   Eye,
   EyeOff,
+  Wrench,
+  Globe,
+  AlertTriangle,
+  ChevronDown,
 } from "lucide-react";
 import { CURRENCY_SYMBOLS, type SupportedCurrency } from "@/types/currency";
 
@@ -67,6 +81,8 @@ interface ProjetoTransaction {
   destino_tipo: string | null;
   ajuste_motivo: string | null;
   ajuste_direcao: string | null;
+  /** Classificação de AJUSTE_SALDO: define em qual KPI ele entra */
+  ajuste_natureza: 'RECONCILIACAO_OPERACIONAL' | 'EFEITO_FINANCEIRO' | 'EXTRAORDINARIO' | null;
   evento_promocional_tipo: string | null;
   /**
    * Classificação de auditoria — define visualização e KPIs.
@@ -235,6 +251,108 @@ function getTransactionSign(tipo: string, ajusteDirecao?: string | null): "posit
   return "neutral";
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Badge clicável para reclassificar a natureza de um AJUSTE_SALDO.
+// As 3 naturezas mapeiam para diferentes blocos no card de Indicadores Financeiros:
+//   - RECONCILIACAO_OPERACIONAL → entra em Performance Pura (operação)
+//   - EFEITO_FINANCEIRO         → entra em Efeitos Financeiros (FX)
+//   - EXTRAORDINARIO            → entra em Extraordinários (fora de performance)
+// O update direto via supabase é protegido por RLS (apenas owner/admin podem UPDATE).
+// ─────────────────────────────────────────────────────────────────────────
+type AjusteNaturezaKey = 'RECONCILIACAO_OPERACIONAL' | 'EFEITO_FINANCEIRO' | 'EXTRAORDINARIO';
+
+const NATUREZA_META: Record<AjusteNaturezaKey, { label: string; icon: React.ElementType; color: string; description: string }> = {
+  RECONCILIACAO_OPERACIONAL: {
+    label: 'Reconciliação Operacional',
+    icon: Wrench,
+    color: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+    description: 'Centavos por arredondamento de odds, retornos fracionados. Faz parte da performance da operação.',
+  },
+  EFEITO_FINANCEIRO: {
+    label: 'Efeito Financeiro',
+    icon: Globe,
+    color: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+    description: 'Variação cambial ou ganho/perda no recebimento. Não é performance — é efeito macro.',
+  },
+  EXTRAORDINARIO: {
+    label: 'Extraordinário',
+    icon: AlertTriangle,
+    color: 'bg-orange-500/15 text-orange-300 border-orange-500/30',
+    description: 'Estorno administrativo ou correção de lançamento sem vínculo operacional. Fora da performance.',
+  },
+};
+
+function AjusteNaturezaBadge({
+  ledgerId,
+  natureza,
+  projetoId,
+}: {
+  ledgerId: string;
+  natureza: AjusteNaturezaKey | null;
+  projetoId: string;
+}) {
+  const queryClient = useQueryClient();
+  const current: AjusteNaturezaKey = natureza ?? 'RECONCILIACAO_OPERACIONAL';
+  const meta = NATUREZA_META[current];
+  const Icon = meta.icon;
+
+  const handleSelect = async (novo: AjusteNaturezaKey) => {
+    if (novo === current) return;
+    const { error } = await supabase
+      .from('cash_ledger')
+      .update({ ajuste_natureza: novo })
+      .eq('id', ledgerId);
+    if (error) {
+      toast.error('Sem permissão para reclassificar este ajuste');
+      return;
+    }
+    toast.success(`Reclassificado: ${NATUREZA_META[novo].label}`);
+    queryClient.invalidateQueries({ queryKey: ['projeto-extrato-history', projetoId] });
+    queryClient.invalidateQueries({ queryKey: ['financial-metrics-popover', projetoId] });
+    invalidateCanonicalCaches(queryClient, projetoId);
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          onClick={(e) => e.stopPropagation()}
+          className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-medium transition-opacity hover:opacity-80 ${meta.color}`}
+          title={meta.description}
+        >
+          <Icon className="h-2.5 w-2.5" />
+          {meta.label}
+          <ChevronDown className="h-2.5 w-2.5 opacity-60" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-72">
+        <DropdownMenuLabel className="text-xs">Classificar este ajuste como:</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {(Object.keys(NATUREZA_META) as AjusteNaturezaKey[]).map((key) => {
+          const m = NATUREZA_META[key];
+          const ItemIcon = m.icon;
+          const isCurrent = key === current;
+          return (
+            <DropdownMenuItem
+              key={key}
+              onClick={() => handleSelect(key)}
+              className="flex flex-col items-start gap-0.5 py-2 cursor-pointer"
+            >
+              <div className="flex items-center gap-1.5 w-full">
+                <ItemIcon className="h-3 w-3" />
+                <span className="text-xs font-medium">{m.label}</span>
+                {isCurrent && <span className="ml-auto text-[10px] text-muted-foreground">atual</span>}
+              </div>
+              <span className="text-[10px] text-muted-foreground leading-snug">{m.description}</span>
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function useProjetoExtrato(
   projetoId: string,
   convertToConsolidation: (valor: number, moedaOrigem: string) => number,
@@ -253,7 +371,7 @@ function useProjetoExtrato(
           cotacao, cotacao_origem_usd, cotacao_destino_usd, status,
           data_transacao, created_at, descricao,
           origem_bookmaker_id, destino_bookmaker_id, origem_tipo, destino_tipo,
-          ajuste_motivo, ajuste_direcao, evento_promocional_tipo,
+          ajuste_motivo, ajuste_direcao, ajuste_natureza, evento_promocional_tipo,
           auditoria_metadata
         `)
         .eq("projeto_id_snapshot", projetoId)
@@ -351,6 +469,7 @@ function useProjetoExtrato(
           destino_tipo: e.destino_tipo,
           ajuste_motivo: e.ajuste_motivo,
           ajuste_direcao: e.ajuste_direcao,
+          ajuste_natureza: (e as any).ajuste_natureza ?? null,
           evento_promocional_tipo: e.evento_promocional_tipo,
           audit_class: auditClass,
           cancelled_reason: cancelledReason,
@@ -1014,6 +1133,13 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                                   <Badge variant="outline" className="text-[9px] px-1 py-0 text-purple-400 border-purple-400/30">
                                     {t.evento_promocional_tipo}
                                   </Badge>
+                                )}
+                                {t.tipo_transacao === "AJUSTE_SALDO" && (
+                                  <AjusteNaturezaBadge
+                                    ledgerId={t.id}
+                                    natureza={t.ajuste_natureza}
+                                    projetoId={projetoId}
+                                  />
                                 )}
                               </div>
                               <div className="text-right shrink-0">

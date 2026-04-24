@@ -112,7 +112,7 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
       .eq("tipo_transacao", "GIRO_GRATIS").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange).limit(10000),
     applyDateFilter(supabase.from("cash_ledger").select("valor, moeda")
       .eq("tipo_transacao", "GIRO_GRATIS_ESTORNO").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange).limit(10000),
-    applyDateFilter(supabase.from("cash_ledger").select("valor, moeda, ajuste_direcao")
+    applyDateFilter(supabase.from("cash_ledger").select("valor, moeda, ajuste_direcao, ajuste_natureza")
       .eq("tipo_transacao", "AJUSTE_SALDO").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange).limit(10000),
     applyDateFilter(supabase.from("cash_ledger").select("valor, moeda")
       .eq("tipo_transacao", "PERDA_OPERACIONAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange).limit(10000),
@@ -182,7 +182,7 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
       cashbackEstorno: (cashbackE.data || []) as { valor: number; moeda: string }[],
       girosGratis: (giros.data || []) as { valor: number; moeda: string }[],
       girosGratisEstorno: (girosEstorno.data || []) as { valor: number; moeda: string }[],
-      ajusteSaldo: (ajustes.data || []) as { valor: number; moeda: string; ajuste_direcao?: string | null }[],
+      ajusteSaldo: (ajustes.data || []) as { valor: number; moeda: string; ajuste_direcao?: string | null; ajuste_natureza?: string | null }[],
       perdaOperacional: (perdasOp.data || []) as { valor: number; moeda: string }[],
       perdaCambial: (perdasFx.data || []) as { valor: number; moeda: string }[],
       ganhoCambial: (ganhosFx.data || []) as { valor: number; moeda: string }[],
@@ -335,7 +335,7 @@ function SegregatedExtrasBlock({
         </div>
       )}
 
-      {/* 🟠 AJUSTES & EXTRAORDINÁRIOS */}
+      {/* 🟠 EXTRAORDINÁRIOS */}
       {hasAdj && (
         <div>
           <button
@@ -344,7 +344,7 @@ function SegregatedExtrasBlock({
           >
             <span className="text-[11px] text-muted-foreground flex items-center gap-1.5">
               <Wrench className="h-3 w-3 text-orange-500/80" />
-              Ajustes & Extraordinários
+              Extraordinários
               <ChevronDown className={`h-3 w-3 text-muted-foreground/60 transition-transform ${openAdj ? "rotate-180" : ""}`} />
             </span>
             <span className={`text-[11px] font-mono tabular-nums font-semibold ${metrics.ajustesExtraordinarios >= 0 ? "text-emerald-500" : "text-red-500"}`}>
@@ -353,8 +353,8 @@ function SegregatedExtrasBlock({
           </button>
           {openAdj && (
             <div className="mt-1 space-y-0.5 pl-2 border-l-2 border-orange-500/30 ml-1">
-              {Math.abs(metrics.ajustes) >= 0.01 && (
-                <MetricRow label="Ajustes de Saldo" value={fmtSigned(metrics.ajustes)} colorClass={metrics.ajustes >= 0 ? "text-emerald-500" : "text-red-500"} indent tooltip="Correções para fechar a conta quando o saldo da casa diverge do esperado (ex.: arredondamento de odds). Não é performance — é correção contábil." onClick={() => onDrillDown?.("ajustes", metrics.ajustes)} />
+              {Math.abs(metrics.ajustesExtraord) >= 0.01 && (
+                <MetricRow label="Ajustes Extraordinários" value={fmtSigned(metrics.ajustesExtraord)} colorClass={metrics.ajustesExtraord >= 0 ? "text-emerald-500" : "text-red-500"} indent tooltip="Ajustes de saldo classificados como administrativos/sem vínculo operacional (estornos, correções de lançamento). Reclassifique no Extrato se necessário." onClick={() => onDrillDown?.("ajustes", metrics.ajustesExtraord)} />
               )}
               {Math.abs(metrics.perdaOp) >= 0.01 && (
                 <MetricRow label="Perdas Operacionais" value={`−${formatCurrency(metrics.perdaOp)}`} colorClass="text-red-500" indent tooltip="Capital perdido por incidentes (contas bloqueadas, saldos retidos). Evento extraordinário, fora da performance recorrente." onClick={() => onDrillDown?.("perdaOp", metrics.perdaOp)} />
@@ -362,7 +362,7 @@ function SegregatedExtrasBlock({
             </div>
           )}
           <p className="text-[9px] text-muted-foreground/60 mt-0.5 pl-4">
-            Correções e incidentes. Não é performance, mas afeta o caixa.
+            Incidentes e ajustes administrativos. Afeta o caixa, mas não é performance.
           </p>
         </div>
       )}
@@ -432,6 +432,14 @@ function LucroOperacionalCollapsible({ metrics, formatCurrency }: { metrics: any
         {Math.abs(metrics.girosGratis) >= 0.01 && (
           <MetricRow label="Giros Grátis" value={formatCurrency(metrics.girosGratis)} colorClass="text-emerald-500" />
         )}
+        {Math.abs(metrics.ajustesOperacionais) >= 0.01 && (
+          <MetricRow
+            label="Reconciliação Operacional"
+            value={fmtSigned(metrics.ajustesOperacionais)}
+            colorClass={metrics.ajustesOperacionais >= 0 ? "text-emerald-500" : "text-red-500"}
+            tooltip="Ajustes de saldo classificados como reconciliação operacional (centavos por arredondamento de odds, retornos fracionados). Faz parte da performance da operação."
+          />
+        )}
         <div className="border-t border-emerald-500/15 mt-1.5 pt-1.5">
           <div className="flex items-center justify-between gap-4">
             <Tooltip>
@@ -441,7 +449,7 @@ function LucroOperacionalCollapsible({ metrics, formatCurrency }: { metrics: any
                 </span>
               </TooltipTrigger>
               <TooltipContent side="left" className="max-w-[260px] text-xs">
-                Numerador de ROI. Mede a qualidade da operação: juice + créditos promocionais. Não inclui FX nem ajustes.
+                Numerador de ROI. Mede a qualidade da operação: juice + créditos promocionais + reconciliações operacionais (ajustes que materializam imprecisão da operação). Não inclui FX nem ajustes administrativos.
               </TooltipContent>
             </Tooltip>
             <span className={`text-[11px] font-mono tabular-nums font-bold ${metrics.performancePura >= 0 ? "text-emerald-500" : "text-red-500"}`}>
@@ -478,7 +486,7 @@ function LucroOperacionalCollapsible({ metrics, formatCurrency }: { metrics: any
         </div>
       )}
 
-      {/* 🟠 Ajustes & Extraordinários */}
+      {/* 🟠 Extraordinários */}
       {hasAdj && (
         <div className="rounded-md border border-orange-500/20 bg-orange-500/[0.03] px-2.5 py-2">
           <div className="flex items-center justify-between gap-2">
@@ -487,11 +495,11 @@ function LucroOperacionalCollapsible({ metrics, formatCurrency }: { metrics: any
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-orange-500/90 border-b border-dotted border-orange-500/40 cursor-help">
-                    Ajustes & Extraordinários
+                    Extraordinários
                   </span>
                 </TooltipTrigger>
                 <TooltipContent side="left" className="max-w-[260px] text-xs">
-                  Correções contábeis (AJUSTE_SALDO) e incidentes (PERDA_OPERACIONAL). Afeta o caixa, mas não compõe a performance recorrente nem a remuneração do operador.
+                  Incidentes (perdas operacionais) e ajustes administrativos sem vínculo operacional. Afeta o caixa, mas não compõe a performance recorrente nem a remuneração do operador.
                 </TooltipContent>
               </Tooltip>
             </div>
@@ -703,10 +711,19 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
 
     const cashbackLiquido = sumConvert(r.cashbackManual) - sumConvert(r.cashbackEstorno);
     const girosGratis = sumConvert(r.girosGratis) - sumConvert(r.girosGratisEstorno);
-    const ajustes = r.ajusteSaldo.reduce((acc, e) => {
-      const sinal = e.ajuste_direcao === 'SAIDA' ? -1 : 1;
-      return acc + convertToConsolidationOficial(e.valor * sinal, e.moeda);
-    }, 0);
+    // Particionar AJUSTE_SALDO por natureza (default: RECONCILIACAO_OPERACIONAL)
+    const sumAjustePorNatureza = (natureza: string) =>
+      r.ajusteSaldo
+        .filter(e => (e.ajuste_natureza || 'RECONCILIACAO_OPERACIONAL') === natureza)
+        .reduce((acc, e) => {
+          const sinal = e.ajuste_direcao === 'SAIDA' ? -1 : 1;
+          return acc + convertToConsolidationOficial(e.valor * sinal, e.moeda);
+        }, 0);
+    const ajustesOperacionais = sumAjustePorNatureza('RECONCILIACAO_OPERACIONAL');
+    const ajustesFx = sumAjustePorNatureza('EFEITO_FINANCEIRO');
+    const ajustesExtraord = sumAjustePorNatureza('EXTRAORDINARIO');
+    // Total agregado (mantido para retrocompatibilidade com FinancialDrillDownModal)
+    const ajustes = ajustesOperacionais + ajustesFx + ajustesExtraord;
     const perdaOp = sumConvert(r.perdaOperacional);
     const perdaFx = sumConvert(r.perdaCambial);
     const ganhoFx = sumConvert(r.ganhoCambial);
@@ -750,13 +767,15 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     const fluxoCaixaLiquido = saquesRecebidos - depositosEfetivos;
 
     // ─── SEGREGAÇÃO CONCEITUAL (Performance vs FX vs Ajustes) ───
-    // Performance Pura (denominador de ROI): juice + créditos promocionais
+    // Performance Pura (numerador de ROI): juice + créditos promocionais + reconciliações operacionais
+    // Reconciliações operacionais (centavos por arredondamento de odds, retornos fracionados)
+    // SÃO parte da operação — devem entrar em performance.
     const creditosPerformance = bonusGanhos + cashbackLiquido + girosGratis;
-    const performancePura = lucroApostasPuro + creditosPerformance;
-    // Efeitos Financeiros (FX): variação cambial e ganho/perda de confirmação — fora de ROI
-    const efeitosFinanceiros = (ganhoFx - perdaFx) + ganhoConfirmacao;
-    // Ajustes & Extraordinários: correções contábeis e incidentes — fora de ROI
-    const ajustesExtraordinarios = ajustes - perdaOp;
+    const performancePura = lucroApostasPuro + creditosPerformance + ajustesOperacionais;
+    // Efeitos Financeiros (FX): variação cambial + ajustes classificados como FX — fora de ROI
+    const efeitosFinanceiros = (ganhoFx - perdaFx) + ganhoConfirmacao + ajustesFx;
+    // Extraordinários: incidentes operacionais e ajustes administrativos — fora de ROI
+    const ajustesExtraordinarios = ajustesExtraord - perdaOp;
     // Resultado Operacional Total (reconcilia com Patrimônio)
     const resultadoOperacionalTotal = performancePura + efeitosFinanceiros + ajustesExtraordinarios;
 
@@ -801,6 +820,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
       fluxoCaixaLiquido, fluxoLiquidoAjustado, capitalTotal, extrasPositivos,
       fluxoInternoLiquido,
       cashbackLiquido, girosGratis, ajustes, ganhoConfirmacao, ganhoFx, perdaOp, perdaFx,
+      ajustesOperacionais, ajustesFx, ajustesExtraord,
       bonusGanhos,
       lucroApostasPuro, estrategiaBreakdown,
       // Segregação conceitual

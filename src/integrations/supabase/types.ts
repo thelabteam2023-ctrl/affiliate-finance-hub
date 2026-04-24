@@ -1877,6 +1877,7 @@ export type Database = {
         Row: {
           ajuste_direcao: string | null
           ajuste_motivo: string | null
+          ajuste_natureza: string | null
           auditoria_metadata: Json | null
           balance_processed_at: string | null
           coin: string | null
@@ -1940,6 +1941,7 @@ export type Database = {
         Insert: {
           ajuste_direcao?: string | null
           ajuste_motivo?: string | null
+          ajuste_natureza?: string | null
           auditoria_metadata?: Json | null
           balance_processed_at?: string | null
           coin?: string | null
@@ -2003,6 +2005,7 @@ export type Database = {
         Update: {
           ajuste_direcao?: string | null
           ajuste_motivo?: string | null
+          ajuste_natureza?: string | null
           auditoria_metadata?: Json | null
           balance_processed_at?: string | null
           coin?: string | null
