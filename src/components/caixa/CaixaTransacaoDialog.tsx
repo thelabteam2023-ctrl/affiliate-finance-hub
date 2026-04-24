@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { isWalletCompatibleWithCoin } from "@/lib/cryptoNetworkCompat";
 import { getTodayCivilDate } from "@/utils/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
@@ -187,6 +188,7 @@ export function CaixaTransacaoDialog({
 }: CaixaTransacaoDialogProps) {
   const { toast } = useToast();
   const { workspaceId } = useWorkspace();
+  const queryClient = useQueryClient();
   const { 
     cotacaoUSD, cotacaoEUR, cotacaoGBP, 
     cotacaoMXN, cotacaoMYR, cotacaoARS, cotacaoCOP,
@@ -3048,7 +3050,13 @@ export function CaixaTransacaoDialog({
       
       // Disparar evento para atualizar UI imediatamente
       dispatchCaixaDataChanged();
-      
+
+      // Invalidar queries de Central de Operações e conciliação para refletir
+      // novos saques/depósitos pendentes sem precisar de F5.
+      queryClient.invalidateQueries({ queryKey: ["central-operacoes-data"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["contas-disponiveis-count"] });
+
       onSuccess();
       onClose();
     } catch (error: any) {
@@ -3164,6 +3172,10 @@ export function CaixaTransacaoDialog({
       setTaxaBancariaInfo(null);
       resetForm();
       dispatchCaixaDataChanged();
+      // Invalidar queries de Central de Operações e conciliação
+      queryClient.invalidateQueries({ queryKey: ["central-operacoes-data"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["contas-disponiveis-count"] });
       onSuccess();
       onClose();
     } catch (error: any) {
