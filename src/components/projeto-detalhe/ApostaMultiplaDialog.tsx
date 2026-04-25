@@ -7,9 +7,8 @@ import { useWorkspace } from "@/hooks/useWorkspace";
 import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos, type BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
 import { criarAposta, deletarAposta, liquidarAposta, reliquidarAposta, type SelecaoMultipla } from "@/services/aposta";
 import { creditarFreebetViaLedger, estornarFreebetViaLedger } from "@/lib/freebetLedgerService";
-import { useExchangeRatesSafe } from "@/contexts/ExchangeRatesContext";
 import { isForeignCurrency } from "@/types/currency";
-import { useProjetoConsolidacao } from "@/hooks/useProjetoConsolidacao";
+import { useProjetoWorkingRates } from "@/hooks/useProjetoWorkingRates";
 import {
   Dialog,
   DialogContent,
@@ -167,9 +166,7 @@ export function ApostaMultiplaDialog({
 }: ApostaMultiplaDialogProps) {
   const { workspaceId } = useWorkspace();
   const { favoriteSource } = useWorkspaceBetSources(workspaceId);
-  const exchangeRates = useExchangeRatesSafe();
-  // REGRA UNIFICADA: formulários SEMPRE usam cotação de trabalho (se configurada)
-  const { cotacaoAtual: cotacaoUsdFormulario } = useProjetoConsolidacao({ projetoId });
+  const { getEffectiveRate } = useProjetoWorkingRates(projetoId);
   const [loading, setLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   
@@ -1022,11 +1019,10 @@ export function ApostaMultiplaDialog({
       }
 
       // Multi-moeda: determinar moeda e snapshot
-      // REGRA UNIFICADA: USD usa cotacaoUsdFormulario (Trabalho > PTAX), outras moedas usam exchangeRates
       const moedaOpEdit = bookmakerSaldo?.moeda || 'BRL';
       const isForeignEdit = isForeignCurrency(moedaOpEdit);
       const cotacaoSnapEdit = isForeignEdit
-        ? (moedaOpEdit === 'USD' ? cotacaoUsdFormulario : (exchangeRates ? exchangeRates.getRate(moedaOpEdit) : null))
+        ? getEffectiveRate(moedaOpEdit).rate
         : null;
       const valorBrlRefEdit = isForeignEdit && cotacaoSnapEdit ? stakeNum * cotacaoSnapEdit : null;
 
@@ -1259,11 +1255,11 @@ export function ApostaMultiplaDialog({
       } else {
         // ========== USAR criarAposta DO SERVIÇO CENTRALIZADO ==========
         // Multi-moeda: determinar moeda da operação e snapshot de cotação
-        // REGRA UNIFICADA: USD usa cotacaoUsdFormulario (Trabalho > PTAX), outras moedas usam exchangeRates
+        // REGRA UNIFICADA: formulários usam Cotação de Trabalho quando configurada
         const moedaOp = bookmakerSaldo?.moeda || 'BRL';
         const isForeign = isForeignCurrency(moedaOp);
         const cotacaoSnap = isForeign
-          ? (moedaOp === 'USD' ? cotacaoUsdFormulario : (exchangeRates ? exchangeRates.getRate(moedaOp) : null))
+          ? getEffectiveRate(moedaOp).rate
           : null;
         const valorBrlRef = isForeign && cotacaoSnap ? stakeNum * cotacaoSnap : null;
 

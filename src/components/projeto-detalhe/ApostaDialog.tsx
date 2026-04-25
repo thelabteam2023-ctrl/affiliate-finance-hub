@@ -78,6 +78,7 @@ import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { FonteEntradaSelector } from "@/components/apostas/FonteEntradaSelector";
 import { useWorkspaceBetSources } from "@/hooks/useWorkspaceBetSources";
 import { deriveStakeSplit, derivePersistedStakeSplit } from "@/lib/freebetStake";
+import { useProjetoWorkingRates } from "@/hooks/useProjetoWorkingRates";
 
 // Multi-entry para aposta simples (mesma seleção, múltiplas bookmakers)
 interface AdditionalEntry {
@@ -431,6 +432,7 @@ const getMoneylineSelecoes = (esporte: string | undefined, evento: string): stri
 export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess, defaultEstrategia = 'PUNTER', activeTab = 'apostas', embedded = false }: ApostaDialogProps) {
   const { workspaceId } = useWorkspace();
   const { convertToConsolidation, moedaConsolidacao } = useProjetoCurrency(projetoId);
+  const { getEffectiveRate } = useProjetoWorkingRates(projetoId);
   const [loading, setLoading] = useState(false);
   const { favoriteSource } = useWorkspaceBetSources(workspaceId);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -1847,6 +1849,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         ? getEstrategiaFromTab(activeTab)
         : null;
       const estrategiaSimples = (lockedEstrategiaForSave || registroValues.estrategia || defaultEstrategia || 'PUNTER') as ApostaEstrategia;
+      const buildSnapshotFields = (valor: number, moeda: string) => {
+        const rateInfo = getEffectiveRate(moeda);
+        const now = new Date().toISOString();
+        return moeda === 'BRL'
+          ? { cotacao_snapshot: null as number | null, cotacao_snapshot_at: null as string | null, valor_brl_referencia: valor, conversion_source: rateInfo.source }
+          : { cotacao_snapshot: rateInfo.rate, cotacao_snapshot_at: now, valor_brl_referencia: valor * rateInfo.rate, conversion_source: rateInfo.source };
+      };
 
       const commonData = {
         user_id: userData.user.id,
@@ -2036,6 +2045,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         const parentValorRetorno = isMultiCC
           ? convertToConsolidation(valorRetornoCalculado, primaryMoedaForCheck)
           : valorRetornoCalculado;
+        const parentSnapshotFields = buildSnapshotFields(parentStake, moedaOperacao);
 
         apostaData = {
           ...commonData,
@@ -2065,6 +2075,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           stake_total: parentStake,
           stake_consolidado: isMultiCC ? parentStake : null,
           pl_consolidado: (isMultiCC && statusResultado !== 'PENDENTE') ? parentLucroPrejuizo : null,
+          cotacao_snapshot: isMultiCC ? null : parentSnapshotFields.cotacao_snapshot,
+          cotacao_snapshot_at: isMultiCC ? null : parentSnapshotFields.cotacao_snapshot_at,
+          valor_brl_referencia: isMultiCC ? null : parentSnapshotFields.valor_brl_referencia,
+          conversion_source: isMultiCC ? null : parentSnapshotFields.conversion_source,
           // WATERFALL: Flag para indicar se freebet deve ser usado no waterfall
           usar_freebet: bookmakerStakeFreebet + additionalStakeFreebet > 0,
         };
@@ -2575,6 +2589,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           if (additionalEntries.length > 0) {
             // Delete existing pernas and re-insert
             await supabase.from("apostas_pernas").delete().eq("aposta_id", aposta.id);
+            const primarySnapshot = buildSnapshotFields(stakeBookmakerEfetiva, moedaOperacao);
             
             const allPernas = [
               {
@@ -2589,22 +2604,33 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                 stake_freebet: usarFreebetBookmaker ? valorFreebetUsar : 0,
                 moeda: moedaOperacao,
                 fonte_saldo: usarFreebetBookmaker ? 'FREEBET' : 'REAL',
+                cotacao_snapshot: primarySnapshot.cotacao_snapshot,
+                cotacao_snapshot_at: primarySnapshot.cotacao_snapshot_at,
+                stake_brl_referencia: primarySnapshot.valor_brl_referencia,
               },
               ...additionalEntries
                 .filter(e => e.bookmaker_id && parseFloat(e.odd) > 0 && ((parseFloat(e.stake) || 0) + (e.usar_freebet ? (parseFloat(e.valor_freebet) || 0) : 0)) > 0)
-                .map((e, idx) => ({
-                  aposta_id: aposta.id,
-                  bookmaker_id: e.bookmaker_id,
-                  ordem: idx + 1,
-                  selecao: effectiveSelecao || 'N/A',
-                  selecao_livre: null,
-                  odd: parseFloat(e.odd),
-                  stake: (parseFloat(e.stake) || 0) + (e.usar_freebet ? (parseFloat(e.valor_freebet) || 0) : 0), // Total = real + FB
-                  stake_real: parseFloat(e.stake) || 0,
-                  stake_freebet: e.usar_freebet ? (parseFloat(e.valor_freebet) || 0) : 0,
-                  moeda: bookmakers.find(b => b.id === e.bookmaker_id)?.moeda || moedaOperacao,
-                  fonte_saldo: e.usar_freebet ? 'FREEBET' : 'REAL',
-                }))
+                .map((e, idx) => {
+                  const entryStakeTotal = (parseFloat(e.stake) || 0) + (e.usar_freebet ? (parseFloat(e.valor_freebet) || 0) : 0);
+                  const entryMoeda = bookmakers.find(b => b.id === e.bookmaker_id)?.moeda || moedaOperacao;
+                  const entrySnapshot = buildSnapshotFields(entryStakeTotal, entryMoeda);
+                  return {
+                    aposta_id: aposta.id,
+                    bookmaker_id: e.bookmaker_id,
+                    ordem: idx + 1,
+                    selecao: effectiveSelecao || 'N/A',
+                    selecao_livre: null,
+                    odd: parseFloat(e.odd),
+                    stake: entryStakeTotal, // Total = real + FB
+                    stake_real: parseFloat(e.stake) || 0,
+                    stake_freebet: e.usar_freebet ? (parseFloat(e.valor_freebet) || 0) : 0,
+                    moeda: entryMoeda,
+                    fonte_saldo: e.usar_freebet ? 'FREEBET' : 'REAL',
+                    cotacao_snapshot: entrySnapshot.cotacao_snapshot,
+                    cotacao_snapshot_at: entrySnapshot.cotacao_snapshot_at,
+                    stake_brl_referencia: entrySnapshot.valor_brl_referencia,
+                  };
+                })
             ];
 
             const { error: pernasError } = await supabase.from("apostas_pernas").insert(allPernas);
@@ -2811,6 +2837,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               usar_freebet: e.usar_freebet,
             })),
           });
+          const primarySnapshot = buildSnapshotFields(stakeBookmakerEfetiva, moedaOperacao);
           const allPernas = [
             {
               aposta_id: novaApostaId,
@@ -2824,22 +2851,33 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               stake_freebet: usarFreebetBookmaker ? valorFreebetUsar : 0,
               moeda: moedaOperacao,
               fonte_saldo: usarFreebetBookmaker ? 'FREEBET' : 'REAL',
+              cotacao_snapshot: primarySnapshot.cotacao_snapshot,
+              cotacao_snapshot_at: primarySnapshot.cotacao_snapshot_at,
+              stake_brl_referencia: primarySnapshot.valor_brl_referencia,
             },
             ...additionalEntries
               .filter(e => e.bookmaker_id && parseFloat(e.odd) > 0 && ((parseFloat(e.stake) || 0) + (e.usar_freebet ? (parseFloat(e.valor_freebet) || 0) : 0)) > 0)
-              .map((e, idx) => ({
-                aposta_id: novaApostaId,
-                bookmaker_id: e.bookmaker_id,
-                ordem: idx + 1,
-                selecao: effectiveSelecao || 'N/A',
-                selecao_livre: null,
-                odd: parseFloat(e.odd),
-                stake: (parseFloat(e.stake) || 0) + (e.usar_freebet ? (parseFloat(e.valor_freebet) || 0) : 0), // Total = real + FB
-                stake_real: parseFloat(e.stake) || 0,
-                stake_freebet: e.usar_freebet ? (parseFloat(e.valor_freebet) || 0) : 0,
-                moeda: bookmakers.find(b => b.id === e.bookmaker_id)?.moeda || moedaOperacao,
-                fonte_saldo: e.usar_freebet ? 'FREEBET' : 'REAL',
-              }))
+              .map((e, idx) => {
+                const entryStakeTotal = (parseFloat(e.stake) || 0) + (e.usar_freebet ? (parseFloat(e.valor_freebet) || 0) : 0);
+                const entryMoeda = bookmakers.find(b => b.id === e.bookmaker_id)?.moeda || moedaOperacao;
+                const entrySnapshot = buildSnapshotFields(entryStakeTotal, entryMoeda);
+                return {
+                  aposta_id: novaApostaId,
+                  bookmaker_id: e.bookmaker_id,
+                  ordem: idx + 1,
+                  selecao: effectiveSelecao || 'N/A',
+                  selecao_livre: null,
+                  odd: parseFloat(e.odd),
+                  stake: entryStakeTotal, // Total = real + FB
+                  stake_real: parseFloat(e.stake) || 0,
+                  stake_freebet: e.usar_freebet ? (parseFloat(e.valor_freebet) || 0) : 0,
+                  moeda: entryMoeda,
+                  fonte_saldo: e.usar_freebet ? 'FREEBET' : 'REAL',
+                  cotacao_snapshot: entrySnapshot.cotacao_snapshot,
+                  cotacao_snapshot_at: entrySnapshot.cotacao_snapshot_at,
+                  stake_brl_referencia: entrySnapshot.valor_brl_referencia,
+                };
+              })
           ];
 
           console.log('[ApostaDialog][MULTI-ENTRY] allPernas a inserir:', allPernas);

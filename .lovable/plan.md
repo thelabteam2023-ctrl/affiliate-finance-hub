@@ -1,123 +1,58 @@
-Plano de refatoração para corrigir o cenário da aba Surebet
+Confirmei indícios fortes de inconsistência na aposta do Manchester:
 
-Objetivo
+- Projeto está com `moeda_consolidacao = USD`, `fonte_cotacao = TRABALHO`, `cotacao_trabalho = 5`.
+- A aposta `MANCHESTER UNITED X BRENTFORD` gravada via formulário simples está como `moeda_operacao = MULTI`, `stake = 200`, `stake_consolidado = 200`.
+- As pernas estão assim:
+  - USD 100
+  - BRL 500
+- Com cotação de trabalho 5, o total consolidado correto em USD é `100 + (500 / 5) = 200`. Então o agregado do pai ficou matematicamente correto.
+- Porém as pernas foram gravadas com `cotacao_snapshot = null` e `stake_brl_referencia = null`. Isso viola o nosso padrão de snapshot por operação/perna e deixa dependente de fallback em outras leituras.
 
-Fazer com que o botão/formulário de "Aposta Simples" usado dentro da aba Surebet tenha exatamente o mesmo comportamento da aposta simples criada em Punter/Valuebet: registro simples, liquidação simples, card simples e cálculo por casa/perna quando houver múltiplas casas.
+O problema principal encontrado: o formulário de aposta simples (`ApostaDialog`) calcula usando `convertToConsolidation`, que hoje usa Cotação de Trabalho, mas ao salvar não congela `cotacao_snapshot`/`stake_brl_referencia` nas pernas de multi-entry e também não grava snapshot no pai para aposta simples mono-moeda estrangeira. Isso dá a impressão/risco de uso de cotação oficial em renderizações e relatórios que dependem desses campos.
 
-Diagnóstico confirmado
+Também encontrei pontos que precisam padronização:
 
-1. O registro recém-criado pela aba Surebet ainda nasceu assim:
+- `useApostasUnificada.criarArbitragem`: usa `getSnapshotFields` sem passar override da cotação de trabalho, então pode cair na cotação oficial.
+- `ApostaMultiplaDialog`: USD usa `useProjetoConsolidacao.cotacaoAtual`, mas outras moedas usam `exchangeRates.getRate`, ou seja, oficial/live para EUR/GBP/MYR/MXN/ARS/COP.
+- Formulários próprios de Surebet (`SurebetDialogTable` e `SurebetModalRoot`) já têm lógica de `getEffectiveRate` com Cotação de Trabalho e passam override para `getSnapshotFields`; estes parecem mais alinhados.
+- `ProjetoSurebetTab` passa `convertFnOficial` para alguns cards/gráficos/exportações; para exibição operacional de cards isso deve ser revisado para não usar cotação oficial quando houver necessidade de conversão fallback.
 
-```text
-forma_registro = SIMPLES
-estrategia = SUREBET
-bookmaker_id = null
-stake = 200
-pernas_count = 0
-```
+Plano de correção:
 
-Isso é um estado híbrido incorreto: parece aposta simples, mas é rotulada como Surebet e aparece em Operações da aba Surebet. Como não tem pernas, o card mostra informação incompleta e pode usar handlers/visual de surebet.
+1. Criar um helper único para taxa de trabalho por moeda
+   - Centralizar a leitura das cotações de trabalho do projeto para USD, EUR, GBP, MYR, MXN, ARS e COP.
+   - Regra: Cotação de Trabalho válida > fallback oficial apenas se não existir taxa de trabalho cadastrada.
+   - Stablecoins USD (`USDT`, `USDC`) usam a taxa de USD.
 
-2. As simulações anteriores que funcionaram bem nasceram corretamente como:
+2. Corrigir o formulário de aposta simples (`ApostaDialog`)
+   - Usar o helper de taxa efetiva/trabalho no save.
+   - Para aposta simples mono-moeda estrangeira, gravar no pai:
+     - `cotacao_snapshot`
+     - `cotacao_snapshot_at`
+     - `valor_brl_referencia`
+     - `conversion_source = TRABALHO` quando aplicável
+   - Para multi-entry, gravar em cada registro de `apostas_pernas`:
+     - `cotacao_snapshot`
+     - `stake_brl_referencia`
+     - `cotacao_snapshot_at`, se a tabela aceitar esse campo
+   - Manter o pai multi-moeda com `stake_consolidado` na moeda do projeto, como já funcionou no caso Manchester.
 
-```text
-forma_registro = SIMPLES
-estrategia = PUNTER
-com ou sem apostas_pernas para multi-casa
-```
+3. Corrigir criação por `useApostasUnificada.criarArbitragem`
+   - Passar a Cotação de Trabalho para `getSnapshotFields` em vez de deixar cair na cotação oficial.
+   - Garantir que as pernas normalizadas herdem os snapshots corretos.
 
-3. O problema não é apenas visual. Existem pelo menos três pontos que precisam ser alinhados:
-- abertura do formulário ainda pode passar `estrategia=SUREBET` por algum caminho antigo;
-- a aba Surebet busca tudo com `estrategia = SUREBET`, então captura apostas simples que não deveriam estar ali como surebet real;
-- o card de Operações força badge/estratégia `SUREBET` mesmo quando renderiza `ApostaCard` para uma aposta simples.
+4. Corrigir aposta múltipla (`ApostaMultiplaDialog`)
+   - Substituir `exchangeRates.getRate(...)` para outras moedas por taxa de trabalho do projeto quando existir.
+   - Gravar snapshot coerente no pai para qualquer moeda estrangeira, não só USD.
 
-O que será alterado
+5. Revisar renderização/exportação na aba Surebet
+   - Trocar `convertFnOficial` por conversão de trabalho nos cards operacionais quando a função for usada como fallback de exibição.
+   - Manter oficial/PTAX apenas onde for KPI de realização financeira, se houver esse caso explícito.
 
-1. Corrigir a origem do formulário
-- Garantir que qualquer abertura de "Aposta Simples" pela aba Surebet envie `estrategia=PUNTER`, não `SUREBET`.
-- Corrigir também o caminho via `ApostaPopupContainer`, que ainda usa `getEstrategiaFromTab(activeTab)` para simples/múltipla e pode reintroduzir `SUREBET`.
-- A regra final será:
-
-```text
-Aposta Simples = forma_registro SIMPLES + estratégia escolhida no formulário, default PUNTER
-Surebet real = forma_registro ARBITRAGEM + estratégia SUREBET + pernas de arbitragem
-```
-
-2. Separar a listagem da aba Surebet
-- Ajustar a query da aba Surebet para tratar como "Surebet real" apenas operações de arbitragem:
-
-```text
-estrategia = SUREBET
-forma_registro = ARBITRAGEM
-```
-
-- Aposta simples criada enquanto o usuário está na aba Surebet não deve ser convertida em surebet nem ganhar badge `SUREBET` por causa da aba.
-- Se for necessário manter visibilidade operacional na aba Surebet, ela deve aparecer como `SIMPLES/PUNTER`, usando o mesmo card da aposta simples, nunca como arbitragem.
-
-3. Corrigir o card em Operações
-- Remover o `estrategia="SUREBET"` hardcoded quando a operação é simples.
-- O `ApostaCard` deve receber `operacao.estrategia` real, por exemplo `PUNTER`, `VALUEBET`, etc.
-- Para multi-casa simples, o card deve exibir as casas/pernas como entradas replicadas, não como cenário de arbitragem.
-- Evitar que `bookmaker_id = null` sem pernas gere card vazio/incompleto.
-
-4. Corrigir multi-casa simples como comportamento canônico
-- Quando o usuário adiciona "casa a mais" no formulário simples, o sistema deve persistir as entradas como multi-entry de aposta simples.
-- Cada casa deve ter stake, odd, moeda e resultado próprios em `apostas_pernas`.
-- O pai deve ser apenas agregador da operação, sem virar surebet.
-
-5. Conferir liquidação e resultados parciais
-- Validar que GREEN, RED, VOID, MEIO_GREEN e MEIO_RED usam a mesma liquidação canônica para apostas simples em todas as abas.
-- Para multi-casa, a liquidação rápida deve atualizar as pernas e o pai com os valores esperados:
-
-```text
-GREEN      lucro = stake * (odd - 1), retorno = stake * odd
-MEIO_GREEN lucro = stake * (odd - 1) / 2, retorno = stake + lucro
-VOID       lucro = 0, retorno = stake
-MEIO_RED   lucro = -stake / 2, retorno = stake / 2
-RED        lucro = -stake, retorno = 0
-```
-
-- Em multi-moeda, cada perna calcula na moeda nativa e o pai consolida com Cotação de Trabalho/snapshot, sem misturar símbolo de uma moeda com valor de outra.
-
-6. Backend/defesa contra estados híbridos
-- Adicionar ou ajustar uma proteção de domínio para impedir novos registros inconsistentes:
-
-```text
-estrategia = SUREBET + forma_registro = SIMPLES
-```
-
-- Em vez de permitir esse híbrido, o serviço deve normalizar para `PUNTER` quando for aposta simples, ou bloquear com erro claro se a intenção era surebet real.
-- Não vou fazer correção em massa retroativa nos dados financeiros. Se existir algum registro de teste/híbrido, apenas indicarei qual está inconsistente para correção pontual aprovada depois.
-
-7. Validação
-- Rodar checagens TypeScript/testes disponíveis.
-- Fazer uma simulação local/read-only dos cenários esperados e comparar com as fórmulas:
-  - 1 bookmaker;
-  - 2+ bookmakers mesma moeda;
-  - 2+ bookmakers moedas diferentes;
-  - resultados GREEN, MEIO_GREEN, VOID, MEIO_RED, RED.
-
-Arquivos prováveis
-
-- `src/components/popups/ApostaPopupContainer.tsx`
-- `src/components/projeto-detalhe/GlobalActionsBar.tsx`
-- `src/pages/ApostaWindowPage.tsx`
-- `src/components/projeto-detalhe/ApostaDialog.tsx`
-- `src/components/projeto-detalhe/ProjetoSurebetTab.tsx`
-- `src/components/projeto-detalhe/ApostaCard.tsx`
-- `src/services/aposta/ApostaService.ts`
-- possivelmente uma migration pequena de validação/normalização de domínio, se necessário
-
-Resultado esperado
-
-Depois da refatoração:
-
-```text
-Abrir "Nova Aposta > Aposta Simples" na aba Surebet
-= mesmo formulário e mesmo comportamento da aba Punter
-= registro SIMPLES/PUNTER por padrão
-= adicionar casas a mais cria multi-entry simples
-= cards e liquidação mostram os valores corretos por casa
-= Surebet real continua existindo apenas pelo formulário/motor de Surebet
-```
-
+6. Validação pós-correção
+   - Rodar verificação TypeScript.
+   - Criar/inspecionar uma aposta simples multi-entry BRL+USD em Surebet e confirmar:
+     - pai com `stake_consolidado = 200` no exemplo 100 USD + 500 BRL com cotação 5;
+     - pernas com snapshots preenchidos;
+     - card exibindo o mesmo total esperado sem depender de cotação oficial.
+   - Auditar também uma aposta múltipla em moeda estrangeira para confirmar que o snapshot usa Cotação de Trabalho.
