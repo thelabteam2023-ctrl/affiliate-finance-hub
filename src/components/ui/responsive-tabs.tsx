@@ -208,10 +208,10 @@ const ResponsiveTabsList = React.forwardRef<
             <TabsPrimitive.Trigger
               key={tab.value}
               value={tab.value}
-              className="inline-flex items-center justify-center gap-1.5 md:gap-2 whitespace-nowrap px-2 md:px-3 lg:px-4 py-3 text-xs md:text-sm font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground relative data-[state=active]:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 shrink-0 min-w-0"
+              className="group inline-flex items-center justify-center gap-1.5 md:gap-2 whitespace-nowrap px-2 md:px-3 lg:px-4 py-3 text-xs md:text-sm font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground relative data-[state=active]:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 shrink-0 min-w-0"
             >
               {tab.icon}
-              <span className="hidden sm:inline truncate max-w-[80px] md:max-w-none">{tab.label}</span>
+              <span className="hidden group-data-[state=active]:inline sm:inline truncate max-w-[92px] md:max-w-none">{tab.label}</span>
             </TabsPrimitive.Trigger>
           ))}
 
