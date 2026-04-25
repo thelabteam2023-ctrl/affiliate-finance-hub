@@ -1,112 +1,128 @@
-Diagnóstico inicial confirmado:
+Confirmação da causa
 
-A operação mostrada no print tem 2 pernas de US$ 100 com odd 2.00:
+A hipótese está correta: o problema está ligado ao formato de entrada "aposta simples com mais de uma perna" usado dentro da aba Surebet.
 
-```text
-AMUNRA    stake US$ 100 -> payout esperado US$ 200
-MY EMPIRE stake US$ 100 -> payout esperado US$ 200
-```
-
-Como a stake deveria ter sido debitada na criação, o saldo final correto em cada casa seria:
+Na auditoria do projeto atual encontrei este padrão:
 
 ```text
-saldo inicial 100 + bônus 100 - stake 100 + payout 200 = US$ 300
-lucro líquido da operação por casa = US$ 100
+aposta_id: bdb146f6-42a3-4939-a785-6a0e1f871b19
+forma_registro: SIMPLES
+estrategia: SUREBET
+pernas em apostas_pernas: 2
+stake por perna: 100 + 100
+STAKE no financial_events: 0
+PAYOUT no financial_events: 200 + 200
+status: LIQUIDADA
 ```
 
-Mas o banco mostra:
+Isso explica exatamente a inflação: na liquidação entraram os payouts, mas a criação não debitou as stakes das duas pernas. O saldo fica +100 acima do correto em cada casa.
+
+Também encontrei outro registro recente:
 
 ```text
-AMUNRA    saldo_atual = US$ 400
-MY EMPIRE saldo_atual = US$ 400
+aposta_id: fda04e39-3e44-460d-beff-71d8b3dcc64b
+forma_registro: SIMPLES
+estrategia: SUREBET
+sem pernas normalizadas
+STAKE: -100
+PAYOUT: +200
 ```
 
-A causa encontrada não é duplicação do payout da operação atual. O problema é mais grave: a criação dessa surebet inseriu `apostas_unificada` e `apostas_pernas` diretamente pela UI, mas não gerou eventos `STAKE` no `financial_events`. Depois, na liquidação, a RPC `liquidar_perna_surebet_v1` gerou corretamente os eventos `PAYOUT` de US$ 200 por perna. Como não houve débito anterior de US$ 100 por perna, cada casa ficou inflada em US$ 100.
+Esse segundo caso não infla saldo, mas está semanticamente errado: uma Surebet não deve nascer como SIMPLES.
 
-Evidência da operação atual:
+Plano de correção
+
+1. Remover o caminho perigoso na aba Surebet
+   - O `ApostaDialog` hoje força `forma_registro = SIMPLES` e ainda permite `activeTab="surebet"`.
+   - Isso cria a combinação perigosa `SIMPLES + SUREBET`.
+   - Vou bloquear esse caminho: dentro da aba Surebet, o botão/fluxo de criação e edição de operações com múltiplas entradas deve usar somente `SurebetDialog` e o motor atômico.
+
+2. Migrar multi-entry do formulário simples para motor atômico quando houver mais de uma casa
+   - Se o formulário simples tiver `additionalEntries.length > 0`, ele não poderá mais fazer:
+     - insert direto em `apostas_unificada`
+     - insert direto em `apostas_pernas`
+     - liquidação posterior via `liquidarAposta` do pai
+   - Ele deverá montar as pernas reais e chamar uma rotina canônica que usa `criar_surebet_atomica` quando a estratégia for Surebet ou quando estiver no contexto da aba Surebet.
+   - Resultado esperado: cada perna gera seu próprio `STAKE` no ledger antes de qualquer payout.
+
+3. Criar uma blindagem no serviço central de apostas
+   - Reforçar `ApostaService.criarAposta` para tratar como arbitragem qualquer entrada que tenha:
+     - `estrategia = SUREBET`, ou
+     - `forma_registro = ARBITRAGEM`, ou
+     - 2+ pernas em contexto surebet.
+   - Isso impede que uma Surebet disfarçada de simples continue passando pelo caminho de aposta simples.
+
+4. Adicionar guard no banco contra liquidação sem stake
+   - Atualizar a RPC `liquidar_perna_surebet_v1` para verificar, antes de criar `PAYOUT`/`VOID_REFUND`, se existe `STAKE` ativo daquela aposta, casa e perna/valor.
+   - Se não existir stake correspondente, a liquidação deve falhar com erro explícito, em vez de inflar saldo.
+   - Essa proteção é indispensável porque UI sozinha não basta.
+
+5. Adicionar trigger/validação contra `SIMPLES + SUREBET + múltiplas pernas`
+   - Criar uma barreira no banco para impedir que uma aposta `estrategia='SUREBET'` seja mantida como `forma_registro='SIMPLES'` quando houver pernas normalizadas.
+   - Para novas operações, Surebet multi-perna deve ser `ARBITRAGEM`.
+   - Não vou alterar saldos históricos diretamente.
+
+6. Corrigir o fluxo de edição
+   - A edição de uma operação que já tem pernas não deve abrir `ApostaDialog` como se fosse aposta simples.
+   - Deve abrir o fluxo de Surebet ou bloquear edição direta quando a operação estiver liquidada, usando os caminhos canônicos de reliquidação/exclusão.
+
+7. Auditoria de dados afetados
+   - Gerar uma consulta/lista de inconsistências no padrão:
 
 ```text
-aposta_id: 6413da1b-8620-486a-b1e2-731726298f1a
-pernas: 2
-stake total pelas pernas: US$ 200
-STAKE events: 0
-PAYOUT events: 2
-PAYOUT total: US$ 400
+operações com apostas_pernas > 0
++ STAKE ativo = 0
++ PAYOUT/VOID_REFUND ativo > 0
 ```
 
-Fluxo defeituoso encontrado:
+   - Separar em categorias:
+     - inflou saldo: payout sem stake
+     - risco futuro: múltiplas pernas sem stake ainda pendente
+     - erro semântico: SUREBET gravada como SIMPLES, mas com ledger equilibrado
+   - Seguindo a política anti-retrofix, não farei ajuste em massa automático. Para casos já contaminados, a correção segura será por ajuste explícito controlado (`AJUSTE_SALDO`) após aprovação.
+
+8. Testes e simulações obrigatórias
+   - Criar Surebet com 2 pernas via SurebetDialog: deve gerar 2 `STAKE` imediatamente.
+   - Liquidar as duas pernas GREEN: deve gerar 2 `PAYOUT`; saldo líquido por casa = +100 quando stake 100 odd 2.00.
+   - Criar no formulário simples com entrada adicional dentro/fora da aba Surebet: não pode gerar operação sem stake por perna.
+   - Tentar liquidar perna sem stake: deve falhar explicitamente.
+   - Excluir operação pendente: deve reverter stakes.
+   - Excluir operação liquidada: deve reverter stake + payout sem duplicar.
+   - Validar atualização da Visão Geral e saldos sem F5.
+
+Arquivos previstos
 
 ```text
-SurebetDialog / SurebetDialogTable
-  -> insert direto em apostas_unificada
-  -> insert direto em apostas_pernas
-  -> NÃO cria financial_events STAKE
-  -> liquidação cria PAYOUT
-  -> saldo fica inflado
+src/components/projeto-detalhe/ApostaDialog.tsx
+src/components/projeto-detalhe/ProjetoSurebetTab.tsx
+src/services/aposta/ApostaService.ts
+src/services/aposta/invariants.ts
+supabase/migrations/... blindagem da RPC liquidar_perna_surebet_v1 e validações
+src/utils/__tests__/... simulações multi-entry/surebet ledger
 ```
 
-Fluxo correto que deve ser usado:
+Resultado esperado
+
+Depois da correção, o fluxo perigoso deixa de existir:
 
 ```text
-criar_surebet_atomica
-  -> cria pai
-  -> cria pernas
-  -> cria STAKE no financial_events para cada perna
-  -> trigger atualiza saldo_atual
+ANTES
+ApostaDialog na aba Surebet
+-> forma_registro SIMPLES
+-> cria pai direto
+-> cria pernas direto
+-> não cria STAKE por perna
+-> liquidação cria PAYOUT
+-> saldo inflado
+
+DEPOIS
+Surebet/multi-perna
+-> criar_surebet_atomica
+-> cria pai ARBITRAGEM
+-> cria pernas
+-> cria STAKE por perna
+-> liquidação só cria PAYOUT se STAKE existir
+-> saldo líquido correto
 ```
 
-Plano de correção segura:
-
-1. Trocar a criação de surebet para o motor atômico
-   - Refatorar `SurebetDialog.tsx` e `SurebetDialogTable.tsx` para não fazerem mais insert direto em `apostas_unificada` + `apostas_pernas`.
-   - Usar a RPC canônica `criar_surebet_atomica`, que já cria os eventos `STAKE` e mantém saldo, pernas e operação em uma única transação.
-
-2. Blindar contra bypass futuro
-   - Adicionar uma barreira no código para centralizar criação de surebet em um helper/serviço único.
-   - Remover ou isolar caminhos de inserção direta para `forma_registro = ARBITRAGEM`.
-   - Garantir que qualquer criação de operação com múltiplas pernas passe pelo ledger.
-
-3. Corrigir a incompatibilidade de sinais se necessário
-   - A RPC atual de criação grava `STAKE` com valor negativo.
-   - O trigger atual usa o valor diretamente, então isso está consistente.
-   - Confirmar no ajuste final que não existe nenhuma função antiga ainda gravando `STAKE` com sinal positivo.
-
-4. Simulações obrigatórias antes de liberar
-   - Surebet 2 pernas, mesma moeda: saldo deve reduzir na criação e creditar payout na liquidação.
-   - Surebet 2 pernas com uma vencedora: apenas a casa vencedora recebe payout; a outra mantém débito da stake.
-   - Surebet com sub-entries/mesma seleção em duas casas: cada casa precisa gerar seu próprio `STAKE`.
-   - Surebet multimoeda: stake e payout em moeda nativa, consolidação separada.
-   - Deleção de surebet pendente: deve reverter stakes.
-   - Deleção de surebet liquidada: deve reverter stake + payout líquido sem duplicar.
-   - Reliquidação: trocar GREEN/RED/VOID não pode deixar payout antigo ativo.
-
-5. Auditoria sem retrofix automático
-   - Criar uma consulta de auditoria para listar operações com pernas e sem eventos `STAKE`, semelhante ao caso atual.
-   - Não farei correção em massa diretamente no ledger, porque o projeto tem política anti-retrofix para dados financeiros.
-   - Para casos já afetados, o caminho seguro é apresentar a lista de inconsistências e, se aprovado, aplicar ajustes explícitos via `AJUSTE_SALDO`/procedimento controlado, nunca update direto em `saldo_atual` nem deleção de ledger.
-
-6. Atualização de caches/UI após criação, liquidação, edição e exclusão
-   - Manter a invalidação canônica já adicionada para Visão Geral.
-   - Garantir que criação e edição de surebet também invalidem `bookmaker-saldos`, `projeto-dashboard-apostas`, calendário e KPIs canônicos.
-
-Arquivos previstos:
-
-```text
-src/components/projeto-detalhe/SurebetDialog.tsx
-src/components/projeto-detalhe/SurebetDialogTable.tsx
-src/services/aposta/ApostaService.ts ou novo helper canônico de surebet
-src/utils/__tests__/... testes/simulações de ledger de surebet
-supabase/migrations/... se for necessário blindar no banco
-```
-
-Resultado esperado:
-
-Depois da correção, uma surebet com US$ 100 em AMUNRA e US$ 100 em MY EMPIRE, ambas @2.00 e GREEN, ficará com apenas US$ 100 de lucro líquido por casa, porque o sistema passará a registrar:
-
-```text
-criação:   STAKE  -100 em cada casa
-liquidação: PAYOUT +200 em cada casa
-net:       +100 em cada casa
-```
-
-Isso elimina a inflação atual de saldo e impede que novas operações de surebet nasçam sem débito de stake.
+A correção não será apenas visual; será feita em três camadas: frontend, serviço central e banco de dados.
