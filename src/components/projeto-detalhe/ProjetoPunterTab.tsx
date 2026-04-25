@@ -474,15 +474,9 @@ export function ProjetoPunterTab({
         }
       }
 
-      // 3. Atualizar lista local
-      setApostas(prev => prev.map(a => 
-        a.id === apostaId 
-          ? { ...a, resultado, lucro_prejuizo: lucro, status: "LIQUIDADA" }
-          : a
-      ));
-
-      // 4. Invalidar cache de saldos
+      // 3. Recarregar do banco: retorno/lucro canônicos são calculados no motor financeiro.
       invalidateSaldos(projetoId);
+      await fetchApostas();
 
       const resultLabel = {
         GREEN: "Green",
