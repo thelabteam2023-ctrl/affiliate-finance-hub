@@ -1593,7 +1593,13 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                           {aposta.esporte || "—"}{aposta.mercado ? ` · ${aposta.mercado}` : ""}{aposta.selecao ? ` · ${aposta.selecao}` : ""}
                         </p>
                       </div>
-                      <Badge variant="outline" className="shrink-0 text-[10px]">{getAbaAposta(aposta.estrategia)}</Badge>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <Badge variant="outline" className="text-[10px]">{getAbaAposta(aposta.estrategia)}</Badge>
+                        <Button variant="outline" size="sm" className="h-8 gap-1" onClick={() => openEditarApostaUso(aposta)}>
+                          <Pencil className="h-3.5 w-3.5" />
+                          Editar
+                        </Button>
+                      </div>
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                       <span>{format(new Date(aposta.data_aposta), "dd/MM/yyyy HH:mm", { locale: ptBR })}</span>
@@ -1602,6 +1608,15 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                       {aposta.odd != null && <span>@{Number(aposta.odd).toFixed(2)}</span>}
                       {aposta.stake != null && <span>Stake: {formatCurrency(Number(aposta.stake), aposta.moeda || vinculoApostasModal?.moeda || "BRL")}</span>}
                     </div>
+                    {aposta.casas?.length ? (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {aposta.casas.map((casa, idx) => (
+                          <Badge key={`${aposta.id}-${casa.nome}-${idx}`} variant="secondary" className="text-[10px] font-normal">
+                            {casa.nome}: {casa.stake != null ? formatCurrency(Number(casa.stake), casa.moeda || vinculoApostasModal?.moeda || "BRL") : "—"}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
                 ))}
               </div>
