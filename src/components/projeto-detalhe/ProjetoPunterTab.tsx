@@ -69,7 +69,7 @@ import type { SurebetQuickResult } from "@/components/apostas/SurebetRowActionsM
 import { UnifiedStatisticsCard } from "./UnifiedStatisticsCard";
 import { ChartEmptyState } from "@/components/ui/chart-empty-state";
 
-import { cn, getFirstLastName } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { buildBookmakerNomeMap, collectMissingBookmakerIds, mergeBookmakerNomeMaps } from "@/lib/bookmaker-display";
 import { useUnlinkedBookmakerNames } from "@/hooks/useUnlinkedBookmakerNames";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
@@ -84,6 +84,7 @@ import { ExportMenu, transformApostaToExport } from "./ExportMenu";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
 // FinancialSummaryCompact removed — now integrated into Lucro KPI popover
 import { useCalendarApostasRpc, transformRpcDailyForCharts } from "@/hooks/useCalendarApostasRpc";
+import { aggregateBookmakerUsage } from "@/utils/bookmakerUsageAnalytics";
 
 interface ProjetoPunterTabProps {
   projetoId: string;
