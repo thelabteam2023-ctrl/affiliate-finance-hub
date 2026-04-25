@@ -3865,14 +3865,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                             )}
                           </div>
                         </td>
-                        {/* Linha */}
-                        <td className="px-2 py-3">
-                          <Input
-                            value={entry.selecao_livre}
-                            onChange={(e) => setAdditionalEntries(prev => prev.map(en => en.id === entry.id ? { ...en, selecao_livre: e.target.value } : en))}
-                            placeholder="Ex: Over 2.5, Casa"
-                            className="h-8 text-xs text-center px-2 border-dashed"
-                          />
+                        {/* Linha compartilhada com a entrada principal */}
+                        <td className="px-2 py-3 text-center">
+                          <div className="h-8 flex items-center justify-center rounded-md bg-muted/20 px-2 text-xs text-muted-foreground border border-dashed border-border/40 truncate">
+                            {effectiveSelecao || selecao || "—"}
+                          </div>
                         </td>
                         {/* Retorno */}
                         <td className="px-2 py-3 text-center">
