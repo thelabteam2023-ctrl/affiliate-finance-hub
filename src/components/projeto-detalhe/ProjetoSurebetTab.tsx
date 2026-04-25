@@ -416,7 +416,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
         
         const pernasSurebetCard = groupPernasBySelecao(pernasOrdenadas);
         const hasValidPernas = pernasSurebetCard.length > 0;
-        const isSimples = arb.forma_registro === "SIMPLES" && !hasValidPernas;
+        const isSimples = arb.forma_registro === "SIMPLES";
         return {
           id: arb.id, workspace_id: arb.workspace_id, created_at: arb.created_at, data_operacao: arb.data_aposta, evento: arb.evento || "",
           esporte: arb.esporte || "", modelo: arb.modelo || "1-2", mercado: arb.mercado,
@@ -427,7 +427,9 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           // quando a moeda de consolidação corresponde ao projeto.
           lucro_real: arb.lucro_prejuizo, roi_real: arb.roi_real,
           status: arb.status, resultado: arb.resultado, observacoes: arb.observacoes,
-          pernas: pernasSurebetCard, forma_registro: arb.forma_registro,
+          pernas: isSimples ? [] : pernasSurebetCard,
+          raw_pernas: pernasRaw,
+          forma_registro: arb.forma_registro,
           estrategia: arb.estrategia, contexto_operacional: arb.contexto_operacional,
           stake: arb.stake, stake_bonus: arb.stake_bonus, bonus_id: arb.bonus_id,
           odd: arb.odd, selecao: arb.selecao, bookmaker_id: arb.bookmaker_id,
@@ -441,6 +443,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           valor_brl_referencia: arb.valor_brl_referencia,
           lucro_prejuizo_brl_referencia: arb.lucro_prejuizo_brl_referencia,
           lucro_prejuizo: arb.lucro_prejuizo,
+          fonte_saldo: arb.fonte_saldo || null,
+          stake_freebet: arb.stake_freebet ?? null,
         };
       });
     },
