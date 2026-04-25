@@ -97,7 +97,7 @@ export async function criarAposta(
         p_esporte: input.esporte || null,
         p_mercado: input.mercado || null,
         p_modelo: input.modelo || null,
-        p_estrategia: input.estrategia,
+        p_estrategia: 'SUREBET',
         p_contexto_operacional: input.contexto_operacional || 'NORMAL',
         p_data_aposta: input.data_aposta,
         p_pernas: (input.pernas || []) as any,
