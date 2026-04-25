@@ -836,6 +836,7 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
                             logo: bonus.bookmaker_logo_url,
                             bookmaker_catalogo_id: bonus.bookmaker_catalogo_id,
                             moeda: bonus.currency,
+                            saldo_operavel: saldosData?.find((saldo) => saldo.id === bonus.bookmaker_id)?.saldo_operavel,
                           });
                           setPendingBonusDialogOpen(true);
                         }}
