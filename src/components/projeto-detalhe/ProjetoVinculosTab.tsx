@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useProjectCurrencyFormat } from "@/hooks/useProjectCurrencyFormat";
@@ -107,6 +107,9 @@ import { usePasswordDecryption } from "@/hooks/usePasswordDecryption";
 import { LazyPasswordField } from "@/components/parceiros/LazyPasswordField";
 import { BrokerReceberContasDialog } from "@/components/broker/BrokerReceberContasDialog";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { ESTRATEGIA_LABELS, type ApostaEstrategia } from "@/lib/apostaConstants";
 
 type VinculoSortMode = "alpha" | "newest" | "oldest" | "apostas_desc" | "apostas_asc" | "saldo_desc" | "saldo_asc" | "em_aposta_desc" | "em_aposta_asc" | "disponivel_desc" | "disponivel_asc";
 
@@ -115,6 +118,23 @@ interface ProjetoVinculosTabProps {
   tipoProjeto?: string;
   investidorId?: string | null;
   isBroker?: boolean;
+}
+
+interface ApostaUsoBookmaker {
+  id: string;
+  pernaId?: string;
+  data_aposta: string;
+  evento: string | null;
+  esporte: string | null;
+  mercado: string | null;
+  estrategia: string | null;
+  forma_registro: string | null;
+  status: string | null;
+  resultado: string | null;
+  odd: number | null;
+  stake: number | null;
+  moeda: string | null;
+  selecao: string | null;
 }
 
 // Interface Vinculo importada de useProjetoVinculos
@@ -190,6 +210,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
   const [ajusteSaldoDialogOpen, setAjusteSaldoDialogOpen] = useState(false);
   const [vinculoParaAjuste, setVinculoParaAjuste] = useState<Vinculo | null>(null);
   const [vinculoDetalhesMobile, setVinculoDetalhesMobile] = useState<Vinculo | null>(null);
+  const [vinculoApostasModal, setVinculoApostasModal] = useState<Vinculo | null>(null);
   
   const sortStorageKey = `vinculos-sort-mode:${projetoId}`;
   const [sortMode, setSortModeState] = useState<VinculoSortMode>(() => {
@@ -214,6 +235,67 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
   }, [sortStorageKey]);
   const [receberContasDialogOpen, setReceberContasDialogOpen] = useState(false);
   const isBroker = isBrokerProp === true;
+
+  const apostasUsoQuery = useQuery({
+    queryKey: ["vinculo-apostas-uso", projetoId, vinculoApostasModal?.id],
+    enabled: !!projetoId && !!vinculoApostasModal?.id,
+    queryFn: async (): Promise<ApostaUsoBookmaker[]> => {
+      const bookmakerId = vinculoApostasModal!.id;
+
+      const [{ data: simples, error: simplesError }, { data: pernas, error: pernasError }] = await Promise.all([
+        supabase
+          .from("apostas_unificada")
+          .select("id, data_aposta, evento, esporte, mercado, estrategia, forma_registro, status, resultado, odd, stake, moeda_operacao, selecao")
+          .eq("projeto_id", projetoId)
+          .eq("bookmaker_id", bookmakerId)
+          .is("cancelled_at", null),
+        supabase
+          .from("apostas_pernas")
+          .select("id, selecao, selecao_livre, odd, stake, moeda, aposta:apostas_unificada!inner(id, projeto_id, data_aposta, evento, esporte, mercado, estrategia, forma_registro, status, resultado, cancelled_at)")
+          .eq("bookmaker_id", bookmakerId)
+          .eq("aposta.projeto_id", projetoId)
+          .is("aposta.cancelled_at", null),
+      ]);
+
+      if (simplesError) throw simplesError;
+      if (pernasError) throw pernasError;
+
+      const rows: ApostaUsoBookmaker[] = [];
+      (simples || []).forEach((a: any) => rows.push({
+        id: a.id,
+        data_aposta: a.data_aposta,
+        evento: a.evento,
+        esporte: a.esporte,
+        mercado: a.mercado,
+        estrategia: a.estrategia,
+        forma_registro: a.forma_registro,
+        status: a.status,
+        resultado: a.resultado,
+        odd: a.odd,
+        stake: a.stake,
+        moeda: a.moeda_operacao,
+        selecao: a.selecao,
+      }));
+      (pernas || []).forEach((p: any) => rows.push({
+        id: p.aposta.id,
+        pernaId: p.id,
+        data_aposta: p.aposta.data_aposta,
+        evento: p.aposta.evento,
+        esporte: p.aposta.esporte,
+        mercado: p.aposta.mercado,
+        estrategia: p.aposta.estrategia,
+        forma_registro: p.aposta.forma_registro,
+        status: p.aposta.status,
+        resultado: p.aposta.resultado,
+        odd: p.odd,
+        stake: p.stake,
+        moeda: p.moeda,
+        selecao: p.selecao_livre || p.selecao,
+      }));
+
+      return rows.sort((a, b) => new Date(b.data_aposta).getTime() - new Date(a.data_aposta).getTime());
+    },
+  });
 
   const { bonuses, fetchBonuses: refetchBonuses, getSummary, getActiveBonusByBookmaker, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
 
@@ -407,6 +489,23 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
           </Badge>
         );
     }
+  };
+
+  const getAbaAposta = (estrategia: string | null) => {
+    const labels: Record<string, string> = {
+      PUNTER: "Punter",
+      SUREBET: "Surebet",
+      VALUEBET: "ValueBet",
+      EXTRACAO_FREEBET: "Freebets",
+      EXTRACAO_BONUS: "Bônus",
+      DUPLO_GREEN: "Duplo Green",
+    };
+    return labels[estrategia || ""] || ESTRATEGIA_LABELS[estrategia as ApostaEstrategia] || "Todas as Apostas";
+  };
+
+  const openApostasModal = (vinculo: Vinculo) => {
+    if (vinculo.totalApostas <= 0) return;
+    setVinculoApostasModal(vinculo);
   };
 
   const filteredVinculos = vinculos.filter((v) => {
@@ -920,10 +1019,15 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
 
                   <div className="flex items-center justify-between pt-2 border-t">
                     <span className="text-xs text-muted-foreground">Apostas</span>
-                    <span className="text-sm font-medium flex items-center gap-1">
+                    <button
+                      type="button"
+                      disabled={vinculo.totalApostas <= 0}
+                      onClick={() => openApostasModal(vinculo)}
+                      className="text-sm font-medium flex items-center gap-1 rounded px-1 transition-colors enabled:hover:text-primary disabled:cursor-default"
+                    >
                       <Target className="h-3 w-3 text-primary" />
                       {vinculo.totalApostas}
-                    </span>
+                    </button>
                   </div>
                   
                   <div className="flex flex-col gap-2 mt-2">
@@ -1142,10 +1246,15 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                       {sortMode === "apostas_desc" && <ArrowDown className="h-3 w-3 text-primary" />}
                       {sortMode === "apostas_asc" && <ArrowUp className="h-3 w-3 text-primary" />}
                     </p>
-                    <p className="font-medium tabular-nums flex items-center justify-center gap-1">
+                    <button
+                      type="button"
+                      disabled={vinculo.totalApostas <= 0}
+                      onClick={() => openApostasModal(vinculo)}
+                      className="font-medium tabular-nums flex items-center justify-center gap-1 rounded px-1 mx-auto transition-colors enabled:hover:text-primary disabled:cursor-default"
+                    >
                       <Target className="h-3 w-3 text-primary" />
                       {vinculo.totalApostas}
-                    </p>
+                    </button>
                   </div>
 
                   {/* ===== SALDOS UNIFICADOS (LIST) ===== */}
@@ -1346,7 +1455,14 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                 </div>
                 <div className="rounded-lg border border-border/50 bg-muted/20 p-3">
                   <p className="text-xs text-muted-foreground">Apostas</p>
-                  <p className="font-medium flex items-center gap-1"><Target className="h-3.5 w-3.5 text-primary" />{vinculoDetalhesMobile.totalApostas}</p>
+                  <button
+                    type="button"
+                    disabled={vinculoDetalhesMobile.totalApostas <= 0}
+                    onClick={() => openApostasModal(vinculoDetalhesMobile)}
+                    className="font-medium flex items-center gap-1 rounded transition-colors enabled:hover:text-primary disabled:cursor-default"
+                  >
+                    <Target className="h-3.5 w-3.5 text-primary" />{vinculoDetalhesMobile.totalApostas}
+                  </button>
                 </div>
               </div>
 
@@ -1397,6 +1513,52 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!vinculoApostasModal} onOpenChange={(open) => !open && setVinculoApostasModal(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Apostas da casa</DialogTitle>
+            <DialogDescription>
+              {vinculoApostasModal?.nome} · {vinculoApostasModal?.parceiro_nome || "Sem parceiro"}
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh] pr-4">
+            {apostasUsoQuery.isLoading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 4 }).map((_, idx) => <Skeleton key={idx} className="h-16 w-full" />)}
+              </div>
+            ) : apostasUsoQuery.data?.length ? (
+              <div className="space-y-2">
+                {apostasUsoQuery.data.map((aposta) => (
+                  <div key={`${aposta.id}-${aposta.pernaId || "main"}`} className="rounded-lg border border-border/50 bg-muted/20 p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-medium truncate uppercase">{aposta.evento || "Aposta"}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {aposta.esporte || "—"}{aposta.mercado ? ` · ${aposta.mercado}` : ""}{aposta.selecao ? ` · ${aposta.selecao}` : ""}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="shrink-0 text-[10px]">{getAbaAposta(aposta.estrategia)}</Badge>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                      <span>{format(new Date(aposta.data_aposta), "dd/MM/yyyy HH:mm", { locale: ptBR })}</span>
+                      <span>Status: {aposta.status || "—"}</span>
+                      <span>Resultado: {aposta.resultado || "Pendente"}</span>
+                      {aposta.odd != null && <span>@{Number(aposta.odd).toFixed(2)}</span>}
+                      {aposta.stake != null && <span>Stake: {formatCurrency(Number(aposta.stake), aposta.moeda || vinculoApostasModal?.moeda || "BRL")}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-8 text-center text-muted-foreground">
+                <Target className="mx-auto mb-2 h-8 w-8 opacity-50" />
+                Nenhuma aposta encontrada para esta casa.
+              </div>
+            )}
+          </ScrollArea>
         </DialogContent>
       </Dialog>
 
