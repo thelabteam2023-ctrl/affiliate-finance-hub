@@ -388,7 +388,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                 resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada,
                 stake_brl_referencia, lucro_prejuizo_brl_referencia, fonte_saldo,
                 bookmaker:bookmakers (
-                  nome, parceiro_id,
+                  nome, parceiro_id, instance_identifier,
                   parceiro:parceiros (nome),
                   bookmakers_catalogo (logo_url)
                 )
