@@ -1121,7 +1121,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   // NOVO: fonte_saldo também é sincronizado baseado na aba/estratégia
   useEffect(() => {
     if (!aposta && open) {
-      const lockedEstrategia = isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : null;
+      const defaultSimpleEstrategia = (defaultEstrategia || 'PUNTER') as ApostaEstrategia;
       const lockedContexto = isAbaContextoFixo(activeTab) ? getContextoFromTab(activeTab) : null;
       
       // Inferir fonte_saldo baseado na aba ativa ou estratégia
@@ -1129,7 +1129,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         if (activeTab === 'freebets') return 'FREEBET' as FonteSaldo;
         if (activeTab === 'bonus' || activeTab === 'bonus-operacoes') return 'BONUS' as FonteSaldo;
         // Para outras abas, inferir da estratégia
-        const estrategiaAtual = lockedEstrategia || registroValues.estrategia;
+        const estrategiaAtual = registroValues.estrategia || defaultSimpleEstrategia;
         if (estrategiaAtual === 'EXTRACAO_FREEBET') return 'FREEBET' as FonteSaldo;
         if (estrategiaAtual === 'EXTRACAO_BONUS') return 'BONUS' as FonteSaldo;
         return 'REAL' as FonteSaldo;
@@ -1138,9 +1138,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       setRegistroValues(prev => {
         const updates: Partial<typeof prev> = {};
         
-        // Sincronizar estratégia se locked
-        if (lockedEstrategia && prev.estrategia !== lockedEstrategia) {
-          updates.estrategia = lockedEstrategia;
+        // Aposta Simples não herda estratégia da aba: usa o default explícito da janela.
+        if (!prev.estrategia && defaultSimpleEstrategia) {
+          updates.estrategia = defaultSimpleEstrategia;
         }
         
         // Sincronizar contexto se locked (abas bonus/freebets)
@@ -1162,7 +1162,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         return prev;
       });
     }
-  }, [open, aposta, activeTab, registroValues.estrategia]);
+  }, [open, aposta, activeTab, defaultEstrategia, registroValues.estrategia]);
 
   // Auto-select favorite source when opening new ValueBet
   useEffect(() => {
