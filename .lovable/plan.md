@@ -1,66 +1,27 @@
-Plano para melhorar a visualização mobile da aba Vínculos
+Plano para ajustar o formulário de Aposta Simples com múltiplas entradas:
 
-Objetivo
-- Manter a linha da bookmaker enxuta no mobile, mas permitir acesso completo às informações e botões através de um modal de detalhes.
-- Preservar a visualização atual em telas maiores, onde já há espaço para exibir tudo na própria linha.
+1. Formulário: remover a coluna/campo “Linha” das entradas adicionais
+- No modo “Bookmaker” da Aposta Simples, quando o usuário clicar em “+ Entrada”, as novas entradas não terão mais um campo separado de Linha.
+- A Linha continuará sendo definida apenas uma vez, na entrada principal.
+- Todas as entradas adicionais usarão automaticamente a mesma Linha/seleção da entrada principal.
+- O cabeçalho/tabela será reajustado para ficar mais limpo: Bookmaker, Odd, Stake, Retorno e ação de remover.
 
-Mudanças propostas
+2. Persistência correta nas pernas
+- Ao salvar/criar uma aposta simples multi-entry, cada registro em `apostas_pernas` receberá a mesma `selecao` da entrada principal.
+- `selecao_livre` das entradas adicionais deixará de ser preenchido individualmente; será `null` ou herdará visualmente a seleção principal, evitando divergência entre casas.
+- Ao editar/duplicar apostas antigas que tenham `selecao_livre` diferente nas subentradas, a tela passará a tratá-las como uma única linha compartilhada pela aposta.
 
-1. Criar ação “Detalhes” na linha mobile
-- Na lista de vínculos, em telas pequenas, a linha ficará mais limpa.
-- Adicionar um botão/área de toque “Ver detalhes” ou ícone de expansão na linha da bookmaker.
-- Ao tocar, abrir um modal com todas as informações daquela bookmaker.
+3. Card de operações
+- No `SurebetCard`, usado para renderizar aposta simples multi-entry, as subentradas deixarão de exibir uma linha individual entre parênteses.
+- O card mostrará a Linha/Mercado uma única vez no agrupamento da perna, e as casas dentro do agrupamento mostrarão apenas bookmaker, odd, stake, moeda/freebet e resultado quando aplicável.
+- Isso mantém o comportamento correto: várias casas compondo a mesma perna, com o mesmo mercado e a mesma linha.
 
-2. Modal completo da bookmaker
-O modal exibirá, de forma organizada:
-- Logo, nome da casa, login/usuário e parceiro/investidor.
-- Status da conta: Ativo, Limitada ou outro status existente.
-- Moeda da conta e informação de cotação quando for moeda estrangeira.
-- Total de apostas.
-- Saldos completos:
-  - Saldo Operável
-  - Em Aposta
-  - Disponível
-  - Saldo Real
-  - Freebet
-  - Bônus
-  - Em Saque, quando existir
-  - Conversão aproximada para a moeda de consolidação do projeto, quando aplicável.
-- Credenciais de acesso, mantendo o comportamento atual de revelar/copiar senha somente pelo fluxo já existente.
-- Alerta de conciliação pendente, quando existir.
+4. Validação visual e regressão
+- Conferir que apostas simples single-entry continuam iguais.
+- Conferir que surebets/múltiplas reais continuam exibindo pernas distintas normalmente.
+- Conferir que liquidação rápida e resultado global de multi-entry simples continuam funcionando, pois a alteração é de modelagem visual/persistência da seleção, não de cálculo financeiro.
 
-3. Botões dentro do modal
-Adicionar no modal os mesmos botões importantes que hoje ficam comprimidos na linha:
-- Bônus
-- Depósito
-- Saque
-- Alterar status
-- Ajustar saldo
-- Liberar/conciliar vínculo
-
-As mesmas regras atuais serão mantidas:
-- Depósito/Saque não aparecem quando o vínculo é de investidor, como já ocorre hoje.
-- Alterar status continuará usando o mesmo fluxo atual.
-- Ajuste, bônus e conciliação continuarão abrindo os diálogos existentes.
-
-4. Ajustar responsividade da lista
-- Em mobile, ocultar ou reduzir colunas que hoje causam perda de informação visual.
-- Mostrar apenas o resumo essencial na linha: logo, nome, parceiro/login, status/moeda e talvez saldo principal compacto.
-- O modal passa a ser a “ficha completa” da conta.
-- Em desktop/tablet maior, preservar a experiência atual com a linha completa.
-
-5. Fechamento e integração com os diálogos existentes
-- Ao clicar em uma ação dentro do modal que abre outro diálogo, fechar ou manter o modal de forma controlada para evitar sobreposição confusa.
-- Reutilizar os estados e handlers existentes em `ProjetoVinculosTab.tsx`, sem alterar regras financeiras nem consultas.
-
-Detalhes técnicos
-- Arquivo principal: `src/components/projeto-detalhe/ProjetoVinculosTab.tsx`.
-- Reutilizar o componente `Dialog` já existente do projeto.
-- Reutilizar `SaldoOperavelDisplay`, `LazyPasswordField`, `getStatusBadge`, `handleOpenBonusDrawer`, `handleChangeStatus`, `setTransacaoContext`, `setAjusteSaldoDialogOpen` e `setConciliacaoDialogOpen`.
-- Não haverá mudança de banco de dados, RPCs, saldos ou fórmulas financeiras.
-- A alteração será apenas de interface/responsividade.
-
-Resultado esperado
-- No mobile, a aba Vínculos ficará mais limpa e fácil de navegar.
-- O usuário conseguirá acessar todas as informações e ações da bookmaker sem depender de uma linha horizontal apertada.
-- Em telas grandes, a experiência atual permanece estável.
+Arquivos previstos:
+- `src/components/projeto-detalhe/ApostaDialog.tsx`
+- `src/components/projeto-detalhe/SurebetCard.tsx`
+- Possível ajuste auxiliar em `src/utils/groupPernasBySelecao.ts`, se necessário para garantir agrupamento consistente por linha principal.
