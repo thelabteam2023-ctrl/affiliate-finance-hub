@@ -80,7 +80,13 @@ export function groupPernasBySelecao(
         : (main.lucro_prejuizo ?? null),
       bookmaker_nome: resolve(main),
       bookmaker_id: main.bookmaker_id,
+      parceiro_nome: main.parceiro_nome ?? main.bookmaker?.parceiro?.nome ?? null,
+      instance_identifier: main.instance_identifier ?? null,
+      logo_url: main.logo_url ?? null,
       moeda: main.moeda || 'BRL',
+      stake_brl_referencia: main.stake_brl_referencia ?? null,
+      lucro_prejuizo_brl_referencia: main.lucro_prejuizo_brl_referencia ?? null,
+      cotacao_snapshot: main.cotacao_snapshot ?? null,
       fonte_saldo: main.fonte_saldo || undefined,
     };
 
