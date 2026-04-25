@@ -507,6 +507,36 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
     }));
   }, [vinculos]);
 
+  const openTransacao = (vinculo: Vinculo, tipo: "DEPOSITO" | "SAQUE") => {
+    setTransacaoContext({
+      bookmarkerId: vinculo.id,
+      bookmakerNome: vinculo.nome,
+      moeda: vinculo.moeda,
+      saldoAtual: vinculo.saldo_real,
+      parceiroId: vinculo.parceiro_id,
+      tipo,
+    });
+    setVinculoDetalhesMobile(null);
+    setTransacaoDialogOpen(true);
+  };
+
+  const openAjusteSaldo = (vinculo: Vinculo) => {
+    setVinculoParaAjuste(vinculo);
+    setVinculoDetalhesMobile(null);
+    setAjusteSaldoDialogOpen(true);
+  };
+
+  const openConciliacao = (vinculo: Vinculo) => {
+    setVinculoParaConciliar(vinculo);
+    setVinculoDetalhesMobile(null);
+    setConciliacaoDialogOpen(true);
+  };
+
+  const openBonusDrawer = (vinculo: Vinculo) => {
+    setVinculoDetalhesMobile(null);
+    handleOpenBonusDrawer({ id: vinculo.id, nome: vinculo.nome, login: vinculo.login_username, password: vinculo.login_password_encrypted, logo: vinculo.logo_url, bookmakerCatalogoId: vinculo.bookmaker_catalogo_id });
+  };
+
   if (loading) {
     return (
       <div className="space-y-4">
