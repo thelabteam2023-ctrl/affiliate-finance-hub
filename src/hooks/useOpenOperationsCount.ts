@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 interface UseOpenOperationsCountOptions {
   projetoId: string;
   estrategia?: string;
+  formaRegistro?: string;
   refreshTrigger?: number;
 }
 
@@ -14,6 +15,7 @@ interface UseOpenOperationsCountOptions {
 export function useOpenOperationsCount({ 
   projetoId, 
   estrategia,
+  formaRegistro,
   refreshTrigger 
 }: UseOpenOperationsCountOptions) {
   const [count, setCount] = useState(0);
@@ -37,6 +39,9 @@ export function useOpenOperationsCount({
       if (estrategia) {
         query = query.eq("estrategia", estrategia);
       }
+      if (formaRegistro) {
+        query = query.eq("forma_registro", formaRegistro);
+      }
 
       const { count: resultCount, error } = await query;
 
@@ -52,7 +57,7 @@ export function useOpenOperationsCount({
     } finally {
       setLoading(false);
     }
-  }, [projetoId, estrategia]);
+  }, [projetoId, estrategia, formaRegistro]);
 
   useEffect(() => {
     fetchCount();
@@ -63,7 +68,7 @@ export function useOpenOperationsCount({
     if (!projetoId) return;
 
     const channel = supabase
-      .channel(`open-ops-${projetoId}-${estrategia || "all"}`)
+      .channel(`open-ops-${projetoId}-${estrategia || "all"}-${formaRegistro || "all"}`)
       .on(
         "postgres_changes",
         {
@@ -81,7 +86,7 @@ export function useOpenOperationsCount({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [projetoId, estrategia, fetchCount]);
+  }, [projetoId, estrategia, formaRegistro, fetchCount]);
 
   return { count, loading, refetch: fetchCount };
 }
