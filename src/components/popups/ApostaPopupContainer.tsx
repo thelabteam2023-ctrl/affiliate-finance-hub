@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import { useApostaPopup } from '@/contexts/ApostaPopupContext';
 import { SurebetPopup } from './SurebetPopup';
 import { openApostaWindow, openApostaMultiplaWindow } from '@/lib/windowHelper';
-import { getEstrategiaFromTab } from '@/lib/apostaConstants';
 
 /**
  * Container que renderiza os popups de apostas baseado no contexto
@@ -28,23 +27,21 @@ export const ApostaPopupContainer: React.FC = () => {
     if (!activePopup || !data) return;
 
     if (activePopup === 'simples') {
-      const estrategia = getEstrategiaFromTab(data.activeTab || 'apostas');
       openApostaWindow({
         projetoId: data.projetoId,
         id: data.aposta?.id || null,
         activeTab: data.activeTab,
-        estrategia,
+        estrategia: 'PUNTER',
       });
       closePopup();
     }
 
     if (activePopup === 'multipla') {
-      const estrategia = getEstrategiaFromTab(data.activeTab || 'apostas');
       openApostaMultiplaWindow({
         projetoId: data.projetoId,
         id: data.aposta?.id || null,
         activeTab: data.activeTab,
-        estrategia,
+        estrategia: 'PUNTER',
       });
       closePopup();
     }

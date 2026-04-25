@@ -54,7 +54,7 @@ import { liquidarAposta, reverterLiquidacao } from "@/lib/financialEngine";
 import { estornarFreebetViaLedger, creditarFreebetViaLedger, consumirFreebetViaLedger } from "@/lib/freebetLedgerService";
 import { RegistroApostaValues, validateRegistroAposta, getSuggestionsForTab } from "./RegistroApostaFields";
 import { BetFormHeaderV2 } from "@/components/apostas/BetFormHeaderV2";
-import { FONTE_SALDO, getContextoFromTab, isAbaContextoFixo, type FormaRegistro, type ApostaEstrategia, type ContextoOperacional, type FonteSaldo } from "@/lib/apostaConstants";
+import { FONTE_SALDO, getContextoFromTab, isAbaContextoFixo, type ApostaEstrategia, type ContextoOperacional, type FonteSaldo } from "@/lib/apostaConstants";
 import { useFonteSaldoDefault } from "@/components/apostas/FonteSaldoSelector";
 import { toLocalTimestamp, validarDataAposta, dbTimestampToDatetimeLocal } from "@/utils/dateUtils";
 import { 
@@ -1103,8 +1103,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         // CRÍTICO: forma_registro NUNCA pode ser null - usar 'SIMPLES' como fallback robusto
         // NOVO: fonte_saldo também precisa ser restaurado (default 'REAL' para dados legados)
         setRegistroValues({
-          forma_registro: (aposta.forma_registro as FormaRegistro) || 'SIMPLES',
-          estrategia: (aposta.estrategia as ApostaEstrategia) || null,
+          forma_registro: 'SIMPLES',
+          estrategia: aposta.estrategia === 'SUREBET' ? 'PUNTER' : ((aposta.estrategia as ApostaEstrategia) || null),
           contexto_operacional: (aposta.contexto_operacional as ContextoOperacional) || null,
           fonte_saldo: (aposta.fonte_saldo as FonteSaldo) || 'REAL', // Legado: default REAL
         });
@@ -1842,6 +1842,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         : (tipoOperacaoExchange === "cobertura" ? coberturaBackBookmakerId : exchangeBookmakerId);
       const selectedBookmaker = bookmakers.find(bk => bk.id === selectedBookmakerId);
       const moedaOperacao = selectedBookmaker?.moeda || "BRL";
+      const estrategiaSimples = registroValues.estrategia === 'SUREBET'
+        ? 'PUNTER'
+        : registroValues.estrategia;
 
       const commonData = {
         user_id: userData.user.id,
@@ -1864,15 +1867,15 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         gerou_freebet: false,
         valor_freebet_gerada: null,
         // Campos explícitos do Prompt Oficial - NUNCA inferidos
-        estrategia: registroValues.estrategia,
-        forma_registro: registroValues.forma_registro,
+        estrategia: estrategiaSimples,
+        forma_registro: 'SIMPLES',
         // contexto_operacional: respeitar valor selecionado no formulário (NORMAL, BONUS, FREEBET)
         contexto_operacional: registroValues.contexto_operacional || 'NORMAL',
         // VERDADE FINANCEIRA: fonte_saldo é a fonte de verdade
         fonte_saldo: usarFreebetBookmaker ? 'FREEBET' : 'REAL',
         // @deprecated: usar_freebet derivado de fonte_saldo, mantido para compat RPC
         usar_freebet: usarFreebetBookmaker,
-        fonte_entrada: registroValues.estrategia === 'VALUEBET' ? (fonteEntrada || 'Manual') : null,
+        fonte_entrada: estrategiaSimples === 'VALUEBET' ? (fonteEntrada || 'Manual') : null,
         // CRÍTICO: Moeda da operação = moeda nativa da bookmaker
         moeda_operacao: moedaOperacao,
       };

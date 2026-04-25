@@ -1,74 +1,123 @@
-Plano de correção
+Plano de refatoração para corrigir o cenário da aba Surebet
 
-Objetivo: o formulário aberto por “Nova Aposta > Aposta Simples” deve ser sempre uma aposta simples multi-casa, independentemente da aba onde foi aberto. Adicionar “casa a mais” significa replicar a mesma entrada em outra bookmaker para resolver tudo junto, e não criar uma surebet/arbitragem.
+Objetivo
 
-O que será corrigido
+Fazer com que o botão/formulário de "Aposta Simples" usado dentro da aba Surebet tenha exatamente o mesmo comportamento da aposta simples criada em Punter/Valuebet: registro simples, liquidação simples, card simples e cálculo por casa/perna quando houver múltiplas casas.
 
-1. Remover o travamento indevido da estratégia pela aba no formulário de Aposta Simples
-- Hoje `ApostaDialog` usa `activeTab=surebet` para forçar `estrategia=SUREBET`.
-- Isso faz uma aposta simples multi-casa entrar no caminho de arbitragem.
-- Vou alterar para que `ApostaDialog` respeite o `defaultEstrategia` recebido pela URL, que já vem como `PUNTER` no botão global.
-- Na aba Surebet, o formulário de Aposta Simples continuará abrindo como `PUNTER` por padrão e com `forma_registro=SIMPLES`.
+Diagnóstico confirmado
 
-2. Impedir que “Aposta Simples + casas adicionais” chame o motor atômico de Surebet
-- Hoje existe um desvio em `ApostaDialog.tsx`:
-  - se tem `additionalEntries.length > 0`
-  - e `estrategia === SUREBET`
-  - então cria `forma_registro=ARBITRAGEM` via `criar_surebet_atomica`.
-- Esse desvio será removido/desativado para o formulário de Aposta Simples.
-- O fluxo correto será:
+1. O registro recém-criado pela aba Surebet ainda nasceu assim:
 
 ```text
-Nova Aposta > Aposta Simples
-  -> forma_registro = SIMPLES
-  -> estratégia default = PUNTER
-  -> 1 ou mais casas em apostas_pernas
-  -> liquidação global aplica o mesmo resultado a cada casa
+forma_registro = SIMPLES
+estrategia = SUREBET
+bookmaker_id = null
+stake = 200
+pernas_count = 0
 ```
 
-3. Manter Surebet verdadeira apenas no formulário próprio de arbitragem
-- A criação de arbitragem continuará existindo apenas no formulário/painel de Surebet (`SurebetModalRoot`).
-- Esse sim continua usando `forma_registro=ARBITRAGEM`, estratégia `SUREBET` e o motor próprio de cenários.
+Isso é um estado híbrido incorreto: parece aposta simples, mas é rotulada como Surebet e aparece em Operações da aba Surebet. Como não tem pernas, o card mostra informação incompleta e pode usar handlers/visual de surebet.
 
-4. Ajustar o cabeçalho visual para não exibir estratégia travada incorreta no formulário simples
-- `BetFormHeaderV2` atualmente bloqueia a estratégia quando `activeTab` é uma aba especializada, incluindo `surebet`.
-- Para `formType="simples"`, não deve travar como `SUREBET` só porque a janela foi aberta na aba Surebet.
-- Resultado esperado: ao abrir “Aposta Simples” em qualquer aba operacional, o comportamento e cálculo serão equivalentes ao que hoje funciona na aba Punter.
+2. As simulações anteriores que funcionaram bem nasceram corretamente como:
 
-5. Revisar o cálculo persistido da aposta simples multi-casa
-- Para uma aposta normal, por casa:
-  - stake R$ 100
-  - odd 2.00
-  - GREEN: retorno bruto R$ 200 e lucro líquido R$ 100
-  - RED: retorno R$ 0 e lucro líquido -R$ 100
-  - VOID: retorno R$ 100 e lucro líquido R$ 0
-- Para 3 casas iguais, todas GREEN:
-  - cada casa recebe +R$ 200 de payout após ter debitado R$ 100 de stake
-  - lucro líquido por casa: +R$ 100
-  - lucro líquido total: +R$ 300
-- Vou garantir que o pai da aposta não use cálculo de arbitragem nem valor consolidado como se fosse moeda nativa.
+```text
+forma_registro = SIMPLES
+estrategia = PUNTER
+com ou sem apostas_pernas para multi-casa
+```
 
-6. Validar funções de liquidação multi-casa
-- As funções de liquidação já têm suporte para `apostas_pernas`, criando eventos por perna.
-- Vou revisar o caminho usado por `liquidarAposta` para confirmar que a liquidação de uma aposta simples multi-casa passa por `liquidar_aposta_v4`/`reliquidar_aposta_v6`, não por fluxo de surebet.
-- Se necessário, farei uma migração pequena para reforçar a regra no backend: `SIMPLES + múltiplas pernas` é permitido quando a estratégia não é `SUREBET`.
+3. O problema não é apenas visual. Existem pelo menos três pontos que precisam ser alinhados:
+- abertura do formulário ainda pode passar `estrategia=SUREBET` por algum caminho antigo;
+- a aba Surebet busca tudo com `estrategia = SUREBET`, então captura apostas simples que não deveriam estar ali como surebet real;
+- o card de Operações força badge/estratégia `SUREBET` mesmo quando renderiza `ApostaCard` para uma aposta simples.
 
-Arquivos previstos
+O que será alterado
 
+1. Corrigir a origem do formulário
+- Garantir que qualquer abertura de "Aposta Simples" pela aba Surebet envie `estrategia=PUNTER`, não `SUREBET`.
+- Corrigir também o caminho via `ApostaPopupContainer`, que ainda usa `getEstrategiaFromTab(activeTab)` para simples/múltipla e pode reintroduzir `SUREBET`.
+- A regra final será:
+
+```text
+Aposta Simples = forma_registro SIMPLES + estratégia escolhida no formulário, default PUNTER
+Surebet real = forma_registro ARBITRAGEM + estratégia SUREBET + pernas de arbitragem
+```
+
+2. Separar a listagem da aba Surebet
+- Ajustar a query da aba Surebet para tratar como "Surebet real" apenas operações de arbitragem:
+
+```text
+estrategia = SUREBET
+forma_registro = ARBITRAGEM
+```
+
+- Aposta simples criada enquanto o usuário está na aba Surebet não deve ser convertida em surebet nem ganhar badge `SUREBET` por causa da aba.
+- Se for necessário manter visibilidade operacional na aba Surebet, ela deve aparecer como `SIMPLES/PUNTER`, usando o mesmo card da aposta simples, nunca como arbitragem.
+
+3. Corrigir o card em Operações
+- Remover o `estrategia="SUREBET"` hardcoded quando a operação é simples.
+- O `ApostaCard` deve receber `operacao.estrategia` real, por exemplo `PUNTER`, `VALUEBET`, etc.
+- Para multi-casa simples, o card deve exibir as casas/pernas como entradas replicadas, não como cenário de arbitragem.
+- Evitar que `bookmaker_id = null` sem pernas gere card vazio/incompleto.
+
+4. Corrigir multi-casa simples como comportamento canônico
+- Quando o usuário adiciona "casa a mais" no formulário simples, o sistema deve persistir as entradas como multi-entry de aposta simples.
+- Cada casa deve ter stake, odd, moeda e resultado próprios em `apostas_pernas`.
+- O pai deve ser apenas agregador da operação, sem virar surebet.
+
+5. Conferir liquidação e resultados parciais
+- Validar que GREEN, RED, VOID, MEIO_GREEN e MEIO_RED usam a mesma liquidação canônica para apostas simples em todas as abas.
+- Para multi-casa, a liquidação rápida deve atualizar as pernas e o pai com os valores esperados:
+
+```text
+GREEN      lucro = stake * (odd - 1), retorno = stake * odd
+MEIO_GREEN lucro = stake * (odd - 1) / 2, retorno = stake + lucro
+VOID       lucro = 0, retorno = stake
+MEIO_RED   lucro = -stake / 2, retorno = stake / 2
+RED        lucro = -stake, retorno = 0
+```
+
+- Em multi-moeda, cada perna calcula na moeda nativa e o pai consolida com Cotação de Trabalho/snapshot, sem misturar símbolo de uma moeda com valor de outra.
+
+6. Backend/defesa contra estados híbridos
+- Adicionar ou ajustar uma proteção de domínio para impedir novos registros inconsistentes:
+
+```text
+estrategia = SUREBET + forma_registro = SIMPLES
+```
+
+- Em vez de permitir esse híbrido, o serviço deve normalizar para `PUNTER` quando for aposta simples, ou bloquear com erro claro se a intenção era surebet real.
+- Não vou fazer correção em massa retroativa nos dados financeiros. Se existir algum registro de teste/híbrido, apenas indicarei qual está inconsistente para correção pontual aprovada depois.
+
+7. Validação
+- Rodar checagens TypeScript/testes disponíveis.
+- Fazer uma simulação local/read-only dos cenários esperados e comparar com as fórmulas:
+  - 1 bookmaker;
+  - 2+ bookmakers mesma moeda;
+  - 2+ bookmakers moedas diferentes;
+  - resultados GREEN, MEIO_GREEN, VOID, MEIO_RED, RED.
+
+Arquivos prováveis
+
+- `src/components/popups/ApostaPopupContainer.tsx`
+- `src/components/projeto-detalhe/GlobalActionsBar.tsx`
+- `src/pages/ApostaWindowPage.tsx`
 - `src/components/projeto-detalhe/ApostaDialog.tsx`
-- `src/components/apostas/BetFormHeaderV2.tsx`
-- Possivelmente `src/components/apostas/BetFormHeader.tsx` se ainda for usado em algum fluxo legado
-- Possivelmente `src/lib/apostaConstants.ts` para separar “aba ativa” de “estratégia travada” no contexto de aposta simples
-- Possivelmente uma migração de backend se a validação atual bloquear indevidamente `SIMPLES` com múltiplas pernas
+- `src/components/projeto-detalhe/ProjetoSurebetTab.tsx`
+- `src/components/projeto-detalhe/ApostaCard.tsx`
+- `src/services/aposta/ApostaService.ts`
+- possivelmente uma migration pequena de validação/normalização de domínio, se necessário
 
-Critérios de aceite
+Resultado esperado
 
-- Abrir “Aposta Simples” pela aba Punter, Surebet, ValueBet ou Apostas deve gerar o mesmo tipo operacional: `forma_registro=SIMPLES`.
-- Adicionar 2, 3 ou mais casas no formulário simples não deve criar arbitragem.
-- A aposta simples multi-casa deve ser liquidável globalmente com GREEN/RED/VOID.
-- Exemplo validado: 3 casas, cada uma stake R$ 100 odd 2.00, resultado GREEN:
-  - casa 1: retorno R$ 200, lucro R$ 100
-  - casa 2: retorno R$ 200, lucro R$ 100
-  - casa 3: retorno R$ 200, lucro R$ 100
-  - total: retorno bruto R$ 600, lucro líquido R$ 300
-- O formulário próprio de Surebet/Arbitragem continuará funcionando separado, sem perder regras de cenário e recálculo de arbitragem.
+Depois da refatoração:
+
+```text
+Abrir "Nova Aposta > Aposta Simples" na aba Surebet
+= mesmo formulário e mesmo comportamento da aba Punter
+= registro SIMPLES/PUNTER por padrão
+= adicionar casas a mais cria multi-entry simples
+= cards e liquidação mostram os valores corretos por casa
+= Surebet real continua existindo apenas pelo formulário/motor de Surebet
+```
+

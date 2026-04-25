@@ -53,7 +53,7 @@ import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
 import { groupPernasBySelecao } from "@/utils/groupPernasBySelecao";
 import type { SurebetQuickResult } from "@/components/apostas/SurebetRowActionsMenu";
 import { ApostaDialog } from "./ApostaDialog";
-import { ApostaCard, ApostaCardData } from "./ApostaCard";
+import { ApostaCard, ApostaCardData, type EstrategiaType } from "./ApostaCard";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { SurebetStatisticsCard } from "./SurebetStatisticsCard";
 
@@ -330,6 +330,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           .select(selectFields)
           .eq("projeto_id", projetoId)
           .eq("estrategia", "SUREBET")
+          .eq("forma_registro", "ARBITRAGEM")
           .is("cancelled_at", null)
           .order("data_aposta", { ascending: false });
         if (dateFilters.startUTC) q = q.gte("data_aposta", dateFilters.startUTC);
@@ -346,6 +347,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
             .select(selectFields)
             .eq("projeto_id", projetoId)
             .eq("estrategia", "SUREBET")
+            .eq("forma_registro", "ARBITRAGEM")
             .eq("status", "PENDENTE")
             .is("cancelled_at", null)
             .order("data_aposta", { ascending: false })
@@ -449,6 +451,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
   const { count: openOperationsCount } = useOpenOperationsCount({
     projetoId,
     estrategia: APOSTA_ESTRATEGIA.SUREBET,
+    formaRegistro: "ARBITRAGEM",
     refreshTrigger,
   });
 
@@ -1445,6 +1448,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
               if (isSimples) {
                 // Converter para formato ApostaCardData
                 const bookmakerBase = operacao.bookmaker_nome?.split(" - ")[0] || operacao.bookmaker_nome;
+                const estrategiaOperacao = (operacao.estrategia || "PUNTER") as EstrategiaType;
                 const apostaData: ApostaCardData = {
                   id: operacao.id,
                   evento: operacao.evento,
@@ -1458,7 +1462,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                   resultado: operacao.resultado,
                   status: operacao.status,
                   lucro_prejuizo: operacao.lucro_real,
-                  estrategia: "SUREBET",
+                  estrategia: operacao.estrategia || "PUNTER",
                   bookmaker_nome: operacao.bookmaker_nome,
                   parceiro_nome: operacao.parceiro_nome,
                    logo_url: getLogoUrl(bookmakerBase || ""),
@@ -1471,7 +1475,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                   <ApostaCard
                     key={operacao.id}
                     aposta={apostaData}
-                    estrategia="SUREBET"
+                    estrategia={estrategiaOperacao}
                     variant={viewMode === "cards" ? "card" : "list"}
                     onEdit={() => {
                       // Converter para formato esperado pelo ApostaDialog
