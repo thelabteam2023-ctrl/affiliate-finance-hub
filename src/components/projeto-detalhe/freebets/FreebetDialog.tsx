@@ -12,7 +12,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -32,8 +31,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, Gift, Loader2, Lock } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
+import { CalendarIcon, Gift, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBookmakerSaldosQuery } from "@/hooks/useBookmakerSaldosQuery";
 import { BookmakerSelectOption } from "@/components/bookmakers/BookmakerSelectOption";
@@ -356,31 +354,6 @@ export function FreebetDialog({
                     </PopoverContent>
                   </Popover>
                   <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Checkbox de Rollover */}
-            <FormField
-              control={form.control}
-              name="tem_rollover"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3 bg-muted/30">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel className="flex items-center gap-1.5 text-sm font-normal cursor-pointer">
-                      <Lock className="h-3.5 w-3.5 text-amber-500" />
-                      Exige cumprimento de rollover
-                    </FormLabel>
-                    <FormDescription className="text-xs">
-                      Após uso, o lucro terá restrição de saque
-                    </FormDescription>
-                  </div>
                 </FormItem>
               )}
             />
