@@ -189,6 +189,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
   const [selectedParceiros, setSelectedParceiros] = useState<string[]>([]);
   const [ajusteSaldoDialogOpen, setAjusteSaldoDialogOpen] = useState(false);
   const [vinculoParaAjuste, setVinculoParaAjuste] = useState<Vinculo | null>(null);
+  const [vinculoDetalhesMobile, setVinculoDetalhesMobile] = useState<Vinculo | null>(null);
   
   const sortStorageKey = `vinculos-sort-mode:${projetoId}`;
   const [sortMode, setSortModeState] = useState<VinculoSortMode>(() => {
@@ -505,6 +506,36 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
       label: nome,
     }));
   }, [vinculos]);
+
+  const openTransacao = (vinculo: Vinculo, tipo: "DEPOSITO" | "SAQUE") => {
+    setTransacaoContext({
+      bookmarkerId: vinculo.id,
+      bookmakerNome: vinculo.nome,
+      moeda: vinculo.moeda,
+      saldoAtual: vinculo.saldo_real,
+      parceiroId: vinculo.parceiro_id,
+      tipo,
+    });
+    setVinculoDetalhesMobile(null);
+    setTransacaoDialogOpen(true);
+  };
+
+  const openAjusteSaldo = (vinculo: Vinculo) => {
+    setVinculoParaAjuste(vinculo);
+    setVinculoDetalhesMobile(null);
+    setAjusteSaldoDialogOpen(true);
+  };
+
+  const openConciliacao = (vinculo: Vinculo) => {
+    setVinculoParaConciliar(vinculo);
+    setVinculoDetalhesMobile(null);
+    setConciliacaoDialogOpen(true);
+  };
+
+  const openBonusDrawer = (vinculo: Vinculo) => {
+    setVinculoDetalhesMobile(null);
+    handleOpenBonusDrawer({ id: vinculo.id, nome: vinculo.nome, login: vinculo.login_username, password: vinculo.login_password_encrypted, logo: vinculo.logo_url, bookmakerCatalogoId: vinculo.bookmaker_catalogo_id });
+  };
 
   if (loading) {
     return (
@@ -1102,7 +1133,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                   </div>
 
                   {/* Apostas */}
-                  <div className="text-center w-[70px] flex-shrink-0">
+                  <div className="hidden sm:block text-center w-[70px] flex-shrink-0">
                     <p 
                       className="text-xs text-muted-foreground flex items-center justify-center gap-1 cursor-pointer hover:text-foreground transition-colors"
                       onClick={() => setSortMode(prev => prev === "apostas_desc" ? "apostas_asc" : "apostas_desc")}
@@ -1138,6 +1169,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                     convertToConsolidacao={convertToConsolidacaoProjeto}
                     moedaConsolidacao={moedaConsolidacaoProjeto}
                     formatConsolidacao={formatConsolidacaoProjeto}
+                    className="hidden sm:flex"
                   />
 
                   {/* Status Badge */}
@@ -1150,9 +1182,18 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8"
+                      className="h-8 w-8 sm:hidden"
+                      title="Ver detalhes"
+                      onClick={() => setVinculoDetalhesMobile(vinculo)}
+                    >
+                      <List className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="hidden sm:inline-flex h-8 w-8"
                       title="Ver Bônus"
-                      onClick={() => handleOpenBonusDrawer({ id: vinculo.id, nome: vinculo.nome, login: vinculo.login_username, password: vinculo.login_password_encrypted, logo: vinculo.logo_url, bookmakerCatalogoId: vinculo.bookmaker_catalogo_id })}
+                      onClick={() => openBonusDrawer(vinculo)}
                     >
                       <Coins className="h-4 w-4" />
                     </Button>
@@ -1161,38 +1202,18 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
+                          className="hidden sm:inline-flex h-8 w-8"
                           title="Depositar"
-                          onClick={() => {
-                            setTransacaoContext({
-                              bookmarkerId: vinculo.id,
-                              bookmakerNome: vinculo.nome,
-                              moeda: vinculo.moeda,
-                              saldoAtual: vinculo.saldo_real,
-                              parceiroId: vinculo.parceiro_id,
-                              tipo: "DEPOSITO",
-                            });
-                            setTransacaoDialogOpen(true);
-                          }}
+                          onClick={() => openTransacao(vinculo, "DEPOSITO")}
                         >
                           <ArrowRightLeft className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
+                          className="hidden sm:inline-flex h-8 w-8"
                           title="Sacar"
-                          onClick={() => {
-                            setTransacaoContext({
-                              bookmarkerId: vinculo.id,
-                              bookmakerNome: vinculo.nome,
-                              moeda: vinculo.moeda,
-                              saldoAtual: vinculo.saldo_real,
-                              parceiroId: vinculo.parceiro_id,
-                              tipo: "SAQUE",
-                            });
-                            setTransacaoDialogOpen(true);
-                          }}
+                          onClick={() => openTransacao(vinculo, "SAQUE")}
                         >
                           <Wallet className="h-4 w-4" />
                         </Button>
@@ -1206,7 +1227,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
+                          className="hidden sm:inline-flex h-8 w-8"
                           title="Alterar Status"
                         >
                           <ShieldAlert className="h-4 w-4" />
@@ -1250,12 +1271,9 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
+                            className="hidden sm:inline-flex h-8 w-8"
                             title="Ajustar Saldo"
-                            onClick={() => {
-                              setVinculoParaAjuste(vinculo);
-                              setAjusteSaldoDialogOpen(true);
-                            }}
+                            onClick={() => openAjusteSaldo(vinculo)}
                           >
                             <Scale className="h-4 w-4" />
                           </Button>
@@ -1268,12 +1286,9 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      className="hidden sm:inline-flex h-8 w-8 text-destructive hover:text-destructive"
                       title="Liberar do Projeto"
-                      onClick={() => {
-                        setVinculoParaConciliar(vinculo);
-                        setConciliacaoDialogOpen(true);
-                      }}
+                      onClick={() => openConciliacao(vinculo)}
                     >
                       <Link2Off className="h-4 w-4" />
                     </Button>
@@ -1290,6 +1305,100 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
         <div className="pointer-events-none absolute inset-x-0 top-0 h-5 bg-gradient-to-b from-background/90 to-transparent" />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-7 bg-gradient-to-t from-background/90 to-transparent" />
       </div>
+
+      <Dialog open={!!vinculoDetalhesMobile} onOpenChange={(open) => !open && setVinculoDetalhesMobile(null)}>
+        <DialogContent className="max-h-[92vh] overflow-y-auto p-0 sm:max-w-lg">
+          {vinculoDetalhesMobile && (
+            <div className="space-y-4 p-5">
+              <DialogHeader className="text-left">
+                <DialogTitle className="flex items-start gap-3 pr-8">
+                  {vinculoDetalhesMobile.logo_url ? (
+                    <img src={vinculoDetalhesMobile.logo_url} alt={vinculoDetalhesMobile.nome} className="h-12 w-12 rounded-lg object-contain p-1 shrink-0" />
+                  ) : (
+                    <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <Building2 className="h-6 w-6 text-primary" />
+                    </div>
+                  )}
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="truncate">{vinculoDetalhesMobile.nome}</span>
+                      {getStatusBadge(vinculoDetalhesMobile.bookmaker_status)}
+                      {vinculoDetalhesMobile.moeda !== "BRL" && <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-blue-500/10 text-blue-400 border-blue-500/30">{vinculoDetalhesMobile.moeda}</Badge>}
+                    </div>
+                    <p className="text-sm font-normal text-muted-foreground truncate">
+                      {vinculoDetalhesMobile.parceiro_nome || (vinculoDetalhesMobile.investidor_nome && vinculoDetalhesMobile.instance_identifier ? vinculoDetalhesMobile.instance_identifier : "Sem parceiro")}
+                    </p>
+                  </div>
+                </DialogTitle>
+              </DialogHeader>
+
+              {vinculoDetalhesMobile.has_pending_transactions && (
+                <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span>Esta casa possui transações pendentes de conciliação. Operações podem estar bloqueadas até conciliar.</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="rounded-lg border border-border/50 bg-muted/20 p-3">
+                  <p className="text-xs text-muted-foreground">Login</p>
+                  <p className="font-medium truncate">{vinculoDetalhesMobile.login_username || "Não informado"}</p>
+                </div>
+                <div className="rounded-lg border border-border/50 bg-muted/20 p-3">
+                  <p className="text-xs text-muted-foreground">Apostas</p>
+                  <p className="font-medium flex items-center gap-1"><Target className="h-3.5 w-3.5 text-primary" />{vinculoDetalhesMobile.totalApostas}</p>
+                </div>
+              </div>
+
+              {vinculoDetalhesMobile.login_password_encrypted && (
+                <div className="rounded-lg border border-border/50 bg-muted/20 p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Senha</p>
+                  <LazyPasswordField
+                    cacheKey={`projeto-vinculos-mobile:${vinculoDetalhesMobile.id}`}
+                    encrypted={vinculoDetalhesMobile.login_password_encrypted}
+                    requestDecrypt={requestDecrypt}
+                    isDecrypted={isDecrypted}
+                    getCached={getCached}
+                  />
+                </div>
+              )}
+
+              <SaldoOperavelDisplay
+                saldoOperavel={vinculoDetalhesMobile.saldo_operavel}
+                saldoEmAposta={vinculoDetalhesMobile.saldo_em_aposta}
+                saldoDisponivel={vinculoDetalhesMobile.saldo_disponivel}
+                saldoReal={vinculoDetalhesMobile.saldo_real}
+                saldoFreebet={vinculoDetalhesMobile.saldo_freebet}
+                saldoBonus={vinculoDetalhesMobile.saldo_bonus}
+                saldoSaquePendente={vinculoDetalhesMobile.saldo_saque_pendente}
+                formatCurrency={(val, moeda) => formatCurrency(val, moeda || vinculoDetalhesMobile.moeda)}
+                moeda={vinculoDetalhesMobile.moeda}
+                variant="card"
+                convertToConsolidacao={convertToConsolidacaoProjeto}
+                moedaConsolidacao={moedaConsolidacaoProjeto}
+                formatConsolidacao={formatConsolidacaoProjeto}
+              />
+
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="outline" size="sm" onClick={() => openBonusDrawer(vinculoDetalhesMobile)}><Coins className="mr-2 h-4 w-4" />Bônus</Button>
+                <Popover open={statusPopoverId === `mobile-${vinculoDetalhesMobile.id}`} onOpenChange={(open) => setStatusPopoverId(open ? `mobile-${vinculoDetalhesMobile.id}` : null)}>
+                  <PopoverTrigger asChild><Button variant="outline" size="sm"><ShieldAlert className="mr-2 h-4 w-4" />Status</Button></PopoverTrigger>
+                  <PopoverContent className="w-56" align="end">
+                    <RadioGroup value={vinculoDetalhesMobile.bookmaker_status.toUpperCase()} onValueChange={(value) => handleChangeStatus(vinculoDetalhesMobile.id, value)} disabled={changeStatusMutation.isPending}>
+                      <div className="flex items-center space-x-2"><RadioGroupItem value="ATIVO" id={`ativo-mobile-${vinculoDetalhesMobile.id}`} /><Label htmlFor={`ativo-mobile-${vinculoDetalhesMobile.id}`}>Ativo</Label></div>
+                      <div className="flex items-center space-x-2"><RadioGroupItem value="LIMITADA" id={`limitada-mobile-${vinculoDetalhesMobile.id}`} /><Label htmlFor={`limitada-mobile-${vinculoDetalhesMobile.id}`}>Limitada</Label></div>
+                    </RadioGroup>
+                  </PopoverContent>
+                </Popover>
+                {!vinculoDetalhesMobile.investidor_id && <Button variant="outline" size="sm" onClick={() => openTransacao(vinculoDetalhesMobile, "DEPOSITO")}><ArrowRightLeft className="mr-2 h-4 w-4" />Depósito</Button>}
+                {!vinculoDetalhesMobile.investidor_id && <Button variant="outline" size="sm" onClick={() => openTransacao(vinculoDetalhesMobile, "SAQUE")}><Wallet className="mr-2 h-4 w-4" />Saque</Button>}
+                <Button variant="outline" size="sm" onClick={() => openAjusteSaldo(vinculoDetalhesMobile)}><Scale className="mr-2 h-4 w-4" />Ajuste</Button>
+                <Button variant="outline" size="sm" className="text-destructive border-destructive/30 hover:text-destructive" onClick={() => openConciliacao(vinculoDetalhesMobile)}><Link2Off className="mr-2 h-4 w-4" />Liberar</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Add Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={(open) => {
