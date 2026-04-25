@@ -857,6 +857,53 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       .slice(0, 8);
   }, [surebetsParaKpi, moedaConsolidacao, convertFn]);
 
+  const surebetsForCharts = useMemo(() => surebets.map(s => ({
+    data_aposta: s.data_operacao,
+    lucro_prejuizo: s.lucro_real,
+    stake: s.stake || s.stake_total,
+    stake_total: s.stake_total,
+    bookmaker_id: s.bookmaker_id,
+    bookmaker_nome: s.bookmaker_nome || "—",
+    parceiro_nome: s.parceiro_nome,
+    resultado: s.resultado,
+    moeda_operacao: s.moeda_operacao,
+    stake_consolidado: s.stake_consolidado,
+    pl_consolidado: s.pl_consolidado,
+    valor_brl_referencia: s.valor_brl_referencia,
+    lucro_prejuizo_brl_referencia: s.lucro_prejuizo_brl_referencia,
+    pernas: s.pernas?.map(p => ({
+      bookmaker_id: p.bookmaker_id,
+      bookmaker_nome: p.bookmaker_nome,
+      parceiro_nome: (p as any).parceiro_nome,
+      instance_identifier: (p as any).instance_identifier,
+      logo_url: (p as any).logo_url,
+      stake: p.stake,
+      stake_total: p.stake_total,
+      odd: p.odd,
+      resultado: p.resultado || undefined,
+      lucro_prejuizo: getLucroPerna(p),
+      moeda: p.moeda,
+      stake_brl_referencia: (p as any).stake_brl_referencia,
+      lucro_prejuizo_brl_referencia: (p as any).lucro_prejuizo_brl_referencia,
+      cotacao_snapshot: (p as any).cotacao_snapshot,
+      entries: p.entries?.map(entry => ({
+        bookmaker_id: entry.bookmaker_id,
+        bookmaker_nome: entry.bookmaker_nome,
+        parceiro_nome: (entry as any).parceiro_nome,
+        instance_identifier: (entry as any).instance_identifier,
+        logo_url: (entry as any).logo_url,
+        stake: entry.stake,
+        odd: entry.odd,
+        resultado: (entry as any).resultado ?? p.resultado ?? undefined,
+        lucro_prejuizo: (entry as any).lucro_prejuizo ?? undefined,
+        moeda: entry.moeda,
+        stake_brl_referencia: (entry as any).stake_brl_referencia,
+        lucro_prejuizo_brl_referencia: (entry as any).lucro_prejuizo_brl_referencia,
+        cotacao_snapshot: (entry as any).cotacao_snapshot,
+      })),
+    })),
+  })), [surebets]);
+
   // Mapa de logos combinando catálogo global + bookmakers do projeto
   // Prioridade: catálogo global (mais completo e confiável)
   const logoMap = useMemo(() => {
