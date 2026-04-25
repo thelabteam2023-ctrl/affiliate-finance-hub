@@ -715,10 +715,12 @@ export default function ProjetoDetalhe() {
 
       {/* Summary Bar - KPIs compactos em faixa horizontal */}
       {showKpis && (
-        <div className="flex-shrink-0 rounded-lg border border-border/60 bg-card/60 backdrop-blur px-4 py-2.5" style={{ maxHeight: "100px" }}>
-          <div className="flex items-center justify-center gap-4 md:gap-6 flex-wrap">
+        <div className="flex-shrink-0 rounded-lg border border-border/60 bg-card/60 backdrop-blur px-3 py-2.5 sm:px-4">
+          <div className="grid grid-cols-3 sm:flex sm:flex-wrap items-stretch sm:items-center justify-center gap-2 sm:gap-4 md:gap-6">
             {/* Saldo Operável — destaque principal */}
-            <SaldoOperavelCard projetoId={id!} variant="compact" />
+            <div className="col-span-2 sm:col-span-1 min-w-0">
+              <SaldoOperavelCard projetoId={id!} variant="compact" />
+            </div>
 
             <div className="h-8 w-px bg-border/50 hidden sm:block flex-shrink-0" />
 
@@ -738,7 +740,7 @@ export default function ProjetoDetalhe() {
                 const reds = rMatch ? Number(rMatch[1]) : 0;
                 const voids = vMatch ? Number(vMatch[1]) : 0;
                 return (
-                  <div className="flex flex-col cursor-help min-w-[70px]">
+                  <div className="flex min-h-12 flex-col items-center justify-center rounded-md bg-muted/25 px-2 py-1.5 text-center cursor-help sm:min-h-0 sm:items-start sm:bg-transparent sm:p-0 sm:text-left sm:min-w-[70px]">
                     <span className="text-xs text-muted-foreground leading-tight">Apostas</span>
                     <span className="text-base md:text-lg font-bold leading-tight">{kpiBreakdowns?.apostas?.total || 0}</span>
                     <div className="flex items-center gap-2 text-xs leading-tight mt-0.5">
@@ -766,9 +768,9 @@ export default function ProjetoDetalhe() {
             <TooltipProvider>
               <Tooltip delayDuration={200}>
                 <TooltipTrigger asChild>
-                  <div className="flex flex-col min-w-[80px] cursor-help">
+                  <div className="flex min-h-12 flex-col items-center justify-center rounded-md bg-muted/25 px-2 py-1.5 text-center cursor-help sm:min-h-0 sm:items-start sm:bg-transparent sm:p-0 sm:text-left sm:min-w-[80px]">
                     <span className="text-xs text-muted-foreground leading-tight">Volume</span>
-                    <span className="text-base md:text-lg font-bold leading-tight truncate">
+                    <span className="max-w-full text-sm sm:text-base md:text-lg font-bold leading-tight truncate">
                       {formatCurrency(kpiBreakdowns?.volume?.total || 0)}
                     </span>
                     {kpiBreakdowns?.volumeTemporal && kpiBreakdowns.volumeTemporal.diasAtivos > 0 && (
@@ -847,12 +849,12 @@ export default function ProjetoDetalhe() {
               formatValue={formatCurrency}
               title="Resultado por Estratégia"
             >
-              <div className="flex flex-col cursor-help min-w-[80px]">
+              <div className="flex min-h-12 flex-col items-center justify-center rounded-md bg-muted/25 px-2 py-1.5 text-center cursor-help sm:min-h-0 sm:items-start sm:bg-transparent sm:p-0 sm:text-left sm:min-w-[80px]">
                 <span className="text-xs text-muted-foreground leading-tight">
                   {(kpiBreakdowns?.lucro?.total || 0) >= 0 ? "Lucro" : "Prejuízo"}
                 </span>
                 <span className={cn(
-                  "text-base md:text-lg font-bold leading-tight truncate",
+                  "max-w-full text-sm sm:text-base md:text-lg font-bold leading-tight truncate",
                   (kpiBreakdowns?.lucro?.total || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'
                 )}>
                   {formatCurrency(Math.abs(kpiBreakdowns?.lucro?.total || 0))}
@@ -866,7 +868,7 @@ export default function ProjetoDetalhe() {
             <TooltipProvider>
               <Tooltip delayDuration={200}>
                 <TooltipTrigger asChild>
-                  <div className="flex flex-col cursor-help min-w-[50px]">
+                  <div className="flex min-h-12 flex-col items-center justify-center rounded-md bg-muted/25 px-2 py-1.5 text-center cursor-help sm:min-h-0 sm:items-start sm:bg-transparent sm:p-0 sm:text-left sm:min-w-[50px]">
                     <span className="text-xs text-muted-foreground leading-tight">ROI</span>
                     <span className={cn(
                       "text-base md:text-lg font-bold leading-tight",
