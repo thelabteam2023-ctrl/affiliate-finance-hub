@@ -1227,7 +1227,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           <div className="lg:col-span-2 space-y-4">
             <VisaoGeralCharts 
               apostas={surebets.map(s => {
-                const isSimples = s.forma_registro === "SIMPLES" || !s.pernas?.length;
+                const isSimples = !s.pernas?.length;
                 return {
                   data_aposta: s.data_operacao,
                   lucro_prejuizo: s.lucro_real,
@@ -1277,7 +1277,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           <div className="lg:col-span-1">
             <VisaoGeralCharts 
               apostas={surebets.map(s => {
-                const isSimples = s.forma_registro === "SIMPLES" || !s.pernas?.length;
+                const isSimples = !s.pernas?.length;
                 return {
                   data_aposta: s.data_operacao,
                   lucro_prejuizo: s.lucro_real,
