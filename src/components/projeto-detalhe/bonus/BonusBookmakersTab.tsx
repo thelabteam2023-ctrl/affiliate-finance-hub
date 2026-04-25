@@ -589,7 +589,7 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
   // Pending bonus edit dialog state (separate from drawer)
   const [pendingBonusDialogOpen, setPendingBonusDialogOpen] = useState(false);
   const [pendingBonusToEdit, setPendingBonusToEdit] = useState<ProjectBonus | null>(null);
-  const [pendingBonusBookmaker, setPendingBonusBookmaker] = useState<{ id: string; nome: string; login?: string; password?: string | null; logo?: string | null; bookmaker_catalogo_id?: string | null; moeda?: string } | null>(null);
+  const [pendingBonusBookmaker, setPendingBonusBookmaker] = useState<{ id: string; nome: string; login?: string; password?: string | null; logo?: string | null; bookmaker_catalogo_id?: string | null; moeda?: string; saldo_operavel?: number } | null>(null);
 
   const bookmakersInBonusMode = getBookmakersWithActiveBonus();
 
@@ -1287,6 +1287,7 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
             logo_url: pendingBonusBookmaker.logo,
             bookmaker_catalogo_id: pendingBonusBookmaker.bookmaker_catalogo_id,
             moeda: pendingBonusBookmaker.moeda,
+            saldo_atual: pendingBonusBookmaker.saldo_operavel ?? saldosData?.find((saldo) => saldo.id === pendingBonusBookmaker.id)?.saldo_operavel,
           }]}
           bonus={pendingBonusToEdit}
           preselectedBookmakerId={pendingBonusBookmaker.id}
