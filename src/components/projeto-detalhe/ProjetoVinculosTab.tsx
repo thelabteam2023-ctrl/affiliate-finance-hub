@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useProjectCurrencyFormat } from "@/hooks/useProjectCurrencyFormat";
@@ -107,6 +107,9 @@ import { usePasswordDecryption } from "@/hooks/usePasswordDecryption";
 import { LazyPasswordField } from "@/components/parceiros/LazyPasswordField";
 import { BrokerReceberContasDialog } from "@/components/broker/BrokerReceberContasDialog";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { ESTRATEGIA_LABELS, type ApostaEstrategia } from "@/lib/apostaConstants";
 
 type VinculoSortMode = "alpha" | "newest" | "oldest" | "apostas_desc" | "apostas_asc" | "saldo_desc" | "saldo_asc" | "em_aposta_desc" | "em_aposta_asc" | "disponivel_desc" | "disponivel_asc";
 
@@ -115,6 +118,23 @@ interface ProjetoVinculosTabProps {
   tipoProjeto?: string;
   investidorId?: string | null;
   isBroker?: boolean;
+}
+
+interface ApostaUsoBookmaker {
+  id: string;
+  pernaId?: string;
+  data_aposta: string;
+  evento: string | null;
+  esporte: string | null;
+  mercado: string | null;
+  estrategia: string | null;
+  forma_registro: string | null;
+  status: string | null;
+  resultado: string | null;
+  odd: number | null;
+  stake: number | null;
+  moeda: string | null;
+  selecao: string | null;
 }
 
 // Interface Vinculo importada de useProjetoVinculos
