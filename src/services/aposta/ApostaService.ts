@@ -51,11 +51,6 @@ function detectarMoeda(pernas: PernaInput[]): string {
 export async function criarAposta(
   input: CriarApostaInput
 ): Promise<ApostaServiceResult<{ id: string }>> {
-  if (input.estrategia === 'SUREBET' && input.forma_registro === 'SIMPLES') {
-    input = { ...input, estrategia: 'PUNTER' as any };
-    console.warn('[ApostaService] Normalizando SIMPLES+SUREBET para SIMPLES+PUNTER');
-  }
-
   console.log("[ApostaService] Iniciando criação de aposta", {
     forma_registro: input.forma_registro,
     estrategia: input.estrategia,
@@ -87,9 +82,7 @@ export async function criarAposta(
   // ================================================================
   // ETAPA 2: PREPARAR DADOS
   // ================================================================
-  const isSurebet = input.estrategia === 'SUREBET';
-  const isMultiPernaSurebet = isSurebet && (input.pernas?.length || 0) >= 2;
-  const isArbitragem = input.forma_registro === 'ARBITRAGEM' || isMultiPernaSurebet;
+  const isArbitragem = input.forma_registro === 'ARBITRAGEM';
 
   // ARBITRAGEM/SUREBET deve nascer pelo motor atômico do banco, que cria pai,
   // pernas e eventos STAKE no ledger na mesma transação. Inserção direta aqui
