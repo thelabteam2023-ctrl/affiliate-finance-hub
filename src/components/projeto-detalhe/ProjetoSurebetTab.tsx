@@ -131,6 +131,9 @@ interface Surebet {
   valor_brl_referencia?: number | null;
   lucro_prejuizo_brl_referencia?: number | null;
   lucro_prejuizo?: number | null;
+  fonte_saldo?: string | null;
+  stake_freebet?: number | null;
+  raw_pernas?: any[];
 }
 
 // REMOVIDO: Interface Bookmaker - agora usa BookmakerSaldo do hook centralizado
@@ -316,6 +319,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           status, resultado, observacoes, forma_registro, estrategia, contexto_operacional,
           odd, selecao, bookmaker_id, bonus_id,
           moeda_operacao, stake_consolidado, pl_consolidado, consolidation_currency, valor_brl_referencia, lucro_prejuizo_brl_referencia,
+          fonte_saldo, usar_freebet, stake_real, stake_freebet, is_multicurrency,
           bookmaker:bookmakers(nome, parceiro:parceiros(nome))
         `;
 
@@ -330,7 +334,6 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           .select(selectFields)
           .eq("projeto_id", projetoId)
           .eq("estrategia", "SUREBET")
-          .eq("forma_registro", "ARBITRAGEM")
           .is("cancelled_at", null)
           .order("data_aposta", { ascending: false });
         if (dateFilters.startUTC) q = q.gte("data_aposta", dateFilters.startUTC);
@@ -347,7 +350,6 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
             .select(selectFields)
             .eq("projeto_id", projetoId)
             .eq("estrategia", "SUREBET")
-            .eq("forma_registro", "ARBITRAGEM")
             .eq("status", "PENDENTE")
             .is("cancelled_at", null)
             .order("data_aposta", { ascending: false })
@@ -414,7 +416,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
         
         const pernasSurebetCard = groupPernasBySelecao(pernasOrdenadas);
         const hasValidPernas = pernasSurebetCard.length > 0;
-        const isSimples = arb.forma_registro === "SIMPLES" && !hasValidPernas;
+        const isSimples = arb.forma_registro === "SIMPLES";
         return {
           id: arb.id, workspace_id: arb.workspace_id, created_at: arb.created_at, data_operacao: arb.data_aposta, evento: arb.evento || "",
           esporte: arb.esporte || "", modelo: arb.modelo || "1-2", mercado: arb.mercado,
@@ -425,7 +427,9 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           // quando a moeda de consolidação corresponde ao projeto.
           lucro_real: arb.lucro_prejuizo, roi_real: arb.roi_real,
           status: arb.status, resultado: arb.resultado, observacoes: arb.observacoes,
-          pernas: pernasSurebetCard, forma_registro: arb.forma_registro,
+          pernas: isSimples ? [] : pernasSurebetCard,
+          raw_pernas: pernasRaw,
+          forma_registro: arb.forma_registro,
           estrategia: arb.estrategia, contexto_operacional: arb.contexto_operacional,
           stake: arb.stake, stake_bonus: arb.stake_bonus, bonus_id: arb.bonus_id,
           odd: arb.odd, selecao: arb.selecao, bookmaker_id: arb.bookmaker_id,
@@ -439,6 +443,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           valor_brl_referencia: arb.valor_brl_referencia,
           lucro_prejuizo_brl_referencia: arb.lucro_prejuizo_brl_referencia,
           lucro_prejuizo: arb.lucro_prejuizo,
+          fonte_saldo: arb.fonte_saldo || null,
+          stake_freebet: arb.stake_freebet ?? null,
         };
       });
     },
@@ -451,7 +457,6 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
   const { count: openOperationsCount } = useOpenOperationsCount({
     projetoId,
     estrategia: APOSTA_ESTRATEGIA.SUREBET,
-    formaRegistro: "ARBITRAGEM",
     refreshTrigger,
   });
 
@@ -1447,7 +1452,11 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
               
               if (isSimples) {
                 // Converter para formato ApostaCardData
-                const bookmakerBase = operacao.bookmaker_nome?.split(" - ")[0] || operacao.bookmaker_nome;
+                const rawPernas = Array.isArray(operacao.raw_pernas) ? operacao.raw_pernas : [];
+                const primaryPerna = rawPernas[0];
+                const bookmakerNome = primaryPerna?.bookmaker_nome || operacao.bookmaker_nome;
+                const parceiroNome = primaryPerna?.parceiro_nome || operacao.parceiro_nome;
+                const bookmakerBase = bookmakerNome?.split(" - ")[0] || bookmakerNome;
                 const estrategiaOperacao = (operacao.estrategia || "PUNTER") as EstrategiaType;
                 const apostaData: ApostaCardData = {
                   id: operacao.id,
@@ -1456,19 +1465,33 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                   mercado: operacao.mercado,
                   selecao: operacao.selecao,
                   odd: operacao.odd,
-                  stake: operacao.stake || operacao.stake_total,
+                  primary_odd: primaryPerna?.odd ?? operacao.odd,
+                  stake: primaryPerna?.stake ?? operacao.stake ?? operacao.stake_total,
+                  stake_total: operacao.stake_total,
                   data_aposta: operacao.data_operacao,
                   created_at: (operacao as any).created_at,
                   resultado: operacao.resultado,
                   status: operacao.status,
                   lucro_prejuizo: operacao.lucro_real,
                   estrategia: operacao.estrategia || "PUNTER",
-                  bookmaker_nome: operacao.bookmaker_nome,
-                  parceiro_nome: operacao.parceiro_nome,
+                  bookmaker_nome: bookmakerNome,
+                  parceiro_nome: parceiroNome,
+                  instance_identifier: primaryPerna?.instance_identifier || null,
                    logo_url: getLogoUrl(bookmakerBase || ""),
                    moeda: operacao.moeda_operacao || undefined,
                    fonte_saldo: (operacao as any).fonte_saldo || null,
                    stake_freebet: (operacao as any).stake_freebet ?? null,
+                   stake_consolidado: operacao.stake_consolidado ?? null,
+                   pl_consolidado: operacao.pl_consolidado ?? null,
+                   sub_entries: rawPernas.slice(1).map((p: any) => ({
+                     bookmaker_nome: p.bookmaker_nome || "Casa",
+                     parceiro_nome: p.parceiro_nome || null,
+                     odd: p.odd,
+                     stake: p.stake,
+                     moeda: p.moeda || operacao.moeda_operacao || undefined,
+                     logo_url: p.logo_url || getLogoUrl((p.bookmaker_nome || "").split(" - ")[0] || ""),
+                     selecao_livre: p.selecao_livre || null,
+                   })),
                 };
                 
                 return (
@@ -1496,6 +1519,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                     onDelete={(apostaId) => handleSurebetDelete(apostaId)}
                     onDuplicate={handleDuplicateSimples}
                     formatCurrency={formatCurrency}
+                    convertToConsolidation={convertFnOficial}
+                    moedaConsolidacao={moedaConsolidacao}
                   />
                 );
               }
