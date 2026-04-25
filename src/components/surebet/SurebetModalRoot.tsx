@@ -133,6 +133,8 @@ import {
   type ContextoOperacional,
 } from "@/lib/apostaConstants";
 
+const ARBITRAGEM_ESTRATEGIA: ApostaEstrategia = APOSTA_ESTRATEGIA.SUREBET;
+
 const getPernaLabel = (index: number, total: number): string => {
   if (total === 2) return index === 0 ? "1" : "2";
   if (total === 3) return index === 0 ? "1" : index === 1 ? "X" : "2";
@@ -412,7 +414,7 @@ export function SurebetModalRoot({
       setEvento(surebet.evento);
       setEsporte(surebet.esporte);
       setMercado(surebet.mercado || "");
-      setEstrategia((surebet.estrategia || APOSTA_ESTRATEGIA.SUREBET) as ApostaEstrategia);
+      setEstrategia(ARBITRAGEM_ESTRATEGIA);
       setContexto((surebet.contexto_operacional || CONTEXTO_OPERACIONAL.NORMAL) as ContextoOperacional);
       
       // Preservar Data/Hora original no modo edição
@@ -449,7 +451,7 @@ export function SurebetModalRoot({
       setEvento(rascunho.evento || "");
       setEsporte(rascunho.esporte || "Futebol");
       setMercado(rascunho.mercado || "");
-      setEstrategia(rascunho.estrategia ? (rascunho.estrategia as ApostaEstrategia) : null);
+      setEstrategia(ARBITRAGEM_ESTRATEGIA);
       setContexto((rascunho.contexto_operacional || CONTEXTO_OPERACIONAL.NORMAL) as ContextoOperacional);
       
       const numPernasRascunho = rascunho.quantidade_pernas || rascunho.pernas?.length || 2;
@@ -494,8 +496,7 @@ export function SurebetModalRoot({
       
       // Se a aba tiver estratégia fixa, pré-selecionar automaticamente
       // Em "apostas-livres" ou "apostas", o usuário deve escolher manualmente
-      const estrategiaFromTab = getEstrategiaFromTab(activeTab);
-      setEstrategia(estrategiaFromTab);
+      setEstrategia(ARBITRAGEM_ESTRATEGIA);
       
       // Contexto baseado na aba
       if (activeTab === 'bonus') {
@@ -530,7 +531,7 @@ export function SurebetModalRoot({
   // precisamos atualizar os estados automaticamente
   useEffect(() => {
     if (!isEditing && open) {
-      const lockedEstrategia = isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : null;
+      const lockedEstrategia = ARBITRAGEM_ESTRATEGIA;
       const lockedContexto = isAbaContextoFixo(activeTab) ? getContextoFromTab(activeTab) : null;
       
       // Sincronizar estratégia se locked
@@ -2074,7 +2075,7 @@ export function SurebetModalRoot({
             onContextoChange={(v) => setContexto(v)}
             isEditing={isEditing}
             activeTab={activeTab}
-            lockedEstrategia={!isEditing && isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : null}
+            lockedEstrategia={ARBITRAGEM_ESTRATEGIA}
             gameFields={{
               esporte,
               evento,
