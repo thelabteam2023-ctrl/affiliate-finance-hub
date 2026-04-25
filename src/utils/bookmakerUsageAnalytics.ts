@@ -55,6 +55,7 @@ export interface BookmakerParticipation {
   stake: number;
   lucro: number;
   resolved: boolean;
+  resultado: string | null;
   moeda: string;
 }
 
@@ -64,6 +65,9 @@ export interface BookmakerUsageAggregate {
   volume: number;
   lucro: number;
   roi: number;
+  greens?: number;
+  reds?: number;
+  voids?: number;
   moeda?: string;
   logo_url?: string | null;
   vinculos: Array<{
@@ -185,6 +189,7 @@ export function extractBookmakerParticipations(
       stake,
       lucro: resolved ? lucro : 0,
       resolved,
+      resultado: entry.resultado ?? operation.resultado ?? null,
       moeda: moedaConsolidacao,
     };
   });
@@ -199,6 +204,9 @@ export function aggregateBookmakerUsage(
     volume: number;
     volumeLiquidado: number;
     lucro: number;
+    greens: number;
+    reds: number;
+    voids: number;
     moeda: string;
     logo_url: string | null;
     vinculos: Map<string, { apostas: number; volume: number; volumeLiquidado: number; lucro: number }>;
@@ -217,6 +225,9 @@ export function aggregateBookmakerUsage(
           volume: 0,
           volumeLiquidado: 0,
           lucro: 0,
+          greens: 0,
+          reds: 0,
+          voids: 0,
           moeda: participation.moeda,
           logo_url: participation.logo_url,
           vinculos: new Map(),
@@ -228,6 +239,9 @@ export function aggregateBookmakerUsage(
       casaData.volume += participation.stake;
       if (participation.resolved) casaData.volumeLiquidado += participation.stake;
       casaData.lucro += participation.lucro;
+      if (participation.resultado === "GREEN" || participation.resultado === "MEIO_GREEN") casaData.greens += 1;
+      if (participation.resultado === "RED" || participation.resultado === "MEIO_RED") casaData.reds += 1;
+      if (participation.resultado === "VOID" || participation.resultado === "REEMBOLSO") casaData.voids += 1;
       if (!casaData.logo_url && participation.logo_url) casaData.logo_url = participation.logo_url;
 
       if (!casaData.vinculos.has(vinculo)) {
@@ -247,6 +261,9 @@ export function aggregateBookmakerUsage(
     volume: data.volume,
     lucro: data.lucro,
     roi: data.volumeLiquidado > 0 ? (data.lucro / data.volumeLiquidado) * 100 : 0,
+    greens: data.greens,
+    reds: data.reds,
+    voids: data.voids,
     moeda: data.moeda,
     logo_url: data.logo_url || options.resolveLogo?.(casa) || null,
     vinculos: Array.from(data.vinculos.entries()).map(([vinculo, v]) => ({
