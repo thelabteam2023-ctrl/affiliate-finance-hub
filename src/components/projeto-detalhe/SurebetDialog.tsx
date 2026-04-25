@@ -1,16 +1,11 @@
 /**
  * SurebetDialog - Formulário de criação/edição de Surebets
  * 
- * NOTA DE ARQUITETURA (2026-01):
- * Este componente ainda usa inserções diretas no Supabase por razões de complexidade.
- * O hook useSurebetService foi criado para centralizar a lógica, mas a migração completa
- * requer refatoração extensiva devido à complexidade do formulário (múltiplas entradas,
- * snapshots de moeda, freebets, etc.).
- * 
- * PRÓXIMOS PASSOS:
- * - Novas funcionalidades devem usar useSurebetService
- * - Gradualmente migrar lógica de handleSubmit para o serviço
- * - O dual-write atual JÁ foi corrigido para incluir apostas_pernas
+ * NOTA DE ARQUITETURA (2026-04):
+ * Criação de surebet usa obrigatoriamente a RPC criar_surebet_atomica.
+ * Ela cria operação, pernas e eventos STAKE no ledger em uma transação.
+ * Inserção direta de ARBITRAGEM em apostas_unificada/apostas_pernas é proibida,
+ * pois cria operação sem débito de stake e infla saldos na liquidação.
  * 
  * @see src/services/aposta - Serviço centralizado de apostas
  * @see src/hooks/useSurebetService.ts - Hook especializado para Surebets
@@ -2410,65 +2405,59 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
           });
         }
         
-        // Inserir na tabela unificada
+        // Inserir via motor financeiro atômico: cria pai, pernas e eventos STAKE no ledger.
+        // Nunca inserir ARBITRAGEM diretamente, pois isso cria operação sem débito de stake.
         if (!workspaceId) {
           toast.error("Workspace não identificado. Tente recarregar a página.");
           return;
         }
-        
-        const { data: insertedData, error: insertError } = await supabase
-          .from("apostas_unificada")
-          .insert({
-            user_id: user.id,
-            workspace_id: workspaceId,
-            projeto_id: projetoId,
-            forma_registro: 'ARBITRAGEM',
-            estrategia: registroValues.estrategia,
-            contexto_operacional: registroValues.contexto_operacional,
-            evento,
-            esporte,
-            modelo,
-            mercado,
-            // Campos multi-moeda
-            moeda_operacao: moedaOperacao,
-            stake_total: stakeTotal, // null se MULTI
-            valor_brl_referencia: valorBRLReferencia,
-            // Snapshot da operação (só faz sentido para moeda única)
-            cotacao_snapshot: moedaOperacao !== "MULTI" && moedaOperacao !== "BRL" 
-              ? pernasToSave[0]?.cotacao_snapshot 
-              : null,
-            cotacao_snapshot_at: moedaOperacao !== "MULTI" && moedaOperacao !== "BRL"
-              ? pernasToSave[0]?.cotacao_snapshot_at
-              : null,
-            // Demais campos
-            spread_calculado: analysis?.spread || null,
-            roi_esperado: analysis?.roiEsperado || null,
-            lucro_esperado: analysis?.guaranteedProfit || null,
-            observacoes,
-            status: "PENDENTE",
-            resultado: "PENDENTE",
-            pernas: pernasToSave as any,
-            data_aposta: toLocalTimestamp("")
-          })
-          .select("id")
-          .single();
 
-        if (insertError) throw insertError;
-        
-        // CRÍTICO: DUAL-WRITE - Inserir pernas na tabela normalizada apostas_pernas
-        // Isso garante que o saldo_em_aposta seja calculado corretamente pela RPC
-        if (insertedData?.id && pernasToSave.length > 0) {
-          const pernasInsert = pernasToInserts(insertedData.id, pernasToSave);
-          const { error: pernasError } = await supabase
-            .from("apostas_pernas")
-            .insert(pernasInsert);
-          
-          if (pernasError) {
-            console.error("[SurebetDialog] Erro ao inserir pernas normalizadas:", pernasError);
-            // Não falhar a operação principal, mas logar para auditoria
-          } else {
-            console.log("[SurebetDialog] Dual-write: pernas inseridas em apostas_pernas:", pernasInsert.length);
+        const pernasParaRPC = pernasToSave.flatMap((perna) => {
+          if (perna.entries && perna.entries.length > 0) {
+            return perna.entries.map((entry) => ({
+              bookmaker_id: entry.bookmaker_id,
+              stake: entry.stake,
+              odd: entry.odd,
+              moeda: entry.moeda,
+              selecao: perna.selecao,
+              selecao_livre: entry.selecao_livre || perna.selecao_livre || null,
+              cotacao_snapshot: entry.cotacao_snapshot,
+              stake_brl_referencia: entry.stake_brl_referencia,
+              fonte_saldo: 'REAL',
+            }));
           }
+
+          return [{
+            bookmaker_id: perna.bookmaker_id,
+            stake: perna.stake,
+            odd: perna.odd,
+            moeda: perna.moeda,
+            selecao: perna.selecao,
+            selecao_livre: perna.selecao_livre || null,
+            cotacao_snapshot: perna.cotacao_snapshot,
+            stake_brl_referencia: perna.stake_brl_referencia,
+            fonte_saldo: 'REAL',
+          }];
+        });
+        
+        const { data: rpcResult, error: rpcError } = await supabase.rpc('criar_surebet_atomica', {
+          p_workspace_id: workspaceId,
+          p_user_id: user.id,
+          p_projeto_id: projetoId,
+          p_evento: evento,
+          p_esporte: esporte,
+          p_mercado: mercado || null,
+          p_modelo: modelo,
+          p_estrategia: registroValues.estrategia,
+          p_contexto_operacional: registroValues.contexto_operacional,
+          p_data_aposta: toLocalTimestamp(""),
+          p_pernas: pernasParaRPC,
+        });
+
+        if (rpcError) throw rpcError;
+        const result = rpcResult?.[0];
+        if (!result?.success) {
+          throw new Error(result?.message || "Falha ao criar surebet");
         }
 
         toast.success("Operação registrada com sucesso!");

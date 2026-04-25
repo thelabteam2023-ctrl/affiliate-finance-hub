@@ -1,125 +1,112 @@
-Plano para prosseguir com a correção definitiva da contagem de “Casas Mais Utilizadas”.
+Diagnóstico inicial confirmado:
 
-## Diagnóstico confirmado
-
-O problema não é a ausência de dados na operação. A falha acontece na transformação para a UI.
-
-Fluxo atual problemático:
+A operação mostrada no print tem 2 pernas de US$ 100 com odd 2.00:
 
 ```text
-apostas_pernas
-  -> groupPernasBySelecao agrupa por seleção
-  -> Surebet/VisaoGeralCharts recebe pernas resumidas
-  -> entries[] não é preservado no mapping
-  -> aggregateBookmakerUsage só enxerga a primeira casa
+AMUNRA    stake US$ 100 -> payout esperado US$ 200
+MY EMPIRE stake US$ 100 -> payout esperado US$ 200
 ```
 
-Exemplo do bug em Surebet:
-
-- A operação tem duas pernas/entradas reais em `apostas_pernas`.
-- `groupPernasBySelecao` junta entradas da mesma seleção em uma perna principal + `entries[]`.
-- Ao montar os dados para o card “Casas Mais Utilizadas”, `ProjetoSurebetTab.tsx` faz `s.pernas?.map(p => ({ bookmaker_nome, stake, ... }))`.
-- Esse mapping copia apenas os campos principais de `p`, mas descarta `p.entries`.
-- Resultado: a estatística vê só a casa principal da linha agrupada.
-
-Além disso, `groupPernasBySelecao` ainda não preserva campos analíticos importantes dentro de `entries[]`, como `resultado`, `lucro_prejuizo`, `parceiro_nome`, `instance_identifier`, `stake_brl_referencia`, `lucro_prejuizo_brl_referencia` e `cotacao_snapshot`.
-
-## O que vou corrigir
-
-### 1. Blindar `groupPernasBySelecao`
-
-Preservar, em cada item de `entries[]`, todos os campos necessários para análise:
-
-- `bookmaker_id`
-- `bookmaker_nome`
-- `parceiro_nome`
-- `instance_identifier`
-- `logo_url`
-- `resultado`
-- `lucro_prejuizo`
-- `moeda`
-- `stake`
-- `odd`
-- `stake_brl_referencia`
-- `lucro_prejuizo_brl_referencia`
-- `cotacao_snapshot`
-- `fonte_saldo`
-
-Assim, qualquer aba que agrupe por seleção não perderá granularidade de casa.
-
-### 2. Corrigir o mapping da Surebet para `VisaoGeralCharts`
-
-Em `ProjetoSurebetTab.tsx`, substituir os mappings duplicados de `surebets.map(...)` por uma função local única, por exemplo `mapSurebetForCharts(s)`.
-
-Essa função vai:
-
-- passar `pernas[]` completas para o agregador;
-- preservar `entries[]` dentro de cada perna;
-- preservar IDs, nomes, parceiro, instância, stake/lucro por perna e snapshots de conversão;
-- evitar cair no fallback de “primeira casa” quando a operação tiver pernas agrupadas.
-
-Isso deve corrigir imediatamente a visão da coluna direita “Casas Mais Utilizadas” em Surebet.
-
-### 3. Reforçar o agregador canônico
-
-Ajustar `src/utils/bookmakerUsageAnalytics.ts` para tratar todos os formatos como participação real por casa:
+Como a stake deveria ter sido debitada na criação, o saldo final correto em cada casa seria:
 
 ```text
-operação simples parent
-_sub_entries[]
-pernas[] flat
-pernas[].entries[] agrupado por seleção
+saldo inicial 100 + bônus 100 - stake 100 + payout 200 = US$ 300
+lucro líquido da operação por casa = US$ 100
 ```
 
-Também vou reforçar fallback de lucro quando `entries[]` não tiver lucro individual:
-
-- se houver lucro individual: usa o valor individual;
-- se faltar lucro em algumas entries: distribui o lucro restante proporcionalmente por stake, não por contagem simples;
-- pendentes continuam com lucro 0;
-- ROI continua usando volume liquidado, conforme padrão do projeto.
-
-### 4. Revisar Punter, ValueBet e Duplo Green
-
-Aplicar a mesma blindagem nos pontos onde essas abas enriquecem `apostas_pernas` como `_sub_entries` ou `pernas`.
-
-Pontos a confirmar/corrigir:
-
-- incluir parceiro, instância, logo e snapshots nas sub-entries carregadas;
-- garantir que `_sub_entries[]` tenham `bookmaker_nome`, `parceiro_nome`, `instance_identifier`, `logo_url`, `resultado`, `lucro_prejuizo`, `moeda` e referências de conversão;
-- garantir que filtros por Casa/Parceiro também considerem `pernas[].entries[]`, não só `_sub_entries` e `pernas` diretas.
-
-### 5. Corrigir filtros dimensionais quando houver entries agrupadas
-
-Atualizar `apostaFilterHelpers.ts` para coletar bookmaker IDs também dentro de:
+Mas o banco mostra:
 
 ```text
-pernas[].entries[].bookmaker_id
+AMUNRA    saldo_atual = US$ 400
+MY EMPIRE saldo_atual = US$ 400
 ```
 
-Hoje ele considera parent, `_sub_entries` e `pernas`, mas não percorre `entries[]` aninhado. Isso pode afetar filtros por casa/parceiro em operações agrupadas.
+A causa encontrada não é duplicação do payout da operação atual. O problema é mais grave: a criação dessa surebet inseriu `apostas_unificada` e `apostas_pernas` diretamente pela UI, mas não gerou eventos `STAKE` no `financial_events`. Depois, na liquidação, a RPC `liquidar_perna_surebet_v1` gerou corretamente os eventos `PAYOUT` de US$ 200 por perna. Como não houve débito anterior de US$ 100 por perna, cada casa ficou inflada em US$ 100.
 
-### 6. Expandir simulações e testes unitários
+Evidência da operação atual:
 
-Adicionar/ajustar testes do agregador canônico com cenários sintéticos:
+```text
+aposta_id: 6413da1b-8620-486a-b1e2-731726298f1a
+pernas: 2
+stake total pelas pernas: US$ 200
+STAKE events: 0
+PAYOUT events: 2
+PAYOUT total: US$ 400
+```
 
-1. Surebet com duas pernas em casas diferentes.
-2. Surebet com duas entries dentro da mesma seleção.
-3. Punter/ValueBet com `_sub_entries` multi-entry.
-4. Duplo Green com `pernas[]` e `_sub_entries`.
-5. Filtro por bookmaker encontrando `pernas[].entries[]`.
-6. Lucro faltante em entries sendo distribuído proporcionalmente por stake.
-7. ROI usando apenas volume liquidado.
+Fluxo defeituoso encontrado:
 
-### 7. Validação final
+```text
+SurebetDialog / SurebetDialogTable
+  -> insert direto em apostas_unificada
+  -> insert direto em apostas_pernas
+  -> NÃO cria financial_events STAKE
+  -> liquidação cria PAYOUT
+  -> saldo fica inflado
+```
 
-Depois da implementação, vou rodar:
+Fluxo correto que deve ser usado:
 
-- testes unitários do agregador;
-- teste dos filtros auxiliares;
-- typecheck.
+```text
+criar_surebet_atomica
+  -> cria pai
+  -> cria pernas
+  -> cria STAKE no financial_events para cada perna
+  -> trigger atualiza saldo_atual
+```
+
+Plano de correção segura:
+
+1. Trocar a criação de surebet para o motor atômico
+   - Refatorar `SurebetDialog.tsx` e `SurebetDialogTable.tsx` para não fazerem mais insert direto em `apostas_unificada` + `apostas_pernas`.
+   - Usar a RPC canônica `criar_surebet_atomica`, que já cria os eventos `STAKE` e mantém saldo, pernas e operação em uma única transação.
+
+2. Blindar contra bypass futuro
+   - Adicionar uma barreira no código para centralizar criação de surebet em um helper/serviço único.
+   - Remover ou isolar caminhos de inserção direta para `forma_registro = ARBITRAGEM`.
+   - Garantir que qualquer criação de operação com múltiplas pernas passe pelo ledger.
+
+3. Corrigir a incompatibilidade de sinais se necessário
+   - A RPC atual de criação grava `STAKE` com valor negativo.
+   - O trigger atual usa o valor diretamente, então isso está consistente.
+   - Confirmar no ajuste final que não existe nenhuma função antiga ainda gravando `STAKE` com sinal positivo.
+
+4. Simulações obrigatórias antes de liberar
+   - Surebet 2 pernas, mesma moeda: saldo deve reduzir na criação e creditar payout na liquidação.
+   - Surebet 2 pernas com uma vencedora: apenas a casa vencedora recebe payout; a outra mantém débito da stake.
+   - Surebet com sub-entries/mesma seleção em duas casas: cada casa precisa gerar seu próprio `STAKE`.
+   - Surebet multimoeda: stake e payout em moeda nativa, consolidação separada.
+   - Deleção de surebet pendente: deve reverter stakes.
+   - Deleção de surebet liquidada: deve reverter stake + payout líquido sem duplicar.
+   - Reliquidação: trocar GREEN/RED/VOID não pode deixar payout antigo ativo.
+
+5. Auditoria sem retrofix automático
+   - Criar uma consulta de auditoria para listar operações com pernas e sem eventos `STAKE`, semelhante ao caso atual.
+   - Não farei correção em massa diretamente no ledger, porque o projeto tem política anti-retrofix para dados financeiros.
+   - Para casos já afetados, o caminho seguro é apresentar a lista de inconsistências e, se aprovado, aplicar ajustes explícitos via `AJUSTE_SALDO`/procedimento controlado, nunca update direto em `saldo_atual` nem deleção de ledger.
+
+6. Atualização de caches/UI após criação, liquidação, edição e exclusão
+   - Manter a invalidação canônica já adicionada para Visão Geral.
+   - Garantir que criação e edição de surebet também invalidem `bookmaker-saldos`, `projeto-dashboard-apostas`, calendário e KPIs canônicos.
+
+Arquivos previstos:
+
+```text
+src/components/projeto-detalhe/SurebetDialog.tsx
+src/components/projeto-detalhe/SurebetDialogTable.tsx
+src/services/aposta/ApostaService.ts ou novo helper canônico de surebet
+src/utils/__tests__/... testes/simulações de ledger de surebet
+supabase/migrations/... se for necessário blindar no banco
+```
 
 Resultado esperado:
 
-- se uma operação envolver duas casas, as duas aparecem em “Casas Mais Utilizadas”;
-- Surebet, Punter, ValueBet, Duplo Green, Visão Geral e Performance passam a usar a mesma regra;
-- futuras entradas multi-entry não voltam a perder casas por transformação intermediária.
+Depois da correção, uma surebet com US$ 100 em AMUNRA e US$ 100 em MY EMPIRE, ambas @2.00 e GREEN, ficará com apenas US$ 100 de lucro líquido por casa, porque o sistema passará a registrar:
+
+```text
+criação:   STAKE  -100 em cada casa
+liquidação: PAYOUT +200 em cada casa
+net:       +100 em cada casa
+```
+
+Isso elimina a inflação atual de saldo e impede que novas operações de surebet nasçam sem débito de stake.
