@@ -40,6 +40,8 @@ export function useInvalidateProjectQueries() {
         | "giros" 
         | "cashback"
         | "dashboard"
+        | "operacoes"
+        | "central"
       )[];
     }) => {
       const { only } = options || {};
@@ -151,6 +153,24 @@ export function useInvalidateProjectQueries() {
         invalidations.push(
           queryClient.invalidateQueries({ 
             queryKey: ["apostas", projetoId] 
+          }),
+          queryClient.invalidateQueries({ 
+            queryKey: ["surebets-tab", projetoId],
+            refetchType: "active",
+          })
+        );
+      }
+
+      // Listas operacionais filtradas por aba/período
+      if (shouldInvalidate("operacoes")) {
+        invalidations.push(
+          queryClient.invalidateQueries({ 
+            queryKey: ["surebets-tab", projetoId],
+            refetchType: "active",
+          }),
+          queryClient.invalidateQueries({ 
+            queryKey: ["apostas", projetoId],
+            refetchType: "active",
           })
         );
       }
@@ -165,10 +185,23 @@ export function useInvalidateProjectQueries() {
             queryKey: ["bonus-bets-summary", projetoId] 
           }),
           queryClient.invalidateQueries({ 
+            queryKey: ["bonus-bets-juice", projetoId] 
+          }),
+          queryClient.invalidateQueries({ 
             queryKey: ["bonus-analytics", projetoId] 
           }),
           queryClient.invalidateQueries({ 
             queryKey: ["bonus-ajustes-pos-limitacao", projetoId] 
+          })
+        );
+      }
+
+      // Central de Operações usa workspace/role na chave, então invalidamos por prefixo.
+      if (shouldInvalidate("central") || !only || only.length === 0) {
+        invalidations.push(
+          queryClient.invalidateQueries({
+            queryKey: ["central-operacoes-data"],
+            refetchType: "active",
           })
         );
       }
