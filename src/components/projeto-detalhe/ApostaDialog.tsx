@@ -2367,6 +2367,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               selecao: apostaData.selecao,
               observacoes: apostaData.observacoes,
               data_aposta: apostaData.data_aposta,
+              estrategia: apostaData.estrategia,
+              contexto_operacional: apostaData.contexto_operacional,
               // Campos de exchange/cobertura
               modo_entrada: apostaData.modo_entrada,
               lay_exchange: apostaData.lay_exchange,
