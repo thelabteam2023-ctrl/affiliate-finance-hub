@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useProjectBonuses, ProjectBonus, BonusFormData, FinalizeReason } from "@/hooks/useProjectBonuses";
+import { useBookmakerSaldosQuery } from "@/hooks/useBookmakerSaldosQuery";
 import { BonusHistoryDrawer } from "./BonusHistoryDrawer";
 import { BonusDialog } from "./BonusDialog";
 import { FinalizeBonusDialog } from "./FinalizeBonusDialog";
@@ -51,6 +52,14 @@ export function VinculoBonusDrawer({
     getBonusesByBookmaker,
     getSummary,
   } = useProjectBonuses({ projectId, bookmakerId });
+
+  const { data: saldosData } = useBookmakerSaldosQuery({
+    projetoId: projectId,
+    enabled: open || dialogOpen,
+    includeZeroBalance: true,
+  });
+
+  const saldoCanonico = saldosData?.find((saldo) => saldo.id === bookmakerId)?.saldo_operavel;
 
   // If initialBonusToEdit is provided, open the dialog for editing when drawer opens
   useEffect(() => {
@@ -173,7 +182,7 @@ export function VinculoBonusDrawer({
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         projectId={projectId}
-        bookmakers={[{ id: bookmakerId, nome: bookmakerName, login_username: bookmakerLogin, login_password_encrypted: bookmakerPassword, bookmaker_catalogo_id: bookmakerCatalogoId, logo_url: bookmakerLogo, moeda: currency }]}
+        bookmakers={[{ id: bookmakerId, nome: bookmakerName, login_username: bookmakerLogin, login_password_encrypted: bookmakerPassword, bookmaker_catalogo_id: bookmakerCatalogoId, logo_url: bookmakerLogo, moeda: currency, saldo_atual: saldoCanonico }]}
         bonus={editingBonus}
         preselectedBookmakerId={bookmakerId}
         saving={saving}

@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { BonusDialog } from "./BonusDialog";
 import { useProjectBonuses } from "@/hooks/useProjectBonuses";
+import { useBookmakerSaldosQuery } from "@/hooks/useBookmakerSaldosQuery";
 import { useAuth } from "@/hooks/useAuth";
 import { RascunhosBadge, RascunhosPanel } from "./rascunhos";
 import type { ApostaRascunho } from "@/hooks/useApostaRascunho";
@@ -116,6 +117,11 @@ export function GlobalActionsBar({
 
   // Bonus hook
   const { bonuses, createBonus, saving: bonusSaving } = useProjectBonuses({ projectId: projetoId });
+  const { data: saldosData = [] } = useBookmakerSaldosQuery({
+    projetoId,
+    enabled: !!projetoId,
+    includeZeroBalance: true,
+  });
 
   const activeBonusBookmakerIds = useMemo(() => {
     return new Set(
@@ -192,20 +198,26 @@ export function GlobalActionsBar({
   };
 
   // Transform bookmakers for BonusDialog format (hide bookmakers that already have an active OR pending bonus)
+  const saldosMap = useMemo(() => new Map(saldosData.map((saldo) => [saldo.id, saldo])), [saldosData]);
+
   const bookmarkersForBonus = bookmakers
     .filter((b) => !activeBonusBookmakerIds.has(b.id) && !pendingBonusBookmakerIds.has(b.id))
-    .map((b) => ({
-      id: b.id,
-      nome: b.nome,
-      login_username: b.login_username || "",
-      login_password_encrypted: b.login_password_encrypted,
-      logo_url: b.bookmakers_catalogo?.logo_url,
-      bookmaker_catalogo_id: b.bookmaker_catalogo_id,
-      saldo_atual: b.saldo_atual ?? 0,
-      saldo_usd: b.saldo_usd ?? 0,
-      moeda: b.moeda || "BRL",
-      parceiro_nome: b.parceiro?.nome,
-    }));
+    .map((b) => {
+      const saldoCanonico = saldosMap.get(b.id);
+
+      return {
+        id: b.id,
+        nome: b.nome,
+        login_username: b.login_username || "",
+        login_password_encrypted: b.login_password_encrypted,
+        logo_url: saldoCanonico?.logo_url || b.bookmakers_catalogo?.logo_url,
+        bookmaker_catalogo_id: b.bookmaker_catalogo_id,
+        saldo_atual: saldoCanonico?.saldo_operavel ?? b.saldo_atual,
+        saldo_usd: b.saldo_usd ?? 0,
+        moeda: saldoCanonico?.moeda || b.moeda || "BRL",
+        parceiro_nome: saldoCanonico?.parceiro_nome || b.parceiro?.nome,
+      };
+    });
 
   return (
     <>
