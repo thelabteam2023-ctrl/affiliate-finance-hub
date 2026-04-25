@@ -1455,7 +1455,14 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                 </div>
                 <div className="rounded-lg border border-border/50 bg-muted/20 p-3">
                   <p className="text-xs text-muted-foreground">Apostas</p>
-                  <p className="font-medium flex items-center gap-1"><Target className="h-3.5 w-3.5 text-primary" />{vinculoDetalhesMobile.totalApostas}</p>
+                  <button
+                    type="button"
+                    disabled={vinculoDetalhesMobile.totalApostas <= 0}
+                    onClick={() => openApostasModal(vinculoDetalhesMobile)}
+                    className="font-medium flex items-center gap-1 rounded transition-colors enabled:hover:text-primary disabled:cursor-default"
+                  >
+                    <Target className="h-3.5 w-3.5 text-primary" />{vinculoDetalhesMobile.totalApostas}
+                  </button>
                 </div>
               </div>
 
