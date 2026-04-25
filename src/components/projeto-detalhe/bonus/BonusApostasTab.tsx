@@ -831,20 +831,9 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
         }
       }
 
-      // 3. Atualizar lista local
-      setApostas(prev => prev.map(a =>
-        a.id === apostaId
-          ? { ...a, resultado, lucro_prejuizo: lucro, status: "LIQUIDADA" }
-          : a
-      ));
-      setApostasMultiplas(prev => prev.map(am =>
-        am.id === apostaId
-          ? { ...am, resultado, lucro_prejuizo: lucro, status: "LIQUIDADA" }
-          : am
-      ));
-
-      // 4. Invalidar cache de saldos
+      // 3. Recarregar do banco: retorno/lucro canônicos são calculados no motor financeiro.
       invalidateSaldos(projetoId);
+      await handleApostaUpdated();
 
       const resultLabel = {
         GREEN: "Green",
