@@ -131,6 +131,9 @@ interface Surebet {
   valor_brl_referencia?: number | null;
   lucro_prejuizo_brl_referencia?: number | null;
   lucro_prejuizo?: number | null;
+  fonte_saldo?: string | null;
+  stake_freebet?: number | null;
+  raw_pernas?: any[];
 }
 
 // REMOVIDO: Interface Bookmaker - agora usa BookmakerSaldo do hook centralizado
@@ -316,6 +319,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           status, resultado, observacoes, forma_registro, estrategia, contexto_operacional,
           odd, selecao, bookmaker_id, bonus_id,
           moeda_operacao, stake_consolidado, pl_consolidado, consolidation_currency, valor_brl_referencia, lucro_prejuizo_brl_referencia,
+          fonte_saldo, usar_freebet, stake_real, stake_freebet, is_multicurrency,
           bookmaker:bookmakers(nome, parceiro:parceiros(nome))
         `;
 
@@ -330,7 +334,6 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           .select(selectFields)
           .eq("projeto_id", projetoId)
           .eq("estrategia", "SUREBET")
-          .eq("forma_registro", "ARBITRAGEM")
           .is("cancelled_at", null)
           .order("data_aposta", { ascending: false });
         if (dateFilters.startUTC) q = q.gte("data_aposta", dateFilters.startUTC);
@@ -347,7 +350,6 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
             .select(selectFields)
             .eq("projeto_id", projetoId)
             .eq("estrategia", "SUREBET")
-            .eq("forma_registro", "ARBITRAGEM")
             .eq("status", "PENDENTE")
             .is("cancelled_at", null)
             .order("data_aposta", { ascending: false })
