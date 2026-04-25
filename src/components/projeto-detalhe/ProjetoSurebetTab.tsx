@@ -661,7 +661,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       console.error("Erro ao excluir surebet:", error);
       toast.error("Erro ao excluir surebet");
     }
-  }, [projetoId, invalidateSaldos, onDataChange, queryClient]);
+  }, [projetoId, invalidateSaldos, onDataChange, invalidateAfterMutation, refetchSurebets]);
 
   // === DUPLICAR ===
   const handleDuplicateSimples = useCallback((apostaId: string) => {
