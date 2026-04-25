@@ -64,6 +64,7 @@ interface BookmakerOption {
   logo_url?: string | null;
   bookmaker_catalogo_id?: string | null;
   saldo_atual?: number;
+  saldo_operavel?: number;
   saldo_usd?: number;
   moeda?: string;
   parceiro_nome?: string;
@@ -527,7 +528,7 @@ export function BonusDialog({
                     const moeda = bk.moeda || "BRL";
                     const currencySymbol = getCurrencySymbol(moeda);
 
-                    const saldo = bk.saldo_atual ?? 0;
+                    const saldo = bk.saldo_atual ?? bk.saldo_operavel ?? null;
 
                     return (
                       <SelectItem key={bk.id} value={bk.id} className="py-2">
@@ -554,13 +555,19 @@ export function BonusDialog({
                               )}
                             </div>
                           </div>
-                          <span className="text-success font-semibold whitespace-nowrap shrink-0">
-                            {currencySymbol}{" "}
-                            {saldo.toLocaleString("pt-BR", {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
-                          </span>
+                          {saldo === null ? (
+                            <span className="text-xs font-medium text-muted-foreground whitespace-nowrap shrink-0">
+                              saldo indisponível
+                            </span>
+                          ) : (
+                            <span className="text-success font-semibold whitespace-nowrap shrink-0">
+                              {currencySymbol}{" "}
+                              {saldo.toLocaleString("pt-BR", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </span>
+                          )}
                         </div>
                       </SelectItem>
                     );
