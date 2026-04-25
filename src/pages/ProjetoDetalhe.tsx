@@ -968,6 +968,7 @@ export default function ProjetoDetalhe() {
           <TabsContent value="visao-geral" forceMount className={cn("h-full m-0", activeTab !== "visao-geral" && "hidden")}>
             <ProjetoDashboardTab 
               projetoId={id!} 
+              refreshTrigger={refreshTrigger}
             />
           </TabsContent>
 
