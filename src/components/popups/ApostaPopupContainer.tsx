@@ -27,11 +27,12 @@ export const ApostaPopupContainer: React.FC = () => {
     if (!activePopup || !data) return;
 
     if (activePopup === 'simples') {
+      const estrategia = data.activeTab === 'surebet' ? 'SUREBET' : 'PUNTER';
       openApostaWindow({
         projetoId: data.projetoId,
         id: data.aposta?.id || null,
         activeTab: data.activeTab,
-        estrategia: 'PUNTER',
+        estrategia,
       });
       closePopup();
     }
