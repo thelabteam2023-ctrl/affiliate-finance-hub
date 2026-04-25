@@ -210,6 +210,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
   const [ajusteSaldoDialogOpen, setAjusteSaldoDialogOpen] = useState(false);
   const [vinculoParaAjuste, setVinculoParaAjuste] = useState<Vinculo | null>(null);
   const [vinculoDetalhesMobile, setVinculoDetalhesMobile] = useState<Vinculo | null>(null);
+  const [vinculoApostasModal, setVinculoApostasModal] = useState<Vinculo | null>(null);
   
   const sortStorageKey = `vinculos-sort-mode:${projetoId}`;
   const [sortMode, setSortModeState] = useState<VinculoSortMode>(() => {
@@ -234,6 +235,67 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
   }, [sortStorageKey]);
   const [receberContasDialogOpen, setReceberContasDialogOpen] = useState(false);
   const isBroker = isBrokerProp === true;
+
+  const apostasUsoQuery = useQuery({
+    queryKey: ["vinculo-apostas-uso", projetoId, vinculoApostasModal?.id],
+    enabled: !!projetoId && !!vinculoApostasModal?.id,
+    queryFn: async (): Promise<ApostaUsoBookmaker[]> => {
+      const bookmakerId = vinculoApostasModal!.id;
+
+      const [{ data: simples, error: simplesError }, { data: pernas, error: pernasError }] = await Promise.all([
+        supabase
+          .from("apostas_unificada")
+          .select("id, data_aposta, evento, esporte, mercado, estrategia, forma_registro, status, resultado, odd, stake, moeda_operacao, selecao")
+          .eq("projeto_id", projetoId)
+          .eq("bookmaker_id", bookmakerId)
+          .is("cancelled_at", null),
+        supabase
+          .from("apostas_pernas")
+          .select("id, selecao, selecao_livre, odd, stake, moeda, aposta:apostas_unificada!inner(id, projeto_id, data_aposta, evento, esporte, mercado, estrategia, forma_registro, status, resultado, cancelled_at)")
+          .eq("bookmaker_id", bookmakerId)
+          .eq("aposta.projeto_id", projetoId)
+          .is("aposta.cancelled_at", null),
+      ]);
+
+      if (simplesError) throw simplesError;
+      if (pernasError) throw pernasError;
+
+      const rows: ApostaUsoBookmaker[] = [];
+      (simples || []).forEach((a: any) => rows.push({
+        id: a.id,
+        data_aposta: a.data_aposta,
+        evento: a.evento,
+        esporte: a.esporte,
+        mercado: a.mercado,
+        estrategia: a.estrategia,
+        forma_registro: a.forma_registro,
+        status: a.status,
+        resultado: a.resultado,
+        odd: a.odd,
+        stake: a.stake,
+        moeda: a.moeda_operacao,
+        selecao: a.selecao,
+      }));
+      (pernas || []).forEach((p: any) => rows.push({
+        id: p.aposta.id,
+        pernaId: p.id,
+        data_aposta: p.aposta.data_aposta,
+        evento: p.aposta.evento,
+        esporte: p.aposta.esporte,
+        mercado: p.aposta.mercado,
+        estrategia: p.aposta.estrategia,
+        forma_registro: p.aposta.forma_registro,
+        status: p.aposta.status,
+        resultado: p.aposta.resultado,
+        odd: p.odd,
+        stake: p.stake,
+        moeda: p.moeda,
+        selecao: p.selecao_livre || p.selecao,
+      }));
+
+      return rows.sort((a, b) => new Date(b.data_aposta).getTime() - new Date(a.data_aposta).getTime());
+    },
+  });
 
   const { bonuses, fetchBonuses: refetchBonuses, getSummary, getActiveBonusByBookmaker, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
 
