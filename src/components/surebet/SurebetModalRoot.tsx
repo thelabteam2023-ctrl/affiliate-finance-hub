@@ -125,13 +125,13 @@ import {
   CONTEXTOS_LIST,
   APOSTA_ESTRATEGIA,
   CONTEXTO_OPERACIONAL,
-  getEstrategiaFromTab,
   getContextoFromTab,
-  isAbaEstrategiaFixa,
   isAbaContextoFixo,
   type ApostaEstrategia,
   type ContextoOperacional,
 } from "@/lib/apostaConstants";
+
+const ARBITRAGEM_ESTRATEGIA: ApostaEstrategia = APOSTA_ESTRATEGIA.SUREBET;
 
 const getPernaLabel = (index: number, total: number): string => {
   if (total === 2) return index === 0 ? "1" : "2";
@@ -412,7 +412,7 @@ export function SurebetModalRoot({
       setEvento(surebet.evento);
       setEsporte(surebet.esporte);
       setMercado(surebet.mercado || "");
-      setEstrategia((surebet.estrategia || APOSTA_ESTRATEGIA.SUREBET) as ApostaEstrategia);
+      setEstrategia(ARBITRAGEM_ESTRATEGIA);
       setContexto((surebet.contexto_operacional || CONTEXTO_OPERACIONAL.NORMAL) as ContextoOperacional);
       
       // Preservar Data/Hora original no modo edição
@@ -449,7 +449,7 @@ export function SurebetModalRoot({
       setEvento(rascunho.evento || "");
       setEsporte(rascunho.esporte || "Futebol");
       setMercado(rascunho.mercado || "");
-      setEstrategia(rascunho.estrategia ? (rascunho.estrategia as ApostaEstrategia) : null);
+      setEstrategia(ARBITRAGEM_ESTRATEGIA);
       setContexto((rascunho.contexto_operacional || CONTEXTO_OPERACIONAL.NORMAL) as ContextoOperacional);
       
       const numPernasRascunho = rascunho.quantidade_pernas || rascunho.pernas?.length || 2;
@@ -494,8 +494,7 @@ export function SurebetModalRoot({
       
       // Se a aba tiver estratégia fixa, pré-selecionar automaticamente
       // Em "apostas-livres" ou "apostas", o usuário deve escolher manualmente
-      const estrategiaFromTab = getEstrategiaFromTab(activeTab);
-      setEstrategia(estrategiaFromTab);
+      setEstrategia(ARBITRAGEM_ESTRATEGIA);
       
       // Contexto baseado na aba
       if (activeTab === 'bonus') {
@@ -530,7 +529,7 @@ export function SurebetModalRoot({
   // precisamos atualizar os estados automaticamente
   useEffect(() => {
     if (!isEditing && open) {
-      const lockedEstrategia = isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : null;
+      const lockedEstrategia = ARBITRAGEM_ESTRATEGIA;
       const lockedContexto = isAbaContextoFixo(activeTab) ? getContextoFromTab(activeTab) : null;
       
       // Sincronizar estratégia se locked
@@ -1308,7 +1307,6 @@ export function SurebetModalRoot({
   const handleSave = async () => {
     // GUARD: Impede múltiplos saves simultâneos (double-click, Enter key, etc.)
     if (saving) return;
-    if (!estrategia) { toast.error("Selecione uma estratégia"); return; }
     if (!contexto) { toast.error("Selecione um contexto"); return; }
     if (!evento.trim()) { toast.error("Informe o evento"); return; }
     if (odds.length < numPernas || analysis.pernasCompletasCount < numPernas) {
@@ -1327,6 +1325,8 @@ export function SurebetModalRoot({
       setSaving(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
+
+      const estrategiaArbitragem = ARBITRAGEM_ESTRATEGIA;
 
       const getBookmakerMoeda = (bookmakerId: string): SupportedCurrency => {
         const bk = bookmakerSaldos.find(b => b.id === bookmakerId);
@@ -1495,7 +1495,7 @@ export function SurebetModalRoot({
           p_esporte: esporte,
           p_mercado: mercado,
           p_modelo: modelo,
-          p_estrategia: estrategia,
+          p_estrategia: estrategiaArbitragem,
           p_contexto: contexto,
           p_data_aposta: toLocalTimestamp(dataAposta),
           p_stake_total: newStakeTotal,
@@ -1594,7 +1594,7 @@ export function SurebetModalRoot({
           p_esporte: esporte,
           p_mercado: mercado || null,
           p_modelo: modelo,
-          p_estrategia: estrategia,
+          p_estrategia: estrategiaArbitragem,
           p_contexto_operacional: contexto,
           p_data_aposta: toLocalTimestamp(dataAposta),
           p_pernas: pernasParaRPC,
@@ -1715,7 +1715,7 @@ export function SurebetModalRoot({
           projeto_id: projetoId,
           bookmaker_id: entry.bookmaker_id,
           forma_registro: 'SIMPLES',
-          estrategia,
+          estrategia: ARBITRAGEM_ESTRATEGIA,
           contexto_operacional: contexto,
           evento,
           esporte,
@@ -2010,7 +2010,7 @@ export function SurebetModalRoot({
       evento: evento || undefined,
       mercado: mercado || undefined,
       esporte: esporte || undefined,
-      estrategia: estrategia || undefined,
+      estrategia: ARBITRAGEM_ESTRATEGIA,
       contexto_operacional: contexto || undefined,
       modelo,
       modelo_tipo: modeloTipo,
@@ -2074,7 +2074,7 @@ export function SurebetModalRoot({
             onContextoChange={(v) => setContexto(v)}
             isEditing={isEditing}
             activeTab={activeTab}
-            lockedEstrategia={!isEditing && isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : null}
+            lockedEstrategia={ARBITRAGEM_ESTRATEGIA}
             gameFields={{
               esporte,
               evento,

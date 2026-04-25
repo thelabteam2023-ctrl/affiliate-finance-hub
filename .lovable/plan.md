@@ -1,165 +1,52 @@
-## Diagnóstico encontrado
+Plano para corrigir o erro do formulário de Arbitragem e preservar as melhorias recentes
 
-A falha mais forte está no fluxo de apostas simples com múltiplas entradas/casas, como o jogo **Venezia x Empoli** na aba **Duplo Green**.
+Diagnóstico confirmado
+- O erro da imagem vem da trigger de proteção em `apostas_pernas`: ela bloqueia qualquer registro pai `forma_registro = ARBITRAGEM` cuja `estrategia` não seja `SUREBET`.
+- O formulário de Arbitragem foi aberto pela aba Bônus (`tab=bonus`) e por isso o estado do formulário ficou com `estrategia = EXTRACAO_BONUS`.
+- Ao salvar, o formulário chama `criar_surebet_atomica` com `p_estrategia = EXTRACAO_BONUS`; a função cria o pai como `ARBITRAGEM + EXTRACAO_BONUS`; em seguida, ao inserir as pernas, a trigger bloqueia com: “Arbitragem com pernas deve usar estrategia=SUREBET e motor atômico”.
+- Ou seja: as melhorias de roteamento/contexto deixaram o formulário respeitar a aba de origem, mas isso conflitou com a regra atual do banco que exige que toda arbitragem técnica seja `SUREBET`.
 
-No banco, esse jogo está gravado como:
+Correção proposta
 
-```text
-forma_registro: SIMPLES
-estrategia: DUPLO_GREEN
-bookmaker_id do pai: null
-pernas:
-  1) AMUNRA, USD, stake 100, odd 2
-  2) 7GAMES, BRL, stake 500, odd 2
-```
+1. Separar “tipo técnico do formulário” de “contexto de origem”
+- Para o formulário de Arbitragem, manter sempre `estrategia = SUREBET` no registro salvo, independentemente de ele ter sido aberto dentro de Bônus, Punter, ValueBet, Duplo Green ou Surebet.
+- Preservar `contexto_operacional = BONUS` quando o formulário vier da aba Bônus, e `FREEBET` quando vier da aba Freebets.
+- Manter a fonte de saldo por perna (`REAL`/`FREEBET`) como a verdade financeira, sem voltar ao modelo antigo.
 
-Ou seja: ele é uma **aposta simples multi-entry**, não uma arbitragem/surebet real. Porém, em algumas abas, quando esse tipo de card é renderizado visualmente como `SurebetCard`, o botão **Duplicar** está chamando o formulário errado:
+2. Ajustar UI do cabeçalho do formulário de Arbitragem
+- Evitar que o cabeçalho mostre “Extração de Bônus” como estratégia em um formulário de Arbitragem.
+- Quando aberto da aba Bônus, o cabeçalho deve indicar o contexto de origem, mas a estratégia técnica do formulário deve permanecer Surebet/Arbitragem.
+- Isso elimina a inconsistência visual e evita que o usuário registre uma arbitragem com estratégia incompatível.
 
-```text
-Aposta simples multi-entry -> abre /janela/surebet/novo?duplicateFrom=...
-```
+3. Corrigir o salvamento no `SurebetModalRoot`
+- No `handleSave`, normalizar a estratégia antes da chamada RPC:
+  - `p_estrategia: 'SUREBET'` para qualquer `forma_registro = ARBITRAGEM`.
+  - `p_contexto_operacional` continua vindo da aba/modal (`NORMAL`, `BONUS`, `FREEBET`).
+- Aplicar a mesma regra em rascunhos e duplicações de arbitragem para não reutilizar estratégia inválida.
+- Manter os snapshots de cotação de trabalho já implementados (`getEffectiveRate` + `getSnapshotFields`) para todas as pernas.
 
-O correto é:
+4. Reforçar a camada de serviço para evitar regressão
+- Em `ApostaService.criarAposta`, no caminho `forma_registro = ARBITRAGEM`, enviar `p_estrategia: 'SUREBET'` para a RPC mesmo que algum chamador passe outra estratégia por engano.
+- Isso cria uma defesa adicional no frontend/service sem enfraquecer a proteção do banco.
 
-```text
-Aposta simples multi-entry -> abrir /janela/aposta/novo?duplicateFrom=...
-```
+5. Revisar o hook legado de arbitragem
+- `useApostasUnificada.criarArbitragem` ainda faz insert direto em `apostas_unificada` e depois em `apostas_pernas`, contrariando o padrão atual do motor atômico.
+- Vou atualizar esse hook para delegar a criação para `criar_surebet_atomica` ou remover o caminho inseguro de dual-write direto, preservando os snapshots de cotação de trabalho.
+- Isso evita que outros pontos do app recriem o mesmo erro ou contornem o ledger.
 
-Isso explica falhas intermitentes: depende de qual aba/renderização você usa. Na aba **Todas as apostas** e **Surebet**, esse caso já está mais alinhado; em **Duplo Green**, **ValueBet**, **Punter** e **Bônus**, há trechos em que multi-entry simples chama `handleDuplicateSurebet`, o que força o fluxo de formulário de surebet em uma operação que nasceu no formulário simples.
+6. Auditar os demais formulários de aposta
+- Aposta simples: confirmar que continua salvando snapshots de Cotação de Trabalho no pai e nas pernas multi-casa.
+- Aposta múltipla: confirmar que usa `getEffectiveRate` e não cotação oficial para snapshots.
+- Arbitragem/Surebet: confirmar que usa cotação de trabalho em todas as pernas e que salva via RPC atômica.
+- Duplicação: confirmar que não carrega IDs antigos e que abre o formulário correto por `forma_registro`.
+- Modal de Vínculos: confirmar que o botão editar abre o formulário correto sem trocar a estratégia técnica de arbitragem.
 
-Também encontrei outro risco: ao duplicar uma aposta simples, o clone carrega `__seedPernas` com as pernas originais, mas cada entrada adicional recebe `id` igual ao ID antigo da perna. Na hora de salvar, o insert em `apostas_pernas` não usa esse `id`, então tende a não quebrar, mas deixa o estado do formulário semanticamente errado. O clone deveria carregar entradas sem IDs antigos.
+7. Validação após implementar
+- Rodar checagem TypeScript.
+- Fazer busca no código por chamadas diretas a inserts de `ARBITRAGEM` em `apostas_unificada`/`apostas_pernas`.
+- Validar o caso da imagem: arbitragem aberta da aba Bônus com 3 pernas deve salvar sem erro, como `SUREBET` técnico + `contexto_operacional = BONUS`.
 
-## Solução proposta
-
-### 1. Corrigir o handler de duplicação para aposta simples multi-entry
-
-Ajustar todos os pontos onde uma aposta simples multi-entry é renderizada via `SurebetCard` para continuar usando o formulário correto de origem:
-
-```text
-onDuplicate={handleDuplicateSimples ou handleDuplicateAposta}
-```
-
-em vez de:
-
-```text
-onDuplicate={handleDuplicateSurebet}
-```
-
-Aplicar nas abas:
-
-- Duplo Green
-- ValueBet
-- Punter
-- Bônus
-- Conferir novamente Todas as apostas e Surebet para manter o padrão correto
-
-Regra final:
-
-```text
-forma_registro = SIMPLES  -> duplicar com formulário de Aposta Simples
-forma_registro = MULTIPLA -> duplicar com formulário de Múltipla
-forma_registro = ARBITRAGEM/SUREBET real -> duplicar com formulário de Surebet
-```
-
-### 2. Preservar a estratégia da aba ao duplicar
-
-Nos links de duplicação, incluir a estratégia explícita quando a aba é especializada, por exemplo:
-
-```text
-Duplo Green: estrategia=DUPLO_GREEN
-ValueBet: estrategia=VALUEBET
-Punter: estrategia=PUNTER
-Bônus: estrategia=EXTRACAO_BONUS
-Freebets: estrategia=EXTRACAO_FREEBET
-Surebet: estrategia=SUREBET
-```
-
-Isso reduz dependência de inferência posterior e evita clones salvos em estratégia errada.
-
-### 3. Limpar IDs antigos das pernas ao hidratar clone simples
-
-No `ApostaWindowPage`/`ApostaDialog`, ao carregar `__seedPernas` para duplicação:
-
-- manter bookmaker, odd, stake, seleção, moeda, fonte_saldo e snapshots úteis;
-- remover `id`, `aposta_id`, `created_at`, `updated_at` das pernas seed;
-- gerar IDs locais novos apenas para UI, sem reaproveitar UUIDs reais de `apostas_pernas`.
-
-Isso deixa claro que o clone é novo e evita qualquer risco de edição/sincronização acidental com perna antiga.
-
-### 4. Corrigir duplicação de surebet real
-
-Hoje o `SurebetWindowPage` busca apenas o pai (`apostas_unificada`) e depende do `SurebetModalRoot` buscar pernas usando `surebet.id`. Em duplicação, o objeto montado não contém `id`, então o formulário pode abrir sem pernas.
-
-Ajuste proposto:
-
-- quando `duplicateFrom` existir, buscar também `apostas_pernas` do original;
-- passar essas pernas como seed para o `SurebetModalRoot`;
-- no modal, em modo duplicação, popular as pernas a partir do seed, mas sem IDs antigos;
-- salvar como operação nova.
-
-Isso separa corretamente:
-
-```text
-Editar surebet -> usa id original e IDs das pernas
-Duplicar surebet -> usa dados originais como seed, sem IDs antigos
-```
-
-### 5. Padronizar abertura de janelas
-
-Criar/usar helpers de duplicação em `windowHelper.ts` para evitar URLs manuais divergentes:
-
-```text
-openDuplicateApostaWindow
-openDuplicateMultiplaWindow
-openDuplicateSurebetWindow
-```
-
-Com isso, as abas deixam de montar URLs manualmente e a regra fica centralizada.
-
-### 6. Revisar atualização após salvar clone
-
-Garantir que, ao salvar a duplicação, os eventos cross-window invalidem as listas/KPIs corretos em todas as abas:
-
-- `APOSTA_SAVED` para simples;
-- `APOSTA_MULTIPLA_SAVED` para múltipla;
-- `SUREBET_SAVED` para surebet real;
-- invalidar caches canônicos e saldos após salvar.
-
-### 7. Testes práticos após correção
-
-Testar manualmente os cenários principais:
-
-1. **Duplo Green**: duplicar o Venezia x Empoli multi-entry.
-   - Deve abrir formulário simples.
-   - Deve carregar AMUNRA e 7GAMES como entradas.
-   - Deve salvar novo clone como `DUPLO_GREEN`.
-   - Deve aparecer na aba Duplo Green.
-
-2. **ValueBet/Punter/Bônus**: duplicar aposta simples single-entry e multi-entry.
-   - Single-entry e multi-entry devem abrir o formulário simples.
-   - Estratégia deve permanecer fixa conforme a aba.
-
-3. **Surebet real**: duplicar operação de arbitragem real.
-   - Deve abrir formulário de surebet.
-   - Deve carregar todas as pernas.
-   - Deve salvar como nova operação sem reaproveitar IDs antigos.
-
-4. **Todas as apostas**: duplicar simples, múltipla e surebet.
-   - Cada tipo deve abrir seu formulário correto.
-
-## Arquivos a alterar
-
-- `src/components/projeto-detalhe/ProjetoDuploGreenTab.tsx`
-- `src/components/projeto-detalhe/ProjetoValueBetTab.tsx`
-- `src/components/projeto-detalhe/ProjetoPunterTab.tsx`
-- `src/components/projeto-detalhe/bonus/BonusApostasTab.tsx`
-- `src/components/projeto-detalhe/ProjetoApostasTab.tsx` apenas para revisão/centralização
-- `src/components/projeto-detalhe/ProjetoSurebetTab.tsx` apenas para revisão/centralização
-- `src/pages/ApostaWindowPage.tsx`
-- `src/pages/SurebetWindowPage.tsx`
-- `src/components/surebet/SurebetModalRoot.tsx`
-- `src/lib/windowHelper.ts`
-
-## Resultado esperado
-
-A ação **Duplicar** passa a respeitar a origem real da operação, e não apenas o componente visual usado no card. Assim, uma aposta simples multi-casa renderizada como card estilo surebet continuará sendo duplicada no formulário de aposta simples, preservando entradas, estratégia, cotação/snapshots e visibilidade na aba correta.
+Resultado esperado
+- O usuário conseguirá registrar arbitragem novamente sem o erro.
+- As melhorias recentes continuarão funcionando: cotação de trabalho, duplicação, edição por vínculos e renderização nas abas.
+- O sistema fica coerente com o padrão financeiro definido: arbitragem sempre usa motor atômico e pernas via ledger, sem insert/update direto inseguro.

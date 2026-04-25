@@ -38,7 +38,6 @@ import {
   ArrowRight
 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
 import { getMarketsForSportAndModel, isMercadoCompativelComModelo } from "@/lib/marketNormalizer";
 import { 
   BookmakerSelectOption, 
@@ -545,7 +544,7 @@ export function SurebetDialogTable({
         setEvento(surebet.evento);
         setEsporte(surebet.esporte);
         setMercado(surebet.mercado || "");
-        setEstrategia(surebet.estrategia || "SUREBET");
+        setEstrategia("SUREBET");
         setContexto(surebet.contexto_operacional || "NORMAL");
         
         // Determinar modelo baseado no modelo salvo
@@ -568,7 +567,7 @@ export function SurebetDialogTable({
         setMercado(rascunho.mercado || "");
         
         // Carregar campos de contexto obrigatórios
-        setEstrategia(rascunho.estrategia || "SUREBET");
+        setEstrategia("SUREBET");
         setContexto(rascunho.contexto_operacional || "NORMAL");
         
         // Determinar modelo baseado no novo campo modelo_tipo ou fallback para pernas
@@ -1278,7 +1277,7 @@ export function SurebetDialogTable({
         p_esporte: esporte,
         p_mercado: mercado || null,
         p_modelo: modeloString,
-        p_estrategia: estrategia,
+        p_estrategia: 'SUREBET',
         p_contexto_operacional: contexto,
         p_data_aposta: toLocalTimestamp(""),
         p_pernas: pernasParaRPC,
@@ -2152,7 +2151,7 @@ export function SurebetDialogTable({
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1.5">
                   <Label className="text-[10px] text-muted-foreground whitespace-nowrap">Estratégia</Label>
-                  <Select value={estrategia} onValueChange={setEstrategia} disabled={isEditing}>
+                  <Select value="SUREBET" onValueChange={() => setEstrategia("SUREBET")} disabled>
                     <SelectTrigger className="h-7 w-28 text-xs">
                       <SelectValue />
                     </SelectTrigger>
