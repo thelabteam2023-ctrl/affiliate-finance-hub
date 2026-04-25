@@ -54,7 +54,7 @@ import { liquidarAposta, reverterLiquidacao } from "@/lib/financialEngine";
 import { estornarFreebetViaLedger, creditarFreebetViaLedger, consumirFreebetViaLedger } from "@/lib/freebetLedgerService";
 import { RegistroApostaValues, validateRegistroAposta, getSuggestionsForTab } from "./RegistroApostaFields";
 import { BetFormHeaderV2 } from "@/components/apostas/BetFormHeaderV2";
-import { FONTE_SALDO, getContextoFromTab, isAbaContextoFixo, type FormaRegistro, type ApostaEstrategia, type ContextoOperacional, type FonteSaldo } from "@/lib/apostaConstants";
+import { FONTE_SALDO, getContextoFromTab, isAbaContextoFixo, type ApostaEstrategia, type ContextoOperacional, type FonteSaldo } from "@/lib/apostaConstants";
 import { useFonteSaldoDefault } from "@/components/apostas/FonteSaldoSelector";
 import { toLocalTimestamp, validarDataAposta, dbTimestampToDatetimeLocal } from "@/utils/dateUtils";
 import { 
