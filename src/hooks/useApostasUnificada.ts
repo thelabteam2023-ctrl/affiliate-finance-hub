@@ -7,7 +7,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { 
   ApostaUnificadaRow,
-  ApostaUnificadaInsert,
   PernaArbitragem,
   CriarArbitragemParams,
   AtualizarArbitragemParams,
@@ -46,7 +45,7 @@ export interface UseApostasUnificadaReturn {
 export function useApostasUnificada(): UseApostasUnificadaReturn {
   const [loading, setLoading] = useState(false);
   const { workspaceId } = useWorkspace();
-  const { getSnapshotFields, isForeignCurrency } = useCurrencySnapshot();
+  const { getSnapshotFields } = useCurrencySnapshot();
   const { getRate } = useCotacoes();
 
   // Buscar operações de arbitragem de um projeto
@@ -121,23 +120,14 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
         return null;
       }
 
-      const stakeTotal = calcularStakeTotalPernas(params.pernas);
-      const spread = calcularSpread(params.pernas);
-      const roiEsperado = calcularRoiEsperado(params.pernas);
-      const lucroEsperado = calcularLucroEsperado(params.pernas);
-
-      // Determinar moeda da operação baseado nas pernas
-      // Para operações multi-moeda, usamos a moeda da primeira perna ou BRL
-      const moedaOperacao = params.moeda_operacao || "BRL";
       const { data: workingRates } = await supabase
         .from("projetos")
         .select("fonte_cotacao, cotacao_trabalho, cotacao_trabalho_eur, cotacao_trabalho_gbp, cotacao_trabalho_myr, cotacao_trabalho_mxn, cotacao_trabalho_ars, cotacao_trabalho_cop")
         .eq("id", params.projeto_id)
         .maybeSingle();
-      const parentRate = resolveEffectiveProjectRate(moedaOperacao, workingRates, getRate);
       
-      // Criar snapshot de conversão se for moeda estrangeira
-      const snapshotFields = getSnapshotFields(stakeTotal, moedaOperacao as SupportedCurrency, parentRate.rate);
+      // Arbitragem real sempre nasce pelo motor atômico e com estratégia técnica SUREBET.
+      // O contexto operacional preserva a aba de origem (ex: BONUS/FREEBET).
       const pernasComSnapshot = params.pernas.map((perna) => {
         const pernaMoeda = (perna.moeda || "BRL") as SupportedCurrency;
         const pernaRate = resolveEffectiveProjectRate(pernaMoeda, workingRates, getRate);
@@ -151,69 +141,35 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
         };
       });
 
-      const insertData: ApostaUnificadaInsert = {
-        user_id: user.id,
-        workspace_id: workspaceId,
-        projeto_id: params.projeto_id,
-        forma_registro: "ARBITRAGEM",
-        estrategia: params.estrategia,
-        contexto_operacional: params.contexto_operacional,
-        evento: params.evento,
-        esporte: params.esporte,
-        mercado: params.mercado,
-        modelo: params.modelo,
-        pernas: pernasComSnapshot as any,
-        stake_total: stakeTotal,
-        spread_calculado: spread,
-        roi_esperado: roiEsperado,
-        lucro_esperado: lucroEsperado,
-        observacoes: params.observacoes,
-        status: "PENDENTE",
-        resultado: "PENDENTE",
-        data_aposta: new Date().toISOString(),
-        // Campos de multi-moeda
-        moeda_operacao: snapshotFields.moeda_operacao,
-        cotacao_snapshot: snapshotFields.cotacao_snapshot,
-        cotacao_snapshot_at: snapshotFields.cotacao_snapshot_at,
-        valor_brl_referencia: snapshotFields.valor_brl_referencia,
-        conversion_source: parentRate.source,
-      };
-
-      const { data, error } = await supabase
-        .from("apostas_unificada")
-        .insert(insertData)
-        .select("id")
-        .single();
+      const { data, error } = await supabase.rpc('criar_surebet_atomica', {
+        p_workspace_id: workspaceId,
+        p_user_id: user.id,
+        p_projeto_id: params.projeto_id,
+        p_evento: params.evento,
+        p_esporte: params.esporte || null,
+        p_mercado: params.mercado || null,
+        p_modelo: params.modelo || null,
+        p_estrategia: 'SUREBET',
+        p_contexto_operacional: params.contexto_operacional || 'NORMAL',
+        p_data_aposta: new Date().toISOString(),
+        p_pernas: pernasComSnapshot as any,
+      });
 
       if (error) throw error;
-      
-      // DUAL-WRITE: Inserir pernas na tabela normalizada
-      if (data?.id && params.pernas.length > 0) {
-        const pernasInsert = pernasToInserts(data.id, pernasComSnapshot);
-        const { error: pernasError } = await supabase
-          .from("apostas_pernas")
-          .insert(pernasInsert);
-        
-        if (pernasError) {
-          console.error("[useApostasUnificada] Erro ao inserir pernas normalizadas:", pernasError);
-          // Não falhar a operação principal, apenas logar
-        }
+      const result = data?.[0];
+      if (!result?.success || !result.aposta_id) {
+        throw new Error(result?.message || 'Falha ao criar arbitragem');
       }
       
-      const isForeign = isForeignCurrency(moedaOperacao);
-      toast.success(
-        isForeign 
-          ? `Operação registrada (${moedaOperacao})!` 
-          : "Operação registrada com sucesso!"
-      );
-      return data.id;
+      toast.success("Operação registrada com sucesso!");
+      return result.aposta_id;
     } catch (error: any) {
       toast.error("Erro ao criar operação: " + error.message);
       return null;
     } finally {
       setLoading(false);
     }
-  }, [getSnapshotFields, getRate, isForeignCurrency, workspaceId]);
+  }, [getSnapshotFields, getRate, workspaceId]);
 
   // Atualizar operação existente
   const atualizarArbitragem = useCallback(async (params: AtualizarArbitragemParams): Promise<boolean> => {
