@@ -84,6 +84,7 @@ import { ModuleActivationDialog } from "@/components/projeto-detalhe/ModuleActiv
 import { SetDefaultTabButton } from "@/components/projeto-detalhe/SetDefaultTabButton";
 import { useActionAccess } from "@/hooks/useModuleAccess";
 import { getOperationalDateRangeForQuery, getTodayCivilDate } from "@/utils/dateUtils";
+import { useInvalidateAfterMutation } from "@/hooks/useInvalidateAfterMutation";
 // REMOVIDO: OperationalFiltersProvider - filtros agora são isolados por aba
 
 // Icon map for dynamic modules
@@ -167,6 +168,7 @@ export default function ProjetoDetalhe() {
   // Hook de formatação de moeda do projeto
   const { formatCurrency, formatChartAxis, convertToConsolidation, convertToConsolidationOficial, cotacaoOficialUSD } = useProjetoCurrency(id);
   const { getRate, lastUpdate: rateLastUpdate } = useCotacoes();
+  const invalidateAfterMutation = useInvalidateAfterMutation();
   
   // Project tab preference (página inicial por projeto)
   const { defaultTab, loading: tabPreferenceLoading, isDefaultTab } = useProjectTabPreference(id);
@@ -369,14 +371,6 @@ export default function ProjetoDetalhe() {
     }
   }, [id, defaultTab, tabPreferenceLoading, modulesLoading, modulesError, isModuleActive, tabFromUrl]);
   
-  // Função centralizada para disparar refresh em todas as abas
-  const triggerGlobalRefresh = () => {
-    setRefreshTrigger(prev => prev + 1);
-    fetchApostasResumo();
-    refreshResultado();
-    refreshBreakdowns();
-  };
-
   // KPIs sempre mostram dados completos do projeto (sem filtro de período no nível da página)
   // Cada aba tem seu próprio filtro interno (padrão Bônus/Freebets)
   const getDateRangeFromFilter = (): { start: Date | null; end: Date | null } => {
@@ -407,6 +401,17 @@ export default function ProjetoDetalhe() {
     convertToConsolidationOficial,
     cotacaoKey: cotacaoOficialUSD,
   });
+
+  // Função centralizada para disparar refresh em todas as abas, incluindo a Visão Geral montada em forceMount.
+  const triggerGlobalRefresh = useCallback(() => {
+    if (id) {
+      void invalidateAfterMutation(id);
+    }
+    setRefreshTrigger(prev => prev + 1);
+    fetchApostasResumo();
+    refreshResultado();
+    refreshBreakdowns();
+  }, [id, invalidateAfterMutation, refreshResultado, refreshBreakdowns]);
 
   useEffect(() => {
     if (id) {
@@ -963,6 +968,7 @@ export default function ProjetoDetalhe() {
           <TabsContent value="visao-geral" forceMount className={cn("h-full m-0", activeTab !== "visao-geral" && "hidden")}>
             <ProjetoDashboardTab 
               projetoId={id!} 
+              refreshTrigger={refreshTrigger}
             />
           </TabsContent>
 

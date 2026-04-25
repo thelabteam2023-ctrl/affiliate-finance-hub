@@ -512,8 +512,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
         }
       }
 
-      // 3. Invalidar cache de surebets para refetch
-      queryClient.invalidateQueries({ queryKey: ["surebets-tab", projetoId] });
+      await invalidateAfterMutation(projetoId);
+      await refetchSurebets();
 
       // 4. Invalidar cache de saldos
       invalidateSaldos(projetoId);
@@ -532,7 +532,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       console.error("Erro ao atualizar aposta:", error);
       toast.error("Erro ao atualizar resultado");
     }
-  }, [surebets, onDataChange, projetoId, invalidateSaldos, hasActiveRolloverBonus, atualizarProgressoRollover]);
+  }, [surebets, onDataChange, projetoId, invalidateSaldos, hasActiveRolloverBonus, atualizarProgressoRollover, invalidateAfterMutation, refetchSurebets]);
 
   // Liquidação de perna individual de Surebet via motor financeiro
   const handleSurebetPernaResolve = useCallback(async (input: {
@@ -566,7 +566,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
         return;
       }
 
-      queryClient.invalidateQueries({ queryKey: ["surebets-tab", projetoId] });
+      await invalidateAfterMutation(projetoId);
+      await refetchSurebets();
       invalidateSaldos(projetoId);
 
       const resultLabel = {
@@ -583,7 +584,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       console.error("Erro ao liquidar perna:", error);
       toast.error("Erro ao atualizar resultado da perna");
     }
-  }, [projetoId, invalidateSaldos, onDataChange, queryClient]);
+  }, [projetoId, invalidateSaldos, onDataChange, invalidateAfterMutation, refetchSurebets]);
 
   // Liquidação rápida de Surebet completa (via menu, baseado em winners)
   const handleSurebetQuickResolve = useCallback(async (surebetId: string, result: SurebetQuickResult) => {
@@ -651,7 +652,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
         toast.error(result.error?.message || "Erro ao excluir surebet");
         return;
       }
-      queryClient.invalidateQueries({ queryKey: ["surebets-tab", projetoId] });
+      await invalidateAfterMutation(projetoId);
+      await refetchSurebets();
       invalidateSaldos(projetoId);
       toast.success("Surebet excluída");
       onDataChange?.();
@@ -659,7 +661,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       console.error("Erro ao excluir surebet:", error);
       toast.error("Erro ao excluir surebet");
     }
-  }, [projetoId, invalidateSaldos, onDataChange, queryClient]);
+  }, [projetoId, invalidateSaldos, onDataChange, invalidateAfterMutation, refetchSurebets]);
 
   // === DUPLICAR ===
   const handleDuplicateSimples = useCallback((apostaId: string) => {
