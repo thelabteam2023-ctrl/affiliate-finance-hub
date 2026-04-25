@@ -554,21 +554,27 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
     return tabs[estrategia || ""] || "apostas";
   };
 
-  const openEditarApostaUso = (aposta: ApostaUsoBookmaker) => {
-    const activeTab = getApostaTab(aposta.estrategia);
-    const estrategia = aposta.estrategia || undefined;
+  const handleResolveApostaUso = async (aposta: ApostaUsoBookmaker, resultado: string) => {
+    try {
+      const stake = Number(aposta.stakeTotal ?? aposta.stake ?? 0);
+      const odd = Number(aposta.parentOdd ?? aposta.odd ?? 1);
+      const lucro = calcularImpactoResultado(stake, odd, resultado);
+      const result = await reliquidarAposta(aposta.id, resultado, lucro);
 
-    if (aposta.forma_registro === "ARBITRAGEM" || aposta.estrategia === "SUREBET") {
-      openSurebetWindow({ projetoId, id: aposta.id, activeTab });
-      return;
+      if (!result.success) {
+        toast.error(result.error?.message || "Erro ao liquidar aposta");
+        return;
+      }
+
+      await Promise.all([
+        apostasUsoQuery.refetch(),
+        invalidateCanonicalCaches(queryClient, projetoId),
+      ]);
+      toast.success(`Operação marcada como ${resultado}`);
+    } catch (error) {
+      console.error("Erro ao liquidar aposta pelo vínculo:", error);
+      toast.error("Erro ao atualizar resultado");
     }
-
-    if (aposta.forma_registro === "MULTIPLA") {
-      openApostaMultiplaWindow({ projetoId, id: aposta.id, activeTab, estrategia });
-      return;
-    }
-
-    openApostaWindow({ projetoId, id: aposta.id, activeTab, estrategia });
   };
 
   const openApostasModal = (vinculo: Vinculo) => {
