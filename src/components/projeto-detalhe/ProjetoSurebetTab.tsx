@@ -1298,7 +1298,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
               periodStart={dateRange?.start}
               periodEnd={dateRange?.end}
               formatCurrency={formatCurrency}
-              convertToConsolidation={convertFnOficial}
+              convertToConsolidation={convertFn}
               moedaConsolidacao={moedaConsolidacao}
             />
             <SurebetStatisticsCard surebets={surebets} formatCurrency={formatCurrency} currencySymbol={currencySymbol} />
@@ -1314,7 +1314,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
               periodStart={dateRange?.start}
               periodEnd={dateRange?.end}
               formatCurrency={formatCurrency}
-              convertToConsolidation={convertFnOficial}
+              convertToConsolidation={convertFn}
               moedaConsolidacao={moedaConsolidacao}
             />
           </div>
@@ -1519,7 +1519,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                     onDelete={(apostaId) => handleSurebetDelete(apostaId)}
                     onDuplicate={handleDuplicateSimples}
                     formatCurrency={formatCurrency}
-                    convertToConsolidation={convertFnOficial}
+                    convertToConsolidation={convertFn}
                     moedaConsolidacao={moedaConsolidacao}
                   />
                 );
@@ -1540,7 +1540,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                    onDelete={handleSurebetDelete}
                    onDuplicate={handleDuplicateSurebet}
                   formatCurrency={formatCurrency}
-                  convertToConsolidation={convertFnOficial}
+                  convertToConsolidation={convertFn}
                   moedaConsolidacao={moedaConsolidacao}
                   bookmakerNomeMap={bookmakerNomeMap}
                 />
