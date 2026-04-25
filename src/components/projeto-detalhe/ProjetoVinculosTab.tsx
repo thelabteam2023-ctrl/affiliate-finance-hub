@@ -491,6 +491,23 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
     }
   };
 
+  const getAbaAposta = (estrategia: string | null) => {
+    const labels: Record<string, string> = {
+      PUNTER: "Punter",
+      SUREBET: "Surebet",
+      VALUEBET: "ValueBet",
+      EXTRACAO_FREEBET: "Freebets",
+      EXTRACAO_BONUS: "Bônus",
+      DUPLO_GREEN: "Duplo Green",
+    };
+    return labels[estrategia || ""] || ESTRATEGIA_LABELS[estrategia as ApostaEstrategia] || "Todas as Apostas";
+  };
+
+  const openApostasModal = (vinculo: Vinculo) => {
+    if (vinculo.totalApostas <= 0) return;
+    setVinculoApostasModal(vinculo);
+  };
+
   const filteredVinculos = vinculos.filter((v) => {
     const matchesSearch =
       v.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
