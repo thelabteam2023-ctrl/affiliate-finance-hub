@@ -259,14 +259,14 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
       const [{ data: simples, error: simplesError }, { data: pernas, error: pernasError }] = await Promise.all([
         supabase
           .from("apostas_unificada")
-          .select("id, data_aposta, evento, esporte, mercado, estrategia, forma_registro, status, resultado, odd, stake, moeda_operacao, selecao")
+          .select("id, data_aposta, evento, esporte, mercado, estrategia, forma_registro, status, resultado, odd, stake, stake_total, moeda_operacao, selecao")
           .eq("projeto_id", projetoId)
           .eq("workspace_id", workspaceId)
           .eq("bookmaker_id", bookmakerId)
           .is("cancelled_at", null),
         supabase
           .from("apostas_pernas")
-          .select("id, selecao, selecao_livre, odd, stake, moeda, aposta:apostas_unificada!inner(id, projeto_id, workspace_id, data_aposta, evento, esporte, mercado, estrategia, forma_registro, status, resultado, cancelled_at)")
+          .select("id, selecao, selecao_livre, odd, stake, moeda, aposta:apostas_unificada!inner(id, projeto_id, workspace_id, data_aposta, evento, esporte, mercado, estrategia, forma_registro, status, resultado, odd, stake_total, cancelled_at)")
           .eq("bookmaker_id", bookmakerId)
           .eq("aposta.projeto_id", projetoId)
           .eq("aposta.workspace_id", workspaceId)
@@ -306,6 +306,8 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
         resultado: a.resultado,
         odd: a.odd,
         stake: a.stake,
+        stakeTotal: a.stake_total,
+        parentOdd: a.odd,
         moeda: a.moeda_operacao,
         selecao: a.selecao,
         casas: [{ nome: vinculoApostasModal?.nome || "Casa", stake: a.stake, moeda: a.moeda_operacao }],
@@ -323,6 +325,8 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
         resultado: p.aposta.resultado,
         odd: p.odd,
         stake: p.stake,
+        stakeTotal: p.aposta.stake_total,
+        parentOdd: p.aposta.odd,
         moeda: p.moeda,
         selecao: p.selecao_livre || p.selecao,
         casas: casasPorAposta.get(p.aposta.id) || [],
