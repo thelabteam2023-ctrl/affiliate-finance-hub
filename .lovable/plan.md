@@ -1,54 +1,95 @@
-Diagnóstico do erro ao revincular a Alawin
+Diagnóstico encontrado
 
-Identifiquei que o erro acontece no fluxo da aba Central de Operações > Bookmakers > Disponíveis, ao tentar vincular novamente uma casa que acabou de ser desvinculada.
+O valor `$ 0,00` no select do modal de edição de bônus não parece ser um saldo salvo genericamente no banco. A causa está no payload incompleto enviado ao `BonusDialog` em alguns fluxos.
 
-Causa provável
+O componente `BonusDialog` exibe o saldo assim:
 
-O vínculo em si é feito com um UPDATE direto em `bookmakers.projeto_id`. Esse UPDATE dispara triggers no banco que já fazem automaticamente:
+```text
+saldo = bk.saldo_atual ?? 0
+```
 
-- criação/neutralização do `DEPOSITO_VIRTUAL` quando necessário;
-- criação/fechamento do histórico em `projeto_bookmaker_historico`;
-- adoção de freebets órfãs.
+Ou seja: se o objeto da casa passado ao modal não contém `saldo_atual`, a UI cai automaticamente em `0`.
 
-Porém, o frontend ainda tenta inserir manualmente um novo registro em `projeto_bookmaker_historico` logo depois do UPDATE. Isso pode gerar conflito/inconsistência porque o trigger já criou ou manipulou esse histórico. O erro mostrado no toast é genérico, então a operação pode estar falhando depois do UPDATE, deixando o usuário com sensação de que o vínculo falhou mesmo quando parte do processo já aconteceu.
+Fluxos auditados:
 
-Também encontrei outro ponto sensível no trigger de desvinculação: a RPC `desvincular_bookmaker_atomico` referencia `project_bookmaker_link_bonuses` usando `projeto_id`, mas a tabela usa `project_id`. Esse erro está escondido por um bloco `EXCEPTION`, então não necessariamente quebra tudo, mas pode causar detecção incorreta de uso da casa ao decidir se um vínculo foi fantasma ou real.
+1. `ProjetoBonusTab`
+   - Usa `useBookmakerSaldosQuery`, baseado na RPC canônica `get_bookmaker_saldos`.
+   - Passa `saldo_atual: bk.saldo_operavel` ao `BonusDialog`.
+   - Este fluxo está mais alinhado com a fonte canônica.
+
+2. `GlobalActionsBar`
+   - Busca diretamente `bookmakers.saldo_atual`.
+   - Não usa a RPC canônica de saldo operável.
+   - Pode exibir um saldo diferente do restante do sistema, especialmente quando há stake em aberto/freebet/saldo operável.
+
+3. `VinculoBonusDrawer`
+   - Passa para o `BonusDialog` apenas dados básicos da casa:
+
+```text
+id, nome, login, senha, catálogo, logo, moeda
+```
+
+   - Não passa `saldo_atual` nem `saldo_operavel`.
+   - Portanto o `BonusDialog` renderiza `0` por fallback.
+   - Este é o fluxo compatível com o print enviado, pois ele mostra o modal de edição aberto a partir do vínculo/histórico de bônus da casa.
+
+4. `BonusBookmakersTab` -> edição de bônus pendente
+   - Também passa uma casa sem saldo ao `BonusDialog` no fluxo específico de edição de bônus pendente.
+   - Mesmo bug potencial.
+
+Confirmação via banco
+
+Para a casa do print, há dados reais no banco:
+
+```text
+HUGEWIN / projeto 80d16390...
+saldo_atual: 200.00 USD
+bônus: Boas-vindas 100%, status pending, valor 200 USD
+```
+
+Logo, o `$ 0,00` exibido no select é um fallback visual/frontend causado por ausência do campo `saldo_atual` no objeto passado ao modal, não uma prova de saldo zerado na casa.
 
 Plano de correção
 
-1. Tornar o fluxo de vínculo canônico no frontend
-   - Em `ContasDisponiveisModule.tsx`, remover a inserção manual em `projeto_bookmaker_historico` no vínculo individual.
-   - No vínculo em massa, remover também a inserção manual em `projeto_bookmaker_historico`.
-   - Manter o banco como fonte única para criar/fechar histórico via trigger `fn_ensure_historico_on_projeto_change`.
-
-2. Melhorar o feedback de erro
-   - Trocar o toast genérico `Erro ao vincular bookmaker ao projeto` por uma mensagem com `err.message` quando existir.
-   - Adicionar log estruturado com bookmaker, projeto e etapa onde falhou.
-   - Assim, se houver outro bloqueio real no banco, ele ficará claro na interface/console.
-
-3. Reforçar segurança contra cliques duplos
-   - O botão já respeita `vincularLoading`, mas vou adicionar early-return se já estiver vinculando.
-   - No vínculo em massa, manter o processamento sequencial, mas com resultado claro de quais casas falharam.
-
-4. Corrigir a inconsistência na RPC de desvinculação
-   - Criar migração para ajustar `desvincular_bookmaker_atomico`, trocando a referência incorreta `projeto_id` por `project_id` em `project_bookmaker_link_bonuses`.
-   - Seguir o padrão do projeto: `DROP FUNCTION IF EXISTS` antes de recriar a RPC para evitar ambiguidade de assinatura.
-   - Não alterar saldos diretamente e não fazer retrofix em ledger.
-
-5. Verificação após aplicar
-   - Conferir o estado atual da Alawin: ela está sem `projeto_id`, saldo MX$ 1.453,50, com SAQUE_VIRTUAL confirmado e DEPOSITO_VIRTUAL anterior cancelado.
-   - Após a correção, o fluxo esperado ao revincular no mesmo projeto é:
+1. Tornar `BonusDialog` mais seguro e explícito
+   - Trocar o fallback silencioso `bk.saldo_atual ?? 0` por uma resolução de saldo com prioridade:
 
 ```text
-bookmakers.projeto_id = PROJETO 00
-  -> trigger neutraliza ping-pong se aplicável ou calcula novo baseline
-  -> trigger cria histórico ativo se não existir
-  -> frontend apenas atualiza cache e mostra sucesso
+saldo_atual informado
+saldo_operavel informado, se adicionarmos esse campo à interface
+null/undefined quando não houver saldo carregado
 ```
+
+   - Quando o saldo não estiver disponível, exibir algo como `saldo indisponível` ou ocultar o valor, em vez de mostrar `$ 0,00` falso.
+
+2. Padronizar o fluxo do `VinculoBonusDrawer`
+   - Fazer o drawer buscar o saldo canônico da casa via `useBookmakerSaldosQuery` usando o `projectId`.
+   - Ao montar o array de `bookmakers` para o `BonusDialog`, incluir:
+
+```text
+saldo_atual: saldo_operavel canônico da RPC
+```
+
+   - Assim o modal exibirá o mesmo saldo usado na aba de bônus e vínculos.
+
+3. Corrigir o fluxo de edição de bônus pendente em `BonusBookmakersTab`
+   - Ao abrir `BonusDialog` para bônus pendente, anexar o saldo canônico da casa selecionada, vindo de `saldosData`.
+   - Evita que o mesmo `$ 0,00` apareça nesse caminho.
+
+4. Revisar `GlobalActionsBar`
+   - Substituir a query direta em `bookmakers` por `useBookmakerSaldosQuery`, ou enriquecer o payload com a RPC canônica.
+   - Objetivo: todos os lugares que abrem `BonusDialog` usam a mesma fonte de saldo.
+
+5. Ajuste de interface/tipo
+   - Expandir a interface `BookmakerOption` do `BonusDialog` para aceitar explicitamente `saldo_operavel?: number`, mantendo compatibilidade com `saldo_atual?: number`.
+   - Criar uma pequena função local para formatar saldo sem mascarar dados ausentes como zero.
+
+6. Validação
+   - Verificar TypeScript.
+   - Reabrir o fluxo de edição do bônus da HUGEWIN/ALAWIN e confirmar que o select mostra o saldo real/canônico, não `$ 0,00`.
 
 Resultado esperado
 
-- Revincular uma casa recém-desvinculada não deve mais falhar por duplicidade/inconsistência de histórico.
-- O fluxo fica mais leve e menos redundante.
-- O histórico volta a ter uma única fonte de verdade: os triggers do banco.
-- Se houver erro real de regra financeira, a mensagem aparecerá de forma diagnóstica em vez de toast genérico.
+- O select deixa de exibir `$ 0,00` quando o saldo apenas não foi carregado.
+- O modal de bônus passa a mostrar o saldo canônico da casa nos fluxos de vínculo/histórico, bônus pendente e botão global.
+- Reduzimos divergência entre `saldo_atual` bruto e `saldo_operavel` usado operacionalmente no restante do sistema.
