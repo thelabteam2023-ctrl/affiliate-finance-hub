@@ -2151,7 +2151,7 @@ export function SurebetDialogTable({
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1.5">
                   <Label className="text-[10px] text-muted-foreground whitespace-nowrap">Estratégia</Label>
-                  <Select value={estrategia} onValueChange={setEstrategia} disabled={isEditing}>
+                  <Select value="SUREBET" onValueChange={() => setEstrategia("SUREBET")} disabled>
                     <SelectTrigger className="h-7 w-28 text-xs">
                       <SelectValue />
                     </SelectTrigger>
