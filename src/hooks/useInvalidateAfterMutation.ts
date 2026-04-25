@@ -34,7 +34,7 @@ export function useInvalidateAfterMutation() {
   return useCallback(
     async (projetoId: string, options?: ProjectInvalidateOpts) => {
       // 1. Canônicos primeiro (refetchType:'active' → atualização <1s na UI)
-      invalidateCanonicalCaches(queryClient, projetoId);
+      await invalidateCanonicalCaches(queryClient, projetoId);
       // 2. Queries específicas do módulo (saldos, listagens, vínculos)
       await invalidateProject(projetoId, options);
     },
