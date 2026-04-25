@@ -372,8 +372,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
               .select(`
                 id, aposta_id, bookmaker_id, moeda, selecao, selecao_livre, odd, stake,
                 resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada,
-                stake_brl_referencia, lucro_prejuizo_brl_referencia, fonte_saldo,
-                bookmakers (nome, instance_identifier, parceiro:parceiros(nome))
+                stake_brl_referencia, lucro_prejuizo_brl_referencia, cotacao_snapshot, fonte_saldo,
+                bookmakers (nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo(logo_url))
               `)
               .in("aposta_id", idsChunk)
               .order("ordem", { ascending: true }),
@@ -389,12 +389,15 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
             bookmaker_id: p.bookmaker_id,
             bookmaker_nome: parceiroNome ? `${bookmaker?.nome || "—"} - ${parceiroNome}${bookmaker?.instance_identifier ? ` (${bookmaker.instance_identifier})` : ''}` : `${bookmaker?.nome || "—"}${bookmaker?.instance_identifier ? ` (${bookmaker.instance_identifier})` : ''}`,
             parceiro_nome: parceiroNome || null,
+            instance_identifier: bookmaker?.instance_identifier || null,
+            logo_url: bookmaker?.bookmakers_catalogo?.logo_url || null,
             moeda: p.moeda || 'BRL',
             selecao: p.selecao, selecao_livre: p.selecao_livre, odd: p.odd, stake: p.stake,
             resultado: p.resultado, lucro_prejuizo: p.lucro_prejuizo,
             gerou_freebet: p.gerou_freebet, valor_freebet_gerada: p.valor_freebet_gerada,
             stake_brl_referencia: p.stake_brl_referencia,
             lucro_prejuizo_brl_referencia: p.lucro_prejuizo_brl_referencia,
+            cotacao_snapshot: p.cotacao_snapshot,
             fonte_saldo: p.fonte_saldo || null,
           });
         });
