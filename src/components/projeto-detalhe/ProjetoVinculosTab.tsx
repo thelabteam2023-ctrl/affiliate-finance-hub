@@ -189,6 +189,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
   const [selectedParceiros, setSelectedParceiros] = useState<string[]>([]);
   const [ajusteSaldoDialogOpen, setAjusteSaldoDialogOpen] = useState(false);
   const [vinculoParaAjuste, setVinculoParaAjuste] = useState<Vinculo | null>(null);
+  const [vinculoDetalhesMobile, setVinculoDetalhesMobile] = useState<Vinculo | null>(null);
   
   const sortStorageKey = `vinculos-sort-mode:${projetoId}`;
   const [sortMode, setSortModeState] = useState<VinculoSortMode>(() => {
