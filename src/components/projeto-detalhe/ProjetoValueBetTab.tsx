@@ -1376,7 +1376,7 @@ export function ProjetoValueBetTab({
                   onPernaResultChange={handleSurebetPernaResolve}
                   onSimpleQuickResolve={handleQuickResolve}
                    onDelete={handleDeleteAposta}
-                   onDuplicate={handleDuplicateSurebet}
+                   onDuplicate={handleDuplicateSimples}
                   formatCurrency={formatCurrency}
                   convertToConsolidation={convertToConsolidationOficialFn}
                   bookmakerNomeMap={bookmakerNomeMap}

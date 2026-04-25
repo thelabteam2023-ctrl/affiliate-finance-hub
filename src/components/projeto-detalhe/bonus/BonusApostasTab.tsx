@@ -1128,7 +1128,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
               onSimpleMenuQuickResolve={handleQuickResolve}
               onPernaResultChange={handleSurebetPernaResolve}
                onDelete={handleDeleteSurebet}
-               onDuplicate={handleDuplicateSurebet}
+               onDuplicate={handleDuplicateSimples}
             />
           );
         }
