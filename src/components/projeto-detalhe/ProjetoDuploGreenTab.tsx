@@ -69,7 +69,7 @@ import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateR
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { DuploGreenStatisticsCard } from "./DuploGreenStatisticsCard";
 
-import { cn, getFirstLastName } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { buildBookmakerNomeMap, collectMissingBookmakerIds, mergeBookmakerNomeMaps } from "@/lib/bookmaker-display";
 import { useUnlinkedBookmakerNames } from "@/hooks/useUnlinkedBookmakerNames";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
@@ -84,6 +84,7 @@ import { ExportMenu, transformApostaToExport, transformSurebetToExport } from ".
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
 // FinancialSummaryCompact removed — now integrated into Lucro KPI popover
 import { useCalendarApostasRpc, transformRpcDailyForCharts } from "@/hooks/useCalendarApostasRpc";
+import { aggregateBookmakerUsage } from "@/utils/bookmakerUsageAnalytics";
 
 interface ProjetoDuploGreenTabProps {
   projetoId: string;
