@@ -1,128 +1,74 @@
-Confirmação da causa
-
-A hipótese está correta: o problema está ligado ao formato de entrada "aposta simples com mais de uma perna" usado dentro da aba Surebet.
-
-Na auditoria do projeto atual encontrei este padrão:
-
-```text
-aposta_id: bdb146f6-42a3-4939-a785-6a0e1f871b19
-forma_registro: SIMPLES
-estrategia: SUREBET
-pernas em apostas_pernas: 2
-stake por perna: 100 + 100
-STAKE no financial_events: 0
-PAYOUT no financial_events: 200 + 200
-status: LIQUIDADA
-```
-
-Isso explica exatamente a inflação: na liquidação entraram os payouts, mas a criação não debitou as stakes das duas pernas. O saldo fica +100 acima do correto em cada casa.
-
-Também encontrei outro registro recente:
-
-```text
-aposta_id: fda04e39-3e44-460d-beff-71d8b3dcc64b
-forma_registro: SIMPLES
-estrategia: SUREBET
-sem pernas normalizadas
-STAKE: -100
-PAYOUT: +200
-```
-
-Esse segundo caso não infla saldo, mas está semanticamente errado: uma Surebet não deve nascer como SIMPLES.
-
 Plano de correção
 
-1. Remover o caminho perigoso na aba Surebet
-   - O `ApostaDialog` hoje força `forma_registro = SIMPLES` e ainda permite `activeTab="surebet"`.
-   - Isso cria a combinação perigosa `SIMPLES + SUREBET`.
-   - Vou bloquear esse caminho: dentro da aba Surebet, o botão/fluxo de criação e edição de operações com múltiplas entradas deve usar somente `SurebetDialog` e o motor atômico.
+Objetivo: o formulário aberto por “Nova Aposta > Aposta Simples” deve ser sempre uma aposta simples multi-casa, independentemente da aba onde foi aberto. Adicionar “casa a mais” significa replicar a mesma entrada em outra bookmaker para resolver tudo junto, e não criar uma surebet/arbitragem.
 
-2. Migrar multi-entry do formulário simples para motor atômico quando houver mais de uma casa
-   - Se o formulário simples tiver `additionalEntries.length > 0`, ele não poderá mais fazer:
-     - insert direto em `apostas_unificada`
-     - insert direto em `apostas_pernas`
-     - liquidação posterior via `liquidarAposta` do pai
-   - Ele deverá montar as pernas reais e chamar uma rotina canônica que usa `criar_surebet_atomica` quando a estratégia for Surebet ou quando estiver no contexto da aba Surebet.
-   - Resultado esperado: cada perna gera seu próprio `STAKE` no ledger antes de qualquer payout.
+O que será corrigido
 
-3. Criar uma blindagem no serviço central de apostas
-   - Reforçar `ApostaService.criarAposta` para tratar como arbitragem qualquer entrada que tenha:
-     - `estrategia = SUREBET`, ou
-     - `forma_registro = ARBITRAGEM`, ou
-     - 2+ pernas em contexto surebet.
-   - Isso impede que uma Surebet disfarçada de simples continue passando pelo caminho de aposta simples.
+1. Remover o travamento indevido da estratégia pela aba no formulário de Aposta Simples
+- Hoje `ApostaDialog` usa `activeTab=surebet` para forçar `estrategia=SUREBET`.
+- Isso faz uma aposta simples multi-casa entrar no caminho de arbitragem.
+- Vou alterar para que `ApostaDialog` respeite o `defaultEstrategia` recebido pela URL, que já vem como `PUNTER` no botão global.
+- Na aba Surebet, o formulário de Aposta Simples continuará abrindo como `PUNTER` por padrão e com `forma_registro=SIMPLES`.
 
-4. Adicionar guard no banco contra liquidação sem stake
-   - Atualizar a RPC `liquidar_perna_surebet_v1` para verificar, antes de criar `PAYOUT`/`VOID_REFUND`, se existe `STAKE` ativo daquela aposta, casa e perna/valor.
-   - Se não existir stake correspondente, a liquidação deve falhar com erro explícito, em vez de inflar saldo.
-   - Essa proteção é indispensável porque UI sozinha não basta.
-
-5. Adicionar trigger/validação contra `SIMPLES + SUREBET + múltiplas pernas`
-   - Criar uma barreira no banco para impedir que uma aposta `estrategia='SUREBET'` seja mantida como `forma_registro='SIMPLES'` quando houver pernas normalizadas.
-   - Para novas operações, Surebet multi-perna deve ser `ARBITRAGEM`.
-   - Não vou alterar saldos históricos diretamente.
-
-6. Corrigir o fluxo de edição
-   - A edição de uma operação que já tem pernas não deve abrir `ApostaDialog` como se fosse aposta simples.
-   - Deve abrir o fluxo de Surebet ou bloquear edição direta quando a operação estiver liquidada, usando os caminhos canônicos de reliquidação/exclusão.
-
-7. Auditoria de dados afetados
-   - Gerar uma consulta/lista de inconsistências no padrão:
+2. Impedir que “Aposta Simples + casas adicionais” chame o motor atômico de Surebet
+- Hoje existe um desvio em `ApostaDialog.tsx`:
+  - se tem `additionalEntries.length > 0`
+  - e `estrategia === SUREBET`
+  - então cria `forma_registro=ARBITRAGEM` via `criar_surebet_atomica`.
+- Esse desvio será removido/desativado para o formulário de Aposta Simples.
+- O fluxo correto será:
 
 ```text
-operações com apostas_pernas > 0
-+ STAKE ativo = 0
-+ PAYOUT/VOID_REFUND ativo > 0
+Nova Aposta > Aposta Simples
+  -> forma_registro = SIMPLES
+  -> estratégia default = PUNTER
+  -> 1 ou mais casas em apostas_pernas
+  -> liquidação global aplica o mesmo resultado a cada casa
 ```
 
-   - Separar em categorias:
-     - inflou saldo: payout sem stake
-     - risco futuro: múltiplas pernas sem stake ainda pendente
-     - erro semântico: SUREBET gravada como SIMPLES, mas com ledger equilibrado
-   - Seguindo a política anti-retrofix, não farei ajuste em massa automático. Para casos já contaminados, a correção segura será por ajuste explícito controlado (`AJUSTE_SALDO`) após aprovação.
+3. Manter Surebet verdadeira apenas no formulário próprio de arbitragem
+- A criação de arbitragem continuará existindo apenas no formulário/painel de Surebet (`SurebetModalRoot`).
+- Esse sim continua usando `forma_registro=ARBITRAGEM`, estratégia `SUREBET` e o motor próprio de cenários.
 
-8. Testes e simulações obrigatórias
-   - Criar Surebet com 2 pernas via SurebetDialog: deve gerar 2 `STAKE` imediatamente.
-   - Liquidar as duas pernas GREEN: deve gerar 2 `PAYOUT`; saldo líquido por casa = +100 quando stake 100 odd 2.00.
-   - Criar no formulário simples com entrada adicional dentro/fora da aba Surebet: não pode gerar operação sem stake por perna.
-   - Tentar liquidar perna sem stake: deve falhar explicitamente.
-   - Excluir operação pendente: deve reverter stakes.
-   - Excluir operação liquidada: deve reverter stake + payout sem duplicar.
-   - Validar atualização da Visão Geral e saldos sem F5.
+4. Ajustar o cabeçalho visual para não exibir estratégia travada incorreta no formulário simples
+- `BetFormHeaderV2` atualmente bloqueia a estratégia quando `activeTab` é uma aba especializada, incluindo `surebet`.
+- Para `formType="simples"`, não deve travar como `SUREBET` só porque a janela foi aberta na aba Surebet.
+- Resultado esperado: ao abrir “Aposta Simples” em qualquer aba operacional, o comportamento e cálculo serão equivalentes ao que hoje funciona na aba Punter.
+
+5. Revisar o cálculo persistido da aposta simples multi-casa
+- Para uma aposta normal, por casa:
+  - stake R$ 100
+  - odd 2.00
+  - GREEN: retorno bruto R$ 200 e lucro líquido R$ 100
+  - RED: retorno R$ 0 e lucro líquido -R$ 100
+  - VOID: retorno R$ 100 e lucro líquido R$ 0
+- Para 3 casas iguais, todas GREEN:
+  - cada casa recebe +R$ 200 de payout após ter debitado R$ 100 de stake
+  - lucro líquido por casa: +R$ 100
+  - lucro líquido total: +R$ 300
+- Vou garantir que o pai da aposta não use cálculo de arbitragem nem valor consolidado como se fosse moeda nativa.
+
+6. Validar funções de liquidação multi-casa
+- As funções de liquidação já têm suporte para `apostas_pernas`, criando eventos por perna.
+- Vou revisar o caminho usado por `liquidarAposta` para confirmar que a liquidação de uma aposta simples multi-casa passa por `liquidar_aposta_v4`/`reliquidar_aposta_v6`, não por fluxo de surebet.
+- Se necessário, farei uma migração pequena para reforçar a regra no backend: `SIMPLES + múltiplas pernas` é permitido quando a estratégia não é `SUREBET`.
 
 Arquivos previstos
 
-```text
-src/components/projeto-detalhe/ApostaDialog.tsx
-src/components/projeto-detalhe/ProjetoSurebetTab.tsx
-src/services/aposta/ApostaService.ts
-src/services/aposta/invariants.ts
-supabase/migrations/... blindagem da RPC liquidar_perna_surebet_v1 e validações
-src/utils/__tests__/... simulações multi-entry/surebet ledger
-```
+- `src/components/projeto-detalhe/ApostaDialog.tsx`
+- `src/components/apostas/BetFormHeaderV2.tsx`
+- Possivelmente `src/components/apostas/BetFormHeader.tsx` se ainda for usado em algum fluxo legado
+- Possivelmente `src/lib/apostaConstants.ts` para separar “aba ativa” de “estratégia travada” no contexto de aposta simples
+- Possivelmente uma migração de backend se a validação atual bloquear indevidamente `SIMPLES` com múltiplas pernas
 
-Resultado esperado
+Critérios de aceite
 
-Depois da correção, o fluxo perigoso deixa de existir:
-
-```text
-ANTES
-ApostaDialog na aba Surebet
--> forma_registro SIMPLES
--> cria pai direto
--> cria pernas direto
--> não cria STAKE por perna
--> liquidação cria PAYOUT
--> saldo inflado
-
-DEPOIS
-Surebet/multi-perna
--> criar_surebet_atomica
--> cria pai ARBITRAGEM
--> cria pernas
--> cria STAKE por perna
--> liquidação só cria PAYOUT se STAKE existir
--> saldo líquido correto
-```
-
-A correção não será apenas visual; será feita em três camadas: frontend, serviço central e banco de dados.
+- Abrir “Aposta Simples” pela aba Punter, Surebet, ValueBet ou Apostas deve gerar o mesmo tipo operacional: `forma_registro=SIMPLES`.
+- Adicionar 2, 3 ou mais casas no formulário simples não deve criar arbitragem.
+- A aposta simples multi-casa deve ser liquidável globalmente com GREEN/RED/VOID.
+- Exemplo validado: 3 casas, cada uma stake R$ 100 odd 2.00, resultado GREEN:
+  - casa 1: retorno R$ 200, lucro R$ 100
+  - casa 2: retorno R$ 200, lucro R$ 100
+  - casa 3: retorno R$ 200, lucro R$ 100
+  - total: retorno bruto R$ 600, lucro líquido R$ 300
+- O formulário próprio de Surebet/Arbitragem continuará funcionando separado, sem perder regras de cenário e recálculo de arbitragem.
