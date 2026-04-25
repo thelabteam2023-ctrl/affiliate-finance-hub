@@ -3198,7 +3198,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     onContextoChange: (v: any) => setRegistroValues(prev => ({ ...prev, contexto_operacional: v })),
     isEditing: !!aposta,
     activeTab,
-    lockedEstrategia: !aposta && isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : null,
+    lockedEstrategia: null,
     gameFields: {
       esporte,
       evento,
