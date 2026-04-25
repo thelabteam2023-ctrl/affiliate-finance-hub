@@ -516,7 +516,7 @@ export function ProjetoPunterTab({
 
   // === DUPLICAR APOSTAS ===
   const handleDuplicateSimples = useCallback((apostaId: string) => {
-    const url = `/janela/aposta/novo?projetoId=${encodeURIComponent(projetoId)}&tab=punter&duplicateFrom=${apostaId}`;
+    const url = `/janela/aposta/novo?projetoId=${encodeURIComponent(projetoId)}&tab=punter&estrategia=PUNTER&duplicateFrom=${apostaId}`;
     window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
   }, [projetoId]);
 
@@ -1283,7 +1283,7 @@ export function ProjetoPunterTab({
                   onSimpleMenuQuickResolve={handleQuickResolve}
                    onPernaResultChange={handleSurebetPernaResolve}
                    onDelete={handleDeleteAposta}
-                   onDuplicate={handleDuplicateSurebet}
+                   onDuplicate={handleDuplicateSimples}
                    formatCurrency={formatCurrency}
                    convertToConsolidation={convertToConsolidationOficialFn}
                    moedaConsolidacao={moedaConsolidacaoVal}
@@ -1375,7 +1375,7 @@ export function ProjetoPunterTab({
                   onSimpleMenuQuickResolve={handleQuickResolve}
                   onPernaResultChange={handleSurebetPernaResolve}
                    onDelete={handleDeleteAposta}
-                   onDuplicate={handleDuplicateSurebet}
+                   onDuplicate={handleDuplicateSimples}
                   formatCurrency={formatCurrency}
                   convertToConsolidation={convertToConsolidationOficialFn}
                   moedaConsolidacao={moedaConsolidacaoVal}

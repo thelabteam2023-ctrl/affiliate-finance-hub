@@ -96,6 +96,8 @@ export default function ApostaWindowPage() {
             .eq('aposta_id', fetchId)
             .order('ordem', { ascending: true });
 
+          const seedPernas = (pernas || []).map(({ id, aposta_id, created_at, updated_at, ...perna }) => perna);
+
           // Strip identity fields for duplication — keep all operational data including data_aposta
           const { id: _id, created_at, updated_at, status, resultado, lucro_prejuizo, lucro_prejuizo_brl_referencia, pl_consolidado, retorno_consolidado, roi_real, valor_retorno, ...rest } = data;
           setAposta({
@@ -105,7 +107,7 @@ export default function ApostaWindowPage() {
             resultado: null,
             lucro_prejuizo: null,
             // Seed de pernas para o dialog popular additionalEntries sem precisar de id
-            __seedPernas: pernas && pernas.length > 0 ? pernas : null,
+            __seedPernas: seedPernas.length > 0 ? seedPernas : null,
           });
         } else {
           setAposta(data);

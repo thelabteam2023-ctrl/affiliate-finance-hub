@@ -72,6 +72,7 @@ interface Surebet {
   forma_registro?: string | null;
   estrategia?: string | null;
   contexto_operacional?: string | null;
+  __seedPernas?: any[];
 }
 
 interface SurebetPerna {
@@ -158,7 +159,7 @@ export function SurebetModalRoot({
   onSuccess,
   embedded = false
 }: SurebetModalRootProps) {
-  const isEditing = !!surebet;
+  const isEditing = !!surebet?.id;
   const { workspaceId } = useWorkspace();
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
@@ -406,8 +407,8 @@ export function SurebetModalRoot({
   useEffect(() => {
     if (!open) return;
     
-    if (surebet && surebet.id) {
-      // Modo edição
+    if (surebet) {
+      // Modo edição ou duplicação
       setEvento(surebet.evento);
       setEsporte(surebet.esporte);
       setMercado(surebet.mercado || "");
@@ -437,7 +438,11 @@ export function SurebetModalRoot({
         if (match) setNumPernasCustom(parseInt(match[1]));
       }
       
-      fetchLinkedPernas(surebet.id);
+      if (surebet.id) {
+        fetchLinkedPernas(surebet.id);
+      } else if (surebet.__seedPernas && surebet.__seedPernas.length > 0) {
+        hydratePernasIntoForm(surebet.__seedPernas, false);
+      }
     } else if (rascunho) {
       // Modo rascunho: carregar TODOS os dados
       // IMPORTANTE: NÃO pré-selecionar estratégia se não estava definida no rascunho
@@ -596,6 +601,53 @@ export function SurebetModalRoot({
   };
 
   const [pernasLoading, setPernasLoading] = useState(false);
+
+  const hydratePernasIntoForm = (pernasData: any[], preserveIds: boolean) => {
+    const groups = new Map<string, any[]>();
+    const groupOrder: string[] = [];
+    for (const perna of pernasData) {
+      const key = perna.selecao || `__unnamed_${perna.id || groupOrder.length}`;
+      if (!groups.has(key)) {
+        groups.set(key, []);
+        groupOrder.push(key);
+      }
+      groups.get(key)!.push(perna);
+    }
+
+    const pernasOdds: OddEntry[] = groupOrder.map((key, groupIdx) => {
+      const groupPernas = groups.get(key)!;
+      const mainPerna = groupPernas[0];
+      const additionalPernas = groupPernas.slice(1);
+      return {
+        bookmaker_id: mainPerna.bookmaker_id || "",
+        moeda: (mainPerna.moeda || "BRL") as SupportedCurrency,
+        odd: mainPerna.odd?.toString() || "",
+        stake: mainPerna.stake?.toString() || "",
+        selecao: mainPerna.selecao,
+        selecaoLivre: mainPerna.selecao_livre || "",
+        isReference: groupIdx === 0,
+        isManuallyEdited: true,
+        resultado: preserveIds ? mainPerna.resultado : null,
+        lucro_prejuizo: preserveIds ? mainPerna.lucro_prejuizo : null,
+        gerouFreebet: preserveIds ? (mainPerna.gerou_freebet || false) : false,
+        valorFreebetGerada: preserveIds ? (mainPerna.valor_freebet_gerada?.toString() || "") : "",
+        fonteSaldo: (mainPerna.fonte_saldo as 'REAL' | 'FREEBET') || 'REAL',
+        pernaId: preserveIds ? mainPerna.id : undefined,
+        additionalEntries: additionalPernas.map((sub: any) => ({
+          bookmaker_id: sub.bookmaker_id || "",
+          moeda: (sub.moeda || "BRL") as SupportedCurrency,
+          odd: sub.odd?.toString() || "",
+          stake: sub.stake?.toString() || "",
+          selecaoLivre: sub.selecao_livre || "",
+          fonteSaldo: (sub.fonte_saldo as 'REAL' | 'FREEBET') || 'REAL',
+          pernaId: preserveIds ? sub.id : undefined,
+        })),
+      };
+    });
+
+    setOdds(pernasOdds);
+    setDirectedProfitLegs(Array.from({ length: pernasOdds.length }, (_, i) => i));
+  };
 
   const fetchLinkedPernas = async (surebetId: string, retryCount = 0) => {
     setPernasLoading(true);

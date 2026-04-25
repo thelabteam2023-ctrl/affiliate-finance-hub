@@ -109,6 +109,12 @@ export default function SurebetWindowPage() {
         }
         
         if (isDuplicating) {
+          const { data: pernas } = await supabase
+            .from("apostas_pernas")
+            .select("*")
+            .eq("aposta_id", fetchId)
+            .order("ordem", { ascending: true });
+
           // Strip identity/result for duplication — preservar data_aposta original
           setSurebet({
             data_operacao: data.data_aposta, // Clone fiel da data original
@@ -126,6 +132,7 @@ export default function SurebetWindowPage() {
             forma_registro: data.forma_registro,
             estrategia: data.estrategia,
             contexto_operacional: data.contexto_operacional,
+            __seedPernas: (pernas || []).map(({ id, aposta_id, created_at, updated_at, ...perna }) => perna),
           });
         } else {
           // Normal edit mapping

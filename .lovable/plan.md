@@ -1,58 +1,165 @@
-Confirmei indícios fortes de inconsistência na aposta do Manchester:
+## Diagnóstico encontrado
 
-- Projeto está com `moeda_consolidacao = USD`, `fonte_cotacao = TRABALHO`, `cotacao_trabalho = 5`.
-- A aposta `MANCHESTER UNITED X BRENTFORD` gravada via formulário simples está como `moeda_operacao = MULTI`, `stake = 200`, `stake_consolidado = 200`.
-- As pernas estão assim:
-  - USD 100
-  - BRL 500
-- Com cotação de trabalho 5, o total consolidado correto em USD é `100 + (500 / 5) = 200`. Então o agregado do pai ficou matematicamente correto.
-- Porém as pernas foram gravadas com `cotacao_snapshot = null` e `stake_brl_referencia = null`. Isso viola o nosso padrão de snapshot por operação/perna e deixa dependente de fallback em outras leituras.
+A falha mais forte está no fluxo de apostas simples com múltiplas entradas/casas, como o jogo **Venezia x Empoli** na aba **Duplo Green**.
 
-O problema principal encontrado: o formulário de aposta simples (`ApostaDialog`) calcula usando `convertToConsolidation`, que hoje usa Cotação de Trabalho, mas ao salvar não congela `cotacao_snapshot`/`stake_brl_referencia` nas pernas de multi-entry e também não grava snapshot no pai para aposta simples mono-moeda estrangeira. Isso dá a impressão/risco de uso de cotação oficial em renderizações e relatórios que dependem desses campos.
+No banco, esse jogo está gravado como:
 
-Também encontrei pontos que precisam padronização:
+```text
+forma_registro: SIMPLES
+estrategia: DUPLO_GREEN
+bookmaker_id do pai: null
+pernas:
+  1) AMUNRA, USD, stake 100, odd 2
+  2) 7GAMES, BRL, stake 500, odd 2
+```
 
-- `useApostasUnificada.criarArbitragem`: usa `getSnapshotFields` sem passar override da cotação de trabalho, então pode cair na cotação oficial.
-- `ApostaMultiplaDialog`: USD usa `useProjetoConsolidacao.cotacaoAtual`, mas outras moedas usam `exchangeRates.getRate`, ou seja, oficial/live para EUR/GBP/MYR/MXN/ARS/COP.
-- Formulários próprios de Surebet (`SurebetDialogTable` e `SurebetModalRoot`) já têm lógica de `getEffectiveRate` com Cotação de Trabalho e passam override para `getSnapshotFields`; estes parecem mais alinhados.
-- `ProjetoSurebetTab` passa `convertFnOficial` para alguns cards/gráficos/exportações; para exibição operacional de cards isso deve ser revisado para não usar cotação oficial quando houver necessidade de conversão fallback.
+Ou seja: ele é uma **aposta simples multi-entry**, não uma arbitragem/surebet real. Porém, em algumas abas, quando esse tipo de card é renderizado visualmente como `SurebetCard`, o botão **Duplicar** está chamando o formulário errado:
 
-Plano de correção:
+```text
+Aposta simples multi-entry -> abre /janela/surebet/novo?duplicateFrom=...
+```
 
-1. Criar um helper único para taxa de trabalho por moeda
-   - Centralizar a leitura das cotações de trabalho do projeto para USD, EUR, GBP, MYR, MXN, ARS e COP.
-   - Regra: Cotação de Trabalho válida > fallback oficial apenas se não existir taxa de trabalho cadastrada.
-   - Stablecoins USD (`USDT`, `USDC`) usam a taxa de USD.
+O correto é:
 
-2. Corrigir o formulário de aposta simples (`ApostaDialog`)
-   - Usar o helper de taxa efetiva/trabalho no save.
-   - Para aposta simples mono-moeda estrangeira, gravar no pai:
-     - `cotacao_snapshot`
-     - `cotacao_snapshot_at`
-     - `valor_brl_referencia`
-     - `conversion_source = TRABALHO` quando aplicável
-   - Para multi-entry, gravar em cada registro de `apostas_pernas`:
-     - `cotacao_snapshot`
-     - `stake_brl_referencia`
-     - `cotacao_snapshot_at`, se a tabela aceitar esse campo
-   - Manter o pai multi-moeda com `stake_consolidado` na moeda do projeto, como já funcionou no caso Manchester.
+```text
+Aposta simples multi-entry -> abrir /janela/aposta/novo?duplicateFrom=...
+```
 
-3. Corrigir criação por `useApostasUnificada.criarArbitragem`
-   - Passar a Cotação de Trabalho para `getSnapshotFields` em vez de deixar cair na cotação oficial.
-   - Garantir que as pernas normalizadas herdem os snapshots corretos.
+Isso explica falhas intermitentes: depende de qual aba/renderização você usa. Na aba **Todas as apostas** e **Surebet**, esse caso já está mais alinhado; em **Duplo Green**, **ValueBet**, **Punter** e **Bônus**, há trechos em que multi-entry simples chama `handleDuplicateSurebet`, o que força o fluxo de formulário de surebet em uma operação que nasceu no formulário simples.
 
-4. Corrigir aposta múltipla (`ApostaMultiplaDialog`)
-   - Substituir `exchangeRates.getRate(...)` para outras moedas por taxa de trabalho do projeto quando existir.
-   - Gravar snapshot coerente no pai para qualquer moeda estrangeira, não só USD.
+Também encontrei outro risco: ao duplicar uma aposta simples, o clone carrega `__seedPernas` com as pernas originais, mas cada entrada adicional recebe `id` igual ao ID antigo da perna. Na hora de salvar, o insert em `apostas_pernas` não usa esse `id`, então tende a não quebrar, mas deixa o estado do formulário semanticamente errado. O clone deveria carregar entradas sem IDs antigos.
 
-5. Revisar renderização/exportação na aba Surebet
-   - Trocar `convertFnOficial` por conversão de trabalho nos cards operacionais quando a função for usada como fallback de exibição.
-   - Manter oficial/PTAX apenas onde for KPI de realização financeira, se houver esse caso explícito.
+## Solução proposta
 
-6. Validação pós-correção
-   - Rodar verificação TypeScript.
-   - Criar/inspecionar uma aposta simples multi-entry BRL+USD em Surebet e confirmar:
-     - pai com `stake_consolidado = 200` no exemplo 100 USD + 500 BRL com cotação 5;
-     - pernas com snapshots preenchidos;
-     - card exibindo o mesmo total esperado sem depender de cotação oficial.
-   - Auditar também uma aposta múltipla em moeda estrangeira para confirmar que o snapshot usa Cotação de Trabalho.
+### 1. Corrigir o handler de duplicação para aposta simples multi-entry
+
+Ajustar todos os pontos onde uma aposta simples multi-entry é renderizada via `SurebetCard` para continuar usando o formulário correto de origem:
+
+```text
+onDuplicate={handleDuplicateSimples ou handleDuplicateAposta}
+```
+
+em vez de:
+
+```text
+onDuplicate={handleDuplicateSurebet}
+```
+
+Aplicar nas abas:
+
+- Duplo Green
+- ValueBet
+- Punter
+- Bônus
+- Conferir novamente Todas as apostas e Surebet para manter o padrão correto
+
+Regra final:
+
+```text
+forma_registro = SIMPLES  -> duplicar com formulário de Aposta Simples
+forma_registro = MULTIPLA -> duplicar com formulário de Múltipla
+forma_registro = ARBITRAGEM/SUREBET real -> duplicar com formulário de Surebet
+```
+
+### 2. Preservar a estratégia da aba ao duplicar
+
+Nos links de duplicação, incluir a estratégia explícita quando a aba é especializada, por exemplo:
+
+```text
+Duplo Green: estrategia=DUPLO_GREEN
+ValueBet: estrategia=VALUEBET
+Punter: estrategia=PUNTER
+Bônus: estrategia=EXTRACAO_BONUS
+Freebets: estrategia=EXTRACAO_FREEBET
+Surebet: estrategia=SUREBET
+```
+
+Isso reduz dependência de inferência posterior e evita clones salvos em estratégia errada.
+
+### 3. Limpar IDs antigos das pernas ao hidratar clone simples
+
+No `ApostaWindowPage`/`ApostaDialog`, ao carregar `__seedPernas` para duplicação:
+
+- manter bookmaker, odd, stake, seleção, moeda, fonte_saldo e snapshots úteis;
+- remover `id`, `aposta_id`, `created_at`, `updated_at` das pernas seed;
+- gerar IDs locais novos apenas para UI, sem reaproveitar UUIDs reais de `apostas_pernas`.
+
+Isso deixa claro que o clone é novo e evita qualquer risco de edição/sincronização acidental com perna antiga.
+
+### 4. Corrigir duplicação de surebet real
+
+Hoje o `SurebetWindowPage` busca apenas o pai (`apostas_unificada`) e depende do `SurebetModalRoot` buscar pernas usando `surebet.id`. Em duplicação, o objeto montado não contém `id`, então o formulário pode abrir sem pernas.
+
+Ajuste proposto:
+
+- quando `duplicateFrom` existir, buscar também `apostas_pernas` do original;
+- passar essas pernas como seed para o `SurebetModalRoot`;
+- no modal, em modo duplicação, popular as pernas a partir do seed, mas sem IDs antigos;
+- salvar como operação nova.
+
+Isso separa corretamente:
+
+```text
+Editar surebet -> usa id original e IDs das pernas
+Duplicar surebet -> usa dados originais como seed, sem IDs antigos
+```
+
+### 5. Padronizar abertura de janelas
+
+Criar/usar helpers de duplicação em `windowHelper.ts` para evitar URLs manuais divergentes:
+
+```text
+openDuplicateApostaWindow
+openDuplicateMultiplaWindow
+openDuplicateSurebetWindow
+```
+
+Com isso, as abas deixam de montar URLs manualmente e a regra fica centralizada.
+
+### 6. Revisar atualização após salvar clone
+
+Garantir que, ao salvar a duplicação, os eventos cross-window invalidem as listas/KPIs corretos em todas as abas:
+
+- `APOSTA_SAVED` para simples;
+- `APOSTA_MULTIPLA_SAVED` para múltipla;
+- `SUREBET_SAVED` para surebet real;
+- invalidar caches canônicos e saldos após salvar.
+
+### 7. Testes práticos após correção
+
+Testar manualmente os cenários principais:
+
+1. **Duplo Green**: duplicar o Venezia x Empoli multi-entry.
+   - Deve abrir formulário simples.
+   - Deve carregar AMUNRA e 7GAMES como entradas.
+   - Deve salvar novo clone como `DUPLO_GREEN`.
+   - Deve aparecer na aba Duplo Green.
+
+2. **ValueBet/Punter/Bônus**: duplicar aposta simples single-entry e multi-entry.
+   - Single-entry e multi-entry devem abrir o formulário simples.
+   - Estratégia deve permanecer fixa conforme a aba.
+
+3. **Surebet real**: duplicar operação de arbitragem real.
+   - Deve abrir formulário de surebet.
+   - Deve carregar todas as pernas.
+   - Deve salvar como nova operação sem reaproveitar IDs antigos.
+
+4. **Todas as apostas**: duplicar simples, múltipla e surebet.
+   - Cada tipo deve abrir seu formulário correto.
+
+## Arquivos a alterar
+
+- `src/components/projeto-detalhe/ProjetoDuploGreenTab.tsx`
+- `src/components/projeto-detalhe/ProjetoValueBetTab.tsx`
+- `src/components/projeto-detalhe/ProjetoPunterTab.tsx`
+- `src/components/projeto-detalhe/bonus/BonusApostasTab.tsx`
+- `src/components/projeto-detalhe/ProjetoApostasTab.tsx` apenas para revisão/centralização
+- `src/components/projeto-detalhe/ProjetoSurebetTab.tsx` apenas para revisão/centralização
+- `src/pages/ApostaWindowPage.tsx`
+- `src/pages/SurebetWindowPage.tsx`
+- `src/components/surebet/SurebetModalRoot.tsx`
+- `src/lib/windowHelper.ts`
+
+## Resultado esperado
+
+A ação **Duplicar** passa a respeitar a origem real da operação, e não apenas o componente visual usado no card. Assim, uma aposta simples multi-casa renderizada como card estilo surebet continuará sendo duplicada no formulário de aposta simples, preservando entradas, estratégia, cotação/snapshots e visibilidade na aba correta.
