@@ -427,7 +427,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           // quando a moeda de consolidação corresponde ao projeto.
           lucro_real: arb.lucro_prejuizo, roi_real: arb.roi_real,
           status: arb.status, resultado: arb.resultado, observacoes: arb.observacoes,
-          pernas: isSimples ? [] : pernasSurebetCard,
+          pernas: isSimples ? pernasSurebetCard : pernasSurebetCard,
           raw_pernas: pernasRaw,
           forma_registro: arb.forma_registro,
           estrategia: arb.estrategia, contexto_operacional: arb.contexto_operacional,
