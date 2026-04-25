@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos, type BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
+import { useInvalidateAfterMutation } from "@/hooks/useInvalidateAfterMutation";
 import { usePreCommitValidation } from "@/hooks/usePreCommitValidation";
 import { useStakeReservation, useBookmakerSaldoComReservas } from "@/hooks/useStakeReservation";
 import { SaldoReservaCompact } from "@/components/saldo/SaldoReservaDisplay";
@@ -450,6 +451,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     currentBookmakerId: aposta?.bookmaker_id || null
   });
   const invalidateSaldos = useInvalidateBookmakerSaldos();
+  const invalidateAfterMutation = useInvalidateAfterMutation();
   const queryClient = useQueryClient();
   
   // Hook para validação pré-commit (anti-concorrência)
@@ -2925,12 +2927,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         // não na criação. Isso garante que apenas apostas finalizadas (GREEN/RED) contem para o rollover.
       }
 
-      // CRITICAL FIX: Aguardar invalidação completar ANTES de fechar o dialog
-      // Isso garante que os novos saldos sejam buscados do servidor
-      await invalidateSaldos(projetoId);
-      
-      // CRÍTICO: Invalidar caches canônicos (same-window — BroadcastChannel não alcança)
-      invalidateCanonicalCaches(queryClient, projetoId);
+      // CRITICAL FIX: Aguardar invalidação completa ANTES de fechar o dialog
+      // Isso garante que listas, saldos, KPIs, bônus e central reflitam o servidor sem F5.
+      await invalidateAfterMutation(projetoId);
 
       onSuccess('save');
       if (!embedded) onOpenChange(false);
@@ -3155,10 +3154,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         throw new Error(result.error?.message || 'Falha ao excluir aposta');
       }
       
-      invalidateSaldos(projetoId);
-      
-      // CRÍTICO: Invalidar caches canônicos (same-window)
-      invalidateCanonicalCaches(queryClient, projetoId);
+      // CRÍTICO: aguardar caches globais no mesmo navegador antes do sucesso.
+      await invalidateAfterMutation(projetoId);
       
       // Broadcast para sincronização cross-window
       try {
