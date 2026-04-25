@@ -1849,6 +1849,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         ? getEstrategiaFromTab(activeTab)
         : null;
       const estrategiaSimples = (lockedEstrategiaForSave || registroValues.estrategia || defaultEstrategia || 'PUNTER') as ApostaEstrategia;
+      const buildSnapshotFields = (valor: number, moeda: string) => {
+        const rateInfo = getEffectiveRate(moeda);
+        const now = new Date().toISOString();
+        return moeda === 'BRL'
+          ? { cotacao_snapshot: null as number | null, cotacao_snapshot_at: null as string | null, valor_brl_referencia: valor, conversion_source: rateInfo.source }
+          : { cotacao_snapshot: rateInfo.rate, cotacao_snapshot_at: now, valor_brl_referencia: valor * rateInfo.rate, conversion_source: rateInfo.source };
+      };
 
       const commonData = {
         user_id: userData.user.id,
@@ -2038,6 +2045,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         const parentValorRetorno = isMultiCC
           ? convertToConsolidation(valorRetornoCalculado, primaryMoedaForCheck)
           : valorRetornoCalculado;
+        const parentSnapshotFields = buildSnapshotFields(parentStake, moedaOperacao);
 
         apostaData = {
           ...commonData,
@@ -2067,6 +2075,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           stake_total: parentStake,
           stake_consolidado: isMultiCC ? parentStake : null,
           pl_consolidado: (isMultiCC && statusResultado !== 'PENDENTE') ? parentLucroPrejuizo : null,
+          cotacao_snapshot: isMultiCC ? null : parentSnapshotFields.cotacao_snapshot,
+          cotacao_snapshot_at: isMultiCC ? null : parentSnapshotFields.cotacao_snapshot_at,
+          valor_brl_referencia: isMultiCC ? null : parentSnapshotFields.valor_brl_referencia,
+          conversion_source: isMultiCC ? null : parentSnapshotFields.conversion_source,
           // WATERFALL: Flag para indicar se freebet deve ser usado no waterfall
           usar_freebet: bookmakerStakeFreebet + additionalStakeFreebet > 0,
         };
