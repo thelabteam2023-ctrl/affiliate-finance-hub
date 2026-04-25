@@ -81,6 +81,7 @@ import { SaldoOperavelCard } from "./SaldoOperavelCard";
 // FinancialSummaryCompact removed — now integrated into Lucro KPI popover
 import { useCalendarApostasRpc, transformRpcDailyForCharts } from "@/hooks/useCalendarApostasRpc";
 import { ChartEmptyState } from "@/components/ui/chart-empty-state";
+import { useInvalidateAfterMutation } from "@/hooks/useInvalidateAfterMutation";
 
 interface ProjetoSurebetTabProps {
   projetoId: string;
@@ -210,6 +211,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
   
   // Hook para invalidar cache de saldos
   const invalidateSaldos = useInvalidateBookmakerSaldos();
+  const invalidateAfterMutation = useInvalidateAfterMutation();
   
   // Hook para gerenciamento de rollover (bônus)
   // NOTA: processarLiquidacaoBonus e reverterLiquidacaoBonus removidos - modelo unificado
@@ -468,8 +470,9 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
 
   // REMOVIDO: fetchBookmakers - agora usa useBookmakerSaldosQuery centralizado
 
-  const handleDataChange = () => {
-    refetchSurebets();
+  const handleDataChange = async () => {
+    await invalidateAfterMutation(projetoId);
+    await refetchSurebets();
     onDataChange?.();
   };
 
