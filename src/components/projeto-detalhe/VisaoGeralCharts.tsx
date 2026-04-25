@@ -36,6 +36,7 @@ interface Perna {
   parceiro_nome?: string | null;
   instance_identifier?: string | null;
   stake?: number;
+  stake_total?: number | null;
   lucro_prejuizo?: number;
   resultado?: string;
   odd?: number;
@@ -44,6 +45,7 @@ interface Perna {
   stake_brl_referencia?: number | null;
   lucro_prejuizo_brl_referencia?: number | null;
   cotacao_snapshot?: number | null;
+  entries?: Perna[] | null;
 }
 
 interface ApostaBase {
