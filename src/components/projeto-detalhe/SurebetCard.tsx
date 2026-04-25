@@ -28,6 +28,14 @@ export interface SurebetPernaEntry {
   selecao_livre?: string;
   /** Fonte do saldo: REAL ou FREEBET */
   fonte_saldo?: string;
+  parceiro_nome?: string | null;
+  instance_identifier?: string | null;
+  logo_url?: string | null;
+  resultado?: string | null;
+  lucro_prejuizo?: number | null;
+  stake_brl_referencia?: number | null;
+  lucro_prejuizo_brl_referencia?: number | null;
+  cotacao_snapshot?: number | null;
 }
 
 export interface SurebetPerna {
