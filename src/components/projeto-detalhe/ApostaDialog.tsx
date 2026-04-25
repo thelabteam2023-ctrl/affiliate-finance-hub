@@ -1104,7 +1104,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         // NOVO: fonte_saldo também precisa ser restaurado (default 'REAL' para dados legados)
         setRegistroValues({
           forma_registro: 'SIMPLES',
-          estrategia: aposta.estrategia === 'SUREBET' ? 'PUNTER' : ((aposta.estrategia as ApostaEstrategia) || null),
+          estrategia: (aposta.estrategia as ApostaEstrategia) || null,
           contexto_operacional: (aposta.contexto_operacional as ContextoOperacional) || null,
           fonte_saldo: (aposta.fonte_saldo as FonteSaldo) || 'REAL', // Legado: default REAL
         });
@@ -1138,8 +1138,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       setRegistroValues(prev => {
         const updates: Partial<typeof prev> = {};
         
-        // Aposta Simples não herda estratégia da aba: usa o default explícito da janela.
-        if (!prev.estrategia && defaultSimpleEstrategia) {
+        // Aposta Simples usa o default explícito da janela. Na aba Surebet, trava como SUREBET.
+        if ((!prev.estrategia && defaultSimpleEstrategia) || (activeTab === 'surebet' && prev.estrategia !== 'SUREBET')) {
           updates.estrategia = defaultSimpleEstrategia;
         }
         
