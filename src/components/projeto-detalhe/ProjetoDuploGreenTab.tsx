@@ -1163,7 +1163,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
           periodStart={tabFilters.dateRange?.start}
           periodEnd={tabFilters.dateRange?.end}
           formatCurrency={formatCurrency}
-          convertToConsolidation={convertFnOficial}
+          convertToConsolidation={convertFn}
           moedaConsolidacao={moedaConsol}
         />
       )}
@@ -1234,12 +1234,12 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                           stake: p.stake,
                           moeda: p.moeda,
                         })),
-                      }, "DUPLO_GREEN", convertFnOficial);
+                      }, "DUPLO_GREEN", convertFn);
                     }
                     return transformApostaToExport({
                       ...a,
                       estrategia: "DUPLO_GREEN",
-                    }, "Duplo Green", convertFnOficial);
+                    }, "Duplo Green", convertFn);
                   })}
                   abaOrigem="Duplo Green"
                   filename={`duplogreen-${projetoId}-${format(new Date(), 'yyyy-MM-dd')}`}
@@ -1352,7 +1352,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                    onDelete={handleDeleteSurebet}
                    onDuplicate={handleDuplicateSurebet}
                   formatCurrency={formatCurrency}
-                  convertToConsolidation={convertFnOficial}
+                  convertToConsolidation={convertFn}
                   bookmakerNomeMap={bookmakerNomeMap}
                 />
               );
@@ -1413,7 +1413,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                          onDelete={handleDeleteAposta}
                          onDuplicate={handleDuplicateAposta}
                         formatCurrency={formatCurrency}
-                        convertToConsolidation={convertFnOficial}
+                        convertToConsolidation={convertFn}
                         bookmakerNomeMap={bookmakerNomeMap}
                       />
                     );
@@ -1430,7 +1430,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                        onDuplicate={handleDuplicateAposta}
                       variant={viewMode === "cards" ? "card" : "list"}
                       formatCurrency={formatCurrency}
-                      convertToConsolidation={convertFnOficial}
+                      convertToConsolidation={convertFn}
                       moedaConsolidacao={moedaConsol}
                     />
                   );

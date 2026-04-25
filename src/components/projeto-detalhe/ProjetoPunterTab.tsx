@@ -1105,10 +1105,10 @@ export function ProjetoPunterTab({
             periodStart={dateRange?.start}
             periodEnd={dateRange?.end}
             formatCurrency={formatCurrency}
-            convertToConsolidation={convertToConsolidationOficialFn}
+            convertToConsolidation={convertToConsolidationFn}
             moedaConsolidacao={moedaConsolidacaoVal}
           />
-          <UnifiedStatisticsCard apostas={apostas} formatCurrency={formatCurrency} currencySymbol={currencySymbol} convertToConsolidation={convertToConsolidationOficialFn} moedaConsolidacao={moedaConsolidacaoVal} />
+          <UnifiedStatisticsCard apostas={apostas} formatCurrency={formatCurrency} currencySymbol={currencySymbol} convertToConsolidation={convertToConsolidationFn} moedaConsolidacao={moedaConsolidacaoVal} />
         </>
       ) : (
         <Card>
@@ -1161,7 +1161,7 @@ export function ProjetoPunterTab({
                     ...a,
                     data_aposta: a.data_aposta,
                     estrategia: "PUNTER",
-                  }, "Punter", convertToConsolidationOficialFn))}
+                  }, "Punter", convertToConsolidationFn))}
                   abaOrigem="Punter"
                 filename={`punters-${projetoId}-${format(new Date(), 'yyyy-MM-dd')}`}
                 filtrosAplicados={{
@@ -1285,7 +1285,7 @@ export function ProjetoPunterTab({
                    onDelete={handleDeleteAposta}
                    onDuplicate={handleDuplicateSimples}
                    formatCurrency={formatCurrency}
-                   convertToConsolidation={convertToConsolidationOficialFn}
+                   convertToConsolidation={convertToConsolidationFn}
                    moedaConsolidacao={moedaConsolidacaoVal}
                    bookmakerNomeMap={bookmakerNomeMap}
                  />
@@ -1313,7 +1313,7 @@ export function ProjetoPunterTab({
                 onDuplicate={handleDuplicateSimples}
                 variant="card"
                 formatCurrency={formatCurrency}
-                convertToConsolidation={convertToConsolidationOficialFn}
+                convertToConsolidation={convertToConsolidationFn}
                 moedaConsolidacao={moedaConsolidacaoVal}
               />
             );
@@ -1377,7 +1377,7 @@ export function ProjetoPunterTab({
                    onDelete={handleDeleteAposta}
                    onDuplicate={handleDuplicateSimples}
                   formatCurrency={formatCurrency}
-                  convertToConsolidation={convertToConsolidationOficialFn}
+                  convertToConsolidation={convertToConsolidationFn}
                   moedaConsolidacao={moedaConsolidacaoVal}
                   bookmakerNomeMap={bookmakerNomeMap}
                 />
@@ -1405,7 +1405,7 @@ export function ProjetoPunterTab({
                 onDuplicate={handleDuplicateSimples}
                 variant="list"
                 formatCurrency={formatCurrency}
-                convertToConsolidation={convertToConsolidationOficialFn}
+                convertToConsolidation={convertToConsolidationFn}
                 moedaConsolidacao={moedaConsolidacaoVal}
               />
             );

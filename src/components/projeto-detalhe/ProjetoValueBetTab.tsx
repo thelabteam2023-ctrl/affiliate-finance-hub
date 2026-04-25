@@ -1105,10 +1105,10 @@ export function ProjetoValueBetTab({
             periodStart={dateRange?.start}
             periodEnd={dateRange?.end}
             formatCurrency={formatCurrency}
-            convertToConsolidation={convertToConsolidationOficialFn}
+            convertToConsolidation={convertToConsolidationFn}
             moedaConsolidacao={moedaConsolidacaoVal}
           />
-          <UnifiedStatisticsCard apostas={apostas} formatCurrency={formatCurrency} currencySymbol={currencySymbol} convertToConsolidation={convertToConsolidationOficialFn} moedaConsolidacao={moedaConsolidacaoVal} />
+          <UnifiedStatisticsCard apostas={apostas} formatCurrency={formatCurrency} currencySymbol={currencySymbol} convertToConsolidation={convertToConsolidationFn} moedaConsolidacao={moedaConsolidacaoVal} />
         </>
       ) : (
         <Card>
@@ -1161,7 +1161,7 @@ export function ProjetoValueBetTab({
                     ...a,
                     data_aposta: a.data_aposta,
                     estrategia: "VALUEBET",
-                  }, "ValueBet", convertToConsolidationOficialFn))}
+                  }, "ValueBet", convertToConsolidationFn))}
                   abaOrigem="ValueBet"
                 filename={`valuebets-${projetoId}-${format(new Date(), 'yyyy-MM-dd')}`}
                 filtrosAplicados={{
@@ -1286,7 +1286,7 @@ export function ProjetoValueBetTab({
                    onDelete={handleDeleteAposta}
                    onDuplicate={handleDuplicateSimples}
                    formatCurrency={formatCurrency}
-                   convertToConsolidation={convertToConsolidationOficialFn}
+                   convertToConsolidation={convertToConsolidationFn}
                    bookmakerNomeMap={bookmakerNomeMap}
                  />
                );
@@ -1313,7 +1313,7 @@ export function ProjetoValueBetTab({
                 onDuplicate={handleDuplicateSimples}
                 variant="card"
                 formatCurrency={formatCurrency}
-                convertToConsolidation={convertToConsolidationOficialFn}
+                convertToConsolidation={convertToConsolidationFn}
                 moedaConsolidacao={moedaConsolidacaoVal}
               />
             );
@@ -1378,7 +1378,7 @@ export function ProjetoValueBetTab({
                    onDelete={handleDeleteAposta}
                    onDuplicate={handleDuplicateSimples}
                   formatCurrency={formatCurrency}
-                  convertToConsolidation={convertToConsolidationOficialFn}
+                  convertToConsolidation={convertToConsolidationFn}
                   bookmakerNomeMap={bookmakerNomeMap}
                 />
               );
@@ -1405,7 +1405,7 @@ export function ProjetoValueBetTab({
                 onDuplicate={handleDuplicateSimples}
                 variant="list"
                 formatCurrency={formatCurrency}
-                convertToConsolidation={convertToConsolidationOficialFn}
+                convertToConsolidation={convertToConsolidationFn}
                 moedaConsolidacao={moedaConsolidacaoVal}
               />
             );
