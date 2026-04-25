@@ -1842,6 +1842,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         : (tipoOperacaoExchange === "cobertura" ? coberturaBackBookmakerId : exchangeBookmakerId);
       const selectedBookmaker = bookmakers.find(bk => bk.id === selectedBookmakerId);
       const moedaOperacao = selectedBookmaker?.moeda || "BRL";
+      const estrategiaSimples = registroValues.estrategia === 'SUREBET'
+        ? 'PUNTER'
+        : registroValues.estrategia;
 
       const commonData = {
         user_id: userData.user.id,
@@ -1864,15 +1867,15 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         gerou_freebet: false,
         valor_freebet_gerada: null,
         // Campos explícitos do Prompt Oficial - NUNCA inferidos
-        estrategia: registroValues.estrategia,
-        forma_registro: registroValues.forma_registro,
+        estrategia: estrategiaSimples,
+        forma_registro: 'SIMPLES',
         // contexto_operacional: respeitar valor selecionado no formulário (NORMAL, BONUS, FREEBET)
         contexto_operacional: registroValues.contexto_operacional || 'NORMAL',
         // VERDADE FINANCEIRA: fonte_saldo é a fonte de verdade
         fonte_saldo: usarFreebetBookmaker ? 'FREEBET' : 'REAL',
         // @deprecated: usar_freebet derivado de fonte_saldo, mantido para compat RPC
         usar_freebet: usarFreebetBookmaker,
-        fonte_entrada: registroValues.estrategia === 'VALUEBET' ? (fonteEntrada || 'Manual') : null,
+        fonte_entrada: estrategiaSimples === 'VALUEBET' ? (fonteEntrada || 'Manual') : null,
         // CRÍTICO: Moeda da operação = moeda nativa da bookmaker
         moeda_operacao: moedaOperacao,
       };
