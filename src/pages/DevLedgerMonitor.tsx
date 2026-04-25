@@ -18,7 +18,8 @@ import {
   clearRpcLogs,
   type RpcCallLog,
 } from "@/lib/dev/rpcInterceptor";
-import { Activity, AlertTriangle, Database, Receipt, Wallet, Zap, Trash2, Pause, Play } from "lucide-react";
+import { explainRpcCall } from "@/lib/dev/rpcExplain";
+import { Activity, AlertTriangle, Database, Receipt, Wallet, Zap, Trash2, Pause, Play, HelpCircle } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -165,6 +166,7 @@ export default function DevLedgerMonitor() {
   const navigate = useNavigate();
   const [paused, setPaused] = useState(false);
   const [filter, setFilter] = useState("");
+  const [rpcExplainedMode, setRpcExplainedMode] = useState(true);
   const { getRate } = useExchangeRates();
 
   // Hard guard — only system owner
@@ -212,7 +214,10 @@ export default function DevLedgerMonitor() {
   );
 
   const rpcFiltered = useMemo(
-    () => rpcLogs.filter((r) => filterFn(`${r.fn_name} ${r.status} ${r.error ?? ""}`)),
+    () => rpcLogs.filter((r) => {
+      const explanation = explainRpcCall(r);
+      return filterFn(`${r.fn_name} ${r.status} ${r.error ?? ""} ${explanation.name} ${explanation.description} ${explanation.impactLabel}`);
+    }),
     [rpcLogs, filter]
   );
 
