@@ -99,6 +99,7 @@ import {
   Clock,
   Users,
   ArrowUpFromLine,
+  Pencil,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Toggle } from "@/components/ui/toggle";
@@ -110,6 +111,7 @@ import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ESTRATEGIA_LABELS, type ApostaEstrategia } from "@/lib/apostaConstants";
+import { openApostaMultiplaWindow, openApostaWindow, openSurebetWindow } from "@/lib/windowHelper";
 
 type VinculoSortMode = "alpha" | "newest" | "oldest" | "apostas_desc" | "apostas_asc" | "saldo_desc" | "saldo_asc" | "em_aposta_desc" | "em_aposta_asc" | "disponivel_desc" | "disponivel_asc";
 
@@ -135,6 +137,7 @@ interface ApostaUsoBookmaker {
   stake: number | null;
   moeda: string | null;
   selecao: string | null;
+  casas?: Array<{ nome: string; stake: number | null; moeda: string | null }>;
 }
 
 // Interface Vinculo importada de useProjetoVinculos
@@ -247,18 +250,37 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
           .from("apostas_unificada")
           .select("id, data_aposta, evento, esporte, mercado, estrategia, forma_registro, status, resultado, odd, stake, moeda_operacao, selecao")
           .eq("projeto_id", projetoId)
+          .eq("workspace_id", workspaceId)
           .eq("bookmaker_id", bookmakerId)
           .is("cancelled_at", null),
         supabase
           .from("apostas_pernas")
-          .select("id, selecao, selecao_livre, odd, stake, moeda, aposta:apostas_unificada!inner(id, projeto_id, data_aposta, evento, esporte, mercado, estrategia, forma_registro, status, resultado, cancelled_at)")
+          .select("id, selecao, selecao_livre, odd, stake, moeda, aposta:apostas_unificada!inner(id, projeto_id, workspace_id, data_aposta, evento, esporte, mercado, estrategia, forma_registro, status, resultado, cancelled_at)")
           .eq("bookmaker_id", bookmakerId)
           .eq("aposta.projeto_id", projetoId)
+          .eq("aposta.workspace_id", workspaceId)
           .is("aposta.cancelled_at", null),
       ]);
 
       if (simplesError) throw simplesError;
       if (pernasError) throw pernasError;
+
+      const apostaIdsComPernas = Array.from(new Set((pernas || []).map((p: any) => p.aposta?.id).filter(Boolean)));
+      const casasPorAposta = new Map<string, Array<{ nome: string; stake: number | null; moeda: string | null }>>();
+      if (apostaIdsComPernas.length > 0) {
+        const { data: todasPernas, error: todasPernasError } = await supabase
+          .from("apostas_pernas")
+          .select("aposta_id, stake, moeda, bookmaker:bookmakers(nome)")
+          .in("aposta_id", apostaIdsComPernas);
+
+        if (todasPernasError) throw todasPernasError;
+
+        (todasPernas || []).forEach((p: any) => {
+          const casas = casasPorAposta.get(p.aposta_id) || [];
+          casas.push({ nome: p.bookmaker?.nome || "Casa", stake: p.stake, moeda: p.moeda });
+          casasPorAposta.set(p.aposta_id, casas);
+        });
+      }
 
       const rows: ApostaUsoBookmaker[] = [];
       (simples || []).forEach((a: any) => rows.push({
@@ -275,6 +297,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
         stake: a.stake,
         moeda: a.moeda_operacao,
         selecao: a.selecao,
+        casas: [{ nome: vinculoApostasModal?.nome || "Casa", stake: a.stake, moeda: a.moeda_operacao }],
       }));
       (pernas || []).forEach((p: any) => rows.push({
         id: p.aposta.id,
@@ -291,6 +314,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
         stake: p.stake,
         moeda: p.moeda,
         selecao: p.selecao_livre || p.selecao,
+        casas: casasPorAposta.get(p.aposta.id) || [],
       }));
 
       return rows.sort((a, b) => new Date(b.data_aposta).getTime() - new Date(a.data_aposta).getTime());
@@ -501,6 +525,35 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
       DUPLO_GREEN: "Duplo Green",
     };
     return labels[estrategia || ""] || ESTRATEGIA_LABELS[estrategia as ApostaEstrategia] || "Todas as Apostas";
+  };
+
+  const getApostaTab = (estrategia: string | null) => {
+    const tabs: Record<string, string> = {
+      PUNTER: "punter",
+      SUREBET: "surebet",
+      VALUEBET: "valuebet",
+      EXTRACAO_FREEBET: "freebets",
+      EXTRACAO_BONUS: "bonus",
+      DUPLO_GREEN: "duplogreen",
+    };
+    return tabs[estrategia || ""] || "apostas";
+  };
+
+  const openEditarApostaUso = (aposta: ApostaUsoBookmaker) => {
+    const activeTab = getApostaTab(aposta.estrategia);
+    const estrategia = aposta.estrategia || undefined;
+
+    if (aposta.forma_registro === "ARBITRAGEM" || aposta.estrategia === "SUREBET") {
+      openSurebetWindow({ projetoId, id: aposta.id, activeTab });
+      return;
+    }
+
+    if (aposta.forma_registro === "MULTIPLA") {
+      openApostaMultiplaWindow({ projetoId, id: aposta.id, activeTab, estrategia });
+      return;
+    }
+
+    openApostaWindow({ projetoId, id: aposta.id, activeTab, estrategia });
   };
 
   const openApostasModal = (vinculo: Vinculo) => {
@@ -1540,7 +1593,13 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                           {aposta.esporte || "—"}{aposta.mercado ? ` · ${aposta.mercado}` : ""}{aposta.selecao ? ` · ${aposta.selecao}` : ""}
                         </p>
                       </div>
-                      <Badge variant="outline" className="shrink-0 text-[10px]">{getAbaAposta(aposta.estrategia)}</Badge>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <Badge variant="outline" className="text-[10px]">{getAbaAposta(aposta.estrategia)}</Badge>
+                        <Button variant="outline" size="sm" className="h-8 gap-1" onClick={() => openEditarApostaUso(aposta)}>
+                          <Pencil className="h-3.5 w-3.5" />
+                          Editar
+                        </Button>
+                      </div>
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                       <span>{format(new Date(aposta.data_aposta), "dd/MM/yyyy HH:mm", { locale: ptBR })}</span>
@@ -1549,6 +1608,15 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                       {aposta.odd != null && <span>@{Number(aposta.odd).toFixed(2)}</span>}
                       {aposta.stake != null && <span>Stake: {formatCurrency(Number(aposta.stake), aposta.moeda || vinculoApostasModal?.moeda || "BRL")}</span>}
                     </div>
+                    {aposta.casas?.length ? (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {aposta.casas.map((casa, idx) => (
+                          <Badge key={`${aposta.id}-${casa.nome}-${idx}`} variant="secondary" className="text-[10px] font-normal">
+                            {casa.nome}: {casa.stake != null ? formatCurrency(Number(casa.stake), casa.moeda || vinculoApostasModal?.moeda || "BRL") : "—"}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
                 ))}
               </div>
