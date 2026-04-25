@@ -1843,7 +1843,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         : (tipoOperacaoExchange === "cobertura" ? coberturaBackBookmakerId : exchangeBookmakerId);
       const selectedBookmaker = bookmakers.find(bk => bk.id === selectedBookmakerId);
       const moedaOperacao = selectedBookmaker?.moeda || "BRL";
-      const estrategiaSimples = registroValues.estrategia;
+      const lockedEstrategiaForSave = !aposta && isAbaEstrategiaFixa(activeTab)
+        ? getEstrategiaFromTab(activeTab)
+        : null;
+      const estrategiaSimples = (lockedEstrategiaForSave || registroValues.estrategia || defaultEstrategia || 'PUNTER') as ApostaEstrategia;
 
       const commonData = {
         user_id: userData.user.id,
@@ -1865,7 +1868,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         observacoes: observacoes || null,
         gerou_freebet: false,
         valor_freebet_gerada: null,
-        // Campos explícitos do Prompt Oficial - NUNCA inferidos
+          // Campos explícitos do Prompt Oficial - NUNCA inferidos pela UI solta.
+          // Em abas especializadas, a estratégia da aba é mandatória também no save.
         estrategia: estrategiaSimples,
         forma_registro: 'SIMPLES',
         // contexto_operacional: respeitar valor selecionado no formulário (NORMAL, BONUS, FREEBET)
