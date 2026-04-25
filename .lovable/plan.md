@@ -1,131 +1,125 @@
-Plano para criar uma fonte canônica de “Casas Mais Utilizadas” e eliminar divergências entre abas.
+Plano para prosseguir com a correção definitiva da contagem de “Casas Mais Utilizadas”.
 
-## Diagnóstico
+## Diagnóstico confirmado
 
-Hoje existem cálculos duplicados em vários pontos:
+O problema não é a ausência de dados na operação. A falha acontece na transformação para a UI.
 
-- `VisaoGeralCharts.tsx` tem sua própria agregação de casas.
-- `SurebetStatisticsCard.tsx` calcula “Top Casas por Uso” internamente.
-- `ProjetoDuploGreenTab.tsx` também monta `porCasa`/`casaData` localmente.
-- `PerformancePorCasaCard.tsx` tem outra regra para casa consolidada e casa + parceiro.
-- Punter e ValueBet carregam `apostas_pernas` como `_sub_entries`, mas nem todo card estatístico usa isso de forma padronizada.
-
-O bug da Surebet provavelmente vem da combinação de dois pontos:
-
-1. Em apostas simples multi-entry, as entradas ficam em `apostas_pernas` e depois são agrupadas por `selecao` em `entries[]`.
-2. O card estatístico atual olha principalmente `pernas[]` como se cada item fosse uma casa. Quando há `entries[]` dentro da mesma perna/linha, ele pode acabar contabilizando apenas a entrada principal, ignorando as demais casas.
-
-## Regra canônica proposta
-
-Criar um utilitário único para transformar qualquer operação em “participações por bookmaker”.
-
-Cada participação representa uma casa envolvida na operação, independentemente de a origem ser:
-
-- aposta simples normal: `bookmaker_id` do parent;
-- aposta simples multi-entry: cada item em `_sub_entries` ou `pernas[].entries[]`;
-- surebet/múltipla/arbitragem: cada perna em `apostas_pernas`;
-- duplo green/valuebet/punter com múltiplas entradas: cada entrada real da operação.
-
-Fluxo canônico:
+Fluxo atual problemático:
 
 ```text
-Operação
-  -> extrair participações reais por bookmaker
-  -> normalizar casa base + vínculo/parceiro
-  -> consolidar volume/lucro com hierarquia correta
-  -> gerar ranking por casa e detalhe por vínculo
+apostas_pernas
+  -> groupPernasBySelecao agrupa por seleção
+  -> Surebet/VisaoGeralCharts recebe pernas resumidas
+  -> entries[] não é preservado no mapping
+  -> aggregateBookmakerUsage só enxerga a primeira casa
 ```
 
-## Implementação
+Exemplo do bug em Surebet:
 
-### 1. Criar utilitário canônico
+- A operação tem duas pernas/entradas reais em `apostas_pernas`.
+- `groupPernasBySelecao` junta entradas da mesma seleção em uma perna principal + `entries[]`.
+- Ao montar os dados para o card “Casas Mais Utilizadas”, `ProjetoSurebetTab.tsx` faz `s.pernas?.map(p => ({ bookmaker_nome, stake, ... }))`.
+- Esse mapping copia apenas os campos principais de `p`, mas descarta `p.entries`.
+- Resultado: a estatística vê só a casa principal da linha agrupada.
 
-Adicionar um novo utilitário, por exemplo `src/utils/bookmakerUsageAnalytics.ts`, com funções como:
+Além disso, `groupPernasBySelecao` ainda não preserva campos analíticos importantes dentro de `entries[]`, como `resultado`, `lucro_prejuizo`, `parceiro_nome`, `instance_identifier`, `stake_brl_referencia`, `lucro_prejuizo_brl_referencia` e `cotacao_snapshot`.
 
-- `extractBookmakerParticipations(aposta)`
-- `aggregateBookmakerUsage(apostas, options)`
-- `extractCasaVinculo(...)`
+## O que vou corrigir
 
-Ele deve suportar estes formatos de entrada:
+### 1. Blindar `groupPernasBySelecao`
 
-- `bookmaker_id`, `bookmaker_nome`, `parceiro_nome`, `instance_identifier` no parent;
-- `pernas[]` flat;
-- `pernas[].entries[]` agrupado por seleção;
-- `_sub_entries[]` usado em Punter/ValueBet;
-- campos de moeda/snapshot para stake e lucro.
+Preservar, em cada item de `entries[]`, todos os campos necessários para análise:
 
-### 2. Padronizar moeda e valores
+- `bookmaker_id`
+- `bookmaker_nome`
+- `parceiro_nome`
+- `instance_identifier`
+- `logo_url`
+- `resultado`
+- `lucro_prejuizo`
+- `moeda`
+- `stake`
+- `odd`
+- `stake_brl_referencia`
+- `lucro_prejuizo_brl_referencia`
+- `cotacao_snapshot`
+- `fonte_saldo`
 
-Usar a hierarquia financeira já existente:
+Assim, qualquer aba que agrupe por seleção não perderá granularidade de casa.
 
-- volume: `stake_consolidado` quando existir;
-- pernas: `stake_brl_referencia`/snapshot quando disponível, senão `convertPernaToConsolidacao`;
-- lucro: `pl_consolidado`/`lucro_prejuizo_brl_referencia`/snapshot quando disponível;
-- fallback final: `getConsolidatedStake` e `getConsolidatedLucro`.
+### 2. Corrigir o mapping da Surebet para `VisaoGeralCharts`
 
-Isso evita que cada aba converta de um jeito diferente.
+Em `ProjetoSurebetTab.tsx`, substituir os mappings duplicados de `surebets.map(...)` por uma função local única, por exemplo `mapSurebetForCharts(s)`.
 
-### 3. Corrigir SurebetStatisticsCard
+Essa função vai:
 
-Trocar o cálculo local de `casaStats` para usar o agregador canônico.
+- passar `pernas[]` completas para o agregador;
+- preservar `entries[]` dentro de cada perna;
+- preservar IDs, nomes, parceiro, instância, stake/lucro por perna e snapshots de conversão;
+- evitar cair no fallback de “primeira casa” quando a operação tiver pernas agrupadas.
 
-Critério esperado: se uma operação tem duas casas na mesma linha/seleção, as duas aparecem no ranking e no tooltip, cada uma com sua participação de stake/lucro.
+Isso deve corrigir imediatamente a visão da coluna direita “Casas Mais Utilizadas” em Surebet.
 
-### 4. Corrigir VisaoGeralCharts
+### 3. Reforçar o agregador canônico
 
-Substituir o bloco local “Casas mais utilizadas” pelo agregador canônico, mantendo o mesmo layout visual atual.
+Ajustar `src/utils/bookmakerUsageAnalytics.ts` para tratar todos os formatos como participação real por casa:
 
-Isso garante que a visão geral, Surebet e demais módulos contem casas da mesma forma.
+```text
+operação simples parent
+_sub_entries[]
+pernas[] flat
+pernas[].entries[] agrupado por seleção
+```
 
-### 5. Corrigir Punter e ValueBet
+Também vou reforçar fallback de lucro quando `entries[]` não tiver lucro individual:
 
-Hoje essas abas carregam `_sub_entries`, mas o `UnifiedStatisticsCard` não considera casas. Mesmo assim, os gráficos/visões que usam “Casas Mais Utilizadas” devem receber dados compatíveis.
+- se houver lucro individual: usa o valor individual;
+- se faltar lucro em algumas entries: distribui o lucro restante proporcionalmente por stake, não por contagem simples;
+- pendentes continuam com lucro 0;
+- ROI continua usando volume liquidado, conforme padrão do projeto.
 
-Ajustes previstos:
+### 4. Revisar Punter, ValueBet e Duplo Green
 
-- garantir que `_sub_entries` carregue também `bookmaker_nome`, `parceiro_nome`, `logo_url`, `moeda` e valores necessários;
-- quando essas apostas forem exibidas em cards/gráficos por casa, usar o extrator canônico.
+Aplicar a mesma blindagem nos pontos onde essas abas enriquecem `apostas_pernas` como `_sub_entries` ou `pernas`.
 
-### 6. Corrigir Duplo Green
+Pontos a confirmar/corrigir:
 
-Substituir os cálculos locais `porCasa` e `casaData` em `ProjetoDuploGreenTab.tsx` pelo agregador canônico.
+- incluir parceiro, instância, logo e snapshots nas sub-entries carregadas;
+- garantir que `_sub_entries[]` tenham `bookmaker_nome`, `parceiro_nome`, `instance_identifier`, `logo_url`, `resultado`, `lucro_prejuizo`, `moeda` e referências de conversão;
+- garantir que filtros por Casa/Parceiro também considerem `pernas[].entries[]`, não só `_sub_entries` e `pernas` diretas.
 
-Isso evita divergência entre Duplo Green e Surebet quando ambos usam pernas/entradas múltiplas.
+### 5. Corrigir filtros dimensionais quando houver entries agrupadas
 
-### 7. Corrigir PerformancePorCasaCard
+Atualizar `apostaFilterHelpers.ts` para coletar bookmaker IDs também dentro de:
 
-Refatorar as visões:
+```text
+pernas[].entries[].bookmaker_id
+```
 
-- `casa_consolidada`
-- `casa_parceiro`
+Hoje ele considera parent, `_sub_entries` e `pernas`, mas não percorre `entries[]` aninhado. Isso pode afetar filtros por casa/parceiro em operações agrupadas.
 
-para reutilizarem a mesma extração canônica de participações, em vez de regras locais específicas.
+### 6. Expandir simulações e testes unitários
 
-### 8. Preservar diferenças conceituais
+Adicionar/ajustar testes do agregador canônico com cenários sintéticos:
 
-A padronização será na extração e agregação das casas, mas mantendo diferenças legítimas de cada tela:
+1. Surebet com duas pernas em casas diferentes.
+2. Surebet com duas entries dentro da mesma seleção.
+3. Punter/ValueBet com `_sub_entries` multi-entry.
+4. Duplo Green com `pernas[]` e `_sub_entries`.
+5. Filtro por bookmaker encontrando `pernas[].entries[]`.
+6. Lucro faltante em entries sendo distribuído proporcionalmente por stake.
+7. ROI usando apenas volume liquidado.
 
-- ranking por volume continuará ordenando por volume;
-- ranking por uso pode ordenar por quantidade de participações;
-- lucro/ROI continuam respeitando liquidadas vs pendentes conforme cada KPI;
-- “Casa” agrupa por bookmaker base;
-- “Casa + Parceiro” separa contas/vínculos.
+### 7. Validação final
 
-## Validação
+Depois da implementação, vou rodar:
 
-Após implementar:
+- testes unitários do agregador;
+- teste dos filtros auxiliares;
+- typecheck.
 
-1. Criar/usar cenário com aposta simples multi-entry contendo duas casas na mesma linha.
-2. Confirmar que a aba Surebet mostra as duas casas em “Top Casas por Uso”.
-3. Confirmar que Punter, ValueBet e Duplo Green não ignoram `_sub_entries` ou `entries[]`.
-4. Rodar typecheck e testes existentes.
-5. Adicionar teste unitário para o novo agregador cobrindo:
-   - parent simples;
-   - `pernas[]` flat;
-   - `pernas[].entries[]`;
-   - `_sub_entries[]`;
-   - agrupamento casa consolidada vs casa + parceiro.
+Resultado esperado:
 
-## Resultado esperado
-
-A visualização de “Casas Mais Utilizadas” passa a ter uma única regra de verdade. Quando uma operação envolver duas casas, ambas serão contabilizadas em todas as abas que usam esse tipo de ranking, reduzindo retrabalho e evitando divergências futuras.
+- se uma operação envolver duas casas, as duas aparecem em “Casas Mais Utilizadas”;
+- Surebet, Punter, ValueBet, Duplo Green, Visão Geral e Performance passam a usar a mesma regra;
+- futuras entradas multi-entry não voltam a perder casas por transformação intermediária.
