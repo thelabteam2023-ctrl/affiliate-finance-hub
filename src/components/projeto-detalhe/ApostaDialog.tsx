@@ -54,7 +54,7 @@ import { liquidarAposta, reverterLiquidacao } from "@/lib/financialEngine";
 import { estornarFreebetViaLedger, creditarFreebetViaLedger, consumirFreebetViaLedger } from "@/lib/freebetLedgerService";
 import { RegistroApostaValues, validateRegistroAposta, getSuggestionsForTab } from "./RegistroApostaFields";
 import { BetFormHeaderV2 } from "@/components/apostas/BetFormHeaderV2";
-import { FORMA_REGISTRO, APOSTA_ESTRATEGIA, CONTEXTO_OPERACIONAL, FONTE_SALDO, isAbaEstrategiaFixa, getEstrategiaFromTab, getContextoFromTab, isAbaContextoFixo, type FormaRegistro, type ApostaEstrategia, type ContextoOperacional, type FonteSaldo } from "@/lib/apostaConstants";
+import { FONTE_SALDO, getContextoFromTab, isAbaContextoFixo, type FormaRegistro, type ApostaEstrategia, type ContextoOperacional, type FonteSaldo } from "@/lib/apostaConstants";
 import { useFonteSaldoDefault } from "@/components/apostas/FonteSaldoSelector";
 import { toLocalTimestamp, validarDataAposta, dbTimestampToDatetimeLocal } from "@/utils/dateUtils";
 import { 
@@ -67,7 +67,6 @@ import {
 } from "@/components/bookmakers/BookmakerSelectOption";
 import { BookmakerSearchableSelectContent } from "@/components/bookmakers/BookmakerSearchableSelectContent";
 import { reliquidarAposta, deletarAposta } from "@/services/aposta";
-import { criarAposta } from "@/services/aposta";
 // MOTOR FINANCEIRO v9.5: updateBookmakerBalance REMOVIDO - saldos são atualizados exclusivamente via trigger
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { GerouFreebetInput } from "./GerouFreebetInput";
@@ -1122,7 +1121,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   // NOVO: fonte_saldo também é sincronizado baseado na aba/estratégia
   useEffect(() => {
     if (!aposta && open) {
-      const lockedEstrategia = isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : null;
+      const defaultSimpleEstrategia = (defaultEstrategia || 'PUNTER') as ApostaEstrategia;
       const lockedContexto = isAbaContextoFixo(activeTab) ? getContextoFromTab(activeTab) : null;
       
       // Inferir fonte_saldo baseado na aba ativa ou estratégia
@@ -1130,7 +1129,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         if (activeTab === 'freebets') return 'FREEBET' as FonteSaldo;
         if (activeTab === 'bonus' || activeTab === 'bonus-operacoes') return 'BONUS' as FonteSaldo;
         // Para outras abas, inferir da estratégia
-        const estrategiaAtual = lockedEstrategia || registroValues.estrategia;
+        const estrategiaAtual = registroValues.estrategia || defaultSimpleEstrategia;
         if (estrategiaAtual === 'EXTRACAO_FREEBET') return 'FREEBET' as FonteSaldo;
         if (estrategiaAtual === 'EXTRACAO_BONUS') return 'BONUS' as FonteSaldo;
         return 'REAL' as FonteSaldo;
@@ -1139,9 +1138,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       setRegistroValues(prev => {
         const updates: Partial<typeof prev> = {};
         
-        // Sincronizar estratégia se locked
-        if (lockedEstrategia && prev.estrategia !== lockedEstrategia) {
-          updates.estrategia = lockedEstrategia;
+        // Aposta Simples não herda estratégia da aba: usa o default explícito da janela.
+        if (!prev.estrategia && defaultSimpleEstrategia) {
+          updates.estrategia = defaultSimpleEstrategia;
         }
         
         // Sincronizar contexto se locked (abas bonus/freebets)
@@ -1163,7 +1162,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         return prev;
       });
     }
-  }, [open, aposta, activeTab, registroValues.estrategia]);
+  }, [open, aposta, activeTab, defaultEstrategia, registroValues.estrategia]);
 
   // Auto-select favorite source when opening new ValueBet
   useEffect(() => {
@@ -2779,72 +2778,6 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         }
         // ========== FIM VALIDAÇÃO PRÉ-COMMIT ==========
 
-        const shouldUseSurebetAtomicEngine =
-          tipoAposta === "bookmaker" &&
-          additionalEntries.length > 0 &&
-          registroValues.estrategia === "SUREBET";
-
-        if (shouldUseSurebetAtomicEngine && statusResultado !== "PENDENTE") {
-          toast.error("Salve a surebet primeiro e liquide pelas pernas para manter o saldo correto.");
-          setLoading(false);
-          return;
-        }
-
-        if (shouldUseSurebetAtomicEngine) {
-          const pernas = [
-            {
-              bookmaker_id: bookmakerId,
-              bookmaker_nome: selectedBookmaker?.nome,
-              moeda: moedaOperacao,
-              selecao: effectiveSelecao || 'N/A',
-              selecao_livre: null,
-              odd: parseFloat(odd),
-              stake: stakeBookmakerEfetiva,
-              fonte_saldo: usarFreebetBookmaker ? 'FREEBET' : 'REAL',
-            },
-            ...additionalEntries
-              .filter(e => e.bookmaker_id && parseFloat(e.odd) > 0 && ((parseFloat(e.stake) || 0) + (e.usar_freebet ? (parseFloat(e.valor_freebet) || 0) : 0)) > 0)
-              .map(e => {
-                const entryBk = bookmakers.find(b => b.id === e.bookmaker_id);
-                return {
-                  bookmaker_id: e.bookmaker_id,
-                  bookmaker_nome: entryBk?.nome,
-                  moeda: entryBk?.moeda || moedaOperacao,
-                  selecao: effectiveSelecao || 'N/A',
-                  selecao_livre: null,
-                  odd: parseFloat(e.odd),
-                  stake: (parseFloat(e.stake) || 0) + (e.usar_freebet ? (parseFloat(e.valor_freebet) || 0) : 0),
-                  fonte_saldo: e.usar_freebet ? 'FREEBET' : 'REAL',
-                };
-              })
-          ];
-
-          const result = await criarAposta({
-            user_id: userData.user.id,
-            workspace_id: workspaceId,
-            projeto_id: projetoId,
-            data_aposta: toLocalTimestamp(dataAposta),
-            evento,
-            esporte,
-            mercado: mercado || null,
-            observacoes: observacoes || null,
-            estrategia: 'SUREBET' as any,
-            forma_registro: 'ARBITRAGEM' as any,
-            contexto_operacional: registroValues.contexto_operacional || 'NORMAL',
-            modelo: 'multi_entry_simple',
-            pernas: pernas as any,
-          });
-
-          if (!result.success) {
-            throw new Error(result.error?.message || 'Falha ao criar surebet pelo motor atômico');
-          }
-
-          await invalidateAfterMutation(projetoId);
-          onSuccess('save');
-          if (!embedded) onOpenChange(false);
-          return;
-        }
-
         // Insert - capturar o ID da aposta inserida
         const { data: insertedData, error } = await supabase
           .from("apostas_unificada")
@@ -3265,7 +3198,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     onContextoChange: (v: any) => setRegistroValues(prev => ({ ...prev, contexto_operacional: v })),
     isEditing: !!aposta,
     activeTab,
-    lockedEstrategia: !aposta && isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : null,
+    lockedEstrategia: null,
     gameFields: {
       esporte,
       evento,
