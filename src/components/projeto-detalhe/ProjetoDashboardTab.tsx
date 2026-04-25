@@ -36,6 +36,7 @@ import { getOperationalDateRangeForQuery, extractLocalDateKey, extractCivilDateK
 
 interface ProjetoDashboardTabProps {
   projetoId: string;
+  refreshTrigger?: number;
 }
 
 interface ApostaUnificada {
@@ -178,7 +179,7 @@ async function fetchApostasFiltradas(
 const STALE_TIME = PERIOD_STALE_TIME;
 const GC_TIME = PERIOD_GC_TIME;
 
-export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
+export function ProjetoDashboardTab({ projetoId, refreshTrigger = 0 }: ProjetoDashboardTabProps) {
   const [selectedEsporte, setSelectedEsporte] = useState<string>("");
   
   // Filtros de período
@@ -258,7 +259,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
     isFetching: isFetchingApostas,
     isPlaceholderData: isStaleApostas,
   } = useQuery({
-    queryKey: ["projeto-dashboard-apostas", projetoId, dateRangeKey],
+    queryKey: ["projeto-dashboard-apostas", projetoId, dateRangeKey, refreshTrigger],
     queryFn: () => fetchApostasFiltradas(projetoId, dateRange),
     staleTime: STALE_TIME,
     gcTime: GC_TIME,
