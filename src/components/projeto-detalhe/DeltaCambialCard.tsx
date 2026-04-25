@@ -347,14 +347,14 @@ export function DeltaCambialCard({
   return (
     <>
       {/* Compact inline strip */}
-      <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border/50 bg-card">
-        <DollarSign className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+      <div className="relative flex items-center px-3 py-2 rounded-lg border border-border/50 bg-card">
+        <DollarSign className="absolute left-3 h-3.5 w-3.5 text-primary" />
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-1 items-center justify-center gap-3 px-10">
           {primaryCurrencies.map(renderCompactCurrency)}
         </div>
 
-        <div className="flex items-center gap-1 ml-auto flex-shrink-0">
+        <div className="absolute right-3 flex items-center gap-1">
           {secondaryCurrencies.length > 0 && (
             <Button
               variant="ghost"
