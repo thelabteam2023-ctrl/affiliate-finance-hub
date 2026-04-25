@@ -99,6 +99,7 @@ import {
   Clock,
   Users,
   ArrowUpFromLine,
+  Pencil,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Toggle } from "@/components/ui/toggle";
@@ -110,6 +111,7 @@ import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ESTRATEGIA_LABELS, type ApostaEstrategia } from "@/lib/apostaConstants";
+import { openApostaMultiplaWindow, openApostaWindow, openSurebetWindow } from "@/lib/windowHelper";
 
 type VinculoSortMode = "alpha" | "newest" | "oldest" | "apostas_desc" | "apostas_asc" | "saldo_desc" | "saldo_asc" | "em_aposta_desc" | "em_aposta_asc" | "disponivel_desc" | "disponivel_asc";
 
@@ -135,6 +137,7 @@ interface ApostaUsoBookmaker {
   stake: number | null;
   moeda: string | null;
   selecao: string | null;
+  casas?: Array<{ nome: string; stake: number | null; moeda: string | null }>;
 }
 
 // Interface Vinculo importada de useProjetoVinculos
