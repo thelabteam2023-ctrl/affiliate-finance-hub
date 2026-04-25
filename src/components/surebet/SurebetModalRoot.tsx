@@ -72,6 +72,7 @@ interface Surebet {
   forma_registro?: string | null;
   estrategia?: string | null;
   contexto_operacional?: string | null;
+  __seedPernas?: any[];
 }
 
 interface SurebetPerna {
@@ -158,7 +159,7 @@ export function SurebetModalRoot({
   onSuccess,
   embedded = false
 }: SurebetModalRootProps) {
-  const isEditing = !!surebet;
+  const isEditing = !!surebet?.id;
   const { workspaceId } = useWorkspace();
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
