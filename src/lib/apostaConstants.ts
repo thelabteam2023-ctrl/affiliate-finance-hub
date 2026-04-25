@@ -203,6 +203,7 @@ export const ESTRATEGIAS_LIST = [
 export const ABAS_ESTRATEGIA_FIXA = [
   'freebets',
   'bonus', 
+  'bonus-operacoes',
   'surebet',
   'valuebet',
   'duplogreen',
@@ -227,6 +228,7 @@ export const getEstrategiaFromTab = (activeTab: string): ApostaEstrategia | null
     'visao-geral': null, // Visão geral: exige seleção manual
     freebets: 'EXTRACAO_FREEBET',
     bonus: 'EXTRACAO_BONUS',
+    'bonus-operacoes': 'EXTRACAO_BONUS',
     surebet: 'SUREBET',
     valuebet: 'VALUEBET',
     duplogreen: 'DUPLO_GREEN',

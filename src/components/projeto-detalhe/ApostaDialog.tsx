@@ -54,7 +54,7 @@ import { liquidarAposta, reverterLiquidacao } from "@/lib/financialEngine";
 import { estornarFreebetViaLedger, creditarFreebetViaLedger, consumirFreebetViaLedger } from "@/lib/freebetLedgerService";
 import { RegistroApostaValues, validateRegistroAposta, getSuggestionsForTab } from "./RegistroApostaFields";
 import { BetFormHeaderV2 } from "@/components/apostas/BetFormHeaderV2";
-import { FONTE_SALDO, getContextoFromTab, isAbaContextoFixo, type ApostaEstrategia, type ContextoOperacional, type FonteSaldo } from "@/lib/apostaConstants";
+import { FONTE_SALDO, getContextoFromTab, getEstrategiaFromTab, isAbaContextoFixo, isAbaEstrategiaFixa, type ApostaEstrategia, type ContextoOperacional, type FonteSaldo } from "@/lib/apostaConstants";
 import { useFonteSaldoDefault } from "@/components/apostas/FonteSaldoSelector";
 import { toLocalTimestamp, validarDataAposta, dbTimestampToDatetimeLocal } from "@/utils/dateUtils";
 import { 
@@ -1121,7 +1121,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   // NOVO: fonte_saldo também é sincronizado baseado na aba/estratégia
   useEffect(() => {
     if (!aposta && open) {
-      const defaultSimpleEstrategia = (defaultEstrategia || 'PUNTER') as ApostaEstrategia;
+      const lockedEstrategia = isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : null;
+      const defaultSimpleEstrategia = (lockedEstrategia || defaultEstrategia || 'PUNTER') as ApostaEstrategia;
       const lockedContexto = isAbaContextoFixo(activeTab) ? getContextoFromTab(activeTab) : null;
       
       // Inferir fonte_saldo baseado na aba ativa ou estratégia
@@ -1138,8 +1139,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       setRegistroValues(prev => {
         const updates: Partial<typeof prev> = {};
         
-        // Aposta Simples usa o default explícito da janela. Na aba Surebet, trava como SUREBET.
-        if ((!prev.estrategia && defaultSimpleEstrategia) || (activeTab === 'surebet' && prev.estrategia !== 'SUREBET')) {
+        // Aposta Simples usa o default explícito da janela; abas especializadas travam sua estratégia.
+        if ((!prev.estrategia && defaultSimpleEstrategia) || (lockedEstrategia && prev.estrategia !== lockedEstrategia)) {
           updates.estrategia = defaultSimpleEstrategia;
         }
         
@@ -3201,7 +3202,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     onContextoChange: (v: any) => setRegistroValues(prev => ({ ...prev, contexto_operacional: v })),
     isEditing: !!aposta,
     activeTab,
-    lockedEstrategia: activeTab === 'surebet' && !aposta ? 'SUREBET' as const : null,
+    lockedEstrategia: !aposta && isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : null,
     gameFields: {
       esporte,
       evento,

@@ -26,6 +26,7 @@ import { useBookmakerSaldosQuery } from "@/hooks/useBookmakerSaldosQuery";
 import { useAuth } from "@/hooks/useAuth";
 import { RascunhosBadge, RascunhosPanel } from "./rascunhos";
 import type { ApostaRascunho } from "@/hooks/useApostaRascunho";
+import { getEstrategiaFromTab } from "@/lib/apostaConstants";
 
 interface GlobalActionsBarProps {
   projetoId: string;
@@ -142,7 +143,7 @@ export function GlobalActionsBar({
 
   // Handlers para abrir janelas de apostas
   const handleOpenApostaSimples = () => {
-    const estrategia = activeTab === 'surebet' ? 'SUREBET' : 'PUNTER';
+    const estrategia = getEstrategiaFromTab(activeTab || 'apostas') || 'PUNTER';
     const url = `/janela/aposta/novo?projetoId=${encodeURIComponent(projetoId)}&tab=${encodeURIComponent(activeTab || 'apostas')}&estrategia=${estrategia}`;
     const windowFeatures = 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
     window.open(url, '_blank', windowFeatures);

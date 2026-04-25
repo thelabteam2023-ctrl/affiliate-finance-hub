@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useApostaPopup } from '@/contexts/ApostaPopupContext';
 import { SurebetPopup } from './SurebetPopup';
 import { openApostaWindow, openApostaMultiplaWindow } from '@/lib/windowHelper';
+import { getEstrategiaFromTab } from '@/lib/apostaConstants';
 
 /**
  * Container que renderiza os popups de apostas baseado no contexto
@@ -27,7 +28,7 @@ export const ApostaPopupContainer: React.FC = () => {
     if (!activePopup || !data) return;
 
     if (activePopup === 'simples') {
-      const estrategia = data.activeTab === 'surebet' ? 'SUREBET' : 'PUNTER';
+      const estrategia = getEstrategiaFromTab(data.activeTab || 'apostas') || 'PUNTER';
       openApostaWindow({
         projetoId: data.projetoId,
         id: data.aposta?.id || null,
