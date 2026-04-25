@@ -1254,47 +1254,40 @@ export function SurebetDialogTable({
         };
       });
 
-      const moedasUnicas = [...new Set(pernasToSave.map(p => p.moeda))];
-      const moedaOperacao: MoedaOperacao = moedasUnicas.length === 1 ? moedasUnicas[0] : "MULTI";
-      
-      const valorBRLReferencia = pernasToSave.reduce((acc, p) => acc + (p.stake_brl_referencia || 0), 0);
-      const stakeTotal = moedaOperacao !== "MULTI" ? pernasToSave.reduce((acc, p) => acc + p.stake, 0) : null;
-
       // Modelo string para salvar
       const modeloString = modeloTipo === "2" ? "1-2" : modeloTipo === "3" ? "1-X-2" : `${numPernasCustom}-way`;
 
-      const { data: insertedData, error: insertError } = await supabase
-        .from("apostas_unificada")
-        .insert({
-          user_id: user.id,
-          workspace_id: workspaceId,
-          projeto_id: projetoId,
-          forma_registro: 'ARBITRAGEM',
-          estrategia: estrategia,
-          contexto_operacional: contexto,
-          evento,
-          esporte,
-          modelo: modeloString,
-          mercado,
-          moeda_operacao: moedaOperacao,
-          stake_total: stakeTotal,
-          valor_brl_referencia: valorBRLReferencia,
-          spread_calculado: null,
-          roi_esperado: analysis?.minRoi || null,
-          lucro_esperado: analysis?.minLucro || null,
-          status: "PENDENTE",
-          resultado: "PENDENTE",
-          pernas: pernasToSave as any,
-          data_aposta: toLocalTimestamp("")
-        })
-        .select("id")
-        .single();
+      // Criar via RPC atômica: garante STAKE no ledger para cada perna.
+      const pernasParaRPC = pernasToSave.map((perna) => ({
+        bookmaker_id: perna.bookmaker_id,
+        stake: perna.stake,
+        odd: perna.odd,
+        moeda: perna.moeda,
+        selecao: perna.selecao,
+        selecao_livre: perna.selecao_livre || null,
+        cotacao_snapshot: perna.cotacao_snapshot,
+        stake_brl_referencia: perna.stake_brl_referencia,
+        fonte_saldo: 'REAL',
+      }));
 
-      if (insertError) throw insertError;
+      const { data: rpcResult, error: rpcError } = await supabase.rpc('criar_surebet_atomica', {
+        p_workspace_id: workspaceId,
+        p_user_id: user.id,
+        p_projeto_id: projetoId,
+        p_evento: evento,
+        p_esporte: esporte,
+        p_mercado: mercado || null,
+        p_modelo: modeloString,
+        p_estrategia: estrategia,
+        p_contexto_operacional: contexto,
+        p_data_aposta: toLocalTimestamp(""),
+        p_pernas: pernasParaRPC,
+      });
 
-      if (insertedData?.id && pernasToSave.length > 0) {
-        const pernasInsert = pernasToInserts(insertedData.id, pernasToSave);
-        await supabase.from("apostas_pernas").insert(pernasInsert);
+      if (rpcError) throw rpcError;
+      const result = rpcResult?.[0];
+      if (!result?.success) {
+        throw new Error(result?.message || "Falha ao criar arbitragem");
       }
 
       toast.success("Arbitragem registrada com sucesso!");
