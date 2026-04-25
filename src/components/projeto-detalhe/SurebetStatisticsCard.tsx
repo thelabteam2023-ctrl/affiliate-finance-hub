@@ -9,6 +9,7 @@ import {
 import { extractLocalDateKey } from "@/utils/dateUtils";
 import { KPIStatCell } from "@/components/kpis/KPIStatCell";
 import { KPISectionHeader } from "@/components/kpis/KPISectionHeader";
+import { aggregateBookmakerUsage } from "@/utils/bookmakerUsageAnalytics";
 
 interface SurebetPerna {
   id?: string;
@@ -18,6 +19,14 @@ interface SurebetPerna {
   resultado?: string | null;
   bookmaker_nome: string;
   bookmaker_id?: string;
+  entries?: Array<{
+    bookmaker_id?: string;
+    bookmaker_nome: string;
+    stake: number;
+    odd: number;
+    moeda?: string;
+    resultado?: string | null;
+  }>;
 }
 
 interface Surebet {
@@ -139,42 +148,26 @@ export function SurebetStatisticsCard({ surebets, formatCurrency, currencySymbol
       : 0;
 
     // === 4. DEPENDÊNCIA POR CASA ===
-    const casaStats = new Map<string, {
-      operacoes: number;
-      lucro: number;
-      stake: number;
-      voids: number;
-      roiEsperado: number;
-      roiRealizado: number;
-      operacoesComRoi: number;
-    }>();
+    // Canônico: considera parent, pernas e entries[] dentro da mesma seleção.
+    const aggregatedCasas = aggregateBookmakerUsage(
+      surebets.map(s => ({
+        ...s,
+        stake: s.stake_total,
+        lucro_prejuizo: s.lucro_real,
+        moeda_operacao: "BRL",
+      })),
+      { moedaConsolidacao: "BRL" },
+    );
 
-    const extractCasa = (nomeCompleto: string) => {
-      const separatorIdx = nomeCompleto.indexOf(" - ");
-      return separatorIdx > 0 ? nomeCompleto.substring(0, separatorIdx).trim() : nomeCompleto;
-    };
-
-    surebets.forEach(s => {
-      const numPernas = s.pernas?.length || 1;
-      s.pernas?.forEach(perna => {
-        const casa = extractCasa(perna.bookmaker_nome || "Desconhecida");
-        if (!casaStats.has(casa)) {
-          casaStats.set(casa, { operacoes: 0, lucro: 0, stake: 0, voids: 0, roiEsperado: 0, roiRealizado: 0, operacoesComRoi: 0 });
-        }
-        const entry = casaStats.get(casa)!;
-        entry.operacoes += 1;
-        entry.stake += perna.stake;
-        entry.lucro += (s.lucro_real || 0) / numPernas;
-        if (s.resultado === "VOID" || perna.resultado === "VOID") {
-          entry.voids += 1;
-        }
-        if (s.roi_esperado !== null && s.roi_real !== null) {
-          entry.roiEsperado += s.roi_esperado / numPernas;
-          entry.roiRealizado += s.roi_real / numPernas;
-          entry.operacoesComRoi += 1;
-        }
-      });
-    });
+    const casaStats = new Map(aggregatedCasas.map(casa => [casa.casa, {
+      operacoes: casa.apostas,
+      lucro: casa.lucro,
+      stake: casa.volume,
+      voids: 0,
+      roiEsperado: 0,
+      roiRealizado: 0,
+      operacoesComRoi: 0,
+    }]));
 
     const casasOrdenadas = Array.from(casaStats.entries())
       .sort((a, b) => b[1].operacoes - a[1].operacoes);

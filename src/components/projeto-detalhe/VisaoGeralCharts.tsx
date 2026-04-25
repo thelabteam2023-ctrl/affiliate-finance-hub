@@ -22,10 +22,9 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarioLucros } from "./CalendarioLucros";
-import { getFirstLastName } from "@/lib/utils";
 import { parseLocalDateTime, extractLocalDateKey } from "@/utils/dateUtils";
-import { getConsolidatedLucro, getConsolidatedStake, getConsolidatedLucroDirect } from "@/utils/consolidatedValues";
-import { convertPernaToConsolidacao } from "@/lib/currency-conversion-snapshot";
+import { getConsolidatedLucro, getConsolidatedLucroDirect } from "@/utils/consolidatedValues";
+import { aggregateBookmakerUsage } from "@/utils/bookmakerUsageAnalytics";
 
 // =====================================================
 // TIPOS
@@ -838,86 +837,9 @@ export function VisaoGeralCharts({
   );
 
 
-  const getConsolidatedStakeLocal = (a: ApostaBase): number => {
-    return getConsolidatedStake(a, convertToConsolidation, moedaConsolidacao);
-  };
-
-  const getConsolidatedLucroLocal = consolidateLucro;
-
   // Casas mais utilizadas (por volume) — agrupa por CASA, com detalhamento por vínculo
   // Formato esperado: "PARIMATCH - RAFAEL GOMES" → Casa = "PARIMATCH", Vínculo = "RAFAEL GOMES"
   const casasData = useMemo((): CasaUsada[] => {
-    // Estrutura: casa → { total, vinculos: Map<vinculo, { apostas, volume, lucro }> }
-    const casaMap = new Map<string, { 
-      apostas: number; 
-      volume: number;
-      volumeLiquidado: number;
-      lucro: number;
-      moeda: string;
-      vinculos: Map<string, { apostas: number; volume: number; volumeLiquidado: number; lucro: number }> 
-    }>();
-
-    const processEntry = (bookmakerNome: string, parceiroNome: string | null | undefined, instanceIdentifier: string | null | undefined, stake: number, lucro: number, moeda: string, isLiquidada: boolean) => {
-      let casa: string;
-      let vinculo: string;
-      
-      // Sempre agrupar pela casa BASE (ex: BET365), usando identifier ou parceiro como vínculo
-      const separatorIdx = bookmakerNome.indexOf(" - ");
-      casa = separatorIdx > 0 ? bookmakerNome.substring(0, separatorIdx).trim() : bookmakerNome;
-      
-      if (instanceIdentifier) {
-        vinculo = instanceIdentifier;
-      } else if (parceiroNome) {
-        vinculo = getFirstLastName(parceiroNome);
-      } else if (separatorIdx > 0) {
-        vinculo = getFirstLastName(bookmakerNome.substring(separatorIdx + 3).trim());
-      } else {
-        vinculo = "Principal";
-      }
-
-      if (!casaMap.has(casa)) {
-        casaMap.set(casa, { apostas: 0, volume: 0, volumeLiquidado: 0, lucro: 0, moeda, vinculos: new Map() });
-      }
-      const casaData = casaMap.get(casa)!;
-      casaData.apostas += 1;
-      casaData.volume += stake;
-      if (isLiquidada) {
-        casaData.volumeLiquidado += stake;
-      }
-      casaData.lucro += lucro;
-
-      if (!casaData.vinculos.has(vinculo)) {
-        casaData.vinculos.set(vinculo, { apostas: 0, volume: 0, volumeLiquidado: 0, lucro: 0 });
-      }
-      const vinculoData = casaData.vinculos.get(vinculo)!;
-      vinculoData.apostas += 1;
-      vinculoData.volume += stake;
-      if (isLiquidada) {
-        vinculoData.volumeLiquidado += stake;
-      }
-      vinculoData.lucro += lucro;
-    };
-
-    // Helper: converte stake/lucro de perna para moeda de consolidação
-    // HIERARQUIA: snapshot da perna > Cotação de Trabalho > PTAX live (zero drift)
-    const convertPernaWithSnapshot = (
-      valor: number,
-      pernaMoeda: string,
-      cotacaoSnapshot?: number | null,
-    ): number => {
-      if (!valor) return 0;
-      const moedaDest = moedaConsolidacao || "BRL";
-      if (pernaMoeda === moedaDest) return valor;
-      if (!convertToConsolidation) return valor;
-      return convertPernaToConsolidacao(
-        { valor, moedaOrigem: pernaMoeda, cotacaoSnapshot },
-        {
-          moedaConsolidacao: moedaDest,
-          convertToConsolidationFallback: convertToConsolidation,
-        },
-      );
-    };
-
     // Filtra apostas pendentes que não pertencem ao período selecionado
     // (pendentes são injetadas independente do período para visibilidade operacional,
     // mas NÃO devem inflar métricas de períodos onde não ocorreram)
@@ -928,34 +850,6 @@ export function VisaoGeralCharts({
       const dateStr = a.data_aposta.includes('T') ? a.data_aposta.substring(0, 10) : a.data_aposta;
       const apostaDate = new Date(dateStr + 'T12:00:00');
       return apostaDate >= startOfDay(periodStart) && apostaDate <= periodEnd;
-    });
-
-    apostasParaCasas.forEach((a) => {
-      const moedaOp = a.moeda_operacao || "BRL";
-      const isLiquidada = !!(a.resultado && a.resultado !== "PENDENTE");
-      
-      if (a.pernas && Array.isArray(a.pernas) && a.pernas.length > 0) {
-        a.pernas.forEach((perna) => {
-          const nomeCompleto = perna.bookmaker_nome || "Desconhecida";
-          const parceiroNome = perna.parceiro_nome;
-          const pernaMoeda = perna.moeda || moedaOp;
-          const pernaStakeRaw = typeof perna.stake === "number" ? perna.stake : 0;
-          const pernaLucroRaw = typeof perna.lucro_prejuizo === "number" ? perna.lucro_prejuizo : 0;
-          const pernaStake = (moedaConsolidacao === "BRL" && typeof perna.stake_brl_referencia === "number")
-            ? perna.stake_brl_referencia
-            : convertPernaWithSnapshot(pernaStakeRaw, pernaMoeda, perna.cotacao_snapshot);
-          const pernaLucro = (moedaConsolidacao === "BRL" && typeof perna.lucro_prejuizo_brl_referencia === "number")
-            ? perna.lucro_prejuizo_brl_referencia
-            : convertPernaWithSnapshot(pernaLucroRaw, pernaMoeda, perna.cotacao_snapshot);
-          processEntry(nomeCompleto, parceiroNome, perna.instance_identifier, pernaStake, pernaLucro, moedaConsolidacao || "BRL", isLiquidada);
-        });
-      } else {
-        const nomeCompleto = a.bookmaker_nome || "Desconhecida";
-        const parceiroNome = a.parceiro_nome;
-        const stakeConsolidado = getConsolidatedStakeLocal(a);
-        const lucroConsolidado = getConsolidatedLucroLocal(a);
-        processEntry(nomeCompleto, parceiroNome, a.instance_identifier, stakeConsolidado, lucroConsolidado, moedaConsolidacao || "BRL", isLiquidada);
-      }
     });
 
     // Função helper para buscar logo do logoMap
@@ -987,30 +881,12 @@ export function VisaoGeralCharts({
       return null;
     };
 
-    return Array.from(casaMap.entries()).map(([casa, data]) => {
-      // ROI usa volume LIQUIDADO — apostas pendentes não têm resultado
-      const roi = data.volumeLiquidado > 0 ? (data.lucro / data.volumeLiquidado) * 100 : 0;
-      return {
-        casa,
-        apostas: data.apostas,
-        volume: data.volume,
-        lucro: data.lucro,
-        roi,
-        moeda: data.moeda,
-        logo_url: findLogoForCasa(casa),
-        vinculos: Array.from(data.vinculos.entries()).map(([vinculo, v]) => {
-          const vinculoRoi = v.volumeLiquidado > 0 ? (v.lucro / v.volumeLiquidado) * 100 : 0;
-          return {
-            vinculo,
-            apostas: v.apostas,
-            volume: v.volume,
-            lucro: v.lucro,
-            roi: vinculoRoi,
-          };
-        }).sort((a, b) => b.volume - a.volume),
-      };
+    return aggregateBookmakerUsage(apostasParaCasas, {
+      moedaConsolidacao,
+      convertToConsolidation,
+      resolveLogo: findLogoForCasa,
     });
-  }, [apostas, logoMap, convertToConsolidation, moedaConsolidacao]);
+  }, [apostas, logoMap, convertToConsolidation, moedaConsolidacao, periodStart, periodEnd]);
 
   // Badge usa o total do período filtrado
   const isPositive = isPositiveBadge;

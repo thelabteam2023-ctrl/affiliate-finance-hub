@@ -1,62 +1,131 @@
-Plano para corrigir a necessidade de F5 após salvar aposta simples, valendo também para Bônus e demais abas financeiras.
+Plano para criar uma fonte canônica de “Casas Mais Utilizadas” e eliminar divergências entre abas.
 
 ## Diagnóstico
-O fluxo atual já invalida saldos e alguns KPIs, mas não cobre de forma centralizada as queries operacionais montadas nas abas, especialmente:
-- `surebets-tab`, usada pela aba Operações/Surebet e também por apostas simples nesse contexto.
-- queries de Bônus e análises associadas.
-- `central-operacoes-data`, usada pela Central de Operações.
-- algumas chaves com parâmetros adicionais de período/filtro, que precisam ser invalidadas por prefixo.
 
-Por isso a mutação é salva no banco, mas a tela ativa pode continuar mostrando dados antigos até o F5.
+Hoje existem cálculos duplicados em vários pontos:
 
-## Implementação proposta
+- `VisaoGeralCharts.tsx` tem sua própria agregação de casas.
+- `SurebetStatisticsCard.tsx` calcula “Top Casas por Uso” internamente.
+- `ProjetoDuploGreenTab.tsx` também monta `porCasa`/`casaData` localmente.
+- `PerformancePorCasaCard.tsx` tem outra regra para casa consolidada e casa + parceiro.
+- Punter e ValueBet carregam `apostas_pernas` como `_sub_entries`, mas nem todo card estatístico usa isso de forma padronizada.
 
-1. **Ampliar a invalidação canônica**
-   - Atualizar `invalidateCanonicalCaches` para incluir as listas operacionais e módulos financeiros:
-     - `surebets-tab`
-     - `apostas`
-     - `bonus`, `bonus-bets-summary`, `bonus-analytics`, `bonus-bets-juice`
-     - `giros-gratis`, `giros-disponiveis`
-     - `cashback-manual`
-     - `central-operacoes-data`
-     - saldos/vínculos relacionados quando aplicável
-   - Usar invalidação por prefixo quando a query possui filtros extras, como período/data.
+O bug da Surebet provavelmente vem da combinação de dois pontos:
 
-2. **Unificar o hook pós-mutação**
-   - Expandir `useInvalidateProjectQueries`/`useInvalidateAfterMutation` para que qualquer ação financeira dispare:
-     - KPIs canônicos.
-     - saldos de bookmakers.
-     - calendário/evolução de lucro.
-     - lista da aba ativa.
-     - Central de Operações.
-     - módulos promocionais, incluindo Bônus.
+1. Em apostas simples multi-entry, as entradas ficam em `apostas_pernas` e depois são agrupadas por `selecao` em `entries[]`.
+2. O card estatístico atual olha principalmente `pernas[]` como se cada item fosse uma casa. Quando há `entries[]` dentro da mesma perna/linha, ele pode acabar contabilizando apenas a entrada principal, ignorando as demais casas.
 
-3. **Corrigir o fluxo do `ApostaDialog`**
-   - Após salvar, editar ou excluir aposta simples, aguardar a invalidação completa antes de fechar/retornar sucesso.
-   - Trocar chamadas parciais (`invalidateSaldos` + `invalidateCanonicalCaches`) pelo fluxo unificado.
-   - Manter as regras atuais de ledger/RPC intactas, sem mexer em saldo diretamente.
+## Regra canônica proposta
 
-4. **Reforçar a aba `ProjetoSurebetTab`**
-   - Ajustar `handleDataChange` para invalidar a query `surebets-tab` antes de chamar `refetchSurebets()`.
-   - Garantir que operações simples, surebets e múltiplas entradas reapareçam/atualizem automaticamente sem F5.
+Criar um utilitário único para transformar qualquer operação em “participações por bookmaker”.
 
-5. **Cobrir a aba Bônus**
-   - Garantir que criação, edição, vínculo/liquidação e ações de bônus invalidem os caches de bônus e também os caches globais que dependem deles:
-     - saldos
-     - lucro operacional
-     - evolução/calendário
-     - central de operações
-     - cards/analytics de bônus
+Cada participação representa uma casa envolvida na operação, independentemente de a origem ser:
 
-6. **Validação**
-   - Rodar verificação TypeScript.
-   - Conferir que a mudança é apenas de sincronização/cache, sem alteração em fórmulas financeiras, RPCs, ledger, saldo físico ou regras de conversão.
+- aposta simples normal: `bookmaker_id` do parent;
+- aposta simples multi-entry: cada item em `_sub_entries` ou `pernas[].entries[]`;
+- surebet/múltipla/arbitragem: cada perna em `apostas_pernas`;
+- duplo green/valuebet/punter com múltiplas entradas: cada entrada real da operação.
+
+Fluxo canônico:
+
+```text
+Operação
+  -> extrair participações reais por bookmaker
+  -> normalizar casa base + vínculo/parceiro
+  -> consolidar volume/lucro com hierarquia correta
+  -> gerar ranking por casa e detalhe por vínculo
+```
+
+## Implementação
+
+### 1. Criar utilitário canônico
+
+Adicionar um novo utilitário, por exemplo `src/utils/bookmakerUsageAnalytics.ts`, com funções como:
+
+- `extractBookmakerParticipations(aposta)`
+- `aggregateBookmakerUsage(apostas, options)`
+- `extractCasaVinculo(...)`
+
+Ele deve suportar estes formatos de entrada:
+
+- `bookmaker_id`, `bookmaker_nome`, `parceiro_nome`, `instance_identifier` no parent;
+- `pernas[]` flat;
+- `pernas[].entries[]` agrupado por seleção;
+- `_sub_entries[]` usado em Punter/ValueBet;
+- campos de moeda/snapshot para stake e lucro.
+
+### 2. Padronizar moeda e valores
+
+Usar a hierarquia financeira já existente:
+
+- volume: `stake_consolidado` quando existir;
+- pernas: `stake_brl_referencia`/snapshot quando disponível, senão `convertPernaToConsolidacao`;
+- lucro: `pl_consolidado`/`lucro_prejuizo_brl_referencia`/snapshot quando disponível;
+- fallback final: `getConsolidatedStake` e `getConsolidatedLucro`.
+
+Isso evita que cada aba converta de um jeito diferente.
+
+### 3. Corrigir SurebetStatisticsCard
+
+Trocar o cálculo local de `casaStats` para usar o agregador canônico.
+
+Critério esperado: se uma operação tem duas casas na mesma linha/seleção, as duas aparecem no ranking e no tooltip, cada uma com sua participação de stake/lucro.
+
+### 4. Corrigir VisaoGeralCharts
+
+Substituir o bloco local “Casas mais utilizadas” pelo agregador canônico, mantendo o mesmo layout visual atual.
+
+Isso garante que a visão geral, Surebet e demais módulos contem casas da mesma forma.
+
+### 5. Corrigir Punter e ValueBet
+
+Hoje essas abas carregam `_sub_entries`, mas o `UnifiedStatisticsCard` não considera casas. Mesmo assim, os gráficos/visões que usam “Casas Mais Utilizadas” devem receber dados compatíveis.
+
+Ajustes previstos:
+
+- garantir que `_sub_entries` carregue também `bookmaker_nome`, `parceiro_nome`, `logo_url`, `moeda` e valores necessários;
+- quando essas apostas forem exibidas em cards/gráficos por casa, usar o extrator canônico.
+
+### 6. Corrigir Duplo Green
+
+Substituir os cálculos locais `porCasa` e `casaData` em `ProjetoDuploGreenTab.tsx` pelo agregador canônico.
+
+Isso evita divergência entre Duplo Green e Surebet quando ambos usam pernas/entradas múltiplas.
+
+### 7. Corrigir PerformancePorCasaCard
+
+Refatorar as visões:
+
+- `casa_consolidada`
+- `casa_parceiro`
+
+para reutilizarem a mesma extração canônica de participações, em vez de regras locais específicas.
+
+### 8. Preservar diferenças conceituais
+
+A padronização será na extração e agregação das casas, mas mantendo diferenças legítimas de cada tela:
+
+- ranking por volume continuará ordenando por volume;
+- ranking por uso pode ordenar por quantidade de participações;
+- lucro/ROI continuam respeitando liquidadas vs pendentes conforme cada KPI;
+- “Casa” agrupa por bookmaker base;
+- “Casa + Parceiro” separa contas/vínculos.
+
+## Validação
+
+Após implementar:
+
+1. Criar/usar cenário com aposta simples multi-entry contendo duas casas na mesma linha.
+2. Confirmar que a aba Surebet mostra as duas casas em “Top Casas por Uso”.
+3. Confirmar que Punter, ValueBet e Duplo Green não ignoram `_sub_entries` ou `entries[]`.
+4. Rodar typecheck e testes existentes.
+5. Adicionar teste unitário para o novo agregador cobrindo:
+   - parent simples;
+   - `pernas[]` flat;
+   - `pernas[].entries[]`;
+   - `_sub_entries[]`;
+   - agrupamento casa consolidada vs casa + parceiro.
 
 ## Resultado esperado
-Depois de salvar uma aposta simples, uma operação de bônus ou qualquer mutação financeira, a interface deve atualizar automaticamente em menos de 1 segundo, sem precisar usar F5, incluindo:
-- aba Operações/Surebet;
-- aba Bônus;
-- Vínculos/saldos;
-- KPIs da Visão Geral;
-- calendário/evolução de lucro;
-- Central de Operações.
+
+A visualização de “Casas Mais Utilizadas” passa a ter uma única regra de verdade. Quando uma operação envolver duas casas, ambas serão contabilizadas em todas as abas que usam esse tipo de ranking, reduzindo retrabalho e evitando divergências futuras.

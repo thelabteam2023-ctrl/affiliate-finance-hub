@@ -69,7 +69,7 @@ import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateR
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { DuploGreenStatisticsCard } from "./DuploGreenStatisticsCard";
 
-import { cn, getFirstLastName } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { buildBookmakerNomeMap, collectMissingBookmakerIds, mergeBookmakerNomeMaps } from "@/lib/bookmaker-display";
 import { useUnlinkedBookmakerNames } from "@/hooks/useUnlinkedBookmakerNames";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
@@ -84,6 +84,7 @@ import { ExportMenu, transformApostaToExport, transformSurebetToExport } from ".
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
 // FinancialSummaryCompact removed — now integrated into Lucro KPI popover
 import { useCalendarApostasRpc, transformRpcDailyForCharts } from "@/hooks/useCalendarApostasRpc";
+import { aggregateBookmakerUsage } from "@/utils/bookmakerUsageAnalytics";
 
 interface ProjetoDuploGreenTabProps {
   projetoId: string;
@@ -817,95 +818,14 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
 
   // casaData agregado por CASA (não por vínculo)
   const casaData = useMemo((): CasaAgregada[] => {
-    // Estrutura: casa → { total, vinculos: Map<vinculo, dados> }
-    const casaMap = new Map<string, {
-      apostas: number;
-      volume: number;
-      volumeLiquidado: number;
-      lucro: number;
-      vinculos: Map<string, { apostas: number; volume: number; volumeLiquidado: number; lucro: number }>;
-    }>();
-
-    const extractCasaVinculo = (nomeCompleto: string) => {
-      const separatorIdx = nomeCompleto.indexOf(" - ");
-      if (separatorIdx > 0) {
-        const vinculoRaw = nomeCompleto.substring(separatorIdx + 3).trim();
-        return {
-          casa: nomeCompleto.substring(0, separatorIdx).trim(),
-          vinculo: getFirstLastName(vinculoRaw)
-        };
-      }
-      return { casa: nomeCompleto, vinculo: "Principal" };
-    };
-
-    const processEntry = (nomeCompleto: string, stake: number, lucro: number, resolved: boolean) => {
-      const { casa, vinculo } = extractCasaVinculo(nomeCompleto);
-
-      if (!casaMap.has(casa)) {
-        casaMap.set(casa, { apostas: 0, volume: 0, volumeLiquidado: 0, lucro: 0, vinculos: new Map() });
-      }
-      const casaEntry = casaMap.get(casa)!;
-      casaEntry.apostas += 1;
-      casaEntry.volume += stake;
-      if (resolved) casaEntry.volumeLiquidado += stake;
-      casaEntry.lucro += lucro;
-
-      if (!casaEntry.vinculos.has(vinculo)) {
-        casaEntry.vinculos.set(vinculo, { apostas: 0, volume: 0, volumeLiquidado: 0, lucro: 0 });
-      }
-      const vinculoEntry = casaEntry.vinculos.get(vinculo)!;
-      vinculoEntry.apostas += 1;
-      vinculoEntry.volume += stake;
-      if (resolved) vinculoEntry.volumeLiquidado += stake;
-      vinculoEntry.lucro += lucro;
-    };
-
-    apostasParaKpi.forEach((a) => {
-      const pernas = Array.isArray(a.pernas) ? a.pernas : [];
-      const resolved = !!a.resultado && a.resultado !== "PENDENTE";
-
-      if (pernas.length > 0) {
-        const lucroPorPernaFallback =
-          a.status === "LIQUIDADA" ? Number(a.lucro_prejuizo || 0) / Math.max(pernas.length, 1) : 0;
-
-        pernas.forEach((p: any) => {
-          const nomeCompleto = p?.bookmaker_nome || "Desconhecida";
-          const stake = Number(p?.stake || 0);
-          const lucro = typeof p?.lucro_prejuizo === "number" ? p.lucro_prejuizo : lucroPorPernaFallback;
-          processEntry(nomeCompleto, stake, lucro, resolved);
-        });
-        return;
-      }
-
-      // Aposta simples
-      const nomeCompleto = a.bookmaker_nome || "Desconhecida";
-      const stake = typeof a.stake_total === "number" ? a.stake_total : (a.stake || 0);
-      processEntry(nomeCompleto, stake, a.lucro_prejuizo || 0, resolved);
-    });
-
-    return Array.from(casaMap.entries())
-      .map(([casa, data]) => {
-        const roi = data.volumeLiquidado > 0 ? (data.lucro / data.volumeLiquidado) * 100 : 0;
-        return {
-          casa,
-          apostas: data.apostas,
-          volume: data.volume,
-          lucro: data.lucro,
-          roi,
-          vinculos: Array.from(data.vinculos.entries())
-            .map(([vinculo, v]) => ({
-              vinculo,
-              apostas: v.apostas,
-              volume: v.volume,
-              lucro: v.lucro,
-              roi: v.volumeLiquidado > 0 ? (v.lucro / v.volumeLiquidado) * 100 : 0,
-            }))
-            .sort((a, b) => b.volume - a.volume),
-        };
-      })
+    return aggregateBookmakerUsage(apostasParaKpi, {
+      moedaConsolidacao: moedaConsol,
+      convertToConsolidation: convertFn,
+    })
+      .map(({ casa, apostas, volume, lucro, roi, vinculos }) => ({ casa, apostas, volume, lucro, roi, vinculos }))
       .sort((a, b) => b.volume - a.volume)
       .slice(0, 8);
-  }, [apostasParaKpi]);
+  }, [apostasParaKpi, moedaConsol, convertFn]);
 
   // Mapa base do projeto (bookmakers vinculadas)
   const projectNomeMap = useMemo(() => buildBookmakerNomeMap(bookmakers), [bookmakers]);
