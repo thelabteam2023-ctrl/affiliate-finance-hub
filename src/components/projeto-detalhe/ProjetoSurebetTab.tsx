@@ -53,7 +53,7 @@ import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
 import { groupPernasBySelecao } from "@/utils/groupPernasBySelecao";
 import type { SurebetQuickResult } from "@/components/apostas/SurebetRowActionsMenu";
 import { ApostaDialog } from "./ApostaDialog";
-import { ApostaCard, ApostaCardData } from "./ApostaCard";
+import { ApostaCard, ApostaCardData, type EstrategiaType } from "./ApostaCard";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { SurebetStatisticsCard } from "./SurebetStatisticsCard";
 
