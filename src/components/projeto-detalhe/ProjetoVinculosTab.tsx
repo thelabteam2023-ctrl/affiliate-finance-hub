@@ -527,6 +527,35 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
     return labels[estrategia || ""] || ESTRATEGIA_LABELS[estrategia as ApostaEstrategia] || "Todas as Apostas";
   };
 
+  const getApostaTab = (estrategia: string | null) => {
+    const tabs: Record<string, string> = {
+      PUNTER: "punter",
+      SUREBET: "surebet",
+      VALUEBET: "valuebet",
+      EXTRACAO_FREEBET: "freebets",
+      EXTRACAO_BONUS: "bonus",
+      DUPLO_GREEN: "duplogreen",
+    };
+    return tabs[estrategia || ""] || "apostas";
+  };
+
+  const openEditarApostaUso = (aposta: ApostaUsoBookmaker) => {
+    const activeTab = getApostaTab(aposta.estrategia);
+    const estrategia = aposta.estrategia || undefined;
+
+    if (aposta.forma_registro === "ARBITRAGEM" || aposta.estrategia === "SUREBET") {
+      openSurebetWindow({ projetoId, id: aposta.id, activeTab });
+      return;
+    }
+
+    if (aposta.forma_registro === "MULTIPLA") {
+      openApostaMultiplaWindow({ projetoId, id: aposta.id, activeTab, estrategia });
+      return;
+    }
+
+    openApostaWindow({ projetoId, id: aposta.id, activeTab, estrategia });
+  };
+
   const openApostasModal = (vinculo: Vinculo) => {
     if (vinculo.totalApostas <= 0) return;
     setVinculoApostasModal(vinculo);
