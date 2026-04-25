@@ -791,23 +791,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
 
      console.log('[ProjetoApostasTab] reliquidarAposta sucesso, atualizando estado local');
      
-      // 2. Atualizar estado local — no array correto
-      if (apostaSimples) {
-        setApostas(prev => prev.map(a => 
-          a.id === apostaId 
-            ? { ...a, resultado, lucro_prejuizo: lucro, status: "LIQUIDADA" }
-            : a
-        ));
-      } else {
-        setApostasMultiplas(prev => prev.map(am => 
-          am.id === apostaId 
-            ? { ...am, resultado, lucro_prejuizo: lucro, status: "LIQUIDADA" }
-            : am
-        ));
-      }
-
-      // 3. Invalidar cache de saldos
+      // 2. Recarregar do banco: retorno/lucro canônicos são calculados no motor financeiro.
       invalidateSaldos(projetoId);
+      await fetchAllApostas();
 
       const resultLabel = {
         GREEN: "Green",
