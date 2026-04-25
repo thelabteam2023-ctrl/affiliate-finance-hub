@@ -49,6 +49,9 @@ export interface SurebetPerna {
   lucro_prejuizo?: number | null;
   bookmaker_nome: string;
   bookmaker_id?: string;
+  parceiro_nome?: string | null;
+  instance_identifier?: string | null;
+  logo_url?: string | null;
   moeda?: string;
   /** Fonte do saldo: REAL ou FREEBET */
   fonte_saldo?: string;
@@ -60,6 +63,9 @@ export interface SurebetPerna {
   entries?: SurebetPernaEntry[];
   odd_media?: number;
   stake_total?: number;
+  stake_brl_referencia?: number | null;
+  lucro_prejuizo_brl_referencia?: number | null;
+  cotacao_snapshot?: number | null;
 }
 
 export interface SurebetData {
