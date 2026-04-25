@@ -100,7 +100,7 @@ export async function criarAposta(
         p_estrategia: input.estrategia,
         p_contexto_operacional: input.contexto_operacional || 'NORMAL',
         p_data_aposta: input.data_aposta,
-        p_pernas: input.pernas || [],
+        p_pernas: (input.pernas || []) as any,
       });
 
       if (error) {
