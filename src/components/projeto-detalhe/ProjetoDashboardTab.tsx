@@ -450,7 +450,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       {/* Filtro de período */}
       <StandardTimeFilter
         period={period}
@@ -462,7 +462,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
 
       {/* Conteúdo com transição suave ao trocar filtro */}
       <div 
-        className="transition-opacity duration-300 ease-in-out" 
+        className="min-w-0 space-y-4 transition-opacity duration-300 ease-in-out" 
         style={{ opacity: isTransitioning ? 0.5 : 1 }}
       >
 
@@ -497,15 +497,15 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
       />
 
       {/* Performance por Esporte */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="flex items-center gap-2">
+      <Card className="overflow-hidden">
+        <CardHeader className="flex flex-col gap-3 space-y-0 p-4 pb-2 sm:flex-row sm:items-center sm:justify-between sm:p-6 sm:pb-2">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
             <BarChart3 className="h-5 w-5" />
             Performance por Esporte
           </CardTitle>
           {esportesData.length > 0 && (
             <Select value={selectedEsporte} onValueChange={setSelectedEsporte}>
-              <SelectTrigger className="w-[180px] h-8 text-sm">
+              <SelectTrigger className="h-8 w-full text-sm sm:w-[180px]">
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
@@ -518,7 +518,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
             </Select>
           )}
         </CardHeader>
-        <CardContent className="overflow-hidden">
+        <CardContent className="overflow-hidden p-2 pt-0 sm:p-6 sm:pt-0">
           <ModernBarChart
             data={filteredEsportesData}
             categoryKey="esporte"
@@ -548,8 +548,8 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
                 gradientEnd: "#EF4444" 
               },
             ]}
-            height={250}
-            barSize={16}
+            height={220}
+            barSize={14}
             showLabels={false}
             showLegend={true}
             customTooltipContent={(payload, label) => {
