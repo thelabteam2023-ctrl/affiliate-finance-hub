@@ -1030,21 +1030,21 @@ export function VisaoGeralCharts({
   // Só evolução
   if (showEvolucaoChart && !showCasasCard) {
     return (
-      <Card>
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+      <Card className="overflow-hidden">
+        <CardHeader className="p-4 pb-2 sm:p-6 sm:pb-2">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2">
               {isPositive ? (
                 <TrendingUp className="h-4 w-4 text-success" />
               ) : (
                 <TrendingDown className="h-4 w-4 text-destructive" />
               )}
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="min-w-0 text-sm font-medium leading-tight">
                 Evolução do Lucro Geral
-                <span className="text-muted-foreground/60 font-normal ml-1">(Unificação de estratégias)</span>
+                <span className="hidden text-muted-foreground/60 font-normal ml-1 sm:inline">(Unificação de estratégias)</span>
               </CardTitle>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
               {showCalendar && (
                 <Popover open={calendarOpen} onOpenChange={handleCalendarOpenChange}>
                   <PopoverTrigger asChild>
@@ -1090,8 +1090,8 @@ export function VisaoGeralCharts({
             </CardDescription>
           )}
         </CardHeader>
-        <CardContent className="pt-0">
-          <div className="h-[220px] md:h-[280px]">
+        <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+          <div className="h-[210px] sm:h-[240px] md:h-[280px]">
             <EvolucaoLucroChart data={chartDisplayData} accentColor={accentColor} isSingleDayPeriod={isSingleDayPeriod} formatCurrency={formatCurrency} formatChartAxis={axisFormatter} />
           </div>
         </CardContent>
@@ -1101,20 +1101,20 @@ export function VisaoGeralCharts({
 
   // Ambos
   return (
-    <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
+    <div className="grid min-w-0 gap-4 grid-cols-1 lg:grid-cols-3">
       {/* Gráfico de Área — Evolução do Lucro (PROTAGONISTA - 2 colunas) */}
-      <Card className="lg:col-span-2">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+      <Card className="overflow-hidden lg:col-span-2">
+        <CardHeader className="p-4 pb-2 sm:p-6 sm:pb-2">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2">
               {isPositive ? (
                 <TrendingUp className="h-4 w-4 text-success" />
               ) : (
                 <TrendingDown className="h-4 w-4 text-destructive" />
               )}
-              <CardTitle className="text-sm font-medium">Evolução do Lucro</CardTitle>
+              <CardTitle className="min-w-0 text-sm font-medium leading-tight">Evolução do Lucro</CardTitle>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
               {showCalendar && (
                 <Popover open={calendarOpen} onOpenChange={handleCalendarOpenChange}>
                   <PopoverTrigger asChild>
@@ -1160,8 +1160,8 @@ export function VisaoGeralCharts({
             </CardDescription>
           )}
         </CardHeader>
-        <CardContent className="pt-0">
-          <div className="h-[220px] md:h-[280px]">
+        <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+          <div className="h-[210px] sm:h-[240px] md:h-[280px]">
             <EvolucaoLucroChart data={chartDisplayData} accentColor={accentColor} isSingleDayPeriod={isSingleDayPeriod} formatCurrency={formatCurrency} formatChartAxis={axisFormatter} />
           </div>
         </CardContent>
