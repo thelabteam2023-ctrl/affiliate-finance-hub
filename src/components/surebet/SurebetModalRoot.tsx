@@ -1309,7 +1309,6 @@ export function SurebetModalRoot({
   const handleSave = async () => {
     // GUARD: Impede múltiplos saves simultâneos (double-click, Enter key, etc.)
     if (saving) return;
-    if (!estrategia) { toast.error("Selecione uma estratégia"); return; }
     if (!contexto) { toast.error("Selecione um contexto"); return; }
     if (!evento.trim()) { toast.error("Informe o evento"); return; }
     if (odds.length < numPernas || analysis.pernasCompletasCount < numPernas) {
@@ -1328,6 +1327,8 @@ export function SurebetModalRoot({
       setSaving(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
+
+      const estrategiaArbitragem = ARBITRAGEM_ESTRATEGIA;
 
       const getBookmakerMoeda = (bookmakerId: string): SupportedCurrency => {
         const bk = bookmakerSaldos.find(b => b.id === bookmakerId);
@@ -1496,7 +1497,7 @@ export function SurebetModalRoot({
           p_esporte: esporte,
           p_mercado: mercado,
           p_modelo: modelo,
-          p_estrategia: estrategia,
+          p_estrategia: estrategiaArbitragem,
           p_contexto: contexto,
           p_data_aposta: toLocalTimestamp(dataAposta),
           p_stake_total: newStakeTotal,
@@ -1716,7 +1717,7 @@ export function SurebetModalRoot({
           projeto_id: projetoId,
           bookmaker_id: entry.bookmaker_id,
           forma_registro: 'SIMPLES',
-          estrategia,
+          estrategia: estrategiaArbitragem,
           contexto_operacional: contexto,
           evento,
           esporte,
