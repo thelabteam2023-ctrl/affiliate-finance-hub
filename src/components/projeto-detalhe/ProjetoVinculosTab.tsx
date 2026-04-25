@@ -250,18 +250,37 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
           .from("apostas_unificada")
           .select("id, data_aposta, evento, esporte, mercado, estrategia, forma_registro, status, resultado, odd, stake, moeda_operacao, selecao")
           .eq("projeto_id", projetoId)
+          .eq("workspace_id", workspaceId)
           .eq("bookmaker_id", bookmakerId)
           .is("cancelled_at", null),
         supabase
           .from("apostas_pernas")
-          .select("id, selecao, selecao_livre, odd, stake, moeda, aposta:apostas_unificada!inner(id, projeto_id, data_aposta, evento, esporte, mercado, estrategia, forma_registro, status, resultado, cancelled_at)")
+          .select("id, selecao, selecao_livre, odd, stake, moeda, aposta:apostas_unificada!inner(id, projeto_id, workspace_id, data_aposta, evento, esporte, mercado, estrategia, forma_registro, status, resultado, cancelled_at)")
           .eq("bookmaker_id", bookmakerId)
           .eq("aposta.projeto_id", projetoId)
+          .eq("aposta.workspace_id", workspaceId)
           .is("aposta.cancelled_at", null),
       ]);
 
       if (simplesError) throw simplesError;
       if (pernasError) throw pernasError;
+
+      const apostaIdsComPernas = Array.from(new Set((pernas || []).map((p: any) => p.aposta?.id).filter(Boolean)));
+      const casasPorAposta = new Map<string, Array<{ nome: string; stake: number | null; moeda: string | null }>>();
+      if (apostaIdsComPernas.length > 0) {
+        const { data: todasPernas, error: todasPernasError } = await supabase
+          .from("apostas_pernas")
+          .select("aposta_id, stake, moeda, bookmaker:bookmakers(nome)")
+          .in("aposta_id", apostaIdsComPernas);
+
+        if (todasPernasError) throw todasPernasError;
+
+        (todasPernas || []).forEach((p: any) => {
+          const casas = casasPorAposta.get(p.aposta_id) || [];
+          casas.push({ nome: p.bookmaker?.nome || "Casa", stake: p.stake, moeda: p.moeda });
+          casasPorAposta.set(p.aposta_id, casas);
+        });
+      }
 
       const rows: ApostaUsoBookmaker[] = [];
       (simples || []).forEach((a: any) => rows.push({
@@ -278,6 +297,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
         stake: a.stake,
         moeda: a.moeda_operacao,
         selecao: a.selecao,
+        casas: [{ nome: vinculoApostasModal?.nome || "Casa", stake: a.stake, moeda: a.moeda_operacao }],
       }));
       (pernas || []).forEach((p: any) => rows.push({
         id: p.aposta.id,
@@ -294,6 +314,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
         stake: p.stake,
         moeda: p.moeda,
         selecao: p.selecao_livre || p.selecao,
+        casas: casasPorAposta.get(p.aposta.id) || [],
       }));
 
       return rows.sort((a, b) => new Date(b.data_aposta).getTime() - new Date(a.data_aposta).getTime());
