@@ -1,16 +1,11 @@
 /**
  * SurebetDialog - Formulário de criação/edição de Surebets
  * 
- * NOTA DE ARQUITETURA (2026-01):
- * Este componente ainda usa inserções diretas no Supabase por razões de complexidade.
- * O hook useSurebetService foi criado para centralizar a lógica, mas a migração completa
- * requer refatoração extensiva devido à complexidade do formulário (múltiplas entradas,
- * snapshots de moeda, freebets, etc.).
- * 
- * PRÓXIMOS PASSOS:
- * - Novas funcionalidades devem usar useSurebetService
- * - Gradualmente migrar lógica de handleSubmit para o serviço
- * - O dual-write atual JÁ foi corrigido para incluir apostas_pernas
+ * NOTA DE ARQUITETURA (2026-04):
+ * Criação de surebet usa obrigatoriamente a RPC criar_surebet_atomica.
+ * Ela cria operação, pernas e eventos STAKE no ledger em uma transação.
+ * Inserção direta de ARBITRAGEM em apostas_unificada/apostas_pernas é proibida,
+ * pois cria operação sem débito de stake e infla saldos na liquidação.
  * 
  * @see src/services/aposta - Serviço centralizado de apostas
  * @see src/hooks/useSurebetService.ts - Hook especializado para Surebets
