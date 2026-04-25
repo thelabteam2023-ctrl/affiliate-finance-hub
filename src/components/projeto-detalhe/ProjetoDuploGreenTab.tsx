@@ -386,7 +386,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
               .select(`
                 id, aposta_id, bookmaker_id, odd, stake, stake_real, stake_freebet, moeda, selecao, selecao_livre, ordem,
                 resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada,
-                stake_brl_referencia, lucro_prejuizo_brl_referencia, fonte_saldo,
+                stake_brl_referencia, lucro_prejuizo_brl_referencia, cotacao_snapshot, fonte_saldo,
                 bookmaker:bookmakers (
                   nome, parceiro_id, instance_identifier,
                   parceiro:parceiros (nome),
@@ -430,6 +430,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                 valor_freebet_gerada: p.valor_freebet_gerada,
                 stake_brl_referencia: p.stake_brl_referencia,
                 lucro_prejuizo_brl_referencia: p.lucro_prejuizo_brl_referencia,
+                cotacao_snapshot: p.cotacao_snapshot,
                 fonte_saldo: p.fonte_saldo || null,
               }));
             } else if (pernas.length > 1) {
