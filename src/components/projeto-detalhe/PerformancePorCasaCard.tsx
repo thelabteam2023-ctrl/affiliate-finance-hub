@@ -10,6 +10,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { aggregateBookmakerUsage } from "@/utils/bookmakerUsageAnalytics";
 
 /**
  * VISÕES DE PERFORMANCE
@@ -261,76 +262,26 @@ export function PerformancePorCasaCard({
    * - Apostas simples: contadas normalmente
    */
   const casaConsolidadaMetrics = useMemo(() => {
-    const casaMap: Record<string, PerformanceMetrics> = {};
-
-    const addToCasa = (
-      bookmakerNome: string,
-      logoUrl: string | null,
-      stake: number,
-      lucroPrejuizo: number,
-      resultado: string | null
-    ) => {
-      const key = bookmakerNome;
-
-      if (!casaMap[key]) {
-        casaMap[key] = {
-          key,
-          nome: bookmakerNome,
-          parceiro_nome: null, // Não exibe parceiro nesta visão
-          logo_url: logoUrl,
-          totalOperacoes: 0,
-          totalStake: 0,
-          lucro: 0,
-          greens: 0,
-          reds: 0,
-          voids: 0,
-          roi: 0,
-        };
-      }
-
-      casaMap[key].totalOperacoes++;
-      casaMap[key].totalStake += stake || 0;
-      casaMap[key].lucro += lucroPrejuizo || 0;
-
-      if (resultado === "GREEN" || resultado === "MEIO_GREEN") {
-        casaMap[key].greens++;
-      }
-      if (resultado === "RED" || resultado === "MEIO_RED") {
-        casaMap[key].reds++;
-      }
-      if (resultado === "VOID" || resultado === "REEMBOLSO") {
-        casaMap[key].voids++;
-      }
-    };
-
-    apostasUnificadas.forEach((aposta) => {
-      if (aposta.forma_registro === "ARBITRAGEM" && aposta.pernas && aposta.pernas.length > 0) {
-        // Arbitragem: desagregar pernas
-        aposta.pernas.forEach((perna) => {
-          addToCasa(
-            perna.bookmaker_nome || "Desconhecida",
-            perna.logo_url || null,
-            perna.stake || 0,
-            perna.lucro_prejuizo || 0,
-            perna.resultado || null
-          );
-        });
-      } else {
-        // Aposta simples/múltipla
-        addToCasa(
-          aposta.bookmaker_nome,
-          aposta.logo_url,
-          aposta.stake || 0,
-          aposta.lucro_prejuizo || 0,
-          aposta.resultado
-        );
-      }
-    });
-
-    return Object.values(casaMap)
-      .map((m) => ({ ...m, roi: m.totalStake > 0 ? (m.lucro / m.totalStake) * 100 : 0 }))
+    return aggregateBookmakerUsage(apostasUnificadas, {
+      moedaConsolidacao,
+      convertToConsolidation,
+      resolveLogo: getLogoUrl,
+    })
+      .map((m) => ({
+        key: m.casa,
+        nome: m.casa,
+        parceiro_nome: null,
+        logo_url: m.logo_url || null,
+        totalOperacoes: m.apostas,
+        totalStake: m.volume,
+        lucro: m.lucro,
+        greens: m.greens || 0,
+        reds: m.reds || 0,
+        voids: m.voids || 0,
+        roi: m.roi,
+      }))
       .sort((a, b) => b.totalOperacoes - a.totalOperacoes);
-  }, [apostasUnificadas]);
+  }, [apostasUnificadas, moedaConsolidacao, convertToConsolidation, getLogoUrl]);
 
   /**
    * VISÃO CASA + PARCEIRO - Cada conta é uma linha separada
@@ -338,82 +289,26 @@ export function PerformancePorCasaCard({
    * - Arbitragem: cada perna é distribuída para sua respectiva conta
    */
   const casaParceiroMetrics = useMemo(() => {
-    const contaMap: Record<string, PerformanceMetrics> = {};
-
-    const addToConta = (
-      bookmakerId: string,
-      bookmakerNome: string,
-      parceiroNome: string | null,
-      logoUrl: string | null,
-      stake: number,
-      lucroPrejuizo: number,
-      resultado: string | null
-    ) => {
-      const key = bookmakerId;
-
-      if (!contaMap[key]) {
-        contaMap[key] = {
-          key,
-          nome: bookmakerNome,
-          parceiro_nome: parceiroNome,
-          logo_url: logoUrl,
-          totalOperacoes: 0,
-          totalStake: 0,
-          lucro: 0,
-          greens: 0,
-          reds: 0,
-          voids: 0,
-          roi: 0,
-        };
-      }
-
-      contaMap[key].totalOperacoes++;
-      contaMap[key].totalStake += stake || 0;
-      contaMap[key].lucro += lucroPrejuizo || 0;
-
-      if (resultado === "GREEN" || resultado === "MEIO_GREEN") {
-        contaMap[key].greens++;
-      }
-      if (resultado === "RED" || resultado === "MEIO_RED") {
-        contaMap[key].reds++;
-      }
-      if (resultado === "VOID" || resultado === "REEMBOLSO") {
-        contaMap[key].voids++;
-      }
-    };
-
-    apostasUnificadas.forEach((aposta) => {
-      if (aposta.forma_registro === "ARBITRAGEM" && aposta.pernas && aposta.pernas.length > 0) {
-        // Arbitragem: desagregar pernas
-        aposta.pernas.forEach((perna) => {
-          addToConta(
-            perna.bookmaker_id || "unknown",
-            perna.bookmaker_nome || "Desconhecida",
-            perna.parceiro_nome || null,
-            perna.logo_url || null,
-            perna.stake || 0,
-            perna.lucro_prejuizo || 0,
-            perna.resultado || null
-          );
-        });
-      } else {
-        // Aposta simples/múltipla
-        addToConta(
-          aposta.bookmaker_id,
-          aposta.bookmaker_nome,
-          aposta.parceiro_nome,
-          aposta.logo_url,
-          aposta.stake || 0,
-          aposta.lucro_prejuizo || 0,
-          aposta.resultado
-        );
-      }
-    });
-
-    return Object.values(contaMap)
-      .map((m) => ({ ...m, roi: m.totalStake > 0 ? (m.lucro / m.totalStake) * 100 : 0 }))
+    return aggregateBookmakerUsage(apostasUnificadas, {
+      moedaConsolidacao,
+      convertToConsolidation,
+      resolveLogo: getLogoUrl,
+    })
+      .flatMap((casa) => casa.vinculos.map((vinculo) => ({
+        key: `${casa.casa}:${vinculo.vinculo}`,
+        nome: casa.casa,
+        parceiro_nome: vinculo.vinculo === "Principal" ? null : vinculo.vinculo,
+        logo_url: casa.logo_url || null,
+        totalOperacoes: vinculo.apostas,
+        totalStake: vinculo.volume,
+        lucro: vinculo.lucro,
+        greens: 0,
+        reds: 0,
+        voids: 0,
+        roi: vinculo.roi,
+      })))
       .sort((a, b) => b.totalOperacoes - a.totalOperacoes);
-  }, [apostasUnificadas]);
+  }, [apostasUnificadas, moedaConsolidacao, convertToConsolidation, getLogoUrl]);
 
   // Selecionar métricas baseado na visão atual
   const displayMetrics = useMemo(() => {
