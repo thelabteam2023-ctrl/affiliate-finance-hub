@@ -431,7 +431,7 @@ function PernaItem({
                 <SurebetBookmakerLogo nome={entry.bookmaker_nome} getLogoUrl={getLogoUrl} />
               </div>
               
-              {/* Nome + FB badge + linha opcional - com vínculo abreviado */}
+              {/* Nome + FB badge - com vínculo abreviado */}
               <div className="flex items-center gap-1.5 flex-1 min-w-0 text-muted-foreground">
                 <span className="truncate uppercase">
                   {formatBookmakerDisplay(
@@ -444,9 +444,6 @@ function PernaItem({
                   <span className="shrink-0 text-amber-400" title="Freebet">
                     <Gift className="h-3.5 w-3.5" />
                   </span>
-                )}
-                {entry.selecao_livre && (
-                  <span className="text-primary/70 text-[9px] shrink-0">({entry.selecao_livre})</span>
                 )}
               </div>
               
