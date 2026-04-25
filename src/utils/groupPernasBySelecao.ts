@@ -13,6 +13,9 @@ interface RawPerna {
   id?: string;
   bookmaker_id?: string;
   bookmaker_nome?: string;
+  parceiro_nome?: string | null;
+  instance_identifier?: string | null;
+  logo_url?: string | null;
   selecao: string;
   selecao_livre?: string | null;
   odd: number;
@@ -20,6 +23,9 @@ interface RawPerna {
   resultado?: string | null;
   lucro_prejuizo?: number | null;
   moeda?: string;
+  stake_brl_referencia?: number | null;
+  lucro_prejuizo_brl_referencia?: number | null;
+  cotacao_snapshot?: number | null;
   gerou_freebet?: boolean;
   valor_freebet_gerada?: number | null;
   fonte_saldo?: string | null;
@@ -74,7 +80,13 @@ export function groupPernasBySelecao(
         : (main.lucro_prejuizo ?? null),
       bookmaker_nome: resolve(main),
       bookmaker_id: main.bookmaker_id,
+      parceiro_nome: main.parceiro_nome ?? main.bookmaker?.parceiro?.nome ?? null,
+      instance_identifier: main.instance_identifier ?? null,
+      logo_url: main.logo_url ?? null,
       moeda: main.moeda || 'BRL',
+      stake_brl_referencia: main.stake_brl_referencia ?? null,
+      lucro_prejuizo_brl_referencia: main.lucro_prejuizo_brl_referencia ?? null,
+      cotacao_snapshot: main.cotacao_snapshot ?? null,
       fonte_saldo: main.fonte_saldo || undefined,
     };
 
@@ -85,9 +97,17 @@ export function groupPernasBySelecao(
         id: p.id,
         bookmaker_id: p.bookmaker_id || '',
         bookmaker_nome: resolve(p),
+        parceiro_nome: p.parceiro_nome ?? p.bookmaker?.parceiro?.nome ?? null,
+        instance_identifier: p.instance_identifier ?? null,
+        logo_url: p.logo_url ?? null,
         moeda: p.moeda || 'BRL',
         odd: p.odd,
         stake: p.stake,
+        resultado: p.resultado ?? null,
+        lucro_prejuizo: p.lucro_prejuizo ?? null,
+        stake_brl_referencia: p.stake_brl_referencia ?? null,
+        lucro_prejuizo_brl_referencia: p.lucro_prejuizo_brl_referencia ?? null,
+        cotacao_snapshot: p.cotacao_snapshot ?? null,
         selecao_livre: p.selecao_livre || undefined,
         fonte_saldo: p.fonte_saldo || undefined,
       }));

@@ -411,9 +411,9 @@ export function ProjetoPunterTab({
               .from("apostas_pernas")
               .select(`
                 id, aposta_id, bookmaker_id, odd, stake, stake_real, stake_freebet, moeda, selecao, selecao_livre, ordem,
-                resultado, lucro_prejuizo, fonte_saldo,
+                resultado, lucro_prejuizo, stake_brl_referencia, lucro_prejuizo_brl_referencia, cotacao_snapshot, fonte_saldo,
                 bookmaker:bookmakers (
-                  nome, parceiro_id,
+                  nome, parceiro_id, instance_identifier,
                   parceiro:parceiros (nome),
                   bookmakers_catalogo (logo_url)
                 )

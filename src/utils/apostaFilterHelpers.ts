@@ -14,7 +14,10 @@
 interface ApostaWithEntries {
   bookmaker_id?: string | null;
   _sub_entries?: Array<{ bookmaker_id?: string | null }> | null;
-  pernas?: Array<{ bookmaker_id?: string | null }> | null;
+  pernas?: Array<{
+    bookmaker_id?: string | null;
+    entries?: Array<{ bookmaker_id?: string | null }> | null;
+  }> | null;
 }
 
 /**
@@ -32,6 +35,11 @@ export function collectApostaBookmakerIds(a: ApostaWithEntries): Set<string> {
   if (Array.isArray(a.pernas)) {
     for (const p of a.pernas) {
       if (p?.bookmaker_id) ids.add(p.bookmaker_id);
+      if (Array.isArray(p?.entries)) {
+        for (const entry of p.entries) {
+          if (entry?.bookmaker_id) ids.add(entry.bookmaker_id);
+        }
+      }
     }
   }
   return ids;

@@ -54,4 +54,32 @@ describe("bookmakerUsageAnalytics", () => {
     expect(result.reduce((sum, item) => sum + item.apostas, 0)).toBe(2);
     expect(result.reduce((sum, item) => sum + item.volume, 0)).toBe(200);
   });
+
+  it("distribui lucro faltante proporcionalmente pela stake das entries", () => {
+    const result = aggregateBookmakerUsage([
+      {
+        id: "op-3",
+        status: "LIQUIDADA",
+        resultado: "GREEN",
+        stake: 200,
+        lucro_prejuizo: 60,
+        pernas: [
+          {
+            id: "perna-1",
+            selecao: "Casa" as any,
+            stake: 200,
+            resultado: "GREEN",
+            bookmaker_nome: "Grupo",
+            entries: [
+              { bookmaker_id: "bk-1", bookmaker_nome: "AlphaBet", stake: 150, resultado: "GREEN", moeda: "BRL" },
+              { bookmaker_id: "bk-2", bookmaker_nome: "BetaBook", stake: 50, resultado: "GREEN", moeda: "BRL" },
+            ],
+          },
+        ],
+      },
+    ], { moedaConsolidacao: "BRL" });
+
+    expect(result.find((item) => item.casa === "AlphaBet")?.lucro).toBe(45);
+    expect(result.find((item) => item.casa === "BetaBook")?.lucro).toBe(15);
+  });
 });

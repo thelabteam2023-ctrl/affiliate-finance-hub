@@ -372,8 +372,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
               .select(`
                 id, aposta_id, bookmaker_id, moeda, selecao, selecao_livre, odd, stake,
                 resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada,
-                stake_brl_referencia, lucro_prejuizo_brl_referencia, fonte_saldo,
-                bookmakers (nome, instance_identifier, parceiro:parceiros(nome))
+                stake_brl_referencia, lucro_prejuizo_brl_referencia, cotacao_snapshot, fonte_saldo,
+                bookmakers (nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo(logo_url))
               `)
               .in("aposta_id", idsChunk)
               .order("ordem", { ascending: true }),
@@ -389,12 +389,15 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
             bookmaker_id: p.bookmaker_id,
             bookmaker_nome: parceiroNome ? `${bookmaker?.nome || "—"} - ${parceiroNome}${bookmaker?.instance_identifier ? ` (${bookmaker.instance_identifier})` : ''}` : `${bookmaker?.nome || "—"}${bookmaker?.instance_identifier ? ` (${bookmaker.instance_identifier})` : ''}`,
             parceiro_nome: parceiroNome || null,
+            instance_identifier: bookmaker?.instance_identifier || null,
+            logo_url: bookmaker?.bookmakers_catalogo?.logo_url || null,
             moeda: p.moeda || 'BRL',
             selecao: p.selecao, selecao_livre: p.selecao_livre, odd: p.odd, stake: p.stake,
             resultado: p.resultado, lucro_prejuizo: p.lucro_prejuizo,
             gerou_freebet: p.gerou_freebet, valor_freebet_gerada: p.valor_freebet_gerada,
             stake_brl_referencia: p.stake_brl_referencia,
             lucro_prejuizo_brl_referencia: p.lucro_prejuizo_brl_referencia,
+            cotacao_snapshot: p.cotacao_snapshot,
             fonte_saldo: p.fonte_saldo || null,
           });
         });
@@ -857,6 +860,53 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       .slice(0, 8);
   }, [surebetsParaKpi, moedaConsolidacao, convertFn]);
 
+  const surebetsForCharts = useMemo(() => surebets.map(s => ({
+    data_aposta: s.data_operacao,
+    lucro_prejuizo: s.lucro_real,
+    stake: s.stake || s.stake_total,
+    stake_total: s.stake_total,
+    bookmaker_id: s.bookmaker_id,
+    bookmaker_nome: s.bookmaker_nome || "—",
+    parceiro_nome: s.parceiro_nome,
+    resultado: s.resultado,
+    moeda_operacao: s.moeda_operacao,
+    stake_consolidado: s.stake_consolidado,
+    pl_consolidado: s.pl_consolidado,
+    valor_brl_referencia: s.valor_brl_referencia,
+    lucro_prejuizo_brl_referencia: s.lucro_prejuizo_brl_referencia,
+    pernas: s.pernas?.map(p => ({
+      bookmaker_id: p.bookmaker_id,
+      bookmaker_nome: p.bookmaker_nome,
+      parceiro_nome: (p as any).parceiro_nome,
+      instance_identifier: (p as any).instance_identifier,
+      logo_url: (p as any).logo_url,
+      stake: p.stake,
+      stake_total: p.stake_total,
+      odd: p.odd,
+      resultado: p.resultado || undefined,
+      lucro_prejuizo: getLucroPerna(p),
+      moeda: p.moeda,
+      stake_brl_referencia: (p as any).stake_brl_referencia,
+      lucro_prejuizo_brl_referencia: (p as any).lucro_prejuizo_brl_referencia,
+      cotacao_snapshot: (p as any).cotacao_snapshot,
+      entries: p.entries?.map(entry => ({
+        bookmaker_id: entry.bookmaker_id,
+        bookmaker_nome: entry.bookmaker_nome,
+        parceiro_nome: (entry as any).parceiro_nome,
+        instance_identifier: (entry as any).instance_identifier,
+        logo_url: (entry as any).logo_url,
+        stake: entry.stake,
+        odd: entry.odd,
+        resultado: (entry as any).resultado ?? p.resultado ?? undefined,
+        lucro_prejuizo: (entry as any).lucro_prejuizo ?? undefined,
+        moeda: entry.moeda,
+        stake_brl_referencia: (entry as any).stake_brl_referencia,
+        lucro_prejuizo_brl_referencia: (entry as any).lucro_prejuizo_brl_referencia,
+        cotacao_snapshot: (entry as any).cotacao_snapshot,
+      })),
+    })),
+  })), [surebets]);
+
   // Mapa de logos combinando catálogo global + bookmakers do projeto
   // Prioridade: catálogo global (mais completo e confiável)
   const logoMap = useMemo(() => {
@@ -1226,40 +1276,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           {/* Coluna esquerda: Gráfico + Estatísticas */}
           <div className="lg:col-span-2 space-y-4">
             <VisaoGeralCharts 
-              apostas={surebets.map(s => {
-                const isSimples = !s.pernas?.length;
-                return {
-                  data_aposta: s.data_operacao,
-                  lucro_prejuizo: s.lucro_real,
-                  stake: isSimples ? (s.stake || s.stake_total) : s.stake_total,
-                  bookmaker_nome: isSimples ? (s.bookmaker_nome || "—") : (s.pernas?.[0]?.bookmaker_nome || "—"),
-                  parceiro_nome: isSimples ? s.parceiro_nome : undefined,
-                  // CRÍTICO: manter campos consolidados para o badge/linha de evolução bater com KPIs
-                  moeda_operacao: s.moeda_operacao,
-                  stake_consolidado: s.stake_consolidado,
-                  pl_consolidado: s.pl_consolidado,
-                  valor_brl_referencia: s.valor_brl_referencia,
-                  lucro_prejuizo_brl_referencia: s.lucro_prejuizo_brl_referencia,
-                  pernas: isSimples 
-                    ? [{
-                        bookmaker_nome: s.bookmaker_nome || "—",
-                        parceiro_nome: s.parceiro_nome,
-                        stake: s.stake || s.stake_total,
-                        odd: s.odd,
-                        resultado: s.resultado || undefined,
-                        lucro_prejuizo: s.lucro_real || 0,
-                        moeda: s.moeda_operacao || undefined,
-                      }]
-                    : s.pernas?.map(p => ({
-                        bookmaker_nome: p.bookmaker_nome,
-                        stake: p.stake,
-                        odd: p.odd,
-                        resultado: p.resultado || undefined,
-                        lucro_prejuizo: getLucroPerna(p),
-                        moeda: p.moeda || undefined,
-                      }))
-                };
-              })}
+              apostas={surebetsForCharts}
               apostasCalendario={transformRpcDailyForCharts(calendarDaily)}
               accentColor="hsl(var(--primary))"
               logoMap={logoMap}
@@ -1276,42 +1293,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           {/* Coluna direita: Casas Mais Utilizadas */}
           <div className="lg:col-span-1">
             <VisaoGeralCharts 
-              apostas={surebets.map(s => {
-                const isSimples = !s.pernas?.length;
-                return {
-                  data_aposta: s.data_operacao,
-                  lucro_prejuizo: s.lucro_real,
-                  stake: isSimples ? (s.stake || s.stake_total) : s.stake_total,
-                  bookmaker_nome: isSimples ? (s.bookmaker_nome || "—") : (s.pernas?.[0]?.bookmaker_nome || "—"),
-                  parceiro_nome: isSimples ? s.parceiro_nome : undefined,
-                  moeda_operacao: s.moeda_operacao,
-                  stake_consolidado: s.stake_consolidado,
-                  pl_consolidado: s.pl_consolidado,
-                  valor_brl_referencia: s.valor_brl_referencia,
-                  lucro_prejuizo_brl_referencia: s.lucro_prejuizo_brl_referencia,
-                  pernas: isSimples 
-                    ? [{
-                        bookmaker_nome: s.bookmaker_nome || "—",
-                        parceiro_nome: s.parceiro_nome,
-                        stake: s.stake || s.stake_total,
-                        odd: s.odd,
-                        resultado: s.resultado || undefined,
-                        lucro_prejuizo: s.lucro_real || 0,
-                        moeda: s.moeda_operacao || undefined,
-                      }]
-                    : s.pernas?.map(p => ({
-                        bookmaker_nome: p.bookmaker_nome,
-                        parceiro_nome: (p as any).parceiro_nome,
-                        stake: p.stake,
-                        odd: p.odd,
-                        resultado: p.resultado || undefined,
-                        lucro_prejuizo: getLucroPerna(p),
-                        moeda: p.moeda,
-                        stake_brl_referencia: (p as any).stake_brl_referencia,
-                        lucro_prejuizo_brl_referencia: (p as any).lucro_prejuizo_brl_referencia,
-                      }))
-                };
-              })}
+              apostas={surebetsForCharts}
               accentColor="hsl(var(--primary))"
               logoMap={logoMap}
               showEvolucaoChart={false}
