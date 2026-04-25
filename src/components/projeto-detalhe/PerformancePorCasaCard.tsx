@@ -267,7 +267,7 @@ export function PerformancePorCasaCard({
       convertToConsolidation,
       resolveLogo: getLogoUrl,
     })
-      .map((m) => ({
+      .map((m): PerformanceMetrics => ({
         key: m.casa,
         nome: m.casa,
         parceiro_nome: null,
@@ -294,7 +294,7 @@ export function PerformancePorCasaCard({
       convertToConsolidation,
       resolveLogo: getLogoUrl,
     })
-      .flatMap((casa) => casa.vinculos.map((vinculo) => ({
+      .flatMap((casa) => casa.vinculos.map((vinculo): PerformanceMetrics => ({
         key: `${casa.casa}:${vinculo.vinculo}`,
         nome: casa.casa,
         parceiro_nome: vinculo.vinculo === "Principal" ? null : vinculo.vinculo,
