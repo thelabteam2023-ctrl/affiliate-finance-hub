@@ -69,7 +69,7 @@ import type { SurebetQuickResult } from "@/components/apostas/SurebetRowActionsM
 import { UnifiedStatisticsCard } from "./UnifiedStatisticsCard";
 import { ChartEmptyState } from "@/components/ui/chart-empty-state";
 
-import { cn, getFirstLastName } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { buildBookmakerNomeMap, collectMissingBookmakerIds, mergeBookmakerNomeMaps } from "@/lib/bookmaker-display";
 import { useUnlinkedBookmakerNames } from "@/hooks/useUnlinkedBookmakerNames";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
@@ -84,6 +84,7 @@ import { ExportMenu, transformApostaToExport } from "./ExportMenu";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
 // FinancialSummaryCompact removed — now integrated into Lucro KPI popover
 import { useCalendarApostasRpc, transformRpcDailyForCharts } from "@/hooks/useCalendarApostasRpc";
+import { aggregateBookmakerUsage } from "@/utils/bookmakerUsageAnalytics";
 
 interface ProjetoValueBetTabProps {
   projetoId: string;
@@ -698,100 +699,19 @@ export function ProjetoValueBetTab({
       .map(([moeda, valor]) => ({ moeda, valor }))
       .filter(item => Math.abs(item.valor) > 0.01);
 
-    const porCasa: Record<string, { stake: number; lucro: number; count: number }> = {};
-    apostasParaKpi.forEach(a => {
-      const casa = a.bookmaker_nome || "Desconhecida";
-      if (!porCasa[casa]) porCasa[casa] = { stake: 0, lucro: 0, count: 0 };
-      porCasa[casa].stake += getConsolidatedStake(a, convertToConsolidation, moedaConsolidacao);
-      porCasa[casa].lucro += getConsolidatedLucro(a, convertToConsolidation, moedaConsolidacao);
-      porCasa[casa].count++;
-    });
-
-    return { total, totalStake, lucroTotal, pendentes, greens, reds, taxaAcerto, roi, porCasa, currencyBreakdown, lucroPorMoeda };
+    return { total, totalStake, lucroTotal, pendentes, greens, reds, taxaAcerto, roi, currencyBreakdown, lucroPorMoeda };
   }, [apostasParaKpi, convertToConsolidationFn, moedaConsolidacaoVal]);
 
-  // casaData agregado por CASA (não por vínculo) - Padrão unificado
+  // casaData agregado por CASA (não por vínculo) - fonte canônica unificada
   const casaData = useMemo((): CasaAgregada[] => {
-    const casaMap = new Map<string, {
-      apostas: number;
-      volume: number;
-      volumeLiquidado: number;
-      lucro: number;
-      vinculos: Map<string, { apostas: number; volume: number; volumeLiquidado: number; lucro: number }>;
-    }>();
-
-    const extractCasaVinculo = (bookmakerNome: string, operadorNome?: string, instanceIdentifier?: string | null) => {
-      const separatorIdx = bookmakerNome.indexOf(" - ");
-      if (separatorIdx > 0) {
-        const vinculoRaw = bookmakerNome.substring(separatorIdx + 3).trim();
-        return {
-          casa: bookmakerNome.substring(0, separatorIdx).trim(),
-          vinculo: getFirstLastName(vinculoRaw)
-        };
-      }
-      const vinculo = instanceIdentifier?.trim() || (operadorNome ? getFirstLastName(operadorNome) : null);
-      return { 
-        casa: bookmakerNome, 
-        vinculo: vinculo || "Sem vínculo" 
-      };
-    };
-
-    const isResolved = (resultado: string | null | undefined) => 
-      !!resultado && resultado !== "PENDENTE";
-
-    const processEntry = (bookmakerNome: string, operadorNome: string | undefined, instanceIdentifier: string | null | undefined, stake: number, lucro: number, resolved: boolean) => {
-      const { casa, vinculo } = extractCasaVinculo(bookmakerNome, operadorNome, instanceIdentifier);
-
-      if (!casaMap.has(casa)) {
-        casaMap.set(casa, { apostas: 0, volume: 0, volumeLiquidado: 0, lucro: 0, vinculos: new Map() });
-      }
-      const casaEntry = casaMap.get(casa)!;
-      casaEntry.apostas += 1;
-      casaEntry.volume += stake;
-      if (resolved) casaEntry.volumeLiquidado += stake;
-      casaEntry.lucro += lucro;
-
-      if (!casaEntry.vinculos.has(vinculo)) {
-        casaEntry.vinculos.set(vinculo, { apostas: 0, volume: 0, volumeLiquidado: 0, lucro: 0 });
-      }
-      const vinculoEntry = casaEntry.vinculos.get(vinculo)!;
-      vinculoEntry.apostas += 1;
-      vinculoEntry.volume += stake;
-      if (resolved) vinculoEntry.volumeLiquidado += stake;
-      vinculoEntry.lucro += lucro;
-    };
-
-    apostasParaKpi.forEach((a) => {
-      const bookmakerNome = a.bookmaker_nome || "Desconhecida";
-      const stake = getConsolidatedStake(a, convertToConsolidationFn, moedaConsolidacaoVal);
-      const lucro = getConsolidatedLucro(a, convertToConsolidationFn, moedaConsolidacaoVal);
-      const resolved = isResolved(a.resultado);
-      processEntry(bookmakerNome, a.operador_nome, a.instance_identifier, stake, lucro, resolved);
-    });
-
-    return Array.from(casaMap.entries())
-      .map(([casa, data]) => {
-        const roi = data.volumeLiquidado > 0 ? (data.lucro / data.volumeLiquidado) * 100 : 0;
-        return {
-          casa,
-          apostas: data.apostas,
-          volume: data.volume,
-          lucro: data.lucro,
-          roi,
-          vinculos: Array.from(data.vinculos.entries())
-            .map(([vinculo, v]) => ({
-              vinculo,
-              apostas: v.apostas,
-              volume: v.volume,
-              lucro: v.lucro,
-              roi: v.volumeLiquidado > 0 ? (v.lucro / v.volumeLiquidado) * 100 : 0,
-            }))
-            .sort((a, b) => b.volume - a.volume),
-        };
-      })
+    return aggregateBookmakerUsage(apostasParaKpi, {
+      moedaConsolidacao: moedaConsolidacaoVal,
+      convertToConsolidation: convertToConsolidationFn,
+    })
+      .map(({ casa, apostas, volume, lucro, roi, vinculos }) => ({ casa, apostas, volume, lucro, roi, vinculos }))
       .sort((a, b) => b.volume - a.volume)
       .slice(0, 8);
-  }, [apostasParaKpi, convertToConsolidationOficialFn, moedaConsolidacaoVal]);
+  }, [apostasParaKpi, convertToConsolidationFn, moedaConsolidacaoVal]);
 
   // Mapa de logos combinando catálogo global + bookmakers do projeto
   const logoMap = useMemo(() => {
