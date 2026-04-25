@@ -374,15 +374,15 @@ function CasasMaisUtilizadasCard({ casas, casasGlobal, accentColor, logoMap, for
 
   if (topCasas.length === 0) {
     return (
-      <Card className="h-full">
-        <CardHeader className="pb-2">
+      <Card className="h-full overflow-hidden">
+        <CardHeader className="p-4 pb-2 sm:p-6 sm:pb-2">
           <div className="flex items-center gap-2">
             <Building2 className="h-4 w-4" style={{ color: accentColor }} />
             <CardTitle className="text-sm font-medium">Casas Mais Utilizadas</CardTitle>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center h-[200px] text-sm text-muted-foreground">
+        <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+          <div className="flex items-center justify-center h-[160px] sm:h-[200px] text-sm text-muted-foreground">
             Nenhuma casa registrada
           </div>
         </CardContent>
@@ -394,8 +394,8 @@ function CasasMaisUtilizadasCard({ casas, casasGlobal, accentColor, logoMap, for
 
   return (
     <>
-      <Card>
-        <CardHeader className="pb-3">
+      <Card className="overflow-hidden">
+        <CardHeader className="p-4 pb-3 sm:p-6 sm:pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Building2 className="h-4 w-4" style={{ color: accentColor }} />
@@ -418,9 +418,9 @@ function CasasMaisUtilizadasCard({ casas, casasGlobal, accentColor, logoMap, for
             Por volume apostado {scope === "global" && "(Todos os projetos)"}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-2.5">
+        <CardContent className="space-y-2.5 p-4 pt-0 sm:p-6 sm:pt-0">
           {/* Header row */}
-          <div className="grid grid-cols-[72px_40px_1fr_56px] gap-x-3 items-center text-[11px] text-muted-foreground border-b pb-2 uppercase tracking-wide">
+          <div className="grid grid-cols-[56px_32px_minmax(76px,1fr)_48px] sm:grid-cols-[72px_40px_1fr_56px] gap-x-2 sm:gap-x-3 items-center text-[10px] sm:text-[11px] text-muted-foreground border-b pb-2 uppercase tracking-wide">
             <span className="text-center">Casa</span>
             <span className="text-center">Qtd</span>
             <span className="text-right">Volume</span>
@@ -439,7 +439,7 @@ function CasasMaisUtilizadasCard({ casas, casasGlobal, accentColor, logoMap, for
                 className={`space-y-1.5 ${canOpenDetails ? 'cursor-pointer hover:bg-muted/30 rounded-md p-1 -m-1 transition-colors' : 'cursor-default'}`}
                 onClick={() => canOpenDetails && setSelectedCasa(casa)}
               >
-                <div className="grid grid-cols-[72px_40px_1fr_56px] gap-x-3 items-center">
+                <div className="grid grid-cols-[56px_32px_minmax(76px,1fr)_48px] sm:grid-cols-[72px_40px_1fr_56px] gap-x-2 sm:gap-x-3 items-center">
                   <div className="flex flex-col items-center gap-1">
                     <div className="w-9 h-9 rounded-md bg-muted/50 flex items-center justify-center overflow-hidden shrink-0">
                       {logoUrl ? (
