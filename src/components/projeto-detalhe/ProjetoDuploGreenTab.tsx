@@ -699,7 +699,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
 
   // === DUPLICAR ===
   const handleDuplicateAposta = useCallback((apostaId: string) => {
-    const url = `/janela/aposta/novo?projetoId=${encodeURIComponent(projetoId)}&tab=duplogreen&duplicateFrom=${apostaId}`;
+    const url = `/janela/aposta/novo?projetoId=${encodeURIComponent(projetoId)}&tab=duplogreen&estrategia=DUPLO_GREEN&duplicateFrom=${apostaId}`;
     window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
   }, [projetoId]);
 

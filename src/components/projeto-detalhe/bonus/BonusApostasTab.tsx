@@ -868,7 +868,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
 
   // === DUPLICAR ===
   const handleDuplicateSimples = useCallback((apostaId: string) => {
-    const url = `/janela/aposta/novo?projetoId=${encodeURIComponent(projetoId)}&tab=bonus&duplicateFrom=${apostaId}`;
+    const url = `/janela/aposta/novo?projetoId=${encodeURIComponent(projetoId)}&tab=bonus&estrategia=EXTRACAO_BONUS&duplicateFrom=${apostaId}`;
     window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
   }, [projetoId]);
 

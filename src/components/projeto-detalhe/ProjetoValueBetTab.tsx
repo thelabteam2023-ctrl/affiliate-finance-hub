@@ -516,7 +516,7 @@ export function ProjetoValueBetTab({
 
   // === DUPLICAR APOSTAS ===
   const handleDuplicateSimples = useCallback((apostaId: string) => {
-    const url = `/janela/aposta/novo?projetoId=${encodeURIComponent(projetoId)}&tab=valuebet&duplicateFrom=${apostaId}`;
+    const url = `/janela/aposta/novo?projetoId=${encodeURIComponent(projetoId)}&tab=valuebet&estrategia=VALUEBET&duplicateFrom=${apostaId}`;
     window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
   }, [projetoId]);
 
