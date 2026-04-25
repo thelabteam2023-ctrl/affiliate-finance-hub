@@ -1448,6 +1448,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
               if (isSimples) {
                 // Converter para formato ApostaCardData
                 const bookmakerBase = operacao.bookmaker_nome?.split(" - ")[0] || operacao.bookmaker_nome;
+                const estrategiaOperacao = (operacao.estrategia || "PUNTER") as EstrategiaType;
                 const apostaData: ApostaCardData = {
                   id: operacao.id,
                   evento: operacao.evento,
@@ -1461,7 +1462,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                   resultado: operacao.resultado,
                   status: operacao.status,
                   lucro_prejuizo: operacao.lucro_real,
-                  estrategia: "SUREBET",
+                  estrategia: operacao.estrategia || "PUNTER",
                   bookmaker_nome: operacao.bookmaker_nome,
                   parceiro_nome: operacao.parceiro_nome,
                    logo_url: getLogoUrl(bookmakerBase || ""),
@@ -1474,7 +1475,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                   <ApostaCard
                     key={operacao.id}
                     aposta={apostaData}
-                    estrategia="SUREBET"
+                    estrategia={estrategiaOperacao}
                     variant={viewMode === "cards" ? "card" : "list"}
                     onEdit={() => {
                       // Converter para formato esperado pelo ApostaDialog
