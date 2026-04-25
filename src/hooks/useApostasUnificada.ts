@@ -213,7 +213,7 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
     } finally {
       setLoading(false);
     }
-  }, [getSnapshotFields, isForeignCurrency]);
+  }, [getSnapshotFields, getRate, isForeignCurrency, workspaceId]);
 
   // Atualizar operação existente
   const atualizarArbitragem = useCallback(async (params: AtualizarArbitragemParams): Promise<boolean> => {
