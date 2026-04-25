@@ -1283,7 +1283,7 @@ export function ProjetoPunterTab({
                   onSimpleMenuQuickResolve={handleQuickResolve}
                    onPernaResultChange={handleSurebetPernaResolve}
                    onDelete={handleDeleteAposta}
-                   onDuplicate={handleDuplicateSurebet}
+                   onDuplicate={handleDuplicateSimples}
                    formatCurrency={formatCurrency}
                    convertToConsolidation={convertToConsolidationOficialFn}
                    moedaConsolidacao={moedaConsolidacaoVal}

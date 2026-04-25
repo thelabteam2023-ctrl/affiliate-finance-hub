@@ -1350,7 +1350,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                   onPernaResultChange={handleSurebetPernaResolve}
                   onSimpleQuickResolve={handleQuickResolve}
                    onDelete={handleDeleteSurebet}
-                   onDuplicate={handleDuplicateAposta}
+                   onDuplicate={handleDuplicateSurebet}
                   formatCurrency={formatCurrency}
                   convertToConsolidation={convertFnOficial}
                   bookmakerNomeMap={bookmakerNomeMap}
@@ -1411,7 +1411,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                         onPernaResultChange={handleSurebetPernaResolve}
                         onSimpleQuickResolve={handleQuickResolve}
                          onDelete={handleDeleteAposta}
-                         onDuplicate={handleDuplicateSurebet}
+                         onDuplicate={handleDuplicateAposta}
                         formatCurrency={formatCurrency}
                         convertToConsolidation={convertFnOficial}
                         bookmakerNomeMap={bookmakerNomeMap}

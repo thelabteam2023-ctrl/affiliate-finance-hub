@@ -1128,7 +1128,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
               onSimpleMenuQuickResolve={handleQuickResolve}
               onPernaResultChange={handleSurebetPernaResolve}
                onDelete={handleDeleteSurebet}
-               onDuplicate={handleDuplicateSimples}
+               onDuplicate={handleDuplicateSurebet}
             />
           );
         }
@@ -1188,7 +1188,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
                 onSimpleMenuQuickResolve={handleQuickResolve}
                 onPernaResultChange={handleSurebetPernaResolve}
                  onDelete={handleDeleteAposta}
-                 onDuplicate={handleDuplicateSurebet}
+                 onDuplicate={handleDuplicateSimples}
                 formatCurrency={formatProjectCurrency}
                 convertToConsolidation={convertToConsolidation}
                 moedaConsolidacao={moedaConsolidacao}
