@@ -261,13 +261,13 @@ export function StandardTimeFilter({
   const selectedCycle = projectCycles.find(c => c.id === activeCycleId);
 
   return (
-    <div className={cn("flex flex-wrap items-center gap-2", className)}>
+    <div className={cn("flex max-w-full flex-wrap items-center gap-2 overflow-hidden", className)}>
       {/* Period Toggle */}
       <ToggleGroup
         type="single"
         value={period === "custom" || activeCycleId !== "none" ? undefined : period}
         onValueChange={handlePeriodChange}
-        className="bg-muted/50 p-0.5 rounded-lg"
+        className="grid w-full grid-cols-5 bg-muted/50 p-0.5 rounded-lg sm:flex sm:w-auto"
       >
         {PERIOD_OPTIONS.map((option) => (
           <ToggleGroupItem
@@ -275,7 +275,7 @@ export function StandardTimeFilter({
             value={option.value}
             size="sm"
             className={cn(
-              "text-xs px-3 h-7 data-[state=on]:bg-card data-[state=on]:text-foreground data-[state=on]:shadow-sm data-[state=on]:border data-[state=on]:border-border",
+              "h-7 min-w-0 px-1.5 text-[11px] leading-tight sm:px-3 sm:text-xs data-[state=on]:bg-card data-[state=on]:text-foreground data-[state=on]:shadow-sm data-[state=on]:border data-[state=on]:border-border",
               period === option.value && activeCycleId === "none" && "bg-card text-foreground shadow-sm border border-border"
             )}
           >
@@ -291,7 +291,7 @@ export function StandardTimeFilter({
             variant={period === "custom" && activeCycleId === "none" ? "default" : "outline"}
             size="sm"
             className={cn(
-              "h-7 text-xs gap-1.5",
+              "h-7 text-xs gap-1.5 shrink-0",
               period === "custom" && activeCycleId === "none" && "bg-primary text-primary-foreground"
             )}
           >
@@ -371,7 +371,7 @@ export function StandardTimeFilter({
       {showCycleSelector && (
         <>
           <Select value={activeCycleId} onValueChange={handleCycleSelect}>
-            <SelectTrigger className="w-[170px] h-7 text-xs">
+            <SelectTrigger className="h-7 w-[calc(100vw-7rem)] max-w-[190px] sm:w-[170px] text-xs">
               <SelectValue placeholder="Filtrar por ciclo" />
             </SelectTrigger>
             <SelectContent>

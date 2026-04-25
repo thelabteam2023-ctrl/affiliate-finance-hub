@@ -202,16 +202,16 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
   // Inline trigger for compact variant
   const compactTrigger = (
     <div
-      className="px-3 py-1.5 rounded-md bg-primary/10 border border-primary/20 flex flex-col items-center justify-center text-center cursor-pointer group"
+      className="h-full min-h-12 px-3 py-1.5 rounded-md bg-primary/10 border border-primary/20 flex flex-col items-center justify-center text-center cursor-pointer group"
       onClick={openPanel}
     >
-      <div className="flex items-center justify-center gap-2">
-        <Wallet className="h-4 w-4 text-primary" />
-        <span className="text-sm font-medium font-bold text-primary">
+      <div className="flex min-w-0 max-w-full items-center justify-center gap-1.5 sm:gap-2">
+        <Wallet className="h-4 w-4 text-primary shrink-0" />
+        <span className="min-w-0 truncate text-sm font-bold text-primary tabular-nums">
           {formatCurrency(saldoAtualTotal)}
         </span>
         {hasCasas && (
-          <ChevronDown className="h-3 w-3 text-muted-foreground transition-transform group-hover:text-primary" />
+          <ChevronDown className="h-3 w-3 text-muted-foreground transition-transform group-hover:text-primary shrink-0" />
         )}
       </div>
     </div>

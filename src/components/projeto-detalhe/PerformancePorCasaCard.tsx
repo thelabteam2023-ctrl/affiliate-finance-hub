@@ -444,20 +444,20 @@ export function PerformancePorCasaCard({
   }, [view]);
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
+    <Card className="overflow-hidden">
+      <CardHeader className="p-4 pb-3 sm:p-6 sm:pb-3">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
             <CardTitle>Performance</CardTitle>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 overflow-hidden">
             <ToggleGroup
               type="single"
               value={view}
               onValueChange={(v) => v && setView(v as PerformanceView)}
-              className="bg-muted/30 p-0.5 rounded-lg"
+              className="grid w-full grid-cols-3 bg-muted/30 p-0.5 rounded-lg sm:flex sm:w-auto"
             >
               {(Object.keys(VIEW_LABELS) as PerformanceView[]).map((v) => (
                 <TooltipProvider key={v} delayDuration={300}>
@@ -465,12 +465,12 @@ export function PerformancePorCasaCard({
                     <TooltipTrigger asChild>
                       <ToggleGroupItem
                         value={v}
-                        className="text-xs px-3 py-1.5 data-[state=on]:bg-background data-[state=on]:shadow-sm rounded-md transition-all"
+                        className="min-w-0 px-1.5 py-1.5 text-[11px] sm:text-xs sm:px-3 data-[state=on]:bg-background data-[state=on]:shadow-sm rounded-md transition-all"
                       >
-                        {v === "estrategia" && <Layers className="h-3.5 w-3.5 mr-1.5" />}
-                        {v === "casa_consolidada" && <Building2 className="h-3.5 w-3.5 mr-1.5" />}
-                        {v === "casa_parceiro" && <Users className="h-3.5 w-3.5 mr-1.5" />}
-                        {VIEW_LABELS[v].label}
+                        {v === "estrategia" && <Layers className="h-3.5 w-3.5 shrink-0 sm:mr-1.5" />}
+                        {v === "casa_consolidada" && <Building2 className="h-3.5 w-3.5 shrink-0 sm:mr-1.5" />}
+                        {v === "casa_parceiro" && <Users className="h-3.5 w-3.5 shrink-0 sm:mr-1.5" />}
+                        <span className="truncate">{VIEW_LABELS[v].label}</span>
                       </ToggleGroupItem>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="max-w-[260px]">
@@ -486,7 +486,7 @@ export function PerformancePorCasaCard({
       <CardContent className="px-0">
         <ScrollArea className="h-[280px]">
           {/* Header */}
-          <div className="grid grid-cols-5 gap-2 px-6 pb-2 text-xs text-muted-foreground font-medium border-b border-border/50">
+          <div className="hidden sm:grid grid-cols-5 gap-2 px-6 pb-2 text-xs text-muted-foreground font-medium border-b border-border/50">
             <div className="col-span-1">{headerLabels.col1}</div>
             <div className="text-right">{headerLabels.count}</div>
             <div className="text-right">Volume</div>
@@ -509,9 +509,9 @@ export function PerformancePorCasaCard({
                 return (
                   <div
                     key={item.key}
-                    className="grid grid-cols-5 gap-2 px-6 py-3 hover:bg-muted/30 transition-colors"
+                    className="grid grid-cols-2 sm:grid-cols-5 gap-x-3 gap-y-2 px-4 sm:px-6 py-3 hover:bg-muted/30 transition-colors"
                   >
-                    <div className="col-span-1 flex items-center gap-2">
+                    <div className="col-span-2 sm:col-span-1 flex items-center gap-2 min-w-0">
                       {view !== "estrategia" && displayLogo ? (
                         <img
                           src={displayLogo}
@@ -536,7 +536,8 @@ export function PerformancePorCasaCard({
                         )}
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-left sm:text-right">
+                      <p className="text-[10px] text-muted-foreground sm:hidden">{headerLabels.count}</p>
                       <p className="text-sm font-mono">{item.totalOperacoes}</p>
                       <p className="text-xs text-muted-foreground">
                         {(item.greens > 0 || item.reds > 0 || item.voids > 0) 
@@ -545,9 +546,11 @@ export function PerformancePorCasaCard({
                       </p>
                     </div>
                     <div className="text-right">
+                      <p className="text-[10px] text-muted-foreground sm:hidden">Volume</p>
                       <p className="text-sm font-mono">{item.totalStake > 0 ? formatCurrency(item.totalStake) : '–'}</p>
                     </div>
-                    <div className="text-right flex items-center justify-end gap-1">
+                    <div className="text-left sm:text-right flex flex-col sm:flex-row sm:items-center sm:justify-end gap-1">
+                      <p className="text-[10px] text-muted-foreground sm:hidden">Lucro</p>
                       <p
                         className={`text-sm font-mono font-medium ${
                           item.lucro >= 0 ? "text-emerald-400" : "text-red-400"
@@ -563,6 +566,7 @@ export function PerformancePorCasaCard({
                       )}
                     </div>
                     <div className="text-right">
+                      <p className="text-[10px] text-muted-foreground sm:hidden">ROI</p>
                       <p
                         className={`text-sm font-mono font-medium ${
                           item.roi >= 0 ? "text-emerald-400" : "text-red-400"
