@@ -330,6 +330,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           .select(selectFields)
           .eq("projeto_id", projetoId)
           .eq("estrategia", "SUREBET")
+          .eq("forma_registro", "ARBITRAGEM")
           .is("cancelled_at", null)
           .order("data_aposta", { ascending: false });
         if (dateFilters.startUTC) q = q.gte("data_aposta", dateFilters.startUTC);
@@ -346,6 +347,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
             .select(selectFields)
             .eq("projeto_id", projetoId)
             .eq("estrategia", "SUREBET")
+            .eq("forma_registro", "ARBITRAGEM")
             .eq("status", "PENDENTE")
             .is("cancelled_at", null)
             .order("data_aposta", { ascending: false })
@@ -449,6 +451,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
   const { count: openOperationsCount } = useOpenOperationsCount({
     projetoId,
     estrategia: APOSTA_ESTRATEGIA.SUREBET,
+    formaRegistro: "ARBITRAGEM",
     refreshTrigger,
   });
 
