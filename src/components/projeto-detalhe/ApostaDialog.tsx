@@ -54,7 +54,7 @@ import { liquidarAposta, reverterLiquidacao } from "@/lib/financialEngine";
 import { estornarFreebetViaLedger, creditarFreebetViaLedger, consumirFreebetViaLedger } from "@/lib/freebetLedgerService";
 import { RegistroApostaValues, validateRegistroAposta, getSuggestionsForTab } from "./RegistroApostaFields";
 import { BetFormHeaderV2 } from "@/components/apostas/BetFormHeaderV2";
-import { FORMA_REGISTRO, APOSTA_ESTRATEGIA, CONTEXTO_OPERACIONAL, FONTE_SALDO, isAbaEstrategiaFixa, getEstrategiaFromTab, getContextoFromTab, isAbaContextoFixo, type FormaRegistro, type ApostaEstrategia, type ContextoOperacional, type FonteSaldo } from "@/lib/apostaConstants";
+import { FONTE_SALDO, getContextoFromTab, isAbaContextoFixo, type FormaRegistro, type ApostaEstrategia, type ContextoOperacional, type FonteSaldo } from "@/lib/apostaConstants";
 import { useFonteSaldoDefault } from "@/components/apostas/FonteSaldoSelector";
 import { toLocalTimestamp, validarDataAposta, dbTimestampToDatetimeLocal } from "@/utils/dateUtils";
 import { 
@@ -67,7 +67,6 @@ import {
 } from "@/components/bookmakers/BookmakerSelectOption";
 import { BookmakerSearchableSelectContent } from "@/components/bookmakers/BookmakerSearchableSelectContent";
 import { reliquidarAposta, deletarAposta } from "@/services/aposta";
-import { criarAposta } from "@/services/aposta";
 // MOTOR FINANCEIRO v9.5: updateBookmakerBalance REMOVIDO - saldos são atualizados exclusivamente via trigger
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { GerouFreebetInput } from "./GerouFreebetInput";
