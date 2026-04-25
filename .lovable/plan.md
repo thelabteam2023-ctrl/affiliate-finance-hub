@@ -1,27 +1,62 @@
-Plano para ajustar o formulário de Aposta Simples com múltiplas entradas:
+Plano para corrigir a necessidade de F5 após salvar aposta simples, valendo também para Bônus e demais abas financeiras.
 
-1. Formulário: remover a coluna/campo “Linha” das entradas adicionais
-- No modo “Bookmaker” da Aposta Simples, quando o usuário clicar em “+ Entrada”, as novas entradas não terão mais um campo separado de Linha.
-- A Linha continuará sendo definida apenas uma vez, na entrada principal.
-- Todas as entradas adicionais usarão automaticamente a mesma Linha/seleção da entrada principal.
-- O cabeçalho/tabela será reajustado para ficar mais limpo: Bookmaker, Odd, Stake, Retorno e ação de remover.
+## Diagnóstico
+O fluxo atual já invalida saldos e alguns KPIs, mas não cobre de forma centralizada as queries operacionais montadas nas abas, especialmente:
+- `surebets-tab`, usada pela aba Operações/Surebet e também por apostas simples nesse contexto.
+- queries de Bônus e análises associadas.
+- `central-operacoes-data`, usada pela Central de Operações.
+- algumas chaves com parâmetros adicionais de período/filtro, que precisam ser invalidadas por prefixo.
 
-2. Persistência correta nas pernas
-- Ao salvar/criar uma aposta simples multi-entry, cada registro em `apostas_pernas` receberá a mesma `selecao` da entrada principal.
-- `selecao_livre` das entradas adicionais deixará de ser preenchido individualmente; será `null` ou herdará visualmente a seleção principal, evitando divergência entre casas.
-- Ao editar/duplicar apostas antigas que tenham `selecao_livre` diferente nas subentradas, a tela passará a tratá-las como uma única linha compartilhada pela aposta.
+Por isso a mutação é salva no banco, mas a tela ativa pode continuar mostrando dados antigos até o F5.
 
-3. Card de operações
-- No `SurebetCard`, usado para renderizar aposta simples multi-entry, as subentradas deixarão de exibir uma linha individual entre parênteses.
-- O card mostrará a Linha/Mercado uma única vez no agrupamento da perna, e as casas dentro do agrupamento mostrarão apenas bookmaker, odd, stake, moeda/freebet e resultado quando aplicável.
-- Isso mantém o comportamento correto: várias casas compondo a mesma perna, com o mesmo mercado e a mesma linha.
+## Implementação proposta
 
-4. Validação visual e regressão
-- Conferir que apostas simples single-entry continuam iguais.
-- Conferir que surebets/múltiplas reais continuam exibindo pernas distintas normalmente.
-- Conferir que liquidação rápida e resultado global de multi-entry simples continuam funcionando, pois a alteração é de modelagem visual/persistência da seleção, não de cálculo financeiro.
+1. **Ampliar a invalidação canônica**
+   - Atualizar `invalidateCanonicalCaches` para incluir as listas operacionais e módulos financeiros:
+     - `surebets-tab`
+     - `apostas`
+     - `bonus`, `bonus-bets-summary`, `bonus-analytics`, `bonus-bets-juice`
+     - `giros-gratis`, `giros-disponiveis`
+     - `cashback-manual`
+     - `central-operacoes-data`
+     - saldos/vínculos relacionados quando aplicável
+   - Usar invalidação por prefixo quando a query possui filtros extras, como período/data.
 
-Arquivos previstos:
-- `src/components/projeto-detalhe/ApostaDialog.tsx`
-- `src/components/projeto-detalhe/SurebetCard.tsx`
-- Possível ajuste auxiliar em `src/utils/groupPernasBySelecao.ts`, se necessário para garantir agrupamento consistente por linha principal.
+2. **Unificar o hook pós-mutação**
+   - Expandir `useInvalidateProjectQueries`/`useInvalidateAfterMutation` para que qualquer ação financeira dispare:
+     - KPIs canônicos.
+     - saldos de bookmakers.
+     - calendário/evolução de lucro.
+     - lista da aba ativa.
+     - Central de Operações.
+     - módulos promocionais, incluindo Bônus.
+
+3. **Corrigir o fluxo do `ApostaDialog`**
+   - Após salvar, editar ou excluir aposta simples, aguardar a invalidação completa antes de fechar/retornar sucesso.
+   - Trocar chamadas parciais (`invalidateSaldos` + `invalidateCanonicalCaches`) pelo fluxo unificado.
+   - Manter as regras atuais de ledger/RPC intactas, sem mexer em saldo diretamente.
+
+4. **Reforçar a aba `ProjetoSurebetTab`**
+   - Ajustar `handleDataChange` para invalidar a query `surebets-tab` antes de chamar `refetchSurebets()`.
+   - Garantir que operações simples, surebets e múltiplas entradas reapareçam/atualizem automaticamente sem F5.
+
+5. **Cobrir a aba Bônus**
+   - Garantir que criação, edição, vínculo/liquidação e ações de bônus invalidem os caches de bônus e também os caches globais que dependem deles:
+     - saldos
+     - lucro operacional
+     - evolução/calendário
+     - central de operações
+     - cards/analytics de bônus
+
+6. **Validação**
+   - Rodar verificação TypeScript.
+   - Conferir que a mudança é apenas de sincronização/cache, sem alteração em fórmulas financeiras, RPCs, ledger, saldo físico ou regras de conversão.
+
+## Resultado esperado
+Depois de salvar uma aposta simples, uma operação de bônus ou qualquer mutação financeira, a interface deve atualizar automaticamente em menos de 1 segundo, sem precisar usar F5, incluindo:
+- aba Operações/Surebet;
+- aba Bônus;
+- Vínculos/saldos;
+- KPIs da Visão Geral;
+- calendário/evolução de lucro;
+- Central de Operações.
