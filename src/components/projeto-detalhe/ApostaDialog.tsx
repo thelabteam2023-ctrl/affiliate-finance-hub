@@ -67,6 +67,7 @@ import {
 } from "@/components/bookmakers/BookmakerSelectOption";
 import { BookmakerSearchableSelectContent } from "@/components/bookmakers/BookmakerSearchableSelectContent";
 import { reliquidarAposta, deletarAposta } from "@/services/aposta";
+import { criarAposta } from "@/services/aposta";
 // MOTOR FINANCEIRO v9.5: updateBookmakerBalance REMOVIDO - saldos são atualizados exclusivamente via trigger
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { GerouFreebetInput } from "./GerouFreebetInput";
@@ -2777,6 +2778,72 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           }
         }
         // ========== FIM VALIDAÇÃO PRÉ-COMMIT ==========
+
+        const shouldUseSurebetAtomicEngine =
+          tipoAposta === "bookmaker" &&
+          additionalEntries.length > 0 &&
+          registroValues.estrategia === "SUREBET";
+
+        if (shouldUseSurebetAtomicEngine && statusResultado !== "PENDENTE") {
+          toast.error("Salve a surebet primeiro e liquide pelas pernas para manter o saldo correto.");
+          setLoading(false);
+          return;
+        }
+
+        if (shouldUseSurebetAtomicEngine) {
+          const pernas = [
+            {
+              bookmaker_id: bookmakerId,
+              bookmaker_nome: selectedBookmaker?.nome,
+              moeda: moedaOperacao,
+              selecao: effectiveSelecao || 'N/A',
+              selecao_livre: null,
+              odd: parseFloat(odd),
+              stake: stakeBookmakerEfetiva,
+              fonte_saldo: usarFreebetBookmaker ? 'FREEBET' : 'REAL',
+            },
+            ...additionalEntries
+              .filter(e => e.bookmaker_id && parseFloat(e.odd) > 0 && ((parseFloat(e.stake) || 0) + (e.usar_freebet ? (parseFloat(e.valor_freebet) || 0) : 0)) > 0)
+              .map(e => {
+                const entryBk = bookmakers.find(b => b.id === e.bookmaker_id);
+                return {
+                  bookmaker_id: e.bookmaker_id,
+                  bookmaker_nome: entryBk?.nome,
+                  moeda: entryBk?.moeda || moedaOperacao,
+                  selecao: effectiveSelecao || 'N/A',
+                  selecao_livre: null,
+                  odd: parseFloat(e.odd),
+                  stake: (parseFloat(e.stake) || 0) + (e.usar_freebet ? (parseFloat(e.valor_freebet) || 0) : 0),
+                  fonte_saldo: e.usar_freebet ? 'FREEBET' : 'REAL',
+                };
+              })
+          ];
+
+          const result = await criarAposta({
+            user_id: userData.user.id,
+            workspace_id: workspaceId,
+            projeto_id: projetoId,
+            data_aposta: toLocalTimestamp(dataAposta),
+            evento,
+            esporte,
+            mercado: mercado || null,
+            observacoes: observacoes || null,
+            estrategia: 'SUREBET' as any,
+            forma_registro: 'ARBITRAGEM' as any,
+            contexto_operacional: registroValues.contexto_operacional || 'NORMAL',
+            modelo: 'multi_entry_simple',
+            pernas: pernas as any,
+          });
+
+          if (!result.success) {
+            throw new Error(result.error?.message || 'Falha ao criar surebet pelo motor atômico');
+          }
+
+          await invalidateAfterMutation(projetoId);
+          onSuccess('save');
+          if (!embedded) onOpenChange(false);
+          return;
+        }
 
         // Insert - capturar o ID da aposta inserida
         const { data: insertedData, error } = await supabase
