@@ -26,6 +26,8 @@ import { SupportedCurrency } from "@/types/currency";
 import { useCurrencySnapshot } from "./useCurrencySnapshot";
 import { useWorkspace } from "./useWorkspace";
 import { liquidarAposta as liquidarApostaService, reliquidarAposta as reliquidarApostaService } from "@/services/aposta/ApostaService";
+import { useCotacoes } from "./useCotacoes";
+import { resolveEffectiveProjectRate } from "./useProjetoWorkingRates";
 
 export interface UseApostasUnificadaReturn {
   loading: boolean;
@@ -45,6 +47,7 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
   const [loading, setLoading] = useState(false);
   const { workspaceId } = useWorkspace();
   const { getSnapshotFields, isForeignCurrency } = useCurrencySnapshot();
+  const { getRate } = useCotacoes();
 
   // Buscar operações de arbitragem de um projeto
   const fetchArbitragens = useCallback(async (
