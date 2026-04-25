@@ -82,7 +82,9 @@ export async function criarAposta(
   // ================================================================
   // ETAPA 2: PREPARAR DADOS
   // ================================================================
-  const isArbitragem = input.forma_registro === 'ARBITRAGEM';
+  const isSurebet = input.estrategia === 'SUREBET';
+  const isMultiPernaSurebet = isSurebet && (input.pernas?.length || 0) >= 2;
+  const isArbitragem = input.forma_registro === 'ARBITRAGEM' || isMultiPernaSurebet;
 
   // ARBITRAGEM/SUREBET deve nascer pelo motor atômico do banco, que cria pai,
   // pernas e eventos STAKE no ledger na mesma transação. Inserção direta aqui
