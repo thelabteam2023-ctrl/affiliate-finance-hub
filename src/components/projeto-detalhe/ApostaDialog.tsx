@@ -1,6 +1,4 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { invalidateCanonicalCaches } from "@/lib/invalidateCanonicalCaches";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
@@ -452,7 +450,6 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   });
   const invalidateSaldos = useInvalidateBookmakerSaldos();
   const invalidateAfterMutation = useInvalidateAfterMutation();
-  const queryClient = useQueryClient();
   
   // Hook para validação pré-commit (anti-concorrência)
   const { validateAndReserve, showValidationErrors, validating } = usePreCommitValidation();
