@@ -51,6 +51,11 @@ function detectarMoeda(pernas: PernaInput[]): string {
 export async function criarAposta(
   input: CriarApostaInput
 ): Promise<ApostaServiceResult<{ id: string }>> {
+  if (input.estrategia === 'SUREBET' && input.forma_registro === 'SIMPLES') {
+    input = { ...input, estrategia: 'PUNTER' as any };
+    console.warn('[ApostaService] Normalizando SIMPLES+SUREBET para SIMPLES+PUNTER');
+  }
+
   console.log("[ApostaService] Iniciando criação de aposta", {
     forma_registro: input.forma_registro,
     estrategia: input.estrategia,
