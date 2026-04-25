@@ -71,6 +71,7 @@ export interface SurebetPerna {
 export interface SurebetData {
   id: string;
   workspace_id?: string;
+  forma_registro?: string | null;
   data_operacao: string;
   evento: string;
   esporte: string;
@@ -507,7 +508,8 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
   );
   const hasMultipleDistinctSelecoes = selecoesUnicas.size >= 2;
 
-  const couldBeSimples = isPunter || isDuploGreen || isFreebetStrat || isSimples
+  const isRegistroSimples = surebet.forma_registro === "SIMPLES";
+  const couldBeSimples = isRegistroSimples || isPunter || isDuploGreen || isFreebetStrat || isSimples
     || surebet.estrategia === "VALUEBET" || surebet.estrategia === "EXTRACAO_BONUS";
   const isSimplesMultiEntry = couldBeSimples && !hasMultipleDistinctSelecoes;
   
@@ -797,13 +799,13 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
                 onEdit={() => onEdit?.(surebet)}
                 onDuplicate={onDuplicate ? () => onDuplicate(surebet.id) : undefined}
                 onQuickResolve={(result) => {
-                  if (isSimplesMultiEntry && onSimpleMenuQuickResolve) {
+                  if (isSimplesMultiEntry && (onSimpleMenuQuickResolve || onSimpleQuickResolve)) {
                     const resultadoFinal = result.type === 'all_void'
                       ? 'VOID'
                       : result.winners.length > 0
                         ? 'GREEN'
                         : 'RED';
-                    void onSimpleMenuQuickResolve(surebet.id, resultadoFinal);
+                    void (onSimpleMenuQuickResolve || onSimpleQuickResolve)?.(surebet.id, resultadoFinal);
                     return;
                   }
 
