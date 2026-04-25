@@ -407,8 +407,8 @@ export function SurebetModalRoot({
   useEffect(() => {
     if (!open) return;
     
-    if (surebet && surebet.id) {
-      // Modo edição
+    if (surebet) {
+      // Modo edição ou duplicação
       setEvento(surebet.evento);
       setEsporte(surebet.esporte);
       setMercado(surebet.mercado || "");
@@ -438,7 +438,11 @@ export function SurebetModalRoot({
         if (match) setNumPernasCustom(parseInt(match[1]));
       }
       
-      fetchLinkedPernas(surebet.id);
+      if (surebet.id) {
+        fetchLinkedPernas(surebet.id);
+      } else if (surebet.__seedPernas && surebet.__seedPernas.length > 0) {
+        hydratePernasIntoForm(surebet.__seedPernas, false);
+      }
     } else if (rascunho) {
       // Modo rascunho: carregar TODOS os dados
       // IMPORTANTE: NÃO pré-selecionar estratégia se não estava definida no rascunho
