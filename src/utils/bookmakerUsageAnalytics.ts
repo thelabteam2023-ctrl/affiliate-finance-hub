@@ -6,6 +6,7 @@ type ConvertFn = (valor: number, moedaOrigem: string) => number;
 
 export interface BookmakerUsageEntry {
   id?: string | null;
+  selecao?: string | null;
   bookmaker_id?: string | null;
   bookmaker_nome?: string | null;
   parceiro_nome?: string | null;
