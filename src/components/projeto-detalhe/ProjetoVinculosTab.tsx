@@ -1614,12 +1614,25 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                           {aposta.esporte || "—"}{aposta.mercado ? ` · ${aposta.mercado}` : ""}{aposta.selecao ? ` · ${aposta.selecao}` : ""}
                         </p>
                       </div>
-                      <div className="flex shrink-0 items-center gap-2">
+                      <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                         <Badge variant="outline" className="text-[10px]">{getAbaAposta(aposta.estrategia)}</Badge>
-                        <Button variant="outline" size="sm" className="h-8 gap-1" onClick={() => openEditarApostaUso(aposta)}>
-                          <Pencil className="h-3.5 w-3.5" />
-                          Editar
-                        </Button>
+                        {(aposta.forma_registro === "ARBITRAGEM" || aposta.estrategia === "SUREBET" ? ARBITRAGEM_GLOBAL_RESULT_OPTIONS : SIMPLE_RESULT_OPTIONS).map((option) => {
+                          const Icon = option.icon;
+                          const isCurrent = aposta.resultado === option.value;
+                          return (
+                            <Button
+                              key={option.value}
+                              variant={isCurrent ? "secondary" : "outline"}
+                              size="sm"
+                              className="h-8 gap-1"
+                              disabled={isCurrent}
+                              onClick={() => handleResolveApostaUso(aposta, option.value)}
+                            >
+                              <Icon className="h-3.5 w-3.5" />
+                              {option.label}
+                            </Button>
+                          );
+                        })}
                       </div>
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
