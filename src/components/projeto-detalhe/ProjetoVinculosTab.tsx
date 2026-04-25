@@ -99,6 +99,7 @@ import {
   Clock,
   Users,
   ArrowUpFromLine,
+  Pencil,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Toggle } from "@/components/ui/toggle";
@@ -110,9 +111,7 @@ import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ESTRATEGIA_LABELS, type ApostaEstrategia } from "@/lib/apostaConstants";
-import { reliquidarAposta } from "@/services/aposta";
-import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
-import { invalidateCanonicalCaches } from "@/lib/invalidateCanonicalCaches";
+import { openApostaMultiplaWindow, openApostaWindow, openSurebetWindow } from "@/lib/windowHelper";
 
 type VinculoSortMode = "alpha" | "newest" | "oldest" | "apostas_desc" | "apostas_asc" | "saldo_desc" | "saldo_asc" | "em_aposta_desc" | "em_aposta_asc" | "disponivel_desc" | "disponivel_asc";
 
@@ -136,20 +135,10 @@ interface ApostaUsoBookmaker {
   resultado: string | null;
   odd: number | null;
   stake: number | null;
-  stakeTotal?: number | null;
-  parentOdd?: number | null;
   moeda: string | null;
   selecao: string | null;
   casas?: Array<{ nome: string; stake: number | null; moeda: string | null }>;
 }
-
-const SIMPLE_RESULT_OPTIONS = [
-  { value: "GREEN", label: "Green", icon: CheckCircle2 },
-  { value: "RED", label: "Red", icon: XCircle },
-  { value: "VOID", label: "Void", icon: AlertTriangle },
-] as const;
-
-const ARBITRAGEM_GLOBAL_RESULT_OPTIONS = SIMPLE_RESULT_OPTIONS.filter((option) => option.value !== "GREEN");
 
 // Interface Vinculo importada de useProjetoVinculos
 
@@ -259,14 +248,14 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
       const [{ data: simples, error: simplesError }, { data: pernas, error: pernasError }] = await Promise.all([
         supabase
           .from("apostas_unificada")
-          .select("id, data_aposta, evento, esporte, mercado, estrategia, forma_registro, status, resultado, odd, stake, stake_total, moeda_operacao, selecao")
+          .select("id, data_aposta, evento, esporte, mercado, estrategia, forma_registro, status, resultado, odd, stake, moeda_operacao, selecao")
           .eq("projeto_id", projetoId)
           .eq("workspace_id", workspaceId)
           .eq("bookmaker_id", bookmakerId)
           .is("cancelled_at", null),
         supabase
           .from("apostas_pernas")
-          .select("id, selecao, selecao_livre, odd, stake, moeda, aposta:apostas_unificada!inner(id, projeto_id, workspace_id, data_aposta, evento, esporte, mercado, estrategia, forma_registro, status, resultado, odd, stake_total, cancelled_at)")
+          .select("id, selecao, selecao_livre, odd, stake, moeda, aposta:apostas_unificada!inner(id, projeto_id, workspace_id, data_aposta, evento, esporte, mercado, estrategia, forma_registro, status, resultado, cancelled_at)")
           .eq("bookmaker_id", bookmakerId)
           .eq("aposta.projeto_id", projetoId)
           .eq("aposta.workspace_id", workspaceId)
@@ -306,8 +295,6 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
         resultado: a.resultado,
         odd: a.odd,
         stake: a.stake,
-        stakeTotal: a.stake_total,
-        parentOdd: a.odd,
         moeda: a.moeda_operacao,
         selecao: a.selecao,
         casas: [{ nome: vinculoApostasModal?.nome || "Casa", stake: a.stake, moeda: a.moeda_operacao }],
@@ -325,8 +312,6 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
         resultado: p.aposta.resultado,
         odd: p.odd,
         stake: p.stake,
-        stakeTotal: p.aposta.stake_total,
-        parentOdd: p.aposta.odd,
         moeda: p.moeda,
         selecao: p.selecao_livre || p.selecao,
         casas: casasPorAposta.get(p.aposta.id) || [],
@@ -554,27 +539,21 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
     return tabs[estrategia || ""] || "apostas";
   };
 
-  const handleResolveApostaUso = async (aposta: ApostaUsoBookmaker, resultado: string) => {
-    try {
-      const stake = Number(aposta.stakeTotal ?? aposta.stake ?? 0);
-      const odd = Number(aposta.parentOdd ?? aposta.odd ?? 1);
-      const lucro = calcularImpactoResultado(stake, odd, resultado);
-      const result = await reliquidarAposta(aposta.id, resultado, lucro);
+  const openEditarApostaUso = (aposta: ApostaUsoBookmaker) => {
+    const activeTab = getApostaTab(aposta.estrategia);
+    const estrategia = aposta.estrategia || undefined;
 
-      if (!result.success) {
-        toast.error(result.error?.message || "Erro ao liquidar aposta");
-        return;
-      }
-
-      await Promise.all([
-        apostasUsoQuery.refetch(),
-        invalidateCanonicalCaches(queryClient, projetoId),
-      ]);
-      toast.success(`Operação marcada como ${resultado}`);
-    } catch (error) {
-      console.error("Erro ao liquidar aposta pelo vínculo:", error);
-      toast.error("Erro ao atualizar resultado");
+    if (aposta.forma_registro === "ARBITRAGEM" || aposta.estrategia === "SUREBET") {
+      openSurebetWindow({ projetoId, id: aposta.id, activeTab });
+      return;
     }
+
+    if (aposta.forma_registro === "MULTIPLA") {
+      openApostaMultiplaWindow({ projetoId, id: aposta.id, activeTab, estrategia });
+      return;
+    }
+
+    openApostaWindow({ projetoId, id: aposta.id, activeTab, estrategia });
   };
 
   const openApostasModal = (vinculo: Vinculo) => {
@@ -1614,25 +1593,12 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                           {aposta.esporte || "—"}{aposta.mercado ? ` · ${aposta.mercado}` : ""}{aposta.selecao ? ` · ${aposta.selecao}` : ""}
                         </p>
                       </div>
-                      <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                      <div className="flex shrink-0 items-center gap-2">
                         <Badge variant="outline" className="text-[10px]">{getAbaAposta(aposta.estrategia)}</Badge>
-                        {(aposta.forma_registro === "ARBITRAGEM" || aposta.estrategia === "SUREBET" ? ARBITRAGEM_GLOBAL_RESULT_OPTIONS : SIMPLE_RESULT_OPTIONS).map((option) => {
-                          const Icon = option.icon;
-                          const isCurrent = aposta.resultado === option.value;
-                          return (
-                            <Button
-                              key={option.value}
-                              variant={isCurrent ? "secondary" : "outline"}
-                              size="sm"
-                              className="h-8 gap-1"
-                              disabled={isCurrent}
-                              onClick={() => handleResolveApostaUso(aposta, option.value)}
-                            >
-                              <Icon className="h-3.5 w-3.5" />
-                              {option.label}
-                            </Button>
-                          );
-                        })}
+                        <Button variant="outline" size="sm" className="h-8 gap-1" onClick={() => openEditarApostaUso(aposta)}>
+                          <Pencil className="h-3.5 w-3.5" />
+                          Editar
+                        </Button>
                       </div>
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
