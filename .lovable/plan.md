@@ -1,44 +1,54 @@
-## Objetivo
-Eliminar a ambiguidade visual entre múltiplas contas da mesma casa (ex: ALAWIN JOSE vs ALAWIN MARIA) na aba "Desempenho por Casa" do painel de detalhes do parceiro, exibindo o `instance_identifier` que já existe no dado mas não é renderizado.
+Diagnóstico do erro ao revincular a Alawin
 
-## Arquivo único alterado
-`src/components/parceiros/ParceiroDetalhesPanel.tsx`
+Identifiquei que o erro acontece no fluxo da aba Central de Operações > Bookmakers > Disponíveis, ao tentar vincular novamente uma casa que acabou de ser desvinculada.
 
-## Mudanças
+Causa provável
 
-### 1. Helper local `nomeExibicao(bm)` (topo do componente)
-```ts
-const nomeExibicao = (bm: { bookmaker_nome: string; instance_identifier?: string | null }) =>
-  bm.instance_identifier ? `${bm.bookmaker_nome} · ${bm.instance_identifier}` : bm.bookmaker_nome;
+O vínculo em si é feito com um UPDATE direto em `bookmakers.projeto_id`. Esse UPDATE dispara triggers no banco que já fazem automaticamente:
+
+- criação/neutralização do `DEPOSITO_VIRTUAL` quando necessário;
+- criação/fechamento do histórico em `projeto_bookmaker_historico`;
+- adoção de freebets órfãs.
+
+Porém, o frontend ainda tenta inserir manualmente um novo registro em `projeto_bookmaker_historico` logo depois do UPDATE. Isso pode gerar conflito/inconsistência porque o trigger já criou ou manipulou esse histórico. O erro mostrado no toast é genérico, então a operação pode estar falhando depois do UPDATE, deixando o usuário com sensação de que o vínculo falhou mesmo quando parte do processo já aconteceu.
+
+Também encontrei outro ponto sensível no trigger de desvinculação: a RPC `desvincular_bookmaker_atomico` referencia `project_bookmaker_link_bonuses` usando `projeto_id`, mas a tabela usa `project_id`. Esse erro está escondido por um bloco `EXCEPTION`, então não necessariamente quebra tudo, mas pode causar detecção incorreta de uso da casa ao decidir se um vínculo foi fantasma ou real.
+
+Plano de correção
+
+1. Tornar o fluxo de vínculo canônico no frontend
+   - Em `ContasDisponiveisModule.tsx`, remover a inserção manual em `projeto_bookmaker_historico` no vínculo individual.
+   - No vínculo em massa, remover também a inserção manual em `projeto_bookmaker_historico`.
+   - Manter o banco como fonte única para criar/fechar histórico via trigger `fn_ensure_historico_on_projeto_change`.
+
+2. Melhorar o feedback de erro
+   - Trocar o toast genérico `Erro ao vincular bookmaker ao projeto` por uma mensagem com `err.message` quando existir.
+   - Adicionar log estruturado com bookmaker, projeto e etapa onde falhou.
+   - Assim, se houver outro bloqueio real no banco, ele ficará claro na interface/console.
+
+3. Reforçar segurança contra cliques duplos
+   - O botão já respeita `vincularLoading`, mas vou adicionar early-return se já estiver vinculando.
+   - No vínculo em massa, manter o processamento sequencial, mas com resultado claro de quais casas falharam.
+
+4. Corrigir a inconsistência na RPC de desvinculação
+   - Criar migração para ajustar `desvincular_bookmaker_atomico`, trocando a referência incorreta `projeto_id` por `project_id` em `project_bookmaker_link_bonuses`.
+   - Seguir o padrão do projeto: `DROP FUNCTION IF EXISTS` antes de recriar a RPC para evitar ambiguidade de assinatura.
+   - Não alterar saldos diretamente e não fazer retrofix em ledger.
+
+5. Verificação após aplicar
+   - Conferir o estado atual da Alawin: ela está sem `projeto_id`, saldo MX$ 1.453,50, com SAQUE_VIRTUAL confirmado e DEPOSITO_VIRTUAL anterior cancelado.
+   - Após a correção, o fluxo esperado ao revincular no mesmo projeto é:
+
+```text
+bookmakers.projeto_id = PROJETO 00
+  -> trigger neutraliza ping-pong se aplicável ou calcula novo baseline
+  -> trigger cria histórico ativo se não existir
+  -> frontend apenas atualiza cache e mostra sucesso
 ```
 
-### 2. Card mobile (linha ~219)
-Manter o `bookmaker_nome` em destaque e adicionar uma 2ª linha discreta com o identificador:
-```tsx
-<p className="text-sm font-medium truncate">{bm.bookmaker_nome}</p>
-{bm.instance_identifier && (
-  <p className="text-[10px] text-muted-foreground truncate uppercase tracking-wide">
-    {bm.instance_identifier}
-  </p>
-)}
-```
+Resultado esperado
 
-### 3. Tabela desktop (linha ~1352)
-Mesma estrutura: nome em cima, identificador em `text-[10px] text-muted-foreground` logo abaixo, condicional ao `instance_identifier` existir.
-
-### 4. Triggers de modais (linhas 1417, 1464, 1465, 1467, 1510-1512)
-Substituir `bm.bookmaker_nome` por `nomeExibicao(bm)` nos parâmetros passados a:
-- `setHistoricoDialog({ ..., bookmakerNome: nomeExibicao(bm), ... })`
-- `onNewTransacao?.(bm.bookmaker_id, nomeExibicao(bm), ...)` (depósito e saque)
-- `setPerdaDialog({ ..., bookmakerNome: nomeExibicao(bm), ... })`
-
-Assim o título do modal exibe `ALAWIN · JOSE` em vez de apenas `ALAWIN`, eliminando a ambiguidade também dentro das ações.
-
-## O que NÃO muda
-- Hook de dados (campo `instance_identifier` já vem populado).
-- Lógica de busca/filtro (linhas 542-543 já consideram o identificador).
-- Estilos globais ou outros componentes.
-- Banco de dados / RPCs.
-
-## Resultado esperado
-Na aba "Desempenho por Casa" da Gestão de Parceiros, contas duplicadas (ex: ALAWIN com diferentes titulares/moedas) ficarão visualmente distintas tanto na lista quanto nos modais de Histórico, Depósito, Saque e Registrar Perda.
+- Revincular uma casa recém-desvinculada não deve mais falhar por duplicidade/inconsistência de histórico.
+- O fluxo fica mais leve e menos redundante.
+- O histórico volta a ter uma única fonte de verdade: os triggers do banco.
+- Se houver erro real de regra financeira, a mensagem aparecerá de forma diagnóstica em vez de toast genérico.
