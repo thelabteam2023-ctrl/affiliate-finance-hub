@@ -7,9 +7,9 @@ import { useWorkspace } from "@/hooks/useWorkspace";
 import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos, type BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
 import { criarAposta, deletarAposta, liquidarAposta, reliquidarAposta, type SelecaoMultipla } from "@/services/aposta";
 import { creditarFreebetViaLedger, estornarFreebetViaLedger } from "@/lib/freebetLedgerService";
-import { useExchangeRatesSafe } from "@/contexts/ExchangeRatesContext";
 import { isForeignCurrency } from "@/types/currency";
 import { useProjetoConsolidacao } from "@/hooks/useProjetoConsolidacao";
+import { useProjetoWorkingRates } from "@/hooks/useProjetoWorkingRates";
 import {
   Dialog,
   DialogContent,
@@ -167,9 +167,9 @@ export function ApostaMultiplaDialog({
 }: ApostaMultiplaDialogProps) {
   const { workspaceId } = useWorkspace();
   const { favoriteSource } = useWorkspaceBetSources(workspaceId);
-  const exchangeRates = useExchangeRatesSafe();
   // REGRA UNIFICADA: formulários SEMPRE usam cotação de trabalho (se configurada)
   const { cotacaoAtual: cotacaoUsdFormulario } = useProjetoConsolidacao({ projetoId });
+  const { getEffectiveRate } = useProjetoWorkingRates(projetoId);
   const [loading, setLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   
