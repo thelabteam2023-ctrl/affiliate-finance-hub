@@ -270,36 +270,24 @@ export function ContasDisponiveisModule() {
   };
 
   const handleConfirmVincular = async () => {
-    if (!selectedConta || !selectedProjetoId) return;
+    if (!selectedConta || !selectedProjetoId || vincularLoading) return;
     setVincularLoading(true);
     try {
-      // 1. Update bookmaker to link to project
       const { error: updateError } = await supabase
         .from("bookmakers")
         .update({ projeto_id: selectedProjetoId })
         .eq("id", selectedConta.id);
 
-      if (updateError) throw updateError;
-
-      // 2. Create historico entry
-      const { error: histError } = await supabase
-        .from("projeto_bookmaker_historico")
-        .insert({
-          projeto_id: selectedProjetoId,
-          bookmaker_id: selectedConta.id,
-          bookmaker_nome: selectedConta.nome,
-          parceiro_id: selectedConta.parceiro_id,
-          parceiro_nome: selectedConta.parceiro_nome,
-          user_id: user!.id,
-          workspace_id: workspaceId!,
+      if (updateError) {
+        console.error("[ContasDisponiveis] Falha ao atualizar projeto_id", {
+          bookmakerId: selectedConta.id,
+          projetoId: selectedProjetoId,
+          error: updateError,
         });
-
-      if (histError) {
-        console.error("[ContasDisponiveis] Erro ao criar histórico:", histError);
+        throw updateError;
       }
 
-      // 3. DEPOSITO_VIRTUAL + adoção de órfãs — gerenciado pelo trigger do DB
-      // O trigger fn_ensure_deposito_virtual_on_link cuida de tudo ao setar projeto_id
+      // Histórico, DEPOSITO_VIRTUAL e adoção de órfãs são gerenciados pelos triggers do banco.
       const { executeLink } = await import("@/lib/projetoTransitionService");
       await executeLink({
         bookmakerId: selectedConta.id,
@@ -319,8 +307,13 @@ export function ContasDisponiveisModule() {
       queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
       refetch();
     } catch (err) {
-      console.error("[ContasDisponiveis] Erro ao vincular:", err);
-      toast.error("Erro ao vincular bookmaker ao projeto");
+      const message = err instanceof Error ? err.message : "Erro desconhecido ao vincular bookmaker ao projeto";
+      console.error("[ContasDisponiveis] Erro ao vincular", {
+        bookmakerId: selectedConta.id,
+        projetoId: selectedProjetoId,
+        error: err,
+      });
+      toast.error(`Erro ao vincular bookmaker ao projeto: ${message}`);
     } finally {
       setVincularLoading(false);
     }
@@ -368,9 +361,10 @@ export function ContasDisponiveisModule() {
 
   // Bulk vincular handler
   const handleBulkVincular = async () => {
-    if (!bulkProjetoId || selectedContas.length === 0) return;
+    if (!bulkProjetoId || selectedContas.length === 0 || bulkLoading) return;
     setBulkLoading(true);
     let successCount = 0;
+    const failedNames: string[] = [];
     try {
       const { executeLink } = await import("@/lib/projetoTransitionService");
 
@@ -382,19 +376,7 @@ export function ContasDisponiveisModule() {
             .eq("id", conta.id);
           if (updateError) throw updateError;
 
-          await supabase
-            .from("projeto_bookmaker_historico")
-            .insert({
-              projeto_id: bulkProjetoId,
-              bookmaker_id: conta.id,
-              bookmaker_nome: conta.nome,
-              parceiro_id: conta.parceiro_id,
-              parceiro_nome: conta.parceiro_nome,
-              user_id: user!.id,
-              workspace_id: workspaceId!,
-            });
-
-          // DEPOSITO_VIRTUAL + adoção de órfãs — gerenciado pelo trigger do DB
+          // Histórico, DEPOSITO_VIRTUAL e adoção de órfãs são gerenciados pelos triggers do banco.
           await executeLink({
             bookmakerId: conta.id,
             projetoId: bulkProjetoId,
@@ -406,7 +388,13 @@ export function ContasDisponiveisModule() {
 
           successCount++;
         } catch (err) {
-          console.error(`[BulkVincular] Erro em ${conta.nome}:`, err);
+          failedNames.push(conta.nome);
+          console.error("[BulkVincular] Erro ao vincular casa", {
+            bookmakerId: conta.id,
+            bookmakerNome: conta.nome,
+            projetoId: bulkProjetoId,
+            error: err,
+          });
         }
       }
 
@@ -418,7 +406,7 @@ export function ContasDisponiveisModule() {
         refetch();
       }
       if (successCount < selectedContas.length) {
-        toast.error(`${selectedContas.length - successCount} casa(s) falharam ao vincular`);
+        toast.error(`${selectedContas.length - successCount} casa(s) falharam ao vincular: ${failedNames.join(", ")}`);
       }
       setBulkVincularOpen(false);
       setSelectedIds(new Set());
