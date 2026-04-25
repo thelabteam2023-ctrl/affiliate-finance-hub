@@ -82,6 +82,7 @@ import { SaldoOperavelCard } from "./SaldoOperavelCard";
 import { useCalendarApostasRpc, transformRpcDailyForCharts } from "@/hooks/useCalendarApostasRpc";
 import { ChartEmptyState } from "@/components/ui/chart-empty-state";
 import { useInvalidateAfterMutation } from "@/hooks/useInvalidateAfterMutation";
+import { aggregateBookmakerUsage } from "@/utils/bookmakerUsageAnalytics";
 
 interface ProjetoSurebetTabProps {
   projetoId: string;
@@ -841,90 +842,20 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
   // Mas para a Visão Geral sempre usamos kpisGlobal
   const kpis = kpisGlobal;
 
-  // casaData agregado por CASA (não por vínculo) - Padrão unificado
+  // casaData agregado por CASA (não por vínculo) - fonte canônica unificada
   const casaData = useMemo((): CasaAgregada[] => {
-    const casaMap = new Map<string, {
-      apostas: number;
-      volume: number;
-      volumeLiquidado: number;
-      lucro: number;
-      vinculos: Map<string, { apostas: number; volume: number; volumeLiquidado: number; lucro: number }>;
-    }>();
-
-    const extractCasaVinculo = (nomeCompleto: string) => {
-      const separatorIdx = nomeCompleto.indexOf(" - ");
-      if (separatorIdx > 0) {
-        const vinculoRaw = nomeCompleto.substring(separatorIdx + 3).trim();
-        return {
-          casa: nomeCompleto.substring(0, separatorIdx).trim(),
-          vinculo: getFirstLastName(vinculoRaw)
-        };
-      }
-      return { casa: nomeCompleto, vinculo: "Principal" };
-    };
-
-    const processEntry = (nomeCompleto: string, stake: number, lucro: number, resolved: boolean) => {
-      const { casa, vinculo } = extractCasaVinculo(nomeCompleto);
-
-      if (!casaMap.has(casa)) {
-        casaMap.set(casa, { apostas: 0, volume: 0, volumeLiquidado: 0, lucro: 0, vinculos: new Map() });
-      }
-      const casaEntry = casaMap.get(casa)!;
-      casaEntry.apostas += 1;
-      casaEntry.volume += stake;
-      if (resolved) casaEntry.volumeLiquidado += stake;
-      casaEntry.lucro += lucro;
-
-      if (!casaEntry.vinculos.has(vinculo)) {
-        casaEntry.vinculos.set(vinculo, { apostas: 0, volume: 0, volumeLiquidado: 0, lucro: 0 });
-      }
-      const vinculoEntry = casaEntry.vinculos.get(vinculo)!;
-      vinculoEntry.apostas += 1;
-      vinculoEntry.volume += stake;
-      if (resolved) vinculoEntry.volumeLiquidado += stake;
-      vinculoEntry.lucro += lucro;
-    };
-
-    // ISOLAMENTO: casaData usa dados filtrados por período (surebetsParaKpi)
-    surebetsParaKpi.forEach((surebet) => {
-      const resolved = !!surebet.resultado && surebet.resultado !== "PENDENTE";
-      if (surebet.forma_registro === "SIMPLES" || !surebet.pernas?.length) {
-        const nomeCompleto = surebet.bookmaker_nome || "Desconhecida";
-        const stake = surebet.stake || surebet.stake_total || 0;
-        const lucro = surebet.lucro_real || 0;
-        processEntry(nomeCompleto, stake, lucro, resolved);
-      } else {
-        surebet.pernas.forEach(perna => {
-          const nomeCompleto = perna.bookmaker_nome || "Desconhecida";
-          const lucroPerna = getLucroPerna(perna);
-          processEntry(nomeCompleto, perna.stake, lucroPerna, resolved);
-        });
-      }
-    });
-
-    return Array.from(casaMap.entries())
-      .map(([casa, data]) => {
-        const roi = data.volumeLiquidado > 0 ? (data.lucro / data.volumeLiquidado) * 100 : 0;
-        return {
-          casa,
-          apostas: data.apostas,
-          volume: data.volume,
-          lucro: data.lucro,
-          roi,
-          vinculos: Array.from(data.vinculos.entries())
-            .map(([vinculo, v]) => ({
-              vinculo,
-              apostas: v.apostas,
-              volume: v.volume,
-              lucro: v.lucro,
-              roi: v.volumeLiquidado > 0 ? (v.lucro / v.volumeLiquidado) * 100 : 0,
-            }))
-            .sort((a, b) => b.volume - a.volume),
-        };
-      })
+    return aggregateBookmakerUsage(surebetsParaKpi.map((s) => ({
+      ...s,
+      lucro_prejuizo: s.lucro_real,
+      status: s.status,
+    })), {
+      moedaConsolidacao,
+      convertToConsolidation: convertFn,
+    })
+      .map(({ casa, apostas, volume, lucro, roi, vinculos }) => ({ casa, apostas, volume, lucro, roi, vinculos }))
       .sort((a, b) => b.volume - a.volume)
       .slice(0, 8);
-  }, [surebetsParaKpi]);
+  }, [surebetsParaKpi, moedaConsolidacao, convertFn]);
 
   // Mapa de logos combinando catálogo global + bookmakers do projeto
   // Prioridade: catálogo global (mais completo e confiável)
