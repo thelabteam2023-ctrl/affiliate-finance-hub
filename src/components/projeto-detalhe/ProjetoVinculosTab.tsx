@@ -99,7 +99,6 @@ import {
   Clock,
   Users,
   ArrowUpFromLine,
-  Pencil,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Toggle } from "@/components/ui/toggle";
@@ -111,7 +110,9 @@ import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ESTRATEGIA_LABELS, type ApostaEstrategia } from "@/lib/apostaConstants";
-import { openApostaMultiplaWindow, openApostaWindow, openSurebetWindow } from "@/lib/windowHelper";
+import { reliquidarAposta } from "@/services/aposta";
+import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
+import { invalidateCanonicalCaches } from "@/lib/invalidateCanonicalCaches";
 
 type VinculoSortMode = "alpha" | "newest" | "oldest" | "apostas_desc" | "apostas_asc" | "saldo_desc" | "saldo_asc" | "em_aposta_desc" | "em_aposta_asc" | "disponivel_desc" | "disponivel_asc";
 
@@ -135,10 +136,20 @@ interface ApostaUsoBookmaker {
   resultado: string | null;
   odd: number | null;
   stake: number | null;
+  stakeTotal?: number | null;
+  parentOdd?: number | null;
   moeda: string | null;
   selecao: string | null;
   casas?: Array<{ nome: string; stake: number | null; moeda: string | null }>;
 }
+
+const SIMPLE_RESULT_OPTIONS = [
+  { value: "GREEN", label: "Green", icon: CheckCircle2 },
+  { value: "RED", label: "Red", icon: XCircle },
+  { value: "VOID", label: "Void", icon: AlertTriangle },
+] as const;
+
+const ARBITRAGEM_GLOBAL_RESULT_OPTIONS = SIMPLE_RESULT_OPTIONS.filter((option) => option.value !== "GREEN");
 
 // Interface Vinculo importada de useProjetoVinculos
 
