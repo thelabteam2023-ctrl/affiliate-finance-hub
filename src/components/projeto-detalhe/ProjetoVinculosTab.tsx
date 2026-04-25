@@ -1516,6 +1516,52 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
         </DialogContent>
       </Dialog>
 
+      <Dialog open={!!vinculoApostasModal} onOpenChange={(open) => !open && setVinculoApostasModal(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Apostas da casa</DialogTitle>
+            <DialogDescription>
+              {vinculoApostasModal?.nome} · {vinculoApostasModal?.parceiro_nome || "Sem parceiro"}
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh] pr-4">
+            {apostasUsoQuery.isLoading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 4 }).map((_, idx) => <Skeleton key={idx} className="h-16 w-full" />)}
+              </div>
+            ) : apostasUsoQuery.data?.length ? (
+              <div className="space-y-2">
+                {apostasUsoQuery.data.map((aposta) => (
+                  <div key={`${aposta.id}-${aposta.pernaId || "main"}`} className="rounded-lg border border-border/50 bg-muted/20 p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-medium truncate uppercase">{aposta.evento || "Aposta"}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {aposta.esporte || "—"}{aposta.mercado ? ` · ${aposta.mercado}` : ""}{aposta.selecao ? ` · ${aposta.selecao}` : ""}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="shrink-0 text-[10px]">{getAbaAposta(aposta.estrategia)}</Badge>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                      <span>{format(new Date(aposta.data_aposta), "dd/MM/yyyy HH:mm", { locale: ptBR })}</span>
+                      <span>Status: {aposta.status || "—"}</span>
+                      <span>Resultado: {aposta.resultado || "Pendente"}</span>
+                      {aposta.odd != null && <span>@{Number(aposta.odd).toFixed(2)}</span>}
+                      {aposta.stake != null && <span>Stake: {formatCurrency(Number(aposta.stake), aposta.moeda || vinculoApostasModal?.moeda || "BRL")}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-8 text-center text-muted-foreground">
+                <Target className="mx-auto mb-2 h-8 w-8 opacity-50" />
+                Nenhuma aposta encontrada para esta casa.
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
       {/* Add Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={(open) => {
         setAddDialogOpen(open);
