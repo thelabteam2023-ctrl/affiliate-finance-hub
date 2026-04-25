@@ -129,9 +129,27 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
       // Determinar moeda da operação baseado nas pernas
       // Para operações multi-moeda, usamos a moeda da primeira perna ou BRL
       const moedaOperacao = params.moeda_operacao || "BRL";
+      const { data: workingRates } = await supabase
+        .from("projetos")
+        .select("fonte_cotacao, cotacao_trabalho, cotacao_trabalho_eur, cotacao_trabalho_gbp, cotacao_trabalho_myr, cotacao_trabalho_mxn, cotacao_trabalho_ars, cotacao_trabalho_cop")
+        .eq("id", params.projeto_id)
+        .maybeSingle();
+      const parentRate = resolveEffectiveProjectRate(moedaOperacao, workingRates, getRate);
       
       // Criar snapshot de conversão se for moeda estrangeira
-      const snapshotFields = getSnapshotFields(stakeTotal, moedaOperacao as SupportedCurrency);
+      const snapshotFields = getSnapshotFields(stakeTotal, moedaOperacao as SupportedCurrency, parentRate.rate);
+      const pernasComSnapshot = params.pernas.map((perna) => {
+        const pernaMoeda = (perna.moeda || "BRL") as SupportedCurrency;
+        const pernaRate = resolveEffectiveProjectRate(pernaMoeda, workingRates, getRate);
+        const pernaSnapshot = getSnapshotFields(perna.stake || 0, pernaMoeda, pernaRate.rate);
+        return {
+          ...perna,
+          moeda: pernaMoeda,
+          stake_brl_referencia: pernaSnapshot.valor_brl_referencia,
+          cotacao_snapshot: pernaSnapshot.cotacao_snapshot,
+          cotacao_snapshot_at: pernaSnapshot.cotacao_snapshot_at,
+        };
+      });
 
       const insertData: ApostaUnificadaInsert = {
         user_id: user.id,
@@ -144,7 +162,7 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
         esporte: params.esporte,
         mercado: params.mercado,
         modelo: params.modelo,
-        pernas: params.pernas as any,
+        pernas: pernasComSnapshot as any,
         stake_total: stakeTotal,
         spread_calculado: spread,
         roi_esperado: roiEsperado,
@@ -158,6 +176,7 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
         cotacao_snapshot: snapshotFields.cotacao_snapshot,
         cotacao_snapshot_at: snapshotFields.cotacao_snapshot_at,
         valor_brl_referencia: snapshotFields.valor_brl_referencia,
+        conversion_source: parentRate.source,
       };
 
       const { data, error } = await supabase
@@ -170,7 +189,7 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
       
       // DUAL-WRITE: Inserir pernas na tabela normalizada
       if (data?.id && params.pernas.length > 0) {
-        const pernasInsert = pernasToInserts(data.id, params.pernas);
+        const pernasInsert = pernasToInserts(data.id, pernasComSnapshot);
         const { error: pernasError } = await supabase
           .from("apostas_pernas")
           .insert(pernasInsert);
