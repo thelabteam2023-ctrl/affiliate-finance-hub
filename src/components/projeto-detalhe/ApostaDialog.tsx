@@ -1078,7 +1078,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                   stake_freebet: p.stake_freebet,
                 });
                 return {
-                  id: p.id,
+                  id: p.id || generateEntryId(),
                   bookmaker_id: p.bookmaker_id,
                   odd: p.odd.toString(),
                   stake: split.stakeReal > 0 ? split.stakeReal.toString() : '0',
