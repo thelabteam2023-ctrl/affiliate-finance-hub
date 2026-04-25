@@ -418,7 +418,10 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           esporte: arb.esporte || "", modelo: arb.modelo || "1-2", mercado: arb.mercado,
           stake_total: arb.stake_total || arb.stake || 0, spread_calculado: arb.spread_calculado,
           roi_esperado: arb.roi_esperado, lucro_esperado: arb.lucro_esperado,
-          lucro_real: arb.pl_consolidado ?? arb.lucro_prejuizo, roi_real: arb.roi_real,
+          // lucro_real deve permanecer na moeda nativa da aposta para cards simples.
+          // KPIs consolidados usam getConsolidatedLucro(), que já prioriza pl_consolidado
+          // quando a moeda de consolidação corresponde ao projeto.
+          lucro_real: arb.lucro_prejuizo, roi_real: arb.roi_real,
           status: arb.status, resultado: arb.resultado, observacoes: arb.observacoes,
           pernas: pernasSurebetCard, forma_registro: arb.forma_registro,
           estrategia: arb.estrategia, contexto_operacional: arb.contexto_operacional,
