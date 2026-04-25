@@ -18,7 +18,8 @@ import {
   clearRpcLogs,
   type RpcCallLog,
 } from "@/lib/dev/rpcInterceptor";
-import { Activity, AlertTriangle, Database, Receipt, Wallet, Zap, Trash2, Pause, Play } from "lucide-react";
+import { explainRpcCall } from "@/lib/dev/rpcExplain";
+import { Activity, AlertTriangle, Database, Receipt, Wallet, Zap, Trash2, Pause, Play, HelpCircle } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -165,6 +166,7 @@ export default function DevLedgerMonitor() {
   const navigate = useNavigate();
   const [paused, setPaused] = useState(false);
   const [filter, setFilter] = useState("");
+  const [rpcExplainedMode, setRpcExplainedMode] = useState(true);
   const { getRate } = useExchangeRates();
 
   // Hard guard — only system owner
@@ -212,7 +214,10 @@ export default function DevLedgerMonitor() {
   );
 
   const rpcFiltered = useMemo(
-    () => rpcLogs.filter((r) => filterFn(`${r.fn_name} ${r.status} ${r.error ?? ""}`)),
+    () => rpcLogs.filter((r) => {
+      const explanation = explainRpcCall(r);
+      return filterFn(`${r.fn_name} ${r.status} ${r.error ?? ""} ${explanation.name} ${explanation.description} ${explanation.impactLabel}`);
+    }),
     [rpcLogs, filter]
   );
 
@@ -642,7 +647,15 @@ export default function DevLedgerMonitor() {
             <CardHeader className="py-2">
               <CardTitle className="text-sm flex items-center justify-between">
                 <span>Chamadas RPC (sessão atual, max 500)</span>
-                <span className="text-xs text-muted-foreground">capturado via interceptor</span>
+                <div className="flex items-center gap-3 text-xs font-normal">
+                  <div className="flex items-center gap-2">
+                    <Switch id="rpc-mode" checked={rpcExplainedMode} onCheckedChange={setRpcExplainedMode} />
+                    <Label htmlFor="rpc-mode" className="text-xs cursor-pointer">
+                      {rpcExplainedMode ? "Modo explicado" : "Modo técnico"}
+                    </Label>
+                  </div>
+                  <span className="text-muted-foreground">capturado via interceptor</span>
+                </div>
               </CardTitle>
             </CardHeader>
             <CardContent className="flex-1 min-h-0 p-0">
@@ -652,37 +665,99 @@ export default function DevLedgerMonitor() {
                     <tr className="text-left text-muted-foreground">
                       <th className="px-2 py-1.5">Hora</th>
                       <th className="px-2 py-1.5">Função</th>
+                      {rpcExplainedMode && <th className="px-2 py-1.5">Entendimento</th>}
                       <th className="px-2 py-1.5">Status</th>
                       <th className="px-2 py-1.5 text-right">Duração</th>
                       <th className="px-2 py-1.5">Args / Erro / Preview</th>
                     </tr>
                   </thead>
                   <tbody className="font-mono">
-                    {rpcFiltered.map((r) => (
-                      <tr key={r.id} className="border-b hover:bg-accent/30 align-top">
-                        <td className="px-2 py-1 whitespace-nowrap text-muted-foreground">{fmtTime(r.started_at)}</td>
-                        <td className="px-2 py-1 font-semibold text-primary">{r.fn_name}</td>
-                        <td className="px-2 py-1"><Badge variant={statusVariant(r.status)} className="text-[10px]">{r.status}</Badge></td>
-                        <td className="px-2 py-1 text-right tabular-nums">{r.duration_ms != null ? `${r.duration_ms}ms` : "..."}</td>
-                        <td className="px-2 py-1 max-w-[500px]">
-                          {r.error ? (
-                            <span className="text-destructive text-[11px]">{r.error}</span>
-                          ) : (
-                            <details>
-                              <summary className="cursor-pointer text-[11px] text-muted-foreground">
-                                {JSON.stringify(r.args).slice(0, 80)}
-                              </summary>
-                              <pre className="text-[10px] whitespace-pre-wrap mt-1 p-2 bg-muted rounded">
-                                args: {JSON.stringify(r.args, null, 2)}
-                                {r.result_preview && `\n\nresult: ${r.result_preview}`}
-                              </pre>
-                            </details>
+                    {rpcFiltered.map((r) => {
+                      const explanation = explainRpcCall(r);
+                      return (
+                        <tr key={r.id} className="border-b hover:bg-accent/30 align-top">
+                          <td className="px-2 py-1 whitespace-nowrap text-muted-foreground">{fmtTime(r.started_at)}</td>
+                          <td className="px-2 py-1 font-semibold text-primary">
+                            <div>{r.fn_name}</div>
+                            {rpcExplainedMode && <div className="text-[10px] text-muted-foreground font-normal">{explanation.name}</div>}
+                          </td>
+                          {rpcExplainedMode && (
+                            <td className="px-2 py-1 max-w-[340px]">
+                              <div className="space-y-1 font-sans">
+                                <div className="text-[11px] leading-snug">{explanation.description}</div>
+                                <div className="flex flex-wrap items-center gap-1">
+                                  <Badge variant={explanation.isCritical ? "destructive" : "outline"} className="text-[10px]">
+                                    {explanation.impactLabel}
+                                  </Badge>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground cursor-help">
+                                        <HelpCircle className="h-3 w-3" /> leitura leiga
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="text-xs max-w-[280px]">
+                                      Consulta apenas lê dados. Escrita altera registros. Financeiro crítico pode afetar saldo, aposta, ledger, vínculo ou liquidação.
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </div>
+                              </div>
+                            </td>
                           )}
-                        </td>
-                      </tr>
-                    ))}
+                          <td className="px-2 py-1">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant={statusVariant(r.status)} className="text-[10px] cursor-help">{rpcExplainedMode ? explanation.statusLabel : r.status}</Badge>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-xs max-w-[260px]">{explanation.statusMeaning}</TooltipContent>
+                            </Tooltip>
+                          </td>
+                          <td className="px-2 py-1 text-right tabular-nums">
+                            <div>{r.duration_ms != null ? `${r.duration_ms}ms` : "..."}</div>
+                            {rpcExplainedMode && <div className="text-[10px] text-muted-foreground font-sans">{explanation.durationLabel}</div>}
+                          </td>
+                          <td className="px-2 py-1 max-w-[520px]">
+                            {rpcExplainedMode ? (
+                              <details className="font-sans">
+                                <summary className="cursor-pointer text-[11px] text-muted-foreground">
+                                  {r.error ? "Ver erro explicado e dados técnicos" : "Ver dados enviados e retorno"}
+                                </summary>
+                                <div className="mt-2 space-y-2 text-[11px]">
+                                  <div className="rounded bg-muted p-2">
+                                    <div className="font-semibold mb-1">O que foi enviado</div>
+                                    <div className="text-muted-foreground">{explanation.argsSummary}</div>
+                                  </div>
+                                  <div className="rounded bg-muted p-2">
+                                    <div className="font-semibold mb-1">O que voltou</div>
+                                    <div className={r.error ? "text-destructive" : "text-muted-foreground"}>
+                                      {r.error ? explanation.errorMeaning : explanation.resultSummary}
+                                    </div>
+                                    {r.error && <div className="mt-1 font-mono text-[10px] text-destructive">{r.error}</div>}
+                                  </div>
+                                  <pre className="text-[10px] whitespace-pre-wrap p-2 bg-muted rounded font-mono">
+                                    args: {JSON.stringify(r.args, null, 2)}
+                                    {r.result_preview && `\n\nresult: ${r.result_preview}`}
+                                  </pre>
+                                </div>
+                              </details>
+                            ) : r.error ? (
+                              <span className="text-destructive text-[11px]">{r.error}</span>
+                            ) : (
+                              <details>
+                                <summary className="cursor-pointer text-[11px] text-muted-foreground">
+                                  {JSON.stringify(r.args).slice(0, 80)}
+                                </summary>
+                                <pre className="text-[10px] whitespace-pre-wrap mt-1 p-2 bg-muted rounded">
+                                  args: {JSON.stringify(r.args, null, 2)}
+                                  {r.result_preview && `\n\nresult: ${r.result_preview}`}
+                                </pre>
+                              </details>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                     {rpcFiltered.length === 0 && (
-                      <tr><td colSpan={5} className="text-center py-6 text-muted-foreground">Nenhuma RPC capturada ainda. Interaja com o sistema.</td></tr>
+                      <tr><td colSpan={rpcExplainedMode ? 6 : 5} className="text-center py-6 text-muted-foreground">Nenhuma RPC capturada ainda. Interaja com o sistema.</td></tr>
                     )}
                   </tbody>
                 </table>
