@@ -1169,6 +1169,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                     convertToConsolidacao={convertToConsolidacaoProjeto}
                     moedaConsolidacao={moedaConsolidacaoProjeto}
                     formatConsolidacao={formatConsolidacaoProjeto}
+                    className="hidden sm:flex"
                   />
 
                   {/* Status Badge */}
@@ -1181,17 +1182,18 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                     <Button
                       variant="ghost"
                       size="icon"
-                    className="h-8 w-8 sm:hidden"
-                    onClick={() => setVinculoDetalhesMobile(vinculo)}
-                  >
-                    <List className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="hidden sm:inline-flex h-8 w-8"
+                      className="h-8 w-8 sm:hidden"
+                      title="Ver detalhes"
+                      onClick={() => setVinculoDetalhesMobile(vinculo)}
+                    >
+                      <List className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="hidden sm:inline-flex h-8 w-8"
                       title="Ver Bônus"
-                    onClick={() => openBonusDrawer(vinculo)}
+                      onClick={() => openBonusDrawer(vinculo)}
                     >
                       <Coins className="h-4 w-4" />
                     </Button>
@@ -1200,38 +1202,18 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
+                          className="hidden sm:inline-flex h-8 w-8"
                           title="Depositar"
-                          onClick={() => {
-                            setTransacaoContext({
-                              bookmarkerId: vinculo.id,
-                              bookmakerNome: vinculo.nome,
-                              moeda: vinculo.moeda,
-                              saldoAtual: vinculo.saldo_real,
-                              parceiroId: vinculo.parceiro_id,
-                              tipo: "DEPOSITO",
-                            });
-                            setTransacaoDialogOpen(true);
-                          }}
+                          onClick={() => openTransacao(vinculo, "DEPOSITO")}
                         >
                           <ArrowRightLeft className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
+                          className="hidden sm:inline-flex h-8 w-8"
                           title="Sacar"
-                          onClick={() => {
-                            setTransacaoContext({
-                              bookmarkerId: vinculo.id,
-                              bookmakerNome: vinculo.nome,
-                              moeda: vinculo.moeda,
-                              saldoAtual: vinculo.saldo_real,
-                              parceiroId: vinculo.parceiro_id,
-                              tipo: "SAQUE",
-                            });
-                            setTransacaoDialogOpen(true);
-                          }}
+                          onClick={() => openTransacao(vinculo, "SAQUE")}
                         >
                           <Wallet className="h-4 w-4" />
                         </Button>
@@ -1245,7 +1227,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
+                          className="hidden sm:inline-flex h-8 w-8"
                           title="Alterar Status"
                         >
                           <ShieldAlert className="h-4 w-4" />
@@ -1289,12 +1271,9 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
+                            className="hidden sm:inline-flex h-8 w-8"
                             title="Ajustar Saldo"
-                            onClick={() => {
-                              setVinculoParaAjuste(vinculo);
-                              setAjusteSaldoDialogOpen(true);
-                            }}
+                            onClick={() => openAjusteSaldo(vinculo)}
                           >
                             <Scale className="h-4 w-4" />
                           </Button>
@@ -1307,12 +1286,9 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      className="hidden sm:inline-flex h-8 w-8 text-destructive hover:text-destructive"
                       title="Liberar do Projeto"
-                      onClick={() => {
-                        setVinculoParaConciliar(vinculo);
-                        setConciliacaoDialogOpen(true);
-                      }}
+                      onClick={() => openConciliacao(vinculo)}
                     >
                       <Link2Off className="h-4 w-4" />
                     </Button>
