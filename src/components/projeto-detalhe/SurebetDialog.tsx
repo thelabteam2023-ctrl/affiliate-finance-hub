@@ -667,7 +667,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
     const suggestions = getSuggestionsForTab(activeTab);
     return {
       forma_registro: 'ARBITRAGEM',
-      estrategia: suggestions.estrategia ?? null, // CRÍTICO: null se não definido, NUNCA fallback
+      estrategia: ARBITRAGEM_ESTRATEGIA,
       contexto_operacional: suggestions.contexto_operacional ?? 'NORMAL',
     };
   });
@@ -739,6 +739,11 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
         setEsporte(rascunho.esporte || "Futebol");
         setMercado(rascunho.mercado || "");
         setObservacoes(rascunho.observacoes || "");
+        setRegistroValues({
+          forma_registro: 'ARBITRAGEM',
+          estrategia: ARBITRAGEM_ESTRATEGIA,
+          contexto_operacional: (rascunho.contexto_operacional as RegistroApostaValues['contexto_operacional']) || getSuggestionsForTab(activeTab).contexto_operacional || 'NORMAL',
+        });
         
         // Determinar modelo baseado no número de pernas
         const numPernas = rascunho.pernas?.length || 2;
