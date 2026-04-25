@@ -78,6 +78,7 @@ import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { FonteEntradaSelector } from "@/components/apostas/FonteEntradaSelector";
 import { useWorkspaceBetSources } from "@/hooks/useWorkspaceBetSources";
 import { deriveStakeSplit, derivePersistedStakeSplit } from "@/lib/freebetStake";
+import { useProjetoWorkingRates } from "@/hooks/useProjetoWorkingRates";
 
 // Multi-entry para aposta simples (mesma seleção, múltiplas bookmakers)
 interface AdditionalEntry {
@@ -431,6 +432,7 @@ const getMoneylineSelecoes = (esporte: string | undefined, evento: string): stri
 export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess, defaultEstrategia = 'PUNTER', activeTab = 'apostas', embedded = false }: ApostaDialogProps) {
   const { workspaceId } = useWorkspace();
   const { convertToConsolidation, moedaConsolidacao } = useProjetoCurrency(projetoId);
+  const { getEffectiveRate } = useProjetoWorkingRates(projetoId);
   const [loading, setLoading] = useState(false);
   const { favoriteSource } = useWorkspaceBetSources(workspaceId);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
