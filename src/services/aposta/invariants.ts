@@ -96,10 +96,10 @@ export async function validateInvariants(
   // ================================================================
   if (input.estrategia === 'SUREBET') {
     const pernasCount = input.pernas?.length || 0;
-    if (input.forma_registro !== FORMA_REGISTRO.ARBITRAGEM && pernasCount !== 0) {
+    if (input.forma_registro !== FORMA_REGISTRO.ARBITRAGEM && pernasCount === 1) {
       violations.push({
         invariant: 'SUREBET_REQUIRES_ARBITRAGEM',
-        message: `Estratégia SUREBET com pernas requer forma_registro ARBITRAGEM. Recebido: ${input.forma_registro}`,
+        message: `Estratégia SUREBET requer no mínimo 2 pernas quando há pernas informadas. Recebido: ${pernasCount}`,
         context: {
           estrategia: input.estrategia,
           forma_registro: input.forma_registro,
