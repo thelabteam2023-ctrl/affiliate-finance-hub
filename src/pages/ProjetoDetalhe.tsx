@@ -911,16 +911,18 @@ export default function ProjetoDetalhe() {
             </TooltipProvider>
 
             {/* + Mais Indicadores */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <button className="flex items-center justify-center h-7 w-7 rounded-md border border-border/50 bg-muted/40 hover:bg-accent transition-colors flex-shrink-0">
-                  <Plus className="h-3.5 w-3.5 text-muted-foreground" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent side="bottom" align="end" className="p-0 w-auto" sideOffset={8}>
-                <FinancialMetricsPopover projetoId={id!} />
-              </PopoverContent>
-            </Popover>
+            <div className="col-span-3 flex items-center justify-center sm:col-span-1 sm:block">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className="flex items-center justify-center h-7 w-7 rounded-md border border-border/50 bg-muted/40 hover:bg-accent transition-colors flex-shrink-0">
+                    <Plus className="h-3.5 w-3.5 text-muted-foreground" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent side="bottom" align="end" className="p-0 w-auto" sideOffset={8}>
+                  <FinancialMetricsPopover projetoId={id!} />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
         </div>
       )}
