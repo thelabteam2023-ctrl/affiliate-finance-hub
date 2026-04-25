@@ -1133,7 +1133,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                   </div>
 
                   {/* Apostas */}
-                  <div className="text-center w-[70px] flex-shrink-0">
+                  <div className="hidden sm:block text-center w-[70px] flex-shrink-0">
                     <p 
                       className="text-xs text-muted-foreground flex items-center justify-center gap-1 cursor-pointer hover:text-foreground transition-colors"
                       onClick={() => setSortMode(prev => prev === "apostas_desc" ? "apostas_asc" : "apostas_desc")}
@@ -1181,9 +1181,17 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8"
+                    className="h-8 w-8 sm:hidden"
+                    onClick={() => setVinculoDetalhesMobile(vinculo)}
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="hidden sm:inline-flex h-8 w-8"
                       title="Ver Bônus"
-                      onClick={() => handleOpenBonusDrawer({ id: vinculo.id, nome: vinculo.nome, login: vinculo.login_username, password: vinculo.login_password_encrypted, logo: vinculo.logo_url, bookmakerCatalogoId: vinculo.bookmaker_catalogo_id })}
+                    onClick={() => openBonusDrawer(vinculo)}
                     >
                       <Coins className="h-4 w-4" />
                     </Button>
