@@ -83,6 +83,50 @@ export async function criarAposta(
   // ETAPA 2: PREPARAR DADOS
   // ================================================================
   const isArbitragem = input.forma_registro === 'ARBITRAGEM';
+
+  // ARBITRAGEM/SUREBET deve nascer pelo motor atômico do banco, que cria pai,
+  // pernas e eventos STAKE no ledger na mesma transação. Inserção direta aqui
+  // deixaria a operação sem débito de stake e inflaria saldos ao liquidar.
+  if (isArbitragem) {
+    try {
+      const { data, error } = await supabase.rpc('criar_surebet_atomica', {
+        p_workspace_id: input.workspace_id,
+        p_user_id: input.user_id,
+        p_projeto_id: input.projeto_id,
+        p_evento: input.evento || '',
+        p_esporte: input.esporte || null,
+        p_mercado: input.mercado || null,
+        p_modelo: input.modelo || null,
+        p_estrategia: input.estrategia,
+        p_contexto_operacional: input.contexto_operacional || 'NORMAL',
+        p_data_aposta: input.data_aposta,
+        p_pernas: input.pernas || [],
+      });
+
+      if (error) {
+        return {
+          success: false,
+          error: { code: 'RPC_ERROR', message: error.message, details: { error } },
+        };
+      }
+
+      const result = data?.[0];
+      if (!result?.success) {
+        return {
+          success: false,
+          error: { code: 'CREATE_FAILED', message: result?.message || 'Falha ao criar arbitragem' },
+        };
+      }
+
+      return { success: true, data: { id: result.aposta_id } };
+    } catch (err: any) {
+      return {
+        success: false,
+        error: { code: 'UNEXPECTED_ERROR', message: err.message || 'Erro inesperado ao criar arbitragem', details: { error: err } },
+      };
+    }
+  }
+
   const isMultipla = input.forma_registro === 'MULTIPLA';
   const pernas = input.pernas || [];
   const stakeSplit = !isArbitragem
