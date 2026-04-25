@@ -1019,10 +1019,15 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
 
                   <div className="flex items-center justify-between pt-2 border-t">
                     <span className="text-xs text-muted-foreground">Apostas</span>
-                    <span className="text-sm font-medium flex items-center gap-1">
+                    <button
+                      type="button"
+                      disabled={vinculo.totalApostas <= 0}
+                      onClick={() => openApostasModal(vinculo)}
+                      className="text-sm font-medium flex items-center gap-1 rounded px-1 transition-colors enabled:hover:text-primary disabled:cursor-default"
+                    >
                       <Target className="h-3 w-3 text-primary" />
                       {vinculo.totalApostas}
-                    </span>
+                    </button>
                   </div>
                   
                   <div className="flex flex-col gap-2 mt-2">
@@ -1241,10 +1246,15 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                       {sortMode === "apostas_desc" && <ArrowDown className="h-3 w-3 text-primary" />}
                       {sortMode === "apostas_asc" && <ArrowUp className="h-3 w-3 text-primary" />}
                     </p>
-                    <p className="font-medium tabular-nums flex items-center justify-center gap-1">
+                    <button
+                      type="button"
+                      disabled={vinculo.totalApostas <= 0}
+                      onClick={() => openApostasModal(vinculo)}
+                      className="font-medium tabular-nums flex items-center justify-center gap-1 rounded px-1 mx-auto transition-colors enabled:hover:text-primary disabled:cursor-default"
+                    >
                       <Target className="h-3 w-3 text-primary" />
                       {vinculo.totalApostas}
-                    </p>
+                    </button>
                   </div>
 
                   {/* ===== SALDOS UNIFICADOS (LIST) ===== */}
