@@ -163,23 +163,35 @@ export function extractBookmakerParticipations(
     entries.push(operation);
   }
 
-  const knownLucro = entries.reduce((acc, entry) => {
-    if (typeof entry.lucro_prejuizo !== "number") return acc;
-    return acc + convertEntryValue(entry.lucro_prejuizo, entry, moedaFallback, options, entry.lucro_prejuizo_brl_referencia);
-  }, 0);
-  const missingLucroCount = entries.filter((entry) => typeof entry.lucro_prejuizo !== "number").length;
-  const operationLucro = getConsolidatedLucro(operation, options.convertToConsolidation, moedaConsolidacao);
-  const fallbackLucro = missingLucroCount > 0 ? (operationLucro - knownLucro) / missingLucroCount : 0;
-
-  return entries.map((entry) => {
-    const info = normalizeBookmakerInfo(entry);
+  const entriesWithConvertedStake = entries.map((entry) => {
     const stakeRaw = typeof entry.stake_total === "number" ? entry.stake_total : (entry.stake ?? 0);
     const stake = entry === operation
       ? getConsolidatedStake(operation, options.convertToConsolidation, moedaConsolidacao)
       : convertEntryValue(stakeRaw, entry, moedaFallback, options, entry.stake_brl_referencia);
+    return { entry, stake };
+  });
+
+  const knownLucro = entries.reduce((acc, entry) => {
+    if (typeof entry.lucro_prejuizo !== "number") return acc;
+    return acc + convertEntryValue(entry.lucro_prejuizo, entry, moedaFallback, options, entry.lucro_prejuizo_brl_referencia);
+  }, 0);
+  const missingStakeTotal = entriesWithConvertedStake.reduce((acc, item) => {
+    if (typeof item.entry.lucro_prejuizo === "number") return acc;
+    return acc + Math.max(item.stake, 0);
+  }, 0);
+  const missingLucroCount = entriesWithConvertedStake.filter((item) => typeof item.entry.lucro_prejuizo !== "number").length;
+  const operationLucro = getConsolidatedLucro(operation, options.convertToConsolidation, moedaConsolidacao);
+  const remainingLucro = operationLucro - knownLucro;
+
+  return entriesWithConvertedStake.map(({ entry, stake }) => {
+    const info = normalizeBookmakerInfo(entry);
     const lucro = typeof entry.lucro_prejuizo === "number"
       ? convertEntryValue(entry.lucro_prejuizo, entry, moedaFallback, options, entry.lucro_prejuizo_brl_referencia)
-      : fallbackLucro;
+      : missingStakeTotal > 0
+        ? remainingLucro * (Math.max(stake, 0) / missingStakeTotal)
+        : missingLucroCount > 0
+          ? remainingLucro / missingLucroCount
+          : 0;
 
     return {
       bookmaker_id: entry.bookmaker_id,
