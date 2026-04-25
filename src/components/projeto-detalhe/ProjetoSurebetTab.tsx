@@ -457,7 +457,6 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
   const { count: openOperationsCount } = useOpenOperationsCount({
     projetoId,
     estrategia: APOSTA_ESTRATEGIA.SUREBET,
-    formaRegistro: "ARBITRAGEM",
     refreshTrigger,
   });
 
