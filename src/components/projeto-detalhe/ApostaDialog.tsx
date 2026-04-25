@@ -1103,8 +1103,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         // CRÍTICO: forma_registro NUNCA pode ser null - usar 'SIMPLES' como fallback robusto
         // NOVO: fonte_saldo também precisa ser restaurado (default 'REAL' para dados legados)
         setRegistroValues({
-          forma_registro: (aposta.forma_registro as FormaRegistro) || 'SIMPLES',
-          estrategia: (aposta.estrategia as ApostaEstrategia) || null,
+          forma_registro: 'SIMPLES',
+          estrategia: aposta.estrategia === 'SUREBET' ? 'PUNTER' : ((aposta.estrategia as ApostaEstrategia) || null),
           contexto_operacional: (aposta.contexto_operacional as ContextoOperacional) || null,
           fonte_saldo: (aposta.fonte_saldo as FonteSaldo) || 'REAL', // Legado: default REAL
         });
