@@ -1273,40 +1273,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           {/* Coluna esquerda: Gráfico + Estatísticas */}
           <div className="lg:col-span-2 space-y-4">
             <VisaoGeralCharts 
-              apostas={surebets.map(s => {
-                const isSimples = !s.pernas?.length;
-                return {
-                  data_aposta: s.data_operacao,
-                  lucro_prejuizo: s.lucro_real,
-                  stake: isSimples ? (s.stake || s.stake_total) : s.stake_total,
-                  bookmaker_nome: isSimples ? (s.bookmaker_nome || "—") : (s.pernas?.[0]?.bookmaker_nome || "—"),
-                  parceiro_nome: isSimples ? s.parceiro_nome : undefined,
-                  // CRÍTICO: manter campos consolidados para o badge/linha de evolução bater com KPIs
-                  moeda_operacao: s.moeda_operacao,
-                  stake_consolidado: s.stake_consolidado,
-                  pl_consolidado: s.pl_consolidado,
-                  valor_brl_referencia: s.valor_brl_referencia,
-                  lucro_prejuizo_brl_referencia: s.lucro_prejuizo_brl_referencia,
-                  pernas: isSimples 
-                    ? [{
-                        bookmaker_nome: s.bookmaker_nome || "—",
-                        parceiro_nome: s.parceiro_nome,
-                        stake: s.stake || s.stake_total,
-                        odd: s.odd,
-                        resultado: s.resultado || undefined,
-                        lucro_prejuizo: s.lucro_real || 0,
-                        moeda: s.moeda_operacao || undefined,
-                      }]
-                    : s.pernas?.map(p => ({
-                        bookmaker_nome: p.bookmaker_nome,
-                        stake: p.stake,
-                        odd: p.odd,
-                        resultado: p.resultado || undefined,
-                        lucro_prejuizo: getLucroPerna(p),
-                        moeda: p.moeda || undefined,
-                      }))
-                };
-              })}
+              apostas={surebetsForCharts}
               apostasCalendario={transformRpcDailyForCharts(calendarDaily)}
               accentColor="hsl(var(--primary))"
               logoMap={logoMap}
@@ -1323,42 +1290,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           {/* Coluna direita: Casas Mais Utilizadas */}
           <div className="lg:col-span-1">
             <VisaoGeralCharts 
-              apostas={surebets.map(s => {
-                const isSimples = !s.pernas?.length;
-                return {
-                  data_aposta: s.data_operacao,
-                  lucro_prejuizo: s.lucro_real,
-                  stake: isSimples ? (s.stake || s.stake_total) : s.stake_total,
-                  bookmaker_nome: isSimples ? (s.bookmaker_nome || "—") : (s.pernas?.[0]?.bookmaker_nome || "—"),
-                  parceiro_nome: isSimples ? s.parceiro_nome : undefined,
-                  moeda_operacao: s.moeda_operacao,
-                  stake_consolidado: s.stake_consolidado,
-                  pl_consolidado: s.pl_consolidado,
-                  valor_brl_referencia: s.valor_brl_referencia,
-                  lucro_prejuizo_brl_referencia: s.lucro_prejuizo_brl_referencia,
-                  pernas: isSimples 
-                    ? [{
-                        bookmaker_nome: s.bookmaker_nome || "—",
-                        parceiro_nome: s.parceiro_nome,
-                        stake: s.stake || s.stake_total,
-                        odd: s.odd,
-                        resultado: s.resultado || undefined,
-                        lucro_prejuizo: s.lucro_real || 0,
-                        moeda: s.moeda_operacao || undefined,
-                      }]
-                    : s.pernas?.map(p => ({
-                        bookmaker_nome: p.bookmaker_nome,
-                        parceiro_nome: (p as any).parceiro_nome,
-                        stake: p.stake,
-                        odd: p.odd,
-                        resultado: p.resultado || undefined,
-                        lucro_prejuizo: getLucroPerna(p),
-                        moeda: p.moeda,
-                        stake_brl_referencia: (p as any).stake_brl_referencia,
-                        lucro_prejuizo_brl_referencia: (p as any).lucro_prejuizo_brl_referencia,
-                      }))
-                };
-              })}
+              apostas={surebetsForCharts}
               accentColor="hsl(var(--primary))"
               logoMap={logoMap}
               showEvolucaoChart={false}
