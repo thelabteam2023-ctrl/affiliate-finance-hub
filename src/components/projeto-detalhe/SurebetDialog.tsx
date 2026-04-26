@@ -727,7 +727,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
         // Isso garante que ao editar, o contexto real em que a aposta foi criada seja preservado
         setRegistroValues({
           forma_registro: (surebet.forma_registro as RegistroApostaValues['forma_registro']) || 'ARBITRAGEM',
-          estrategia: ARBITRAGEM_ESTRATEGIA,
+          estrategia: (surebet.estrategia as RegistroApostaValues['estrategia']) || ARBITRAGEM_ESTRATEGIA,
           contexto_operacional: (surebet.contexto_operacional as RegistroApostaValues['contexto_operacional']) || 'NORMAL',
         });
         
@@ -2455,7 +2455,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
           p_esporte: esporte,
           p_mercado: mercado || null,
           p_modelo: modelo,
-          p_estrategia: ARBITRAGEM_ESTRATEGIA,
+          p_estrategia: registroValues.estrategia || ARBITRAGEM_ESTRATEGIA,
           p_contexto_operacional: registroValues.contexto_operacional,
           p_data_aposta: toLocalTimestamp(""),
           p_pernas: pernasParaRPC,
@@ -2806,7 +2806,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
                 onChange={setRegistroValues}
                 suggestions={!isEditing ? getSuggestionsForTab(activeTab) : undefined}
                 disabled={isEditing ? { forma_registro: true, estrategia: true, contexto_operacional: true } : undefined}
-                lockedEstrategia={ARBITRAGEM_ESTRATEGIA}
+                lockedEstrategia={isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) || undefined : undefined}
                 compact
               />
               
