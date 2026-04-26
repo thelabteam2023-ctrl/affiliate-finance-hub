@@ -1484,6 +1484,13 @@ export function SurebetModalRoot({
           else resultadoAposta = 'VOID';
         }
 
+        const originalPernas = originalPernasSnapshot.current;
+        const hasResultadoChange = allPernasFlat.some((flat) => {
+          if (!flat.pernaId) return !!flat.resultado;
+          const originalPerna = originalPernas.find(op => op.id === flat.pernaId);
+          return !!originalPerna && (flat.resultado || null) !== (originalPerna.resultado || null);
+        });
+
         const newStakeTotal = pernasToCalc.reduce((acc, p) => acc + p.stake, 0);
         const newStakeConsolidado = pernasToCalc.reduce((acc, p) => {
           return acc + convertViaBRL(p.stake, p.moeda, engineConfig.consolidationCurrency, engineConfig.brlRates);
@@ -1504,10 +1511,10 @@ export function SurebetModalRoot({
           p_stake_consolidado: newStakeConsolidado,
           p_lucro_esperado: analysis.minLucro,
           p_roi_esperado: analysis.minRoi,
-          p_lucro_prejuizo: lucroRealTotal,
-          p_roi_real: roiReal,
-          p_status: statusAposta,
-          p_resultado: resultadoAposta,
+          p_lucro_prejuizo: hasResultadoChange ? lucroRealTotal : null,
+          p_roi_real: hasResultadoChange ? roiReal : null,
+          p_status: hasResultadoChange ? statusAposta : null,
+          p_resultado: hasResultadoChange ? resultadoAposta : null,
         });
         
         if (rpcError) {
@@ -1523,7 +1530,6 @@ export function SurebetModalRoot({
         console.log('[SurebetModalRoot] ✅ Edição atômica concluída:', result);
         
         // 4. Liquidar/reliquidar pernas cujo resultado mudou (pós-edição)
-        const originalPernas = originalPernasSnapshot.current;
         for (const flat of allPernasFlat) {
           if (!flat.pernaId) continue; // Pernas novas não têm resultado anterior
           

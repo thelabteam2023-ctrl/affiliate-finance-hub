@@ -1,52 +1,50 @@
-Plano para corrigir o erro do formulário de Arbitragem e preservar as melhorias recentes
+Plano para corrigir o erro ao editar estratégia em entradas de arbitragem
 
-Diagnóstico confirmado
-- O erro da imagem vem da trigger de proteção em `apostas_pernas`: ela bloqueia qualquer registro pai `forma_registro = ARBITRAGEM` cuja `estrategia` não seja `SUREBET`.
-- O formulário de Arbitragem foi aberto pela aba Bônus (`tab=bonus`) e por isso o estado do formulário ficou com `estrategia = EXTRACAO_BONUS`.
-- Ao salvar, o formulário chama `criar_surebet_atomica` com `p_estrategia = EXTRACAO_BONUS`; a função cria o pai como `ARBITRAGEM + EXTRACAO_BONUS`; em seguida, ao inserir as pernas, a trigger bloqueia com: “Arbitragem com pernas deve usar estrategia=SUREBET e motor atômico”.
-- Ou seja: as melhorias de roteamento/contexto deixaram o formulário respeitar a aba de origem, mas isso conflitou com a regra atual do banco que exige que toda arbitragem técnica seja `SUREBET`.
+Diagnóstico
+- O erro da imagem não é mais o bloqueio antigo de “estratégia precisa ser SUREBET”. Esse ponto foi relaxado.
+- O erro atual vem da trigger de proteção do pai `apostas_unificada`: ela bloqueia UPDATE direto de campos de liquidação em apostas `forma_registro = ARBITRAGEM` (`resultado`, `lucro_prejuizo`, `status = LIQUIDADA`) quando a atualização não passa pelo motor autorizado.
+- O formulário de edição `SurebetModalRoot` chama a RPC `editar_surebet_completa_v1` e envia também `p_lucro_prejuizo`, `p_roi_real`, `p_status` e `p_resultado`. Mesmo quando o usuário só quer trocar a estratégia, essa RPC faz UPDATE nesses campos no pai. Como a função `editar_surebet_completa_v1` ainda não seta o contexto autorizado `app.surebet_recalc_context`, a trigger entende isso como UPDATE manual de liquidação e bloqueia.
+- Há ainda fluxos legados (`SurebetDialog`, `useApostasUnificada.atualizarArbitragem`) com update direto/delete+insert de pernas que podem recriar inconsistências. O formulário usado na imagem parece ser o novo `SurebetModalRoot`, mas a auditoria deve fechar esses caminhos também.
 
 Correção proposta
 
-1. Separar “tipo técnico do formulário” de “contexto de origem”
-- Para o formulário de Arbitragem, manter sempre `estrategia = SUREBET` no registro salvo, independentemente de ele ter sido aberto dentro de Bônus, Punter, ValueBet, Duplo Green ou Surebet.
-- Preservar `contexto_operacional = BONUS` quando o formulário vier da aba Bônus, e `FREEBET` quando vier da aba Freebets.
-- Manter a fonte de saldo por perna (`REAL`/`FREEBET`) como a verdade financeira, sem voltar ao modelo antigo.
+1. Ajustar a RPC `editar_surebet_completa_v1` no banco
+- Criar uma migração substituindo a função com `DROP FUNCTION IF EXISTS` antes do `CREATE OR REPLACE`, seguindo a regra do projeto para evitar ambiguidade de assinatura.
+- No início da função, setar `PERFORM set_config('app.surebet_recalc_context', 'on', true);` para que edições atômicas autorizadas possam atualizar os campos derivados do pai quando necessário.
+- Melhorar a função para atualizar campos de liquidação do pai apenas quando os parâmetros realmente forem enviados e representarem mudança necessária, evitando alterações desnecessárias em `resultado/lucro/status` durante uma simples troca de estratégia.
+- Preservar a edição atômica de pernas via `editar_perna_surebet_atomica` e criação/deleção de pernas via RPCs já existentes.
 
-2. Ajustar UI do cabeçalho do formulário de Arbitragem
-- Evitar que o cabeçalho mostre “Extração de Bônus” como estratégia em um formulário de Arbitragem.
-- Quando aberto da aba Bônus, o cabeçalho deve indicar o contexto de origem, mas a estratégia técnica do formulário deve permanecer Surebet/Arbitragem.
-- Isso elimina a inconsistência visual e evita que o usuário registre uma arbitragem com estratégia incompatível.
+2. Ajustar o frontend para não recalcular liquidação ao editar apenas metadados
+- Em `SurebetModalRoot`, diferenciar dois tipos de edição:
+  - edição estrutural/financeira: pernas, stake, odd, bookmaker, resultados;
+  - edição de metadados: estratégia, contexto, evento, esporte, mercado, data.
+- Para troca simples de estratégia/contexto, enviar para a RPC apenas os campos necessários e manter `p_lucro_prejuizo`, `p_roi_real`, `p_status` e `p_resultado` como `null/undefined` quando não houver alteração real de resultado.
+- Manter estratégia editável em “Todas Apostas” e travada apenas nas abas com estratégia fixa (Bônus, Duplo Green, Surebet, ValueBet, Punter, etc.), conforme a regra que você descreveu.
 
-3. Corrigir o salvamento no `SurebetModalRoot`
-- No `handleSave`, normalizar a estratégia antes da chamada RPC:
-  - `p_estrategia: 'SUREBET'` para qualquer `forma_registro = ARBITRAGEM`.
-  - `p_contexto_operacional` continua vindo da aba/modal (`NORMAL`, `BONUS`, `FREEBET`).
-- Aplicar a mesma regra em rascunhos e duplicações de arbitragem para não reutilizar estratégia inválida.
-- Manter os snapshots de cotação de trabalho já implementados (`getEffectiveRate` + `getSnapshotFields`) para todas as pernas.
+3. Blindar a edição de registros salvos com estratégia antiga/errada
+- Garantir que um registro `ARBITRAGEM` possa ter `estrategia = EXTRACAO_BONUS`, `DUPLO_GREEN`, `VALUEBET`, `PUNTER` etc. quando editado a partir de “Todas Apostas”.
+- Preservar `forma_registro = ARBITRAGEM` como tipo técnico do formulário e `estrategia` como classificação operacional editável.
+- Preservar `contexto_operacional` separado da estratégia.
 
-4. Reforçar a camada de serviço para evitar regressão
-- Em `ApostaService.criarAposta`, no caminho `forma_registro = ARBITRAGEM`, enviar `p_estrategia: 'SUREBET'` para a RPC mesmo que algum chamador passe outra estratégia por engano.
-- Isso cria uma defesa adicional no frontend/service sem enfraquecer a proteção do banco.
+4. Remover/neutralizar caminhos legados inseguros
+- Atualizar `useApostasUnificada.atualizarArbitragem` para não fazer `update` direto em `apostas_unificada` + delete/insert em `apostas_pernas`; deve delegar para `editar_surebet_completa_v1` ou ficar restrito a um caminho seguro sem impacto financeiro.
+- Revisar `SurebetDialog`/`SurebetDialogTable`: se ainda forem usados em alguma aba, impedir que façam UPDATE direto de arbitragem liquidada ou sincronização manual de pernas fora das RPCs.
+- Manter `liquidarSurebetSimples` apenas como deprecated e garantir que nenhum chamador novo dependa dele.
 
-5. Revisar o hook legado de arbitragem
-- `useApostasUnificada.criarArbitragem` ainda faz insert direto em `apostas_unificada` e depois em `apostas_pernas`, contrariando o padrão atual do motor atômico.
-- Vou atualizar esse hook para delegar a criação para `criar_surebet_atomica` ou remover o caminho inseguro de dual-write direto, preservando os snapshots de cotação de trabalho.
-- Isso evita que outros pontos do app recriem o mesmo erro ou contornem o ledger.
-
-6. Auditar os demais formulários de aposta
-- Aposta simples: confirmar que continua salvando snapshots de Cotação de Trabalho no pai e nas pernas multi-casa.
-- Aposta múltipla: confirmar que usa `getEffectiveRate` e não cotação oficial para snapshots.
-- Arbitragem/Surebet: confirmar que usa cotação de trabalho em todas as pernas e que salva via RPC atômica.
-- Duplicação: confirmar que não carrega IDs antigos e que abre o formulário correto por `forma_registro`.
-- Modal de Vínculos: confirmar que o botão editar abre o formulário correto sem trocar a estratégia técnica de arbitragem.
-
-7. Validação após implementar
-- Rodar checagem TypeScript.
-- Fazer busca no código por chamadas diretas a inserts de `ARBITRAGEM` em `apostas_unificada`/`apostas_pernas`.
-- Validar o caso da imagem: arbitragem aberta da aba Bônus com 3 pernas deve salvar sem erro, como `SUREBET` técnico + `contexto_operacional = BONUS`.
+5. Validação
+- Rodar TypeScript.
+- Rodar a suíte Vitest existente.
+- Auditar por busca no código chamadas diretas a `.update()` em `apostas_unificada` para `ARBITRAGEM`, especialmente atualizações de `resultado`, `lucro_prejuizo` ou `status`.
+- Testar o caso da imagem: editar a entrada “WEST HAM X EVERTON”, trocar estratégia de Surebet para Extração de Bônus e salvar sem acionar bloqueio.
+- Testar também:
+  - criação de arbitragem normal;
+  - edição só de estratégia em Todas Apostas;
+  - edição em aba com estratégia fixa continua travada;
+  - edição de odds/stakes/pernas continua passando pela RPC atômica;
+  - liquidação/reliquidação continua via `liquidar_perna_surebet_v1`.
 
 Resultado esperado
-- O usuário conseguirá registrar arbitragem novamente sem o erro.
-- As melhorias recentes continuarão funcionando: cotação de trabalho, duplicação, edição por vínculos e renderização nas abas.
-- O sistema fica coerente com o padrão financeiro definido: arbitragem sempre usa motor atômico e pernas via ledger, sem insert/update direto inseguro.
+- Você conseguirá corrigir apostas antigas lançadas com estratégia errada diretamente pelo modo edição.
+- A proteção financeira continua ativa contra updates manuais de liquidação.
+- A flexibilidade de estratégia em “Todas Apostas” passa a funcionar sem quebrar o motor de surebet/arbitragem.
+- As abas com estratégia fixa continuam se comportando como antes.

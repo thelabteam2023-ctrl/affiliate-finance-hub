@@ -12,15 +12,11 @@ import {
   AtualizarArbitragemParams,
   LiquidarArbitragemParams,
   calcularStakeTotalPernas,
-  calcularSpread,
-  calcularRoiEsperado,
-  calcularLucroEsperado,
   calcularLucroReal,
   determinarResultadoArbitragem,
   parsePernaFromJson
 } from "@/types/apostasUnificada";
 import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
-import { pernasToInserts } from "@/types/apostasPernas";
 import { SupportedCurrency } from "@/types/currency";
 import { useCurrencySnapshot } from "./useCurrencySnapshot";
 import { useWorkspace } from "./useWorkspace";
@@ -177,48 +173,61 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
     try {
       setLoading(true);
 
-      const updateData: any = {
-        updated_at: new Date().toISOString()
-      };
-
-      if (params.evento !== undefined) updateData.evento = params.evento;
-      if (params.esporte !== undefined) updateData.esporte = params.esporte;
-      if (params.mercado !== undefined) updateData.mercado = params.mercado;
-      if (params.observacoes !== undefined) updateData.observacoes = params.observacoes;
-      
-      if (params.pernas !== undefined) {
-        updateData.pernas = params.pernas;
-        updateData.stake_total = calcularStakeTotalPernas(params.pernas);
-        updateData.spread_calculado = calcularSpread(params.pernas);
-        updateData.roi_esperado = calcularRoiEsperado(params.pernas);
-        updateData.lucro_esperado = calcularLucroEsperado(params.pernas);
-      }
-
-      const { error } = await supabase
+      const { data: apostaAtual, error: fetchError } = await supabase
         .from("apostas_unificada")
-        .update(updateData)
-        .eq("id", params.id);
+        .select("modelo, estrategia, contexto_operacional, data_aposta")
+        .eq("id", params.id)
+        .maybeSingle();
+
+      if (fetchError) throw fetchError;
+      if (!apostaAtual) throw new Error("Arbitragem não encontrada");
+
+      const { data: pernasAtuais, error: pernasFetchError } = await supabase
+        .from("apostas_pernas")
+        .select("id, bookmaker_id, stake, odd, moeda, selecao, selecao_livre, ordem, fonte_saldo, cotacao_snapshot, stake_brl_referencia")
+        .eq("aposta_id", params.id)
+        .order("ordem", { ascending: true });
+
+      if (pernasFetchError) throw pernasFetchError;
+      
+      const sourcePernas = params.pernas || (pernasAtuais || []);
+      const pernasParaRpc = sourcePernas.map((perna: any, index: number) => ({
+        id: perna.id || pernasAtuais?.[index]?.id || null,
+        bookmaker_id: perna.bookmaker_id,
+        stake: perna.stake,
+        odd: perna.odd,
+        moeda: perna.moeda || "BRL",
+        selecao: perna.selecao,
+        selecao_livre: perna.selecao_livre || null,
+        cotacao_snapshot: perna.cotacao_snapshot,
+        stake_brl_referencia: perna.stake_brl_referencia,
+        fonte_saldo: perna.fonte_saldo || "REAL",
+      }));
+
+      const { data: rpcResult, error } = await supabase.rpc('editar_surebet_completa_v1', {
+        p_aposta_id: params.id,
+        p_pernas: pernasParaRpc as any,
+        p_evento: params.evento ?? null,
+        p_esporte: params.esporte ?? null,
+        p_mercado: params.mercado ?? null,
+        p_modelo: apostaAtual.modelo,
+        p_estrategia: apostaAtual.estrategia,
+        p_contexto: apostaAtual.contexto_operacional,
+        p_data_aposta: apostaAtual.data_aposta,
+        p_stake_total: null,
+        p_stake_consolidado: null,
+        p_lucro_esperado: null,
+        p_roi_esperado: null,
+        p_lucro_prejuizo: null,
+        p_roi_real: null,
+        p_status: null,
+        p_resultado: null,
+      });
 
       if (error) throw error;
-      
-      // DUAL-WRITE: Atualizar pernas na tabela normalizada
-      if (params.pernas !== undefined) {
-        // Deletar pernas existentes e reinserir
-        await supabase
-          .from("apostas_pernas")
-          .delete()
-          .eq("aposta_id", params.id);
-        
-        if (params.pernas.length > 0) {
-          const pernasInsert = pernasToInserts(params.id, params.pernas);
-          const { error: pernasError } = await supabase
-            .from("apostas_pernas")
-            .insert(pernasInsert);
-          
-          if (pernasError) {
-            console.error("[useApostasUnificada] Erro ao atualizar pernas normalizadas:", pernasError);
-          }
-        }
+      const result = rpcResult as any;
+      if (result && !result.success) {
+        throw new Error(result.error || 'Falha ao atualizar arbitragem');
       }
       
       toast.success("Operação atualizada!");
