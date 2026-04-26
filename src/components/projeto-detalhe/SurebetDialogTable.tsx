@@ -1277,7 +1277,7 @@ export function SurebetDialogTable({
         p_esporte: esporte,
         p_mercado: mercado || null,
         p_modelo: modeloString,
-        p_estrategia: 'SUREBET',
+        p_estrategia: estrategia || 'SUREBET',
         p_contexto_operacional: contexto,
         p_data_aposta: toLocalTimestamp(""),
         p_pernas: pernasParaRPC,
