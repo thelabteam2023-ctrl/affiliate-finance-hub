@@ -57,6 +57,7 @@ import { convertCurrency, calcularStakesMultiCurrency, type GetEffectiveRateFn }
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { invalidateCanonicalCaches } from "@/lib/invalidateCanonicalCaches";
+import { getEstrategiaFromTab, isAbaEstrategiaFixa } from "@/lib/apostaConstants";
 
 const ARBITRAGEM_ESTRATEGIA: RegistroApostaValues['estrategia'] = 'SUREBET';
 import { MERCADOS_POR_ESPORTE, getMarketsForSport, getMarketsForSportAndModel, isMercadoCompativelComModelo, mercadoAdmiteEmpate, resolveMarketToOptions, type ModeloAposta } from "@/lib/marketNormalizer";
