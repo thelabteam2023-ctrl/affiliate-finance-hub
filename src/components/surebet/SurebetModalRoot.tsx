@@ -126,7 +126,9 @@ import {
   APOSTA_ESTRATEGIA,
   CONTEXTO_OPERACIONAL,
   getContextoFromTab,
+  getEstrategiaFromTab,
   isAbaContextoFixo,
+  isAbaEstrategiaFixa,
   type ApostaEstrategia,
   type ContextoOperacional,
 } from "@/lib/apostaConstants";
@@ -412,7 +414,7 @@ export function SurebetModalRoot({
       setEvento(surebet.evento);
       setEsporte(surebet.esporte);
       setMercado(surebet.mercado || "");
-      setEstrategia(ARBITRAGEM_ESTRATEGIA);
+      setEstrategia((surebet.estrategia || ARBITRAGEM_ESTRATEGIA) as ApostaEstrategia);
       setContexto((surebet.contexto_operacional || CONTEXTO_OPERACIONAL.NORMAL) as ContextoOperacional);
       
       // Preservar Data/Hora original no modo edição
@@ -529,7 +531,7 @@ export function SurebetModalRoot({
   // precisamos atualizar os estados automaticamente
   useEffect(() => {
     if (!isEditing && open) {
-      const lockedEstrategia = ARBITRAGEM_ESTRATEGIA;
+      const lockedEstrategia = isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : null;
       const lockedContexto = isAbaContextoFixo(activeTab) ? getContextoFromTab(activeTab) : null;
       
       // Sincronizar estratégia se locked
