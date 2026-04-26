@@ -2240,7 +2240,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
           p_modelo: surebet.modelo || null,
           p_estrategia: registroValues.estrategia,
           p_contexto: registroValues.contexto_operacional,
-          p_data_aposta: surebet.data_aposta || null,
+          p_data_aposta: surebet.data_operacao || null,
           p_stake_total: stakeEditTotal,
           p_stake_consolidado: valorBRLRefEdit,
           p_lucro_esperado: null,
