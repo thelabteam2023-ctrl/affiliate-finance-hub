@@ -140,7 +140,7 @@ export function BetFormHeaderV2({
   const config = FormTypeConfig[formType];
   const Icon = config.icon;
   
-  const isEstrategiaFixed = !isEditing && !!lockedEstrategia && (formType !== "simples" || activeTab === "surebet" || isAbaEstrategiaFixa(activeTab));
+  const isEstrategiaFixed = !!lockedEstrategia && (formType !== "simples" || activeTab === "surebet" || isAbaEstrategiaFixa(activeTab));
   const displayEstrategia = lockedEstrategia || estrategia;
   
   const title = isEditing ? config.editTitle : config.title;
