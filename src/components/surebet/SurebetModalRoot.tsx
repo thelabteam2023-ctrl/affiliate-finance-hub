@@ -1717,7 +1717,7 @@ export function SurebetModalRoot({
           projeto_id: projetoId,
           bookmaker_id: entry.bookmaker_id,
           forma_registro: 'SIMPLES',
-          estrategia: ARBITRAGEM_ESTRATEGIA,
+          estrategia: (estrategia || ARBITRAGEM_ESTRATEGIA) as ApostaEstrategia,
           contexto_operacional: contexto,
           evento,
           esporte,
