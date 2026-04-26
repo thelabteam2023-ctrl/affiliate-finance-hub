@@ -11,6 +11,7 @@ import {
   CriarArbitragemParams,
   AtualizarArbitragemParams,
   LiquidarArbitragemParams,
+  calcularStakeTotalPernas,
   calcularLucroReal,
   determinarResultadoArbitragem,
   parsePernaFromJson
