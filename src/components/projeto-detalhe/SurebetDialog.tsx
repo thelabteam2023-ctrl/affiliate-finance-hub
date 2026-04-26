@@ -2805,7 +2805,11 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
                 values={registroValues}
                 onChange={setRegistroValues}
                 suggestions={!isEditing ? getSuggestionsForTab(activeTab) : undefined}
-                disabled={isEditing ? { forma_registro: true, estrategia: true, contexto_operacional: true } : undefined}
+                disabled={isEditing ? {
+                  forma_registro: true,
+                  estrategia: isAbaEstrategiaFixa(activeTab),
+                  contexto_operacional: activeTab === 'bonus' || activeTab === 'freebets',
+                } : undefined}
                 lockedEstrategia={isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) || undefined : undefined}
                 compact
               />
