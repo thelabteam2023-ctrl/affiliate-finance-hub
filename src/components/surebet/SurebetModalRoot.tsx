@@ -1328,7 +1328,7 @@ export function SurebetModalRoot({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      const estrategiaArbitragem = ARBITRAGEM_ESTRATEGIA;
+      const estrategiaSelecionada = (estrategia || ARBITRAGEM_ESTRATEGIA) as ApostaEstrategia;
 
       const getBookmakerMoeda = (bookmakerId: string): SupportedCurrency => {
         const bk = bookmakerSaldos.find(b => b.id === bookmakerId);
@@ -1497,7 +1497,7 @@ export function SurebetModalRoot({
           p_esporte: esporte,
           p_mercado: mercado,
           p_modelo: modelo,
-          p_estrategia: estrategiaArbitragem,
+          p_estrategia: estrategiaSelecionada,
           p_contexto: contexto,
           p_data_aposta: toLocalTimestamp(dataAposta),
           p_stake_total: newStakeTotal,
@@ -1596,7 +1596,7 @@ export function SurebetModalRoot({
           p_esporte: esporte,
           p_mercado: mercado || null,
           p_modelo: modelo,
-          p_estrategia: estrategiaArbitragem,
+          p_estrategia: estrategiaSelecionada,
           p_contexto_operacional: contexto,
           p_data_aposta: toLocalTimestamp(dataAposta),
           p_pernas: pernasParaRPC,
@@ -2012,7 +2012,7 @@ export function SurebetModalRoot({
       evento: evento || undefined,
       mercado: mercado || undefined,
       esporte: esporte || undefined,
-      estrategia: ARBITRAGEM_ESTRATEGIA,
+      estrategia: (estrategia || ARBITRAGEM_ESTRATEGIA) as ApostaEstrategia,
       contexto_operacional: contexto || undefined,
       modelo,
       modelo_tipo: modeloTipo,
@@ -2076,7 +2076,7 @@ export function SurebetModalRoot({
             onContextoChange={(v) => setContexto(v)}
             isEditing={isEditing}
             activeTab={activeTab}
-            lockedEstrategia={ARBITRAGEM_ESTRATEGIA}
+            lockedEstrategia={isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : null}
             gameFields={{
               esporte,
               evento,
