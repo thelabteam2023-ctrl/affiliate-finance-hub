@@ -126,7 +126,8 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
         .eq("id", params.projeto_id)
         .maybeSingle();
       
-      // Arbitragem real sempre nasce pelo motor atômico e com estratégia técnica SUREBET.
+      // Arbitragem real sempre nasce pelo motor atômico. A estratégia continua
+      // sendo decisão operacional editável quando a origem é Todas Apostas.
       // O contexto operacional preserva a aba de origem (ex: BONUS/FREEBET).
       const pernasComSnapshot = params.pernas.map((perna) => {
         const pernaMoeda = (perna.moeda || "BRL") as SupportedCurrency;
@@ -149,7 +150,7 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
         p_esporte: params.esporte || null,
         p_mercado: params.mercado || null,
         p_modelo: params.modelo || null,
-        p_estrategia: 'SUREBET',
+        p_estrategia: params.estrategia || 'SUREBET',
         p_contexto_operacional: params.contexto_operacional || 'NORMAL',
         p_data_aposta: new Date().toISOString(),
         p_pernas: pernasComSnapshot as any,
