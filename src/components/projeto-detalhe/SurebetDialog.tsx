@@ -2219,50 +2219,42 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
           ? ((analysis?.guaranteedProfit || 0) / stakeEditTotal) * 100 
           : null;
         
-        // 5. Update completo na tabela unificada
-        const { error } = await supabase
-          .from("apostas_unificada")
-          .update({
-            evento,
-            esporte,
-            mercado,
-            observacoes,
-            pernas: novasPernas as any,
-            moeda_operacao: moedaOperacaoEdit,
-            valor_brl_referencia: valorBRLRefEdit,
-            stake_total: stakeEditTotal,
-            spread_calculado: spreadEdit,
-            roi_esperado: roiEdit,
-            updated_at: new Date().toISOString()
-          })
-          .eq("id", surebet.id);
+        const pernasParaRPC = novasPernas.map((perna) => ({
+          bookmaker_id: perna.bookmaker_id,
+          stake: perna.stake,
+          odd: perna.odd,
+          moeda: perna.moeda,
+          selecao: perna.selecao,
+          selecao_livre: perna.selecao_livre || null,
+          cotacao_snapshot: perna.cotacao_snapshot,
+          stake_brl_referencia: perna.stake_brl_referencia,
+          fonte_saldo: 'REAL',
+        }));
+
+        const { data: rpcResult, error } = await supabase.rpc('editar_surebet_completa_v1', {
+          p_aposta_id: surebet.id,
+          p_pernas: pernasParaRPC as any,
+          p_evento: evento,
+          p_esporte: esporte,
+          p_mercado: mercado,
+          p_modelo: surebet.modelo || null,
+          p_estrategia: registroValues.estrategia,
+          p_contexto: registroValues.contexto_operacional,
+          p_data_aposta: surebet.data_aposta || null,
+          p_stake_total: stakeEditTotal,
+          p_stake_consolidado: valorBRLRefEdit,
+          p_lucro_esperado: null,
+          p_roi_esperado: roiEdit,
+          p_lucro_prejuizo: null,
+          p_roi_real: null,
+          p_status: null,
+          p_resultado: null,
+        });
 
         if (error) throw error;
-        
-        // CRÍTICO: DUAL-WRITE - Sincronizar apostas_pernas (delete + re-insert)
-        // Isso garante que o saldo_em_aposta seja calculado corretamente pela RPC
-        if (surebet.id && novasPernas.length > 0) {
-          // 5a. Deletar pernas antigas
-          const { error: deleteError } = await supabase
-            .from("apostas_pernas")
-            .delete()
-            .eq("aposta_id", surebet.id);
-          
-          if (deleteError) {
-            console.error("[SurebetDialog] Erro ao deletar pernas antigas:", deleteError);
-          }
-          
-          // 5b. Inserir novas pernas
-          const pernasInsert = pernasToInserts(surebet.id, novasPernas);
-          const { error: pernasError } = await supabase
-            .from("apostas_pernas")
-            .insert(pernasInsert);
-          
-          if (pernasError) {
-            console.error("[SurebetDialog] Erro ao re-inserir pernas normalizadas:", pernasError);
-          } else {
-            console.log("[SurebetDialog] Dual-write edit: pernas sincronizadas:", pernasInsert.length);
-          }
+        const result = rpcResult as any;
+        if (result && !result.success) {
+          throw new Error(result.error || 'Falha ao atualizar arbitragem');
         }
         
         // Invalidar cache de saldos
