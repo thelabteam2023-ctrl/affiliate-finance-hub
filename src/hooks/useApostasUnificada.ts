@@ -181,8 +181,18 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
 
       if (fetchError) throw fetchError;
       if (!apostaAtual) throw new Error("Arbitragem não encontrada");
+
+      const { data: pernasAtuais, error: pernasFetchError } = await supabase
+        .from("apostas_pernas")
+        .select("id, bookmaker_id, stake, odd, moeda, selecao, selecao_livre, ordem, fonte_saldo, cotacao_snapshot, stake_brl_referencia")
+        .eq("aposta_id", params.id)
+        .order("ordem", { ascending: true });
+
+      if (pernasFetchError) throw pernasFetchError;
       
-      const pernasParaRpc = (params.pernas || []).map((perna) => ({
+      const sourcePernas = params.pernas || (pernasAtuais || []);
+      const pernasParaRpc = sourcePernas.map((perna: any, index: number) => ({
+        id: perna.id || pernasAtuais?.[index]?.id || null,
         bookmaker_id: perna.bookmaker_id,
         stake: perna.stake,
         odd: perna.odd,
@@ -191,7 +201,7 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
         selecao_livre: perna.selecao_livre || null,
         cotacao_snapshot: perna.cotacao_snapshot,
         stake_brl_referencia: perna.stake_brl_referencia,
-        fonte_saldo: "REAL",
+        fonte_saldo: perna.fonte_saldo || "REAL",
       }));
 
       const { data: rpcResult, error } = await supabase.rpc('editar_surebet_completa_v1', {
