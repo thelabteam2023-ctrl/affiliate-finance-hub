@@ -104,22 +104,38 @@ function getCpfColor(idx: number | null | undefined) {
 
 // ──────── Componentes drag-and-drop ────────
 
-function DraggableBookmaker({ id, nome, moeda, status, logoUrl }: {
+type BookmakerDragItem = { id: string; nome: string; moeda: string };
+
+function DraggableBookmaker({ id, nome, moeda, status, logoUrl, selected, selectedBatch, onToggleSelect }: {
   id: string; nome: string; moeda: string;
   status: "REGULAMENTADA" | "NAO_REGULAMENTADA";
   logoUrl: string | null;
+  selected: boolean;
+  selectedBatch: BookmakerDragItem[];
+  onToggleSelect: () => void;
 }) {
+  const isBatchDrag = selected && selectedBatch.length > 1;
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `bm-${id}`,
-    data: { type: "bookmaker", bookmakerId: id, nome, moeda },
+    data: isBatchDrag
+      ? { type: "bookmaker-batch", items: selectedBatch, count: selectedBatch.length }
+      : { type: "bookmaker", bookmakerId: id, nome, moeda },
   });
   return (
     <div
       ref={setNodeRef}
       {...listeners}
       {...attributes}
+      onClick={(e) => {
+        if (e.ctrlKey || e.metaKey) {
+          e.preventDefault();
+          e.stopPropagation();
+          onToggleSelect();
+        }
+      }}
       className={cn(
         "px-2 py-1.5 rounded-md border bg-card text-xs cursor-grab active:cursor-grabbing hover:border-primary transition-colors flex items-center gap-2",
+        selected && "border-primary bg-primary/10 ring-1 ring-primary/50",
         isDragging && "opacity-40"
       )}
     >
@@ -140,10 +156,19 @@ function DraggableBookmaker({ id, nome, moeda, status, logoUrl }: {
 
 // Item arrastável vindo do PLANO de distribuição
 // Carrega tudo: CPF (parceiro), casa, grupo, valor sugerido — pronto para virar campanha
-function DraggableCelula({ celula, parceiroNome }: { celula: CelulaDisponivel; parceiroNome?: string }) {
+function DraggableCelula({ celula, parceiroNome, selected, selectedBatch, onToggleSelect }: {
+  celula: CelulaDisponivel;
+  parceiroNome?: string;
+  selected: boolean;
+  selectedBatch: CelulaDisponivel[];
+  onToggleSelect: () => void;
+}) {
+  const isBatchDrag = selected && selectedBatch.length > 1;
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `cel-${celula.id}`,
-    data: { type: "celula", celula },
+    data: isBatchDrag
+      ? { type: "celula-batch", items: selectedBatch, count: selectedBatch.length }
+      : { type: "celula", celula },
   });
   const jaAgendada = !!celula.agendada_em;
   const cpfColor = getCpfColor(celula.cpf_index);
@@ -156,11 +181,19 @@ function DraggableCelula({ celula, parceiroNome }: { celula: CelulaDisponivel; p
       ref={setNodeRef}
       {...(jaAgendada ? {} : listeners)}
       {...attributes}
+      onClick={(e) => {
+        if (!jaAgendada && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          e.stopPropagation();
+          onToggleSelect();
+        }
+      }}
       className={cn(
         "px-2 py-1.5 rounded-md border text-xs transition-colors flex items-center gap-2",
         jaAgendada
           ? "opacity-50 cursor-not-allowed bg-card"
           : "cursor-grab active:cursor-grabbing hover:brightness-110",
+        selected && "ring-2 ring-primary ring-offset-1 ring-offset-background",
         isDragging && "opacity-40"
       )}
       style={{
