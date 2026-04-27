@@ -36,6 +36,16 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useExchangeRates } from "@/contexts/ExchangeRatesContext";
 import { useDistribuicaoPlanos } from "@/hooks/useDistribuicaoPlanos";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface CatalogoItem {
   id: string;
@@ -49,7 +59,7 @@ export default function DistribuicaoTab() {
   const { grupos, membros, isLoading: gruposLoading } = useBookmakerGrupos();
   const { data: perfis = [] } = usePlanningPerfis();
   const { data: casasPlanejamento = [] } = usePlanningCasas();
-  const { createPlano } = useDistribuicaoPlanos();
+  const { planos, createPlano, deletePlano } = useDistribuicaoPlanos();
   const { convertToBRL, cotacaoUSD } = useExchangeRates();
 
   const [planoNome, setPlanoNome] = useState("");
@@ -63,6 +73,7 @@ export default function DistribuicaoTab() {
     }>
   >([]);
   const [resultado, setResultado] = useState<ReturnType<typeof gerarDistribuicao> | null>(null);
+  const [planoParaExcluir, setPlanoParaExcluir] = useState<string | null>(null);
 
   // Conversão moeda nativa → USD (via BRL)
   const toUsd = (valor: number, moeda: string): number => {
@@ -211,6 +222,15 @@ export default function DistribuicaoTab() {
     );
   };
 
+  const planoSelecionadoParaExcluir = planos.find((p) => p.id === planoParaExcluir) ?? null;
+
+  const confirmarExclusaoPlano = () => {
+    if (!planoParaExcluir) return;
+    deletePlano.mutate(planoParaExcluir, {
+      onSuccess: () => setPlanoParaExcluir(null),
+    });
+  };
+
 
 
   const selectedGenericosCount = useMemo(
@@ -298,6 +318,7 @@ export default function DistribuicaoTab() {
   };
 
   return (
+    <>
     <div className="space-y-4">
       <div className="text-xs text-muted-foreground">
         Use os perfis e os grupos de casas já cadastrados. Cada grupo é distribuído de acordo com a
@@ -317,6 +338,41 @@ export default function DistribuicaoTab() {
           className="h-8 text-sm"
         />
       </div>
+
+      {planos.length > 0 && (
+        <Card className="p-3 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <div className="text-xs font-medium">Planos salvos</div>
+              <div className="text-[11px] text-muted-foreground">Exclua distribuições que não serão mais usadas.</div>
+            </div>
+            <Badge variant="outline" className="text-[10px] shrink-0">{planos.length}</Badge>
+          </div>
+          <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+            {planos.map((plano) => (
+              <div key={plano.id} className="flex items-center justify-between gap-2 rounded-md border px-2 py-1.5">
+                <div className="min-w-0">
+                  <div className="text-xs font-medium truncate">{plano.nome}</div>
+                  <div className="text-[10px] text-muted-foreground">
+                    {new Date(plano.created_at).toLocaleDateString("pt-BR")}
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-destructive hover:text-destructive"
+                  onClick={() => setPlanoParaExcluir(plano.id)}
+                  disabled={deletePlano.isPending}
+                  title="Excluir plano de distribuição"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <Separator />
 
@@ -753,5 +809,22 @@ export default function DistribuicaoTab() {
         </Card>
       )}
     </div>
+    <AlertDialog open={!!planoParaExcluir} onOpenChange={(open) => !open && setPlanoParaExcluir(null)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Excluir plano de distribuição?</AlertDialogTitle>
+          <AlertDialogDescription>
+            O plano {planoSelecionadoParaExcluir ? `"${planoSelecionadoParaExcluir.nome}"` : "selecionado"} será removido junto com suas células de distribuição. Essa ação não pode ser desfeita.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={deletePlano.isPending}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={confirmarExclusaoPlano} disabled={deletePlano.isPending}>
+            {deletePlano.isPending ? "Excluindo..." : "Excluir"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
