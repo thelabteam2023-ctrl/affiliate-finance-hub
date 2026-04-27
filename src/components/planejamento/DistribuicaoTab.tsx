@@ -36,6 +36,16 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useExchangeRates } from "@/contexts/ExchangeRatesContext";
 import { useDistribuicaoPlanos } from "@/hooks/useDistribuicaoPlanos";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface CatalogoItem {
   id: string;
@@ -49,7 +59,7 @@ export default function DistribuicaoTab() {
   const { grupos, membros, isLoading: gruposLoading } = useBookmakerGrupos();
   const { data: perfis = [] } = usePlanningPerfis();
   const { data: casasPlanejamento = [] } = usePlanningCasas();
-  const { createPlano } = useDistribuicaoPlanos();
+  const { planos, createPlano, deletePlano } = useDistribuicaoPlanos();
   const { convertToBRL, cotacaoUSD } = useExchangeRates();
 
   const [planoNome, setPlanoNome] = useState("");
@@ -63,6 +73,7 @@ export default function DistribuicaoTab() {
     }>
   >([]);
   const [resultado, setResultado] = useState<ReturnType<typeof gerarDistribuicao> | null>(null);
+  const [planoParaExcluir, setPlanoParaExcluir] = useState<string | null>(null);
 
   // Conversão moeda nativa → USD (via BRL)
   const toUsd = (valor: number, moeda: string): number => {
