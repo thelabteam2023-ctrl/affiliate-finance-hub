@@ -26,6 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RegulamentacaoFilter, RegFilterValue } from "./RegulamentacaoFilter";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -392,11 +393,12 @@ function TrashDropZone({ active }: { active: boolean }) {
   );
 }
 
-function DayCell({ date, isCurrentMonth, children, onAdd }: {
+function DayCell({ date, isCurrentMonth, children, onAdd, onOpenDetails }: {
   date: Date;
   isCurrentMonth: boolean;
   children: React.ReactNode;
   onAdd: () => void;
+  onOpenDetails: () => void;
 }) {
   const dateKey = formatDateKey(date);
   const isPast = isDateInPast(dateKey);
@@ -412,8 +414,9 @@ function DayCell({ date, isCurrentMonth, children, onAdd }: {
   return (
     <div
       ref={setNodeRef}
+      onClick={onOpenDetails}
       className={cn(
-        "min-h-[110px] border rounded-md p-1 flex flex-col gap-1 transition-colors bg-muted/40",
+        "min-h-[110px] border rounded-md p-1 flex flex-col gap-1 transition-colors bg-muted/40 cursor-pointer",
         !isCurrentMonth && "bg-muted/10 opacity-50",
         isPast && "bg-muted/20 opacity-60 cursor-not-allowed",
         !isPast && isOver && "ring-2 ring-primary bg-primary/10",
@@ -423,7 +426,7 @@ function DayCell({ date, isCurrentMonth, children, onAdd }: {
       <div className="flex items-center justify-between">
         <span className={cn("text-xs font-medium", isToday && !isPast && "text-primary", isPast && "text-muted-foreground")}>{date.getDate()}</span>
         {isCurrentMonth && !isPast && (
-          <button onClick={onAdd} className="opacity-0 hover:opacity-100 group-hover:opacity-100 text-muted-foreground hover:text-primary">
+          <button onClick={(e) => { e.stopPropagation(); onAdd(); }} className="opacity-0 hover:opacity-100 group-hover:opacity-100 text-muted-foreground hover:text-primary">
             <Plus className="h-3 w-3" />
           </button>
         )}
@@ -467,10 +470,12 @@ export function PlanejamentoCalendario() {
   } | null>(null);
   const [moveConfirmed, setMoveConfirmed] = useState(false);
   const [simulacaoOpen, setSimulacaoOpen] = useState(false);
+  const [detailsDate, setDetailsDate] = useState<string | null>(null);
 
   const { data: campanhas = [] } = usePlanningCampanhas(year, month);
   const { data: casasPlan = [] } = usePlanningCasas();
   const { data: ips = [] } = usePlanningIps();
+  const { data: wallets = [] } = usePlanningWallets();
   const { data: parceiros = [] } = useParceirosLite();
   const { data: perfisPre = [] } = usePlanningPerfis();
   const upsert = useUpsertCampanha();
@@ -764,6 +769,8 @@ export function PlanejamentoCalendario() {
     });
     return m;
   }, [campanhas]);
+
+  const detailsCampanhas = detailsDate ? (campanhasByDay.get(detailsDate) ?? []) : [];
 
   // Totais (já convertidos para a moeda de exibição)
   const { totalDia, totalMes, totalCasasMes } = useMemo(() => {
@@ -1218,6 +1225,7 @@ export function PlanejamentoCalendario() {
                     date={cell.date}
                     isCurrentMonth={cell.isCurrentMonth}
                     onAdd={() => setEditing({ date: key })}
+                    onOpenDetails={() => setDetailsDate(key)}
                   >
                     {dayCamps.map(c => {
                       const grupoStatus = grupoViolationMap.get(c.id);
@@ -1282,6 +1290,50 @@ export function PlanejamentoCalendario() {
           campanhasDoMes={campanhas}
         />
       )}
+
+      <Dialog open={!!detailsDate} onOpenChange={(open) => !open && setDetailsDate(null)}>
+        <DialogContent className="max-w-4xl max-h-[82vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Casas planejadas do dia {detailsDate?.split("-").reverse().join("/")}</DialogTitle>
+            <DialogDescription>
+              {detailsCampanhas.length} casas • Σ {formatMoney(detailsCampanhas.reduce((sum, c) => sum + convertToDisplay(Number(c.deposit_amount), c.currency), 0), displayCurrency)}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="overflow-auto rounded-md border">
+            <div className="grid grid-cols-[1.2fr_1fr_1fr_1fr_0.7fr_0.8fr] gap-2 px-3 py-2 text-[11px] font-semibold text-muted-foreground bg-muted/40 min-w-[760px]">
+              <div>Casa</div>
+              <div>Perfil</div>
+              <div>IP utilizado</div>
+              <div>Wallet</div>
+              <div>Moeda</div>
+              <div className="text-right">Valor</div>
+            </div>
+            <div className="min-w-[760px] divide-y">
+              {detailsCampanhas.map((c) => {
+                const ip = c.ip_id ? ipMap[c.ip_id] : null;
+                const wallet = c.wallet_id ? wallets.find((w) => w.id === c.wallet_id) : null;
+                const perfil = c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : null;
+                return (
+                  <div key={c.id} className="grid grid-cols-[1.2fr_1fr_1fr_1fr_0.7fr_0.8fr] gap-2 px-3 py-2 text-xs items-center hover:bg-muted/30">
+                    <div className="font-medium truncate flex items-center gap-2">
+                      <BookmakerLogo logoUrl={getLogoUrl(c.bookmaker_nome)} alt={c.bookmaker_nome} size="h-6 w-6 shrink-0" iconSize="h-3.5 w-3.5" />
+                      <span className="truncate">{c.bookmaker_nome}</span>
+                    </div>
+                    <div className="truncate">{perfil ?? "—"}</div>
+                    <div className="truncate">{ip ? `${ip.label}${ip.ip_address ? ` • ${ip.ip_address}` : ""}` : "—"}</div>
+                    <div className="truncate">{wallet ? `${wallet.label}${wallet.network ? ` • ${wallet.network}` : ""}` : "—"}</div>
+                    <div className="font-semibold">{c.currency}</div>
+                    <div className="text-right font-semibold tabular-nums">{formatMoney(Number(c.deposit_amount), c.currency)}</div>
+                  </div>
+                );
+              })}
+              {detailsCampanhas.length === 0 && (
+                <div className="px-3 py-8 text-center text-sm text-muted-foreground">Nenhuma casa planejada neste dia.</div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <RecursosManager open={recursosOpen} onOpenChange={setRecursosOpen} />
 
