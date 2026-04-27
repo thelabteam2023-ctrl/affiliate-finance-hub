@@ -669,6 +669,28 @@ export function PlanejamentoCalendario() {
     return map;
   }, [celulasPlano, campanhas, parceiroIdToCpfIdx, modoPlano, planoFiltroId]);
 
+  const campanhaPlanoOrderMap = useMemo(() => {
+    const map = new Map<string, number>();
+    celulasPlano.forEach((c) => {
+      if (c.campanha_id) map.set(c.campanha_id, c.ordem ?? Number.MAX_SAFE_INTEGER);
+    });
+    return map;
+  }, [celulasPlano]);
+
+  const sortCampanhasByCpf = useCallback((list: PlanningCampanha[]) => {
+    return [...list].sort((a, b) => {
+      const cpfA = campanhaCpfMap.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+      const cpfB = campanhaCpfMap.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+      if (cpfA !== cpfB) return cpfA - cpfB;
+
+      const ordemA = campanhaPlanoOrderMap.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+      const ordemB = campanhaPlanoOrderMap.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+      if (ordemA !== ordemB) return ordemA - ordemB;
+
+      return a.bookmaker_nome.localeCompare(b.bookmaker_nome, "pt-BR");
+    });
+  }, [campanhaCpfMap, campanhaPlanoOrderMap]);
+
   // (modoPlano declarado acima)
   const sidebarItemsCount = modoPlano ? filteredCelulas.length : filteredBookmakers.length;
 
@@ -783,8 +805,9 @@ export function PlanejamentoCalendario() {
       if (!m.has(c.scheduled_date)) m.set(c.scheduled_date, []);
       m.get(c.scheduled_date)!.push(c);
     });
+    m.forEach((list, key) => m.set(key, sortCampanhasByCpf(list)));
     return m;
-  }, [campanhas]);
+  }, [campanhas, sortCampanhasByCpf]);
 
   const detailsCampanhas = detailsDate ? (campanhasByDay.get(detailsDate) ?? []) : [];
 
