@@ -1100,6 +1100,9 @@ export function PlanejamentoCalendario() {
                         key={c.id}
                         celula={c}
                         parceiroNome={c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : undefined}
+                        selected={selectedCelulaIds.has(c.id)}
+                        selectedBatch={selectedCelulaBatch}
+                        onToggleSelect={() => toggleCelulaSelection(c.id)}
                       />
                     ))}
                     {filteredCelulas.length === 0 && (
@@ -1120,6 +1123,9 @@ export function PlanejamentoCalendario() {
                         moeda={b.moeda_padrao}
                         status={b.status}
                         logoUrl={b.logo_url}
+                        selected={selectedBookmakerIds.has(b.id)}
+                        selectedBatch={selectedBookmakerBatch}
+                        onToggleSelect={() => toggleBookmakerSelection(b.id)}
                       />
                     ))}
                     {filteredBookmakers.length === 0 && (
