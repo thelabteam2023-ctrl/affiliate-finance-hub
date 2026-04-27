@@ -1224,6 +1224,7 @@ export function PlanejamentoCalendario() {
                     date={cell.date}
                     isCurrentMonth={cell.isCurrentMonth}
                     onAdd={() => setEditing({ date: key })}
+                    onOpenDetails={() => setDetailsDate(key)}
                   >
                     {dayCamps.map(c => {
                       const grupoStatus = grupoViolationMap.get(c.id);
