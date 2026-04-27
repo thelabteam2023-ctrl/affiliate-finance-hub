@@ -766,7 +766,7 @@ export function PlanejamentoCalendario() {
   }, [campanhas]);
 
   // Totais (já convertidos para a moeda de exibição)
-  const { totalDia, totalMes } = useMemo(() => {
+  const { totalDia, totalMes, totalCasasMes } = useMemo(() => {
     const dia = new Map<string, number>();
     let mes = 0;
     campanhas.forEach(c => {
@@ -774,7 +774,7 @@ export function PlanejamentoCalendario() {
       dia.set(c.scheduled_date, (dia.get(c.scheduled_date) ?? 0) + valorConvertido);
       mes += valorConvertido;
     });
-    return { totalDia: dia, totalMes: mes };
+    return { totalDia: dia, totalMes: mes, totalCasasMes: campanhas.length };
   }, [campanhas, convertToDisplay]);
 
   const handleDragStart = (e: DragStartEvent) => setActiveDrag(e.active.data.current);
@@ -1197,7 +1197,7 @@ export function PlanejamentoCalendario() {
                 </Button>
               </div>
               <Badge variant="secondary" className="text-sm">
-                Total do mês: {formatMoney(totalMes, displayCurrency)}
+                {totalCasasMes} casas • Total do mês: {formatMoney(totalMes, displayCurrency)}
               </Badge>
             </div>
           </div>
@@ -1240,7 +1240,7 @@ export function PlanejamentoCalendario() {
                     })}
                     {dayTotal > 0 && (
                       <div className="text-[10px] text-muted-foreground border-t pt-0.5 mt-auto">
-                        Σ {formatMoney(dayTotal, displayCurrency)}
+                        {dayCamps.length} casas • Σ {formatMoney(dayTotal, displayCurrency)}
                       </div>
                     )}
                   </DayCell>
