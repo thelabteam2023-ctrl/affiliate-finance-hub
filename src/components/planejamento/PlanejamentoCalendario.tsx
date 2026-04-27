@@ -992,9 +992,20 @@ export function PlanejamentoCalendario() {
               </div>
               <p className="text-[11px] text-muted-foreground">
                 {modoPlano
-                  ? "Células do plano — arraste para o calendário"
-                  : "Arraste para o calendário"}
+                  ? "Células do plano — Ctrl/Cmd + clique seleciona várias"
+                  : "Ctrl/Cmd + clique seleciona várias"}
               </p>
+
+              {(selectedBookmakerIds.size > 0 || selectedCelulaIds.size > 0) && (
+                <div className="flex items-center justify-between rounded-md border bg-primary/10 px-2 py-1 text-[11px] text-primary">
+                  <span className="font-medium">
+                    {selectedBookmakerIds.size + selectedCelulaIds.size} selecionada(s)
+                  </span>
+                  <button type="button" className="hover:underline" onClick={clearSelection}>
+                    Limpar
+                  </button>
+                </div>
+              )}
 
               {/* Seletor de Plano de Distribuição */}
               <Select value={planoFiltroId} onValueChange={(v) => { setPlanoFiltroId(v); setGrupoFiltroId("todos"); setCpfFiltroIdx("todos"); }}>
