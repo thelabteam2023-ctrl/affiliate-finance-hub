@@ -475,6 +475,7 @@ export function PlanejamentoCalendario() {
   const { data: campanhas = [] } = usePlanningCampanhas(year, month);
   const { data: casasPlan = [] } = usePlanningCasas();
   const { data: ips = [] } = usePlanningIps();
+  const { data: wallets = [] } = usePlanningWallets();
   const { data: parceiros = [] } = useParceirosLite();
   const { data: perfisPre = [] } = usePlanningPerfis();
   const upsert = useUpsertCampanha();
