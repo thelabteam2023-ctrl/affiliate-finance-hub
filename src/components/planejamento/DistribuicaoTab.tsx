@@ -318,6 +318,7 @@ export default function DistribuicaoTab() {
   };
 
   return (
+    <>
     <div className="space-y-4">
       <div className="text-xs text-muted-foreground">
         Use os perfis e os grupos de casas já cadastrados. Cada grupo é distribuído de acordo com a
@@ -808,5 +809,22 @@ export default function DistribuicaoTab() {
         </Card>
       )}
     </div>
+    <AlertDialog open={!!planoParaExcluir} onOpenChange={(open) => !open && setPlanoParaExcluir(null)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Excluir plano de distribuição?</AlertDialogTitle>
+          <AlertDialogDescription>
+            O plano {planoSelecionadoParaExcluir ? `"${planoSelecionadoParaExcluir.nome}"` : "selecionado"} será removido junto com suas células de distribuição. Essa ação não pode ser desfeita.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={deletePlano.isPending}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={confirmarExclusaoPlano} disabled={deletePlano.isPending}>
+            {deletePlano.isPending ? "Excluindo..." : "Excluir"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
