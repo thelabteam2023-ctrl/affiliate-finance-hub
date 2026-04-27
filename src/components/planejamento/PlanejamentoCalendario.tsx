@@ -534,6 +534,55 @@ export function PlanejamentoCalendario() {
     });
   }, [celulasPlano, grupoFiltroId, cpfFiltroIdx, bmSearch]);
 
+  useEffect(() => {
+    const visibleIds = new Set(filteredBookmakers.map((b) => b.id));
+    setSelectedBookmakerIds((prev) => {
+      const next = new Set(Array.from(prev).filter((id) => visibleIds.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [filteredBookmakers]);
+
+  useEffect(() => {
+    const visibleIds = new Set(filteredCelulas.map((c) => c.id));
+    setSelectedCelulaIds((prev) => {
+      const next = new Set(Array.from(prev).filter((id) => visibleIds.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [filteredCelulas]);
+
+  const selectedBookmakerBatch = useMemo<BookmakerDragItem[]>(() => {
+    return filteredBookmakers
+      .filter((b) => selectedBookmakerIds.has(b.id))
+      .map((b) => ({ id: b.id, nome: b.nome, moeda: b.moeda_padrao }));
+  }, [filteredBookmakers, selectedBookmakerIds]);
+
+  const selectedCelulaBatch = useMemo(() => {
+    return filteredCelulas.filter((c) => selectedCelulaIds.has(c.id));
+  }, [filteredCelulas, selectedCelulaIds]);
+
+  const toggleBookmakerSelection = useCallback((id: string) => {
+    setSelectedCelulaIds(new Set());
+    setSelectedBookmakerIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleCelulaSelection = useCallback((id: string) => {
+    setSelectedBookmakerIds(new Set());
+    setSelectedCelulaIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedBookmakerIds(new Set());
+    setSelectedCelulaIds(new Set());
+  }, []);
+
   // Lista de CPFs presentes no plano (para popular filtro)
   const cpfsDoPlano = useMemo(() => {
     const set = new Set<number>();
