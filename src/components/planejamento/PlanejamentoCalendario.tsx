@@ -1063,6 +1063,30 @@ export function PlanejamentoCalendario() {
                 </Select>
               )}
 
+              {planoProgress && (
+                <div className="rounded-md border bg-card p-2 space-y-1.5">
+                  <div className="flex items-center justify-between gap-2 text-[11px]">
+                    <span className="font-semibold truncate">{planoProgress.label}</span>
+                    <span className="text-muted-foreground shrink-0">{planoProgress.percentual}%</span>
+                  </div>
+                  <Progress value={planoProgress.percentual} className="h-2" />
+                  <div className="grid grid-cols-3 gap-1 text-center text-[10px]">
+                    <div className="rounded bg-muted/50 px-1 py-1">
+                      <div className="font-semibold">{planoProgress.total}</div>
+                      <div className="text-muted-foreground">Total</div>
+                    </div>
+                    <div className="rounded bg-primary/10 px-1 py-1 text-primary">
+                      <div className="font-semibold">{planoProgress.lancadas}</div>
+                      <div>Lançadas</div>
+                    </div>
+                    <div className="rounded bg-muted/50 px-1 py-1">
+                      <div className="font-semibold">{planoProgress.pendentes}</div>
+                      <div className="text-muted-foreground">Faltam</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Filtro de CPF — chips coloridos para diferenciar visualmente */}
               {modoPlano && cpfsDoPlano.length > 0 && (
                 <div className="flex flex-wrap gap-1">
