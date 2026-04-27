@@ -769,6 +769,8 @@ export function PlanejamentoCalendario() {
     return m;
   }, [campanhas]);
 
+  const detailsCampanhas = detailsDate ? (campanhasByDay.get(detailsDate) ?? []) : [];
+
   // Totais (já convertidos para a moeda de exibição)
   const { totalDia, totalMes, totalCasasMes } = useMemo(() => {
     const dia = new Map<string, number>();
