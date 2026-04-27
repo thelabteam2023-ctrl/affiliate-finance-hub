@@ -1290,6 +1290,50 @@ export function PlanejamentoCalendario() {
         />
       )}
 
+      <Dialog open={!!detailsDate} onOpenChange={(open) => !open && setDetailsDate(null)}>
+        <DialogContent className="max-w-4xl max-h-[82vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Casas planejadas do dia {detailsDate?.split("-").reverse().join("/")}</DialogTitle>
+            <DialogDescription>
+              {detailsCampanhas.length} casas • Σ {formatMoney(detailsCampanhas.reduce((sum, c) => sum + convertToDisplay(Number(c.deposit_amount), c.currency), 0), displayCurrency)}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="overflow-auto rounded-md border">
+            <div className="grid grid-cols-[1.2fr_1fr_1fr_1fr_0.7fr_0.8fr] gap-2 px-3 py-2 text-[11px] font-semibold text-muted-foreground bg-muted/40 min-w-[760px]">
+              <div>Casa</div>
+              <div>Perfil</div>
+              <div>IP utilizado</div>
+              <div>Wallet</div>
+              <div>Moeda</div>
+              <div className="text-right">Valor</div>
+            </div>
+            <div className="min-w-[760px] divide-y">
+              {detailsCampanhas.map((c) => {
+                const ip = c.ip_id ? ipMap[c.ip_id] : null;
+                const wallet = c.wallet_id ? wallets.find((w) => w.id === c.wallet_id) : null;
+                const perfil = c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : null;
+                return (
+                  <div key={c.id} className="grid grid-cols-[1.2fr_1fr_1fr_1fr_0.7fr_0.8fr] gap-2 px-3 py-2 text-xs items-center hover:bg-muted/30">
+                    <div className="font-medium truncate flex items-center gap-2">
+                      <BookmakerLogo logoUrl={getLogoUrl(c.bookmaker_nome)} alt={c.bookmaker_nome} size="h-6 w-6 shrink-0" iconSize="h-3.5 w-3.5" />
+                      <span className="truncate">{c.bookmaker_nome}</span>
+                    </div>
+                    <div className="truncate">{perfil ?? "—"}</div>
+                    <div className="truncate">{ip ? `${ip.label}${ip.ip_address ? ` • ${ip.ip_address}` : ""}` : "—"}</div>
+                    <div className="truncate">{wallet ? `${wallet.label}${wallet.network ? ` • ${wallet.network}` : ""}` : "—"}</div>
+                    <div className="font-semibold">{c.currency}</div>
+                    <div className="text-right font-semibold tabular-nums">{formatMoney(Number(c.deposit_amount), c.currency)}</div>
+                  </div>
+                );
+              })}
+              {detailsCampanhas.length === 0 && (
+                <div className="px-3 py-8 text-center text-sm text-muted-foreground">Nenhuma casa planejada neste dia.</div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <RecursosManager open={recursosOpen} onOpenChange={setRecursosOpen} />
 
       <AlertDialog open={!!pendingMove} onOpenChange={(v) => !v && setPendingMove(null)}>
