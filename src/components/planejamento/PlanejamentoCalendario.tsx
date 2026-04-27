@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import { ChevronLeft, ChevronRight, Settings2, Plus, AlertTriangle, MapPin, User, Search, Building2, Trash2, ChevronDown, ChevronUp, ShieldAlert, Pencil, Sparkles } from "lucide-react";
 import { SimulacaoDistribuicaoDialog } from "./SimulacaoDistribuicaoDialog";
 import {
@@ -671,6 +672,21 @@ export function PlanejamentoCalendario() {
   // (modoPlano declarado acima)
   const sidebarItemsCount = modoPlano ? filteredCelulas.length : filteredBookmakers.length;
 
+  const planoProgress = useMemo(() => {
+    if (!modoPlano) return null;
+    const base = grupoFiltroId === "todos"
+      ? celulasPlano
+      : celulasPlano.filter((c) => c.grupo_id === grupoFiltroId);
+    const total = base.length;
+    const lancadas = base.filter((c) => c.agendada_em || c.campanha_id).length;
+    const pendentes = Math.max(0, total - lancadas);
+    const percentual = total > 0 ? Math.round((lancadas / total) * 100) : 0;
+    const label = grupoFiltroId === "todos"
+      ? "Todos os grupos"
+      : gruposDoPlano.find((g) => g.id === grupoFiltroId)?.nome ?? "Grupo";
+    return { total, lancadas, pendentes, percentual, label };
+  }, [modoPlano, celulasPlano, grupoFiltroId, gruposDoPlano]);
+
   // Excluir campanha do calendário (libera célula vinculada se houver)
   const handleDeleteCampanha = useCallback(async (campanhaId: string) => {
     try {
@@ -1045,6 +1061,30 @@ export function PlanejamentoCalendario() {
                     ))}
                   </SelectContent>
                 </Select>
+              )}
+
+              {planoProgress && (
+                <div className="rounded-md border bg-card p-2 space-y-1.5">
+                  <div className="flex items-center justify-between gap-2 text-[11px]">
+                    <span className="font-semibold truncate">{planoProgress.label}</span>
+                    <span className="text-muted-foreground shrink-0">{planoProgress.percentual}%</span>
+                  </div>
+                  <Progress value={planoProgress.percentual} className="h-2" />
+                  <div className="grid grid-cols-3 gap-1 text-center text-[10px]">
+                    <div className="rounded bg-muted/50 px-1 py-1">
+                      <div className="font-semibold">{planoProgress.total}</div>
+                      <div className="text-muted-foreground">Total</div>
+                    </div>
+                    <div className="rounded bg-primary/10 px-1 py-1 text-primary">
+                      <div className="font-semibold">{planoProgress.lancadas}</div>
+                      <div>Lançadas</div>
+                    </div>
+                    <div className="rounded bg-muted/50 px-1 py-1">
+                      <div className="font-semibold">{planoProgress.pendentes}</div>
+                      <div className="text-muted-foreground">Faltam</div>
+                    </div>
+                  </div>
+                </div>
               )}
 
               {/* Filtro de CPF — chips coloridos para diferenciar visualmente */}
