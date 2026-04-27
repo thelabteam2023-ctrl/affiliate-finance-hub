@@ -26,6 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RegulamentacaoFilter, RegFilterValue } from "./RegulamentacaoFilter";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -392,11 +393,12 @@ function TrashDropZone({ active }: { active: boolean }) {
   );
 }
 
-function DayCell({ date, isCurrentMonth, children, onAdd }: {
+function DayCell({ date, isCurrentMonth, children, onAdd, onOpenDetails }: {
   date: Date;
   isCurrentMonth: boolean;
   children: React.ReactNode;
   onAdd: () => void;
+  onOpenDetails: () => void;
 }) {
   const dateKey = formatDateKey(date);
   const isPast = isDateInPast(dateKey);
@@ -412,8 +414,9 @@ function DayCell({ date, isCurrentMonth, children, onAdd }: {
   return (
     <div
       ref={setNodeRef}
+      onClick={onOpenDetails}
       className={cn(
-        "min-h-[110px] border rounded-md p-1 flex flex-col gap-1 transition-colors bg-muted/40",
+        "min-h-[110px] border rounded-md p-1 flex flex-col gap-1 transition-colors bg-muted/40 cursor-pointer",
         !isCurrentMonth && "bg-muted/10 opacity-50",
         isPast && "bg-muted/20 opacity-60 cursor-not-allowed",
         !isPast && isOver && "ring-2 ring-primary bg-primary/10",
@@ -423,7 +426,7 @@ function DayCell({ date, isCurrentMonth, children, onAdd }: {
       <div className="flex items-center justify-between">
         <span className={cn("text-xs font-medium", isToday && !isPast && "text-primary", isPast && "text-muted-foreground")}>{date.getDate()}</span>
         {isCurrentMonth && !isPast && (
-          <button onClick={onAdd} className="opacity-0 hover:opacity-100 group-hover:opacity-100 text-muted-foreground hover:text-primary">
+          <button onClick={(e) => { e.stopPropagation(); onAdd(); }} className="opacity-0 hover:opacity-100 group-hover:opacity-100 text-muted-foreground hover:text-primary">
             <Plus className="h-3 w-3" />
           </button>
         )}
