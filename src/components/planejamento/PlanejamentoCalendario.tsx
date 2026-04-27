@@ -104,22 +104,38 @@ function getCpfColor(idx: number | null | undefined) {
 
 // ──────── Componentes drag-and-drop ────────
 
-function DraggableBookmaker({ id, nome, moeda, status, logoUrl }: {
+type BookmakerDragItem = { id: string; nome: string; moeda: string };
+
+function DraggableBookmaker({ id, nome, moeda, status, logoUrl, selected, selectedBatch, onToggleSelect }: {
   id: string; nome: string; moeda: string;
   status: "REGULAMENTADA" | "NAO_REGULAMENTADA";
   logoUrl: string | null;
+  selected: boolean;
+  selectedBatch: BookmakerDragItem[];
+  onToggleSelect: () => void;
 }) {
+  const isBatchDrag = selected && selectedBatch.length > 1;
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `bm-${id}`,
-    data: { type: "bookmaker", bookmakerId: id, nome, moeda },
+    data: isBatchDrag
+      ? { type: "bookmaker-batch", items: selectedBatch, count: selectedBatch.length }
+      : { type: "bookmaker", bookmakerId: id, nome, moeda },
   });
   return (
     <div
       ref={setNodeRef}
       {...listeners}
       {...attributes}
+      onClick={(e) => {
+        if (e.ctrlKey || e.metaKey) {
+          e.preventDefault();
+          e.stopPropagation();
+          onToggleSelect();
+        }
+      }}
       className={cn(
         "px-2 py-1.5 rounded-md border bg-card text-xs cursor-grab active:cursor-grabbing hover:border-primary transition-colors flex items-center gap-2",
+        selected && "border-primary bg-primary/10 ring-1 ring-primary/50",
         isDragging && "opacity-40"
       )}
     >
@@ -140,10 +156,19 @@ function DraggableBookmaker({ id, nome, moeda, status, logoUrl }: {
 
 // Item arrastável vindo do PLANO de distribuição
 // Carrega tudo: CPF (parceiro), casa, grupo, valor sugerido — pronto para virar campanha
-function DraggableCelula({ celula, parceiroNome }: { celula: CelulaDisponivel; parceiroNome?: string }) {
+function DraggableCelula({ celula, parceiroNome, selected, selectedBatch, onToggleSelect }: {
+  celula: CelulaDisponivel;
+  parceiroNome?: string;
+  selected: boolean;
+  selectedBatch: CelulaDisponivel[];
+  onToggleSelect: () => void;
+}) {
+  const isBatchDrag = selected && selectedBatch.length > 1;
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `cel-${celula.id}`,
-    data: { type: "celula", celula },
+    data: isBatchDrag
+      ? { type: "celula-batch", items: selectedBatch, count: selectedBatch.length }
+      : { type: "celula", celula },
   });
   const jaAgendada = !!celula.agendada_em;
   const cpfColor = getCpfColor(celula.cpf_index);
@@ -156,11 +181,19 @@ function DraggableCelula({ celula, parceiroNome }: { celula: CelulaDisponivel; p
       ref={setNodeRef}
       {...(jaAgendada ? {} : listeners)}
       {...attributes}
+      onClick={(e) => {
+        if (!jaAgendada && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          e.stopPropagation();
+          onToggleSelect();
+        }
+      }}
       className={cn(
         "px-2 py-1.5 rounded-md border text-xs transition-colors flex items-center gap-2",
         jaAgendada
           ? "opacity-50 cursor-not-allowed bg-card"
           : "cursor-grab active:cursor-grabbing hover:brightness-110",
+        selected && "ring-2 ring-primary ring-offset-1 ring-offset-background",
         isDragging && "opacity-40"
       )}
       style={{
@@ -412,6 +445,8 @@ export function PlanejamentoCalendario() {
   const [bmSearch, setBmSearch] = useState("");
   const [bmFilter, setBmFilter] = useState<RegFilterValue>("all");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [selectedBookmakerIds, setSelectedBookmakerIds] = useState<Set<string>>(() => new Set());
+  const [selectedCelulaIds, setSelectedCelulaIds] = useState<Set<string>>(() => new Set());
   const [planoFiltroId, setPlanoFiltroId] = useState<string>("none"); // "none" = mostrar casas livres
   const [grupoFiltroId, setGrupoFiltroId] = useState<string>("todos"); // "todos" = sem filtro de grupo
   const [cpfFiltroIdx, setCpfFiltroIdx] = useState<string>("todos"); // "todos" = sem filtro de CPF
@@ -498,6 +533,55 @@ export function PlanejamentoCalendario() {
       return true;
     });
   }, [celulasPlano, grupoFiltroId, cpfFiltroIdx, bmSearch]);
+
+  useEffect(() => {
+    const visibleIds = new Set(filteredBookmakers.map((b) => b.id));
+    setSelectedBookmakerIds((prev) => {
+      const next = new Set(Array.from(prev).filter((id) => visibleIds.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [filteredBookmakers]);
+
+  useEffect(() => {
+    const visibleIds = new Set(filteredCelulas.map((c) => c.id));
+    setSelectedCelulaIds((prev) => {
+      const next = new Set(Array.from(prev).filter((id) => visibleIds.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [filteredCelulas]);
+
+  const selectedBookmakerBatch = useMemo<BookmakerDragItem[]>(() => {
+    return filteredBookmakers
+      .filter((b) => selectedBookmakerIds.has(b.id))
+      .map((b) => ({ id: b.id, nome: b.nome, moeda: b.moeda_padrao }));
+  }, [filteredBookmakers, selectedBookmakerIds]);
+
+  const selectedCelulaBatch = useMemo(() => {
+    return filteredCelulas.filter((c) => selectedCelulaIds.has(c.id));
+  }, [filteredCelulas, selectedCelulaIds]);
+
+  const toggleBookmakerSelection = useCallback((id: string) => {
+    setSelectedCelulaIds(new Set());
+    setSelectedBookmakerIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleCelulaSelection = useCallback((id: string) => {
+    setSelectedBookmakerIds(new Set());
+    setSelectedCelulaIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedBookmakerIds(new Set());
+    setSelectedCelulaIds(new Set());
+  }, []);
 
   // Lista de CPFs presentes no plano (para popular filtro)
   const cpfsDoPlano = useMemo(() => {
@@ -730,12 +814,15 @@ export function PlanejamentoCalendario() {
       return;
     }
 
-    if (data?.type === "celula") {
+    if (data?.type === "celula" || data?.type === "celula-batch") {
       // Arrasto de célula do PLANO → cria campanha já com CPF + casa + valor sugerido
-      const celula: CelulaDisponivel = data.celula;
+      const celulas: CelulaDisponivel[] = data?.type === "celula-batch" ? data.items ?? [] : [data.celula];
+      let ok = 0;
+      let blocked = 0;
+      for (const celula of celulas) {
       if (celula.agendada_em) {
-        toast.warning("Esta célula já está agendada.");
-        return;
+        blocked++;
+        continue;
       }
       const check = validate({
         bookmaker_catalogo_id: celula.bookmaker_catalogo_id,
@@ -745,8 +832,8 @@ export function PlanejamentoCalendario() {
         scheduled_date: dateKey,
       });
       if (check.violations.length > 0) {
-        toast.error(`Bloqueado por regra de grupo: ${check.violations[0].mensagem}`);
-        return;
+        blocked++;
+        continue;
       }
       try {
         const novaCamp: any = await upsert.mutateAsync({
@@ -769,33 +856,48 @@ export function PlanejamentoCalendario() {
         } else {
           console.warn("[planejamento] upsert não retornou id da campanha", novaCamp);
         }
-        toast.success(`${celula.bookmaker_nome} agendada`);
+        ok++;
       } catch (err: any) {
         console.error("[planejamento] erro ao agendar célula", err);
-        toast.error(err?.message || "Erro ao agendar célula");
+        blocked++;
       }
-    } else if (data?.type === "bookmaker") {
+      }
+      clearSelection();
+      if (ok > 0 && blocked > 0) toast.warning(`${ok} agendadas, ${blocked} não puderam ser agendadas`);
+      else if (ok > 0) toast.success(ok === 1 ? `${celulas[0]?.bookmaker_nome} agendada` : `${ok} células agendadas`);
+      else toast.error("Nenhuma célula pôde ser agendada");
+    } else if (data?.type === "bookmaker" || data?.type === "bookmaker-batch") {
+      const items: BookmakerDragItem[] = data?.type === "bookmaker-batch" ? data.items ?? [] : [{ id: data.bookmakerId, nome: data.nome, moeda: data.moeda }];
+      let ok = 0;
+      let blocked = 0;
+      for (const item of items) {
       // Valida regras de grupo antes de criar campanha pendente
       const check = validate({
-        bookmaker_catalogo_id: data.bookmakerId,
+        bookmaker_catalogo_id: item.id,
         parceiro_id: null,
         ip_id: null,
         wallet_id: null,
         scheduled_date: dateKey,
       });
       if (check.violations.length > 0) {
-        toast.error(`Bloqueado por regra de grupo: ${check.violations[0].mensagem}`);
-        return;
+        blocked++;
+        continue;
       }
       // Cria campanha PENDENTE imediatamente (sem abrir modal)
       await upsert.mutateAsync({
         scheduled_date: dateKey,
-        bookmaker_catalogo_id: data.bookmakerId,
-        bookmaker_nome: data.nome,
-        currency: data.moeda,
+        bookmaker_catalogo_id: item.id,
+        bookmaker_nome: item.nome,
+        currency: item.moeda,
         deposit_amount: 0,
         status: "planned",
       });
+      ok++;
+      }
+      clearSelection();
+      if (ok > 0 && blocked > 0) toast.warning(`${ok} casas agendadas, ${blocked} bloqueadas por regra`);
+      else if (ok > 0) toast.success(ok === 1 ? `${items[0]?.nome} agendada` : `${ok} casas agendadas`);
+      else toast.error("Nenhuma casa pôde ser agendada");
     } else if (data?.type === "campanha") {
       // Mover campanha existente para outra data → pede confirmação
       const camp = campanhas.find(c => c.id === data.campanhaId);
@@ -890,9 +992,20 @@ export function PlanejamentoCalendario() {
               </div>
               <p className="text-[11px] text-muted-foreground">
                 {modoPlano
-                  ? "Células do plano — arraste para o calendário"
-                  : "Arraste para o calendário"}
+                  ? "Células do plano — Ctrl/Cmd + clique seleciona várias"
+                  : "Ctrl/Cmd + clique seleciona várias"}
               </p>
+
+              {(selectedBookmakerIds.size > 0 || selectedCelulaIds.size > 0) && (
+                <div className="flex items-center justify-between rounded-md border bg-primary/10 px-2 py-1 text-[11px] text-primary">
+                  <span className="font-medium">
+                    {selectedBookmakerIds.size + selectedCelulaIds.size} selecionada(s)
+                  </span>
+                  <button type="button" className="hover:underline" onClick={clearSelection}>
+                    Limpar
+                  </button>
+                </div>
+              )}
 
               {/* Seletor de Plano de Distribuição */}
               <Select value={planoFiltroId} onValueChange={(v) => { setPlanoFiltroId(v); setGrupoFiltroId("todos"); setCpfFiltroIdx("todos"); }}>
@@ -998,6 +1111,9 @@ export function PlanejamentoCalendario() {
                         key={c.id}
                         celula={c}
                         parceiroNome={c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : undefined}
+                        selected={selectedCelulaIds.has(c.id)}
+                        selectedBatch={selectedCelulaBatch}
+                        onToggleSelect={() => toggleCelulaSelection(c.id)}
                       />
                     ))}
                     {filteredCelulas.length === 0 && (
@@ -1018,6 +1134,9 @@ export function PlanejamentoCalendario() {
                         moeda={b.moeda_padrao}
                         status={b.status}
                         logoUrl={b.logo_url}
+                        selected={selectedBookmakerIds.has(b.id)}
+                        selectedBatch={selectedBookmakerBatch}
+                        onToggleSelect={() => toggleBookmakerSelection(b.id)}
                       />
                     ))}
                     {filteredBookmakers.length === 0 && (
@@ -1137,6 +1256,18 @@ export function PlanejamentoCalendario() {
           <div className="px-2 py-1.5 rounded-md border bg-card text-xs shadow-lg">
             <div className="font-medium">{activeDrag.nome}</div>
             <div className="text-[10px] text-muted-foreground">{activeDrag.moeda}</div>
+          </div>
+        )}
+        {(activeDrag?.type === "bookmaker-batch" || activeDrag?.type === "celula-batch") && (
+          <div className="px-3 py-2 rounded-md border bg-card text-xs shadow-lg">
+            <div className="font-semibold">{activeDrag.count} itens selecionados</div>
+            <div className="text-[10px] text-muted-foreground">Solte no dia desejado</div>
+          </div>
+        )}
+        {activeDrag?.type === "celula" && (
+          <div className="px-2 py-1.5 rounded-md border bg-card text-xs shadow-lg">
+            <div className="font-medium">{activeDrag.celula?.bookmaker_nome}</div>
+            <div className="text-[10px] text-muted-foreground">{activeDrag.celula?.moeda}</div>
           </div>
         )}
       </DragOverlay>
