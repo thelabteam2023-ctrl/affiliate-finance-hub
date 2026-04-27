@@ -1258,6 +1258,18 @@ export function PlanejamentoCalendario() {
             <div className="text-[10px] text-muted-foreground">{activeDrag.moeda}</div>
           </div>
         )}
+        {(activeDrag?.type === "bookmaker-batch" || activeDrag?.type === "celula-batch") && (
+          <div className="px-3 py-2 rounded-md border bg-card text-xs shadow-lg">
+            <div className="font-semibold">{activeDrag.count} itens selecionados</div>
+            <div className="text-[10px] text-muted-foreground">Solte no dia desejado</div>
+          </div>
+        )}
+        {activeDrag?.type === "celula" && (
+          <div className="px-2 py-1.5 rounded-md border bg-card text-xs shadow-lg">
+            <div className="font-medium">{activeDrag.celula?.bookmaker_nome}</div>
+            <div className="text-[10px] text-muted-foreground">{activeDrag.celula?.moeda}</div>
+          </div>
+        )}
       </DragOverlay>
 
       {editing && (
