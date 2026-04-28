@@ -207,11 +207,13 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
                 value={form.bookmaker_catalogo_id || undefined}
                 onValueChange={(v) => {
                   const bm = bookmakers.find(b => b.id === v);
+                  const linkedIpId = ipByBookmakerMap.get(v);
                   setForm(f => ({
                     ...f,
                     bookmaker_catalogo_id: v,
                     bookmaker_nome: bm?.nome ?? f.bookmaker_nome,
                     currency: bm?.moeda_padrao ?? f.currency,
+                    ip_id: f.ip_id || linkedIpId || "",
                   }));
                 }}
               >
