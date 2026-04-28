@@ -521,6 +521,13 @@ export function PlanejamentoCalendario() {
       });
     return map;
   }, [ips]);
+  const ipByPerfilBookmakerMap = useMemo(() => {
+    const map = new Map<string, string>();
+    ips
+      .filter(i => i.is_active && i.perfil_planejamento_id && i.bookmaker_catalogo_id)
+      .forEach(i => map.set(`${i.perfil_planejamento_id}:${i.bookmaker_catalogo_id}`, i.id));
+    return map;
+  }, [ips]);
   const parceiroMap = useMemo(() => {
     const labelOverride = new Map<string, string>();
     perfisPre.forEach(p => {
