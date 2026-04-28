@@ -717,6 +717,20 @@ export function PlanejamentoCalendario() {
     return map;
   }, [celulasPlano]);
 
+  const campanhaPerfilMap = useMemo(() => {
+    const map = new Map<string, (typeof perfisPre)[number]>();
+    campanhas.forEach((camp) => {
+      const perfilPorParceiro = camp.parceiro_id ? perfilByParceiroIdMap.get(camp.parceiro_id) : null;
+      const cpfIdx = campanhaCpfMap.get(camp.id);
+      const perfilPorCpf = cpfIdx ? cpfIndexToPerfilMap.get(cpfIdx) : null;
+      const celula = celulasPlano.find((c) => c.campanha_id === camp.id);
+      const perfilPorCelula = celula ? getCelulaPerfil(celula) : null;
+      const perfil = perfilPorParceiro ?? perfilPorCelula ?? perfilPorCpf;
+      if (perfil) map.set(camp.id, perfil);
+    });
+    return map;
+  }, [campanhas, perfilByParceiroIdMap, campanhaCpfMap, cpfIndexToPerfilMap, celulasPlano, getCelulaPerfil]);
+
   const sortCampanhasByCpf = useCallback((list: PlanningCampanha[]) => {
     return [...list].sort((a, b) => {
       const cpfA = campanhaCpfMap.get(a.id) ?? Number.MAX_SAFE_INTEGER;
@@ -910,9 +924,11 @@ export function PlanejamentoCalendario() {
         blocked++;
         continue;
       }
+      const perfil = getCelulaPerfil(celula);
+      const effectiveParceiroId = celula.parceiro_id ?? perfil?.parceiro_id ?? null;
       const check = validate({
         bookmaker_catalogo_id: celula.bookmaker_catalogo_id,
-        parceiro_id: celula.parceiro_id,
+        parceiro_id: effectiveParceiroId,
         ip_id: null,
         wallet_id: null,
         scheduled_date: dateKey,
@@ -928,7 +944,7 @@ export function PlanejamentoCalendario() {
           bookmaker_nome: celula.bookmaker_nome,
           currency: celula.moeda,
           deposit_amount: celula.deposito_sugerido || 0,
-          parceiro_id: celula.parceiro_id ?? undefined,
+          parceiro_id: effectiveParceiroId ?? undefined,
           status: "planned",
         } as any);
         // useUpsertCampanha retorna o ID como string (não objeto). Aceita ambos.
