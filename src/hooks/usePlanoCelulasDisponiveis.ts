@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { orderPlanningPerfis } from "@/hooks/usePlanningData";
 
 /**
  * Célula da distribuição com dados úteis para arrastar para o calendário.
@@ -46,13 +47,13 @@ export function usePlanoCelulasDisponiveis(planoId: string | null) {
     queryFn: async (): Promise<CelulaDisponivel[]> => {
       if (!planoId || !workspaceId) return [];
 
-      // 0) plano (precisamos do parceiro_ids para ordenar CPF 1, CPF 2...)
+      // 0) plano (salva os IDs dos perfis selecionados para preservar CPF 1, CPF 2...)
       const { data: plano } = await (supabase as any)
         .from("distribuicao_planos")
         .select("parceiro_ids")
         .eq("id", planoId)
         .maybeSingle();
-      const parceiroIdsPlano: string[] = plano?.parceiro_ids ?? [];
+      const perfilIdsPlano: string[] = plano?.parceiro_ids ?? [];
 
       // 1) células do plano
       const { data: celulas, error: cErr } = await (supabase as any)
@@ -81,8 +82,8 @@ export function usePlanoCelulasDisponiveis(planoId: string | null) {
         new Set(celulas.map((c: any) => c.bookmaker_catalogo_id as string))
       );
 
-      // 3) catálogo + grupos + membros (depósito sugerido)
-      const [catRes, gruposRes, membrosRes] = await Promise.all([
+      // 3) catálogo + grupos + membros (depósito sugerido) + perfis (ordem canônica CPF)
+      const [catRes, gruposRes, membrosRes, perfisRes] = await Promise.all([
         supabase
           .from("bookmakers_catalogo")
           .select("id, nome, logo_url, moeda_padrao")
@@ -95,6 +96,10 @@ export function usePlanoCelulasDisponiveis(planoId: string | null) {
           .from("bookmaker_grupo_membros")
           .select("grupo_id, bookmaker_catalogo_id, deposito_sugerido, deposito_moeda")
           .in("grupo_id", grupoIds.length ? grupoIds : ["00000000-0000-0000-0000-000000000000"]),
+        (supabase as any)
+          .from("planning_perfis")
+          .select("id, nome_generico, label_custom, created_at")
+          .eq("workspace_id", workspaceId),
       ]);
 
       const catMap = new Map<string, any>();
@@ -117,7 +122,9 @@ export function usePlanoCelulasDisponiveis(planoId: string | null) {
       const ownerKey = (c: any) => c.perfil_planejamento_id ?? c.parceiro_id ?? null;
 
       const ownerPlanoIndex = new Map<string, number>();
-      parceiroIdsPlano.forEach((pid, idx) => ownerPlanoIndex.set(pid, idx + 1));
+      orderPlanningPerfis((perfisRes.data ?? []) as any[])
+        .filter((p) => perfilIdsPlano.includes(p.id))
+        .forEach((p, idx) => ownerPlanoIndex.set(p.id, idx + 1));
       [...celulas]
         .sort((a: any, b: any) => (a.ordem ?? 0) - (b.ordem ?? 0))
         .forEach((c: any) => {
