@@ -781,12 +781,15 @@ function IpsList() {
       <div className="space-y-1 max-h-[360px] overflow-y-auto">
         {ips.map(ip => {
           const linkedCasa = casasSelecionadas.find(c => c.bookmaker_catalogo_id === ip.bookmaker_catalogo_id);
+          const linkedPerfilIndex = perfis.findIndex(p => p.id === ip.perfil_planejamento_id);
+          const linkedPerfil = linkedPerfilIndex >= 0 ? perfis[linkedPerfilIndex] : null;
           return (
           <Card key={ip.id} className="p-2 flex items-center justify-between">
             <div className="text-sm">
               <span className="font-medium">{ip.label}</span>{" "}
               <span className="text-muted-foreground">· {ip.ip_address}</span>{" "}
               {ip.location_city && <span className="text-xs text-muted-foreground">({ip.location_city})</span>}
+              {linkedPerfil && <Badge variant="secondary" className="ml-2 h-5 text-[10px]">CPF {linkedPerfilIndex + 1} · {perfilDisplayName(linkedPerfil)}</Badge>}
               {linkedCasa?.casa && <Badge variant="outline" className="ml-2 h-5 text-[10px]">{linkedCasa.label_custom || linkedCasa.casa.nome}</Badge>}
             </div>
             <div className="flex gap-1">
