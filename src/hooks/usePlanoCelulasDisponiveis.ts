@@ -122,7 +122,7 @@ export function usePlanoCelulasDisponiveis(planoId: string | null) {
       const ownerKey = (c: any) => c.perfil_planejamento_id ?? c.parceiro_id ?? null;
 
       const ownerPlanoIndex = new Map<string, number>();
-      orderPlanningPerfis((perfisRes.data ?? []) as any[])
+      orderPlanningPerfis((perfisRes.data ?? []) as Array<{ id: string; nome_generico: string | null; label_custom: string | null; created_at: string }>)
         .filter((p) => perfilIdsPlano.includes(p.id))
         .forEach((p, idx) => ownerPlanoIndex.set(p.id, idx + 1));
       [...celulas]
