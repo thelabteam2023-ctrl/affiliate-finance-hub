@@ -1491,7 +1491,7 @@ export function PlanejamentoCalendario() {
             </DialogDescription>
           </DialogHeader>
           <div className="overflow-auto rounded-md border">
-            <div className="grid grid-cols-[1.2fr_1fr_1fr_1fr_0.7fr_0.8fr] gap-2 px-3 py-2 text-[11px] font-semibold text-muted-foreground bg-muted/40 min-w-[760px]">
+            <div className="grid grid-cols-[1.15fr_0.95fr_1.45fr_1.35fr_0.45fr_0.75fr] gap-2 px-3 py-2 text-[11px] font-semibold text-muted-foreground bg-muted/40 min-w-[880px]">
               <div>Casa</div>
               <div>Perfil</div>
               <div>IP utilizado</div>
@@ -1499,7 +1499,7 @@ export function PlanejamentoCalendario() {
               <div>Moeda</div>
               <div className="text-right">Valor</div>
             </div>
-            <div className="min-w-[760px] divide-y">
+            <div className="min-w-[880px] divide-y">
               {detailsCampanhas.map((c) => {
                 const perfilInfo = campanhaPerfilMap.get(c.id);
                 const celula = celulasPlano.find((item) => item.campanha_id === c.id);
@@ -1516,7 +1516,7 @@ export function PlanejamentoCalendario() {
                 const cpfIndex = campanhaCpfMap.get(c.id) ?? null;
                 const cpfColor = getCpfColor(cpfIndex, perfilInfo?.cor);
                 return (
-                  <div key={c.id} className="grid grid-cols-[1.2fr_1fr_1fr_1fr_0.7fr_0.8fr] gap-2 px-3 py-2 text-xs items-center hover:bg-muted/30">
+                  <div key={c.id} className="grid grid-cols-[1.15fr_0.95fr_1.45fr_1.35fr_0.45fr_0.75fr] gap-2 px-3 py-2 text-xs items-center hover:bg-muted/30">
                     <div className="font-medium truncate flex items-center gap-2">
                       {cpfIndex && cpfColor && (
                         <span className="h-5 w-5 shrink-0 rounded flex items-center justify-center text-[10px] font-bold" style={{ backgroundColor: cpfColor.dot, color: "hsl(0 0% 10%)" }}>{cpfIndex}</span>
