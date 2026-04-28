@@ -1182,7 +1182,8 @@ export function PlanejamentoCalendario() {
                     Todos
                   </button>
                   {cpfsDoPlano.map((idx) => {
-                    const color = getCpfColor(idx);
+                    const perfil = cpfIndexToPerfilMap.get(idx);
+                    const color = getCpfColor(idx, perfil?.cor);
                     const active = cpfFiltroIdx === String(idx);
                     return (
                       <button
@@ -1236,7 +1237,8 @@ export function PlanejamentoCalendario() {
                       <DraggableCelula
                         key={c.id}
                         celula={c}
-                        parceiroNome={c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : undefined}
+                        parceiroNome={getCelulaPerfil(c)?.parceiro_id ? parceiroMap[getCelulaPerfil(c)!.parceiro_id!]?.nome : undefined}
+                        perfilCor={getCelulaPerfil(c)?.cor}
                         selected={selectedCelulaIds.has(c.id)}
                         selectedBatch={selectedCelulaBatch}
                         onToggleSelect={() => toggleCelulaSelection(c.id)}
