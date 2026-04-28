@@ -596,7 +596,8 @@ function IpsList() {
   const removeRow = (idx: number) =>
     setBulkRows(prev => (prev.length === 1 ? [emptyRow()] : prev.filter((_, i) => i !== idx)));
 
-  const activePerfis = useMemo(() => orderPlanningPerfis(perfis.filter(p => p.is_active)), [perfis]);
+  const orderedPerfis = useMemo(() => orderPlanningPerfis(perfis), [perfis]);
+  const activePerfis = useMemo(() => orderedPerfis.filter(p => p.is_active), [orderedPerfis]);
 
   const perfilByParceiroId = useMemo(() => {
     const map = new Map<string, string>();
@@ -807,7 +808,7 @@ function IpsList() {
                 <SelectTrigger><SelectValue placeholder="Selecione o CPF/perfil" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none">Sem CPF</SelectItem>
-                  {perfis.filter(p => p.is_active).map((p, i) => (
+                  {activePerfis.map((p, i) => (
                     <SelectItem key={p.id} value={p.id}>
                       CPF {i + 1} · {perfilDisplayName(p)}
                     </SelectItem>
@@ -847,8 +848,8 @@ function IpsList() {
       <div className="space-y-1 max-h-[360px] overflow-y-auto">
         {ips.map(ip => {
           const linkedCasa = casasSelecionadas.find(c => c.bookmaker_catalogo_id === ip.bookmaker_catalogo_id);
-          const linkedPerfilIndex = perfis.findIndex(p => p.id === ip.perfil_planejamento_id);
-          const linkedPerfil = linkedPerfilIndex >= 0 ? perfis[linkedPerfilIndex] : null;
+          const linkedPerfilIndex = orderedPerfis.findIndex(p => p.id === ip.perfil_planejamento_id);
+          const linkedPerfil = linkedPerfilIndex >= 0 ? orderedPerfis[linkedPerfilIndex] : null;
           return (
           <Card key={ip.id} className="p-2 flex items-center justify-between">
             <div className="text-sm">
