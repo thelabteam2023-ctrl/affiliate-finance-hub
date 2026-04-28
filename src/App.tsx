@@ -1,4 +1,5 @@
 import { Suspense, lazy } from "react";
+import type { ComponentType } from "react";
 import { ThemeProvider } from "next-themes";
 import { TopBarProvider, useTopBar } from "@/contexts/TopBarContext";
 import { Toaster } from "@/components/ui/toaster";
@@ -31,7 +32,7 @@ import ResetPassword from "./pages/ResetPassword";
 import AcceptInvite from "./pages/AcceptInvite";
 import NotFound from "./pages/NotFound";
 
-function lazyWithChunkRetry<T extends { default: React.ComponentType<any> }>(factory: () => Promise<T>) {
+function lazyWithChunkRetry<T extends { default: ComponentType<any> }>(factory: () => Promise<T>) {
   return lazy(async () => {
     try {
       const mod = await factory();
