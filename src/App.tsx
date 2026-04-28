@@ -1,4 +1,5 @@
 import { Suspense, lazy } from "react";
+import type { ComponentType } from "react";
 import { ThemeProvider } from "next-themes";
 import { TopBarProvider, useTopBar } from "@/contexts/TopBarContext";
 import { Toaster } from "@/components/ui/toaster";
@@ -31,38 +32,62 @@ import ResetPassword from "./pages/ResetPassword";
 import AcceptInvite from "./pages/AcceptInvite";
 import NotFound from "./pages/NotFound";
 
-// ─── Lazy imports: heavy authenticated pages ───
-const GestaoParceiros = lazy(() => import("./pages/GestaoParceiros"));
-const GestaoBookmakers = lazy(() => import("./pages/GestaoBookmakers"));
-const GestaoBancos = lazy(() => import("./pages/GestaoBancos"));
-const GestaoInvestidores = lazy(() => import("./pages/GestaoInvestidores"));
-const GestaoOperadores = lazy(() => import("./pages/GestaoOperadores"));
-const GestaoProjetos = lazy(() => import("./pages/GestaoProjetos"));
-const ProjetoDetalhe = lazy(() => import("./pages/ProjetoDetalhe"));
-const ProgramaIndicacao = lazy(() => import("./pages/ProgramaIndicacao"));
-const Caixa = lazy(() => import("./pages/Caixa"));
-const Financeiro = lazy(() => import("./pages/Financeiro"));
-const CentralOperacoes = lazy(() => import("./pages/CentralOperacoes"));
-const Anotacoes = lazy(() => import("./pages/Anotacoes"));
+function lazyWithChunkRetry<T extends { default: ComponentType<any> }>(factory: () => Promise<T>) {
+  return lazy(async () => {
+    try {
+      const mod = await factory();
+      sessionStorage.removeItem("stakesync:chunk-reload");
+      return mod;
+    } catch (error: any) {
+      const message = String(error?.message ?? error ?? "");
+      const isChunkError =
+        message.includes("Failed to fetch dynamically imported module") ||
+        message.includes("Importing a module script failed") ||
+        message.includes("ChunkLoadError");
 
-const Workspace = lazy(() => import("./pages/Workspace"));
-const Comunidade = lazy(() => import("./pages/Comunidade"));
-const ComunidadeDetalhe = lazy(() => import("./pages/ComunidadeDetalhe"));
-const ComunidadeTopico = lazy(() => import("./pages/ComunidadeTopico"));
-const ComunidadeChatPopout = lazy(() => import("./pages/ComunidadeChatPopout"));
-const SystemAdmin = lazy(() => import("./pages/SystemAdmin"));
-const ProtecaoProgressiva = lazy(() => import("./pages/ProtecaoProgressiva"));
-const CalculadoraEV = lazy(() => import("./pages/CalculadoraEV"));
-const CalculadoraExtracao = lazy(() => import("./pages/CalculadoraExtracao"));
-const PlanejamentoCampanhas = lazy(() => import("./pages/PlanejamentoCampanhas"));
-const SurebetWindowPage = lazy(() => import("./pages/SurebetWindowPage"));
-const ApostaWindowPage = lazy(() => import("./pages/ApostaWindowPage"));
-const ApostaMultiplaWindowPage = lazy(() => import("./pages/ApostaMultiplaWindowPage"));
-const SharedProject = lazy(() => import("./pages/SharedProject"));
-const SupplierPortal = lazy(() => import("./pages/SupplierPortal"));
-const FornecedoresPortal = lazy(() => import("./pages/FornecedoresPortal"));
-const Solicitacoes = lazy(() => import("./pages/Solicitacoes"));
-const DevLedgerMonitor = lazy(() => import("./pages/DevLedgerMonitor"));
+      if (isChunkError && sessionStorage.getItem("stakesync:chunk-reload") !== "1") {
+        sessionStorage.setItem("stakesync:chunk-reload", "1");
+        window.location.reload();
+        return new Promise<T>(() => undefined);
+      }
+
+      throw error;
+    }
+  });
+}
+
+// ─── Lazy imports: heavy authenticated pages ───
+const GestaoParceiros = lazyWithChunkRetry(() => import("./pages/GestaoParceiros"));
+const GestaoBookmakers = lazyWithChunkRetry(() => import("./pages/GestaoBookmakers"));
+const GestaoBancos = lazyWithChunkRetry(() => import("./pages/GestaoBancos"));
+const GestaoInvestidores = lazyWithChunkRetry(() => import("./pages/GestaoInvestidores"));
+const GestaoOperadores = lazyWithChunkRetry(() => import("./pages/GestaoOperadores"));
+const GestaoProjetos = lazyWithChunkRetry(() => import("./pages/GestaoProjetos"));
+const ProjetoDetalhe = lazyWithChunkRetry(() => import("./pages/ProjetoDetalhe"));
+const ProgramaIndicacao = lazyWithChunkRetry(() => import("./pages/ProgramaIndicacao"));
+const Caixa = lazyWithChunkRetry(() => import("./pages/Caixa"));
+const Financeiro = lazyWithChunkRetry(() => import("./pages/Financeiro"));
+const CentralOperacoes = lazyWithChunkRetry(() => import("./pages/CentralOperacoes"));
+const Anotacoes = lazyWithChunkRetry(() => import("./pages/Anotacoes"));
+
+const Workspace = lazyWithChunkRetry(() => import("./pages/Workspace"));
+const Comunidade = lazyWithChunkRetry(() => import("./pages/Comunidade"));
+const ComunidadeDetalhe = lazyWithChunkRetry(() => import("./pages/ComunidadeDetalhe"));
+const ComunidadeTopico = lazyWithChunkRetry(() => import("./pages/ComunidadeTopico"));
+const ComunidadeChatPopout = lazyWithChunkRetry(() => import("./pages/ComunidadeChatPopout"));
+const SystemAdmin = lazyWithChunkRetry(() => import("./pages/SystemAdmin"));
+const ProtecaoProgressiva = lazyWithChunkRetry(() => import("./pages/ProtecaoProgressiva"));
+const CalculadoraEV = lazyWithChunkRetry(() => import("./pages/CalculadoraEV"));
+const CalculadoraExtracao = lazyWithChunkRetry(() => import("./pages/CalculadoraExtracao"));
+const PlanejamentoCampanhas = lazyWithChunkRetry(() => import("./pages/PlanejamentoCampanhas"));
+const SurebetWindowPage = lazyWithChunkRetry(() => import("./pages/SurebetWindowPage"));
+const ApostaWindowPage = lazyWithChunkRetry(() => import("./pages/ApostaWindowPage"));
+const ApostaMultiplaWindowPage = lazyWithChunkRetry(() => import("./pages/ApostaMultiplaWindowPage"));
+const SharedProject = lazyWithChunkRetry(() => import("./pages/SharedProject"));
+const SupplierPortal = lazyWithChunkRetry(() => import("./pages/SupplierPortal"));
+const FornecedoresPortal = lazyWithChunkRetry(() => import("./pages/FornecedoresPortal"));
+const Solicitacoes = lazyWithChunkRetry(() => import("./pages/Solicitacoes"));
+const DevLedgerMonitor = lazyWithChunkRetry(() => import("./pages/DevLedgerMonitor"));
 
 // ─── QueryClient com defaults globais de performance ───
 const queryClient = new QueryClient({
