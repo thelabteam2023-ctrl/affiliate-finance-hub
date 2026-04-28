@@ -84,8 +84,7 @@ function formatMoney(v: number, currency: string) {
   }
 }
 
-// Paleta de cores por CPF — diferenciar visualmente cada CPF do plano.
-// Usa HSL fixo (não tokens) propositalmente para distinguir CPFs entre si.
+// Paleta de cores por CPF — fallback quando o CPF ainda não tem perfil do planejamento.
 const CPF_COLORS: { bg: string; border: string; text: string; dot: string }[] = [
   { bg: "hsl(45 95% 55% / 0.15)", border: "hsl(45 95% 55%)", text: "hsl(45 95% 65%)", dot: "hsl(45 95% 55%)" },   // 1 amarelo
   { bg: "hsl(142 70% 45% / 0.15)", border: "hsl(142 70% 45%)", text: "hsl(142 70% 55%)", dot: "hsl(142 70% 45%)" }, // 2 verde
@@ -99,7 +98,10 @@ const CPF_COLORS: { bg: string; border: string; text: string; dot: string }[] = 
   { bg: "hsl(160 60% 40% / 0.18)", border: "hsl(160 60% 40%)", text: "hsl(160 60% 55%)", dot: "hsl(160 60% 40%)" }, // 10 teal escuro
 ];
 
-function getCpfColor(idx: number | null | undefined) {
+function getCpfColor(idx: number | null | undefined, perfilCor?: string | null) {
+  if (perfilCor) {
+    return { bg: `${perfilCor}26`, border: perfilCor, text: perfilCor, dot: perfilCor };
+  }
   if (!idx || idx < 1) return null;
   return CPF_COLORS[(idx - 1) % CPF_COLORS.length];
 }
@@ -158,9 +160,10 @@ function DraggableBookmaker({ id, nome, moeda, status, logoUrl, selected, select
 
 // Item arrastável vindo do PLANO de distribuição
 // Carrega tudo: CPF (parceiro), casa, grupo, valor sugerido — pronto para virar campanha
-function DraggableCelula({ celula, parceiroNome, selected, selectedBatch, onToggleSelect }: {
+function DraggableCelula({ celula, parceiroNome, perfilCor, selected, selectedBatch, onToggleSelect }: {
   celula: CelulaDisponivel;
   parceiroNome?: string;
+  perfilCor?: string | null;
   selected: boolean;
   selectedBatch: CelulaDisponivel[];
   onToggleSelect: () => void;
@@ -173,7 +176,7 @@ function DraggableCelula({ celula, parceiroNome, selected, selectedBatch, onTogg
       : { type: "celula", celula },
   });
   const jaAgendada = !!celula.agendada_em;
-  const cpfColor = getCpfColor(celula.cpf_index);
+  const cpfColor = getCpfColor(celula.cpf_index, perfilCor);
   const cpfTag = celula.cpf_index ? `CPF ${celula.cpf_index}` : null;
   const titleStr = jaAgendada
     ? `${celula.bookmaker_nome} • ${cpfTag ?? "CPF ?"}${parceiroNome ? ` (${parceiroNome})` : ""} • já agendada`
