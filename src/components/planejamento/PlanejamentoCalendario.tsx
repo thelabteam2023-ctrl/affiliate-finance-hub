@@ -512,6 +512,15 @@ export function PlanejamentoCalendario() {
 
   // Mapas auxiliares (usa label_custom dos perfis pré-selecionados quando existir)
   const ipMap = useMemo(() => Object.fromEntries(ips.map(i => [i.id, i])), [ips]);
+  const ipByBookmakerMap = useMemo(() => {
+    const map = new Map<string, string>();
+    ips
+      .filter(i => i.is_active && i.bookmaker_catalogo_id)
+      .forEach(i => {
+        if (!map.has(i.bookmaker_catalogo_id!)) map.set(i.bookmaker_catalogo_id!, i.id);
+      });
+    return map;
+  }, [ips]);
   const parceiroMap = useMemo(() => {
     const labelOverride = new Map<string, string>();
     perfisPre.forEach(p => {
@@ -930,10 +939,11 @@ export function PlanejamentoCalendario() {
       }
       const perfil = getCelulaPerfil(celula);
       const effectiveParceiroId = celula.parceiro_id ?? perfil?.parceiro_id ?? null;
+      const linkedIpId = ipByBookmakerMap.get(celula.bookmaker_catalogo_id) ?? null;
       const check = validate({
         bookmaker_catalogo_id: celula.bookmaker_catalogo_id,
         parceiro_id: effectiveParceiroId,
-        ip_id: null,
+        ip_id: linkedIpId,
         wallet_id: null,
         scheduled_date: dateKey,
       });
@@ -949,6 +959,7 @@ export function PlanejamentoCalendario() {
           currency: celula.moeda,
           deposit_amount: celula.deposito_sugerido || 0,
           parceiro_id: effectiveParceiroId ?? undefined,
+          ip_id: linkedIpId,
           status: "planned",
         } as any);
         // useUpsertCampanha retorna o ID como string (não objeto). Aceita ambos.
@@ -977,11 +988,12 @@ export function PlanejamentoCalendario() {
       let ok = 0;
       let blocked = 0;
       for (const item of items) {
+      const linkedIpId = ipByBookmakerMap.get(item.id) ?? null;
       // Valida regras de grupo antes de criar campanha pendente
       const check = validate({
         bookmaker_catalogo_id: item.id,
         parceiro_id: null,
-        ip_id: null,
+        ip_id: linkedIpId,
         wallet_id: null,
         scheduled_date: dateKey,
       });
@@ -996,6 +1008,7 @@ export function PlanejamentoCalendario() {
         bookmaker_nome: item.nome,
         currency: item.moeda,
         deposit_amount: 0,
+        ip_id: linkedIpId,
         status: "planned",
       });
       ok++;

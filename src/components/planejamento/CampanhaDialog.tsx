@@ -42,6 +42,15 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
     () => casasPlan.filter(p => p.is_active && p.casa).map(p => p.casa!),
     [casasPlan]
   );
+  const ipByBookmakerMap = useMemo(() => {
+    const map = new Map<string, string>();
+    ips
+      .filter(i => i.is_active && i.bookmaker_catalogo_id)
+      .forEach(i => {
+        if (!map.has(i.bookmaker_catalogo_id!)) map.set(i.bookmaker_catalogo_id!, i.id);
+      });
+    return map;
+  }, [ips]);
   const upsert = useUpsertCampanha();
   const del = useDeleteCampanha();
 
@@ -89,7 +98,7 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
         deposit_amount: String(campanha.deposit_amount ?? ""),
         currency: campanha.currency,
         parceiro_id: campanha.parceiro_id ?? suggestedParceiroId ?? "",
-        ip_id: campanha.ip_id ?? "",
+        ip_id: campanha.ip_id ?? ipByBookmakerMap.get(campanha.bookmaker_catalogo_id ?? "") ?? "",
         wallet_id: campanha.wallet_id ?? "",
         notes: campanha.notes ?? "",
       });
@@ -100,7 +109,7 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
         deposit_amount: "",
         currency: initialBookmaker.moeda_padrao || "BRL",
         parceiro_id: "",
-        ip_id: "",
+        ip_id: ipByBookmakerMap.get(initialBookmaker.id) ?? "",
         wallet_id: "",
         notes: "",
       });
@@ -116,7 +125,7 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
         notes: "",
       });
     }
-  }, [open, campanha, initialBookmaker, suggestedParceiroId]);
+  }, [open, campanha, initialBookmaker, suggestedParceiroId, ipByBookmakerMap]);
 
   // Detectar conflitos no mesmo dia
   const conflitos = useMemo(() => {
@@ -144,7 +153,8 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
     const sameDay = campanhasDoMes.filter(c => c.scheduled_date === scheduledDate && c.id !== campanha?.id);
     const usedIps = new Set(sameDay.map(c => c.ip_id).filter(Boolean));
     const usedParceiros = new Set(sameDay.map(c => c.parceiro_id).filter(Boolean));
-    const freeIp = ips.find(i => i.is_active && !usedIps.has(i.id));
+    const linkedIp = form.bookmaker_catalogo_id ? ips.find(i => i.is_active && i.bookmaker_catalogo_id === form.bookmaker_catalogo_id && !usedIps.has(i.id)) : null;
+    const freeIp = linkedIp || ips.find(i => i.is_active && !usedIps.has(i.id));
     const freeParceiro = parceiros.find(p => !usedParceiros.has(p.id));
     setForm(f => ({
       ...f,
@@ -197,11 +207,13 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
                 value={form.bookmaker_catalogo_id || undefined}
                 onValueChange={(v) => {
                   const bm = bookmakers.find(b => b.id === v);
+                  const linkedIpId = ipByBookmakerMap.get(v);
                   setForm(f => ({
                     ...f,
                     bookmaker_catalogo_id: v,
                     bookmaker_nome: bm?.nome ?? f.bookmaker_nome,
                     currency: bm?.moeda_padrao ?? f.currency,
+                    ip_id: f.ip_id || linkedIpId || "",
                   }));
                 }}
               >

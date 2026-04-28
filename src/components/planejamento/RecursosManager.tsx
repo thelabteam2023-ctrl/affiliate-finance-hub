@@ -569,11 +569,12 @@ function CasasList() {
 
 // ───────────────────────── IPs ─────────────────────────
 
-type BulkRow = { label: string; ip_address: string; location_city: string };
-const emptyRow = (): BulkRow => ({ label: "", ip_address: "", location_city: "" });
+type BulkRow = { label: string; ip_address: string; location_city: string; bookmaker_catalogo_id: string };
+const emptyRow = (): BulkRow => ({ label: "", ip_address: "", location_city: "", bookmaker_catalogo_id: "" });
 
 function IpsList() {
   const { data: ips = [] } = usePlanningIps();
+  const { data: casasSelecionadas = [] } = usePlanningCasas();
   const upsert = useUpsertPlanningIp();
   const del = useDeletePlanningIp();
   const [editing, setEditing] = useState<Partial<PlanningIp> | null>(null);
@@ -610,6 +611,7 @@ function IpsList() {
           label: row.label.trim(),
           ip_address: row.ip_address.trim(),
           location_city: row.location_city.trim(),
+          bookmaker_catalogo_id: row.bookmaker_catalogo_id || null,
           is_active: true,
         });
       }
@@ -638,16 +640,17 @@ function IpsList() {
             <Badge variant="secondary" className="text-[10px]">{validRows.length} válido(s)</Badge>
           </div>
 
-          <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground px-1">
+          <div className="grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground px-1">
             <span>Label</span>
             <span>Endereço</span>
             <span>Cidade</span>
+            <span>Casa vinculada</span>
             <span className="w-7" />
           </div>
 
           <div className="space-y-1.5 max-h-[280px] overflow-y-auto">
             {bulkRows.map((row, idx) => (
-              <div key={idx} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-1.5 items-center">
+              <div key={idx} className="grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-1.5 items-center">
                 <Input
                   value={row.label}
                   onChange={e => updateRow(idx, { label: e.target.value })}
@@ -666,6 +669,22 @@ function IpsList() {
                   placeholder="São Paulo"
                   className="h-8 text-sm"
                 />
+                <Select
+                  value={row.bookmaker_catalogo_id || undefined}
+                  onValueChange={v => updateRow(idx, { bookmaker_catalogo_id: v === "__none" ? "" : v })}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="Selecionar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">Sem vínculo</SelectItem>
+                    {casasSelecionadas.filter(c => c.is_active && c.casa).map(c => (
+                      <SelectItem key={c.bookmaker_catalogo_id} value={c.bookmaker_catalogo_id}>
+                        {c.label_custom || c.casa?.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -697,7 +716,24 @@ function IpsList() {
           <div className="grid grid-cols-2 gap-2">
             <div><Label className="text-xs">Label</Label><Input value={editing.label ?? ""} onChange={e => setEditing({ ...editing, label: e.target.value })} /></div>
             <div><Label className="text-xs">Endereço IP</Label><Input value={editing.ip_address ?? ""} onChange={e => setEditing({ ...editing, ip_address: e.target.value })} /></div>
-            <div className="col-span-2"><Label className="text-xs">Cidade</Label><Input value={editing.location_city ?? ""} onChange={e => setEditing({ ...editing, location_city: e.target.value })} /></div>
+            <div><Label className="text-xs">Cidade</Label><Input value={editing.location_city ?? ""} onChange={e => setEditing({ ...editing, location_city: e.target.value })} /></div>
+            <div>
+              <Label className="text-xs">Casa vinculada</Label>
+              <Select
+                value={editing.bookmaker_catalogo_id || undefined}
+                onValueChange={v => setEditing({ ...editing, bookmaker_catalogo_id: v === "__none" ? null : v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Selecione a casa do calendário" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">Sem vínculo</SelectItem>
+                  {casasSelecionadas.filter(c => c.is_active && c.casa).map(c => (
+                    <SelectItem key={c.bookmaker_catalogo_id} value={c.bookmaker_catalogo_id}>
+                      {c.label_custom || c.casa?.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="ghost" size="sm" onClick={() => setEditing(null)}>Cancelar</Button>
@@ -707,19 +743,22 @@ function IpsList() {
       )}
 
       <div className="space-y-1 max-h-[360px] overflow-y-auto">
-        {ips.map(ip => (
+        {ips.map(ip => {
+          const linkedCasa = casasSelecionadas.find(c => c.bookmaker_catalogo_id === ip.bookmaker_catalogo_id);
+          return (
           <Card key={ip.id} className="p-2 flex items-center justify-between">
             <div className="text-sm">
               <span className="font-medium">{ip.label}</span>{" "}
               <span className="text-muted-foreground">· {ip.ip_address}</span>{" "}
               {ip.location_city && <span className="text-xs text-muted-foreground">({ip.location_city})</span>}
+              {linkedCasa?.casa && <Badge variant="outline" className="ml-2 h-5 text-[10px]">{linkedCasa.label_custom || linkedCasa.casa.nome}</Badge>}
             </div>
             <div className="flex gap-1">
               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditing(ip)}><Pencil className="h-3.5 w-3.5" /></Button>
               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => del.mutate(ip.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
             </div>
           </Card>
-        ))}
+        );})}
       </div>
     </div>
   );
