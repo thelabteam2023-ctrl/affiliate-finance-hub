@@ -1410,6 +1410,7 @@ export function PlanejamentoCalendario() {
           initialBookmaker={editing.initialBookmaker}
           campanha={editing.campanha}
           campanhasDoMes={campanhas}
+          suggestedParceiroId={editing.campanha ? campanhaPerfilMap.get(editing.campanha.id)?.parceiro_id ?? null : null}
         />
       )}
 
@@ -1434,10 +1435,16 @@ export function PlanejamentoCalendario() {
               {detailsCampanhas.map((c) => {
                 const ip = c.ip_id ? ipMap[c.ip_id] : null;
                 const wallet = c.wallet_id ? wallets.find((w) => w.id === c.wallet_id) : null;
-                const perfil = c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : null;
+                const perfilInfo = campanhaPerfilMap.get(c.id);
+                const perfil = c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : perfilInfo?.parceiro_id ? parceiroMap[perfilInfo.parceiro_id]?.nome : null;
+                const cpfIndex = campanhaCpfMap.get(c.id) ?? null;
+                const cpfColor = getCpfColor(cpfIndex, perfilInfo?.cor);
                 return (
                   <div key={c.id} className="grid grid-cols-[1.2fr_1fr_1fr_1fr_0.7fr_0.8fr] gap-2 px-3 py-2 text-xs items-center hover:bg-muted/30">
                     <div className="font-medium truncate flex items-center gap-2">
+                      {cpfIndex && cpfColor && (
+                        <span className="h-5 w-5 shrink-0 rounded flex items-center justify-center text-[10px] font-bold" style={{ backgroundColor: cpfColor.dot, color: "hsl(0 0% 10%)" }}>{cpfIndex}</span>
+                      )}
                       <BookmakerLogo logoUrl={getLogoUrl(c.bookmaker_nome)} alt={c.bookmaker_nome} size="h-6 w-6 shrink-0" iconSize="h-3.5 w-3.5" />
                       <span className="truncate">{c.bookmaker_nome}</span>
                     </div>
