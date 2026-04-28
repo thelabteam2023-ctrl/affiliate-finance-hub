@@ -737,6 +737,23 @@ function IpsList() {
             <div><Label className="text-xs">Endereço IP</Label><Input value={editing.ip_address ?? ""} onChange={e => setEditing({ ...editing, ip_address: e.target.value })} /></div>
             <div><Label className="text-xs">Cidade</Label><Input value={editing.location_city ?? ""} onChange={e => setEditing({ ...editing, location_city: e.target.value })} /></div>
             <div>
+              <Label className="text-xs">CPF / Perfil</Label>
+              <Select
+                value={editing.perfil_planejamento_id || undefined}
+                onValueChange={v => setEditing({ ...editing, perfil_planejamento_id: v === "__none" ? null : v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Selecione o CPF/perfil" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">Sem CPF</SelectItem>
+                  {perfis.filter(p => p.is_active).map((p, i) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      CPF {i + 1} · {perfilDisplayName(p)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
               <Label className="text-xs">Casa vinculada</Label>
               <Select
                 value={editing.bookmaker_catalogo_id || undefined}
