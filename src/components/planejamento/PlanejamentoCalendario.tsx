@@ -512,6 +512,15 @@ export function PlanejamentoCalendario() {
 
   // Mapas auxiliares (usa label_custom dos perfis pré-selecionados quando existir)
   const ipMap = useMemo(() => Object.fromEntries(ips.map(i => [i.id, i])), [ips]);
+  const ipByBookmakerMap = useMemo(() => {
+    const map = new Map<string, string>();
+    ips
+      .filter(i => i.is_active && i.bookmaker_catalogo_id)
+      .forEach(i => {
+        if (!map.has(i.bookmaker_catalogo_id!)) map.set(i.bookmaker_catalogo_id!, i.id);
+      });
+    return map;
+  }, [ips]);
   const parceiroMap = useMemo(() => {
     const labelOverride = new Map<string, string>();
     perfisPre.forEach(p => {
