@@ -758,7 +758,7 @@ function IpsList() {
               <div key={idx} className="grid grid-cols-[1.25fr_1fr_1fr_auto] gap-1.5 items-center">
                 <Select
                   value={row.bookmaker_catalogo_id || undefined}
-                  onValueChange={v => updateRow(idx, { bookmaker_catalogo_id: v === "__none" ? "" : v })}
+                  onValueChange={v => updateRow(idx, v === "__none" ? emptyRow() : buildBulkRowForCasa(bulkPerfilId, v))}
                   disabled={!bulkPerfilId}
                 >
                   <SelectTrigger className="h-8 text-sm">
