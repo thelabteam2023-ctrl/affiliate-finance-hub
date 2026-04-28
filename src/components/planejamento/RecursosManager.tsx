@@ -625,6 +625,11 @@ function IpsList() {
     return casasPorPerfilMap.get(perfilId) ?? [];
   };
 
+  const getCasaDisplayName = (casa: ReturnType<typeof getCasasForPerfil>[number] | undefined) => {
+    if (!casa) return "Proxy";
+    return (("label_custom" in casa ? casa.label_custom : null) || casa.casa?.nome || "Proxy").trim();
+  };
+
   const handleBulkPerfilChange = (perfilId: string) => {
     setBulkPerfilId(perfilId);
     const casas = getCasasForPerfil(perfilId);
@@ -662,7 +667,7 @@ function IpsList() {
       for (const row of validRows) {
         const casa = getCasasForPerfil(bulkPerfilId).find(c => c.bookmaker_catalogo_id === row.bookmaker_catalogo_id);
         await upsert.mutateAsync({
-          label: (("label_custom" in (casa ?? {}) ? casa?.label_custom : null) || casa?.casa?.nome || "Proxy").trim(),
+          label: getCasaDisplayName(casa),
           ip_address: row.ip_address.trim(),
           location_city: row.location_city.trim(),
           perfil_planejamento_id: bulkPerfilId || null,
