@@ -23,7 +23,7 @@ import {
   useUpdatePlanningPerfil, useDeletePlanningPerfil,
   usePlanningCasas, useAddPlanningCasas, useDeletePlanningCasa,
   usePlanningCasasPermitidasPorPerfil,
-  PERFIL_CORES, perfilDisplayName,
+  PERFIL_CORES, perfilDisplayName, orderPlanningPerfis,
 } from "@/hooks/usePlanningData";
 import {
   Popover, PopoverContent, PopoverTrigger,
@@ -570,8 +570,8 @@ function CasasList() {
 
 // ───────────────────────── IPs ─────────────────────────
 
-type BulkRow = { label: string; ip_address: string; location_city: string; perfil_planejamento_id: string; bookmaker_catalogo_id: string };
-const emptyRow = (): BulkRow => ({ label: "", ip_address: "", location_city: "", perfil_planejamento_id: "", bookmaker_catalogo_id: "" });
+type BulkRow = { ip_address: string; location_city: string; bookmaker_catalogo_id: string };
+const emptyRow = (): BulkRow => ({ ip_address: "", location_city: "", bookmaker_catalogo_id: "" });
 
 function IpsList() {
   const { data: ips = [] } = usePlanningIps();
@@ -582,6 +582,7 @@ function IpsList() {
   const del = useDeletePlanningIp();
   const [editing, setEditing] = useState<Partial<PlanningIp> | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkPerfilId, setBulkPerfilId] = useState("");
   const [bulkRows, setBulkRows] = useState<BulkRow[]>([emptyRow(), emptyRow(), emptyRow()]);
   const [bulkBusy, setBulkBusy] = useState(false);
 
@@ -594,6 +595,8 @@ function IpsList() {
   const addRow = () => setBulkRows(prev => [...prev, emptyRow()]);
   const removeRow = (idx: number) =>
     setBulkRows(prev => (prev.length === 1 ? [emptyRow()] : prev.filter((_, i) => i !== idx)));
+
+  const activePerfis = useMemo(() => orderPlanningPerfis(perfis.filter(p => p.is_active)), [perfis]);
 
   const perfilByParceiroId = useMemo(() => {
     const map = new Map<string, string>();
@@ -622,12 +625,32 @@ function IpsList() {
     return casasPorPerfilMap.get(perfilId) ?? [];
   };
 
+  const handleBulkPerfilChange = (perfilId: string) => {
+    setBulkPerfilId(perfilId);
+    const casas = getCasasForPerfil(perfilId);
+    setBulkRows(casas.length > 0
+      ? casas.map(c => ({ ...emptyRow(), bookmaker_catalogo_id: c.bookmaker_catalogo_id }))
+      : [emptyRow()]
+    );
+  };
+
+  const getAvailableCasasForBulkRow = (idx: number) => {
+    const selectedInOtherRows = new Set(
+      bulkRows
+        .filter((_, rowIdx) => rowIdx !== idx)
+        .map(row => row.bookmaker_catalogo_id)
+        .filter(Boolean)
+    );
+    return getCasasForPerfil(bulkPerfilId).filter(c => !selectedInOtherRows.has(c.bookmaker_catalogo_id));
+  };
+
   const validRows = useMemo(
-    () => bulkRows.filter(r => r.label.trim() && r.ip_address.trim()),
-    [bulkRows]
+    () => bulkRows.filter(r => bulkPerfilId && r.bookmaker_catalogo_id && r.ip_address.trim()),
+    [bulkRows, bulkPerfilId]
   );
 
   const resetBulk = () => {
+    setBulkPerfilId("");
     setBulkRows([emptyRow(), emptyRow(), emptyRow()]);
     setBulkOpen(false);
   };
