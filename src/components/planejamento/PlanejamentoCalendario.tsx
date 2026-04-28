@@ -637,9 +637,13 @@ export function PlanejamentoCalendario() {
   const parceiroIdToCpfIdx = useMemo(() => {
     const m = new Map<string, number>();
     const ids: string[] = (planoSelecionado as any)?.parceiro_ids ?? [];
-    ids.forEach((pid, idx) => m.set(pid, idx + 1));
+    ids.forEach((ownerId, idx) => {
+      m.set(ownerId, idx + 1);
+      const perfil = perfilByIdMap.get(ownerId);
+      if (perfil?.parceiro_id) m.set(perfil.parceiro_id, idx + 1);
+    });
     return m;
-  }, [planoSelecionado]);
+  }, [planoSelecionado, perfilByIdMap]);
 
   const cpfIndexToPerfilMap = useMemo(() => {
     const map = new Map<number, (typeof perfisPre)[number]>();
