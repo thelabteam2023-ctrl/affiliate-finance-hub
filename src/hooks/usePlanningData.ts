@@ -8,6 +8,7 @@ import { toast } from "sonner";
 export interface PlanningIp {
   id: string;
   workspace_id: string;
+  bookmaker_catalogo_id: string | null;
   label: string;
   ip_address: string;
   proxy_type: string | null;
@@ -518,6 +519,7 @@ export function useUpsertPlanningIp() {
       const base = {
         workspace_id: workspaceId,
         created_by: user.id,
+        bookmaker_catalogo_id: payload.bookmaker_catalogo_id ?? null,
         label: payload.label ?? "",
         ip_address: payload.ip_address ?? "",
         proxy_type: payload.proxy_type ?? null,
