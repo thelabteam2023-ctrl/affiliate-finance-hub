@@ -1357,13 +1357,14 @@ export function PlanejamentoCalendario() {
                           onClick={() => setEditing({ date: key, campanha: c })}
                           onDelete={() => handleDeleteCampanha(c.id)}
                           ipLabel={c.ip_id ? ipMap[c.ip_id]?.label : undefined}
-                          parceiroNome={c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : undefined}
+                          parceiroNome={c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : campanhaPerfilMap.get(c.id)?.parceiro_id ? parceiroMap[campanhaPerfilMap.get(c.id)!.parceiro_id!]?.nome : undefined}
                           hasConflict={dayConflicts.has(c.id)}
                           isPending={isCampanhaPending(c)}
                           logoUrl={getLogoUrl(c.bookmaker_nome)}
                           grupoBlock={grupoStatus?.hasBlock}
                           grupoWarn={grupoStatus?.hasWarn}
                           cpfIndex={campanhaCpfMap.get(c.id) ?? null}
+                          perfilCor={campanhaPerfilMap.get(c.id)?.cor}
                         />
                       );
                     })}
