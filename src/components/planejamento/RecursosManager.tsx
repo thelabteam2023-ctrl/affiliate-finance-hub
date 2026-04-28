@@ -23,7 +23,7 @@ import {
   useUpdatePlanningPerfil, useDeletePlanningPerfil,
   usePlanningCasas, useAddPlanningCasas, useDeletePlanningCasa,
   usePlanningCasasPermitidasPorPerfil,
-  PERFIL_CORES, perfilDisplayName,
+  PERFIL_CORES, perfilDisplayName, orderPlanningPerfis,
 } from "@/hooks/usePlanningData";
 import {
   Popover, PopoverContent, PopoverTrigger,
@@ -570,8 +570,8 @@ function CasasList() {
 
 // ───────────────────────── IPs ─────────────────────────
 
-type BulkRow = { label: string; ip_address: string; location_city: string; perfil_planejamento_id: string; bookmaker_catalogo_id: string };
-const emptyRow = (): BulkRow => ({ label: "", ip_address: "", location_city: "", perfil_planejamento_id: "", bookmaker_catalogo_id: "" });
+type BulkRow = { ip_address: string; location_city: string; bookmaker_catalogo_id: string };
+const emptyRow = (): BulkRow => ({ ip_address: "", location_city: "", bookmaker_catalogo_id: "" });
 
 function IpsList() {
   const { data: ips = [] } = usePlanningIps();
@@ -582,6 +582,7 @@ function IpsList() {
   const del = useDeletePlanningIp();
   const [editing, setEditing] = useState<Partial<PlanningIp> | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkPerfilId, setBulkPerfilId] = useState("");
   const [bulkRows, setBulkRows] = useState<BulkRow[]>([emptyRow(), emptyRow(), emptyRow()]);
   const [bulkBusy, setBulkBusy] = useState(false);
 
@@ -594,6 +595,9 @@ function IpsList() {
   const addRow = () => setBulkRows(prev => [...prev, emptyRow()]);
   const removeRow = (idx: number) =>
     setBulkRows(prev => (prev.length === 1 ? [emptyRow()] : prev.filter((_, i) => i !== idx)));
+
+  const orderedPerfis = useMemo(() => orderPlanningPerfis(perfis), [perfis]);
+  const activePerfis = useMemo(() => orderedPerfis.filter(p => p.is_active), [orderedPerfis]);
 
   const perfilByParceiroId = useMemo(() => {
     const map = new Map<string, string>();
@@ -622,12 +626,37 @@ function IpsList() {
     return casasPorPerfilMap.get(perfilId) ?? [];
   };
 
+  const getCasaDisplayName = (casa: ReturnType<typeof getCasasForPerfil>[number] | undefined) => {
+    if (!casa) return "Proxy";
+    return (("label_custom" in casa ? casa.label_custom : null) || casa.casa?.nome || "Proxy").trim();
+  };
+
+  const handleBulkPerfilChange = (perfilId: string) => {
+    setBulkPerfilId(perfilId);
+    const casas = getCasasForPerfil(perfilId);
+    setBulkRows(casas.length > 0
+      ? casas.map(c => ({ ...emptyRow(), bookmaker_catalogo_id: c.bookmaker_catalogo_id }))
+      : [emptyRow()]
+    );
+  };
+
+  const getAvailableCasasForBulkRow = (idx: number) => {
+    const selectedInOtherRows = new Set(
+      bulkRows
+        .filter((_, rowIdx) => rowIdx !== idx)
+        .map(row => row.bookmaker_catalogo_id)
+        .filter(Boolean)
+    );
+    return getCasasForPerfil(bulkPerfilId).filter(c => !selectedInOtherRows.has(c.bookmaker_catalogo_id));
+  };
+
   const validRows = useMemo(
-    () => bulkRows.filter(r => r.label.trim() && r.ip_address.trim()),
-    [bulkRows]
+    () => bulkRows.filter(r => bulkPerfilId && r.bookmaker_catalogo_id && r.ip_address.trim()),
+    [bulkRows, bulkPerfilId]
   );
 
   const resetBulk = () => {
+    setBulkPerfilId("");
     setBulkRows([emptyRow(), emptyRow(), emptyRow()]);
     setBulkOpen(false);
   };
@@ -637,11 +666,12 @@ function IpsList() {
     setBulkBusy(true);
     try {
       for (const row of validRows) {
+        const casa = getCasasForPerfil(bulkPerfilId).find(c => c.bookmaker_catalogo_id === row.bookmaker_catalogo_id);
         await upsert.mutateAsync({
-          label: row.label.trim(),
+          label: getCasaDisplayName(casa),
           ip_address: row.ip_address.trim(),
           location_city: row.location_city.trim(),
-          perfil_planejamento_id: row.perfil_planejamento_id || null,
+          perfil_planejamento_id: bulkPerfilId || null,
           bookmaker_catalogo_id: row.bookmaker_catalogo_id || null,
           is_active: true,
         });
@@ -667,28 +697,64 @@ function IpsList() {
       {bulkOpen && (
         <Card className="p-3 space-y-2">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-medium">Adicionar vários IPs</p>
+            <div className="space-y-1">
+              <p className="text-xs font-medium">Adicionar proxies por CPF</p>
+              <p className="text-[10px] text-muted-foreground">Escolha o CPF uma vez e preencha os proxies das casas vinculadas a ele.</p>
+            </div>
             <Badge variant="secondary" className="text-[10px]">{validRows.length} válido(s)</Badge>
           </div>
 
-          <div className="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_auto] gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground px-1">
-            <span>Label</span>
+          <div className="grid grid-cols-[minmax(220px,1fr)_auto] gap-2 items-end">
+            <div>
+              <Label className="text-xs">CPF / Perfil</Label>
+              <Select value={bulkPerfilId || undefined} onValueChange={handleBulkPerfilChange}>
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue placeholder="Selecione o CPF" />
+                </SelectTrigger>
+                <SelectContent>
+                  {activePerfis.map((p, i) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      CPF {i + 1} · {perfilDisplayName(p)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Badge variant="outline" className="h-8 px-3 text-xs">
+              {bulkPerfilId ? `${getCasasForPerfil(bulkPerfilId).length} casa(s)` : "Selecione um CPF"}
+            </Badge>
+          </div>
+
+          <div className="grid grid-cols-[1.25fr_1fr_1fr_auto] gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground px-1">
+            <span>Casa vinculada</span>
             <span>Endereço</span>
             <span>Cidade</span>
-            <span>CPF / Perfil</span>
-            <span>Casa vinculada</span>
             <span className="w-7" />
           </div>
 
           <div className="space-y-1.5 max-h-[280px] overflow-y-auto">
             {bulkRows.map((row, idx) => (
-              <div key={idx} className="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_auto] gap-1.5 items-center">
-                <Input
-                  value={row.label}
-                  onChange={e => updateRow(idx, { label: e.target.value })}
-                  placeholder="Casa Principal"
-                  className="h-8 text-sm"
-                />
+              <div key={idx} className="grid grid-cols-[1.25fr_1fr_1fr_auto] gap-1.5 items-center">
+                <Select
+                  value={row.bookmaker_catalogo_id || undefined}
+                  onValueChange={v => updateRow(idx, { bookmaker_catalogo_id: v === "__none" ? "" : v })}
+                  disabled={!bulkPerfilId}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder={bulkPerfilId ? "Selecionar" : "Escolha CPF"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">Sem vínculo</SelectItem>
+                    {getAvailableCasasForBulkRow(idx).map(c => (
+                      <SelectItem key={c.bookmaker_catalogo_id} value={c.bookmaker_catalogo_id}>
+                        <div className="flex items-center gap-2">
+                          {c.casa?.logo_url ? <img src={c.casa.logo_url} alt="" className="h-4 w-4 rounded object-contain" /> : <Building2 className="h-3.5 w-3.5" />}
+                          <span>{("label_custom" in c ? c.label_custom : null) || c.casa?.nome}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Input
                   value={row.ip_address}
                   onChange={e => updateRow(idx, { ip_address: e.target.value })}
@@ -701,42 +767,6 @@ function IpsList() {
                   placeholder="São Paulo"
                   className="h-8 text-sm"
                 />
-                <Select
-                  value={row.perfil_planejamento_id || undefined}
-                  onValueChange={v => updateRow(idx, { perfil_planejamento_id: v === "__none" ? "" : v, bookmaker_catalogo_id: "" })}
-                >
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue placeholder="CPF" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none">Sem CPF</SelectItem>
-                    {perfis.filter(p => p.is_active).map((p, i) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        CPF {i + 1} · {perfilDisplayName(p)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={row.bookmaker_catalogo_id || undefined}
-                  onValueChange={v => updateRow(idx, { bookmaker_catalogo_id: v === "__none" ? "" : v })}
-                  disabled={!row.perfil_planejamento_id}
-                >
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue placeholder={row.perfil_planejamento_id ? "Selecionar" : "Escolha CPF"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none">Sem vínculo</SelectItem>
-                    {getCasasForPerfil(row.perfil_planejamento_id).map(c => (
-                      <SelectItem key={c.bookmaker_catalogo_id} value={c.bookmaker_catalogo_id}>
-                        <div className="flex items-center gap-2">
-                          {c.casa?.logo_url ? <img src={c.casa.logo_url} alt="" className="h-4 w-4 rounded object-contain" /> : <Building2 className="h-3.5 w-3.5" />}
-                          <span>{("label_custom" in c ? c.label_custom : null) || c.casa?.nome}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -778,7 +808,7 @@ function IpsList() {
                 <SelectTrigger><SelectValue placeholder="Selecione o CPF/perfil" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none">Sem CPF</SelectItem>
-                  {perfis.filter(p => p.is_active).map((p, i) => (
+                  {activePerfis.map((p, i) => (
                     <SelectItem key={p.id} value={p.id}>
                       CPF {i + 1} · {perfilDisplayName(p)}
                     </SelectItem>
@@ -818,8 +848,8 @@ function IpsList() {
       <div className="space-y-1 max-h-[360px] overflow-y-auto">
         {ips.map(ip => {
           const linkedCasa = casasSelecionadas.find(c => c.bookmaker_catalogo_id === ip.bookmaker_catalogo_id);
-          const linkedPerfilIndex = perfis.findIndex(p => p.id === ip.perfil_planejamento_id);
-          const linkedPerfil = linkedPerfilIndex >= 0 ? perfis[linkedPerfilIndex] : null;
+          const linkedPerfilIndex = orderedPerfis.findIndex(p => p.id === ip.perfil_planejamento_id);
+          const linkedPerfil = linkedPerfilIndex >= 0 ? orderedPerfis[linkedPerfilIndex] : null;
           return (
           <Card key={ip.id} className="p-2 flex items-center justify-between">
             <div className="text-sm">
