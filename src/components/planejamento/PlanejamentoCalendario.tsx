@@ -986,9 +986,11 @@ export function PlanejamentoCalendario() {
       }
       const perfil = getCelulaPerfil(celula);
       const effectiveParceiroId = celula.parceiro_id ?? perfil?.parceiro_id ?? null;
-      const linkedIpId = (perfil?.id ? ipByPerfilBookmakerMap.get(`${perfil.id}:${celula.bookmaker_catalogo_id}`) : null)
-        ?? ipByBookmakerMap.get(celula.bookmaker_catalogo_id)
-        ?? null;
+      const linkedIpId = resolveScopedIpId({
+        perfilId: perfil?.id,
+        parceiroId: effectiveParceiroId,
+        bookmakerCatalogoId: celula.bookmaker_catalogo_id,
+      });
       const check = validate({
         bookmaker_catalogo_id: celula.bookmaker_catalogo_id,
         parceiro_id: effectiveParceiroId,
@@ -1037,7 +1039,7 @@ export function PlanejamentoCalendario() {
       let ok = 0;
       let blocked = 0;
       for (const item of items) {
-      const linkedIpId = ipByBookmakerMap.get(item.id) ?? null;
+      const linkedIpId = resolveScopedIpId({ bookmakerCatalogoId: item.id });
       // Valida regras de grupo antes de criar campanha pendente
       const check = validate({
         bookmaker_catalogo_id: item.id,
