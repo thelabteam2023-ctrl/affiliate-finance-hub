@@ -671,12 +671,13 @@ function IpsList() {
                 />
                 <Select
                   value={row.bookmaker_catalogo_id || undefined}
-                  onValueChange={v => updateRow(idx, { bookmaker_catalogo_id: v })}
+                  onValueChange={v => updateRow(idx, { bookmaker_catalogo_id: v === "__none" ? "" : v })}
                 >
                   <SelectTrigger className="h-8 text-sm">
                     <SelectValue placeholder="Selecionar" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="__none">Sem vínculo</SelectItem>
                     {casasSelecionadas.filter(c => c.is_active && c.casa).map(c => (
                       <SelectItem key={c.bookmaker_catalogo_id} value={c.bookmaker_catalogo_id}>
                         {c.label_custom || c.casa?.nome}
@@ -720,10 +721,11 @@ function IpsList() {
               <Label className="text-xs">Casa vinculada</Label>
               <Select
                 value={editing.bookmaker_catalogo_id || undefined}
-                onValueChange={v => setEditing({ ...editing, bookmaker_catalogo_id: v })}
+                onValueChange={v => setEditing({ ...editing, bookmaker_catalogo_id: v === "__none" ? null : v })}
               >
                 <SelectTrigger><SelectValue placeholder="Selecione a casa do calendário" /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__none">Sem vínculo</SelectItem>
                   {casasSelecionadas.filter(c => c.is_active && c.casa).map(c => (
                     <SelectItem key={c.bookmaker_catalogo_id} value={c.bookmaker_catalogo_id}>
                       {c.label_custom || c.casa?.nome}
