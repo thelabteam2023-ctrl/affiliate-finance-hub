@@ -528,16 +528,6 @@ export function PlanejamentoCalendario() {
       .forEach(i => map.set(`${i.perfil_planejamento_id}:${i.bookmaker_catalogo_id}`, i.id));
     return map;
   }, [ips]);
-  const ipByParceiroBookmakerMap = useMemo(() => {
-    const map = new Map<string, string>();
-    ips
-      .filter(i => i.is_active && i.perfil_planejamento_id && i.bookmaker_catalogo_id)
-      .forEach(i => {
-        const perfil = perfilByIdMap.get(i.perfil_planejamento_id!);
-        if (perfil?.parceiro_id) map.set(`${perfil.parceiro_id}:${i.bookmaker_catalogo_id}`, i.id);
-      });
-    return map;
-  }, [ips, perfilByIdMap]);
   const parceiroMap = useMemo(() => {
     const labelOverride = new Map<string, string>();
     perfisPre.forEach(p => {
@@ -553,6 +543,17 @@ export function PlanejamentoCalendario() {
     perfisPre.forEach((p) => map.set(p.id, p));
     return map;
   }, [perfisPre]);
+
+  const ipByParceiroBookmakerMap = useMemo(() => {
+    const map = new Map<string, string>();
+    ips
+      .filter(i => i.is_active && i.perfil_planejamento_id && i.bookmaker_catalogo_id)
+      .forEach(i => {
+        const perfil = perfilByIdMap.get(i.perfil_planejamento_id!);
+        if (perfil?.parceiro_id) map.set(`${perfil.parceiro_id}:${i.bookmaker_catalogo_id}`, i.id);
+      });
+    return map;
+  }, [ips, perfilByIdMap]);
 
   const perfilByParceiroIdMap = useMemo(() => {
     const map = new Map<string, (typeof perfisPre)[number]>();
