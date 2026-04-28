@@ -51,6 +51,27 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
       });
     return map;
   }, [ips]);
+  const ipByPerfilBookmakerMap = useMemo(() => {
+    const map = new Map<string, string>();
+    ips
+      .filter(i => i.is_active && i.perfil_planejamento_id && i.bookmaker_catalogo_id)
+      .forEach(i => map.set(`${i.perfil_planejamento_id}:${i.bookmaker_catalogo_id}`, i.id));
+    return map;
+  }, [ips]);
+  const perfilByParceiroIdMap = useMemo(() => {
+    const map = new Map<string, string>();
+    perfisPre.forEach(p => {
+      if (p.parceiro_id) map.set(p.parceiro_id, p.id);
+    });
+    return map;
+  }, [perfisPre]);
+  const getSuggestedIpId = useCallback((bookmakerId?: string | null, parceiroId?: string | null) => {
+    if (!bookmakerId) return "";
+    const perfilId = parceiroId ? perfilByParceiroIdMap.get(parceiroId) : null;
+    return (perfilId ? ipByPerfilBookmakerMap.get(`${perfilId}:${bookmakerId}`) : null)
+      ?? ipByBookmakerMap.get(bookmakerId)
+      ?? "";
+  }, [ipByBookmakerMap, ipByPerfilBookmakerMap, perfilByParceiroIdMap]);
   const upsert = useUpsertCampanha();
   const del = useDeleteCampanha();
 
@@ -98,7 +119,7 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
         deposit_amount: String(campanha.deposit_amount ?? ""),
         currency: campanha.currency,
         parceiro_id: campanha.parceiro_id ?? suggestedParceiroId ?? "",
-        ip_id: campanha.ip_id ?? ipByBookmakerMap.get(campanha.bookmaker_catalogo_id ?? "") ?? "",
+        ip_id: campanha.ip_id ?? getSuggestedIpId(campanha.bookmaker_catalogo_id, campanha.parceiro_id ?? suggestedParceiroId) ?? "",
         wallet_id: campanha.wallet_id ?? "",
         notes: campanha.notes ?? "",
       });
@@ -109,7 +130,7 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
         deposit_amount: "",
         currency: initialBookmaker.moeda_padrao || "BRL",
         parceiro_id: "",
-        ip_id: ipByBookmakerMap.get(initialBookmaker.id) ?? "",
+        ip_id: getSuggestedIpId(initialBookmaker.id, suggestedParceiroId),
         wallet_id: "",
         notes: "",
       });
@@ -125,7 +146,7 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
         notes: "",
       });
     }
-  }, [open, campanha, initialBookmaker, suggestedParceiroId, ipByBookmakerMap]);
+  }, [open, campanha, initialBookmaker, suggestedParceiroId, getSuggestedIpId]);
 
   // Detectar conflitos no mesmo dia
   const conflitos = useMemo(() => {
