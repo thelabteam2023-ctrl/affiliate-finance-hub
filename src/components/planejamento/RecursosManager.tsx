@@ -660,11 +660,12 @@ function IpsList() {
     setBulkBusy(true);
     try {
       for (const row of validRows) {
+        const casa = getCasasForPerfil(bulkPerfilId).find(c => c.bookmaker_catalogo_id === row.bookmaker_catalogo_id);
         await upsert.mutateAsync({
-          label: row.label.trim(),
+          label: (("label_custom" in (casa ?? {}) ? casa?.label_custom : null) || casa?.casa?.nome || "Proxy").trim(),
           ip_address: row.ip_address.trim(),
           location_city: row.location_city.trim(),
-          perfil_planejamento_id: row.perfil_planejamento_id || null,
+          perfil_planejamento_id: bulkPerfilId || null,
           bookmaker_catalogo_id: row.bookmaker_catalogo_id || null,
           is_active: true,
         });
@@ -690,28 +691,64 @@ function IpsList() {
       {bulkOpen && (
         <Card className="p-3 space-y-2">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-medium">Adicionar vários IPs</p>
+            <div className="space-y-1">
+              <p className="text-xs font-medium">Adicionar proxies por CPF</p>
+              <p className="text-[10px] text-muted-foreground">Escolha o CPF uma vez e preencha os proxies das casas vinculadas a ele.</p>
+            </div>
             <Badge variant="secondary" className="text-[10px]">{validRows.length} válido(s)</Badge>
           </div>
 
-          <div className="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_auto] gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground px-1">
-            <span>Label</span>
+          <div className="grid grid-cols-[minmax(220px,1fr)_auto] gap-2 items-end">
+            <div>
+              <Label className="text-xs">CPF / Perfil</Label>
+              <Select value={bulkPerfilId || undefined} onValueChange={handleBulkPerfilChange}>
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue placeholder="Selecione o CPF" />
+                </SelectTrigger>
+                <SelectContent>
+                  {activePerfis.map((p, i) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      CPF {i + 1} · {perfilDisplayName(p)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Badge variant="outline" className="h-8 px-3 text-xs">
+              {bulkPerfilId ? `${getCasasForPerfil(bulkPerfilId).length} casa(s)` : "Selecione um CPF"}
+            </Badge>
+          </div>
+
+          <div className="grid grid-cols-[1.25fr_1fr_1fr_auto] gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground px-1">
+            <span>Casa vinculada</span>
             <span>Endereço</span>
             <span>Cidade</span>
-            <span>CPF / Perfil</span>
-            <span>Casa vinculada</span>
             <span className="w-7" />
           </div>
 
           <div className="space-y-1.5 max-h-[280px] overflow-y-auto">
             {bulkRows.map((row, idx) => (
-              <div key={idx} className="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_auto] gap-1.5 items-center">
-                <Input
-                  value={row.label}
-                  onChange={e => updateRow(idx, { label: e.target.value })}
-                  placeholder="Casa Principal"
-                  className="h-8 text-sm"
-                />
+              <div key={idx} className="grid grid-cols-[1.25fr_1fr_1fr_auto] gap-1.5 items-center">
+                <Select
+                  value={row.bookmaker_catalogo_id || undefined}
+                  onValueChange={v => updateRow(idx, { bookmaker_catalogo_id: v === "__none" ? "" : v })}
+                  disabled={!bulkPerfilId}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder={bulkPerfilId ? "Selecionar" : "Escolha CPF"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">Sem vínculo</SelectItem>
+                    {getAvailableCasasForBulkRow(idx).map(c => (
+                      <SelectItem key={c.bookmaker_catalogo_id} value={c.bookmaker_catalogo_id}>
+                        <div className="flex items-center gap-2">
+                          {c.casa?.logo_url ? <img src={c.casa.logo_url} alt="" className="h-4 w-4 rounded object-contain" /> : <Building2 className="h-3.5 w-3.5" />}
+                          <span>{("label_custom" in c ? c.label_custom : null) || c.casa?.nome}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Input
                   value={row.ip_address}
                   onChange={e => updateRow(idx, { ip_address: e.target.value })}
@@ -724,42 +761,6 @@ function IpsList() {
                   placeholder="São Paulo"
                   className="h-8 text-sm"
                 />
-                <Select
-                  value={row.perfil_planejamento_id || undefined}
-                  onValueChange={v => updateRow(idx, { perfil_planejamento_id: v === "__none" ? "" : v, bookmaker_catalogo_id: "" })}
-                >
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue placeholder="CPF" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none">Sem CPF</SelectItem>
-                    {perfis.filter(p => p.is_active).map((p, i) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        CPF {i + 1} · {perfilDisplayName(p)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={row.bookmaker_catalogo_id || undefined}
-                  onValueChange={v => updateRow(idx, { bookmaker_catalogo_id: v === "__none" ? "" : v })}
-                  disabled={!row.perfil_planejamento_id}
-                >
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue placeholder={row.perfil_planejamento_id ? "Selecionar" : "Escolha CPF"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none">Sem vínculo</SelectItem>
-                    {getCasasForPerfil(row.perfil_planejamento_id).map(c => (
-                      <SelectItem key={c.bookmaker_catalogo_id} value={c.bookmaker_catalogo_id}>
-                        <div className="flex items-center gap-2">
-                          {c.casa?.logo_url ? <img src={c.casa.logo_url} alt="" className="h-4 w-4 rounded object-contain" /> : <Building2 className="h-3.5 w-3.5" />}
-                          <span>{("label_custom" in c ? c.label_custom : null) || c.casa?.nome}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
                 <Button
                   variant="ghost"
                   size="icon"
