@@ -178,6 +178,9 @@ export default function DistribuicaoTab() {
   };
 
   const handleGerar = () => {
+    const selectedPerfilIdsOrdenados = perfisOrdenados
+      .filter((p) => selectedPerfilIds.includes(p.id))
+      .map((p) => p.id);
     const configs: GrupoConfig[] = grupoConfigs.map((g) => ({
       grupo_id: g.grupo_id,
       grupo_nome: grupoMap.get(g.grupo_id)?.nome ?? "Grupo",
@@ -187,7 +190,7 @@ export default function DistribuicaoTab() {
       catalogo_ids: grupoCatalogoMap.get(g.grupo_id) ?? [],
     }));
     // O engine espera "parceiroIds"; aqui passamos os IDs dos PERFIS de planejamento
-    setResultado(gerarDistribuicao(selectedPerfilIds, configs));
+    setResultado(gerarDistribuicao(selectedPerfilIdsOrdenados, configs));
   };
 
   const handleSalvar = () => {
@@ -388,7 +391,7 @@ export default function DistribuicaoTab() {
               variant="outline"
               size="sm"
               className="h-7 text-xs"
-              onClick={() => setSelectedPerfilIds(perfis.filter((p) => p.is_active).map((p) => p.id))}
+              onClick={() => setSelectedPerfilIds(perfisOrdenados.filter((p) => p.is_active).map((p) => p.id))}
             >
               Todos ativos
             </Button>
