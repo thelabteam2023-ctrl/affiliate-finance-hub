@@ -174,7 +174,10 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
     const sameDay = campanhasDoMes.filter(c => c.scheduled_date === scheduledDate && c.id !== campanha?.id);
     const usedIps = new Set(sameDay.map(c => c.ip_id).filter(Boolean));
     const usedParceiros = new Set(sameDay.map(c => c.parceiro_id).filter(Boolean));
-    const linkedIp = form.bookmaker_catalogo_id ? ips.find(i => i.is_active && i.bookmaker_catalogo_id === form.bookmaker_catalogo_id && !usedIps.has(i.id)) : null;
+    const perfilId = form.parceiro_id ? perfilByParceiroIdMap.get(form.parceiro_id) : null;
+    const linkedIp = form.bookmaker_catalogo_id
+      ? ips.find(i => i.is_active && i.bookmaker_catalogo_id === form.bookmaker_catalogo_id && (!perfilId || i.perfil_planejamento_id === perfilId) && !usedIps.has(i.id))
+      : null;
     const freeIp = linkedIp || ips.find(i => i.is_active && !usedIps.has(i.id));
     const freeParceiro = parceiros.find(p => !usedParceiros.has(p.id));
     setForm(f => ({
