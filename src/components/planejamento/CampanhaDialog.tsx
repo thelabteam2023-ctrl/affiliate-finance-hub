@@ -231,13 +231,12 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
                 value={form.bookmaker_catalogo_id || undefined}
                 onValueChange={(v) => {
                   const bm = bookmakers.find(b => b.id === v);
-                  const linkedIpId = ipByBookmakerMap.get(v);
                   setForm(f => ({
                     ...f,
                     bookmaker_catalogo_id: v,
                     bookmaker_nome: bm?.nome ?? f.bookmaker_nome,
                     currency: bm?.moeda_padrao ?? f.currency,
-                    ip_id: f.ip_id || linkedIpId || "",
+                    ip_id: getSuggestedIpId(v, f.parceiro_id) || f.ip_id || "",
                   }));
                 }}
               >
@@ -274,7 +273,7 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
           <div className="flex items-end gap-2">
             <div className="flex-1">
               <Label className="text-xs">Perfil (parceiro)</Label>
-              <Select value={form.parceiro_id || undefined} onValueChange={(v) => setForm(f => ({ ...f, parceiro_id: v }))}>
+              <Select value={form.parceiro_id || undefined} onValueChange={(v) => setForm(f => ({ ...f, parceiro_id: v, ip_id: getSuggestedIpId(f.bookmaker_catalogo_id, v) || f.ip_id }))}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
                   {parceiros.map(p => (
