@@ -22,6 +22,7 @@ import {
   useAddPlanningPerfisGenericos,
   useUpdatePlanningPerfil, useDeletePlanningPerfil,
   usePlanningCasas, useAddPlanningCasas, useDeletePlanningCasa,
+  usePlanningCasasPermitidasPorPerfil,
   PERFIL_CORES, perfilDisplayName,
 } from "@/hooks/usePlanningData";
 import {
@@ -575,6 +576,7 @@ const emptyRow = (): BulkRow => ({ label: "", ip_address: "", location_city: "",
 function IpsList() {
   const { data: ips = [] } = usePlanningIps();
   const { data: casasSelecionadas = [] } = usePlanningCasas();
+  const { data: casasPermitidasPerfil = [] } = usePlanningCasasPermitidasPorPerfil();
   const { data: perfis = [] } = usePlanningPerfis();
   const upsert = useUpsertPlanningIp();
   const del = useDeletePlanningIp();
@@ -592,6 +594,33 @@ function IpsList() {
   const addRow = () => setBulkRows(prev => [...prev, emptyRow()]);
   const removeRow = (idx: number) =>
     setBulkRows(prev => (prev.length === 1 ? [emptyRow()] : prev.filter((_, i) => i !== idx)));
+
+  const perfilByParceiroId = useMemo(() => {
+    const map = new Map<string, string>();
+    perfis.forEach(p => {
+      if (p.parceiro_id) map.set(p.parceiro_id, p.id);
+    });
+    return map;
+  }, [perfis]);
+
+  const casasPorPerfilMap = useMemo(() => {
+    const map = new Map<string, typeof casasPermitidasPerfil>();
+    casasPermitidasPerfil.forEach(c => {
+      const perfilId = c.perfil_planejamento_id || (c.parceiro_id ? perfilByParceiroId.get(c.parceiro_id) : null);
+      if (!perfilId || !c.casa) return;
+      const current = map.get(perfilId) ?? [];
+      if (!current.some(item => item.bookmaker_catalogo_id === c.bookmaker_catalogo_id)) {
+        current.push(c);
+        map.set(perfilId, current);
+      }
+    });
+    return map;
+  }, [casasPermitidasPerfil, perfilByParceiroId]);
+
+  const getCasasForPerfil = (perfilId?: string | null) => {
+    if (!perfilId) return casasSelecionadas.filter(c => c.is_active && c.casa);
+    return casasPorPerfilMap.get(perfilId) ?? [];
+  };
 
   const validRows = useMemo(
     () => bulkRows.filter(r => r.label.trim() && r.ip_address.trim()),
