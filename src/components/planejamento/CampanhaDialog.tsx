@@ -27,11 +27,12 @@ interface Props {
   initialBookmaker?: { id: string; nome: string; moeda_padrao: string } | null;
   campanha?: PlanningCampanha | null;
   campanhasDoMes: PlanningCampanha[];
+  suggestedParceiroId?: string | null;
 }
 
 const MOEDAS = ["BRL", "USD", "EUR", "GBP", "MXN", "USDT"];
 
-export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookmaker, campanha, campanhasDoMes }: Props) {
+export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookmaker, campanha, campanhasDoMes, suggestedParceiroId }: Props) {
   const { data: ips = [] } = usePlanningIps();
   const { data: wallets = [] } = usePlanningWallets();
   const { data: parceirosFull = [] } = useParceirosLite();
@@ -87,7 +88,7 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
         bookmaker_nome: campanha.bookmaker_nome,
         deposit_amount: String(campanha.deposit_amount ?? ""),
         currency: campanha.currency,
-        parceiro_id: campanha.parceiro_id ?? "",
+        parceiro_id: campanha.parceiro_id ?? suggestedParceiroId ?? "",
         ip_id: campanha.ip_id ?? "",
         wallet_id: campanha.wallet_id ?? "",
         notes: campanha.notes ?? "",
@@ -115,7 +116,7 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
         notes: "",
       });
     }
-  }, [open, campanha, initialBookmaker]);
+  }, [open, campanha, initialBookmaker, suggestedParceiroId]);
 
   // Detectar conflitos no mesmo dia
   const conflitos = useMemo(() => {

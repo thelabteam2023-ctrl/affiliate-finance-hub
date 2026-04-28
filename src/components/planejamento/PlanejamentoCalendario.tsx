@@ -84,8 +84,7 @@ function formatMoney(v: number, currency: string) {
   }
 }
 
-// Paleta de cores por CPF — diferenciar visualmente cada CPF do plano.
-// Usa HSL fixo (não tokens) propositalmente para distinguir CPFs entre si.
+// Paleta de cores por CPF — fallback quando o CPF ainda não tem perfil do planejamento.
 const CPF_COLORS: { bg: string; border: string; text: string; dot: string }[] = [
   { bg: "hsl(45 95% 55% / 0.15)", border: "hsl(45 95% 55%)", text: "hsl(45 95% 65%)", dot: "hsl(45 95% 55%)" },   // 1 amarelo
   { bg: "hsl(142 70% 45% / 0.15)", border: "hsl(142 70% 45%)", text: "hsl(142 70% 55%)", dot: "hsl(142 70% 45%)" }, // 2 verde
@@ -99,7 +98,10 @@ const CPF_COLORS: { bg: string; border: string; text: string; dot: string }[] = 
   { bg: "hsl(160 60% 40% / 0.18)", border: "hsl(160 60% 40%)", text: "hsl(160 60% 55%)", dot: "hsl(160 60% 40%)" }, // 10 teal escuro
 ];
 
-function getCpfColor(idx: number | null | undefined) {
+function getCpfColor(idx: number | null | undefined, perfilCor?: string | null) {
+  if (perfilCor) {
+    return { bg: `${perfilCor}26`, border: perfilCor, text: perfilCor, dot: perfilCor };
+  }
   if (!idx || idx < 1) return null;
   return CPF_COLORS[(idx - 1) % CPF_COLORS.length];
 }
@@ -158,9 +160,10 @@ function DraggableBookmaker({ id, nome, moeda, status, logoUrl, selected, select
 
 // Item arrastável vindo do PLANO de distribuição
 // Carrega tudo: CPF (parceiro), casa, grupo, valor sugerido — pronto para virar campanha
-function DraggableCelula({ celula, parceiroNome, selected, selectedBatch, onToggleSelect }: {
+function DraggableCelula({ celula, parceiroNome, perfilCor, selected, selectedBatch, onToggleSelect }: {
   celula: CelulaDisponivel;
   parceiroNome?: string;
+  perfilCor?: string | null;
   selected: boolean;
   selectedBatch: CelulaDisponivel[];
   onToggleSelect: () => void;
@@ -173,7 +176,7 @@ function DraggableCelula({ celula, parceiroNome, selected, selectedBatch, onTogg
       : { type: "celula", celula },
   });
   const jaAgendada = !!celula.agendada_em;
-  const cpfColor = getCpfColor(celula.cpf_index);
+  const cpfColor = getCpfColor(celula.cpf_index, perfilCor);
   const cpfTag = celula.cpf_index ? `CPF ${celula.cpf_index}` : null;
   const titleStr = jaAgendada
     ? `${celula.bookmaker_nome} • ${cpfTag ?? "CPF ?"}${parceiroNome ? ` (${parceiroNome})` : ""} • já agendada`
@@ -251,7 +254,7 @@ function DraggableCelula({ celula, parceiroNome, selected, selectedBatch, onTogg
   );
 }
 
-function DraggableCampanha({ campanha, onClick, onDelete, ipLabel, parceiroNome, hasConflict, isPending, logoUrl, grupoBlock, grupoWarn, cpfIndex }: {
+function DraggableCampanha({ campanha, onClick, onDelete, ipLabel, parceiroNome, hasConflict, isPending, logoUrl, grupoBlock, grupoWarn, cpfIndex, perfilCor }: {
   campanha: PlanningCampanha;
   onClick: () => void;
   onDelete: () => void;
@@ -263,13 +266,14 @@ function DraggableCampanha({ campanha, onClick, onDelete, ipLabel, parceiroNome,
   grupoBlock?: boolean;
   grupoWarn?: boolean;
   cpfIndex?: number | null;
+  perfilCor?: string | null;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `camp-${campanha.id}`,
     data: { type: "campanha", campanhaId: campanha.id },
   });
   const hasValue = Number(campanha.deposit_amount) > 0;
-  const cpfColor = getCpfColor(cpfIndex);
+  const cpfColor = getCpfColor(cpfIndex, perfilCor);
   // Quando há CPF vinculado, usamos a cor do CPF como destaque dominante
   // (mas mantemos overrides de erro: conflito/regra de grupo).
   const cpfStyle = cpfColor && !hasConflict && !grupoBlock
@@ -518,6 +522,20 @@ export function PlanejamentoCalendario() {
     );
   }, [parceiros, perfisPre]);
 
+  const perfilByIdMap = useMemo(() => {
+    const map = new Map<string, (typeof perfisPre)[number]>();
+    perfisPre.forEach((p) => map.set(p.id, p));
+    return map;
+  }, [perfisPre]);
+
+  const perfilByParceiroIdMap = useMemo(() => {
+    const map = new Map<string, (typeof perfisPre)[number]>();
+    perfisPre.forEach((p) => {
+      if (p.parceiro_id) map.set(p.parceiro_id, p);
+    });
+    return map;
+  }, [perfisPre]);
+
   // Filtro da sidebar de casas (modo "casas livres" — quando não há plano selecionado)
   const filteredBookmakers = useMemo(() => {
     return bookmakers.filter(b => {
@@ -619,9 +637,35 @@ export function PlanejamentoCalendario() {
   const parceiroIdToCpfIdx = useMemo(() => {
     const m = new Map<string, number>();
     const ids: string[] = (planoSelecionado as any)?.parceiro_ids ?? [];
-    ids.forEach((pid, idx) => m.set(pid, idx + 1));
+    ids.forEach((ownerId, idx) => {
+      m.set(ownerId, idx + 1);
+      const perfil = perfilByIdMap.get(ownerId);
+      if (perfil?.parceiro_id) m.set(perfil.parceiro_id, idx + 1);
+    });
     return m;
-  }, [planoSelecionado]);
+  }, [planoSelecionado, perfilByIdMap]);
+
+  const cpfIndexToPerfilMap = useMemo(() => {
+    const map = new Map<number, (typeof perfisPre)[number]>();
+    const ids: string[] = (planoSelecionado as any)?.parceiro_ids ?? [];
+    ids.forEach((ownerId, idx) => {
+      const perfil = perfilByIdMap.get(ownerId) ?? perfilByParceiroIdMap.get(ownerId);
+      if (perfil) map.set(idx + 1, perfil);
+    });
+    celulasPlano.forEach((cel) => {
+      if (!cel.cpf_index || map.has(cel.cpf_index)) return;
+      const perfil = cel.perfil_planejamento_id ? perfilByIdMap.get(cel.perfil_planejamento_id) : null;
+      if (perfil) map.set(cel.cpf_index, perfil);
+    });
+    return map;
+  }, [planoSelecionado, perfilByIdMap, perfilByParceiroIdMap, celulasPlano, perfisPre]);
+
+  const getCelulaPerfil = useCallback((celula: CelulaDisponivel) => {
+    return (celula.perfil_planejamento_id ? perfilByIdMap.get(celula.perfil_planejamento_id) : null)
+      ?? (celula.parceiro_id ? perfilByParceiroIdMap.get(celula.parceiro_id) : null)
+      ?? (celula.cpf_index ? cpfIndexToPerfilMap.get(celula.cpf_index) : null)
+      ?? null;
+  }, [perfilByIdMap, perfilByParceiroIdMap, cpfIndexToPerfilMap]);
 
   // Mapa: campanha_id -> cpf_index (para colorir o card no calendário).
   // Estratégias em cascata:
@@ -676,6 +720,20 @@ export function PlanejamentoCalendario() {
     });
     return map;
   }, [celulasPlano]);
+
+  const campanhaPerfilMap = useMemo(() => {
+    const map = new Map<string, (typeof perfisPre)[number]>();
+    campanhas.forEach((camp) => {
+      const perfilPorParceiro = camp.parceiro_id ? perfilByParceiroIdMap.get(camp.parceiro_id) : null;
+      const cpfIdx = campanhaCpfMap.get(camp.id);
+      const perfilPorCpf = cpfIdx ? cpfIndexToPerfilMap.get(cpfIdx) : null;
+      const celula = celulasPlano.find((c) => c.campanha_id === camp.id);
+      const perfilPorCelula = celula ? getCelulaPerfil(celula) : null;
+      const perfil = perfilPorParceiro ?? perfilPorCelula ?? perfilPorCpf;
+      if (perfil) map.set(camp.id, perfil);
+    });
+    return map;
+  }, [campanhas, perfilByParceiroIdMap, campanhaCpfMap, cpfIndexToPerfilMap, celulasPlano, getCelulaPerfil]);
 
   const sortCampanhasByCpf = useCallback((list: PlanningCampanha[]) => {
     return [...list].sort((a, b) => {
@@ -870,9 +928,11 @@ export function PlanejamentoCalendario() {
         blocked++;
         continue;
       }
+      const perfil = getCelulaPerfil(celula);
+      const effectiveParceiroId = celula.parceiro_id ?? perfil?.parceiro_id ?? null;
       const check = validate({
         bookmaker_catalogo_id: celula.bookmaker_catalogo_id,
-        parceiro_id: celula.parceiro_id,
+        parceiro_id: effectiveParceiroId,
         ip_id: null,
         wallet_id: null,
         scheduled_date: dateKey,
@@ -888,7 +948,7 @@ export function PlanejamentoCalendario() {
           bookmaker_nome: celula.bookmaker_nome,
           currency: celula.moeda,
           deposit_amount: celula.deposito_sugerido || 0,
-          parceiro_id: celula.parceiro_id ?? undefined,
+          parceiro_id: effectiveParceiroId ?? undefined,
           status: "planned",
         } as any);
         // useUpsertCampanha retorna o ID como string (não objeto). Aceita ambos.
@@ -1126,7 +1186,8 @@ export function PlanejamentoCalendario() {
                     Todos
                   </button>
                   {cpfsDoPlano.map((idx) => {
-                    const color = getCpfColor(idx);
+                    const perfil = cpfIndexToPerfilMap.get(idx);
+                    const color = getCpfColor(idx, perfil?.cor);
                     const active = cpfFiltroIdx === String(idx);
                     return (
                       <button
@@ -1180,7 +1241,8 @@ export function PlanejamentoCalendario() {
                       <DraggableCelula
                         key={c.id}
                         celula={c}
-                        parceiroNome={c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : undefined}
+                        parceiroNome={getCelulaPerfil(c)?.parceiro_id ? parceiroMap[getCelulaPerfil(c)!.parceiro_id!]?.nome : undefined}
+                        perfilCor={getCelulaPerfil(c)?.cor}
                         selected={selectedCelulaIds.has(c.id)}
                         selectedBatch={selectedCelulaBatch}
                         onToggleSelect={() => toggleCelulaSelection(c.id)}
@@ -1299,13 +1361,14 @@ export function PlanejamentoCalendario() {
                           onClick={() => setEditing({ date: key, campanha: c })}
                           onDelete={() => handleDeleteCampanha(c.id)}
                           ipLabel={c.ip_id ? ipMap[c.ip_id]?.label : undefined}
-                          parceiroNome={c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : undefined}
+                          parceiroNome={c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : campanhaPerfilMap.get(c.id)?.parceiro_id ? parceiroMap[campanhaPerfilMap.get(c.id)!.parceiro_id!]?.nome : undefined}
                           hasConflict={dayConflicts.has(c.id)}
                           isPending={isCampanhaPending(c)}
                           logoUrl={getLogoUrl(c.bookmaker_nome)}
                           grupoBlock={grupoStatus?.hasBlock}
                           grupoWarn={grupoStatus?.hasWarn}
                           cpfIndex={campanhaCpfMap.get(c.id) ?? null}
+                          perfilCor={campanhaPerfilMap.get(c.id)?.cor}
                         />
                       );
                     })}
@@ -1351,6 +1414,7 @@ export function PlanejamentoCalendario() {
           initialBookmaker={editing.initialBookmaker}
           campanha={editing.campanha}
           campanhasDoMes={campanhas}
+          suggestedParceiroId={editing.campanha ? campanhaPerfilMap.get(editing.campanha.id)?.parceiro_id ?? null : null}
         />
       )}
 
@@ -1375,10 +1439,16 @@ export function PlanejamentoCalendario() {
               {detailsCampanhas.map((c) => {
                 const ip = c.ip_id ? ipMap[c.ip_id] : null;
                 const wallet = c.wallet_id ? wallets.find((w) => w.id === c.wallet_id) : null;
-                const perfil = c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : null;
+                const perfilInfo = campanhaPerfilMap.get(c.id);
+                const perfil = c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : perfilInfo?.parceiro_id ? parceiroMap[perfilInfo.parceiro_id]?.nome : null;
+                const cpfIndex = campanhaCpfMap.get(c.id) ?? null;
+                const cpfColor = getCpfColor(cpfIndex, perfilInfo?.cor);
                 return (
                   <div key={c.id} className="grid grid-cols-[1.2fr_1fr_1fr_1fr_0.7fr_0.8fr] gap-2 px-3 py-2 text-xs items-center hover:bg-muted/30">
                     <div className="font-medium truncate flex items-center gap-2">
+                      {cpfIndex && cpfColor && (
+                        <span className="h-5 w-5 shrink-0 rounded flex items-center justify-center text-[10px] font-bold" style={{ backgroundColor: cpfColor.dot, color: "hsl(0 0% 10%)" }}>{cpfIndex}</span>
+                      )}
                       <BookmakerLogo logoUrl={getLogoUrl(c.bookmaker_nome)} alt={c.bookmaker_nome} size="h-6 w-6 shrink-0" iconSize="h-3.5 w-3.5" />
                       <span className="truncate">{c.bookmaker_nome}</span>
                     </div>
