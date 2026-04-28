@@ -12,6 +12,8 @@ import {
 import {
   usePlanningPerfis,
   usePlanningCasas,
+  orderPlanningPerfis,
+  planningPerfilCpfIndex,
 } from "@/hooks/usePlanningData";
 import {
   GrupoConfig,
@@ -61,6 +63,7 @@ export default function DistribuicaoTab() {
   const { data: casasPlanejamento = [] } = usePlanningCasas();
   const { planos, createPlano, deletePlano } = useDistribuicaoPlanos();
   const { convertToBRL, cotacaoUSD } = useExchangeRates();
+  const perfisOrdenados = useMemo(() => orderPlanningPerfis(perfis), [perfis]);
 
   const [planoNome, setPlanoNome] = useState("");
   const [selectedPerfilIds, setSelectedPerfilIds] = useState<string[]>([]);
@@ -175,6 +178,9 @@ export default function DistribuicaoTab() {
   };
 
   const handleGerar = () => {
+    const selectedPerfilIdsOrdenados = perfisOrdenados
+      .filter((p) => selectedPerfilIds.includes(p.id))
+      .map((p) => p.id);
     const configs: GrupoConfig[] = grupoConfigs.map((g) => ({
       grupo_id: g.grupo_id,
       grupo_nome: grupoMap.get(g.grupo_id)?.nome ?? "Grupo",
@@ -184,7 +190,7 @@ export default function DistribuicaoTab() {
       catalogo_ids: grupoCatalogoMap.get(g.grupo_id) ?? [],
     }));
     // O engine espera "parceiroIds"; aqui passamos os IDs dos PERFIS de planejamento
-    setResultado(gerarDistribuicao(selectedPerfilIds, configs));
+    setResultado(gerarDistribuicao(selectedPerfilIdsOrdenados, configs));
   };
 
   const handleSalvar = () => {
@@ -195,9 +201,7 @@ export default function DistribuicaoTab() {
     const perfilToParceiro = new Map<string, string | null>();
     perfis.forEach((p) => perfilToParceiro.set(p.id, p.parceiro_id ?? null));
 
-    const parceiroIds = selectedPerfilIds
-      .map((pid) => perfilToParceiro.get(pid) ?? null)
-      .filter((x): x is string => !!x);
+    const parceiroIds = selectedPerfilIds;
 
     createPlano.mutate(
       {
@@ -387,7 +391,7 @@ export default function DistribuicaoTab() {
               variant="outline"
               size="sm"
               className="h-7 text-xs"
-              onClick={() => setSelectedPerfilIds(perfis.filter((p) => p.is_active).map((p) => p.id))}
+              onClick={() => setSelectedPerfilIds(perfisOrdenados.filter((p) => p.is_active).map((p) => p.id))}
             >
               Todos ativos
             </Button>
@@ -403,9 +407,10 @@ export default function DistribuicaoTab() {
         </div>
         <ScrollArea className="h-32 border rounded-md p-2">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5">
-            {perfis.map((p) => {
+            {perfisOrdenados.map((p) => {
               const nome = p.label_custom?.trim() || p.parceiro?.nome || p.nome_generico || "—";
               const isGenerico = !p.parceiro_id;
+              const cpfIndex = planningPerfilCpfIndex(perfis, p.id);
               return (
                 <label
                   key={p.id}
@@ -420,7 +425,7 @@ export default function DistribuicaoTab() {
                     style={{ backgroundColor: p.cor }}
                     title={isGenerico ? "Perfil genérico" : "Perfil real"}
                   />
-                  <span className="truncate text-xs">{nome}</span>
+                  <span className="truncate text-xs">CPF #{cpfIndex ?? "?"} · {nome}</span>
                   {isGenerico && (
                     <Badge variant="outline" className="text-[9px] h-4 shrink-0">gen</Badge>
                   )}
