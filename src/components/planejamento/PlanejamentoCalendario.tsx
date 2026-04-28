@@ -254,7 +254,7 @@ function DraggableCelula({ celula, parceiroNome, perfilCor, selected, selectedBa
   );
 }
 
-function DraggableCampanha({ campanha, onClick, onDelete, ipLabel, parceiroNome, hasConflict, isPending, logoUrl, grupoBlock, grupoWarn, cpfIndex }: {
+function DraggableCampanha({ campanha, onClick, onDelete, ipLabel, parceiroNome, hasConflict, isPending, logoUrl, grupoBlock, grupoWarn, cpfIndex, perfilCor }: {
   campanha: PlanningCampanha;
   onClick: () => void;
   onDelete: () => void;
@@ -266,13 +266,14 @@ function DraggableCampanha({ campanha, onClick, onDelete, ipLabel, parceiroNome,
   grupoBlock?: boolean;
   grupoWarn?: boolean;
   cpfIndex?: number | null;
+  perfilCor?: string | null;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `camp-${campanha.id}`,
     data: { type: "campanha", campanhaId: campanha.id },
   });
   const hasValue = Number(campanha.deposit_amount) > 0;
-  const cpfColor = getCpfColor(cpfIndex);
+  const cpfColor = getCpfColor(cpfIndex, perfilCor);
   // Quando há CPF vinculado, usamos a cor do CPF como destaque dominante
   // (mas mantemos overrides de erro: conflito/regra de grupo).
   const cpfStyle = cpfColor && !hasConflict && !grupoBlock
