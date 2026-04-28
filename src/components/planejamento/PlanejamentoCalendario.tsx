@@ -515,7 +515,7 @@ export function PlanejamentoCalendario() {
   const ipByBookmakerMap = useMemo(() => {
     const map = new Map<string, string>();
     ips
-      .filter(i => i.is_active && i.bookmaker_catalogo_id)
+      .filter(i => i.is_active && i.bookmaker_catalogo_id && !i.perfil_planejamento_id)
       .forEach(i => {
         if (!map.has(i.bookmaker_catalogo_id!)) map.set(i.bookmaker_catalogo_id!, i.id);
       });
@@ -554,6 +554,35 @@ export function PlanejamentoCalendario() {
       });
     return map;
   }, [ips, perfilByIdMap]);
+
+  const resolveScopedIpId = useCallback((params: {
+    directIpId?: string | null;
+    perfilId?: string | null;
+    parceiroId?: string | null;
+    bookmakerCatalogoId?: string | null;
+  }) => {
+    const { directIpId, perfilId, parceiroId, bookmakerCatalogoId } = params;
+    if (!bookmakerCatalogoId) return null;
+
+    const validDirectIpId = (() => {
+      if (!directIpId) return null;
+      const ip = ipMap[directIpId];
+      if (!ip?.is_active || ip.bookmaker_catalogo_id !== bookmakerCatalogoId) return null;
+      if (perfilId && ip.perfil_planejamento_id === perfilId) return directIpId;
+      if (parceiroId && ip.perfil_planejamento_id) {
+        const ipPerfil = perfilByIdMap.get(ip.perfil_planejamento_id);
+        if (ipPerfil?.parceiro_id === parceiroId) return directIpId;
+      }
+      if (!perfilId && !parceiroId && !ip.perfil_planejamento_id) return directIpId;
+      return null;
+    })();
+
+    return validDirectIpId
+      ?? (perfilId ? ipByPerfilBookmakerMap.get(`${perfilId}:${bookmakerCatalogoId}`) : null)
+      ?? (parceiroId ? ipByParceiroBookmakerMap.get(`${parceiroId}:${bookmakerCatalogoId}`) : null)
+      ?? (!perfilId && !parceiroId ? ipByBookmakerMap.get(bookmakerCatalogoId) : null)
+      ?? null;
+  }, [ipByBookmakerMap, ipByParceiroBookmakerMap, ipByPerfilBookmakerMap, ipMap, perfilByIdMap]);
 
   const perfilByParceiroIdMap = useMemo(() => {
     const map = new Map<string, (typeof perfisPre)[number]>();
@@ -957,9 +986,11 @@ export function PlanejamentoCalendario() {
       }
       const perfil = getCelulaPerfil(celula);
       const effectiveParceiroId = celula.parceiro_id ?? perfil?.parceiro_id ?? null;
-      const linkedIpId = (perfil?.id ? ipByPerfilBookmakerMap.get(`${perfil.id}:${celula.bookmaker_catalogo_id}`) : null)
-        ?? ipByBookmakerMap.get(celula.bookmaker_catalogo_id)
-        ?? null;
+      const linkedIpId = resolveScopedIpId({
+        perfilId: perfil?.id,
+        parceiroId: effectiveParceiroId,
+        bookmakerCatalogoId: celula.bookmaker_catalogo_id,
+      });
       const check = validate({
         bookmaker_catalogo_id: celula.bookmaker_catalogo_id,
         parceiro_id: effectiveParceiroId,
@@ -1008,7 +1039,7 @@ export function PlanejamentoCalendario() {
       let ok = 0;
       let blocked = 0;
       for (const item of items) {
-      const linkedIpId = ipByBookmakerMap.get(item.id) ?? null;
+      const linkedIpId = resolveScopedIpId({ bookmakerCatalogoId: item.id });
       // Valida regras de grupo antes de criar campanha pendente
       const check = validate({
         bookmaker_catalogo_id: item.id,
@@ -1473,12 +1504,12 @@ export function PlanejamentoCalendario() {
                 const perfilInfo = campanhaPerfilMap.get(c.id);
                 const celula = celulasPlano.find((item) => item.campanha_id === c.id);
                 const bookmakerCatalogoId = c.bookmaker_catalogo_id ?? celula?.bookmaker_catalogo_id ?? null;
-                const linkedIpId = c.ip_id
-                  ?? (perfilInfo?.id && bookmakerCatalogoId ? ipByPerfilBookmakerMap.get(`${perfilInfo.id}:${bookmakerCatalogoId}`) : null)
-                  ?? (c.parceiro_id && bookmakerCatalogoId ? ipByParceiroBookmakerMap.get(`${c.parceiro_id}:${bookmakerCatalogoId}`) : null)
-                  ?? (perfilInfo?.parceiro_id && bookmakerCatalogoId ? ipByParceiroBookmakerMap.get(`${perfilInfo.parceiro_id}:${bookmakerCatalogoId}`) : null)
-                  ?? (bookmakerCatalogoId ? ipByBookmakerMap.get(bookmakerCatalogoId) : null)
-                  ?? null;
+                const linkedIpId = resolveScopedIpId({
+                  directIpId: c.ip_id,
+                  perfilId: perfilInfo?.id,
+                  parceiroId: c.parceiro_id ?? perfilInfo?.parceiro_id,
+                  bookmakerCatalogoId,
+                });
                 const ip = linkedIpId ? ipMap[linkedIpId] : null;
                 const wallet = c.wallet_id ? wallets.find((w) => w.id === c.wallet_id) : null;
                 const perfil = c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : perfilInfo?.parceiro_id ? parceiroMap[perfilInfo.parceiro_id]?.nome : null;
