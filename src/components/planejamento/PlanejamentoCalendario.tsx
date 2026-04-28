@@ -522,6 +522,20 @@ export function PlanejamentoCalendario() {
     );
   }, [parceiros, perfisPre]);
 
+  const perfilByIdMap = useMemo(() => {
+    const map = new Map<string, (typeof perfisPre)[number]>();
+    perfisPre.forEach((p) => map.set(p.id, p));
+    return map;
+  }, [perfisPre]);
+
+  const perfilByParceiroIdMap = useMemo(() => {
+    const map = new Map<string, (typeof perfisPre)[number]>();
+    perfisPre.forEach((p) => {
+      if (p.parceiro_id) map.set(p.parceiro_id, p);
+    });
+    return map;
+  }, [perfisPre]);
+
   // Filtro da sidebar de casas (modo "casas livres" — quando não há plano selecionado)
   const filteredBookmakers = useMemo(() => {
     return bookmakers.filter(b => {
