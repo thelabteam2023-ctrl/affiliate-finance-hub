@@ -642,17 +642,18 @@ function IpsList() {
             <Badge variant="secondary" className="text-[10px]">{validRows.length} válido(s)</Badge>
           </div>
 
-          <div className="grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground px-1">
+          <div className="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_auto] gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground px-1">
             <span>Label</span>
             <span>Endereço</span>
             <span>Cidade</span>
+            <span>CPF / Perfil</span>
             <span>Casa vinculada</span>
             <span className="w-7" />
           </div>
 
           <div className="space-y-1.5 max-h-[280px] overflow-y-auto">
             {bulkRows.map((row, idx) => (
-              <div key={idx} className="grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-1.5 items-center">
+              <div key={idx} className="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_auto] gap-1.5 items-center">
                 <Input
                   value={row.label}
                   onChange={e => updateRow(idx, { label: e.target.value })}
@@ -671,6 +672,22 @@ function IpsList() {
                   placeholder="São Paulo"
                   className="h-8 text-sm"
                 />
+                <Select
+                  value={row.perfil_planejamento_id || undefined}
+                  onValueChange={v => updateRow(idx, { perfil_planejamento_id: v === "__none" ? "" : v })}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="CPF" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">Sem CPF</SelectItem>
+                    {perfis.filter(p => p.is_active).map((p, i) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        CPF {i + 1} · {perfilDisplayName(p)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Select
                   value={row.bookmaker_catalogo_id || undefined}
                   onValueChange={v => updateRow(idx, { bookmaker_catalogo_id: v === "__none" ? "" : v })}
