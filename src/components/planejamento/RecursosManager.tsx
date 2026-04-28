@@ -570,8 +570,8 @@ function CasasList() {
 
 // ───────────────────────── IPs ─────────────────────────
 
-type BulkRow = { ip_address: string; location_city: string; bookmaker_catalogo_id: string };
-const emptyRow = (): BulkRow => ({ ip_address: "", location_city: "", bookmaker_catalogo_id: "" });
+type BulkRow = { id?: string; ip_address: string; location_city: string; bookmaker_catalogo_id: string };
+const emptyRow = (): BulkRow => ({ id: undefined, ip_address: "", location_city: "", bookmaker_catalogo_id: "" });
 
 function IpsList() {
   const { data: ips = [] } = usePlanningIps();
@@ -631,11 +631,31 @@ function IpsList() {
     return (("label_custom" in casa ? casa.label_custom : null) || casa.casa?.nome || "Proxy").trim();
   };
 
+  const ipByPerfilBookmakerMap = useMemo(() => {
+    const map = new Map<string, PlanningIp>();
+    ips.forEach(ip => {
+      if (ip.perfil_planejamento_id && ip.bookmaker_catalogo_id) {
+        map.set(`${ip.perfil_planejamento_id}:${ip.bookmaker_catalogo_id}`, ip);
+      }
+    });
+    return map;
+  }, [ips]);
+
+  const buildBulkRowForCasa = (perfilId: string, bookmakerCatalogoId: string): BulkRow => {
+    const existingIp = ipByPerfilBookmakerMap.get(`${perfilId}:${bookmakerCatalogoId}`);
+    return {
+      id: existingIp?.id,
+      bookmaker_catalogo_id: bookmakerCatalogoId,
+      ip_address: existingIp?.ip_address ?? "",
+      location_city: existingIp?.location_city ?? "",
+    };
+  };
+
   const handleBulkPerfilChange = (perfilId: string) => {
     setBulkPerfilId(perfilId);
     const casas = getCasasForPerfil(perfilId);
     setBulkRows(casas.length > 0
-      ? casas.map(c => ({ ...emptyRow(), bookmaker_catalogo_id: c.bookmaker_catalogo_id }))
+      ? casas.map(c => buildBulkRowForCasa(perfilId, c.bookmaker_catalogo_id))
       : [emptyRow()]
     );
   };
@@ -668,6 +688,7 @@ function IpsList() {
       for (const row of validRows) {
         const casa = getCasasForPerfil(bulkPerfilId).find(c => c.bookmaker_catalogo_id === row.bookmaker_catalogo_id);
         await upsert.mutateAsync({
+          id: row.id,
           label: getCasaDisplayName(casa),
           ip_address: row.ip_address.trim(),
           location_city: row.location_city.trim(),
