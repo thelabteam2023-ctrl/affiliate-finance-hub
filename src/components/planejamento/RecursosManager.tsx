@@ -569,12 +569,13 @@ function CasasList() {
 
 // ───────────────────────── IPs ─────────────────────────
 
-type BulkRow = { label: string; ip_address: string; location_city: string; bookmaker_catalogo_id: string };
-const emptyRow = (): BulkRow => ({ label: "", ip_address: "", location_city: "", bookmaker_catalogo_id: "" });
+type BulkRow = { label: string; ip_address: string; location_city: string; perfil_planejamento_id: string; bookmaker_catalogo_id: string };
+const emptyRow = (): BulkRow => ({ label: "", ip_address: "", location_city: "", perfil_planejamento_id: "", bookmaker_catalogo_id: "" });
 
 function IpsList() {
   const { data: ips = [] } = usePlanningIps();
   const { data: casasSelecionadas = [] } = usePlanningCasas();
+  const { data: perfis = [] } = usePlanningPerfis();
   const upsert = useUpsertPlanningIp();
   const del = useDeletePlanningIp();
   const [editing, setEditing] = useState<Partial<PlanningIp> | null>(null);
@@ -611,6 +612,7 @@ function IpsList() {
           label: row.label.trim(),
           ip_address: row.ip_address.trim(),
           location_city: row.location_city.trim(),
+          perfil_planejamento_id: row.perfil_planejamento_id || null,
           bookmaker_catalogo_id: row.bookmaker_catalogo_id || null,
           is_active: true,
         });
