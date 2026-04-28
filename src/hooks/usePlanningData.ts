@@ -101,6 +101,47 @@ export function perfilDisplayName(p: Pick<PlanningPerfil, "label_custom" | "nome
   return p.label_custom?.trim() || p.parceiro?.nome || p.nome_generico || "—";
 }
 
+export function getPerfilCpfSlot(p: Pick<PlanningPerfil, "nome_generico" | "label_custom">): number | null {
+  const source = `${p.nome_generico ?? ""} ${p.label_custom ?? ""}`;
+  const match = source.match(/CPF\s*#?\s*(\d+)/i);
+  return match ? Number(match[1]) : null;
+}
+
+export function orderPlanningPerfis<T extends Pick<PlanningPerfil, "id" | "nome_generico" | "label_custom" | "created_at">>(perfis: T[]): T[] {
+  const explicitSlots = new Map<string, number>();
+  const usedSlots = new Set<number>();
+  perfis.forEach((p) => {
+    const slot = getPerfilCpfSlot(p);
+    if (slot && slot > 0) {
+      explicitSlots.set(p.id, slot);
+      usedSlots.add(slot);
+    }
+  });
+
+  const fallbackSlots = new Map<string, number>();
+  let cursor = 1;
+  [...perfis]
+    .filter((p) => !explicitSlots.has(p.id))
+    .sort((a, b) => String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")))
+    .forEach((p) => {
+      while (usedSlots.has(cursor)) cursor += 1;
+      fallbackSlots.set(p.id, cursor);
+      usedSlots.add(cursor);
+    });
+
+  return [...perfis].sort((a, b) => {
+    const slotA = explicitSlots.get(a.id) ?? fallbackSlots.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+    const slotB = explicitSlots.get(b.id) ?? fallbackSlots.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+    if (slotA !== slotB) return slotA - slotB;
+    return String(a.created_at ?? "").localeCompare(String(b.created_at ?? ""));
+  });
+}
+
+export function planningPerfilCpfIndex(perfis: Pick<PlanningPerfil, "id" | "nome_generico" | "label_custom" | "created_at">[], perfilId: string): number | null {
+  const idx = orderPlanningPerfis(perfis).findIndex((p) => p.id === perfilId);
+  return idx >= 0 ? idx + 1 : null;
+}
+
 export interface BookmakerCatalogo {
   id: string;
   nome: string;
