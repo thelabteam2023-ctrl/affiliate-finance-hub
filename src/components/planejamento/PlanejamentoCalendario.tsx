@@ -515,7 +515,7 @@ export function PlanejamentoCalendario() {
   const ipByBookmakerMap = useMemo(() => {
     const map = new Map<string, string>();
     ips
-      .filter(i => i.is_active && i.bookmaker_catalogo_id)
+      .filter(i => i.is_active && i.bookmaker_catalogo_id && !i.perfil_planejamento_id)
       .forEach(i => {
         if (!map.has(i.bookmaker_catalogo_id!)) map.set(i.bookmaker_catalogo_id!, i.id);
       });
@@ -554,6 +554,35 @@ export function PlanejamentoCalendario() {
       });
     return map;
   }, [ips, perfilByIdMap]);
+
+  const resolveScopedIpId = useCallback((params: {
+    directIpId?: string | null;
+    perfilId?: string | null;
+    parceiroId?: string | null;
+    bookmakerCatalogoId?: string | null;
+  }) => {
+    const { directIpId, perfilId, parceiroId, bookmakerCatalogoId } = params;
+    if (!bookmakerCatalogoId) return null;
+
+    const validDirectIpId = (() => {
+      if (!directIpId) return null;
+      const ip = ipMap[directIpId];
+      if (!ip?.is_active || ip.bookmaker_catalogo_id !== bookmakerCatalogoId) return null;
+      if (perfilId && ip.perfil_planejamento_id === perfilId) return directIpId;
+      if (parceiroId && ip.perfil_planejamento_id) {
+        const ipPerfil = perfilByIdMap.get(ip.perfil_planejamento_id);
+        if (ipPerfil?.parceiro_id === parceiroId) return directIpId;
+      }
+      if (!perfilId && !parceiroId && !ip.perfil_planejamento_id) return directIpId;
+      return null;
+    })();
+
+    return validDirectIpId
+      ?? (perfilId ? ipByPerfilBookmakerMap.get(`${perfilId}:${bookmakerCatalogoId}`) : null)
+      ?? (parceiroId ? ipByParceiroBookmakerMap.get(`${parceiroId}:${bookmakerCatalogoId}`) : null)
+      ?? (!perfilId && !parceiroId ? ipByBookmakerMap.get(bookmakerCatalogoId) : null)
+      ?? null;
+  }, [ipByBookmakerMap, ipByParceiroBookmakerMap, ipByPerfilBookmakerMap, ipMap, perfilByIdMap]);
 
   const perfilByParceiroIdMap = useMemo(() => {
     const map = new Map<string, (typeof perfisPre)[number]>();
