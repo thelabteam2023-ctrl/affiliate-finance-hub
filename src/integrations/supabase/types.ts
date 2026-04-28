@@ -7763,6 +7763,7 @@ export type Database = {
       }
       planning_ips: {
         Row: {
+          bookmaker_catalogo_id: string | null
           created_at: string
           created_by: string
           id: string
@@ -7778,6 +7779,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          bookmaker_catalogo_id?: string | null
           created_at?: string
           created_by: string
           id?: string
@@ -7793,6 +7795,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          bookmaker_catalogo_id?: string | null
           created_at?: string
           created_by?: string
           id?: string
@@ -7808,6 +7811,20 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "planning_ips_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers_catalogo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planning_ips_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "v_community_bookmaker_stats"
+            referencedColumns: ["bookmaker_catalogo_id"]
+          },
           {
             foreignKeyName: "planning_ips_workspace_id_fkey"
             columns: ["workspace_id"]
