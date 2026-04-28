@@ -641,6 +641,28 @@ export function PlanejamentoCalendario() {
     return m;
   }, [planoSelecionado]);
 
+  const cpfIndexToPerfilMap = useMemo(() => {
+    const map = new Map<number, (typeof perfisPre)[number]>();
+    const ids: string[] = (planoSelecionado as any)?.parceiro_ids ?? [];
+    ids.forEach((ownerId, idx) => {
+      const perfil = perfilByIdMap.get(ownerId) ?? perfilByParceiroIdMap.get(ownerId);
+      if (perfil) map.set(idx + 1, perfil);
+    });
+    celulasPlano.forEach((cel) => {
+      if (!cel.cpf_index || map.has(cel.cpf_index)) return;
+      const perfil = cel.perfil_planejamento_id ? perfilByIdMap.get(cel.perfil_planejamento_id) : null;
+      if (perfil) map.set(cel.cpf_index, perfil);
+    });
+    return map;
+  }, [planoSelecionado, perfilByIdMap, perfilByParceiroIdMap, celulasPlano, perfisPre]);
+
+  const getCelulaPerfil = useCallback((celula: CelulaDisponivel) => {
+    return (celula.perfil_planejamento_id ? perfilByIdMap.get(celula.perfil_planejamento_id) : null)
+      ?? (celula.parceiro_id ? perfilByParceiroIdMap.get(celula.parceiro_id) : null)
+      ?? (celula.cpf_index ? cpfIndexToPerfilMap.get(celula.cpf_index) : null)
+      ?? null;
+  }, [perfilByIdMap, perfilByParceiroIdMap, cpfIndexToPerfilMap]);
+
   // Mapa: campanha_id -> cpf_index (para colorir o card no calendário).
   // Estratégias em cascata:
   //  1) Vínculo direto via célula agendada (campanha_id na célula).
