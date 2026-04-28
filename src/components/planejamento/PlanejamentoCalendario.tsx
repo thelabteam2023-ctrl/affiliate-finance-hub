@@ -1504,12 +1504,12 @@ export function PlanejamentoCalendario() {
                 const perfilInfo = campanhaPerfilMap.get(c.id);
                 const celula = celulasPlano.find((item) => item.campanha_id === c.id);
                 const bookmakerCatalogoId = c.bookmaker_catalogo_id ?? celula?.bookmaker_catalogo_id ?? null;
-                const linkedIpId = c.ip_id
-                  ?? (perfilInfo?.id && bookmakerCatalogoId ? ipByPerfilBookmakerMap.get(`${perfilInfo.id}:${bookmakerCatalogoId}`) : null)
-                  ?? (c.parceiro_id && bookmakerCatalogoId ? ipByParceiroBookmakerMap.get(`${c.parceiro_id}:${bookmakerCatalogoId}`) : null)
-                  ?? (perfilInfo?.parceiro_id && bookmakerCatalogoId ? ipByParceiroBookmakerMap.get(`${perfilInfo.parceiro_id}:${bookmakerCatalogoId}`) : null)
-                  ?? (bookmakerCatalogoId ? ipByBookmakerMap.get(bookmakerCatalogoId) : null)
-                  ?? null;
+                const linkedIpId = resolveScopedIpId({
+                  directIpId: c.ip_id,
+                  perfilId: perfilInfo?.id,
+                  parceiroId: c.parceiro_id ?? perfilInfo?.parceiro_id,
+                  bookmakerCatalogoId,
+                });
                 const ip = linkedIpId ? ipMap[linkedIpId] : null;
                 const wallet = c.wallet_id ? wallets.find((w) => w.id === c.wallet_id) : null;
                 const perfil = c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : perfilInfo?.parceiro_id ? parceiroMap[perfilInfo.parceiro_id]?.nome : null;
