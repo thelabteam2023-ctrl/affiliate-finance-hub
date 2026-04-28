@@ -528,6 +528,16 @@ export function PlanejamentoCalendario() {
       .forEach(i => map.set(`${i.perfil_planejamento_id}:${i.bookmaker_catalogo_id}`, i.id));
     return map;
   }, [ips]);
+  const ipByParceiroBookmakerMap = useMemo(() => {
+    const map = new Map<string, string>();
+    ips
+      .filter(i => i.is_active && i.perfil_planejamento_id && i.bookmaker_catalogo_id)
+      .forEach(i => {
+        const perfil = perfilByIdMap.get(i.perfil_planejamento_id!);
+        if (perfil?.parceiro_id) map.set(`${perfil.parceiro_id}:${i.bookmaker_catalogo_id}`, i.id);
+      });
+    return map;
+  }, [ips, perfilByIdMap]);
   const parceiroMap = useMemo(() => {
     const labelOverride = new Map<string, string>();
     perfisPre.forEach(p => {
@@ -1460,9 +1470,13 @@ export function PlanejamentoCalendario() {
             <div className="min-w-[760px] divide-y">
               {detailsCampanhas.map((c) => {
                 const perfilInfo = campanhaPerfilMap.get(c.id);
+                const celula = celulasPlano.find((item) => item.campanha_id === c.id);
+                const bookmakerCatalogoId = c.bookmaker_catalogo_id ?? celula?.bookmaker_catalogo_id ?? null;
                 const linkedIpId = c.ip_id
-                  ?? (perfilInfo?.id && c.bookmaker_catalogo_id ? ipByPerfilBookmakerMap.get(`${perfilInfo.id}:${c.bookmaker_catalogo_id}`) : null)
-                  ?? (c.bookmaker_catalogo_id ? ipByBookmakerMap.get(c.bookmaker_catalogo_id) : null)
+                  ?? (perfilInfo?.id && bookmakerCatalogoId ? ipByPerfilBookmakerMap.get(`${perfilInfo.id}:${bookmakerCatalogoId}`) : null)
+                  ?? (c.parceiro_id && bookmakerCatalogoId ? ipByParceiroBookmakerMap.get(`${c.parceiro_id}:${bookmakerCatalogoId}`) : null)
+                  ?? (perfilInfo?.parceiro_id && bookmakerCatalogoId ? ipByParceiroBookmakerMap.get(`${perfilInfo.parceiro_id}:${bookmakerCatalogoId}`) : null)
+                  ?? (bookmakerCatalogoId ? ipByBookmakerMap.get(bookmakerCatalogoId) : null)
                   ?? null;
                 const ip = linkedIpId ? ipMap[linkedIpId] : null;
                 const wallet = c.wallet_id ? wallets.find((w) => w.id === c.wallet_id) : null;
