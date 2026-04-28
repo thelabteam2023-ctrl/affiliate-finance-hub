@@ -22,6 +22,7 @@ import {
   useAddPlanningPerfisGenericos,
   useUpdatePlanningPerfil, useDeletePlanningPerfil,
   usePlanningCasas, useAddPlanningCasas, useDeletePlanningCasa,
+  usePlanningCasasPermitidasPorPerfil,
   PERFIL_CORES, perfilDisplayName,
 } from "@/hooks/usePlanningData";
 import {
@@ -575,6 +576,7 @@ const emptyRow = (): BulkRow => ({ label: "", ip_address: "", location_city: "",
 function IpsList() {
   const { data: ips = [] } = usePlanningIps();
   const { data: casasSelecionadas = [] } = usePlanningCasas();
+  const { data: casasPermitidasPerfil = [] } = usePlanningCasasPermitidasPorPerfil();
   const { data: perfis = [] } = usePlanningPerfis();
   const upsert = useUpsertPlanningIp();
   const del = useDeletePlanningIp();
@@ -592,6 +594,33 @@ function IpsList() {
   const addRow = () => setBulkRows(prev => [...prev, emptyRow()]);
   const removeRow = (idx: number) =>
     setBulkRows(prev => (prev.length === 1 ? [emptyRow()] : prev.filter((_, i) => i !== idx)));
+
+  const perfilByParceiroId = useMemo(() => {
+    const map = new Map<string, string>();
+    perfis.forEach(p => {
+      if (p.parceiro_id) map.set(p.parceiro_id, p.id);
+    });
+    return map;
+  }, [perfis]);
+
+  const casasPorPerfilMap = useMemo(() => {
+    const map = new Map<string, typeof casasPermitidasPerfil>();
+    casasPermitidasPerfil.forEach(c => {
+      const perfilId = c.perfil_planejamento_id || (c.parceiro_id ? perfilByParceiroId.get(c.parceiro_id) : null);
+      if (!perfilId || !c.casa) return;
+      const current = map.get(perfilId) ?? [];
+      if (!current.some(item => item.bookmaker_catalogo_id === c.bookmaker_catalogo_id)) {
+        current.push(c);
+        map.set(perfilId, current);
+      }
+    });
+    return map;
+  }, [casasPermitidasPerfil, perfilByParceiroId]);
+
+  const getCasasForPerfil = (perfilId?: string | null) => {
+    if (!perfilId) return casasSelecionadas.filter(c => c.is_active && c.casa);
+    return casasPorPerfilMap.get(perfilId) ?? [];
+  };
 
   const validRows = useMemo(
     () => bulkRows.filter(r => r.label.trim() && r.ip_address.trim()),
@@ -674,7 +703,7 @@ function IpsList() {
                 />
                 <Select
                   value={row.perfil_planejamento_id || undefined}
-                  onValueChange={v => updateRow(idx, { perfil_planejamento_id: v === "__none" ? "" : v })}
+                  onValueChange={v => updateRow(idx, { perfil_planejamento_id: v === "__none" ? "" : v, bookmaker_catalogo_id: "" })}
                 >
                   <SelectTrigger className="h-8 text-sm">
                     <SelectValue placeholder="CPF" />
@@ -691,15 +720,19 @@ function IpsList() {
                 <Select
                   value={row.bookmaker_catalogo_id || undefined}
                   onValueChange={v => updateRow(idx, { bookmaker_catalogo_id: v === "__none" ? "" : v })}
+                  disabled={!row.perfil_planejamento_id}
                 >
                   <SelectTrigger className="h-8 text-sm">
-                    <SelectValue placeholder="Selecionar" />
+                    <SelectValue placeholder={row.perfil_planejamento_id ? "Selecionar" : "Escolha CPF"} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none">Sem vínculo</SelectItem>
-                    {casasSelecionadas.filter(c => c.is_active && c.casa).map(c => (
+                    {getCasasForPerfil(row.perfil_planejamento_id).map(c => (
                       <SelectItem key={c.bookmaker_catalogo_id} value={c.bookmaker_catalogo_id}>
-                        {c.label_custom || c.casa?.nome}
+                        <div className="flex items-center gap-2">
+                          {c.casa?.logo_url ? <img src={c.casa.logo_url} alt="" className="h-4 w-4 rounded object-contain" /> : <Building2 className="h-3.5 w-3.5" />}
+                          <span>{("label_custom" in c ? c.label_custom : null) || c.casa?.nome}</span>
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -740,7 +773,7 @@ function IpsList() {
               <Label className="text-xs">CPF / Perfil</Label>
               <Select
                 value={editing.perfil_planejamento_id || undefined}
-                onValueChange={v => setEditing({ ...editing, perfil_planejamento_id: v === "__none" ? null : v })}
+                onValueChange={v => setEditing({ ...editing, perfil_planejamento_id: v === "__none" ? null : v, bookmaker_catalogo_id: null })}
               >
                 <SelectTrigger><SelectValue placeholder="Selecione o CPF/perfil" /></SelectTrigger>
                 <SelectContent>
@@ -758,13 +791,17 @@ function IpsList() {
               <Select
                 value={editing.bookmaker_catalogo_id || undefined}
                 onValueChange={v => setEditing({ ...editing, bookmaker_catalogo_id: v === "__none" ? null : v })}
+                disabled={!editing.perfil_planejamento_id}
               >
-                <SelectTrigger><SelectValue placeholder="Selecione a casa do calendário" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={editing.perfil_planejamento_id ? "Selecione a casa do CPF" : "Escolha o CPF primeiro"} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none">Sem vínculo</SelectItem>
-                  {casasSelecionadas.filter(c => c.is_active && c.casa).map(c => (
+                  {getCasasForPerfil(editing.perfil_planejamento_id).map(c => (
                     <SelectItem key={c.bookmaker_catalogo_id} value={c.bookmaker_catalogo_id}>
-                      {c.label_custom || c.casa?.nome}
+                      <div className="flex items-center gap-2">
+                        {c.casa?.logo_url ? <img src={c.casa.logo_url} alt="" className="h-4 w-4 rounded object-contain" /> : <Building2 className="h-3.5 w-3.5" />}
+                        <span>{("label_custom" in c ? c.label_custom : null) || c.casa?.nome}</span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>

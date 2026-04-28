@@ -123,6 +123,16 @@ export interface PlanningCasa {
   casa?: BookmakerCatalogo | null;
 }
 
+export interface PlanningCasaPermitidaPerfil {
+  id: string;
+  workspace_id: string;
+  perfil_planejamento_id: string | null;
+  parceiro_id: string | null;
+  bookmaker_catalogo_id: string;
+  ordem: number;
+  casa?: Pick<BookmakerCatalogo, "id" | "nome" | "logo_url" | "moeda_padrao" | "status"> | null;
+}
+
 // ──────────────────────── QUERIES ────────────────────────
 
 export function usePlanningIps() {
@@ -448,6 +458,24 @@ export function usePlanningCasas() {
       if (error) throw error;
       return (data ?? []) as unknown as PlanningCasa[];
     },
+  });
+}
+
+export function usePlanningCasasPermitidasPorPerfil() {
+  const { workspaceId } = useAuth();
+  return useQuery({
+    queryKey: ["planning-casas-permitidas-perfil", workspaceId],
+    enabled: !!workspaceId,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("distribuicao_plano_celulas")
+        .select("id, workspace_id, perfil_planejamento_id, parceiro_id, bookmaker_catalogo_id, ordem, casa:bookmakers_catalogo(id, nome, logo_url, moeda_padrao, status)")
+        .eq("workspace_id", workspaceId!)
+        .order("ordem");
+      if (error) throw error;
+      return (data ?? []) as unknown as PlanningCasaPermitidaPerfil[];
+    },
+    staleTime: 15_000,
   });
 }
 
