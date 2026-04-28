@@ -9,6 +9,7 @@ export interface PlanningIp {
   id: string;
   workspace_id: string;
   bookmaker_catalogo_id: string | null;
+  perfil_planejamento_id: string | null;
   label: string;
   ip_address: string;
   proxy_type: string | null;
@@ -520,6 +521,7 @@ export function useUpsertPlanningIp() {
         workspace_id: workspaceId,
         created_by: user.id,
         bookmaker_catalogo_id: payload.bookmaker_catalogo_id ?? null,
+        perfil_planejamento_id: payload.perfil_planejamento_id ?? null,
         label: payload.label ?? "",
         ip_address: payload.ip_address ?? "",
         proxy_type: payload.proxy_type ?? null,
