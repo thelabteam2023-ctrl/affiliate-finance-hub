@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { ChevronLeft, ChevronRight, Settings2, Plus, AlertTriangle, MapPin, User, Search, Building2, Trash2, ChevronDown, ChevronUp, ShieldAlert, Pencil, Sparkles } from "lucide-react";
+import { ChevronLeft, ChevronRight, Settings2, Plus, AlertTriangle, MapPin, User, Search, Building2, Trash2, ChevronDown, ChevronUp, ShieldAlert, Pencil, Sparkles, Copy } from "lucide-react";
 import { SimulacaoDistribuicaoDialog } from "./SimulacaoDistribuicaoDialog";
 import {
   ContextMenu,
@@ -1494,7 +1494,26 @@ export function PlanejamentoCalendario() {
                       <span className="truncate">{c.bookmaker_nome}</span>
                     </div>
                     <div className="truncate">{perfil ?? "—"}</div>
-                    <div className="truncate">{ip ? `${ip.label}${ip.ip_address ? ` • ${ip.ip_address}` : ""}` : "—"}</div>
+                    <div className="min-w-0 flex items-center gap-1.5">
+                      {ip?.ip_address ? (
+                        <>
+                          <span className="truncate font-medium" title={ip.ip_address}>{ip.ip_address}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 shrink-0"
+                            title="Copiar IP utilizado"
+                            onClick={() => {
+                              navigator.clipboard.writeText(ip.ip_address);
+                              toast.success("IP copiado");
+                            }}
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      ) : "—"}
+                    </div>
                     <div className="truncate">{wallet ? `${wallet.label}${wallet.network ? ` • ${wallet.network}` : ""}` : "—"}</div>
                     <div className="font-semibold">{c.currency}</div>
                     <div className="text-right font-semibold tabular-nums">{formatMoney(Number(c.deposit_amount), c.currency)}</div>
