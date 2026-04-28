@@ -7773,6 +7773,7 @@ export type Database = {
           location_city: string | null
           location_country: string | null
           notes: string | null
+          perfil_planejamento_id: string | null
           provider: string | null
           proxy_type: string | null
           updated_at: string
@@ -7789,6 +7790,7 @@ export type Database = {
           location_city?: string | null
           location_country?: string | null
           notes?: string | null
+          perfil_planejamento_id?: string | null
           provider?: string | null
           proxy_type?: string | null
           updated_at?: string
@@ -7805,6 +7807,7 @@ export type Database = {
           location_city?: string | null
           location_country?: string | null
           notes?: string | null
+          perfil_planejamento_id?: string | null
           provider?: string | null
           proxy_type?: string | null
           updated_at?: string
@@ -7824,6 +7827,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_community_bookmaker_stats"
             referencedColumns: ["bookmaker_catalogo_id"]
+          },
+          {
+            foreignKeyName: "planning_ips_perfil_planejamento_id_fkey"
+            columns: ["perfil_planejamento_id"]
+            isOneToOne: false
+            referencedRelation: "planning_perfis"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "planning_ips_workspace_id_fkey"
