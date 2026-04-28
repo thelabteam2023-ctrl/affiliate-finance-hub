@@ -521,6 +521,13 @@ export function PlanejamentoCalendario() {
       });
     return map;
   }, [ips]);
+  const ipByPerfilBookmakerMap = useMemo(() => {
+    const map = new Map<string, string>();
+    ips
+      .filter(i => i.is_active && i.perfil_planejamento_id && i.bookmaker_catalogo_id)
+      .forEach(i => map.set(`${i.perfil_planejamento_id}:${i.bookmaker_catalogo_id}`, i.id));
+    return map;
+  }, [ips]);
   const parceiroMap = useMemo(() => {
     const labelOverride = new Map<string, string>();
     perfisPre.forEach(p => {
@@ -939,7 +946,9 @@ export function PlanejamentoCalendario() {
       }
       const perfil = getCelulaPerfil(celula);
       const effectiveParceiroId = celula.parceiro_id ?? perfil?.parceiro_id ?? null;
-      const linkedIpId = ipByBookmakerMap.get(celula.bookmaker_catalogo_id) ?? null;
+      const linkedIpId = (perfil?.id ? ipByPerfilBookmakerMap.get(`${perfil.id}:${celula.bookmaker_catalogo_id}`) : null)
+        ?? ipByBookmakerMap.get(celula.bookmaker_catalogo_id)
+        ?? null;
       const check = validate({
         bookmaker_catalogo_id: celula.bookmaker_catalogo_id,
         parceiro_id: effectiveParceiroId,

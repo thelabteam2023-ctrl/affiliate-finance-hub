@@ -569,12 +569,13 @@ function CasasList() {
 
 // ───────────────────────── IPs ─────────────────────────
 
-type BulkRow = { label: string; ip_address: string; location_city: string; bookmaker_catalogo_id: string };
-const emptyRow = (): BulkRow => ({ label: "", ip_address: "", location_city: "", bookmaker_catalogo_id: "" });
+type BulkRow = { label: string; ip_address: string; location_city: string; perfil_planejamento_id: string; bookmaker_catalogo_id: string };
+const emptyRow = (): BulkRow => ({ label: "", ip_address: "", location_city: "", perfil_planejamento_id: "", bookmaker_catalogo_id: "" });
 
 function IpsList() {
   const { data: ips = [] } = usePlanningIps();
   const { data: casasSelecionadas = [] } = usePlanningCasas();
+  const { data: perfis = [] } = usePlanningPerfis();
   const upsert = useUpsertPlanningIp();
   const del = useDeletePlanningIp();
   const [editing, setEditing] = useState<Partial<PlanningIp> | null>(null);
@@ -611,6 +612,7 @@ function IpsList() {
           label: row.label.trim(),
           ip_address: row.ip_address.trim(),
           location_city: row.location_city.trim(),
+          perfil_planejamento_id: row.perfil_planejamento_id || null,
           bookmaker_catalogo_id: row.bookmaker_catalogo_id || null,
           is_active: true,
         });
@@ -640,17 +642,18 @@ function IpsList() {
             <Badge variant="secondary" className="text-[10px]">{validRows.length} válido(s)</Badge>
           </div>
 
-          <div className="grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground px-1">
+          <div className="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_auto] gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground px-1">
             <span>Label</span>
             <span>Endereço</span>
             <span>Cidade</span>
+            <span>CPF / Perfil</span>
             <span>Casa vinculada</span>
             <span className="w-7" />
           </div>
 
           <div className="space-y-1.5 max-h-[280px] overflow-y-auto">
             {bulkRows.map((row, idx) => (
-              <div key={idx} className="grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-1.5 items-center">
+              <div key={idx} className="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_auto] gap-1.5 items-center">
                 <Input
                   value={row.label}
                   onChange={e => updateRow(idx, { label: e.target.value })}
@@ -669,6 +672,22 @@ function IpsList() {
                   placeholder="São Paulo"
                   className="h-8 text-sm"
                 />
+                <Select
+                  value={row.perfil_planejamento_id || undefined}
+                  onValueChange={v => updateRow(idx, { perfil_planejamento_id: v === "__none" ? "" : v })}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="CPF" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">Sem CPF</SelectItem>
+                    {perfis.filter(p => p.is_active).map((p, i) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        CPF {i + 1} · {perfilDisplayName(p)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Select
                   value={row.bookmaker_catalogo_id || undefined}
                   onValueChange={v => updateRow(idx, { bookmaker_catalogo_id: v === "__none" ? "" : v })}
@@ -718,6 +737,23 @@ function IpsList() {
             <div><Label className="text-xs">Endereço IP</Label><Input value={editing.ip_address ?? ""} onChange={e => setEditing({ ...editing, ip_address: e.target.value })} /></div>
             <div><Label className="text-xs">Cidade</Label><Input value={editing.location_city ?? ""} onChange={e => setEditing({ ...editing, location_city: e.target.value })} /></div>
             <div>
+              <Label className="text-xs">CPF / Perfil</Label>
+              <Select
+                value={editing.perfil_planejamento_id || undefined}
+                onValueChange={v => setEditing({ ...editing, perfil_planejamento_id: v === "__none" ? null : v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Selecione o CPF/perfil" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">Sem CPF</SelectItem>
+                  {perfis.filter(p => p.is_active).map((p, i) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      CPF {i + 1} · {perfilDisplayName(p)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
               <Label className="text-xs">Casa vinculada</Label>
               <Select
                 value={editing.bookmaker_catalogo_id || undefined}
@@ -745,12 +781,15 @@ function IpsList() {
       <div className="space-y-1 max-h-[360px] overflow-y-auto">
         {ips.map(ip => {
           const linkedCasa = casasSelecionadas.find(c => c.bookmaker_catalogo_id === ip.bookmaker_catalogo_id);
+          const linkedPerfilIndex = perfis.findIndex(p => p.id === ip.perfil_planejamento_id);
+          const linkedPerfil = linkedPerfilIndex >= 0 ? perfis[linkedPerfilIndex] : null;
           return (
           <Card key={ip.id} className="p-2 flex items-center justify-between">
             <div className="text-sm">
               <span className="font-medium">{ip.label}</span>{" "}
               <span className="text-muted-foreground">· {ip.ip_address}</span>{" "}
               {ip.location_city && <span className="text-xs text-muted-foreground">({ip.location_city})</span>}
+              {linkedPerfil && <Badge variant="secondary" className="ml-2 h-5 text-[10px]">CPF {linkedPerfilIndex + 1} · {perfilDisplayName(linkedPerfil)}</Badge>}
               {linkedCasa?.casa && <Badge variant="outline" className="ml-2 h-5 text-[10px]">{linkedCasa.label_custom || linkedCasa.casa.nome}</Badge>}
             </div>
             <div className="flex gap-1">
