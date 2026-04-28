@@ -1459,9 +1459,13 @@ export function PlanejamentoCalendario() {
             </div>
             <div className="min-w-[760px] divide-y">
               {detailsCampanhas.map((c) => {
-                const ip = c.ip_id ? ipMap[c.ip_id] : null;
-                const wallet = c.wallet_id ? wallets.find((w) => w.id === c.wallet_id) : null;
                 const perfilInfo = campanhaPerfilMap.get(c.id);
+                const linkedIpId = c.ip_id
+                  ?? (perfilInfo?.id && c.bookmaker_catalogo_id ? ipByPerfilBookmakerMap.get(`${perfilInfo.id}:${c.bookmaker_catalogo_id}`) : null)
+                  ?? (c.bookmaker_catalogo_id ? ipByBookmakerMap.get(c.bookmaker_catalogo_id) : null)
+                  ?? null;
+                const ip = linkedIpId ? ipMap[linkedIpId] : null;
+                const wallet = c.wallet_id ? wallets.find((w) => w.id === c.wallet_id) : null;
                 const perfil = c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : perfilInfo?.parceiro_id ? parceiroMap[perfilInfo.parceiro_id]?.nome : null;
                 const cpfIndex = campanhaCpfMap.get(c.id) ?? null;
                 const cpfColor = getCpfColor(cpfIndex, perfilInfo?.cor);
