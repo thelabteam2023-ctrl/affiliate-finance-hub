@@ -569,11 +569,12 @@ function CasasList() {
 
 // ───────────────────────── IPs ─────────────────────────
 
-type BulkRow = { label: string; ip_address: string; location_city: string };
-const emptyRow = (): BulkRow => ({ label: "", ip_address: "", location_city: "" });
+type BulkRow = { label: string; ip_address: string; location_city: string; bookmaker_catalogo_id: string };
+const emptyRow = (): BulkRow => ({ label: "", ip_address: "", location_city: "", bookmaker_catalogo_id: "" });
 
 function IpsList() {
   const { data: ips = [] } = usePlanningIps();
+  const { data: casasSelecionadas = [] } = usePlanningCasas();
   const upsert = useUpsertPlanningIp();
   const del = useDeletePlanningIp();
   const [editing, setEditing] = useState<Partial<PlanningIp> | null>(null);
@@ -610,6 +611,7 @@ function IpsList() {
           label: row.label.trim(),
           ip_address: row.ip_address.trim(),
           location_city: row.location_city.trim(),
+          bookmaker_catalogo_id: row.bookmaker_catalogo_id || null,
           is_active: true,
         });
       }
@@ -638,16 +640,17 @@ function IpsList() {
             <Badge variant="secondary" className="text-[10px]">{validRows.length} válido(s)</Badge>
           </div>
 
-          <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground px-1">
+          <div className="grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground px-1">
             <span>Label</span>
             <span>Endereço</span>
             <span>Cidade</span>
+            <span>Casa vinculada</span>
             <span className="w-7" />
           </div>
 
           <div className="space-y-1.5 max-h-[280px] overflow-y-auto">
             {bulkRows.map((row, idx) => (
-              <div key={idx} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-1.5 items-center">
+              <div key={idx} className="grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-1.5 items-center">
                 <Input
                   value={row.label}
                   onChange={e => updateRow(idx, { label: e.target.value })}
@@ -666,6 +669,21 @@ function IpsList() {
                   placeholder="São Paulo"
                   className="h-8 text-sm"
                 />
+                <Select
+                  value={row.bookmaker_catalogo_id || undefined}
+                  onValueChange={v => updateRow(idx, { bookmaker_catalogo_id: v })}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="Selecionar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {casasSelecionadas.filter(c => c.is_active && c.casa).map(c => (
+                      <SelectItem key={c.bookmaker_catalogo_id} value={c.bookmaker_catalogo_id}>
+                        {c.label_custom || c.casa?.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Button
                   variant="ghost"
                   size="icon"
