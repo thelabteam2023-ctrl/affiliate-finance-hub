@@ -737,20 +737,6 @@ export function PlanejamentoCalendario() {
       ?? null;
   }, [perfilByIdMap, perfilByParceiroIdMap, cpfIndexToPerfilMap]);
 
-  const resolveCampanhaIpId = useCallback((campanha: PlanningCampanha) => {
-    const celula = celulaAgendadaByCampanhaIdMap.get(campanha.id);
-    const perfilInfo = campanhaPerfilMap.get(campanha.id);
-    const perfilId = perfilInfo?.id ?? celula?.perfil_planejamento_id ?? null;
-    const parceiroId = campanha.parceiro_id ?? perfilInfo?.parceiro_id ?? celula?.parceiro_id ?? null;
-    const bookmakerCatalogoId = campanha.bookmaker_catalogo_id ?? celula?.bookmaker_catalogo_id ?? null;
-    return resolveScopedIpId({
-      directIpId: campanha.ip_id,
-      perfilId,
-      parceiroId,
-      bookmakerCatalogoId,
-    });
-  }, [campanhaPerfilMap, celulaAgendadaByCampanhaIdMap, resolveScopedIpId]);
-
   // Mapa: campanha_id -> cpf_index (para colorir o card no calendário).
   // Estratégias em cascata:
   //  1) Vínculo direto via célula agendada (campanha_id na célula).
@@ -811,13 +797,27 @@ export function PlanejamentoCalendario() {
       const perfilPorParceiro = camp.parceiro_id ? perfilByParceiroIdMap.get(camp.parceiro_id) : null;
       const cpfIdx = campanhaCpfMap.get(camp.id);
       const perfilPorCpf = cpfIdx ? cpfIndexToPerfilMap.get(cpfIdx) : null;
-      const celula = celulasPlano.find((c) => c.campanha_id === camp.id);
+      const celula = celulaAgendadaByCampanhaIdMap.get(camp.id);
       const perfilPorCelula = celula ? getCelulaPerfil(celula) : null;
       const perfil = perfilPorParceiro ?? perfilPorCelula ?? perfilPorCpf;
       if (perfil) map.set(camp.id, perfil);
     });
     return map;
-  }, [campanhas, perfilByParceiroIdMap, campanhaCpfMap, cpfIndexToPerfilMap, celulasPlano, getCelulaPerfil]);
+  }, [campanhas, perfilByParceiroIdMap, campanhaCpfMap, cpfIndexToPerfilMap, celulaAgendadaByCampanhaIdMap, getCelulaPerfil]);
+
+  const resolveCampanhaIpId = useCallback((campanha: PlanningCampanha) => {
+    const celula = celulaAgendadaByCampanhaIdMap.get(campanha.id);
+    const perfilInfo = campanhaPerfilMap.get(campanha.id);
+    const perfilId = perfilInfo?.id ?? celula?.perfil_planejamento_id ?? null;
+    const parceiroId = campanha.parceiro_id ?? perfilInfo?.parceiro_id ?? celula?.parceiro_id ?? null;
+    const bookmakerCatalogoId = campanha.bookmaker_catalogo_id ?? celula?.bookmaker_catalogo_id ?? null;
+    return resolveScopedIpId({
+      directIpId: campanha.ip_id,
+      perfilId,
+      parceiroId,
+      bookmakerCatalogoId,
+    });
+  }, [campanhaPerfilMap, celulaAgendadaByCampanhaIdMap, resolveScopedIpId]);
 
   const sortCampanhasByCpf = useCallback((list: PlanningCampanha[]) => {
     return [...list].sort((a, b) => {
