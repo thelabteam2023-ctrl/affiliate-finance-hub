@@ -941,7 +941,7 @@ export function PlanejamentoCalendario() {
   const { validate } = useGrupoRegrasValidator(campanhasVisiveis);
   const grupoViolationMap = useMemo(() => {
     const map = new Map<string, { hasBlock: boolean; hasWarn: boolean }>();
-    campanhas.forEach((c) => {
+    campanhasVisiveis.forEach((c) => {
       const result = validate({
         bookmaker_catalogo_id: c.bookmaker_catalogo_id,
         parceiro_id: c.parceiro_id,
