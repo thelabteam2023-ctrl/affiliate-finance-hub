@@ -1231,19 +1231,6 @@ export function PlanejamentoCalendario() {
                 </div>
               )}
 
-              {/* Seletor de Plano de Distribuição */}
-              <Select value={planoFiltroId} onValueChange={(v) => { setPlanoFiltroId(v); setGrupoFiltroId("todos"); setCpfFiltroIdx("todos"); }}>
-                <SelectTrigger className="h-7 text-xs">
-                  <SelectValue placeholder="Plano de distribuição" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sem plano (casas livres)</SelectItem>
-                  {planos.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
               {/* Filtro de Grupo (só faz sentido com plano) */}
               {modoPlano && gruposDoPlano.length > 0 && (
                 <Select value={grupoFiltroId} onValueChange={setGrupoFiltroId}>
