@@ -28,6 +28,7 @@ import {
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
+import { toast } from "sonner";
 
 interface Props {
   open: boolean;
@@ -700,8 +701,10 @@ function IpsList() {
           perfil_planejamento_id: bulkPerfilId || null,
           bookmaker_catalogo_id: row.bookmaker_catalogo_id || null,
           is_active: true,
+          suppressToast: true,
         });
       }
+      toast.success(`${validRows.length} IP${validRows.length === 1 ? " salvo" : "s salvos"}`);
       resetBulk();
     } finally {
       setBulkBusy(false);
