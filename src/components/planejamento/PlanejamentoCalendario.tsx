@@ -63,6 +63,7 @@ type DisplayCurrency = "BRL" | "USD";
 
 const MES_NOMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const PLANO_FILTRO_STORAGE_KEY = "planejamento:planoFiltroId";
 
 function formatDateKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -456,7 +457,10 @@ export function PlanejamentoCalendario() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [selectedBookmakerIds, setSelectedBookmakerIds] = useState<Set<string>>(() => new Set());
   const [selectedCelulaIds, setSelectedCelulaIds] = useState<Set<string>>(() => new Set());
-  const [planoFiltroId, setPlanoFiltroId] = useState<string>("none"); // "none" = mostrar casas livres
+  const [planoFiltroId, setPlanoFiltroId] = useState<string>(() => {
+    if (typeof window === "undefined") return "none";
+    return window.localStorage.getItem(PLANO_FILTRO_STORAGE_KEY) || "none";
+  }); // "none" = mostrar casas livres
   const [grupoFiltroId, setGrupoFiltroId] = useState<string>("todos"); // "todos" = sem filtro de grupo
   const [cpfFiltroIdx, setCpfFiltroIdx] = useState<string>("todos"); // "todos" = sem filtro de CPF
   const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>(() => {
@@ -488,7 +492,7 @@ export function PlanejamentoCalendario() {
   const deleteCamp = useDeleteCampanha();
   const { getLogoUrl } = useBookmakerLogoMap();
   const { convertToBRL, cotacaoUSD, isUsingFallback } = useExchangeRates();
-  const { planos } = useDistribuicaoPlanos();
+  const { planos, isLoading: planosLoading } = useDistribuicaoPlanos();
   const { data: celulasPlano = [] } = usePlanoCelulasDisponiveis(
     planoFiltroId !== "none" ? planoFiltroId : null
   );
