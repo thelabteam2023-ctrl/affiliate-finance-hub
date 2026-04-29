@@ -446,9 +446,7 @@ export function PlanejamentoCalendario() {
   const [editing, setEditing] = useState<{ date: string; campanha?: PlanningCampanha; initialBookmaker?: any } | null>(null);
   const [activeDrag, setActiveDrag] = useState<any>(null);
   const [bmSearch, setBmSearch] = useState("");
-  const [bmFilter, setBmFilter] = useState<RegFilterValue>("all");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [selectedBookmakerIds, setSelectedBookmakerIds] = useState<Set<string>>(() => new Set());
   const [selectedCelulaIds, setSelectedCelulaIds] = useState<Set<string>>(() => new Set());
   const [planoFiltroId, setPlanoFiltroId] = useState<string>(() => {
     if (typeof window === "undefined") return "";
@@ -476,7 +474,6 @@ export function PlanejamentoCalendario() {
   const [detailsDate, setDetailsDate] = useState<string | null>(null);
 
   const { data: campanhas = [] } = usePlanningCampanhas(year, month);
-  const { data: casasPlan = [] } = usePlanningCasas();
   const { data: ips = [] } = usePlanningIps();
   const { data: wallets = [] } = usePlanningWallets();
   const { data: parceiros = [] } = useParceirosLite();
@@ -501,12 +498,6 @@ export function PlanejamentoCalendario() {
     // USD: converte BRL → USD
     return cotacaoUSD > 0 ? valueInBRL / cotacaoUSD : 0;
   }, [convertToBRL, cotacaoUSD, displayCurrency]);
-
-  // Casas ativas pré-selecionadas para o workspace
-  const bookmakers = useMemo(
-    () => casasPlan.filter(p => p.is_active && p.casa).map(p => p.casa!),
-    [casasPlan]
-  );
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
