@@ -584,7 +584,7 @@ export function useUpsertPlanningIp() {
   const qc = useQueryClient();
   const { workspaceId, user } = useAuth();
   return useMutation({
-    mutationFn: async (payload: Partial<PlanningIp> & { id?: string }) => {
+    mutationFn: async (payload: Partial<PlanningIp> & { id?: string; suppressToast?: boolean }) => {
       if (!workspaceId || !user) throw new Error("Sem workspace");
       const base = {
         workspace_id: workspaceId,
@@ -608,9 +608,9 @@ export function useUpsertPlanningIp() {
         if (error) throw error;
       }
     },
-    onSuccess: () => {
+    onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ["planning-ips"] });
-      toast.success("IP salvo");
+      if (!vars.suppressToast) toast.success("IP salvo");
     },
     onError: (e: any) => toast.error("Erro ao salvar IP", { description: e.message }),
   });
