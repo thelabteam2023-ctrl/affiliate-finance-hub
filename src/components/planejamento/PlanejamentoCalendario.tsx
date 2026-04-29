@@ -730,7 +730,7 @@ export function PlanejamentoCalendario() {
     return map;
   }, [planoSelecionado, perfilByIdMap, perfilByParceiroIdMap, celulasPlano, perfisPre]);
 
-  const getCelulaPerfil = useCallback((celula: CelulaDisponivel) => {
+  const getCelulaPerfil = useCallback((celula: Pick<CelulaDisponivel, "perfil_planejamento_id" | "parceiro_id"> & Partial<Pick<CelulaDisponivel, "cpf_index">>) => {
     return (celula.perfil_planejamento_id ? perfilByIdMap.get(celula.perfil_planejamento_id) : null)
       ?? (celula.parceiro_id ? perfilByParceiroIdMap.get(celula.parceiro_id) : null)
       ?? (celula.cpf_index ? cpfIndexToPerfilMap.get(celula.cpf_index) : null)
