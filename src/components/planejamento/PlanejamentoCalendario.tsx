@@ -1536,7 +1536,6 @@ export function PlanejamentoCalendario() {
               {detailsCampanhas.map((c) => {
                 const perfilInfo = campanhaPerfilMap.get(c.id);
                 const celula = celulaAgendadaByCampanhaIdMap.get(c.id);
-                const bookmakerCatalogoId = c.bookmaker_catalogo_id ?? celula?.bookmaker_catalogo_id ?? null;
                 const linkedIpId = resolveCampanhaIpId(c);
                 const ip = linkedIpId ? ipMap[linkedIpId] : null;
                 const wallet = c.wallet_id ? wallets.find((w) => w.id === c.wallet_id) : null;
