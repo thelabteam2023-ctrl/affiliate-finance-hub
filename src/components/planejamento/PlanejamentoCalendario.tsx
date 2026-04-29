@@ -1393,6 +1393,38 @@ export function PlanejamentoCalendario() {
 
         {/* Calendário */}
         <div className="flex-1 flex flex-col gap-3 min-w-0">
+          <div className="flex items-center gap-2 overflow-x-auto rounded-lg border bg-card/60 p-1.5">
+            <Button
+              variant={planoFiltroId === "none" ? "default" : "ghost"}
+              size="sm"
+              className="h-7 shrink-0 px-3 text-xs"
+              onClick={() => selectPlanoFiltro("none")}
+            >
+              Sem plano
+            </Button>
+            {planos.map((plano) => (
+              <Button
+                key={plano.id}
+                variant={planoFiltroId === plano.id ? "default" : "ghost"}
+                size="sm"
+                className="h-7 max-w-44 shrink-0 px-3 text-xs"
+                onClick={() => selectPlanoFiltro(plano.id)}
+                title={plano.nome}
+              >
+                <span className="truncate">{plano.nome}</span>
+              </Button>
+            ))}
+            <Button
+              variant="outline"
+              size="sm"
+              className="ml-auto h-7 shrink-0 px-3 text-xs"
+              onClick={() => setRecursosOpen(true)}
+            >
+              <Settings2 className="mr-1 h-3.5 w-3.5" />
+              Gerenciar
+            </Button>
+          </div>
+
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="icon" onClick={prevMonth}><ChevronLeft className="h-4 w-4" /></Button>
