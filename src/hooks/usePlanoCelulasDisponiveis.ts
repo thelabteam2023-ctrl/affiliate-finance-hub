@@ -215,16 +215,16 @@ export function useCelulasAgendadasPorCampanhas(campanhaIds: string[]) {
   const { workspaceId } = useAuth();
   return useQuery({
     queryKey: ["plano-celulas-agendadas", workspaceId, campanhaIds],
-    queryFn: async (): Promise<Array<Pick<CelulaDisponivel, "id" | "bookmaker_catalogo_id" | "parceiro_id" | "perfil_planejamento_id" | "campanha_id">>> => {
+    queryFn: async (): Promise<Array<Pick<CelulaDisponivel, "id" | "plano_id" | "bookmaker_catalogo_id" | "parceiro_id" | "perfil_planejamento_id" | "campanha_id">>> => {
       if (!workspaceId || campanhaIds.length === 0) return [];
 
       const { data, error } = await (supabase as any)
         .from("distribuicao_plano_celulas")
-        .select("id, bookmaker_catalogo_id, parceiro_id, perfil_planejamento_id, campanha_id")
+        .select("id, plano_id, bookmaker_catalogo_id, parceiro_id, perfil_planejamento_id, campanha_id")
         .eq("workspace_id", workspaceId)
         .in("campanha_id", campanhaIds);
       if (error) throw error;
-      return (data ?? []) as Array<Pick<CelulaDisponivel, "id" | "bookmaker_catalogo_id" | "parceiro_id" | "perfil_planejamento_id" | "campanha_id">>;
+      return (data ?? []) as Array<Pick<CelulaDisponivel, "id" | "plano_id" | "bookmaker_catalogo_id" | "parceiro_id" | "perfil_planejamento_id" | "campanha_id">>;
     },
     enabled: !!workspaceId && campanhaIds.length > 0,
     staleTime: 15_000,

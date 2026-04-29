@@ -64,6 +64,7 @@ type DisplayCurrency = "BRL" | "USD";
 const MES_NOMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const PLANO_FILTRO_STORAGE_KEY = "planejamento:planoFiltroId";
+const PLANO_TODOS_VALUE = "all";
 
 function formatDateKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -494,7 +495,7 @@ export function PlanejamentoCalendario() {
   const { convertToBRL, cotacaoUSD, isUsingFallback } = useExchangeRates();
   const { planos, isLoading: planosLoading } = useDistribuicaoPlanos();
   const { data: celulasPlano = [] } = usePlanoCelulasDisponiveis(
-    planoFiltroId !== "none" ? planoFiltroId : null
+    planoFiltroId !== "none" && planoFiltroId !== PLANO_TODOS_VALUE ? planoFiltroId : null
   );
   const campanhaIds = useMemo(() => campanhas.map((c) => c.id), [campanhas]);
   const { data: celulasAgendadas = [] } = useCelulasAgendadasPorCampanhas(campanhaIds);
@@ -705,7 +706,21 @@ export function PlanejamentoCalendario() {
     return Array.from(map.values());
   }, [celulasPlano]);
 
-  const modoPlano = planoFiltroId !== "none";
+  const modoTodosPlanos = planoFiltroId === PLANO_TODOS_VALUE;
+  const modoPlano = planoFiltroId !== "none" && !modoTodosPlanos;
+  const campanhaPlanoIdMap = useMemo(() => {
+    const map = new Map<string, string>();
+    celulasAgendadas.forEach((celula) => {
+      if (celula.campanha_id && celula.plano_id) map.set(celula.campanha_id, celula.plano_id);
+    });
+    return map;
+  }, [celulasAgendadas]);
+
+  const campanhasVisiveis = useMemo(() => {
+    if (modoTodosPlanos) return campanhas;
+    if (modoPlano) return campanhas.filter((camp) => campanhaPlanoIdMap.get(camp.id) === planoFiltroId);
+    return campanhas.filter((camp) => !campanhaPlanoIdMap.has(camp.id));
+  }, [campanhas, campanhaPlanoIdMap, modoPlano, modoTodosPlanos, planoFiltroId]);
 
   // Plano selecionado (para extrair parceiro_ids e mapear CPF por posição)
   const planoSelecionado = useMemo(
@@ -722,7 +737,7 @@ export function PlanejamentoCalendario() {
   }, []);
 
   useEffect(() => {
-    if (planosLoading || planoFiltroId === "none") return;
+    if (planosLoading || planoFiltroId === "none" || planoFiltroId === PLANO_TODOS_VALUE) return;
     if (!planos.some((p) => p.id === planoFiltroId)) {
       selectPlanoFiltro("none");
     }
@@ -775,7 +790,7 @@ export function PlanejamentoCalendario() {
       if (c.campanha_id && c.cpf_index) map.set(c.campanha_id, c.cpf_index);
     });
     // 2) Por parceiro
-    campanhas.forEach((camp) => {
+    campanhasVisiveis.forEach((camp) => {
       if (map.has(camp.id)) return;
       if (camp.parceiro_id) {
         const idx = parceiroIdToCpfIdx.get(camp.parceiro_id);
@@ -787,7 +802,7 @@ export function PlanejamentoCalendario() {
       const celulasOrdenadas = [...celulasPlano].sort(
         (a, b) => (a.cpf_index ?? 99) - (b.cpf_index ?? 99) || (a.ordem ?? 0) - (b.ordem ?? 0)
       );
-      campanhas.forEach((camp) => {
+      campanhasVisiveis.forEach((camp) => {
         if (map.has(camp.id)) return;
         const catId = (camp as any).bookmaker_catalogo_id;
         if (!catId) return;
@@ -800,12 +815,12 @@ export function PlanejamentoCalendario() {
         modoPlano,
         planoId: planoFiltroId,
         celulasPlano: celulasPlano.map((c) => ({ id: c.id, casa: c.bookmaker_nome, cpf_index: c.cpf_index, campanha_id: c.campanha_id, parceiro_id: c.parceiro_id })),
-        campanhas: campanhas.map((c) => ({ id: c.id, casa: c.bookmaker_nome, parceiro_id: c.parceiro_id, bookmaker_catalogo_id: (c as any).bookmaker_catalogo_id })),
+        campanhas: campanhasVisiveis.map((c) => ({ id: c.id, casa: c.bookmaker_nome, parceiro_id: c.parceiro_id, bookmaker_catalogo_id: (c as any).bookmaker_catalogo_id })),
         map: Array.from(map.entries()),
       });
     }
     return map;
-  }, [celulasPlano, campanhas, parceiroIdToCpfIdx, modoPlano, planoFiltroId]);
+  }, [celulasPlano, campanhasVisiveis, parceiroIdToCpfIdx, modoPlano, planoFiltroId]);
 
   const campanhaPlanoOrderMap = useMemo(() => {
     const map = new Map<string, number>();
@@ -817,7 +832,7 @@ export function PlanejamentoCalendario() {
 
   const campanhaPerfilMap = useMemo(() => {
     const map = new Map<string, (typeof perfisPre)[number]>();
-    campanhas.forEach((camp) => {
+    campanhasVisiveis.forEach((camp) => {
       const perfilPorParceiro = camp.parceiro_id ? perfilByParceiroIdMap.get(camp.parceiro_id) : null;
       const cpfIdx = campanhaCpfMap.get(camp.id);
       const perfilPorCpf = cpfIdx ? cpfIndexToPerfilMap.get(cpfIdx) : null;
@@ -827,7 +842,7 @@ export function PlanejamentoCalendario() {
       if (perfil) map.set(camp.id, perfil);
     });
     return map;
-  }, [campanhas, perfilByParceiroIdMap, campanhaCpfMap, cpfIndexToPerfilMap, celulaAgendadaByCampanhaIdMap, getCelulaPerfil]);
+  }, [campanhasVisiveis, perfilByParceiroIdMap, campanhaCpfMap, cpfIndexToPerfilMap, celulaAgendadaByCampanhaIdMap, getCelulaPerfil]);
 
   const resolveCampanhaIpId = useCallback((campanha: PlanningCampanha) => {
     const celula = celulaAgendadaByCampanhaIdMap.get(campanha.id);
@@ -898,7 +913,7 @@ export function PlanejamentoCalendario() {
   const conflictMap = useMemo(() => {
     const map = new Map<string, Set<string>>();
     const byDay = new Map<string, PlanningCampanha[]>();
-    campanhas.forEach(c => {
+    campanhasVisiveis.forEach(c => {
       if (!byDay.has(c.scheduled_date)) byDay.set(c.scheduled_date, []);
       byDay.get(c.scheduled_date)!.push(c);
     });
@@ -920,13 +935,13 @@ export function PlanejamentoCalendario() {
       });
     });
     return map;
-  }, [campanhas, resolveCampanhaIpId]);
+  }, [campanhasVisiveis, resolveCampanhaIpId]);
 
   // Validador de regras de grupo
-  const { validate } = useGrupoRegrasValidator(campanhas);
+  const { validate } = useGrupoRegrasValidator(campanhasVisiveis);
   const grupoViolationMap = useMemo(() => {
     const map = new Map<string, { hasBlock: boolean; hasWarn: boolean }>();
-    campanhas.forEach((c) => {
+    campanhasVisiveis.forEach((c) => {
       const result = validate({
         bookmaker_catalogo_id: c.bookmaker_catalogo_id,
         parceiro_id: c.parceiro_id,
@@ -943,7 +958,7 @@ export function PlanejamentoCalendario() {
       }
     });
     return map;
-  }, [campanhas, validate]);
+  }, [campanhasVisiveis, validate]);
 
   // Construir grid do mês (semanas)
   const grid = useMemo(() => {
@@ -969,13 +984,13 @@ export function PlanejamentoCalendario() {
 
   const campanhasByDay = useMemo(() => {
     const m = new Map<string, PlanningCampanha[]>();
-    campanhas.forEach(c => {
+    campanhasVisiveis.forEach(c => {
       if (!m.has(c.scheduled_date)) m.set(c.scheduled_date, []);
       m.get(c.scheduled_date)!.push(c);
     });
     m.forEach((list, key) => m.set(key, sortCampanhasByCpf(list)));
     return m;
-  }, [campanhas, sortCampanhasByCpf]);
+  }, [campanhasVisiveis, sortCampanhasByCpf]);
 
   const detailsCampanhas = detailsDate ? (campanhasByDay.get(detailsDate) ?? []) : [];
 
@@ -983,13 +998,13 @@ export function PlanejamentoCalendario() {
   const { totalDia, totalMes, totalCasasMes } = useMemo(() => {
     const dia = new Map<string, number>();
     let mes = 0;
-    campanhas.forEach(c => {
+    campanhasVisiveis.forEach(c => {
       const valorConvertido = convertToDisplay(Number(c.deposit_amount), c.currency);
       dia.set(c.scheduled_date, (dia.get(c.scheduled_date) ?? 0) + valorConvertido);
       mes += valorConvertido;
     });
-    return { totalDia: dia, totalMes: mes, totalCasasMes: campanhas.length };
-  }, [campanhas, convertToDisplay]);
+    return { totalDia: dia, totalMes: mes, totalCasasMes: campanhasVisiveis.length };
+  }, [campanhasVisiveis, convertToDisplay]);
 
   const handleDragStart = (e: DragStartEvent) => setActiveDrag(e.active.data.current);
 
@@ -1402,6 +1417,14 @@ export function PlanejamentoCalendario() {
             >
               Sem plano
             </Button>
+            <Button
+              variant={planoFiltroId === PLANO_TODOS_VALUE ? "default" : "ghost"}
+              size="sm"
+              className="h-7 shrink-0 px-3 text-xs"
+              onClick={() => selectPlanoFiltro(PLANO_TODOS_VALUE)}
+            >
+              Todos
+            </Button>
             {planos.map((plano) => (
               <Button
                 key={plano.id}
@@ -1420,8 +1443,8 @@ export function PlanejamentoCalendario() {
               className="ml-auto h-7 shrink-0 px-3 text-xs"
               onClick={() => setRecursosOpen(true)}
             >
-              <Settings2 className="mr-1 h-3.5 w-3.5" />
-              Gerenciar
+              <Plus className="mr-1 h-3.5 w-3.5" />
+              Adicionar plano
             </Button>
           </div>
 
