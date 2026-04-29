@@ -56,7 +56,11 @@ interface CatalogoItem {
   moeda_padrao: string;
 }
 
-export default function DistribuicaoTab() {
+interface DistribuicaoTabProps {
+  onPlanoCriado?: (planoId: string) => void;
+}
+
+export default function DistribuicaoTab({ onPlanoCriado }: DistribuicaoTabProps) {
   const { workspaceId } = useAuth();
   const { grupos, membros, isLoading: gruposLoading } = useBookmakerGrupos();
   const { data: perfis = [] } = usePlanningPerfis();
@@ -222,6 +226,11 @@ export default function DistribuicaoTab() {
           ip_slot: c.ip_slot,
           ordem: idx,
         })),
+      },
+      {
+        onSuccess: (plano: any) => {
+          if (plano?.id) onPlanoCriado?.(plano.id);
+        },
       },
     );
   };
