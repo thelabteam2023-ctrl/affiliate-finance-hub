@@ -706,7 +706,21 @@ export function PlanejamentoCalendario() {
     return Array.from(map.values());
   }, [celulasPlano]);
 
-  const modoPlano = planoFiltroId !== "none";
+  const modoTodosPlanos = planoFiltroId === PLANO_TODOS_VALUE;
+  const modoPlano = planoFiltroId !== "none" && !modoTodosPlanos;
+  const campanhaPlanoIdMap = useMemo(() => {
+    const map = new Map<string, string>();
+    celulasAgendadas.forEach((celula) => {
+      if (celula.campanha_id && celula.plano_id) map.set(celula.campanha_id, celula.plano_id);
+    });
+    return map;
+  }, [celulasAgendadas]);
+
+  const campanhasVisiveis = useMemo(() => {
+    if (modoTodosPlanos) return campanhas;
+    if (modoPlano) return campanhas.filter((camp) => campanhaPlanoIdMap.get(camp.id) === planoFiltroId);
+    return campanhas.filter((camp) => !campanhaPlanoIdMap.has(camp.id));
+  }, [campanhas, campanhaPlanoIdMap, modoPlano, modoTodosPlanos, planoFiltroId]);
 
   // Plano selecionado (para extrair parceiro_ids e mapear CPF por posição)
   const planoSelecionado = useMemo(
