@@ -51,6 +51,7 @@ import { useExchangeRates } from "@/contexts/ExchangeRatesContext";
 import { useDistribuicaoPlanos } from "@/hooks/useDistribuicaoPlanos";
 import {
   usePlanoCelulasDisponiveis,
+  useCelulasAgendadasPorCampanhas,
   marcarCelulaAgendada,
   desmarcarCelulaAgendada,
   type CelulaDisponivel,
@@ -491,6 +492,8 @@ export function PlanejamentoCalendario() {
   const { data: celulasPlano = [] } = usePlanoCelulasDisponiveis(
     planoFiltroId !== "none" ? planoFiltroId : null
   );
+  const campanhaIds = useMemo(() => campanhas.map((c) => c.id), [campanhas]);
+  const { data: celulasAgendadas = [] } = useCelulasAgendadasPorCampanhas(campanhaIds);
   const qc = useQueryClient();
 
   // Converte qualquer valor da moeda nativa para a moeda de exibição (BRL ou USD)
@@ -567,7 +570,11 @@ export function PlanejamentoCalendario() {
     const validDirectIpId = (() => {
       if (!directIpId) return null;
       const ip = ipMap[directIpId];
-      if (!ip?.is_active || ip.bookmaker_catalogo_id !== bookmakerCatalogoId) return null;
+      if (!ip?.is_active) return null;
+      if (ip.bookmaker_catalogo_id && ip.bookmaker_catalogo_id !== bookmakerCatalogoId) return null;
+      // Se a campanha salvou ip_id diretamente, ele é a fonte mais forte.
+      // O perfil/CPF pode ser inferido de plano diferente em outras abas/usuários.
+      if (ip.bookmaker_catalogo_id === bookmakerCatalogoId || !ip.bookmaker_catalogo_id) return directIpId;
       if (perfilId && ip.perfil_planejamento_id === perfilId) return directIpId;
       if (parceiroId && ip.perfil_planejamento_id) {
         const ipPerfil = perfilByIdMap.get(ip.perfil_planejamento_id);
@@ -580,7 +587,7 @@ export function PlanejamentoCalendario() {
     return validDirectIpId
       ?? (perfilId ? ipByPerfilBookmakerMap.get(`${perfilId}:${bookmakerCatalogoId}`) : null)
       ?? (parceiroId ? ipByParceiroBookmakerMap.get(`${parceiroId}:${bookmakerCatalogoId}`) : null)
-      ?? (!perfilId && !parceiroId ? ipByBookmakerMap.get(bookmakerCatalogoId) : null)
+      ?? ipByBookmakerMap.get(bookmakerCatalogoId)
       ?? null;
   }, [ipByBookmakerMap, ipByParceiroBookmakerMap, ipByPerfilBookmakerMap, ipMap, perfilByIdMap]);
 
@@ -591,6 +598,17 @@ export function PlanejamentoCalendario() {
     });
     return map;
   }, [perfisPre]);
+
+  const celulaAgendadaByCampanhaIdMap = useMemo(() => {
+    const map = new Map<string, (typeof celulasAgendadas)[number] | CelulaDisponivel>();
+    celulasAgendadas.forEach((c) => {
+      if (c.campanha_id) map.set(c.campanha_id, c);
+    });
+    celulasPlano.forEach((c) => {
+      if (c.campanha_id) map.set(c.campanha_id, c);
+    });
+    return map;
+  }, [celulasAgendadas, celulasPlano]);
 
   // Filtro da sidebar de casas (modo "casas livres" — quando não há plano selecionado)
   const filteredBookmakers = useMemo(() => {
@@ -716,7 +734,7 @@ export function PlanejamentoCalendario() {
     return map;
   }, [planoSelecionado, perfilByIdMap, perfilByParceiroIdMap, celulasPlano, perfisPre]);
 
-  const getCelulaPerfil = useCallback((celula: CelulaDisponivel) => {
+  const getCelulaPerfil = useCallback((celula: Pick<CelulaDisponivel, "perfil_planejamento_id" | "parceiro_id"> & Partial<Pick<CelulaDisponivel, "cpf_index">>) => {
     return (celula.perfil_planejamento_id ? perfilByIdMap.get(celula.perfil_planejamento_id) : null)
       ?? (celula.parceiro_id ? perfilByParceiroIdMap.get(celula.parceiro_id) : null)
       ?? (celula.cpf_index ? cpfIndexToPerfilMap.get(celula.cpf_index) : null)
@@ -783,13 +801,27 @@ export function PlanejamentoCalendario() {
       const perfilPorParceiro = camp.parceiro_id ? perfilByParceiroIdMap.get(camp.parceiro_id) : null;
       const cpfIdx = campanhaCpfMap.get(camp.id);
       const perfilPorCpf = cpfIdx ? cpfIndexToPerfilMap.get(cpfIdx) : null;
-      const celula = celulasPlano.find((c) => c.campanha_id === camp.id);
+      const celula = celulaAgendadaByCampanhaIdMap.get(camp.id);
       const perfilPorCelula = celula ? getCelulaPerfil(celula) : null;
       const perfil = perfilPorParceiro ?? perfilPorCelula ?? perfilPorCpf;
       if (perfil) map.set(camp.id, perfil);
     });
     return map;
-  }, [campanhas, perfilByParceiroIdMap, campanhaCpfMap, cpfIndexToPerfilMap, celulasPlano, getCelulaPerfil]);
+  }, [campanhas, perfilByParceiroIdMap, campanhaCpfMap, cpfIndexToPerfilMap, celulaAgendadaByCampanhaIdMap, getCelulaPerfil]);
+
+  const resolveCampanhaIpId = useCallback((campanha: PlanningCampanha) => {
+    const celula = celulaAgendadaByCampanhaIdMap.get(campanha.id);
+    const perfilInfo = campanhaPerfilMap.get(campanha.id);
+    const perfilId = perfilInfo?.id ?? celula?.perfil_planejamento_id ?? null;
+    const parceiroId = campanha.parceiro_id ?? perfilInfo?.parceiro_id ?? celula?.parceiro_id ?? null;
+    const bookmakerCatalogoId = campanha.bookmaker_catalogo_id ?? celula?.bookmaker_catalogo_id ?? null;
+    return resolveScopedIpId({
+      directIpId: campanha.ip_id,
+      perfilId,
+      parceiroId,
+      bookmakerCatalogoId,
+    });
+  }, [campanhaPerfilMap, celulaAgendadaByCampanhaIdMap, resolveScopedIpId]);
 
   const sortCampanhasByCpf = useCallback((list: PlanningCampanha[]) => {
     return [...list].sort((a, b) => {
@@ -854,11 +886,13 @@ export function PlanejamentoCalendario() {
       const ipCount = new Map<string, number>();
       const pCount = new Map<string, number>();
       list.forEach(c => {
-        if (c.ip_id) ipCount.set(c.ip_id, (ipCount.get(c.ip_id) ?? 0) + 1);
+        const resolvedIpId = resolveCampanhaIpId(c);
+        if (resolvedIpId) ipCount.set(resolvedIpId, (ipCount.get(resolvedIpId) ?? 0) + 1);
         if (c.parceiro_id) pCount.set(c.parceiro_id, (pCount.get(c.parceiro_id) ?? 0) + 1);
       });
       list.forEach(c => {
-        const conflict = (c.ip_id && (ipCount.get(c.ip_id) ?? 0) > 1) || (c.parceiro_id && (pCount.get(c.parceiro_id) ?? 0) > 1);
+        const resolvedIpId = resolveCampanhaIpId(c);
+        const conflict = (resolvedIpId && (ipCount.get(resolvedIpId) ?? 0) > 1) || (c.parceiro_id && (pCount.get(c.parceiro_id) ?? 0) > 1);
         if (conflict) {
           if (!map.has(c.scheduled_date)) map.set(c.scheduled_date, new Set());
           map.get(c.scheduled_date)!.add(c.id);
@@ -866,7 +900,7 @@ export function PlanejamentoCalendario() {
       });
     });
     return map;
-  }, [campanhas]);
+  }, [campanhas, resolveCampanhaIpId]);
 
   // Validador de regras de grupo
   const { validate } = useGrupoRegrasValidator(campanhas);
@@ -1418,16 +1452,17 @@ export function PlanejamentoCalendario() {
                   >
                     {dayCamps.map(c => {
                       const grupoStatus = grupoViolationMap.get(c.id);
+                      const resolvedIpId = resolveCampanhaIpId(c);
                       return (
                         <DraggableCampanha
                           key={c.id}
                           campanha={c}
                           onClick={() => setEditing({ date: key, campanha: c })}
                           onDelete={() => handleDeleteCampanha(c.id)}
-                          ipLabel={c.ip_id ? ipMap[c.ip_id]?.label : undefined}
+                          ipLabel={resolvedIpId ? ipMap[resolvedIpId]?.label : undefined}
                           parceiroNome={c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : campanhaPerfilMap.get(c.id)?.parceiro_id ? parceiroMap[campanhaPerfilMap.get(c.id)!.parceiro_id!]?.nome : undefined}
                           hasConflict={dayConflicts.has(c.id)}
-                          isPending={isCampanhaPending(c)}
+                          isPending={!c.parceiro_id || !resolvedIpId || !c.wallet_id || Number(c.deposit_amount) <= 0}
                           logoUrl={getLogoUrl(c.bookmaker_nome)}
                           grupoBlock={grupoStatus?.hasBlock}
                           grupoWarn={grupoStatus?.hasWarn}
@@ -1502,14 +1537,8 @@ export function PlanejamentoCalendario() {
             <div className="min-w-[880px] divide-y">
               {detailsCampanhas.map((c) => {
                 const perfilInfo = campanhaPerfilMap.get(c.id);
-                const celula = celulasPlano.find((item) => item.campanha_id === c.id);
-                const bookmakerCatalogoId = c.bookmaker_catalogo_id ?? celula?.bookmaker_catalogo_id ?? null;
-                const linkedIpId = resolveScopedIpId({
-                  directIpId: c.ip_id,
-                  perfilId: perfilInfo?.id,
-                  parceiroId: c.parceiro_id ?? perfilInfo?.parceiro_id,
-                  bookmakerCatalogoId,
-                });
+                const celula = celulaAgendadaByCampanhaIdMap.get(c.id);
+                const linkedIpId = resolveCampanhaIpId(c);
                 const ip = linkedIpId ? ipMap[linkedIpId] : null;
                 const wallet = c.wallet_id ? wallets.find((w) => w.id === c.wallet_id) : null;
                 const perfil = c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : perfilInfo?.parceiro_id ? parceiroMap[perfilInfo.parceiro_id]?.nome : null;
