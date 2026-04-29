@@ -699,6 +699,21 @@ export function useUpsertCampanha() {
       if (payload.id) {
         const { error } = await supabase.from("planning_campanhas" as any).update(base).eq("id", payload.id);
         if (error) throw error;
+
+        // Sincroniza a célula do assistente de plano vinculada a esta campanha.
+        // Se a casa/perfil for alterada manualmente pelo calendário, o plano deixa
+        // de apontar para a casa antiga e passa a representar a substituição real.
+        const celulaUpdate: any = {
+          bookmaker_catalogo_id: base.bookmaker_catalogo_id,
+          parceiro_id: base.parceiro_id,
+        };
+        const { error: celulaError } = await (supabase as any)
+          .from("distribuicao_plano_celulas")
+          .update(celulaUpdate)
+          .eq("workspace_id", workspaceId)
+          .eq("campanha_id", payload.id);
+        if (celulaError) throw celulaError;
+
         return payload.id;
       } else {
         const { data, error } = await supabase
@@ -712,6 +727,8 @@ export function useUpsertCampanha() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["planning-campanhas"] });
+      qc.invalidateQueries({ queryKey: ["plano-celulas-disponiveis"] });
+      qc.invalidateQueries({ queryKey: ["plano-celulas-agendadas"] });
     },
     onError: (e: any) => toast.error("Erro ao salvar campanha", { description: e.message }),
   });
