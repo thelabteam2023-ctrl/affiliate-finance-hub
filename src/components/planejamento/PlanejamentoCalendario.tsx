@@ -705,8 +705,7 @@ export function PlanejamentoCalendario() {
     return Array.from(map.values());
   }, [celulasPlano]);
 
-  const modoTodosPlanos = planoFiltroId === PLANO_TODOS_VALUE;
-  const modoPlano = planoFiltroId !== "none" && !modoTodosPlanos;
+  const modoPlano = !!planoFiltroId;
   const campanhaPlanoIdMap = useMemo(() => {
     const map = new Map<string, string>();
     celulasAgendadas.forEach((celula) => {
@@ -716,10 +715,9 @@ export function PlanejamentoCalendario() {
   }, [celulasAgendadas]);
 
   const campanhasVisiveis = useMemo(() => {
-    if (modoTodosPlanos) return campanhas;
-    if (modoPlano) return campanhas.filter((camp) => campanhaPlanoIdMap.get(camp.id) === planoFiltroId);
-    return campanhas.filter((camp) => !campanhaPlanoIdMap.has(camp.id));
-  }, [campanhas, campanhaPlanoIdMap, modoPlano, modoTodosPlanos, planoFiltroId]);
+    if (!modoPlano) return [];
+    return campanhas.filter((camp) => campanhaPlanoIdMap.get(camp.id) === planoFiltroId);
+  }, [campanhas, campanhaPlanoIdMap, modoPlano, planoFiltroId]);
 
   // Plano selecionado (para extrair parceiro_ids e mapear CPF por posição)
   const planoSelecionado = useMemo(
@@ -736,9 +734,10 @@ export function PlanejamentoCalendario() {
   }, []);
 
   useEffect(() => {
-    if (planosLoading || planoFiltroId === "none" || planoFiltroId === PLANO_TODOS_VALUE) return;
-    if (!planos.some((p) => p.id === planoFiltroId)) {
-      selectPlanoFiltro("none");
+    if (planosLoading) return;
+    const planoExiste = planoFiltroId && planos.some((p) => p.id === planoFiltroId);
+    if (!planoExiste) {
+      selectPlanoFiltro(planos[0]?.id ?? "");
     }
   }, [planos, planosLoading, planoFiltroId, selectPlanoFiltro]);
 
