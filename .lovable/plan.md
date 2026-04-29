@@ -1,78 +1,79 @@
-Plano de ajuste
+Proponho transformar os planos salvos de distribuição em uma navegação direta dentro do Planejamento de Campanhas, reduzindo o fluxo atual de abrir o select e escolher “Bônus Maio” toda vez.
 
-A divergência foi confirmada: o valor “inflado” em Bookmakers vem das contas Broker. Hoje a Posição de Capital soma tudo dentro de “Bookmakers”, incluindo `is_broker_account = true`.
+## Modelo sugerido
 
-Valores encontrados no workspace principal:
-
-```text
-Bookmakers não-Broker BRL: R$ 65.690,72
-Broker BRL:               R$ 51.042,62
-Total atual BRL exibido:  R$ 116.733,34
-```
-
-Contas Broker que estão entrando no total atual:
+Criar uma faixa de acesso rápido acima/ao lado do calendário com os planos salvos como subabas/chips clicáveis:
 
 ```text
-BET365 / BROKER TIAGO: R$ 43.244,00
-BET365 / BROKER TIAGO: R$ 4.298,62
-7GAMES / TESTE:        R$ 2.000,00
-APOSTOU / TESTE:       R$ 1.500,00
+Calendário Real | Calendário Simulado
+
+[Sem plano] [Bônus Maio] [Bônus Junho] [VIP Maio] [+ Gerenciar]
 ```
 
-Implementação proposta
+Ao clicar em uma subaba de plano:
+- O calendário continua no mesmo mês/ano atual.
+- A lateral passa automaticamente para o modo daquele plano.
+- Os filtros de CPF e grupo continuam disponíveis, mas como filtros secundários.
+- O plano ativo fica visualmente destacado.
+- O usuário não precisa abrir o select para acessar o plano salvo.
 
-1. Separar a agregação no Caixa
-   - Em `src/pages/Caixa.tsx`, alterar a consulta de saldos das bookmakers para buscar também `is_broker_account` e/ou o vínculo com `projetos.is_broker`.
-   - Agregar em dois grupos separados:
-     - `saldosBookmakersPorMoeda`: somente contas não-Broker.
-     - `saldosBrokerPorMoeda`: somente contas Broker.
-   - Manter o filtro por `workspace_id` e a regra financeira existente de `Math.max(0, saldo_atual)`.
+## Comportamento de UX
 
-2. Criar nova sessão “Broker” na Posição de Capital
-   - Em `src/components/caixa/PosicaoCapital.tsx`, adicionar uma nova categoria entre “Bookmakers” e “Contas Parceiros” ou após “Bookmakers”:
+1. **Subabas de planos salvos**
+   - Mostrar os planos retornados por `useDistribuicaoPlanos()` como botões horizontais.
+   - Incluir sempre uma opção “Sem plano” para casas livres.
+   - Se houver muitos planos, a lista será rolável horizontalmente para não quebrar o layout.
 
+2. **Persistência da última visualização**
+   - Salvar localmente o último plano aberto pelo usuário.
+   - Quando ele voltar ao Planejamento de Campanhas, abrir direto no último plano selecionado, se ainda existir.
+   - Se o plano tiver sido excluído, voltar para “Sem plano”.
+
+3. **Menos peso na lateral**
+   - O select atual de plano dentro da sidebar deixa de ser o caminho principal.
+   - Podemos remover esse select ou mantê-lo como fallback compacto, mas a recomendação é remover para evitar duplicidade.
+   - A sidebar fica focada em: progresso do plano, filtros por grupo/CPF, busca e lista de casas/células.
+
+4. **Acesso ao Gerenciador de Recursos**
+   - Manter o botão “Gerenciar recursos”.
+   - Adicionar também um botão pequeno “Gerenciar” ao fim das subabas para o usuário chegar rapidamente onde cria/exclui planos.
+
+## O que muda na prática
+
+Hoje:
 ```text
-Caixa Operacional
-Bookmakers
-Broker
-Contas Parceiros
-Wallets Parceiros
+Entrar no planejamento → abrir select → escolher Bônus Maio → visualizar células
 ```
 
-   - A nova categoria “Broker” terá cor própria e ícone próprio para não confundir com Bookmakers operacionais.
-
-3. Ajustar totais e percentuais
-   - O total geral da Posição de Capital continuará incluindo Broker, porque é capital existente.
-   - O item “Bookmakers” passará a representar apenas casas operacionais/não-Broker.
-   - O item “Broker” passará a representar o capital dos projetos Broker.
-   - Percentuais do gráfico serão recalculados com as cinco categorias.
-
-4. Ajustar detalhes exibidos
-   - “Bookmakers” deverá mostrar algo como:
-
+Depois:
 ```text
-R$ 65.691 + 2 moedas
+Entrar no planejamento → clicar direto em Bônus Maio
 ```
 
-   - “Broker” deverá mostrar:
-
+Ou, se foi o último usado:
 ```text
-R$ 51.043
+Entrar no planejamento → Bônus Maio já abre automaticamente
 ```
 
-   - Se houver Broker em outras moedas no futuro, seguirá o mesmo padrão multimoeda já usado no componente.
+## Ajustes técnicos previstos
 
-5. Preservar compatibilidade
-   - `saldoBookmakers` legado usado por `CaixaTabsContainer` será revisado para não carregar Broker indevidamente, se esse valor representar apenas bookmakers operacionais.
-   - Não haverá alteração de dados no banco e nenhum ajuste direto de `saldo_atual`; será apenas correção de classificação na UI.
+Arquivos principais:
+- `src/components/planejamento/PlanejamentoCalendario.tsx`
+- Possivelmente criação de um componente pequeno, por exemplo `PlanejamentoPlanoTabs.tsx`, para manter o calendário mais organizado.
 
-Resultado esperado
+Implementação:
+- Trocar a seleção principal baseada apenas no `<Select>` por uma navegação de botões/chips usando o mesmo estado `planoFiltroId`.
+- Inicializar `planoFiltroId` a partir de `localStorage`, com validação contra a lista real de planos carregados.
+- Persistir mudanças em uma chave local, por exemplo `planejamento:planoFiltroId`.
+- Resetar `grupoFiltroId` e `cpfFiltroIdx` quando o usuário trocar de plano, mantendo o comportamento atual.
+- Manter isolamento por workspace e sem alterar dados financeiros, apostas, registros ou estrutura de banco.
 
-A Posição de Capital deixará de mostrar Bookmakers como se tivessem R$ 116 mil em BRL. Ela passará a separar claramente:
+## Segurança e dados
 
-```text
-Bookmakers: R$ 65.690,72
-Broker:     R$ 51.042,62
-```
+Não é necessário alterar banco de dados para esse modelo.
+A mudança é apenas de navegação/visualização no frontend.
+Os dados continuam sendo carregados pelas queries existentes e filtrados pelo workspace atual.
 
-Assim a comparação com “Saldos por Parceiro” ficará coerente, e os valores provenientes de Broker terão uma sessão própria dentro da distribuição de capital.
+## Resultado esperado
+
+A tela passa a funcionar como uma central de planos salvos: o usuário visualiza rapidamente “Bônus Maio”, “Bônus Junho” ou qualquer distribuição criada, sem depender do select escondido na lateral e com menos cliques para chegar à operação desejada.

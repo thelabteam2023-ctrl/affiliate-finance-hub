@@ -63,6 +63,7 @@ type DisplayCurrency = "BRL" | "USD";
 
 const MES_NOMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const PLANO_FILTRO_STORAGE_KEY = "planejamento:planoFiltroId";
 
 function formatDateKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -456,7 +457,10 @@ export function PlanejamentoCalendario() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [selectedBookmakerIds, setSelectedBookmakerIds] = useState<Set<string>>(() => new Set());
   const [selectedCelulaIds, setSelectedCelulaIds] = useState<Set<string>>(() => new Set());
-  const [planoFiltroId, setPlanoFiltroId] = useState<string>("none"); // "none" = mostrar casas livres
+  const [planoFiltroId, setPlanoFiltroId] = useState<string>(() => {
+    if (typeof window === "undefined") return "none";
+    return window.localStorage.getItem(PLANO_FILTRO_STORAGE_KEY) || "none";
+  }); // "none" = mostrar casas livres
   const [grupoFiltroId, setGrupoFiltroId] = useState<string>("todos"); // "todos" = sem filtro de grupo
   const [cpfFiltroIdx, setCpfFiltroIdx] = useState<string>("todos"); // "todos" = sem filtro de CPF
   const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>(() => {
@@ -488,7 +492,7 @@ export function PlanejamentoCalendario() {
   const deleteCamp = useDeleteCampanha();
   const { getLogoUrl } = useBookmakerLogoMap();
   const { convertToBRL, cotacaoUSD, isUsingFallback } = useExchangeRates();
-  const { planos } = useDistribuicaoPlanos();
+  const { planos, isLoading: planosLoading } = useDistribuicaoPlanos();
   const { data: celulasPlano = [] } = usePlanoCelulasDisponiveis(
     planoFiltroId !== "none" ? planoFiltroId : null
   );
@@ -708,6 +712,22 @@ export function PlanejamentoCalendario() {
     () => planos.find((p) => p.id === planoFiltroId) ?? null,
     [planos, planoFiltroId]
   );
+  const selectPlanoFiltro = useCallback((planoId: string) => {
+    setPlanoFiltroId(planoId);
+    setGrupoFiltroId("todos");
+    setCpfFiltroIdx("todos");
+    try {
+      window.localStorage.setItem(PLANO_FILTRO_STORAGE_KEY, planoId);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (planosLoading || planoFiltroId === "none") return;
+    if (!planos.some((p) => p.id === planoFiltroId)) {
+      selectPlanoFiltro("none");
+    }
+  }, [planos, planosLoading, planoFiltroId, selectPlanoFiltro]);
+
   const parceiroIdToCpfIdx = useMemo(() => {
     const m = new Map<string, number>();
     const ids: string[] = (planoSelecionado as any)?.parceiro_ids ?? [];
@@ -1211,19 +1231,6 @@ export function PlanejamentoCalendario() {
                 </div>
               )}
 
-              {/* Seletor de Plano de Distribuição */}
-              <Select value={planoFiltroId} onValueChange={(v) => { setPlanoFiltroId(v); setGrupoFiltroId("todos"); setCpfFiltroIdx("todos"); }}>
-                <SelectTrigger className="h-7 text-xs">
-                  <SelectValue placeholder="Plano de distribuição" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sem plano (casas livres)</SelectItem>
-                  {planos.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
               {/* Filtro de Grupo (só faz sentido com plano) */}
               {modoPlano && gruposDoPlano.length > 0 && (
                 <Select value={grupoFiltroId} onValueChange={setGrupoFiltroId}>
@@ -1386,6 +1393,38 @@ export function PlanejamentoCalendario() {
 
         {/* Calendário */}
         <div className="flex-1 flex flex-col gap-3 min-w-0">
+          <div className="flex items-center gap-2 overflow-x-auto rounded-lg border bg-card/60 p-1.5">
+            <Button
+              variant={planoFiltroId === "none" ? "default" : "ghost"}
+              size="sm"
+              className="h-7 shrink-0 px-3 text-xs"
+              onClick={() => selectPlanoFiltro("none")}
+            >
+              Sem plano
+            </Button>
+            {planos.map((plano) => (
+              <Button
+                key={plano.id}
+                variant={planoFiltroId === plano.id ? "default" : "ghost"}
+                size="sm"
+                className="h-7 max-w-44 shrink-0 px-3 text-xs"
+                onClick={() => selectPlanoFiltro(plano.id)}
+                title={plano.nome}
+              >
+                <span className="truncate">{plano.nome}</span>
+              </Button>
+            ))}
+            <Button
+              variant="outline"
+              size="sm"
+              className="ml-auto h-7 shrink-0 px-3 text-xs"
+              onClick={() => setRecursosOpen(true)}
+            >
+              <Settings2 className="mr-1 h-3.5 w-3.5" />
+              Gerenciar
+            </Button>
+          </div>
+
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="icon" onClick={prevMonth}><ChevronLeft className="h-4 w-4" /></Button>
