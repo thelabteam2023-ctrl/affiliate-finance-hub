@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ModernDonutChart } from "@/components/ui/modern-donut-chart";
-import { PieChart as PieChartIcon, Wallet, Building2, Coins, CreditCard, HelpCircle, CheckCircle2, AlertTriangle } from "lucide-react";
+import { PieChart as PieChartIcon, Wallet, Building2, Coins, CreditCard, HelpCircle, CheckCircle2, AlertTriangle, BriefcaseBusiness } from "lucide-react";
 import { useMultiCurrencyConversion } from "@/hooks/useMultiCurrencyConversion";
 import { formatCurrencyValue, getCurrencySymbol } from "@/types/currency";
 
@@ -24,6 +24,8 @@ interface PosicaoCapitalProps {
   saldoCaixaCrypto: number;
   /** Saldos de bookmakers por moeda */
   saldosBookmakers: SaldoBookmakerPorMoeda[];
+  /** Saldos de contas Broker por moeda */
+  saldosBroker: SaldoBookmakerPorMoeda[];
   /** Saldos em contas bancárias de parceiros (por moeda) */
   saldosContasParceiros: Array<{ moeda: string; saldo: number }>;
   /** Saldo em wallets de parceiros (USD) */
@@ -36,6 +38,7 @@ interface PosicaoCapitalProps {
 const GRADIENT_COLORS = [
   ["#22C55E", "#16A34A"], // Caixa Operacional - emerald
   ["#3B82F6", "#2563EB"], // Bookmakers - blue
+  ["#F59E0B", "#D97706"], // Broker - amber
   ["#8B5CF6", "#7C3AED"], // Contas Parceiros - purple
   ["#F97316", "#EA580C"], // Wallets Crypto - orange
 ];
@@ -44,6 +47,7 @@ export function PosicaoCapital({
   saldosFiat,
   saldoCaixaCrypto,
   saldosBookmakers,
+  saldosBroker,
   saldosContasParceiros,
   saldoWalletsParceiros,
   cotacaoUSD,
