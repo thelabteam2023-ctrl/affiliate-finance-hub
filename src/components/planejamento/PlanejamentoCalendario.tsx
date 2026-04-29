@@ -1099,39 +1099,6 @@ export function PlanejamentoCalendario() {
     } else if (data?.type === "bookmaker" || data?.type === "bookmaker-batch") {
       toast.error("Crie ou selecione um plano antes de inserir casas no calendário.");
       return;
-      const items: BookmakerDragItem[] = data?.type === "bookmaker-batch" ? data.items ?? [] : [{ id: data.bookmakerId, nome: data.nome, moeda: data.moeda }];
-      let ok = 0;
-      let blocked = 0;
-      for (const item of items) {
-      const linkedIpId = resolveScopedIpId({ bookmakerCatalogoId: item.id });
-      // Valida regras de grupo antes de criar campanha pendente
-      const check = validate({
-        bookmaker_catalogo_id: item.id,
-        parceiro_id: null,
-        ip_id: linkedIpId,
-        wallet_id: null,
-        scheduled_date: dateKey,
-      });
-      if (check.violations.length > 0) {
-        blocked++;
-        continue;
-      }
-      // Cria campanha PENDENTE imediatamente (sem abrir modal)
-      await upsert.mutateAsync({
-        scheduled_date: dateKey,
-        bookmaker_catalogo_id: item.id,
-        bookmaker_nome: item.nome,
-        currency: item.moeda,
-        deposit_amount: 0,
-        ip_id: linkedIpId,
-        status: "planned",
-      });
-      ok++;
-      }
-      clearSelection();
-      if (ok > 0 && blocked > 0) toast.warning(`${ok} casas agendadas, ${blocked} bloqueadas por regra`);
-      else if (ok > 0) toast.success(ok === 1 ? `${items[0]?.nome} agendada` : `${ok} casas agendadas`);
-      else toast.error("Nenhuma casa pôde ser agendada");
     } else if (data?.type === "campanha") {
       // Mover campanha existente para outra data → pede confirmação
       const camp = campanhas.find(c => c.id === data.campanhaId);
