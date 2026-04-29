@@ -1150,10 +1150,10 @@ export function PlanejamentoCalendario() {
                 Células do plano ativo — Ctrl/Cmd + clique seleciona várias
               </p>
 
-              {(selectedBookmakerIds.size > 0 || selectedCelulaIds.size > 0) && (
+              {selectedCelulaIds.size > 0 && (
                 <div className="flex items-center justify-between rounded-md border bg-primary/10 px-2 py-1 text-[11px] text-primary">
                   <span className="font-medium">
-                    {selectedBookmakerIds.size + selectedCelulaIds.size} selecionada(s)
+                    {selectedCelulaIds.size} selecionada(s)
                   </span>
                   <button type="button" className="hover:underline" onClick={clearSelection}>
                     Limpar
