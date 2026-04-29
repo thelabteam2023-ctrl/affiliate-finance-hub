@@ -737,7 +737,7 @@ export function PlanejamentoCalendario() {
   }, []);
 
   useEffect(() => {
-    if (planosLoading || planoFiltroId === "none") return;
+    if (planosLoading || planoFiltroId === "none" || planoFiltroId === PLANO_TODOS_VALUE) return;
     if (!planos.some((p) => p.id === planoFiltroId)) {
       selectPlanoFiltro("none");
     }
