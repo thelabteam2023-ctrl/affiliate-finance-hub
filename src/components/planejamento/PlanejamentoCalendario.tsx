@@ -1228,9 +1228,7 @@ export function PlanejamentoCalendario() {
                 </div>
               </div>
               <p className="text-[11px] text-muted-foreground">
-                {modoPlano
-                  ? "Células do plano — Ctrl/Cmd + clique seleciona várias"
-                  : "Ctrl/Cmd + clique seleciona várias"}
+                Células do plano ativo — Ctrl/Cmd + clique seleciona várias
               </p>
 
               {(selectedBookmakerIds.size > 0 || selectedCelulaIds.size > 0) && (
@@ -1340,65 +1338,32 @@ export function PlanejamentoCalendario() {
                 />
               </div>
 
-              {/* Filtro de regulamentação só faz sentido em modo "casas livres" */}
-              {!modoPlano && (
-                <RegulamentacaoFilter
-                  value={bmFilter}
-                  onChange={setBmFilter}
-                  size="sm"
-                  orientation="vertical"
-                />
-              )}
-
               <TrashDropZone active={activeDrag?.type === "campanha"} />
 
               <div className="flex-1 overflow-y-auto space-y-1 mt-1 -mx-1 px-1">
-                {modoPlano ? (
-                  <>
-                    {filteredCelulas.map((c) => (
-                      <DraggableCelula
-                        key={c.id}
-                        celula={c}
-                        parceiroNome={getCelulaPerfil(c)?.parceiro_id ? parceiroMap[getCelulaPerfil(c)!.parceiro_id!]?.nome : undefined}
-                        perfilCor={getCelulaPerfil(c)?.cor}
-                        selected={selectedCelulaIds.has(c.id)}
-                        selectedBatch={selectedCelulaBatch}
-                        onToggleSelect={() => toggleCelulaSelection(c.id)}
-                      />
-                    ))}
-                    {filteredCelulas.length === 0 && (
-                      <p className="text-xs text-muted-foreground italic text-center py-4">
-                        {celulasPlano.length === 0
-                          ? "Plano sem células."
-                          : "Sem resultados."}
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    {filteredBookmakers.map(b => (
-                      <DraggableBookmaker
-                        key={b.id}
-                        id={b.id}
-                        nome={b.nome}
-                        moeda={b.moeda_padrao}
-                        status={b.status}
-                        logoUrl={b.logo_url}
-                        selected={selectedBookmakerIds.has(b.id)}
-                        selectedBatch={selectedBookmakerBatch}
-                        onToggleSelect={() => toggleBookmakerSelection(b.id)}
-                      />
-                    ))}
-                    {filteredBookmakers.length === 0 && (
-                      <p className="text-xs text-muted-foreground italic text-center py-4">
-                        {bookmakers.length === 0 ? "Nenhuma casa cadastrada." : "Sem resultados."}
-                      </p>
-                    )}
-                  </>
+                {filteredCelulas.map((c) => (
+                  <DraggableCelula
+                    key={c.id}
+                    celula={c}
+                    parceiroNome={getCelulaPerfil(c)?.parceiro_id ? parceiroMap[getCelulaPerfil(c)!.parceiro_id!]?.nome : undefined}
+                    perfilCor={getCelulaPerfil(c)?.cor}
+                    selected={selectedCelulaIds.has(c.id)}
+                    selectedBatch={selectedCelulaBatch}
+                    onToggleSelect={() => toggleCelulaSelection(c.id)}
+                  />
+                ))}
+                {filteredCelulas.length === 0 && (
+                  <p className="text-xs text-muted-foreground italic text-center py-4">
+                    {!planoFiltroId
+                      ? "Crie um plano para começar."
+                      : celulasPlano.length === 0
+                      ? "Plano sem células."
+                      : "Sem resultados."}
+                  </p>
                 )}
               </div>
               <Button variant="outline" size="sm" onClick={() => setRecursosOpen(true)}>
-                <Settings2 className="h-4 w-4 mr-1" /> Gerenciar recursos
+                <Plus className="h-4 w-4 mr-1" /> Assistente de plano
               </Button>
             </>
           )}
@@ -1407,22 +1372,6 @@ export function PlanejamentoCalendario() {
         {/* Calendário */}
         <div className="flex-1 flex flex-col gap-3 min-w-0">
           <div className="flex items-center gap-2 overflow-x-auto rounded-lg border bg-card/60 p-1.5">
-            <Button
-              variant={planoFiltroId === "none" ? "default" : "ghost"}
-              size="sm"
-              className="h-7 shrink-0 px-3 text-xs"
-              onClick={() => selectPlanoFiltro("none")}
-            >
-              Sem plano
-            </Button>
-            <Button
-              variant={planoFiltroId === PLANO_TODOS_VALUE ? "default" : "ghost"}
-              size="sm"
-              className="h-7 shrink-0 px-3 text-xs"
-              onClick={() => selectPlanoFiltro(PLANO_TODOS_VALUE)}
-            >
-              Todos
-            </Button>
             {planos.map((plano) => (
               <Button
                 key={plano.id}
@@ -1435,6 +1384,9 @@ export function PlanejamentoCalendario() {
                 <span className="truncate">{plano.nome}</span>
               </Button>
             ))}
+            {!planosLoading && planos.length === 0 && (
+              <span className="px-2 text-xs text-muted-foreground shrink-0">Nenhum plano criado</span>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -1442,7 +1394,7 @@ export function PlanejamentoCalendario() {
               onClick={() => setRecursosOpen(true)}
             >
               <Plus className="mr-1 h-3.5 w-3.5" />
-              Adicionar plano
+              Novo plano
             </Button>
           </div>
 
