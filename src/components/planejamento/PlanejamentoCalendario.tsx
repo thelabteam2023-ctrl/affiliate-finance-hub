@@ -432,11 +432,6 @@ function DayCell({ date, isCurrentMonth, children, onAdd, onOpenDetails }: {
     >
       <div className="flex items-center justify-between">
         <span className={cn("text-xs font-medium", isToday && !isPast && "text-primary", isPast && "text-muted-foreground")}>{date.getDate()}</span>
-        {isCurrentMonth && !isPast && (
-          <button onClick={(e) => { e.stopPropagation(); onAdd(); }} className="opacity-0 hover:opacity-100 group-hover:opacity-100 text-muted-foreground hover:text-primary">
-            <Plus className="h-3 w-3" />
-          </button>
-        )}
       </div>
       <div className="flex-1 flex flex-col gap-1 overflow-y-auto">{children}</div>
     </div>
@@ -1204,10 +1199,10 @@ export function PlanejamentoCalendario() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setRecursosOpen(true)}
-                title="Gerenciar recursos"
+                title="Assistente de plano"
                 className="h-8 w-8"
               >
-                <Settings2 className="h-4 w-4" />
+                <Plus className="h-4 w-4" />
               </Button>
             </>
           ) : (
@@ -1459,7 +1454,7 @@ export function PlanejamentoCalendario() {
                   <DayCell
                     date={cell.date}
                     isCurrentMonth={cell.isCurrentMonth}
-                    onAdd={() => setEditing({ date: key })}
+                    onAdd={() => undefined}
                     onOpenDetails={() => setDetailsDate(key)}
                   >
                     {dayCamps.map(c => {
@@ -1600,7 +1595,7 @@ export function PlanejamentoCalendario() {
         </DialogContent>
       </Dialog>
 
-      <RecursosManager open={recursosOpen} onOpenChange={setRecursosOpen} />
+      <RecursosManager open={recursosOpen} onOpenChange={setRecursosOpen} initialTab="distribuicao" />
 
       <AlertDialog open={!!pendingMove} onOpenChange={(v) => !v && setPendingMove(null)}>
         <AlertDialogContent>
@@ -1640,9 +1635,10 @@ export function PlanejamentoCalendario() {
         open={simulacaoOpen}
         onOpenChange={setSimulacaoOpen}
         celulas={celulasPlano}
-        campanhasExistentes={campanhas}
+        campanhasExistentes={campanhasVisiveis}
         year={year}
         month={month}
+        planoId={planoFiltroId}
       />
     </DndContext>
   );
