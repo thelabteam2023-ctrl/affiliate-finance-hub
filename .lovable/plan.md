@@ -1,37 +1,78 @@
-Vou implementar seleção múltipla na sidebar do Planejamento de Campanhas para permitir enviar várias casas/células ao calendário de uma vez.
+Plano de ajuste
 
-Plano:
+A divergência foi confirmada: o valor “inflado” em Bookmakers vem das contas Broker. Hoje a Posição de Capital soma tudo dentro de “Bookmakers”, incluindo `is_broker_account = true`.
 
-1. Seleção múltipla na lista lateral
-- Permitir clicar com Ctrl/Cmd em várias casas/células para marcar/desmarcar.
-- Mostrar destaque visual nos itens selecionados.
-- Exibir um contador simples, por exemplo: “3 selecionadas”.
-- Manter o comportamento atual quando não houver seleção múltipla: arrastar uma casa continua funcionando igual.
+Valores encontrados no workspace principal:
 
-2. Arrasto em lote para o calendário
-- Ao arrastar uma casa selecionada, o sistema levará junto todas as selecionadas do mesmo modo:
-  - modo “Sem plano”: várias casas livres;
-  - modo “Plano de distribuição”: várias células do plano.
-- Ao soltar em um dia, serão criadas várias campanhas naquele mesmo dia.
-- Para células de plano, manter os dados já existentes: CPF, casa, grupo, valor sugerido e parceiro quando existir.
-- Após agendar células do plano, marcar cada célula como agendada para evitar duplicidade.
+```text
+Bookmakers não-Broker BRL: R$ 65.690,72
+Broker BRL:               R$ 51.042,62
+Total atual BRL exibido:  R$ 116.733,34
+```
 
-3. Validações e mensagens
-- Validar datas passadas como já acontece hoje.
-- Validar regra de grupo para cada item antes de criar.
-- Se alguma casa/célula for bloqueada por regra, não impedir necessariamente todo o lote: criar as válidas e avisar quantas falharam.
-- Mostrar toast final resumido, por exemplo: “5 casas agendadas” ou “4 agendadas, 1 bloqueada por regra”.
+Contas Broker que estão entrando no total atual:
 
-4. Experiência de uso
-- Adicionar instrução curta na sidebar: “Ctrl/Cmd + clique para selecionar várias”.
-- Adicionar opção para limpar seleção quando houver itens marcados.
-- Se filtros de plano/grupo/CPF/busca mudarem, manter apenas seleções ainda visíveis/válidas ou limpar a seleção para evitar arrastar itens ocultos por engano.
+```text
+BET365 / BROKER TIAGO: R$ 43.244,00
+BET365 / BROKER TIAGO: R$ 4.298,62
+7GAMES / TESTE:        R$ 2.000,00
+APOSTOU / TESTE:       R$ 1.500,00
+```
 
-Detalhes técnicos:
-- Alterar principalmente `src/components/planejamento/PlanejamentoCalendario.tsx`.
-- Criar estados para IDs selecionados de casas livres e células de plano.
-- Ajustar `DraggableBookmaker` e `DraggableCelula` para receber `selected`, `onToggleSelect` e lidar com Ctrl/Cmd clique sem abrir outro fluxo.
-- Alterar o payload do `useDraggable` para incluir o lote selecionado quando aplicável.
-- Atualizar `handleDragEnd` para processar `bookmaker-batch` e `celula-batch`, reutilizando a lógica atual de criação individual.
-- Atualizar `DragOverlay` para mostrar um card de “N itens selecionados” durante o arrasto em lote.
-- Validar com TypeScript após implementar.
+Implementação proposta
+
+1. Separar a agregação no Caixa
+   - Em `src/pages/Caixa.tsx`, alterar a consulta de saldos das bookmakers para buscar também `is_broker_account` e/ou o vínculo com `projetos.is_broker`.
+   - Agregar em dois grupos separados:
+     - `saldosBookmakersPorMoeda`: somente contas não-Broker.
+     - `saldosBrokerPorMoeda`: somente contas Broker.
+   - Manter o filtro por `workspace_id` e a regra financeira existente de `Math.max(0, saldo_atual)`.
+
+2. Criar nova sessão “Broker” na Posição de Capital
+   - Em `src/components/caixa/PosicaoCapital.tsx`, adicionar uma nova categoria entre “Bookmakers” e “Contas Parceiros” ou após “Bookmakers”:
+
+```text
+Caixa Operacional
+Bookmakers
+Broker
+Contas Parceiros
+Wallets Parceiros
+```
+
+   - A nova categoria “Broker” terá cor própria e ícone próprio para não confundir com Bookmakers operacionais.
+
+3. Ajustar totais e percentuais
+   - O total geral da Posição de Capital continuará incluindo Broker, porque é capital existente.
+   - O item “Bookmakers” passará a representar apenas casas operacionais/não-Broker.
+   - O item “Broker” passará a representar o capital dos projetos Broker.
+   - Percentuais do gráfico serão recalculados com as cinco categorias.
+
+4. Ajustar detalhes exibidos
+   - “Bookmakers” deverá mostrar algo como:
+
+```text
+R$ 65.691 + 2 moedas
+```
+
+   - “Broker” deverá mostrar:
+
+```text
+R$ 51.043
+```
+
+   - Se houver Broker em outras moedas no futuro, seguirá o mesmo padrão multimoeda já usado no componente.
+
+5. Preservar compatibilidade
+   - `saldoBookmakers` legado usado por `CaixaTabsContainer` será revisado para não carregar Broker indevidamente, se esse valor representar apenas bookmakers operacionais.
+   - Não haverá alteração de dados no banco e nenhum ajuste direto de `saldo_atual`; será apenas correção de classificação na UI.
+
+Resultado esperado
+
+A Posição de Capital deixará de mostrar Bookmakers como se tivessem R$ 116 mil em BRL. Ela passará a separar claramente:
+
+```text
+Bookmakers: R$ 65.690,72
+Broker:     R$ 51.042,62
+```
+
+Assim a comparação com “Saldos por Parceiro” ficará coerente, e os valores provenientes de Broker terão uma sessão própria dentro da distribuição de capital.

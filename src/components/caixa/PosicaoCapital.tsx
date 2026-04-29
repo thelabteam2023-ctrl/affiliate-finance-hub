@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ModernDonutChart } from "@/components/ui/modern-donut-chart";
-import { PieChart as PieChartIcon, Wallet, Building2, Coins, CreditCard, HelpCircle, CheckCircle2, AlertTriangle } from "lucide-react";
+import { PieChart as PieChartIcon, Wallet, Building2, Coins, CreditCard, HelpCircle, CheckCircle2, AlertTriangle, BriefcaseBusiness } from "lucide-react";
 import { useMultiCurrencyConversion } from "@/hooks/useMultiCurrencyConversion";
 import { formatCurrencyValue, getCurrencySymbol } from "@/types/currency";
 
@@ -24,6 +24,8 @@ interface PosicaoCapitalProps {
   saldoCaixaCrypto: number;
   /** Saldos de bookmakers por moeda */
   saldosBookmakers: SaldoBookmakerPorMoeda[];
+  /** Saldos de contas Broker por moeda */
+  saldosBroker: SaldoBookmakerPorMoeda[];
   /** Saldos em contas bancárias de parceiros (por moeda) */
   saldosContasParceiros: Array<{ moeda: string; saldo: number }>;
   /** Saldo em wallets de parceiros (USD) */
@@ -36,6 +38,7 @@ interface PosicaoCapitalProps {
 const GRADIENT_COLORS = [
   ["#22C55E", "#16A34A"], // Caixa Operacional - emerald
   ["#3B82F6", "#2563EB"], // Bookmakers - blue
+  ["#F59E0B", "#D97706"], // Broker - amber
   ["#8B5CF6", "#7C3AED"], // Contas Parceiros - purple
   ["#F97316", "#EA580C"], // Wallets Crypto - orange
 ];
@@ -44,6 +47,7 @@ export function PosicaoCapital({
   saldosFiat,
   saldoCaixaCrypto,
   saldosBookmakers,
+  saldosBroker,
   saldosContasParceiros,
   saldoWalletsParceiros,
   cotacaoUSD,
@@ -165,6 +169,31 @@ export function PosicaoCapital({
       ? `R$ ${bookmakersBRLValue.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}${bookmakersOtherCount > 0 ? ` + ${bookmakersOtherCount} ${bookmakersOtherCount === 1 ? 'moeda' : 'moedas'}` : ''}`
       : 'Em operação';
 
+    // Consolidar saldos Broker para BRL separadamente das bookmakers operacionais
+    let brokerBRL = 0;
+    let brokerBRLValue = 0;
+    const brokerDetails: Array<{ moeda: string; valorOriginal: number; valorBRL: number; symbol: string }> = [];
+    let brokerOtherCount = 0;
+
+    saldosBroker.forEach(sb => {
+      if (sb.saldo === 0) return;
+
+      if (sb.moeda === 'BRL') {
+        brokerBRL += sb.saldo;
+        brokerBRLValue = sb.saldo;
+        brokerDetails.push({ moeda: 'BRL', valorOriginal: sb.saldo, valorBRL: sb.saldo, symbol: 'R$' });
+      } else {
+        const valorBRL = convert(sb.saldo, sb.moeda, 'BRL');
+        brokerBRL += valorBRL;
+        brokerDetails.push({ moeda: sb.moeda, valorOriginal: sb.saldo, valorBRL, symbol: getCurrencySymbol(sb.moeda) });
+        brokerOtherCount++;
+      }
+    });
+
+    const brokerDetailStr = brokerDetails.length > 0
+      ? `R$ ${brokerBRLValue.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}${brokerOtherCount > 0 ? ` + ${brokerOtherCount} ${brokerOtherCount === 1 ? 'moeda' : 'moedas'}` : ''}`
+      : 'Projetos Broker';
+
     // Consolidar contas de parceiros para BRL (multi-moeda)
     let contasParcBRL = 0;
     let contasParcBRLValue = 0;
@@ -207,7 +236,15 @@ export function PosicaoCapital({
         icon: Building2,
         detail: bookmakersDetailStr,
         detailItems: bookmakersDetails,
-        help: "Capital alocado em casas de apostas para operações"
+        help: "Capital alocado em casas de apostas operacionais, excluindo contas Broker"
+      },
+      {
+        name: "Broker",
+        value: brokerBRL,
+        icon: BriefcaseBusiness,
+        detail: brokerDetailStr,
+        detailItems: brokerDetails,
+        help: "Capital em contas vinculadas a projetos Broker, separado das bookmakers operacionais"
       },
       { 
         name: "Contas Parceiros", 
@@ -230,7 +267,7 @@ export function PosicaoCapital({
     const total = dados.reduce((sum, item) => sum + item.value, 0);
     
     return { dados, total };
-  }, [saldosFiat, saldoCaixaCrypto, saldosBookmakers, saldosContasParceiros, saldoWalletsParceiros, cotacaoUSD, convert]);
+  }, [saldosFiat, saldoCaixaCrypto, saldosBookmakers, saldosBroker, saldosContasParceiros, saldoWalletsParceiros, cotacaoUSD, convert]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {

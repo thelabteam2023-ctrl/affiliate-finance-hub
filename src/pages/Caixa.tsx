@@ -121,6 +121,7 @@ export default function Caixa() {
   const [saldosFiat, setSaldosFiat] = useState<SaldoFiat[]>([]);
   const [saldosCrypto, setSaldosCrypto] = useState<SaldoCrypto[]>([]);
   const [saldosBookmakersPorMoeda, setSaldosBookmakersPorMoeda] = useState<Array<{ moeda: string; saldo: number }>>([]);
+  const [saldosBrokerPorMoeda, setSaldosBrokerPorMoeda] = useState<Array<{ moeda: string; saldo: number }>>([]);
   const [saldoBookmakers, setSaldoBookmakers] = useState(0); // Legacy: BRL total (para CaixaTabsContainer)
   const [saldosContasParceiros, setSaldosContasParceiros] = useState<Array<{ moeda: string; saldo: number }>>([]);
   const [saldoWalletsParceiros, setSaldoWalletsParceiros] = useState(0);
@@ -387,21 +388,27 @@ export default function Caixa() {
         setSaldosCrypto([]);
       }
 
-      // Fetch total bookmaker balance - agregar por moeda
+      // Fetch total bookmaker balance - agregar por moeda separando Broker
       // Inclui status 'ativo' e 'limitada' (casas com saldo mas operacionalmente limitadas)
       // FIX: Incluir AGUARDANDO_SAQUE - essas casas ainda têm saldo real
       // FIX: Filtrar por workspace_id para isolar dados do workspace ativo
       const { data: bookmakersBalanceData } = await supabase
         .from("bookmakers")
-        .select("saldo_atual, moeda")
+        .select("saldo_atual, moeda, is_broker_account")
         .eq("workspace_id", workspaceId)
         .in("status", ["ativo", "limitada", "AGUARDANDO_SAQUE"]);
       
-      // Agregar saldos por moeda
+      // Agregar saldos por moeda, mantendo contas Broker fora de Bookmakers operacionais
       const saldosPorMoeda: Record<string, number> = {};
+      const saldosBrokerPorMoedaMap: Record<string, number> = {};
       bookmakersBalanceData?.forEach(b => {
         const moeda = b.moeda || 'BRL';
-        saldosPorMoeda[moeda] = (saldosPorMoeda[moeda] || 0) + Math.max(0, b.saldo_atual || 0);
+        const saldoPositivo = Math.max(0, b.saldo_atual || 0);
+        if (b.is_broker_account) {
+          saldosBrokerPorMoedaMap[moeda] = (saldosBrokerPorMoedaMap[moeda] || 0) + saldoPositivo;
+        } else {
+          saldosPorMoeda[moeda] = (saldosPorMoeda[moeda] || 0) + saldoPositivo;
+        }
       });
       
       // Converter para array
@@ -410,8 +417,13 @@ export default function Caixa() {
         .map(([moeda, saldo]) => ({ moeda, saldo }));
       
       setSaldosBookmakersPorMoeda(saldosArray);
+      setSaldosBrokerPorMoeda(
+        Object.entries(saldosBrokerPorMoedaMap)
+          .filter(([_, saldo]) => saldo !== 0)
+          .map(([moeda, saldo]) => ({ moeda, saldo }))
+      );
       
-      // Legacy: manter compatibilidade com saldoBookmakers (BRL total para CaixaTabsContainer)
+      // Legacy: manter compatibilidade com saldoBookmakers (BRL não-Broker para CaixaTabsContainer)
       setSaldoBookmakers(saldosPorMoeda['BRL'] || 0);
 
       // Fetch partner bank accounts balance BY CURRENCY (EXCLUDING caixa operacional to avoid double-counting)
@@ -1148,6 +1160,7 @@ export default function Caixa() {
             saldosFiat={saldosFiat}
             saldoCaixaCrypto={getTotalCryptoUSD()}
             saldosBookmakers={saldosBookmakersPorMoeda}
+            saldosBroker={saldosBrokerPorMoeda}
             saldosContasParceiros={saldosContasParceiros}
             saldoWalletsParceiros={saldoWalletsParceiros}
             cotacaoUSD={cotacaoUSD}
