@@ -1417,6 +1417,14 @@ export function PlanejamentoCalendario() {
             >
               Sem plano
             </Button>
+            <Button
+              variant={planoFiltroId === PLANO_TODOS_VALUE ? "default" : "ghost"}
+              size="sm"
+              className="h-7 shrink-0 px-3 text-xs"
+              onClick={() => selectPlanoFiltro(PLANO_TODOS_VALUE)}
+            >
+              Todos
+            </Button>
             {planos.map((plano) => (
               <Button
                 key={plano.id}
@@ -1435,8 +1443,8 @@ export function PlanejamentoCalendario() {
               className="ml-auto h-7 shrink-0 px-3 text-xs"
               onClick={() => setRecursosOpen(true)}
             >
-              <Settings2 className="mr-1 h-3.5 w-3.5" />
-              Gerenciar
+              <Plus className="mr-1 h-3.5 w-3.5" />
+              Adicionar plano
             </Button>
           </div>
 
