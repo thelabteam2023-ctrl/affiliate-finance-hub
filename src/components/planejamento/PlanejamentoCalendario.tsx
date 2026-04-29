@@ -790,7 +790,7 @@ export function PlanejamentoCalendario() {
       if (c.campanha_id && c.cpf_index) map.set(c.campanha_id, c.cpf_index);
     });
     // 2) Por parceiro
-    campanhas.forEach((camp) => {
+    campanhasVisiveis.forEach((camp) => {
       if (map.has(camp.id)) return;
       if (camp.parceiro_id) {
         const idx = parceiroIdToCpfIdx.get(camp.parceiro_id);
@@ -802,7 +802,7 @@ export function PlanejamentoCalendario() {
       const celulasOrdenadas = [...celulasPlano].sort(
         (a, b) => (a.cpf_index ?? 99) - (b.cpf_index ?? 99) || (a.ordem ?? 0) - (b.ordem ?? 0)
       );
-      campanhas.forEach((camp) => {
+      campanhasVisiveis.forEach((camp) => {
         if (map.has(camp.id)) return;
         const catId = (camp as any).bookmaker_catalogo_id;
         if (!catId) return;
@@ -815,12 +815,12 @@ export function PlanejamentoCalendario() {
         modoPlano,
         planoId: planoFiltroId,
         celulasPlano: celulasPlano.map((c) => ({ id: c.id, casa: c.bookmaker_nome, cpf_index: c.cpf_index, campanha_id: c.campanha_id, parceiro_id: c.parceiro_id })),
-        campanhas: campanhas.map((c) => ({ id: c.id, casa: c.bookmaker_nome, parceiro_id: c.parceiro_id, bookmaker_catalogo_id: (c as any).bookmaker_catalogo_id })),
+        campanhas: campanhasVisiveis.map((c) => ({ id: c.id, casa: c.bookmaker_nome, parceiro_id: c.parceiro_id, bookmaker_catalogo_id: (c as any).bookmaker_catalogo_id })),
         map: Array.from(map.entries()),
       });
     }
     return map;
-  }, [celulasPlano, campanhas, parceiroIdToCpfIdx, modoPlano, planoFiltroId]);
+  }, [celulasPlano, campanhasVisiveis, parceiroIdToCpfIdx, modoPlano, planoFiltroId]);
 
   const campanhaPlanoOrderMap = useMemo(() => {
     const map = new Map<string, number>();
@@ -832,7 +832,7 @@ export function PlanejamentoCalendario() {
 
   const campanhaPerfilMap = useMemo(() => {
     const map = new Map<string, (typeof perfisPre)[number]>();
-    campanhas.forEach((camp) => {
+    campanhasVisiveis.forEach((camp) => {
       const perfilPorParceiro = camp.parceiro_id ? perfilByParceiroIdMap.get(camp.parceiro_id) : null;
       const cpfIdx = campanhaCpfMap.get(camp.id);
       const perfilPorCpf = cpfIdx ? cpfIndexToPerfilMap.get(cpfIdx) : null;
@@ -842,7 +842,7 @@ export function PlanejamentoCalendario() {
       if (perfil) map.set(camp.id, perfil);
     });
     return map;
-  }, [campanhas, perfilByParceiroIdMap, campanhaCpfMap, cpfIndexToPerfilMap, celulaAgendadaByCampanhaIdMap, getCelulaPerfil]);
+  }, [campanhasVisiveis, perfilByParceiroIdMap, campanhaCpfMap, cpfIndexToPerfilMap, celulaAgendadaByCampanhaIdMap, getCelulaPerfil]);
 
   const resolveCampanhaIpId = useCallback((campanha: PlanningCampanha) => {
     const celula = celulaAgendadaByCampanhaIdMap.get(campanha.id);
@@ -913,7 +913,7 @@ export function PlanejamentoCalendario() {
   const conflictMap = useMemo(() => {
     const map = new Map<string, Set<string>>();
     const byDay = new Map<string, PlanningCampanha[]>();
-    campanhas.forEach(c => {
+    campanhasVisiveis.forEach(c => {
       if (!byDay.has(c.scheduled_date)) byDay.set(c.scheduled_date, []);
       byDay.get(c.scheduled_date)!.push(c);
     });
@@ -935,10 +935,10 @@ export function PlanejamentoCalendario() {
       });
     });
     return map;
-  }, [campanhas, resolveCampanhaIpId]);
+  }, [campanhasVisiveis, resolveCampanhaIpId]);
 
   // Validador de regras de grupo
-  const { validate } = useGrupoRegrasValidator(campanhas);
+  const { validate } = useGrupoRegrasValidator(campanhasVisiveis);
   const grupoViolationMap = useMemo(() => {
     const map = new Map<string, { hasBlock: boolean; hasWarn: boolean }>();
     campanhas.forEach((c) => {
@@ -958,7 +958,7 @@ export function PlanejamentoCalendario() {
       }
     });
     return map;
-  }, [campanhas, validate]);
+  }, [campanhasVisiveis, validate]);
 
   // Construir grid do mês (semanas)
   const grid = useMemo(() => {
@@ -984,13 +984,13 @@ export function PlanejamentoCalendario() {
 
   const campanhasByDay = useMemo(() => {
     const m = new Map<string, PlanningCampanha[]>();
-    campanhas.forEach(c => {
+    campanhasVisiveis.forEach(c => {
       if (!m.has(c.scheduled_date)) m.set(c.scheduled_date, []);
       m.get(c.scheduled_date)!.push(c);
     });
     m.forEach((list, key) => m.set(key, sortCampanhasByCpf(list)));
     return m;
-  }, [campanhas, sortCampanhasByCpf]);
+  }, [campanhasVisiveis, sortCampanhasByCpf]);
 
   const detailsCampanhas = detailsDate ? (campanhasByDay.get(detailsDate) ?? []) : [];
 
@@ -998,13 +998,13 @@ export function PlanejamentoCalendario() {
   const { totalDia, totalMes, totalCasasMes } = useMemo(() => {
     const dia = new Map<string, number>();
     let mes = 0;
-    campanhas.forEach(c => {
+    campanhasVisiveis.forEach(c => {
       const valorConvertido = convertToDisplay(Number(c.deposit_amount), c.currency);
       dia.set(c.scheduled_date, (dia.get(c.scheduled_date) ?? 0) + valorConvertido);
       mes += valorConvertido;
     });
-    return { totalDia: dia, totalMes: mes, totalCasasMes: campanhas.length };
-  }, [campanhas, convertToDisplay]);
+    return { totalDia: dia, totalMes: mes, totalCasasMes: campanhasVisiveis.length };
+  }, [campanhasVisiveis, convertToDisplay]);
 
   const handleDragStart = (e: DragStartEvent) => setActiveDrag(e.active.data.current);
 
