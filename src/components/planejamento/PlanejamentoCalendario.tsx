@@ -51,6 +51,7 @@ import { useExchangeRates } from "@/contexts/ExchangeRatesContext";
 import { useDistribuicaoPlanos } from "@/hooks/useDistribuicaoPlanos";
 import {
   usePlanoCelulasDisponiveis,
+  useCelulasAgendadasPorCampanhas,
   marcarCelulaAgendada,
   desmarcarCelulaAgendada,
   type CelulaDisponivel,
@@ -491,6 +492,8 @@ export function PlanejamentoCalendario() {
   const { data: celulasPlano = [] } = usePlanoCelulasDisponiveis(
     planoFiltroId !== "none" ? planoFiltroId : null
   );
+  const campanhaIds = useMemo(() => campanhas.map((c) => c.id), [campanhas]);
+  const { data: celulasAgendadas = [] } = useCelulasAgendadasPorCampanhas(campanhaIds);
   const qc = useQueryClient();
 
   // Converte qualquer valor da moeda nativa para a moeda de exibição (BRL ou USD)
