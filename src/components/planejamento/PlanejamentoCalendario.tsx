@@ -595,6 +595,17 @@ export function PlanejamentoCalendario() {
     return map;
   }, [perfisPre]);
 
+  const celulaAgendadaByCampanhaIdMap = useMemo(() => {
+    const map = new Map<string, (typeof celulasAgendadas)[number] | CelulaDisponivel>();
+    celulasAgendadas.forEach((c) => {
+      if (c.campanha_id) map.set(c.campanha_id, c);
+    });
+    celulasPlano.forEach((c) => {
+      if (c.campanha_id) map.set(c.campanha_id, c);
+    });
+    return map;
+  }, [celulasAgendadas, celulasPlano]);
+
   // Filtro da sidebar de casas (modo "casas livres" — quando não há plano selecionado)
   const filteredBookmakers = useMemo(() => {
     return bookmakers.filter(b => {
@@ -725,6 +736,20 @@ export function PlanejamentoCalendario() {
       ?? (celula.cpf_index ? cpfIndexToPerfilMap.get(celula.cpf_index) : null)
       ?? null;
   }, [perfilByIdMap, perfilByParceiroIdMap, cpfIndexToPerfilMap]);
+
+  const resolveCampanhaIpId = useCallback((campanha: PlanningCampanha) => {
+    const celula = celulaAgendadaByCampanhaIdMap.get(campanha.id);
+    const perfilInfo = campanhaPerfilMap.get(campanha.id);
+    const perfilId = perfilInfo?.id ?? celula?.perfil_planejamento_id ?? null;
+    const parceiroId = campanha.parceiro_id ?? perfilInfo?.parceiro_id ?? celula?.parceiro_id ?? null;
+    const bookmakerCatalogoId = campanha.bookmaker_catalogo_id ?? celula?.bookmaker_catalogo_id ?? null;
+    return resolveScopedIpId({
+      directIpId: campanha.ip_id,
+      perfilId,
+      parceiroId,
+      bookmakerCatalogoId,
+    });
+  }, [campanhaPerfilMap, celulaAgendadaByCampanhaIdMap, resolveScopedIpId]);
 
   // Mapa: campanha_id -> cpf_index (para colorir o card no calendário).
   // Estratégias em cascata:
