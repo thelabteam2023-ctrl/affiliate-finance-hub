@@ -1,79 +1,28 @@
-Proponho transformar os planos salvos de distribuição em uma navegação direta dentro do Planejamento de Campanhas, reduzindo o fluxo atual de abrir o select e escolher “Bônus Maio” toda vez.
+Plano para deixar o calendário compacto quando houver muitas casas no mesmo dia:
 
-## Modelo sugerido
+1. Limitar a prévia diária a 5 operações
+   - No calendário mensal, cada dia continuará mostrando as primeiras operações ordenadas por CPF/perfil, como já acontece hoje.
+   - Se o dia tiver mais de 5 casas, as demais ficarão ocultas na célula para evitar que o layout cresça demais e quebre a grade.
 
-Criar uma faixa de acesso rápido acima/ao lado do calendário com os planos salvos como subabas/chips clicáveis:
+2. Adicionar botão “+N” no próprio dia
+   - Abaixo das 5 primeiras operações, exibir um botão compacto do tipo “+17 casas” ou “+17”.
+   - Ao clicar nele, abrir a visão detalhada do dia já existente, com todas as casas daquele dia.
+   - Esse botão também servirá como indicador visual de que existem mais operações não exibidas na célula.
 
-```text
-Calendário Real | Calendário Simulado
+3. Preservar a visão detalhada completa
+   - O modal “Casas planejadas do dia” continuará mostrando todas as operações do dia, sem limite.
+   - A edição, cópia de IP, valores, perfil/CPF e demais informações permanecem disponíveis ali.
 
-[Sem plano] [Bônus Maio] [Bônus Junho] [VIP Maio] [+ Gerenciar]
-```
+4. Ajustar altura/overflow da célula para evitar quebra visual
+   - Trocar o comportamento atual de rolagem interna por uma célula mais estável e compacta.
+   - Manter o rodapé do dia com o resumo “X casas • Σ valor”, para que o total continue visível mesmo com itens ocultos.
+   - Reduzir o risco de a semana ficar desproporcional quando um único dia tiver 20+ demandas.
 
-Ao clicar em uma subaba de plano:
-- O calendário continua no mesmo mês/ano atual.
-- A lateral passa automaticamente para o modo daquele plano.
-- Os filtros de CPF e grupo continuam disponíveis, mas como filtros secundários.
-- O plano ativo fica visualmente destacado.
-- O usuário não precisa abrir o select para acessar o plano salvo.
-
-## Comportamento de UX
-
-1. **Subabas de planos salvos**
-   - Mostrar os planos retornados por `useDistribuicaoPlanos()` como botões horizontais.
-   - Incluir sempre uma opção “Sem plano” para casas livres.
-   - Se houver muitos planos, a lista será rolável horizontalmente para não quebrar o layout.
-
-2. **Persistência da última visualização**
-   - Salvar localmente o último plano aberto pelo usuário.
-   - Quando ele voltar ao Planejamento de Campanhas, abrir direto no último plano selecionado, se ainda existir.
-   - Se o plano tiver sido excluído, voltar para “Sem plano”.
-
-3. **Menos peso na lateral**
-   - O select atual de plano dentro da sidebar deixa de ser o caminho principal.
-   - Podemos remover esse select ou mantê-lo como fallback compacto, mas a recomendação é remover para evitar duplicidade.
-   - A sidebar fica focada em: progresso do plano, filtros por grupo/CPF, busca e lista de casas/células.
-
-4. **Acesso ao Gerenciador de Recursos**
-   - Manter o botão “Gerenciar recursos”.
-   - Adicionar também um botão pequeno “Gerenciar” ao fim das subabas para o usuário chegar rapidamente onde cria/exclui planos.
-
-## O que muda na prática
-
-Hoje:
-```text
-Entrar no planejamento → abrir select → escolher Bônus Maio → visualizar células
-```
-
-Depois:
-```text
-Entrar no planejamento → clicar direto em Bônus Maio
-```
-
-Ou, se foi o último usado:
-```text
-Entrar no planejamento → Bônus Maio já abre automaticamente
-```
-
-## Ajustes técnicos previstos
-
-Arquivos principais:
-- `src/components/planejamento/PlanejamentoCalendario.tsx`
-- Possivelmente criação de um componente pequeno, por exemplo `PlanejamentoPlanoTabs.tsx`, para manter o calendário mais organizado.
-
-Implementação:
-- Trocar a seleção principal baseada apenas no `<Select>` por uma navegação de botões/chips usando o mesmo estado `planoFiltroId`.
-- Inicializar `planoFiltroId` a partir de `localStorage`, com validação contra a lista real de planos carregados.
-- Persistir mudanças em uma chave local, por exemplo `planejamento:planoFiltroId`.
-- Resetar `grupoFiltroId` e `cpfFiltroIdx` quando o usuário trocar de plano, mantendo o comportamento atual.
-- Manter isolamento por workspace e sem alterar dados financeiros, apostas, registros ou estrutura de banco.
-
-## Segurança e dados
-
-Não é necessário alterar banco de dados para esse modelo.
-A mudança é apenas de navegação/visualização no frontend.
-Os dados continuam sendo carregados pelas queries existentes e filtrados pelo workspace atual.
-
-## Resultado esperado
-
-A tela passa a funcionar como uma central de planos salvos: o usuário visualiza rapidamente “Bônus Maio”, “Bônus Junho” ou qualquer distribuição criada, sem depender do select escondido na lateral e com menos cliques para chegar à operação desejada.
+Detalhes técnicos:
+- Alterar `src/components/planejamento/PlanejamentoCalendario.tsx`.
+- Criar uma constante como `MAX_VISIBLE_CAMPANHAS_PER_DAY = 5`.
+- Na renderização do calendário, separar `visibleDayCamps = dayCamps.slice(0, 5)` e `hiddenCount = dayCamps.length - visibleDayCamps.length`.
+- Renderizar `DraggableCampanha` apenas para `visibleDayCamps`.
+- Renderizar um botão compacto quando `hiddenCount > 0`, chamando `setDetailsDate(key)`.
+- Garantir `stopPropagation` no botão para não causar cliques duplicados.
+- A lista do modal continuará usando `detailsCampanhas`, sem alteração no limite.

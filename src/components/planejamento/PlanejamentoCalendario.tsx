@@ -62,6 +62,7 @@ type DisplayCurrency = "BRL" | "USD";
 const MES_NOMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const PLANO_FILTRO_STORAGE_KEY = "planejamento:planoFiltroId";
+const MAX_VISIBLE_CAMPANHAS_PER_DAY = 5;
 
 function formatDateKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -431,7 +432,7 @@ function DayCell({ date, isCurrentMonth, children, onAdd, onOpenDetails }: {
       <div className="flex items-center justify-between">
         <span className={cn("text-xs font-medium", isToday && !isPast && "text-primary", isPast && "text-muted-foreground")}>{date.getDate()}</span>
       </div>
-      <div className="flex-1 flex flex-col gap-1 overflow-y-auto">{children}</div>
+      <div className="flex-1 min-h-0 flex flex-col gap-1 overflow-hidden">{children}</div>
     </div>
   );
 }
