@@ -29,18 +29,23 @@ import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
 
-interface Props { open: boolean; onOpenChange: (v: boolean) => void; }
+interface Props {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  initialTab?: "casas" | "perfis" | "ips" | "wallets" | "distribuicao";
+  onPlanoCriado?: (planoId: string) => void;
+}
 
 import DistribuicaoTab from "./DistribuicaoTab";
 
-export function RecursosManager({ open, onOpenChange }: Props) {
+export function RecursosManager({ open, onOpenChange, initialTab = "casas", onPlanoCriado }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Gerenciar recursos</DialogTitle>
         </DialogHeader>
-        <Tabs defaultValue="casas" className="flex-1 flex flex-col min-h-0">
+        <Tabs defaultValue={initialTab} className="flex-1 flex flex-col min-h-0">
           <TabsList>
             <TabsTrigger value="casas">Casas</TabsTrigger>
             <TabsTrigger value="perfis">Perfis</TabsTrigger>
@@ -52,7 +57,7 @@ export function RecursosManager({ open, onOpenChange }: Props) {
           <TabsContent value="perfis" className="flex-1 overflow-y-auto"><PerfisList /></TabsContent>
           <TabsContent value="ips" className="flex-1 overflow-y-auto"><IpsList /></TabsContent>
           <TabsContent value="wallets" className="flex-1 overflow-y-auto"><WalletsList /></TabsContent>
-          <TabsContent value="distribuicao" className="flex-1 overflow-y-auto"><DistribuicaoTab /></TabsContent>
+          <TabsContent value="distribuicao" className="flex-1 overflow-y-auto"><DistribuicaoTab onPlanoCriado={onPlanoCriado} /></TabsContent>
         </Tabs>
       </DialogContent>
     </Dialog>
