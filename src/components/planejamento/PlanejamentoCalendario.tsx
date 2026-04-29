@@ -886,11 +886,13 @@ export function PlanejamentoCalendario() {
       const ipCount = new Map<string, number>();
       const pCount = new Map<string, number>();
       list.forEach(c => {
-        if (c.ip_id) ipCount.set(c.ip_id, (ipCount.get(c.ip_id) ?? 0) + 1);
+        const resolvedIpId = resolveCampanhaIpId(c);
+        if (resolvedIpId) ipCount.set(resolvedIpId, (ipCount.get(resolvedIpId) ?? 0) + 1);
         if (c.parceiro_id) pCount.set(c.parceiro_id, (pCount.get(c.parceiro_id) ?? 0) + 1);
       });
       list.forEach(c => {
-        const conflict = (c.ip_id && (ipCount.get(c.ip_id) ?? 0) > 1) || (c.parceiro_id && (pCount.get(c.parceiro_id) ?? 0) > 1);
+        const resolvedIpId = resolveCampanhaIpId(c);
+        const conflict = (resolvedIpId && (ipCount.get(resolvedIpId) ?? 0) > 1) || (c.parceiro_id && (pCount.get(c.parceiro_id) ?? 0) > 1);
         if (conflict) {
           if (!map.has(c.scheduled_date)) map.set(c.scheduled_date, new Set());
           map.get(c.scheduled_date)!.add(c.id);
@@ -898,7 +900,7 @@ export function PlanejamentoCalendario() {
       });
     });
     return map;
-  }, [campanhas]);
+  }, [campanhas, resolveCampanhaIpId]);
 
   // Validador de regras de grupo
   const { validate } = useGrupoRegrasValidator(campanhas);
