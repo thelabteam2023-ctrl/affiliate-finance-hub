@@ -1372,6 +1372,8 @@ export function PlanejamentoCalendario() {
             {grid.map((cell, idx) => {
               const key = formatDateKey(cell.date);
               const dayCamps = campanhasByDay.get(key) ?? [];
+              const visibleDayCamps = dayCamps.slice(0, MAX_VISIBLE_CAMPANHAS_PER_DAY);
+              const hiddenDayCampsCount = dayCamps.length - visibleDayCamps.length;
               const dayTotal = totalDia.get(key) ?? 0;
               const dayConflicts = conflictMap.get(key) ?? new Set();
               return (
@@ -1382,7 +1384,7 @@ export function PlanejamentoCalendario() {
                     onAdd={() => undefined}
                     onOpenDetails={() => setDetailsDate(key)}
                   >
-                    {dayCamps.map(c => {
+                    {visibleDayCamps.map(c => {
                       const grupoStatus = grupoViolationMap.get(c.id);
                       const resolvedIpId = resolveCampanhaIpId(c);
                       return (
@@ -1403,6 +1405,21 @@ export function PlanejamentoCalendario() {
                         />
                       );
                     })}
+                    {hiddenDayCampsCount > 0 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-full justify-center rounded border border-dashed border-muted-foreground/30 bg-muted/30 px-2 text-[10px] font-semibold text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDetailsDate(key);
+                        }}
+                      >
+                        <Plus className="mr-1 h-3 w-3" />
+                        {hiddenDayCampsCount} {hiddenDayCampsCount === 1 ? "casa" : "casas"}
+                      </Button>
+                    )}
                     {dayTotal > 0 && (
                       <div className="text-[10px] text-muted-foreground border-t pt-0.5 mt-auto">
                         {dayCamps.length} casas • Σ {formatMoney(dayTotal, displayCurrency)}
