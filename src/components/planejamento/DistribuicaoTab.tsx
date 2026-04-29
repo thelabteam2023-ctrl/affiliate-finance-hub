@@ -56,7 +56,11 @@ interface CatalogoItem {
   moeda_padrao: string;
 }
 
-export default function DistribuicaoTab() {
+interface DistribuicaoTabProps {
+  onPlanoCriado?: (planoId: string) => void;
+}
+
+export default function DistribuicaoTab({ onPlanoCriado }: DistribuicaoTabProps) {
   const { workspaceId } = useAuth();
   const { grupos, membros, isLoading: gruposLoading } = useBookmakerGrupos();
   const { data: perfis = [] } = usePlanningPerfis();
@@ -223,6 +227,11 @@ export default function DistribuicaoTab() {
           ordem: idx,
         })),
       },
+      {
+        onSuccess: (plano: any) => {
+          if (plano?.id) onPlanoCriado?.(plano.id);
+        },
+      },
     );
   };
 
@@ -325,8 +334,7 @@ export default function DistribuicaoTab() {
     <>
     <div className="space-y-4">
       <div className="text-xs text-muted-foreground">
-        Use os perfis e os grupos de casas já cadastrados. Cada grupo é distribuído de acordo com a
-        regra escolhida. Apenas casas que estão no Planejamento entram na distribuição.
+        Crie primeiro o plano, escolha os perfis e grupos, gere a distribuição e salve para abrir o calendário desse plano.
       </div>
 
       {/* Nome */}
@@ -710,8 +718,7 @@ export default function DistribuicaoTab() {
       <div className="rounded-md border border-primary/30 bg-primary/5 p-2.5 text-[11px] text-muted-foreground flex items-start gap-2">
         <CalendarRange className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
         <span>
-          Após salvar o plano, vá para a aba <strong>Calendário</strong> e use o filtro
-          "Plano + CPF" no painel "Casas disponíveis" para arrastar as casas para os dias desejados.
+          Após salvar, o calendário abre automaticamente no novo plano para você arrastar as casas disponíveis para os dias.
         </span>
       </div>
 

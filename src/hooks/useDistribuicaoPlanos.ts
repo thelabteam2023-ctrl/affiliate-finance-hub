@@ -146,8 +146,13 @@ export function useDistribuicaoPlanos() {
 
       return plano;
     },
-    onSuccess: () => {
+    onSuccess: (plano) => {
       toast.success("Plano de distribuição salvo");
+      qc.setQueryData<DistribuicaoPlano[]>([KEY, workspaceId], (cur) => {
+        if (!cur) return [plano as DistribuicaoPlano];
+        if (cur.some((p) => p.id === plano.id)) return cur;
+        return [plano as DistribuicaoPlano, ...cur];
+      });
       invalidate();
     },
     onError: (e: any) => toast.error(e.message || "Erro ao salvar plano"),

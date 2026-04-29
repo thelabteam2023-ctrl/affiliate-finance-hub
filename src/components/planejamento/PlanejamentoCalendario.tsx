@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { ChevronLeft, ChevronRight, Settings2, Plus, AlertTriangle, MapPin, User, Search, Building2, Trash2, ChevronDown, ChevronUp, ShieldAlert, Pencil, Sparkles, Copy } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, AlertTriangle, MapPin, User, Search, Building2, Trash2, ChevronDown, ChevronUp, ShieldAlert, Pencil, Sparkles, Copy } from "lucide-react";
 import { SimulacaoDistribuicaoDialog } from "./SimulacaoDistribuicaoDialog";
 import {
   ContextMenu,
@@ -28,12 +28,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { RegulamentacaoFilter, RegFilterValue } from "./RegulamentacaoFilter";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   PlanningCampanha,
-  usePlanningCasas,
   usePlanningCampanhas,
   usePlanningIps,
   usePlanningWallets,
@@ -64,7 +62,6 @@ type DisplayCurrency = "BRL" | "USD";
 const MES_NOMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const PLANO_FILTRO_STORAGE_KEY = "planejamento:planoFiltroId";
-const PLANO_TODOS_VALUE = "all";
 
 function formatDateKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -433,11 +430,6 @@ function DayCell({ date, isCurrentMonth, children, onAdd, onOpenDetails }: {
     >
       <div className="flex items-center justify-between">
         <span className={cn("text-xs font-medium", isToday && !isPast && "text-primary", isPast && "text-muted-foreground")}>{date.getDate()}</span>
-        {isCurrentMonth && !isPast && (
-          <button onClick={(e) => { e.stopPropagation(); onAdd(); }} className="opacity-0 hover:opacity-100 group-hover:opacity-100 text-muted-foreground hover:text-primary">
-            <Plus className="h-3 w-3" />
-          </button>
-        )}
       </div>
       <div className="flex-1 flex flex-col gap-1 overflow-y-auto">{children}</div>
     </div>
@@ -454,14 +446,12 @@ export function PlanejamentoCalendario() {
   const [editing, setEditing] = useState<{ date: string; campanha?: PlanningCampanha; initialBookmaker?: any } | null>(null);
   const [activeDrag, setActiveDrag] = useState<any>(null);
   const [bmSearch, setBmSearch] = useState("");
-  const [bmFilter, setBmFilter] = useState<RegFilterValue>("all");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [selectedBookmakerIds, setSelectedBookmakerIds] = useState<Set<string>>(() => new Set());
   const [selectedCelulaIds, setSelectedCelulaIds] = useState<Set<string>>(() => new Set());
   const [planoFiltroId, setPlanoFiltroId] = useState<string>(() => {
-    if (typeof window === "undefined") return "none";
-    return window.localStorage.getItem(PLANO_FILTRO_STORAGE_KEY) || "none";
-  }); // "none" = mostrar casas livres
+    if (typeof window === "undefined") return "";
+    return window.localStorage.getItem(PLANO_FILTRO_STORAGE_KEY) || "";
+  });
   const [grupoFiltroId, setGrupoFiltroId] = useState<string>("todos"); // "todos" = sem filtro de grupo
   const [cpfFiltroIdx, setCpfFiltroIdx] = useState<string>("todos"); // "todos" = sem filtro de CPF
   const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>(() => {
@@ -484,7 +474,6 @@ export function PlanejamentoCalendario() {
   const [detailsDate, setDetailsDate] = useState<string | null>(null);
 
   const { data: campanhas = [] } = usePlanningCampanhas(year, month);
-  const { data: casasPlan = [] } = usePlanningCasas();
   const { data: ips = [] } = usePlanningIps();
   const { data: wallets = [] } = usePlanningWallets();
   const { data: parceiros = [] } = useParceirosLite();
@@ -495,7 +484,7 @@ export function PlanejamentoCalendario() {
   const { convertToBRL, cotacaoUSD, isUsingFallback } = useExchangeRates();
   const { planos, isLoading: planosLoading } = useDistribuicaoPlanos();
   const { data: celulasPlano = [] } = usePlanoCelulasDisponiveis(
-    planoFiltroId !== "none" && planoFiltroId !== PLANO_TODOS_VALUE ? planoFiltroId : null
+    planoFiltroId || null
   );
   const campanhaIds = useMemo(() => campanhas.map((c) => c.id), [campanhas]);
   const { data: celulasAgendadas = [] } = useCelulasAgendadasPorCampanhas(campanhaIds);
@@ -509,12 +498,6 @@ export function PlanejamentoCalendario() {
     // USD: converte BRL → USD
     return cotacaoUSD > 0 ? valueInBRL / cotacaoUSD : 0;
   }, [convertToBRL, cotacaoUSD, displayCurrency]);
-
-  // Casas ativas pré-selecionadas para o workspace
-  const bookmakers = useMemo(
-    () => casasPlan.filter(p => p.is_active && p.casa).map(p => p.casa!),
-    [casasPlan]
-  );
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -615,15 +598,6 @@ export function PlanejamentoCalendario() {
     return map;
   }, [celulasAgendadas, celulasPlano]);
 
-  // Filtro da sidebar de casas (modo "casas livres" — quando não há plano selecionado)
-  const filteredBookmakers = useMemo(() => {
-    return bookmakers.filter(b => {
-      if (bmFilter !== "all" && b.status !== bmFilter) return false;
-      if (bmSearch && !b.nome.toLowerCase().includes(bmSearch.toLowerCase())) return false;
-      return true;
-    });
-  }, [bookmakers, bmFilter, bmSearch]);
-
   // Filtro de células do plano (modo "plano selecionado")
   const filteredCelulas = useMemo(() => {
     return celulasPlano.filter((c) => {
@@ -638,14 +612,6 @@ export function PlanejamentoCalendario() {
   }, [celulasPlano, grupoFiltroId, cpfFiltroIdx, bmSearch]);
 
   useEffect(() => {
-    const visibleIds = new Set(filteredBookmakers.map((b) => b.id));
-    setSelectedBookmakerIds((prev) => {
-      const next = new Set(Array.from(prev).filter((id) => visibleIds.has(id)));
-      return next.size === prev.size ? prev : next;
-    });
-  }, [filteredBookmakers]);
-
-  useEffect(() => {
     const visibleIds = new Set(filteredCelulas.map((c) => c.id));
     setSelectedCelulaIds((prev) => {
       const next = new Set(Array.from(prev).filter((id) => visibleIds.has(id)));
@@ -653,27 +619,11 @@ export function PlanejamentoCalendario() {
     });
   }, [filteredCelulas]);
 
-  const selectedBookmakerBatch = useMemo<BookmakerDragItem[]>(() => {
-    return filteredBookmakers
-      .filter((b) => selectedBookmakerIds.has(b.id))
-      .map((b) => ({ id: b.id, nome: b.nome, moeda: b.moeda_padrao }));
-  }, [filteredBookmakers, selectedBookmakerIds]);
-
   const selectedCelulaBatch = useMemo(() => {
     return filteredCelulas.filter((c) => selectedCelulaIds.has(c.id));
   }, [filteredCelulas, selectedCelulaIds]);
 
-  const toggleBookmakerSelection = useCallback((id: string) => {
-    setSelectedCelulaIds(new Set());
-    setSelectedBookmakerIds((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  }, []);
-
   const toggleCelulaSelection = useCallback((id: string) => {
-    setSelectedBookmakerIds(new Set());
     setSelectedCelulaIds((prev) => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
@@ -682,7 +632,6 @@ export function PlanejamentoCalendario() {
   }, []);
 
   const clearSelection = useCallback(() => {
-    setSelectedBookmakerIds(new Set());
     setSelectedCelulaIds(new Set());
   }, []);
 
@@ -706,8 +655,7 @@ export function PlanejamentoCalendario() {
     return Array.from(map.values());
   }, [celulasPlano]);
 
-  const modoTodosPlanos = planoFiltroId === PLANO_TODOS_VALUE;
-  const modoPlano = planoFiltroId !== "none" && !modoTodosPlanos;
+  const modoPlano = !!planoFiltroId;
   const campanhaPlanoIdMap = useMemo(() => {
     const map = new Map<string, string>();
     celulasAgendadas.forEach((celula) => {
@@ -717,10 +665,9 @@ export function PlanejamentoCalendario() {
   }, [celulasAgendadas]);
 
   const campanhasVisiveis = useMemo(() => {
-    if (modoTodosPlanos) return campanhas;
-    if (modoPlano) return campanhas.filter((camp) => campanhaPlanoIdMap.get(camp.id) === planoFiltroId);
-    return campanhas.filter((camp) => !campanhaPlanoIdMap.has(camp.id));
-  }, [campanhas, campanhaPlanoIdMap, modoPlano, modoTodosPlanos, planoFiltroId]);
+    if (!modoPlano) return [];
+    return campanhas.filter((camp) => campanhaPlanoIdMap.get(camp.id) === planoFiltroId);
+  }, [campanhas, campanhaPlanoIdMap, modoPlano, planoFiltroId]);
 
   // Plano selecionado (para extrair parceiro_ids e mapear CPF por posição)
   const planoSelecionado = useMemo(
@@ -737,9 +684,10 @@ export function PlanejamentoCalendario() {
   }, []);
 
   useEffect(() => {
-    if (planosLoading || planoFiltroId === "none" || planoFiltroId === PLANO_TODOS_VALUE) return;
-    if (!planos.some((p) => p.id === planoFiltroId)) {
-      selectPlanoFiltro("none");
+    if (planosLoading) return;
+    const planoExiste = planoFiltroId && planos.some((p) => p.id === planoFiltroId);
+    if (!planoExiste) {
+      selectPlanoFiltro(planos[0]?.id ?? "");
     }
   }, [planos, planosLoading, planoFiltroId, selectPlanoFiltro]);
 
@@ -873,7 +821,7 @@ export function PlanejamentoCalendario() {
   }, [campanhaCpfMap, campanhaPlanoOrderMap]);
 
   // (modoPlano declarado acima)
-  const sidebarItemsCount = modoPlano ? filteredCelulas.length : filteredBookmakers.length;
+  const sidebarItemsCount = modoPlano ? filteredCelulas.length : 0;
 
   const planoProgress = useMemo(() => {
     if (!modoPlano) return null;
@@ -1104,39 +1052,8 @@ export function PlanejamentoCalendario() {
       else if (ok > 0) toast.success(ok === 1 ? `${celulas[0]?.bookmaker_nome} agendada` : `${ok} células agendadas`);
       else toast.error("Nenhuma célula pôde ser agendada");
     } else if (data?.type === "bookmaker" || data?.type === "bookmaker-batch") {
-      const items: BookmakerDragItem[] = data?.type === "bookmaker-batch" ? data.items ?? [] : [{ id: data.bookmakerId, nome: data.nome, moeda: data.moeda }];
-      let ok = 0;
-      let blocked = 0;
-      for (const item of items) {
-      const linkedIpId = resolveScopedIpId({ bookmakerCatalogoId: item.id });
-      // Valida regras de grupo antes de criar campanha pendente
-      const check = validate({
-        bookmaker_catalogo_id: item.id,
-        parceiro_id: null,
-        ip_id: linkedIpId,
-        wallet_id: null,
-        scheduled_date: dateKey,
-      });
-      if (check.violations.length > 0) {
-        blocked++;
-        continue;
-      }
-      // Cria campanha PENDENTE imediatamente (sem abrir modal)
-      await upsert.mutateAsync({
-        scheduled_date: dateKey,
-        bookmaker_catalogo_id: item.id,
-        bookmaker_nome: item.nome,
-        currency: item.moeda,
-        deposit_amount: 0,
-        ip_id: linkedIpId,
-        status: "planned",
-      });
-      ok++;
-      }
-      clearSelection();
-      if (ok > 0 && blocked > 0) toast.warning(`${ok} casas agendadas, ${blocked} bloqueadas por regra`);
-      else if (ok > 0) toast.success(ok === 1 ? `${items[0]?.nome} agendada` : `${ok} casas agendadas`);
-      else toast.error("Nenhuma casa pôde ser agendada");
+      toast.error("Crie ou selecione um plano antes de inserir casas no calendário.");
+      return;
     } else if (data?.type === "campanha") {
       // Mover campanha existente para outra data → pede confirmação
       const camp = campanhas.find(c => c.id === data.campanhaId);
@@ -1206,10 +1123,10 @@ export function PlanejamentoCalendario() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setRecursosOpen(true)}
-                title="Gerenciar recursos"
+                title="Assistente de plano"
                 className="h-8 w-8"
               >
-                <Settings2 className="h-4 w-4" />
+                <Plus className="h-4 w-4" />
               </Button>
             </>
           ) : (
@@ -1230,15 +1147,13 @@ export function PlanejamentoCalendario() {
                 </div>
               </div>
               <p className="text-[11px] text-muted-foreground">
-                {modoPlano
-                  ? "Células do plano — Ctrl/Cmd + clique seleciona várias"
-                  : "Ctrl/Cmd + clique seleciona várias"}
+                Células do plano ativo — Ctrl/Cmd + clique seleciona várias
               </p>
 
-              {(selectedBookmakerIds.size > 0 || selectedCelulaIds.size > 0) && (
+              {selectedCelulaIds.size > 0 && (
                 <div className="flex items-center justify-between rounded-md border bg-primary/10 px-2 py-1 text-[11px] text-primary">
                   <span className="font-medium">
-                    {selectedBookmakerIds.size + selectedCelulaIds.size} selecionada(s)
+                    {selectedCelulaIds.size} selecionada(s)
                   </span>
                   <button type="button" className="hover:underline" onClick={clearSelection}>
                     Limpar
@@ -1342,65 +1257,32 @@ export function PlanejamentoCalendario() {
                 />
               </div>
 
-              {/* Filtro de regulamentação só faz sentido em modo "casas livres" */}
-              {!modoPlano && (
-                <RegulamentacaoFilter
-                  value={bmFilter}
-                  onChange={setBmFilter}
-                  size="sm"
-                  orientation="vertical"
-                />
-              )}
-
               <TrashDropZone active={activeDrag?.type === "campanha"} />
 
               <div className="flex-1 overflow-y-auto space-y-1 mt-1 -mx-1 px-1">
-                {modoPlano ? (
-                  <>
-                    {filteredCelulas.map((c) => (
-                      <DraggableCelula
-                        key={c.id}
-                        celula={c}
-                        parceiroNome={getCelulaPerfil(c)?.parceiro_id ? parceiroMap[getCelulaPerfil(c)!.parceiro_id!]?.nome : undefined}
-                        perfilCor={getCelulaPerfil(c)?.cor}
-                        selected={selectedCelulaIds.has(c.id)}
-                        selectedBatch={selectedCelulaBatch}
-                        onToggleSelect={() => toggleCelulaSelection(c.id)}
-                      />
-                    ))}
-                    {filteredCelulas.length === 0 && (
-                      <p className="text-xs text-muted-foreground italic text-center py-4">
-                        {celulasPlano.length === 0
-                          ? "Plano sem células."
-                          : "Sem resultados."}
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    {filteredBookmakers.map(b => (
-                      <DraggableBookmaker
-                        key={b.id}
-                        id={b.id}
-                        nome={b.nome}
-                        moeda={b.moeda_padrao}
-                        status={b.status}
-                        logoUrl={b.logo_url}
-                        selected={selectedBookmakerIds.has(b.id)}
-                        selectedBatch={selectedBookmakerBatch}
-                        onToggleSelect={() => toggleBookmakerSelection(b.id)}
-                      />
-                    ))}
-                    {filteredBookmakers.length === 0 && (
-                      <p className="text-xs text-muted-foreground italic text-center py-4">
-                        {bookmakers.length === 0 ? "Nenhuma casa cadastrada." : "Sem resultados."}
-                      </p>
-                    )}
-                  </>
+                {filteredCelulas.map((c) => (
+                  <DraggableCelula
+                    key={c.id}
+                    celula={c}
+                    parceiroNome={getCelulaPerfil(c)?.parceiro_id ? parceiroMap[getCelulaPerfil(c)!.parceiro_id!]?.nome : undefined}
+                    perfilCor={getCelulaPerfil(c)?.cor}
+                    selected={selectedCelulaIds.has(c.id)}
+                    selectedBatch={selectedCelulaBatch}
+                    onToggleSelect={() => toggleCelulaSelection(c.id)}
+                  />
+                ))}
+                {filteredCelulas.length === 0 && (
+                  <p className="text-xs text-muted-foreground italic text-center py-4">
+                    {!planoFiltroId
+                      ? "Crie um plano para começar."
+                      : celulasPlano.length === 0
+                      ? "Plano sem células."
+                      : "Sem resultados."}
+                  </p>
                 )}
               </div>
               <Button variant="outline" size="sm" onClick={() => setRecursosOpen(true)}>
-                <Settings2 className="h-4 w-4 mr-1" /> Gerenciar recursos
+                <Plus className="h-4 w-4 mr-1" /> Assistente de plano
               </Button>
             </>
           )}
@@ -1409,22 +1291,6 @@ export function PlanejamentoCalendario() {
         {/* Calendário */}
         <div className="flex-1 flex flex-col gap-3 min-w-0">
           <div className="flex items-center gap-2 overflow-x-auto rounded-lg border bg-card/60 p-1.5">
-            <Button
-              variant={planoFiltroId === "none" ? "default" : "ghost"}
-              size="sm"
-              className="h-7 shrink-0 px-3 text-xs"
-              onClick={() => selectPlanoFiltro("none")}
-            >
-              Sem plano
-            </Button>
-            <Button
-              variant={planoFiltroId === PLANO_TODOS_VALUE ? "default" : "ghost"}
-              size="sm"
-              className="h-7 shrink-0 px-3 text-xs"
-              onClick={() => selectPlanoFiltro(PLANO_TODOS_VALUE)}
-            >
-              Todos
-            </Button>
             {planos.map((plano) => (
               <Button
                 key={plano.id}
@@ -1437,6 +1303,9 @@ export function PlanejamentoCalendario() {
                 <span className="truncate">{plano.nome}</span>
               </Button>
             ))}
+            {!planosLoading && planos.length === 0 && (
+              <span className="px-2 text-xs text-muted-foreground shrink-0">Nenhum plano criado</span>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -1444,7 +1313,7 @@ export function PlanejamentoCalendario() {
               onClick={() => setRecursosOpen(true)}
             >
               <Plus className="mr-1 h-3.5 w-3.5" />
-              Adicionar plano
+              Novo plano
             </Button>
           </div>
 
@@ -1509,7 +1378,7 @@ export function PlanejamentoCalendario() {
                   <DayCell
                     date={cell.date}
                     isCurrentMonth={cell.isCurrentMonth}
-                    onAdd={() => setEditing({ date: key })}
+                    onAdd={() => undefined}
                     onOpenDetails={() => setDetailsDate(key)}
                   >
                     {dayCamps.map(c => {
@@ -1650,7 +1519,15 @@ export function PlanejamentoCalendario() {
         </DialogContent>
       </Dialog>
 
-      <RecursosManager open={recursosOpen} onOpenChange={setRecursosOpen} />
+      <RecursosManager
+        open={recursosOpen}
+        onOpenChange={setRecursosOpen}
+        initialTab="distribuicao"
+        onPlanoCriado={(planoId) => {
+          selectPlanoFiltro(planoId);
+          setRecursosOpen(false);
+        }}
+      />
 
       <AlertDialog open={!!pendingMove} onOpenChange={(v) => !v && setPendingMove(null)}>
         <AlertDialogContent>
@@ -1690,9 +1567,10 @@ export function PlanejamentoCalendario() {
         open={simulacaoOpen}
         onOpenChange={setSimulacaoOpen}
         celulas={celulasPlano}
-        campanhasExistentes={campanhas}
+        campanhasExistentes={campanhasVisiveis}
         year={year}
         month={month}
+        planoId={planoFiltroId}
       />
     </DndContext>
   );
