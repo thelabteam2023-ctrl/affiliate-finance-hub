@@ -43,7 +43,7 @@ export function RecursosManager({ open, onOpenChange, initialTab = "casas", onPl
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Gerenciar recursos</DialogTitle>
+          <DialogTitle>{initialTab === "distribuicao" ? "Assistente de plano" : "Gerenciar recursos"}</DialogTitle>
         </DialogHeader>
         <Tabs defaultValue={initialTab} className="flex-1 flex flex-col min-h-0">
           <TabsList>
