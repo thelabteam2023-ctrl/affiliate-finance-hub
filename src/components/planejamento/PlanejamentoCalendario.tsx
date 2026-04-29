@@ -866,7 +866,7 @@ export function PlanejamentoCalendario() {
   }, [campanhaCpfMap, campanhaPlanoOrderMap]);
 
   // (modoPlano declarado acima)
-  const sidebarItemsCount = modoPlano ? filteredCelulas.length : filteredBookmakers.length;
+  const sidebarItemsCount = modoPlano ? filteredCelulas.length : 0;
 
   const planoProgress = useMemo(() => {
     if (!modoPlano) return null;
@@ -1097,6 +1097,8 @@ export function PlanejamentoCalendario() {
       else if (ok > 0) toast.success(ok === 1 ? `${celulas[0]?.bookmaker_nome} agendada` : `${ok} células agendadas`);
       else toast.error("Nenhuma célula pôde ser agendada");
     } else if (data?.type === "bookmaker" || data?.type === "bookmaker-batch") {
+      toast.error("Crie ou selecione um plano antes de inserir casas no calendário.");
+      return;
       const items: BookmakerDragItem[] = data?.type === "bookmaker-batch" ? data.items ?? [] : [{ id: data.bookmakerId, nome: data.nome, moeda: data.moeda }];
       let ok = 0;
       let blocked = 0;
