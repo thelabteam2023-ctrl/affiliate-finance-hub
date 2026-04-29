@@ -570,7 +570,11 @@ export function PlanejamentoCalendario() {
     const validDirectIpId = (() => {
       if (!directIpId) return null;
       const ip = ipMap[directIpId];
-      if (!ip?.is_active || ip.bookmaker_catalogo_id !== bookmakerCatalogoId) return null;
+      if (!ip?.is_active) return null;
+      if (ip.bookmaker_catalogo_id && ip.bookmaker_catalogo_id !== bookmakerCatalogoId) return null;
+      // Se a campanha salvou ip_id diretamente, ele é a fonte mais forte.
+      // O perfil/CPF pode ser inferido de plano diferente em outras abas/usuários.
+      if (ip.bookmaker_catalogo_id === bookmakerCatalogoId || !ip.bookmaker_catalogo_id) return directIpId;
       if (perfilId && ip.perfil_planejamento_id === perfilId) return directIpId;
       if (parceiroId && ip.perfil_planejamento_id) {
         const ipPerfil = perfilByIdMap.get(ip.perfil_planejamento_id);
@@ -583,7 +587,7 @@ export function PlanejamentoCalendario() {
     return validDirectIpId
       ?? (perfilId ? ipByPerfilBookmakerMap.get(`${perfilId}:${bookmakerCatalogoId}`) : null)
       ?? (parceiroId ? ipByParceiroBookmakerMap.get(`${parceiroId}:${bookmakerCatalogoId}`) : null)
-      ?? (!perfilId && !parceiroId ? ipByBookmakerMap.get(bookmakerCatalogoId) : null)
+      ?? ipByBookmakerMap.get(bookmakerCatalogoId)
       ?? null;
   }, [ipByBookmakerMap, ipByParceiroBookmakerMap, ipByPerfilBookmakerMap, ipMap, perfilByIdMap]);
 
