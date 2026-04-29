@@ -712,6 +712,22 @@ export function PlanejamentoCalendario() {
     () => planos.find((p) => p.id === planoFiltroId) ?? null,
     [planos, planoFiltroId]
   );
+  const selectPlanoFiltro = useCallback((planoId: string) => {
+    setPlanoFiltroId(planoId);
+    setGrupoFiltroId("todos");
+    setCpfFiltroIdx("todos");
+    try {
+      window.localStorage.setItem(PLANO_FILTRO_STORAGE_KEY, planoId);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (planosLoading || planoFiltroId === "none") return;
+    if (!planos.some((p) => p.id === planoFiltroId)) {
+      selectPlanoFiltro("none");
+    }
+  }, [planos, planosLoading, planoFiltroId, selectPlanoFiltro]);
+
   const parceiroIdToCpfIdx = useMemo(() => {
     const m = new Map<string, number>();
     const ids: string[] = (planoSelecionado as any)?.parceiro_ids ?? [];
