@@ -1595,7 +1595,15 @@ export function PlanejamentoCalendario() {
         </DialogContent>
       </Dialog>
 
-      <RecursosManager open={recursosOpen} onOpenChange={setRecursosOpen} initialTab="distribuicao" />
+      <RecursosManager
+        open={recursosOpen}
+        onOpenChange={setRecursosOpen}
+        initialTab="distribuicao"
+        onPlanoCriado={(planoId) => {
+          selectPlanoFiltro(planoId);
+          setRecursosOpen(false);
+        }}
+      />
 
       <AlertDialog open={!!pendingMove} onOpenChange={(v) => !v && setPendingMove(null)}>
         <AlertDialogContent>
