@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { ChevronLeft, ChevronRight, Settings2, Plus, AlertTriangle, MapPin, User, Search, Building2, Trash2, ChevronDown, ChevronUp, ShieldAlert, Pencil, Sparkles, Copy } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, AlertTriangle, MapPin, User, Search, Building2, Trash2, ChevronDown, ChevronUp, ShieldAlert, Pencil, Sparkles, Copy } from "lucide-react";
 import { SimulacaoDistribuicaoDialog } from "./SimulacaoDistribuicaoDialog";
 import {
   ContextMenu,
@@ -28,12 +28,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { RegulamentacaoFilter, RegFilterValue } from "./RegulamentacaoFilter";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   PlanningCampanha,
-  usePlanningCasas,
   usePlanningCampanhas,
   usePlanningIps,
   usePlanningWallets,
