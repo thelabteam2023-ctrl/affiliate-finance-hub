@@ -598,15 +598,6 @@ export function PlanejamentoCalendario() {
     return map;
   }, [celulasAgendadas, celulasPlano]);
 
-  // Filtro da sidebar de casas (modo "casas livres" — quando não há plano selecionado)
-  const filteredBookmakers = useMemo(() => {
-    return bookmakers.filter(b => {
-      if (bmFilter !== "all" && b.status !== bmFilter) return false;
-      if (bmSearch && !b.nome.toLowerCase().includes(bmSearch.toLowerCase())) return false;
-      return true;
-    });
-  }, [bookmakers, bmFilter, bmSearch]);
-
   // Filtro de células do plano (modo "plano selecionado")
   const filteredCelulas = useMemo(() => {
     return celulasPlano.filter((c) => {
@@ -621,14 +612,6 @@ export function PlanejamentoCalendario() {
   }, [celulasPlano, grupoFiltroId, cpfFiltroIdx, bmSearch]);
 
   useEffect(() => {
-    const visibleIds = new Set(filteredBookmakers.map((b) => b.id));
-    setSelectedBookmakerIds((prev) => {
-      const next = new Set(Array.from(prev).filter((id) => visibleIds.has(id)));
-      return next.size === prev.size ? prev : next;
-    });
-  }, [filteredBookmakers]);
-
-  useEffect(() => {
     const visibleIds = new Set(filteredCelulas.map((c) => c.id));
     setSelectedCelulaIds((prev) => {
       const next = new Set(Array.from(prev).filter((id) => visibleIds.has(id)));
@@ -636,27 +619,11 @@ export function PlanejamentoCalendario() {
     });
   }, [filteredCelulas]);
 
-  const selectedBookmakerBatch = useMemo<BookmakerDragItem[]>(() => {
-    return filteredBookmakers
-      .filter((b) => selectedBookmakerIds.has(b.id))
-      .map((b) => ({ id: b.id, nome: b.nome, moeda: b.moeda_padrao }));
-  }, [filteredBookmakers, selectedBookmakerIds]);
-
   const selectedCelulaBatch = useMemo(() => {
     return filteredCelulas.filter((c) => selectedCelulaIds.has(c.id));
   }, [filteredCelulas, selectedCelulaIds]);
 
-  const toggleBookmakerSelection = useCallback((id: string) => {
-    setSelectedCelulaIds(new Set());
-    setSelectedBookmakerIds((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  }, []);
-
   const toggleCelulaSelection = useCallback((id: string) => {
-    setSelectedBookmakerIds(new Set());
     setSelectedCelulaIds((prev) => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
@@ -665,7 +632,6 @@ export function PlanejamentoCalendario() {
   }, []);
 
   const clearSelection = useCallback(() => {
-    setSelectedBookmakerIds(new Set());
     setSelectedCelulaIds(new Set());
   }, []);
 
