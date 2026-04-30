@@ -14090,6 +14090,7 @@ export type Database = {
           coin: string | null
           endereco: string | null
           exchange: string | null
+          label: string | null
           parceiro_id: string | null
           parceiro_nome: string | null
           saldo_coin: number | null

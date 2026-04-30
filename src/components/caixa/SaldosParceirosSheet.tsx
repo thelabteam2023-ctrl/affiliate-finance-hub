@@ -43,6 +43,7 @@ interface SaldoWalletParceiro {
   parceiro_nome: string;
   exchange: string;
   endereco: string;
+  label?: string;
   coin: string;
   saldo_coin: number;
   saldo_usd: number;
@@ -86,6 +87,7 @@ interface ParceiroSaldoAgrupado {
     saldo_locked_usd: number;
     exchange: string;
     endereco: string;
+    label?: string;
   }>;
   saldos_bookmakers: Array<{ 
     nome: string; 
@@ -444,6 +446,7 @@ export function SaldosParceirosSheet() {
           saldo_locked_usd: saldoLockedUsd,
           exchange: wallet.exchange || "Wallet",
           endereco: wallet.endereco || "",
+          label: wallet.label,
         });
         parceiro.total_crypto_usd += saldoUsdAtualizado;
         parceiro.total_crypto_locked_usd += saldoLockedUsd;
@@ -611,9 +614,9 @@ export function SaldosParceirosSheet() {
     };
 
     // Group by endereco (unique wallet address)
-    const grouped = saldos.reduce<Record<string, { exchange: string; endereco: string; items: typeof saldos }>>((acc, s) => {
+    const grouped = saldos.reduce<Record<string, { exchange: string; endereco: string; label?: string; items: typeof saldos }>>((acc, s) => {
       const key = s.endereco || s.exchange || "Wallet";
-      if (!acc[key]) acc[key] = { exchange: s.exchange, endereco: s.endereco, items: [] };
+      if (!acc[key]) acc[key] = { exchange: s.exchange, endereco: s.endereco, label: s.label, items: [] };
       acc[key].items.push(s);
       return acc;
     }, {});
@@ -648,17 +651,30 @@ export function SaldosParceirosSheet() {
             <div key={wKey}>
               {/* Wallet header: exchange name + address + total */}
               <div className={`py-1 ${wIdx > 0 ? "mt-2 border-t border-border/30 pt-2" : ""}`}>
-                {wallet.exchange && wallet.exchange !== "Wallet" && (
-                  <span className="text-[11px] font-semibold text-primary/80 uppercase tracking-wider">
-                    {wallet.exchange.split(/[-\s]/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')}
-                  </span>
-                )}
+                <div className="flex flex-col mb-0.5">
+                  {wallet.label ? (
+                    <span className="text-[11px] font-bold text-primary uppercase tracking-wider">
+                      {wallet.label}
+                    </span>
+                  ) : (
+                    wallet.exchange && wallet.exchange !== "Wallet" && (
+                      <span className="text-[11px] font-semibold text-primary/80 uppercase tracking-wider">
+                        {wallet.exchange.split(/[-\s]/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')}
+                      </span>
+                    )
+                  )}
+                </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[12px] font-semibold text-foreground/90 font-mono tracking-wide" title={wallet.endereco}>
+                  <span className="text-[12px] font-semibold text-foreground/90 font-mono tracking-wide" title={wallet.label ? `${wallet.label} (${wallet.endereco})` : wallet.endereco}>
                     {truncateAddr(wallet.endereco) || wallet.exchange}
                   </span>
                   <span className="text-[11px] font-mono text-muted-foreground/60 tabular-nums">{formatCurrency(walletTotal, "USD")}</span>
                 </div>
+                {wallet.label && wallet.exchange && wallet.exchange !== "Wallet" && (
+                  <div className="text-[10px] text-muted-foreground/60 uppercase tracking-tight">
+                    {wallet.exchange.split(/[-\s]/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')}
+                  </div>
+                )}
                 
               </div>
               {items.map((s, idx) => (
