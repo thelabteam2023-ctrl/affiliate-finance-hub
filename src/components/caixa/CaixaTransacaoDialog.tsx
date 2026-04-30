@@ -125,6 +125,7 @@ interface ContaBancaria {
 
 interface WalletCrypto {
   id: string;
+  label?: string | null;
   exchange: string;
   endereco: string;
   parceiro_id: string;
@@ -1789,6 +1790,7 @@ export function CaixaTransacaoDialog({
       
       setWalletsCrypto((wallets || []).map(w => ({
         id: w.id,
+        label: w.label,
         exchange: w.exchange,
         endereco: w.endereco,
         parceiro_id: w.parceiro_id,
@@ -3404,7 +3406,7 @@ export function CaixaTransacaoDialog({
                       const saldo = saldosParceirosWallets.find(
                         s => s.wallet_id === wallet.id && s.coin === coin
                       );
-                      const walletName = wallet.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET';
+                      const walletName = (wallet.label || wallet.exchange || 'WALLET').replace(/-/g, ' ').toUpperCase();
                       const shortenedAddress = wallet.endereco 
                         ? `${wallet.endereco.slice(0, 5)}....${wallet.endereco.slice(-5)}`
                         : '';
@@ -3909,7 +3911,7 @@ export function CaixaTransacaoDialog({
                         const saldo = saldosParceirosWallets.find(
                           s => s.wallet_id === wallet.id && s.coin === coin
                         );
-                        const walletName = wallet.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET';
+                        const walletName = (wallet.label || wallet.exchange || 'WALLET').replace(/-/g, ' ').toUpperCase();
                         const shortenedAddress = wallet.endereco 
                           ? `${wallet.endereco.slice(0, 5)}....${wallet.endereco.slice(-5)}`
                           : '';
@@ -4142,7 +4144,7 @@ export function CaixaTransacaoDialog({
                   {walletsCrypto
                     .filter((w) => w.parceiro_id === destinoParceiroId && isWalletCompatibleWithCoin(w, coin))
                     .map((wallet) => {
-                      const walletName = wallet.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET';
+                      const walletName = (wallet.label || wallet.exchange || 'WALLET').replace(/-/g, ' ').toUpperCase();
                       const shortenedAddress = wallet.endereco 
                         ? `${wallet.endereco.slice(0, 5)}....${wallet.endereco.slice(-5)}`
                         : '';
