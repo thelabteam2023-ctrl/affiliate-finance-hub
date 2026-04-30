@@ -259,6 +259,7 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
 
   const resetWalletForm = () => {
     setNovaWallet({
+      label: "",
       exchange: "",
       endereco: "",
       rede_id: "",
