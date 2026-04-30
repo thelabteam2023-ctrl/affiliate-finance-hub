@@ -1,0 +1,1 @@
+ALTER TABLE public.wallets_crypto ADD COLUMN label TEXT;
