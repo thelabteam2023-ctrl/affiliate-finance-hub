@@ -8,6 +8,7 @@ import { SwapCryptoDialog } from "@/components/caixa/SwapCryptoDialog";
 
 interface CryptoWalletCardProps {
   wallet: {
+    label?: string;
     moeda: string[];
     network: string;
     endereco: string;
@@ -62,9 +63,16 @@ export function CryptoWalletCard({ wallet, parceiroId }: CryptoWalletCardProps) 
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <Wallet className="w-5 h-5 text-primary" />
               </div>
-              <h3 className="font-semibold text-foreground truncate">
-                {formatExchangeName(wallet.exchange || "")}
-              </h3>
+              <div className="flex flex-col min-w-0">
+                <h3 className="font-semibold text-foreground truncate">
+                  {wallet.label || formatExchangeName(wallet.exchange || "Wallet")}
+                </h3>
+                {wallet.label && wallet.exchange && (
+                  <p className="text-xs text-muted-foreground truncate">
+                    {formatExchangeName(wallet.exchange)}
+                  </p>
+                )}
+              </div>
             </div>
             <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
               <div className="flex items-center gap-2">
