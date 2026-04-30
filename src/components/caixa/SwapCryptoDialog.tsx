@@ -46,6 +46,7 @@ const MOEDAS_CRYPTO = [
 
 interface WalletOption {
   id: string;
+  label: string | null;
   exchange: string | null;
   endereco: string;
   parceiro_id: string;
@@ -110,13 +111,14 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
   const fetchWalletsAndBalances = useCallback(async () => {
     if (!caixaParceiroId) return;
     const [walletsRes, balancesRes, parceiroRes] = await Promise.all([
-      supabase.from("wallets_crypto").select("id, exchange, endereco, parceiro_id, moeda, network, rede_id").eq("parceiro_id", caixaParceiroId),
+      supabase.from("wallets_crypto").select("id, label, exchange, endereco, parceiro_id, moeda, network, rede_id").eq("parceiro_id", caixaParceiroId),
       supabase.from("v_saldo_parceiro_wallets").select("wallet_id, coin, saldo_coin, saldo_usd").eq("parceiro_id", caixaParceiroId),
       supabase.from("parceiros").select("nome").eq("id", caixaParceiroId).single(),
     ]);
     setParceiroNome(parceiroRes.data?.nome || "");
     setWallets((walletsRes.data || []).map((w: any) => ({
       id: w.id,
+      label: w.label,
       exchange: w.exchange,
       endereco: w.endereco,
       parceiro_id: w.parceiro_id,
@@ -346,7 +348,7 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
   };
 
   const formatExchangeName = (w: WalletOption) => {
-    return (w.exchange || w.network || "Wallet")
+    return (w.label || w.exchange || w.network || "Wallet")
       .split(/[-\s]/)
       .map(s => s.charAt(0).toUpperCase() + s.slice(1))
       .join(' ')

@@ -18,6 +18,7 @@ import { MoedaMultiSelect } from "@/components/parceiros/MoedaMultiSelect";
 
 interface WalletInfo {
   wallet_id: string;
+  label?: string | null;
   exchange: string | null;
   endereco: string;
   network: string;
@@ -48,14 +49,14 @@ export function ExposicaoCryptoCard({
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const [novaWallet, setNovaWallet] = useState({
-    exchange: "", endereco: "", rede_id: "", network: "TRC20", moeda: [] as string[], observacoes: "",
+    label: "", exchange: "", endereco: "", rede_id: "", network: "TRC20", moeda: [] as string[], observacoes: "",
   });
 
   const fetchWallets = useCallback(async () => {
     if (!caixaParceiroId) return;
     const [walletsViewRes, walletsDetailRes] = await Promise.all([
       supabase.from("v_saldo_parceiro_wallets").select("*").eq("parceiro_id", caixaParceiroId),
-      supabase.from("wallets_crypto").select("id, exchange, endereco, network, moeda").eq("parceiro_id", caixaParceiroId),
+      supabase.from("wallets_crypto").select("id, label, exchange, endereco, network, moeda").eq("parceiro_id", caixaParceiroId),
     ]);
 
     const detailMap = new Map((walletsDetailRes.data || []).map((d: any) => [d.id, d]));
@@ -66,6 +67,7 @@ export function ExposicaoCryptoCard({
       if (!grouped[w.wallet_id]) {
         grouped[w.wallet_id] = {
           wallet_id: w.wallet_id,
+          label: detail?.label,
           exchange: detail?.exchange || w.exchange,
           endereco: detail?.endereco || w.endereco,
           network: detail?.network || "",
@@ -83,7 +85,7 @@ export function ExposicaoCryptoCard({
     (walletsDetailRes.data || []).forEach((d: any) => {
       if (!grouped[d.id]) {
         grouped[d.id] = {
-          wallet_id: d.id, exchange: d.exchange, endereco: d.endereco,
+          wallet_id: d.id, label: d.label, exchange: d.exchange, endereco: d.endereco,
           network: d.network || "", moedas: Array.isArray(d.moeda) ? d.moeda : [],
           coins: [], totalUsd: 0,
         };
@@ -110,7 +112,7 @@ export function ExposicaoCryptoCard({
   };
 
   const resetWalletForm = () => {
-    setNovaWallet({ exchange: "", endereco: "", rede_id: "", network: "TRC20", moeda: [], observacoes: "" });
+    setNovaWallet({ label: "", exchange: "", endereco: "", rede_id: "", network: "TRC20", moeda: [], observacoes: "" });
   };
 
   const handleAddWallet = async () => {
@@ -127,6 +129,7 @@ export function ExposicaoCryptoCard({
       }
       const { error } = await supabase.from("wallets_crypto").insert({
         parceiro_id: caixaParceiroId,
+        label: novaWallet.label || null,
         endereco: novaWallet.endereco,
         network: networkName,
         rede_id: novaWallet.rede_id || null,
@@ -241,7 +244,7 @@ export function ExposicaoCryptoCard({
                                   <Bitcoin className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                                   <div className="min-w-0">
                                     <p className="text-sm font-semibold">
-                                      {wallet.exchange?.replace(/-/g, " ").toUpperCase() || "Wallet"}
+                                      {(wallet.label || wallet.exchange || "Wallet").replace(/-/g, " ").toUpperCase()}
                                     </p>
                                     {wallet.network && (
                                       <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 uppercase font-medium mt-1">
@@ -312,6 +315,10 @@ export function ExposicaoCryptoCard({
           </DialogHeader>
           <div className="space-y-4">
             <MoedaMultiSelect moedas={novaWallet.moeda} onChange={(moedas) => setNovaWallet({ ...novaWallet, moeda: moedas })} />
+            <div className="space-y-1.5">
+              <Label className="text-xs">Apelido da Wallet <span className="text-muted-foreground/60">(opc.)</span></Label>
+              <Input value={novaWallet.label} onChange={(e) => setNovaWallet({ ...novaWallet, label: e.target.value })} placeholder="Ex: Carteira Binance VIP" />
+            </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Exchange/Wallet <span className="text-muted-foreground/60">(opc.)</span></Label>
               <ExchangeSelect value={novaWallet.exchange} onValueChange={(value) => setNovaWallet({ ...novaWallet, exchange: value })} />

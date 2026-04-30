@@ -49,6 +49,7 @@ interface BankAccount {
 
 interface CryptoWallet {
   id?: string;
+  label?: string;
   moeda: string[];
   endereco: string;
   rede_id: string;
@@ -275,6 +276,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       // Decrypt wallet observacoes when loading and ensure moeda is always an array
       const decryptedWallets = (parceiro.wallets_crypto || []).map((wallet: any) => ({
         ...wallet,
+        label: wallet.label || "",
         moeda: Array.isArray(wallet.moeda) ? wallet.moeda : [],
         observacoes: wallet.observacoes_encrypted 
           ? decodeURIComponent(escape(atob(wallet.observacoes_encrypted)))
@@ -789,6 +791,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
 
             const walletData = {
               parceiro_id: currentParceiroId,
+              label: wallet.label || null,
               moeda: wallet.moeda,
               endereco: wallet.endereco,
               network: redes.find(r => r.id === wallet.rede_id)?.nome || "",
@@ -903,6 +906,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     setCryptoWallets([
       ...cryptoWallets,
       { 
+        label: "",
         moeda: [], 
         endereco: "", 
         rede_id: "", 
@@ -1894,6 +1898,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   const isExpanded = expandedWalletIndex === index;
                   const rede = redes.find(r => r.id === wallet.rede_id);
                   const redeNome = rede?.nome || "Rede não selecionada";
+                  const label = wallet.label || "";
                   const exchangeNome = wallet.exchange || "";
                   const moedaDisplay = wallet.moeda.length > 0 ? wallet.moeda.join(", ") : "—";
                   const truncAddr = wallet.endereco 
@@ -1913,10 +1918,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                           </div>
                           <div className="min-w-0">
                             <p className="text-sm font-semibold truncate">
-                              {exchangeNome || redeNome}
+                              {label || exchangeNome || redeNome}
                             </p>
                             <p className="text-xs text-muted-foreground truncate">
-                              {moedaDisplay} · {redeNome} · <span className="font-mono">{truncAddr}</span>
+                              {label && exchangeNome && `${exchangeNome} · `}{moedaDisplay} · {redeNome} · <span className="font-mono">{truncAddr}</span>
                             </p>
                           </div>
                         </div>
@@ -1940,6 +1945,19 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                       {isExpanded && (
                         <CardContent className="pt-2 pb-4 border-t border-border/50">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="md:col-span-2">
+                              <Label className="text-center block">
+                                Apelido da Wallet
+                                <span className="text-xs text-muted-foreground/60 ml-1">(ex: Minha Trust Wallet 1)</span>
+                              </Label>
+                              <Input
+                                value={wallet.label}
+                                onChange={(e) => updateCryptoWallet(index, "label", e.target.value)}
+                                placeholder="Identificação da wallet"
+                                disabled={viewMode}
+                                className="text-center"
+                              />
+                            </div>
                             <div className="md:col-span-2">
                               <MoedaMultiSelect
                                 moedas={wallet.moeda}

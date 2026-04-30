@@ -39,7 +39,7 @@ export function useParceiroContas(parceiroId: string | null) {
           .order('banco'),
         supabase
           .from('wallets_crypto')
-          .select('id, exchange, network, endereco, moeda')
+          .select('id, label, exchange, network, endereco, moeda')
           .eq('parceiro_id', parceiroId)
           .order('network'),
       ]);
@@ -66,7 +66,7 @@ export function useParceiroContas(parceiroId: string | null) {
         network: w.network,
         endereco: w.endereco,
         moedas: Array.isArray(w.moeda) ? w.moeda : [],
-        label: `${w.exchange ?? w.network} – ${w.endereco.slice(0, 8)}...${w.endereco.slice(-6)}`,
+        label: w.label || `${w.exchange ?? w.network} – ${w.endereco.slice(0, 8)}...${w.endereco.slice(-6)}`,
       }));
 
       return [...contas, ...wallets];

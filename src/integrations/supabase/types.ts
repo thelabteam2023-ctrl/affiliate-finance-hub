@@ -11140,6 +11140,7 @@ export type Database = {
           endereco: string
           exchange: string | null
           id: string
+          label: string | null
           moeda: string[] | null
           network: string
           observacoes_encrypted: string | null
@@ -11155,6 +11156,7 @@ export type Database = {
           endereco: string
           exchange?: string | null
           id?: string
+          label?: string | null
           moeda?: string[] | null
           network: string
           observacoes_encrypted?: string | null
@@ -11170,6 +11172,7 @@ export type Database = {
           endereco?: string
           exchange?: string | null
           id?: string
+          label?: string | null
           moeda?: string[] | null
           network?: string
           observacoes_encrypted?: string | null

@@ -33,6 +33,7 @@ interface ContaBancaria {
 
 interface WalletCrypto {
   id: string;
+  label: string | null;
   exchange: string | null;
   endereco: string;
   network: string;
@@ -95,6 +96,7 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
 
   // Form state - Wallet (same fields as ParceiroDialog)
   const [novaWallet, setNovaWallet] = useState({
+    label: "",
     exchange: "",
     endereco: "",
     rede_id: "",
@@ -118,7 +120,7 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
           .eq("parceiro_id", caixaParceiroId),
         supabase
           .from("wallets_crypto")
-          .select("id, network, moeda")
+          .select("id, label, network, moeda")
           .eq("parceiro_id", caixaParceiroId),
       ]);
 
@@ -133,6 +135,7 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
         return {
           ...w,
           id: w.wallet_id,
+          label: detail?.label || null,
           network: detail?.network || '',
           moedas: Array.isArray(detail?.moeda) ? detail.moeda : [],
         };
@@ -233,6 +236,7 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
 
       const { error } = await supabase.from("wallets_crypto").insert({
         parceiro_id: caixaParceiroId,
+        label: novaWallet.label || null,
         endereco: novaWallet.endereco,
         network: networkName,
         rede_id: novaWallet.rede_id || null,
@@ -255,6 +259,7 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
 
   const resetWalletForm = () => {
     setNovaWallet({
+      label: "",
       exchange: "",
       endereco: "",
       rede_id: "",
@@ -407,7 +412,7 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
                             </div>
                             <div>
                               <p className="text-sm font-medium">
-                                {first.exchange?.replace(/-/g, " ").toUpperCase() || "Wallet"}
+                                {(first.label || first.exchange || "Wallet").replace(/-/g, " ").toUpperCase()}
                               </p>
                               <p
                                 className="text-[11px] text-muted-foreground font-mono cursor-pointer hover:text-primary transition-colors flex items-center gap-1"
@@ -575,6 +580,17 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
               <MoedaMultiSelect
                 moedas={novaWallet.moeda}
                 onChange={(moedas) => setNovaWallet({ ...novaWallet, moeda: moedas })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">
+                Apelido da Wallet
+                <span className="text-muted-foreground/60 ml-1">(ex: Fundo de Reserva 1)</span>
+              </Label>
+              <Input
+                value={novaWallet.label}
+                onChange={(e) => setNovaWallet({ ...novaWallet, label: e.target.value })}
+                placeholder="Identificação da wallet"
               />
             </div>
             <div className="space-y-1.5">

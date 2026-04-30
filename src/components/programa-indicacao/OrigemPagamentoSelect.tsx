@@ -32,6 +32,7 @@ interface CaixaContaInfo {
 
 interface CaixaWalletInfo {
   id: string;
+  label?: string | null;
   exchange: string;
   endereco: string;
   saldo_coin: number;
@@ -40,6 +41,7 @@ interface CaixaWalletInfo {
 
 interface WalletCrypto {
   id: string;
+  label?: string | null;
   exchange: string;
   endereco: string;
   parceiro_id: string;
@@ -190,7 +192,7 @@ export function OrigemPagamentoSelect({
       ] = await Promise.all([
         supabase.from("parceiros").select("id, nome").eq("status", "ativo").order("nome"),
         supabase.from("contas_bancarias").select("id, banco, titular, parceiro_id").order("banco"),
-        supabase.from("wallets_crypto").select("id, exchange, endereco, parceiro_id, moeda").order("exchange"),
+        supabase.from("wallets_crypto").select("id, label, exchange, endereco, parceiro_id, moeda").order("exchange"),
         supabase.from("v_saldo_parceiro_contas").select("conta_id, parceiro_id, saldo, moeda"),
         supabase.from("v_saldo_parceiro_wallets").select("wallet_id, parceiro_id, coin, saldo_usd, saldo_coin"),
       ]);
@@ -249,6 +251,7 @@ export function OrigemPagamentoSelect({
               const walletInfo = walletsData.find((w: any) => w.id === row.wallet_id);
               walletsByCoin[c].push({
                 id: row.wallet_id,
+                label: walletInfo?.label,
                 exchange: walletInfo?.exchange || "Wallet",
                 endereco: walletInfo?.endereco || "",
                 saldo_coin: row.saldo_coin || 0,
@@ -934,14 +937,17 @@ export function OrigemPagamentoSelect({
                   <SelectContent>
                     {walletsParceiroSelecionado.map((w) => {
                       const walletSaldo = getSaldoWalletParceiro(w.id);
-                      const exchangeDisplay = w.exchange || "Wallet";
+                      const exchangeDisplay = w.label || w.exchange || "Wallet";
                       const enderecoDisplay = w.endereco ? `${w.endereco.slice(0, 12)}...` : "—";
                       return (
                         <SelectItem key={w.id} value={w.id}>
                           <div className="flex items-center justify-between w-full gap-4">
                             <div className="flex flex-col">
                               <span className="font-medium text-sm">{exchangeDisplay}</span>
-                              <span className="text-xs text-muted-foreground">{enderecoDisplay}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {enderecoDisplay}
+                                {w.label && w.exchange && <span className="ml-1 text-[10px] opacity-70">({w.exchange})</span>}
+                              </span>
                             </div>
                             <div className="flex flex-col items-end text-xs">
                               <span className={walletSaldo.saldoBRL < valorEfetivo ? "text-destructive font-medium" : "text-emerald-600 font-medium"}>

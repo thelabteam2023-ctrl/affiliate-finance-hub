@@ -44,6 +44,7 @@ interface ContaBancaria {
 
 interface Wallet {
   id: string;
+  label?: string | null;
   exchange: string;
   parceiro_id: string;
 }
@@ -97,7 +98,7 @@ export function HistoricoDespesasAdmin({ formatCurrency, dataInicio, dataFim }: 
         supabase.from("parceiros").select("id, nome"),
         supabase.from("operadores").select("id, nome"),
         supabase.from("contas_bancarias").select("id, banco, titular, parceiro_id"),
-        supabase.from("wallets_crypto").select("id, exchange, parceiro_id"),
+        supabase.from("wallets_crypto").select("id, label, exchange, parceiro_id"),
       ]);
 
       // Map parceiros
@@ -200,7 +201,7 @@ export function HistoricoDespesasAdmin({ formatCurrency, dataInicio, dataFim }: 
       const wallet = wallets.find((w) => w.id === transacao.origem_wallet_id);
       if (wallet) {
         const parceiroNome = parceiros[wallet.parceiro_id] || "";
-        return { label: wallet.exchange, sublabel: parceiroNome, icon: Coins };
+        return { label: wallet.label || wallet.exchange, sublabel: parceiroNome, icon: Coins };
       }
       return { label: "Wallet Crypto", sublabel: "", icon: Coins };
     }
