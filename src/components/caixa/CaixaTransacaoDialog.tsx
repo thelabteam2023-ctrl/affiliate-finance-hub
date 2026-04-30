@@ -1788,7 +1788,7 @@ export function CaixaTransacaoDialog({
         } : null,
       })));
       
-      setWalletsCrypto((wallets || []).map(w => ({
+      setWalletsCrypto(((wallets as any[]) || []).map(w => ({
         id: w.id,
         label: w.label,
         exchange: w.exchange,
