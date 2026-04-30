@@ -65,6 +65,7 @@ interface ContaBancaria {
 
 interface WalletCrypto {
   id: string;
+  label?: string | null;
   exchange: string;
   endereco: string;
   parceiro_id: string;
@@ -239,7 +240,7 @@ export function ReconciliacaoDialog({
       const [bookmakersRes, contasRes, walletsRes, saldosContasRes, saldosWalletsRes, caixaParceiroRes] = await Promise.all([
         supabase.from("bookmakers").select(`id, nome, saldo_atual, moeda, parceiro_id, reconciled_at, parceiros!inner(nome, status)`).in("status", ["ativo", "limitada"]).eq("parceiros.status", "ativo").order("nome"),
         supabase.from("contas_bancarias").select(`id, banco, titular, parceiro_id, moeda, reconciled_at, parceiros!inner(nome, status)`).eq("parceiros.status", "ativo").order("banco"),
-        supabase.from("wallets_crypto").select(`id, exchange, endereco, parceiro_id, moeda, reconciled_at, parceiros!inner(nome, status)`).eq("parceiros.status", "ativo").order("exchange"),
+        supabase.from("wallets_crypto").select(`id, label, exchange, endereco, parceiro_id, moeda, reconciled_at, parceiros!inner(nome, status)`).eq("parceiros.status", "ativo").order("exchange"),
         supabase.from("v_saldo_parceiro_contas").select("conta_id, saldo"),
         supabase.from("v_saldo_parceiro_wallets").select("wallet_id, coin, saldo_coin, saldo_usd"),
         supabase.from("parceiros").select("id").eq("is_caixa_operacional", true).maybeSingle(),
@@ -267,7 +268,7 @@ export function ReconciliacaoDialog({
       })));
 
       setWallets((walletsRes.data || []).map((w: any) => ({
-        id: w.id, exchange: w.exchange, endereco: w.endereco,
+        id: w.id, label: w.label, exchange: w.exchange, endereco: w.endereco,
         parceiro_id: w.parceiro_id, parceiro_nome: w.parceiros?.nome,
         moeda: Array.isArray(w.moeda) ? w.moeda : ["USDT"],
         reconciled_at: w.reconciled_at,
@@ -329,7 +330,7 @@ export function ReconciliacaoDialog({
       }
       if (subTipoCaixa === "CRYPTO" && walletId) {
         const wallet = wallets.find(w => w.id === walletId);
-        return wallet ? `Caixa – ${wallet.exchange} (${wallet.endereco.slice(0, 8)}...)` : "Caixa Operacional";
+        return wallet ? `Caixa – ${wallet.label || wallet.exchange} (${wallet.endereco.slice(0, 8)}...)` : "Caixa Operacional";
       }
       return `Caixa Operacional (${moeda})`;
     }
@@ -343,7 +344,7 @@ export function ReconciliacaoDialog({
     }
     if (tipoEntidade === "WALLET") {
       const wallet = wallets.find(w => w.id === entidadeId);
-      return wallet ? `${wallet.exchange} - ${wallet.endereco.slice(0, 10)}...` : "";
+      return wallet ? `${wallet.label || wallet.exchange} - ${wallet.endereco.slice(0, 10)}...` : "";
     }
     return "";
   };
