@@ -579,6 +579,17 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">
+                Apelido da Wallet
+                <span className="text-muted-foreground/60 ml-1">(ex: Fundo de Reserva 1)</span>
+              </Label>
+              <Input
+                value={novaWallet.label}
+                onChange={(e) => setNovaWallet({ ...novaWallet, label: e.target.value })}
+                placeholder="Identificação da wallet"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">
                 Exchange/Wallet
                 <span className="text-muted-foreground/60 ml-1">(opcional)</span>
               </Label>
