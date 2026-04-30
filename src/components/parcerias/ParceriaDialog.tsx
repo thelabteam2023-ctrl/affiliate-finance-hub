@@ -224,26 +224,6 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
     setFornecedores(data || []);
   };
 
-  const handleIndicadorChange = (indicadorId: string) => {
-    const indicador = indicadores.find((i) => i.id === indicadorId);
-    setFormData({ 
-      ...formData, 
-      indicador_id: indicadorId,
-      valor_indicador: 0,
-      valor_parceiro: 0,
-    });
-    setOrcamentoDisponivel(indicador?.orcamento_por_parceiro || 0);
-  };
-
-  const handleValorParceiroChange = (valor: number) => {
-    const valorIndicador = Math.max(0, orcamentoDisponivel - valor);
-    setFormData({
-      ...formData,
-      valor_parceiro: valor,
-      valor_indicador: valorIndicador,
-    });
-  };
-
   const handleSubmit = async () => {
     if (!formData.parceiro_id) {
       toast({ title: "Selecione um parceiro", variant: "destructive" });
@@ -532,10 +512,9 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
                       <Input
                         type="number"
                         value={formData.valor_parceiro}
-                        onChange={(e) => handleValorParceiroChange(parseFloat(e.target.value) || 0)}
+                        onChange={(e) => setFormData({ ...formData, valor_parceiro: parseFloat(e.target.value) || 0 })}
                         disabled={isViewMode}
                         min={0}
-                        max={orcamentoDisponivel}
                         step={0.01}
                       />
                     </div>
@@ -544,10 +523,11 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
                       <Input
                         type="number"
                         value={formData.valor_indicador}
-                        disabled
-                        className="bg-muted"
+                        onChange={(e) => setFormData({ ...formData, valor_indicador: parseFloat(e.target.value) || 0 })}
+                        disabled={isViewMode}
+                        min={0}
+                        step={0.01}
                       />
-                      <p className="text-xs text-muted-foreground">Calculado automaticamente</p>
                     </div>
                   </div>
                 </div>
