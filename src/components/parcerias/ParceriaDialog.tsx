@@ -228,20 +228,9 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
     const indicador = indicadores.find((i) => i.id === indicadorId);
     setFormData({ 
       ...formData, 
-      indicador_id: indicadorId,
-      valor_indicador: 0,
-      valor_parceiro: 0,
+      indicador_id: indicadorId
     });
     setOrcamentoDisponivel(indicador?.orcamento_por_parceiro || 0);
-  };
-
-  const handleValorParceiroChange = (valor: number) => {
-    const valorIndicador = Math.max(0, orcamentoDisponivel - valor);
-    setFormData({
-      ...formData,
-      valor_parceiro: valor,
-      valor_indicador: valorIndicador,
-    });
   };
 
   const handleSubmit = async () => {
@@ -519,7 +508,7 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
                 </Select>
               </div>
 
-              {orcamentoDisponivel > 0 && (
+              {formData.indicador_id && (
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 text-sm">
                     <DollarSign className="h-4 w-4 text-primary" />
@@ -532,10 +521,9 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
                       <Input
                         type="number"
                         value={formData.valor_parceiro}
-                        onChange={(e) => handleValorParceiroChange(parseFloat(e.target.value) || 0)}
+                        onChange={(e) => setFormData({ ...formData, valor_parceiro: parseFloat(e.target.value) || 0 })}
                         disabled={isViewMode}
                         min={0}
-                        max={orcamentoDisponivel}
                         step={0.01}
                       />
                     </div>
@@ -544,10 +532,11 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
                       <Input
                         type="number"
                         value={formData.valor_indicador}
-                        disabled
-                        className="bg-muted"
+                        onChange={(e) => setFormData({ ...formData, valor_indicador: parseFloat(e.target.value) || 0 })}
+                        disabled={isViewMode}
+                        min={0}
+                        step={0.01}
                       />
-                      <p className="text-xs text-muted-foreground">Calculado automaticamente</p>
                     </div>
                   </div>
                 </div>
