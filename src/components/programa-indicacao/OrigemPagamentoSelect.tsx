@@ -934,14 +934,17 @@ export function OrigemPagamentoSelect({
                   <SelectContent>
                     {walletsParceiroSelecionado.map((w) => {
                       const walletSaldo = getSaldoWalletParceiro(w.id);
-                      const exchangeDisplay = w.exchange || "Wallet";
+                      const exchangeDisplay = w.label || w.exchange || "Wallet";
                       const enderecoDisplay = w.endereco ? `${w.endereco.slice(0, 12)}...` : "—";
                       return (
                         <SelectItem key={w.id} value={w.id}>
                           <div className="flex items-center justify-between w-full gap-4">
                             <div className="flex flex-col">
                               <span className="font-medium text-sm">{exchangeDisplay}</span>
-                              <span className="text-xs text-muted-foreground">{enderecoDisplay}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {enderecoDisplay}
+                                {w.label && w.exchange && <span className="ml-1 text-[10px] opacity-70">({w.exchange})</span>}
+                              </span>
                             </div>
                             <div className="flex flex-col items-end text-xs">
                               <span className={walletSaldo.saldoBRL < valorEfetivo ? "text-destructive font-medium" : "text-emerald-600 font-medium"}>
