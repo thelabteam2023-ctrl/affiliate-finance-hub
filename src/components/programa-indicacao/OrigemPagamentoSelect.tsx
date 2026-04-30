@@ -32,6 +32,7 @@ interface CaixaContaInfo {
 
 interface CaixaWalletInfo {
   id: string;
+  label?: string | null;
   exchange: string;
   endereco: string;
   saldo_coin: number;
@@ -40,6 +41,7 @@ interface CaixaWalletInfo {
 
 interface WalletCrypto {
   id: string;
+  label?: string | null;
   exchange: string;
   endereco: string;
   parceiro_id: string;
@@ -190,7 +192,7 @@ export function OrigemPagamentoSelect({
       ] = await Promise.all([
         supabase.from("parceiros").select("id, nome").eq("status", "ativo").order("nome"),
         supabase.from("contas_bancarias").select("id, banco, titular, parceiro_id").order("banco"),
-        supabase.from("wallets_crypto").select("id, exchange, endereco, parceiro_id, moeda").order("exchange"),
+        supabase.from("wallets_crypto").select("id, label, exchange, endereco, parceiro_id, moeda").order("exchange"),
         supabase.from("v_saldo_parceiro_contas").select("conta_id, parceiro_id, saldo, moeda"),
         supabase.from("v_saldo_parceiro_wallets").select("wallet_id, parceiro_id, coin, saldo_usd, saldo_coin"),
       ]);
@@ -249,6 +251,7 @@ export function OrigemPagamentoSelect({
               const walletInfo = walletsData.find((w: any) => w.id === row.wallet_id);
               walletsByCoin[c].push({
                 id: row.wallet_id,
+                label: walletInfo?.label,
                 exchange: walletInfo?.exchange || "Wallet",
                 endereco: walletInfo?.endereco || "",
                 saldo_coin: row.saldo_coin || 0,
