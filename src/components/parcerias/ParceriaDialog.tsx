@@ -224,6 +224,15 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
     setFornecedores(data || []);
   };
 
+  const handleIndicadorChange = (indicadorId: string) => {
+    const indicador = indicadores.find((i) => i.id === indicadorId);
+    setFormData({ 
+      ...formData, 
+      indicador_id: indicadorId
+    });
+    setOrcamentoDisponivel(indicador?.orcamento_por_parceiro || 0);
+  };
+
   const handleSubmit = async () => {
     if (!formData.parceiro_id) {
       toast({ title: "Selecione um parceiro", variant: "destructive" });
@@ -499,7 +508,7 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
                 </Select>
               </div>
 
-              {orcamentoDisponivel > 0 && (
+              {formData.indicador_id && (
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 text-sm">
                     <DollarSign className="h-4 w-4 text-primary" />
