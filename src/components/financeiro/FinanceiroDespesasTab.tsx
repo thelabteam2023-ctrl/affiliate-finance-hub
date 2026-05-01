@@ -54,6 +54,7 @@ function toTitleCase(str: string): string {
 }
 
 export function FinanceiroDespesasTab({ despesasAdmin, totalDespesasAdmin, totalPagamentosOperadores, formatCurrency, onRefresh, dataInicio, dataFim }: Props) {
+  const totalGeralAdmin = despesasAdmin.reduce((acc, d) => acc + d.valor, 0);
   const { toast } = useToast();
   const [despesaAdminDialogOpen, setDespesaAdminDialogOpen] = useState(false);
   const [editingDespesa, setEditingDespesa] = useState<DespesaAdministrativa | null>(null);
@@ -219,6 +220,7 @@ export function FinanceiroDespesasTab({ despesasAdmin, totalDespesasAdmin, total
           onOpenChange={setDetailsModalOpen}
           grupo={selectedGrupo}
           despesas={despesasAdmin.filter(d => (d.grupo || "OUTROS") === selectedGrupo)}
+          totalGeralFinanceiro={totalGeralAdmin}
           formatCurrency={formatCurrency}
         />
       )}

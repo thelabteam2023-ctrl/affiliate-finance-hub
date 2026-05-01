@@ -21,6 +21,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   grupo: string;
   despesas: Despesa[];
+  totalGeralFinanceiro: number;
   formatCurrency: (value: number) => string;
 }
 
@@ -36,7 +37,14 @@ function toTitleCase(str: string): string {
     .join(" ");
 }
 
-export function ResumoGrupoDetalhesModal({ open, onOpenChange, grupo, despesas, formatCurrency }: Props) {
+export function ResumoGrupoDetalhesModal({ 
+  open, 
+  onOpenChange, 
+  grupo, 
+  despesas, 
+  totalGeralFinanceiro, 
+  formatCurrency 
+}: Props) {
   const grupoInfo = getGrupoInfo(grupo);
   const IconComponent = grupoInfo.icon;
 
@@ -56,6 +64,9 @@ export function ResumoGrupoDetalhesModal({ open, onOpenChange, grupo, despesas, 
   }, [despesas]);
 
   const totalGeral = despesas.reduce((acc, d) => acc + d.valor, 0);
+  const percentualSobreTotal = totalGeralFinanceiro > 0 
+    ? (totalGeral / totalGeralFinanceiro) * 100 
+    : 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -65,6 +76,11 @@ export function ResumoGrupoDetalhesModal({ open, onOpenChange, grupo, despesas, 
             <IconComponent className="h-5 w-5" />
             Detalhamento: {grupoInfo.label}
           </DialogTitle>
+          {percentualSobreTotal > 0 && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Este grupo representa <span className="font-semibold text-orange-500">{percentualSobreTotal.toFixed(1)}%</span> das despesas administrativas do período.
+            </p>
+          )}
         </DialogHeader>
 
         <div className="py-4">
