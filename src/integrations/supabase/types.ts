@@ -3223,7 +3223,6 @@ export type Database = {
           origem_tipo: string | null
           origem_wallet_id: string | null
           qtd_coin: number | null
-          recorrente: boolean | null
           status: string
           subcategoria_rh: string | null
           tipo_moeda: string | null
@@ -3248,7 +3247,6 @@ export type Database = {
           origem_tipo?: string | null
           origem_wallet_id?: string | null
           qtd_coin?: number | null
-          recorrente?: boolean | null
           status?: string
           subcategoria_rh?: string | null
           tipo_moeda?: string | null
@@ -3273,7 +3271,6 @@ export type Database = {
           origem_tipo?: string | null
           origem_wallet_id?: string | null
           qtd_coin?: number | null
-          recorrente?: boolean | null
           status?: string
           subcategoria_rh?: string | null
           tipo_moeda?: string | null
