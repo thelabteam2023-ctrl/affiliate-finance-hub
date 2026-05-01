@@ -77,7 +77,7 @@ export const GRUPOS_DESPESA: Record<string, GrupoDespesaInfo> = {
     description: "Despesas não classificadas",
     icon: MoreHorizontal,
     color: "bg-gray-500/10 text-gray-600 border-gray-500/20",
-    subcategorias: ["Diversos", "Refeições", "Taxas Bancárias", "Outros"],
+    subcategorias: ["Diversos", "Refeições", "Outros"],
   },
 } as const;
 
