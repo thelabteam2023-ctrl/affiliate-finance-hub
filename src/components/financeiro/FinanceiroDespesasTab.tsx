@@ -189,7 +189,12 @@ export function FinanceiroDespesasTab({ despesasAdmin, totalDespesasAdmin, total
                     <IconComponent className="h-4 w-4 group-hover:scale-110 transition-transform" />
                     <span className="group-hover:underline underline-offset-4">{grupoInfo.label}</span>
                   </span>
-                  <span className="font-medium text-orange-500">{formatCurrency(valor as number)}</span>
+                  <div className="flex items-center gap-4">
+                    <span className="text-xs text-muted-foreground font-normal">
+                      {totalGeralAdmin > 0 ? (((valor as number) / totalGeralAdmin) * 100).toFixed(1) : 0}%
+                    </span>
+                    <span className="font-medium text-orange-500">{formatCurrency(valor as number)}</span>
+                  </div>
                 </button>
               );
             })}
