@@ -24,7 +24,6 @@ interface DespesaAdministrativa {
   descricao: string | null;
   valor: number;
   data_despesa: string;
-  recorrente: boolean;
   status: string;
   _fromLedger?: boolean;
 }
@@ -60,25 +59,22 @@ export function FinanceiroDespesasTab({ despesasAdmin, totalDespesasAdmin, total
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 z-10 bg-background">
-                <tr className="border-b bg-muted/30">
-                  <th className="text-left py-3 px-4 font-medium">Data</th>
-                  <th className="text-left py-3 px-4 font-medium">Grupo</th>
-                  <th className="text-left py-3 px-4 font-medium">Descrição</th>
-                  <th className="text-right py-3 px-4 font-medium">Valor</th>
-                  <th className="text-center py-3 px-4 font-medium">Recorrente</th>
-                  <th className="text-center py-3 px-4 font-medium">Status</th>
-                  <th className="text-center py-3 px-4 font-medium">Ações</th>
-                </tr>
-              </thead>
-            </table>
-            <div className={despesasAdmin.length >= 5 ? "max-h-[320px] overflow-y-auto" : ""}>
-              <table className="w-full text-sm">
-                <tbody>
+            <div className={despesasAdmin.length >= 5 ? "max-h-[400px] overflow-y-auto" : ""}>
+              <table className="w-full text-sm border-collapse">
+                <thead className="sticky top-0 z-10 bg-background shadow-sm">
+                  <tr className="bg-muted/30">
+                    <th className="text-left py-3 px-4 font-medium border-b">Data</th>
+                    <th className="text-left py-3 px-4 font-medium border-b">Grupo</th>
+                    <th className="text-left py-3 px-4 font-medium border-b">Descrição</th>
+                    <th className="text-right py-3 px-4 font-medium border-b">Valor</th>
+                    <th className="text-center py-3 px-4 font-medium border-b">Status</th>
+                    <th className="text-center py-3 px-4 font-medium border-b">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/50">
                   {despesasAdmin.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <td colSpan={6} className="text-center py-8 text-muted-foreground">
                         Nenhuma despesa administrativa cadastrada
                       </td>
                     </tr>
@@ -109,12 +105,9 @@ export function FinanceiroDespesasTab({ despesasAdmin, totalDespesasAdmin, total
                                 </TooltipContent>
                               </ShadcnTooltip>
                             </td>
-                            <td className="py-3 px-4 text-muted-foreground">{despesa.descricao || "—"}</td>
-                            <td className="py-3 px-4 text-right font-medium text-orange-500 w-[120px]">{formatCurrency(despesa.valor)}</td>
-                            <td className="py-3 px-4 text-center w-[100px]">
-                              {despesa.recorrente ? <Badge variant="secondary" className="text-xs">Sim</Badge> : <span className="text-muted-foreground">—</span>}
-                            </td>
-                            <td className="py-3 px-4 text-center w-[100px]">
+                            <td className="py-3 px-4 text-muted-foreground max-w-[300px] truncate">{despesa.descricao || "—"}</td>
+                            <td className="py-3 px-4 text-right font-medium text-orange-500 min-w-[100px]">{formatCurrency(despesa.valor)}</td>
+                            <td className="py-3 px-4 text-center w-[120px]">
                               <Badge variant={despesa.status === "CONFIRMADO" ? "default" : "secondary"} className="text-xs">{despesa.status}</Badge>
                             </td>
                             <td className="py-3 px-4 w-[80px]">
