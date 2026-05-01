@@ -171,16 +171,6 @@ export function FinanceiroDespesasTab({ despesasAdmin, totalDespesasAdmin, total
                   </span>
                   <span className="font-medium text-orange-500">{formatCurrency(valor as number)}</span>
                 </button>
-      {selectedGrupo && (
-        <ResumoGrupoDetalhesModal
-          open={detailsModalOpen}
-          onOpenChange={setDetailsModalOpen}
-          grupo={selectedGrupo}
-          despesas={despesasAdmin.filter(d => (d.grupo || "OUTROS") === selectedGrupo)}
-          formatCurrency={formatCurrency}
-        />
-      )}
-
               );
             })}
             {despesasAdmin.length > 0 && (
@@ -203,6 +193,16 @@ export function FinanceiroDespesasTab({ despesasAdmin, totalDespesasAdmin, total
         despesa={editingDespesa}
         onSuccess={() => onRefresh()}
       />
+
+      {selectedGrupo && (
+        <ResumoGrupoDetalhesModal
+          open={detailsModalOpen}
+          onOpenChange={setDetailsModalOpen}
+          grupo={selectedGrupo}
+          despesas={despesasAdmin.filter(d => (d.grupo || "OUTROS") === selectedGrupo)}
+          formatCurrency={formatCurrency}
+        />
+      )}
     </div>
   );
 }
