@@ -11,6 +11,7 @@ export interface GrupoDespesaInfo {
   description: string;
   icon: LucideIcon;
   color: string;
+  subcategorias?: string[];
 }
 
 export const GRUPOS_DESPESA: Record<string, GrupoDespesaInfo> = {
@@ -20,6 +21,7 @@ export const GRUPOS_DESPESA: Record<string, GrupoDespesaInfo> = {
     description: "Energia, água e serviços essenciais",
     icon: Zap,
     color: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20",
+    subcategorias: ["Água", "Energia", "Limpeza", "Outros"],
   },
   INTERNET_E_COMUNICACAO: {
     value: "INTERNET_E_COMUNICACAO",
@@ -27,6 +29,7 @@ export const GRUPOS_DESPESA: Record<string, GrupoDespesaInfo> = {
     description: "Internet fixa, móvel, telefonia",
     icon: Wifi,
     color: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+    subcategorias: ["Internet Fixa", "Internet Móvel", "Planos Telefônicos", "Hospedagem", "Outros"],
   },
   ADMINISTRATIVO_CONTABIL_FISCAL: {
     value: "ADMINISTRATIVO_CONTABIL_FISCAL",
@@ -34,6 +37,7 @@ export const GRUPOS_DESPESA: Record<string, GrupoDespesaInfo> = {
     description: "Tributos, contabilidade, jurídico, taxas",
     icon: Landmark,
     color: "bg-purple-500/10 text-purple-600 border-purple-500/20",
+    subcategorias: ["Contabilidade", "Impostos/Taxas", "Jurídico", "Documentação", "Outros"],
   },
   INFRAESTRUTURA_E_OCUPACAO: {
     value: "INFRAESTRUTURA_E_OCUPACAO",
@@ -41,6 +45,7 @@ export const GRUPOS_DESPESA: Record<string, GrupoDespesaInfo> = {
     description: "Aluguel, condomínio, manutenção predial",
     icon: Building2,
     color: "bg-orange-500/10 text-orange-600 border-orange-500/20",
+    subcategorias: ["Aluguel", "Condomínio", "IPTU", "Manutenção", "Reforma", "Outros"],
   },
   TECNOLOGIA_E_SOFTWARES: {
     value: "TECNOLOGIA_E_SOFTWARES",
@@ -48,6 +53,7 @@ export const GRUPOS_DESPESA: Record<string, GrupoDespesaInfo> = {
     description: "Licenças, proxy, VPN, servidores, SaaS",
     icon: Cpu,
     color: "bg-cyan-500/10 text-cyan-600 border-cyan-500/20",
+    subcategorias: ["Licenças SaaS", "Proxies/VPNs", "Servidores/Cloud", "API Integrations", "Outros"],
   },
   ATIVOS: {
     value: "ATIVOS",
@@ -55,6 +61,7 @@ export const GRUPOS_DESPESA: Record<string, GrupoDespesaInfo> = {
     description: "Equipamentos, hardware, móveis",
     icon: Package,
     color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
+    subcategorias: ["Equipamentos", "Móveis", "Hardware", "Outros"],
   },
   RECURSOS_HUMANOS: {
     value: "RECURSOS_HUMANOS",
@@ -62,6 +69,7 @@ export const GRUPOS_DESPESA: Record<string, GrupoDespesaInfo> = {
     description: "Pagamentos de colaboradores (selecione subcategoria)",
     icon: Users,
     color: "bg-pink-500/10 text-pink-600 border-pink-500/20",
+    subcategorias: ["Salário", "Comissão", "Bonificação", "Outros"],
   },
   OUTROS: {
     value: "OUTROS",
@@ -69,6 +77,7 @@ export const GRUPOS_DESPESA: Record<string, GrupoDespesaInfo> = {
     description: "Despesas não classificadas",
     icon: MoreHorizontal,
     color: "bg-gray-500/10 text-gray-600 border-gray-500/20",
+    subcategorias: ["Diversos", "Taxas Bancárias", "Outros"],
   },
 } as const;
 
