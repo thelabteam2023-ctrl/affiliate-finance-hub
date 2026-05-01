@@ -426,7 +426,6 @@ export function useFinanceiroCalculations({
           descricao: p.descricao,
           valor: p.valor,
           data_despesa: p.data_transacao || p.data_pagamento,
-          recorrente: false,
           status: p.status || 'CONFIRMADO',
           _fromLedger: true,
         })),
