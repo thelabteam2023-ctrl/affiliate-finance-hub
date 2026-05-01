@@ -110,7 +110,12 @@ export function FinanceiroDespesasTab({ despesasAdmin, totalDespesasAdmin, total
                                 </TooltipContent>
                               </ShadcnTooltip>
                             </td>
-                            <td className="py-3 px-4 text-muted-foreground max-w-[300px] truncate">{despesa.descricao || "—"}</td>
+                            <td className="py-3 px-4 text-muted-foreground max-w-[300px] truncate">
+                              {despesa.operadores?.nome && (
+                                <div className="text-foreground font-medium mb-0.5">{despesa.operadores.nome}</div>
+                              )}
+                              <div className="text-xs">{despesa.descricao || "—"}</div>
+                            </td>
                             <td className="py-3 px-4 text-right font-medium text-orange-500 min-w-[100px]">{formatCurrency(despesa.valor)}</td>
                             <td className="py-3 px-4 text-center w-[120px]">
                               <Badge variant={despesa.status === "CONFIRMADO" ? "default" : "secondary"} className="text-xs">{despesa.status}</Badge>
