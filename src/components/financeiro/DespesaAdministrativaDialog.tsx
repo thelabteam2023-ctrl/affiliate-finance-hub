@@ -54,7 +54,6 @@ interface DespesaAdministrativa {
   descricao: string;
   valor: number;
   data_despesa: string;
-  recorrente: boolean;
   status: string;
   origem_tipo?: string;
   origem_caixa_operacional?: boolean;
@@ -96,7 +95,6 @@ export function DespesaAdministrativaDialog({
     descricao: "",
     valor: 0,
     data_despesa: new Date().toISOString().split("T")[0],
-    recorrente: false,
     status: "CONFIRMADO",
   });
   const [origemData, setOrigemData] = useState<OrigemPagamentoData>({
@@ -166,7 +164,6 @@ export function DespesaAdministrativaDialog({
         descricao: "",
         valor: 0,
         data_despesa: new Date().toISOString().split("T")[0],
-        recorrente: false,
         status: "CONFIRMADO",
       });
       setOrigemData({
@@ -261,7 +258,6 @@ export function DespesaAdministrativaDialog({
         descricao: formData.descricao || null,
         valor: formData.valor,
         data_despesa: formData.data_despesa,
-        recorrente: formData.recorrente,
         status: formData.status,
         user_id: user.id,
         workspace_id: workspaceId,
@@ -459,7 +455,6 @@ export function DespesaAdministrativaDialog({
           descricao: despesa.descricao,
           valor: despesa.valor,
           data_despesa: despesa.data_despesa,
-          recorrente: despesa.recorrente,
           status: despesa.status,
           origem_tipo: despesa.origem_tipo,
           origem_parceiro_id: despesa.origem_parceiro_id,
@@ -476,7 +471,6 @@ export function DespesaAdministrativaDialog({
           descricao: payload.descricao,
           valor: payload.valor,
           data_despesa: payload.data_despesa,
-          recorrente: payload.recorrente,
           status: payload.status,
           origem_tipo: payload.origem_tipo,
           origem_parceiro_id: payload.origem_parceiro_id,
@@ -596,7 +590,6 @@ export function DespesaAdministrativaDialog({
           descricao: payload.descricao,
           valor: payload.valor,
           data_despesa: payload.data_despesa,
-          recorrente: payload.recorrente,
           status: payload.status,
           origem_tipo: payload.origem_tipo,
           origem_parceiro_id: payload.origem_parceiro_id,
@@ -819,19 +812,6 @@ export function DespesaAdministrativaDialog({
               onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
               placeholder="Descrição opcional da despesa..."
               rows={2}
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Despesa Recorrente</Label>
-              <p className="text-xs text-muted-foreground">
-                Marque se esta despesa se repete mensalmente
-              </p>
-            </div>
-            <Switch
-              checked={formData.recorrente}
-              onCheckedChange={(checked) => setFormData({ ...formData, recorrente: checked })}
             />
           </div>
 
