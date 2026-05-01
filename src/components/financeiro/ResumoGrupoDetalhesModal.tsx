@@ -32,8 +32,8 @@ export function ResumoGrupoDetalhesModal({ open, onOpenChange, grupo, despesas, 
     const agrupado: Record<string, number> = {};
     
     despesas.forEach((d) => {
-      // Se tiver operador, usa o nome. Se não, tenta a descrição. Se não, "Outros".
-      const nome = d.operadores?.nome || (d.descricao && d.descricao.length < 30 ? d.descricao : null) || "Outros / Não Identificado";
+      // Prioridade total para o nome do operador. Se não existir, usa a descrição ou marcador genérico.
+      const nome = d.operadores?.nome || (d.descricao && d.descricao.length < 50 ? d.descricao : null) || "Outros / Não Identificado";
       agrupado[nome] = (agrupado[nome] || 0) + d.valor;
     });
 
