@@ -20,7 +20,9 @@ import {
 import { DatePicker } from "@/components/ui/date-picker";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Users } from "lucide-react";
+import { Loader2, Users, Check } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { OrigemPagamentoSelect, OrigemPagamentoData } from "@/components/programa-indicacao/OrigemPagamentoSelect";
 import { PagamentoOperadorDialog } from "@/components/operadores/PagamentoOperadorDialog";
 import { useWorkspace } from "@/hooks/useWorkspace";
@@ -48,6 +50,7 @@ interface DespesaAdministrativa {
   id?: string;
   categoria: string;
   grupo?: string;
+  tipo_despesa?: string | null;
   subcategoria_rh?: string | null;
   operador_id?: string | null;
   descricao: string;
@@ -89,6 +92,7 @@ export function DespesaAdministrativaDialog({
   const [formData, setFormData] = useState<DespesaAdministrativa>({
     categoria: "",
     grupo: "UTILIDADES_E_SERVICOS_BASICOS",
+    tipo_despesa: null,
     subcategoria_rh: null,
     operador_id: null,
     descricao: "",
@@ -140,6 +144,7 @@ export function DespesaAdministrativaDialog({
         ...despesa,
         data_despesa: despesa.data_despesa.split("T")[0],
         grupo: despesa.grupo || "OUTROS",
+        tipo_despesa: (despesa as any).tipo_despesa || null,
         subcategoria_rh: (despesa as any).subcategoria_rh || null,
         operador_id: (despesa as any).operador_id || null,
       });
@@ -158,6 +163,7 @@ export function DespesaAdministrativaDialog({
       setFormData({
         categoria: "",
         grupo: "UTILIDADES_E_SERVICOS_BASICOS",
+        tipo_despesa: null,
         subcategoria_rh: null,
         operador_id: null,
         descricao: "",
@@ -238,20 +244,25 @@ export function DespesaAdministrativaDialog({
       if (!user) throw new Error("Usuário não autenticado");
       if (!workspaceId) throw new Error("Workspace não encontrado");
 
-      const grupoInfo = getGrupoInfo(formData.grupo || "OUTROS");
+      const currentGrupo = formData.grupo || "OUTROS";
+      const grupoInfo = getGrupoInfo(currentGrupo);
       const subcategoriaInfo = formData.subcategoria_rh ? getSubcategoriaRHInfo(formData.subcategoria_rh) : null;
       const operadorSelecionado = formData.operador_id 
         ? operadores.find(op => op.operador_id === formData.operador_id) 
         : null;
       
-      // Categoria personalizada para RH incluindo subcategoria
-      const categoriaLabel = formData.grupo === "RECURSOS_HUMANOS" && subcategoriaInfo
-        ? `${grupoInfo.label} - ${subcategoriaInfo.label}`
-        : grupoInfo.label;
+      // Categoria detalhada
+      let categoriaLabel = grupoInfo.label;
+      if (currentGrupo === "RECURSOS_HUMANOS" && subcategoriaInfo) {
+        categoriaLabel = `${grupoInfo.label} - ${subcategoriaInfo.label}`;
+      } else if (formData.tipo_despesa) {
+        categoriaLabel = `${grupoInfo.label} - ${formData.tipo_despesa}`;
+      }
       
       const payload: any = {
         categoria: categoriaLabel,
         grupo: formData.grupo,
+        tipo_despesa: formData.tipo_despesa,
         subcategoria_rh: formData.grupo === "RECURSOS_HUMANOS" ? formData.subcategoria_rh : null,
         operador_id: formData.grupo === "RECURSOS_HUMANOS" ? (formData.operador_id || null) : null,
         descricao: formData.descricao || null,
