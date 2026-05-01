@@ -1,3 +1,4 @@
+import { ResumoGrupoDetalhesModal } from "@/components/financeiro/ResumoGrupoDetalhesModal";
 import { useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -26,6 +27,8 @@ interface DespesaAdministrativa {
   data_despesa: string;
   status: string;
   _fromLedger?: boolean;
+  operador_id?: string | null;
+  operadores?: { nome: string } | null;
 }
 
 interface Props {
@@ -42,6 +45,8 @@ export function FinanceiroDespesasTab({ despesasAdmin, totalDespesasAdmin, total
   const { toast } = useToast();
   const [despesaAdminDialogOpen, setDespesaAdminDialogOpen] = useState(false);
   const [editingDespesa, setEditingDespesa] = useState<DespesaAdministrativa | null>(null);
+  const [selectedGrupo, setSelectedGrupo] = useState<string | null>(null);
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -105,7 +110,12 @@ export function FinanceiroDespesasTab({ despesasAdmin, totalDespesasAdmin, total
                                 </TooltipContent>
                               </ShadcnTooltip>
                             </td>
-                            <td className="py-3 px-4 text-muted-foreground max-w-[300px] truncate">{despesa.descricao || "—"}</td>
+                            <td className="py-3 px-4 text-muted-foreground max-w-[300px] truncate">
+                              {despesa.operadores?.nome && (
+                                <div className="text-foreground font-medium mb-0.5">{despesa.operadores.nome}</div>
+                              )}
+                              <div className="text-xs">{despesa.descricao || "—"}</div>
+                            </td>
                             <td className="py-3 px-4 text-right font-medium text-orange-500 min-w-[100px]">{formatCurrency(despesa.valor)}</td>
                             <td className="py-3 px-4 text-center w-[120px]">
                               <Badge variant={despesa.status === "CONFIRMADO" ? "default" : "secondary"} className="text-xs">{despesa.status}</Badge>
@@ -152,10 +162,20 @@ export function FinanceiroDespesasTab({ despesasAdmin, totalDespesasAdmin, total
               const grupoInfo = getGrupoInfo(grupo);
               const IconComponent = grupoInfo.icon;
               return (
-                <div key={grupo} className="flex items-center justify-between">
-                  <span className="text-sm flex items-center gap-2"><IconComponent className="h-4 w-4" /><span>{grupoInfo.label}</span></span>
+                <button
+                  key={grupo}
+                  onClick={() => {
+                    setSelectedGrupo(grupo);
+                    setDetailsModalOpen(true);
+                  }}
+                  className="flex items-center justify-between w-full p-2 hover:bg-muted/50 rounded-lg transition-colors group"
+                >
+                  <span className="text-sm flex items-center gap-2">
+                    <IconComponent className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                    <span className="group-hover:underline underline-offset-4">{grupoInfo.label}</span>
+                  </span>
                   <span className="font-medium text-orange-500">{formatCurrency(valor as number)}</span>
-                </div>
+                </button>
               );
             })}
             {despesasAdmin.length > 0 && (
@@ -178,6 +198,16 @@ export function FinanceiroDespesasTab({ despesasAdmin, totalDespesasAdmin, total
         despesa={editingDespesa}
         onSuccess={() => onRefresh()}
       />
+
+      {selectedGrupo && (
+        <ResumoGrupoDetalhesModal
+          open={detailsModalOpen}
+          onOpenChange={setDetailsModalOpen}
+          grupo={selectedGrupo}
+          despesas={despesasAdmin.filter(d => (d.grupo || "OUTROS") === selectedGrupo)}
+          formatCurrency={formatCurrency}
+        />
+      )}
     </div>
   );
 }
