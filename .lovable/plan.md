@@ -18,11 +18,15 @@ Plano para deixar o calendário compacto quando houver muitas casas no mesmo dia
    - Manter o rodapé do dia com o resumo “X casas • Σ valor”, para que o total continue visível mesmo com itens ocultos.
    - Reduzir o risco de a semana ficar desproporcional quando um único dia tiver 20+ demandas.
 
-Detalhes técnicos:
-- Alterar `src/components/planejamento/PlanejamentoCalendario.tsx`.
-- Criar uma constante como `MAX_VISIBLE_CAMPANHAS_PER_DAY = 5`.
-- Na renderização do calendário, separar `visibleDayCamps = dayCamps.slice(0, 5)` e `hiddenCount = dayCamps.length - visibleDayCamps.length`.
-- Renderizar `DraggableCampanha` apenas para `visibleDayCamps`.
-- Renderizar um botão compacto quando `hiddenCount > 0`, chamando `setDetailsDate(key)`.
-- Garantir `stopPropagation` no botão para não causar cliques duplicados.
-- A lista do modal continuará usando `detailsCampanhas`, sem alteração no limite.
+
+## Detalhamento de Despesas por Beneficiário (Resumo por Grupo)
+
+1. **Objetivo**: Permitir a visualização detalhada de quem recebeu os valores em cada grupo de despesas administrativas.
+2. **Ações**:
+   - Tornar as linhas do card "Resumo por Grupo" (Financeiro > Despesas) clicáveis.
+   - Ao clicar, abrir um modal (`ResumoGrupoDetalhesModal`) que exibe a somatória dos valores agrupados por beneficiário (Operador).
+   - Se a despesa não estiver vinculada a um operador, o sistema utilizará a descrição curta ou um marcador genérico como beneficiário.
+3. **Alterações Técnicas**:
+   - `src/hooks/useFinanceiroData.ts`: Atualizado para incluir o join com a tabela de `operadores`.
+   - `src/components/financeiro/ResumoGrupoDetalhesModal.tsx`: Novo componente para o modal de detalhamento.
+   - `src/components/financeiro/FinanceiroDespesasTab.tsx`: Integrada a lógica de clique e exibição do modal.
