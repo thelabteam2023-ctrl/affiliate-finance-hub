@@ -41,6 +41,18 @@ interface Props {
   dataFim?: string | null;
 }
 
+function toTitleCase(str: string): string {
+  if (!str) return str;
+  return str
+    .toLowerCase()
+    .split(" ")
+    .map((word) => {
+      if (["de", "da", "do", "dos", "das", "e"].includes(word)) return word;
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(" ");
+}
+
 export function FinanceiroDespesasTab({ despesasAdmin, totalDespesasAdmin, totalPagamentosOperadores, formatCurrency, onRefresh, dataInicio, dataFim }: Props) {
   const { toast } = useToast();
   const [despesaAdminDialogOpen, setDespesaAdminDialogOpen] = useState(false);
@@ -112,7 +124,9 @@ export function FinanceiroDespesasTab({ despesasAdmin, totalDespesasAdmin, total
                             </td>
                             <td className="py-3 px-4 text-muted-foreground max-w-[300px] truncate">
                               {despesa.operadores?.nome && (
-                                <div className="text-foreground font-medium mb-0.5">{despesa.operadores.nome}</div>
+                                <div className="text-foreground font-medium mb-0.5">
+                                  {toTitleCase(despesa.operadores.nome)}
+                                </div>
                               )}
                               <div className="text-xs">{despesa.descricao || "—"}</div>
                             </td>
