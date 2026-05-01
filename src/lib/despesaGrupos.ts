@@ -29,7 +29,7 @@ export const GRUPOS_DESPESA: Record<string, GrupoDespesaInfo> = {
     description: "Internet fixa, móvel, telefonia",
     icon: Wifi,
     color: "bg-blue-500/10 text-blue-600 border-blue-500/20",
-    subcategorias: ["Internet Fixa", "Internet Móvel", "Planos Telefônicos", "Hospedagem", "Outros"],
+    subcategorias: ["Internet Fixa", "Internet Móvel", "Planos Telefônicos", "Outros"],
   },
   ADMINISTRATIVO_CONTABIL_FISCAL: {
     value: "ADMINISTRATIVO_CONTABIL_FISCAL",
@@ -53,7 +53,7 @@ export const GRUPOS_DESPESA: Record<string, GrupoDespesaInfo> = {
     description: "Licenças, proxy, VPN, servidores, SaaS",
     icon: Cpu,
     color: "bg-cyan-500/10 text-cyan-600 border-cyan-500/20",
-    subcategorias: ["Licenças SaaS", "Proxies/VPNs", "Servidores/Cloud", "API Integrations", "Outros"],
+    subcategorias: ["Licenças SaaS", "Proxies/VPNs", "Servidores/Cloud", "Hospedagem", "API Integrations", "Outros"],
   },
   ATIVOS: {
     value: "ATIVOS",
