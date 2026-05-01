@@ -682,6 +682,7 @@ export function DespesaAdministrativaDialog({
                     grupo: value,
                     subcategoria_rh: value === "RECURSOS_HUMANOS" ? formData.subcategoria_rh : null,
                     operador_id: value === "RECURSOS_HUMANOS" ? formData.operador_id : null,
+                    tipo_despesa: null,
                   });
                 }}
               >
@@ -702,9 +703,46 @@ export function DespesaAdministrativaDialog({
                   })}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground mb-3">
                 {getGrupoInfo(formData.grupo || "OUTROS").description}
               </p>
+
+              {/* Badges de Subcategoria (Tipo de Despesa) */}
+              {(() => {
+                const info = getGrupoInfo(formData.grupo || "OUTROS");
+                if (info.subcategorias && info.subcategorias.length > 0) {
+                  return (
+                    <div className="space-y-2">
+                      <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Tipo de Despesa específico</Label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {info.subcategorias.map((sub) => {
+                          const isSelected = formData.tipo_despesa === sub;
+                          return (
+                            <Badge
+                              key={sub}
+                              variant={isSelected ? "default" : "outline"}
+                              className={cn(
+                                "cursor-pointer py-1 px-3 transition-all hover:scale-105 active:scale-95 flex items-center gap-1",
+                                isSelected ? "bg-primary shadow-sm" : "hover:bg-primary/5 text-muted-foreground"
+                              )}
+                              onClick={() => {
+                                setFormData({ 
+                                  ...formData, 
+                                  tipo_despesa: isSelected ? null : sub 
+                                });
+                              }}
+                            >
+                              {isSelected && <Check className="h-3 w-3" />}
+                              {sub}
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
             </div>
 
             {/* Subcategoria de RH - aparece apenas quando grupo = RECURSOS_HUMANOS */}
