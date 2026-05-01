@@ -3225,6 +3225,7 @@ export type Database = {
           qtd_coin: number | null
           status: string
           subcategoria_rh: string | null
+          tipo_despesa: string | null
           tipo_moeda: string | null
           updated_at: string
           user_id: string
@@ -3249,6 +3250,7 @@ export type Database = {
           qtd_coin?: number | null
           status?: string
           subcategoria_rh?: string | null
+          tipo_despesa?: string | null
           tipo_moeda?: string | null
           updated_at?: string
           user_id: string
@@ -3273,6 +3275,7 @@ export type Database = {
           qtd_coin?: number | null
           status?: string
           subcategoria_rh?: string | null
+          tipo_despesa?: string | null
           tipo_moeda?: string | null
           updated_at?: string
           user_id?: string
