@@ -24,6 +24,18 @@ interface Props {
   formatCurrency: (value: number) => string;
 }
 
+function toTitleCase(str: string): string {
+  if (!str) return str;
+  return str
+    .toLowerCase()
+    .split(" ")
+    .map((word) => {
+      if (["de", "da", "do", "dos", "das", "e"].includes(word)) return word;
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(" ");
+}
+
 export function ResumoGrupoDetalhesModal({ open, onOpenChange, grupo, despesas, formatCurrency }: Props) {
   const grupoInfo = getGrupoInfo(grupo);
   const IconComponent = grupoInfo.icon;
@@ -32,9 +44,10 @@ export function ResumoGrupoDetalhesModal({ open, onOpenChange, grupo, despesas, 
     const agrupado: Record<string, number> = {};
     
     despesas.forEach((d) => {
-      // Prioridade total para o nome do operador. Se não existir, usa a descrição ou marcador genérico.
-      const nome = d.operadores?.nome || (d.descricao && d.descricao.length < 50 ? d.descricao : null) || "Outros / Não Identificado";
-      agrupado[nome] = (agrupado[nome] || 0) + d.valor;
+      // Prioridade total para o nome do operador formatado em Title Case.
+      const rawNome = d.operadores?.nome || (d.descricao && d.descricao.length < 50 ? d.descricao : null) || "Outros / Não Identificado";
+      const nomeFormatado = toTitleCase(rawNome);
+      agrupado[nomeFormatado] = (agrupado[nomeFormatado] || 0) + d.valor;
     });
 
     return Object.entries(agrupado)
