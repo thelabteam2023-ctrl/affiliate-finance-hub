@@ -256,15 +256,25 @@ export function useFinanceiroCalculations({
       agrupado[operadorNome].valor += p.valor;
     });
     costs.despesasRH.forEach((d: any) => {
-      let subcategoriaLabel = "RH - Outros";
+      const operadorNome = d.operadores?.nome || "Operador não identificado";
+      let subcategoriaLabel = "Outros";
+      
       if (d.subcategoria_rh) {
-        const subcatMap: Record<string, string> = { SALARIO_MENSAL: "RH - Salário Mensal", COMISSAO: "RH - Comissões", ADIANTAMENTO: "RH - Adiantamentos", BONIFICACAO: "RH - Bonificações" };
-        subcategoriaLabel = subcatMap[d.subcategoria_rh] || `RH - ${d.subcategoria_rh}`;
+        const subcatMap: Record<string, string> = { 
+          SALARIO_MENSAL: "Salário Mensal", 
+          COMISSAO: "Comissão", 
+          ADIANTAMENTO: "Adiantamento", 
+          BONIFICACAO: "Bonificação" 
+        };
+        subcategoriaLabel = subcatMap[d.subcategoria_rh] || d.subcategoria_rh;
       } else if (d.categoria) {
-        subcategoriaLabel = `RH - ${d.categoria}`;
+        // Se a categoria já contém "Recursos Humanos - ", limpar para não ficar redundante
+        subcategoriaLabel = d.categoria.replace("Recursos Humanos - ", "");
       }
-      if (!agrupado[subcategoriaLabel]) agrupado[subcategoriaLabel] = { operadorNome: subcategoriaLabel, valor: 0 };
-      agrupado[subcategoriaLabel].valor += d.valor;
+      
+      const key = `RH - ${operadorNome} (${subcategoriaLabel})`;
+      if (!agrupado[key]) agrupado[key] = { operadorNome: key, valor: 0 };
+      agrupado[key].valor += d.valor;
     });
     return Object.values(agrupado).sort((a, b) => b.valor - a.valor);
   }, [filtered.filteredPagamentosOp, costs.despesasRH]);
