@@ -39,6 +39,7 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
   const queryClient = useQueryClient();
   const [novoFornecedorOpen, setNovoFornecedorOpen] = useState(false);
   const [alocacaoOpen, setAlocacaoOpen] = useState(false);
+  const [transacaoDialogOpen, setTransacaoDialogOpen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
