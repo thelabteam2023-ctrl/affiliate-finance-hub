@@ -269,13 +269,23 @@ export function FinanceiroDespesasTab({
                                           }
                                         }
                                         
-                                        // Se não tiver nome ou for o genérico, tenta extrair da descrição (termo curto)
-                                        if ((!nome || nome === "Operador") && despesa.descricao) {
-                                          const palavras = despesa.descricao.split(" ");
-                                          if (palavras.length <= 3) return toTitleCase(despesa.descricao);
-                                        }
+                                        let finalName = nome || "Operador";
                                         
-                                        return toTitleCase(nome || "Operador");
+                                        // Se o nome for o genérico, tenta buscar na descrição
+                                        if (finalName === "Operador" && despesa.descricao) {
+                                          const palavras = despesa.descricao.split(" ");
+                                          if (palavras.length <= 3) {
+                                            finalName = despesa.descricao;
+                                          }
+                                        }
+
+                                        // Remove prefixos comuns como "PAGAMENTO" ou "PAGTO" para mostrar apenas o nome real
+                                        const cleanName = finalName
+                                          .replace(/^PAGAMENTO\s+/i, "")
+                                          .replace(/^PAGTO\s+/i, "")
+                                          .trim();
+                                        
+                                        return toTitleCase(cleanName);
                                       })()}
                                     </div>
                                   )}
