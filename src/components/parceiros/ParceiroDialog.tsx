@@ -828,16 +828,18 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
               ? btoa(unescape(encodeURIComponent(wallet.observacoes)))
               : null;
 
-            const walletData: any = {
-              parceiro_id: currentParceiroId,
+            const walletData = {
+              parceiro_id: sanitizeUuid(currentParceiroId),
               label: wallet.label || null,
-              moeda: wallet.moeda || [],
-              endereco: wallet.endereco,
-              network: redes.find(r => r.id === wallet.rede_id)?.nome || "",
-              rede_id: wallet.rede_id === "" ? null : wallet.rede_id,
+              moeda: Array.isArray(wallet.moeda) ? wallet.moeda : [],
+              endereco: wallet.endereco.trim(),
+              network: redes.find(r => r.id === wallet.rede_id)?.nome || "Rede Desconhecida",
+              rede_id: sanitizeUuid(wallet.rede_id),
               exchange: wallet.exchange || null,
               observacoes_encrypted: observacoesEncrypted,
             };
+
+            console.log(`[ParceiroDialog] Saving crypto wallet ${i}:`, JSON.stringify(walletData, null, 2));
             
             if (wallet.id) {
               // UPDATE existing wallet
