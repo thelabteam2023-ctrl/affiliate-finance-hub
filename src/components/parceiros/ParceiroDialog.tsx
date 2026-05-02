@@ -7,23 +7,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useWorkspace } from "@/hooks/useWorkspace";
- import { Loader2, Plus, Trash2, User, Landmark, Wallet, Copy, Check, AlertTriangle, Zap, ChevronDown, ChevronUp, Building2, Truck } from "lucide-react";
+import { Loader2, User, Landmark, Wallet, Copy, Check } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PersonalDataTab } from "./tabs/PersonalDataTab";
 import { BankAccountsTab } from "./tabs/BankAccountsTab";
 import { CryptoWalletsTab } from "./tabs/CryptoWalletsTab";
-import { validateCPF, formatCPF, formatCEP, formatAgencia, formatConta } from "@/lib/validators";
-import { DatePickerInput } from "@/components/ui/date-picker-input";
+import { validateCPF, formatCPF, formatCEP } from "@/lib/validators";
 import { ParceiroProfileView } from "./ParceiroProfileView";
-import { StarRating } from "./StarRating";
 
 interface PixKey {
   tipo: string;
