@@ -76,12 +76,14 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("supplier_profiles")
-        .select("*")
+        .select(`
+          *,
+          parceiros (id)
+        `)
         .eq("parent_workspace_id", workspaceId)
         .order("created_at", { ascending: false });
       if (error) throw error;
 
-      // Fetch related data separately to avoid deep type inference
       const profiles = data || [];
       const wsIds = profiles.map((p: any) => p.workspace_id);
 
@@ -92,6 +94,7 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
 
       return profiles.map((p: any) => ({
         ...p,
+        parceiro_id: (p.parceiros as any)?.[0]?.id,
         supplier_alocacoes: (alocRes.data || []).filter((a: any) => a.supplier_workspace_id === p.workspace_id),
         supplier_access_tokens: (tokenRes.data || []).filter((t: any) => t.supplier_workspace_id === p.workspace_id),
       }));
@@ -256,6 +259,7 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
           origem_conta_bancaria_id: origemData.origemContaBancariaId || null,
           origem_wallet_id: origemData.origemWalletId || null,
           destino_tipo: "FORNECEDOR",
+          destino_parceiro_id: selectedSupplier.parceiro_id || null,
           data_transacao: format(new Date(), "yyyy-MM-dd"),
           descricao: descricaoAlocacao || `Alocação de capital para fornecedor ${selectedSupplier.nome}`,
           status: "CONFIRMADO",
