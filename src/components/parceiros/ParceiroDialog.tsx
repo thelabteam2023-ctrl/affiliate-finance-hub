@@ -664,10 +664,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         }
       }
 
-       const parceiroData: any = {
+      const parceiroData: any = {
         user_id: user.id,
         workspace_id: workspaceId,
-        nome,
+        nome: nome.trim(),
         cpf: cpf.replace(/\D/g, "") || null,
         email: email || null,
         telefone: telefone.replace(/[^\d+]/g, "") || null,
@@ -675,13 +675,17 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         endereco: endereco || null,
         cidade: cidade || null,
         cep: cep.replace(/\D/g, "") || null,
-         status,
-         observacoes: observacoes || null,
-         fornecedor_origem_id: fornecedorOrigemId === "" ? null : fornecedorOrigemId,
-         qualidade: qualidade ?? null,
+        status,
+        observacoes: observacoes || null,
+        fornecedor_origem_id: sanitizeUuid(fornecedorOrigemId),
+        qualidade: (qualidade === null || isNaN(Number(qualidade))) ? null : Number(qualidade),
       };
 
-      console.log("[ParceiroDialog] Saving parceiroData:", parceiroData);
+      console.log("[ParceiroDialog] Saving parceiroData:", JSON.stringify(parceiroData, null, 2));
+
+      if (!parceiroData.workspace_id) {
+        throw new Error("ID do Workspace não encontrado. Por favor, recarregue a página.");
+      }
 
       let currentParceiroId = parceiroId || parceiro?.id;
 
