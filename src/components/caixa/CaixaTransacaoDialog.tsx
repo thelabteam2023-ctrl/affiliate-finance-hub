@@ -3432,12 +3432,17 @@ export function CaixaTransacaoDialog({
                       const shortenedAddress = wallet.endereco 
                         ? `${wallet.endereco.slice(0, 5)}....${wallet.endereco.slice(-5)}`
                         : '';
-                      const saldoDisponivel = saldo?.saldo_disponivel ?? saldo?.saldo_usd ?? 0;
+                           // No contexto de transferência de moedas, o saldo real é o saldo_coin.
+                           // O saldo_disponivel da view é em USD e pode divergir em stablecoins se o valor_usd no ledger estiver inconsistente.
+                           const saldoDisponivel = (coin === 'USDT' || coin === 'USDC') 
+                             ? (saldo?.saldo_coin ?? 0) 
+                             : (saldo?.saldo_disponivel ?? saldo?.saldo_usd ?? 0);
+                             
                       const temLocked = (saldo?.saldo_locked ?? 0) > 0;
                       return (
                         <SelectItem key={wallet.id} value={wallet.id}>
                           <span className="font-mono">
-                            {walletName} - {shortenedAddress} - Disp: {formatCurrency(saldoDisponivel)}
+                                 {walletName} - {shortenedAddress} - Disp: {saldoDisponivel.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 6 })} {coin}
                             {temLocked && <span className="text-warning ml-1">(🔒)</span>}
                           </span>
                         </SelectItem>
