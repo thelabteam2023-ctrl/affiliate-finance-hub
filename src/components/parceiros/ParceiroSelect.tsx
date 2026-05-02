@@ -191,10 +191,15 @@ export interface ParceiroSelectRef {
         return { saldo: 0, disponivel: false }; // "Saldo indisponível"
       }
       
-      // Usar saldo_disponivel se disponível, senão fallback para saldo_usd
-      const saldoDisponivelTotal = walletsDoParceiro.reduce((acc, w) => 
-        acc + (w.saldo_disponivel ?? w.saldo_usd ?? 0), 0
-      );
+      // No contexto de moedas, o saldo real é a quantidade de coins (saldo_coin).
+      // O saldo_disponivel da view é em USD e pode divergir em stablecoins.
+      const saldoDisponivelTotal = walletsDoParceiro.reduce((acc, w) => {
+        if (coin === 'USDT' || coin === 'USDC') {
+          return acc + (w.saldo_coin || 0);
+        }
+        return acc + (w.saldo_disponivel ?? w.saldo_usd ?? 0);
+      }, 0);
+      
       return { saldo: saldoDisponivelTotal, disponivel: true };
     }
     
@@ -227,16 +232,28 @@ export interface ParceiroSelectRef {
       );
     }
     
-    // CRYPTO - sempre exibir em USD
-    const formatted = saldo.toLocaleString('en-US', { 
-      minimumFractionDigits: 2, 
-      maximumFractionDigits: 2 
-    });
-    return (
-      <span className={saldo > 0 ? "text-emerald-500 text-xs font-medium" : "text-muted-foreground text-xs"}>
-        Saldo: $ {formatted}
-      </span>
-    );
+    // CRYPTO - exibir na moeda do coin se selecionado, senão em USD
+    if (coin === 'USDT' || coin === 'USDC') {
+      const formatted = saldo.toLocaleString('pt-BR', { 
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 2 
+      });
+      return (
+        <span className={saldo > 0 ? "text-emerald-500 text-xs font-medium" : "text-muted-foreground text-xs"}>
+          Saldo: {formatted} {coin}
+        </span>
+      );
+    } else {
+      const formatted = saldo.toLocaleString('en-US', { 
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 2 
+      });
+      return (
+        <span className={saldo > 0 ? "text-emerald-500 text-xs font-medium" : "text-muted-foreground text-xs"}>
+          Saldo: $ {formatted}
+        </span>
+      );
+    }
   };
 
   return (
