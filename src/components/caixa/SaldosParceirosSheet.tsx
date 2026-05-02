@@ -95,6 +95,13 @@ interface ParceiroSaldoAgrupado {
     moeda: string;
     has_bonus: boolean;
   }>;
+  saldos_fornecedor?: {
+    saldo_central: number;
+    saldo_bancos: number;
+    saldo_contas: number;
+    saldo_total: number;
+  };
+  is_fornecedor?: boolean;
   // Transações pendentes (em trânsito para bookmakers)
   pendentes_bookmakers: Array<{
     bookmaker_nome: string;
