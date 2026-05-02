@@ -203,12 +203,12 @@ async function fetchFinanceiroData(workspaceId: string): Promise<FinanceiroData>
     apostasHistorico: apostasHistoricoResult.data || [],
     totalParceirosAtivos: parceirosAtivosResult.count || 0,
     contasParceiros: parceirosContas,
-    contasDetalhadas: (contasDetalhadasResult.data || []).map((c: any) => ({
+    contasDetalhadas: (allContasSaldoResult.data || []).map((c: any) => ({
       ...c,
       id: c.conta_id || c.id
     })),
     walletsParceiros: parceirosWallets,
-    walletsDetalhadas: (walletsDetalhadasResult.data || []).map((w: any) => ({
+    walletsDetalhadas: (allWalletsSaldoResult.data || []).map((w: any) => ({
       ...w,
       id: w.wallet_id || w.id
     })),

@@ -94,7 +94,10 @@ export function useFinanceiroCalculations({
     const filteredDespesas = filterByPeriod(despesas, "data_movimentacao");
     const filteredCustos = filterByPeriod(custos, "data_inicio");
     const filteredLedger = filterByPeriod(cashLedger, "data_transacao");
-    const filteredDespesasAdmin = filterByPeriod(despesasAdmin, "data_despesa");
+    const filteredDespesasAdmin = filterByPeriod(despesasAdmin.map(d => ({
+      ...d,
+      origem_caixa_operacional: d.origem_tipo === "CAIXA_OPERACIONAL"
+    })), "data_despesa");
     const filteredPagamentosOp = filterByPeriod(pagamentosOperador, "data_pagamento");
     return { filteredDespesas, filteredCustos, filteredLedger, filteredDespesasAdmin, filteredPagamentosOp };
   }, [despesas, custos, cashLedger, despesasAdmin, pagamentosOperador, filterByPeriod]);
