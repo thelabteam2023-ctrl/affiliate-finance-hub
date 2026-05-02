@@ -1,7 +1,30 @@
- import * as React from "react";
- import { X } from "lucide-react";
- import { Badge } from "./badge";
- import { cn } from "@/lib/utils";
+  import * as React from "react";
+  import { X, Plus, Check } from "lucide-react";
+  import { Badge } from "./badge";
+  import { cn } from "@/lib/utils";
+  import { Button } from "./button";
+  import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+  } from "@/components/ui/popover";
+  import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+  } from "@/components/ui/command";
+  // Configuração de cores para tags predefinidas
+  const TAG_COLORS: Record<string, string> = {
+    "Investimento Inicial": "bg-blue-500/10 text-blue-500 border-blue-500/20",
+    "Aporte Extra": "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+    "default": "bg-primary/10 text-primary border-primary/20"
+  };
+
+  export const getTagColor = (tag: string) => TAG_COLORS[tag] || TAG_COLORS["default"];
+
  
  interface TagInputProps {
    placeholder?: string;
@@ -11,81 +34,104 @@
    suggestions?: string[];
  }
  
- export function TagInput({
-   placeholder,
-   tags,
-   onChange,
-   className,
-   suggestions = [],
- }: TagInputProps) {
-   const [inputValue, setInputValue] = React.useState("");
- 
-   const addTag = (tag: string) => {
-     const trimmedTag = tag.trim();
-     if (trimmedTag && !tags.includes(trimmedTag)) {
-       onChange([...tags, trimmedTag]);
-     }
-     setInputValue("");
-   };
- 
-   const removeTag = (tagToRemove: string) => {
-     onChange(tags.filter((tag) => tag !== tagToRemove));
-   };
- 
-   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-     if (e.key === "Enter" || e.key === ",") {
-       e.preventDefault();
-       addTag(inputValue);
-     } else if (e.key === "Backspace" && !inputValue && tags.length > 0) {
-       removeTag(tags[tags.length - 1]);
-     }
-   };
- 
-   const filteredSuggestions = suggestions.filter(
-     (suggestion) => 
-       suggestion.toLowerCase().includes(inputValue.toLowerCase()) && 
-       !tags.includes(suggestion)
-   );
- 
-   return (
-     <div className={cn("space-y-2", className)}>
-       <div className="flex flex-wrap gap-2 p-2 border rounded-md bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
-         {tags.map((tag) => (
-           <Badge key={tag} variant="secondary" className="flex items-center gap-1 py-1 px-2 text-xs">
-             {tag}
-             <button
-               type="button"
-               onClick={() => removeTag(tag)}
-               className="hover:text-destructive focus:outline-none"
-             >
-               <X className="h-3 w-3" />
-             </button>
-           </Badge>
-         ))}
-         <input
-           className="flex-1 bg-transparent outline-none text-sm min-w-[120px]"
-           placeholder={tags.length === 0 ? placeholder : ""}
-           value={inputValue}
-           onChange={(e) => setInputValue(e.target.value)}
-           onKeyDown={handleKeyDown}
-           onBlur={() => inputValue && addTag(inputValue)}
-         />
-       </div>
-       
-       {inputValue && filteredSuggestions.length > 0 && (
-         <div className="flex flex-wrap gap-1 mt-1">
-           {filteredSuggestions.map((suggestion) => (
-             <button
-               key={suggestion}
-               type="button"
-               onClick={() => addTag(suggestion)}
-               className="text-[10px] px-2 py-1 rounded-full bg-muted hover:bg-muted-foreground/20 transition-colors"
-             >
-               {suggestion}
-             </button>
-           ))}
-         </div>
-       )}
-     </div>
-   );
- }
+  export function TagInput({
+    tags,
+    onChange,
+    className,
+    suggestions = [],
+  }: TagInputProps) {
+    const [open, setOpen] = React.useState(false);
+
+    // Sugestões fixas + o que vier do banco
+    const allSuggestions = React.useMemo(() => {
+      const defaults = ["Investimento Inicial", "Aporte Extra"];
+      const combined = [...new Set([...defaults, ...suggestions])];
+      return combined;
+    }, [suggestions]);
+
+    const toggleTag = (tag: string) => {
+      if (tags.includes(tag)) {
+        onChange(tags.filter((t) => t !== tag));
+      } else {
+        onChange([...tags, tag]);
+      }
+    };
+
+    return (
+      <div className={cn("flex flex-wrap items-center gap-2", className)}>
+        {tags.map((tag) => (
+          <Badge 
+            key={tag} 
+            variant="outline" 
+            className={cn("flex items-center gap-1 py-0.5 px-2 text-[10px] font-medium", getTagColor(tag))}
+          >
+            {tag}
+            <button
+              type="button"
+              onClick={() => toggleTag(tag)}
+              className="hover:text-destructive focus:outline-none ml-1"
+            >
+              <X className="h-2.5 w-2.5" />
+            </button>
+          </Badge>
+        ))}
+
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-6 w-6 rounded-full p-0 flex items-center justify-center border-dashed border-muted-foreground/50 hover:border-primary hover:bg-primary/5 group transition-all"
+            >
+              <Plus className="h-3 w-3 text-muted-foreground group-hover:text-primary" />
+              <span className="sr-only">Adicionar Tag</span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[200px] p-0" align="start">
+            <Command>
+              <CommandInput placeholder="Nova tag..." className="h-8 text-xs" />
+              <CommandList>
+                <CommandEmpty>
+                  <button
+                    className="flex items-center gap-2 w-full px-2 py-1.5 text-xs hover:bg-muted transition-colors text-primary font-medium"
+                    onClick={() => {
+                      const input = document.querySelector('[cmdk-input]') as HTMLInputElement;
+                      if (input?.value) {
+                        toggleTag(input.value);
+                        input.value = "";
+                        setOpen(false);
+                      }
+                    }}
+                  >
+                    <Plus className="h-3 w-3" />
+                    Criar nova tag
+                  </button>
+                </CommandEmpty>
+                <CommandGroup heading="Sugestões">
+                  {allSuggestions.map((suggestion) => (
+                    <CommandItem
+                      key={suggestion}
+                      onSelect={() => {
+                        toggleTag(suggestion);
+                      }}
+                      className="text-xs"
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-3.5 w-3.5",
+                          tags.includes(suggestion) ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      <span className={cn("px-1.5 py-0.5 rounded text-[10px]", getTagColor(suggestion))}>
+                        {suggestion}
+                      </span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      </div>
+    );
+  }
