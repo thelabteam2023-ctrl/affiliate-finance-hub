@@ -111,22 +111,22 @@ export interface ParceiroSelectRef {
            pQuery = pQuery.eq("fornecedor_origem_id", fornecedorOrigemId);
          }
  
-         // 2. Buscar fornecedores ativos (se solicitado)
-         const queries = [pQuery];
+         // Buscar parceiros
+         const { data: pData, error: pError } = await pQuery;
+         if (pError) throw pError;
+ 
+         // Buscar fornecedores se necessário
+         let fData: any[] = [];
          if (includeFornecedores) {
-           queries.push(
-             supabase
-               .from("fornecedores")
-               .select("id, nome, status")
-               .eq("status", "ativo")
-               .order("nome", { ascending: true })
-           );
+           const { data, error: fError } = await supabase
+             .from("fornecedores")
+             .select("id, nome, status")
+             .eq("status", "ativo")
+             .order("nome", { ascending: true });
+           if (fError) throw fError;
+           fData = data || [];
          }
- 
-         const results = await Promise.all(queries);
-         const pData = results[0].data || [];
-         const fData = results[1]?.data || [];
- 
+
          let lista: Entidade[] = [
            ...pData.map(p => ({ ...p, tipo: 'parceiro' as const })),
            ...fData.map(f => ({ ...f, tipo: 'fornecedor' as const, cpf: '' }))
