@@ -41,6 +41,8 @@ interface ParceiroSelectProps {
   saldosWallets?: SaldoParceiroWallets[];
   // Incluir parceiro atual mesmo se inativo (para edição)
   includeParceiroId?: string;
+  // Filtro por fornecedor gerenciador
+  fornecedorOrigemId?: string;
 }
 
 export interface ParceiroSelectRef {
@@ -53,6 +55,7 @@ interface Parceiro {
   nome: string;
   cpf: string;
   status: string;
+  fornecedor_origem_id?: string | null;
 }
 
 const ParceiroSelect = forwardRef<ParceiroSelectRef, ParceiroSelectProps>(({ 
@@ -66,7 +69,8 @@ const ParceiroSelect = forwardRef<ParceiroSelectRef, ParceiroSelectProps>(({
   coin,
   saldosContas,
   saldosWallets,
-  includeParceiroId
+  includeParceiroId,
+  fornecedorOrigemId
 }, ref) => {
   const [parceiros, setParceiros] = useState<Parceiro[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,12 +95,18 @@ const ParceiroSelect = forwardRef<ParceiroSelectRef, ParceiroSelectProps>(({
     const fetchParceiros = async () => {
       try {
         // Buscar parceiros ativos
-        const { data: ativos, error } = await supabase
+        let query = supabase
           .from("parceiros")
-          .select("id, nome, cpf, status")
+          .select("id, nome, cpf, status, fornecedor_origem_id")
           .eq("status", "ativo")
           .neq("is_caixa_operacional", true)
           .order("nome", { ascending: true });
+
+        if (fornecedorOrigemId) {
+          query = query.eq("fornecedor_origem_id", fornecedorOrigemId);
+        }
+
+        const { data: ativos, error } = await query;
 
         if (error) throw error;
         
@@ -109,7 +119,7 @@ const ParceiroSelect = forwardRef<ParceiroSelectRef, ParceiroSelectProps>(({
             // Buscar o parceiro específico (pode estar inativo)
             const { data: parceiroEspecifico } = await supabase
               .from("parceiros")
-              .select("id, nome, cpf, status")
+              .select("id, nome, cpf, status, fornecedor_origem_id")
               .eq("id", includeParceiroId)
               .maybeSingle();
             

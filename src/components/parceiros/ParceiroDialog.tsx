@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useWorkspace } from "@/hooks/useWorkspace";
-import { Loader2, Plus, Trash2, User, Landmark, Wallet, Copy, Check, AlertTriangle, Zap, ChevronDown, ChevronUp, Building2 } from "lucide-react";
+ import { Loader2, Plus, Trash2, User, Landmark, Wallet, Copy, Check, AlertTriangle, Zap, ChevronDown, ChevronUp, Building2, Truck } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -90,6 +90,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   const [cep, setCep] = useState("");
   const [status, setStatus] = useState("ativo");
   const [observacoes, setObservacoes] = useState("");
+  const [fornecedorOrigemId, setFornecedorOrigemId] = useState<string | null>(null);
+  const [fornecedores, setFornecedores] = useState<any[]>([]);
   const [qualidade, setQualidade] = useState<number | null>(null);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [cryptoWallets, setCryptoWallets] = useState<CryptoWallet[]>([]);
@@ -164,9 +166,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         endereco: parceiro.endereco || "",
         cidade: parceiro.cidade || "",
         cep: formatCEP(parceiro.cep || ""),
-        status: parceiro.status || "ativo",
-        observacoes: parceiro.observacoes || "",
-        qualidade: parceiro.qualidade ?? null,
+         status: parceiro.status || "ativo",
+         observacoes: parceiro.observacoes || "",
+         fornecedorOrigemId: (parceiro as any).fornecedor_origem_id || null,
+         qualidade: parceiro.qualidade ?? null,
         bankAccounts: JSON.stringify(mappedBankAccounts),
         cryptoWallets: JSON.stringify(mappedWallets),
       });
@@ -199,9 +202,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       endereco,
       cidade,
       cep,
-      status,
-      observacoes,
-      qualidade,
+       status,
+       observacoes,
+       fornecedorOrigemId,
+       qualidade,
       bankAccounts: JSON.stringify(bankAccounts),
       cryptoWallets: JSON.stringify(cryptoWallets)
     };
@@ -213,7 +217,17 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   useEffect(() => {
     fetchBancos();
     fetchRedes();
+    fetchFornecedores();
   }, []);
+
+  const fetchFornecedores = async () => {
+    const { data } = await supabase
+      .from("fornecedores")
+      .select("id, nome")
+      .eq("status", "ATIVO")
+      .order("nome");
+    if (data) setFornecedores(data);
+  };
 
   useEffect(() => {
     if (open) {
@@ -234,9 +248,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       setEndereco(parceiro.endereco || "");
       setCidade(parceiro.cidade || "");
       setCep(formatCEP(parceiro.cep || "")); // Apply mask when loading
-      setStatus(parceiro.status || "ativo");
-      setObservacoes(parceiro.observacoes || "");
-      setQualidade((parceiro as any).qualidade ?? null);
+       setStatus(parceiro.status || "ativo");
+       setObservacoes(parceiro.observacoes || "");
+       setFornecedorOrigemId((parceiro as any).fornecedor_origem_id || null);
+       setQualidade((parceiro as any).qualidade ?? null);
       
       // Map bank accounts data using pix_keys JSONB column
       const mappedAccounts = (parceiro.contas_bancarias || []).map((acc: any) => {
@@ -652,9 +667,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         endereco: endereco || null,
         cidade: cidade || null,
         cep: cep.replace(/\D/g, "") || null,
-        status,
-        observacoes: observacoes || null,
-        qualidade: qualidade ?? null,
+         status,
+         observacoes: observacoes || null,
+         fornecedor_origem_id: fornecedorOrigemId,
+         qualidade: qualidade ?? null,
       };
 
       let currentParceiroId = parceiroId || parceiro?.id;
@@ -1591,31 +1607,63 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                     </Alert>
                   )}
                 </div>
-                <div className="md:col-span-2">
-                  <Label>
-                    Qualidade do parceiro
-                    <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                  </Label>
-                  <div className="mt-1.5 flex items-center gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2">
-                    <StarRating
-                      value={qualidade}
-                      onChange={(v) => !loading && !viewMode && setQualidade(v)}
-                      readOnly={loading || viewMode}
-                      size="md"
-                      showLabel
-                    />
-                    {qualidade != null && !viewMode && (
-                      <button
-                        type="button"
-                        onClick={() => setQualidade(null)}
-                        className="ml-auto text-xs text-muted-foreground hover:text-foreground transition-colors"
-                        disabled={loading}
-                      >
-                        Limpar
-                      </button>
-                    )}
-                  </div>
-                </div>
+                 <div className="md:col-span-2 space-y-4">
+                   <div className="space-y-2">
+                     <Label htmlFor="fornecedor_origem">
+                       Fornecedor Gerenciador
+                       <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
+                     </Label>
+                     <div className="flex items-center gap-2">
+                       <Truck className="h-4 w-4 text-muted-foreground shrink-0" />
+                       <Select
+                         value={fornecedorOrigemId || "none"}
+                         onValueChange={(val) => setFornecedorOrigemId(val === "none" ? null : val)}
+                         disabled={loading || viewMode}
+                       >
+                         <SelectTrigger className="flex-1">
+                           <SelectValue placeholder="Sem fornecedor (gestão interna)" />
+                         </SelectTrigger>
+                         <SelectContent>
+                           <SelectItem value="none">Sem fornecedor (gestão interna)</SelectItem>
+                           {fornecedores.map((f) => (
+                             <SelectItem key={f.id} value={f.id}>
+                               {f.nome}
+                             </SelectItem>
+                           ))}
+                         </SelectContent>
+                       </Select>
+                     </div>
+                     <p className="text-[11px] text-muted-foreground">
+                       Selecione se este parceiro é gerenciado por um de nossos fornecedores externos.
+                     </p>
+                   </div>
+
+                   <div className="space-y-2">
+                     <Label>
+                       Qualidade do parceiro
+                       <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
+                     </Label>
+                     <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2">
+                       <StarRating
+                         value={qualidade}
+                         onChange={(v) => !loading && !viewMode && setQualidade(v)}
+                         readOnly={loading || viewMode}
+                         size="md"
+                         showLabel
+                       />
+                       {qualidade != null && !viewMode && (
+                         <button
+                           type="button"
+                           onClick={() => setQualidade(null)}
+                           className="ml-auto text-xs text-muted-foreground hover:text-foreground transition-colors"
+                           disabled={loading}
+                         >
+                           Limpar
+                         </button>
+                       )}
+                     </div>
+                   </div>
+                 </div>
                 <div className="md:col-span-2">
                   <Label htmlFor="observacoes">
                     Observações

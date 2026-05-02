@@ -25,6 +25,7 @@ import { format } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
+import { CaixaTransacaoDialog } from "../caixa/CaixaTransacaoDialog";
 
 interface Props {
   workspaceId: string;
@@ -39,6 +40,7 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
   const queryClient = useQueryClient();
   const [novoFornecedorOpen, setNovoFornecedorOpen] = useState(false);
   const [alocacaoOpen, setAlocacaoOpen] = useState(false);
+  const [transacaoDialogOpen, setTransacaoDialogOpen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
@@ -477,17 +479,24 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
                         >
                           <Building2 className="h-3 w-3" /> Casas
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setSelectedSupplier(supplier);
-                            setAlocacaoOpen(true);
-                          }}
-                          className="gap-1 text-xs"
-                        >
-                          <Wallet className="h-3 w-3" /> Alocar
-                        </Button>
+                         <Tooltip>
+                           <TooltipTrigger asChild>
+                             <Button
+                               size="sm"
+                               variant="outline"
+                               onClick={() => {
+                                 setSelectedSupplier(supplier);
+                                 setTransacaoDialogOpen(true);
+                               }}
+                               className="gap-1 text-xs"
+                             >
+                               <Wallet className="h-3 w-3" /> Alocar
+                             </Button>
+                           </TooltipTrigger>
+                           <TooltipContent>
+                             <p>Alocar capital em contas/bookmakers gerenciadas por este fornecedor</p>
+                           </TooltipContent>
+                         </Tooltip>
                         <Button
                           size="sm"
                           variant="outline"
@@ -659,8 +668,24 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog: Alocar Capital */}
-      <Dialog open={alocacaoOpen} onOpenChange={setAlocacaoOpen}>
+       {/* Dialog: Alocar Capital (Via Transação Unificada) */}
+       {selectedSupplier && (
+         <CaixaTransacaoDialog
+           open={transacaoDialogOpen}
+           onClose={() => setTransacaoDialogOpen(false)}
+           onSuccess={() => {
+             setTransacaoDialogOpen(false);
+             queryClient.invalidateQueries({ queryKey: ["admin-suppliers"] });
+           }}
+           defaultTipoTransacao="TRANSFERENCIA"
+           limitDestinoToSupplierId={selectedSupplier.fornecedor_id}
+           defaultTipoMoeda="FIAT"
+           defaultMoeda="BRL"
+         />
+       )}
+
+       {/* Dialog: Alocar Capital (Legacy - keeping for backward compatibility of state) */}
+       <Dialog open={alocacaoOpen} onOpenChange={setAlocacaoOpen}>
         <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
