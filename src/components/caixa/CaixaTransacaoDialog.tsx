@@ -3615,6 +3615,18 @@ export function CaixaTransacaoDialog({
           return (
             <>
               <div className="space-y-2">
+                <Label>Fornecedor</Label>
+                <FornecedorSelect
+                  ref={origemFornecedorSelectRef}
+                  value={origemFornecedorId}
+                  onValueChange={(value) => {
+                    setOrigemFornecedorId(value);
+                    setOrigemParceiroId("");
+                    setOrigemContaId("");
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
                 <Label>Parceiro (com saldo em {moeda})</Label>
                 <ParceiroSelect
                   value={origemParceiroId}
@@ -3627,7 +3639,7 @@ export function CaixaTransacaoDialog({
                   tipoMoeda="FIAT"
                   moeda={moeda}
                   saldosContas={saldosParceirosContas}
-                  fornecedorOrigemId={limitDestinoToSupplierId}
+                  fornecedorOrigemId={origemFornecedorId || limitDestinoToSupplierId}
                 />
               </div>
               {origemParceiroId && (
@@ -3701,6 +3713,18 @@ export function CaixaTransacaoDialog({
           return (
             <>
               <div className="space-y-2">
+                <Label>Fornecedor</Label>
+                <FornecedorSelect
+                  ref={origemFornecedorSelectRef}
+                  value={origemFornecedorId}
+                  onValueChange={(value) => {
+                    setOrigemFornecedorId(value);
+                    setOrigemParceiroId("");
+                    setOrigemWalletId("");
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
                 <Label>Parceiro (com saldo em {coin})</Label>
                 <ParceiroSelect
                   value={origemParceiroId}
@@ -3713,6 +3737,7 @@ export function CaixaTransacaoDialog({
                   tipoMoeda="CRYPTO"
                   coin={coin}
                   saldosWallets={saldosParceirosWallets}
+                  fornecedorOrigemId={origemFornecedorId}
                 />
               </div>
               {origemParceiroId && (
@@ -3819,6 +3844,18 @@ export function CaixaTransacaoDialog({
         return (
           <>
             <div className="space-y-2">
+              <Label>Fornecedor</Label>
+              <FornecedorSelect
+                ref={origemFornecedorSelectRef}
+                value={origemFornecedorId}
+                onValueChange={(value) => {
+                  setOrigemFornecedorId(value);
+                  setOrigemParceiroId("");
+                  setOrigemContaId("");
+                }}
+              />
+            </div>
+            <div className="space-y-2">
               <Label>Parceiro (com saldo em {moeda})</Label>
               <ParceiroSelect
                 ref={parceiroSelectRef}
@@ -3832,6 +3869,7 @@ export function CaixaTransacaoDialog({
                 tipoMoeda="FIAT"
                 moeda={moeda}
                 saldosContas={saldosParceirosContas}
+                fornecedorOrigemId={origemFornecedorId}
               />
             </div>
             {origemParceiroId && (
