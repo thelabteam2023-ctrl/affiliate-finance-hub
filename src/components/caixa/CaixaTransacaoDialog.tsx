@@ -104,6 +104,11 @@ interface CaixaTransacaoDialogProps {
    * does NOT re-open the bookmaker popover.
    */
   lockBookmakerDestino?: boolean;
+  /**
+   * Filter destination partners by supplier ID.
+   * Used in the "Alocar Capital" flow from Supplier Admin Panel.
+   */
+  limitDestinoToSupplierId?: string;
 }
 
 interface BancoTaxa {
@@ -187,6 +192,7 @@ export function CaixaTransacaoDialog({
   entryPoint,
   allowedTipoTransacao,
   lockBookmakerDestino,
+  limitDestinoToSupplierId,
 }: CaixaTransacaoDialogProps) {
   const { toast } = useToast();
   const { workspaceId } = useWorkspace();
@@ -3608,6 +3614,7 @@ export function CaixaTransacaoDialog({
                   tipoMoeda="FIAT"
                   moeda={moeda}
                   saldosContas={saldosParceirosContas}
+                  fornecedorOrigemId={limitDestinoToSupplierId}
                 />
               </div>
               {origemParceiroId && (
@@ -4447,6 +4454,7 @@ export function CaixaTransacaoDialog({
                 }}
                 disabled={!origemEstaCompleta}
                 onlyParceiros={parceirosDisponiveis}
+                fornecedorOrigemId={limitDestinoToSupplierId}
                 showSaldo={true}
                 tipoMoeda="FIAT"
                 moeda={moeda}
@@ -4528,6 +4536,7 @@ export function CaixaTransacaoDialog({
                 }}
                 disabled={!origemEstaCompleta}
                 onlyParceiros={parceirosDisponiveis}
+                fornecedorOrigemId={limitDestinoToSupplierId}
                 showSaldo={true}
                 tipoMoeda="CRYPTO"
                 coin={coin}
