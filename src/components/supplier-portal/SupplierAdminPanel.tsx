@@ -667,8 +667,24 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog: Alocar Capital */}
-      <Dialog open={alocacaoOpen} onOpenChange={setAlocacaoOpen}>
+       {/* Dialog: Alocar Capital (Via Transação Unificada) */}
+       {selectedSupplier && (
+         <CaixaTransacaoDialog
+           open={transacaoDialogOpen}
+           onClose={() => setTransacaoDialogOpen(false)}
+           onSuccess={() => {
+             setTransacaoDialogOpen(false);
+             queryClient.invalidateQueries({ queryKey: ["admin-suppliers"] });
+           }}
+           defaultTipoTransacao="TRANSFERENCIA"
+           limitDestinoToSupplierId={selectedSupplier.fornecedor_id}
+           defaultTipoMoeda="FIAT"
+           defaultMoeda="BRL"
+         />
+       )}
+
+       {/* Dialog: Alocar Capital (Legacy - keeping for backward compatibility of state) */}
+       <Dialog open={alocacaoOpen} onOpenChange={setAlocacaoOpen}>
         <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
