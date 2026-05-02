@@ -1,3 +1,17 @@
+   const isCryptoEntidade = (tipoEntidade === "WALLET") || (tipoEntidade === "CAIXA_OPERACIONAL" && subTipoCaixa === "CRYPTO");
+ 
+   const currentUSDPrice = useMemo(() => {
+     if (!isCryptoEntidade || !moeda) return 0;
+     const m = moeda.toUpperCase();
+     if (m === "USDT" || m === "USDC") return 1.0;
+     return cryptoPrices[m] || 0;
+   }, [isCryptoEntidade, moeda, cryptoPrices]);
+ 
+   const saldoSistemaUSD = useMemo(() => {
+     if (!isCryptoEntidade) return 0;
+     return saldoSistema * currentUSDPrice;
+   }, [isCryptoEntidade, saldoSistema, currentUSDPrice]);
+ 
 import { useState, useEffect, useMemo } from "react";
 import { getTodayCivilDate } from "@/utils/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
@@ -750,9 +764,16 @@ export function ReconciliacaoDialog({
               <div className="rounded-lg border border-border/50 bg-muted/30 p-3 space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Saldo no Sistema</span>
-                  <span className="font-mono font-semibold">
-                    {currencySymbol} {saldoSistema.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: isCryptoMoedaSelected ? 8 : 2 })}
-                  </span>
+                   <div className="flex flex-col items-end">
+                     <span className="font-mono font-semibold">
+                       {currencySymbol} {saldoSistema.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: isCryptoMoedaSelected ? 8 : 2 })}
+                     </span>
+                     {isCryptoEntidade && saldoSistemaUSD > 0 && (
+                       <span className="text-[10px] text-primary font-medium">
+                         ≈ US$ {saldoSistemaUSD.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                       </span>
+                     )}
+                   </div>
                 </div>
                 {entidadeReconciledAt && (
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
