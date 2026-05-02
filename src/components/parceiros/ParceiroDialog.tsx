@@ -606,12 +606,12 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       }
     }
     
-    // Validate wallet data - exchange is mandatory
+    // Validate wallet data
     for (const wallet of cryptoWallets) {
-      if (!wallet.exchange || !wallet.rede_id || !wallet.endereco || !wallet.moeda || wallet.moeda.length === 0) {
+      if (!wallet.rede_id || !wallet.endereco || !wallet.moeda || wallet.moeda.length === 0) {
         toast({
           title: "Campos obrigatórios faltando",
-          description: "Preencha: Exchange/Wallet, Rede, Moedas e Endereço em todas as wallets.",
+          description: "Preencha: Rede, Moedas e Endereço em todas as wallets.",
           variant: "destructive",
         });
         return;
@@ -799,7 +799,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         // UPDATE or INSERT wallets
         for (let i = 0; i < cryptoWallets.length; i++) {
           const wallet = cryptoWallets[i];
-          if (wallet.moeda && wallet.moeda.length > 0 && wallet.endereco && wallet.exchange) {
+          if (wallet.moeda && wallet.moeda.length > 0 && wallet.endereco && wallet.rede_id) {
             // Encrypt observacoes if present
             const observacoesEncrypted = wallet.observacoes 
               ? btoa(unescape(encodeURIComponent(wallet.observacoes)))
