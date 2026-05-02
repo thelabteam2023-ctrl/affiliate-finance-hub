@@ -52,8 +52,24 @@ export function ResumoGrupoDetalhesModal({
     const agrupado: Record<string, number> = {};
     
     despesas.forEach((d) => {
-      // Prioridade total para o nome do operador formatado em Title Case.
-      const rawNome = d.operadores?.nome || (d.descricao && d.descricao.length < 50 ? d.descricao : null) || "Outros / Não Identificado";
+      // Prioridade total para o nome do operador (tratando caso venha como objeto ou array)
+      let rawNome = "Outros / Não Identificado";
+      
+      if (d.operadores) {
+        if (Array.isArray(d.operadores) && d.operadores.length > 0) {
+          rawNome = d.operadores[0].nome;
+        } else if (typeof d.operadores === 'object' && 'nome' in d.operadores) {
+          rawNome = (d.operadores as any).nome;
+        }
+      }
+      
+      // Fallback para descrição se o nome for nulo ou genérico como "Operador"
+      if ((!rawNome || rawNome === "Operador" || rawNome === "Outros / Não Identificado") && d.descricao) {
+        if (d.descricao.length < 50) {
+          rawNome = d.descricao;
+        }
+      }
+
       const nomeFormatado = toTitleCase(rawNome);
       agrupado[nomeFormatado] = (agrupado[nomeFormatado] || 0) + d.valor;
     });

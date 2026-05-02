@@ -124,7 +124,22 @@ export function FinanceiroDespesasTab({
 
   const getDestinoInfo = (transacao: DespesaAdministrativa) => {
     if (transacao.grupo === 'RECURSOS_HUMANOS' || transacao.operador_id) {
-      return { label: transacao.operadores?.nome || "Operador", sublabel: "RH / Pagamento", icon: User };
+      let nome = "Operador";
+      
+      if (transacao.operadores) {
+        if (Array.isArray(transacao.operadores) && (transacao.operadores as any[]).length > 0) {
+          nome = (transacao.operadores as any[])[0].nome;
+        } else if (typeof transacao.operadores === 'object') {
+          nome = (transacao.operadores as any).nome;
+        }
+      }
+      
+      // Se o nome for genérico ou vazio, tentar usar a descrição curta
+      if ((!nome || nome === "Operador") && transacao.descricao && transacao.descricao.length < 30) {
+        nome = transacao.descricao;
+      }
+
+      return { label: nome || "Operador", sublabel: "RH / Pagamento", icon: User };
     }
     return { label: "Despesa Externa", sublabel: transacao.categoria, icon: Building2 };
   };
@@ -242,11 +257,25 @@ export function FinanceiroDespesasTab({
                             <td className="py-3 px-4 text-muted-foreground max-w-[300px] truncate">
                               <div className="flex items-center gap-2">
                                 <div className="flex-1">
-                                  {despesa.operadores?.nome && (
-                                    <div className="text-foreground font-medium mb-0.5">
-                                      {toTitleCase(despesa.operadores.nome)}
-                                    </div>
-                                  )}
+                                  {(() => {
+                                    let nome = "";
+                                    if (despesa.operadores) {
+                                      if (Array.isArray(despesa.operadores) && despesa.operadores.length > 0) {
+                                        nome = despesa.operadores[0].nome;
+                                      } else {
+                                        nome = (despesa.operadores as any).nome;
+                                      }
+                                    }
+                                    
+                                    if (nome && nome !== "Operador") {
+                                      return (
+                                        <div className="text-foreground font-medium mb-0.5">
+                                          {toTitleCase(nome)}
+                                        </div>
+                                      );
+                                    }
+                                    return null;
+                                  })()}
                                   <div className="text-xs">{despesa.descricao || "—"}</div>
                                 </div>
                                 <Button 
