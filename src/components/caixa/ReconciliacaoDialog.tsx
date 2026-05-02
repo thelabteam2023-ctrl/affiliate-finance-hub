@@ -527,7 +527,13 @@ export function ReconciliacaoDialog({
         description: `Ajuste de ${getCurrencySymbol(moeda)} ${valorAjuste.toFixed(isCryptoMoedaSelected ? 8 : 2)} (${direcao === "ENTRADA" ? "+" : "-"}) em ${getEntidadeNome()} registrado com sucesso.`,
       });
 
-      handleClose();
+      // Mantém o modal aberto para novos lançamentos, limpando apenas os campos de valor
+      setSaldoReal("");
+      setSaldoRealDisplay("");
+      
+      // Recarrega os dados para atualizar o "Saldo no Sistema" e permitir nova reconciliação
+      await fetchData();
+      
       dispatchCaixaDataChanged();
       onSuccess();
     } catch (error: any) {
