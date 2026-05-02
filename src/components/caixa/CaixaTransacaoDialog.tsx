@@ -8,7 +8,8 @@ import { useCotacoes } from "@/hooks/useCotacoes";
 import { useToast } from "@/hooks/use-toast";
 import { dispatchCaixaDataChanged } from "@/hooks/useInvalidateCaixaData";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Calendar, Info as InfoIcon } from "lucide-react";
+ import { Calendar, Info as InfoIcon, Tag as TagIcon } from "lucide-react";
+ import { TagInput } from "@/components/ui/tag-input";
 import {
   Tooltip,
   TooltipContent,
@@ -210,8 +211,22 @@ export function CaixaTransacaoDialog({
   const [valorDisplay, setValorDisplay] = useState<string>("");
   const [qtdCoin, setQtdCoin] = useState<string>("");
   const [cotacao, setCotacao] = useState<string>("");
-  const [descricao, setDescricao] = useState<string>("");
-  const [dataTransacao, setDataTransacao] = useState<string>("");
+   const [descricao, setDescricao] = useState<string>("");
+   const [dataTransacao, setDataTransacao] = useState<string>("");
+   const [tags, setTags] = useState<string[]>([]);
+   const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
+   // Buscar tags sugeridas
+   useEffect(() => {
+     const fetchTagSuggestions = async () => {
+       if (!open || !workspaceId) return;
+       const { data, error } = await supabase.rpc('get_cash_ledger_tags', { p_workspace_id: workspaceId });
+       if (!error && data) {
+         setTagSuggestions(data);
+       }
+     };
+     fetchTagSuggestions();
+   }, [open, workspaceId]);
+ 
   
   // REMOVIDO: valorCreditado e valorCreditadoDisplay
   // O valor creditado real agora é informado na tela de Conciliação, não aqui
@@ -2646,8 +2661,9 @@ export function CaixaTransacaoDialog({
         moeda: moedaDestino, // Moeda canônica = moeda da casa
         valor: valorDestinoCalculado, // Valor canônico = valor na moeda da casa
         descricao,
-        status: statusInicial,
-        investidor_id: tipoTransacao === "APORTE_FINANCEIRO" ? investidorId : null,
+         status: statusInicial,
+         tags: tags,
+         investidor_id: tipoTransacao === "APORTE_FINANCEIRO" ? investidorId : null,
         nome_investidor: tipoTransacao === "APORTE_FINANCEIRO" && investidor ? investidor.nome : null,
         // DATA RETROATIVA: Permite registrar transações em datas passadas
         data_transacao: dataTransacao || getTodayCivilDate(),
@@ -3048,9 +3064,10 @@ export function CaixaTransacaoDialog({
         description: mensagemSucesso,
       });
 
-      resetForm();
-      
-      // Disparar evento para atualizar UI imediatamente
+       resetForm();
+       setTags([]);
+       
+       // Disparar evento para atualizar UI imediatamente
       dispatchCaixaDataChanged();
 
       // Invalidar queries de Central de Operações e conciliação para refletir
@@ -5785,18 +5802,37 @@ export function CaixaTransacaoDialog({
             </div>
           )}
 
-          {/* Descrição */}
-          {tipoTransacao && (
-            <div className="space-y-2">
-              <Label>Descrição (opcional)</Label>
-              <Textarea
-                value={descricao}
-                onChange={(e) => setDescricao(e.target.value)}
-                placeholder="Observações sobre a transação"
-                rows={3}
-              />
-            </div>
-          )}
+           {/* Tags */}
+           {tipoTransacao && (
+             <div className="space-y-2">
+               <Label className="flex items-center gap-2">
+                 <TagIcon className="h-4 w-4 text-muted-foreground" />
+                 Tags (opcional)
+               </Label>
+               <TagInput
+                 placeholder="Pressione Enter para adicionar tags"
+                 tags={tags}
+                 onChange={setTags}
+                 suggestions={tagSuggestions}
+               />
+               <p className="text-[10px] text-muted-foreground italic">
+                 Use tags para categorizar fluxos específicos (Ex: Aporte Extra, Investimento Inicial)
+               </p>
+             </div>
+           )}
+ 
+           {/* Descrição */}
+           {tipoTransacao && (
+             <div className="space-y-2">
+               <Label>Descrição (opcional)</Label>
+               <Textarea
+                 value={descricao}
+                 onChange={(e) => setDescricao(e.target.value)}
+                 placeholder="Observações sobre a transação"
+                 rows={3}
+               />
+             </div>
+           )}
         </div>
 
         <div className="flex justify-end gap-2">
