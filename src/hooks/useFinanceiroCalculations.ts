@@ -256,7 +256,15 @@ export function useFinanceiroCalculations({
       agrupado[operadorNome].valor += p.valor;
     });
     costs.despesasRH.forEach((d: any) => {
-      const operadorNome = d.operadores?.nome || "Operador não identificado";
+      let operadorNome = "Operador não identificado";
+      if (d.operadores) {
+        if (Array.isArray(d.operadores) && d.operadores.length > 0) {
+          operadorNome = d.operadores[0].nome;
+        } else if (typeof d.operadores === 'object') {
+          operadorNome = d.operadores.nome;
+        }
+      }
+
       let subcategoriaLabel = "Outros";
       
       if (d.subcategoria_rh) {
