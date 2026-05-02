@@ -78,9 +78,10 @@ export interface SaquePendente {
   wallet_network?: string;
   wallet_exchange?: string;
   wallet_moedas?: string[];
-  // Snapshot do projeto para rastreabilidade FX
-  projeto_id_snapshot?: string | null;
-}
+   // Snapshot do projeto para rastreabilidade FX
+   projeto_id_snapshot?: string | null;
+   valor_usd?: number;
+ }
 
 interface ConfirmarSaqueDialogProps {
   open: boolean;
@@ -247,17 +248,22 @@ export function ConfirmarSaqueDialog({
         // em vez do valor real, causando divergência de saldo.
         // A entrada PERDA/GANHO_CAMBIAL é registrada separadamente SEM destino_wallet_id
         // para evitar dupla contagem — ela serve apenas como registro contábil.
-         const { data: updateResult, error } = await supabase
-           .from("cash_ledger")
-           .update({
-             status: "CONFIRMADO",
-             qtd_coin: qtdCoinRecebidaNum,
-             valor_confirmado: qtdCoinRecebidaNum,
-             descricao: descricaoFinal || null,
-             transit_status: "CONFIRMED",
-             data_confirmacao: dataConfirmacao ? new Date(dataConfirmacao + "T12:00:00").toISOString() : new Date().toISOString(),
-             auditoria_metadata: { ignore_duplicate: ignorarDuplicidade }
-           })
+        const isStablecoin = coinMoeda === "USDT" || coinMoeda === "USDC";
+        
+        const { data: updateResult, error } = await supabase
+          .from("cash_ledger")
+          .update({
+            status: "CONFIRMADO",
+            qtd_coin: qtdCoinRecebidaNum,
+            valor_confirmado: qtdCoinRecebidaNum,
+            // Para stablecoins, o valor em USD é igual à quantidade de coins recebida (1:1)
+            // Isso garante que o saldo em USD da wallet reflita o valor real conciliado.
+            valor_usd: isStablecoin ? qtdCoinRecebidaNum : saque.valor_usd,
+            descricao: descricaoFinal || null,
+            transit_status: "CONFIRMED",
+            data_confirmacao: dataConfirmacao ? new Date(dataConfirmacao + "T12:00:00").toISOString() : new Date().toISOString(),
+            auditoria_metadata: { ignore_duplicate: ignorarDuplicidade }
+          })
           .eq("id", saque.id)
           .eq("status", "PENDENTE")
           .select("id");
