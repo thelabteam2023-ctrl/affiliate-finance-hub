@@ -257,25 +257,28 @@ export function FinanceiroDespesasTab({
                             <td className="py-3 px-4 text-muted-foreground max-w-[300px] truncate">
                               <div className="flex items-center gap-2">
                                 <div className="flex-1">
-                                  {(() => {
-                                    let nome = "";
-                                    if (despesa.operadores) {
-                                      if (Array.isArray(despesa.operadores) && despesa.operadores.length > 0) {
-                                        nome = despesa.operadores[0].nome;
-                                      } else {
-                                        nome = (despesa.operadores as any).nome;
-                                      }
-                                    }
-                                    
-                                    if (nome && nome !== "Operador") {
-                                      return (
-                                        <div className="text-foreground font-medium mb-0.5">
-                                          {toTitleCase(nome)}
-                                        </div>
-                                      );
-                                    }
-                                    return null;
-                                  })()}
+                                  {(despesa.grupo === 'RECURSOS_HUMANOS' || despesa.operador_id) && (
+                                    <div className="text-foreground font-bold mb-0.5">
+                                      {(() => {
+                                        let nome = "";
+                                        if (despesa.operadores) {
+                                          if (Array.isArray(despesa.operadores) && despesa.operadores.length > 0) {
+                                            nome = despesa.operadores[0].nome;
+                                          } else {
+                                            nome = (despesa.operadores as any).nome;
+                                          }
+                                        }
+                                        
+                                        // Se não tiver nome ou for o genérico, tenta extrair da descrição (termo curto)
+                                        if ((!nome || nome === "Operador") && despesa.descricao) {
+                                          const palavras = despesa.descricao.split(" ");
+                                          if (palavras.length <= 3) return toTitleCase(despesa.descricao);
+                                        }
+                                        
+                                        return toTitleCase(nome || "Operador");
+                                      })()}
+                                    </div>
+                                  )}
                                   <div className="text-xs">{despesa.descricao || "—"}</div>
                                 </div>
                                 <Button 
