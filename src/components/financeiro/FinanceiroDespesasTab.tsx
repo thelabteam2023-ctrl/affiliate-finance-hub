@@ -124,7 +124,22 @@ export function FinanceiroDespesasTab({
 
   const getDestinoInfo = (transacao: DespesaAdministrativa) => {
     if (transacao.grupo === 'RECURSOS_HUMANOS' || transacao.operador_id) {
-      return { label: transacao.operadores?.nome || "Operador", sublabel: "RH / Pagamento", icon: User };
+      let nome = "Operador";
+      
+      if (transacao.operadores) {
+        if (Array.isArray(transacao.operadores) && (transacao.operadores as any[]).length > 0) {
+          nome = (transacao.operadores as any[])[0].nome;
+        } else if (typeof transacao.operadores === 'object') {
+          nome = (transacao.operadores as any).nome;
+        }
+      }
+      
+      // Se o nome for genérico ou vazio, tentar usar a descrição curta
+      if ((!nome || nome === "Operador") && transacao.descricao && transacao.descricao.length < 30) {
+        nome = transacao.descricao;
+      }
+
+      return { label: nome || "Operador", sublabel: "RH / Pagamento", icon: User };
     }
     return { label: "Despesa Externa", sublabel: transacao.categoria, icon: Building2 };
   };
