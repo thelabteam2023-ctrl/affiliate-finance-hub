@@ -259,6 +259,7 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
           origem_conta_bancaria_id: origemData.origemContaBancariaId || null,
           origem_wallet_id: origemData.origemWalletId || null,
           destino_tipo: "FORNECEDOR",
+          destino_parceiro_id: selectedSupplier.parceiro_id || null,
           data_transacao: format(new Date(), "yyyy-MM-dd"),
           descricao: descricaoAlocacao || `Alocação de capital para fornecedor ${selectedSupplier.nome}`,
           status: "CONFIRMADO",
