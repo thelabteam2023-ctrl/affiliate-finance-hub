@@ -723,9 +723,13 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         }
         
         // UPDATE or INSERT accounts
-        for (let i = 0; i < bankAccounts.length; i++) {
-          const account = bankAccounts[i];
-          if (account.banco_id) {
+        const updatedBankAccounts = [...bankAccounts];
+        for (let i = 0; i < updatedBankAccounts.length; i++) {
+          const account = updatedBankAccounts[i];
+          // Only save relevant bank accounts
+          const isRelevant = account.banco_id || account.pix_keys.some(k => k.chave);
+          
+          if (isRelevant && account.banco_id) {
             // Format PIX keys for JSONB storage - clean CPF/CNPJ formatting
             const cleanedPixKeys = account.pix_keys
               .filter(k => k.chave && k.tipo)
@@ -773,15 +777,14 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                 throw insertError;
               }
               
-              // Update the account in state with the new ID to prevent re-insertion
+              // Update the account local copy with the new ID
               if (insertedData?.id) {
-                const updatedAccounts = [...bankAccounts];
-                updatedAccounts[i] = { ...updatedAccounts[i], id: insertedData.id };
-                setBankAccounts(updatedAccounts);
+                updatedBankAccounts[i] = { ...updatedBankAccounts[i], id: insertedData.id };
               }
             }
           }
         }
+        setBankAccounts(updatedBankAccounts);
       }
 
       // Save crypto wallets with proper UPDATE/INSERT/DELETE logic
