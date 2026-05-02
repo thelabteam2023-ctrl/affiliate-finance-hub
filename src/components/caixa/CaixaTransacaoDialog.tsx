@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import ParceiroSelect, { ParceiroSelectRef } from "@/components/parceiros/ParceiroSelect";
+import FornecedorSelect, { FornecedorSelectRef } from "@/components/fornecedores/FornecedorSelect";
 import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
 import BookmakerSelect, { BookmakerSelectRef } from "@/components/bookmakers/BookmakerSelect";
 import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
@@ -210,6 +211,8 @@ export function CaixaTransacaoDialog({
   const [tipoTransacao, setTipoTransacao] = useState<string>("");
   const [fluxoAporte, setFluxoAporte] = useState<"APORTE" | "LIQUIDACAO">("APORTE");
   const [investidorId, setInvestidorId] = useState<string>("");
+  const [origemFornecedorId, setOrigemFornecedorId] = useState<string>("");
+  const [destinoFornecedorId, setDestinoFornecedorId] = useState<string>("");
   const [tipoMoeda, setTipoMoeda] = useState<string>("FIAT");
   const [moeda, setMoeda] = useState<string>("");
   const [coin, setCoin] = useState<string>("");
@@ -247,6 +250,8 @@ export function CaixaTransacaoDialog({
   const moedaFiatSelectRef = useRef<HTMLButtonElement>(null);
   const valorFiatInputRef = useRef<HTMLInputElement>(null);
   const parceiroSelectRef = useRef<ParceiroSelectRef>(null);
+  const origemFornecedorSelectRef = useRef<FornecedorSelectRef>(null);
+  const destinoFornecedorSelectRef = useRef<FornecedorSelectRef>(null);
   const contaBancariaSelectRef = useRef<HTMLButtonElement>(null);
   const walletCryptoSelectRef = useRef<HTMLButtonElement>(null);
   const bookmakerSelectRef = useRef<BookmakerSelectRef>(null);
