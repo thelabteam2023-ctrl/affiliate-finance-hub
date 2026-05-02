@@ -627,6 +627,13 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     console.log("[ParceiroDialog] Starting saveData...");
 
     try {
+      // Helper to ensure UUID fields are either valid UUIDs or null (never empty strings)
+      const sanitizeUuid = (val: any) => {
+        if (!val || val === "" || val === "none") return null;
+        // Basic UUID format check
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        return uuidRegex.test(val) ? val : null;
+      };
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
