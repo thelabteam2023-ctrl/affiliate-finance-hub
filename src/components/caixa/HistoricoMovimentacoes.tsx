@@ -8,7 +8,8 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
- import { Filter, ArrowRight, AlertCircle, Info, Clock, CheckCircle2, XCircle, Building2, Wallet, Search, X, Pencil, FolderKanban, Users, MoreVertical, Undo2, Trash2, Tag as TagIcon } from "lucide-react";
+  import { Filter, ArrowRight, AlertCircle, Info, Clock, CheckCircle2, XCircle, Building2, Wallet, Search, X, Pencil, FolderKanban, Users, MoreVertical, Undo2, Trash2, Tag as TagIcon, Check } from "lucide-react";
+  import { getTagColor } from "@/components/ui/tag-input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,7 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { getFirstLastName } from "@/lib/utils";
+ import { getFirstLastName, cn } from "@/lib/utils";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { usePagination } from "@/hooks/usePagination";
@@ -648,28 +649,30 @@ export function HistoricoMovimentacoes({
                    </PopoverTrigger>
                    <PopoverContent className="w-52 p-2" align="start">
                      <div className="space-y-1">
-                       {availableTags.map((tag) => {
-                         const isSelected = filtroTags.includes(tag);
-                         return (
-                           <button
-                             key={tag}
-                             className={`flex items-center gap-2 w-full px-2 py-1.5 rounded text-xs hover:bg-muted/80 transition-colors ${isSelected ? "bg-muted font-medium" : ""}`}
-                             onClick={() => {
-                               if (isSelected) {
-                                 setFiltroTags(filtroTags.filter(v => v !== tag));
-                               } else {
-                                 setFiltroTags([...filtroTags, tag]);
-                               }
-                               pagination.goToFirstPage();
-                             }}
-                           >
-                             <div className={`h-3.5 w-3.5 rounded-sm border flex items-center justify-center ${isSelected ? "bg-primary border-primary" : "border-muted-foreground/40"}`}>
-                               {isSelected && <CheckCircle2 className="h-3 w-3 text-primary-foreground" />}
-                             </div>
+                       {availableTags.map((tag) => (
+                         <CommandItem
+                           key={tag}
+                           onSelect={() => {
+                             if (filtroTags.includes(tag)) {
+                               setFiltroTags(filtroTags.filter(v => v !== tag));
+                             } else {
+                               setFiltroTags([...filtroTags, tag]);
+                             }
+                             pagination.goToFirstPage();
+                           }}
+                           className="text-xs"
+                         >
+                           <Check
+                             className={cn(
+                               "mr-2 h-3.5 w-3.5",
+                               filtroTags.includes(tag) ? "opacity-100" : "opacity-0"
+                             )}
+                           />
+                           <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-medium", getTagColor(tag))}>
                              {tag}
-                           </button>
-                         );
-                       })}
+                           </span>
+                         </CommandItem>
+                       ))}
                        {filtroTags.length > 0 && (
                          <>
                            <div className="border-t border-border/50 my-1" />
@@ -718,15 +721,21 @@ export function HistoricoMovimentacoes({
                      <Badge className={getTipoColor(transacao.tipo_transacao, transacao)}>
                        {getTipoLabel(transacao.tipo_transacao, transacao)}
                      </Badge>
-                     {transacao.tags && Array.isArray(transacao.tags) && transacao.tags.length > 0 && (
-                       <div className="flex flex-wrap gap-1">
-                         {transacao.tags.map((tag: string) => (
-                           <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
-                             {tag}
-                           </span>
-                         ))}
-                       </div>
-                     )}
+                      {transacao.tags && Array.isArray(transacao.tags) && transacao.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {transacao.tags.map((tag: string) => (
+                            <span 
+                              key={tag} 
+                              className={cn(
+                                "text-[9px] px-1.5 py-0.5 rounded border font-medium",
+                                getTagColor(tag)
+                              )}
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                    </div>
                   {transacao.reversed_at && (
                     <Badge variant="outline" className="border-amber-500/40 text-amber-500 bg-amber-500/10">

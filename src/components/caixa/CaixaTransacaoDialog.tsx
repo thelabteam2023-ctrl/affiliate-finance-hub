@@ -5809,12 +5809,11 @@ export function CaixaTransacaoDialog({
                  <TagIcon className="h-4 w-4 text-muted-foreground" />
                  Tags (opcional)
                </Label>
-               <TagInput
-                 placeholder="Pressione Enter para adicionar tags"
-                 tags={tags}
-                 onChange={setTags}
-                 suggestions={tagSuggestions}
-               />
+                <TagInput
+                  tags={tags}
+                  onChange={setTags}
+                  suggestions={tagSuggestions}
+                />
                <p className="text-[10px] text-muted-foreground italic">
                  Use tags para categorizar fluxos específicos (Ex: Aporte Extra, Investimento Inicial)
                </p>
