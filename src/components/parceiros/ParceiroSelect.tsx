@@ -41,8 +41,10 @@ interface ParceiroSelectProps {
   saldosWallets?: SaldoParceiroWallets[];
   // Incluir parceiro atual mesmo se inativo (para edição)
   includeParceiroId?: string;
-  // Filtro por fornecedor gerenciador
-  fornecedorOrigemId?: string;
+   // Incluir fornecedores do portal na lista
+   includeFornecedores?: boolean;
+   // Filtro por fornecedor gerenciador (apenas para parceiros)
+   fornecedorOrigemId?: string;
 }
 
 export interface ParceiroSelectRef {
@@ -50,15 +52,16 @@ export interface ParceiroSelectRef {
   open: () => void;
 }
 
-interface Parceiro {
-  id: string;
-  nome: string;
-  cpf: string;
-  status: string;
-  fornecedor_origem_id?: string | null;
-}
-
-const ParceiroSelect = forwardRef<ParceiroSelectRef, ParceiroSelectProps>(({ 
+ interface Entidade {
+   id: string;
+   nome: string;
+   cpf?: string;
+   status: string;
+   fornecedor_origem_id?: string | null;
+   tipo: 'parceiro' | 'fornecedor';
+ }
+ 
+ const ParceiroSelect = forwardRef<ParceiroSelectRef, ParceiroSelectProps>(({
   value, 
   onValueChange, 
   disabled, 
@@ -68,11 +71,12 @@ const ParceiroSelect = forwardRef<ParceiroSelectRef, ParceiroSelectProps>(({
   moeda,
   coin,
   saldosContas,
-  saldosWallets,
-  includeParceiroId,
-  fornecedorOrigemId
-}, ref) => {
-  const [parceiros, setParceiros] = useState<Parceiro[]>([]);
+   saldosWallets,
+   includeParceiroId,
+   includeFornecedores,
+   fornecedorOrigemId
+ }, ref) => {
+   const [entidades, setEntidades] = useState<Entidade[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [displayName, setDisplayName] = useState<string>("");
@@ -90,99 +94,118 @@ const ParceiroSelect = forwardRef<ParceiroSelectRef, ParceiroSelectProps>(({
     },
   }));
 
-  // Buscar lista de parceiros ativos + parceiro atual se fornecido
-  useEffect(() => {
-    const fetchParceiros = async () => {
-      try {
-        // Buscar parceiros ativos
-        let query = supabase
-          .from("parceiros")
-          .select("id, nome, cpf, status, fornecedor_origem_id")
-          .eq("status", "ativo")
-          .neq("is_caixa_operacional", true)
-          .order("nome", { ascending: true });
+   // Buscar lista de parceiros e fornecedores ativos
+   useEffect(() => {
+     const fetchDados = async () => {
+       setLoading(true);
+       try {
+         // 1. Buscar parceiros ativos
+         let pQuery = supabase
+           .from("parceiros")
+           .select("id, nome, cpf, status, fornecedor_origem_id")
+           .eq("status", "ativo")
+           .neq("is_caixa_operacional", true)
+           .order("nome", { ascending: true });
+ 
+         if (fornecedorOrigemId) {
+           pQuery = pQuery.eq("fornecedor_origem_id", fornecedorOrigemId);
+         }
+ 
+         // Buscar parceiros
+         const { data: pData, error: pError } = await pQuery;
+         if (pError) throw pError;
+ 
+         // Buscar fornecedores se necessário
+         let fData: any[] = [];
+         if (includeFornecedores) {
+           const { data, error: fError } = await supabase
+             .from("fornecedores")
+             .select("id, nome, status")
+             .eq("status", "ativo")
+             .order("nome", { ascending: true });
+           if (fError) throw fError;
+           fData = data || [];
+         }
 
-        if (fornecedorOrigemId) {
-          query = query.eq("fornecedor_origem_id", fornecedorOrigemId);
-        }
+         let lista: Entidade[] = [
+           ...pData.map(p => ({ ...p, tipo: 'parceiro' as const })),
+           ...fData.map(f => ({ ...f, tipo: 'fornecedor' as const, cpf: '' }))
+         ];
+ 
+         // 3. Incluir ID específico (para edição)
+         if (includeParceiroId && !lista.some(e => e.id === includeParceiroId)) {
+           const { data: pEsp } = await supabase
+             .from("parceiros")
+             .select("id, nome, cpf, status")
+             .eq("id", includeParceiroId)
+             .maybeSingle();
+           
+           if (pEsp) {
+             lista = [{ ...pEsp, tipo: 'parceiro' }, ...lista];
+           } else if (includeFornecedores) {
+             const { data: fEsp } = await supabase
+               .from("fornecedores")
+               .select("id, nome, status")
+               .eq("id", includeParceiroId)
+               .maybeSingle();
+             if (fEsp) {
+               lista = [{ ...fEsp, tipo: 'fornecedor', cpf: '' }, ...lista];
+             }
+           }
+         }
+ 
+         setEntidades(lista);
+       } catch (error) {
+         console.error("Erro ao buscar dados do select:", error);
+       } finally {
+         setLoading(false);
+       }
+     };
+ 
+     fetchDados();
+   }, [includeParceiroId, includeFornecedores, fornecedorOrigemId]);
 
-        const { data: ativos, error } = await query;
+   // Quando value muda, buscar o nome para exibição
+   useEffect(() => {
+     if (!value) {
+       setDisplayName("");
+       return;
+     }
+ 
+     const found = entidades.find(e => e.id === value);
+     if (found) {
+       setDisplayName(found.nome);
+       return;
+     }
+ 
+     const fetchDisplayName = async () => {
+       try {
+         const { data: p } = await supabase.from("parceiros").select("nome").eq("id", value).maybeSingle();
+         if (p) {
+           setDisplayName(p.nome);
+           return;
+         }
+         if (includeFornecedores) {
+           const { data: f } = await supabase.from("fornecedores").select("nome").eq("id", value).maybeSingle();
+           if (f) setDisplayName(f.nome);
+         }
+       } catch (error) {
+         console.error("Erro ao buscar nome para display:", error);
+       }
+     };
+ 
+     fetchDisplayName();
+   }, [value, entidades, includeFornecedores]);
 
-        if (error) throw error;
-        
-        let lista = ativos || [];
-        
-        // Se temos um parceiro específico para incluir, garantir que está na lista
-        if (includeParceiroId) {
-          const jaExiste = lista.some(p => p.id === includeParceiroId);
-          if (!jaExiste) {
-            // Buscar o parceiro específico (pode estar inativo)
-            const { data: parceiroEspecifico } = await supabase
-              .from("parceiros")
-              .select("id, nome, cpf, status, fornecedor_origem_id")
-              .eq("id", includeParceiroId)
-              .maybeSingle();
-            
-            if (parceiroEspecifico) {
-              lista = [parceiroEspecifico, ...lista];
-            }
-          }
-        }
-        
-        setParceiros(lista);
-      } catch (error) {
-        console.error("Erro ao buscar parceiros:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchParceiros();
-   }, [includeParceiroId, fornecedorOrigemId]);
-
-  // Quando value muda, buscar o nome para exibição
-  useEffect(() => {
-    if (!value) {
-      setDisplayName("");
-      return;
-    }
-
-    // Primeiro, verificar na lista local
-    const found = parceiros.find(p => p.id === value);
-    if (found) {
-      setDisplayName(found.nome);
-      return;
-    }
-
-    // Se não encontrou na lista (pode ser um parceiro pré-selecionado), buscar do banco
-    const fetchDisplayName = async () => {
-      try {
-        const { data } = await supabase
-          .from("parceiros")
-          .select("nome")
-          .eq("id", value)
-          .maybeSingle();
-        
-        if (data) {
-          setDisplayName(data.nome);
-        }
-      } catch (error) {
-        console.error("Erro ao buscar nome do parceiro:", error);
-      }
-    };
-
-    fetchDisplayName();
-  }, [value, parceiros]);
-
-  // Aplicar filtro de onlyParceiros se fornecido
-  const availableParceiros = onlyParceiros 
-    ? parceiros.filter(p => onlyParceiros.includes(p.id))
-    : parceiros;
-
-  const filteredParceiros = availableParceiros.filter((parceiro) =>
-    parceiro.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    parceiro.cpf.includes(searchTerm)
-  );
+   // Aplicar filtro de onlyParceiros
+   const availableEntidades = onlyParceiros 
+     ? entidades.filter(e => onlyParceiros.includes(e.id))
+     : entidades;
+ 
+   const filteredEntidades = availableEntidades.filter((e) =>
+     e.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     (e.cpf && e.cpf.includes(searchTerm))
+   );
 
   // Função para formatar CPF
   const formatCPF = (cpf: string): string => {
@@ -290,24 +313,28 @@ const ParceiroSelect = forwardRef<ParceiroSelectRef, ParceiroSelectProps>(({
           </div>
         </div>
         <div className="max-h-[300px] overflow-auto">
-          {filteredParceiros.length === 0 ? (
+          {filteredEntidades.length === 0 ? (
             <div className="p-4 text-center text-sm text-muted-foreground">
-              {searchTerm ? "Nenhum parceiro encontrado" : "Nenhum parceiro ativo disponível"}
+              {searchTerm ? "Nenhum resultado encontrado" : "Nenhuma opção disponível"}
             </div>
           ) : (
-            filteredParceiros.map((parceiro) => (
-              <SelectItem key={parceiro.id} value={parceiro.id} className="text-left justify-start">
+            filteredEntidades.map((e) => (
+              <SelectItem key={e.id} value={e.id} className="text-left justify-start">
                 <div className="flex flex-col w-full py-0.5">
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <span className="font-medium">{parceiro.nome}</span>
+                    <span className="font-medium">
+                      {e.nome} {e.tipo === 'fornecedor' && <span className="text-[10px] bg-blue-100 text-blue-700 px-1 rounded ml-1">FORNECEDOR</span>}
+                    </span>
                   </div>
-                  <span className="text-xs text-muted-foreground ml-6">
-                    {formatCPF(parceiro.cpf)}
-                  </span>
+                  {e.cpf && (
+                    <span className="text-xs text-muted-foreground ml-6">
+                      {formatCPF(e.cpf)}
+                    </span>
+                  )}
                   {showSaldo && (
                     <div className="ml-6">
-                      {formatSaldo(parceiro.id)}
+                      {formatSaldo(e.id)}
                     </div>
                   )}
                 </div>
