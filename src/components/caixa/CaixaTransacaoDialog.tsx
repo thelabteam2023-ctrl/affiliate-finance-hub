@@ -3784,19 +3784,12 @@ export function CaixaTransacaoDialog({
                 });
                 const temSaldo = walletsComSaldo.length > 0;
 
-                if (temSaldo) return null;
-
-           {origemParceiroId && coin && (
-             <Alert className="border-blue-500/50 bg-blue-500/10 mt-2">
-               <Info className="h-4 w-4 text-blue-500" />
-               <AlertDescription className="text-blue-500">
-                 Verifique se o parceiro/fornecedor possui saldo disponível.
-               </AlertDescription>
-             </Alert>
-           )}
-         </>
-       );
-    }
+                 return null;
+               })()}
+             </>
+           );
+         }
+       }
 
     return null;
   };
