@@ -101,7 +101,8 @@ interface ParceiroSaldoAgrupado {
     saldo_contas: number;
     saldo_total: number;
   };
-  is_fornecedor?: boolean;
+   is_fornecedor?: boolean; // Se o parceiro É o perfil de um fornecedor
+   fornecedor_origem_id?: string | null; // ID do fornecedor que gerencia este parceiro
   // Transações pendentes (em trânsito para bookmakers)
   pendentes_bookmakers: Array<{
     bookmaker_nome: string;
@@ -289,6 +290,7 @@ const BookmakerHoverContent = ({
 export function SaldosParceirosSheet() {
   const [open, setOpen] = useState(false);
   const [parceirosAgrupados, setParceirosAgrupados] = useState<ParceiroSaldoAgrupado[]>([]);
+  const [fornecedores, setFornecedores] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [cryptoPrices, setCryptoPrices] = useState<Record<string, number>>({});
   const [pricesLoading, setPricesLoading] = useState(false);
@@ -405,7 +407,7 @@ export function SaldosParceirosSheet() {
       const parceirosMap = new Map<string, ParceiroSaldoAgrupado>();
 
       // Helper to get or create parceiro entry
-      const getOrCreateParceiro = (parceiroId: string, nome: string = "Parceiro"): ParceiroSaldoAgrupado => {
+       const getOrCreateParceiro = (parceiroId: string, nome: string = "Parceiro", fornecedorOrigemId?: string | null): ParceiroSaldoAgrupado => {
         if (!parceirosMap.has(parceiroId)) {
           parceirosMap.set(parceiroId, {
             parceiro_id: parceiroId,
@@ -418,16 +420,25 @@ export function SaldosParceirosSheet() {
             total_crypto_usd: 0,
             total_crypto_locked_usd: 0,
             total_bookmakers_por_moeda: createEmptySaldos(),
-            total_pendente_por_moeda: createEmptySaldos(),
+             total_pendente_por_moeda: createEmptySaldos(),
+             fornecedor_origem_id: fornecedorOrigemId,
           });
         }
         return parceirosMap.get(parceiroId)!;
       };
 
       // Fetch partner info to know who is a supplier and get names for all
-      const { data: allParceiros } = await supabase
-        .from("parceiros")
-        .select("id, nome, is_caixa_operacional, supplier_profile_id");
+       const { data: allParceiros } = await supabase
+         .from("parceiros")
+         .select("id, nome, is_caixa_operacional, supplier_profile_id, fornecedor_origem_id");
+       const { data: allFornecedores } = await supabase
+         .from("fornecedores")
+         .select("id, nome");
+       
+       const forMap: Record<string, string> = {};
+       allFornecedores?.forEach(f => { forMap[f.id] = f.nome; });
+       setFornecedores(forMap);
+
 
       const parceiroInfoMap = new Map<string, any>();
       if (allParceiros) {
@@ -437,8 +448,9 @@ export function SaldosParceirosSheet() {
       // Process FIAT accounts (multi-currency)
       (saldosContas as SaldoContaParceiro[] || []).forEach((conta) => {
         if (!conta.parceiro_id || conta.saldo === 0) return;
+        const pInfo = parceiroInfoMap.get(conta.parceiro_id);
 
-        const parceiro = getOrCreateParceiro(conta.parceiro_id, conta.parceiro_nome);
+        const parceiro = getOrCreateParceiro(conta.parceiro_id, conta.parceiro_nome, pInfo?.fornecedor_origem_id);
         const moeda = conta.moeda || "BRL";
         
         const saldoClamped = Math.max(0, conta.saldo);
@@ -455,8 +467,9 @@ export function SaldosParceirosSheet() {
       // Process crypto wallets (com saldo travado)
       (saldosWallets as SaldoWalletParceiro[] || []).forEach((wallet) => {
         if (!wallet.parceiro_id || wallet.saldo_coin === 0) return;
+        const pInfo = parceiroInfoMap.get(wallet.parceiro_id);
 
-        const parceiro = getOrCreateParceiro(wallet.parceiro_id, wallet.parceiro_nome);
+        const parceiro = getOrCreateParceiro(wallet.parceiro_id, wallet.parceiro_nome, pInfo?.fornecedor_origem_id);
         
         // Calcular USD com preço atual da Binance
         const currentPrice = prices[wallet.coin] || 0;
@@ -480,8 +493,9 @@ export function SaldosParceirosSheet() {
       (transacoesPendentes || []).forEach((tx: any) => {
         const bm = tx.bookmakers;
         if (!bm?.parceiro_id) return;
+        const pInfo = parceiroInfoMap.get(bm.parceiro_id);
 
-        const parceiro = getOrCreateParceiro(bm.parceiro_id, "Parceiro");
+        const parceiro = getOrCreateParceiro(bm.parceiro_id, "Parceiro", pInfo?.fornecedor_origem_id);
         const moedaDestino = bm.moeda || "USD";
         
         parceiro.pendentes_bookmakers.push({
@@ -501,8 +515,9 @@ export function SaldosParceirosSheet() {
       // portanto NÃO devemos somar project_bookmaker_link_bonuses novamente.
       (bookmakers || []).forEach((bk) => {
         if (!bk.parceiro_id) return;
+        const pInfo = parceiroInfoMap.get(bk.parceiro_id);
 
-        const parceiro = getOrCreateParceiro(bk.parceiro_id, "Parceiro");
+        const parceiro = getOrCreateParceiro(bk.parceiro_id, "Parceiro", pInfo?.fornecedor_origem_id);
         const saldoReal = Math.max(0, bk.saldo_atual || 0);
         const saldoFreebet = Math.max(0, bk.saldo_freebet || 0);
         const moeda = bk.moeda || "BRL";
@@ -530,7 +545,7 @@ export function SaldosParceirosSheet() {
         const linkedParceiro = allParceiros?.find(p => p.supplier_profile_id === sf.supplier_profile_id);
         if (!linkedParceiro) return;
 
-        const parceiro = getOrCreateParceiro(linkedParceiro.id, linkedParceiro.nome);
+        const parceiro = getOrCreateParceiro(linkedParceiro.id, linkedParceiro.nome, linkedParceiro.fornecedor_origem_id);
         parceiro.is_fornecedor = true;
         
         // Map supplier balances to existing structure for seamless display
