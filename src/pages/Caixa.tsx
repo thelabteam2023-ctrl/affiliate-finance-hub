@@ -36,11 +36,11 @@ import { SaldosFiatCard } from "@/components/caixa/SaldosFiatCard";
 import { ExposicaoCryptoCard } from "@/components/caixa/ExposicaoCryptoCard";
 import { SaldoBancosParceiroModal } from "@/components/caixa/SaldoBancosParceiroModal";
 // TransacoesEmTransito removido - lógica unificada na Conciliação
-import { subDays, startOfDay, endOfDay, format } from "date-fns";
+import { subDays, startOfDay, endOfDay, format, isAfter, isBefore, isEqual } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { parseLocalDateTime, extractCivilDateKey } from "@/utils/dateUtils";
+import { parseLocalDateTime, extractCivilDateKey, getCivilDateRangeForQuery } from "@/utils/dateUtils";
 
 interface LocationState {
   openDialog?: boolean;
@@ -237,63 +237,38 @@ export default function Caixa() {
     try {
       if (initialLoading) setLoading(true);
       
-      // Fetch transactions with date filter applied server-side
-      // Quando dataInicio/dataFim são undefined (filtro "Tudo"), trazemos TODO o histórico
-      // do workspace (sem cortar por janela). Isso evita que lançamentos antigos
-      // "sumam" da paginação local. O Supabase traz até 1000 linhas por padrão; usamos
-      // .range para garantir até 10000 linhas em uma única consulta.
-      const queryStartDate = dataInicio ? format(dataInicio, "yyyy-MM-dd") : null;
-      const queryEndDate = dataFim ? format(dataFim, "yyyy-MM-dd") : null;
-      
-      // ARQUITETURA: Caixa Operacional só exibe transações de CASH REAL
-      // Eventos promocionais (GIRO_GRATIS, BONUS_CREDITADO, etc.) são filtrados
-      // para manter a visão pura de "dinheiro que entra e sai do sistema"
-      // Motor Financeiro v11: Exclui status de duplicidade para evitar confusão visual
-      // Busca principal: transações pela data_transacao no período
-      let principalQuery = supabase
+      // ARQUITETURA REESTRUTURADA: Busca unificada por "Data Efetiva"
+      // A data efetiva de uma transação para o Caixa é: data_confirmacao (se existir) OU data_transacao.
+      // Para garantir que não percamos transações, buscamos um range amplo no banco e filtramos no cliente,
+      // ou usamos uma query complexa. Para performance e simplicidade, vamos buscar todas as transações
+      // do workspace (até 10k) se o período for 'Tudo', ou usar filtros OR se houver datas.
+
+      let baseQuery = supabase
         .from("cash_ledger")
         .select("*")
+        .eq("workspace_id", workspaceId)
         .in("tipo_transacao", [...CASH_REAL_TYPES])
-        .not("status", "in", "(DUPLICADO_CORRIGIDO,DUPLICADO_BLOQUEADO)")
+        .not("status", "in", "(DUPLICADO_CORRIGIDO,DUPLICADO_BLOQUEADO)");
+
+      if (dataInicio && dataFim) {
+        const startStr = format(dataInicio, "yyyy-MM-dd");
+        const endStr = format(dataFim, "yyyy-MM-dd");
+        const range = getCivilDateRangeForQuery(startStr, endStr);
+
+        // Query complexa: (data_transacao no range) OR (data_confirmacao no range)
+        // Isso garante que pegamos transações criadas antes mas confirmadas no período, e vice-versa.
+        baseQuery = baseQuery.or(
+          `and(data_transacao.gte.${range.startUTC},data_transacao.lte.${range.endUTC}),` +
+          `and(data_confirmacao.gte.${range.startUTC},data_confirmacao.lte.${range.endUTC})`
+        );
+      }
+
+      const { data: allData, error: fetchError } = await baseQuery
         .order("data_transacao", { ascending: false })
         .range(0, 9999);
-      if (queryStartDate) {
-        principalQuery = principalQuery.gte("data_transacao", `${queryStartDate}T00:00:00.000Z`);
-      }
-      if (queryEndDate) {
-        principalQuery = principalQuery.lte("data_transacao", `${queryEndDate}T23:59:59.999Z`);
-      }
-      const { data: transacoesData, error: transacoesError } = await principalQuery;
 
-      if (transacoesError) throw transacoesError;
-
-      // Busca complementar: saques confirmados no período cujo pedido foi ANTES do período
-      // Isso garante que saques recebidos apareçam na cronologia correta.
-      // Só faz sentido quando há janela definida (queryStartDate/queryEndDate).
-      let transacoesConfirmadas: any[] | null = null;
-      if (queryStartDate && queryEndDate) {
-        const { data } = await supabase
-          .from("cash_ledger")
-          .select("*")
-          .in("tipo_transacao", [...CASH_REAL_TYPES])
-          .not("status", "in", "(DUPLICADO_CORRIGIDO,DUPLICADO_BLOQUEADO)")
-          .lt("data_transacao", `${queryStartDate}T00:00:00.000Z`)
-          .gte("data_confirmacao", `${queryStartDate}T00:00:00.000Z`)
-          .lte("data_confirmacao", `${queryEndDate}T23:59:59.999Z`)
-          .range(0, 9999);
-        transacoesConfirmadas = data;
-      }
-
-      // Merge e deduplicar
-      const allIds = new Set((transacoesData || []).map((t: any) => t.id));
-      const merged = [...(transacoesData || [])];
-      for (const t of (transacoesConfirmadas || [])) {
-        if (!allIds.has(t.id)) {
-          merged.push(t);
-        }
-      }
-
-      setTransacoes(merged);
+      if (fetchError) throw fetchError;
+      setTransacoes(allData || []);
 
       // Fetch reference data for names
       const { data: parceirosData } = await supabase
