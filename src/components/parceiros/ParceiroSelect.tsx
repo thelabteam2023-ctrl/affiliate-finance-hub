@@ -138,7 +138,7 @@ const ParceiroSelect = forwardRef<ParceiroSelectRef, ParceiroSelectProps>(({
     };
 
     fetchParceiros();
-  }, [includeParceiroId]);
+   }, [includeParceiroId, fornecedorOrigemId]);
 
   // Quando value muda, buscar o nome para exibição
   useEffect(() => {
