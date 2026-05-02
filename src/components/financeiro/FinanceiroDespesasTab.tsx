@@ -74,7 +74,55 @@ export function FinanceiroDespesasTab({ despesasAdmin, totalDespesasAdmin, total
         </Button>
       </div>
 
+      {/* Resumo por Grupo */}
       <Card>
+        <CardHeader><CardTitle className="text-base">Resumo por Grupo</CardTitle></CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {Object.entries(
+              despesasAdmin.reduce((acc, d) => { const grupo = d.grupo || "OUTROS"; acc[grupo] = (acc[grupo] || 0) + d.valor; return acc; }, {} as Record<string, number>)
+            ).sort((a, b) => (b[1] as number) - (a[1] as number)).map(([grupo, valor]) => {
+              const grupoInfo = getGrupoInfo(grupo);
+              const IconComponent = grupoInfo.icon;
+              return (
+                <button
+                  key={grupo}
+                  onClick={() => {
+                    setSelectedGrupo(grupo);
+                    setDetailsModalOpen(true);
+                  }}
+                  className="flex items-center justify-between w-full p-2 hover:bg-muted/50 rounded-lg transition-colors group"
+                >
+                  <span className="text-sm flex items-center gap-2">
+                    <IconComponent className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                    <span className="group-hover:underline underline-offset-4">{grupoInfo.label}</span>
+                  </span>
+                  <div className="flex items-center gap-4">
+                    <span className="text-xs text-muted-foreground font-normal">
+                      {totalGeralAdmin > 0 ? (((valor as number) / totalGeralAdmin) * 100).toFixed(1) : 0}%
+                    </span>
+                    <span className="font-medium text-orange-500">{formatCurrency(valor as number)}</span>
+                  </div>
+                </button>
+              );
+            })}
+            {despesasAdmin.length > 0 && (
+              <>
+                <div className="pt-3 border-t flex items-center justify-between font-bold text-lg">
+                  <span>Total Geral</span>
+                  <span className="text-orange-500">{formatCurrency(despesasAdmin.reduce((acc, d) => acc + d.valor, 0))}</span>
+                </div>
+              </>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tabela de Despesas Individuais */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base font-semibold">Lançamentos Individuais</CardTitle>
+        </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <div className={despesasAdmin.length >= 5 ? "max-h-[400px] overflow-y-auto" : ""}>
@@ -162,50 +210,6 @@ export function FinanceiroDespesasTab({ despesasAdmin, totalDespesasAdmin, total
                 </tbody>
               </table>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Resumo por Grupo */}
-      <Card>
-        <CardHeader><CardTitle className="text-base">Resumo por Grupo</CardTitle></CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {Object.entries(
-              despesasAdmin.reduce((acc, d) => { const grupo = d.grupo || "OUTROS"; acc[grupo] = (acc[grupo] || 0) + d.valor; return acc; }, {} as Record<string, number>)
-            ).sort((a, b) => (b[1] as number) - (a[1] as number)).map(([grupo, valor]) => {
-              const grupoInfo = getGrupoInfo(grupo);
-              const IconComponent = grupoInfo.icon;
-              return (
-                <button
-                  key={grupo}
-                  onClick={() => {
-                    setSelectedGrupo(grupo);
-                    setDetailsModalOpen(true);
-                  }}
-                  className="flex items-center justify-between w-full p-2 hover:bg-muted/50 rounded-lg transition-colors group"
-                >
-                  <span className="text-sm flex items-center gap-2">
-                    <IconComponent className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                    <span className="group-hover:underline underline-offset-4">{grupoInfo.label}</span>
-                  </span>
-                  <div className="flex items-center gap-4">
-                    <span className="text-xs text-muted-foreground font-normal">
-                      {totalGeralAdmin > 0 ? (((valor as number) / totalGeralAdmin) * 100).toFixed(1) : 0}%
-                    </span>
-                    <span className="font-medium text-orange-500">{formatCurrency(valor as number)}</span>
-                  </div>
-                </button>
-              );
-            })}
-            {despesasAdmin.length > 0 && (
-              <>
-                <div className="pt-3 border-t flex items-center justify-between font-bold text-lg">
-                  <span>Total Geral</span>
-                  <span className="text-orange-500">{formatCurrency(despesasAdmin.reduce((acc, d) => acc + d.valor, 0))}</span>
-                </div>
-              </>
-            )}
           </div>
         </CardContent>
       </Card>
