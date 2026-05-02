@@ -101,7 +101,12 @@ export function FinanceiroDespesasTab({
     if (transacao.origem_conta_bancaria_id) {
       const conta = contasBancarias.find((c) => c.id === transacao.origem_conta_bancaria_id);
       if (conta) {
-        return { label: conta.banco, sublabel: conta.titular || conta.parceiro_nome, icon: CreditCard };
+        const titular = conta.titular || conta.parceiro_nome;
+        return { 
+          label: conta.banco, 
+          sublabel: titular ? `Titular: ${titular}` : "Titular não identificado", 
+          icon: CreditCard 
+        };
       }
       return { label: "Conta Bancária", sublabel: "", icon: CreditCard };
     }
