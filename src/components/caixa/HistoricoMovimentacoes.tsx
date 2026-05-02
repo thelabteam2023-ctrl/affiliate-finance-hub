@@ -434,6 +434,14 @@ export function HistoricoMovimentacoes({
   
   const handlePeriodChange = useCallback((filter: DashboardPeriodFilter) => {
     setPeriodFilter(filter);
+    
+    // Se o filtro for personalizado, não calculamos o range aqui,
+    // pois ele é definido pelo handleCustomRangeChange logo antes
+    if (filter === "custom") {
+      pagination.goToFirstPage();
+      return;
+    }
+    
     const range = getDashboardDateRange(filter);
     setDataInicio(range.start ?? undefined);
     setDataFim(range.end ?? undefined);
