@@ -4202,10 +4202,9 @@ export function CaixaTransacaoDialog({
                     }, 180);
                   }
                 }}
-                disabled={!origemEstaCompleta}
-                onlyParceiros={parceirosDisponiveis}
-                 fornecedorOrigemId={limitDestinoToSupplierId}
-                showSaldo={true}
+                 disabled={!origemEstaCompleta}
+                 onlyParceiros={parceirosDisponiveis}
+                 showSaldo={true}
                 tipoMoeda="FIAT"
                 moeda={moeda}
                 saldosContas={saldosParceirosContas}
@@ -4284,10 +4283,9 @@ export function CaixaTransacaoDialog({
                     }, 180);
                   }
                 }}
-                disabled={!origemEstaCompleta}
-                onlyParceiros={parceirosDisponiveis}
-                 fornecedorOrigemId={limitDestinoToSupplierId}
-                showSaldo={true}
+                 disabled={!origemEstaCompleta}
+                 onlyParceiros={parceirosDisponiveis}
+                 showSaldo={true}
                 tipoMoeda="CRYPTO"
                 coin={coin}
                 saldosWallets={saldosParceirosWallets}
