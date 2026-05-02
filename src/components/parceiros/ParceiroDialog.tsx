@@ -103,7 +103,12 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   const [walletSaldos, setWalletSaldos] = useState<Record<string, { saldo: number; coin: string }>>({});
   const { toast } = useToast();
 
-  // DEBUG logs removidos — causavam re-render tracking desnecessário
+   // Debug logging to help identify "Invalid input syntax" errors
+   useEffect(() => {
+     if (loading) {
+       console.log("[ParceiroDialog] Loading state changed:", loading);
+     }
+   }, [loading]);
 
   const copyToClipboard = async (text: string, fieldName: string) => {
     try {
@@ -619,6 +624,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   const saveData = async () => {
     setLoading(true);
     setPlanLimitError(null);
+    console.log("[ParceiroDialog] Starting saveData...");
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -651,7 +657,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         }
       }
 
-      const parceiroData = {
+       const parceiroData: any = {
         user_id: user.id,
         workspace_id: workspaceId,
         nome,
@@ -664,9 +670,11 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         cep: cep.replace(/\D/g, "") || null,
          status,
          observacoes: observacoes || null,
-         fornecedor_origem_id: fornecedorOrigemId,
+         fornecedor_origem_id: fornecedorOrigemId === "" ? null : fornecedorOrigemId,
          qualidade: qualidade ?? null,
       };
+
+      console.log("[ParceiroDialog] Saving parceiroData:", parceiroData);
 
       let currentParceiroId = parceiroId || parceiro?.id;
 
@@ -729,7 +737,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
             
             const accountData: any = {
               parceiro_id: currentParceiroId,
-              banco_id: account.banco_id, // ensure this is a valid UUID
+              banco_id: account.banco_id === "" ? null : account.banco_id,
               banco: bancos.find(b => b.id === account.banco_id)?.nome || "",
               moeda: account.moeda || "BRL",
               agencia: account.agencia || null,
@@ -813,7 +821,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
               moeda: wallet.moeda || [],
               endereco: wallet.endereco,
               network: redes.find(r => r.id === wallet.rede_id)?.nome || "",
-              rede_id: wallet.rede_id, // ensure this is a valid UUID
+              rede_id: wallet.rede_id === "" ? null : wallet.rede_id,
               exchange: wallet.exchange || null,
               observacoes_encrypted: observacoesEncrypted,
             };
@@ -859,6 +867,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
 
       onClose({ saved: true });
     } catch (error: any) {
+      console.error("[ParceiroDialog] Caught error in saveData:", error);
       let errorMessage = error.message;
       
       // Check for duplicate CPF error
