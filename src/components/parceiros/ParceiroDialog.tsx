@@ -248,9 +248,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       setEndereco(parceiro.endereco || "");
       setCidade(parceiro.cidade || "");
       setCep(formatCEP(parceiro.cep || "")); // Apply mask when loading
-      setStatus(parceiro.status || "ativo");
-      setObservacoes(parceiro.observacoes || "");
-      setQualidade((parceiro as any).qualidade ?? null);
+       setStatus(parceiro.status || "ativo");
+       setObservacoes(parceiro.observacoes || "");
+       setFornecedorOrigemId((parceiro as any).fornecedor_origem_id || null);
+       setQualidade((parceiro as any).qualidade ?? null);
       
       // Map bank accounts data using pix_keys JSONB column
       const mappedAccounts = (parceiro.contas_bancarias || []).map((acc: any) => {
