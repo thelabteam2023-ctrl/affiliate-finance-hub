@@ -3712,18 +3712,6 @@ export function CaixaTransacaoDialog({
           return (
             <>
               <div className="space-y-2">
-                <Label>Fornecedor</Label>
-                <FornecedorSelect
-                  ref={origemFornecedorSelectRef}
-                  value={origemFornecedorId}
-                  onValueChange={(value) => {
-                    setOrigemFornecedorId(value);
-                    setOrigemParceiroId("");
-                    setOrigemWalletId("");
-                  }}
-                />
-              </div>
-              <div className="space-y-2">
                 <Label>Parceiro (com saldo em {coin})</Label>
                 <ParceiroSelect
                   value={origemParceiroId}
