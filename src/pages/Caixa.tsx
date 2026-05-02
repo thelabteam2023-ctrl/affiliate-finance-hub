@@ -125,7 +125,8 @@ export default function Caixa() {
   const [saldoBookmakers, setSaldoBookmakers] = useState(0); // Legacy: BRL total (para CaixaTabsContainer)
   const [saldosContasParceiros, setSaldosContasParceiros] = useState<Array<{ moeda: string; saldo: number }>>([]);
   const [saldoWalletsParceiros, setSaldoWalletsParceiros] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const { canCreate } = useActionAccess();
   const { isOwnerOrAdmin, isSystemOwner } = usePermissions();
   
