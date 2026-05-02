@@ -52,7 +52,11 @@ export default function Financeiro() {
   const { data: finData, loading, refetch: refetchFinanceiro } = useFinanceiroData();
   
   // Cotações
-  const cryptoSymbols = useMemo(() => finData.caixaCrypto.map(c => c.coin), [finData.caixaCrypto]);
+   const cryptoSymbols = useMemo(() => {
+     const caixaCoins = finData.caixaCrypto.map(c => c.coin);
+     const partnerCoins = finData.walletsDetalhadas.map(w => w.coin);
+     return Array.from(new Set([...caixaCoins, ...partnerCoins])).filter(Boolean);
+   }, [finData.caixaCrypto, finData.walletsDetalhadas]);
   const { cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP, getCryptoUSDValue, refreshAll: refreshCotacoes, loading: loadingCotacoes, lastUpdate, source } = useCotacoes(cryptoSymbols);
   
   const cotacoesMap = useMemo(() => {

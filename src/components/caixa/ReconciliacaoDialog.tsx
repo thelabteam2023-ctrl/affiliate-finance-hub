@@ -82,7 +82,7 @@ export function ReconciliacaoDialog({
   const { toast } = useToast();
   const { isOwnerOrAdmin, isSystemOwner } = usePermissions();
   const { workspaceId } = useWorkspace();
-  const { getRate, lastUpdate } = useExchangeRates();
+   const { getRate, lastUpdate, cryptoPrices } = useExchangeRates();
 
   const [loading, setLoading] = useState(false);
   const [fetchingData, setFetchingData] = useState(false);
@@ -155,10 +155,24 @@ export function ReconciliacaoDialog({
   }, [tipoEntidade, entidadeId, moeda, subTipoCaixa, contaId, walletId, bookmakers, saldosContas, saldosWallets]);
 
   // Diferença calculada
-  const diferenca = useMemo(() => {
-    const real = parseFloat(saldoReal) || 0;
-    return real - saldoSistema;
-  }, [saldoReal, saldoSistema]);
+   const diferenca = useMemo(() => {
+     const real = parseFloat(saldoReal) || 0;
+     return real - saldoSistema;
+   }, [saldoReal, saldoSistema]);
+ 
+   const isCryptoEntidade = (tipoEntidade === "WALLET") || (tipoEntidade === "CAIXA_OPERACIONAL" && subTipoCaixa === "CRYPTO");
+ 
+   const currentUSDPrice = useMemo(() => {
+     if (!isCryptoEntidade || !moeda) return 0;
+     const m = moeda.toUpperCase();
+     if (m === "USDT" || m === "USDC") return 1.0;
+     return cryptoPrices[m] || 0;
+   }, [isCryptoEntidade, moeda, cryptoPrices]);
+ 
+   const saldoSistemaUSD = useMemo(() => {
+     if (!isCryptoEntidade) return 0;
+     return saldoSistema * currentUSDPrice;
+   }, [isCryptoEntidade, saldoSistema, currentUSDPrice]);
 
   // Moedas disponíveis
   const moedasDisponiveis = useMemo(() => {
@@ -681,9 +695,10 @@ export function ReconciliacaoDialog({
                   value={walletId}
                   onValueChange={(v) => { setWalletId(v); setSaldoReal(""); setSaldoRealDisplay(""); }}
                   placeholder="Selecione a wallet"
-                  saldos={saldosWalletsList}
-                  usdToBrlRate={getRate("USD")}
-                />
+                   saldos={saldosWalletsList}
+                   usdToBrlRate={getRate("USD")}
+                   cryptoPrices={cryptoPrices}
+                 />
               </div>
             )}
 
@@ -722,9 +737,10 @@ export function ReconciliacaoDialog({
                   value={entidadeId}
                   onValueChange={setEntidadeId}
                   placeholder="Selecione a wallet"
-                  saldos={saldosWalletsList}
-                  usdToBrlRate={getRate("USD")}
-                />
+                   saldos={saldosWalletsList}
+                   usdToBrlRate={getRate("USD")}
+                   cryptoPrices={cryptoPrices}
+                 />
               </div>
             )}
 
@@ -748,9 +764,16 @@ export function ReconciliacaoDialog({
               <div className="rounded-lg border border-border/50 bg-muted/30 p-3 space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Saldo no Sistema</span>
-                  <span className="font-mono font-semibold">
-                    {currencySymbol} {saldoSistema.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: isCryptoMoedaSelected ? 8 : 2 })}
-                  </span>
+                   <div className="flex flex-col items-end">
+                     <span className="font-mono font-semibold">
+                       {currencySymbol} {saldoSistema.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: isCryptoMoedaSelected ? 8 : 2 })}
+                     </span>
+                     {isCryptoEntidade && saldoSistemaUSD > 0 && (
+                       <span className="text-[10px] text-primary font-medium">
+                         ≈ US$ {saldoSistemaUSD.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                       </span>
+                     )}
+                   </div>
                 </div>
                 {entidadeReconciledAt && (
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -799,9 +822,16 @@ export function ReconciliacaoDialog({
                     )}
                     <span className={`font-mono font-bold ${
                       Math.abs(diferenca) < minDiferenca ? "text-muted-foreground" : diferenca > 0 ? "text-primary" : "text-destructive"
-                    }`}>
-                      {diferenca > 0 ? "+" : ""}{currencySymbol} {diferenca.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: isCryptoMoedaSelected ? 8 : 2 })}
-                    </span>
+                     }`}>
+                       <div className="flex flex-col items-end">
+                         <span>{diferenca > 0 ? "+" : ""}{currencySymbol} {diferenca.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: isCryptoMoedaSelected ? 8 : 2 })}</span>
+                         {isCryptoEntidade && Math.abs(diferenca) >= minDiferenca && currentUSDPrice > 0 && (
+                           <span className="text-[10px] font-medium opacity-80">
+                             {diferenca > 0 ? "+" : "-"} US$ {Math.abs(diferenca * currentUSDPrice).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                           </span>
+                         )}
+                       </div>
+                     </span>
                   </div>
                 </div>
                 {Math.abs(diferenca) >= minDiferenca && (
