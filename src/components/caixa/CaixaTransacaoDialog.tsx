@@ -4031,28 +4031,27 @@ export function CaixaTransacaoDialog({
         if (tipoMoeda === "FIAT") {
           return (
             <>
-               <div className="space-y-2">
-                 <Label>Parceiro ou Fornecedor</Label>
-                 <ParceiroSelect
-                   ref={parceiroDestinoSelectRef}
-                   value={destinoParceiroId}
-                   onValueChange={(value) => {
-                     setDestinoParceiroId(value);
-                     setDestinoContaId("");
-                     // Auto-focus: parceiro → conta bancária
-                     setTimeout(() => {
-                       destinoContaBancariaSelectRef.current?.focus();
-                       destinoContaBancariaSelectRef.current?.click();
-                     }, 180);
-                   }}
-                   includeFornecedores={true}
-                   onlyParceiros={parceirosDisponiveis}
-                   showSaldo={true}
-                   tipoMoeda="FIAT"
-                   moeda={moeda}
-                   saldosContas={saldosParceirosContas}
-                 />
-               </div>
+                <div className="space-y-2">
+                  <Label>Parceiro</Label>
+                  <ParceiroSelect
+                    ref={parceiroDestinoSelectRef}
+                    value={destinoParceiroId}
+                    onValueChange={(value) => {
+                      setDestinoParceiroId(value);
+                      setDestinoContaId("");
+                      // Auto-focus: parceiro → conta bancária
+                      setTimeout(() => {
+                        destinoContaBancariaSelectRef.current?.focus();
+                        destinoContaBancariaSelectRef.current?.click();
+                      }, 180);
+                    }}
+                    onlyParceiros={parceirosDisponiveis}
+                    showSaldo={true}
+                    tipoMoeda="FIAT"
+                    moeda={moeda}
+                    saldosContas={saldosParceirosContas}
+                  />
+                </div>
               {destinoParceiroId && (
                 <div className="space-y-2">
                   <Label>Conta Bancária</Label>
@@ -4103,22 +4102,21 @@ export function CaixaTransacaoDialog({
           // CRYPTO
           return (
             <>
-               <div className="space-y-2">
-                 <Label>Parceiro ou Fornecedor</Label>
-                 <ParceiroSelect
-                   value={destinoParceiroId}
-                   onValueChange={(value) => {
-                     setDestinoParceiroId(value);
-                     setDestinoWalletId("");
-                   }}
-                   includeFornecedores={true}
-                   onlyParceiros={parceirosDisponiveis}
-                   showSaldo={true}
-                   tipoMoeda="CRYPTO"
-                   coin={coin}
-                   saldosWallets={saldosParceirosWallets}
-                 />
-               </div>
+                <div className="space-y-2">
+                  <Label>Parceiro</Label>
+                  <ParceiroSelect
+                    value={destinoParceiroId}
+                    onValueChange={(value) => {
+                      setDestinoParceiroId(value);
+                      setDestinoWalletId("");
+                    }}
+                    onlyParceiros={parceirosDisponiveis}
+                    showSaldo={true}
+                    tipoMoeda="CRYPTO"
+                    coin={coin}
+                    saldosWallets={saldosParceirosWallets}
+                  />
+                </div>
               {destinoParceiroId && (
                 <div className="space-y-2">
                   <Label>Wallet Crypto</Label>
