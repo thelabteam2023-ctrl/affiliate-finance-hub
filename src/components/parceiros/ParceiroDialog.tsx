@@ -202,9 +202,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       endereco,
       cidade,
       cep,
-      status,
-      observacoes,
-      qualidade,
+       status,
+       observacoes,
+       fornecedorOrigemId,
+       qualidade,
       bankAccounts: JSON.stringify(bankAccounts),
       cryptoWallets: JSON.stringify(cryptoWallets)
     };
