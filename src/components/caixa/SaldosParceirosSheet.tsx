@@ -934,18 +934,53 @@ export function SaldosParceirosSheet() {
                 )}
               </div>
 
-              <ScrollArea className="h-[calc(100vh-320px)]">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent border-border/50">
-                      <TableHead className="text-xs font-medium">Parceiro</TableHead>
-                      <TableHead className="text-xs font-medium text-right">FIAT</TableHead>
-                      <TableHead className="text-xs font-medium text-right">Crypto</TableHead>
-                      <TableHead className="text-xs font-medium text-right">Bookmaker</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {parceirosAgrupados.map((parceiro, index) => {
+               <ScrollArea className="h-[calc(100vh-320px)] pr-4">
+                 {(() => {
+                   const groups: Record<string, ParceiroSaldoAgrupado[]> = { "none": [] };
+                   parceirosAgrupados.forEach(p => {
+                     const key = p.fornecedor_origem_id || "none";
+                     if (!groups[key]) groups[key] = [];
+                     groups[key].push(p);
+                   });
+
+                   const groupKeys = Object.keys(groups).sort((a, b) => {
+                     if (a === "none") return -1;
+                     if (b === "none") return 1;
+                     return (fornecedores[a] || "").localeCompare(fornecedores[b] || "");
+                   });
+
+                   return groupKeys.map(groupKey => {
+                     const groupParceiros = groups[groupKey];
+                     if (groupParceiros.length === 0) return null;
+                     const forNome = groupKey === "none" ? "Gestão Interna" : (fornecedores[groupKey] || "Fornecedor Desconhecido");
+
+                     return (
+                       <div key={groupKey} className="mb-6">
+                         <div className="flex items-center gap-2 mb-2 px-1 sticky top-0 bg-background/95 backdrop-blur-sm z-10 py-1.5 border-b border-border/40">
+                           {groupKey === "none" ? (
+                             <Building2 className="h-4 w-4 text-muted-foreground" />
+                           ) : (
+                             <Truck className="h-4 w-4 text-primary" />
+                           )}
+                           <h3 className="text-xs font-bold uppercase tracking-widest text-foreground/80">
+                             {forNome}
+                             <span className="ml-2 font-normal text-muted-foreground lowercase tracking-normal">
+                               ({groupParceiros.length} parceiro{groupParceiros.length !== 1 ? "s" : ""})
+                             </span>
+                           </h3>
+                         </div>
+
+                         <Table>
+                           <TableHeader className="max-md:hidden">
+                             <TableRow className="hover:bg-transparent border-none h-8">
+                               <TableHead className="text-[10px] uppercase font-bold text-muted-foreground/60">Parceiro</TableHead>
+                               <TableHead className="text-[10px] uppercase font-bold text-muted-foreground/60 text-right">Bancos</TableHead>
+                               <TableHead className="text-[10px] uppercase font-bold text-muted-foreground/60 text-right">Wallets</TableHead>
+                               <TableHead className="text-[10px] uppercase font-bold text-muted-foreground/60 text-right">Casas</TableHead>
+                             </TableRow>
+                           </TableHeader>
+                           <TableBody>
+                             {groupParceiros.map((parceiro, index) => {
                       // Get primary FIAT currency (highest value) for display
                       const fiatEntries = Object.entries(parceiro.total_fiat_por_moeda)
                         .filter(([_, v]) => v > 0)
