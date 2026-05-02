@@ -808,9 +808,13 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         }
         
         // UPDATE or INSERT wallets
-        for (let i = 0; i < cryptoWallets.length; i++) {
-          const wallet = cryptoWallets[i];
-          if (wallet.moeda && wallet.moeda.length > 0 && wallet.endereco && wallet.rede_id) {
+        const updatedCryptoWallets = [...cryptoWallets];
+        for (let i = 0; i < updatedCryptoWallets.length; i++) {
+          const wallet = updatedCryptoWallets[i];
+          // Only save relevant wallets
+          const isRelevant = wallet.rede_id || wallet.endereco || (wallet.moeda && wallet.moeda.length > 0);
+          
+          if (isRelevant && wallet.moeda && wallet.moeda.length > 0 && wallet.endereco && wallet.rede_id) {
             // Encrypt observacoes if present
             const observacoesEncrypted = wallet.observacoes 
               ? btoa(unescape(encodeURIComponent(wallet.observacoes)))
@@ -851,15 +855,14 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                 throw insertError;
               }
               
-              // Update the wallet in state with the new ID to prevent re-insertion
+              // Update the wallet local copy with the new ID
               if (insertedData?.id) {
-                const updatedWallets = [...cryptoWallets];
-                updatedWallets[i] = { ...updatedWallets[i], id: insertedData.id };
-                setCryptoWallets(updatedWallets);
+                updatedCryptoWallets[i] = { ...updatedCryptoWallets[i], id: insertedData.id };
               }
             }
           }
         }
+        setCryptoWallets(updatedCryptoWallets);
       }
 
       toast({
