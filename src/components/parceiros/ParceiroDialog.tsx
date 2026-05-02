@@ -606,12 +606,16 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       }
     }
     
-    // Validate wallet data
-    for (const wallet of cryptoWallets) {
+    // Validate wallet data - Only validate wallets that have some information
+    const relevantWallets = cryptoWallets.filter(w => 
+      w.rede_id || w.endereco || (w.moeda && w.moeda.length > 0) || w.exchange || w.label
+    );
+
+    for (const wallet of relevantWallets) {
       if (!wallet.rede_id || !wallet.endereco || !wallet.moeda || wallet.moeda.length === 0) {
         toast({
-          title: "Campos obrigatórios faltando",
-          description: "Preencha: Rede, Moedas e Endereço em todas as wallets.",
+          title: "Campos obrigatórios faltando na Wallet",
+          description: "Por favor, preencha Rede, Moedas e Endereço em todas as wallets que você adicionou.",
           variant: "destructive",
         });
         return;
