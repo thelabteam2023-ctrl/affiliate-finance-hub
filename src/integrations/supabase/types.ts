@@ -1924,6 +1924,7 @@ export type Database = {
           reversed_by_id: string | null
           status: string
           status_valor: string | null
+          tags: string[] | null
           tipo_moeda: string
           tipo_transacao: string
           transit_status: string | null
@@ -1988,6 +1989,7 @@ export type Database = {
           reversed_by_id?: string | null
           status?: string
           status_valor?: string | null
+          tags?: string[] | null
           tipo_moeda: string
           tipo_transacao: string
           transit_status?: string | null
@@ -2052,6 +2054,7 @@ export type Database = {
           reversed_by_id?: string | null
           status?: string
           status_valor?: string | null
+          tags?: string[] | null
           tipo_moeda?: string
           tipo_transacao?: string
           transit_status?: string | null
