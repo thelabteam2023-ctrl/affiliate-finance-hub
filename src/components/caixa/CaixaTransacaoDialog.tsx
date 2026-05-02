@@ -781,6 +781,7 @@ export function CaixaTransacaoDialog({
   const [saldosCaixaCrypto, setSaldosCaixaCrypto] = useState<SaldoCaixaCrypto[]>([]);
   const [saldosParceirosContas, setSaldosParceirosContas] = useState<SaldoParceiroContas[]>([]);
   const [saldosParceirosWallets, setSaldosParceirosWallets] = useState<SaldoParceiroWallets[]>([]);
+  const [fornecedores, setFornecedores] = useState<Array<{ id: string; nome: string }>>([]);
   const [investidores, setInvestidores] = useState<Array<{ id: string; nome: string }>>([]);
   const [saquesPendentes, setSaquesPendentes] = useState<Record<string, number>>({});
   
@@ -849,6 +850,7 @@ export function CaixaTransacaoDialog({
       fetchSaldosCaixa();
       fetchSaldosParceiros();
       fetchInvestidores();
+      fetchFornecedores();
       fetchSaquesPendentes();
     }
   }, [open]);
@@ -1938,6 +1940,21 @@ export function CaixaTransacaoDialog({
       setInvestidores(data || []);
     } catch (error) {
       console.error("Erro ao carregar investidores:", error);
+    }
+  };
+
+  const fetchFornecedores = async () => {
+    if (!workspaceId) return;
+    try {
+      const { data, error } = await supabase
+        .from("fornecedores")
+        .select("id, nome")
+        .eq("workspace_id", workspaceId)
+        .eq("status", "ativo");
+      if (error) throw error;
+      setFornecedores(data || []);
+    } catch (error) {
+      console.error("Erro ao carregar fornecedores:", error);
     }
   };
 
