@@ -100,7 +100,8 @@ export function ConfirmarSaqueDialog({
   saque,
 }: ConfirmarSaqueDialogProps) {
   const [loading, setLoading] = useState(false);
-  const [observacoes, setObservacoes] = useState("");
+   const [observacoes, setObservacoes] = useState("");
+   const [ignorarDuplicidade, setIgnorarDuplicidade] = useState(false);
   const [showRecusaConfirm, setShowRecusaConfirm] = useState(false);
   const [parceiroInativo, setParceiroInativo] = useState<string | null>(null);
   
@@ -119,7 +120,8 @@ export function ConfirmarSaqueDialog({
   // Resetar estados quando abre o dialog e verificar status do parceiro
   useEffect(() => {
     if (open && saque) {
-      setObservacoes("");
+       setObservacoes("");
+       setIgnorarDuplicidade(false);
       setParceiroInativo(null);
       // Data de confirmação padrão = hoje
       setDataConfirmacao(getTodayCivilDate());
@@ -244,16 +246,17 @@ export function ConfirmarSaqueDialog({
         // em vez do valor real, causando divergência de saldo.
         // A entrada PERDA/GANHO_CAMBIAL é registrada separadamente SEM destino_wallet_id
         // para evitar dupla contagem — ela serve apenas como registro contábil.
-        const { data: updateResult, error } = await supabase
-          .from("cash_ledger")
-          .update({
-            status: "CONFIRMADO",
-            qtd_coin: qtdCoinRecebidaNum, // Atualizar para valor REAL recebido (view usa este campo)
-            valor_confirmado: qtdCoinRecebidaNum, // registrar valor real recebido para auditoria
-            descricao: descricaoFinal || null,
-            transit_status: "CONFIRMED", // Confirmar trânsito para creditação na wallet
-            data_confirmacao: dataConfirmacao ? new Date(dataConfirmacao + "T12:00:00").toISOString() : new Date().toISOString(),
-          })
+         const { data: updateResult, error } = await supabase
+           .from("cash_ledger")
+           .update({
+             status: "CONFIRMADO",
+             qtd_coin: qtdCoinRecebidaNum,
+             valor_confirmado: qtdCoinRecebidaNum,
+             descricao: descricaoFinal || null,
+             transit_status: "CONFIRMED",
+             data_confirmacao: dataConfirmacao ? new Date(dataConfirmacao + "T12:00:00").toISOString() : new Date().toISOString(),
+             auditoria_metadata: { ignore_duplicate: ignorarDuplicidade }
+           })
           .eq("id", saque.id)
           .eq("status", "PENDENTE")
           .select("id");
@@ -310,14 +313,15 @@ export function ConfirmarSaqueDialog({
             : `[Ajuste ${tipoDif}]: ${formatCurrency(Math.abs(diferencaFiat), moedaDestinoFiat)}`;
         }
 
-        const { data: updateResultFiat, error } = await supabase
-          .from("cash_ledger")
-          .update({
-            status: "CONFIRMADO",
-            valor_confirmado: valorRecebidoNum,
-            descricao: descricaoFinal || null,
-            data_confirmacao: dataConfirmacao ? new Date(dataConfirmacao + "T12:00:00").toISOString() : new Date().toISOString(),
-          })
+         const { data: updateResultFiat, error } = await supabase
+           .from("cash_ledger")
+           .update({
+             status: "CONFIRMADO",
+             valor_confirmado: valorRecebidoNum,
+             descricao: descricaoFinal || null,
+             data_confirmacao: dataConfirmacao ? new Date(dataConfirmacao + "T12:00:00").toISOString() : new Date().toISOString(),
+             auditoria_metadata: { ignore_duplicate: ignorarDuplicidade }
+           })
           .eq("id", saque.id)
           .eq("status", "PENDENTE")
           .select("id");
@@ -466,8 +470,9 @@ export function ConfirmarSaqueDialog({
     }
   };
 
-  const resetForm = () => {
-    setObservacoes("");
+   const resetForm = () => {
+     setObservacoes("");
+     setIgnorarDuplicidade(false);
     setValorRecebido("");
     setQtdCoinRecebida("");
     setDataConfirmacao("");
@@ -750,8 +755,28 @@ export function ConfirmarSaqueDialog({
               </p>
             </div>
 
-            {/* Observações */}
-            <div className="space-y-2">
+             {/* Opção de Ignorar Duplicidade */}
+             <div className="flex items-center space-x-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-3">
+               <Checkbox 
+                 id="ignore-duplicate" 
+                 checked={ignorarDuplicidade}
+                 onCheckedChange={(checked) => setIgnorarDuplicidade(checked === true)}
+               />
+               <div className="grid gap-1.5 leading-none">
+                 <label
+                   htmlFor="ignore-duplicate"
+                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                 >
+                   Confirmar mesmo se houver suspeita de duplicidade
+                 </label>
+                 <p className="text-xs text-muted-foreground">
+                   Marque esta opção se este saque for legítimo, mesmo que já exista outro saque de mesmo valor para este destino recentemente.
+                 </p>
+               </div>
+             </div>
+ 
+             {/* Observações */}
+             <div className="space-y-2">
               <Label htmlFor="observacoes">Observações (opcional)</Label>
               <Textarea
                 id="observacoes"
