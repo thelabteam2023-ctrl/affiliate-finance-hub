@@ -2241,6 +2241,9 @@ export function CaixaTransacaoDialog({
   };
 
   const getOrigemLabel = (): string => {
+    const fornecedor = fornecedores.find(f => f.id === origemFornecedorId);
+    const suffix = fornecedor ? ` (${fornecedor.nome})` : "";
+
     if (tipoTransacao === "APORTE_FINANCEIRO") {
       if (fluxoAporte === "APORTE") {
         const investidor = investidores.find(inv => inv.id === investidorId);
@@ -2253,15 +2256,15 @@ export function CaixaTransacaoDialog({
       if (tipoMoeda === "CRYPTO") {
         if (origemWalletId) {
           const wallet = walletsCrypto.find(w => w.id === origemWalletId);
-          return wallet ? `${wallet.exchange}` : "Wallet Crypto";
+           return wallet ? `${wallet.exchange}${suffix}` : "Wallet Crypto";
         }
-        return "Wallet Crypto";
+        return `Wallet Crypto${suffix}`;
       } else {
         if (origemContaId) {
           const conta = contasBancarias.find(c => c.id === origemContaId);
-          return conta ? `${conta.banco} - ${conta.titular}` : "Conta Bancária";
+          return conta ? `${conta.banco} - ${conta.titular}${suffix}` : "Conta Bancária";
         }
-        return "Conta Bancária";
+        return `Conta Bancária${suffix}`;
       }
     }
     if (tipoTransacao === "SAQUE" && origemBookmakerId) {
@@ -2276,13 +2279,16 @@ export function CaixaTransacaoDialog({
       }
       if (origemTipo === "PARCEIRO_WALLET" && origemWalletId) {
         const wallet = walletsCrypto.find(w => w.id === origemWalletId);
-        return wallet ? `${wallet.exchange}` : "Wallet";
+         return wallet ? `${wallet.exchange}${suffix}` : "Wallet";
       }
     }
-    return "Origem";
+    return `Origem${suffix}`;
   };
 
   const getDestinoLabel = (): string => {
+    const fornecedor = fornecedores.find(f => f.id === destinoFornecedorId);
+    const suffix = fornecedor ? ` (${fornecedor.nome})` : "";
+
     if (tipoTransacao === "APORTE_FINANCEIRO") {
       if (fluxoAporte === "APORTE") {
         return "Caixa Operacional";
@@ -2295,15 +2301,15 @@ export function CaixaTransacaoDialog({
       if (tipoMoeda === "CRYPTO") {
         if (destinoWalletId) {
           const wallet = walletsCrypto.find(w => w.id === destinoWalletId);
-          return wallet ? `${wallet.exchange}` : "Wallet Crypto";
+           return wallet ? `${wallet.exchange}${suffix}` : "Wallet Crypto";
         }
-        return "Wallet Crypto";
+        return `Wallet Crypto${suffix}`;
       } else {
         if (destinoContaId) {
           const conta = contasBancarias.find(c => c.id === destinoContaId);
-          return conta ? `${conta.banco} - ${conta.titular}` : "Conta Bancária";
+          return conta ? `${conta.banco} - ${conta.titular}${suffix}` : "Conta Bancária";
         }
-        return "Conta Bancária";
+        return `Conta Bancária${suffix}`;
       }
     }
     if (tipoTransacao === "DEPOSITO" && destinoBookmakerId) {
@@ -2318,10 +2324,10 @@ export function CaixaTransacaoDialog({
       }
       if (destinoTipo === "PARCEIRO_WALLET" && destinoWalletId) {
         const wallet = walletsCrypto.find(w => w.id === destinoWalletId);
-        return wallet ? `${wallet.exchange}` : "Wallet";
+         return wallet ? `${wallet.exchange}${suffix}` : "Wallet";
       }
     }
-    return "Destino";
+    return `Destino${suffix}`;
   };
 
   const handleSubmit = async () => {
