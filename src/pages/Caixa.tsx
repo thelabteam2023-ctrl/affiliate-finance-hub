@@ -167,6 +167,56 @@ export default function Caixa() {
   const [filtroTipo, setFiltroTipo] = useState<string[]>([]);
   const [filtroProjeto, setFiltroProjeto] = useState<string>("TODOS");
   const [filtroParceiro, setFiltroParceiro] = useState<string>("TODOS");
+
+  // Deriva a lista de parceiros filtrada pelo projeto selecionado
+  const parceirosListaFiltrada = useMemo(() => {
+    const allParceiros = Object.entries(parceiros)
+      .filter(([id]) => id !== caixaParceiroId)
+      .map(([id, nome]) => ({ id, nome }));
+
+    if (filtroProjeto === "TODOS") return allParceiros;
+
+    const parceirosIdsNoProjeto = new Set<string>();
+    
+    transacoes.forEach(t => {
+      const matchProjeto = filtroProjeto === "SEM_PROJETO" 
+        ? !t.projeto_id_snapshot 
+        : t.projeto_id_snapshot === filtroProjeto;
+
+      if (matchProjeto) {
+        if (t.origem_parceiro_id) parceirosIdsNoProjeto.add(t.origem_parceiro_id);
+        if (t.destino_parceiro_id) parceirosIdsNoProjeto.add(t.destino_parceiro_id);
+        
+        if (t.origem_bookmaker_id) {
+          const pId = bookmakers[t.origem_bookmaker_id]?.parceiro_id;
+          if (pId) parceirosIdsNoProjeto.add(pId);
+        }
+        if (t.destino_bookmaker_id) {
+          const pId = bookmakers[t.destino_bookmaker_id]?.parceiro_id;
+          if (pId) parceirosIdsNoProjeto.add(pId);
+        }
+        
+        if (t.origem_wallet_id) {
+          const w = walletsDetalhes.find(wd => wd.id === t.origem_wallet_id);
+          if (w?.parceiro_id) parceirosIdsNoProjeto.add(w.parceiro_id);
+        }
+        if (t.destino_wallet_id) {
+          const w = walletsDetalhes.find(wd => wd.id === t.destino_wallet_id);
+          if (w?.parceiro_id) parceirosIdsNoProjeto.add(w.parceiro_id);
+        }
+      }
+    });
+
+    return allParceiros.filter(p => parceirosIdsNoProjeto.has(p.id));
+  }, [parceiros, caixaParceiroId, filtroProjeto, transacoes, bookmakers, walletsDetalhes]);
+
+  // Resetar filtro de parceiro se ele não existir no novo projeto selecionado
+  useEffect(() => {
+    if (filtroParceiro !== "TODOS" && !parceirosListaFiltrada.some(p => p.id === filtroParceiro)) {
+      setFiltroParceiro("TODOS");
+    }
+  }, [filtroProjeto, parceirosListaFiltrada, filtroParceiro]);
+
   const [dataInicio, setDataInicio] = useState<Date | undefined>(subDays(new Date(), 30));
   const [dataFim, setDataFim] = useState<Date | undefined>(new Date());
   
@@ -1184,7 +1234,7 @@ export default function Caixa() {
             filtroParceiro={filtroParceiro}
             setFiltroParceiro={setFiltroParceiro}
             projetos={projetos}
-            parceirosLista={Object.entries(parceiros).filter(([id]) => id !== caixaParceiroId).map(([id, nome]) => ({ id, nome }))}
+            parceirosLista={parceirosListaFiltrada}
             dataInicio={dataInicio}
             setDataInicio={setDataInicio}
             dataFim={dataFim}
