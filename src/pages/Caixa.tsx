@@ -234,7 +234,7 @@ export default function Caixa() {
 
   const fetchData = async () => {
     try {
-      setLoading(true);
+      if (initialLoading) setLoading(true);
       
       // Fetch transactions with date filter applied server-side
       // Quando dataInicio/dataFim são undefined (filtro "Tudo"), trazemos TODO o histórico
