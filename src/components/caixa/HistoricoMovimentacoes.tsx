@@ -8,7 +8,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Filter, ArrowRight, AlertCircle, Info, Clock, CheckCircle2, XCircle, Building2, Wallet, Search, X, Pencil, FolderKanban, Users, MoreVertical, Undo2, Trash2 } from "lucide-react";
+ import { Filter, ArrowRight, AlertCircle, Info, Clock, CheckCircle2, XCircle, Building2, Wallet, Search, X, Pencil, FolderKanban, Users, MoreVertical, Undo2, Trash2, Tag as TagIcon } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -266,20 +266,44 @@ export function HistoricoMovimentacoes({
   const [excluirTx, setExcluirTx] = useState<any | null>(null);
   const { role } = useRole();
   const [usuariosMap, setUsuariosMap] = useState<Record<string, string>>({});
-  // Filtro local por casa (bookmaker) — filtra origem OU destino
-  const [filtroBookmakerIds, setFiltroBookmakerIds] = useState<string[]>([]);
-  // Get all filtered transactions
-  const transacoesBase = useMemo(() => getTransacoesFiltradas(), [getTransacoesFiltradas]);
-
-  // Aplica filtro por casa (origem OU destino) sobre o resultado base
-  const transacoesFiltradas = useMemo(() => {
-    if (filtroBookmakerIds.length === 0) return transacoesBase;
-    const set = new Set(filtroBookmakerIds);
-    return transacoesBase.filter((t: any) =>
-      (t.origem_bookmaker_id && set.has(t.origem_bookmaker_id)) ||
-      (t.destino_bookmaker_id && set.has(t.destino_bookmaker_id))
-    );
-  }, [transacoesBase, filtroBookmakerIds]);
+   // Filtro local por casa (bookmaker) — filtra origem OU destino
+   const [filtroBookmakerIds, setFiltroBookmakerIds] = useState<string[]>([]);
+   const [filtroTags, setFiltroTags] = useState<string[]>([]);
+ 
+   // Get all filtered transactions
+   const transacoesBase = useMemo(() => getTransacoesFiltradas(), [getTransacoesFiltradas]);
+ 
+   // Aplica filtros locais (casa e tags) sobre o resultado base
+   const transacoesFiltradas = useMemo(() => {
+     let result = transacoesBase;
+ 
+     if (filtroBookmakerIds.length > 0) {
+       const set = new Set(filtroBookmakerIds);
+       result = result.filter((t: any) =>
+         (t.origem_bookmaker_id && set.has(t.origem_bookmaker_id)) ||
+         (t.destino_bookmaker_id && set.has(t.destino_bookmaker_id))
+       );
+     }
+ 
+     if (filtroTags.length > 0) {
+       result = result.filter((t: any) => 
+         t.tags && Array.isArray(t.tags) && filtroTags.some(tag => t.tags.includes(tag))
+       );
+     }
+ 
+     return result;
+   }, [transacoesBase, filtroBookmakerIds, filtroTags]);
+   // Tags disponíveis nas transações do período
+   const availableTags = useMemo(() => {
+     const tags = new Set<string>();
+     transacoesBase.forEach((t: any) => {
+       if (t.tags && Array.isArray(t.tags)) {
+         t.tags.forEach(tag => tags.add(tag));
+       }
+     });
+     return Array.from(tags).sort();
+   }, [transacoesBase]);
+ 
 
   // Opções do combobox: apenas casas presentes nas transações do período (mais leve e relevante)
   const bookmakerOptions = useMemo<BookmakerFilterOption[]>(() => {
@@ -587,17 +611,84 @@ export function HistoricoMovimentacoes({
               onChange={setFiltroParceiro}
               parceiros={parceirosLista}
             />
-            {/* Casa (Bookmaker) filter with search */}
-            <BookmakerFilterCombobox
-              bookmakers={bookmakerOptions}
-              selectedIds={filtroBookmakerIds}
-              onSelectionChange={(ids) => {
-                setFiltroBookmakerIds(ids);
-                pagination.goToFirstPage();
-              }}
-              label="Casa"
-              searchPlaceholder="Buscar casa…"
-            />
+             {/* Casa (Bookmaker) filter with search */}
+             <BookmakerFilterCombobox
+               bookmakers={bookmakerOptions}
+               selectedIds={filtroBookmakerIds}
+               onSelectionChange={(ids) => {
+                 setFiltroBookmakerIds(ids);
+                 pagination.goToFirstPage();
+               }}
+               label="Casa"
+               searchPlaceholder="Buscar casa…"
+             />
+ 
+             {/* Tag filter - Multi-select */}
+             {availableTags.length > 0 && (
+               <div className="flex items-center">
+                 <Popover>
+                   <PopoverTrigger asChild>
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       className={`h-8 text-xs whitespace-nowrap gap-1.5 ${filtroTags.length > 0 ? "bg-secondary border-secondary" : "border-border/50"}`}
+                     >
+                       <TagIcon className="h-3 w-3" />
+                       <span>Tags:</span>
+                       {filtroTags.length === 0 ? (
+                         <span>Todas</span>
+                       ) : filtroTags.length === 1 ? (
+                         <span>{filtroTags[0]}</span>
+                       ) : (
+                         <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
+                           {filtroTags.length}
+                         </Badge>
+                       )}
+                     </Button>
+                   </PopoverTrigger>
+                   <PopoverContent className="w-52 p-2" align="start">
+                     <div className="space-y-1">
+                       {availableTags.map((tag) => {
+                         const isSelected = filtroTags.includes(tag);
+                         return (
+                           <button
+                             key={tag}
+                             className={`flex items-center gap-2 w-full px-2 py-1.5 rounded text-xs hover:bg-muted/80 transition-colors ${isSelected ? "bg-muted font-medium" : ""}`}
+                             onClick={() => {
+                               if (isSelected) {
+                                 setFiltroTags(filtroTags.filter(v => v !== tag));
+                               } else {
+                                 setFiltroTags([...filtroTags, tag]);
+                               }
+                               pagination.goToFirstPage();
+                             }}
+                           >
+                             <div className={`h-3.5 w-3.5 rounded-sm border flex items-center justify-center ${isSelected ? "bg-primary border-primary" : "border-muted-foreground/40"}`}>
+                               {isSelected && <CheckCircle2 className="h-3 w-3 text-primary-foreground" />}
+                             </div>
+                             {tag}
+                           </button>
+                         );
+                       })}
+                       {filtroTags.length > 0 && (
+                         <>
+                           <div className="border-t border-border/50 my-1" />
+                           <button
+                             className="w-full px-2 py-1.5 rounded text-xs text-muted-foreground hover:bg-muted/80 transition-colors text-center"
+                             onClick={() => {
+                               setFiltroTags([]);
+                               pagination.goToFirstPage();
+                             }}
+                           >
+                             Limpar tags
+                           </button>
+                         </>
+                       )}
+                     </div>
+                   </PopoverContent>
+                 </Popover>
+               </div>
+             )}
             <DashboardPeriodFilterBar
               value={periodFilter}
               onChange={handlePeriodChange}
@@ -623,9 +714,20 @@ export function HistoricoMovimentacoes({
                 {pagination.paginatedItems.map((transacao) => (
                   <div key={transacao.id} className="group flex items-center justify-between p-4 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors">
                 <div className="flex items-center gap-4 flex-1">
-                  <Badge className={getTipoColor(transacao.tipo_transacao, transacao)}>
-                    {getTipoLabel(transacao.tipo_transacao, transacao)}
-                  </Badge>
+                   <div className="flex flex-col gap-1">
+                     <Badge className={getTipoColor(transacao.tipo_transacao, transacao)}>
+                       {getTipoLabel(transacao.tipo_transacao, transacao)}
+                     </Badge>
+                     {transacao.tags && Array.isArray(transacao.tags) && transacao.tags.length > 0 && (
+                       <div className="flex flex-wrap gap-1">
+                         {transacao.tags.map((tag: string) => (
+                           <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                             {tag}
+                           </span>
+                         ))}
+                       </div>
+                     )}
+                   </div>
                   {transacao.reversed_at && (
                     <Badge variant="outline" className="border-amber-500/40 text-amber-500 bg-amber-500/10">
                       <Undo2 className="h-3 w-3 mr-1" />

@@ -15226,6 +15226,10 @@ export type Database = {
           source: string
         }[]
       }
+      get_cash_ledger_tags: {
+        Args: { p_workspace_id: string }
+        Returns: string[]
+      }
       get_cash_ledger_totals: {
         Args: {
           p_data_fim: string
