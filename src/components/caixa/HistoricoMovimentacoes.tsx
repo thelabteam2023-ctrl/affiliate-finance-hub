@@ -32,6 +32,7 @@ import { EditarDataTransacaoDialog } from "./EditarDataTransacaoDialog";
 import { EditarSaqueConfirmadoDialog } from "./EditarSaqueConfirmadoDialog";
 import { ReverterMovimentacaoDialog } from "./ReverterMovimentacaoDialog";
 import { ExcluirMovimentacaoDialog } from "./ExcluirMovimentacaoDialog";
+import { EditarTagsDialog } from "./EditarTagsDialog";
 import { canRevert, canDelete } from "@/lib/movimentacaoEligibility";
 import { useRole } from "@/hooks/useRole";
 import { BookmakerFilterCombobox, type BookmakerFilterOption } from "@/components/ui/bookmaker-filter-combobox";
@@ -265,6 +266,7 @@ export function HistoricoMovimentacoes({
   } | null>(null);
   const [reverterTx, setReverterTx] = useState<any | null>(null);
   const [excluirTx, setExcluirTx] = useState<any | null>(null);
+  const [editTagsTx, setEditTagsTx] = useState<any | null>(null);
   const { role } = useRole();
   const [usuariosMap, setUsuariosMap] = useState<Record<string, string>>({});
    // Filtro local por casa (bookmaker) — filtra origem OU destino
@@ -1115,6 +1117,10 @@ export function HistoricoMovimentacoes({
                                 Editar recebimento
                               </DropdownMenuItem>
                             )}
+                            <DropdownMenuItem onClick={() => setEditTagsTx(transacao)}>
+                              <TagIcon className="h-3.5 w-3.5 mr-2" />
+                              Editar tags
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <TooltipProvider delayDuration={150}>
                               <Tooltip>
@@ -1224,6 +1230,15 @@ export function HistoricoMovimentacoes({
         onOpenChange={(o) => { if (!o) setExcluirTx(null); }}
         transacao={excluirTx}
         resumoTransacao={excluirTx?._resumo}
+      />
+
+      <EditarTagsDialog
+        open={!!editTagsTx}
+        transacao={editTagsTx}
+        onClose={() => setEditTagsTx(null)}
+        onSuccess={() => {
+          window.dispatchEvent(new CustomEvent("lovable:caixa-data-changed"));
+        }}
       />
     </>
   );
