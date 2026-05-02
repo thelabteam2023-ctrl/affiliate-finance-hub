@@ -563,20 +563,24 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       return;
     }
     
-    // Check bank accounts validation - RN101
-    for (const account of bankAccounts) {
+    // Check bank accounts validation - Only validate accounts that have some information
+    const relevantBankAccounts = bankAccounts.filter(acc => 
+      acc.banco_id || (acc.pix_keys && acc.pix_keys.some(k => k.chave)) || acc.agencia || acc.conta
+    );
+
+    for (const account of relevantBankAccounts) {
       if (!account.banco_id) {
         toast({
-          title: "Campo obrigatório",
-          description: "Selecione o banco.",
+          title: "Campo obrigatório no Banco",
+          description: "Por favor, selecione o banco para todas as contas adicionadas.",
           variant: "destructive",
         });
         return;
       }
       if (!account.pix_keys.some(k => k.chave)) {
         toast({
-          title: "Campo obrigatório",
-          description: "Adicione pelo menos uma chave PIX.",
+          title: "Campo obrigatório no Banco",
+          description: "Adicione pelo menos uma chave PIX para todas as contas adicionadas.",
           variant: "destructive",
         });
         return;
