@@ -424,7 +424,7 @@ export function SaldosParceirosSheet() {
         if (!conta.parceiro_id || conta.saldo === 0) return;
         const pInfo = parceiroInfoMap.get(conta.parceiro_id);
 
-        const parceiro = getOrCreateParceiro(conta.parceiro_id, conta.parceiro_nome, pInfo?.fornecedor_origem_id);
+         const parceiro = getOrCreateParceiro(conta.parceiro_id, conta.parceiro_nome);
         const moeda = conta.moeda || "BRL";
         
         const saldoClamped = Math.max(0, conta.saldo);
@@ -443,7 +443,7 @@ export function SaldosParceirosSheet() {
         if (!wallet.parceiro_id || wallet.saldo_coin === 0) return;
         const pInfo = parceiroInfoMap.get(wallet.parceiro_id);
 
-        const parceiro = getOrCreateParceiro(wallet.parceiro_id, wallet.parceiro_nome, pInfo?.fornecedor_origem_id);
+         const parceiro = getOrCreateParceiro(wallet.parceiro_id, wallet.parceiro_nome);
         
         // Calcular USD com preço atual da Binance
         const currentPrice = prices[wallet.coin] || 0;
@@ -469,7 +469,7 @@ export function SaldosParceirosSheet() {
         if (!bm?.parceiro_id) return;
         const pInfo = parceiroInfoMap.get(bm.parceiro_id);
 
-        const parceiro = getOrCreateParceiro(bm.parceiro_id, "Parceiro", pInfo?.fornecedor_origem_id);
+         const parceiro = getOrCreateParceiro(bm.parceiro_id, "Parceiro");
         const moedaDestino = bm.moeda || "USD";
         
         parceiro.pendentes_bookmakers.push({
@@ -491,7 +491,7 @@ export function SaldosParceirosSheet() {
         if (!bk.parceiro_id) return;
         const pInfo = parceiroInfoMap.get(bk.parceiro_id);
 
-        const parceiro = getOrCreateParceiro(bk.parceiro_id, "Parceiro", pInfo?.fornecedor_origem_id);
+         const parceiro = getOrCreateParceiro(bk.parceiro_id, "Parceiro");
         const saldoReal = Math.max(0, bk.saldo_atual || 0);
         const saldoFreebet = Math.max(0, bk.saldo_freebet || 0);
         const moeda = bk.moeda || "BRL";
