@@ -77,11 +77,8 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
     queryKey: ["admin-suppliers", workspaceId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("supplier_profiles")
-        .select(`
-          *,
-          parceiros (id)
-        `)
+         .from("supplier_profiles")
+         .select("*")
         .eq("parent_workspace_id", workspaceId)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -94,12 +91,11 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
         supabase.from("supplier_access_tokens").select("supplier_workspace_id, id, expires_at, revoked_at, use_count, last_used_at, label, token_plain").in("supplier_workspace_id", wsIds),
       ]);
 
-      return profiles.map((p: any) => ({
-        ...p,
-        parceiro_id: (p.parceiros as any)?.[0]?.id,
-        supplier_alocacoes: (alocRes.data || []).filter((a: any) => a.supplier_workspace_id === p.workspace_id),
-        supplier_access_tokens: (tokenRes.data || []).filter((t: any) => t.supplier_workspace_id === p.workspace_id),
-      }));
+       return profiles.map((p: any) => ({
+         ...p,
+         supplier_alocacoes: (alocRes.data || []).filter((a: any) => a.supplier_workspace_id === p.workspace_id),
+         supplier_access_tokens: (tokenRes.data || []).filter((t: any) => t.supplier_workspace_id === p.workspace_id),
+       }));
     },
   });
 
@@ -260,8 +256,7 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
           origem_parceiro_id: origemData.origemParceiroId || null,
           origem_conta_bancaria_id: origemData.origemContaBancariaId || null,
           origem_wallet_id: origemData.origemWalletId || null,
-          destino_tipo: "FORNECEDOR",
-          destino_parceiro_id: selectedSupplier.parceiro_id || null,
+           destino_tipo: "FORNECEDOR",
           data_transacao: format(new Date(), "yyyy-MM-dd"),
           descricao: descricaoAlocacao || `Alocação de capital para fornecedor ${selectedSupplier.nome}`,
           status: "CONFIRMADO",
