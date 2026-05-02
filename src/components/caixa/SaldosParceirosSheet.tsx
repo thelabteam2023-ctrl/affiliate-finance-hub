@@ -515,44 +515,7 @@ export function SaldosParceirosSheet() {
         }
       });
 
-      // Process Supplier Balances
-      (saldosFornecedores || []).forEach((sf) => {
-        const linkedParceiro = allParceiros?.find(p => p.supplier_profile_id === sf.supplier_profile_id);
-        if (!linkedParceiro) return;
-
-        const parceiro = getOrCreateParceiro(linkedParceiro.id, linkedParceiro.nome, linkedParceiro.fornecedor_origem_id);
-        parceiro.is_fornecedor = true;
-        
-        // Map supplier balances to existing structure for seamless display
-        const saldoFiat = (sf.saldo_central || 0) + (sf.saldo_bancos || 0);
-        if (saldoFiat > 0) {
-          parceiro.saldos_fiat.push({
-            moeda: "BRL",
-            saldo: saldoFiat,
-            banco: "Custódia Fornecedor",
-          });
-          parceiro.total_fiat_por_moeda["BRL"] = (parceiro.total_fiat_por_moeda["BRL"] || 0) + saldoFiat;
-        }
-
-        if (sf.saldo_contas > 0) {
-          parceiro.saldos_bookmakers.push({
-            nome: "Contas Fornecedor",
-            saldo_operavel: sf.saldo_contas,
-            moeda: "BRL",
-            has_bonus: false,
-          });
-          parceiro.total_bookmakers_por_moeda["BRL"] = (parceiro.total_bookmakers_por_moeda["BRL"] || 0) + sf.saldo_contas;
-        }
-
-        parceiro.saldos_fornecedor = {
-          saldo_central: sf.saldo_central,
-          saldo_bancos: sf.saldo_bancos,
-          saldo_contas: sf.saldo_contas,
-          saldo_total: sf.saldo_total,
-        };
-      });
-
-      // Collect caixa operacional IDs to filter them out
+       // Collect caixa operacional IDs to filter them out
       const caixaIds = new Set<string>();
       
       parceirosMap.forEach((parceiro, id) => {
@@ -573,18 +536,17 @@ export function SaldosParceirosSheet() {
         return Object.values(saldos).reduce((sum, v) => sum + (v || 0), 0);
       };
 
-      const parceirosComSaldo = Array.from(parceirosMap.values())
-        .filter((p) => 
-          p.saldos_fiat.length > 0 || 
-          p.saldos_crypto.length > 0 || 
-          p.saldos_bookmakers.length > 0 || 
-          (p.saldos_fornecedor && p.saldos_fornecedor.saldo_total > 0)
-        )
-        .sort((a, b) => {
-          const totalA = getTotalFromCurrencies(a.total_fiat_por_moeda) + a.total_crypto_usd + getTotalFromCurrencies(a.total_bookmakers_por_moeda) + (a.saldos_fornecedor?.saldo_total || 0);
-          const totalB = getTotalFromCurrencies(b.total_fiat_por_moeda) + b.total_crypto_usd + getTotalFromCurrencies(b.total_bookmakers_por_moeda) + (b.saldos_fornecedor?.saldo_total || 0);
-          return totalA - totalB;
-        });
+       const parceirosComSaldo = Array.from(parceirosMap.values())
+         .filter((p) =>
+           p.saldos_fiat.length > 0 ||
+           p.saldos_crypto.length > 0 ||
+           p.saldos_bookmakers.length > 0
+         )
+         .sort((a, b) => {
+           const totalA = getTotalFromCurrencies(a.total_fiat_por_moeda) + a.total_crypto_usd + getTotalFromCurrencies(a.total_bookmakers_por_moeda);
+           const totalB = getTotalFromCurrencies(b.total_fiat_por_moeda) + b.total_crypto_usd + getTotalFromCurrencies(b.total_bookmakers_por_moeda);
+           return totalA - totalB;
+         });
 
       setParceirosAgrupados(parceirosComSaldo);
     } catch (error) {
@@ -910,79 +872,37 @@ export function SaldosParceirosSheet() {
               </div>
 
                <ScrollArea className="h-[calc(100vh-320px)] pr-4">
-                 {(() => {
-                   const groups: Record<string, ParceiroSaldoAgrupado[]> = { "none": [] };
-                   parceirosAgrupados.forEach(p => {
-                     const key = p.fornecedor_origem_id || "none";
-                     if (!groups[key]) groups[key] = [];
-                     groups[key].push(p);
-                   });
+                 <Table>
+                   <TableHeader className="max-md:hidden">
+                     <TableRow className="hover:bg-transparent border-none h-8">
+                       <TableHead className="text-[10px] uppercase font-bold text-muted-foreground/60">Parceiro</TableHead>
+                       <TableHead className="text-[10px] uppercase font-bold text-muted-foreground/60 text-right">Bancos</TableHead>
+                       <TableHead className="text-[10px] uppercase font-bold text-muted-foreground/60 text-right">Wallets</TableHead>
+                       <TableHead className="text-[10px] uppercase font-bold text-muted-foreground/60 text-right">Casas</TableHead>
+                     </TableRow>
+                   </TableHeader>
+                   <TableBody>
+                     {parceirosAgrupados.map((parceiro, index) => {
+                       // Get primary FIAT currency (highest value) for display
+                       const fiatEntries = Object.entries(parceiro.total_fiat_por_moeda)
+                         .filter(([_, v]) => v > 0)
+                         .sort(([, a], [, b]) => b - a);
+                       const primaryFiat = fiatEntries[0];
 
-                   const groupKeys = Object.keys(groups).sort((a, b) => {
-                     if (a === "none") return -1;
-                     if (b === "none") return 1;
-                     return (fornecedores[a] || "").localeCompare(fornecedores[b] || "");
-                   });
+                       // Get bookmaker entries by currency
+                       const bookmakerEntries = Object.entries(parceiro.total_bookmakers_por_moeda)
+                         .filter(([_, v]) => v > 0)
+                         .sort(([, a], [, b]) => b - a);
+                       const hasBookmakerBalance = bookmakerEntries.length > 0;
 
-                   return groupKeys.map(groupKey => {
-                     const groupParceiros = groups[groupKey];
-                     if (groupParceiros.length === 0) return null;
-                     const forNome = groupKey === "none" ? "Gestão Interna" : (fornecedores[groupKey] || "Fornecedor Desconhecido");
-
-                     return (
-                       <div key={groupKey} className="mb-6">
-                         <div className="flex items-center gap-2 mb-2 px-1 sticky top-0 bg-background/95 backdrop-blur-sm z-10 py-1.5 border-b border-border/40">
-                           {groupKey === "none" ? (
-                             <Building2 className="h-4 w-4 text-muted-foreground" />
-                           ) : (
-                             <Truck className="h-4 w-4 text-primary" />
-                           )}
-                           <h3 className="text-xs font-bold uppercase tracking-widest text-foreground/80">
-                             {forNome}
-                             <span className="ml-2 font-normal text-muted-foreground lowercase tracking-normal">
-                               ({groupParceiros.length} parceiro{groupParceiros.length !== 1 ? "s" : ""})
-                             </span>
-                           </h3>
-                         </div>
-
-                         <Table>
-                           <TableHeader className="max-md:hidden">
-                             <TableRow className="hover:bg-transparent border-none h-8">
-                               <TableHead className="text-[10px] uppercase font-bold text-muted-foreground/60">Parceiro</TableHead>
-                               <TableHead className="text-[10px] uppercase font-bold text-muted-foreground/60 text-right">Bancos</TableHead>
-                               <TableHead className="text-[10px] uppercase font-bold text-muted-foreground/60 text-right">Wallets</TableHead>
-                               <TableHead className="text-[10px] uppercase font-bold text-muted-foreground/60 text-right">Casas</TableHead>
-                             </TableRow>
-                           </TableHeader>
-                           <TableBody>
-                             {groupParceiros.map((parceiro, index) => {
-                      // Get primary FIAT currency (highest value) for display
-                      const fiatEntries = Object.entries(parceiro.total_fiat_por_moeda)
-                        .filter(([_, v]) => v > 0)
-                        .sort(([, a], [, b]) => b - a);
-                      const primaryFiat = fiatEntries[0];
-                      
-                      // Get bookmaker entries by currency
-                      const bookmakerEntries = Object.entries(parceiro.total_bookmakers_por_moeda)
-                        .filter(([_, v]) => v > 0)
-                        .sort(([, a], [, b]) => b - a);
-                      const hasBookmakerBalance = bookmakerEntries.length > 0;
-                      
-                      return (
-                        <TableRow 
-                          key={parceiro.parceiro_id} 
-                          className={`border-border/30 ${index % 2 === 0 ? 'bg-transparent' : 'bg-muted/20'}`}
-                        >
-                          <TableCell className="py-2.5 font-medium text-sm whitespace-nowrap">
-                            <div className="flex flex-col">
-                              <span className="truncate max-w-[120px]">{getFirstLastName(parceiro.parceiro_nome)}</span>
-                              {parceiro.is_fornecedor && (
-                                <Badge variant="outline" className="text-[9px] h-3.5 px-1 py-0 w-fit border-primary/30 text-primary uppercase font-bold tracking-tighter">
-                                  Fornecedor
-                                </Badge>
-                              )}
-                            </div>
-                          </TableCell>
+                       return (
+                         <TableRow
+                           key={parceiro.parceiro_id}
+                           className={`border-border/30 ${index % 2 === 0 ? 'bg-transparent' : 'bg-muted/20'}`}
+                         >
+                           <TableCell className="py-2.5 font-medium text-sm whitespace-nowrap">
+                             <span className="truncate max-w-[120px]">{getFirstLastName(parceiro.parceiro_nome)}</span>
+                           </TableCell>
                           
                           {/* FIAT Cell - Multi-currency */}
                           <TableCell className="py-2.5 text-right">
