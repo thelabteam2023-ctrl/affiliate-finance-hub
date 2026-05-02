@@ -3918,44 +3918,25 @@ export function CaixaTransacaoDialog({
             )}
           </>
         );
-      } else {
-        // CRYPTO - Filtrar parceiros com saldo DISPONÍVEL no coin selecionado
-        const parceirosComSaldo = saldosParceirosWallets
-          .filter(s => s.coin === coin && (s.saldo_disponivel ?? s.saldo_usd) > 0)
-          .map(s => s.parceiro_id)
-          .filter((value, index, self) => self.indexOf(value) === index); // unique
-
-        return (
-          <>
-            <div className="space-y-2">
-              <Label>Fornecedor</Label>
-              <FornecedorSelect
-                ref={origemFornecedorSelectRef}
-                value={origemFornecedorId}
-                onValueChange={(value) => {
-                  setOrigemFornecedorId(value);
-                  setOrigemParceiroId("");
-                  setOrigemWalletId("");
-                }}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Parceiro (com saldo em {coin})</Label>
-              <ParceiroSelect
-                ref={parceiroSelectRef}
-                value={origemParceiroId}
-                onValueChange={(value) => {
-                  setOrigemParceiroId(value);
-                  setOrigemWalletId("");
-                }}
-                onlyParceiros={parceirosComSaldo}
-                showSaldo={true}
-                tipoMoeda="CRYPTO"
-                coin={coin}
-                saldosWallets={saldosParceirosWallets}
-                fornecedorOrigemId={origemFornecedorId}
-              />
-            </div>
+       } else {
+         return (
+           <>
+             <div className="space-y-2">
+               <Label>Origem (Parceiro ou Fornecedor)</Label>
+               <ParceiroSelect
+                 ref={parceiroSelectRef}
+                 value={origemParceiroId}
+                 onValueChange={(value) => {
+                   setOrigemParceiroId(value);
+                   setOrigemWalletId("");
+                 }}
+                 includeFornecedores={true}
+                 showSaldo={true}
+                 tipoMoeda="CRYPTO"
+                 coin={coin}
+                 saldosWallets={saldosParceirosWallets}
+               />
+             </div>
             {origemParceiroId && (
               <div className="space-y-2">
                 <Label>Wallet Crypto</Label>
