@@ -2226,10 +2226,7 @@ export function CaixaTransacaoDialog({
     );
   };
 
-  const getOrigemLabel = (): string => {
-    const fornecedor = fornecedores.find(f => f.id === origemFornecedorId);
-    const suffix = fornecedor ? ` (${fornecedor.nome})` : "";
-
+   const getOrigemLabel = (): string => {
     if (tipoTransacao === "APORTE_FINANCEIRO") {
       if (fluxoAporte === "APORTE") {
         const investidor = investidores.find(inv => inv.id === investidorId);
@@ -2268,13 +2265,10 @@ export function CaixaTransacaoDialog({
          return wallet ? `${wallet.exchange}${suffix}` : "Wallet";
       }
     }
-    return `Origem${suffix}`;
+     return `Origem`;
   };
 
-  const getDestinoLabel = (): string => {
-    const fornecedor = fornecedores.find(f => f.id === destinoFornecedorId);
-    const suffix = fornecedor ? ` (${fornecedor.nome})` : "";
-
+   const getDestinoLabel = (): string => {
     if (tipoTransacao === "APORTE_FINANCEIRO") {
       if (fluxoAporte === "APORTE") {
         return "Caixa Operacional";
@@ -2287,7 +2281,7 @@ export function CaixaTransacaoDialog({
       if (tipoMoeda === "CRYPTO") {
         if (destinoWalletId) {
           const wallet = walletsCrypto.find(w => w.id === destinoWalletId);
-           return wallet ? `${wallet.exchange}${suffix}` : "Wallet Crypto";
+            return wallet ? `${wallet.exchange}` : "Wallet Crypto";
         }
         return `Wallet Crypto${suffix}`;
       } else {
@@ -3718,7 +3712,6 @@ export function CaixaTransacaoDialog({
                   tipoMoeda="CRYPTO"
                   coin={coin}
                   saldosWallets={saldosParceirosWallets}
-                  fornecedorOrigemId={origemFornecedorId}
                 />
               </div>
               {origemParceiroId && (
