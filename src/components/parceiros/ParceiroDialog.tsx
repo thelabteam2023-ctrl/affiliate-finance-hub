@@ -687,7 +687,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         throw new Error("ID do Workspace não encontrado. Por favor, recarregue a página.");
       }
 
-      let currentParceiroId = parceiroId || parceiro?.id;
+       let currentParceiroId = sanitizeUuid(parceiroId || parceiro?.id);
 
       if (currentParceiroId) {
         const { error } = await supabase
