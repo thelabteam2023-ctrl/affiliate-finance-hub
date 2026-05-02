@@ -55,6 +55,7 @@ interface Parceiro {
   nome: string;
   cpf: string;
   status: string;
+  fornecedor_origem_id?: string | null;
 }
 
 const ParceiroSelect = forwardRef<ParceiroSelectRef, ParceiroSelectProps>(({ 
