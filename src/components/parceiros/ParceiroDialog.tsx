@@ -746,18 +746,20 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   : k.chave
               }));
             
-            const accountData: any = {
-              parceiro_id: currentParceiroId,
-              banco_id: account.banco_id === "" ? null : account.banco_id,
-              banco: bancos.find(b => b.id === account.banco_id)?.nome || "",
+            const accountData = {
+              parceiro_id: sanitizeUuid(currentParceiroId),
+              banco_id: sanitizeUuid(account.banco_id),
+              banco: bancos.find(b => b.id === account.banco_id)?.nome || "Banco Desconhecido",
               moeda: account.moeda || "BRL",
               agencia: account.agencia || null,
               conta: account.conta || null,
-              tipo_conta: account.tipo_conta,
-              titular: account.titular || nome,
+              tipo_conta: account.tipo_conta || "corrente",
+              titular: (account.titular || nome).trim(),
               pix_keys: cleanedPixKeys,
               observacoes: account.observacoes || null,
             };
+
+            console.log(`[ParceiroDialog] Saving bank account ${i}:`, JSON.stringify(accountData, null, 2));
             
             if (account.id) {
               // UPDATE existing account
