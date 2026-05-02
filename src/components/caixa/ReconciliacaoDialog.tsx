@@ -792,12 +792,17 @@ export function ReconciliacaoDialog({
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                   {currencySymbol}
                 </span>
-                <Input
-                  value={saldoRealDisplay}
-                  onChange={handleSaldoRealChange}
-                  placeholder="0,00"
-                  className="pl-10"
-                />
+                 <Input
+                   value={saldoRealDisplay}
+                   onChange={handleSaldoRealChange}
+                   placeholder="0,00"
+                   className="pl-10"
+                 />
+                 {isCryptoEntidade && parseFloat(saldoReal) > 0 && currentUSDPrice > 0 && (
+                   <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-primary font-medium">
+                     ≈ US$ {(parseFloat(saldoReal) * currentUSDPrice).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                   </div>
+                 )}
               </div>
             </div>
 
