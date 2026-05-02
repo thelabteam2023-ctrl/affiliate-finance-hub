@@ -655,9 +655,9 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         user_id: user.id,
         workspace_id: workspaceId,
         nome,
-        cpf: cpf.replace(/\D/g, ""),
-        email,
-        telefone: telefone.replace(/[^\d+]/g, ""),
+        cpf: cpf.replace(/\D/g, "") || null,
+        email: email || null,
+        telefone: telefone.replace(/[^\d+]/g, "") || null,
         data_nascimento: dataNascimento || null,
         endereco: endereco || null,
         cidade: cidade || null,
@@ -713,10 +713,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         const updatedBankAccounts = [...bankAccounts];
         for (let i = 0; i < updatedBankAccounts.length; i++) {
           const account = updatedBankAccounts[i];
-          // Only save relevant bank accounts
-          const isRelevant = account.banco_id || account.pix_keys.some(k => k.chave);
+          // Only save relevant bank accounts (must have a valid banco_id)
+          const isRelevant = !!account.banco_id && account.banco_id !== "";
           
-          if (isRelevant && account.banco_id) {
+          if (isRelevant) {
             // Format PIX keys for JSONB storage - clean CPF/CNPJ formatting
             const cleanedPixKeys = account.pix_keys
               .filter(k => k.chave && k.tipo)
@@ -727,11 +727,11 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   : k.chave
               }));
             
-            const accountData = {
+            const accountData: any = {
               parceiro_id: currentParceiroId,
-              banco_id: account.banco_id,
+              banco_id: account.banco_id, // ensure this is a valid UUID
               banco: bancos.find(b => b.id === account.banco_id)?.nome || "",
-              moeda: account.moeda || "BRL", // CRÍTICO: Incluir moeda selecionada pelo usuário
+              moeda: account.moeda || "BRL",
               agencia: account.agencia || null,
               conta: account.conta || null,
               tipo_conta: account.tipo_conta,
@@ -798,23 +798,23 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         const updatedCryptoWallets = [...cryptoWallets];
         for (let i = 0; i < updatedCryptoWallets.length; i++) {
           const wallet = updatedCryptoWallets[i];
-          // Only save relevant wallets
-          const isRelevant = wallet.rede_id || wallet.endereco || (wallet.moeda && wallet.moeda.length > 0);
+          // Only save relevant wallets (must have network and address)
+          const isRelevant = !!wallet.rede_id && wallet.rede_id !== "" && !!wallet.endereco;
           
-          if (isRelevant && wallet.moeda && wallet.moeda.length > 0 && wallet.endereco && wallet.rede_id) {
+          if (isRelevant) {
             // Encrypt observacoes if present
             const observacoesEncrypted = wallet.observacoes 
               ? btoa(unescape(encodeURIComponent(wallet.observacoes)))
               : null;
 
-            const walletData = {
+            const walletData: any = {
               parceiro_id: currentParceiroId,
               label: wallet.label || null,
-              moeda: wallet.moeda,
+              moeda: wallet.moeda || [],
               endereco: wallet.endereco,
               network: redes.find(r => r.id === wallet.rede_id)?.nome || "",
-              rede_id: wallet.rede_id,
-              exchange: wallet.exchange,
+              rede_id: wallet.rede_id, // ensure this is a valid UUID
+              exchange: wallet.exchange || null,
               observacoes_encrypted: observacoesEncrypted,
             };
             
