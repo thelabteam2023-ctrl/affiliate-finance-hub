@@ -2021,6 +2021,8 @@ export function CaixaTransacaoDialog({
     setTipoTransacao("");
     setFluxoAporte("APORTE");
     setInvestidorId("");
+    setOrigemFornecedorId(limitDestinoToSupplierId || "");
+    setDestinoFornecedorId(limitDestinoToSupplierId || "");
     setTipoMoeda("FIAT");
     setMoeda("");
     setCoin("");
@@ -2042,6 +2044,12 @@ export function CaixaTransacaoDialog({
     setDestinoWalletId("");
     setDestinoBookmakerId("");
     setFluxoTransferencia("CAIXA_PARCEIRO");
+    
+    // Se houver filtro de fornecedor, garantir que o valor está sincronizado
+    if (limitDestinoToSupplierId) {
+      setOrigemFornecedorId(limitDestinoToSupplierId);
+      setDestinoFornecedorId(limitDestinoToSupplierId);
+    }
     
     // Reset refs de tracking para auto-focus
     prevCoin.current = "";
