@@ -667,9 +667,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         endereco: endereco || null,
         cidade: cidade || null,
         cep: cep.replace(/\D/g, "") || null,
-        status,
-        observacoes: observacoes || null,
-        qualidade: qualidade ?? null,
+         status,
+         observacoes: observacoes || null,
+         fornecedor_origem_id: fornecedorOrigemId,
+         qualidade: qualidade ?? null,
       };
 
       let currentParceiroId = parceiroId || parceiro?.id;
