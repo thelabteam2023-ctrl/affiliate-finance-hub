@@ -169,8 +169,9 @@ export default function Caixa() {
   const [filtroProjeto, setFiltroProjeto] = useState<string>("TODOS");
   const [filtroParceiro, setFiltroParceiro] = useState<string>("TODOS");
 
-  const [dataInicio, setDataInicio] = useState<Date | undefined>(subDays(new Date(), 30));
-  const [dataFim, setDataFim] = useState<Date | undefined>(new Date());
+  // O estado inicial deve ser 'Tudo' para evitar race conditions na primeira carga
+  const [dataInicio, setDataInicio] = useState<Date | undefined>(undefined);
+  const [dataFim, setDataFim] = useState<Date | undefined>(undefined);
   
   // Data for displaying names
   const [parceiros, setParceiros] = useState<{ [key: string]: string }>({});
