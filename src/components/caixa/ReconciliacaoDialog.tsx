@@ -82,7 +82,7 @@ export function ReconciliacaoDialog({
   const { toast } = useToast();
   const { isOwnerOrAdmin, isSystemOwner } = usePermissions();
   const { workspaceId } = useWorkspace();
-  const { getRate, lastUpdate } = useExchangeRates();
+   const { getRate, lastUpdate, cryptoPrices } = useExchangeRates();
 
   const [loading, setLoading] = useState(false);
   const [fetchingData, setFetchingData] = useState(false);
@@ -681,9 +681,10 @@ export function ReconciliacaoDialog({
                   value={walletId}
                   onValueChange={(v) => { setWalletId(v); setSaldoReal(""); setSaldoRealDisplay(""); }}
                   placeholder="Selecione a wallet"
-                  saldos={saldosWalletsList}
-                  usdToBrlRate={getRate("USD")}
-                />
+                   saldos={saldosWalletsList}
+                   usdToBrlRate={getRate("USD")}
+                   cryptoPrices={cryptoPrices}
+                 />
               </div>
             )}
 
@@ -722,9 +723,10 @@ export function ReconciliacaoDialog({
                   value={entidadeId}
                   onValueChange={setEntidadeId}
                   placeholder="Selecione a wallet"
-                  saldos={saldosWalletsList}
-                  usdToBrlRate={getRate("USD")}
-                />
+                   saldos={saldosWalletsList}
+                   usdToBrlRate={getRate("USD")}
+                   cryptoPrices={cryptoPrices}
+                 />
               </div>
             )}
 
