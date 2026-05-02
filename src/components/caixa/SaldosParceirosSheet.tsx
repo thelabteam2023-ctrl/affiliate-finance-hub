@@ -532,6 +532,28 @@ export function SaldosParceirosSheet() {
 
         const parceiro = getOrCreateParceiro(linkedParceiro.id, linkedParceiro.nome);
         parceiro.is_fornecedor = true;
+        
+        // Map supplier balances to existing structure for seamless display
+        const saldoFiat = (sf.saldo_central || 0) + (sf.saldo_bancos || 0);
+        if (saldoFiat > 0) {
+          parceiro.saldos_fiat.push({
+            moeda: "BRL",
+            saldo: saldoFiat,
+            banco: "Custódia Fornecedor",
+          });
+          parceiro.total_fiat_por_moeda["BRL"] = (parceiro.total_fiat_por_moeda["BRL"] || 0) + saldoFiat;
+        }
+
+        if (sf.saldo_contas > 0) {
+          parceiro.saldos_bookmakers.push({
+            nome: "Contas Fornecedor",
+            saldo_operavel: sf.saldo_contas,
+            moeda: "BRL",
+            has_bonus: false,
+          });
+          parceiro.total_bookmakers_por_moeda["BRL"] = (parceiro.total_bookmakers_por_moeda["BRL"] || 0) + sf.saldo_contas;
+        }
+
         parceiro.saldos_fornecedor = {
           saldo_central: sf.saldo_central,
           saldo_bancos: sf.saldo_bancos,
