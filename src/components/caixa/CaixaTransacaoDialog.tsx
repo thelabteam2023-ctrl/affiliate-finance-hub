@@ -4622,6 +4622,18 @@ export function CaixaTransacaoDialog({
         return (
           <>
             <div className="space-y-2">
+              <Label>Fornecedor</Label>
+              <FornecedorSelect
+                ref={destinoFornecedorSelectRef}
+                value={destinoFornecedorId}
+                onValueChange={(value) => {
+                  setDestinoFornecedorId(value);
+                  setDestinoParceiroId("");
+                  setDestinoWalletId("");
+                }}
+              />
+            </div>
+            <div className="space-y-2">
               <Label>Parceiro</Label>
               <ParceiroSelect
                 ref={parceiroDestinoSelectRef}
@@ -4638,7 +4650,7 @@ export function CaixaTransacaoDialog({
                 }}
                 disabled={!origemEstaCompleta}
                 onlyParceiros={parceirosDisponiveis}
-                fornecedorOrigemId={limitDestinoToSupplierId}
+                fornecedorOrigemId={destinoFornecedorId || limitDestinoToSupplierId}
                 showSaldo={true}
                 tipoMoeda="CRYPTO"
                 coin={coin}
