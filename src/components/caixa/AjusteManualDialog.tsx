@@ -637,8 +637,13 @@ export function AjusteManualDialog({
         description: `Saldo de ${getEntidadeNome()} reconciliado: ${getCurrencySymbol(moeda)} ${saldoSistemaAtual.toFixed(2)} → ${getCurrencySymbol(moeda)} ${(parseFloat(valor) || 0).toFixed(2)}`,
       });
 
-      handleClose();
+      // Mantém o modal aberto para novos lançamentos, limpando apenas o valor informado
+      setValor("");
+      setValorDisplay("");
       
+      // Recarrega os dados para atualizar o "Saldo no Sistema"
+      await fetchData();
+
       // Disparar evento para atualizar UI imediatamente
       dispatchCaixaDataChanged();
       

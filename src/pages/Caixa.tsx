@@ -1289,7 +1289,7 @@ export default function Caixa() {
         open={ajusteDialogOpen}
         onClose={() => setAjusteDialogOpen(false)}
         onSuccess={async () => {
-          setAjusteDialogOpen(false);
+          // Não fechamos mais automaticamente para permitir múltiplos lançamentos
           await new Promise(resolve => setTimeout(resolve, 600));
           await fetchData();
         }}
@@ -1300,7 +1300,7 @@ export default function Caixa() {
         open={reconciliacaoDialogOpen}
         onClose={() => setReconciliacaoDialogOpen(false)}
         onSuccess={async () => {
-          setReconciliacaoDialogOpen(false);
+          // Não fechamos mais automaticamente para permitir múltiplos lançamentos
           await new Promise(resolve => setTimeout(resolve, 600));
           await fetchData();
         }}
