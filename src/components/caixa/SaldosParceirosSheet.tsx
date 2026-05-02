@@ -949,7 +949,14 @@ export function SaldosParceirosSheet() {
                           className={`border-border/30 ${index % 2 === 0 ? 'bg-transparent' : 'bg-muted/20'}`}
                         >
                           <TableCell className="py-2.5 font-medium text-sm whitespace-nowrap">
-                            {getFirstLastName(parceiro.parceiro_nome)}
+                            <div className="flex flex-col">
+                              <span className="truncate max-w-[120px]">{getFirstLastName(parceiro.parceiro_nome)}</span>
+                              {parceiro.is_fornecedor && (
+                                <Badge variant="outline" className="text-[9px] h-3.5 px-1 py-0 w-fit border-primary/30 text-primary uppercase font-bold tracking-tighter">
+                                  Fornecedor
+                                </Badge>
+                              )}
+                            </div>
                           </TableCell>
                           
                           {/* FIAT Cell - Multi-currency */}
