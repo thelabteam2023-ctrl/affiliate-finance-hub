@@ -210,9 +210,7 @@ export function CaixaTransacaoDialog({
   // Form state
   const [tipoTransacao, setTipoTransacao] = useState<string>("");
   const [fluxoAporte, setFluxoAporte] = useState<"APORTE" | "LIQUIDACAO">("APORTE");
-  const [investidorId, setInvestidorId] = useState<string>("");
-  const [origemFornecedorId, setOrigemFornecedorId] = useState<string>("");
-  const [destinoFornecedorId, setDestinoFornecedorId] = useState<string>("");
+   const [investidorId, setInvestidorId] = useState<string>("");
   const [tipoMoeda, setTipoMoeda] = useState<string>("FIAT");
   const [moeda, setMoeda] = useState<string>("");
   const [coin, setCoin] = useState<string>("");
@@ -249,9 +247,7 @@ export function CaixaTransacaoDialog({
   const qtdCoinInputRef = useRef<HTMLInputElement>(null);
   const moedaFiatSelectRef = useRef<HTMLButtonElement>(null);
   const valorFiatInputRef = useRef<HTMLInputElement>(null);
-  const parceiroSelectRef = useRef<ParceiroSelectRef>(null);
-  const origemFornecedorSelectRef = useRef<FornecedorSelectRef>(null);
-  const destinoFornecedorSelectRef = useRef<FornecedorSelectRef>(null);
+   const parceiroSelectRef = useRef<ParceiroSelectRef>(null);
   const contaBancariaSelectRef = useRef<HTMLButtonElement>(null);
   const walletCryptoSelectRef = useRef<HTMLButtonElement>(null);
   const bookmakerSelectRef = useRef<BookmakerSelectRef>(null);
@@ -387,19 +383,16 @@ export function CaixaTransacaoDialog({
       resetForm();
       
       // CRÍTICO: Armazenar os defaults que devem ser aplicados APÓS o reset do tipoTransacao
-      if (defaultOrigemBookmakerId || defaultDestinoBookmakerId || defaultOrigemParceiroId || defaultDestinoParceiroId || defaultTipoMoeda || defaultMoeda || defaultCoin) {
-        pendingDefaultsRef.current = {
-          origemBookmakerId: defaultOrigemBookmakerId,
-          destinoBookmakerId: defaultDestinoBookmakerId,
-          origemParceiroId: defaultOrigemParceiroId,
-          destinoParceiroId: defaultDestinoParceiroId,
-          tipoMoeda: defaultTipoMoeda,
-          moeda: defaultMoeda,
-          coin: defaultCoin,
-        };
-      } else {
-        pendingDefaultsRef.current = null;
-      }
+       // Resetar pending defaults e aplicar novos
+       pendingDefaultsRef.current = {
+         origemBookmakerId: defaultOrigemBookmakerId,
+         destinoBookmakerId: defaultDestinoBookmakerId,
+         origemParceiroId: defaultOrigemParceiroId,
+         destinoParceiroId: defaultDestinoParceiroId,
+         tipoMoeda: defaultTipoMoeda,
+         moeda: defaultMoeda,
+         coin: defaultCoin,
+       };
       
       // ========================================================================
       // FUNDING INTELIGENTE: Se é SAQUE ou DEPOSITO com bookmaker pré-definida,
@@ -3626,45 +3619,29 @@ export function CaixaTransacaoDialog({
         );
       }
       
-      // PARCEIRO → CAIXA flow - Mesma UI de seleção de parceiros com saldo
-      if (fluxoTransferencia === "PARCEIRO_CAIXA") {
-        if (tipoMoeda === "FIAT") {
-          // Get parceiros com saldo disponível na moeda selecionada
-          const parceirosComSaldo = saldosParceirosContas
-            .filter(s => s.moeda === moeda && s.saldo > 0)
-            .map(s => s.parceiro_id)
-            .filter((value, index, self) => self.indexOf(value) === index);
-
-          return (
-            <>
-              <div className="space-y-2">
-                <Label>Fornecedor</Label>
-                <FornecedorSelect
-                  ref={origemFornecedorSelectRef}
-                  value={origemFornecedorId}
-                  onValueChange={(value) => {
-                    setOrigemFornecedorId(value);
-                    setOrigemParceiroId("");
-                    setOrigemContaId("");
-                  }}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Parceiro (com saldo em {moeda})</Label>
-                <ParceiroSelect
-                  value={origemParceiroId}
-                  onValueChange={(value) => {
-                    setOrigemParceiroId(value);
-                    setOrigemContaId("");
-                  }}
-                  onlyParceiros={parceirosComSaldo}
-                  showSaldo={true}
-                  tipoMoeda="FIAT"
-                  moeda={moeda}
-                  saldosContas={saldosParceirosContas}
-                  fornecedorOrigemId={origemFornecedorId || limitDestinoToSupplierId}
-                />
-              </div>
+       // PARCEIRO → CAIXA flow
+       if (fluxoTransferencia === "PARCEIRO_CAIXA") {
+         return (
+           <>
+             <div className="space-y-2">
+               <Label>Origem (Parceiro ou Fornecedor)</Label>
+               <ParceiroSelect
+                 value={origemParceiroId}
+                 onValueChange={(value) => {
+                   setOrigemParceiroId(value);
+                   setOrigemContaId("");
+                   setOrigemWalletId("");
+                 }}
+                 includeFornecedores={true}
+                 showSaldo={true}
+                 tipoMoeda={tipoMoeda as "FIAT" | "CRYPTO"}
+                 moeda={moeda}
+                 coin={coin}
+                 saldosContas={saldosParceirosContas}
+                 saldosWallets={saldosParceirosWallets}
+                 fornecedorOrigemId={limitDestinoToSupplierId}
+               />
+             </div>
               {origemParceiroId && (
                 <div className="space-y-2">
                   <Label>Conta Bancária</Label>
@@ -3856,45 +3833,28 @@ export function CaixaTransacaoDialog({
         }
       }
       
-      // PARCEIRO → PARCEIRO flow - Filtrar parceiros com saldo na moeda
-      if (tipoMoeda === "FIAT") {
-        // Get parceiros com saldo disponível na moeda selecionada
-        const parceirosComSaldo = saldosParceirosContas
-          .filter(s => s.moeda === moeda && s.saldo > 0)
-          .map(s => s.parceiro_id)
-          .filter((value, index, self) => self.indexOf(value) === index); // unique
-
-        return (
-          <>
-            <div className="space-y-2">
-              <Label>Fornecedor</Label>
-              <FornecedorSelect
-                ref={origemFornecedorSelectRef}
-                value={origemFornecedorId}
-                onValueChange={(value) => {
-                  setOrigemFornecedorId(value);
-                  setOrigemParceiroId("");
-                  setOrigemContaId("");
-                }}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Parceiro (com saldo em {moeda})</Label>
-              <ParceiroSelect
-                ref={parceiroSelectRef}
-                value={origemParceiroId}
-                onValueChange={(value) => {
-                  setOrigemParceiroId(value);
-                  setOrigemContaId("");
-                }}
-                onlyParceiros={parceirosComSaldo}
-                showSaldo={true}
-                tipoMoeda="FIAT"
-                moeda={moeda}
-                saldosContas={saldosParceirosContas}
-                fornecedorOrigemId={origemFornecedorId}
-              />
-            </div>
+       // PARCEIRO → PARCEIRO flow
+       return (
+         <>
+           <div className="space-y-2">
+             <Label>Origem (Parceiro ou Fornecedor)</Label>
+             <ParceiroSelect
+               ref={parceiroSelectRef}
+               value={origemParceiroId}
+               onValueChange={(value) => {
+                 setOrigemParceiroId(value);
+                 setOrigemContaId("");
+                 setOrigemWalletId("");
+               }}
+               includeFornecedores={true}
+               showSaldo={true}
+               tipoMoeda={tipoMoeda as "FIAT" | "CRYPTO"}
+               moeda={moeda}
+               coin={coin}
+               saldosContas={saldosParceirosContas}
+               saldosWallets={saldosParceirosWallets}
+             />
+           </div>
             {origemParceiroId && (
               <div className="space-y-2">
                 <Label>Conta Bancária</Label>
