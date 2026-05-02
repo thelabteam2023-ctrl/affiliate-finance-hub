@@ -395,6 +395,13 @@ export function SaldosParceirosSheet() {
       // Buscar preços atualizados da Binance
       const prices = await fetchCryptoPrices(uniqueCoins);
 
+      // Buscar saldos consolidados de fornecedores
+      const { data: saldosFornecedores, error: forError } = await supabase
+        .from("v_supplier_total_balances")
+        .select("*");
+
+      if (forError) throw forError;
+
       const parceirosMap = new Map<string, ParceiroSaldoAgrupado>();
 
       // Helper to get or create parceiro entry
