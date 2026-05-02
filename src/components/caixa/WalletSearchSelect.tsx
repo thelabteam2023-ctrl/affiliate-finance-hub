@@ -92,7 +92,8 @@ export function WalletSearchSelect({
      
      // Calcula o total em USD usando os preços atuais (cotação real) se disponível
      const totalUsdRealTime = balances.reduce((sum, b) => {
-       const coin = b.coin.toUpperCase();
+      const coin = (b.coin ?? "").toUpperCase();
+      if (!coin) return sum;
        let price = 0;
        if (coin === "USDT" || coin === "USDC") {
          price = 1.0;
