@@ -1607,31 +1607,63 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                     </Alert>
                   )}
                 </div>
-                <div className="md:col-span-2">
-                  <Label>
-                    Qualidade do parceiro
-                    <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                  </Label>
-                  <div className="mt-1.5 flex items-center gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2">
-                    <StarRating
-                      value={qualidade}
-                      onChange={(v) => !loading && !viewMode && setQualidade(v)}
-                      readOnly={loading || viewMode}
-                      size="md"
-                      showLabel
-                    />
-                    {qualidade != null && !viewMode && (
-                      <button
-                        type="button"
-                        onClick={() => setQualidade(null)}
-                        className="ml-auto text-xs text-muted-foreground hover:text-foreground transition-colors"
-                        disabled={loading}
-                      >
-                        Limpar
-                      </button>
-                    )}
-                  </div>
-                </div>
+                 <div className="md:col-span-2 space-y-4">
+                   <div className="space-y-2">
+                     <Label htmlFor="fornecedor_origem">
+                       Fornecedor Gerenciador
+                       <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
+                     </Label>
+                     <div className="flex items-center gap-2">
+                       <Truck className="h-4 w-4 text-muted-foreground shrink-0" />
+                       <Select
+                         value={fornecedorOrigemId || "none"}
+                         onValueChange={(val) => setFornecedorOrigemId(val === "none" ? null : val)}
+                         disabled={loading || viewMode}
+                       >
+                         <SelectTrigger className="flex-1">
+                           <SelectValue placeholder="Sem fornecedor (gestão interna)" />
+                         </SelectTrigger>
+                         <SelectContent>
+                           <SelectItem value="none">Sem fornecedor (gestão interna)</SelectItem>
+                           {fornecedores.map((f) => (
+                             <SelectItem key={f.id} value={f.id}>
+                               {f.nome}
+                             </SelectItem>
+                           ))}
+                         </SelectContent>
+                       </Select>
+                     </div>
+                     <p className="text-[11px] text-muted-foreground">
+                       Selecione se este parceiro é gerenciado por um de nossos fornecedores externos.
+                     </p>
+                   </div>
+
+                   <div className="space-y-2">
+                     <Label>
+                       Qualidade do parceiro
+                       <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
+                     </Label>
+                     <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2">
+                       <StarRating
+                         value={qualidade}
+                         onChange={(v) => !loading && !viewMode && setQualidade(v)}
+                         readOnly={loading || viewMode}
+                         size="md"
+                         showLabel
+                       />
+                       {qualidade != null && !viewMode && (
+                         <button
+                           type="button"
+                           onClick={() => setQualidade(null)}
+                           className="ml-auto text-xs text-muted-foreground hover:text-foreground transition-colors"
+                           disabled={loading}
+                         >
+                           Limpar
+                         </button>
+                       )}
+                     </div>
+                   </div>
+                 </div>
                 <div className="md:col-span-2">
                   <Label htmlFor="observacoes">
                     Observações
