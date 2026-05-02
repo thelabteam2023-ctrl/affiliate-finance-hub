@@ -585,12 +585,25 @@ export default function Caixa() {
         return false;
       }
       
-      // Data efetiva: para saques confirmados, usar data_confirmacao como referência cronológica
-      const dataEfetiva = t.data_confirmacao 
-        ? parseLocalDateTime(t.data_confirmacao) 
-        : parseLocalDateTime(t.data_transacao);
-      const matchDataInicio = !dataInicio || dataEfetiva >= startOfDay(dataInicio);
-      const matchDataFim = !dataFim || dataEfetiva <= endOfDay(dataFim);
+      // Lógica de Data Efetiva (YYYY-MM-DD) para evitar bugs de timezone
+      // REGRA: Usamos a data civil (sem conversão de offset) para garantir que 
+      // "2026-05-02 00:00Z" seja sempre "2026-05-02" independente do horário local.
+      const dataEfetivaStr = t.data_confirmacao 
+        ? extractCivilDateKey(t.data_confirmacao) 
+        : extractCivilDateKey(t.data_transacao);
+      
+      let matchDataInicio = true;
+      let matchDataFim = true;
+      
+      if (dataInicio) {
+        const startStr = format(dataInicio, "yyyy-MM-dd");
+        matchDataInicio = dataEfetivaStr >= startStr;
+      }
+      
+      if (dataFim) {
+        const endStr = format(dataFim, "yyyy-MM-dd");
+        matchDataFim = dataEfetivaStr <= endStr;
+      }
       
       // Include both APORTE and LIQUIDACAO when filter is APORTE_FINANCEIRO
       const knownTypes = ["TRANSFERENCIA", "DEPOSITO", "SAQUE", "APORTE_FINANCEIRO", "SWAP"];
