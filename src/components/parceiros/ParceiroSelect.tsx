@@ -263,28 +263,26 @@ export interface ParceiroSelectRef {
           </div>
         </div>
         <div className="max-h-[300px] overflow-auto">
-          {filteredEntidades.length === 0 ? (
+          {filteredParceiros.length === 0 ? (
             <div className="p-4 text-center text-sm text-muted-foreground">
               {searchTerm ? "Nenhum resultado encontrado" : "Nenhuma opção disponível"}
             </div>
           ) : (
-            filteredEntidades.map((e) => (
-              <SelectItem key={e.id} value={e.id} className="text-left justify-start">
+            filteredParceiros.map((p) => (
+              <SelectItem key={p.id} value={p.id} className="text-left justify-start">
                 <div className="flex flex-col w-full py-0.5">
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <span className="font-medium">
-                      {e.nome} {e.tipo === 'fornecedor' && <span className="text-[10px] bg-blue-100 text-blue-700 px-1 rounded ml-1">FORNECEDOR</span>}
-                    </span>
+                    <span className="font-medium">{p.nome}</span>
                   </div>
-                  {e.cpf && (
+                  {p.cpf && (
                     <span className="text-xs text-muted-foreground ml-6">
-                      {formatCPF(e.cpf)}
+                      {formatCPF(p.cpf)}
                     </span>
                   )}
                   {showSaldo && (
                     <div className="ml-6">
-                      {formatSaldo(e.id)}
+                      {formatSaldo(p.id)}
                     </div>
                   )}
                 </div>
