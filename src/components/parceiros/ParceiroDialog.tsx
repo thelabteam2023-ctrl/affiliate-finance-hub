@@ -1352,341 +1352,41 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   qualidade={qualidade}
                 />
               ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <Label htmlFor="nome">Nome Completo *</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="parceiro-nome-field"
-                      name="parceiro-nome-field"
-                      value={nome}
-                      onChange={(e) => setNome(e.target.value.toUpperCase())}
-                      required
-                      disabled={loading || viewMode}
-                      className="uppercase"
-                    />
-                    {viewMode && nome && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => copyToClipboard(nome, "Nome")}
-                        className="shrink-0"
-                      >
-                        {copiedField === "Nome" ? (
-                          <Check className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="cpf">CPF *</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="parceiro-cpf-field"
-                      name="parceiro-cpf-field"
-                      autoComplete="off"
-                      value={cpf}
-                      onChange={(e) => {
-                        setCpf(formatCPF(e.target.value));
-                        setCpfError(""); // Clear error on change
-                      }}
-                      placeholder="000.000.000-00"
-                      maxLength={14}
-                      required
-                      disabled={loading || viewMode}
-                      className={cpfError ? "border-red-500" : ""}
-                    />
-                    {viewMode && cpf && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => copyToClipboard(cpf.replace(/\D/g, ""), "CPF")}
-                        className="shrink-0"
-                      >
-                        {copiedField === "CPF" ? (
-                          <Check className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                  {checkingCpf && (
-                    <p className="text-xs text-muted-foreground mt-1">Verificando CPF...</p>
-                  )}
-                  {cpfError && (
-                    <p className="text-xs text-red-500 mt-1">{cpfError}</p>
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor="dataNascimento">Data de Nascimento <span className="text-xs text-muted-foreground font-normal">(opcional)</span></Label>
-                  <DatePickerInput
-                    value={dataNascimento}
-                    onChange={setDataNascimento}
-                    disabled={loading || viewMode}
-                    minAge={18}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="email">Email <span className="text-xs text-muted-foreground font-normal">(opcional)</span></Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="parceiro-email-field"
-                      name="parceiro-email-field"
-                      type="text"
-                      inputMode="email"
-                      autoComplete="off"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      disabled={loading || viewMode}
-                    />
-                    {viewMode && email && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => copyToClipboard(email, "Email")}
-                        className="shrink-0"
-                      >
-                        {copiedField === "Email" ? (
-                          <Check className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="telefone">Telefone <span className="text-xs text-muted-foreground font-normal">(opcional)</span></Label>
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <PhoneInput
-                        value={telefone}
-                        onChange={(value) => {
-                          setTelefone(value);
-                          setTelefoneError(""); // Clear error on change
-                        }}
-                        disabled={loading || viewMode}
-                      />
-                    </div>
-                    {viewMode && telefone && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => {
-                          const digits = telefone.replace(/\D/g, "");
-                          const cleaned = digits.startsWith("55") ? digits.slice(2) : digits;
-                          copyToClipboard(cleaned, "Telefone");
-                        }}
-                        className="shrink-0"
-                      >
-                        {copiedField === "Telefone" ? (
-                          <Check className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                  {checkingTelefone && (
-                    <p className="text-xs text-muted-foreground mt-1">Verificando telefone...</p>
-                  )}
-                  {telefoneError && (
-                    <p className="text-xs text-red-500 mt-1">{telefoneError}</p>
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor="endereco">
-                    Endereço
-                    <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                  </Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="parceiro-endereco-field"
-                      name="parceiro-endereco-field"
-                      value={endereco}
-                      onChange={(e) => setEndereco(e.target.value.toUpperCase())}
-                      className="uppercase"
-                      placeholder="Rua, número"
-                      disabled={loading || viewMode}
-                    />
-                    {viewMode && endereco && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => copyToClipboard(endereco, "Endereço")}
-                        className="shrink-0"
-                      >
-                        {copiedField === "Endereço" ? (
-                          <Check className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="cidade">
-                    Cidade - UF
-                    <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                  </Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="parceiro-cidade-field"
-                      name="parceiro-cidade-field"
-                      value={cidade}
-                      onChange={(e) => setCidade(e.target.value.toUpperCase())}
-                      className="uppercase"
-                      placeholder="SÃO PAULO - SP"
-                      disabled={loading || viewMode}
-                    />
-                    {viewMode && cidade && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => copyToClipboard(cidade, "Cidade")}
-                        className="shrink-0"
-                      >
-                        {copiedField === "Cidade" ? (
-                          <Check className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="cep">
-                    CEP
-                    <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                  </Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="parceiro-cep-field"
-                      name="parceiro-cep-field"
-                      value={cep}
-                      onChange={(e) => setCep(formatCEP(e.target.value))}
-                      placeholder="00000-000"
-                      maxLength={9}
-                      disabled={loading || viewMode}
-                    />
-                    {viewMode && cep && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => copyToClipboard(cep.replace(/\D/g, ""), "CEP")}
-                        className="shrink-0"
-                      >
-                        {copiedField === "CEP" ? (
-                          <Check className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                <div className="md:col-span-2 mt-8">
-                  <Label htmlFor="status" className="text-center block mb-2">Status</Label>
-                  <Select value={status} onValueChange={setStatus} disabled={loading || viewMode}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Selecione o status" className="text-center" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ativo">Ativo</SelectItem>
-                      <SelectItem value="inativo">Inativo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {planLimitError && (
-                    <Alert variant="destructive" className="mt-2">
-                      <AlertTriangle className="h-4 w-4" />
-                      <AlertDescription>{planLimitError}</AlertDescription>
-                    </Alert>
-                  )}
-                </div>
-                 <div className="md:col-span-2 space-y-4">
-                   <div className="space-y-2">
-                     <Label htmlFor="fornecedor_origem">
-                       Fornecedor Gerenciador
-                       <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                     </Label>
-                     <div className="flex items-center gap-2">
-                       <Truck className="h-4 w-4 text-muted-foreground shrink-0" />
-                       <Select
-                         value={fornecedorOrigemId || "none"}
-                         onValueChange={(val) => setFornecedorOrigemId(val === "none" ? null : val)}
-                         disabled={loading || viewMode}
-                       >
-                         <SelectTrigger className="flex-1">
-                           <SelectValue placeholder="Sem fornecedor (gestão interna)" />
-                         </SelectTrigger>
-                         <SelectContent>
-                           <SelectItem value="none">Sem fornecedor (gestão interna)</SelectItem>
-                           {fornecedores.map((f) => (
-                             <SelectItem key={f.id} value={f.id}>
-                               {f.nome}
-                             </SelectItem>
-                           ))}
-                         </SelectContent>
-                       </Select>
-                     </div>
-                     <p className="text-[11px] text-muted-foreground">
-                       Selecione se este parceiro é gerenciado por um de nossos fornecedores externos.
-                     </p>
-                   </div>
-
-                   <div className="space-y-2">
-                     <Label>
-                       Qualidade do parceiro
-                       <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                     </Label>
-                     <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2">
-                       <StarRating
-                         value={qualidade}
-                         onChange={(v) => !loading && !viewMode && setQualidade(v)}
-                         readOnly={loading || viewMode}
-                         size="md"
-                         showLabel
-                       />
-                       {qualidade != null && !viewMode && (
-                         <button
-                           type="button"
-                           onClick={() => setQualidade(null)}
-                           className="ml-auto text-xs text-muted-foreground hover:text-foreground transition-colors"
-                           disabled={loading}
-                         >
-                           Limpar
-                         </button>
-                       )}
-                     </div>
-                   </div>
-                 </div>
-                <div className="md:col-span-2">
-                  <Label htmlFor="observacoes">
-                    Observações
-                    <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                  </Label>
-                  <Textarea
-                    id="observacoes"
-                    value={observacoes}
-                    onChange={(e) => setObservacoes(e.target.value)}
-                    rows={3}
-                    disabled={loading || viewMode}
-                  />
-                </div>
-              </div>
+                <PersonalDataTab
+                  nome={nome}
+                  setNome={setNome}
+                  cpf={cpf}
+                  setCpf={setCpf}
+                  email={email}
+                  setEmail={setEmail}
+                  telefone={telefone}
+                  setTelefone={setTelefone}
+                  dataNascimento={dataNascimento}
+                  setDataNascimento={setDataNascimento}
+                  endereco={endereco}
+                  setEndereco={setEndereco}
+                  cidade={cidade}
+                  setCidade={setCidade}
+                  cep={cep}
+                  setCep={setCep}
+                  status={status}
+                  setStatus={setStatus}
+                  observacoes={observacoes}
+                  setObservacoes={setObservacoes}
+                  fornecedorOrigemId={fornecedorOrigemId}
+                  setFornecedorOrigemId={setFornecedorOrigemId}
+                  fornecedores={fornecedores}
+                  qualidade={qualidade}
+                  setQualidade={setQualidade}
+                  loading={loading}
+                  viewMode={viewMode}
+                  cpfError={cpfError}
+                  telefoneError={telefoneError}
+                  checkingCpf={checkingCpf}
+                  planLimitError={planLimitError}
+                  copyToClipboard={copyToClipboard}
+                  copiedField={copiedField}
+                />
               )}
 
               {!viewMode && !parceiro && !parceiroId && (
