@@ -95,14 +95,6 @@ interface ParceiroSaldoAgrupado {
     moeda: string;
     has_bonus: boolean;
   }>;
-  saldos_fornecedor?: {
-    saldo_central: number;
-    saldo_bancos: number;
-    saldo_contas: number;
-    saldo_total: number;
-  };
-   is_fornecedor?: boolean; // Se o parceiro É o perfil de um fornecedor
-   fornecedor_origem_id?: string | null; // ID do fornecedor que gerencia este parceiro
   // Transações pendentes (em trânsito para bookmakers)
   pendentes_bookmakers: Array<{
     bookmaker_nome: string;
@@ -397,17 +389,9 @@ export function SaldosParceirosSheet() {
       // Buscar preços atualizados da Binance
       const prices = await fetchCryptoPrices(uniqueCoins);
 
-      // Buscar saldos consolidados de fornecedores
-      const { data: saldosFornecedores, error: forError } = await supabase
-        .from("v_supplier_total_balances")
-        .select("*");
-
-      if (forError) throw forError;
-
-      const parceirosMap = new Map<string, ParceiroSaldoAgrupado>();
 
       // Helper to get or create parceiro entry
-       const getOrCreateParceiro = (parceiroId: string, nome: string = "Parceiro", fornecedorOrigemId?: string | null): ParceiroSaldoAgrupado => {
+        const getOrCreateParceiro = (parceiroId: string, nome: string = "Parceiro"): ParceiroSaldoAgrupado => {
         if (!parceirosMap.has(parceiroId)) {
           parceirosMap.set(parceiroId, {
             parceiro_id: parceiroId,
@@ -420,30 +404,20 @@ export function SaldosParceirosSheet() {
             total_crypto_usd: 0,
             total_crypto_locked_usd: 0,
             total_bookmakers_por_moeda: createEmptySaldos(),
-             total_pendente_por_moeda: createEmptySaldos(),
-             fornecedor_origem_id: fornecedorOrigemId,
-          });
+              total_pendente_por_moeda: createEmptySaldos(),
+           });
         }
         return parceirosMap.get(parceiroId)!;
       };
 
-      // Fetch partner info to know who is a supplier and get names for all
        const { data: allParceiros } = await supabase
          .from("parceiros")
-         .select("id, nome, is_caixa_operacional, supplier_profile_id, fornecedor_origem_id");
-       const { data: allFornecedores } = await supabase
-         .from("fornecedores")
-         .select("id, nome");
-       
-       const forMap: Record<string, string> = {};
-       allFornecedores?.forEach(f => { forMap[f.id] = f.nome; });
-       setFornecedores(forMap);
-
-
-      const parceiroInfoMap = new Map<string, any>();
-      if (allParceiros) {
-        allParceiros.forEach(p => parceiroInfoMap.set(p.id, p));
-      }
+         .select("id, nome, is_caixa_operacional");
+ 
+       const parceiroInfoMap = new Map<string, any>();
+       if (allParceiros) {
+         allParceiros.forEach(p => parceiroInfoMap.set(p.id, p));
+       }
 
       // Process FIAT accounts (multi-currency)
       (saldosContas as SaldoContaParceiro[] || []).forEach((conta) => {
