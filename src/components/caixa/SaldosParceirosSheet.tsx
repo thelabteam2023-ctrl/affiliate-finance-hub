@@ -424,6 +424,16 @@ export function SaldosParceirosSheet() {
         return parceirosMap.get(parceiroId)!;
       };
 
+      // Fetch partner info to know who is a supplier and get names for all
+      const { data: allParceiros } = await supabase
+        .from("parceiros")
+        .select("id, nome, is_caixa_operacional, supplier_profile_id");
+
+      const parceiroInfoMap = new Map<string, any>();
+      if (allParceiros) {
+        allParceiros.forEach(p => parceiroInfoMap.set(p.id, p));
+      }
+
       // Process FIAT accounts (multi-currency)
       (saldosContas as SaldoContaParceiro[] || []).forEach((conta) => {
         if (!conta.parceiro_id || conta.saldo === 0) return;
