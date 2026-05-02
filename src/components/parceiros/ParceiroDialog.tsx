@@ -166,9 +166,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         endereco: parceiro.endereco || "",
         cidade: parceiro.cidade || "",
         cep: formatCEP(parceiro.cep || ""),
-        status: parceiro.status || "ativo",
-        observacoes: parceiro.observacoes || "",
-        qualidade: parceiro.qualidade ?? null,
+         status: parceiro.status || "ativo",
+         observacoes: parceiro.observacoes || "",
+         fornecedorOrigemId: (parceiro as any).fornecedor_origem_id || null,
+         qualidade: parceiro.qualidade ?? null,
         bankAccounts: JSON.stringify(mappedBankAccounts),
         cryptoWallets: JSON.stringify(mappedWallets),
       });
