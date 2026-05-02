@@ -477,17 +477,24 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
                         >
                           <Building2 className="h-3 w-3" /> Casas
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setSelectedSupplier(supplier);
-                            setAlocacaoOpen(true);
-                          }}
-                          className="gap-1 text-xs"
-                        >
-                          <Wallet className="h-3 w-3" /> Alocar
-                        </Button>
+                         <Tooltip>
+                           <TooltipTrigger asChild>
+                             <Button
+                               size="sm"
+                               variant="outline"
+                               onClick={() => {
+                                 setSelectedSupplier(supplier);
+                                 setTransacaoDialogOpen(true);
+                               }}
+                               className="gap-1 text-xs"
+                             >
+                               <Wallet className="h-3 w-3" /> Alocar
+                             </Button>
+                           </TooltipTrigger>
+                           <TooltipContent>
+                             <p>Alocar capital em contas/bookmakers gerenciadas por este fornecedor</p>
+                           </TooltipContent>
+                         </Tooltip>
                         <Button
                           size="sm"
                           variant="outline"
