@@ -1172,7 +1172,8 @@ export default function Caixa() {
               </Tooltip>
             </DropdownMenuContent>
           </DropdownMenu>
-        )}
+          )}
+        </div>
       </div>
 
       {/* PageContent - ÚNICO scroll vertical */}
