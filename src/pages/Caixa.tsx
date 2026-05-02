@@ -532,6 +532,7 @@ export default function Caixa() {
       });
     } finally {
       setLoading(false);
+      setInitialLoading(false);
     }
   };
 
