@@ -90,6 +90,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   const [cep, setCep] = useState("");
   const [status, setStatus] = useState("ativo");
   const [observacoes, setObservacoes] = useState("");
+  const [fornecedorOrigemId, setFornecedorOrigemId] = useState<string | null>(null);
+  const [fornecedores, setFornecedores] = useState<any[]>([]);
   const [qualidade, setQualidade] = useState<number | null>(null);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [cryptoWallets, setCryptoWallets] = useState<CryptoWallet[]>([]);
@@ -213,7 +215,17 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   useEffect(() => {
     fetchBancos();
     fetchRedes();
+    fetchFornecedores();
   }, []);
+
+  const fetchFornecedores = async () => {
+    const { data } = await supabase
+      .from("fornecedores")
+      .select("id, nome")
+      .eq("status", "ATIVO")
+      .order("nome");
+    if (data) setFornecedores(data);
+  };
 
   useEffect(() => {
     if (open) {
