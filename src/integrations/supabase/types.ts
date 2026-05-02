@@ -6963,7 +6963,6 @@ export type Database = {
           observacoes: string | null
           qualidade: number | null
           status: string
-          supplier_profile_id: string | null
           supplier_titular_id: string | null
           telefone: string | null
           updated_at: string
@@ -6985,7 +6984,6 @@ export type Database = {
           observacoes?: string | null
           qualidade?: number | null
           status?: string
-          supplier_profile_id?: string | null
           supplier_titular_id?: string | null
           telefone?: string | null
           updated_at?: string
@@ -7007,7 +7005,6 @@ export type Database = {
           observacoes?: string | null
           qualidade?: number | null
           status?: string
-          supplier_profile_id?: string | null
           supplier_titular_id?: string | null
           telefone?: string | null
           updated_at?: string
@@ -7021,20 +7018,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "fornecedores"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "parceiros_supplier_profile_id_fkey"
-            columns: ["supplier_profile_id"]
-            isOneToOne: false
-            referencedRelation: "supplier_profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "parceiros_supplier_profile_id_fkey"
-            columns: ["supplier_profile_id"]
-            isOneToOne: false
-            referencedRelation: "v_supplier_total_balances"
-            referencedColumns: ["supplier_profile_id"]
           },
           {
             foreignKeyName: "parceiros_supplier_titular_id_fkey"
@@ -10044,13 +10027,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "supplier_profiles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "supplier_access_tokens_supplier_profile_id_fkey"
-            columns: ["supplier_profile_id"]
-            isOneToOne: false
-            referencedRelation: "v_supplier_total_balances"
-            referencedColumns: ["supplier_profile_id"]
           },
           {
             foreignKeyName: "supplier_access_tokens_supplier_workspace_id_fkey"
@@ -14207,34 +14183,6 @@ export type Database = {
             foreignKeyName: "supplier_ledger_supplier_workspace_id_fkey"
             columns: ["supplier_workspace_id"]
             isOneToOne: false
-            referencedRelation: "workspaces"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      v_supplier_total_balances: {
-        Row: {
-          parent_workspace_id: string | null
-          saldo_bancos: number | null
-          saldo_central: number | null
-          saldo_contas: number | null
-          saldo_total: number | null
-          supplier_nome: string | null
-          supplier_profile_id: string | null
-          supplier_workspace_id: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "supplier_profiles_parent_workspace_id_fkey"
-            columns: ["parent_workspace_id"]
-            isOneToOne: false
-            referencedRelation: "workspaces"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "supplier_profiles_workspace_id_fkey"
-            columns: ["supplier_workspace_id"]
-            isOneToOne: true
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
