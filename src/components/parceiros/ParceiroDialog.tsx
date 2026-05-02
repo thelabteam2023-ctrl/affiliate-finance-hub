@@ -7,28 +7,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useWorkspace } from "@/hooks/useWorkspace";
- import { Loader2, Plus, Trash2, User, Landmark, Wallet, Copy, Check, AlertTriangle, Zap, ChevronDown, ChevronUp, Building2, Truck } from "lucide-react";
+import { Loader2, User, Landmark, Wallet, Copy, Check } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { BancoSelect } from "./BancoSelect";
-import { RedeSelect } from "./RedeSelect";
-import { PixKeyInput } from "./PixKeyInput";
-import { PhoneInput } from "./PhoneInput";
-import { MoedaMultiSelect } from "./MoedaMultiSelect";
-import { ExchangeSelect } from "./ExchangeSelect";
-import { BankAccountCard } from "./BankAccountCard";
-import { CryptoWalletCard } from "./CryptoWalletCard";
-import { validateCPF, formatCPF, formatCEP, formatAgencia, formatConta } from "@/lib/validators";
-import { DatePickerInput } from "@/components/ui/date-picker-input";
+import { PersonalDataTab } from "./tabs/PersonalDataTab";
+import { BankAccountsTab } from "./tabs/BankAccountsTab";
+import { CryptoWalletsTab } from "./tabs/CryptoWalletsTab";
+import { validateCPF, formatCPF, formatCEP } from "@/lib/validators";
 import { ParceiroProfileView } from "./ParceiroProfileView";
-import { StarRating } from "./StarRating";
 
 interface PixKey {
   tipo: string;
@@ -563,20 +550,24 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       return;
     }
     
-    // Check bank accounts validation - RN101
-    for (const account of bankAccounts) {
+    // Check bank accounts validation - Only validate accounts that have some information
+    const relevantBankAccounts = bankAccounts.filter(acc => 
+      acc.banco_id || (acc.pix_keys && acc.pix_keys.some(k => k.chave)) || acc.agencia || acc.conta
+    );
+
+    for (const account of relevantBankAccounts) {
       if (!account.banco_id) {
         toast({
-          title: "Campo obrigatório",
-          description: "Selecione o banco.",
+          title: "Campo obrigatório no Banco",
+          description: "Por favor, selecione o banco para todas as contas adicionadas.",
           variant: "destructive",
         });
         return;
       }
       if (!account.pix_keys.some(k => k.chave)) {
         toast({
-          title: "Campo obrigatório",
-          description: "Adicione pelo menos uma chave PIX.",
+          title: "Campo obrigatório no Banco",
+          description: "Adicione pelo menos uma chave PIX para todas as contas adicionadas.",
           variant: "destructive",
         });
         return;
@@ -606,12 +597,16 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       }
     }
     
-    // Validate wallet data
-    for (const wallet of cryptoWallets) {
+    // Validate wallet data - Only validate wallets that have some information
+    const relevantWallets = cryptoWallets.filter(w => 
+      w.rede_id || w.endereco || (w.moeda && w.moeda.length > 0) || w.exchange || w.label
+    );
+
+    for (const wallet of relevantWallets) {
       if (!wallet.rede_id || !wallet.endereco || !wallet.moeda || wallet.moeda.length === 0) {
         toast({
-          title: "Campos obrigatórios faltando",
-          description: "Preencha: Rede, Moedas e Endereço em todas as wallets.",
+          title: "Campos obrigatórios faltando na Wallet",
+          description: "Por favor, preencha Rede, Moedas e Endereço em todas as wallets que você adicionou.",
           variant: "destructive",
         });
         return;
@@ -715,9 +710,13 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         }
         
         // UPDATE or INSERT accounts
-        for (let i = 0; i < bankAccounts.length; i++) {
-          const account = bankAccounts[i];
-          if (account.banco_id) {
+        const updatedBankAccounts = [...bankAccounts];
+        for (let i = 0; i < updatedBankAccounts.length; i++) {
+          const account = updatedBankAccounts[i];
+          // Only save relevant bank accounts
+          const isRelevant = account.banco_id || account.pix_keys.some(k => k.chave);
+          
+          if (isRelevant && account.banco_id) {
             // Format PIX keys for JSONB storage - clean CPF/CNPJ formatting
             const cleanedPixKeys = account.pix_keys
               .filter(k => k.chave && k.tipo)
@@ -765,15 +764,14 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                 throw insertError;
               }
               
-              // Update the account in state with the new ID to prevent re-insertion
+              // Update the account local copy with the new ID
               if (insertedData?.id) {
-                const updatedAccounts = [...bankAccounts];
-                updatedAccounts[i] = { ...updatedAccounts[i], id: insertedData.id };
-                setBankAccounts(updatedAccounts);
+                updatedBankAccounts[i] = { ...updatedBankAccounts[i], id: insertedData.id };
               }
             }
           }
         }
+        setBankAccounts(updatedBankAccounts);
       }
 
       // Save crypto wallets with proper UPDATE/INSERT/DELETE logic
@@ -797,9 +795,13 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         }
         
         // UPDATE or INSERT wallets
-        for (let i = 0; i < cryptoWallets.length; i++) {
-          const wallet = cryptoWallets[i];
-          if (wallet.moeda && wallet.moeda.length > 0 && wallet.endereco && wallet.rede_id) {
+        const updatedCryptoWallets = [...cryptoWallets];
+        for (let i = 0; i < updatedCryptoWallets.length; i++) {
+          const wallet = updatedCryptoWallets[i];
+          // Only save relevant wallets
+          const isRelevant = wallet.rede_id || wallet.endereco || (wallet.moeda && wallet.moeda.length > 0);
+          
+          if (isRelevant && wallet.moeda && wallet.moeda.length > 0 && wallet.endereco && wallet.rede_id) {
             // Encrypt observacoes if present
             const observacoesEncrypted = wallet.observacoes 
               ? btoa(unescape(encodeURIComponent(wallet.observacoes)))
@@ -840,15 +842,14 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                 throw insertError;
               }
               
-              // Update the wallet in state with the new ID to prevent re-insertion
+              // Update the wallet local copy with the new ID
               if (insertedData?.id) {
-                const updatedWallets = [...cryptoWallets];
-                updatedWallets[i] = { ...updatedWallets[i], id: insertedData.id };
-                setCryptoWallets(updatedWallets);
+                updatedCryptoWallets[i] = { ...updatedCryptoWallets[i], id: insertedData.id };
               }
             }
           }
         }
+        setCryptoWallets(updatedCryptoWallets);
       }
 
       toast({
@@ -1343,341 +1344,41 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   qualidade={qualidade}
                 />
               ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <Label htmlFor="nome">Nome Completo *</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="parceiro-nome-field"
-                      name="parceiro-nome-field"
-                      value={nome}
-                      onChange={(e) => setNome(e.target.value.toUpperCase())}
-                      required
-                      disabled={loading || viewMode}
-                      className="uppercase"
-                    />
-                    {viewMode && nome && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => copyToClipboard(nome, "Nome")}
-                        className="shrink-0"
-                      >
-                        {copiedField === "Nome" ? (
-                          <Check className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="cpf">CPF *</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="parceiro-cpf-field"
-                      name="parceiro-cpf-field"
-                      autoComplete="off"
-                      value={cpf}
-                      onChange={(e) => {
-                        setCpf(formatCPF(e.target.value));
-                        setCpfError(""); // Clear error on change
-                      }}
-                      placeholder="000.000.000-00"
-                      maxLength={14}
-                      required
-                      disabled={loading || viewMode}
-                      className={cpfError ? "border-red-500" : ""}
-                    />
-                    {viewMode && cpf && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => copyToClipboard(cpf.replace(/\D/g, ""), "CPF")}
-                        className="shrink-0"
-                      >
-                        {copiedField === "CPF" ? (
-                          <Check className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                  {checkingCpf && (
-                    <p className="text-xs text-muted-foreground mt-1">Verificando CPF...</p>
-                  )}
-                  {cpfError && (
-                    <p className="text-xs text-red-500 mt-1">{cpfError}</p>
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor="dataNascimento">Data de Nascimento <span className="text-xs text-muted-foreground font-normal">(opcional)</span></Label>
-                  <DatePickerInput
-                    value={dataNascimento}
-                    onChange={setDataNascimento}
-                    disabled={loading || viewMode}
-                    minAge={18}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="email">Email <span className="text-xs text-muted-foreground font-normal">(opcional)</span></Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="parceiro-email-field"
-                      name="parceiro-email-field"
-                      type="text"
-                      inputMode="email"
-                      autoComplete="off"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      disabled={loading || viewMode}
-                    />
-                    {viewMode && email && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => copyToClipboard(email, "Email")}
-                        className="shrink-0"
-                      >
-                        {copiedField === "Email" ? (
-                          <Check className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="telefone">Telefone <span className="text-xs text-muted-foreground font-normal">(opcional)</span></Label>
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <PhoneInput
-                        value={telefone}
-                        onChange={(value) => {
-                          setTelefone(value);
-                          setTelefoneError(""); // Clear error on change
-                        }}
-                        disabled={loading || viewMode}
-                      />
-                    </div>
-                    {viewMode && telefone && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => {
-                          const digits = telefone.replace(/\D/g, "");
-                          const cleaned = digits.startsWith("55") ? digits.slice(2) : digits;
-                          copyToClipboard(cleaned, "Telefone");
-                        }}
-                        className="shrink-0"
-                      >
-                        {copiedField === "Telefone" ? (
-                          <Check className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                  {checkingTelefone && (
-                    <p className="text-xs text-muted-foreground mt-1">Verificando telefone...</p>
-                  )}
-                  {telefoneError && (
-                    <p className="text-xs text-red-500 mt-1">{telefoneError}</p>
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor="endereco">
-                    Endereço
-                    <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                  </Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="parceiro-endereco-field"
-                      name="parceiro-endereco-field"
-                      value={endereco}
-                      onChange={(e) => setEndereco(e.target.value.toUpperCase())}
-                      className="uppercase"
-                      placeholder="Rua, número"
-                      disabled={loading || viewMode}
-                    />
-                    {viewMode && endereco && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => copyToClipboard(endereco, "Endereço")}
-                        className="shrink-0"
-                      >
-                        {copiedField === "Endereço" ? (
-                          <Check className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="cidade">
-                    Cidade - UF
-                    <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                  </Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="parceiro-cidade-field"
-                      name="parceiro-cidade-field"
-                      value={cidade}
-                      onChange={(e) => setCidade(e.target.value.toUpperCase())}
-                      className="uppercase"
-                      placeholder="SÃO PAULO - SP"
-                      disabled={loading || viewMode}
-                    />
-                    {viewMode && cidade && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => copyToClipboard(cidade, "Cidade")}
-                        className="shrink-0"
-                      >
-                        {copiedField === "Cidade" ? (
-                          <Check className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="cep">
-                    CEP
-                    <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                  </Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="parceiro-cep-field"
-                      name="parceiro-cep-field"
-                      value={cep}
-                      onChange={(e) => setCep(formatCEP(e.target.value))}
-                      placeholder="00000-000"
-                      maxLength={9}
-                      disabled={loading || viewMode}
-                    />
-                    {viewMode && cep && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => copyToClipboard(cep.replace(/\D/g, ""), "CEP")}
-                        className="shrink-0"
-                      >
-                        {copiedField === "CEP" ? (
-                          <Check className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                <div className="md:col-span-2 mt-8">
-                  <Label htmlFor="status" className="text-center block mb-2">Status</Label>
-                  <Select value={status} onValueChange={setStatus} disabled={loading || viewMode}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Selecione o status" className="text-center" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ativo">Ativo</SelectItem>
-                      <SelectItem value="inativo">Inativo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {planLimitError && (
-                    <Alert variant="destructive" className="mt-2">
-                      <AlertTriangle className="h-4 w-4" />
-                      <AlertDescription>{planLimitError}</AlertDescription>
-                    </Alert>
-                  )}
-                </div>
-                 <div className="md:col-span-2 space-y-4">
-                   <div className="space-y-2">
-                     <Label htmlFor="fornecedor_origem">
-                       Fornecedor Gerenciador
-                       <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                     </Label>
-                     <div className="flex items-center gap-2">
-                       <Truck className="h-4 w-4 text-muted-foreground shrink-0" />
-                       <Select
-                         value={fornecedorOrigemId || "none"}
-                         onValueChange={(val) => setFornecedorOrigemId(val === "none" ? null : val)}
-                         disabled={loading || viewMode}
-                       >
-                         <SelectTrigger className="flex-1">
-                           <SelectValue placeholder="Sem fornecedor (gestão interna)" />
-                         </SelectTrigger>
-                         <SelectContent>
-                           <SelectItem value="none">Sem fornecedor (gestão interna)</SelectItem>
-                           {fornecedores.map((f) => (
-                             <SelectItem key={f.id} value={f.id}>
-                               {f.nome}
-                             </SelectItem>
-                           ))}
-                         </SelectContent>
-                       </Select>
-                     </div>
-                     <p className="text-[11px] text-muted-foreground">
-                       Selecione se este parceiro é gerenciado por um de nossos fornecedores externos.
-                     </p>
-                   </div>
-
-                   <div className="space-y-2">
-                     <Label>
-                       Qualidade do parceiro
-                       <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                     </Label>
-                     <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2">
-                       <StarRating
-                         value={qualidade}
-                         onChange={(v) => !loading && !viewMode && setQualidade(v)}
-                         readOnly={loading || viewMode}
-                         size="md"
-                         showLabel
-                       />
-                       {qualidade != null && !viewMode && (
-                         <button
-                           type="button"
-                           onClick={() => setQualidade(null)}
-                           className="ml-auto text-xs text-muted-foreground hover:text-foreground transition-colors"
-                           disabled={loading}
-                         >
-                           Limpar
-                         </button>
-                       )}
-                     </div>
-                   </div>
-                 </div>
-                <div className="md:col-span-2">
-                  <Label htmlFor="observacoes">
-                    Observações
-                    <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                  </Label>
-                  <Textarea
-                    id="observacoes"
-                    value={observacoes}
-                    onChange={(e) => setObservacoes(e.target.value)}
-                    rows={3}
-                    disabled={loading || viewMode}
-                  />
-                </div>
-              </div>
+                <PersonalDataTab
+                  nome={nome}
+                  setNome={setNome}
+                  cpf={cpf}
+                  setCpf={setCpf}
+                  email={email}
+                  setEmail={setEmail}
+                  telefone={telefone}
+                  setTelefone={setTelefone}
+                  dataNascimento={dataNascimento}
+                  setDataNascimento={setDataNascimento}
+                  endereco={endereco}
+                  setEndereco={setEndereco}
+                  cidade={cidade}
+                  setCidade={setCidade}
+                  cep={cep}
+                  setCep={setCep}
+                  status={status}
+                  setStatus={setStatus}
+                  observacoes={observacoes}
+                  setObservacoes={setObservacoes}
+                  fornecedorOrigemId={fornecedorOrigemId}
+                  setFornecedorOrigemId={setFornecedorOrigemId}
+                  fornecedores={fornecedores}
+                  qualidade={qualidade}
+                  setQualidade={setQualidade}
+                  loading={loading}
+                  viewMode={viewMode}
+                  cpfError={cpfError}
+                  telefoneError={telefoneError}
+                  checkingCpf={checkingCpf}
+                  planLimitError={planLimitError}
+                  copyToClipboard={copyToClipboard}
+                  copiedField={copiedField}
+                />
               )}
 
               {!viewMode && !parceiro && !parceiroId && (
@@ -1696,198 +1397,20 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
             </TabsContent>
 
             <TabsContent value="bancos" className="space-y-4">
-              
-              {!viewMode && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={addBankAccount}
-                  className="w-full"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Adicionar Conta Bancária
-                </Button>
-              )}
+              <BankAccountsTab
+                bankAccounts={bankAccounts}
+                addBankAccount={addBankAccount}
+                removeBankAccount={removeBankAccount}
+                updateBankAccount={updateBankAccount}
+                expandedBankIndex={expandedBankIndex}
+                setExpandedBankIndex={setExpandedBankIndex}
+                bancos={bancos}
+                loading={loading}
+                viewMode={viewMode}
+                contaSaldos={contaSaldos}
+                cpf={cpf}
+              />
 
-              {viewMode ? (
-                <div className="grid gap-4">
-                  {bankAccounts.map((account, index) => {
-                    const banco = bancos.find(b => b.id === account.banco_id);
-                    return (
-                      <BankAccountCard 
-                        key={index} 
-                        account={{
-                          ...account,
-                          banco: banco?.nome || "",
-                          saldo: account.id ? contaSaldos[account.id] ?? 0 : undefined,
-                        }} 
-                      />
-                    );
-                  })}
-                  {bankAccounts.length === 0 && (
-                    <p className="text-center text-muted-foreground py-8">
-                      Nenhuma conta bancária cadastrada
-                    </p>
-                  )}
-                </div>
-              ) : (
-                bankAccounts.map((account, index) => {
-                  const isExpanded = expandedBankIndex === index;
-                  const banco = bancos.find(b => b.id === account.banco_id);
-                  const bancoNome = banco?.nome || "Banco não selecionado";
-                  const tipoLabel = account.tipo_conta === "corrente" ? "Corrente" : account.tipo_conta === "poupanca" ? "Poupança" : account.tipo_conta === "pagamento" ? "Pagamento" : account.tipo_conta;
-                  const pixCount = account.pix_keys.filter(k => k.chave).length;
-
-                  return (
-                    <Card key={index} className="overflow-hidden">
-                      {/* Collapsed Header */}
-                      <div
-                        className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-accent/30 transition-colors"
-                        onClick={() => setExpandedBankIndex(isExpanded ? null : index)}
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                            <Building2 className="w-4 h-4 text-primary" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold truncate">{bancoNome}</p>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {tipoLabel} · {account.moeda || "BRL"}
-                              {account.titular && ` · ${account.titular}`}
-                              {pixCount > 0 && ` · ${pixCount} PIX`}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          {!viewMode && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
-                              onClick={(e) => { e.stopPropagation(); removeBankAccount(index); }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-                        </div>
-                      </div>
-
-                      {/* Expanded Content */}
-                      {isExpanded && (
-                        <CardContent className="pt-2 pb-4 border-t border-border/50">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div>
-                              <Label>Banco *</Label>
-                              <BancoSelect
-                                value={account.banco_id}
-                                onValueChange={(value) => updateBankAccount(index, "banco_id", value)}
-                                disabled={viewMode}
-                              />
-                            </div>
-                            <div>
-                              <Label>Moeda *</Label>
-                              <Select 
-                                value={account.moeda || "BRL"} 
-                                onValueChange={(value) => updateBankAccount(index, "moeda", value)}
-                                disabled={viewMode}
-                              >
-                                <SelectTrigger className="w-full">
-                                  <SelectValue placeholder="Selecione a moeda" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="BRL">BRL - Real Brasileiro</SelectItem>
-                                  <SelectItem value="USD">USD - Dólar Americano</SelectItem>
-                                  <SelectItem value="EUR">EUR - Euro</SelectItem>
-                                  <SelectItem value="GBP">GBP - Libra Esterlina</SelectItem>
-                                  <SelectItem value="MXN">MXN - Peso Mexicano</SelectItem>
-                                  <SelectItem value="MYR">MYR - Ringgit Malaio</SelectItem>
-                                  <SelectItem value="ARS">ARS - Peso Argentino</SelectItem>
-                                  <SelectItem value="COP">COP - Peso Colombiano</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div>
-                              <Label>
-                                Agência
-                                <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                              </Label>
-                              <Input
-                                value={formatAgencia(account.agencia)}
-                                onChange={(e) => updateBankAccount(index, "agencia", e.target.value)}
-                                placeholder="0000-0"
-                                disabled={viewMode}
-                              />
-                            </div>
-                            <div>
-                              <Label>
-                                Conta
-                                <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                              </Label>
-                              <Input
-                                value={formatConta(account.conta)}
-                                onChange={(e) => updateBankAccount(index, "conta", e.target.value)}
-                                placeholder="00000-0"
-                                disabled={viewMode}
-                              />
-                            </div>
-                            <div>
-                              <Label>Tipo *</Label>
-                              <Select 
-                                value={account.tipo_conta} 
-                                onValueChange={(value) => updateBankAccount(index, "tipo_conta", value)}
-                                disabled={viewMode}
-                              >
-                                <SelectTrigger className="w-full">
-                                  <SelectValue placeholder="Tipo de conta" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="corrente">Corrente</SelectItem>
-                                  <SelectItem value="poupanca">Poupança</SelectItem>
-                                  <SelectItem value="pagamento">Pagamento</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div>
-                              <Label>Titular *</Label>
-                              <Input
-                                value={account.titular}
-                                onChange={(e) => updateBankAccount(index, "titular", e.target.value.toUpperCase())}
-                                placeholder="Nome do titular"
-                                className="uppercase"
-                                disabled={viewMode}
-                              />
-                            </div>
-                            <div className="md:col-span-2">
-                              <PixKeyInput
-                                keys={account.pix_keys}
-                                onChange={(keys) => updateBankAccount(index, "pix_keys", keys)}
-                                cpf={cpf}
-                                disabled={viewMode}
-                              />
-                            </div>
-                            <div className="md:col-span-2">
-                              <Label>
-                                Observações
-                                <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                              </Label>
-                              <Textarea
-                                value={account.observacoes}
-                                onChange={(e) => updateBankAccount(index, "observacoes", e.target.value)}
-                                rows={3}
-                                placeholder="Informações adicionais sobre esta conta"
-                                disabled={viewMode}
-                              />
-                            </div>
-                          </div>
-                        </CardContent>
-                      )}
-                    </Card>
-                  );
-                }))}
-
-              {/* Salvar e Continuar button for new partners */}
               {!viewMode && parceiroId && !parceiro && bankAccounts.length > 0 && (
                 <div className="flex gap-3 mt-6">
                   <Button
@@ -1904,173 +1427,22 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
             </TabsContent>
 
             <TabsContent value="crypto" className="space-y-4">
-              
-              {!viewMode && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={addCryptoWallet}
-                  className="w-full"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Adicionar Wallet Crypto
-                </Button>
-              )}
-
-              {viewMode ? (
-                <div className="grid gap-4">
-                  {cryptoWallets.map((wallet, index) => {
-                    const rede = redes.find(r => r.id === wallet.rede_id);
-                    const saldoInfo = wallet.id ? walletSaldos[wallet.id] : undefined;
-                    return (
-                      <CryptoWalletCard 
-                        key={index} 
-                        wallet={{
-                          ...wallet,
-                          network: rede?.nome || "",
-                          saldo: saldoInfo?.saldo,
-                          saldoCoin: saldoInfo?.coin,
-                        }}
-                        parceiroId={parceiroId || parceiro?.id}
-                      />
-                    );
-                  })}
-                  {cryptoWallets.length === 0 && (
-                    <p className="text-center text-muted-foreground py-8">
-                      Nenhuma wallet crypto cadastrada
-                    </p>
-                  )}
-                </div>
-              ) : (
-                cryptoWallets.map((wallet, index) => {
-                  const isExpanded = expandedWalletIndex === index;
-                  const rede = redes.find(r => r.id === wallet.rede_id);
-                  const redeNome = rede?.nome || "Rede não selecionada";
-                  const label = wallet.label || "";
-                  const exchangeNome = wallet.exchange || "";
-                  const moedaDisplay = wallet.moeda.length > 0 ? wallet.moeda.join(", ") : "—";
-                  const truncAddr = wallet.endereco 
-                    ? `${wallet.endereco.slice(0, 6)}...${wallet.endereco.slice(-6)}`
-                    : "Sem endereço";
-
-                  return (
-                    <Card key={index} className="overflow-hidden">
-                      {/* Collapsed Header */}
-                      <div
-                        className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-accent/30 transition-colors"
-                        onClick={() => setExpandedWalletIndex(isExpanded ? null : index)}
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                            <Wallet className="w-4 h-4 text-primary" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold truncate">
-                              {label || exchangeNome || redeNome}
-                            </p>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {label && exchangeNome && `${exchangeNome} · `}{moedaDisplay} · {redeNome} · <span className="font-mono">{truncAddr}</span>
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          {!viewMode && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
-                              onClick={(e) => { e.stopPropagation(); removeCryptoWallet(index); }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-                        </div>
-                      </div>
-
-                      {/* Expanded Content */}
-                      {isExpanded && (
-                        <CardContent className="pt-2 pb-4 border-t border-border/50">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div className="md:col-span-2">
-                              <Label className="text-center block">
-                                Apelido da Wallet
-                                <span className="text-xs text-muted-foreground/60 ml-1">(ex: Minha Trust Wallet 1)</span>
-                              </Label>
-                              <Input
-                                value={wallet.label}
-                                onChange={(e) => updateCryptoWallet(index, "label", e.target.value)}
-                                placeholder="Identificação da wallet"
-                                disabled={viewMode}
-                                className="text-center"
-                              />
-                            </div>
-                            <div className="md:col-span-2">
-                              <MoedaMultiSelect
-                                moedas={wallet.moeda}
-                                onChange={(moedas) => updateCryptoWallet(index, "moeda", moedas)}
-                                disabled={viewMode}
-                              />
-                            </div>
-                            <div className="md:col-span-2">
-                              <Label className="text-center block">
-                                Exchange/Wallet
-                                <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                              </Label>
-                              <ExchangeSelect
-                                value={wallet.exchange}
-                                onValueChange={(value) => updateCryptoWallet(index, "exchange", value)}
-                                disabled={viewMode}
-                              />
-                            </div>
-                            <div className="md:col-span-2">
-                              <Label className="text-center block">Network *</Label>
-                              <RedeSelect
-                                value={wallet.rede_id}
-                                onValueChange={(value) => updateCryptoWallet(index, "rede_id", value)}
-                                disabled={viewMode}
-                              />
-                            </div>
-                            <div className="md:col-span-2">
-                              <Label className="text-center block">Endereço *</Label>
-                              <Input
-                                value={wallet.endereco}
-                                onChange={(e) => {
-                                  updateCryptoWallet(index, "endereco", e.target.value);
-                                }}
-                                onBlur={() => validateWalletEndereco(wallet.endereco, index, wallet.id)}
-                                placeholder="Endereço da wallet"
-                                disabled={viewMode}
-                                className={`text-center ${enderecoErrors[index] ? "border-destructive" : ""}`}
-                              />
-                              {checkingEnderecos[index] && (
-                                <p className="text-xs text-muted-foreground mt-1 text-center">Verificando endereço...</p>
-                              )}
-                              {enderecoErrors[index] && (
-                                <p className="text-xs text-destructive mt-1 text-center">{enderecoErrors[index]}</p>
-                              )}
-                            </div>
-                            <div className="md:col-span-2">
-                              <Label className="text-center block">
-                                Observações
-                                <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                              </Label>
-                              <Textarea
-                                value={wallet.observacoes}
-                                onChange={(e) => updateCryptoWallet(index, "observacoes", e.target.value)}
-                                placeholder="Informações adicionais sobre esta wallet"
-                                disabled={viewMode}
-                                rows={3}
-                                className="text-center"
-                              />
-                            </div>
-                          </div>
-                        </CardContent>
-                      )}
-                    </Card>
-                  );
-                }))}
+              <CryptoWalletsTab
+                cryptoWallets={cryptoWallets}
+                addCryptoWallet={addCryptoWallet}
+                removeCryptoWallet={removeCryptoWallet}
+                updateCryptoWallet={updateCryptoWallet}
+                expandedWalletIndex={expandedWalletIndex}
+                setExpandedWalletIndex={setExpandedWalletIndex}
+                redes={redes}
+                loading={loading}
+                viewMode={viewMode}
+                walletSaldos={walletSaldos}
+                parceiroId={parceiroId || parceiro?.id}
+                validateWalletEndereco={validateWalletEndereco}
+                enderecoErrors={enderecoErrors}
+                checkingEnderecos={checkingEnderecos}
+              />
             </TabsContent>
           </Tabs>
 
