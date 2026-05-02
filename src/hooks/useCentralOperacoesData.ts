@@ -171,9 +171,10 @@ export interface SaquePendenteConfirmacao {
   cotacao?: number;
   wallet_network?: string;
   wallet_exchange?: string;
-  wallet_moedas?: string[];
-  projeto_id_snapshot?: string | null;
-}
+   wallet_moedas?: string[];
+   projeto_id_snapshot?: string | null;
+   valor_usd?: number;
+ }
 
 export interface AlertaLucroParceiro {
   id: string;
