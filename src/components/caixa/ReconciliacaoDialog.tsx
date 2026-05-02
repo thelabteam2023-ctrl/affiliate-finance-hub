@@ -1,17 +1,3 @@
-   const isCryptoEntidade = (tipoEntidade === "WALLET") || (tipoEntidade === "CAIXA_OPERACIONAL" && subTipoCaixa === "CRYPTO");
- 
-   const currentUSDPrice = useMemo(() => {
-     if (!isCryptoEntidade || !moeda) return 0;
-     const m = moeda.toUpperCase();
-     if (m === "USDT" || m === "USDC") return 1.0;
-     return cryptoPrices[m] || 0;
-   }, [isCryptoEntidade, moeda, cryptoPrices]);
- 
-   const saldoSistemaUSD = useMemo(() => {
-     if (!isCryptoEntidade) return 0;
-     return saldoSistema * currentUSDPrice;
-   }, [isCryptoEntidade, saldoSistema, currentUSDPrice]);
- 
 import { useState, useEffect, useMemo } from "react";
 import { getTodayCivilDate } from "@/utils/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
@@ -169,10 +155,24 @@ export function ReconciliacaoDialog({
   }, [tipoEntidade, entidadeId, moeda, subTipoCaixa, contaId, walletId, bookmakers, saldosContas, saldosWallets]);
 
   // Diferença calculada
-  const diferenca = useMemo(() => {
-    const real = parseFloat(saldoReal) || 0;
-    return real - saldoSistema;
-  }, [saldoReal, saldoSistema]);
+   const diferenca = useMemo(() => {
+     const real = parseFloat(saldoReal) || 0;
+     return real - saldoSistema;
+   }, [saldoReal, saldoSistema]);
+ 
+   const isCryptoEntidade = (tipoEntidade === "WALLET") || (tipoEntidade === "CAIXA_OPERACIONAL" && subTipoCaixa === "CRYPTO");
+ 
+   const currentUSDPrice = useMemo(() => {
+     if (!isCryptoEntidade || !moeda) return 0;
+     const m = moeda.toUpperCase();
+     if (m === "USDT" || m === "USDC") return 1.0;
+     return cryptoPrices[m] || 0;
+   }, [isCryptoEntidade, moeda, cryptoPrices]);
+ 
+   const saldoSistemaUSD = useMemo(() => {
+     if (!isCryptoEntidade) return 0;
+     return saldoSistema * currentUSDPrice;
+   }, [isCryptoEntidade, saldoSistema, currentUSDPrice]);
 
   // Moedas disponíveis
   const moedasDisponiveis = useMemo(() => {
