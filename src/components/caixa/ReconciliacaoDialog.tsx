@@ -822,9 +822,16 @@ export function ReconciliacaoDialog({
                     )}
                     <span className={`font-mono font-bold ${
                       Math.abs(diferenca) < minDiferenca ? "text-muted-foreground" : diferenca > 0 ? "text-primary" : "text-destructive"
-                    }`}>
-                      {diferenca > 0 ? "+" : ""}{currencySymbol} {diferenca.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: isCryptoMoedaSelected ? 8 : 2 })}
-                    </span>
+                     }`}>
+                       <div className="flex flex-col items-end">
+                         <span>{diferenca > 0 ? "+" : ""}{currencySymbol} {diferenca.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: isCryptoMoedaSelected ? 8 : 2 })}</span>
+                         {isCryptoEntidade && Math.abs(diferenca) >= minDiferenca && currentUSDPrice > 0 && (
+                           <span className="text-[10px] font-medium opacity-80">
+                             {diferenca > 0 ? "+" : "-"} US$ {Math.abs(diferenca * currentUSDPrice).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                           </span>
+                         )}
+                       </div>
+                     </span>
                   </div>
                 </div>
                 {Math.abs(diferenca) >= minDiferenca && (
