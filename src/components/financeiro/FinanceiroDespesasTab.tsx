@@ -309,6 +309,107 @@ export function FinanceiroDespesasTab({
           formatCurrency={formatCurrency}
         />
       )}
+
+      <Dialog open={transactionDetailsOpen} onOpenChange={setTransactionDetailsOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Detalhes da Transação</DialogTitle>
+          </DialogHeader>
+          {selectedTransaction && (() => {
+            const origem = getOrigemInfo(selectedTransaction);
+            const destino = getDestinoInfo(selectedTransaction);
+            const OrigemIcon = origem.icon;
+            const DestinoIcon = destino.icon;
+            const isCrypto = selectedTransaction.tipo_moeda === "CRYPTO";
+            const grupoInfo = getGrupoInfo(selectedTransaction.grupo || "OUTROS");
+            const GrupoIcon = grupoInfo.icon;
+
+            return (
+              <div className="space-y-6 py-4">
+                <div className="flex flex-col items-center gap-4 p-4 bg-muted/30 rounded-xl border border-border/50">
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex flex-col items-center gap-2 flex-1">
+                      <div className="p-2 bg-background rounded-full border shadow-sm">
+                        <OrigemIcon className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Origem</span>
+                      <span className="text-sm font-bold text-center">{origem.label}</span>
+                      <span className="text-[10px] text-muted-foreground">{origem.sublabel}</span>
+                    </div>
+
+                    <div className="flex flex-col items-center px-2">
+                      <ArrowRight className="h-5 w-5 text-primary animate-pulse" />
+                    </div>
+
+                    <div className="flex flex-col items-center gap-2 flex-1">
+                      <div className="p-2 bg-background rounded-full border shadow-sm">
+                        <DestinoIcon className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Destino</span>
+                      <span className="text-sm font-bold text-center">{destino.label}</span>
+                      <span className="text-[10px] text-muted-foreground">{destino.sublabel}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center p-3 bg-muted/20 rounded-lg">
+                    <span className="text-sm text-muted-foreground">Grupo / Categoria</span>
+                    <Badge variant="outline" className={grupoInfo.color}>
+                      <GrupoIcon className="h-3 w-3 mr-1" />
+                      {grupoInfo.label}
+                    </Badge>
+                  </div>
+
+                  <div className="flex justify-between items-center p-3 bg-muted/20 rounded-lg">
+                    <span className="text-sm text-muted-foreground">Valor</span>
+                    <span className="text-lg font-bold text-orange-500">
+                      {formatCurrency(selectedTransaction.valor)}
+                    </span>
+                  </div>
+
+                  {isCrypto && (
+                    <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-lg space-y-2">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Coins className="h-4 w-4 text-amber-500" />
+                        <span className="text-xs font-bold text-amber-600 uppercase">Detalhes Crypto</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <p className="text-muted-foreground">Moeda</p>
+                          <p className="font-medium">{selectedTransaction.coin}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Quantidade</p>
+                          <p className="font-medium">{selectedTransaction.qtd_coin?.toFixed(6)}</p>
+                        </div>
+                        <div className="col-span-2 pt-1 border-t border-amber-500/10">
+                          <p className="text-muted-foreground">Cotação</p>
+                          <p className="font-medium">${selectedTransaction.cotacao?.toFixed(4)} USD</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedTransaction.descricao && (
+                    <div className="p-3 bg-muted/20 rounded-lg">
+                      <span className="text-xs text-muted-foreground block mb-1">Descrição</span>
+                      <p className="text-sm">{selectedTransaction.descricao}</p>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-center p-3 bg-muted/20 rounded-lg">
+                    <span className="text-sm text-muted-foreground">Data</span>
+                    <span className="text-sm font-medium">
+                      {format(parseLocalDate(selectedTransaction.data_despesa), "dd/MM/yyyy", { locale: ptBR })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
