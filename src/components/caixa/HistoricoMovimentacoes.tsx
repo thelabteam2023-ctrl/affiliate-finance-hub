@@ -647,32 +647,38 @@ export function HistoricoMovimentacoes({
                        )}
                      </Button>
                    </PopoverTrigger>
-                   <PopoverContent className="w-52 p-2" align="start">
-                     <div className="space-y-1">
-                       {availableTags.map((tag) => (
-                         <CommandItem
-                           key={tag}
-                           onSelect={() => {
-                             if (filtroTags.includes(tag)) {
-                               setFiltroTags(filtroTags.filter(v => v !== tag));
-                             } else {
-                               setFiltroTags([...filtroTags, tag]);
-                             }
-                             pagination.goToFirstPage();
-                           }}
-                           className="text-xs"
-                         >
-                           <Check
-                             className={cn(
-                               "mr-2 h-3.5 w-3.5",
-                               filtroTags.includes(tag) ? "opacity-100" : "opacity-0"
-                             )}
-                           />
-                           <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-medium", getTagColor(tag))}>
-                             {tag}
-                           </span>
-                         </CommandItem>
-                       ))}
+                     <PopoverContent className="w-52 p-2" align="start">
+                       <div className="space-y-1">
+                         {availableTags.map((tag) => {
+                           const isSelected = filtroTags.includes(tag);
+                           return (
+                             <button
+                               key={tag}
+                               className={cn(
+                                 "flex items-center gap-2 w-full px-2 py-1.5 rounded text-xs hover:bg-muted/80 transition-colors",
+                                 isSelected && "bg-muted font-medium"
+                               )}
+                               onClick={() => {
+                                 if (isSelected) {
+                                   setFiltroTags(filtroTags.filter(v => v !== tag));
+                                 } else {
+                                   setFiltroTags([...filtroTags, tag]);
+                                 }
+                                 pagination.goToFirstPage();
+                               }}
+                             >
+                               <Check
+                                 className={cn(
+                                   "h-3.5 w-3.5 shrink-0",
+                                   isSelected ? "opacity-100" : "opacity-0"
+                                 )}
+                               />
+                               <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-medium border", getTagColor(tag))}>
+                                 {tag}
+                               </span>
+                             </button>
+                           );
+                         })}
                        {filtroTags.length > 0 && (
                          <>
                            <div className="border-t border-border/50 my-1" />
