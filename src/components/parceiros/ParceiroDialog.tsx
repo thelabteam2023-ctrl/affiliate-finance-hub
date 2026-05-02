@@ -611,7 +611,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       if (!wallet.rede_id || !wallet.endereco || !wallet.moeda || wallet.moeda.length === 0) {
         toast({
           title: "Campos obrigatórios faltando",
-          description: "Preencha: Exchange/Wallet, Rede, Moedas e Endereço em todas as wallets.",
+          description: "Preencha: Rede, Moedas e Endereço em todas as wallets.",
           variant: "destructive",
         });
         return;
