@@ -168,6 +168,20 @@ export default function Caixa() {
   const [filtroProjeto, setFiltroProjeto] = useState<string>("TODOS");
   const [filtroParceiro, setFiltroParceiro] = useState<string>("TODOS");
 
+  const [dataInicio, setDataInicio] = useState<Date | undefined>(subDays(new Date(), 30));
+  const [dataFim, setDataFim] = useState<Date | undefined>(new Date());
+  
+  // Data for displaying names
+  const [parceiros, setParceiros] = useState<{ [key: string]: string }>({});
+  const [contas, setContas] = useState<{ [key: string]: string }>({});
+  const [contasBancarias, setContasBancarias] = useState<Array<{ id: string; banco: string; titular: string }>>([]);
+  const [wallets, setWallets] = useState<{ [key: string]: string }>({});
+  const [walletsDetalhes, setWalletsDetalhes] = useState<Array<{ id: string; exchange: string; endereco: string; network: string; parceiro_id: string }>>([]);
+  const [bookmakers, setBookmakers] = useState<{ [key: string]: { nome: string; status: string; parceiro_id?: string; projeto_id?: string } }>({});
+  const [operadoresMap, setOperadoresMap] = useState<{ [key: string]: string }>({});
+  const [projetos, setProjetos] = useState<Array<{ id: string; nome: string }>>([]);
+  const [despesasAdminGrupoMap, setDespesasAdminGrupoMap] = useState<{ [descricao: string]: { grupo: string; categoria: string } }>({});
+
   // Deriva a lista de parceiros filtrada pelo projeto selecionado
   const parceirosListaFiltrada = useMemo(() => {
     const allParceiros = Object.entries(parceiros)
@@ -216,20 +230,6 @@ export default function Caixa() {
       setFiltroParceiro("TODOS");
     }
   }, [filtroProjeto, parceirosListaFiltrada, filtroParceiro]);
-
-  const [dataInicio, setDataInicio] = useState<Date | undefined>(subDays(new Date(), 30));
-  const [dataFim, setDataFim] = useState<Date | undefined>(new Date());
-  
-  // Data for displaying names
-  const [parceiros, setParceiros] = useState<{ [key: string]: string }>({});
-  const [contas, setContas] = useState<{ [key: string]: string }>({});
-  const [contasBancarias, setContasBancarias] = useState<Array<{ id: string; banco: string; titular: string }>>([]);
-  const [wallets, setWallets] = useState<{ [key: string]: string }>({});
-  const [walletsDetalhes, setWalletsDetalhes] = useState<Array<{ id: string; exchange: string; endereco: string; network: string; parceiro_id: string }>>([]);
-  const [bookmakers, setBookmakers] = useState<{ [key: string]: { nome: string; status: string; parceiro_id?: string; projeto_id?: string } }>({});
-  const [operadoresMap, setOperadoresMap] = useState<{ [key: string]: string }>({});
-  const [projetos, setProjetos] = useState<Array<{ id: string; nome: string }>>([]);
-  const [despesasAdminGrupoMap, setDespesasAdminGrupoMap] = useState<{ [descricao: string]: { grupo: string; categoria: string } }>({});
 
   const fetchData = async () => {
     try {
