@@ -78,9 +78,10 @@ export interface SaquePendente {
   wallet_network?: string;
   wallet_exchange?: string;
   wallet_moedas?: string[];
-  // Snapshot do projeto para rastreabilidade FX
-  projeto_id_snapshot?: string | null;
-}
+   // Snapshot do projeto para rastreabilidade FX
+   projeto_id_snapshot?: string | null;
+   valor_usd?: number;
+ }
 
 interface ConfirmarSaqueDialogProps {
   open: boolean;
