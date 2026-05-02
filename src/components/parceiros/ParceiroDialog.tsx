@@ -103,7 +103,12 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   const [walletSaldos, setWalletSaldos] = useState<Record<string, { saldo: number; coin: string }>>({});
   const { toast } = useToast();
 
-  // DEBUG logs removidos — causavam re-render tracking desnecessário
+   // Debug logging to help identify "Invalid input syntax" errors
+   useEffect(() => {
+     if (loading) {
+       console.log("[ParceiroDialog] Loading state changed:", loading);
+     }
+   }, [loading]);
 
   const copyToClipboard = async (text: string, fieldName: string) => {
     try {
@@ -619,8 +624,16 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   const saveData = async () => {
     setLoading(true);
     setPlanLimitError(null);
+    console.log("[ParceiroDialog] Starting saveData...");
 
     try {
+      // Helper to ensure UUID fields are either valid UUIDs or null (never empty strings)
+      const sanitizeUuid = (val: any) => {
+        if (!val || val === "" || val === "none") return null;
+        // Basic UUID format check
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        return uuidRegex.test(val) ? val : null;
+      };
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
@@ -651,10 +664,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         }
       }
 
-      const parceiroData = {
+      const parceiroData: any = {
         user_id: user.id,
         workspace_id: workspaceId,
-        nome,
+        nome: nome.trim(),
         cpf: cpf.replace(/\D/g, "") || null,
         email: email || null,
         telefone: telefone.replace(/[^\d+]/g, "") || null,
@@ -662,13 +675,19 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         endereco: endereco || null,
         cidade: cidade || null,
         cep: cep.replace(/\D/g, "") || null,
-         status,
-         observacoes: observacoes || null,
-         fornecedor_origem_id: fornecedorOrigemId,
-         qualidade: qualidade ?? null,
+        status,
+        observacoes: observacoes || null,
+        fornecedor_origem_id: sanitizeUuid(fornecedorOrigemId),
+        qualidade: (qualidade === null || isNaN(Number(qualidade))) ? null : Number(qualidade),
       };
 
-      let currentParceiroId = parceiroId || parceiro?.id;
+      console.log("[ParceiroDialog] Saving parceiroData:", JSON.stringify(parceiroData, null, 2));
+
+      if (!parceiroData.workspace_id) {
+        throw new Error("ID do Workspace não encontrado. Por favor, recarregue a página.");
+      }
+
+       let currentParceiroId = sanitizeUuid(parceiroId || parceiro?.id);
 
       if (currentParceiroId) {
         const { error } = await supabase
@@ -727,18 +746,20 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   : k.chave
               }));
             
-            const accountData: any = {
-              parceiro_id: currentParceiroId,
-              banco_id: account.banco_id, // ensure this is a valid UUID
-              banco: bancos.find(b => b.id === account.banco_id)?.nome || "",
+            const accountData = {
+              parceiro_id: sanitizeUuid(currentParceiroId),
+              banco_id: sanitizeUuid(account.banco_id),
+              banco: bancos.find(b => b.id === account.banco_id)?.nome || "Banco Desconhecido",
               moeda: account.moeda || "BRL",
               agencia: account.agencia || null,
               conta: account.conta || null,
-              tipo_conta: account.tipo_conta,
-              titular: account.titular || nome,
+              tipo_conta: account.tipo_conta || "corrente",
+              titular: (account.titular || nome).trim(),
               pix_keys: cleanedPixKeys,
               observacoes: account.observacoes || null,
             };
+
+            console.log(`[ParceiroDialog] Saving bank account ${i}:`, JSON.stringify(accountData, null, 2));
             
             if (account.id) {
               // UPDATE existing account
@@ -807,16 +828,18 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
               ? btoa(unescape(encodeURIComponent(wallet.observacoes)))
               : null;
 
-            const walletData: any = {
-              parceiro_id: currentParceiroId,
+            const walletData = {
+              parceiro_id: sanitizeUuid(currentParceiroId),
               label: wallet.label || null,
-              moeda: wallet.moeda || [],
-              endereco: wallet.endereco,
-              network: redes.find(r => r.id === wallet.rede_id)?.nome || "",
-              rede_id: wallet.rede_id, // ensure this is a valid UUID
+              moeda: Array.isArray(wallet.moeda) ? wallet.moeda : [],
+              endereco: wallet.endereco.trim(),
+              network: redes.find(r => r.id === wallet.rede_id)?.nome || "Rede Desconhecida",
+              rede_id: sanitizeUuid(wallet.rede_id),
               exchange: wallet.exchange || null,
               observacoes_encrypted: observacoesEncrypted,
             };
+
+            console.log(`[ParceiroDialog] Saving crypto wallet ${i}:`, JSON.stringify(walletData, null, 2));
             
             if (wallet.id) {
               // UPDATE existing wallet
@@ -859,6 +882,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
 
       onClose({ saved: true });
     } catch (error: any) {
+      console.error("[ParceiroDialog] Caught error in saveData:", error);
       let errorMessage = error.message;
       
       // Check for duplicate CPF error
