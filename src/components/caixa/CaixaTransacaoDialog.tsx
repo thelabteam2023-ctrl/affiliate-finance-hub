@@ -47,7 +47,6 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import ParceiroSelect, { ParceiroSelectRef } from "@/components/parceiros/ParceiroSelect";
-import FornecedorSelect, { FornecedorSelectRef } from "@/components/fornecedores/FornecedorSelect";
 import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
 import BookmakerSelect, { BookmakerSelectRef } from "@/components/bookmakers/BookmakerSelect";
 import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
