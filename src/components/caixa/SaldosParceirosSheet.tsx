@@ -386,30 +386,31 @@ export function SaldosParceirosSheet() {
           .map(w => w.coin)
       )];
 
-      // Buscar preços atualizados da Binance
-      const prices = await fetchCryptoPrices(uniqueCoins);
-
-
-      // Helper to get or create parceiro entry
-        const getOrCreateParceiro = (parceiroId: string, nome: string = "Parceiro"): ParceiroSaldoAgrupado => {
-        if (!parceirosMap.has(parceiroId)) {
-          parceirosMap.set(parceiroId, {
-            parceiro_id: parceiroId,
-            parceiro_nome: nome,
-            saldos_fiat: [],
-            saldos_crypto: [],
-            saldos_bookmakers: [],
-            pendentes_bookmakers: [],
-            total_fiat_por_moeda: createEmptySaldos(),
-            total_crypto_usd: 0,
-            total_crypto_locked_usd: 0,
-            total_bookmakers_por_moeda: createEmptySaldos(),
-              total_pendente_por_moeda: createEmptySaldos(),
+       // Buscar preços atualizados da Binance
+       const prices = await fetchCryptoPrices(uniqueCoins);
+ 
+       const parceirosMap = new Map<string, ParceiroSaldoAgrupado>();
+ 
+       // Helper to get or create parceiro entry
+       const getOrCreateParceiro = (parceiroId: string, nome: string = "Parceiro"): ParceiroSaldoAgrupado => {
+         if (!parceirosMap.has(parceiroId)) {
+           parceirosMap.set(parceiroId, {
+             parceiro_id: parceiroId,
+             parceiro_nome: nome,
+             saldos_fiat: [],
+             saldos_crypto: [],
+             saldos_bookmakers: [],
+             pendentes_bookmakers: [],
+             total_fiat_por_moeda: createEmptySaldos(),
+             total_crypto_usd: 0,
+             total_crypto_locked_usd: 0,
+             total_bookmakers_por_moeda: createEmptySaldos(),
+             total_pendente_por_moeda: createEmptySaldos(),
            });
-        }
-        return parceirosMap.get(parceiroId)!;
-      };
-
+         }
+         return parceirosMap.get(parceiroId)!;
+       };
+ 
        const { data: allParceiros } = await supabase
          .from("parceiros")
          .select("id, nome, is_caixa_operacional");
