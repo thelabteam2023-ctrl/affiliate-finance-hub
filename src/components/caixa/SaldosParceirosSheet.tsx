@@ -992,16 +992,12 @@ export function SaldosParceirosSheet() {
                             ) : (
                               <span className="text-muted-foreground/50">—</span>
                             )}
-                          </TableCell>
-                               </TableRow>
-                             );
-                           })}
-                         </TableBody>
-                       </Table>
-                     </div>
-                   );
-                 });
-               })()}
+                   </TableCell>
+                 </TableRow>
+               );
+             })}
+           </TableBody>
+         </Table>
               </ScrollArea>
               <SwapCryptoDialog
                 open={swapDialog.open}
