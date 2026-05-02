@@ -41,10 +41,6 @@ interface ParceiroSelectProps {
   saldosWallets?: SaldoParceiroWallets[];
   // Incluir parceiro atual mesmo se inativo (para edição)
   includeParceiroId?: string;
-   // Incluir fornecedores do portal na lista
-   includeFornecedores?: boolean;
-   // Filtro por fornecedor gerenciador (apenas para parceiros)
-   fornecedorOrigemId?: string;
 }
 
 export interface ParceiroSelectRef {
@@ -52,16 +48,14 @@ export interface ParceiroSelectRef {
   open: () => void;
 }
 
- interface Entidade {
-   id: string;
-   nome: string;
-   cpf?: string;
-   status: string;
-   fornecedor_origem_id?: string | null;
-   tipo: 'parceiro' | 'fornecedor';
- }
- 
- const ParceiroSelect = forwardRef<ParceiroSelectRef, ParceiroSelectProps>(({
+  interface Parceiro {
+    id: string;
+    nome: string;
+    cpf: string;
+    status: string;
+  }
+
+  const ParceiroSelect = forwardRef<ParceiroSelectRef, ParceiroSelectProps>(({
   value, 
   onValueChange, 
   disabled, 
@@ -72,11 +66,9 @@ export interface ParceiroSelectRef {
   coin,
   saldosContas,
    saldosWallets,
-   includeParceiroId,
-   includeFornecedores,
-   fornecedorOrigemId
+    includeParceiroId
  }, ref) => {
-   const [entidades, setEntidades] = useState<Entidade[]>([]);
+    const [parceiros, setParceiros] = useState<Parceiro[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [displayName, setDisplayName] = useState<string>("");
@@ -94,118 +86,76 @@ export interface ParceiroSelectRef {
     },
   }));
 
-   // Buscar lista de parceiros e fornecedores ativos
-   useEffect(() => {
-     const fetchDados = async () => {
-       setLoading(true);
-       try {
-         // 1. Buscar parceiros ativos
-         let pQuery = supabase
-           .from("parceiros")
-           .select("id, nome, cpf, status, fornecedor_origem_id")
-           .eq("status", "ativo")
-           .neq("is_caixa_operacional", true)
-           .order("nome", { ascending: true });
- 
-         if (fornecedorOrigemId) {
-           pQuery = pQuery.eq("fornecedor_origem_id", fornecedorOrigemId);
-         }
- 
-         // Buscar parceiros
-         const { data: pData, error: pError } = await pQuery;
-         if (pError) throw pError;
- 
-         // Buscar fornecedores se necessário
-         let fData: any[] = [];
-         if (includeFornecedores) {
-           const { data, error: fError } = await supabase
-             .from("fornecedores")
-             .select("id, nome, status")
-             .eq("status", "ativo")
-             .order("nome", { ascending: true });
-           if (fError) throw fError;
-           fData = data || [];
-         }
+    // Buscar lista de parceiros ativos
+    useEffect(() => {
+      const fetchParceiros = async () => {
+        setLoading(true);
+        try {
+          // 1. Buscar parceiros ativos
+          let query = supabase
+            .from("parceiros")
+            .select("id, nome, cpf, status")
+            .eq("status", "ativo")
+            .neq("is_caixa_operacional", true)
+            .order("nome", { ascending: true });
 
-         let lista: Entidade[] = [
-           ...pData.map(p => ({ ...p, tipo: 'parceiro' as const })),
-           ...fData.map(f => ({ ...f, tipo: 'fornecedor' as const, cpf: '' }))
-         ];
- 
-         // 3. Incluir ID específico (para edição)
-         if (includeParceiroId && !lista.some(e => e.id === includeParceiroId)) {
-           const { data: pEsp } = await supabase
-             .from("parceiros")
-             .select("id, nome, cpf, status")
-             .eq("id", includeParceiroId)
-             .maybeSingle();
-           
-           if (pEsp) {
-             lista = [{ ...pEsp, tipo: 'parceiro' }, ...lista];
-           } else if (includeFornecedores) {
-             const { data: fEsp } = await supabase
-               .from("fornecedores")
-               .select("id, nome, status")
-               .eq("id", includeParceiroId)
-               .maybeSingle();
-             if (fEsp) {
-               lista = [{ ...fEsp, tipo: 'fornecedor', cpf: '' }, ...lista];
-             }
-           }
-         }
- 
-         setEntidades(lista);
-       } catch (error) {
-         console.error("Erro ao buscar dados do select:", error);
-       } finally {
-         setLoading(false);
-       }
-     };
- 
-     fetchDados();
-   }, [includeParceiroId, includeFornecedores, fornecedorOrigemId]);
+          const { data, error } = await query;
+          if (error) throw error;
+          let lista = data || [];
 
-   // Quando value muda, buscar o nome para exibição
-   useEffect(() => {
-     if (!value) {
-       setDisplayName("");
-       return;
-     }
- 
-     const found = entidades.find(e => e.id === value);
-     if (found) {
-       setDisplayName(found.nome);
-       return;
-     }
- 
-     const fetchDisplayName = async () => {
-       try {
-         const { data: p } = await supabase.from("parceiros").select("nome").eq("id", value).maybeSingle();
-         if (p) {
-           setDisplayName(p.nome);
-           return;
-         }
-         if (includeFornecedores) {
-           const { data: f } = await supabase.from("fornecedores").select("nome").eq("id", value).maybeSingle();
-           if (f) setDisplayName(f.nome);
-         }
-       } catch (error) {
-         console.error("Erro ao buscar nome para display:", error);
-       }
-     };
- 
-     fetchDisplayName();
-   }, [value, entidades, includeFornecedores]);
+          // 2. Incluir parceiro atual se estiver inativo (para casos de edição)
+          if (includeParceiroId && !lista.some(p => p.id === includeParceiroId)) {
+            const { data: pInativo } = await supabase
+              .from("parceiros")
+              .select("id, nome, cpf, status")
+              .eq("id", includeParceiroId)
+              .maybeSingle();
+            
+            if (pInativo) {
+              lista = [pInativo, ...lista];
+            }
+          }
 
-   // Aplicar filtro de onlyParceiros
-   const availableEntidades = onlyParceiros 
-     ? entidades.filter(e => onlyParceiros.includes(e.id))
-     : entidades;
- 
-   const filteredEntidades = availableEntidades.filter((e) =>
-     e.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     (e.cpf && e.cpf.includes(searchTerm))
-   );
+          setParceiros(lista);
+        } catch (error) {
+          console.error("Erro ao buscar parceiros:", error);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchParceiros();
+    }, [includeParceiroId]);
+
+    // Quando value muda, buscar o nome para exibição
+    useEffect(() => {
+      if (!value) {
+        setDisplayName("");
+        return;
+      }
+
+      const found = parceiros.find(p => p.id === value);
+      if (found) {
+        setDisplayName(found.nome);
+      } else {
+        // Fallback: buscar no banco se não estiver na lista carregada
+        const fetchDisplayName = async () => {
+          const { data } = await supabase.from("parceiros").select("nome").eq("id", value).maybeSingle();
+          if (data) setDisplayName(data.nome);
+        };
+        fetchDisplayName();
+      }
+    }, [value, parceiros]);
+
+    // Aplicar filtro de onlyParceiros
+    const availableParceiros = onlyParceiros 
+      ? parceiros.filter(p => onlyParceiros.includes(p.id))
+      : parceiros;
+
+    const filteredParceiros = availableParceiros.filter((p) =>
+      p.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.cpf.includes(searchTerm)
+    );
 
   // Função para formatar CPF
   const formatCPF = (cpf: string): string => {
