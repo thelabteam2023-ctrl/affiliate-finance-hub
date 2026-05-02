@@ -1098,11 +1098,15 @@ export function SaldosParceirosSheet() {
                               <span className="text-muted-foreground/50">—</span>
                             )}
                           </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                               </TableRow>
+                             );
+                           })}
+                         </TableBody>
+                       </Table>
+                     </div>
+                   );
+                 });
+               })()}
               </ScrollArea>
               <SwapCryptoDialog
                 open={swapDialog.open}
