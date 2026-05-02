@@ -525,26 +525,33 @@ export function SaldosParceirosSheet() {
         }
       });
 
-      // Fetch partner names for those that only have bookmakers
-      const parceirosIds = Array.from(parceirosMap.keys());
-      const { data: parceirosData } = await supabase
-        .from("parceiros")
-        .select("id, nome, is_caixa_operacional")
-        .in("id", parceirosIds);
+      // Process Supplier Balances
+      (saldosFornecedores || []).forEach((sf) => {
+        const linkedParceiro = allParceiros?.find(p => p.supplier_profile_id === sf.supplier_profile_id);
+        if (!linkedParceiro) return;
+
+        const parceiro = getOrCreateParceiro(linkedParceiro.id, linkedParceiro.nome);
+        parceiro.is_fornecedor = true;
+        parceiro.saldos_fornecedor = {
+          saldo_central: sf.saldo_central,
+          saldo_bancos: sf.saldo_bancos,
+          saldo_contas: sf.saldo_contas,
+          saldo_total: sf.saldo_total,
+        };
+      });
 
       // Collect caixa operacional IDs to filter them out
       const caixaIds = new Set<string>();
-      if (parceirosData) {
-        parceirosData.forEach((p: any) => {
-          if (p.is_caixa_operacional) {
-            caixaIds.add(p.id);
+      
+      parceirosMap.forEach((parceiro, id) => {
+        const pInfo = parceiroInfoMap.get(id);
+        if (pInfo) {
+          if (pInfo.is_caixa_operacional) caixaIds.add(id);
+          if (parceiro.parceiro_nome === "Parceiro") {
+            parceiro.parceiro_nome = pInfo.nome;
           }
-          const parceiro = parceirosMap.get(p.id);
-          if (parceiro && parceiro.parceiro_nome === "Parceiro") {
-            parceiro.parceiro_nome = p.nome;
-          }
-        });
-      }
+        }
+      });
 
       // Remove caixa operacional entries from the map
       caixaIds.forEach(id => parceirosMap.delete(id));
@@ -555,10 +562,15 @@ export function SaldosParceirosSheet() {
       };
 
       const parceirosComSaldo = Array.from(parceirosMap.values())
-        .filter((p) => p.saldos_fiat.length > 0 || p.saldos_crypto.length > 0 || p.saldos_bookmakers.length > 0)
+        .filter((p) => 
+          p.saldos_fiat.length > 0 || 
+          p.saldos_crypto.length > 0 || 
+          p.saldos_bookmakers.length > 0 || 
+          (p.saldos_fornecedor && p.saldos_fornecedor.saldo_total > 0)
+        )
         .sort((a, b) => {
-          const totalA = getTotalFromCurrencies(a.total_fiat_por_moeda) + a.total_crypto_usd + getTotalFromCurrencies(a.total_bookmakers_por_moeda);
-          const totalB = getTotalFromCurrencies(b.total_fiat_por_moeda) + b.total_crypto_usd + getTotalFromCurrencies(b.total_bookmakers_por_moeda);
+          const totalA = getTotalFromCurrencies(a.total_fiat_por_moeda) + a.total_crypto_usd + getTotalFromCurrencies(a.total_bookmakers_por_moeda) + (a.saldos_fornecedor?.saldo_total || 0);
+          const totalB = getTotalFromCurrencies(b.total_fiat_por_moeda) + b.total_crypto_usd + getTotalFromCurrencies(b.total_bookmakers_por_moeda) + (b.saldos_fornecedor?.saldo_total || 0);
           return totalA - totalB;
         });
 
