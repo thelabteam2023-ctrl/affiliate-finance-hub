@@ -33,6 +33,9 @@ export function PeriodoSelector({ periodo, onChange }: PeriodoSelectorProps) {
   };
 
   const handleChange = (filter: DashboardPeriodFilter) => {
+    // Se for custom, o range já foi definido pelo handleCustomRangeChange
+    if (filter === "custom") return;
+
     const range = getDashboardDateRange(filter);
     
     // Converter para o formato PeriodoAnalise esperado pelo sistema legado
