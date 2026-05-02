@@ -281,6 +281,8 @@ export default function Financeiro() {
             onRefresh={() => refetchFinanceiro()}
             dataInicio={calc.dataInicio}
             dataFim={calc.dataFim}
+            contasBancarias={finData.contasDetalhadas}
+            walletsCrypto={finData.walletsDetalhadas}
           />
         </TabsContent>
 

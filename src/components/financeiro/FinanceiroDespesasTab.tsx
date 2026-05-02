@@ -16,7 +16,13 @@ import {
 } from "@/components/ui/tooltip";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { DespesaAdministrativaDialog } from "@/components/financeiro/DespesaAdministrativaDialog";
-import { HistoricoDespesasAdmin } from "@/components/financeiro/HistoricoDespesasAdmin";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ArrowRight, Info, Coins, Wallet, Building2, CreditCard, User } from "lucide-react";
 
 interface DespesaAdministrativa {
   id: string;
@@ -29,6 +35,15 @@ interface DespesaAdministrativa {
   _fromLedger?: boolean;
   operador_id?: string | null;
   operadores?: { nome: string } | null;
+  origem_tipo?: string | null;
+  origem_caixa_operacional?: boolean | null;
+  origem_parceiro_id?: string | null;
+  origem_conta_bancaria_id?: string | null;
+  origem_wallet_id?: string | null;
+  tipo_moeda?: string | null;
+  coin?: string | null;
+  qtd_coin?: number | null;
+  cotacao?: number | null;
 }
 
 interface Props {
@@ -39,6 +54,8 @@ interface Props {
   onRefresh: () => void;
   dataInicio?: string | null;
   dataFim?: string | null;
+  contasBancarias?: any[];
+  walletsCrypto?: any[];
 }
 
 function toTitleCase(str: string): string {
@@ -53,13 +70,59 @@ function toTitleCase(str: string): string {
     .join(" ");
 }
 
-export function FinanceiroDespesasTab({ despesasAdmin, totalDespesasAdmin, totalPagamentosOperadores, formatCurrency, onRefresh, dataInicio, dataFim }: Props) {
+export function FinanceiroDespesasTab({ 
+  despesasAdmin, 
+  totalDespesasAdmin, 
+  totalPagamentosOperadores, 
+  formatCurrency, 
+  onRefresh, 
+  dataInicio, 
+  dataFim,
+  contasBancarias = [],
+  walletsCrypto = []
+}: Props) {
   const totalGeralAdmin = despesasAdmin.reduce((acc, d) => acc + d.valor, 0);
   const { toast } = useToast();
   const [despesaAdminDialogOpen, setDespesaAdminDialogOpen] = useState(false);
   const [editingDespesa, setEditingDespesa] = useState<DespesaAdministrativa | null>(null);
   const [selectedGrupo, setSelectedGrupo] = useState<string | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<DespesaAdministrativa | null>(null);
+  const [transactionDetailsOpen, setTransactionDetailsOpen] = useState(false);
+
+  const getOrigemInfo = (transacao: DespesaAdministrativa) => {
+    if (transacao.origem_caixa_operacional || transacao.origem_tipo === "CAIXA_OPERACIONAL") {
+      if (transacao.tipo_moeda === "CRYPTO") {
+        return { label: "Caixa Operacional", sublabel: `Crypto (${transacao.coin})`, icon: Coins };
+      }
+      return { label: "Caixa Operacional", sublabel: "FIAT (BRL)", icon: Wallet };
+    }
+    
+    if (transacao.origem_conta_bancaria_id) {
+      const conta = contasBancarias.find((c) => c.id === transacao.origem_conta_bancaria_id);
+      if (conta) {
+        return { label: conta.banco, sublabel: conta.titular || conta.parceiro_nome, icon: CreditCard };
+      }
+      return { label: "Conta Bancária", sublabel: "", icon: CreditCard };
+    }
+    
+    if (transacao.origem_wallet_id) {
+      const wallet = walletsCrypto.find((w) => w.id === transacao.origem_wallet_id);
+      if (wallet) {
+        return { label: wallet.label || wallet.exchange, sublabel: wallet.parceiro_nome || "", icon: Coins };
+      }
+      return { label: "Wallet Crypto", sublabel: "", icon: Coins };
+    }
+    
+    return { label: "Não especificado", sublabel: "", icon: Building2 };
+  };
+
+  const getDestinoInfo = (transacao: DespesaAdministrativa) => {
+    if (transacao.grupo === 'RECURSOS_HUMANOS' || transacao.operador_id) {
+      return { label: transacao.operadores?.nome || "Operador", sublabel: "RH / Pagamento", icon: User };
+    }
+    return { label: "Despesa Externa", sublabel: transacao.categoria, icon: Building2 };
+  };
 
   return (
     <div className="space-y-6">
@@ -118,10 +181,10 @@ export function FinanceiroDespesasTab({ despesasAdmin, totalDespesasAdmin, total
         </CardContent>
       </Card>
 
-      {/* Tabela de Despesas Individuais */}
+      {/* Histórico de Transações */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base font-semibold">Lançamentos Individuais</CardTitle>
+          <CardTitle className="text-base font-semibold">Histórico de Transações</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -131,7 +194,7 @@ export function FinanceiroDespesasTab({ despesasAdmin, totalDespesasAdmin, total
                   <tr className="bg-muted/30">
                     <th className="text-left py-3 px-4 font-medium border-b">Data</th>
                     <th className="text-left py-3 px-4 font-medium border-b">Grupo</th>
-                    <th className="text-left py-3 px-4 font-medium border-b">Descrição</th>
+                    <th className="text-left py-3 px-4 font-medium border-b">Descrição / Fluxo</th>
                     <th className="text-right py-3 px-4 font-medium border-b">Valor</th>
                     <th className="text-center py-3 px-4 font-medium border-b">Status</th>
                     <th className="text-center py-3 px-4 font-medium border-b">Ações</th>
@@ -172,12 +235,27 @@ export function FinanceiroDespesasTab({ despesasAdmin, totalDespesasAdmin, total
                               </ShadcnTooltip>
                             </td>
                             <td className="py-3 px-4 text-muted-foreground max-w-[300px] truncate">
-                              {despesa.operadores?.nome && (
-                                <div className="text-foreground font-medium mb-0.5">
-                                  {toTitleCase(despesa.operadores.nome)}
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1">
+                                  {despesa.operadores?.nome && (
+                                    <div className="text-foreground font-medium mb-0.5">
+                                      {toTitleCase(despesa.operadores.nome)}
+                                    </div>
+                                  )}
+                                  <div className="text-xs">{despesa.descricao || "—"}</div>
                                 </div>
-                              )}
-                              <div className="text-xs">{despesa.descricao || "—"}</div>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-8 w-8 text-muted-foreground hover:text-primary"
+                                  onClick={() => {
+                                    setSelectedTransaction(despesa);
+                                    setTransactionDetailsOpen(true);
+                                  }}
+                                >
+                                  <Info className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </td>
                             <td className="py-3 px-4 text-right font-medium text-orange-500 min-w-[100px]">{formatCurrency(despesa.valor)}</td>
                             <td className="py-3 px-4 text-center w-[120px]">
@@ -214,8 +292,6 @@ export function FinanceiroDespesasTab({ despesasAdmin, totalDespesasAdmin, total
         </CardContent>
       </Card>
 
-      <HistoricoDespesasAdmin formatCurrency={formatCurrency} dataInicio={dataInicio} dataFim={dataFim} />
-
       <DespesaAdministrativaDialog
         open={despesaAdminDialogOpen}
         onOpenChange={setDespesaAdminDialogOpen}
@@ -233,6 +309,107 @@ export function FinanceiroDespesasTab({ despesasAdmin, totalDespesasAdmin, total
           formatCurrency={formatCurrency}
         />
       )}
+
+      <Dialog open={transactionDetailsOpen} onOpenChange={setTransactionDetailsOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Detalhes da Transação</DialogTitle>
+          </DialogHeader>
+          {selectedTransaction && (() => {
+            const origem = getOrigemInfo(selectedTransaction);
+            const destino = getDestinoInfo(selectedTransaction);
+            const OrigemIcon = origem.icon;
+            const DestinoIcon = destino.icon;
+            const isCrypto = selectedTransaction.tipo_moeda === "CRYPTO";
+            const grupoInfo = getGrupoInfo(selectedTransaction.grupo || "OUTROS");
+            const GrupoIcon = grupoInfo.icon;
+
+            return (
+              <div className="space-y-6 py-4">
+                <div className="flex flex-col items-center gap-4 p-4 bg-muted/30 rounded-xl border border-border/50">
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex flex-col items-center gap-2 flex-1">
+                      <div className="p-2 bg-background rounded-full border shadow-sm">
+                        <OrigemIcon className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Origem</span>
+                      <span className="text-sm font-bold text-center">{origem.label}</span>
+                      <span className="text-[10px] text-muted-foreground">{origem.sublabel}</span>
+                    </div>
+
+                    <div className="flex flex-col items-center px-2">
+                      <ArrowRight className="h-5 w-5 text-primary animate-pulse" />
+                    </div>
+
+                    <div className="flex flex-col items-center gap-2 flex-1">
+                      <div className="p-2 bg-background rounded-full border shadow-sm">
+                        <DestinoIcon className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Destino</span>
+                      <span className="text-sm font-bold text-center">{destino.label}</span>
+                      <span className="text-[10px] text-muted-foreground">{destino.sublabel}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center p-3 bg-muted/20 rounded-lg">
+                    <span className="text-sm text-muted-foreground">Grupo / Categoria</span>
+                    <Badge variant="outline" className={grupoInfo.color}>
+                      <GrupoIcon className="h-3 w-3 mr-1" />
+                      {grupoInfo.label}
+                    </Badge>
+                  </div>
+
+                  <div className="flex justify-between items-center p-3 bg-muted/20 rounded-lg">
+                    <span className="text-sm text-muted-foreground">Valor</span>
+                    <span className="text-lg font-bold text-orange-500">
+                      {formatCurrency(selectedTransaction.valor)}
+                    </span>
+                  </div>
+
+                  {isCrypto && (
+                    <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-lg space-y-2">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Coins className="h-4 w-4 text-amber-500" />
+                        <span className="text-xs font-bold text-amber-600 uppercase">Detalhes Crypto</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <p className="text-muted-foreground">Moeda</p>
+                          <p className="font-medium">{selectedTransaction.coin}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Quantidade</p>
+                          <p className="font-medium">{selectedTransaction.qtd_coin?.toFixed(6)}</p>
+                        </div>
+                        <div className="col-span-2 pt-1 border-t border-amber-500/10">
+                          <p className="text-muted-foreground">Cotação</p>
+                          <p className="font-medium">${selectedTransaction.cotacao?.toFixed(4)} USD</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedTransaction.descricao && (
+                    <div className="p-3 bg-muted/20 rounded-lg">
+                      <span className="text-xs text-muted-foreground block mb-1">Descrição</span>
+                      <p className="text-sm">{selectedTransaction.descricao}</p>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-center p-3 bg-muted/20 rounded-lg">
+                    <span className="text-sm text-muted-foreground">Data</span>
+                    <span className="text-sm font-medium">
+                      {format(parseLocalDate(selectedTransaction.data_despesa), "dd/MM/yyyy", { locale: ptBR })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
