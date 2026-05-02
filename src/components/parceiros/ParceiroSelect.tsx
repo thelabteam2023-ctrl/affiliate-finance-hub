@@ -119,7 +119,7 @@ const ParceiroSelect = forwardRef<ParceiroSelectRef, ParceiroSelectProps>(({
             // Buscar o parceiro específico (pode estar inativo)
             const { data: parceiroEspecifico } = await supabase
               .from("parceiros")
-              .select("id, nome, cpf, status")
+              .select("id, nome, cpf, status, fornecedor_origem_id")
               .eq("id", includeParceiroId)
               .maybeSingle();
             
