@@ -1108,9 +1108,18 @@ export default function Caixa() {
 
   return (
     <div className="flex flex-col min-h-0 h-full">
-      {/* Actions bar */}
-      <div className="flex-shrink-0 px-6 pt-3 pb-2 flex items-center justify-end gap-2">
-        <SaldosParceirosSheet />
+      {/* Actions bar e Status de Carregamento */}
+      <div className="flex-shrink-0 px-6 pt-3 pb-2 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          {loading && !initialLoading && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground animate-pulse ml-1">
+              <div className="h-3 w-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+              Sincronizando...
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <SaldosParceirosSheet />
         {canCreate('caixa', 'caixa.transactions.create') && (
           <Button onClick={() => setDialogOpen(true)} className="gap-2">
             <Plus className="h-4 w-4" />
