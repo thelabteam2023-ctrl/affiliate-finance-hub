@@ -2239,16 +2239,16 @@ export function CaixaTransacaoDialog({
       if (tipoMoeda === "CRYPTO") {
         if (origemWalletId) {
           const wallet = walletsCrypto.find(w => w.id === origemWalletId);
-           return wallet ? `${wallet.exchange}${suffix}` : "Wallet Crypto";
-        }
-        return `Wallet Crypto${suffix}`;
-      } else {
-        if (origemContaId) {
-          const conta = contasBancarias.find(c => c.id === origemContaId);
-          return conta ? `${conta.banco} - ${conta.titular}${suffix}` : "Conta Bancária";
-        }
-        return `Conta Bancária${suffix}`;
-      }
+            return wallet ? `${wallet.exchange}` : "Wallet Crypto";
+         }
+         return `Wallet Crypto`;
+       } else {
+         if (origemContaId) {
+           const conta = contasBancarias.find(c => c.id === origemContaId);
+           return conta ? `${conta.banco} - ${conta.titular}` : "Conta Bancária";
+         }
+         return `Conta Bancária`;
+       }
     }
     if (tipoTransacao === "SAQUE" && origemBookmakerId) {
       const bm = bookmakers.find(b => b.id === origemBookmakerId);
@@ -2262,9 +2262,9 @@ export function CaixaTransacaoDialog({
       }
       if (origemTipo === "PARCEIRO_WALLET" && origemWalletId) {
         const wallet = walletsCrypto.find(w => w.id === origemWalletId);
-         return wallet ? `${wallet.exchange}${suffix}` : "Wallet";
-      }
-    }
+          return wallet ? `${wallet.exchange}` : "Wallet";
+       }
+     }
      return `Origem`;
   };
 
@@ -2283,31 +2283,31 @@ export function CaixaTransacaoDialog({
           const wallet = walletsCrypto.find(w => w.id === destinoWalletId);
             return wallet ? `${wallet.exchange}` : "Wallet Crypto";
         }
-        return `Wallet Crypto${suffix}`;
-      } else {
-        if (destinoContaId) {
-          const conta = contasBancarias.find(c => c.id === destinoContaId);
-          return conta ? `${conta.banco} - ${conta.titular}${suffix}` : "Conta Bancária";
-        }
-        return `Conta Bancária${suffix}`;
-      }
-    }
-    if (tipoTransacao === "DEPOSITO" && destinoBookmakerId) {
-      const bm = bookmakers.find(b => b.id === destinoBookmakerId);
-      return bm?.nome || "Bookmaker";
-    }
-    if (tipoTransacao === "TRANSFERENCIA") {
-      if (destinoTipo === "CAIXA_OPERACIONAL") return "Caixa Operacional";
-      if (destinoTipo === "PARCEIRO_CONTA" && destinoContaId) {
-        const conta = contasBancarias.find(c => c.id === destinoContaId);
-        return conta ? `${conta.banco} - ${conta.titular}` : "Conta Bancária";
-      }
-      if (destinoTipo === "PARCEIRO_WALLET" && destinoWalletId) {
-        const wallet = walletsCrypto.find(w => w.id === destinoWalletId);
-         return wallet ? `${wallet.exchange}${suffix}` : "Wallet";
-      }
-    }
-    return `Destino${suffix}`;
+         return `Wallet Crypto`;
+       } else {
+         if (destinoContaId) {
+           const conta = contasBancarias.find(c => c.id === destinoContaId);
+           return conta ? `${conta.banco} - ${conta.titular}` : "Conta Bancária";
+         }
+         return `Conta Bancária`;
+       }
+     }
+     if (tipoTransacao === "DEPOSITO" && destinoBookmakerId) {
+       const bm = bookmakers.find(b => b.id === destinoBookmakerId);
+       return bm?.nome || "Bookmaker";
+     }
+     if (tipoTransacao === "TRANSFERENCIA") {
+       if (destinoTipo === "CAIXA_OPERACIONAL") return "Caixa Operacional";
+       if (destinoTipo === "PARCEIRO_CONTA" && destinoContaId) {
+         const conta = contasBancarias.find(c => c.id === destinoContaId);
+         return conta ? `${conta.banco} - ${conta.titular}` : "Conta Bancária";
+       }
+       if (destinoTipo === "PARCEIRO_WALLET" && destinoWalletId) {
+         const wallet = walletsCrypto.find(w => w.id === destinoWalletId);
+          return wallet ? `${wallet.exchange}` : "Wallet";
+       }
+     }
+     return `Destino`;
   };
 
   const handleSubmit = async () => {
