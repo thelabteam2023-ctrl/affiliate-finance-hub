@@ -125,7 +125,8 @@ export default function Caixa() {
   const [saldoBookmakers, setSaldoBookmakers] = useState(0); // Legacy: BRL total (para CaixaTabsContainer)
   const [saldosContasParceiros, setSaldosContasParceiros] = useState<Array<{ moeda: string; saldo: number }>>([]);
   const [saldoWalletsParceiros, setSaldoWalletsParceiros] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const { canCreate } = useActionAccess();
   const { isOwnerOrAdmin, isSystemOwner } = usePermissions();
   
@@ -233,7 +234,7 @@ export default function Caixa() {
 
   const fetchData = async () => {
     try {
-      setLoading(true);
+      if (initialLoading) setLoading(true);
       
       // Fetch transactions with date filter applied server-side
       // Quando dataInicio/dataFim são undefined (filtro "Tudo"), trazemos TODO o histórico
@@ -531,6 +532,7 @@ export default function Caixa() {
       });
     } finally {
       setLoading(false);
+      setInitialLoading(false);
     }
   };
 
@@ -1106,10 +1108,19 @@ export default function Caixa() {
 
   return (
     <div className="flex flex-col min-h-0 h-full">
-      {/* Actions bar */}
-      <div className="flex-shrink-0 px-6 pt-3 pb-2 flex items-center justify-end gap-2">
-        <SaldosParceirosSheet />
-        {canCreate('caixa', 'caixa.transactions.create') && (
+      {/* Actions bar e Status de Carregamento */}
+      <div className="flex-shrink-0 px-6 pt-3 pb-2 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          {loading && !initialLoading && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground animate-pulse ml-1">
+              <div className="h-3 w-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+              Sincronizando...
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <SaldosParceirosSheet />
+          {canCreate('caixa', 'caixa.transactions.create') && (
           <Button onClick={() => setDialogOpen(true)} className="gap-2">
             <Plus className="h-4 w-4" />
             Nova Transação
@@ -1161,7 +1172,8 @@ export default function Caixa() {
               </Tooltip>
             </DropdownMenuContent>
           </DropdownMenu>
-        )}
+          )}
+        </div>
       </div>
 
       {/* PageContent - ÚNICO scroll vertical */}
