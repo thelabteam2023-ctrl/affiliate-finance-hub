@@ -1989,10 +1989,20 @@ export function SurebetModalRoot({
     return hasAnyPerna || hasEvento;
   }, [odds, evento]);
 
-  // Pode salvar como rascunho: tem dados parciais, mas não tem todas as pernas completas
-  // Também permite atualizar rascunho existente (quando veio de rascunho)
-  const podeSalvarRascunho = !isEditing && temDadosParciais && (analysis.pernasCompletasCount < numPernas || odds.length < numPernas);
-  const isAtualizandoRascunho = !!rascunho || !!rascunhoIdLocal;
+   // ESTADOS DE OPERAÇÃO (Rascunho vs Registrado)
+   // Rascunho é sempre verdadeiro se não for edição direta do banco
+   const isOperacaoRascunho = !isEditing;
+   const isOperacaoRegistrada = isEditing;
+   
+   // ESTADOS DE ESTRUTURA (Completude)
+   const isEstruturaCompleta = analysis.pernasCompletasCount >= numPernas && 
+                              odds.length >= numPernas && 
+                              !!evento.trim() && 
+                              !!estrategia;
+ 
+   // Pode salvar como rascunho: tem qualquer dado e não é edição do banco
+   const podeSalvarRascunho = !isEditing && temDadosParciais;
+   const isAtualizandoRascunho = !!rascunhoIdLocal || !!rascunho?.id;
   const rascunhoIdEfetivo = rascunho?.id || rascunhoIdLocal;
   // Handler para salvar como rascunho
   const handleSalvarRascunho = useCallback(() => {
@@ -2047,8 +2057,9 @@ export function SurebetModalRoot({
       }
     );
     
-    // Fechar o formulário
-    if (!embedded) onOpenChange(false);
+     // NÃO fechar o formulário automaticamente se estiver completo (deixa usuário decidir registrar)
+     // Se estiver incompleto, costuma fechar para "continuar depois"
+     if (!embedded && !isEstruturaCompleta) onOpenChange(false);
   }, [odds, evento, mercado, esporte, estrategia, contexto, modeloTipo, numPernas, workspaceId, bookmakerSaldos, criarRascunho, atualizarRascunho, rascunhoIdEfetivo, onOpenChange]);
 
   const getBookmakerNome = (id: string) => bookmakerSaldos.find(b => b.id === id)?.nome || "";
@@ -2073,7 +2084,7 @@ export function SurebetModalRoot({
             className="hidden"
           />
           
-          {/* HEADER UNIFICADO V2 - 3 linhas fixas */}
+           {/* HEADER UNIFICADO V2 - com badges de estado */}
           <BetFormHeaderV2
             formType="arbitragem"
             estrategia={estrategia}
@@ -2099,6 +2110,31 @@ export function SurebetModalRoot({
             showCloseButton={!embedded}
             onClose={() => onOpenChange(false)}
             embedded={embedded}
+             extraBadge={
+               <div className="flex items-center gap-1.5 ml-1">
+                 {/* Badge de Intenção */}
+                 {isOperacaoRegistrada ? (
+                   <Badge variant="outline" className="text-[10px] h-4 px-1.5 py-0 bg-green-500/10 text-green-500 border-green-500/20 uppercase font-bold tracking-wider">
+                     Registrado
+                   </Badge>
+                 ) : (
+                   <Badge variant="outline" className="text-[10px] h-4 px-1.5 py-0 bg-blue-500/10 text-blue-500 border-blue-500/20 uppercase font-bold tracking-wider">
+                     Rascunho
+                   </Badge>
+                 )}
+                 
+                 {/* Badge de Estrutura */}
+                 {isEstruturaCompleta ? (
+                   <Badge variant="secondary" className="text-[10px] h-4 px-1.5 py-0 bg-muted text-muted-foreground border-transparent uppercase font-medium">
+                     Completo
+                   </Badge>
+                 ) : (
+                   <Badge variant="secondary" className="text-[10px] h-4 px-1.5 py-0 bg-amber-500/10 text-amber-500 border-amber-500/20 uppercase font-medium">
+                     Incompleto
+                   </Badge>
+                 )}
+               </div>
+             }
           />
 
           {/* CONTENT */}
@@ -2357,17 +2393,17 @@ export function SurebetModalRoot({
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
-              {podeSalvarRascunho && (
-                <Button 
-                  variant="outline"
-                  onClick={handleSalvarRascunho}
-                  disabled={saving}
-                  className="border-blue-500/30 text-blue-500 hover:bg-blue-500/10"
-                >
-                  <FileText className="h-4 w-4 mr-1" />
-                  {isAtualizandoRascunho ? 'Atualizar Rascunho' : 'Rascunho'}
-                </Button>
-              )}
+               {!isEditing && (
+                 <Button 
+                   variant="outline"
+                   onClick={handleSalvarRascunho}
+                   disabled={saving || !temDadosParciais}
+                   className="border-blue-500/30 text-blue-500 hover:bg-blue-500/10"
+                 >
+                   <FileText className="h-4 w-4 mr-1" />
+                   {isAtualizandoRascunho ? 'Atualizar Rascunho' : 'Salvar Rascunho'}
+                 </Button>
+               )}
               {analysis.isOperacaoParcial && !isEditing && (
                 <Button 
                   variant="secondary"
@@ -2378,14 +2414,14 @@ export function SurebetModalRoot({
                   Simples ({pernasValidas.length})
                 </Button>
               )}
-              <Button 
-                onClick={handleSave} 
-                disabled={saving || analysis.stakeTotal <= 0 || analysis.pernasCompletasCount < numPernas || odds.length < numPernas || (!isEditing && balanceValidation.hasInsufficientBalance)}
-                title={balanceValidation.hasInsufficientBalance ? "Saldo insuficiente em uma ou mais casas" : undefined}
-              >
-                <Save className="h-4 w-4 mr-1" />
-                {isEditing ? "Salvar" : "Registrar"}
-              </Button>
+               <Button 
+                 onClick={handleSave} 
+                 disabled={saving || !isEstruturaCompleta || (!isEditing && balanceValidation.hasInsufficientBalance)}
+                 title={!isEstruturaCompleta ? "Preencha todos os dados obrigatórios para registrar" : balanceValidation.hasInsufficientBalance ? "Saldo insuficiente em uma ou mais casas" : undefined}
+               >
+                 <Save className="h-4 w-4 mr-1" />
+                 {isEditing ? "Salvar Alterações" : "Registrar Operação"}
+               </Button>
             </div>
           </div>
 
