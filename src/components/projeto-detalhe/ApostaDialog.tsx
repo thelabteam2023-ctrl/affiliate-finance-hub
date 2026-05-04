@@ -468,7 +468,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   } = useStakeReservation({
     workspaceId: workspaceId || '',
     formType: 'SIMPLES',
-    enabled: open && !!workspaceId
+    enabled: open && !!workspaceId,
+    apostaId: aposta?.id
   });
   // O hook useBookmakerSaldoComReservas é usado após a declaração de bookmakerId
   
