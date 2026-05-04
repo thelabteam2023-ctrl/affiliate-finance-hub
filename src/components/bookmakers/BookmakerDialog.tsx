@@ -369,35 +369,58 @@ export default function BookmakerDialog({
       if (!selectedLink) throw new Error("Selecione um link de cadastro");
       if (!workspaceId) throw new Error("Workspace não disponível nesta aba");
 
-      const bookmakerData: any = {
-        user_id: user.id,
-        workspace_id: workspaceId,
-        parceiro_id: parceiroId,
-        bookmaker_catalogo_id: bookmakerId,
-        nome: selectedBookmaker?.nome || "",
-        link_origem: selectedLink,
-        login_username: loginUsername || "",
-        login_password_encrypted: loginPassword ? await (await import("@/utils/cryptoPassword")).encryptPassword(loginPassword) : "",
-        saldo_atual: 0,
-        saldo_usd: 0,
-        moeda: moedaOperacional,
-        status,
-        instance_identifier: instanceIdentifier || null,
-        observacoes: observacoes || null,
-      };
-
       if (bookmaker) {
-        if (!loginPassword) delete bookmakerData.login_password_encrypted;
+        // Para EDIÇÃO: Apenas campos mutáveis para evitar destruição de dados (como saldo)
+        const updateData: any = {
+          link_origem: selectedLink,
+          login_username: loginUsername || "",
+          status,
+          instance_identifier: instanceIdentifier || null,
+          observacoes: observacoes || null,
+        };
+
+        // Só atualiza a moeda se não houver operações financeiras
+        if (!hasFinancialOperations) {
+          updateData.moeda = moedaOperacional;
+        }
+
+        // Só atualiza a senha se foi digitada uma nova
+        if (loginPassword) {
+          updateData.login_password_encrypted = await (await import("@/utils/cryptoPassword")).encryptPassword(loginPassword);
+        }
+
+        // Só atualiza o nome da casa se ele estiver carregado (evita salvar vazio)
+        if (selectedBookmaker?.nome) {
+          updateData.nome = selectedBookmaker.nome;
+        }
 
         const { error } = await supabase
           .from("bookmakers")
-          .update(bookmakerData)
+          .update(updateData)
           .eq("id", bookmaker.id);
         if (error) throw error;
       } else {
+        // Para NOVO VÍNCULO: Objeto completo
+        const insertData: any = {
+          user_id: user.id,
+          workspace_id: workspaceId,
+          parceiro_id: parceiroId,
+          bookmaker_catalogo_id: bookmakerId,
+          nome: selectedBookmaker?.nome || "",
+          link_origem: selectedLink,
+          login_username: loginUsername || "",
+          login_password_encrypted: loginPassword ? await (await import("@/utils/cryptoPassword")).encryptPassword(loginPassword) : "",
+          saldo_atual: 0,
+          saldo_usd: 0,
+          moeda: moedaOperacional,
+          status,
+          instance_identifier: instanceIdentifier || null,
+          observacoes: observacoes || null,
+        };
+
         const { data: insertedData, error } = await supabase
           .from("bookmakers")
-          .insert(bookmakerData)
+          .insert(insertData)
           .select("id")
           .single();
         if (error) throw error;
