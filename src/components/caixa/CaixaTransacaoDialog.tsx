@@ -872,7 +872,8 @@ export function CaixaTransacaoDialog({
     setDestinoBookmakerId("");
     
     // Reset fluxos específicos
-    setFluxoTransferencia("CAIXA_PARCEIRO");
+     setFluxoTransferencia("CAIXA_PARCEIRO");
+     prevFluxoTransferencia.current = "CAIXA_PARCEIRO";
     setFluxoAporte("APORTE");
     setInvestidorId("");
     
