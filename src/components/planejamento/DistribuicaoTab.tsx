@@ -85,6 +85,11 @@ export default function DistribuicaoTab({ onPlanoCriado }: DistribuicaoTabProps)
   >([]);
   const [resultado, setResultado] = useState<ReturnType<typeof gerarDistribuicao> | null>(null);
   const [planoParaExcluir, setPlanoParaExcluir] = useState<string | null>(null);
+  const [confirmacaoVinculo, setConfirmacaoVinculo] = useState<{
+    planoId: string;
+    planoNome: string;
+    projetoId: string | null;
+  } | null>(null);
 
   // Conversão moeda nativa → USD (via BRL)
   const toUsd = (valor: number, moeda: string): number => {
@@ -249,7 +254,15 @@ export default function DistribuicaoTab({ onPlanoCriado }: DistribuicaoTabProps)
     });
   };
 
-
+  const confirmarVinculoProjeto = () => {
+    if (!confirmacaoVinculo) return;
+    updatePlano.mutate({
+      id: confirmacaoVinculo.planoId,
+      projeto_id: confirmacaoVinculo.projetoId
+    }, {
+      onSuccess: () => setConfirmacaoVinculo(null)
+    });
+  };
 
   const selectedGenericosCount = useMemo(
     () => selectedPerfilIds.filter((id) => !perfis.find((p) => p.id === id)?.parceiro_id).length,
@@ -404,12 +417,11 @@ export default function DistribuicaoTab({ onPlanoCriado }: DistribuicaoTabProps)
                 <div className="flex items-center gap-1 shrink-0">
                   <Select
                     value={plano.projeto_id ?? "__none__"}
-                    onValueChange={(v) => {
-                      const confirmed = window.confirm(`Deseja vincular o projeto ao plano "${plano.nome}"?`);
-                      if (confirmed) {
-                        updatePlano.mutate({ id: plano.id, projeto_id: v === "__none__" ? null : v });
-                      }
-                    }}
+                    onValueChange={(v) => setConfirmacaoVinculo({
+                      planoId: plano.id,
+                      planoNome: plano.nome,
+                      projetoId: v === "__none__" ? null : v
+                    })}
                   >
                     <SelectTrigger className="h-7 w-32 text-[10px]" title="Vincular projeto">
                       <SelectValue placeholder="Vincular projeto" />
@@ -886,6 +898,27 @@ export default function DistribuicaoTab({ onPlanoCriado }: DistribuicaoTabProps)
           <AlertDialogCancel disabled={deletePlano.isPending}>Cancelar</AlertDialogCancel>
           <AlertDialogAction onClick={confirmarExclusaoPlano} disabled={deletePlano.isPending}>
             {deletePlano.isPending ? "Excluindo..." : "Excluir"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <AlertDialog open={!!confirmacaoVinculo} onOpenChange={(open) => !open && setConfirmacaoVinculo(null)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Confirmar vínculo de projeto</AlertDialogTitle>
+          <AlertDialogDescription>
+            Deseja vincular o projeto{" "}
+            <strong>
+              {projetos.find((p) => p.id === confirmacaoVinculo?.projetoId)?.nome ?? "Sem vínculo"}
+            </strong>{" "}
+            ao plano <strong>"{confirmacaoVinculo?.planoNome}"</strong>?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={updatePlano.isPending}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={confirmarVinculoProjeto} disabled={updatePlano.isPending}>
+            {updatePlano.isPending ? "Vinculando..." : "Confirmar vínculo"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
