@@ -1,4 +1,4 @@
- import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
  import { 
    ChevronUp,
    ChevronDown,
@@ -87,53 +87,52 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
   const updateCampanha = useUpsertCampanha();
   const logoMap = useBookmakerLogoMap();
   const [editingCampanha, setEditingCampanha] = useState<PlanningCampanha | null>(null);
-   const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState("");
  
-    // Navegação dia a dia via botões flutuantes
-    const navigateDayByDay = (direction: 'up' | 'down') => {
-      const scrollArea = document.querySelector('.planning-module-container [data-radix-scroll-area-viewport]');
-      if (!scrollArea || sortedDates.length === 0) return;
+     // Navegação inteligente via botões flutuantes
+     const navigateDayByDay = useCallback((direction: 'up' | 'down') => {
+       const scrollArea = document.querySelector('.planning-module-container [data-radix-scroll-area-viewport]');
+       if (!scrollArea || sortedDates.length === 0) return;
 
-      const containerRect = scrollArea.getBoundingClientRect();
-      const currentScrollTop = scrollArea.scrollTop;
-      
-      // Encontrar o grupo de data atualmente visível no topo
-      const groups = sortedDates.map(date => {
-        const el = document.getElementById(`date-group-${date}`);
-        if (!el) return null;
-        const rect = el.getBoundingClientRect();
-        const relativeTop = rect.top - containerRect.top + currentScrollTop;
-        return { date, relativeTop, height: rect.height };
-      }).filter(Boolean) as { date: string, relativeTop: number, height: number }[];
+       const containerRect = scrollArea.getBoundingClientRect();
+       const currentScrollTop = scrollArea.scrollTop;
+       const THRESHOLD = 30;
 
-      if (groups.length === 0) return;
+       const groups = sortedDates.map(date => {
+         const el = document.getElementById(`date-group-${date}`);
+         if (!el) return null;
+         const rect = el.getBoundingClientRect();
+         const relativeTop = rect.top - containerRect.top + currentScrollTop;
+         return { date, relativeTop };
+       }).filter(Boolean) as { date: string, relativeTop: number }[];
 
-      // Encontrar o índice do grupo atual (o que está mais próximo do topo do container)
-      // Usamos uma margem de 20px para considerar "no topo"
-      let currentIndex = groups.findIndex(g => g.relativeTop >= currentScrollTop - 20);
-      
-      if (currentIndex === -1) currentIndex = groups.length - 1;
+       if (groups.length === 0) return;
 
-      let targetIndex;
-      if (direction === 'down') {
-        // Se o atual já está exatamente no topo, vai para o próximo. 
-        // Senão, "alinha" o atual no topo.
-        if (Math.abs(groups[currentIndex].relativeTop - currentScrollTop) < 5) {
-          targetIndex = Math.min(currentIndex + 1, groups.length - 1);
-        } else {
-          targetIndex = currentIndex;
-        }
-      } else {
-        // Para subir: se o atual está no topo, vai para o anterior.
-        targetIndex = Math.max(currentIndex - 1, 0);
-      }
+       let currentIndex = groups.findIndex(g => g.relativeTop >= currentScrollTop - THRESHOLD);
+       if (currentIndex === -1) currentIndex = groups.length - 1;
 
-      const targetGroup = groups[targetIndex];
-      scrollArea.scrollTo({ 
-        top: targetGroup.relativeTop - 16, 
-        behavior: 'smooth' 
-      });
-    };
+       let targetIndex;
+       if (direction === 'down') {
+         if (Math.abs(groups[currentIndex].relativeTop - currentScrollTop) < THRESHOLD) {
+           targetIndex = Math.min(currentIndex + 1, groups.length - 1);
+         } else {
+           targetIndex = currentIndex;
+         }
+       } else {
+         if (Math.abs(groups[currentIndex].relativeTop - currentScrollTop) < THRESHOLD) {
+           targetIndex = Math.max(currentIndex - 1, 0);
+         } else {
+           targetIndex = currentIndex;
+         }
+       }
+
+       const targetGroup = groups[targetIndex];
+       scrollArea.scrollTo({ 
+         top: targetGroup.relativeTop - 16, 
+         behavior: 'smooth' 
+       });
+     }, [sortedDates]);
 
     // Ajuste no scrollToToday para buscar dentro do container correto
     const scrollToToday = () => {
