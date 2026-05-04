@@ -159,18 +159,25 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
     }
   }, [open, campanha, initialBookmaker, suggestedParceiroId, getSuggestedIpId]);
 
-  // Detectar conflitos no mesmo dia (excluindo registros que pertencem ao mesmo projeto)
-  const conflitos = useMemo(() => {
-    const sameDay = campanhasDoMes.filter(c => 
-      c.scheduled_date === scheduledDate && 
-      c.id !== campanha?.id &&
-      // Se ambos estão no mesmo projeto, não consideramos conflito de "outra campanha"
-      (c.projeto_id !== form.projeto_id || !form.projeto_id)
-    );
-    const ipConflict = form.ip_id && sameDay.some(c => c.ip_id === form.ip_id);
-    const parceiroConflict = form.parceiro_id && sameDay.some(c => c.parceiro_id === form.parceiro_id);
-    return { ipConflict, parceiroConflict };
-  }, [campanhasDoMes, scheduledDate, form.ip_id, form.parceiro_id, form.projeto_id, campanha?.id]);
+   // Detectar conflitos no mesmo dia (excluindo registros que pertencem ao mesmo projeto)
+   const conflitos = useMemo(() => {
+     // Normalizar projeto_id para comparação segura (null/undefined/"" viram null)
+     const currentProjId = form.projeto_id || null;
+     
+     const sameDay = campanhasDoMes.filter(c => {
+       if (c.scheduled_date !== scheduledDate) return false;
+       if (c.id === campanha?.id) return false;
+       
+       const otherProjId = c.projeto_id || null;
+       // Se ambos estão no mesmo projeto, não consideramos conflito de "outra campanha"
+       // Se um deles (ou ambos) não tem projeto, comparamos os IDs normalizados
+       return otherProjId !== currentProjId || !currentProjId;
+     });
+     
+     const ipConflict = form.ip_id && sameDay.some(c => c.ip_id === form.ip_id);
+     const parceiroConflict = form.parceiro_id && sameDay.some(c => c.parceiro_id === form.parceiro_id);
+     return { ipConflict, parceiroConflict };
+   }, [campanhasDoMes, scheduledDate, form.ip_id, form.parceiro_id, form.projeto_id, campanha?.id]);
 
   // Validação contra regras de grupo
   const { validate } = useGrupoRegrasValidator(campanhasDoMes);
