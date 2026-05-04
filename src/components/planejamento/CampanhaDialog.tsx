@@ -159,13 +159,18 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
     }
   }, [open, campanha, initialBookmaker, suggestedParceiroId, getSuggestedIpId]);
 
-  // Detectar conflitos no mesmo dia
+  // Detectar conflitos no mesmo dia (excluindo registros que pertencem ao mesmo projeto)
   const conflitos = useMemo(() => {
-    const sameDay = campanhasDoMes.filter(c => c.scheduled_date === scheduledDate && c.id !== campanha?.id);
+    const sameDay = campanhasDoMes.filter(c => 
+      c.scheduled_date === scheduledDate && 
+      c.id !== campanha?.id &&
+      // Se ambos estão no mesmo projeto, não consideramos conflito de "outra campanha"
+      (c.projeto_id !== form.projeto_id || !form.projeto_id)
+    );
     const ipConflict = form.ip_id && sameDay.some(c => c.ip_id === form.ip_id);
     const parceiroConflict = form.parceiro_id && sameDay.some(c => c.parceiro_id === form.parceiro_id);
     return { ipConflict, parceiroConflict };
-  }, [campanhasDoMes, scheduledDate, form.ip_id, form.parceiro_id, campanha?.id]);
+  }, [campanhasDoMes, scheduledDate, form.ip_id, form.parceiro_id, form.projeto_id, campanha?.id]);
 
   // Validação contra regras de grupo
   const { validate } = useGrupoRegrasValidator(campanhasDoMes);
@@ -364,8 +369,8 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
             <Alert variant="destructive" className="py-2">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription className="text-xs">
-                {conflitos.ipConflict && <div>⚠ Este IP já é usado em outra campanha no mesmo dia.</div>}
-                {conflitos.parceiroConflict && <div>⚠ Este perfil já é usado em outra campanha no mesmo dia.</div>}
+                {conflitos.ipConflict && <div>⚠ Este IP já está sendo usado em outro projeto no mesmo dia.</div>}
+                {conflitos.parceiroConflict && <div>⚠ Este perfil já está sendo usado em outro projeto no mesmo dia.</div>}
               </AlertDescription>
             </Alert>
           )}
