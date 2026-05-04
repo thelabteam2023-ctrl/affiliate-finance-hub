@@ -362,13 +362,13 @@
                             {/* Indicadores de Status */}
                             <div className="absolute top-0 right-0 p-1 flex gap-1">
                               {status === "concluido" && (
-                                <div className="h-2 w-2 rounded-full bg-[#00FF66] shadow-[0_0_8px_#00FF66]" title="Concluído" />
+                                <div className="h-2.5 w-2.5 rounded-full bg-[#00FF66] shadow-[0_0_12px_4px_rgba(0,255,102,0.6)] animate-pulse" title="Concluído" />
                               )}
                               {status === "atrasado" && (
-                                <div className="h-2 w-2 rounded-full bg-destructive shadow-[0_0_8px_red]" title="Atrasado" />
+                                <div className="h-2.5 w-2.5 rounded-full bg-destructive shadow-[0_0_12px_4px_rgba(239,68,68,0.6)] animate-pulse" title="Atrasado" />
                               )}
                               {status === "pendente" && (
-                                <div className="h-2 w-2 rounded-full bg-[#FFD700] shadow-[0_0_8px_#FFD700]" title="Pendente" />
+                                <div className="h-2.5 w-2.5 rounded-full bg-[#FFD700] shadow-[0_0_12px_4px_rgba(255,215,0,0.6)] animate-pulse" title="Pendente" />
                               )}
                             </div>
                           </Card>
