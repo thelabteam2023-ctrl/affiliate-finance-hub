@@ -1829,34 +1829,175 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                  stake_freebet: (multipla as any).stake_freebet ?? null,
                };
             
-            return (
-              <ApostaCard
-                key={multipla.id}
-                aposta={multiplaCardData}
-                estrategia={estrategiaMultipla}
-                variant={viewMode === "cards" ? "card" : "list"}
-                onEdit={() => handleOpenMultiplaDialog(multipla)}
-                 onQuickResolve={handleQuickResolve}
-                 onDelete={prepareDeleteMultipla}
-                 onDuplicate={handleDuplicateMultipla}
-                 formatCurrency={formatCurrency}
-                 convertToConsolidation={convertToConsolidation}
-                 moedaConsolidacao={moedaConsolidacao}
-               />
-            );
-          })}
-        </div>
-      )}
+                    return (
+                      <ApostaCard
+                        key={multipla.id}
+                        aposta={multiplaCardData}
+                        estrategia={estrategiaMultipla}
+                        variant="list"
+                        onEdit={() => handleOpenMultiplaDialog(multipla)}
+                        onQuickResolve={handleQuickResolve}
+                        onDelete={prepareDeleteMultipla}
+                        onDuplicate={handleDuplicateMultipla}
+                        formatCurrency={formatCurrency}
+                        convertToConsolidation={convertToConsolidation}
+                        moedaConsolidacao={moedaConsolidacao}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
 
-      {/* Modal de Confirmação de Exclusão */}
-      <DeleteBetConfirmDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        betInfo={betToDelete}
-        onConfirm={handleDeleteBet}
-        isDeleting={isDeleting}
-        formatCurrency={formatCurrency}
+  // MODO GRID (CARDS)
+  return (
+    <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3 py-4">
+      {apostasUnificadas.map((item) => {
+        // Render logic for grid (simplified for brevity, using same logic as list but with variant="card")
+        if (item.tipo === "surebet") {
+          const sb = item.data as Surebet;
+          const surebetData: SurebetData = {
+            ...sb,
+            workspace_id: sb.workspace_id,
+            lucro_real: sb.pl_consolidado ?? sb.lucro_prejuizo,
+            pl_consolidado: sb.pl_consolidado,
+            consolidation_currency: (sb as any).consolidation_currency,
+            stake_consolidado: sb.stake_consolidado,
+            pernas: groupPernasBySelecao((sb.pernas || []).map((p: any) => ({
+              id: p.id, selecao: p.selecao, selecao_livre: p.selecao_livre, odd: p.odd, stake: p.stake, resultado: p.resultado,
+              lucro_prejuizo: p.lucro_prejuizo ?? null, bookmaker_nome: p.bookmaker?.nome || p.bookmaker_nome || "—",
+              bookmaker_id: p.bookmaker_id, moeda: p.moeda || 'BRL', fonte_saldo: p.fonte_saldo || null,
+            }))),
+          };
+          return (
+            <SurebetCard
+              key={sb.id}
+              surebet={surebetData}
+              onEdit={(surebet) => {
+                const url = `/janela/surebet/${surebet.id}?projetoId=${encodeURIComponent(projetoId)}&tab=apostas`;
+                window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+              }}
+              onQuickResolve={handleQuickResolveSurebet}
+              onPernaResultChange={handleSurebetPernaResolve}
+              onDelete={prepareDeleteSurebet}
+              onDuplicate={handleDuplicateSurebet}
+              formatCurrency={formatCurrency}
+              convertToConsolidation={convertToConsolidation}
+              moedaConsolidacao={moedaConsolidacao}
+              bookmakerNomeMap={bookmakerNomeMap}
+            />
+          );
+        }
+        if (item.tipo === "simples") {
+          const aposta = item.data as Aposta;
+          const apostaCardData: ApostaCardData = {
+            id: aposta.id, evento: aposta.evento, esporte: aposta.esporte, mercado: aposta.mercado, selecao: aposta.selecao,
+            odd: aposta.odd, stake: aposta.stake, data_aposta: aposta.data_aposta, created_at: aposta.created_at,
+            resultado: aposta.resultado, status: aposta.status, lucro_prejuizo: aposta.lucro_prejuizo, estrategia: aposta.estrategia,
+            bookmaker_nome: formatBookmakerProjectName(aposta.bookmaker?.nome || "—", aposta.bookmaker?.parceiro?.nome, (aposta.bookmaker as any)?.instance_identifier),
+            logo_url: aposta.bookmaker?.bookmakers_catalogo?.logo_url, moeda: aposta.moeda_operacao || "BRL", fonte_saldo: aposta.fonte_saldo || null,
+            stake_freebet: aposta.stake_freebet ?? null, pl_consolidado: aposta.pl_consolidado ?? undefined, stake_consolidado: aposta.stake_consolidado ?? undefined,
+          };
+          let estrategia: string = aposta.estrategia || "NORMAL";
+          if (aposta.gerou_freebet || item.contexto === "FREEBET") estrategia = "FREEBET";
+          else if (item.contexto === "BONUS") estrategia = "BONUS";
+          return (
+            <ApostaCard
+              key={aposta.id} aposta={apostaCardData} estrategia={estrategia} variant="card"
+              onEdit={(apostaId) => {
+                const a = apostas.find(ap => ap.id === apostaId);
+                if (a) handleOpenDialog(a);
+              }}
+              onQuickResolve={handleQuickResolve} onDelete={prepareDeleteSimples} onDuplicate={handleDuplicateSimples}
+              formatCurrency={formatCurrency} convertToConsolidation={convertToConsolidation} moedaConsolidacao={moedaConsolidacao}
+            />
+          );
+        }
+        const multipla = item.data as ApostaMultipla;
+        const multiplaCardData = {
+          id: multipla.id, evento: (multipla as any).evento || '', esporte: (multipla as any).esporte || '', odd_final: multipla.odd_final,
+          stake: multipla.stake, data_aposta: multipla.data_aposta, resultado: multipla.resultado, status: multipla.status,
+          lucro_prejuizo: multipla.lucro_prejuizo, estrategia: multipla.estrategia, tipo_multipla: multipla.tipo_multipla,
+          selecoes: multipla.selecoes.map(s => ({ descricao: s.descricao, odd: parseFloat(s.odd), resultado: s.resultado })),
+          bookmaker_nome: multipla.bookmaker?.nome?.split(" - ")[0] || multipla.bookmaker?.nome,
+          logo_url: multipla.bookmaker?.bookmakers_catalogo?.logo_url, moeda: multipla.moeda_operacao || "BRL",
+        };
+        let estrategiaMultipla: string = multipla.estrategia || "NORMAL";
+        if (multipla.gerou_freebet || item.contexto === "FREEBET") estrategiaMultipla = "FREEBET";
+        else if (item.contexto === "BONUS") estrategiaMultipla = "BONUS";
+        return (
+          <ApostaCard
+            key={multipla.id} aposta={multiplaCardData as any} estrategia={estrategiaMultipla} variant="card"
+            onEdit={() => handleOpenMultiplaDialog(multipla)} onQuickResolve={handleQuickResolve}
+            onDelete={prepareDeleteMultipla} onDuplicate={handleDuplicateMultipla}
+            formatCurrency={formatCurrency} convertToConsolidation={convertToConsolidation} moedaConsolidacao={moedaConsolidacao}
+          />
+        );
+      })}
+    </div>
+  );
+};
+
+return (
+  <div className="h-full flex flex-col min-h-0 relative">
+    <div className="mb-4">
+      <StandardTimeFilter
+        period={tabFilters.period}
+        onPeriodChange={tabFilters.setPeriod}
+        customDateRange={tabFilters.customDateRange}
+        onCustomDateRangeChange={tabFilters.setCustomDateRange}
+        projetoId={projetoId}
       />
+    </div>
+
+    <OperationsHistoryModule
+      projetoId={projetoId}
+      title="Histórico de Operações"
+      tabFilters={tabFilters}
+      openCount={apostasAbertasList.length}
+      totalOpenCount={totalAbertasRaw}
+      historyCount={apostasHistoricoList.length}
+      totalHistoryCount={totalHistoricoRaw}
+      viewMode={viewMode}
+      onViewModeChange={setViewMode}
+      subTab={apostasSubTab}
+      onSubTabChange={setApostasSubTab}
+      openContent={renderApostasContent()}
+      historyContent={renderApostasContent()}
+      className="flex-1 h-full min-h-0 history-module-container"
+      headerActions={
+        <div className="flex items-center gap-2">
+          <SuspiciousDateFilterButton
+            active={suspiciousActive}
+            onToggle={setSuspiciousActive}
+            count={suspiciousCount}
+          />
+          <ExportMenu
+            abaOrigem="Apostas"
+            filename={`apostas-${projetoId}`}
+            getData={() => apostasUnificadas.map(u => ({ ...u.data, tipo: u.tipo })) as any}
+            filtrosAplicados={{}}
+          />
+          {actionsSlot}
+        </div>
+      }
+    />
+
+    <DeleteBetConfirmDialog
+      open={deleteDialogOpen}
+      onOpenChange={setDeleteDialogOpen}
+      betInfo={betToDelete}
+      onConfirm={handleDeleteBet}
+      isDeleting={isDeleting}
+      formatCurrency={formatCurrency}
+    />
+  </div>
+);
 
       {/* Dialogs removidos - todos os formulários abrem em janela externa */}
     </div>
