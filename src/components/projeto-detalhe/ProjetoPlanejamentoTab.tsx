@@ -258,9 +258,65 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
   const renderContent = () => {
     if (filteredData.length === 0) return null;
 
-    if (viewMode === "list") {
-      return (
-        <div className="space-y-8 max-w-5xl mx-auto py-4">
+     if (viewMode === "list") {
+       return (
+         <div className="space-y-8 max-w-5xl mx-auto py-4 relative">
+           {/* Navegação Flutuante Lateral integrada ao conteúdo */}
+           {filteredData.length > 0 && (
+             <div className="fixed md:absolute right-4 md:right-0 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-2 transition-opacity duration-300">
+               <Tooltip>
+                 <TooltipTrigger asChild>
+                   <Button 
+                     variant="secondary" 
+                     size="icon" 
+                     className="rounded-full shadow-lg border border-primary/20 bg-background/95 backdrop-blur-sm hover:bg-primary hover:text-primary-foreground transition-all h-10 w-10"
+                     onClick={(e) => {
+                       e.stopPropagation();
+                       scrollManual('up');
+                     }}
+                   >
+                     <ChevronUp className="h-5 w-5" />
+                   </Button>
+                 </TooltipTrigger>
+                 <TooltipContent side="left">Subir</TooltipContent>
+               </Tooltip>
+ 
+               <Tooltip>
+                 <TooltipTrigger asChild>
+                   <Button 
+                     variant="default" 
+                     size="icon" 
+                     className="rounded-full shadow-xl bg-primary text-primary-foreground h-12 w-12 hover:scale-110 active:scale-95 transition-all border-none"
+                     onClick={(e) => {
+                       e.stopPropagation();
+                       scrollToToday();
+                     }}
+                   >
+                     <Target className="h-6 w-6" />
+                   </Button>
+                 </TooltipTrigger>
+                 <TooltipContent side="left">Ir para Hoje</TooltipContent>
+               </Tooltip>
+ 
+               <Tooltip>
+                 <TooltipTrigger asChild>
+                   <Button 
+                     variant="secondary" 
+                     size="icon" 
+                     className="rounded-full shadow-lg border border-primary/20 bg-background/95 backdrop-blur-sm hover:bg-primary hover:text-primary-foreground transition-all h-10 w-10"
+                     onClick={(e) => {
+                       e.stopPropagation();
+                       scrollManual('down');
+                     }}
+                   >
+                     <ChevronDown className="h-5 w-5" />
+                   </Button>
+                 </TooltipTrigger>
+                 <TooltipContent side="left">Descer</TooltipContent>
+               </Tooltip>
+             </div>
+           )}
+ 
           {sortedDates.map((dateStr) => {
             const camps = groupedByDay[dateStr];
             const dateObj = parseISO(dateStr);
