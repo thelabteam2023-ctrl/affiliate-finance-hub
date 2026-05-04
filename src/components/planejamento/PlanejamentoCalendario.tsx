@@ -1499,15 +1499,16 @@ export function PlanejamentoCalendario() {
             </DialogDescription>
           </DialogHeader>
           <div className="overflow-auto rounded-md border">
-            <div className="grid grid-cols-[1.15fr_0.95fr_1.45fr_1.35fr_0.45fr_0.75fr] gap-2 px-3 py-2 text-[11px] font-semibold text-muted-foreground bg-muted/40 min-w-[880px]">
+             <div className="grid grid-cols-[1.15fr_0.95fr_1.45fr_1.35fr_0.45fr_0.75fr_40px] gap-2 px-3 py-2 text-[11px] font-semibold text-muted-foreground bg-muted/40 min-w-[920px]">
               <div>Casa</div>
               <div>Perfil</div>
               <div>IP utilizado</div>
               <div>Wallet</div>
               <div>Moeda</div>
               <div className="text-right">Valor</div>
+               <div className="text-center">Status</div>
             </div>
-            <div className="min-w-[880px] divide-y">
+             <div className="min-w-[920px] divide-y">
               {detailsCampanhas.map((c) => {
                 const perfilInfo = campanhaPerfilMap.get(c.id);
                 const celula = celulaAgendadaByCampanhaIdMap.get(c.id);
@@ -1518,7 +1519,7 @@ export function PlanejamentoCalendario() {
                 const cpfIndex = campanhaCpfMap.get(c.id) ?? null;
                 const cpfColor = getCpfColor(cpfIndex, perfilInfo?.cor);
                 return (
-                  <div key={c.id} className="grid grid-cols-[1.15fr_0.95fr_1.45fr_1.35fr_0.45fr_0.75fr] gap-2 px-3 py-2 text-xs items-center hover:bg-muted/30">
+                   <div key={c.id} className="grid grid-cols-[1.15fr_0.95fr_1.45fr_1.35fr_0.45fr_0.75fr_40px] gap-2 px-3 py-2 text-xs items-center hover:bg-muted/30">
                     <div className="font-medium truncate flex items-center gap-2">
                       {cpfIndex && cpfColor && (
                         <span className="h-5 w-5 shrink-0 rounded flex items-center justify-center text-[10px] font-bold" style={{ backgroundColor: cpfColor.dot, color: "hsl(0 0% 10%)" }}>{cpfIndex}</span>
@@ -1552,7 +1553,18 @@ export function PlanejamentoCalendario() {
                     </div>
                     <div className="truncate">{wallet ? `${wallet.label}${wallet.network ? ` • ${wallet.network}` : ""}` : "—"}</div>
                     <div className="font-semibold">{c.currency}</div>
-                    <div className="text-right font-semibold tabular-nums">{formatMoney(Number(c.deposit_amount), c.currency)}</div>
+                     <div className="text-right font-semibold tabular-nums">{formatMoney(Number(c.deposit_amount), c.currency)}</div>
+                     <div className="flex justify-center">
+                       <Button
+                         variant="ghost"
+                         size="icon"
+                         className={cn("h-7 w-7", c.is_account_created ? "text-success" : "text-muted-foreground/30")}
+                         onClick={() => handleToggleAccountCreated(c)}
+                         title={c.is_account_created ? "Conta criada (clique para remover)" : "Marcar como conta criada"}
+                       >
+                         <CheckCircle2 className="h-4 w-4" />
+                       </Button>
+                     </div>
                   </div>
                 );
               })}
