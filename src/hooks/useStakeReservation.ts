@@ -361,7 +361,8 @@ export function useBookmakerSaldoComReservas(
   bookmakerId: string | null,
   workspaceId: string,
   sessionId: string,
-  enabled: boolean = true
+  enabled: boolean = true,
+  ignoreApostaId?: string
 ) {
   const [saldo, setSaldo] = useState<{
     contabil: number;
@@ -380,7 +381,8 @@ export function useBookmakerSaldoComReservas(
     try {
       const { data, error } = await supabase.rpc('get_saldo_disponivel_com_reservas', {
         p_bookmaker_id: bookmakerId,
-        p_exclude_session_id: sessionId
+        p_exclude_session_id: sessionId,
+        p_ignore_aposta_id: ignoreApostaId
       });
       
       if (error) throw error;
