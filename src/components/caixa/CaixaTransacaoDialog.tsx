@@ -3617,10 +3617,7 @@ export function CaixaTransacaoDialog({
                         .filter((c) => {
                           if (c.parceiro_id !== origemParceiroId) return false;
                           if (c.moeda !== moeda) return false;
-                          const saldo = saldosParceirosContas.find(
-                            s => s.conta_id === c.id && s.moeda === moeda
-                          );
-                          return saldo && saldo.saldo > 0;
+                           return true;
                         })
                         .map((conta) => {
                           const saldo = saldosParceirosContas.find(
