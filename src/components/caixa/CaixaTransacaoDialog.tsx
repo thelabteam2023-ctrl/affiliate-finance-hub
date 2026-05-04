@@ -263,12 +263,13 @@ export function CaixaTransacaoDialog({
   const transferFocusActiveRef = useRef<boolean>(false);
   const transferFocusStepRef = useRef<number>(0);
 
-  // Track previous values to detect changes (origemParceiroId and origemWalletId tracked after their declarations)
-  const prevTipoMoeda = useRef<string>(tipoMoeda);
-  const prevMoeda = useRef<string>(moeda);
-  const prevValor = useRef<string>(valor);
-  const prevQtdCoin = useRef<string>(qtdCoin);
-  const prevOrigemContaId = useRef<string>("");
+   // Track previous values to detect changes
+   const prevTipoMoeda = useRef<string>(tipoMoeda);
+   const prevMoeda = useRef<string>(moeda);
+   const prevValor = useRef<string>(valor);
+   const prevQtdCoin = useRef<string>(qtdCoin);
+   const prevOrigemContaId = useRef<string>("");
+   const prevFluxoTransferencia = useRef<string>(fluxoTransferencia);
   
   // Flag para evitar re-execução de efeitos durante reset
   const isResettingContext = useRef<boolean>(false);
@@ -477,53 +478,77 @@ export function CaixaTransacaoDialog({
    * @param preserveTransactionContext - Se true, preserva parceiro e bookmaker (identidade da transação)
    *   Usado ao alternar FIAT ↔ CRYPTO, onde apenas a origem financeira muda.
    */
-  const resetContextoDependente = (resetMoedaCoin: boolean = true, resetValores: boolean = true, preserveTransactionContext: boolean = false) => {
-    isResettingContext.current = true;
-    
-    // Reset valores monetários
-    if (resetValores) {
-      setValor("");
-      setValorDisplay("");
-      setQtdCoin("");
-      setCotacao("");
-    }
-    
-    // Reset moeda/coin (quando muda tipoMoeda)
-    if (resetMoedaCoin) {
-      setCoin("");
-      setMoeda("");
-    }
-    
-    // Reset contas/wallets (sempre resetam - são dependentes da moeda)
-    setOrigemContaId("");
-    setOrigemWalletId("");
-    setDestinoContaId("");
-    setDestinoWalletId("");
-    
-    if (!preserveTransactionContext) {
-      // Reset COMPLETO: parceiro e bookmaker também
-      setOrigemParceiroId("");
-      setOrigemBookmakerId("");
-      setDestinoParceiroId("");
-      setDestinoBookmakerId("");
-      setDescricao("");
-      
-      // Reset refs de parceiro/bookmaker
-      prevDestinoParceiroId.current = "";
-      prevOrigemBookmakerId.current = "";
-      prevOrigemParceiroId.current = "";
-      prevDestinoBookmakerId.current = "";
-    }
-    
-    // Reset refs de contas/wallets (sempre)
-    prevCoin.current = resetMoedaCoin ? "" : coin;
-    prevDestinoWalletId.current = "";
-    prevDestinoContaId.current = "";
-    prevOrigemContaId.current = "";
-    prevOrigemWalletId.current = "";
-    prevMoeda.current = resetMoedaCoin ? "" : moeda;
-    prevValor.current = "";
-    prevQtdCoin.current = "";
+   /**
+    * Reset de contexto dependente.
+    * Centraliza a lógica de limpeza de formulário ao trocar contextos (tipo transação, subtipo, moeda, etc).
+    */
+   const resetContextoDependente = (resetMoedaCoin: boolean = true, resetValores: boolean = true, preserveTransactionContext: boolean = false) => {
+     isResettingContext.current = true;
+     console.log("[CaixaTransacaoDialog] Executando resetContextoDependente", { resetMoedaCoin, resetValores, preserveTransactionContext });
+     
+     // Reset valores monetários
+     if (resetValores) {
+       setValor("");
+       setValorDisplay("");
+       setQtdCoin("");
+       setCotacao("");
+       prevValor.current = "";
+       prevQtdCoin.current = "";
+     }
+     
+     // Reset moeda/coin (quando muda tipoMoeda)
+     if (resetMoedaCoin) {
+       setCoin("");
+       setMoeda("");
+       prevCoin.current = "";
+       prevMoeda.current = "";
+     }
+     
+     // Reset contas/wallets (sempre resetam - são dependentes da moeda)
+     setOrigemContaId("");
+     setOrigemWalletId("");
+     setDestinoContaId("");
+     setDestinoWalletId("");
+     prevOrigemContaId.current = "";
+     prevOrigemWalletId.current = "";
+     prevDestinoContaId.current = "";
+     prevDestinoWalletId.current = "";
+     
+     if (!preserveTransactionContext) {
+       // Reset COMPLETO: parceiro, bookmaker e outros dados
+       setOrigemParceiroId("");
+       setOrigemBookmakerId("");
+       setDestinoParceiroId("");
+       setDestinoBookmakerId("");
+       setDescricao("");
+       setDataTransacao("");
+       setTags([]);
+       setFluxoAporte("APORTE");
+       setInvestidorId("");
+       
+       // Reset de alertas e estados de UI
+       setTaxaBancariaInfo(null);
+       setShowTaxaBancariaAlert(false);
+       setPendingTransactionData(null);
+       setShowNoBankAlert(false);
+       setShowNoWalletAlert(false);
+       
+       // Reset refs de parceiro/bookmaker
+       prevDestinoParceiroId.current = "";
+       prevOrigemBookmakerId.current = "";
+       prevOrigemParceiroId.current = "";
+       prevDestinoBookmakerId.current = "";
+       
+       // Reset transfer focus steps
+       transferFocusActiveRef.current = false;
+       transferFocusStepRef.current = 0;
+     }
+     
+     // Reset refs remanescentes
+     if (resetMoedaCoin) {
+       prevCoin.current = "";
+       prevMoeda.current = "";
+     }
     
     // Liberar flag após reset (usar setTimeout para garantir que os estados foram atualizados)
     setTimeout(() => {
