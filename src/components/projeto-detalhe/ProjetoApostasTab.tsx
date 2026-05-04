@@ -29,7 +29,9 @@ import {
   CheckCircle2,
   BarChart3,
   Clock,
-  History
+  History,
+  ChevronUp,
+  ChevronDown
 } from "lucide-react";
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
 import { groupPernasBySelecao } from "@/utils/groupPernasBySelecao";
@@ -37,7 +39,7 @@ import { SurebetDialog } from "./SurebetDialog";
 import { apostaMatchesBookmakerFilter, apostaMatchesParceiroFilter } from "@/utils/apostaFilterHelpers";
 import { ApostaPernasResumo, ApostaPernasInline, Perna } from "./ApostaPernasResumo";
 import { ApostaCard, type ApostaCardData } from "./ApostaCard";
-import { format } from "date-fns";
+import { format, parseISO, isToday, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
 import { ApostaDialog } from "@/components/projeto-detalhe/ApostaDialog";
@@ -60,7 +62,8 @@ import { cn, getFirstLastName } from "@/lib/utils";
 import { formatBookmakerProjectName, buildBookmakerNomeMap, collectMissingBookmakerIds, mergeBookmakerNomeMaps } from "@/lib/bookmaker-display";
 import { useUnlinkedBookmakerNames } from "@/hooks/useUnlinkedBookmakerNames";
 import { parsePernaFromJson } from "@/types/apostasUnificada";
-import { OperationsSubTabHeader, type HistorySubTab, SuspiciousDateFilterButton, useSuspiciousDateFilter, isSuspiciousDate } from "./operations";
+import { OperationsHistoryModule, OperationsSubTabHeader, type HistorySubTab, SuspiciousDateFilterButton, useSuspiciousDateFilter, isSuspiciousDate } from "./operations";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { parseLocalDateTime } from "@/utils/dateUtils";
 import { ExportMenu, transformApostaToExport, transformSurebetToExport } from "./ExportMenu";
 import { DeleteBetConfirmDialog, type DeleteBetInfo } from "@/components/apostas/DeleteBetConfirmDialog";
