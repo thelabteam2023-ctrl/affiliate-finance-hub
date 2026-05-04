@@ -41,10 +41,11 @@
    usePlanningCampanhas, 
    usePlanningPerfis,
   perfilDisplayName,
-  usePlanningIps,
-   planningPerfilCpfIndex,
-   useProjetos,
-   PlanningPerfil
+    usePlanningIps,
+    planningPerfilCpfIndex,
+    useProjetos,
+    PlanningPerfil,
+    useUpsertCampanha
  } from "@/hooks/usePlanningData";
  import { useCelulasAgendadasPorCampanhas } from "@/hooks/usePlanoCelulasDisponiveis";
  import { format, parseISO, isPast, isToday, startOfDay } from "date-fns";
@@ -70,6 +71,7 @@
    const { data: perfis = [] } = usePlanningPerfis();
    const { data: ips = [] } = usePlanningIps();
    const { data: projetos = [] } = useProjetos();
+  const updateCampanha = useUpsertCampanha();
    const logoMap = useBookmakerLogoMap();
  
    const [editingCampanha, setEditingCampanha] = useState<PlanningCampanha | null>(null);
@@ -116,6 +118,18 @@
      return "planejado";
    };
  
+  const handleToggleStatus = async (camp: PlanningCampanha) => {
+    try {
+      await updateCampanha.mutateAsync({
+        id: camp.id,
+        scheduled_date: camp.scheduled_date,
+        is_account_created: !camp.is_account_created
+      });
+    } catch (error) {
+      console.error("Erro ao atualizar status:", error);
+    }
+  };
+
   const filteredCampanhas = useMemo(() => {
     return campanhas.filter(c => {
        const matchesProjeto = projetoFilter === "all" || c.projeto_id === projetoFilter;
