@@ -194,7 +194,6 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
       return (
         <div className="space-y-8 max-w-5xl mx-auto py-4">
           {sortedDates.map((dateStr) => {
-          {sortedDates.map((dateStr) => {
             const camps = groupedByDay[dateStr];
             const dateObj = parseISO(dateStr);
             const isDateToday = isToday(dateObj);
