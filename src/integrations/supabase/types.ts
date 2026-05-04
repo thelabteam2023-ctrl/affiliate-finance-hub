@@ -1262,6 +1262,7 @@ export type Database = {
       }
       bookmaker_stake_reservations: {
         Row: {
+          aposta_id: string | null
           bookmaker_id: string
           created_at: string
           expires_at: string
@@ -1276,6 +1277,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          aposta_id?: string | null
           bookmaker_id: string
           created_at?: string
           expires_at?: string
@@ -1290,6 +1292,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          aposta_id?: string | null
           bookmaker_id?: string
           created_at?: string
           expires_at?: string
@@ -15372,14 +15375,27 @@ export type Database = {
           }
       get_public_plans: { Args: never; Returns: Json }
       get_remaining_days: { Args: { p_expires_at: string }; Returns: number }
-      get_saldo_disponivel_com_reservas: {
-        Args: { p_bookmaker_id: string; p_exclude_session_id?: string }
-        Returns: {
-          saldo_contabil: number
-          saldo_disponivel: number
-          saldo_reservado: number
-        }[]
-      }
+      get_saldo_disponivel_com_reservas:
+        | {
+            Args: { p_bookmaker_id: string; p_exclude_session_id?: string }
+            Returns: {
+              saldo_contabil: number
+              saldo_disponivel: number
+              saldo_reservado: number
+            }[]
+          }
+        | {
+            Args: {
+              p_bookmaker_id: string
+              p_exclude_session_id?: string
+              p_ignore_aposta_id?: string
+            }
+            Returns: {
+              saldo_contabil: number
+              saldo_disponivel: number
+              saldo_reservado: number
+            }[]
+          }
       get_saldo_operavel_por_projeto: {
         Args: { p_projeto_ids: string[] }
         Returns: {
@@ -15890,6 +15906,10 @@ export type Database = {
         }[]
       }
       sync_bonus_rollover: { Args: { p_bonus_id: string }; Returns: number }
+      sync_pending_aposta_stake_v1: {
+        Args: { p_aposta_id: string }
+        Returns: Json
+      }
       try_cast_uuid: { Args: { p_text: string }; Returns: string }
       unlock_wallet_balance: {
         Args: { p_valor_usd: number; p_wallet_id: string }
@@ -15917,25 +15937,46 @@ export type Database = {
       }
       update_parcerias_em_encerramento: { Args: never; Returns: undefined }
       update_user_activity: { Args: { p_user_id: string }; Returns: boolean }
-      upsert_stake_reservation: {
-        Args: {
-          p_bookmaker_id: string
-          p_form_session_id?: string
-          p_form_type?: string
-          p_moeda?: string
-          p_stake: number
-          p_workspace_id: string
-        }
-        Returns: {
-          error_code: string
-          error_message: string
-          reservation_id: string
-          saldo_contabil: number
-          saldo_disponivel: number
-          saldo_reservado: number
-          success: boolean
-        }[]
-      }
+      upsert_stake_reservation:
+        | {
+            Args: {
+              p_bookmaker_id: string
+              p_form_session_id?: string
+              p_form_type?: string
+              p_moeda?: string
+              p_stake: number
+              p_workspace_id: string
+            }
+            Returns: {
+              error_code: string
+              error_message: string
+              reservation_id: string
+              saldo_contabil: number
+              saldo_disponivel: number
+              saldo_reservado: number
+              success: boolean
+            }[]
+          }
+        | {
+            Args: {
+              p_aposta_id?: string
+              p_bookmaker_id: string
+              p_form_session_id?: string
+              p_form_type?: string
+              p_moeda?: string
+              p_stake: number
+              p_workspace_id: string
+            }
+            Returns: {
+              error_code: string
+              error_message: string
+              reservation_id: string
+              saldo_contabil: number
+              saldo_disponivel: number
+              saldo_reservado: number
+              success: boolean
+            }[]
+          }
       user_belongs_to_workspace: {
         Args: { _workspace_id: string }
         Returns: boolean

@@ -18,6 +18,7 @@ interface UseStakeWithReservationOptions {
   moeda?: string;
   enabled?: boolean;
   debounceMs?: number;
+  apostaId?: string;
 }
 
 interface StakeWithReservationResult {
@@ -48,7 +49,8 @@ export function useStakeWithReservation({
   bookmakerId,
   moeda = 'BRL',
   enabled = true,
-  debounceMs = 500
+  debounceMs = 500,
+  apostaId
 }: UseStakeWithReservationOptions): StakeWithReservationResult {
   const [currentStake, setCurrentStake] = useState(0);
   const [localLoading, setLocalLoading] = useState(false);
@@ -79,7 +81,8 @@ export function useStakeWithReservation({
     bookmakerId,
     workspaceId,
     sessionId,
-    enabled && !!bookmakerId
+    enabled && !!bookmakerId,
+    apostaId
   );
   
   // Valores de saldo (com fallbacks)
@@ -124,7 +127,7 @@ export function useStakeWithReservation({
     setLocalLoading(true);
     debounceRef.current = setTimeout(async () => {
       try {
-        await reserveStake(bookmakerId, numValue, moeda);
+        await reserveStake(bookmakerId, numValue, moeda, apostaId);
         // Refetch saldo após reservar (para pegar reservas de outros)
         refetchSaldo();
       } finally {
