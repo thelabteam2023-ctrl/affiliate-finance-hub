@@ -58,8 +58,9 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
     initialViewMode: "list"
   });
 
+  // Sincronização de filtros com a aba Apostas (Histórico Detalhado)
   const tabFilters = useTabFilters({
-    tabId: "planejamento",
+    tabId: "apostas",
     projetoId,
     defaultPeriod: "mes_atual",
     persist: true
