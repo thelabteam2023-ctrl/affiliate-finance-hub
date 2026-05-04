@@ -118,17 +118,29 @@
      return "planejado";
    };
  
-  const handleToggleStatus = async (camp: PlanningCampanha) => {
-    try {
-      await updateCampanha.mutateAsync({
-        id: camp.id,
-        scheduled_date: camp.scheduled_date,
-        is_account_created: !camp.is_account_created
-      });
-    } catch (error) {
-      console.error("Erro ao atualizar status:", error);
-    }
-  };
+   const handleToggleStatus = async (camp: PlanningCampanha) => {
+     try {
+       // Só permitimos alternar entre "Pendente" e "Concluído" via clique direto.
+       // Se o item estiver com informações incompletas, o backend ou o hook useUpsertCampanha 
+       // garantem que o registro seja atualizado, mas a UI reflete o status real baseado nos dados.
+       await updateCampanha.mutateAsync({
+         id: camp.id,
+         scheduled_date: camp.scheduled_date,
+         is_account_created: !camp.is_account_created,
+         // Repassamos campos essenciais para evitar erros de validação se o hook esperar um objeto parcial específico
+         bookmaker_catalogo_id: camp.bookmaker_catalogo_id,
+         bookmaker_nome: camp.bookmaker_nome,
+         deposit_amount: camp.deposit_amount,
+         currency: camp.currency,
+         projeto_id: camp.projeto_id,
+         parceiro_id: camp.parceiro_id,
+         ip_id: camp.ip_id,
+         wallet_id: camp.wallet_id
+       });
+     } catch (error) {
+       console.error("Erro ao atualizar status:", error);
+     }
+   };
 
   const filteredCampanhas = useMemo(() => {
     return campanhas.filter(c => {
