@@ -170,44 +170,54 @@
    return (
      <div className="flex flex-col h-full bg-background overflow-hidden">
        {/* Header com Filtros */}
-       <div className="p-4 border-b flex flex-col md:flex-row gap-4 items-center justify-between bg-card/50">
-         <div className="flex items-center gap-3 w-full md:w-auto">
-           <div className="relative flex-1 md:w-80">
-             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-             <Input
-               placeholder="Buscar por casa, parceiro ou notas..."
-               className="pl-9 h-9"
-               value={searchTerm}
-               onChange={(e) => setSearchTerm(e.target.value)}
-             />
-           </div>
-           <Select value={statusFilter} onValueChange={setStatusFilter}>
-             <SelectTrigger className="w-[180px] h-9">
-               <Filter className="h-3.5 w-3.5 mr-2" />
-               <SelectValue placeholder="Status" />
-             </SelectTrigger>
-             <SelectContent>
-               <SelectItem value="all">Todos os Status</SelectItem>
-               <SelectItem value="concluido">Feito (Conta Criada)</SelectItem>
-               <SelectItem value="pendente">Pendente</SelectItem>
-               <SelectItem value="atrasado">Atrasado</SelectItem>
-               <SelectItem value="planejado">Planejado</SelectItem>
-             </SelectContent>
-           </Select>
+        <div className="p-4 border-b flex flex-col lg:flex-row gap-4 items-start lg:items-end justify-between bg-card/50">
+          <div className="flex flex-wrap items-end gap-3 w-full lg:w-auto">
+            <div className="flex flex-col gap-1.5 flex-1 min-w-[240px] lg:w-80 lg:flex-none">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Busca</span>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Casa, parceiro ou notas..."
+                  className="pl-9 h-9"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
 
-           <Select value={projetoFilter} onValueChange={setProjetoFilter}>
-             <SelectTrigger className="w-[200px] h-9">
-               <Building2 className="h-3.5 w-3.5 mr-2" />
-               <SelectValue placeholder="Projeto" />
-             </SelectTrigger>
-             <SelectContent>
-               <SelectItem value="all">Todos os Projetos</SelectItem>
-               {projetos.map(p => (
-                 <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
-               ))}
-             </SelectContent>
-           </Select>
-         </div>
+            <div className="flex flex-col gap-1.5 w-[160px]">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Status</span>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="h-9">
+                  <Filter className="h-3.5 w-3.5 mr-2 shrink-0" />
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Status</SelectItem>
+                  <SelectItem value="concluido">Feito (Conta Criada)</SelectItem>
+                  <SelectItem value="pendente">Pendente</SelectItem>
+                  <SelectItem value="atrasado">Atrasado</SelectItem>
+                  <SelectItem value="planejado">Planejado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-1.5 w-[180px]">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Projeto</span>
+              <Select value={projetoFilter} onValueChange={setProjetoFilter}>
+                <SelectTrigger className="h-9">
+                  <Building2 className="h-3.5 w-3.5 mr-2 shrink-0" />
+                  <SelectValue placeholder="Projeto" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Projetos</SelectItem>
+                  {projetos.map(p => (
+                    <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
  
           <div className="flex items-center gap-4 text-sm text-muted-foreground font-medium">
             <div className="flex items-center gap-2">
