@@ -324,7 +324,64 @@ import { toast } from "sonner";
        </div>
  
       {/* Lista de Histórico */}
-      <div className="flex-1 overflow-auto p-4 scroll-smooth">
+      <div className="flex-1 overflow-auto p-4 scroll-smooth planning-list-scroll-main relative">
+        {filteredCampanhas.length > 0 && (
+          <div className="sticky top-1/2 -translate-y-1/2 z-50 h-0 w-0">
+            <div className="flex flex-col gap-2 absolute left-1 md:left-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="rounded-full shadow-lg border border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/15 hover:border-white/20 transition-all h-10 w-10 text-white"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      scrollManual('up');
+                    }}
+                  >
+                    <ChevronUp className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">Subir</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="rounded-full shadow-xl border border-white/20 bg-white/10 backdrop-blur-md hover:bg-white/20 transition-all h-12 w-12 text-white hover:scale-105 active:scale-95"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      scrollToToday();
+                    }}
+                  >
+                    <Target className="h-6 w-6" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">Hoje</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="rounded-full shadow-lg border border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/15 hover:border-white/20 transition-all h-10 w-10 text-white"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      scrollManual('down');
+                    }}
+                  >
+                    <ChevronDown className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">Descer</TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+        )}
+
         {filteredCampanhas.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
             <Filter className="h-12 w-12 opacity-20" />
@@ -338,7 +395,7 @@ import { toast } from "sonner";
               const isDateToday = isToday(dateObj);
 
               return (
-                <div key={dateStr} className="relative pl-8 md:pl-0">
+                <div key={dateStr} id={`date-group-main-${dateStr}`} className="relative pl-8 md:pl-0 scroll-mt-4">
                   {/* Linha do Tempo Visual */}
                   <div className="absolute left-[15px] md:left-[108px] top-0 bottom-0 w-px bg-border hidden sm:block" />
 
