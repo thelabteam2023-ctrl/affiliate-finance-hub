@@ -1,20 +1,22 @@
  import { useState, useMemo } from "react";
- import { 
-   Search, 
-   CheckCircle2, 
-   Clock, 
-   AlertTriangle, 
-   Calendar as CalendarIcon, 
-   Filter,
-   Building2,
-   User,
-   MapPin,
-   Wallet,
-   Pencil,
-   Trash2,
-   ChevronDown,
-   ChevronUp
- } from "lucide-react";
+  import { 
+    Search, 
+    CheckCircle2, 
+    Clock, 
+    AlertTriangle, 
+    Calendar as CalendarIcon, 
+    Filter,
+    Building2,
+    User,
+    MapPin,
+    Wallet,
+    Pencil,
+    Trash2,
+    ChevronDown,
+    ChevronUp,
+    ChevronLeft,
+    ChevronRight
+  } from "lucide-react";
  import { Card } from "@/components/ui/card";
  import { Input } from "@/components/ui/input";
  import { Button } from "@/components/ui/button";
@@ -48,10 +50,11 @@
  import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
  
  export function PlanejamentoList() {
-   const [searchTerm, setSearchTerm] = useState("");
-   const [statusFilter, setStatusFilter] = useState<string>("all");
-   const [selectedYear] = useState(new Date().getFullYear());
-   const [selectedMonth] = useState(new Date().getMonth() + 1);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [statusFilter, setStatusFilter] = useState<string>("all");
+    const today = new Date();
+    const [selectedYear, setSelectedYear] = useState(today.getFullYear());
+    const [selectedMonth, setSelectedMonth] = useState(today.getMonth() + 1);
    
    // Para fins de simplificação, estamos buscando o mês atual. 
    // Em um cenário real, poderíamos ter um seletor de mês/ano mais robusto.
@@ -131,13 +134,49 @@
            </Select>
          </div>
  
-         <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
-           <CalendarIcon className="h-4 w-4" />
-           {format(new Date(selectedYear, selectedMonth - 1), "MMMM 'de' yyyy", { locale: ptBR })}
-           <Badge variant="outline" className="ml-2 font-mono">
-             {filteredCampanhas.length} registros
-           </Badge>
-         </div>
+          <div className="flex items-center gap-4 text-sm text-muted-foreground font-medium">
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7" 
+                onClick={() => {
+                  if (selectedMonth === 1) {
+                    setSelectedMonth(12);
+                    setSelectedYear(selectedYear - 1);
+                  } else {
+                    setSelectedMonth(selectedMonth - 1);
+                  }
+                }}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <div className="flex items-center gap-2 min-w-[140px] justify-center">
+                <CalendarIcon className="h-4 w-4" />
+                <span className="capitalize">
+                  {format(new Date(selectedYear, selectedMonth - 1), "MMMM 'de' yyyy", { locale: ptBR })}
+                </span>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7"
+                onClick={() => {
+                  if (selectedMonth === 12) {
+                    setSelectedMonth(1);
+                    setSelectedYear(selectedYear + 1);
+                  } else {
+                    setSelectedMonth(selectedMonth + 1);
+                  }
+                }}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+            <Badge variant="outline" className="font-mono">
+              {filteredCampanhas.length} registros
+            </Badge>
+          </div>
        </div>
  
        {/* Lista de Histórico */}

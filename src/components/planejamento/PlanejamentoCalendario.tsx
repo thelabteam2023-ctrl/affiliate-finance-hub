@@ -1397,7 +1397,7 @@ export function PlanejamentoCalendario() {
             {DIAS_SEMANA.map(d => <div key={d} className="py-1">{d}</div>)}
           </div>
 
-          <div className="grid grid-cols-7 gap-1 flex-1 overflow-y-auto">
+           <div className="grid grid-cols-7 gap-1 flex-1 overflow-y-auto pr-1">
             {grid.map((cell, idx) => {
               const key = formatDateKey(cell.date);
               const dayCamps = campanhasByDay.get(key) ?? [];
@@ -1424,7 +1424,7 @@ export function PlanejamentoCalendario() {
                           onDelete={() => handleDeleteCampanha(c.id)}
                           onToggleAccountCreated={() => handleToggleAccountCreated(c)}
                           ipLabel={resolvedIpId ? ipMap[resolvedIpId]?.label : undefined}
-                          parceiroNome={c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : campanhaPerfilMap.get(c.id)?.parceiro_id ? parceiroMap[campanhaPerfilMap.get(c.id)!.parceiro_id!]?.nome : undefined}
+                           parceiroNome={c.parceiro_snapshot?.nome || (c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : campanhaPerfilMap.get(c.id)?.parceiro_id ? parceiroMap[campanhaPerfilMap.get(c.id)!.parceiro_id!]?.nome : undefined)}
                           hasConflict={dayConflicts.has(c.id)}
                           isPending={!c.parceiro_id || !resolvedIpId || !c.wallet_id || Number(c.deposit_amount) <= 0}
                           logoUrl={getLogoUrl(c.bookmaker_nome)}
