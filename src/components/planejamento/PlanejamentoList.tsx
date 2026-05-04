@@ -184,13 +184,13 @@
        {/* Header com Filtros */}
         <div className="p-4 border-b flex flex-col lg:flex-row gap-4 items-start lg:items-end justify-between bg-card/50">
           <div className="flex flex-wrap items-end gap-3 w-full lg:w-auto">
-            <div className="flex flex-col gap-1.5 flex-1 min-w-[200px] lg:w-80 lg:flex-none">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1 mb-1 lg:mb-0">Busca</span>
+            <div className="flex flex-col gap-1 flex-1 min-w-[200px] lg:w-80 lg:flex-none">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Busca</span>
               <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Casa, parceiro ou notas..."
-                  className="pl-9 h-9"
+                  className="pl-9 h-10 border-muted-foreground/20 focus:border-primary"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
