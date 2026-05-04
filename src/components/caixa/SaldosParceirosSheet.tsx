@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useTabWorkspace } from "@/hooks/useTabWorkspace";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
  import { Users, RefreshCw, ArrowUpDown, Wallet, Landmark, Bitcoin, Info, ArrowRightLeft, Truck, Building2 } from "lucide-react";
@@ -291,6 +292,7 @@ export function SaldosParceirosSheet() {
     open: false,
     parceiroId: null,
   });
+  const { workspaceId } = useTabWorkspace();
   const { convertToBRL } = useExchangeRates();
 
   const fetchCryptoPrices = async (coins: string[]) => {
@@ -317,19 +319,23 @@ export function SaldosParceirosSheet() {
     }
   };
 
-  const fetchSaldosParceiros = async () => {
+  const fetchSaldosParceiros = useCallback(async () => {
+    if (!workspaceId) return;
+    
     try {
       setLoading(true);
 
       const { data: saldosContas, error: contasError } = await supabase
         .from("v_saldo_parceiro_contas")
-        .select("*");
+        .select("*")
+        .eq("workspace_id", workspaceId);
 
       if (contasError) throw contasError;
 
       const { data: saldosWallets, error: walletsError } = await supabase
         .from("v_saldo_parceiro_wallets")
-        .select("*");
+        .select("*")
+        .eq("workspace_id", workspaceId);
 
       if (walletsError) throw walletsError;
 
@@ -337,6 +343,7 @@ export function SaldosParceirosSheet() {
       const { data: bookmakers, error: bookmakersError } = await supabase
         .from("bookmakers")
         .select("id, parceiro_id, nome, saldo_atual, saldo_usd, saldo_freebet, moeda")
+        .eq("workspace_id", workspaceId)
         .not("parceiro_id", "is", null);
 
       if (bookmakersError) throw bookmakersError;
@@ -345,6 +352,7 @@ export function SaldosParceirosSheet() {
       const { data: bonusCreditados, error: bonusError } = await supabase
         .from("project_bookmaker_link_bonuses")
         .select("bookmaker_id, saldo_atual")
+        .eq("workspace_id", workspaceId)
         .eq("status", "credited");
 
       if (bonusError) throw bonusError;
@@ -365,6 +373,7 @@ export function SaldosParceirosSheet() {
             parceiro_id
           )
         `)
+        .eq("workspace_id", workspaceId)
         .eq("status", "PENDENTE")
         .not("origem_wallet_id", "is", null)
         .not("destino_bookmaker_id", "is", null);
@@ -413,7 +422,8 @@ export function SaldosParceirosSheet() {
  
        const { data: allParceiros } = await supabase
          .from("parceiros")
-         .select("id, nome, is_caixa_operacional");
+         .select("id, nome, is_caixa_operacional")
+         .eq("workspace_id", workspaceId);
  
        const parceiroInfoMap = new Map<string, any>();
        if (allParceiros) {
