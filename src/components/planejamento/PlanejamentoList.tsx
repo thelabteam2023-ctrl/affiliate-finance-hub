@@ -134,13 +134,49 @@
            </Select>
          </div>
  
-         <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
-           <CalendarIcon className="h-4 w-4" />
-           {format(new Date(selectedYear, selectedMonth - 1), "MMMM 'de' yyyy", { locale: ptBR })}
-           <Badge variant="outline" className="ml-2 font-mono">
-             {filteredCampanhas.length} registros
-           </Badge>
-         </div>
+          <div className="flex items-center gap-4 text-sm text-muted-foreground font-medium">
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7" 
+                onClick={() => {
+                  if (selectedMonth === 1) {
+                    setSelectedMonth(12);
+                    setSelectedYear(selectedYear - 1);
+                  } else {
+                    setSelectedMonth(selectedMonth - 1);
+                  }
+                }}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <div className="flex items-center gap-2 min-w-[140px] justify-center">
+                <CalendarIcon className="h-4 w-4" />
+                <span className="capitalize">
+                  {format(new Date(selectedYear, selectedMonth - 1), "MMMM 'de' yyyy", { locale: ptBR })}
+                </span>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7"
+                onClick={() => {
+                  if (selectedMonth === 12) {
+                    setSelectedMonth(1);
+                    setSelectedYear(selectedYear + 1);
+                  } else {
+                    setSelectedMonth(selectedMonth + 1);
+                  }
+                }}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+            <Badge variant="outline" className="font-mono">
+              {filteredCampanhas.length} registros
+            </Badge>
+          </div>
        </div>
  
        {/* Lista de Histórico */}
