@@ -17,28 +17,22 @@ export function usePlanningRealtimeSync() {
   useEffect(() => {
     if (!workspaceId || !user) return;
 
-    const scheduleRefresh = (payload: any) => {
-      // Identifica quem causou a mudança para evitar refreshes desnecessários no próprio autor
-      const row = payload.new || payload.old || {};
-      const actorId = row.updated_by || row.created_by || row.user_id;
-      
-      if (actorId === user.id) return;
-
+    const scheduleRefresh = () => {
       // Debounce para evitar múltiplas invalidações em rajadas de eventos
       if (debounceRef.current) clearTimeout(debounceRef.current);
       
       debounceRef.current = setTimeout(() => {
-        console.log("[PlanningRealtimeSync] Mudança detectada, invalidando queries...");
+        console.log("[PlanningRealtimeSync] Mudança detectada no workspace, invalidando queries...");
         
         // Invalida as queries principais do planejamento
-        qc.invalidateQueries({ queryKey: ["planning-campanhas"] });
-        qc.invalidateQueries({ queryKey: ["plano-celulas-agendadas"] });
-        qc.invalidateQueries({ queryKey: ["plano-celulas-disponiveis"] });
+        // Usamos refetchType: 'active' para não forçar refetch de tudo se não estiver visível
+        qc.invalidateQueries({ queryKey: ["planning-campanhas"], refetchType: 'active' });
+        qc.invalidateQueries({ queryKey: ["plano-celulas-agendadas"], refetchType: 'active' });
+        qc.invalidateQueries({ queryKey: ["plano-celulas-disponiveis"], refetchType: 'active' });
 
-        toast("Planejamento atualizado", {
-          description: "Dados sincronizados com outros usuários.",
-          duration: 3000,
-        });
+        // Opcional: só mostrar toast se não for o autor (mas não temos updated_by fácil)
+        // Por enquanto, vamos omitir o toast para evitar redundância para o próprio usuário
+        // ou deixar um toast bem discreto se for realmente necessário.
         
         debounceRef.current = null;
       }, 1000);
