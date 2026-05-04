@@ -23,6 +23,7 @@ export interface DistribuicaoPlano {
   nome: string;
   descricao: string | null;
   parceiro_ids: string[];
+  projeto_id: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -77,6 +78,7 @@ export function useDistribuicaoPlanos() {
     mutationFn: async (params: {
       nome: string;
       descricao?: string;
+      projeto_id?: string | null;
       parceiro_ids: string[];
       grupos: Array<{
         grupo_id: string;
@@ -103,6 +105,7 @@ export function useDistribuicaoPlanos() {
           workspace_id: workspaceId,
           nome: params.nome,
           descricao: params.descricao || null,
+          projeto_id: params.projeto_id ?? null,
           parceiro_ids: params.parceiro_ids,
         })
         .select()
@@ -173,10 +176,33 @@ export function useDistribuicaoPlanos() {
     onError: (e: any) => toast.error(e.message || "Erro ao excluir plano"),
   });
 
+  const updatePlano = useMutation({
+    mutationFn: async (params: { id: string; nome?: string; descricao?: string | null; projeto_id?: string | null }) => {
+      const patch: Record<string, any> = {};
+      if (params.nome !== undefined) patch.nome = params.nome;
+      if (params.descricao !== undefined) patch.descricao = params.descricao;
+      if (params.projeto_id !== undefined) patch.projeto_id = params.projeto_id;
+      const { data, error } = await (supabase as any)
+        .from("distribuicao_planos")
+        .update(patch)
+        .eq("id", params.id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success("Plano atualizado");
+      invalidate();
+    },
+    onError: (e: any) => toast.error(e.message || "Erro ao atualizar plano"),
+  });
+
   return {
     planos: planosQuery.data ?? [],
     isLoading: planosQuery.isLoading,
     createPlano,
+    updatePlano,
     deletePlano,
     invalidate,
   };
