@@ -902,6 +902,27 @@ export default function DistribuicaoTab({ onPlanoCriado }: DistribuicaoTabProps)
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+
+    <AlertDialog open={!!confirmacaoVinculo} onOpenChange={(open) => !open && setConfirmacaoVinculo(null)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Confirmar vínculo de projeto</AlertDialogTitle>
+          <AlertDialogDescription>
+            Deseja vincular o projeto{" "}
+            <strong>
+              {projetos.find((p) => p.id === confirmacaoVinculo?.projetoId)?.nome ?? "Sem vínculo"}
+            </strong>{" "}
+            ao plano <strong>"{confirmacaoVinculo?.planoNome}"</strong>?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={updatePlano.isPending}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={confirmarVinculoProjeto} disabled={updatePlano.isPending}>
+            {updatePlano.isPending ? "Vinculando..." : "Confirmar vínculo"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 }
