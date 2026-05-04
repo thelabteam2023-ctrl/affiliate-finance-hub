@@ -49,7 +49,7 @@ export function usePlanningRealtimeSync() {
           table: "planning_campanhas",
           filter: `workspace_id=eq.${workspaceId}`,
         },
-        (payload: any) => scheduleRefresh(payload)
+        () => scheduleRefresh()
       )
       .on(
         "postgres_changes" as any,
@@ -59,7 +59,7 @@ export function usePlanningRealtimeSync() {
           table: "distribuicao_plano_celulas",
           filter: `workspace_id=eq.${workspaceId}`,
         },
-        (payload: any) => scheduleRefresh(payload)
+        () => scheduleRefresh()
       )
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
