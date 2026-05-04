@@ -367,7 +367,7 @@ export default function DistribuicaoTab({ onPlanoCriado }: DistribuicaoTabProps)
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="__none__">Sem vínculo</SelectItem>
-                       {projetos.filter(p => !p.archived_at).map((p) => (
+                       {projetos.map((p) => (
                          <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
                        ))}
           </SelectContent>
