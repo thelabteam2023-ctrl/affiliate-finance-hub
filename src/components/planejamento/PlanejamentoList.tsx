@@ -390,9 +390,9 @@
                                          )}
                                       </span>
                                     </div>
-                                    <div className="flex items-center gap-1.5 font-medium text-foreground">
+                                    <div className="flex items-center gap-1.5 font-medium text-foreground" title={camp.deposit_amount === 0 ? "Valor sugerido pela célula" : "Valor depositado"}>
                                       <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
-                                      {formatMoney(camp.deposit_amount, camp.currency)}
+                                      {displayValue}
                                     </div>
                                   </div>
                                 </div>
