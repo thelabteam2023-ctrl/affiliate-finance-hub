@@ -285,7 +285,7 @@
                         const status = getStatus(camp, isPending);
                         const displayName = camp.parceiro_snapshot?.nome || 
                                           (perfil ? perfilDisplayName(perfil) : "Sem parceiro");
-                        const cpfIndex = perfil ? planningPerfilCpfIndex(perfis, perfil.id) : null;
+                        const cpfIndex = perfil ? planningPerfilCpfIndex(perfis, perfil.id) : (celula as any)?.cpf_index || null;
                         return (
                           <Card
                             key={camp.id}
@@ -329,7 +329,18 @@
                                       <User className="h-3.5 w-3.5" />
                                       <span className="truncate">
                                         {displayName}
-                                        {cpfIndex && <span className="ml-1.5 text-[10px] font-bold text-primary bg-primary/10 px-1 rounded">CPF {cpfIndex}</span>}
+                                         {cpfIndex && (
+                                           <span 
+                                             className="ml-1.5 text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm border"
+                                             style={{
+                                               backgroundColor: perfil?.cor ? `${perfil.cor}26` : 'hsl(var(--primary)/0.1)',
+                                               borderColor: perfil?.cor || 'hsl(var(--primary))',
+                                               color: perfil?.cor || 'hsl(var(--primary))'
+                                             }}
+                                           >
+                                             CPF {cpfIndex}
+                                           </span>
+                                         )}
                                       </span>
                                     </div>
                                     <div className="flex items-center gap-1.5 font-medium text-foreground">
@@ -387,17 +398,17 @@
                             </div>
 
                             {/* Indicadores de Status */}
-                            <div className="absolute top-0 right-0 p-1 flex gap-1">
-                              {status === "concluido" && (
-                                <div className="h-2.5 w-2.5 rounded-full bg-[#00FF66] shadow-[0_0_12px_4px_rgba(0,255,102,0.6)] animate-pulse" title="Concluído" />
-                              )}
-                              {status === "atrasado" && (
-                                <div className="h-2.5 w-2.5 rounded-full bg-destructive shadow-[0_0_12px_4px_rgba(239,68,68,0.6)] animate-pulse" title="Atrasado" />
-                              )}
-                              {status === "pendente" && (
-                                <div className="h-2.5 w-2.5 rounded-full bg-[#FFD700] shadow-[0_0_12px_4px_rgba(255,215,0,0.6)] animate-pulse" title="Pendente" />
-                              )}
-                            </div>
+                             <div className="absolute top-0 right-0 p-1.5 flex gap-1.5">
+                               {status === "concluido" && (
+                                 <div className="h-3 w-3 rounded-full bg-[#00FF66] shadow-[0_0_15px_6px_rgba(0,255,102,0.8)] animate-pulse" title="Concluído" />
+                               )}
+                               {status === "atrasado" && (
+                                 <div className="h-3 w-3 rounded-full bg-destructive shadow-[0_0_15px_6px_rgba(239,68,68,0.8)] animate-pulse" title="Atrasado" />
+                               )}
+                               {status === "pendente" && (
+                                 <div className="h-3 w-3 rounded-full bg-[#FFD700] shadow-[0_0_15px_6px_rgba(255,215,0,0.8)] animate-pulse" title="Pendente" />
+                               )}
+                             </div>
                           </Card>
                         );
                       })}
