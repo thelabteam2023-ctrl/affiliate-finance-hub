@@ -3770,6 +3770,7 @@ export function CaixaTransacaoDialog({
            );
          }
        }
+       }
 
     return null;
   };
