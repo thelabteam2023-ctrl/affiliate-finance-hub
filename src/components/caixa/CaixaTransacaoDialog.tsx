@@ -269,9 +269,6 @@ export function CaixaTransacaoDialog({
    const prevValor = useRef<string>(valor);
    const prevQtdCoin = useRef<string>(qtdCoin);
    const prevOrigemContaId = useRef<string>("");
-   const prevFluxoTransferencia = useRef<string>(fluxoTransferencia);
-  
-  // Flag para evitar re-execução de efeitos durante reset
   const isResettingContext = useRef<boolean>(false);
 
   // ============================================================================
@@ -806,9 +803,8 @@ export function CaixaTransacaoDialog({
   const [caixaContaId, setCaixaContaId] = useState<string>("");
   const [caixaWalletId, setCaixaWalletId] = useState<string>("");
   // Transfer flow type for TRANSFERENCIA
-  const [fluxoTransferencia, setFluxoTransferencia] = useState<"CAIXA_PARCEIRO" | "PARCEIRO_PARCEIRO" | "PARCEIRO_CAIXA">("CAIXA_PARCEIRO");
-  
-  // Alert dialogs state
+   const [fluxoTransferencia, setFluxoTransferencia] = useState<"CAIXA_PARCEIRO" | "PARCEIRO_PARCEIRO" | "PARCEIRO_CAIXA">("CAIXA_PARCEIRO");
+   const prevFluxoTransferencia = useRef<string>(fluxoTransferencia);
   const [showNoBankAlert, setShowNoBankAlert] = useState(false);
   const [showNoWalletAlert, setShowNoWalletAlert] = useState(false);
   const [alertParceiroId, setAlertParceiroId] = useState<string>("");
