@@ -15906,6 +15906,10 @@ export type Database = {
         }[]
       }
       sync_bonus_rollover: { Args: { p_bonus_id: string }; Returns: number }
+      sync_pending_aposta_stake_v1: {
+        Args: { p_aposta_id: string }
+        Returns: Json
+      }
       try_cast_uuid: { Args: { p_text: string }; Returns: string }
       unlock_wallet_balance: {
         Args: { p_valor_usd: number; p_wallet_id: string }
