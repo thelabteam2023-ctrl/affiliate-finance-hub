@@ -38,6 +38,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useExchangeRates } from "@/contexts/ExchangeRatesContext";
 import { useDistribuicaoPlanos } from "@/hooks/useDistribuicaoPlanos";
+import { useProjetos } from "@/hooks/usePlanningData";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -66,10 +67,13 @@ export default function DistribuicaoTab({ onPlanoCriado }: DistribuicaoTabProps)
   const { data: perfis = [] } = usePlanningPerfis();
   const { data: casasPlanejamento = [] } = usePlanningCasas();
   const { planos, createPlano, deletePlano } = useDistribuicaoPlanos();
+  const { updatePlano } = useDistribuicaoPlanos();
+  const { data: projetos = [] } = useProjetos();
   const { convertToBRL, cotacaoUSD } = useExchangeRates();
   const perfisOrdenados = useMemo(() => orderPlanningPerfis(perfis), [perfis]);
 
   const [planoNome, setPlanoNome] = useState("");
+  const [projetoId, setProjetoId] = useState<string>("__none__");
   const [selectedPerfilIds, setSelectedPerfilIds] = useState<string[]>([]);
   const [grupoConfigs, setGrupoConfigs] = useState<
     Array<{
@@ -210,6 +214,7 @@ export default function DistribuicaoTab({ onPlanoCriado }: DistribuicaoTabProps)
     createPlano.mutate(
       {
         nome: planoNome.trim(),
+        projeto_id: projetoId === "__none__" ? null : projetoId,
         parceiro_ids: parceiroIds,
         grupos: grupoConfigs.map((g, idx) => ({
           grupo_id: g.grupo_id,
