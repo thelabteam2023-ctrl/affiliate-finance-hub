@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, memo } from "react";
 import { SaldoOperavelCard } from "../SaldoOperavelCard";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -1077,7 +1077,8 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
   }
 
   // Render bet cards helper
-  const renderBetCards = (items: ApostaUnificada[]) => (
+  const renderBetCards = (items: ApostaUnificada[]) => {
+    return (
     <div className={cn(
       viewMode === "cards" 
         ? "grid gap-5 md:grid-cols-2 xl:grid-cols-3" 
@@ -1286,6 +1287,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
       })}
     </div>
   );
+  };
 
   return (
     <div className="space-y-4">
