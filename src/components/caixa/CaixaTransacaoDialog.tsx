@@ -4458,7 +4458,8 @@ export function CaixaTransacaoDialog({
 
   // Suporta todas as 8 moedas FIAT + USD para crypto
   const formatCurrency = (value: number, forceCurrency?: string) => {
-    let currencyCode = forceCurrency || (tipoMoeda === "CRYPTO" ? "USD" : (moeda || "USD"));
+    // Default to BRL for FIAT if currency is not yet selected
+    let currencyCode = forceCurrency || (tipoMoeda === "CRYPTO" ? "USD" : (moeda || "BRL"));
     
     // Tratar USDT como USD para formatação
     if (currencyCode === "USDT") currencyCode = "USD";
