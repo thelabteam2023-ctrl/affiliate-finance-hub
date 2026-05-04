@@ -718,7 +718,7 @@ export default function ProjetoDetalhe() {
 
   return (
     // Filtros agora são isolados por aba - cada tab usa seu próprio useTabFilters
-    <div className="flex-1 flex flex-col min-h-0 w-full max-w-full overflow-x-hidden p-4 md:p-6 lg:p-8 space-y-4">
+    <div className="flex-1 flex flex-col min-h-0 h-full w-full max-w-full overflow-hidden p-4 md:p-6 lg:p-8 space-y-4">
 
       {/* Filtro de período removido - cada aba usa seu próprio StandardTimeFilter interno (padrão Bônus/Freebets) */}
 
