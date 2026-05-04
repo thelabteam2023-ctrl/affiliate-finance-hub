@@ -546,54 +546,7 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
   };
 
     return (
-      <div className="h-full flex flex-col min-h-0 relative group/container">
-        {/* Navegação Flutuante Lateral */}
-        {viewMode === "list" && filteredData.length > 0 && (
-          <div className="absolute right-6 top-1/2 -translate-y-1/2 z-30 flex flex-col gap-2 opacity-0 group-hover/container:opacity-100 transition-opacity duration-300">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="secondary" 
-                  size="icon" 
-                  className="rounded-full shadow-lg border border-primary/20 bg-background/80 backdrop-blur-sm hover:bg-primary hover:text-primary-foreground transition-all h-10 w-10"
-                  onClick={() => scrollManual('up')}
-                >
-                  <ChevronUp className="h-5 w-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="left">Subir</TooltipContent>
-            </Tooltip>
-
-             <Tooltip>
-               <TooltipTrigger asChild>
-                 <Button 
-                   variant="default" 
-                   size="icon" 
-                   className="rounded-full shadow-xl bg-primary text-primary-foreground h-12 w-12 hover:scale-110 active:scale-95 transition-all border-none"
-                   onClick={scrollToToday}
-                 >
-                   <Target className="h-6 w-6" />
-                 </Button>
-               </TooltipTrigger>
-               <TooltipContent side="left">Ir para Hoje</TooltipContent>
-             </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="secondary" 
-                  size="icon" 
-                  className="rounded-full shadow-lg border border-primary/20 bg-background/80 backdrop-blur-sm hover:bg-primary hover:text-primary-foreground transition-all h-10 w-10"
-                  onClick={() => scrollManual('down')}
-                >
-                  <ChevronDown className="h-5 w-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="left">Descer</TooltipContent>
-            </Tooltip>
-          </div>
-        )}
-
+      <div className="h-full flex flex-col min-h-0 relative">
         <OperationsHistoryModule
          projetoId={projetoId}
          title="Planejamento de Campanhas"
