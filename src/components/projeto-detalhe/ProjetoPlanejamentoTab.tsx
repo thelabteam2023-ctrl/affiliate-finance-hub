@@ -83,17 +83,14 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
   // 3. Helpers de Resolução (Lógica espelhada do PlanejamentoList)
   const resolveCampanhaData = (c: PlanningCampanha) => {
     const celula = celulasAgendadas.find(cel => cel.campanha_id === c.id);
-    
     const perfil = perfis.find(p => 
       (c.parceiro_id && p.parceiro_id === c.parceiro_id) || 
       (celula?.perfil_planejamento_id && p.id === celula.perfil_planejamento_id) ||
       (celula?.parceiro_id && p.parceiro_id === celula.parceiro_id)
     );
-
     const parceiroId = c.parceiro_id || perfil?.parceiro_id || celula?.parceiro_id;
     const perfilId = perfil?.id || celula?.perfil_planejamento_id;
     const bookmakerCatalogoId = c.bookmaker_catalogo_id || (celula as any)?.bookmaker_catalogo_id;
-
     const linkedIp = ips.find(i => i.id === c.ip_id) || 
                     (perfilId && bookmakerCatalogoId ? ips.find(i => i.perfil_planejamento_id === perfilId && i.bookmaker_catalogo_id === bookmakerCatalogoId) : null) ||
                     (parceiroId && bookmakerCatalogoId ? ips.find(i => {
@@ -101,18 +98,16 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
                       return ipPerfil?.parceiro_id === parceiroId && i.bookmaker_catalogo_id === bookmakerCatalogoId;
                     }) : null) ||
                     (bookmakerCatalogoId ? ips.find(i => i.bookmaker_catalogo_id === bookmakerCatalogoId && !i.perfil_planejamento_id) : null);
-
     const isPending = !parceiroId && !perfilId || !linkedIp || !c.wallet_id || Number(c.deposit_amount) <= 0;
-    
     return { perfil, linkedIp, isPending, parceiroId, celula, bookmakerCatalogoId };
   };
 
   const getStatus = (c: PlanningCampanha, isPending: boolean) => {
     if (c.is_account_created) return "concluido";
     const campDate = startOfDay(parseISO(c.scheduled_date));
-    const today = startOfDay(new Date());
+    const todayDate = startOfDay(new Date());
     if (isPending) {
-      if (campDate < today) return "atrasado";
+      if (campDate < todayDate) return "atrasado";
       return "pendente";
     }
     return "planejado";
@@ -122,10 +117,10 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
     return new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(v);
   };
 
-   const handleCopyProxy = (proxy: string) => {
-     navigator.clipboard.writeText(proxy);
-     toast.success("Proxy copiado para a área de transferência!");
-   };
+  const handleCopyProxy = (proxy: string) => {
+    navigator.clipboard.writeText(proxy);
+    toast.success("Proxy copiado!");
+  };
 
   const handleToggleStatus = async (camp: PlanningCampanha) => {
     try {
@@ -141,54 +136,21 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
     }
   };
 
-   // 4. Filtragem por Sub-aba (Abertas vs Histórico) e Filtros Dimensionais
-   const filteredData = useMemo(() => {
-     return campanhas
-       .map((c) => {
-         const resolved = resolveCampanhaData(c);
-         const status = getStatus(c, resolved.isPending);
-         return { ...c, ...resolved, derivedStatus: status };
-       })
-       .filter((c) => {
-         // 4a. Filtro de Sub-aba (Abertas vs Histórico)
-         if (subTab === "abertas") {
-           if (c.derivedStatus === "concluido") return false;
-         } else {
-           if (c.derivedStatus !== "concluido") return false;
-         }
- 
-         // 4b. Filtro de Status (Atrasados, etc) - Se houver filtros de resultado aplicados
-         if (tabFilters.resultados.length > 0) {
-           // Mapear Status do Planejamento para o padrão de ResultadoFilter
-           // "atrasado" -> "RED" (ou equivalente para filtro de atrasados)
-           // No planejamento o usuário pediu filtro de "atrasados"
-           const statusMap: Record<string, string> = {
-             concluido: "GREEN",
-             atrasado: "RED",
-             pendente: "PENDENTE",
-             planejado: "VOID",
-           };
-           const currentStatusAsResult = statusMap[c.derivedStatus];
-           if (!tabFilters.resultados.includes(currentStatusAsResult as any)) return false;
-         }
- 
-         // 4c. Filtros Dimensionais (Casas / Parceiros)
-         if (tabFilters.bookmakerIds.length > 0) {
-           const campAsAny = c as any;
-           if (!tabFilters.bookmakerIds.includes(c.bookmaker_catalogo_id || "")) {
-             // Tenta pelo ID interno também se disponível
-             if (!tabFilters.bookmakerIds.includes(campAsAny.bookmaker_id || "")) return false;
-           }
-         }
- 
-         if (tabFilters.parceiroIds.length > 0) {
-           if (!tabFilters.parceiroIds.includes(c.parceiroId || "")) return false;
-         }
- 
-         return true;
-       })
-       .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));
-   }, [campanhas, celulasAgendadas, perfis, ips, subTab, tabFilters.resultados, tabFilters.bookmakerIds, tabFilters.parceiroIds]);
+  const filteredData = useMemo(() => {
+    return campanhas
+      .filter((c) => {
+        const matchesProjeto = projetoFilter === "all" || c.projeto_id === projetoFilter;
+        const matchesSearch =
+          c.bookmaker_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (c.parceiro_snapshot?.nome || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (c.notes || "").toLowerCase().includes(searchTerm.toLowerCase());
+        const { isPending } = resolveCampanhaData(c);
+        const status = getStatus(c, isPending);
+        const matchesStatus = statusFilter === "all" || status === statusFilter;
+        return matchesSearch && matchesStatus && matchesProjeto;
+      })
+      .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));
+  }, [campanhas, searchTerm, statusFilter, projetoFilter, celulasAgendadas, perfis, ips]);
 
   const groupedByDay = useMemo(() => {
     const groups: Record<string, any[]> = {};
