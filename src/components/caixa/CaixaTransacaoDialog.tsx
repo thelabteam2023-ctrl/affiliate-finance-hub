@@ -562,9 +562,8 @@ export function CaixaTransacaoDialog({
   useEffect(() => {
     if (tipoMoeda === prevTipoMoeda.current) return; // Sem mudança real
     
-    // 🔒 RESET FINANCEIRO APENAS - Preservar parceiro e bookmaker (identidade da transação)
-    // "Trocar FIAT ↔ CRYPTO não muda a transação. Muda apenas a origem financeira."
-    resetContextoDependente(true, true, true);
+     // 🔒 RESET COMPLETO ao trocar tipo de moeda (FIAT ↔ CRYPTO)
+     resetContextoDependente(true, true, false);
     
     // Para affiliate_deposit com moeda já pré-definida, NÃO abrir o seletor de moeda
     // A auto-focus chain (contasBancarias) vai cuidar de abrir o campo correto
@@ -597,22 +596,8 @@ export function CaixaTransacaoDialog({
     if (isResettingContext.current) return; // Ignorar durante reset de contexto
     if (coin === prevCoin.current) return;
     
-    // Resetar valores (cotação pode ser diferente)
-    setValor("");
-    setValorDisplay("");
-    setQtdCoin("");
-    setCotacao("");
-    
-    // Resetar wallets (pode não aceitar a nova moeda)
-    setOrigemWalletId("");
-    setDestinoWalletId("");
-    
-    // NÃO resetar parceiros - eles são identidade da transação
-    // A wallet será re-selecionada mas o parceiro permanece
-    
-    // Refs
-    prevOrigemWalletId.current = "";
-    prevDestinoWalletId.current = "";
+     // 🔒 RESET COMPLETO ao trocar a moeda selecionada (CRYPTO)
+     resetContextoDependente(false, true, false);
     
     prevCoin.current = coin;
     
@@ -633,20 +618,8 @@ export function CaixaTransacaoDialog({
     if (isResettingContext.current) return; // Ignorar durante reset de contexto
     if (moeda === prevMoeda.current) return;
     
-    // Resetar valores
-    setValor("");
-    setValorDisplay("");
-    
-    // Resetar contas (saldo é por moeda)
-    setOrigemContaId("");
-    setDestinoContaId("");
-    
-    // NÃO resetar bookmaker nem parceiro - são identidade da transação
-    // A conta bancária será re-selecionada mas parceiro/bookmaker permanecem
-    
-    // Refs
-    prevOrigemContaId.current = "";
-    prevDestinoContaId.current = "";
+     // 🔒 RESET COMPLETO ao trocar a moeda selecionada (FIAT)
+     resetContextoDependente(false, true, false);
     
     prevMoeda.current = moeda;
     
