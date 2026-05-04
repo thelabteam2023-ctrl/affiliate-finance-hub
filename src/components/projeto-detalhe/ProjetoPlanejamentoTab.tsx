@@ -181,21 +181,54 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
     }
   };
 
-  // 4. Filtragem por Sub-aba (Abertas vs Histórico)
-  const filteredData = useMemo(() => {
-    return campanhas.map(c => {
-      const resolved = resolveCampanhaData(c);
-      const status = getStatus(c, resolved.isPending);
-      return { ...c, ...resolved, derivedStatus: status };
-    }).filter(c => {
-      // Filtro de Sub-aba
-      if (subTab === "abertas") {
-        return c.derivedStatus !== "concluido";
-      } else {
-        return c.derivedStatus === "concluido";
-      }
-    }).sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));
-  }, [campanhas, celulasAgendadas, perfis, ips, subTab]);
+   // 4. Filtragem por Sub-aba (Abertas vs Histórico) e Filtros Dimensionais
+   const filteredData = useMemo(() => {
+     return campanhas
+       .map((c) => {
+         const resolved = resolveCampanhaData(c);
+         const status = getStatus(c, resolved.isPending);
+         return { ...c, ...resolved, derivedStatus: status };
+       })
+       .filter((c) => {
+         // 4a. Filtro de Sub-aba (Abertas vs Histórico)
+         if (subTab === "abertas") {
+           if (c.derivedStatus === "concluido") return false;
+         } else {
+           if (c.derivedStatus !== "concluido") return false;
+         }
+ 
+         // 4b. Filtro de Status (Atrasados, etc) - Se houver filtros de resultado aplicados
+         if (tabFilters.resultados.length > 0) {
+           // Mapear Status do Planejamento para o padrão de ResultadoFilter
+           // "atrasado" -> "RED" (ou equivalente para filtro de atrasados)
+           // No planejamento o usuário pediu filtro de "atrasados"
+           const statusMap: Record<string, string> = {
+             concluido: "GREEN",
+             atrasado: "RED",
+             pendente: "PENDENTE",
+             planejado: "VOID",
+           };
+           const currentStatusAsResult = statusMap[c.derivedStatus];
+           if (!tabFilters.resultados.includes(currentStatusAsResult as any)) return false;
+         }
+ 
+         // 4c. Filtros Dimensionais (Casas / Parceiros)
+         if (tabFilters.bookmakerIds.length > 0) {
+           const campAsAny = c as any;
+           if (!tabFilters.bookmakerIds.includes(c.bookmaker_catalogo_id || "")) {
+             // Tenta pelo ID interno também se disponível
+             if (!tabFilters.bookmakerIds.includes(campAsAny.bookmaker_id || "")) return false;
+           }
+         }
+ 
+         if (tabFilters.parceiroIds.length > 0) {
+           if (!tabFilters.parceiroIds.includes(c.parceiroId || "")) return false;
+         }
+ 
+         return true;
+       })
+       .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));
+   }, [campanhas, celulasAgendadas, perfis, ips, subTab, tabFilters.resultados, tabFilters.bookmakerIds, tabFilters.parceiroIds]);
 
   const groupedByDay = useMemo(() => {
     const groups: Record<string, any[]> = {};
@@ -225,9 +258,65 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
   const renderContent = () => {
     if (filteredData.length === 0) return null;
 
-    if (viewMode === "list") {
-      return (
-        <div className="space-y-8 max-w-5xl mx-auto py-4">
+     if (viewMode === "list") {
+       return (
+         <div className="space-y-8 max-w-5xl mx-auto py-4 relative">
+           {/* Navegação Flutuante Lateral integrada ao conteúdo */}
+           {filteredData.length > 0 && (
+             <div className="fixed md:absolute right-4 md:right-0 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-2 transition-opacity duration-300">
+               <Tooltip>
+                 <TooltipTrigger asChild>
+                   <Button 
+                     variant="secondary" 
+                     size="icon" 
+                     className="rounded-full shadow-lg border border-primary/20 bg-background/95 backdrop-blur-sm hover:bg-primary hover:text-primary-foreground transition-all h-10 w-10"
+                     onClick={(e) => {
+                       e.stopPropagation();
+                       scrollManual('up');
+                     }}
+                   >
+                     <ChevronUp className="h-5 w-5" />
+                   </Button>
+                 </TooltipTrigger>
+                 <TooltipContent side="left">Subir</TooltipContent>
+               </Tooltip>
+ 
+               <Tooltip>
+                 <TooltipTrigger asChild>
+                   <Button 
+                     variant="default" 
+                     size="icon" 
+                     className="rounded-full shadow-xl bg-primary text-primary-foreground h-12 w-12 hover:scale-110 active:scale-95 transition-all border-none"
+                     onClick={(e) => {
+                       e.stopPropagation();
+                       scrollToToday();
+                     }}
+                   >
+                     <Target className="h-6 w-6" />
+                   </Button>
+                 </TooltipTrigger>
+                 <TooltipContent side="left">Ir para Hoje</TooltipContent>
+               </Tooltip>
+ 
+               <Tooltip>
+                 <TooltipTrigger asChild>
+                   <Button 
+                     variant="secondary" 
+                     size="icon" 
+                     className="rounded-full shadow-lg border border-primary/20 bg-background/95 backdrop-blur-sm hover:bg-primary hover:text-primary-foreground transition-all h-10 w-10"
+                     onClick={(e) => {
+                       e.stopPropagation();
+                       scrollManual('down');
+                     }}
+                   >
+                     <ChevronDown className="h-5 w-5" />
+                   </Button>
+                 </TooltipTrigger>
+                 <TooltipContent side="left">Descer</TooltipContent>
+               </Tooltip>
+             </div>
+           )}
+ 
           {sortedDates.map((dateStr) => {
             const camps = groupedByDay[dateStr];
             const dateObj = parseISO(dateStr);
@@ -457,54 +546,7 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
   };
 
     return (
-      <div className="h-full flex flex-col min-h-0 relative group/container">
-        {/* Navegação Flutuante Lateral */}
-        {viewMode === "list" && filteredData.length > 0 && (
-          <div className="absolute right-6 top-1/2 -translate-y-1/2 z-30 flex flex-col gap-2 opacity-0 group-hover/container:opacity-100 transition-opacity duration-300">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="secondary" 
-                  size="icon" 
-                  className="rounded-full shadow-lg border border-primary/20 bg-background/80 backdrop-blur-sm hover:bg-primary hover:text-primary-foreground transition-all h-10 w-10"
-                  onClick={() => scrollManual('up')}
-                >
-                  <ChevronUp className="h-5 w-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="left">Subir</TooltipContent>
-            </Tooltip>
-
-             <Tooltip>
-               <TooltipTrigger asChild>
-                 <Button 
-                   variant="default" 
-                   size="icon" 
-                   className="rounded-full shadow-xl bg-primary text-primary-foreground h-12 w-12 hover:scale-110 active:scale-95 transition-all border-none"
-                   onClick={scrollToToday}
-                 >
-                   <Target className="h-6 w-6" />
-                 </Button>
-               </TooltipTrigger>
-               <TooltipContent side="left">Ir para Hoje</TooltipContent>
-             </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="secondary" 
-                  size="icon" 
-                  className="rounded-full shadow-lg border border-primary/20 bg-background/80 backdrop-blur-sm hover:bg-primary hover:text-primary-foreground transition-all h-10 w-10"
-                  onClick={() => scrollManual('down')}
-                >
-                  <ChevronDown className="h-5 w-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="left">Descer</TooltipContent>
-            </Tooltip>
-          </div>
-        )}
-
+      <div className="h-full flex flex-col min-h-0 relative">
         <OperationsHistoryModule
          projetoId={projetoId}
          title="Planejamento de Campanhas"

@@ -152,8 +152,8 @@ export interface OperationsHistoryConfig {
           {headerActions}
         </div>
 
-        {/* Filtros LOCAIS - apenas no modo histórico */}
-        {isHistoryMode && showFiltersBar && (
+         {/* Filtros LOCAIS - mostrado em histórico ou se explicitamente solicitado */}
+         {(isHistoryMode || showFiltersBar) && (
           <div className="mt-3">
             <TabFiltersBar
               projetoId={projetoId}
