@@ -71,7 +71,8 @@ export function useStakeReservation({
   const reserveStake = useCallback(async (
     bookmakerId: string,
     stake: number,
-    moeda: string = 'BRL'
+    moeda: string = 'BRL',
+    apostaId?: string
   ): Promise<ReservationResult> => {
     if (!enabled || !workspaceId) {
       return {
@@ -94,7 +95,8 @@ export function useStakeReservation({
         p_stake: stake,
         p_moeda: moeda,
         p_form_session_id: sessionId,
-        p_form_type: formType
+        p_form_type: formType,
+        p_aposta_id: apostaId
       });
       
       if (error) {
@@ -196,12 +198,14 @@ export function useStakeReservation({
    * Obter saldo disponível para uma bookmaker (com reservas de outros)
    */
   const getSaldoDisponivel = useCallback(async (
-    bookmakerId: string
+    bookmakerId: string,
+    ignoreApostaId?: string
   ): Promise<ReservationResult | null> => {
     try {
       const { data, error } = await supabase.rpc('get_saldo_disponivel_com_reservas', {
         p_bookmaker_id: bookmakerId,
-        p_exclude_session_id: sessionId
+        p_exclude_session_id: sessionId,
+        p_ignore_aposta_id: ignoreApostaId
       });
       
       if (error) {
