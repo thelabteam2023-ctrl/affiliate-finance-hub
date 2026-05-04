@@ -247,6 +247,22 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
     },
   });
   
+   // Buscar a data da primeiríssima aposta do projeto para evitar distorção no Lucro/Dia
+   const { data: absoluteFirstBetDate } = useQuery({
+     queryKey: ["projeto-primeira-aposta-absoluta", projetoId],
+     queryFn: async () => {
+       const { data } = await supabase
+         .from("apostas_unificada")
+         .select("data_aposta")
+         .eq("projeto_id", projetoId)
+         .is("cancelled_at", null)
+         .order("data_aposta", { ascending: true })
+         .limit(1);
+       return data?.[0]?.data_aposta ? new Date(data[0].data_aposta) : null;
+     },
+     staleTime: Infinity,
+   });
+ 
   // Sub-abas Abertas/Histórico - usa tipo padronizado
   const [operacoesSubTab, setOperacoesSubTab] = useState<HistorySubTab>("abertas");
   const [searchTerm, setSearchTerm] = useState("");
@@ -818,15 +834,25 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       }
     });
     const diasTrabalhados = datasUnicas.size;
-    // Usar o range do filtro de período para dias corridos (se disponível)
-    // Cap end date at today to avoid inflating days for ongoing cycles
-    let diasCorridos = 0;
-    if (dateRange?.start && dateRange?.end) {
-      const now = new Date();
-      const effectiveEnd = dateRange.end > now ? now : dateRange.end;
-      const diffMs = effectiveEnd.getTime() - dateRange.start.getTime();
-      diasCorridos = Math.max(1, Math.round(diffMs / (24 * 60 * 60 * 1000)) + 1);
-    } else if (dataMin && dataMax) {
+     // Dias corridos: usa o período selecionado, mas respeita a data de início real do projeto
+     // para evitar distorção no lucro/dia (ex: projeto começou em Março, filtro é o Ano inteiro)
+     let diasCorridos = 1;
+     const now = new Date();
+     
+     if (dateRange?.start && dateRange?.end) {
+       const effectiveEnd = dateRange.end > now ? now : dateRange.end;
+       
+       // O início deve ser o maior entre o início do filtro e a primeira aposta do projeto
+       let effectiveStart = dateRange.start;
+       if (absoluteFirstBetDate && absoluteFirstBetDate > dateRange.start) {
+         effectiveStart = absoluteFirstBetDate;
+       }
+       
+       if (effectiveEnd > effectiveStart) {
+         const diffMs = effectiveEnd.getTime() - effectiveStart.getTime();
+         diasCorridos = Math.max(1, Math.round(diffMs / (24 * 60 * 60 * 1000)) + 1);
+       }
+     } else if (dataMin && dataMax) {
       const diffMs = new Date(dataMax).getTime() - new Date(dataMin).getTime();
       diasCorridos = Math.max(1, Math.round(diffMs / (24 * 60 * 60 * 1000)) + 1);
     } else if (diasTrabalhados > 0) {
