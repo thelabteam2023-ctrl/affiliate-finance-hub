@@ -21,7 +21,7 @@ import { startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths, sta
 
 // Tipos de filtros - PADRÃO CONTÁBIL
 export type StandardPeriodFilter = "1dia" | "7dias" | "mes_atual" | "mes_anterior" | "ano" | "custom";
-export type EstrategiaFilter = "all" | "PUNTER" | "SUREBET" | "VALUEBET" | "DUPLO_GREEN" | "EXTRACAO_FREEBET" | "EXTRACAO_BONUS";
+export type EstrategiaFilter = "all" | "PUNTER" | "SUREBET" | "VALUEBET" | "DUPLO_GREEN" | "EXTRACAO_FREEBET" | "EXTRACAO_BONUS" | "PLANEJAMENTO";
 export type ResultadoFilter = "GREEN" | "RED" | "MEIO_GREEN" | "MEIO_RED" | "VOID" | "PENDENTE";
 
 export const RESULTADO_FILTER_OPTIONS: { value: ResultadoFilter; label: string; color: string }[] = [
