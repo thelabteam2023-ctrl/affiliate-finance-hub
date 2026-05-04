@@ -17,6 +17,7 @@ import {
   usePlanningPerfis,
   usePlanningWallets,
   useUpsertCampanha,
+  useProjetos,
 } from "@/hooks/usePlanningData";
 import { useGrupoRegrasValidator } from "@/hooks/useGrupoRegrasValidator";
 import { toast } from "sonner";
@@ -39,6 +40,7 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
   const { data: parceirosFull = [] } = useParceirosLite();
   const { data: perfisPre = [] } = usePlanningPerfis();
   const { data: casasPlan = [] } = usePlanningCasas();
+  const { data: projetos = [] } = useProjetos();
   const bookmakers = useMemo(
     () => casasPlan.filter(p => p.is_active && p.casa).map(p => p.casa!),
     [casasPlan]
@@ -106,6 +108,7 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
     deposit_amount: "",
     currency: "BRL",
     parceiro_id: "" as string | "",
+    projeto_id: "" as string | "",
     ip_id: "" as string | "",
     wallet_id: "" as string | "",
     is_account_created: false,
@@ -121,6 +124,7 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
         deposit_amount: String(campanha.deposit_amount ?? ""),
         currency: campanha.currency,
         parceiro_id: campanha.parceiro_id ?? suggestedParceiroId ?? "",
+        projeto_id: campanha.projeto_id ?? "",
         ip_id: campanha.ip_id ?? getSuggestedIpId(campanha.bookmaker_catalogo_id, campanha.parceiro_id ?? suggestedParceiroId) ?? "",
         wallet_id: campanha.wallet_id ?? "",
         is_account_created: campanha.is_account_created ?? false,
@@ -133,6 +137,7 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
         deposit_amount: "",
         currency: initialBookmaker.moeda_padrao || "BRL",
         parceiro_id: "",
+        projeto_id: "",
         ip_id: getSuggestedIpId(initialBookmaker.id, suggestedParceiroId),
         wallet_id: "",
         is_account_created: false,
@@ -145,6 +150,7 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
         deposit_amount: "",
         currency: "BRL",
         parceiro_id: "",
+        projeto_id: "",
         ip_id: "",
         wallet_id: "",
         is_account_created: false,
@@ -207,6 +213,7 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
       deposit_amount: parseFloat(form.deposit_amount) || 0,
       currency: form.currency,
       parceiro_id: form.parceiro_id || null,
+      projeto_id: form.projeto_id || null,
       parceiro_snapshot: parceiro ? { nome: parceiro.nome, email: parceiro.email, endereco: parceiro.endereco } : null,
       ip_id: form.ip_id || null,
       wallet_id: form.wallet_id || null,
@@ -263,6 +270,23 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
                   {MOEDAS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-xs">Projeto Vinculado</Label>
+            <Select value={form.projeto_id || undefined} onValueChange={(v) => setForm(f => ({ ...f, projeto_id: v }))}>
+              <SelectTrigger><SelectValue placeholder="Selecione um projeto" /></SelectTrigger>
+              <SelectContent>
+                {projetos.map(p => (
+                  <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
             </div>
           </div>
 
