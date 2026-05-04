@@ -286,10 +286,14 @@ export default function BookmakerDialog({
       setObservacoes(bookmaker.observacoes || "");
       setSelectedLink(bookmaker.link_origem || "");
       setSelectedBookmaker(null);
-      setParceiroNome("");
+      // Tentar usar o nome que já veio no objeto se disponível para evitar "Carregando..."
+      const currentParceiroNome = bookmaker.parceiros?.nome || "";
+      setParceiroNome(currentParceiroNome);
       setIsInitialized(true);
       
-      fetchParceiroNome(bookmaker.parceiro_id);
+      if (!currentParceiroNome) {
+        fetchParceiroNome(bookmaker.parceiro_id);
+      }
       
       if (bookmaker.bookmaker_catalogo_id) {
         fetchBookmakerDetails(bookmaker.bookmaker_catalogo_id, bookmaker.link_origem, true);
