@@ -2042,9 +2042,10 @@ export function CaixaTransacaoDialog({
     setDestinoContaId("");
     setDestinoWalletId("");
     setDestinoBookmakerId("");
-    setFluxoTransferencia("CAIXA_PARCEIRO");
-    
-    // Se houver filtro de fornecedor, garantir que o valor está sincronizado
+     setFluxoTransferencia("CAIXA_PARCEIRO");
+     prevFluxoTransferencia.current = "CAIXA_PARCEIRO";
+     
+     // Se houver filtro de fornecedor, garantir que o valor está sincronizado
     
     // Reset refs de tracking para auto-focus
     prevCoin.current = "";
