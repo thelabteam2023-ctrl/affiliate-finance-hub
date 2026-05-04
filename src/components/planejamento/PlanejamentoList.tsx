@@ -179,12 +179,24 @@ import { toast } from "sonner";
     return campanhas
       .filter((c) => {
         const matchesProjeto = projetoFilter === "all" || c.projeto_id === projetoFilter;
+        
+        const { perfil, celula, isPending } = resolveCampanhaData(c);
+        
+        // Busca expandida: verifica no snapshot, no perfil vinculado ou na célula agendada
+        const snapshotNome = (c.parceiro_snapshot?.nome || "").toLowerCase();
+        const perfilNome = (perfil ? perfilDisplayName(perfil) : "").toLowerCase();
+        const celulaParceiroNome = (celula as any)?.parceiro_id 
+          ? (perfis.find(p => p.parceiro_id === (celula as any).parceiro_id)?.parceiro?.nome || "").toLowerCase()
+          : "";
+          
+        const searchLower = searchTerm.toLowerCase();
         const matchesSearch =
-          c.bookmaker_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (c.parceiro_snapshot?.nome || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (c.notes || "").toLowerCase().includes(searchTerm.toLowerCase());
+          c.bookmaker_nome.toLowerCase().includes(searchLower) ||
+          snapshotNome.includes(searchLower) ||
+          perfilNome.includes(searchLower) ||
+          celulaParceiroNome.includes(searchLower) ||
+          (c.notes || "").toLowerCase().includes(searchLower);
 
-        const { isPending } = resolveCampanhaData(c);
         const status = getStatus(c, isPending);
         const matchesStatus = statusFilter === "all" || status === statusFilter;
 
