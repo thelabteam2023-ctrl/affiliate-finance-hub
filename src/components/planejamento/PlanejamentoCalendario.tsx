@@ -1397,7 +1397,7 @@ export function PlanejamentoCalendario() {
             {DIAS_SEMANA.map(d => <div key={d} className="py-1">{d}</div>)}
           </div>
 
-          <div className="grid grid-cols-7 gap-1 flex-1 overflow-y-auto">
+           <div className="grid grid-cols-7 gap-1 flex-1 overflow-y-auto pr-1">
             {grid.map((cell, idx) => {
               const key = formatDateKey(cell.date);
               const dayCamps = campanhasByDay.get(key) ?? [];
