@@ -99,7 +99,7 @@
 
       const isPending = !parceiroId && !perfilId || !linkedIp || !c.wallet_id || Number(c.deposit_amount) <= 0;
       
-      return { perfil, linkedIp, isPending, parceiroId };
+      return { perfil, linkedIp, isPending, parceiroId, celula };
     };
 
     const getStatus = (c: PlanningCampanha, isPending: boolean) => {
@@ -281,7 +281,7 @@
                     {/* Lista de Campanhas do Dia */}
                     <div className="flex-1 grid gap-3 pb-4">
                      {camps.map((camp) => {
-                        const { perfil, linkedIp, isPending, parceiroId } = resolveCampanhaData(camp);
+                        const { perfil, linkedIp, isPending, parceiroId, celula } = resolveCampanhaData(camp);
                         const status = getStatus(camp, isPending);
                         const displayName = camp.parceiro_snapshot?.nome || 
                                           (perfil ? perfilDisplayName(perfil) : "Sem parceiro");
