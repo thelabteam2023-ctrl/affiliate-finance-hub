@@ -404,7 +404,12 @@ export default function DistribuicaoTab({ onPlanoCriado }: DistribuicaoTabProps)
                 <div className="flex items-center gap-1 shrink-0">
                   <Select
                     value={plano.projeto_id ?? "__none__"}
-                    onValueChange={(v) => updatePlano.mutate({ id: plano.id, projeto_id: v === "__none__" ? null : v })}
+                    onValueChange={(v) => {
+                      const confirmed = window.confirm(`Deseja vincular o projeto ao plano "${plano.nome}"?`);
+                      if (confirmed) {
+                        updatePlano.mutate({ id: plano.id, projeto_id: v === "__none__" ? null : v });
+                      }
+                    }}
                   >
                     <SelectTrigger className="h-7 w-32 text-[10px]" title="Vincular projeto">
                       <SelectValue placeholder="Vincular projeto" />
