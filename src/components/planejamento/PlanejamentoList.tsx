@@ -386,19 +386,24 @@
                                     </span>
                                   </div>
                                 </div>
-                                <div className="flex flex-col gap-0.5 min-w-[100px]">
+                                 <div className="flex flex-col gap-0.5 min-w-[110px]">
                                   <span className="text-[10px] uppercase tracking-wider font-semibold opacity-60">Status</span>
-                                  <div className="flex items-center gap-1.5">
+                                   <div 
+                                     className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-all active:scale-95 group/status"
+                                     onClick={() => handleToggleStatus(camp)}
+                                     title="Clique para alternar o status"
+                                   >
                                     {status === "concluido" ? (
-                                      <span className="flex items-center gap-1 text-[#00FF66] font-medium">
-                                        <CheckCircle2 className="h-3.5 w-3.5" /> Concluído
+                                       <span className="flex items-center gap-1 text-[#00FF66] font-bold">
+                                         <CheckCircle2 className="h-3.5 w-3.5 fill-[#00FF66]/20" /> Concluído
                                       </span>
                                     ) : (
                                       <span className={cn(
-                                        "flex items-center gap-1 font-medium",
+                                         "flex items-center gap-1 font-bold",
                                         status === "atrasado" ? "text-destructive" : "text-[#FFD700]"
                                       )}>
-                                        <Clock className="h-3.5 w-3.5" /> {status === "atrasado" ? "Atrasado" : "Pendente"}
+                                         <Clock className={cn("h-3.5 w-3.5", status === "atrasado" && "animate-pulse")} /> 
+                                         {status === "atrasado" ? "Atrasado" : "Pendente"}
                                       </span>
                                     )}
                                   </div>
