@@ -214,9 +214,10 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
  
          // 4c. Filtros Dimensionais (Casas / Parceiros)
          if (tabFilters.bookmakerIds.length > 0) {
+           const campAsAny = c as any;
            if (!tabFilters.bookmakerIds.includes(c.bookmaker_catalogo_id || "")) {
-             // Tenta pelo ID interno também
-             if (!tabFilters.bookmakerIds.includes(c.bookmaker_id || "")) return false;
+             // Tenta pelo ID interno também se disponível
+             if (!tabFilters.bookmakerIds.includes(campAsAny.bookmaker_id || "")) return false;
            }
          }
  
