@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { ChevronLeft, ChevronRight, Plus, AlertTriangle, MapPin, User, Search, Building2, Trash2, ChevronDown, ChevronUp, ShieldAlert, Pencil, Sparkles, Copy } from "lucide-react";
+ import { ChevronLeft, ChevronRight, Plus, AlertTriangle, MapPin, User, Search, Building2, Trash2, ChevronDown, ChevronUp, ShieldAlert, Pencil, Sparkles, Copy, CheckCircle2 } from "lucide-react";
 import { SimulacaoDistribuicaoDialog } from "./SimulacaoDistribuicaoDialog";
 import {
   ContextMenu,
@@ -255,10 +255,11 @@ function DraggableCelula({ celula, parceiroNome, perfilCor, selected, selectedBa
   );
 }
 
-function DraggableCampanha({ campanha, onClick, onDelete, ipLabel, parceiroNome, hasConflict, isPending, logoUrl, grupoBlock, grupoWarn, cpfIndex, perfilCor }: {
+ function DraggableCampanha({ campanha, onClick, onDelete, onToggleAccountCreated, ipLabel, parceiroNome, hasConflict, isPending, logoUrl, grupoBlock, grupoWarn, cpfIndex, perfilCor }: {
   campanha: PlanningCampanha;
   onClick: () => void;
   onDelete: () => void;
+   onToggleAccountCreated: () => void;
   ipLabel?: string;
   parceiroNome?: string;
   hasConflict: boolean;
@@ -320,6 +321,9 @@ function DraggableCampanha({ campanha, onClick, onDelete, ipLabel, parceiroNome,
               iconSize="h-5 w-5"
             />
             <span className="font-semibold truncate flex-1 min-w-0">{campanha.bookmaker_nome}</span>
+            {campanha.is_account_created && (
+              <CheckCircle2 className="h-3 w-3 shrink-0 text-success fill-success/20" />
+            )}
             {(grupoBlock || grupoWarn) && (
               <ShieldAlert
                 className={cn("h-3 w-3 shrink-0", grupoBlock ? "text-destructive" : "text-warning")}
@@ -358,6 +362,10 @@ function DraggableCampanha({ campanha, onClick, onDelete, ipLabel, parceiroNome,
       <ContextMenuContent className="w-48">
         <ContextMenuItem onClick={onClick}>
           <Pencil className="h-3.5 w-3.5 mr-2" /> Editar
+        </ContextMenuItem>
+        <ContextMenuItem onClick={onToggleAccountCreated}>
+          <CheckCircle2 className={cn("h-3.5 w-3.5 mr-2", campanha.is_account_created ? "text-primary" : "text-muted-foreground")} />
+          {campanha.is_account_created ? "Desmarcar conta criada" : "Marcar como conta criada"}
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem
