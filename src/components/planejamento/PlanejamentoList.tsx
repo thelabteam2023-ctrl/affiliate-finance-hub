@@ -364,17 +364,17 @@
                                   <div className="flex items-center gap-2">
                                     <h3 className="font-bold text-base truncate">{camp.bookmaker_nome}</h3>
                                     {status === "concluido" && (
-                                      <Badge className="bg-[#00FF66] hover:bg-[#00FF66]/80 text-black text-[10px] h-5">
+                                      <Badge className="bg-[#00FF66] hover:bg-[#00FF66]/80 text-[#00331a] text-[10px] h-5 font-bold border-none shadow-sm">
                                         FEITO
                                       </Badge>
                                     )}
                                     {status === "atrasado" && (
-                                      <Badge variant="destructive" className="text-[10px] h-5 animate-pulse">
+                                      <Badge variant="destructive" className="text-[10px] h-5 animate-pulse font-bold border-none shadow-sm">
                                         ATRASADO
                                       </Badge>
                                     )}
                                     {status === "pendente" && (
-                                      <Badge className="bg-[#FFD700] hover:bg-[#FFD700]/80 text-black text-[10px] h-5">
+                                      <Badge className="bg-[#FFD700] hover:bg-[#FFD700]/80 text-[#332b00] text-[10px] h-5 font-bold border-none shadow-sm">
                                         PENDENTE
                                       </Badge>
                                     )}
