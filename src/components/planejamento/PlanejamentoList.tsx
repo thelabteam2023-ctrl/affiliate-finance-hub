@@ -42,7 +42,8 @@
    usePlanningPerfis,
   perfilDisplayName,
   usePlanningIps,
-  planningPerfilCpfIndex
+   planningPerfilCpfIndex,
+   useProjetos
  } from "@/hooks/usePlanningData";
  import { format, parseISO, isPast, isToday, startOfDay } from "date-fns";
  import { ptBR } from "date-fns/locale";
@@ -54,6 +55,7 @@
  export function PlanejamentoList() {
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState<string>("all");
+    const [projetoFilter, setProjetoFilter] = useState<string>("all");
     const today = new Date();
     const [selectedYear, setSelectedYear] = useState(today.getFullYear());
     const [selectedMonth, setSelectedMonth] = useState(today.getMonth() + 1);
@@ -63,6 +65,7 @@
    const { data: campanhas = [], isLoading } = usePlanningCampanhas(selectedYear, selectedMonth);
    const { data: perfis = [] } = usePlanningPerfis();
    const { data: ips = [] } = usePlanningIps();
+   const { data: projetos = [] } = useProjetos();
    const logoMap = useBookmakerLogoMap();
  
    const [editingCampanha, setEditingCampanha] = useState<PlanningCampanha | null>(null);
@@ -88,6 +91,7 @@
  
   const filteredCampanhas = useMemo(() => {
     return campanhas.filter(c => {
+       const matchesProjeto = projetoFilter === "all" || c.projeto_id === projetoFilter;
       const matchesSearch = 
         c.bookmaker_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (c.parceiro_snapshot?.nome || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -96,9 +100,9 @@
       const status = getStatus(c);
       const matchesStatus = statusFilter === "all" || status === statusFilter;
       
-      return matchesSearch && matchesStatus;
-    }).sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));
-  }, [campanhas, searchTerm, statusFilter]);
+       return matchesSearch && matchesStatus && matchesProjeto;
+     }).sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));
+   }, [campanhas, searchTerm, statusFilter, projetoFilter]);
 
   const groupedByDay = useMemo(() => {
     const groups: Record<string, PlanningCampanha[]> = {};
@@ -146,6 +150,19 @@
                <SelectItem value="pendente">Pendente</SelectItem>
                <SelectItem value="atrasado">Atrasado</SelectItem>
                <SelectItem value="planejado">Planejado</SelectItem>
+             </SelectContent>
+           </Select>
+
+           <Select value={projetoFilter} onValueChange={setProjetoFilter}>
+             <SelectTrigger className="w-[200px] h-9">
+               <Building2 className="h-3.5 w-3.5 mr-2" />
+               <SelectValue placeholder="Projeto" />
+             </SelectTrigger>
+             <SelectContent>
+               <SelectItem value="all">Todos os Projetos</SelectItem>
+               {projetos.map(p => (
+                 <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+               ))}
              </SelectContent>
            </Select>
          </div>
