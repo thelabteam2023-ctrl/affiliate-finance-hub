@@ -7577,6 +7577,7 @@ export type Database = {
           deposit_amount: number
           id: string
           ip_id: string | null
+          is_account_created: boolean | null
           notes: string | null
           parceiro_id: string | null
           parceiro_snapshot: Json | null
@@ -7595,6 +7596,7 @@ export type Database = {
           deposit_amount?: number
           id?: string
           ip_id?: string | null
+          is_account_created?: boolean | null
           notes?: string | null
           parceiro_id?: string | null
           parceiro_snapshot?: Json | null
@@ -7613,6 +7615,7 @@ export type Database = {
           deposit_amount?: number
           id?: string
           ip_id?: string | null
+          is_account_created?: boolean | null
           notes?: string | null
           parceiro_id?: string | null
           parceiro_snapshot?: Json | null

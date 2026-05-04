@@ -48,6 +48,7 @@ export interface PlanningCampanha {
   ip_id: string | null;
   wallet_id: string | null;
   status: string;
+  is_account_created: boolean;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -694,6 +695,7 @@ export function useUpsertCampanha() {
         ip_id: payload.ip_id ?? null,
         wallet_id: payload.wallet_id ?? null,
         status: payload.status ?? "planned",
+        is_account_created: payload.is_account_created ?? false,
         notes: payload.notes ?? null,
       };
       if (payload.id) {

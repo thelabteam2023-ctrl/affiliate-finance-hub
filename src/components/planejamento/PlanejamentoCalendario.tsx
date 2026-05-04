@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { ChevronLeft, ChevronRight, Plus, AlertTriangle, MapPin, User, Search, Building2, Trash2, ChevronDown, ChevronUp, ShieldAlert, Pencil, Sparkles, Copy } from "lucide-react";
+ import { ChevronLeft, ChevronRight, Plus, AlertTriangle, MapPin, User, Search, Building2, Trash2, ChevronDown, ChevronUp, ShieldAlert, Pencil, Sparkles, Copy, CheckCircle2 } from "lucide-react";
 import { SimulacaoDistribuicaoDialog } from "./SimulacaoDistribuicaoDialog";
 import {
   ContextMenu,
@@ -255,10 +255,11 @@ function DraggableCelula({ celula, parceiroNome, perfilCor, selected, selectedBa
   );
 }
 
-function DraggableCampanha({ campanha, onClick, onDelete, ipLabel, parceiroNome, hasConflict, isPending, logoUrl, grupoBlock, grupoWarn, cpfIndex, perfilCor }: {
+ function DraggableCampanha({ campanha, onClick, onDelete, onToggleAccountCreated, ipLabel, parceiroNome, hasConflict, isPending, logoUrl, grupoBlock, grupoWarn, cpfIndex, perfilCor }: {
   campanha: PlanningCampanha;
   onClick: () => void;
   onDelete: () => void;
+   onToggleAccountCreated: () => void;
   ipLabel?: string;
   parceiroNome?: string;
   hasConflict: boolean;
@@ -320,6 +321,9 @@ function DraggableCampanha({ campanha, onClick, onDelete, ipLabel, parceiroNome,
               iconSize="h-5 w-5"
             />
             <span className="font-semibold truncate flex-1 min-w-0">{campanha.bookmaker_nome}</span>
+            {campanha.is_account_created && (
+              <CheckCircle2 className="h-3 w-3 shrink-0 text-success fill-success/20" />
+            )}
             {(grupoBlock || grupoWarn) && (
               <ShieldAlert
                 className={cn("h-3 w-3 shrink-0", grupoBlock ? "text-destructive" : "text-warning")}
@@ -358,6 +362,10 @@ function DraggableCampanha({ campanha, onClick, onDelete, ipLabel, parceiroNome,
       <ContextMenuContent className="w-48">
         <ContextMenuItem onClick={onClick}>
           <Pencil className="h-3.5 w-3.5 mr-2" /> Editar
+        </ContextMenuItem>
+        <ContextMenuItem onClick={onToggleAccountCreated}>
+          <CheckCircle2 className={cn("h-3.5 w-3.5 mr-2", campanha.is_account_created ? "text-primary" : "text-muted-foreground")} />
+          {campanha.is_account_created ? "Desmarcar conta criada" : "Marcar como conta criada"}
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem
@@ -481,6 +489,21 @@ export function PlanejamentoCalendario() {
   const { data: perfisPre = [] } = usePlanningPerfis();
   const upsert = useUpsertCampanha();
   const deleteCamp = useDeleteCampanha();
+
+  const handleToggleAccountCreated = async (campanha: PlanningCampanha) => {
+    try {
+      await upsert.mutateAsync({
+        id: campanha.id,
+        scheduled_date: campanha.scheduled_date,
+        bookmaker_nome: campanha.bookmaker_nome,
+        is_account_created: !campanha.is_account_created
+      });
+      toast.success(campanha.is_account_created ? "Status de conta removido" : "Conta marcada como criada");
+    } catch (err) {
+      console.error("Erro ao atualizar status da conta:", err);
+    }
+  };
+
   const { getLogoUrl } = useBookmakerLogoMap();
   const { convertToBRL, cotacaoUSD, isUsingFallback } = useExchangeRates();
   const { planos, isLoading: planosLoading } = useDistribuicaoPlanos();
@@ -1393,6 +1416,7 @@ export function PlanejamentoCalendario() {
                           campanha={c}
                           onClick={() => setEditing({ date: key, campanha: c })}
                           onDelete={() => handleDeleteCampanha(c.id)}
+                          onToggleAccountCreated={() => handleToggleAccountCreated(c)}
                           ipLabel={resolvedIpId ? ipMap[resolvedIpId]?.label : undefined}
                           parceiroNome={c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : campanhaPerfilMap.get(c.id)?.parceiro_id ? parceiroMap[campanhaPerfilMap.get(c.id)!.parceiro_id!]?.nome : undefined}
                           hasConflict={dayConflicts.has(c.id)}
@@ -1475,15 +1499,16 @@ export function PlanejamentoCalendario() {
             </DialogDescription>
           </DialogHeader>
           <div className="overflow-auto rounded-md border">
-            <div className="grid grid-cols-[1.15fr_0.95fr_1.45fr_1.35fr_0.45fr_0.75fr] gap-2 px-3 py-2 text-[11px] font-semibold text-muted-foreground bg-muted/40 min-w-[880px]">
+             <div className="grid grid-cols-[1.15fr_0.95fr_1.45fr_1.35fr_0.45fr_0.75fr_40px] gap-2 px-3 py-2 text-[11px] font-semibold text-muted-foreground bg-muted/40 min-w-[920px]">
               <div>Casa</div>
               <div>Perfil</div>
               <div>IP utilizado</div>
               <div>Wallet</div>
               <div>Moeda</div>
               <div className="text-right">Valor</div>
+               <div className="text-center">Status</div>
             </div>
-            <div className="min-w-[880px] divide-y">
+             <div className="min-w-[920px] divide-y">
               {detailsCampanhas.map((c) => {
                 const perfilInfo = campanhaPerfilMap.get(c.id);
                 const celula = celulaAgendadaByCampanhaIdMap.get(c.id);
@@ -1494,13 +1519,16 @@ export function PlanejamentoCalendario() {
                 const cpfIndex = campanhaCpfMap.get(c.id) ?? null;
                 const cpfColor = getCpfColor(cpfIndex, perfilInfo?.cor);
                 return (
-                  <div key={c.id} className="grid grid-cols-[1.15fr_0.95fr_1.45fr_1.35fr_0.45fr_0.75fr] gap-2 px-3 py-2 text-xs items-center hover:bg-muted/30">
+                   <div key={c.id} className="grid grid-cols-[1.15fr_0.95fr_1.45fr_1.35fr_0.45fr_0.75fr_40px] gap-2 px-3 py-2 text-xs items-center hover:bg-muted/30">
                     <div className="font-medium truncate flex items-center gap-2">
                       {cpfIndex && cpfColor && (
                         <span className="h-5 w-5 shrink-0 rounded flex items-center justify-center text-[10px] font-bold" style={{ backgroundColor: cpfColor.dot, color: "hsl(0 0% 10%)" }}>{cpfIndex}</span>
                       )}
                       <BookmakerLogo logoUrl={getLogoUrl(c.bookmaker_nome)} alt={c.bookmaker_nome} size="h-6 w-6 shrink-0" iconSize="h-3.5 w-3.5" />
                       <span className="truncate">{c.bookmaker_nome}</span>
+                      {c.is_account_created && (
+                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-success fill-success/10" />
+                      )}
                     </div>
                     <div className="truncate">{perfil ?? "—"}</div>
                     <div className="min-w-0 flex items-center gap-1.5">
@@ -1525,7 +1553,18 @@ export function PlanejamentoCalendario() {
                     </div>
                     <div className="truncate">{wallet ? `${wallet.label}${wallet.network ? ` • ${wallet.network}` : ""}` : "—"}</div>
                     <div className="font-semibold">{c.currency}</div>
-                    <div className="text-right font-semibold tabular-nums">{formatMoney(Number(c.deposit_amount), c.currency)}</div>
+                     <div className="text-right font-semibold tabular-nums">{formatMoney(Number(c.deposit_amount), c.currency)}</div>
+                     <div className="flex justify-center">
+                       <Button
+                         variant="ghost"
+                         size="icon"
+                         className={cn("h-7 w-7", c.is_account_created ? "text-success" : "text-muted-foreground/30")}
+                         onClick={() => handleToggleAccountCreated(c)}
+                         title={c.is_account_created ? "Conta criada (clique para remover)" : "Marcar como conta criada"}
+                       >
+                         <CheckCircle2 className="h-4 w-4" />
+                       </Button>
+                     </div>
                   </div>
                 );
               })}
