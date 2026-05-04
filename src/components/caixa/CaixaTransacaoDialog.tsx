@@ -3661,7 +3661,9 @@ export function CaixaTransacaoDialog({
            const parceirosComWallet = walletsCrypto
              .filter(w => isWalletCompatibleWithCoin(w, coin))
              .map(w => w.parceiro_id);
-           const uniqueParceiros = [...new Set(parceirosComWallet)];
+           // Relaxar filtro: se a lista estiver vazia, permitir todos para que o usuário possa cadastrar a wallet
+           const uniqueParceirosList = [...new Set(parceirosComWallet)];
+           const uniqueParceiros = uniqueParceirosList.length > 0 ? uniqueParceirosList : undefined;
 
           return (
             <>
