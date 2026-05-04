@@ -34,15 +34,12 @@ export default function PlanejamentoCampanhas() {
     <TooltipProvider>
       <div className="h-[calc(100vh-3.5rem)] flex flex-col bg-background">
         <Tabs value={tab} onValueChange={(v) => setTab(v as "real" | "simulado")} className="flex-1 flex flex-col min-h-0">
-          <div className="px-3 pt-2 border-b">
-           <TabsList className="h-9 bg-muted/50 p-1">
-               <TabsTrigger value="lista" className="text-xs gap-1.5">
-                 <ListTodo className="h-3.5 w-3.5" />
-                 Histórico Detalhado
-               </TabsTrigger>
-           <TabsContent value="lista" className="flex-1 overflow-hidden m-0">
-             <PlanejamentoList />
-           </TabsContent>
+          <div className="px-3 pt-2 border-b bg-card/50">
+            <TabsList className="h-9 bg-muted/50 p-1">
+              <TabsTrigger value="lista" className="text-xs gap-1.5">
+                <ListTodo className="h-3.5 w-3.5" />
+                Histórico Detalhado
+              </TabsTrigger>
               <TabsTrigger value="real" className="text-xs gap-1.5">
                 <CalendarCheck2 className="h-3.5 w-3.5" />
                 Calendário Real
@@ -53,10 +50,14 @@ export default function PlanejamentoCampanhas() {
               </TabsTrigger>
             </TabsList>
           </div>
-          <TabsContent value="real" className="flex-1 overflow-hidden m-0">
+
+          <TabsContent value="lista" className="flex-1 overflow-hidden m-0 outline-none">
+            <PlanejamentoList />
+          </TabsContent>
+          <TabsContent value="real" className="flex-1 overflow-hidden m-0 outline-none">
             <PlanejamentoCalendario />
           </TabsContent>
-          <TabsContent value="simulado" className="flex-1 overflow-hidden m-0">
+          <TabsContent value="simulado" className="flex-1 overflow-hidden m-0 outline-none">
             <CalendarioSimulado />
           </TabsContent>
         </Tabs>
