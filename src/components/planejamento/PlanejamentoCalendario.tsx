@@ -1557,22 +1557,18 @@ export function PlanejamentoCalendario() {
                     <div className="truncate">{perfil ?? "—"}</div>
                     <div className="min-w-0 flex items-center gap-1.5">
                       {ip?.ip_address ? (
-                        <>
-                          <span className="truncate font-medium" title={ip.ip_address}>{ip.ip_address}</span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 shrink-0"
-                            title="Copiar IP utilizado"
-                            onClick={() => {
-                              navigator.clipboard.writeText(ip.ip_address);
-                              toast.success("IP copiado");
-                            }}
-                          >
-                            <Copy className="h-3.5 w-3.5" />
-                          </Button>
-                        </>
+                        <button 
+                          type="button"
+                          className="truncate font-medium hover:text-primary transition-colors flex items-center gap-1.5 group/proxy"
+                          title={`${ip.ip_address} - Clique para copiar`}
+                          onClick={() => {
+                            navigator.clipboard.writeText(ip.ip_address);
+                            toast.success("Proxy copiado!");
+                          }}
+                        >
+                          {ip.ip_address}
+                          <Copy className="h-3 w-3 opacity-0 group-hover/proxy:opacity-100 transition-opacity" />
+                        </button>
                       ) : "—"}
                     </div>
                     <div className="truncate">{wallet ? `${wallet.label}${wallet.network ? ` • ${wallet.network}` : ""}` : "—"}</div>
