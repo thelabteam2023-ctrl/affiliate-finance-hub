@@ -322,9 +322,16 @@
                         
                         // A lógica de exibição deve priorizar os dados da célula agendada para garantir consistência com o calendário
                         const cpfIndex = (celula as any)?.cpf_index || (perfil ? planningPerfilCpfIndex(perfis, perfil.id) : null);
-                        const displayName = camp.parceiro_snapshot?.nome || 
-                                           (perfil ? perfilDisplayName(perfil) : 
-                                           (celula as any)?.parceiro_id ? "Carregando..." : "Sem parceiro");
+                         const displayName = (celula as any)?.parceiro_id 
+                                            ? (perfis.find(p => p.parceiro_id === (celula as any).parceiro_id)?.parceiro?.nome || "Carregando...")
+                                            : (camp.parceiro_snapshot?.nome || 
+                                               (perfil ? perfilDisplayName(perfil) : "Sem parceiro"));
+
+                         const displayValue = camp.deposit_amount > 0 
+                                            ? formatMoney(camp.deposit_amount, camp.currency)
+                                            : (celula as any)?.deposito_sugerido 
+                                              ? formatMoney((celula as any).deposito_sugerido, (celula as any).moeda || "BRL")
+                                              : "R$ 0,00";
 
                         return (
                           <Card
