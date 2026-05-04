@@ -51,19 +51,22 @@ const getStatusBadge = (status: string) => {
   switch (status) {
     case "PENDENTE":
       return (
-        <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
+        <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 gap-1">
+          <Clock className="h-3 w-3" />
           Pendente
         </Badge>
       );
     case "CONFIRMADO":
       return (
-        <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+        <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 gap-1">
+          <CheckCircle2 className="h-3 w-3" />
           Confirmado
         </Badge>
       );
     case "RECUSADO":
       return (
-        <Badge className="bg-red-500/20 text-red-400 border-red-500/30">
+        <Badge className="bg-red-500/20 text-red-400 border-red-500/30 gap-1">
+          <XCircle className="h-3 w-3" />
           Recusado
         </Badge>
       );

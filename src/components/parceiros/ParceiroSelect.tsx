@@ -1,6 +1,5 @@
-import { useState, useEffect, forwardRef, useImperativeHandle, useRef, useMemo } from "react";
+import { useState, useEffect, forwardRef, useImperativeHandle, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useWorkspace } from "@/hooks/useWorkspace";
 import {
   Select,
   SelectContent,
@@ -74,7 +73,6 @@ export interface ParceiroSelectRef {
   const [searchTerm, setSearchTerm] = useState("");
   const [displayName, setDisplayName] = useState<string>("");
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const { workspaceId } = useWorkspace();
 
   // Expose focus and open methods via ref
   useImperativeHandle(ref, () => ({
@@ -91,14 +89,12 @@ export interface ParceiroSelectRef {
     // Buscar lista de parceiros ativos
     useEffect(() => {
       const fetchParceiros = async () => {
-        if (!workspaceId) return;
         setLoading(true);
         try {
           // 1. Buscar parceiros ativos
           let query = supabase
             .from("parceiros")
             .select("id, nome, cpf, status")
-            .eq("workspace_id", workspaceId)
             .eq("status", "ativo")
             .neq("is_caixa_operacional", true)
             .order("nome", { ascending: true });
@@ -129,7 +125,7 @@ export interface ParceiroSelectRef {
       };
 
       fetchParceiros();
-    }, [includeParceiroId, workspaceId]);
+    }, [includeParceiroId]);
 
     // Quando value muda, buscar o nome para exibição
     useEffect(() => {
@@ -225,25 +221,15 @@ export interface ParceiroSelectRef {
     }
     
     if (tipoMoeda === "FIAT") {
-      // Use o símbolo correto baseado na moeda selecionada
-      try {
-        const formatted = saldo.toLocaleString('pt-BR', { 
-          style: 'currency', 
-          currency: moeda || 'BRL' 
-        });
-        return (
-          <span className={saldo > 0 ? "text-emerald-500 text-xs font-medium" : "text-muted-foreground text-xs"}>
-            Saldo: {formatted}
-          </span>
-        );
-      } catch (e) {
-        // Fallback se a moeda for inválida para o toLocaleString
-        return (
-          <span className={saldo > 0 ? "text-emerald-500 text-xs font-medium" : "text-muted-foreground text-xs"}>
-            Saldo: {moeda || 'BRL'} {saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-          </span>
-        );
-      }
+      const formatted = saldo.toLocaleString('pt-BR', { 
+        style: 'currency', 
+        currency: moeda || 'BRL' 
+      });
+      return (
+        <span className={saldo > 0 ? "text-emerald-500 text-xs font-medium" : "text-muted-foreground text-xs"}>
+          Saldo: {formatted}
+        </span>
+      );
     }
     
     // CRYPTO - exibir na moeda do coin se selecionado, senão em USD
@@ -258,15 +244,13 @@ export interface ParceiroSelectRef {
         </span>
       );
     } else {
-      const formatted = saldo.toLocaleString('pt-BR', { 
+      const formatted = saldo.toLocaleString('en-US', { 
         minimumFractionDigits: 2, 
         maximumFractionDigits: 2 
       });
-      // Use the correct symbol for USD, otherwise use the coin code
-      const symbol = (coin === 'USD' || !coin) ? '$' : coin;
       return (
         <span className={saldo > 0 ? "text-emerald-500 text-xs font-medium" : "text-muted-foreground text-xs"}>
-          Saldo: {symbol} {formatted}
+          Saldo: $ {formatted}
         </span>
       );
     }

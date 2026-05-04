@@ -14086,11 +14086,9 @@ export type Database = {
           moeda: string | null
           parceiro_id: string | null
           parceiro_nome: string | null
-          parceiro_status: string | null
           saldo: number | null
           titular: string | null
           user_id: string | null
-          workspace_id: string | null
         }
         Relationships: [
           {
@@ -14113,13 +14111,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_user_last_login"
             referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "parceiros_workspace_id_fkey"
-            columns: ["workspace_id"]
-            isOneToOne: false
-            referencedRelation: "workspaces"
-            referencedColumns: ["id"]
           },
         ]
       }
@@ -14137,7 +14128,6 @@ export type Database = {
           saldo_usd: number | null
           user_id: string | null
           wallet_id: string | null
-          workspace_id: string | null
         }
         Relationships: [
           {
@@ -14160,13 +14150,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_user_last_login"
             referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "parceiros_workspace_id_fkey"
-            columns: ["workspace_id"]
-            isOneToOne: false
-            referencedRelation: "workspaces"
-            referencedColumns: ["id"]
           },
         ]
       }
