@@ -197,8 +197,8 @@
               </div>
             </div>
 
-            <div className="flex flex-col gap-1.5 w-[140px] lg:w-[160px]">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1 mb-1 lg:mb-0">Status</span>
+            <div className="flex flex-col gap-1.5 flex-1 min-w-[140px] sm:flex-none sm:w-[160px]">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Status</span>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="h-9">
                   <Filter className="h-3.5 w-3.5 mr-2 shrink-0" />
@@ -214,8 +214,8 @@
               </Select>
             </div>
 
-            <div className="flex flex-col gap-1.5 w-[160px] lg:w-[180px]">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1 mb-1 lg:mb-0">Projeto</span>
+            <div className="flex flex-col gap-1.5 flex-1 min-w-[160px] sm:flex-none sm:w-[180px]">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Projeto</span>
               <Select value={projetoFilter} onValueChange={setProjetoFilter}>
                 <SelectTrigger className="h-9">
                   <Building2 className="h-3.5 w-3.5 mr-2 shrink-0" />
