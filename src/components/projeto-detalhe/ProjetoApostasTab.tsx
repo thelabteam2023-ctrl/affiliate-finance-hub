@@ -29,9 +29,7 @@ import {
   CheckCircle2,
   BarChart3,
   Clock,
-  History,
-  ChevronUp,
-  ChevronDown
+  History
 } from "lucide-react";
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
 import { groupPernasBySelecao } from "@/utils/groupPernasBySelecao";
@@ -39,7 +37,7 @@ import { SurebetDialog } from "./SurebetDialog";
 import { apostaMatchesBookmakerFilter, apostaMatchesParceiroFilter } from "@/utils/apostaFilterHelpers";
 import { ApostaPernasResumo, ApostaPernasInline, Perna } from "./ApostaPernasResumo";
 import { ApostaCard, type ApostaCardData } from "./ApostaCard";
-import { format, parseISO, isToday, startOfDay } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
 import { ApostaDialog } from "@/components/projeto-detalhe/ApostaDialog";
@@ -62,8 +60,7 @@ import { cn, getFirstLastName } from "@/lib/utils";
 import { formatBookmakerProjectName, buildBookmakerNomeMap, collectMissingBookmakerIds, mergeBookmakerNomeMaps } from "@/lib/bookmaker-display";
 import { useUnlinkedBookmakerNames } from "@/hooks/useUnlinkedBookmakerNames";
 import { parsePernaFromJson } from "@/types/apostasUnificada";
-import { OperationsHistoryModule, OperationsSubTabHeader, type HistorySubTab, SuspiciousDateFilterButton, useSuspiciousDateFilter, isSuspiciousDate } from "./operations";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { OperationsSubTabHeader, type HistorySubTab, SuspiciousDateFilterButton, useSuspiciousDateFilter, isSuspiciousDate } from "./operations";
 import { parseLocalDateTime } from "@/utils/dateUtils";
 import { ExportMenu, transformApostaToExport, transformSurebetToExport } from "./ExportMenu";
 import { DeleteBetConfirmDialog, type DeleteBetInfo } from "@/components/apostas/DeleteBetConfirmDialog";
@@ -1247,110 +1244,6 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     });
   }, [allUnifiedListaAtual, searchTerm, suspiciousActive]);
 
-  // Agrupamento por dia (Padrão Planejamento)
-  const groupedByDay = useMemo(() => {
-    const groups: Record<string, ApostaUnificada[]> = {};
-    apostasUnificadas.forEach(item => {
-      const dateStr = item.data_aposta.split('T')[0];
-      if (!groups[dateStr]) groups[dateStr] = [];
-      groups[dateStr].push(item);
-    });
-    return groups;
-  }, [apostasUnificadas]);
-
-  const sortedDates = useMemo(() => {
-    // Se for abertas, ordem crescente (jogo mais próximo primeiro)
-    // Se for histórico, ordem decrescente (mais recente primeiro)
-    return Object.keys(groupedByDay).sort((a, b) => {
-      if (apostasSubTab === "abertas") {
-        return a.localeCompare(b);
-      }
-      return b.localeCompare(a);
-    });
-  }, [groupedByDay, apostasSubTab]);
-
-  // Navegação inteligente via botões flutuantes
-  const navigateDayByDay = useCallback((direction: 'up' | 'down') => {
-    const scrollArea = document.querySelector('.history-module-container [data-radix-scroll-area-viewport]');
-    if (!scrollArea || sortedDates.length === 0) return;
-
-    const containerRect = scrollArea.getBoundingClientRect();
-    const currentScrollTop = scrollArea.scrollTop;
-    const THRESHOLD = 30; // Margem para considerar que um grupo está no topo
-
-    // Mapear posição de todos os grupos
-    const groups = sortedDates.map(date => {
-      const el = document.getElementById(`history-date-group-${date}`);
-      if (!el) return null;
-      const rect = el.getBoundingClientRect();
-      const relativeTop = rect.top - containerRect.top + currentScrollTop;
-      return { date, relativeTop };
-    }).filter(Boolean) as { date: string, relativeTop: number }[];
-
-    if (groups.length === 0) return;
-
-    // Encontrar o índice do grupo que está ATUALMENTE no topo da visão
-    // É o grupo cuja base está abaixo do topo e topo está acima ou próximo ao topo
-    let currentIndex = groups.findIndex(g => g.relativeTop >= currentScrollTop - THRESHOLD);
-    if (currentIndex === -1) currentIndex = groups.length - 1;
-
-    let targetIndex;
-    if (direction === 'down') {
-      // Se já estamos no topo desse grupo, vamos para o próximo
-      if (Math.abs(groups[currentIndex].relativeTop - currentScrollTop) < THRESHOLD) {
-        targetIndex = Math.min(currentIndex + 1, groups.length - 1);
-      } else {
-        // Se não estamos alinhados, o "descer" alinha o atual no topo primeiro
-        targetIndex = currentIndex;
-      }
-    } else {
-      // Para subir: se estamos alinhados com o atual, vamos para o anterior
-      if (Math.abs(groups[currentIndex].relativeTop - currentScrollTop) < THRESHOLD) {
-        targetIndex = Math.max(currentIndex - 1, 0);
-      } else {
-        // Se estamos no meio de um grupo, o "subir" alinha o topo dele
-        targetIndex = currentIndex;
-      }
-    }
-
-    const targetGroup = groups[targetIndex];
-    scrollArea.scrollTo({ 
-      top: targetGroup.relativeTop - 16, 
-      behavior: 'smooth' 
-    });
-  }, [sortedDates]);
-
-  const scrollToToday = useCallback(() => {
-    const todayStr = format(new Date(), "yyyy-MM-dd");
-    const element = document.getElementById(`history-date-group-${todayStr}`);
-    const scrollArea = document.querySelector('.history-module-container [data-radix-scroll-area-viewport]');
-    
-    if (element && scrollArea) {
-      const containerRect = scrollArea.getBoundingClientRect();
-      const elementRect = element.getBoundingClientRect();
-      const relativeTop = elementRect.top - containerRect.top + scrollArea.scrollTop;
-      scrollArea.scrollTo({ top: relativeTop - 16, behavior: 'smooth' });
-    } else if (!element) {
-      const nextAvailable = sortedDates.find(date => date <= todayStr);
-      if (nextAvailable && scrollArea) {
-        const nextEl = document.getElementById(`history-date-group-${nextAvailable}`);
-        if (nextEl) {
-          const containerRect = scrollArea.getBoundingClientRect();
-          const elementRect = nextEl.getBoundingClientRect();
-          const relativeTop = elementRect.top - containerRect.top + scrollArea.scrollTop;
-          scrollArea.scrollTo({ top: relativeTop - 16, behavior: 'smooth' });
-        }
-      }
-    }
-  }, [sortedDates]);
-
-  useEffect(() => {
-    if (!loading && apostasUnificadas.length > 0) {
-      const timer = setTimeout(scrollToToday, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [loading, apostasSubTab, viewMode, scrollToToday, apostasUnificadas.length]);
-
   // Contadores por contexto
   const contadores = useMemo(() => {
     const all: ApostaUnificada[] = [];
@@ -1568,79 +1461,150 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     );
   }
 
-  const renderApostasContent = () => {
-    if (apostasUnificadas.length === 0) return null;
+  return (
+    <div className="space-y-4">
+      {/* Filtro de período + Actions na mesma linha */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1">
+          <StandardTimeFilter
+            period={tabFilters.period}
+            onPeriodChange={tabFilters.setPeriod}
+            customDateRange={tabFilters.customDateRange}
+            onCustomDateRangeChange={tabFilters.setCustomDateRange}
+            projetoId={projetoId}
+          />
+        </div>
+        {actionsSlot && <div className="shrink-0">{actionsSlot}</div>}
+      </div>
 
-    if (viewMode === "list") {
-      return (
-        <div className="space-y-8 max-w-5xl mx-auto py-4 relative min-h-full">
-          {/* Navegação Flutuante Lateral (Padrão Planejamento) */}
-          <div className="sticky top-1/2 -translate-y-1/2 z-50 h-0 w-0">
-            <div className="flex flex-col gap-2 absolute left-1 md:left-2">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="rounded-full shadow-lg border border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/15 hover:border-white/20 transition-all h-10 w-10 text-white"
-                      onClick={(e) => { e.stopPropagation(); navigateDayByDay('up'); }}
-                    >
-                      <ChevronUp className="h-5 w-5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">Subir um dia</TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="rounded-full shadow-xl border border-white/20 bg-white/10 backdrop-blur-md hover:bg-white/20 transition-all h-12 w-12 text-white hover:scale-105 active:scale-95"
-                      onClick={(e) => { e.stopPropagation(); scrollToToday(); }}
-                    >
-                      <Target className="h-6 w-6" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">Ir para Hoje</TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="rounded-full shadow-lg border border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/15 hover:border-white/20 transition-all h-10 w-10 text-white"
-                      onClick={(e) => { e.stopPropagation(); navigateDayByDay('down'); }}
-                    >
-                      <ChevronDown className="h-5 w-5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">Descer um dia</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
+      {/* Card de Histórico com Filtros */}
+      <Card>
+        <CardHeader className="pb-3">
+          {/* Sub-abas Abertas / Histórico - usando componente padronizado */}
+          <div className="mb-3">
+            <OperationsSubTabHeader
+              subTab={apostasSubTab}
+              onSubTabChange={setApostasSubTab}
+              openCount={apostasAbertasList.length}
+              totalOpenCount={totalAbertasRaw}
+              historyCount={apostasHistoricoList.length}
+              totalHistoryCount={totalHistoricoRaw}
+              viewMode={viewMode}
+              onViewModeChange={(mode) => setViewMode(mode)}
+              showViewToggle={true}
+              searchQuery={searchTerm}
+              onSearchChange={setSearchTerm}
+              sortOrder={tabFilters.sortOrder}
+              onSortOrderToggle={tabFilters.toggleSortOrder}
+              extraActions={
+                <ExportMenu
+                  getData={() => apostasUnificadas.map(u => {
+                    if (u.tipo === "surebet") {
+                      const s = u.data as Surebet;
+                      return transformSurebetToExport({
+                        id: s.id,
+                        data_operacao: s.data_operacao,
+                        evento: s.evento,
+                        mercado: undefined,
+                        modelo: s.modelo,
+                        stake_total: s.stake_total,
+                        spread_calculado: s.spread_calculado,
+                        resultado: s.resultado,
+                        status: s.status,
+                        lucro_real: s.lucro_prejuizo,
+                        observacoes: s.observacoes,
+                        moeda_operacao: (s as any).moeda_operacao,
+                        pernas: s.pernas?.map(p => ({
+                          bookmaker_nome: p.bookmaker?.nome,
+                          selecao: p.selecao,
+                          odd: p.odd,
+                          stake: p.stake,
+                          moeda: p.moeda,
+                        })),
+                      }, s.estrategia || "SUREBET", convertToConsolidation);
+                    }
+                    const a = u.data as Aposta | ApostaMultipla;
+                    return transformApostaToExport({
+                      id: a.id,
+                      data_aposta: a.data_aposta,
+                      evento: 'evento' in a ? a.evento : '',
+                      mercado: 'mercado' in a ? a.mercado : null,
+                      selecao: 'selecao' in a ? a.selecao : '',
+                      odd: 'odd' in a ? a.odd : ('odd_final' in a ? a.odd_final : 0),
+                      stake: a.stake,
+                      resultado: a.resultado,
+                      status: a.status,
+                      lucro_prejuizo: a.lucro_prejuizo,
+                      observacoes: a.observacoes,
+                      bookmaker_nome: a.bookmaker?.nome,
+                      estrategia: 'estrategia' in a ? a.estrategia : null,
+                      moeda_operacao: (a as any).moeda_operacao,
+                    }, "Apostas", convertToConsolidation);
+                  })}
+                  abaOrigem="Apostas"
+                  filename={`apostas-${projetoId}-${format(new Date(), 'yyyy-MM-dd')}`}
+                  filtrosAplicados={{
+                    periodo: tabFilters.period,
+                    dataInicio: dateRange?.start.toISOString(),
+                    dataFim: dateRange?.end.toISOString(),
+                  }}
+                />
+              }
+            />
           </div>
+          
+          {/* Título do Card */}
+          <CardTitle className="text-base font-medium flex items-center gap-2">
+            <History className="h-4 w-4" />
+            {apostasSubTab === "abertas" ? "Operações Abertas" : "Histórico de Operações"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0 space-y-3">
+          {/* Filtros LOCAIS da aba Apostas (isolados de outras abas) */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <TabFiltersBar
+              projetoId={projetoId}
+              filters={tabFilters}
+              showPeriodFilter={false}
+              showEstrategiaFilter={true}
+              showResultadoFilter={true}
+              className="flex-1"
+            />
+            <SuspiciousDateFilterButton
+              active={suspiciousActive}
+              onToggle={setSuspiciousActive}
+              count={suspiciousCount}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
-          {sortedDates.map((dateStr) => {
-            const items = groupedByDay[dateStr];
-            const dateObj = parseISO(dateStr);
-            const isDateToday = isToday(dateObj);
-
-            return (
-              <div key={dateStr} id={`history-date-group-${dateStr}`} className="relative pl-8 md:pl-0 scroll-mt-4">
-                <div className="absolute left-[15px] md:left-[108px] top-0 bottom-0 w-px bg-border hidden sm:block" />
-                <div className="flex flex-col md:flex-row gap-4 md:gap-8">
-                  <div className="md:w-20 shrink-0 md:text-right pt-1 sticky top-0 bg-background z-10 py-2 md:py-0">
-                    <div className={cn("flex flex-row md:flex-col items-center md:items-end gap-2", isDateToday ? "text-primary" : "text-muted-foreground")}>
-                      <span className="text-xs uppercase font-bold tracking-wider">{format(dateObj, "EEE", { locale: ptBR })}</span>
-                      <span className={cn("text-2xl font-black leading-none", isDateToday && "text-primary scale-110")}>{format(dateObj, "dd")}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex-1 grid gap-3 pb-4">
-                    {items.map((item) => {
+      {/* Lista de Apostas - Layout padronizado igual Surebet/Bônus */}
+      {apostasUnificadas.length === 0 ? (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-10">
+              <Target className="mx-auto h-12 w-12 text-muted-foreground/50" />
+              <h3 className="mt-4 text-lg font-semibold">
+                {apostasSubTab === "abertas" ? "Nenhuma aposta aberta" : "Nenhuma aposta no histórico"}
+              </h3>
+              <p className="text-muted-foreground">
+                {tabFilters.activeFiltersCount > 0 || resultadoFilter !== "all" || contextoFilter !== "all"
+                  ? "Tente ajustar os filtros"
+                  : apostasSubTab === "abertas" 
+                    ? "Registre uma nova aposta" 
+                    : "Apostas finalizadas aparecerão aqui"}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className={cn(
+          viewMode === "cards" 
+            ? "grid gap-5 md:grid-cols-2 xl:grid-cols-3" 
+            : "space-y-2"
+        )}>
+          {apostasUnificadas.map((item) => {
             // ===== SUREBET =====
             if (item.tipo === "surebet") {
               const sb = item.data as Surebet;
@@ -1800,7 +1764,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                   key={aposta.id}
                   aposta={apostaCardData}
                   estrategia={estrategia}
-                  variant="list"
+                  variant={viewMode === "cards" ? "card" : "list"}
                   onEdit={(apostaId) => {
                     const a = apostas.find(ap => ap.id === apostaId);
                     if (a) handleOpenDialog(a);
@@ -1854,167 +1818,36 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                  stake_freebet: (multipla as any).stake_freebet ?? null,
                };
             
-                    return (
-                      <ApostaCard
-                        key={multipla.id}
-                        aposta={multiplaCardData}
-                        estrategia={estrategiaMultipla}
-                        variant="list"
-                        onEdit={() => handleOpenMultiplaDialog(multipla)}
-                        onQuickResolve={handleQuickResolve}
-                        onDelete={prepareDeleteMultipla}
-                        onDuplicate={handleDuplicateMultipla}
-                        formatCurrency={formatCurrency}
-                        convertToConsolidation={convertToConsolidation}
-                        moedaConsolidacao={moedaConsolidacao}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
-
-  // MODO GRID (CARDS)
-  return (
-    <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3 py-4">
-      {apostasUnificadas.map((item) => {
-        // Render logic for grid (simplified for brevity, using same logic as list but with variant="card")
-        if (item.tipo === "surebet") {
-          const sb = item.data as Surebet;
-          const surebetData: SurebetData = {
-            ...sb,
-            workspace_id: sb.workspace_id,
-            lucro_real: sb.pl_consolidado ?? sb.lucro_prejuizo,
-            pl_consolidado: sb.pl_consolidado,
-            consolidation_currency: (sb as any).consolidation_currency,
-            stake_consolidado: sb.stake_consolidado,
-            pernas: groupPernasBySelecao((sb.pernas || []).map((p: any) => ({
-              id: p.id, selecao: p.selecao, selecao_livre: p.selecao_livre, odd: p.odd, stake: p.stake, resultado: p.resultado,
-              lucro_prejuizo: p.lucro_prejuizo ?? null, bookmaker_nome: p.bookmaker?.nome || p.bookmaker_nome || "—",
-              bookmaker_id: p.bookmaker_id, moeda: p.moeda || 'BRL', fonte_saldo: p.fonte_saldo || null,
-            }))),
-          };
-          return (
-            <SurebetCard
-              key={sb.id}
-              surebet={surebetData}
-              onEdit={(surebet) => {
-                const url = `/janela/surebet/${surebet.id}?projetoId=${encodeURIComponent(projetoId)}&tab=apostas`;
-                window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
-              }}
-              onQuickResolve={handleQuickResolveSurebet}
-              onPernaResultChange={handleSurebetPernaResolve}
-              onDelete={prepareDeleteSurebet}
-              onDuplicate={handleDuplicateSurebet}
-              formatCurrency={formatCurrency}
-              convertToConsolidation={convertToConsolidation}
-              moedaConsolidacao={moedaConsolidacao}
-              bookmakerNomeMap={bookmakerNomeMap}
-            />
-          );
-        }
-        if (item.tipo === "simples") {
-          const aposta = item.data as Aposta;
-          const apostaCardData: ApostaCardData = {
-            id: aposta.id, evento: aposta.evento, esporte: aposta.esporte, mercado: aposta.mercado, selecao: aposta.selecao,
-            odd: aposta.odd, stake: aposta.stake, data_aposta: aposta.data_aposta, created_at: aposta.created_at,
-            resultado: aposta.resultado, status: aposta.status, lucro_prejuizo: aposta.lucro_prejuizo, estrategia: aposta.estrategia,
-            bookmaker_nome: formatBookmakerProjectName(aposta.bookmaker?.nome || "—", aposta.bookmaker?.parceiro?.nome, (aposta.bookmaker as any)?.instance_identifier),
-            logo_url: aposta.bookmaker?.bookmakers_catalogo?.logo_url, moeda: aposta.moeda_operacao || "BRL", fonte_saldo: aposta.fonte_saldo || null,
-            stake_freebet: aposta.stake_freebet ?? null, pl_consolidado: aposta.pl_consolidado ?? undefined, stake_consolidado: aposta.stake_consolidado ?? undefined,
-          };
-          let estrategia: string = aposta.estrategia || "NORMAL";
-          if (aposta.gerou_freebet || item.contexto === "FREEBET") estrategia = "FREEBET";
-          else if (item.contexto === "BONUS") estrategia = "BONUS";
-          return (
-            <ApostaCard
-              key={aposta.id} aposta={apostaCardData} estrategia={estrategia} variant="card"
-              onEdit={(apostaId) => {
-                const a = apostas.find(ap => ap.id === apostaId);
-                if (a) handleOpenDialog(a);
-              }}
-              onQuickResolve={handleQuickResolve} onDelete={prepareDeleteSimples} onDuplicate={handleDuplicateSimples}
-              formatCurrency={formatCurrency} convertToConsolidation={convertToConsolidation} moedaConsolidacao={moedaConsolidacao}
-            />
-          );
-        }
-        const multipla = item.data as ApostaMultipla;
-        const multiplaCardData = {
-          id: multipla.id, evento: (multipla as any).evento || '', esporte: (multipla as any).esporte || '', odd_final: multipla.odd_final,
-          stake: multipla.stake, data_aposta: multipla.data_aposta, resultado: multipla.resultado, status: multipla.status,
-          lucro_prejuizo: multipla.lucro_prejuizo, estrategia: multipla.estrategia, tipo_multipla: multipla.tipo_multipla,
-          selecoes: multipla.selecoes.map(s => ({ descricao: s.descricao, odd: parseFloat(s.odd), resultado: s.resultado })),
-          bookmaker_nome: multipla.bookmaker?.nome?.split(" - ")[0] || multipla.bookmaker?.nome,
-          logo_url: multipla.bookmaker?.bookmakers_catalogo?.logo_url, moeda: multipla.moeda_operacao || "BRL",
-        };
-        let estrategiaMultipla: string = multipla.estrategia || "NORMAL";
-        if (multipla.gerou_freebet || item.contexto === "FREEBET") estrategiaMultipla = "FREEBET";
-        else if (item.contexto === "BONUS") estrategiaMultipla = "BONUS";
-        return (
-          <ApostaCard
-            key={multipla.id} aposta={multiplaCardData as any} estrategia={estrategiaMultipla} variant="card"
-            onEdit={() => handleOpenMultiplaDialog(multipla)} onQuickResolve={handleQuickResolve}
-            onDelete={prepareDeleteMultipla} onDuplicate={handleDuplicateMultipla}
-            formatCurrency={formatCurrency} convertToConsolidation={convertToConsolidation} moedaConsolidacao={moedaConsolidacao}
-          />
-        );
-      })}
-    </div>
-  );
-};
-
-return (
-  <div className="h-full flex flex-col min-h-0 relative">
-    <OperationsHistoryModule
-      projetoId={projetoId}
-      title="Histórico de Operações"
-      tabFilters={tabFilters}
-      openCount={apostasAbertasList.length}
-      totalOpenCount={totalAbertasRaw}
-      historyCount={apostasHistoricoList.length}
-      totalHistoryCount={totalHistoricoRaw}
-      viewMode={viewMode}
-      onViewModeChange={setViewMode}
-      subTab={apostasSubTab}
-      onSubTabChange={setApostasSubTab}
-      openContent={renderApostasContent()}
-      historyContent={renderApostasContent()}
-      searchQuery={searchTerm}
-      onSearchChange={setSearchTerm}
-      sortOrder={tabFilters.sortOrder}
-      onSortOrderToggle={tabFilters.toggleSortOrder}
-      className="flex-1 h-full min-h-0 history-module-container"
-      headerActions={
-        <div className="flex items-center gap-2">
-          <SuspiciousDateFilterButton
-            active={suspiciousActive}
-            onToggle={setSuspiciousActive}
-            count={suspiciousCount}
-          />
-          <ExportMenu
-            abaOrigem="Apostas"
-            filename={`apostas-${projetoId}`}
-            getData={() => apostasUnificadas.map(u => ({ ...u.data, tipo: u.tipo })) as any}
-            filtrosAplicados={{}}
-          />
-          {actionsSlot}
+            return (
+              <ApostaCard
+                key={multipla.id}
+                aposta={multiplaCardData}
+                estrategia={estrategiaMultipla}
+                variant={viewMode === "cards" ? "card" : "list"}
+                onEdit={() => handleOpenMultiplaDialog(multipla)}
+                 onQuickResolve={handleQuickResolve}
+                 onDelete={prepareDeleteMultipla}
+                 onDuplicate={handleDuplicateMultipla}
+                 formatCurrency={formatCurrency}
+                 convertToConsolidation={convertToConsolidation}
+                 moedaConsolidacao={moedaConsolidacao}
+               />
+            );
+          })}
         </div>
-      }
-    />
+      )}
 
-    <DeleteBetConfirmDialog
-      open={deleteDialogOpen}
-      onOpenChange={setDeleteDialogOpen}
-      betInfo={betToDelete}
-      onConfirm={handleDeleteBet}
-      isDeleting={isDeleting}
-      formatCurrency={formatCurrency}
-    />
-  </div>
+      {/* Modal de Confirmação de Exclusão */}
+      <DeleteBetConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        betInfo={betToDelete}
+        onConfirm={handleDeleteBet}
+        isDeleting={isDeleting}
+        formatCurrency={formatCurrency}
+      />
+
+      {/* Dialogs removidos - todos os formulários abrem em janela externa */}
+    </div>
   );
 }
