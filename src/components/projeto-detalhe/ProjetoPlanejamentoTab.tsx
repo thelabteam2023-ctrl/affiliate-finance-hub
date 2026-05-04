@@ -188,71 +188,188 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
   }, [campanhas, celulasAgendadas, perfis, ips]);
 
   const renderContent = () => {
-    if (filteredData.length === 0) return null; // OperationsHistoryModule lida com empty states
+    if (filteredData.length === 0) return null;
 
     if (viewMode === "list") {
       return (
-        <div className="space-y-3">
-          {filteredData.map((camp) => (
-            <Card
-              key={camp.id}
-              className={cn(
-                "group relative overflow-hidden transition-all border-l-4",
-                camp.derivedStatus === "concluido" && "border-l-[#00FF66] bg-[#00FF66]/5",
-                camp.derivedStatus === "atrasado" && "border-l-destructive bg-destructive/5",
-                camp.derivedStatus === "pendente" && "border-l-[#FFD700] bg-[#FFD700]/5",
-                camp.derivedStatus === "planejado" && "border-l-primary/50 bg-primary/5"
-              )}
-            >
-              <div className="p-3 flex flex-col sm:flex-row items-center gap-4">
-                <div className="flex flex-col items-center justify-center min-w-[60px] border-r pr-4 text-muted-foreground">
-                  <span className="text-[10px] uppercase font-bold">{format(parseISO(camp.scheduled_date), "EEE", { locale: ptBR })}</span>
-                  <span className="text-xl font-black">{format(parseISO(camp.scheduled_date), "dd")}</span>
-                </div>
+        <div className="space-y-8 max-w-5xl mx-auto py-4">
+          {sortedDates.map((dateStr) => {
+            const camps = groupedByDay[dateStr];
+            const dateObj = parseISO(dateStr);
 
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <BookmakerLogo
-                    logoUrl={logoMap[camp.bookmaker_catalogo_id || ""] || null}
-                    alt={camp.bookmaker_nome}
-                    size="h-9 w-9"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-sm truncate">{camp.bookmaker_nome}</h3>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                      <User className="h-3 w-3" />
-                      <span className="truncate">
-                        {camp.parceiro_snapshot?.nome || (camp.perfil ? perfilDisplayName(camp.perfil) : "Sem parceiro")}
-                        {camp.perfil && (
-                          <span className="ml-1.5 opacity-70">
-                            (CPF {planningPerfilCpfIndex(perfis, camp.perfil.id)})
-                          </span>
-                        )}
+            return (
+              <div key={dateStr} className="relative pl-8 md:pl-0">
+                <div className="absolute left-[15px] md:left-[108px] top-0 bottom-0 w-px bg-border hidden sm:block" />
+
+                <div className="flex flex-col md:flex-row gap-4 md:gap-8">
+                  <div className="md:w-20 shrink-0 md:text-right pt-1 sticky top-0 bg-background z-10 py-2 md:py-0">
+                    <div className="flex flex-row md:flex-col items-center md:items-end gap-2 text-muted-foreground">
+                      <span className="text-xs uppercase font-bold tracking-wider">
+                        {format(dateObj, "EEE", { locale: ptBR })}
+                      </span>
+                      <span className="text-2xl font-black leading-none">
+                        {format(dateObj, "dd")}
                       </span>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-4 text-sm px-4 border-l">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] uppercase opacity-60">Valor</span>
-                    <span className="font-bold">{formatMoney(camp.deposit_amount, camp.currency)}</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[10px] uppercase opacity-60">Status</span>
-                    <button 
-                      onClick={() => handleToggleStatus(camp as any)}
-                      className={cn(
-                        "font-bold text-xs hover:opacity-80 transition-all",
-                        camp.derivedStatus === "concluido" ? "text-emerald-500" : camp.derivedStatus === "atrasado" ? "text-destructive" : "text-amber-500"
-                      )}
-                    >
-                      {camp.derivedStatus === "concluido" ? "FEITO" : camp.derivedStatus === "atrasado" ? "ATRASADO" : "PENDENTE"}
-                    </button>
+                  <div className="flex-1 grid gap-3 pb-4">
+                    {camps.map((camp) => {
+                      const { perfil, linkedIp, celula, bookmakerCatalogoId } = camp;
+                      const status = camp.derivedStatus;
+                      
+                      const cpfIndex = (celula as any)?.cpf_index || (perfil ? planningPerfilCpfIndex(perfis, perfil.id) : null);
+                      const displayName = (celula as any)?.parceiro_id 
+                                        ? (perfis.find(p => p.parceiro_id === (celula as any).parceiro_id)?.parceiro?.nome || "Carregando...")
+                                        : (camp.parceiro_snapshot?.nome || 
+                                          (perfil ? perfilDisplayName(perfil) : "Sem parceiro"));
+
+                      const displayValue = camp.deposit_amount > 0 
+                                        ? formatMoney(camp.deposit_amount, camp.currency)
+                                        : (celula as any)?.deposito_sugerido 
+                                          ? formatMoney((celula as any).deposito_sugerido, (celula as any).moeda || "BRL")
+                                          : "R$ 0,00";
+
+                      return (
+                        <Card
+                          key={camp.id}
+                          className={cn(
+                            "group relative overflow-hidden transition-all hover:shadow-md border-l-4",
+                            status === "concluido" && "border-l-[#00FF66] bg-[#00FF66]/5",
+                            status === "atrasado" && "border-l-destructive bg-destructive/5",
+                            status === "pendente" && "border-l-[#FFD700] bg-[#FFD700]/5",
+                            status === "planejado" && "border-l-primary/50 bg-primary/5"
+                          )}
+                        >
+                          <div className="p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <BookmakerLogo
+                                logoUrl={logoMap[bookmakerCatalogoId || ""] || null}
+                                alt={camp.bookmaker_nome || "Casa"}
+                                size="h-10 w-10"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <h3 className="font-bold text-base truncate">{camp.bookmaker_nome || "Sem Nome"}</h3>
+                                  {status === "concluido" && (
+                                    <Badge className="bg-[#00FF66] hover:bg-[#00FF66]/80 text-[#00331a] text-[10px] h-5 font-bold border-none shadow-sm">
+                                      FEITO
+                                    </Badge>
+                                  )}
+                                  {status === "atrasado" && (
+                                    <Badge variant="destructive" className="text-[10px] h-5 font-bold border-none shadow-sm">
+                                      ATRASADO
+                                    </Badge>
+                                  )}
+                                  {status === "pendente" && (
+                                    <Badge className="bg-[#FFD700] hover:bg-[#FFD700]/80 text-[#332b00] text-[10px] h-5 font-bold border-none shadow-sm">
+                                      PENDENTE
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-sm text-muted-foreground">
+                                  <div className="flex items-center gap-1.5">
+                                    <User className="h-3.5 w-3.5" />
+                                    <span className="truncate">
+                                      {displayName}
+                                      {cpfIndex && (
+                                        <span 
+                                          className="ml-1.5 text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm border"
+                                          style={{
+                                            backgroundColor: perfil?.cor ? `${perfil.cor}26` : 'hsl(var(--primary)/0.1)',
+                                            borderColor: perfil?.cor || 'hsl(var(--primary))',
+                                            color: perfil?.cor || 'hsl(var(--primary))'
+                                          }}
+                                        >
+                                          CPF {cpfIndex}
+                                        </span>
+                                      )}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 font-medium text-foreground">
+                                    <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
+                                    {displayValue}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="hidden lg:flex items-center gap-6 px-4 border-x text-sm text-muted-foreground">
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-[10px] uppercase tracking-wider font-semibold opacity-60">IP / Proxy</span>
+                                <div className="flex items-center gap-1.5 text-foreground">
+                                  <MapPin className="h-3.5 w-3.5 text-primary/70" />
+                                  {linkedIp ? (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span 
+                                          className="max-w-[120px] truncate cursor-pointer hover:text-primary transition-colors flex items-center gap-1 group/proxy"
+                                          onClick={() => handleCopyProxy(linkedIp.ip_address)}
+                                        >
+                                          {linkedIp.label}
+                                          <Copy className="h-3 w-3 opacity-0 group-hover/proxy:opacity-100 transition-opacity" />
+                                        </span>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top" className="bg-popover border-border shadow-md">
+                                        <div className="flex flex-col gap-1">
+                                          <p className="text-xs font-mono font-medium">{linkedIp.ip_address}</p>
+                                          <p className="text-[10px] text-muted-foreground">Clique para copiar o proxy</p>
+                                        </div>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  ) : (
+                                    <span className="max-w-[120px] truncate">Pendente</span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex flex-col gap-0.5 min-w-[110px]">
+                                <span className="text-[10px] uppercase tracking-wider font-semibold opacity-60">Status</span>
+                                <div 
+                                  className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-all active:scale-95 group/status"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleToggleStatus(camp as any);
+                                  }}
+                                >
+                                  {status === "concluido" ? (
+                                    <span className="flex items-center gap-1 text-[#00FF66] font-bold">
+                                      <CheckCircle2 className="h-3.5 w-3.5 fill-[#00FF66]/20" /> Concluído
+                                    </span>
+                                  ) : (
+                                    <span className={cn(
+                                      "flex items-center gap-1 font-bold",
+                                      status === "atrasado" ? "text-destructive" : "text-[#FFD700]"
+                                    )}>
+                                      <Clock className="h-3.5 w-3.5" /> 
+                                      {status === "atrasado" ? "Atrasado" : "Pendente"}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 self-end sm:self-center">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 hover:bg-primary/10 hover:text-primary transition-colors"
+                                onClick={() => {
+                                  setEditingCampanha(camp as any);
+                                  setIsDialogOpen(true);
+                                }}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </Card>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
-            </Card>
-          ))}
+            );
+          })}
         </div>
       );
     }
@@ -314,6 +431,15 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
         emptyHistoryMessage="Nenhum planejamento concluído neste projeto"
         maxHeight="calc(100vh - 350px)"
       />
+      {isDialogOpen && (
+        <CampanhaDialog
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          scheduledDate={editingCampanha?.scheduled_date || ""}
+          campanha={editingCampanha}
+          campanhasDoMes={campanhas}
+        />
+      )}
     </div>
   );
 }
