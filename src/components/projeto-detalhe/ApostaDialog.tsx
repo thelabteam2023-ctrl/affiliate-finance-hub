@@ -2526,6 +2526,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             .eq("id", aposta.id);
           if (error) throw error;
 
+          // Sincronizar ledger financeiro se for uma aposta PENDENTE com mudança de stake
+          if (!apostaEstaLiquidada && houveMudancaStake) {
+            console.log("[ApostaDialog] Sincronizando ledger de stake para aposta pendente...");
+            await supabase.rpc('sync_pending_aposta_stake_v1', { p_aposta_id: aposta.id });
+          }
+
           // ================================================================
           // CORREÇÃO CRÍTICA: NÃO usar atualizarSaldoBookmaker para mudanças de resultado
           // O saldo só deve ser afetado via cash_ledger através da liquidação RPC.
