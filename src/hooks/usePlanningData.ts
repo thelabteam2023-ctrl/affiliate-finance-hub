@@ -45,6 +45,7 @@ export interface PlanningCampanha {
   currency: string;
   parceiro_id: string | null;
   parceiro_snapshot: any | null;
+  projeto_id: string | null;
   ip_id: string | null;
   wallet_id: string | null;
   status: string;
@@ -692,6 +693,7 @@ export function useUpsertCampanha() {
         currency: payload.currency ?? "BRL",
         parceiro_id: payload.parceiro_id ?? null,
         parceiro_snapshot: payload.parceiro_snapshot ?? null,
+        projeto_id: payload.projeto_id ?? null,
         ip_id: payload.ip_id ?? null,
         wallet_id: payload.wallet_id ?? null,
         status: payload.status ?? "planned",
