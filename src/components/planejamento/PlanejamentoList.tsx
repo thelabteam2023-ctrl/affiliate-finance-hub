@@ -41,10 +41,11 @@
    usePlanningCampanhas, 
    usePlanningPerfis,
   perfilDisplayName,
-  usePlanningIps,
-   planningPerfilCpfIndex,
-   useProjetos,
-   PlanningPerfil
+    usePlanningIps,
+    planningPerfilCpfIndex,
+    useProjetos,
+    PlanningPerfil,
+    useUpsertCampanha
  } from "@/hooks/usePlanningData";
  import { useCelulasAgendadasPorCampanhas } from "@/hooks/usePlanoCelulasDisponiveis";
  import { format, parseISO, isPast, isToday, startOfDay } from "date-fns";
@@ -70,6 +71,7 @@
    const { data: perfis = [] } = usePlanningPerfis();
    const { data: ips = [] } = usePlanningIps();
    const { data: projetos = [] } = useProjetos();
+  const updateCampanha = useUpsertCampanha();
    const logoMap = useBookmakerLogoMap();
  
    const [editingCampanha, setEditingCampanha] = useState<PlanningCampanha | null>(null);
@@ -116,6 +118,18 @@
      return "planejado";
    };
  
+  const handleToggleStatus = async (camp: PlanningCampanha) => {
+    try {
+      await updateCampanha.mutateAsync({
+        id: camp.id,
+        scheduled_date: camp.scheduled_date,
+        is_account_created: !camp.is_account_created
+      });
+    } catch (error) {
+      console.error("Erro ao atualizar status:", error);
+    }
+  };
+
   const filteredCampanhas = useMemo(() => {
     return campanhas.filter(c => {
        const matchesProjeto = projetoFilter === "all" || c.projeto_id === projetoFilter;
@@ -156,44 +170,54 @@
    return (
      <div className="flex flex-col h-full bg-background overflow-hidden">
        {/* Header com Filtros */}
-       <div className="p-4 border-b flex flex-col md:flex-row gap-4 items-center justify-between bg-card/50">
-         <div className="flex items-center gap-3 w-full md:w-auto">
-           <div className="relative flex-1 md:w-80">
-             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-             <Input
-               placeholder="Buscar por casa, parceiro ou notas..."
-               className="pl-9 h-9"
-               value={searchTerm}
-               onChange={(e) => setSearchTerm(e.target.value)}
-             />
-           </div>
-           <Select value={statusFilter} onValueChange={setStatusFilter}>
-             <SelectTrigger className="w-[180px] h-9">
-               <Filter className="h-3.5 w-3.5 mr-2" />
-               <SelectValue placeholder="Status" />
-             </SelectTrigger>
-             <SelectContent>
-               <SelectItem value="all">Todos os Status</SelectItem>
-               <SelectItem value="concluido">Feito (Conta Criada)</SelectItem>
-               <SelectItem value="pendente">Pendente</SelectItem>
-               <SelectItem value="atrasado">Atrasado</SelectItem>
-               <SelectItem value="planejado">Planejado</SelectItem>
-             </SelectContent>
-           </Select>
+        <div className="p-4 border-b flex flex-col lg:flex-row gap-4 items-start lg:items-end justify-between bg-card/50">
+          <div className="flex flex-wrap items-end gap-3 w-full lg:w-auto">
+            <div className="flex flex-col gap-1.5 flex-1 min-w-[240px] lg:w-80 lg:flex-none">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Busca</span>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Casa, parceiro ou notas..."
+                  className="pl-9 h-9"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
 
-           <Select value={projetoFilter} onValueChange={setProjetoFilter}>
-             <SelectTrigger className="w-[200px] h-9">
-               <Building2 className="h-3.5 w-3.5 mr-2" />
-               <SelectValue placeholder="Projeto" />
-             </SelectTrigger>
-             <SelectContent>
-               <SelectItem value="all">Todos os Projetos</SelectItem>
-               {projetos.map(p => (
-                 <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
-               ))}
-             </SelectContent>
-           </Select>
-         </div>
+            <div className="flex flex-col gap-1.5 w-[160px]">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Status</span>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="h-9">
+                  <Filter className="h-3.5 w-3.5 mr-2 shrink-0" />
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Status</SelectItem>
+                  <SelectItem value="concluido">Feito (Conta Criada)</SelectItem>
+                  <SelectItem value="pendente">Pendente</SelectItem>
+                  <SelectItem value="atrasado">Atrasado</SelectItem>
+                  <SelectItem value="planejado">Planejado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-1.5 w-[180px]">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Projeto</span>
+              <Select value={projetoFilter} onValueChange={setProjetoFilter}>
+                <SelectTrigger className="h-9">
+                  <Building2 className="h-3.5 w-3.5 mr-2 shrink-0" />
+                  <SelectValue placeholder="Projeto" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Projetos</SelectItem>
+                  {projetos.map(p => (
+                    <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
  
           <div className="flex items-center gap-4 text-sm text-muted-foreground font-medium">
             <div className="flex items-center gap-2">
@@ -362,19 +386,24 @@
                                     </span>
                                   </div>
                                 </div>
-                                <div className="flex flex-col gap-0.5 min-w-[100px]">
+                                 <div className="flex flex-col gap-0.5 min-w-[110px]">
                                   <span className="text-[10px] uppercase tracking-wider font-semibold opacity-60">Status</span>
-                                  <div className="flex items-center gap-1.5">
+                                   <div 
+                                     className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-all active:scale-95 group/status"
+                                     onClick={() => handleToggleStatus(camp)}
+                                     title="Clique para alternar o status"
+                                   >
                                     {status === "concluido" ? (
-                                      <span className="flex items-center gap-1 text-[#00FF66] font-medium">
-                                        <CheckCircle2 className="h-3.5 w-3.5" /> Concluído
+                                       <span className="flex items-center gap-1 text-[#00FF66] font-bold">
+                                         <CheckCircle2 className="h-3.5 w-3.5 fill-[#00FF66]/20" /> Concluído
                                       </span>
                                     ) : (
                                       <span className={cn(
-                                        "flex items-center gap-1 font-medium",
+                                         "flex items-center gap-1 font-bold",
                                         status === "atrasado" ? "text-destructive" : "text-[#FFD700]"
                                       )}>
-                                        <Clock className="h-3.5 w-3.5" /> {status === "atrasado" ? "Atrasado" : "Pendente"}
+                                         <Clock className={cn("h-3.5 w-3.5", status === "atrasado" && "animate-pulse")} /> 
+                                         {status === "atrasado" ? "Atrasado" : "Pendente"}
                                       </span>
                                     )}
                                   </div>
