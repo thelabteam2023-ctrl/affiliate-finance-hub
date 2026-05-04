@@ -88,25 +88,10 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
   const [editingCampanha, setEditingCampanha] = useState<PlanningCampanha | null>(null);
    const [isDialogOpen, setIsDialogOpen] = useState(false);
  
-   // Função para scrollar para a data de hoje
-   const scrollToToday = () => {
-     const todayStr = format(new Date(), "yyyy-MM-dd");
-     const element = document.getElementById(`date-group-${todayStr}`);
-     if (element) {
-       element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-     } else {
-       // Se não achou hoje, tenta achar a data mais próxima futura
-       const nextAvailable = sortedDates.find(date => date >= todayStr);
-       if (nextAvailable) {
-         document.getElementById(`date-group-${nextAvailable}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-       }
-     }
-   };
- 
     // Container para scroll manual via setas
     const scrollManual = (direction: 'up' | 'down') => {
       // Buscamos o viewport do Radix que está dentro do OperationsHistoryModule
-      const scrollArea = document.querySelector('#planning-scroll-container [data-radix-scroll-area-viewport]');
+      const scrollArea = document.querySelector('.planning-module-container [data-radix-scroll-area-viewport]');
       if (scrollArea) {
         const amount = direction === 'up' ? -300 : 300;
         scrollArea.scrollBy({ top: amount, behavior: 'smooth' });
@@ -117,7 +102,7 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
     const scrollToToday = () => {
       const todayStr = format(new Date(), "yyyy-MM-dd");
       const element = document.getElementById(`date-group-${todayStr}`);
-      const scrollArea = document.querySelector('#planning-scroll-container [data-radix-scroll-area-viewport]');
+      const scrollArea = document.querySelector('.planning-module-container [data-radix-scroll-area-viewport]');
       
       if (element && scrollArea) {
         // Calculamos a posição relativa ao topo do viewport
