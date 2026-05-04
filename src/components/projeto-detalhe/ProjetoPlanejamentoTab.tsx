@@ -10,7 +10,8 @@ import {
   Copy,
   History,
   LayoutGrid,
-  List
+  List,
+  Pencil
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,7 @@ import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { OperationsHistoryModule } from "./operations";
 import { useTabFilters } from "@/hooks/useTabFilters";
 import { useOperationsHistory } from "./operations/useOperationsHistory";
+import { CampanhaDialog } from "../planejamento/CampanhaDialog";
 
 interface ProjetoPlanejamentoTabProps {
   projetoId: string;
@@ -80,6 +82,8 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
   const { data: ips = [] } = usePlanningIps();
   const updateCampanha = useUpsertCampanha();
   const logoMap = useBookmakerLogoMap();
+  const [editingCampanha, setEditingCampanha] = useState<PlanningCampanha | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   // 3. Helpers de Resolução (Lógica espelhada do PlanejamentoList)
   const resolveCampanhaData = (c: PlanningCampanha) => {
@@ -96,7 +100,12 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
     const bookmakerCatalogoId = c.bookmaker_catalogo_id || (celula as any)?.bookmaker_catalogo_id;
 
     const linkedIp = ips.find(i => i.id === c.ip_id) || 
-                    (perfilId && bookmakerCatalogoId ? ips.find(i => i.perfil_planejamento_id === perfilId && i.bookmaker_catalogo_id === bookmakerCatalogoId) : null);
+                    (perfilId && bookmakerCatalogoId ? ips.find(i => i.perfil_planejamento_id === perfilId && i.bookmaker_catalogo_id === bookmakerCatalogoId) : null) ||
+                    (parceiroId && bookmakerCatalogoId ? ips.find(i => {
+                      const ipPerfil = perfis.find(p => p.id === i.perfil_planejamento_id);
+                      return ipPerfil?.parceiro_id === parceiroId && i.bookmaker_catalogo_id === bookmakerCatalogoId;
+                    }) : null) ||
+                    (bookmakerCatalogoId ? ips.find(i => i.bookmaker_catalogo_id === bookmakerCatalogoId && !i.perfil_planejamento_id) : null);
 
     const isPending = !parceiroId && !perfilId || !linkedIp || !c.wallet_id || Number(c.deposit_amount) <= 0;
     
@@ -152,6 +161,19 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
       }
     }).sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));
   }, [campanhas, celulasAgendadas, perfis, ips, subTab]);
+
+  const groupedByDay = useMemo(() => {
+    const groups: Record<string, any[]> = {};
+    filteredData.forEach(c => {
+      if (!groups[c.scheduled_date]) groups[c.scheduled_date] = [];
+      groups[c.scheduled_date].push(c);
+    });
+    return groups;
+  }, [filteredData]);
+
+  const sortedDates = useMemo(() => {
+    return Object.keys(groupedByDay).sort();
+  }, [groupedByDay]);
 
   // Contagens para o header do módulo
   const counts = useMemo(() => {
