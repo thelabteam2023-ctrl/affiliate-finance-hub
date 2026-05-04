@@ -564,7 +564,7 @@ export function SaldosParceirosSheet() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [workspaceId]);
 
   useEffect(() => {
     if (open) {
