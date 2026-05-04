@@ -1775,7 +1775,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                   key={aposta.id}
                   aposta={apostaCardData}
                   estrategia={estrategia}
-                  variant={viewMode === "cards" ? "card" : "list"}
+                  variant="list"
                   onEdit={(apostaId) => {
                     const a = apostas.find(ap => ap.id === apostaId);
                     if (a) handleOpenDialog(a);
