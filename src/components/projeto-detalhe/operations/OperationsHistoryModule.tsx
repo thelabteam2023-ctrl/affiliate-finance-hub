@@ -84,28 +84,33 @@ export interface OperationsHistoryConfig {
  * - ScrollArea com altura configurável
  * - Empty states padronizados
  */
-export function OperationsHistoryModule({
-  projetoId,
-  title,
-  tabFilters,
-  showEstrategiaFilter = false,
-  showFiltersBar = true,
-  openCount,
-  totalOpenCount,
-  historyCount,
-  totalHistoryCount,
-  viewMode,
-  onViewModeChange,
-  subTab,
-  onSubTabChange,
-  openContent,
-  historyContent,
-  emptyOpenMessage = "Nenhuma operação aberta",
-  emptyHistoryMessage = "Nenhuma operação no histórico",
-  className,
-  maxHeight = "calc(100vh - 400px)",
-  headerActions,
-}: OperationsHistoryConfig) {
+ export function OperationsHistoryModule(props: OperationsHistoryConfig) {
+   const {
+     projetoId,
+     title,
+     tabFilters,
+     showEstrategiaFilter = false,
+     showFiltersBar = true,
+     openCount,
+     totalOpenCount,
+     historyCount,
+     totalHistoryCount,
+     viewMode,
+     onViewModeChange,
+     subTab,
+     onSubTabChange,
+     openContent,
+     historyContent,
+     emptyOpenMessage = "Nenhuma operação aberta",
+     emptyHistoryMessage = "Nenhuma operação no histórico",
+     className,
+     maxHeight = "calc(100vh - 400px)",
+     headerActions,
+   } = props;
+ 
+   // Verificar se deve usar layout de preenchimento de altura
+   const isFullHeight = className?.includes("h-full");
+ 
   // Determinar se está no modo histórico (mostra filtros)
   const isHistoryMode = subTab === "historico";
 
@@ -116,9 +121,9 @@ export function OperationsHistoryModule({
   // Verificar se há filtros ativos (para mensagem de empty state)
   const hasActiveFilters = tabFilters.activeFiltersCount > 0;
 
-  return (
-    <Card className={cn("border-border/50", className)}>
-      {/* Sub-tabs Abertas/Histórico - SEMPRE acima do header */}
+   return (
+     <Card className={cn("border-border/50", isFullHeight && "flex flex-col", className)}>
+       {/* Sub-tabs Abertas/Histórico - SEMPRE acima do header */}
       <div className="px-4 pt-4 pb-2">
         <OperationsSubTabHeader
           subTab={subTab}
@@ -163,26 +168,26 @@ export function OperationsHistoryModule({
         )}
       </CardHeader>
 
-      <CardContent className="pt-0 min-h-[200px]">
-        {subTab === "abertas" ? (
-          hasOpenContent ? (
-            <ScrollArea className="pr-4" style={{ maxHeight }}>
-              {openContent}
-            </ScrollArea>
-          ) : (
+       <CardContent className={cn("pt-0 min-h-[200px]", isFullHeight && "flex-1 min-h-0 overflow-hidden")}>
+         {subTab === "abertas" ? (
+           hasOpenContent ? (
+             <ScrollArea className={cn("pr-4", isFullHeight && "h-full")} style={isFullHeight ? {} : { maxHeight }}>
+               {openContent}
+             </ScrollArea>
+           ) : (
             <EmptyState 
               icon={<Clock className="h-12 w-12 text-muted-foreground/50" />}
               message={emptyOpenMessage}
               subMessage="Todas as operações foram liquidadas"
             />
           )
-        ) : (
-          hasHistoryContent || hasActiveFilters ? (
-            hasHistoryContent ? (
-              <ScrollArea className="pr-4" style={{ maxHeight }}>
-                {historyContent}
-              </ScrollArea>
-            ) : (
+         ) : (
+           hasHistoryContent || hasActiveFilters ? (
+             hasHistoryContent ? (
+               <ScrollArea className={cn("pr-4", isFullHeight && "h-full")} style={isFullHeight ? {} : { maxHeight }}>
+                 {historyContent}
+               </ScrollArea>
+             ) : (
               <EmptyState 
                 icon={<History className="h-12 w-12 text-muted-foreground/50" />}
                 message="Nenhum resultado encontrado"
