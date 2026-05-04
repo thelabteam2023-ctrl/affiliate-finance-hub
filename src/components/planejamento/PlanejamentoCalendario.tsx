@@ -530,6 +530,12 @@ export function PlanejamentoCalendario() {
   const { getLogoUrl } = useBookmakerLogoMap();
   const { convertToBRL, cotacaoUSD, isUsingFallback } = useExchangeRates();
   const { planos, isLoading: planosLoading } = useDistribuicaoPlanos();
+  const { data: projetosLite = [] } = useProjetos();
+  const projetoNomeMap = useMemo(() => {
+    const m = new Map<string, string>();
+    projetosLite.forEach((p) => m.set(p.id, p.nome));
+    return m;
+  }, [projetosLite]);
   const { data: celulasPlano = [] } = usePlanoCelulasDisponiveis(
     planoFiltroId || null
   );
