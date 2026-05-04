@@ -119,12 +119,19 @@
    };
  
   const handleToggleStatus = async (camp: PlanningCampanha) => {
+    const { celula } = resolveCampanhaData(camp);
+    
     try {
       // Quando o status é "Atrasado", ele é derivado de (isPending && campDate < today).
       // Ao clicar para alternar, o usuário quer marcar como concluído (is_account_created: true).
       // Repassamos TODOS os campos existentes para garantir que a atualização no Supabase seja bem-sucedida.
+      
+      // Se a campanha não tem o ID da casa mas a célula tem, recuperamos para evitar erros de constraint
+      const bookmakerId = camp.bookmaker_catalogo_id || celula?.bookmaker_catalogo_id;
+      
       const payload = {
         ...camp,
+        bookmaker_catalogo_id: bookmakerId,
         is_account_created: !camp.is_account_created,
         // Se estava marcado como 'feito' e o usuário desmarcou, volta para 'planned' (ou derivado)
         status: !camp.is_account_created ? 'done' : 'planned'
