@@ -240,3 +240,29 @@ export function useDistribuicaoPlanoDetalhe(planoId: string | null) {
     enabled: !!planoId && !!workspaceId,
   });
 }
+
+/**
+ * Lista planos do workspace, opcionalmente filtrados por `projetoId`.
+ * Preparado para alimentar filtros futuros (Histórico Detalhado, Calendário Real por projeto).
+ * Quando `projetoId` é `null`/`undefined`, retorna todos os planos do workspace (comportamento atual).
+ */
+export function useDistribuicaoPlanosPorProjeto(projetoId?: string | null) {
+  const { workspaceId } = useAuth();
+  return useQuery({
+    queryKey: ["distribuicao-planos-por-projeto", workspaceId, projetoId ?? null],
+    enabled: !!workspaceId,
+    queryFn: async (): Promise<DistribuicaoPlano[]> => {
+      if (!workspaceId) return [];
+      let q = (supabase as any)
+        .from("distribuicao_planos")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: false });
+      if (projetoId) q = q.eq("projeto_id", projetoId);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data ?? [];
+    },
+    staleTime: 30_000,
+  });
+}
