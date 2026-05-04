@@ -75,17 +75,40 @@
    const [editingCampanha, setEditingCampanha] = useState<PlanningCampanha | null>(null);
    const [isDialogOpen, setIsDialogOpen] = useState(false);
  
-   const isCampanhaPending = (c: PlanningCampanha) => {
-     return !c.parceiro_id || !c.ip_id || !c.wallet_id || Number(c.deposit_amount) <= 0;
-   };
- 
-   const getStatus = (c: PlanningCampanha) => {
+    const resolveCampanhaData = (c: PlanningCampanha) => {
+      const celula = celulasAgendadas.find(cel => cel.campanha_id === c.id);
+      
+      const perfil = perfis.find(p => 
+        (c.parceiro_id && p.parceiro_id === c.parceiro_id) || 
+        (celula?.perfil_planejamento_id && p.id === celula.perfil_planejamento_id) ||
+        (celula?.parceiro_id && p.parceiro_id === celula.parceiro_id)
+      );
+
+      const parceiroId = c.parceiro_id || perfil?.parceiro_id || celula?.parceiro_id;
+      const perfilId = perfil?.id || celula?.perfil_planejamento_id;
+      const bookmakerCatalogoId = c.bookmaker_catalogo_id || celula?.bookmaker_catalogo_id;
+
+      // Simplificação do resolveScopedIpId do calendário
+      const linkedIp = ips.find(i => i.id === c.ip_id) || 
+                      (perfilId && bookmakerCatalogoId ? ips.find(i => i.perfil_planejamento_id === perfilId && i.bookmaker_catalogo_id === bookmakerCatalogoId) : null) ||
+                      (parceiroId && bookmakerCatalogoId ? ips.find(i => {
+                        const ipPerfil = perfis.find(p => p.id === i.perfil_planejamento_id);
+                        return ipPerfil?.parceiro_id === parceiroId && i.bookmaker_catalogo_id === bookmakerCatalogoId;
+                      }) : null) ||
+                      (bookmakerCatalogoId ? ips.find(i => i.bookmaker_catalogo_id === bookmakerCatalogoId && !i.perfil_planejamento_id) : null);
+
+      const isPending = !parceiroId && !perfilId || !linkedIp || !c.wallet_id || Number(c.deposit_amount) <= 0;
+      
+      return { perfil, linkedIp, isPending, parceiroId };
+    };
+
+    const getStatus = (c: PlanningCampanha, isPending: boolean) => {
      if (c.is_account_created) return "concluido";
      
      const campDate = startOfDay(parseISO(c.scheduled_date));
      const today = startOfDay(new Date());
      
-     if (isCampanhaPending(c)) {
+      if (isPending) {
        if (campDate < today) return "atrasado";
        return "pendente";
      }
@@ -101,7 +124,8 @@
         (c.parceiro_snapshot?.nome || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
         (c.notes || "").toLowerCase().includes(searchTerm.toLowerCase());
       
-      const status = getStatus(c);
+       const { isPending } = resolveCampanhaData(c);
+       const status = getStatus(c, isPending);
       const matchesStatus = statusFilter === "all" || status === statusFilter;
       
        return matchesSearch && matchesStatus && matchesProjeto;
@@ -257,22 +281,11 @@
                     {/* Lista de Campanhas do Dia */}
                     <div className="flex-1 grid gap-3 pb-4">
                      {camps.map((camp) => {
-                        const status = getStatus(camp);
-                        const celula = celulasAgendadas.find(c => c.campanha_id === camp.id);
-                        
-                        // Tenta encontrar o perfil de várias formas, assim como no calendário
-                        const perfil = perfis.find(p => 
-                          (camp.parceiro_id && p.parceiro_id === camp.parceiro_id) || 
-                          (celula?.perfil_planejamento_id && p.id === celula.perfil_planejamento_id) ||
-                          (celula?.parceiro_id && p.parceiro_id === celula.parceiro_id)
-                        );
-
+                        const { perfil, linkedIp, isPending, parceiroId } = resolveCampanhaData(camp);
+                        const status = getStatus(camp, isPending);
                         const displayName = camp.parceiro_snapshot?.nome || 
                                           (perfil ? perfilDisplayName(perfil) : "Sem parceiro");
-                        
                         const cpfIndex = perfil ? planningPerfilCpfIndex(perfis, perfil.id) : null;
-                        const linkedIp = ips.find(i => i.id === camp.ip_id);
-                        
                         return (
                           <Card
                             key={camp.id}
