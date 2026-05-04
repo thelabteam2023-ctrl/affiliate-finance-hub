@@ -356,10 +356,8 @@ export function CaixaTransacaoDialog({
           .select("moeda, saldo")
           .eq("parceiro_id", parceiroId),
       ]);
-      const wallets = (walletsResp.data || []).filter(
-        (w: any) => (w.saldo_disponivel ?? w.saldo_usd ?? 0) > 0,
-      );
-      const contas = (contasResp.data || []).filter((c: any) => (c.saldo ?? 0) > 0);
+       const wallets = walletsResp.data || [];
+       const contas = contasResp.data || [];
       // Se só tem wallet com saldo (e nenhuma conta FIAT com saldo), inferir CRYPTO
       if (wallets.length > 0 && contas.length === 0) {
         const coin = wallets[0]?.coin || undefined;
@@ -3453,15 +3451,8 @@ export function CaixaTransacaoDialog({
             const temWalletComMoeda = walletsDoParceiroComMoeda.length > 0;
             
             // Verificar se alguma wallet tem saldo DISPONÍVEL (não em trânsito)
-            const walletsComSaldo = walletsDoParceiroComMoeda.filter((w) => {
-              const saldo = saldosParceirosWallets.find(
-                s => s.wallet_id === w.id && s.coin === coin
-              );
-              return saldo && (saldo.saldo_disponivel ?? saldo.saldo_usd) > 0;
-            });
-            const temSaldo = walletsComSaldo.length > 0;
-
-            if (temSaldo) return null;
+             // Não bloqueamos mais por saldo zero
+             if (temWalletComMoeda) return null;
 
             if (!temWalletComMoeda) {
               // Cenário 2: não existe wallet para essa moeda
@@ -3694,10 +3685,7 @@ export function CaixaTransacaoDialog({
                       {walletsCrypto
                         .filter((w) => {
                           if (w.parceiro_id !== origemParceiroId || !isWalletCompatibleWithCoin(w, coin)) return false;
-                          const saldo = saldosParceirosWallets.find(
-                            s => s.wallet_id === w.id && s.coin === coin
-                          );
-                          return saldo && (saldo.saldo_disponivel ?? saldo.saldo_usd) > 0;
+                           return true;
                         })
                         .map((wallet) => {
                           const saldo = saldosParceirosWallets.find(
@@ -3732,13 +3720,7 @@ export function CaixaTransacaoDialog({
                   (w) => w.parceiro_id === origemParceiroId && isWalletCompatibleWithCoin(w, coin)
                 );
                 const temWalletComMoeda = walletsDoParceiroComMoeda.length > 0;
-                const walletsComSaldo = walletsDoParceiroComMoeda.filter((w) => {
-                  const saldo = saldosParceirosWallets.find(
-                    s => s.wallet_id === w.id && s.coin === coin
-                  );
-                  return saldo && (saldo.saldo_disponivel ?? saldo.saldo_usd) > 0;
-                });
-                const temSaldo = walletsComSaldo.length > 0;
+                 return null;
 
                  return null;
                })()}
