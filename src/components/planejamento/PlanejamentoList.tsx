@@ -15,7 +15,8 @@
     ChevronDown,
     ChevronUp,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    Copy
   } from "lucide-react";
  import { Card } from "@/components/ui/card";
  import { Input } from "@/components/ui/input";
@@ -33,9 +34,14 @@
    TableBody,
    TableCell,
    TableHead,
-   TableHeader,
-   TableRow,
+  TableHeader,
+  TableRow,
  } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
  import { 
    PlanningCampanha, 
    usePlanningCampanhas, 
@@ -53,6 +59,7 @@
  import { cn } from "@/lib/utils";
  import { CampanhaDialog } from "./CampanhaDialog";
  import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
+import { toast } from "sonner";
  import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
  
  export function PlanejamentoList() {
@@ -141,6 +148,11 @@
     } catch (error) {
       console.error("Erro ao atualizar status:", error);
     }
+  };
+
+  const handleCopyProxy = (proxy: string) => {
+    navigator.clipboard.writeText(proxy);
+    toast.success("Proxy copiado para a área de transferência!");
   };
 
   const filteredCampanhas = useMemo(() => {
@@ -419,9 +431,27 @@
                                   <span className="text-[10px] uppercase tracking-wider font-semibold opacity-60">IP / Proxy</span>
                                   <div className="flex items-center gap-1.5 text-foreground">
                                     <MapPin className="h-3.5 w-3.5 text-primary/70" />
-                                    <span className="max-w-[120px] truncate">
-                                      {linkedIp ? linkedIp.label : "Pendente"}
-                                    </span>
+                                    {linkedIp ? (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <span 
+                                            className="max-w-[120px] truncate cursor-pointer hover:text-primary transition-colors flex items-center gap-1 group/proxy"
+                                            onClick={() => handleCopyProxy(linkedIp.ip_address)}
+                                          >
+                                            {linkedIp.label}
+                                            <Copy className="h-3 w-3 opacity-0 group-hover/proxy:opacity-100 transition-opacity" />
+                                          </span>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="top" className="bg-popover border-border shadow-md">
+                                          <div className="flex flex-col gap-1">
+                                            <p className="text-xs font-mono font-medium">{linkedIp.ip_address}</p>
+                                            <p className="text-[10px] text-muted-foreground">Clique para copiar o proxy</p>
+                                          </div>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    ) : (
+                                      <span className="max-w-[120px] truncate">Pendente</span>
+                                    )}
                                   </div>
                                 </div>
                                   <div className="flex flex-col gap-0.5 min-w-[110px]">
