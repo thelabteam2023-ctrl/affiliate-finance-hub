@@ -1,24 +1,34 @@
  import { useState, useMemo, useRef, useEffect } from "react";
  import { 
-   ChevronUp,
-   ChevronDown,
-   Target,
-  CheckCircle2, 
-  Clock, 
-  Calendar as CalendarIcon, 
+  Search,
+  CheckCircle2,
+  Clock,
+  AlertTriangle,
+  Calendar as CalendarIcon,
   Filter,
+  Building2,
   User,
   MapPin,
   Wallet,
+  Pencil,
+  ChevronDown,
+  ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   Copy,
-  History,
-  LayoutGrid,
-  List,
-  Pencil
+  Target
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Tooltip,
   TooltipContent,
@@ -31,18 +41,17 @@ import {
   perfilDisplayName,
   usePlanningIps,
   planningPerfilCpfIndex,
-  useUpsertCampanha
+  useProjetos,
+  useUpsertCampanha,
+  PlanningPerfil
 } from "@/hooks/usePlanningData";
 import { useCelulasAgendadasPorCampanhas } from "@/hooks/usePlanoCelulasDisponiveis";
-import { format, parseISO, startOfDay, isToday } from "date-fns";
+import { format, parseISO, isToday, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
 import { toast } from "sonner";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
-import { OperationsHistoryModule } from "./operations";
-import { useTabFilters } from "@/hooks/useTabFilters";
-import { useOperationsHistory } from "./operations/useOperationsHistory";
 import { CampanhaDialog } from "../planejamento/CampanhaDialog";
 
 interface ProjetoPlanejamentoTabProps {
