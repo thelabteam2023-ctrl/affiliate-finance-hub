@@ -8,10 +8,12 @@ function shouldPatchUrl(url: string): boolean {
     return false;
   }
 
-  // IMPORTANT: only inject workspace header on backend functions.
-  // Injecting custom headers on REST/Auth endpoints can trigger CORS/preflight
-  // rejections and block app bootstrap (infinite "Carregando...").
-  return url.includes("/functions/v1/");
+  // We inject on Edge Functions and REST (PostgREST).
+  // We EXPLICITLY avoid Auth and Storage to prevent CORS issues on bootstrap.
+  const isFunction = url.includes("/functions/v1/");
+  const isRest = url.includes("/rest/v1/");
+  
+  return isFunction || isRest;
 }
 
 /**
