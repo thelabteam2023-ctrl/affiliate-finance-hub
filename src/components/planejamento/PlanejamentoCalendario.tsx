@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
- import { ChevronLeft, ChevronRight, Plus, AlertTriangle, MapPin, User, Search, Building2, Trash2, ChevronDown, ChevronUp, ShieldAlert, Pencil, Sparkles, Copy, CheckCircle2 } from "lucide-react";
+  import { ChevronLeft, ChevronRight, Plus, AlertTriangle, MapPin, User, Search, Building2, Trash2, ChevronDown, ChevronUp, ShieldAlert, Pencil, Sparkles, Copy, CheckCircle2, Clock } from "lucide-react";
 import { SimulacaoDistribuicaoDialog } from "./SimulacaoDistribuicaoDialog";
 import {
   ContextMenu,
@@ -321,11 +321,15 @@ function DraggableCelula({ celula, parceiroNome, perfilCor, selected, selectedBa
               iconSize="h-5 w-5"
             />
             <span className="font-semibold truncate flex-1 min-w-0">{campanha.bookmaker_nome}</span>
-            {campanha.is_account_created && (
-              <div className="absolute -top-1.5 -right-1.5 bg-background rounded-full p-0.5 shadow-sm z-10">
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-[#00C853] fill-[#00C853] text-white" />
-              </div>
-            )}
+             {campanha.is_account_created ? (
+               <div className="absolute -top-1.5 -right-1.5 bg-background rounded-full p-0.5 shadow-sm z-10 animate-pulse ring-2 ring-[#00FF66]/20">
+                 <CheckCircle2 className="h-4 w-4 shrink-0 text-[#00FF66] fill-[#00FF66] text-white drop-shadow-[0_0_8px_rgba(0,255,102,0.8)]" />
+               </div>
+             ) : isPending && (
+               <div className="absolute -top-1.5 -right-1.5 bg-background rounded-full p-0.5 shadow-sm z-10 animate-pulse ring-2 ring-[#FFD700]/20">
+                 <Clock className="h-4 w-4 shrink-0 text-[#FFD700] fill-[#FFD700] text-black drop-shadow-[0_0_8px_rgba(255,215,0,0.8)]" />
+               </div>
+             )}
             {(grupoBlock || grupoWarn) && (
               <ShieldAlert
                 className={cn("h-3 w-3 shrink-0", grupoBlock ? "text-destructive" : "text-warning")}
@@ -1528,9 +1532,11 @@ export function PlanejamentoCalendario() {
                       )}
                       <BookmakerLogo logoUrl={getLogoUrl(c.bookmaker_nome)} alt={c.bookmaker_nome} size="h-6 w-6 shrink-0" iconSize="h-3.5 w-3.5" />
                       <span className="truncate">{c.bookmaker_nome}</span>
-                      {c.is_account_created && (
-                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-success fill-success/10" />
-                      )}
+                       {c.is_account_created ? (
+                         <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-[#00FF66] drop-shadow-[0_0_5px_rgba(0,255,102,0.5)]" />
+                       ) : isCampanhaPending(c) && (
+                         <Clock className="h-3.5 w-3.5 shrink-0 text-[#FFD700] drop-shadow-[0_0_5px_rgba(255,215,0,0.5)]" />
+                       )}
                     </div>
                     <div className="truncate">{perfil ?? "—"}</div>
                     <div className="min-w-0 flex items-center gap-1.5">
