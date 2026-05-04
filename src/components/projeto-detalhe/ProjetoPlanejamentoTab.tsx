@@ -235,25 +235,6 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
             </Select>
           </div>
 
-          <div className="flex flex-col gap-1 flex-1 min-w-[150px] sm:flex-none sm:w-[200px]">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Projeto</span>
-            <Select value={projetoFilter} onValueChange={setProjetoFilter}>
-              <SelectTrigger className="h-10 px-3 flex items-center gap-2">
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <div className="truncate">
-                    <SelectValue placeholder="Projeto" />
-                  </div>
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os Projetos</SelectItem>
-                {projetos.map(p => (
-                  <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
         </div>
 
         <div className="flex items-center gap-4 text-sm text-muted-foreground font-medium">
