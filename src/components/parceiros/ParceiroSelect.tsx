@@ -225,15 +225,25 @@ export interface ParceiroSelectRef {
     }
     
     if (tipoMoeda === "FIAT") {
-      const formatted = saldo.toLocaleString('pt-BR', { 
-        style: 'currency', 
-        currency: moeda || 'BRL' 
-      });
-      return (
-        <span className={saldo > 0 ? "text-emerald-500 text-xs font-medium" : "text-muted-foreground text-xs"}>
-          Saldo: {formatted}
-        </span>
-      );
+      // Use o símbolo correto baseado na moeda selecionada
+      try {
+        const formatted = saldo.toLocaleString('pt-BR', { 
+          style: 'currency', 
+          currency: moeda || 'BRL' 
+        });
+        return (
+          <span className={saldo > 0 ? "text-emerald-500 text-xs font-medium" : "text-muted-foreground text-xs"}>
+            Saldo: {formatted}
+          </span>
+        );
+      } catch (e) {
+        // Fallback se a moeda for inválida para o toLocaleString
+        return (
+          <span className={saldo > 0 ? "text-emerald-500 text-xs font-medium" : "text-muted-foreground text-xs"}>
+            Saldo: {moeda || 'BRL'} {saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          </span>
+        );
+      }
     }
     
     // CRYPTO - exibir na moeda do coin se selecionado, senão em USD
