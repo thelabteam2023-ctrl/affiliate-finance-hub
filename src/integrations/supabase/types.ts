@@ -14086,6 +14086,7 @@ export type Database = {
           moeda: string | null
           parceiro_id: string | null
           parceiro_nome: string | null
+          parceiro_status: string | null
           saldo: number | null
           titular: string | null
           user_id: string | null
