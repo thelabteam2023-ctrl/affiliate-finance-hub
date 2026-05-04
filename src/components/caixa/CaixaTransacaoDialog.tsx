@@ -1091,10 +1091,7 @@ export function CaixaTransacaoDialog({
       // Verificar quantas contas com saldo o parceiro tem
       const contasComSaldo = contasBancarias.filter((c) => {
         if (c.parceiro_id !== origemParceiroId) return false;
-        const saldo = saldosParceirosContas.find(
-          s => s.conta_id === c.id && s.moeda === moeda
-        );
-        return saldo && saldo.saldo > 0;
+                           return c.parceiro_id === origemParceiroId && c.moeda === moeda;
       });
       
       // Se houver exatamente uma conta, auto-selecionar
@@ -3639,13 +3636,9 @@ export function CaixaTransacaoDialog({
                   </Select>
                 </div>
               )}
-              {origemParceiroId && contasBancarias.filter((c) => {
-                if (c.parceiro_id !== origemParceiroId) return false;
-                const saldo = saldosParceirosContas.find(
-                  s => s.conta_id === c.id && s.moeda === moeda
-                );
-                return saldo && saldo.saldo > 0;
-              }).length === 0 && (
+               {origemParceiroId && contasBancarias.filter((c) => 
+                 c.parceiro_id === origemParceiroId && c.moeda === moeda
+               ).length === 0 && (
                 <Alert variant="destructive" className="border-warning/50 bg-warning/10">
                   <AlertTriangle className="h-4 w-4 text-warning" />
                   <AlertDescription className="text-warning">
