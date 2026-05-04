@@ -88,14 +88,50 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
   const [editingCampanha, setEditingCampanha] = useState<PlanningCampanha | null>(null);
    const [isDialogOpen, setIsDialogOpen] = useState(false);
  
-    // Container para scroll manual via setas
-    const scrollManual = (direction: 'up' | 'down') => {
-      // Buscamos o viewport do Radix que está dentro do OperationsHistoryModule
+    // Navegação dia a dia via botões flutuantes
+    const navigateDayByDay = (direction: 'up' | 'down') => {
       const scrollArea = document.querySelector('.planning-module-container [data-radix-scroll-area-viewport]');
-      if (scrollArea) {
-        const amount = direction === 'up' ? -300 : 300;
-        scrollArea.scrollBy({ top: amount, behavior: 'smooth' });
+      if (!scrollArea || sortedDates.length === 0) return;
+
+      const containerRect = scrollArea.getBoundingClientRect();
+      const currentScrollTop = scrollArea.scrollTop;
+      
+      // Encontrar o grupo de data atualmente visível no topo
+      const groups = sortedDates.map(date => {
+        const el = document.getElementById(`date-group-${date}`);
+        if (!el) return null;
+        const rect = el.getBoundingClientRect();
+        const relativeTop = rect.top - containerRect.top + currentScrollTop;
+        return { date, relativeTop, height: rect.height };
+      }).filter(Boolean) as { date: string, relativeTop: number, height: number }[];
+
+      if (groups.length === 0) return;
+
+      // Encontrar o índice do grupo atual (o que está mais próximo do topo do container)
+      // Usamos uma margem de 20px para considerar "no topo"
+      let currentIndex = groups.findIndex(g => g.relativeTop >= currentScrollTop - 20);
+      
+      if (currentIndex === -1) currentIndex = groups.length - 1;
+
+      let targetIndex;
+      if (direction === 'down') {
+        // Se o atual já está exatamente no topo, vai para o próximo. 
+        // Senão, "alinha" o atual no topo.
+        if (Math.abs(groups[currentIndex].relativeTop - currentScrollTop) < 5) {
+          targetIndex = Math.min(currentIndex + 1, groups.length - 1);
+        } else {
+          targetIndex = currentIndex;
+        }
+      } else {
+        // Para subir: se o atual está no topo, vai para o anterior.
+        targetIndex = Math.max(currentIndex - 1, 0);
       }
+
+      const targetGroup = groups[targetIndex];
+      scrollArea.scrollTo({ 
+        top: targetGroup.relativeTop - 16, 
+        behavior: 'smooth' 
+      });
     };
 
     // Ajuste no scrollToToday para buscar dentro do container correto
@@ -287,7 +323,7 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
                           className="rounded-full shadow-lg border border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/15 hover:border-white/20 transition-all h-10 w-10 text-white"
                           onClick={(e) => {
                             e.stopPropagation();
-                            scrollManual('up');
+                            navigateDayByDay('up');
                           }}
                         >
                           <ChevronUp className="h-5 w-5" />
@@ -321,7 +357,7 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
                           className="rounded-full shadow-lg border border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/15 hover:border-white/20 transition-all h-10 w-10 text-white"
                           onClick={(e) => {
                             e.stopPropagation();
-                            scrollManual('down');
+                            navigateDayByDay('down');
                           }}
                         >
                           <ChevronDown className="h-5 w-5" />
