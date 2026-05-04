@@ -162,29 +162,31 @@ export function BonusHistoricoTab({ projetoId }: BonusHistoricoTabProps) {
   }, [bonuses, ajustesData]);
 
   const filteredEntries = useMemo(() => {
-    return entries.filter(entry => {
+    const results = entries.filter(entry => {
       if (entry.type === "bonus") {
         const bonus = entry.data;
         const matchesSearch =
           bonus.bookmaker_nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           bonus.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           bonus.parceiro_nome?.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesReason = reasonFilter === "all" || reasonFilter === "ajuste_pos_limitacao"
-          ? reasonFilter === "all"
-            ? matchesSearch
-            : false
-          : bonus.finalize_reason === reasonFilter && matchesSearch;
-        // Simplified: if reasonFilter is a bonus reason or "all"
+        
+        if (!matchesSearch) return false;
+        if (reasonFilter !== "all" && reasonFilter !== "ajuste_pos_limitacao" && bonus.finalize_reason !== reasonFilter) return false;
         if (reasonFilter === "ajuste_pos_limitacao") return false;
-        if (reasonFilter !== "all" && bonus.finalize_reason !== reasonFilter) return false;
-        return matchesSearch;
+        
+        return true;
       } else {
         const ajuste = entry.data;
         const matchesSearch = ajuste.bookmaker_nome?.toLowerCase().includes(searchTerm.toLowerCase());
+        
+        if (!matchesSearch) return false;
         if (reasonFilter !== "all" && reasonFilter !== "ajuste_pos_limitacao") return false;
-        return matchesSearch;
+        
+        return true;
       }
-    }).sort((a, b) => new Date(b.sortDate).getTime() - new Date(a.sortDate).getTime());
+    });
+    
+    return results.sort((a, b) => new Date(b.sortDate).getTime() - new Date(a.sortDate).getTime());
   }, [entries, searchTerm, reasonFilter]);
 
   const getReasonBadge = (reason: FinalizeReason | null) => {

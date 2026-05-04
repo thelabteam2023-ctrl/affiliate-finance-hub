@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -76,6 +76,15 @@ export function FinalizeBonusDialog({
   const [selectedReason, setSelectedReason] = useState<FinalizeReason>("rollover_completed");
   const [confirming, setConfirming] = useState(false);
   const [debitAmount, setDebitAmount] = useState<string>("");
+
+  // Reset state when dialog opens to avoid stale data
+  useEffect(() => {
+    if (open) {
+      setSelectedReason("rollover_completed");
+      setDebitAmount("");
+      setConfirming(false);
+    }
+  }, [open]);
 
   const selectedReasonData = FINALIZE_REASONS.find(r => r.value === selectedReason);
   const hasFinancialImpact = selectedReasonData?.hasFinancialImpact ?? false;
