@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, Trash2, Wand2, ShieldAlert, ShieldCheck } from "lucide-react";
+ import { AlertTriangle, Trash2, Wand2, ShieldAlert, ShieldCheck, CheckCircle2 } from "lucide-react";
+ import { Checkbox } from "@/components/ui/checkbox";
 import {
   PlanningCampanha,
   usePlanningCasas,
@@ -107,6 +108,7 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
     parceiro_id: "" as string | "",
     ip_id: "" as string | "",
     wallet_id: "" as string | "",
+    is_account_created: false,
     notes: "",
   });
 
@@ -121,6 +123,7 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
         parceiro_id: campanha.parceiro_id ?? suggestedParceiroId ?? "",
         ip_id: campanha.ip_id ?? getSuggestedIpId(campanha.bookmaker_catalogo_id, campanha.parceiro_id ?? suggestedParceiroId) ?? "",
         wallet_id: campanha.wallet_id ?? "",
+        is_account_created: campanha.is_account_created ?? false,
         notes: campanha.notes ?? "",
       });
     } else if (initialBookmaker) {
@@ -132,6 +135,7 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
         parceiro_id: "",
         ip_id: getSuggestedIpId(initialBookmaker.id, suggestedParceiroId),
         wallet_id: "",
+        is_account_created: false,
         notes: "",
       });
     } else {
@@ -143,6 +147,7 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
         parceiro_id: "",
         ip_id: "",
         wallet_id: "",
+        is_account_created: false,
         notes: "",
       });
     }
@@ -205,6 +210,8 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
       parceiro_snapshot: parceiro ? { nome: parceiro.nome, email: parceiro.email, endereco: parceiro.endereco } : null,
       ip_id: form.ip_id || null,
       wallet_id: form.wallet_id || null,
+      is_account_created: form.is_account_created,
+      notes: form.notes,
     });
     onOpenChange(false);
   };
@@ -310,6 +317,18 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="flex items-center space-x-2 py-1">
+            <Checkbox 
+              id="is_account_created" 
+              checked={form.is_account_created} 
+              onCheckedChange={(v) => setForm(f => ({ ...f, is_account_created: !!v }))}
+            />
+            <Label htmlFor="is_account_created" className="text-xs font-medium cursor-pointer flex items-center gap-1.5">
+              <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+              Conta já criada nesta casa
+            </Label>
           </div>
 
           <div>
