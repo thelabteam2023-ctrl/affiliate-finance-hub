@@ -517,7 +517,16 @@ export function CaixaTransacaoDialog({
        setOrigemBookmakerId("");
        setDestinoParceiroId("");
        setDestinoBookmakerId("");
-       setDescricao("");
+     setDescricao("");
+     setDataTransacao("");
+     setTags([]);
+     
+     // Resetar estados de alertas/taxas
+     setTaxaBancariaInfo(null);
+     setShowTaxaBancariaAlert(false);
+     setPendingTransactionData(null);
+     setShowNoBankAlert(false);
+     setShowNoWalletAlert(false);
        setDataTransacao("");
        setTags([]);
        setFluxoAporte("APORTE");
