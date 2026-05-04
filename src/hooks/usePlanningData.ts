@@ -256,6 +256,8 @@ export function usePlanningCampanhas(year: number, month: number) {
       if (error) throw error;
       return (data ?? []) as unknown as PlanningCampanha[];
     },
+    refetchInterval: 30000, // Polling de 30 segundos como fallback
+    refetchOnWindowFocus: true,
   });
 }
 

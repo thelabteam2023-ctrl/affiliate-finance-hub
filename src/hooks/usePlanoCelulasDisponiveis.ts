@@ -228,6 +228,8 @@ export function useCelulasAgendadasPorCampanhas(campanhaIds: string[]) {
     },
     enabled: !!workspaceId && campanhaIds.length > 0,
     staleTime: 15_000,
+    refetchInterval: 30000, // Polling de 30 segundos como fallback
+    refetchOnWindowFocus: true,
   });
 }
 
