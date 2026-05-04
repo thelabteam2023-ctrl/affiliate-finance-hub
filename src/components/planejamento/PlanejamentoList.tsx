@@ -40,7 +40,9 @@
    PlanningCampanha, 
    usePlanningCampanhas, 
    usePlanningPerfis,
-   perfilDisplayName
+  perfilDisplayName,
+  usePlanningIps,
+  planningPerfilCpfIndex
  } from "@/hooks/usePlanningData";
  import { format, parseISO, isPast, isToday, startOfDay } from "date-fns";
  import { ptBR } from "date-fns/locale";
@@ -60,6 +62,7 @@
    // Em um cenário real, poderíamos ter um seletor de mês/ano mais robusto.
    const { data: campanhas = [], isLoading } = usePlanningCampanhas(selectedYear, selectedMonth);
    const { data: perfis = [] } = usePlanningPerfis();
+   const { data: ips = [] } = usePlanningIps();
    const logoMap = useBookmakerLogoMap();
  
    const [editingCampanha, setEditingCampanha] = useState<PlanningCampanha | null>(null);
@@ -234,6 +237,11 @@
                     <div className="flex-1 grid gap-3 pb-4">
                       {camps.map((camp) => {
                         const status = getStatus(camp);
+                        const perfil = perfis.find(p => p.parceiro_id === camp.parceiro_id);
+                        const displayName = camp.parceiro_snapshot?.nome || (perfil ? perfilDisplayName(perfil) : "Sem parceiro");
+                        const cpfIndex = perfil ? planningPerfilCpfIndex(perfis, perfil.id) : null;
+                        const linkedIp = ips.find(i => i.id === camp.ip_id);
+                        
                         return (
                           <Card
                             key={camp.id}
@@ -266,11 +274,19 @@
                                         ATRASADO
                                       </Badge>
                                     )}
+                                    {status === "pendente" && (
+                                      <Badge className="bg-[#FFD700] hover:bg-[#FFD700]/80 text-black text-[10px] h-5">
+                                        PENDENTE
+                                      </Badge>
+                                    )}
                                   </div>
                                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-sm text-muted-foreground">
                                     <div className="flex items-center gap-1.5">
                                       <User className="h-3.5 w-3.5" />
-                                      <span className="truncate">{camp.parceiro_snapshot?.nome || "Sem parceiro"}</span>
+                                      <span className="truncate">
+                                        {displayName}
+                                        {cpfIndex && <span className="ml-1.5 text-[10px] font-bold text-primary bg-primary/10 px-1 rounded">CPF {cpfIndex}</span>}
+                                      </span>
                                     </div>
                                     <div className="flex items-center gap-1.5 font-medium text-foreground">
                                       <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
@@ -286,7 +302,9 @@
                                   <span className="text-[10px] uppercase tracking-wider font-semibold opacity-60">IP / Proxy</span>
                                   <div className="flex items-center gap-1.5 text-foreground">
                                     <MapPin className="h-3.5 w-3.5 text-primary/70" />
-                                    {camp.ip_id ? "Vinculado" : "Pendente"}
+                                    <span className="max-w-[120px] truncate">
+                                      {linkedIp ? linkedIp.label : "Pendente"}
+                                    </span>
                                   </div>
                                 </div>
                                 <div className="flex flex-col gap-0.5 min-w-[100px]">
