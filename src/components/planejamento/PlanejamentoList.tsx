@@ -197,12 +197,16 @@
               </div>
             </div>
 
-            <div className="flex flex-col gap-1.5 flex-1 min-w-[140px] sm:flex-none sm:w-[160px]">
+            <div className="flex flex-col gap-1 flex-1 min-w-[150px] sm:flex-none sm:w-[180px]">
               <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Status</span>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="h-9">
-                  <Filter className="h-3.5 w-3.5 mr-2 shrink-0" />
-                  <SelectValue placeholder="Status" />
+                <SelectTrigger className="h-10 px-3 flex items-center gap-2">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <Filter className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <div className="truncate">
+                      <SelectValue placeholder="Status" />
+                    </div>
+                  </div>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os Status</SelectItem>
@@ -214,12 +218,16 @@
               </Select>
             </div>
 
-            <div className="flex flex-col gap-1.5 flex-1 min-w-[160px] sm:flex-none sm:w-[180px]">
+            <div className="flex flex-col gap-1 flex-1 min-w-[150px] sm:flex-none sm:w-[200px]">
               <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Projeto</span>
               <Select value={projetoFilter} onValueChange={setProjetoFilter}>
-                <SelectTrigger className="h-9">
-                  <Building2 className="h-3.5 w-3.5 mr-2 shrink-0" />
-                  <SelectValue placeholder="Projeto" />
+                <SelectTrigger className="h-10 px-3 flex items-center gap-2">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <div className="truncate">
+                      <SelectValue placeholder="Projeto" />
+                    </div>
+                  </div>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os Projetos</SelectItem>
