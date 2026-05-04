@@ -50,10 +50,11 @@
  import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
  
  export function PlanejamentoList() {
-   const [searchTerm, setSearchTerm] = useState("");
-   const [statusFilter, setStatusFilter] = useState<string>("all");
-   const [selectedYear] = useState(new Date().getFullYear());
-   const [selectedMonth] = useState(new Date().getMonth() + 1);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [statusFilter, setStatusFilter] = useState<string>("all");
+    const today = new Date();
+    const [selectedYear, setSelectedYear] = useState(today.getFullYear());
+    const [selectedMonth, setSelectedMonth] = useState(today.getMonth() + 1);
    
    // Para fins de simplificação, estamos buscando o mês atual. 
    // Em um cenário real, poderíamos ter um seletor de mês/ano mais robusto.
