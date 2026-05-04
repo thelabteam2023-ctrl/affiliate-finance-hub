@@ -133,7 +133,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
           <TopBarHeader />
 
           {/* Main content - flex-1 + min-h-0 + overflow-auto para scroll correto */}
-          <main className="flex-1 min-h-0 overflow-auto">
+          <main className="flex-1 min-h-0 overflow-hidden">
             <Suspense fallback={<PageLoader />}>
               {children}
             </Suspense>
