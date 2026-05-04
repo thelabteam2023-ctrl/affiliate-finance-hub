@@ -88,37 +88,50 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
   const [editingCampanha, setEditingCampanha] = useState<PlanningCampanha | null>(null);
    const [isDialogOpen, setIsDialogOpen] = useState(false);
  
-   // Função para scrollar para a data de hoje
-   const scrollToToday = () => {
-     const todayStr = format(new Date(), "yyyy-MM-dd");
-     const element = document.getElementById(`date-group-${todayStr}`);
-     if (element) {
-       element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-     } else {
-       // Se não achou hoje, tenta achar a data mais próxima futura
-       const nextAvailable = sortedDates.find(date => date >= todayStr);
-       if (nextAvailable) {
-         document.getElementById(`date-group-${nextAvailable}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-       }
-     }
-   };
- 
-   // Scroll suave manual via setas
-   const scrollManual = (direction: 'up' | 'down') => {
-     const scrollArea = document.querySelector('[data-radix-scroll-area-viewport]');
-     if (scrollArea) {
-       const amount = direction === 'up' ? -300 : 300;
-       scrollArea.scrollBy({ top: amount, behavior: 'smooth' });
-     }
-   };
- 
-   // Scroll automático inicial
-   useEffect(() => {
-     if (!campanhasLoading && !celulasLoading && filteredData.length > 0) {
-       const timer = setTimeout(scrollToToday, 500);
-       return () => clearTimeout(timer);
-     }
-   }, [campanhasLoading, celulasLoading, subTab, viewMode]);
+    // Container para scroll manual via setas
+    const scrollManual = (direction: 'up' | 'down') => {
+      // Buscamos o viewport do Radix que está dentro do OperationsHistoryModule
+      const scrollArea = document.querySelector('.planning-module-container [data-radix-scroll-area-viewport]');
+      if (scrollArea) {
+        const amount = direction === 'up' ? -300 : 300;
+        scrollArea.scrollBy({ top: amount, behavior: 'smooth' });
+      }
+    };
+
+    // Ajuste no scrollToToday para buscar dentro do container correto
+    const scrollToToday = () => {
+      const todayStr = format(new Date(), "yyyy-MM-dd");
+      const element = document.getElementById(`date-group-${todayStr}`);
+      const scrollArea = document.querySelector('.planning-module-container [data-radix-scroll-area-viewport]');
+      
+      if (element && scrollArea) {
+        // Calculamos a posição relativa ao topo do viewport
+        const containerRect = scrollArea.getBoundingClientRect();
+        const elementRect = element.getBoundingClientRect();
+        const relativeTop = elementRect.top - containerRect.top + scrollArea.scrollTop;
+        
+        scrollArea.scrollTo({ top: relativeTop - 16, behavior: 'smooth' });
+      } else if (!element) {
+        const nextAvailable = sortedDates.find(date => date >= todayStr);
+        if (nextAvailable && scrollArea) {
+          const nextEl = document.getElementById(`date-group-${nextAvailable}`);
+          if (nextEl) {
+            const containerRect = scrollArea.getBoundingClientRect();
+            const elementRect = nextEl.getBoundingClientRect();
+            const relativeTop = elementRect.top - containerRect.top + scrollArea.scrollTop;
+            scrollArea.scrollTo({ top: relativeTop - 16, behavior: 'smooth' });
+          }
+        }
+      }
+    };
+
+    // Scroll automático inicial
+    useEffect(() => {
+      if (!campanhasLoading && !celulasLoading && filteredData.length > 0) {
+        const timer = setTimeout(scrollToToday, 500);
+        return () => clearTimeout(timer);
+      }
+    }, [campanhasLoading, celulasLoading, subTab, viewMode]);
 
   // 3. Helpers de Resolução (Lógica espelhada do PlanejamentoList)
   const resolveCampanhaData = (c: PlanningCampanha) => {
@@ -269,9 +282,9 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button 
-                          variant="secondary" 
+                          variant="ghost" 
                           size="icon" 
-                          className="rounded-full shadow-lg border border-primary/20 bg-background/95 backdrop-blur-sm hover:bg-primary hover:text-primary-foreground transition-all h-10 w-10"
+                          className="rounded-full shadow-lg border border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/15 hover:border-white/20 transition-all h-10 w-10 text-white"
                           onClick={(e) => {
                             e.stopPropagation();
                             scrollManual('up');
@@ -280,15 +293,15 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
                           <ChevronUp className="h-5 w-5" />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent side="right">Subir</TooltipContent>
+                      <TooltipContent side="right" className="bg-background/95 backdrop-blur-sm border-white/10">Subir</TooltipContent>
                     </Tooltip>
 
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button 
-                          variant="default" 
+                          variant="ghost" 
                           size="icon" 
-                          className="rounded-full shadow-xl bg-primary text-primary-foreground h-12 w-12 hover:scale-110 active:scale-95 transition-all border-none"
+                          className="rounded-full shadow-xl border border-white/20 bg-white/10 backdrop-blur-md hover:bg-white/20 transition-all h-12 w-12 text-white hover:scale-105 active:scale-95"
                           onClick={(e) => {
                             e.stopPropagation();
                             scrollToToday();
@@ -297,15 +310,15 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
                           <Target className="h-6 w-6" />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent side="right">Ir para Hoje</TooltipContent>
+                      <TooltipContent side="right" className="bg-background/95 backdrop-blur-sm border-white/10">Ir para Hoje</TooltipContent>
                     </Tooltip>
 
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button 
-                          variant="secondary" 
+                          variant="ghost" 
                           size="icon" 
-                          className="rounded-full shadow-lg border border-primary/20 bg-background/95 backdrop-blur-sm hover:bg-primary hover:text-primary-foreground transition-all h-10 w-10"
+                          className="rounded-full shadow-lg border border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/15 hover:border-white/20 transition-all h-10 w-10 text-white"
                           onClick={(e) => {
                             e.stopPropagation();
                             scrollManual('down');
@@ -314,7 +327,7 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
                           <ChevronDown className="h-5 w-5" />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent side="right">Descer</TooltipContent>
+                      <TooltipContent side="right" className="bg-background/95 backdrop-blur-sm border-white/10">Descer</TooltipContent>
                     </Tooltip>
                   </>
                 )}
@@ -565,8 +578,8 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
          historyContent={renderContent()}
          emptyOpenMessage="Nenhum planejamento pendente para este projeto"
          emptyHistoryMessage="Nenhum planejamento concluído neste projeto"
-         className="flex-1 h-full min-h-0"
-       />
+          className="flex-1 h-full min-h-0 planning-module-container"
+        />
       {isDialogOpen && (
         <CampanhaDialog
           open={isDialogOpen}
