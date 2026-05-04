@@ -184,8 +184,8 @@
        {/* Header com Filtros */}
         <div className="p-4 border-b flex flex-col lg:flex-row gap-4 items-start lg:items-end justify-between bg-card/50">
           <div className="flex flex-wrap items-end gap-3 w-full lg:w-auto">
-            <div className="flex flex-col gap-1.5 flex-1 min-w-[240px] lg:w-80 lg:flex-none">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Busca</span>
+            <div className="flex flex-col gap-1.5 flex-1 min-w-[200px] lg:w-80 lg:flex-none">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1 mb-1 lg:mb-0">Busca</span>
               <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -197,8 +197,8 @@
               </div>
             </div>
 
-            <div className="flex flex-col gap-1.5 w-[160px]">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Status</span>
+            <div className="flex flex-col gap-1.5 w-[140px] lg:w-[160px]">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1 mb-1 lg:mb-0">Status</span>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="h-9">
                   <Filter className="h-3.5 w-3.5 mr-2 shrink-0" />
@@ -214,8 +214,8 @@
               </Select>
             </div>
 
-            <div className="flex flex-col gap-1.5 w-[180px]">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Projeto</span>
+            <div className="flex flex-col gap-1.5 w-[160px] lg:w-[180px]">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1 mb-1 lg:mb-0">Projeto</span>
               <Select value={projetoFilter} onValueChange={setProjetoFilter}>
                 <SelectTrigger className="h-9">
                   <Building2 className="h-3.5 w-3.5 mr-2 shrink-0" />
