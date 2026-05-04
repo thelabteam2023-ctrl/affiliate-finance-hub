@@ -181,21 +181,53 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
     }
   };
 
-  // 4. Filtragem por Sub-aba (Abertas vs Histórico)
-  const filteredData = useMemo(() => {
-    return campanhas.map(c => {
-      const resolved = resolveCampanhaData(c);
-      const status = getStatus(c, resolved.isPending);
-      return { ...c, ...resolved, derivedStatus: status };
-    }).filter(c => {
-      // Filtro de Sub-aba
-      if (subTab === "abertas") {
-        return c.derivedStatus !== "concluido";
-      } else {
-        return c.derivedStatus === "concluido";
-      }
-    }).sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));
-  }, [campanhas, celulasAgendadas, perfis, ips, subTab]);
+   // 4. Filtragem por Sub-aba (Abertas vs Histórico) e Filtros Dimensionais
+   const filteredData = useMemo(() => {
+     return campanhas
+       .map((c) => {
+         const resolved = resolveCampanhaData(c);
+         const status = getStatus(c, resolved.isPending);
+         return { ...c, ...resolved, derivedStatus: status };
+       })
+       .filter((c) => {
+         // 4a. Filtro de Sub-aba (Abertas vs Histórico)
+         if (subTab === "abertas") {
+           if (c.derivedStatus === "concluido") return false;
+         } else {
+           if (c.derivedStatus !== "concluido") return false;
+         }
+ 
+         // 4b. Filtro de Status (Atrasados, etc) - Se houver filtros de resultado aplicados
+         if (tabFilters.resultados.length > 0) {
+           // Mapear Status do Planejamento para o padrão de ResultadoFilter
+           // "atrasado" -> "RED" (ou equivalente para filtro de atrasados)
+           // No planejamento o usuário pediu filtro de "atrasados"
+           const statusMap: Record<string, string> = {
+             concluido: "GREEN",
+             atrasado: "RED",
+             pendente: "PENDENTE",
+             planejado: "VOID",
+           };
+           const currentStatusAsResult = statusMap[c.derivedStatus];
+           if (!tabFilters.resultados.includes(currentStatusAsResult as any)) return false;
+         }
+ 
+         // 4c. Filtros Dimensionais (Casas / Parceiros)
+         if (tabFilters.bookmakerIds.length > 0) {
+           if (!tabFilters.bookmakerIds.includes(c.bookmaker_catalogo_id || "")) {
+             // Tenta pelo ID interno também
+             if (!tabFilters.bookmakerIds.includes(c.bookmaker_id || "")) return false;
+           }
+         }
+ 
+         if (tabFilters.parceiroIds.length > 0) {
+           if (!tabFilters.parceiroIds.includes(c.parceiroId || "")) return false;
+         }
+ 
+         return true;
+       })
+       .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));
+   }, [campanhas, celulasAgendadas, perfis, ips, subTab, tabFilters.resultados, tabFilters.bookmakerIds, tabFilters.parceiroIds]);
 
   const groupedByDay = useMemo(() => {
     const groups: Record<string, any[]> = {};
