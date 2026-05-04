@@ -3353,11 +3353,8 @@ export function CaixaTransacaoDialog({
                       // Filtrar apenas contas com moeda compatível
                       if (c.moeda !== moeda) return false;
                       
-                      // Filtrar apenas contas com saldo disponível
-                      const saldo = saldosParceirosContas.find(
-                        s => s.conta_id === c.id && s.moeda === moeda
-                      );
-                      return saldo && saldo.saldo > 0;
+                       // Mostrar todas as contas compatíveis do parceiro, mesmo com saldo zero
+                       return true;
                     })
                     .map((conta) => {
                       const saldo = saldosParceirosContas.find(
@@ -3373,13 +3370,9 @@ export function CaixaTransacaoDialog({
               </Select>
             </div>
           )}
-          {origemParceiroId && tipoMoeda === "FIAT" && contasBancarias.filter((c) => {
-            if (c.parceiro_id !== origemParceiroId) return false;
-            const saldo = saldosParceirosContas.find(
-              s => s.conta_id === c.id && s.moeda === moeda
-            );
-            return saldo && saldo.saldo > 0;
-          }).length === 0 && (
+           {origemParceiroId && tipoMoeda === "FIAT" && contasBancarias.filter((c) => 
+             c.parceiro_id === origemParceiroId && c.moeda === moeda
+           ).length === 0 && (
             <Alert variant="destructive" className="border-warning/50 bg-warning/10">
               <AlertTriangle className="h-4 w-4 text-warning" />
               <AlertDescription className="text-warning">
@@ -3417,12 +3410,8 @@ export function CaixaTransacaoDialog({
                       // Filtrar apenas wallets do parceiro selecionado
                       if (w.parceiro_id !== origemParceiroId) return false;
                       
-                      // Filtrar apenas wallets com saldo DISPONÍVEL para a moeda selecionada
-                      // Usa saldo_disponivel que já desconta locked (dinheiro em trânsito)
-                      const saldo = saldosParceirosWallets.find(
-                        s => s.wallet_id === w.id && s.coin === coin
-                      );
-                      return saldo && (saldo.saldo_disponivel ?? saldo.saldo_usd) > 0;
+                       // Mostrar todas as wallets compatíveis do parceiro, mesmo com saldo zero
+                       return true;
                     })
                     .map((wallet) => {
                       const saldo = saldosParceirosWallets.find(
@@ -4523,155 +4512,51 @@ export function CaixaTransacaoDialog({
   };
 
   // Função para determinar moedas disponíveis baseado no tipo de transação
-  const getMoedasDisponiveis = () => {
-    // APORTE (Investidor → Caixa): apenas moedas com contas/wallets cadastradas no Caixa Operacional
-    if (tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "APORTE") {
-      const moedasContasCaixa = caixaParceiroId
-        ? [...new Set(contasBancarias.filter(c => c.parceiro_id === caixaParceiroId).map(c => c.moeda))]
-        : [];
-      const moedasWalletsCaixa = caixaParceiroId
-        ? [...new Set(walletsCrypto.filter(w => w.parceiro_id === caixaParceiroId).flatMap(w => w.moeda || []))]
-        : [];
-      return {
-        fiat: moedasContasCaixa.length > 0
-          ? MOEDAS_FIAT.filter(m => moedasContasCaixa.includes(m.value))
-          : MOEDAS_FIAT,
-        crypto: moedasWalletsCaixa.length > 0
-          ? MOEDAS_CRYPTO.filter(m => moedasWalletsCaixa.includes(m.value))
-          : MOEDAS_CRYPTO
-      };
-    }
-    
-    // LIQUIDAÇÃO (Caixa → Investidor): apenas moedas com saldo no caixa
-    if (tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "LIQUIDACAO") {
-      return {
-        fiat: saldosCaixaFiat.filter(s => s.saldo > 0).map(s => {
-          const moedaInfo = MOEDAS_FIAT.find(m => m.value === s.moeda);
-          return { value: s.moeda, label: moedaInfo?.label || s.moeda, saldo: s.saldo };
-        }),
-        crypto: saldosCaixaCrypto.filter(s => s.saldo_coin > 0).map(s => ({
-          value: s.coin,
-          label: MOEDAS_CRYPTO.find(m => m.value === s.coin)?.label || s.coin,
-          saldo: s.saldo_usd,
-          saldoCoin: s.saldo_coin
-        }))
-      };
-    }
-    
-    // DEPÓSITO (Parceiro → Bookmaker): moedas disponíveis nos parceiros OU no caixa operacional
-    if (tipoTransacao === "DEPOSITO") {
-      // Moedas FIAT: combinar caixa operacional + contas de parceiros
-      const moedasFiatCaixa = saldosCaixaFiat
-        .filter(s => s.saldo > 0)
-        .map(s => s.moeda);
-      const moedasFiatParceiros = saldosParceirosContas
-        .filter(s => s.saldo > 0)
-        .map(s => s.moeda);
-      const moedasFiatDisponiveis = [...new Set([...moedasFiatCaixa, ...moedasFiatParceiros])];
-      
-      // Moedas CRYPTO: combinar caixa operacional + wallets de parceiros
-      const moedasCryptoCaixa = saldosCaixaCrypto
-        .filter(s => s.saldo_coin > 0)
-        .map(s => s.coin);
-      const moedasCryptoParceiros = saldosParceirosWallets
-        .filter(s => s.saldo_coin > 0)
-        .map(s => s.coin);
-      const moedasCryptoDisponiveis = [...new Set([...moedasCryptoCaixa, ...moedasCryptoParceiros])];
-      
-      return {
-        fiat: MOEDAS_FIAT.filter(m => moedasFiatDisponiveis.includes(m.value)),
-        crypto: MOEDAS_CRYPTO.filter(m => moedasCryptoDisponiveis.includes(m.value))
-      };
-    }
-    
-    // SAQUE (Bookmaker → Parceiro): moedas derivadas do saldo disponível
-    if (tipoTransacao === "SAQUE") {
-      // FIAT: moedas das bookmakers com saldo em BRL/moeda base
-      const moedasFiatBookmakers = [...new Set(
-        bookmakers
-          .filter(b => b.saldo_atual > 0)
-          .map(b => b.moeda)
-      )];
-      
-      // CRYPTO: mostrar TODAS as moedas crypto quando há bookmakers com saldo em USD
-      // Verifica tanto saldo_atual de casas USD quanto saldo_usd legado
-      const temBookmakerComSaldoUsd = bookmakers.some(b => 
-        (b.moeda === 'USD' && b.saldo_atual > 0) || b.saldo_usd > 0
-      );
-      
-      return {
-        fiat: MOEDAS_FIAT.filter(m => moedasFiatBookmakers.includes(m.value)),
-        crypto: temBookmakerComSaldoUsd ? MOEDAS_CRYPTO : []
-      };
-    }
-    
-    // TRANSFERÊNCIA: depende do fluxo
-    if (tipoTransacao === "TRANSFERENCIA") {
-      if (fluxoTransferencia === "CAIXA_PARCEIRO") {
-        // Caixa → Parceiro: moedas disponíveis no caixa
-        return {
-          fiat: saldosCaixaFiat.filter(s => s.saldo > 0).map(s => {
-            const moedaInfo = MOEDAS_FIAT.find(m => m.value === s.moeda);
-            return { value: s.moeda, label: moedaInfo?.label || s.moeda, saldo: s.saldo };
-          }),
-          crypto: saldosCaixaCrypto.filter(s => s.saldo_coin > 0).map(s => ({
-            value: s.coin,
-            label: MOEDAS_CRYPTO.find(m => m.value === s.coin)?.label || s.coin,
-            saldo: s.saldo_usd
-          }))
-        };
-      } else if (fluxoTransferencia === "PARCEIRO_CAIXA") {
-        // Parceiro → Caixa Operacional: moedas disponíveis nos parceiros
-        const moedasFiatParceiros = [...new Set(
-          saldosParceirosContas
-            .filter(s => s.saldo > 0)
-            .map(s => s.moeda)
-        )];
-        
-        const moedasCryptoParceiros = [...new Set(
-          saldosParceirosWallets
-            .filter(s => s.saldo_coin > 0)
-            .map(s => s.coin)
-        )];
-        
-        return {
-          fiat: MOEDAS_FIAT.filter(m => moedasFiatParceiros.includes(m.value)),
-          crypto: MOEDAS_CRYPTO.filter(m => moedasCryptoParceiros.includes(m.value))
-        };
-      } else {
-        // Parceiro → Parceiro: moedas disponíveis nos parceiros
-        const moedasFiatParceiros = [...new Set(
-          saldosParceirosContas
-            .filter(s => s.saldo > 0)
-            .map(s => s.moeda)
-        )];
-        
-        const moedasCryptoParceiros = [...new Set(
-          saldosParceirosWallets
-            .filter(s => s.saldo_coin > 0)
-            .map(s => s.coin)
-        )];
-        
-        return {
-          fiat: MOEDAS_FIAT.filter(m => moedasFiatParceiros.includes(m.value)),
-          crypto: MOEDAS_CRYPTO.filter(m => moedasCryptoParceiros.includes(m.value))
-        };
-      }
-    }
-    
-    // Fallback: moedas disponíveis no caixa (origem)
-    return {
-      fiat: saldosCaixaFiat.filter(s => s.saldo > 0).map(s => {
-        const moedaInfo = MOEDAS_FIAT.find(m => m.value === s.moeda);
-        return { value: s.moeda, label: moedaInfo?.label || s.moeda, saldo: s.saldo };
-      }),
-      crypto: saldosCaixaCrypto.filter(s => s.saldo_coin > 0).map(s => ({
-        value: s.coin,
-        label: MOEDAS_CRYPTO.find(m => m.value === s.coin)?.label || s.coin,
-        saldo: s.saldo_usd
-      }))
-    };
-  };
+   const getMoedasDisponiveis = () => {
+     // Obtemos as moedas baseadas na EXISTÊNCIA de contas/wallets, não no saldo positivo.
+     // Isso permite registrar transações mesmo quando o saldo no sistema está zerado.
+     
+     // Moedas FIAT disponíveis (Caixa + Parceiros)
+     const moedasFiatExistentes = [...new Set(contasBancarias.map(c => c.moeda))];
+     
+     // Moedas CRYPTO disponíveis (Caixa + Parceiros)
+     const moedasCryptoExistentes = [...new Set(walletsCrypto.flatMap(w => w.moeda || []))];
+
+     // Para SAQUE, também olhamos as moedas das bookmakers
+     const moedasFiatBookmakers = tipoTransacao === "SAQUE" 
+       ? [...new Set(bookmakers.map(b => b.moeda))]
+       : [];
+
+     const fiatResult = MOEDAS_FIAT.filter(m => 
+       moedasFiatExistentes.includes(m.value) || 
+       moedasFiatBookmakers.includes(m.value) ||
+       m.value === "BRL" // BRL sempre disponível por segurança
+     );
+
+     const cryptoResult = MOEDAS_CRYPTO.filter(m => 
+       moedasCryptoExistentes.includes(m.value) || 
+       m.value === "USDT" // USDT sempre disponível por segurança
+     );
+
+     // Para fluxos de liquidação ou visualização de saldo, mantemos a informação do saldo no label
+     if (tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "LIQUIDACAO") {
+       return {
+         fiat: fiatResult.map(m => {
+           const s = saldosCaixaFiat.find(s => s.moeda === m.value);
+           return { ...m, saldo: s?.saldo || 0 };
+         }),
+         crypto: cryptoResult.map(m => {
+           const s = saldosCaixaCrypto.find(s => s.coin === m.value);
+           return { ...m, saldo: s?.saldo_usd || 0, saldoCoin: s?.saldo_coin || 0 };
+         })
+       };
+     }
+
+     return {
+       fiat: fiatResult,
+       crypto: cryptoResult
+     };
+   };
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
