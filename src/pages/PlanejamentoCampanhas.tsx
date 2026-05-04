@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
-import { CalendarRange, CalendarCheck2, Sparkles } from "lucide-react";
+ import { CalendarRange, CalendarCheck2, Sparkles, ListTodo } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useTopBar } from "@/contexts/TopBarContext";
-import { PlanejamentoCalendario } from "@/components/planejamento/PlanejamentoCalendario";
+ import { PlanejamentoCalendario } from "@/components/planejamento/PlanejamentoCalendario";
+ import { PlanejamentoList } from "@/components/planejamento/PlanejamentoList";
 import { CalendarioSimulado } from "@/components/planejamento/CalendarioSimulado";
 
 export default function PlanejamentoCampanhas() {
   const { setContent: setTopBarContent } = useTopBar();
-  const [tab, setTab] = useState<"real" | "simulado">("real");
+   const [tab, setTab] = useState<"real" | "lista" | "simulado">("real");
 
   useEffect(() => {
     setTopBarContent(
@@ -34,7 +35,14 @@ export default function PlanejamentoCampanhas() {
       <div className="h-[calc(100vh-3.5rem)] flex flex-col bg-background">
         <Tabs value={tab} onValueChange={(v) => setTab(v as "real" | "simulado")} className="flex-1 flex flex-col min-h-0">
           <div className="px-3 pt-2 border-b">
-            <TabsList className="h-9">
+           <TabsList className="h-9 bg-muted/50 p-1">
+               <TabsTrigger value="lista" className="text-xs gap-1.5">
+                 <ListTodo className="h-3.5 w-3.5" />
+                 Histórico Detalhado
+               </TabsTrigger>
+           <TabsContent value="lista" className="flex-1 overflow-hidden m-0">
+             <PlanejamentoList />
+           </TabsContent>
               <TabsTrigger value="real" className="text-xs gap-1.5">
                 <CalendarCheck2 className="h-3.5 w-3.5" />
                 Calendário Real
