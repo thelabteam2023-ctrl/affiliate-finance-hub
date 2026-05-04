@@ -311,11 +311,15 @@
                     {/* Lista de Campanhas do Dia */}
                     <div className="flex-1 grid gap-3 pb-4">
                      {camps.map((camp) => {
-                        const { perfil, linkedIp, isPending, parceiroId, celula } = resolveCampanhaData(camp);
+                        const { perfil, linkedIp, isPending, celula } = resolveCampanhaData(camp);
                         const status = getStatus(camp, isPending);
+                        
+                        // A lógica de exibição deve priorizar os dados da célula agendada para garantir consistência com o calendário
+                        const cpfIndex = (celula as any)?.cpf_index || (perfil ? planningPerfilCpfIndex(perfis, perfil.id) : null);
                         const displayName = camp.parceiro_snapshot?.nome || 
-                                          (perfil ? perfilDisplayName(perfil) : "Sem parceiro");
-                        const cpfIndex = perfil ? planningPerfilCpfIndex(perfis, perfil.id) : (celula as any)?.cpf_index || null;
+                                           (perfil ? perfilDisplayName(perfil) : 
+                                           (celula as any)?.parceiro_id ? "Carregando..." : "Sem parceiro");
+
                         return (
                           <Card
                             key={camp.id}
@@ -392,28 +396,31 @@
                                     </span>
                                   </div>
                                 </div>
-                                 <div className="flex flex-col gap-0.5 min-w-[110px]">
-                                  <span className="text-[10px] uppercase tracking-wider font-semibold opacity-60">Status</span>
-                                   <div 
-                                     className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-all active:scale-95 group/status"
-                                     onClick={() => handleToggleStatus(camp)}
-                                     title="Clique para alternar o status"
-                                   >
-                                    {status === "concluido" ? (
-                                       <span className="flex items-center gap-1 text-[#00FF66] font-bold">
-                                         <CheckCircle2 className="h-3.5 w-3.5 fill-[#00FF66]/20" /> Concluído
-                                      </span>
-                                    ) : (
-                                      <span className={cn(
-                                         "flex items-center gap-1 font-bold",
-                                        status === "atrasado" ? "text-destructive" : "text-[#FFD700]"
-                                      )}>
-                                         <Clock className={cn("h-3.5 w-3.5", status === "atrasado" && "animate-pulse")} /> 
-                                         {status === "atrasado" ? "Atrasado" : "Pendente"}
-                                      </span>
-                                    )}
+                                  <div className="flex flex-col gap-0.5 min-w-[110px]">
+                                    <span className="text-[10px] uppercase tracking-wider font-semibold opacity-60">Status</span>
+                                    <div 
+                                      className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-all active:scale-95 group/status"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleToggleStatus(camp);
+                                      }}
+                                      title="Clique para alternar o status"
+                                    >
+                                      {status === "concluido" ? (
+                                        <span className="flex items-center gap-1 text-[#00FF66] font-bold">
+                                          <CheckCircle2 className="h-3.5 w-3.5 fill-[#00FF66]/20" /> Concluído
+                                        </span>
+                                      ) : (
+                                        <span className={cn(
+                                          "flex items-center gap-1 font-bold",
+                                          status === "atrasado" ? "text-destructive" : "text-[#FFD700]"
+                                        )}>
+                                          <Clock className={cn("h-3.5 w-3.5", status === "atrasado" && "animate-pulse")} /> 
+                                          {status === "atrasado" ? "Atrasado" : "Pendente"}
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
                               </div>
 
                               {/* Ações */}
