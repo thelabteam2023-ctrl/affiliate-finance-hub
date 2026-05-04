@@ -475,19 +475,19 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
               <TooltipContent side="left">Subir</TooltipContent>
             </Tooltip>
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="primary" 
-                  size="icon" 
-                  className="rounded-full shadow-xl bg-primary text-primary-foreground h-12 w-12 hover:scale-110 active:scale-95 transition-all"
-                  onClick={scrollToToday}
-                >
-                  <Target className="h-6 w-6" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="left">Ir para Hoje</TooltipContent>
-            </Tooltip>
+             <Tooltip>
+               <TooltipTrigger asChild>
+                 <Button 
+                   variant="default" 
+                   size="icon" 
+                   className="rounded-full shadow-xl bg-primary text-primary-foreground h-12 w-12 hover:scale-110 active:scale-95 transition-all border-none"
+                   onClick={scrollToToday}
+                 >
+                   <Target className="h-6 w-6" />
+                 </Button>
+               </TooltipTrigger>
+               <TooltipContent side="left">Ir para Hoje</TooltipContent>
+             </Tooltip>
 
             <Tooltip>
               <TooltipTrigger asChild>
