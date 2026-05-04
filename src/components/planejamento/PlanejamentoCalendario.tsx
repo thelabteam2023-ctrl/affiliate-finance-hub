@@ -489,6 +489,21 @@ export function PlanejamentoCalendario() {
   const { data: perfisPre = [] } = usePlanningPerfis();
   const upsert = useUpsertCampanha();
   const deleteCamp = useDeleteCampanha();
+
+  const handleToggleAccountCreated = async (campanha: PlanningCampanha) => {
+    try {
+      await upsert.mutateAsync({
+        id: campanha.id,
+        scheduled_date: campanha.scheduled_date,
+        bookmaker_nome: campanha.bookmaker_nome,
+        is_account_created: !campanha.is_account_created
+      });
+      toast.success(campanha.is_account_created ? "Status de conta removido" : "Conta marcada como criada");
+    } catch (err) {
+      console.error("Erro ao atualizar status da conta:", err);
+    }
+  };
+
   const { getLogoUrl } = useBookmakerLogoMap();
   const { convertToBRL, cotacaoUSD, isUsingFallback } = useExchangeRates();
   const { planos, isLoading: planosLoading } = useDistribuicaoPlanos();
