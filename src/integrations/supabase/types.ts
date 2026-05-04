@@ -3638,6 +3638,7 @@ export type Database = {
           meta_diaria_usd: number | null
           nome: string
           parceiro_ids: string[]
+          projeto_id: string | null
           updated_at: string
           workspace_id: string
         }
@@ -3649,6 +3650,7 @@ export type Database = {
           meta_diaria_usd?: number | null
           nome: string
           parceiro_ids?: string[]
+          projeto_id?: string | null
           updated_at?: string
           workspace_id: string
         }
@@ -3660,10 +3662,18 @@ export type Database = {
           meta_diaria_usd?: number | null
           nome?: string
           parceiro_ids?: string[]
+          projeto_id?: string | null
           updated_at?: string
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "distribuicao_planos_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "distribuicao_planos_workspace_id_fkey"
             columns: ["workspace_id"]

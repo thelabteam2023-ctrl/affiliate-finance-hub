@@ -39,6 +39,7 @@ import {
   usePlanningPerfis,
   useUpsertCampanha,
   useDeleteCampanha,
+  useProjetos,
 } from "@/hooks/usePlanningData";
 import { useGrupoRegrasValidator } from "@/hooks/useGrupoRegrasValidator";
 import { CampanhaDialog } from "./CampanhaDialog";
@@ -529,6 +530,12 @@ export function PlanejamentoCalendario() {
   const { getLogoUrl } = useBookmakerLogoMap();
   const { convertToBRL, cotacaoUSD, isUsingFallback } = useExchangeRates();
   const { planos, isLoading: planosLoading } = useDistribuicaoPlanos();
+  const { data: projetosLite = [] } = useProjetos();
+  const projetoNomeMap = useMemo(() => {
+    const m = new Map<string, string>();
+    projetosLite.forEach((p) => m.set(p.id, p.nome));
+    return m;
+  }, [projetosLite]);
   const { data: celulasPlano = [] } = usePlanoCelulasDisponiveis(
     planoFiltroId || null
   );
@@ -1342,11 +1349,16 @@ export function PlanejamentoCalendario() {
                 key={plano.id}
                 variant={planoFiltroId === plano.id ? "default" : "ghost"}
                 size="sm"
-                className="h-7 max-w-44 shrink-0 px-3 text-xs"
+                className="h-auto min-h-7 max-w-48 shrink-0 px-3 py-1 text-xs flex-col items-start gap-0.5"
                 onClick={() => selectPlanoFiltro(plano.id)}
-                title={plano.nome}
+                title={plano.projeto_id ? `${plano.nome} • ${projetoNomeMap.get(plano.projeto_id) ?? "Projeto"}` : plano.nome}
               >
-                <span className="truncate">{plano.nome}</span>
+                <span className="truncate w-full text-left">{plano.nome}</span>
+                {plano.projeto_id && projetoNomeMap.get(plano.projeto_id) && (
+                  <span className="truncate w-full text-left text-[9px] opacity-70 font-normal">
+                    {projetoNomeMap.get(plano.projeto_id)}
+                  </span>
+                )}
               </Button>
             ))}
             {!planosLoading && planos.length === 0 && (

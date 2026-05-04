@@ -38,6 +38,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useExchangeRates } from "@/contexts/ExchangeRatesContext";
 import { useDistribuicaoPlanos } from "@/hooks/useDistribuicaoPlanos";
+import { useProjetos } from "@/hooks/usePlanningData";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -66,10 +67,13 @@ export default function DistribuicaoTab({ onPlanoCriado }: DistribuicaoTabProps)
   const { data: perfis = [] } = usePlanningPerfis();
   const { data: casasPlanejamento = [] } = usePlanningCasas();
   const { planos, createPlano, deletePlano } = useDistribuicaoPlanos();
+  const { updatePlano } = useDistribuicaoPlanos();
+  const { data: projetos = [] } = useProjetos();
   const { convertToBRL, cotacaoUSD } = useExchangeRates();
   const perfisOrdenados = useMemo(() => orderPlanningPerfis(perfis), [perfis]);
 
   const [planoNome, setPlanoNome] = useState("");
+  const [projetoId, setProjetoId] = useState<string>("__none__");
   const [selectedPerfilIds, setSelectedPerfilIds] = useState<string[]>([]);
   const [grupoConfigs, setGrupoConfigs] = useState<
     Array<{
@@ -210,6 +214,7 @@ export default function DistribuicaoTab({ onPlanoCriado }: DistribuicaoTabProps)
     createPlano.mutate(
       {
         nome: planoNome.trim(),
+        projeto_id: projetoId === "__none__" ? null : projetoId,
         parceiro_ids: parceiroIds,
         grupos: grupoConfigs.map((g, idx) => ({
           grupo_id: g.grupo_id,
@@ -351,6 +356,27 @@ export default function DistribuicaoTab({ onPlanoCriado }: DistribuicaoTabProps)
         />
       </div>
 
+      {/* Vínculo a um projeto (opcional) */}
+      <div>
+        <Label htmlFor="plano-projeto" className="text-xs">
+          Projeto vinculado <span className="text-muted-foreground">(opcional)</span>
+        </Label>
+        <Select value={projetoId} onValueChange={setProjetoId}>
+          <SelectTrigger id="plano-projeto" className="h-8 text-sm">
+            <SelectValue placeholder="Sem vínculo" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">Sem vínculo</SelectItem>
+            {projetos.map((p) => (
+              <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-[10px] text-muted-foreground mt-1">
+          Vincule o plano a um projeto deste workspace para habilitar histórico e filtros futuros.
+        </p>
+      </div>
+
       {planos.length > 0 && (
         <Card className="p-3 space-y-2">
           <div className="flex items-center justify-between gap-2">
@@ -365,21 +391,43 @@ export default function DistribuicaoTab({ onPlanoCriado }: DistribuicaoTabProps)
               <div key={plano.id} className="flex items-center justify-between gap-2 rounded-md border px-2 py-1.5">
                 <div className="min-w-0">
                   <div className="text-xs font-medium truncate">{plano.nome}</div>
-                  <div className="text-[10px] text-muted-foreground">
-                    {new Date(plano.created_at).toLocaleDateString("pt-BR")}
+                  <div className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+                    <span>{new Date(plano.created_at).toLocaleDateString("pt-BR")}</span>
+                    {plano.projeto_id && (
+                      <Badge variant="secondary" className="text-[9px] h-4 px-1.5">
+                        <FolderOpen className="h-2.5 w-2.5 mr-0.5" />
+                        {projetos.find((p) => p.id === plano.projeto_id)?.nome ?? "Projeto"}
+                      </Badge>
+                    )}
                   </div>
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-destructive hover:text-destructive"
-                  onClick={() => setPlanoParaExcluir(plano.id)}
-                  disabled={deletePlano.isPending}
-                  title="Excluir plano de distribuição"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Select
+                    value={plano.projeto_id ?? "__none__"}
+                    onValueChange={(v) => updatePlano.mutate({ id: plano.id, projeto_id: v === "__none__" ? null : v })}
+                  >
+                    <SelectTrigger className="h-7 w-32 text-[10px]" title="Vincular projeto">
+                      <SelectValue placeholder="Vincular projeto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Sem vínculo</SelectItem>
+                      {projetos.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-destructive hover:text-destructive"
+                    onClick={() => setPlanoParaExcluir(plano.id)}
+                    disabled={deletePlano.isPending}
+                    title="Excluir plano de distribuição"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
