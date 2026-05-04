@@ -4,7 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Clock, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TabFiltersBar } from "../TabFiltersBar";
-import type { TabFiltersReturn } from "@/hooks/useTabFilters";
+import type { TabFiltersReturn, SortOrder } from "@/hooks/useTabFilters";
 import { OperationsSubTabHeader, type HistorySubTab } from "./OperationsSubTabHeader";
 
 export interface OperationsHistoryConfig {
