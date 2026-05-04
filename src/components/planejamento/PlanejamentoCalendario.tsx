@@ -290,7 +290,7 @@ function DraggableCelula({ celula, parceiroNome, perfilCor, selected, selectedBa
           {...attributes}
           style={cpfStyle}
           className={cn(
-            "rounded border px-1.5 py-1 text-[10px] leading-tight cursor-grab active:cursor-grabbing transition-colors select-none",
+            "relative rounded border px-1.5 py-1 text-[10px] leading-tight cursor-grab active:cursor-grabbing transition-colors select-none",
             // Estilo padrão (sem CPF) — fallback verde/amarelo
             !cpfStyle && (isPending
               ? "bg-warning/5 hover:bg-warning/10 border-warning/30"
@@ -322,7 +322,9 @@ function DraggableCelula({ celula, parceiroNome, perfilCor, selected, selectedBa
             />
             <span className="font-semibold truncate flex-1 min-w-0">{campanha.bookmaker_nome}</span>
             {campanha.is_account_created && (
-              <CheckCircle2 className="h-3 w-3 shrink-0 text-success fill-success/20" />
+              <div className="absolute -top-1.5 -right-1.5 bg-background rounded-full p-0.5 shadow-sm z-10">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-[#00C853] fill-[#00C853] text-white" />
+              </div>
             )}
             {(grupoBlock || grupoWarn) && (
               <ShieldAlert
