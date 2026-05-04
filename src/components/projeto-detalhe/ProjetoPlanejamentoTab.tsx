@@ -578,9 +578,8 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
          historyContent={renderContent()}
          emptyOpenMessage="Nenhum planejamento pendente para este projeto"
          emptyHistoryMessage="Nenhum planejamento concluído neste projeto"
-         className="flex-1 h-full min-h-0"
-         id="planning-scroll-container"
-       />
+          className="flex-1 h-full min-h-0 planning-module-container"
+        />
       {isDialogOpen && (
         <CampanhaDialog
           open={isDialogOpen}
