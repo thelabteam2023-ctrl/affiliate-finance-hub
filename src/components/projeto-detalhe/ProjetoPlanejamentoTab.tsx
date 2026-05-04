@@ -614,19 +614,21 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
     return (
       <div className="h-full flex flex-col min-h-0 relative">
         <OperationsHistoryModule
-         projetoId={projetoId}
-         title="Planejamento de Campanhas"
-         tabFilters={tabFilters}
-         openCount={counts.open}
-         historyCount={counts.history}
-         viewMode={viewMode}
-         onViewModeChange={setViewMode}
-         subTab={subTab}
-         onSubTabChange={setSubTab}
-         openContent={renderContent()}
-         historyContent={renderContent()}
-         emptyOpenMessage="Nenhum planejamento pendente para este projeto"
-         emptyHistoryMessage="Nenhum planejamento concluído neste projeto"
+          projetoId={projetoId}
+          title="Planejamento de Campanhas"
+          tabFilters={tabFilters}
+          openCount={counts.open}
+          historyCount={counts.history}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          subTab={subTab}
+          onSubTabChange={setSubTab}
+          searchQuery={searchTerm}
+          onSearchChange={setSearchTerm}
+          openContent={renderContent()}
+          historyContent={renderContent()}
+          emptyOpenMessage="Nenhum planejamento pendente para este projeto"
+          emptyHistoryMessage="Nenhum planejamento concluído neste projeto"
           className="flex-1 h-full min-h-0 planning-module-container"
         />
       {isDialogOpen && (
