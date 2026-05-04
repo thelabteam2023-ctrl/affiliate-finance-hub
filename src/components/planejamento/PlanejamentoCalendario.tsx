@@ -1533,9 +1533,9 @@ export function PlanejamentoCalendario() {
                       <BookmakerLogo logoUrl={getLogoUrl(c.bookmaker_nome)} alt={c.bookmaker_nome} size="h-6 w-6 shrink-0" iconSize="h-3.5 w-3.5" />
                       <span className="truncate">{c.bookmaker_nome}</span>
                        {c.is_account_created ? (
-                         <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-[#00FF66] drop-shadow-[0_0_5px_rgba(0,255,102,0.5)]" />
+                         <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-[#00FF66] drop-shadow-[0_0_10px_rgba(0,255,102,0.8)]" />
                        ) : isCampanhaPending(c) && (
-                         <Clock className="h-3.5 w-3.5 shrink-0 text-[#FFD700] drop-shadow-[0_0_5px_rgba(255,215,0,0.5)]" />
+                         <Clock className="h-3.5 w-3.5 shrink-0 text-[#FFD700] drop-shadow-[0_0_10px_rgba(255,215,0,0.8)]" />
                        )}
                     </div>
                     <div className="truncate">{perfil ?? "—"}</div>
