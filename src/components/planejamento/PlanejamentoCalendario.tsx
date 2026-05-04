@@ -322,12 +322,12 @@ function DraggableCelula({ celula, parceiroNome, perfilCor, selected, selectedBa
             />
             <span className="font-semibold truncate flex-1 min-w-0">{campanha.bookmaker_nome}</span>
              {campanha.is_account_created ? (
-               <div className="absolute -top-1.5 -right-1.5 bg-background rounded-full p-0.5 shadow-sm z-10 animate-pulse ring-2 ring-[#00FF66]/20">
-                 <CheckCircle2 className="h-4 w-4 shrink-0 text-[#00FF66] fill-[#00FF66] text-white drop-shadow-[0_0_8px_rgba(0,255,102,0.8)]" />
+               <div className="absolute -top-1.5 -right-1.5 bg-background rounded-full p-0.5 shadow-sm z-10 animate-pulse">
+                 <CheckCircle2 className="h-4 w-4 shrink-0 text-[#00FF66] fill-[#00FF66] text-white drop-shadow-[0_0_5px_rgba(0,255,102,0.6)]" />
                </div>
              ) : isPending && (
-               <div className="absolute -top-1.5 -right-1.5 bg-background rounded-full p-0.5 shadow-sm z-10 animate-pulse ring-2 ring-[#FFD700]/20">
-                 <Clock className="h-4 w-4 shrink-0 text-[#FFD700] fill-[#FFD700] text-black drop-shadow-[0_0_8px_rgba(255,215,0,0.8)]" />
+               <div className="absolute -top-1.5 -right-1.5 bg-background rounded-full p-0.5 shadow-sm z-10 animate-pulse">
+                 <Clock className="h-4 w-4 shrink-0 text-[#FFD700] fill-[#FFD700] text-black drop-shadow-[0_0_5px_rgba(255,215,0,0.6)]" />
                </div>
              )}
             {(grupoBlock || grupoWarn) && (
