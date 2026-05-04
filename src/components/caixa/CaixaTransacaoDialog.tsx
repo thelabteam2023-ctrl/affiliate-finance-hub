@@ -3594,8 +3594,10 @@ export function CaixaTransacaoDialog({
         );
       }
       
-       // PARCEIRO → CAIXA flow
-       if (fluxoTransferencia === "PARCEIRO_CAIXA") {
+       // PARCEIRO → CAIXA  e  PARCEIRO → PARCEIRO  (ambos têm Origem = Parceiro).
+       // O split FIAT/CRYPTO é feito por tipoMoeda, não pelo fluxo.
+       if (fluxoTransferencia === "PARCEIRO_CAIXA" || fluxoTransferencia === "PARCEIRO_PARCEIRO") {
+        if (tipoMoeda === "FIAT") {
          return (
            <>
               <div className="space-y-2">
@@ -3674,8 +3676,8 @@ export function CaixaTransacaoDialog({
                   </AlertDescription>
                 </Alert>
               )}
-            </>
-          );
+             </>
+           );
         } else {
           // CRYPTO - Filtrar parceiros com saldo DISPONÍVEL no coin selecionado
           const parceirosComSaldo = saldosParceirosWallets
