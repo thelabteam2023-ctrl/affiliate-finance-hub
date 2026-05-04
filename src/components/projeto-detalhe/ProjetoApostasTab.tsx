@@ -1997,9 +1997,5 @@ return (
       formatCurrency={formatCurrency}
     />
   </div>
-);
-
-      {/* Dialogs removidos - todos os formulários abrem em janela externa */}
-    </div>
   );
 }
