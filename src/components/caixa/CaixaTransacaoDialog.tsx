@@ -1978,18 +1978,29 @@ export function CaixaTransacaoDialog({
      const parceirosExcluidos = new Set<string>();
      if (caixaParceiroId) parceirosExcluidos.add(caixaParceiroId);
  
-     if (tipoMoeda === "FIAT") {
-       // Filtramos por moeda para garantir que o parceiro tenha uma conta no que foi selecionado
-       const ids = contasBancarias
-         .filter((c) => c.id !== origemContaId && !parceirosExcluidos.has(c.parceiro_id) && (!moeda || c.moeda === moeda))
-         .map((c) => c.parceiro_id);
-       return [...new Set(ids)];
-     } else {
-       const ids = walletsCrypto
-         .filter((w) => isWalletCompatibleWithCoin(w, coin) && w.id !== origemWalletId && !parceirosExcluidos.has(w.parceiro_id))
-         .map((w) => w.parceiro_id);
-       return [...new Set(ids)];
-     }
+    // Flexibilizar: Se for FIAT BRL, mostrar todos os parceiros ativos do workspace
+    // para evitar que a lista fique vazia se a conta ainda não estiver cadastrada.
+    // O componente ParceiroSelect já filtra por parceiros ativos.
+    
+    if (tipoMoeda === "FIAT") {
+      // Se moeda for BRL, retornamos null para o ParceiroSelect mostrar TODOS os parceiros ativos
+      // Caso contrário, mantemos o filtro por moeda mas permitimos todos se a lista for ficar vazia
+      if (moeda === "BRL" || !moeda) return undefined;
+
+      const ids = contasBancarias
+        .filter((c) => c.id !== origemContaId && !parceirosExcluidos.has(c.parceiro_id) && c.moeda === moeda)
+        .map((c) => c.parceiro_id);
+      
+      const uniqueIds = [...new Set(ids)];
+      return uniqueIds.length > 0 ? uniqueIds : undefined;
+    } else {
+      const ids = walletsCrypto
+        .filter((w) => isWalletCompatibleWithCoin(w, coin) && w.id !== origemWalletId && !parceirosExcluidos.has(w.parceiro_id))
+        .map((w) => w.parceiro_id);
+      
+      const uniqueIds = [...new Set(ids)];
+      return uniqueIds.length > 0 ? uniqueIds : undefined;
+    }
    };
 
   const isOrigemCompleta = () => {
