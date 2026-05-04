@@ -1,5 +1,8 @@
-import { useState, useMemo } from "react";
-import { 
+ import { useState, useMemo, useRef, useEffect } from "react";
+ import { 
+   ChevronUp,
+   ChevronDown,
+   Target,
   CheckCircle2, 
   Clock, 
   Calendar as CalendarIcon, 
@@ -83,7 +86,39 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
   const updateCampanha = useUpsertCampanha();
   const logoMap = useBookmakerLogoMap();
   const [editingCampanha, setEditingCampanha] = useState<PlanningCampanha | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+   const [isDialogOpen, setIsDialogOpen] = useState(false);
+ 
+   // Função para scrollar para a data de hoje
+   const scrollToToday = () => {
+     const todayStr = format(new Date(), "yyyy-MM-dd");
+     const element = document.getElementById(`date-group-${todayStr}`);
+     if (element) {
+       element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+     } else {
+       // Se não achou hoje, tenta achar a data mais próxima futura
+       const nextAvailable = sortedDates.find(date => date >= todayStr);
+       if (nextAvailable) {
+         document.getElementById(`date-group-${nextAvailable}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+       }
+     }
+   };
+ 
+   // Scroll suave manual via setas
+   const scrollManual = (direction: 'up' | 'down') => {
+     const scrollArea = document.querySelector('[data-radix-scroll-area-viewport]');
+     if (scrollArea) {
+       const amount = direction === 'up' ? -300 : 300;
+       scrollArea.scrollBy({ top: amount, behavior: 'smooth' });
+     }
+   };
+ 
+   // Scroll automático inicial
+   useEffect(() => {
+     if (!campanhasLoading && !celulasLoading && filteredData.length > 0) {
+       const timer = setTimeout(scrollToToday, 500);
+       return () => clearTimeout(timer);
+     }
+   }, [campanhasLoading, celulasLoading, subTab, viewMode]);
 
   // 3. Helpers de Resolução (Lógica espelhada do PlanejamentoList)
   const resolveCampanhaData = (c: PlanningCampanha) => {
@@ -198,8 +233,8 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
             const dateObj = parseISO(dateStr);
             const isDateToday = isToday(dateObj);
 
-            return (
-              <div key={dateStr} className="relative pl-8 md:pl-0">
+             return (
+               <div key={dateStr} id={`date-group-${dateStr}`} className="relative pl-8 md:pl-0 scroll-mt-4">
                 <div className="absolute left-[15px] md:left-[108px] top-0 bottom-0 w-px bg-border hidden sm:block" />
 
                 <div className="flex flex-col md:flex-row gap-4 md:gap-8">
@@ -421,9 +456,56 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
     );
   };
 
-   return (
-     <div className="h-full flex flex-col min-h-0">
-       <OperationsHistoryModule
+    return (
+      <div className="h-full flex flex-col min-h-0 relative group/container">
+        {/* Navegação Flutuante Lateral */}
+        {viewMode === "list" && filteredData.length > 0 && (
+          <div className="absolute right-6 top-1/2 -translate-y-1/2 z-30 flex flex-col gap-2 opacity-0 group-hover/container:opacity-100 transition-opacity duration-300">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="secondary" 
+                  size="icon" 
+                  className="rounded-full shadow-lg border border-primary/20 bg-background/80 backdrop-blur-sm hover:bg-primary hover:text-primary-foreground transition-all h-10 w-10"
+                  onClick={() => scrollManual('up')}
+                >
+                  <ChevronUp className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left">Subir</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="primary" 
+                  size="icon" 
+                  className="rounded-full shadow-xl bg-primary text-primary-foreground h-12 w-12 hover:scale-110 active:scale-95 transition-all"
+                  onClick={scrollToToday}
+                >
+                  <Target className="h-6 w-6" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left">Ir para Hoje</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="secondary" 
+                  size="icon" 
+                  className="rounded-full shadow-lg border border-primary/20 bg-background/80 backdrop-blur-sm hover:bg-primary hover:text-primary-foreground transition-all h-10 w-10"
+                  onClick={() => scrollManual('down')}
+                >
+                  <ChevronDown className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left">Descer</TooltipContent>
+            </Tooltip>
+          </div>
+        )}
+
+        <OperationsHistoryModule
          projetoId={projetoId}
          title="Planejamento de Campanhas"
          tabFilters={tabFilters}
