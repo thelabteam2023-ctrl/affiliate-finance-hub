@@ -263,7 +263,7 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
           <div className="space-y-8 max-w-5xl mx-auto py-4 relative min-h-full">
             {/* Navegação Flutuante Lateral - Agora Sticky e no lado Esquerdo (próximo às datas) */}
             <div className="sticky top-1/2 -translate-y-1/2 z-50 h-0 w-0">
-              <div className="flex flex-col gap-2 absolute left-2 md:-left-16">
+              <div className="flex flex-col gap-2 absolute left-1 md:left-2">
                 {filteredData.length > 0 && (
                   <>
                     <Tooltip>
