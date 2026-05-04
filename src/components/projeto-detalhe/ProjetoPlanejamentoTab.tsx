@@ -232,7 +232,7 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
 
    // 4. Filtragem por Sub-aba (Abertas vs Histórico) e Filtros Dimensionais
    const filteredData = useMemo(() => {
-     return campanhas
+     let result = campanhas
        .map((c) => {
          const resolved = resolveCampanhaData(c);
          const status = getStatus(c, resolved.isPending);
@@ -248,9 +248,6 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
  
          // 4b. Filtro de Status (Atrasados, etc) - Se houver filtros de resultado aplicados
          if (tabFilters.resultados.length > 0) {
-           // Mapear Status do Planejamento para o padrão de ResultadoFilter
-           // "atrasado" -> "RED" (ou equivalente para filtro de atrasados)
-           // No planejamento o usuário pediu filtro de "atrasados"
            const statusMap: Record<string, string> = {
              concluido: "GREEN",
              atrasado: "RED",
@@ -264,9 +261,8 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
          // 4c. Filtros Dimensionais (Casas / Parceiros)
          if (tabFilters.bookmakerIds.length > 0) {
            const campAsAny = c as any;
-           if (!tabFilters.bookmakerIds.includes(c.bookmaker_catalogo_id || "")) {
-             // Tenta pelo ID interno também se disponível
-             if (!tabFilters.bookmakerIds.includes(campAsAny.bookmaker_id || "")) return false;
+           if (!tabFilters.bookmakerIds.includes(c.bookmaker_catalogo_id || "") && !tabFilters.bookmakerIds.includes(campAsAny.bookmaker_id || "")) {
+             return false;
            }
          }
  
@@ -274,23 +270,39 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
            if (!tabFilters.parceiroIds.includes(c.parceiroId || "")) return false;
          }
  
+         // 4d. Busca por texto (Padrão Apostas)
+         if (searchTerm.trim()) {
+           const term = searchTerm.toLowerCase();
+           const matchesBookmaker = (c.bookmaker_nome || "").toLowerCase().includes(term);
+           const matchesParceiro = (c.parceiro_snapshot?.nome || "").toLowerCase().includes(term);
+           if (!matchesBookmaker && !matchesParceiro) return false;
+         }
+ 
          return true;
-       })
-       .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));
-   }, [campanhas, celulasAgendadas, perfis, ips, subTab, tabFilters.resultados, tabFilters.bookmakerIds, tabFilters.parceiroIds]);
+       });
 
-  const groupedByDay = useMemo(() => {
-    const groups: Record<string, any[]> = {};
-    filteredData.forEach(c => {
-      if (!groups[c.scheduled_date]) groups[c.scheduled_date] = [];
-      groups[c.scheduled_date].push(c);
-    });
-    return groups;
-  }, [filteredData]);
-
-  const sortedDates = useMemo(() => {
-    return Object.keys(groupedByDay).sort();
-  }, [groupedByDay]);
+      // Ordenação consistente
+      return result.sort((a, b) => {
+        if (subTab === "abertas") return a.scheduled_date.localeCompare(b.scheduled_date);
+        return b.scheduled_date.localeCompare(a.scheduled_date);
+      });
+   }, [campanhas, celulasAgendadas, perfis, ips, subTab, tabFilters.resultados, tabFilters.bookmakerIds, tabFilters.parceiroIds, searchTerm]);
+ 
+   const groupedByDay = useMemo(() => {
+     const groups: Record<string, any[]> = {};
+     filteredData.forEach(c => {
+       if (!groups[c.scheduled_date]) groups[c.scheduled_date] = [];
+       groups[c.scheduled_date].push(c);
+     });
+     return groups;
+   }, [filteredData]);
+ 
+   const sortedDates = useMemo(() => {
+     return Object.keys(groupedByDay).sort((a, b) => {
+       if (subTab === "abertas") return a.localeCompare(b);
+       return b.localeCompare(a);
+     });
+   }, [groupedByDay, subTab]);
 
   // Contagens para o header do módulo
   const counts = useMemo(() => {
