@@ -12508,6 +12508,7 @@ export type Database = {
       }
       v_custos_aquisicao: {
         Row: {
+          comissao_paga: boolean | null
           custo_total: number | null
           data_inicio: string | null
           fornecedor_id: string | null
@@ -12521,9 +12522,11 @@ export type Database = {
           parceria_id: string | null
           status: string | null
           user_id: string | null
+          valor_comissao: number | null
           valor_fornecedor: number | null
           valor_indicador: number | null
           valor_parceiro: number | null
+          workspace_id: string | null
         }
         Relationships: [
           {
@@ -12609,6 +12612,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_wallet_crypto_balances"
             referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "parcerias_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
           },
         ]
       }
