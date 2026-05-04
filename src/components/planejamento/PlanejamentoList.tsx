@@ -184,25 +184,29 @@
        {/* Header com Filtros */}
         <div className="p-4 border-b flex flex-col lg:flex-row gap-4 items-start lg:items-end justify-between bg-card/50">
           <div className="flex flex-wrap items-end gap-3 w-full lg:w-auto">
-            <div className="flex flex-col gap-1.5 flex-1 min-w-[200px] lg:w-80 lg:flex-none">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1 mb-1 lg:mb-0">Busca</span>
+            <div className="flex flex-col gap-1 flex-1 min-w-[200px] lg:w-80 lg:flex-none">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Busca</span>
               <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Casa, parceiro ou notas..."
-                  className="pl-9 h-9"
+                  className="pl-9 h-10 border-muted-foreground/20 focus:border-primary"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
             </div>
 
-            <div className="flex flex-col gap-1.5 flex-1 min-w-[140px] sm:flex-none sm:w-[160px]">
+            <div className="flex flex-col gap-1 flex-1 min-w-[150px] sm:flex-none sm:w-[180px]">
               <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Status</span>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="h-9">
-                  <Filter className="h-3.5 w-3.5 mr-2 shrink-0" />
-                  <SelectValue placeholder="Status" />
+                <SelectTrigger className="h-10 px-3 flex items-center gap-2">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <Filter className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <div className="truncate">
+                      <SelectValue placeholder="Status" />
+                    </div>
+                  </div>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os Status</SelectItem>
@@ -214,12 +218,16 @@
               </Select>
             </div>
 
-            <div className="flex flex-col gap-1.5 flex-1 min-w-[160px] sm:flex-none sm:w-[180px]">
+            <div className="flex flex-col gap-1 flex-1 min-w-[150px] sm:flex-none sm:w-[200px]">
               <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Projeto</span>
               <Select value={projetoFilter} onValueChange={setProjetoFilter}>
-                <SelectTrigger className="h-9">
-                  <Building2 className="h-3.5 w-3.5 mr-2 shrink-0" />
-                  <SelectValue placeholder="Projeto" />
+                <SelectTrigger className="h-10 px-3 flex items-center gap-2">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <div className="truncate">
+                      <SelectValue placeholder="Projeto" />
+                    </div>
+                  </div>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os Projetos</SelectItem>
@@ -356,17 +364,17 @@
                                   <div className="flex items-center gap-2">
                                     <h3 className="font-bold text-base truncate">{camp.bookmaker_nome}</h3>
                                     {status === "concluido" && (
-                                      <Badge className="bg-[#00FF66] hover:bg-[#00FF66]/80 text-black text-[10px] h-5">
+                                      <Badge className="bg-[#00FF66] hover:bg-[#00FF66]/80 text-[#00331a] text-[10px] h-5 font-bold border-none shadow-sm">
                                         FEITO
                                       </Badge>
                                     )}
                                     {status === "atrasado" && (
-                                      <Badge variant="destructive" className="text-[10px] h-5 animate-pulse">
+                                      <Badge variant="destructive" className="text-[10px] h-5 animate-pulse font-bold border-none shadow-sm">
                                         ATRASADO
                                       </Badge>
                                     )}
                                     {status === "pendente" && (
-                                      <Badge className="bg-[#FFD700] hover:bg-[#FFD700]/80 text-black text-[10px] h-5">
+                                      <Badge className="bg-[#FFD700] hover:bg-[#FFD700]/80 text-[#332b00] text-[10px] h-5 font-bold border-none shadow-sm">
                                         PENDENTE
                                       </Badge>
                                     )}

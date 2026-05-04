@@ -431,20 +431,36 @@ function DayCell({ date, isCurrentMonth, children, onAdd, onOpenDetails }: {
     disabled: isPast,
   });
 
+  const camps = children as any[];
+  const stats = useMemo(() => {
+    if (!Array.isArray(camps)) return null;
+    
+    // Extraímos os dados das campanhas dos filhos (React Nodes)
+    // Como os filhos são DraggableCampanha, podemos precisar de uma forma melhor de contar, 
+    // mas para simplicidade nesta renderização, vamos assumir que recebemos a contagem via props ou contexto se necessário.
+    // Por enquanto, vamos extrair do array de children se possível ou deixar o pai passar os dados.
+    return null; 
+  }, [camps]);
+
   return (
     <div
       ref={setNodeRef}
       onClick={onOpenDetails}
       className={cn(
-        "min-h-[110px] border rounded-md p-1 flex flex-col gap-1 transition-colors bg-muted/40 cursor-pointer",
+        "min-h-[110px] border rounded-md p-1 flex flex-col gap-1 transition-colors bg-muted/40 cursor-pointer relative group",
         !isCurrentMonth && "bg-muted/10 opacity-50",
         isPast && "bg-muted/20 opacity-60 cursor-not-allowed",
         !isPast && isOver && "ring-2 ring-primary bg-primary/10",
-        isToday && !isPast && "border-primary bg-primary/5"
+        isToday && !isPast && "border-primary bg-primary/5 shadow-[inset_0_0_0_1px_rgba(var(--primary),0.1)]"
       )}
     >
-      <div className="flex items-center justify-between">
-        <span className={cn("text-xs font-medium", isToday && !isPast && "text-primary", isPast && "text-muted-foreground")}>{date.getDate()}</span>
+      <div className="flex items-center justify-between mb-0.5">
+        <span className={cn(
+          "text-xs font-bold px-1.5 py-0.5 rounded-sm", 
+          isToday && !isPast ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+        )}>
+          {date.getDate()}
+        </span>
       </div>
       <div className="flex-1 min-h-0 flex flex-col gap-1 overflow-hidden">{children}</div>
     </div>
