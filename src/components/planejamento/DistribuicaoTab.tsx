@@ -85,6 +85,11 @@ export default function DistribuicaoTab({ onPlanoCriado }: DistribuicaoTabProps)
   >([]);
   const [resultado, setResultado] = useState<ReturnType<typeof gerarDistribuicao> | null>(null);
   const [planoParaExcluir, setPlanoParaExcluir] = useState<string | null>(null);
+  const [confirmacaoVinculo, setConfirmacaoVinculo] = useState<{
+    planoId: string;
+    planoNome: string;
+    projetoId: string | null;
+  } | null>(null);
 
   // Conversão moeda nativa → USD (via BRL)
   const toUsd = (valor: number, moeda: string): number => {
