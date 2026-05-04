@@ -497,18 +497,6 @@ import { toast } from "sonner";
                               </div>
                             </div>
 
-                             {/* Indicadores de Status */}
-                              <div className="absolute top-0 right-0 p-1.5 flex gap-1.5">
-                                {status === "concluido" && (
-                                  <div className="h-3 w-3 rounded-full bg-[#00FF66] shadow-[0_0_15px_6px_rgba(0,255,102,0.4)]" title="Concluído" />
-                                )}
-                                {status === "atrasado" && (
-                                  <div className="h-3 w-3 rounded-full bg-destructive shadow-[0_0_15px_6px_rgba(239,68,68,0.4)]" title="Atrasado" />
-                                )}
-                                {status === "pendente" && (
-                                  <div className="h-3 w-3 rounded-full bg-[#FFD700] shadow-[0_0_15px_6px_rgba(255,215,0,0.4)]" title="Pendente" />
-                                )}
-                              </div>
                           </Card>
                         );
                       })}
