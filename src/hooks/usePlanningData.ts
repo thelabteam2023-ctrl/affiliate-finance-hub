@@ -727,19 +727,25 @@ export function useUpsertCampanha() {
         const { error } = await supabase.from("planning_campanhas" as any).update(base).eq("id", payload.id);
         if (error) throw error;
 
-        // Sincroniza a célula do assistente de plano vinculada a esta campanha.
-        // Se a casa/perfil for alterada manualmente pelo calendário, o plano deixa
-        // de apontar para a casa antiga e passa a representar a substituição real.
-        const celulaUpdate: any = {
-          bookmaker_catalogo_id: base.bookmaker_catalogo_id,
-          parceiro_id: base.parceiro_id,
-        };
-        const { error: celulaError } = await (supabase as any)
-          .from("distribuicao_plano_celulas")
-          .update(celulaUpdate)
-          .eq("workspace_id", workspaceId)
-          .eq("campanha_id", payload.id);
-        if (celulaError) throw celulaError;
+        // Sincroniza a célula do assistente de plano vinculada a esta campanha, 
+        // mas apenas se tivermos os valores obrigatórios para evitar erros de constraint.
+        const celulaUpdate: any = {};
+        if (base.bookmaker_catalogo_id) celulaUpdate.bookmaker_catalogo_id = base.bookmaker_catalogo_id;
+        if (base.parceiro_id !== undefined) celulaUpdate.parceiro_id = base.parceiro_id;
+
+        if (Object.keys(celulaUpdate).length > 0) {
+          const { error: celulaError } = await (supabase as any)
+            .from("distribuicao_plano_celulas")
+            .update(celulaUpdate)
+            .eq("workspace_id", workspaceId)
+            .eq("campanha_id", payload.id);
+          
+          if (celulaError) {
+            console.error("Erro ao sincronizar célula:", celulaError);
+            // Não barramos a atualização da campanha se a célula falhar, 
+            // mas logamos o erro para depuração.
+          }
+        }
 
         return payload.id;
       } else {

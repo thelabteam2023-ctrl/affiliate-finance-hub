@@ -88,7 +88,7 @@
 
       const parceiroId = c.parceiro_id || perfil?.parceiro_id || celula?.parceiro_id;
       const perfilId = perfil?.id || celula?.perfil_planejamento_id;
-      const bookmakerCatalogoId = c.bookmaker_catalogo_id || celula?.bookmaker_catalogo_id;
+      const bookmakerCatalogoId = c.bookmaker_catalogo_id || (celula as any)?.bookmaker_catalogo_id;
 
       // Simplificação do resolveScopedIpId do calendário
       const linkedIp = ips.find(i => i.id === c.ip_id) || 
@@ -101,7 +101,7 @@
 
       const isPending = !parceiroId && !perfilId || !linkedIp || !c.wallet_id || Number(c.deposit_amount) <= 0;
       
-      return { perfil, linkedIp, isPending, parceiroId, celula };
+      return { perfil, linkedIp, isPending, parceiroId, celula, bookmakerCatalogoId };
     };
 
     const getStatus = (c: PlanningCampanha, isPending: boolean) => {
@@ -119,12 +119,19 @@
    };
  
   const handleToggleStatus = async (camp: PlanningCampanha) => {
+    const { celula } = resolveCampanhaData(camp);
+    
     try {
       // Quando o status é "Atrasado", ele é derivado de (isPending && campDate < today).
       // Ao clicar para alternar, o usuário quer marcar como concluído (is_account_created: true).
       // Repassamos TODOS os campos existentes para garantir que a atualização no Supabase seja bem-sucedida.
+      
+      // Se a campanha não tem o ID da casa mas a célula tem, recuperamos para evitar erros de constraint
+      const bookmakerId = camp.bookmaker_catalogo_id || celula?.bookmaker_catalogo_id;
+      
       const payload = {
         ...camp,
+        bookmaker_catalogo_id: bookmakerId,
         is_account_created: !camp.is_account_created,
         // Se estava marcado como 'feito' e o usuário desmarcou, volta para 'planned' (ou derivado)
         status: !camp.is_account_created ? 'done' : 'planned'
@@ -324,8 +331,8 @@
 
                     {/* Lista de Campanhas do Dia */}
                     <div className="flex-1 grid gap-3 pb-4">
-                     {camps.map((camp) => {
-                        const { perfil, linkedIp, isPending, celula } = resolveCampanhaData(camp);
+                      {camps.map((camp) => {
+                        const { perfil, linkedIp, isPending, celula, bookmakerCatalogoId } = resolveCampanhaData(camp);
                         const status = getStatus(camp, isPending);
                         
                         // A lógica de exibição deve priorizar os dados da célula agendada para garantir consistência com o calendário
@@ -356,13 +363,13 @@
                               {/* Casa e Info Principal */}
                               <div className="flex items-center gap-3 flex-1 min-w-0">
                                 <BookmakerLogo
-                                  logoUrl={logoMap[camp.bookmaker_catalogo_id || ""] || null}
-                                  alt={camp.bookmaker_nome}
+                                  logoUrl={logoMap[bookmakerCatalogoId || ""] || null}
+                                  alt={camp.bookmaker_nome || "Casa"}
                                   size="h-10 w-10"
                                 />
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2">
-                                    <h3 className="font-bold text-base truncate">{camp.bookmaker_nome}</h3>
+                                    <h3 className="font-bold text-base truncate">{camp.bookmaker_nome || "Sem Nome"}</h3>
                                     {status === "concluido" && (
                                       <Badge className="bg-[#00FF66] hover:bg-[#00FF66]/80 text-[#00331a] text-[10px] h-5 font-bold border-none shadow-sm">
                                         FEITO
