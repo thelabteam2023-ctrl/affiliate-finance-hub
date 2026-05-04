@@ -983,10 +983,15 @@ export function CaixaTransacaoDialog({
     }
   }, [tipoTransacao]);
   
-  useEffect(() => {
-    // Update origem/destino based on transfer flow and currency type
-    // NOTA: Os resets de seleção são tratados pelo resetContextoDependente quando tipoMoeda muda
-    if (tipoTransacao === "TRANSFERENCIA") {
+   useEffect(() => {
+     // 🔒 RESET COMPLETO ao trocar o subtipo de transferência
+     if (tipoTransacao === "TRANSFERENCIA" && fluxoTransferencia !== prevFluxoTransferencia.current) {
+       resetContextoDependente(false, true, false);
+       prevFluxoTransferencia.current = fluxoTransferencia;
+     }
+ 
+     // Update origem/destino based on transfer flow and currency type
+     if (tipoTransacao === "TRANSFERENCIA") {
       if (fluxoTransferencia === "CAIXA_PARCEIRO") {
         setOrigemTipo("CAIXA_OPERACIONAL");
         if (tipoMoeda === "FIAT") {
