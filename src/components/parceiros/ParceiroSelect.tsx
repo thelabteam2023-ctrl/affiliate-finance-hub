@@ -248,13 +248,15 @@ export interface ParceiroSelectRef {
         </span>
       );
     } else {
-      const formatted = saldo.toLocaleString('en-US', { 
+      const formatted = saldo.toLocaleString('pt-BR', { 
         minimumFractionDigits: 2, 
         maximumFractionDigits: 2 
       });
+      // Use the correct symbol for USD, otherwise use the coin code
+      const symbol = (coin === 'USD' || !coin) ? '$' : coin;
       return (
         <span className={saldo > 0 ? "text-emerald-500 text-xs font-medium" : "text-muted-foreground text-xs"}>
-          Saldo: $ {formatted}
+          Saldo: {symbol} {formatted}
         </span>
       );
     }
