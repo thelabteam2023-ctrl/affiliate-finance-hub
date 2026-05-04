@@ -91,84 +91,6 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
     const [searchTerm, setSearchTerm] = useState("");
 
 
-      // Navegação inteligente via botões flutuantes
-      const navigateDayByDay = useCallback((direction: 'up' | 'down') => {
-        const scrollArea = document.querySelector('.planning-module-container [data-radix-scroll-area-viewport]');
-        if (!scrollArea || sortedDates.length === 0) return;
-
-        const containerRect = scrollArea.getBoundingClientRect();
-        const currentScrollTop = scrollArea.scrollTop;
-        const THRESHOLD = 30;
-
-        const groups = sortedDates.map(date => {
-          const el = document.getElementById(`date-group-${date}`);
-          if (!el) return null;
-          const rect = el.getBoundingClientRect();
-          const relativeTop = rect.top - containerRect.top + currentScrollTop;
-          return { date, relativeTop };
-        }).filter(Boolean) as { date: string, relativeTop: number }[];
-
-        if (groups.length === 0) return;
-
-        let currentIndex = groups.findIndex(g => g.relativeTop >= currentScrollTop - THRESHOLD);
-        if (currentIndex === -1) currentIndex = groups.length - 1;
-
-        let targetIndex;
-        if (direction === 'down') {
-          if (Math.abs(groups[currentIndex].relativeTop - currentScrollTop) < THRESHOLD) {
-            targetIndex = Math.min(currentIndex + 1, groups.length - 1);
-          } else {
-            targetIndex = currentIndex;
-          }
-        } else {
-          if (Math.abs(groups[currentIndex].relativeTop - currentScrollTop) < THRESHOLD) {
-            targetIndex = Math.max(currentIndex - 1, 0);
-          } else {
-            targetIndex = currentIndex;
-          }
-        }
-
-        const targetGroup = groups[targetIndex];
-        scrollArea.scrollTo({ 
-          top: targetGroup.relativeTop - 16, 
-          behavior: 'smooth' 
-        });
-      }, [sortedDates]);
-
-    // Ajuste no scrollToToday para buscar dentro do container correto
-    const scrollToToday = () => {
-      const todayStr = format(new Date(), "yyyy-MM-dd");
-      const element = document.getElementById(`date-group-${todayStr}`);
-      const scrollArea = document.querySelector('.planning-module-container [data-radix-scroll-area-viewport]');
-      
-      if (element && scrollArea) {
-        // Calculamos a posição relativa ao topo do viewport
-        const containerRect = scrollArea.getBoundingClientRect();
-        const elementRect = element.getBoundingClientRect();
-        const relativeTop = elementRect.top - containerRect.top + scrollArea.scrollTop;
-        
-        scrollArea.scrollTo({ top: relativeTop - 16, behavior: 'smooth' });
-      } else if (!element) {
-        const nextAvailable = sortedDates.find(date => date >= todayStr);
-        if (nextAvailable && scrollArea) {
-          const nextEl = document.getElementById(`date-group-${nextAvailable}`);
-          if (nextEl) {
-            const containerRect = scrollArea.getBoundingClientRect();
-            const elementRect = nextEl.getBoundingClientRect();
-            const relativeTop = elementRect.top - containerRect.top + scrollArea.scrollTop;
-            scrollArea.scrollTo({ top: relativeTop - 16, behavior: 'smooth' });
-          }
-        }
-      }
-    };
-
-    // Scroll automático inicial
-    useEffect(() => {
-      if (!campanhasLoading && !celulasLoading && filteredData.length > 0) {
-        const timer = setTimeout(scrollToToday, 500);
-        return () => clearTimeout(timer);
-      }
-    }, [campanhasLoading, celulasLoading, subTab, viewMode]);
 
   // 3. Helpers de Resolução (Lógica espelhada do PlanejamentoList)
   const resolveCampanhaData = (c: PlanningCampanha) => {
@@ -304,6 +226,81 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
        return b.localeCompare(a);
      });
    }, [groupedByDay, subTab]);
+
+      // Navegação inteligente via botões flutuantes
+      const navigateDayByDay = useCallback((direction: 'up' | 'down') => {
+        const scrollArea = document.querySelector('.planning-module-container [data-radix-scroll-area-viewport]');
+        if (!scrollArea || sortedDates.length === 0) return;
+
+        const containerRect = scrollArea.getBoundingClientRect();
+        const currentScrollTop = scrollArea.scrollTop;
+        const THRESHOLD = 30;
+
+        const groups = sortedDates.map(date => {
+          const el = document.getElementById(`date-group-${date}`);
+          if (!el) return null;
+          const rect = el.getBoundingClientRect();
+          const relativeTop = rect.top - containerRect.top + currentScrollTop;
+          return { date, relativeTop };
+        }).filter(Boolean) as { date: string, relativeTop: number }[];
+
+        if (groups.length === 0) return;
+
+        let currentIndex = groups.findIndex(g => g.relativeTop >= currentScrollTop - THRESHOLD);
+        if (currentIndex === -1) currentIndex = groups.length - 1;
+
+        let targetIndex;
+        if (direction === 'down') {
+          if (Math.abs(groups[currentIndex].relativeTop - currentScrollTop) < THRESHOLD) {
+            targetIndex = Math.min(currentIndex + 1, groups.length - 1);
+          } else {
+            targetIndex = currentIndex;
+          }
+        } else {
+          if (Math.abs(groups[currentIndex].relativeTop - currentScrollTop) < THRESHOLD) {
+            targetIndex = Math.max(currentIndex - 1, 0);
+          } else {
+            targetIndex = currentIndex;
+          }
+        }
+
+        const targetGroup = groups[targetIndex];
+        scrollArea.scrollTo({ 
+          top: targetGroup.relativeTop - 16, 
+          behavior: 'smooth' 
+        });
+      }, [sortedDates]);
+
+    const scrollToToday = useCallback(() => {
+      const todayStr = format(new Date(), "yyyy-MM-dd");
+      const element = document.getElementById(`date-group-${todayStr}`);
+      const scrollArea = document.querySelector('.planning-module-container [data-radix-scroll-area-viewport]');
+      
+      if (element && scrollArea) {
+        const containerRect = scrollArea.getBoundingClientRect();
+        const elementRect = element.getBoundingClientRect();
+        const relativeTop = elementRect.top - containerRect.top + scrollArea.scrollTop;
+        scrollArea.scrollTo({ top: relativeTop - 16, behavior: 'smooth' });
+      } else if (!element) {
+        const nextAvailable = sortedDates.find(date => date >= todayStr);
+        if (nextAvailable && scrollArea) {
+          const nextEl = document.getElementById(`date-group-${nextAvailable}`);
+          if (nextEl) {
+            const containerRect = scrollArea.getBoundingClientRect();
+            const elementRect = nextEl.getBoundingClientRect();
+            const relativeTop = elementRect.top - containerRect.top + scrollArea.scrollTop;
+            scrollArea.scrollTo({ top: relativeTop - 16, behavior: 'smooth' });
+          }
+        }
+      }
+    }, [sortedDates]);
+
+    useEffect(() => {
+      if (!campanhasLoading && !celulasLoading && filteredData.length > 0) {
+        const timer = setTimeout(scrollToToday, 500);
+        return () => clearTimeout(timer);
+      }
+    }, [campanhasLoading, celulasLoading, subTab, viewMode, scrollToToday, filteredData.length]);
 
   // Contagens para o header do módulo
   const counts = useMemo(() => {
