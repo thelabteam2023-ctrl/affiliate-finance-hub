@@ -331,13 +331,14 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
                               </div>
                               <div className="flex flex-col gap-0.5 min-w-[110px]">
                                 <span className="text-[10px] uppercase tracking-wider font-semibold opacity-60">Status</span>
-                                <div 
-                                  className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-all active:scale-95 group/status"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleToggleStatus(camp as any);
-                                  }}
-                                >
+                               <div 
+                                 className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-all active:scale-95 group/status"
+                                 onClick={(e) => {
+                                   e.stopPropagation();
+                                   handleToggleStatus(camp as any);
+                                 }}
+                                 title="Clique para alternar o status"
+                               >
                                   {status === "concluido" ? (
                                     <span className="flex items-center gap-1 text-[#00FF66] font-bold">
                                       <CheckCircle2 className="h-3.5 w-3.5 fill-[#00FF66]/20" /> Concluído
@@ -420,24 +421,24 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
     );
   };
 
-  return (
-    <div className="space-y-4">
-      <OperationsHistoryModule
-        projetoId={projetoId}
-        title="Histórico de Planejamento"
-        tabFilters={tabFilters}
-        openCount={counts.open}
-        historyCount={counts.history}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        subTab={subTab}
-        onSubTabChange={setSubTab}
-        openContent={renderContent()}
-        historyContent={renderContent()}
-        emptyOpenMessage="Nenhum planejamento pendente para este projeto"
-        emptyHistoryMessage="Nenhum planejamento concluído neste projeto"
-        maxHeight="calc(100vh - 350px)"
-      />
+   return (
+     <div className="h-full flex flex-col min-h-0">
+       <OperationsHistoryModule
+         projetoId={projetoId}
+         title="Planejamento de Campanhas"
+         tabFilters={tabFilters}
+         openCount={counts.open}
+         historyCount={counts.history}
+         viewMode={viewMode}
+         onViewModeChange={setViewMode}
+         subTab={subTab}
+         onSubTabChange={setSubTab}
+         openContent={renderContent()}
+         historyContent={renderContent()}
+         emptyOpenMessage="Nenhum planejamento pendente para este projeto"
+         emptyHistoryMessage="Nenhum planejamento concluído neste projeto"
+         className="flex-1 h-full min-h-0"
+       />
       {isDialogOpen && (
         <CampanhaDialog
           open={isDialogOpen}
