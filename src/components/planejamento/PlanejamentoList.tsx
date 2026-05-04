@@ -34,12 +34,14 @@
    TableBody,
    TableCell,
    TableHead,
-   TableHeader,
-   TableRow,
+  TableHeader,
+  TableRow,
+ } from "@/components/ui/table";
+import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
- } from "@/components/ui/table";
+} from "@/components/ui/tooltip";
  import { 
    PlanningCampanha, 
    usePlanningCampanhas, 
