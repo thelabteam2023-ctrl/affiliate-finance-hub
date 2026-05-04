@@ -7581,6 +7581,7 @@ export type Database = {
           notes: string | null
           parceiro_id: string | null
           parceiro_snapshot: Json | null
+          projeto_id: string | null
           scheduled_date: string
           status: string
           updated_at: string
@@ -7600,6 +7601,7 @@ export type Database = {
           notes?: string | null
           parceiro_id?: string | null
           parceiro_snapshot?: Json | null
+          projeto_id?: string | null
           scheduled_date: string
           status?: string
           updated_at?: string
@@ -7619,6 +7621,7 @@ export type Database = {
           notes?: string | null
           parceiro_id?: string | null
           parceiro_snapshot?: Json | null
+          projeto_id?: string | null
           scheduled_date?: string
           status?: string
           updated_at?: string
@@ -7695,6 +7698,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_wallet_crypto_balances"
             referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "planning_campanhas_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "planning_campanhas_wallet_id_fkey"
