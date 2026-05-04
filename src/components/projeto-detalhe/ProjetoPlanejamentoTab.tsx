@@ -127,10 +127,10 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
     return new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(v);
   };
 
-  const handleCopyProxy = (proxy: string) => {
-    navigator.clipboard.writeText(proxy);
-    toast.success("Proxy copiado!");
-  };
+   const handleCopyProxy = (proxy: string) => {
+     navigator.clipboard.writeText(proxy);
+     toast.success("Proxy copiado para a área de transferência!");
+   };
 
   const handleToggleStatus = async (camp: PlanningCampanha) => {
     try {
@@ -293,10 +293,10 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
                                       )}
                                     </span>
                                   </div>
-                                  <div className="flex items-center gap-1.5 font-medium text-foreground">
-                                    <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
-                                    {displayValue}
-                                  </div>
+                                   <div className="flex items-center gap-1.5 font-medium text-foreground" title={camp.deposit_amount === 0 ? "Valor sugerido pela célula" : "Valor depositado"}>
+                                     <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
+                                     {displayValue}
+                                   </div>
                                 </div>
                               </div>
                             </div>
