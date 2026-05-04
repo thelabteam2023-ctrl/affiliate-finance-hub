@@ -1977,6 +1977,10 @@ return (
       onSubTabChange={setApostasSubTab}
       openContent={renderApostasContent()}
       historyContent={renderApostasContent()}
+      searchQuery={searchTerm}
+      onSearchChange={setSearchTerm}
+      sortOrder={tabFilters.sortOrder}
+      onSortOrderToggle={tabFilters.toggleSortOrder}
       className="flex-1 h-full min-h-0 history-module-container"
       headerActions={
         <div className="flex items-center gap-2">
