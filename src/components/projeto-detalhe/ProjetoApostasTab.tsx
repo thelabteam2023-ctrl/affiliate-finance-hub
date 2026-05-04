@@ -1320,7 +1320,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     });
   }, [sortedDates]);
 
-  const scrollToToday = () => {
+  const scrollToToday = useCallback(() => {
     const todayStr = format(new Date(), "yyyy-MM-dd");
     const element = document.getElementById(`history-date-group-${todayStr}`);
     const scrollArea = document.querySelector('.history-module-container [data-radix-scroll-area-viewport]');
@@ -1342,7 +1342,14 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         }
       }
     }
-  };
+  }, [sortedDates]);
+
+  useEffect(() => {
+    if (!loading && apostasUnificadas.length > 0) {
+      const timer = setTimeout(scrollToToday, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, apostasSubTab, viewMode, scrollToToday, apostasUnificadas.length]);
 
   // Contadores por contexto
   const contadores = useMemo(() => {
