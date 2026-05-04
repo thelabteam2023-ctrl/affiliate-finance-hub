@@ -1543,150 +1543,79 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     );
   }
 
-  return (
-    <div className="space-y-4">
-      {/* Filtro de período + Actions na mesma linha */}
-      <div className="flex items-center gap-3">
-        <div className="flex-1">
-          <StandardTimeFilter
-            period={tabFilters.period}
-            onPeriodChange={tabFilters.setPeriod}
-            customDateRange={tabFilters.customDateRange}
-            onCustomDateRangeChange={tabFilters.setCustomDateRange}
-            projetoId={projetoId}
-          />
-        </div>
-        {actionsSlot && <div className="shrink-0">{actionsSlot}</div>}
-      </div>
+  const renderApostasContent = () => {
+    if (apostasUnificadas.length === 0) return null;
 
-      {/* Card de Histórico com Filtros */}
-      <Card>
-        <CardHeader className="pb-3">
-          {/* Sub-abas Abertas / Histórico - usando componente padronizado */}
-          <div className="mb-3">
-            <OperationsSubTabHeader
-              subTab={apostasSubTab}
-              onSubTabChange={setApostasSubTab}
-              openCount={apostasAbertasList.length}
-              totalOpenCount={totalAbertasRaw}
-              historyCount={apostasHistoricoList.length}
-              totalHistoryCount={totalHistoricoRaw}
-              viewMode={viewMode}
-              onViewModeChange={(mode) => setViewMode(mode)}
-              showViewToggle={true}
-              searchQuery={searchTerm}
-              onSearchChange={setSearchTerm}
-              sortOrder={tabFilters.sortOrder}
-              onSortOrderToggle={tabFilters.toggleSortOrder}
-              extraActions={
-                <ExportMenu
-                  getData={() => apostasUnificadas.map(u => {
-                    if (u.tipo === "surebet") {
-                      const s = u.data as Surebet;
-                      return transformSurebetToExport({
-                        id: s.id,
-                        data_operacao: s.data_operacao,
-                        evento: s.evento,
-                        mercado: undefined,
-                        modelo: s.modelo,
-                        stake_total: s.stake_total,
-                        spread_calculado: s.spread_calculado,
-                        resultado: s.resultado,
-                        status: s.status,
-                        lucro_real: s.lucro_prejuizo,
-                        observacoes: s.observacoes,
-                        moeda_operacao: (s as any).moeda_operacao,
-                        pernas: s.pernas?.map(p => ({
-                          bookmaker_nome: p.bookmaker?.nome,
-                          selecao: p.selecao,
-                          odd: p.odd,
-                          stake: p.stake,
-                          moeda: p.moeda,
-                        })),
-                      }, s.estrategia || "SUREBET", convertToConsolidation);
-                    }
-                    const a = u.data as Aposta | ApostaMultipla;
-                    return transformApostaToExport({
-                      id: a.id,
-                      data_aposta: a.data_aposta,
-                      evento: 'evento' in a ? a.evento : '',
-                      mercado: 'mercado' in a ? a.mercado : null,
-                      selecao: 'selecao' in a ? a.selecao : '',
-                      odd: 'odd' in a ? a.odd : ('odd_final' in a ? a.odd_final : 0),
-                      stake: a.stake,
-                      resultado: a.resultado,
-                      status: a.status,
-                      lucro_prejuizo: a.lucro_prejuizo,
-                      observacoes: a.observacoes,
-                      bookmaker_nome: a.bookmaker?.nome,
-                      estrategia: 'estrategia' in a ? a.estrategia : null,
-                      moeda_operacao: (a as any).moeda_operacao,
-                    }, "Apostas", convertToConsolidation);
-                  })}
-                  abaOrigem="Apostas"
-                  filename={`apostas-${projetoId}-${format(new Date(), 'yyyy-MM-dd')}`}
-                  filtrosAplicados={{
-                    periodo: tabFilters.period,
-                    dataInicio: dateRange?.start.toISOString(),
-                    dataFim: dateRange?.end.toISOString(),
-                  }}
-                />
-              }
-            />
-          </div>
-          
-          {/* Título do Card */}
-          <CardTitle className="text-base font-medium flex items-center gap-2">
-            <History className="h-4 w-4" />
-            {apostasSubTab === "abertas" ? "Operações Abertas" : "Histórico de Operações"}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0 space-y-3">
-          {/* Filtros LOCAIS da aba Apostas (isolados de outras abas) */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <TabFiltersBar
-              projetoId={projetoId}
-              filters={tabFilters}
-              showPeriodFilter={false}
-              showEstrategiaFilter={true}
-              showResultadoFilter={true}
-              className="flex-1"
-            />
-            <SuspiciousDateFilterButton
-              active={suspiciousActive}
-              onToggle={setSuspiciousActive}
-              count={suspiciousCount}
-            />
-          </div>
-        </CardContent>
-      </Card>
+    if (viewMode === "list") {
+      return (
+        <div className="space-y-8 max-w-5xl mx-auto py-4 relative min-h-full">
+          {/* Navegação Flutuante Lateral (Padrão Planejamento) */}
+          <div className="sticky top-1/2 -translate-y-1/2 z-50 h-0 w-0">
+            <div className="flex flex-col gap-2 absolute left-1 md:left-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="rounded-full shadow-lg border border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/15 hover:border-white/20 transition-all h-10 w-10 text-white"
+                      onClick={(e) => { e.stopPropagation(); navigateDayByDay('up'); }}
+                    >
+                      <ChevronUp className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">Subir um dia</TooltipContent>
+                </Tooltip>
 
-      {/* Lista de Apostas - Layout padronizado igual Surebet/Bônus */}
-      {apostasUnificadas.length === 0 ? (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-10">
-              <Target className="mx-auto h-12 w-12 text-muted-foreground/50" />
-              <h3 className="mt-4 text-lg font-semibold">
-                {apostasSubTab === "abertas" ? "Nenhuma aposta aberta" : "Nenhuma aposta no histórico"}
-              </h3>
-              <p className="text-muted-foreground">
-                {tabFilters.activeFiltersCount > 0 || resultadoFilter !== "all" || contextoFilter !== "all"
-                  ? "Tente ajustar os filtros"
-                  : apostasSubTab === "abertas" 
-                    ? "Registre uma nova aposta" 
-                    : "Apostas finalizadas aparecerão aqui"}
-              </p>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="rounded-full shadow-xl border border-white/20 bg-white/10 backdrop-blur-md hover:bg-white/20 transition-all h-12 w-12 text-white hover:scale-105 active:scale-95"
+                      onClick={(e) => { e.stopPropagation(); scrollToToday(); }}
+                    >
+                      <Target className="h-6 w-6" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">Ir para Hoje</TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="rounded-full shadow-lg border border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/15 hover:border-white/20 transition-all h-10 w-10 text-white"
+                      onClick={(e) => { e.stopPropagation(); navigateDayByDay('down'); }}
+                    >
+                      <ChevronDown className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">Descer um dia</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className={cn(
-          viewMode === "cards" 
-            ? "grid gap-5 md:grid-cols-2 xl:grid-cols-3" 
-            : "space-y-2"
-        )}>
-          {apostasUnificadas.map((item) => {
+          </div>
+
+          {sortedDates.map((dateStr) => {
+            const items = groupedByDay[dateStr];
+            const dateObj = parseISO(dateStr);
+            const isDateToday = isToday(dateObj);
+
+            return (
+              <div key={dateStr} id={`history-date-group-${dateStr}`} className="relative pl-8 md:pl-0 scroll-mt-4">
+                <div className="absolute left-[15px] md:left-[108px] top-0 bottom-0 w-px bg-border hidden sm:block" />
+                <div className="flex flex-col md:flex-row gap-4 md:gap-8">
+                  <div className="md:w-20 shrink-0 md:text-right pt-1 sticky top-0 bg-background z-10 py-2 md:py-0">
+                    <div className={cn("flex flex-row md:flex-col items-center md:items-end gap-2", isDateToday ? "text-primary" : "text-muted-foreground")}>
+                      <span className="text-xs uppercase font-bold tracking-wider">{format(dateObj, "EEE", { locale: ptBR })}</span>
+                      <span className={cn("text-2xl font-black leading-none", isDateToday && "text-primary scale-110")}>{format(dateObj, "dd")}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex-1 grid gap-3 pb-4">
+                    {items.map((item) => {
             // ===== SUREBET =====
             if (item.tipo === "surebet") {
               const sb = item.data as Surebet;
