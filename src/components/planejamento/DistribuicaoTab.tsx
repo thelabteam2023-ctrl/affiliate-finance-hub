@@ -249,7 +249,15 @@ export default function DistribuicaoTab({ onPlanoCriado }: DistribuicaoTabProps)
     });
   };
 
-
+  const confirmarVinculoProjeto = () => {
+    if (!confirmacaoVinculo) return;
+    updatePlano.mutate({
+      id: confirmacaoVinculo.planoId,
+      projeto_id: confirmacaoVinculo.projetoId
+    }, {
+      onSuccess: () => setConfirmacaoVinculo(null)
+    });
+  };
 
   const selectedGenericosCount = useMemo(
     () => selectedPerfilIds.filter((id) => !perfis.find((p) => p.id === id)?.parceiro_id).length,
