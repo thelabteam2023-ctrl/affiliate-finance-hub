@@ -16,7 +16,8 @@
     ChevronUp,
     ChevronLeft,
     ChevronRight,
-    Copy
+    Copy,
+    Target
   } from "lucide-react";
  import { Card } from "@/components/ui/card";
  import { Input } from "@/components/ui/input";
@@ -81,9 +82,28 @@ import { toast } from "sonner";
   const updateCampanha = useUpsertCampanha();
    const logoMap = useBookmakerLogoMap();
  
-   const [editingCampanha, setEditingCampanha] = useState<PlanningCampanha | null>(null);
-   const [isDialogOpen, setIsDialogOpen] = useState(false);
- 
+    const [editingCampanha, setEditingCampanha] = useState<PlanningCampanha | null>(null);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+    const scrollManual = (direction: 'up' | 'down') => {
+      const scrollArea = document.querySelector('.planning-list-scroll-main');
+      if (scrollArea) {
+        const amount = direction === 'up' ? -300 : 300;
+        scrollArea.scrollBy({ top: amount, behavior: 'smooth' });
+      }
+    };
+
+    const scrollToToday = () => {
+      const todayStr = format(new Date(), "yyyy-MM-dd");
+      const element = document.getElementById(`date-group-main-${todayStr}`);
+      const scrollArea = document.querySelector('.planning-list-scroll-main');
+      if (element && scrollArea) {
+        const containerRect = scrollArea.getBoundingClientRect();
+        const elementRect = element.getBoundingClientRect();
+        const relativeTop = elementRect.top - containerRect.top + scrollArea.scrollTop;
+        scrollArea.scrollTo({ top: relativeTop - 16, behavior: 'smooth' });
+      }
+    };
     const resolveCampanhaData = (c: PlanningCampanha) => {
       const celula = celulasAgendadas.find(cel => cel.campanha_id === c.id);
       
