@@ -520,6 +520,7 @@ export function CaixaTransacaoDialog({
      setDescricao("");
      setDataTransacao("");
      setTags([]);
+     setTags([]);
      
      // Resetar estados de alertas/taxas
      setTaxaBancariaInfo(null);
