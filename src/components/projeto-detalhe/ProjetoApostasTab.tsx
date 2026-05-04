@@ -1247,6 +1247,85 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     });
   }, [allUnifiedListaAtual, searchTerm, suspiciousActive]);
 
+  // Agrupamento por dia (Padrão Planejamento)
+  const groupedByDay = useMemo(() => {
+    const groups: Record<string, ApostaUnificada[]> = {};
+    apostasUnificadas.forEach(item => {
+      const dateStr = item.data_aposta.split('T')[0];
+      if (!groups[dateStr]) groups[dateStr] = [];
+      groups[dateStr].push(item);
+    });
+    return groups;
+  }, [apostasUnificadas]);
+
+  const sortedDates = useMemo(() => {
+    // No histórico mantemos a ordem decrescente (mais recente primeiro)
+    return Object.keys(groupedByDay).sort((a, b) => b.localeCompare(a));
+  }, [groupedByDay]);
+
+  // Navegação dia a dia via botões flutuantes (Padrão Planejamento)
+  const navigateDayByDay = (direction: 'up' | 'down') => {
+    const scrollArea = document.querySelector('.history-module-container [data-radix-scroll-area-viewport]');
+    if (!scrollArea || sortedDates.length === 0) return;
+
+    const containerRect = scrollArea.getBoundingClientRect();
+    const currentScrollTop = scrollArea.scrollTop;
+    
+    const groups = sortedDates.map(date => {
+      const el = document.getElementById(`history-date-group-${date}`);
+      if (!el) return null;
+      const rect = el.getBoundingClientRect();
+      const relativeTop = rect.top - containerRect.top + currentScrollTop;
+      return { date, relativeTop, height: rect.height };
+    }).filter(Boolean) as { date: string, relativeTop: number, height: number }[];
+
+    if (groups.length === 0) return;
+
+    let currentIndex = groups.findIndex(g => g.relativeTop >= currentScrollTop - 20);
+    if (currentIndex === -1) currentIndex = groups.length - 1;
+
+    let targetIndex;
+    if (direction === 'down') {
+      if (Math.abs(groups[currentIndex].relativeTop - currentScrollTop) < 5) {
+        targetIndex = Math.min(currentIndex + 1, groups.length - 1);
+      } else {
+        targetIndex = currentIndex;
+      }
+    } else {
+      targetIndex = Math.max(currentIndex - 1, 0);
+    }
+
+    const targetGroup = groups[targetIndex];
+    scrollArea.scrollTo({ 
+      top: targetGroup.relativeTop - 16, 
+      behavior: 'smooth' 
+    });
+  };
+
+  const scrollToToday = () => {
+    const todayStr = format(new Date(), "yyyy-MM-dd");
+    const element = document.getElementById(`history-date-group-${todayStr}`);
+    const scrollArea = document.querySelector('.history-module-container [data-radix-scroll-area-viewport]');
+    
+    if (element && scrollArea) {
+      const containerRect = scrollArea.getBoundingClientRect();
+      const elementRect = element.getBoundingClientRect();
+      const relativeTop = elementRect.top - containerRect.top + scrollArea.scrollTop;
+      scrollArea.scrollTo({ top: relativeTop - 16, behavior: 'smooth' });
+    } else if (!element) {
+      const nextAvailable = sortedDates.find(date => date <= todayStr);
+      if (nextAvailable && scrollArea) {
+        const nextEl = document.getElementById(`history-date-group-${nextAvailable}`);
+        if (nextEl) {
+          const containerRect = scrollArea.getBoundingClientRect();
+          const elementRect = nextEl.getBoundingClientRect();
+          const relativeTop = elementRect.top - containerRect.top + scrollArea.scrollTop;
+          scrollArea.scrollTo({ top: relativeTop - 16, behavior: 'smooth' });
+        }
+      }
+    }
+  };
+
   // Contadores por contexto
   const contadores = useMemo(() => {
     const all: ApostaUnificada[] = [];
