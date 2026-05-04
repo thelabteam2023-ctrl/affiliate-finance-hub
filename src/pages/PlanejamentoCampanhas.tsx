@@ -6,10 +6,14 @@ import { useTopBar } from "@/contexts/TopBarContext";
  import { PlanejamentoCalendario } from "@/components/planejamento/PlanejamentoCalendario";
  import { PlanejamentoList } from "@/components/planejamento/PlanejamentoList";
 import { CalendarioSimulado } from "@/components/planejamento/CalendarioSimulado";
+import { usePlanningRealtimeSync } from "@/hooks/usePlanningRealtimeSync";
 
 export default function PlanejamentoCampanhas() {
   const { setContent: setTopBarContent } = useTopBar();
    const [tab, setTab] = useState<"real" | "lista" | "simulado">("real");
+
+  // Ativa a sincronização em tempo real para o planejamento
+  usePlanningRealtimeSync();
 
   useEffect(() => {
     setTopBarContent(
