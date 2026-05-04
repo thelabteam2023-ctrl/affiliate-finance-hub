@@ -1,5 +1,6 @@
-import { useState, useEffect, forwardRef, useImperativeHandle, useRef } from "react";
+import { useState, useEffect, forwardRef, useImperativeHandle, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import {
   Select,
   SelectContent,
@@ -73,6 +74,7 @@ export interface ParceiroSelectRef {
   const [searchTerm, setSearchTerm] = useState("");
   const [displayName, setDisplayName] = useState<string>("");
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const { workspaceId } = useWorkspace();
 
   // Expose focus and open methods via ref
   useImperativeHandle(ref, () => ({
@@ -89,12 +91,14 @@ export interface ParceiroSelectRef {
     // Buscar lista de parceiros ativos
     useEffect(() => {
       const fetchParceiros = async () => {
+        if (!workspaceId) return;
         setLoading(true);
         try {
           // 1. Buscar parceiros ativos
           let query = supabase
             .from("parceiros")
             .select("id, nome, cpf, status")
+            .eq("workspace_id", workspaceId)
             .eq("status", "ativo")
             .neq("is_caixa_operacional", true)
             .order("nome", { ascending: true });
@@ -125,7 +129,7 @@ export interface ParceiroSelectRef {
       };
 
       fetchParceiros();
-    }, [includeParceiroId]);
+    }, [includeParceiroId, workspaceId]);
 
     // Quando value muda, buscar o nome para exibição
     useEffect(() => {
