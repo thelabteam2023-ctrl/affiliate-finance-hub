@@ -43,8 +43,10 @@
   perfilDisplayName,
   usePlanningIps,
    planningPerfilCpfIndex,
-   useProjetos
+   useProjetos,
+   PlanningPerfil
  } from "@/hooks/usePlanningData";
+ import { useCelulasAgendadasPorCampanhas } from "@/hooks/usePlanoCelulasDisponiveis";
  import { format, parseISO, isPast, isToday, startOfDay } from "date-fns";
  import { ptBR } from "date-fns/locale";
  import { cn } from "@/lib/utils";
@@ -62,7 +64,9 @@
    
    // Para fins de simplificação, estamos buscando o mês atual. 
    // Em um cenário real, poderíamos ter um seletor de mês/ano mais robusto.
-   const { data: campanhas = [], isLoading } = usePlanningCampanhas(selectedYear, selectedMonth);
+    const { data: campanhas = [], isLoading: campanhasLoading } = usePlanningCampanhas(selectedYear, selectedMonth);
+    const campanhaIds = useMemo(() => campanhas.map(c => c.id), [campanhas]);
+    const { data: celulasAgendadas = [], isLoading: celulasLoading } = useCelulasAgendadasPorCampanhas(campanhaIds);
    const { data: perfis = [] } = usePlanningPerfis();
    const { data: ips = [] } = usePlanningIps();
    const { data: projetos = [] } = useProjetos();
@@ -71,17 +75,40 @@
    const [editingCampanha, setEditingCampanha] = useState<PlanningCampanha | null>(null);
    const [isDialogOpen, setIsDialogOpen] = useState(false);
  
-   const isCampanhaPending = (c: PlanningCampanha) => {
-     return !c.parceiro_id || !c.ip_id || !c.wallet_id || Number(c.deposit_amount) <= 0;
-   };
- 
-   const getStatus = (c: PlanningCampanha) => {
+    const resolveCampanhaData = (c: PlanningCampanha) => {
+      const celula = celulasAgendadas.find(cel => cel.campanha_id === c.id);
+      
+      const perfil = perfis.find(p => 
+        (c.parceiro_id && p.parceiro_id === c.parceiro_id) || 
+        (celula?.perfil_planejamento_id && p.id === celula.perfil_planejamento_id) ||
+        (celula?.parceiro_id && p.parceiro_id === celula.parceiro_id)
+      );
+
+      const parceiroId = c.parceiro_id || perfil?.parceiro_id || celula?.parceiro_id;
+      const perfilId = perfil?.id || celula?.perfil_planejamento_id;
+      const bookmakerCatalogoId = c.bookmaker_catalogo_id || celula?.bookmaker_catalogo_id;
+
+      // Simplificação do resolveScopedIpId do calendário
+      const linkedIp = ips.find(i => i.id === c.ip_id) || 
+                      (perfilId && bookmakerCatalogoId ? ips.find(i => i.perfil_planejamento_id === perfilId && i.bookmaker_catalogo_id === bookmakerCatalogoId) : null) ||
+                      (parceiroId && bookmakerCatalogoId ? ips.find(i => {
+                        const ipPerfil = perfis.find(p => p.id === i.perfil_planejamento_id);
+                        return ipPerfil?.parceiro_id === parceiroId && i.bookmaker_catalogo_id === bookmakerCatalogoId;
+                      }) : null) ||
+                      (bookmakerCatalogoId ? ips.find(i => i.bookmaker_catalogo_id === bookmakerCatalogoId && !i.perfil_planejamento_id) : null);
+
+      const isPending = !parceiroId && !perfilId || !linkedIp || !c.wallet_id || Number(c.deposit_amount) <= 0;
+      
+      return { perfil, linkedIp, isPending, parceiroId, celula };
+    };
+
+    const getStatus = (c: PlanningCampanha, isPending: boolean) => {
      if (c.is_account_created) return "concluido";
      
      const campDate = startOfDay(parseISO(c.scheduled_date));
      const today = startOfDay(new Date());
      
-     if (isCampanhaPending(c)) {
+      if (isPending) {
        if (campDate < today) return "atrasado";
        return "pendente";
      }
@@ -97,7 +124,8 @@
         (c.parceiro_snapshot?.nome || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
         (c.notes || "").toLowerCase().includes(searchTerm.toLowerCase());
       
-      const status = getStatus(c);
+       const { isPending } = resolveCampanhaData(c);
+       const status = getStatus(c, isPending);
       const matchesStatus = statusFilter === "all" || status === statusFilter;
       
        return matchesSearch && matchesStatus && matchesProjeto;
@@ -121,7 +149,7 @@
      return new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(v);
    };
  
-   if (isLoading) {
+    if (campanhasLoading || celulasLoading) {
      return <div className="p-8 text-center text-muted-foreground">Carregando histórico...</div>;
    }
  
@@ -252,13 +280,12 @@
 
                     {/* Lista de Campanhas do Dia */}
                     <div className="flex-1 grid gap-3 pb-4">
-                      {camps.map((camp) => {
-                        const status = getStatus(camp);
-                        const perfil = perfis.find(p => p.parceiro_id === camp.parceiro_id);
-                        const displayName = camp.parceiro_snapshot?.nome || (perfil ? perfilDisplayName(perfil) : "Sem parceiro");
-                        const cpfIndex = perfil ? planningPerfilCpfIndex(perfis, perfil.id) : null;
-                        const linkedIp = ips.find(i => i.id === camp.ip_id);
-                        
+                     {camps.map((camp) => {
+                        const { perfil, linkedIp, isPending, parceiroId, celula } = resolveCampanhaData(camp);
+                        const status = getStatus(camp, isPending);
+                        const displayName = camp.parceiro_snapshot?.nome || 
+                                          (perfil ? perfilDisplayName(perfil) : "Sem parceiro");
+                        const cpfIndex = perfil ? planningPerfilCpfIndex(perfis, perfil.id) : (celula as any)?.cpf_index || null;
                         return (
                           <Card
                             key={camp.id}
@@ -302,7 +329,18 @@
                                       <User className="h-3.5 w-3.5" />
                                       <span className="truncate">
                                         {displayName}
-                                        {cpfIndex && <span className="ml-1.5 text-[10px] font-bold text-primary bg-primary/10 px-1 rounded">CPF {cpfIndex}</span>}
+                                         {cpfIndex && (
+                                           <span 
+                                             className="ml-1.5 text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm border"
+                                             style={{
+                                               backgroundColor: perfil?.cor ? `${perfil.cor}26` : 'hsl(var(--primary)/0.1)',
+                                               borderColor: perfil?.cor || 'hsl(var(--primary))',
+                                               color: perfil?.cor || 'hsl(var(--primary))'
+                                             }}
+                                           >
+                                             CPF {cpfIndex}
+                                           </span>
+                                         )}
                                       </span>
                                     </div>
                                     <div className="flex items-center gap-1.5 font-medium text-foreground">
@@ -360,17 +398,17 @@
                             </div>
 
                             {/* Indicadores de Status */}
-                            <div className="absolute top-0 right-0 p-1 flex gap-1">
-                              {status === "concluido" && (
-                                <div className="h-2.5 w-2.5 rounded-full bg-[#00FF66] shadow-[0_0_12px_4px_rgba(0,255,102,0.6)] animate-pulse" title="Concluído" />
-                              )}
-                              {status === "atrasado" && (
-                                <div className="h-2.5 w-2.5 rounded-full bg-destructive shadow-[0_0_12px_4px_rgba(239,68,68,0.6)] animate-pulse" title="Atrasado" />
-                              )}
-                              {status === "pendente" && (
-                                <div className="h-2.5 w-2.5 rounded-full bg-[#FFD700] shadow-[0_0_12px_4px_rgba(255,215,0,0.6)] animate-pulse" title="Pendente" />
-                              )}
-                            </div>
+                             <div className="absolute top-0 right-0 p-1.5 flex gap-1.5">
+                               {status === "concluido" && (
+                                 <div className="h-3 w-3 rounded-full bg-[#00FF66] shadow-[0_0_15px_6px_rgba(0,255,102,0.8)] animate-pulse" title="Concluído" />
+                               )}
+                               {status === "atrasado" && (
+                                 <div className="h-3 w-3 rounded-full bg-destructive shadow-[0_0_15px_6px_rgba(239,68,68,0.8)] animate-pulse" title="Atrasado" />
+                               )}
+                               {status === "pendente" && (
+                                 <div className="h-3 w-3 rounded-full bg-[#FFD700] shadow-[0_0_15px_6px_rgba(255,215,0,0.8)] animate-pulse" title="Pendente" />
+                               )}
+                             </div>
                           </Card>
                         );
                       })}
