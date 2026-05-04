@@ -1259,40 +1259,58 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
   }, [apostasUnificadas]);
 
   const sortedDates = useMemo(() => {
-    // No histórico mantemos a ordem decrescente (mais recente primeiro)
-    return Object.keys(groupedByDay).sort((a, b) => b.localeCompare(a));
-  }, [groupedByDay]);
+    // Se for abertas, ordem crescente (jogo mais próximo primeiro)
+    // Se for histórico, ordem decrescente (mais recente primeiro)
+    return Object.keys(groupedByDay).sort((a, b) => {
+      if (apostasSubTab === "abertas") {
+        return a.localeCompare(b);
+      }
+      return b.localeCompare(a);
+    });
+  }, [groupedByDay, apostasSubTab]);
 
-  // Navegação dia a dia via botões flutuantes (Padrão Planejamento)
-  const navigateDayByDay = (direction: 'up' | 'down') => {
+  // Navegação inteligente via botões flutuantes
+  const navigateDayByDay = useCallback((direction: 'up' | 'down') => {
     const scrollArea = document.querySelector('.history-module-container [data-radix-scroll-area-viewport]');
     if (!scrollArea || sortedDates.length === 0) return;
 
     const containerRect = scrollArea.getBoundingClientRect();
     const currentScrollTop = scrollArea.scrollTop;
-    
+    const THRESHOLD = 30; // Margem para considerar que um grupo está no topo
+
+    // Mapear posição de todos os grupos
     const groups = sortedDates.map(date => {
       const el = document.getElementById(`history-date-group-${date}`);
       if (!el) return null;
       const rect = el.getBoundingClientRect();
       const relativeTop = rect.top - containerRect.top + currentScrollTop;
-      return { date, relativeTop, height: rect.height };
-    }).filter(Boolean) as { date: string, relativeTop: number, height: number }[];
+      return { date, relativeTop };
+    }).filter(Boolean) as { date: string, relativeTop: number }[];
 
     if (groups.length === 0) return;
 
-    let currentIndex = groups.findIndex(g => g.relativeTop >= currentScrollTop - 20);
+    // Encontrar o índice do grupo que está ATUALMENTE no topo da visão
+    // É o grupo cuja base está abaixo do topo e topo está acima ou próximo ao topo
+    let currentIndex = groups.findIndex(g => g.relativeTop >= currentScrollTop - THRESHOLD);
     if (currentIndex === -1) currentIndex = groups.length - 1;
 
     let targetIndex;
     if (direction === 'down') {
-      if (Math.abs(groups[currentIndex].relativeTop - currentScrollTop) < 5) {
+      // Se já estamos no topo desse grupo, vamos para o próximo
+      if (Math.abs(groups[currentIndex].relativeTop - currentScrollTop) < THRESHOLD) {
         targetIndex = Math.min(currentIndex + 1, groups.length - 1);
       } else {
+        // Se não estamos alinhados, o "descer" alinha o atual no topo primeiro
         targetIndex = currentIndex;
       }
     } else {
-      targetIndex = Math.max(currentIndex - 1, 0);
+      // Para subir: se estamos alinhados com o atual, vamos para o anterior
+      if (Math.abs(groups[currentIndex].relativeTop - currentScrollTop) < THRESHOLD) {
+        targetIndex = Math.max(currentIndex - 1, 0);
+      } else {
+        // Se estamos no meio de um grupo, o "subir" alinha o topo dele
+        targetIndex = currentIndex;
+      }
     }
 
     const targetGroup = groups[targetIndex];
@@ -1300,7 +1318,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       top: targetGroup.relativeTop - 16, 
       behavior: 'smooth' 
     });
-  };
+  }, [sortedDates]);
 
   const scrollToToday = () => {
     const todayStr = format(new Date(), "yyyy-MM-dd");
