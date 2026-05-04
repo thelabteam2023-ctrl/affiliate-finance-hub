@@ -36,6 +36,7 @@ interface SaldoContaParceiro {
   banco: string;
   moeda: string;
   saldo: number;
+  parceiro_status?: string;
 }
 
 interface SaldoWalletParceiro {
@@ -413,7 +414,7 @@ export function SaldosParceirosSheet() {
  
        const { data: allParceiros } = await supabase
          .from("parceiros")
-         .select("id, nome, is_caixa_operacional");
+         .select("id, nome, is_caixa_operacional, status");
  
        const parceiroInfoMap = new Map<string, any>();
        if (allParceiros) {
@@ -422,10 +423,16 @@ export function SaldosParceirosSheet() {
 
       // Process FIAT accounts (multi-currency)
       (saldosContas as SaldoContaParceiro[] || []).forEach((conta) => {
-        if (!conta.parceiro_id || conta.saldo === 0) return;
+        if (!conta.parceiro_id) return;
+        
         const pInfo = parceiroInfoMap.get(conta.parceiro_id);
+        // FILTRO CRÍTICO: Não mostrar parceiros inativos ou o próprio Caixa Operacional na lista de saldos de parceiros
+        if (pInfo && (pInfo.status === 'inativo' || pInfo.is_caixa_operacional)) return;
+        
+        // Se não tem saldo, não incluir na visualização
+        if (conta.saldo === 0) return;
 
-         const parceiro = getOrCreateParceiro(conta.parceiro_id, conta.parceiro_nome);
+        const parceiro = getOrCreateParceiro(conta.parceiro_id, conta.parceiro_nome);
         const moeda = conta.moeda || "BRL";
         
         const saldoClamped = Math.max(0, conta.saldo);
@@ -441,10 +448,14 @@ export function SaldosParceirosSheet() {
 
       // Process crypto wallets (com saldo travado)
       (saldosWallets as SaldoWalletParceiro[] || []).forEach((wallet) => {
-        if (!wallet.parceiro_id || wallet.saldo_coin === 0) return;
+        if (!wallet.parceiro_id) return;
+        
         const pInfo = parceiroInfoMap.get(wallet.parceiro_id);
+        if (pInfo && (pInfo.status === 'inativo' || pInfo.is_caixa_operacional)) return;
+        
+        if (wallet.saldo_coin === 0) return;
 
-         const parceiro = getOrCreateParceiro(wallet.parceiro_id, wallet.parceiro_nome);
+        const parceiro = getOrCreateParceiro(wallet.parceiro_id, wallet.parceiro_nome);
         
         // Calcular USD com preço atual da Binance
         const currentPrice = prices[wallet.coin] || 0;
