@@ -48,6 +48,7 @@ import {
   Activity,
   CalendarDays,
   BarChart3,
+  CalendarRange,
   Crosshair,
 } from "lucide-react";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
