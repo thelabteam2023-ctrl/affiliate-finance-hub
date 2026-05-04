@@ -31,7 +31,7 @@ import {
   useUpsertCampanha
 } from "@/hooks/usePlanningData";
 import { useCelulasAgendadasPorCampanhas } from "@/hooks/usePlanoCelulasDisponiveis";
-import { format, parseISO, startOfDay } from "date-fns";
+import { format, parseISO, startOfDay, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
@@ -194,8 +194,10 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
       return (
         <div className="space-y-8 max-w-5xl mx-auto py-4">
           {sortedDates.map((dateStr) => {
+          {sortedDates.map((dateStr) => {
             const camps = groupedByDay[dateStr];
             const dateObj = parseISO(dateStr);
+            const isDateToday = isToday(dateObj);
 
             return (
               <div key={dateStr} className="relative pl-8 md:pl-0">
@@ -203,11 +205,17 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
 
                 <div className="flex flex-col md:flex-row gap-4 md:gap-8">
                   <div className="md:w-20 shrink-0 md:text-right pt-1 sticky top-0 bg-background z-10 py-2 md:py-0">
-                    <div className="flex flex-row md:flex-col items-center md:items-end gap-2 text-muted-foreground">
+                    <div className={cn(
+                      "flex flex-row md:flex-col items-center md:items-end gap-2",
+                      isDateToday ? "text-primary" : "text-muted-foreground"
+                    )}>
                       <span className="text-xs uppercase font-bold tracking-wider">
                         {format(dateObj, "EEE", { locale: ptBR })}
                       </span>
-                      <span className="text-2xl font-black leading-none">
+                      <span className={cn(
+                        "text-2xl font-black leading-none",
+                        isDateToday && "text-primary scale-110 transition-transform"
+                      )}>
                         {format(dateObj, "dd")}
                       </span>
                     </div>
