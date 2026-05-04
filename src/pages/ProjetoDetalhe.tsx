@@ -48,6 +48,7 @@ import {
   Activity,
   CalendarDays,
   BarChart3,
+  CalendarRange,
   Crosshair,
 } from "lucide-react";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
@@ -75,6 +76,7 @@ import { ProjetoBonusArea } from "@/components/projeto-detalhe/bonus";
 import { ProjetoCashbackTab } from "@/components/projeto-detalhe/ProjetoCashbackTab";
 import { SaldoOperavelCard } from "@/components/projeto-detalhe/SaldoOperavelCard";
 import { ProjetoGestaoTab } from "@/components/projeto-detalhe/ProjetoGestaoTab";
+import { ProjetoPlanejamentoTab } from "@/components/projeto-detalhe/ProjetoPlanejamentoTab";
 import { ShareLinkDialog } from "@/components/shared/ShareLinkDialog";
 
 import { ProjetoDialog } from "@/components/projetos/ProjetoDialog";
@@ -215,6 +217,7 @@ export default function ProjetoDetalhe() {
     const baseTabs: TabItem[] = [
       { value: "visao-geral", label: "Visão Geral", icon: <LayoutDashboard className="h-3.5 w-3.5 md:h-4 md:w-4" /> },
       { value: "apostas", label: "Todas Apostas", icon: <Target className="h-3.5 w-3.5 md:h-4 md:w-4" /> },
+      { value: "planejamento", label: "Planejamento", icon: <CalendarRange className="h-3.5 w-3.5 md:h-4 md:w-4" /> },
       { value: "vinculos", label: "Vínculos", icon: <Link2 className="h-3.5 w-3.5 md:h-4 md:w-4" /> },
     ];
 
@@ -264,7 +267,7 @@ export default function ProjetoDetalhe() {
   // Handle tab change with module activation prompt
   const handleTabChange = (tabValue: string) => {
     // Base tabs that are always available (don't need module activation)
-    const baseTabs = ["visao-geral", "apostas", "vinculos", "gestao", "modulos", "ciclos", "incidentes"];
+    const baseTabs = ["visao-geral", "apostas", "planejamento", "vinculos", "gestao", "modulos", "ciclos", "incidentes"];
     
     if (baseTabs.includes(tabValue)) {
       setActiveTab(tabValue);
@@ -304,6 +307,7 @@ export default function ProjetoDetalhe() {
     const tabLabels: Record<string, string> = {
       "visao-geral": "Visão Geral",
       "apostas": "Todas Apostas",
+      "planejamento": "Planejamento",
       "vinculos": "Vínculos",
       "promocoes": "Promoções",
       "bonus": "Bônus",
@@ -320,7 +324,7 @@ export default function ProjetoDetalhe() {
 
   // Check if a tab is valid (exists in dynamicTabs or tabGroups)
   const isValidTab = (tabKey: string): boolean => {
-    const baseTabs = ["visao-geral", "apostas", "vinculos", "modulos", "ciclos", "incidentes"];
+    const baseTabs = ["visao-geral", "apostas", "planejamento", "vinculos", "modulos", "ciclos", "incidentes"];
     if (baseTabs.includes(tabKey)) return true;
     
     // Check module tabs
@@ -1086,6 +1090,10 @@ export default function ProjetoDetalhe() {
 
           <TabsContent value="cashback" className="h-full m-0">
             <ProjetoCashbackTab projetoId={id!} />
+          </TabsContent>
+
+          <TabsContent value="planejamento" className="h-full m-0">
+            <ProjetoPlanejamentoTab projetoId={id!} refreshTrigger={refreshTrigger} />
           </TabsContent>
 
           <TabsContent value="vinculos" className="h-full m-0">
