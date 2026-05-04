@@ -45,6 +45,7 @@ import {
   useUpsertCampanha,
   PlanningPerfil
 } from "@/hooks/usePlanningData";
+import { usePlanningRealtimeSync } from "@/hooks/usePlanningRealtimeSync";
 import { useCelulasAgendadasPorCampanhas } from "@/hooks/usePlanoCelulasDisponiveis";
 import { format, parseISO, isToday, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -60,6 +61,9 @@ interface ProjetoPlanejamentoTabProps {
 }
 
 export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProps) {
+  // Ativa a sincronização em tempo real para o planejamento dentro do projeto
+  usePlanningRealtimeSync();
+
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [projetoFilter, setProjetoFilter] = useState<string>(projetoId);
