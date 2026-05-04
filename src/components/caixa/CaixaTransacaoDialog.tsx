@@ -1977,26 +1977,25 @@ export function CaixaTransacaoDialog({
     );
   };
 
-  const getParceirosDisponiveisDestino = () => {
-    // Retorna parceiros que possuem ao menos UMA conta/wallet disponível como destino.
-    // Regra: o mesmo parceiro de origem PODE ser destino, desde que possua outra
-    // conta/wallet diferente da origem (transferência entre contas do mesmo titular).
-    // Apenas o parceiro virtual do Caixa Operacional é sempre excluído.
-    const parceirosExcluidos = new Set<string>();
-    if (caixaParceiroId) parceirosExcluidos.add(caixaParceiroId);
-
-    if (tipoMoeda === "FIAT") {
-      return contasBancarias
-        .filter((c) => c.id !== origemContaId && !parceirosExcluidos.has(c.parceiro_id))
-        .map((c) => c.parceiro_id)
-        .filter((value, index, self) => self.indexOf(value) === index); // unique
-    } else {
-      return walletsCrypto
-        .filter((w) => isWalletCompatibleWithCoin(w, coin) && w.id !== origemWalletId && !parceirosExcluidos.has(w.parceiro_id))
-        .map((w) => w.parceiro_id)
-        .filter((value, index, self) => self.indexOf(value) === index); // unique
-    }
-  };
+   const getParceirosDisponiveisDestino = () => {
+     // Retorna parceiros que possuem ao menos UMA conta/wallet compatível.
+     // IMPORTANTE: Não filtramos por saldo aqui para permitir registros retroativos.
+     const parceirosExcluidos = new Set<string>();
+     if (caixaParceiroId) parceirosExcluidos.add(caixaParceiroId);
+ 
+     if (tipoMoeda === "FIAT") {
+       // Filtramos por moeda para garantir que o parceiro tenha uma conta no que foi selecionado
+       const ids = contasBancarias
+         .filter((c) => c.id !== origemContaId && !parceirosExcluidos.has(c.parceiro_id) && (!moeda || c.moeda === moeda))
+         .map((c) => c.parceiro_id);
+       return [...new Set(ids)];
+     } else {
+       const ids = walletsCrypto
+         .filter((w) => isWalletCompatibleWithCoin(w, coin) && w.id !== origemWalletId && !parceirosExcluidos.has(w.parceiro_id))
+         .map((w) => w.parceiro_id);
+       return [...new Set(ids)];
+     }
+   };
 
   const isOrigemCompleta = () => {
     if (tipoTransacao !== "TRANSFERENCIA" || fluxoTransferencia !== "PARCEIRO_PARCEIRO") {
@@ -3666,11 +3665,11 @@ export function CaixaTransacaoDialog({
             </>
           );
         } else {
-          // CRYPTO - Filtrar parceiros com saldo DISPONÍVEL no coin selecionado
-          const parceirosComSaldo = saldosParceirosWallets
-            .filter(s => s.coin === coin && (s.saldo_disponivel ?? s.saldo_usd) > 0)
-            .map(s => s.parceiro_id)
-            .filter((value, index, self) => self.indexOf(value) === index);
+           // CRYPTO - Filtrar parceiros que possuem wallet compatível
+           const parceirosComWallet = walletsCrypto
+             .filter(w => isWalletCompatibleWithCoin(w, coin))
+             .map(w => w.parceiro_id);
+           const uniqueParceiros = [...new Set(parceirosComWallet)];
 
           return (
             <>
@@ -3682,7 +3681,7 @@ export function CaixaTransacaoDialog({
                     setOrigemParceiroId(value);
                     setOrigemWalletId("");
                   }}
-                  onlyParceiros={parceirosComSaldo}
+                   onlyParceiros={uniqueParceiros}
                   showSaldo={true}
                   tipoMoeda="CRYPTO"
                   coin={coin}
