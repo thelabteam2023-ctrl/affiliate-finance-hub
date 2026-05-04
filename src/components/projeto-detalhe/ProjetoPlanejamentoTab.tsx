@@ -59,88 +59,26 @@ interface ProjetoPlanejamentoTabProps {
   refreshTrigger?: number;
 }
 
-export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: ProjetoPlanejamentoTabProps) {
-  // 1. Estados de Navegação e Filtros LOCAIS (Padrão OperationsHistoryModule)
-  const { subTab, setSubTab, viewMode, setViewMode } = useOperationsHistory({
-    storageKey: `planejamento-${projetoId}`,
-    initialSubTab: "abertas",
-    initialViewMode: "list"
-  });
-
-  const tabFilters = useTabFilters({
-    tabId: "planejamento",
-    projetoId,
-    defaultPeriod: "mes_atual",
-    persist: true
-  });
-
-  // 2. Fetch de Dados
-  // Pegamos o ano/mês do range de filtros para a query de campanhas
-  const selectedDate = tabFilters.dateRange?.start || new Date();
-  const selectedYear = selectedDate.getFullYear();
-  const selectedMonth = selectedDate.getMonth() + 1;
+export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProps) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [projetoFilter, setProjetoFilter] = useState<string>(projetoId);
+  const today = new Date();
+  const [selectedYear, setSelectedYear] = useState(today.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(today.getMonth() + 1);
 
   const { data: allCampanhas = [], isLoading: campanhasLoading } = usePlanningCampanhas(selectedYear, selectedMonth);
-  
-  // Filtrar apenas para este projeto
-  const campanhas = useMemo(() => 
-    allCampanhas.filter(c => c.projeto_id === projetoId), 
-    [allCampanhas, projetoId]
-  );
-
+  const campanhas = useMemo(() => allCampanhas, [allCampanhas]);
   const campanhaIds = useMemo(() => campanhas.map(c => c.id), [campanhas]);
   const { data: celulasAgendadas = [], isLoading: celulasLoading } = useCelulasAgendadasPorCampanhas(campanhaIds);
   const { data: perfis = [] } = usePlanningPerfis();
   const { data: ips = [] } = usePlanningIps();
+  const { data: projetos = [] } = useProjetos();
   const updateCampanha = useUpsertCampanha();
   const logoMap = useBookmakerLogoMap();
+
   const [editingCampanha, setEditingCampanha] = useState<PlanningCampanha | null>(null);
-   const [isDialogOpen, setIsDialogOpen] = useState(false);
- 
-    // Container para scroll manual via setas
-    const scrollManual = (direction: 'up' | 'down') => {
-      // Buscamos o viewport do Radix que está dentro do OperationsHistoryModule
-      const scrollArea = document.querySelector('.planning-module-container [data-radix-scroll-area-viewport]');
-      if (scrollArea) {
-        const amount = direction === 'up' ? -300 : 300;
-        scrollArea.scrollBy({ top: amount, behavior: 'smooth' });
-      }
-    };
-
-    // Ajuste no scrollToToday para buscar dentro do container correto
-    const scrollToToday = () => {
-      const todayStr = format(new Date(), "yyyy-MM-dd");
-      const element = document.getElementById(`date-group-${todayStr}`);
-      const scrollArea = document.querySelector('.planning-module-container [data-radix-scroll-area-viewport]');
-      
-      if (element && scrollArea) {
-        // Calculamos a posição relativa ao topo do viewport
-        const containerRect = scrollArea.getBoundingClientRect();
-        const elementRect = element.getBoundingClientRect();
-        const relativeTop = elementRect.top - containerRect.top + scrollArea.scrollTop;
-        
-        scrollArea.scrollTo({ top: relativeTop - 16, behavior: 'smooth' });
-      } else if (!element) {
-        const nextAvailable = sortedDates.find(date => date >= todayStr);
-        if (nextAvailable && scrollArea) {
-          const nextEl = document.getElementById(`date-group-${nextAvailable}`);
-          if (nextEl) {
-            const containerRect = scrollArea.getBoundingClientRect();
-            const elementRect = nextEl.getBoundingClientRect();
-            const relativeTop = elementRect.top - containerRect.top + scrollArea.scrollTop;
-            scrollArea.scrollTo({ top: relativeTop - 16, behavior: 'smooth' });
-          }
-        }
-      }
-    };
-
-    // Scroll automático inicial
-    useEffect(() => {
-      if (!campanhasLoading && !celulasLoading && filteredData.length > 0) {
-        const timer = setTimeout(scrollToToday, 500);
-        return () => clearTimeout(timer);
-      }
-    }, [campanhasLoading, celulasLoading, subTab, viewMode]);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   // 3. Helpers de Resolução (Lógica espelhada do PlanejamentoList)
   const resolveCampanhaData = (c: PlanningCampanha) => {
