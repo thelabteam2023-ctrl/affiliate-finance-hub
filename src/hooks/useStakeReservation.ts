@@ -38,6 +38,7 @@ interface UseStakeReservationOptions {
   workspaceId: string;
   formType: 'SIMPLES' | 'MULTIPLA' | 'SUREBET';
   enabled?: boolean;
+  apostaId?: string;
 }
 
 // Gera um ID único para a sessão do formulário
@@ -51,7 +52,8 @@ function generateSessionId(): string {
 export function useStakeReservation({
   workspaceId,
   formType,
-  enabled = true
+  enabled = true,
+  apostaId
 }: UseStakeReservationOptions) {
   const queryClient = useQueryClient();
   const [reserving, setReserving] = useState(false);
@@ -96,7 +98,7 @@ export function useStakeReservation({
         p_moeda: moeda,
         p_form_session_id: sessionId,
         p_form_type: formType,
-        p_aposta_id: apostaId
+        p_aposta_id: apostaId // Use the one from the hook options if not provided in call
       });
       
       if (error) {
