@@ -137,20 +137,26 @@
   };
 
   const filteredCampanhas = useMemo(() => {
-    return campanhas.filter(c => {
-       const matchesProjeto = projetoFilter === "all" || c.projeto_id === projetoFilter;
-      const matchesSearch = 
-        c.bookmaker_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (c.parceiro_snapshot?.nome || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (c.notes || "").toLowerCase().includes(searchTerm.toLowerCase());
-      
-       const { isPending } = resolveCampanhaData(c);
-       const status = getStatus(c, isPending);
-      const matchesStatus = statusFilter === "all" || status === statusFilter;
-      
-       return matchesSearch && matchesStatus && matchesProjeto;
-     }).sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));
-   }, [campanhas, searchTerm, statusFilter, projetoFilter]);
+    return campanhas
+      .filter((c) => {
+        const matchesProjeto = projetoFilter === "all" || c.projeto_id === projetoFilter;
+        const matchesSearch =
+          c.bookmaker_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (c.parceiro_snapshot?.nome || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (c.notes || "").toLowerCase().includes(searchTerm.toLowerCase());
+
+        const { isPending } = resolveCampanhaData(c);
+        const status = getStatus(c, isPending);
+        const matchesStatus = statusFilter === "all" || status === statusFilter;
+
+        return matchesSearch && matchesStatus && matchesProjeto;
+      })
+      .sort((a, b) => {
+        const dateCompare = a.scheduled_date.localeCompare(b.scheduled_date);
+        if (dateCompare !== 0) return dateCompare;
+        return (a.created_at || "").localeCompare(b.created_at || "");
+      });
+  }, [campanhas, searchTerm, statusFilter, projetoFilter, celulasAgendadas, perfis, ips]);
 
   const groupedByDay = useMemo(() => {
     const groups: Record<string, PlanningCampanha[]> = {};
@@ -178,8 +184,8 @@
        {/* Header com Filtros */}
         <div className="p-4 border-b flex flex-col lg:flex-row gap-4 items-start lg:items-end justify-between bg-card/50">
           <div className="flex flex-wrap items-end gap-3 w-full lg:w-auto">
-            <div className="flex flex-col gap-1.5 flex-1 min-w-[240px] lg:w-80 lg:flex-none">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Busca</span>
+            <div className="flex flex-col gap-1.5 flex-1 min-w-[200px] lg:w-80 lg:flex-none">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1 mb-1 lg:mb-0">Busca</span>
               <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -191,8 +197,8 @@
               </div>
             </div>
 
-            <div className="flex flex-col gap-1.5 w-[160px]">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Status</span>
+            <div className="flex flex-col gap-1.5 w-[140px] lg:w-[160px]">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1 mb-1 lg:mb-0">Status</span>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="h-9">
                   <Filter className="h-3.5 w-3.5 mr-2 shrink-0" />
@@ -208,8 +214,8 @@
               </Select>
             </div>
 
-            <div className="flex flex-col gap-1.5 w-[180px]">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Projeto</span>
+            <div className="flex flex-col gap-1.5 w-[160px] lg:w-[180px]">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1 mb-1 lg:mb-0">Projeto</span>
               <Select value={projetoFilter} onValueChange={setProjetoFilter}>
                 <SelectTrigger className="h-9">
                   <Building2 className="h-3.5 w-3.5 mr-2 shrink-0" />
@@ -316,9 +322,16 @@
                         
                         // A lógica de exibição deve priorizar os dados da célula agendada para garantir consistência com o calendário
                         const cpfIndex = (celula as any)?.cpf_index || (perfil ? planningPerfilCpfIndex(perfis, perfil.id) : null);
-                        const displayName = camp.parceiro_snapshot?.nome || 
-                                           (perfil ? perfilDisplayName(perfil) : 
-                                           (celula as any)?.parceiro_id ? "Carregando..." : "Sem parceiro");
+                         const displayName = (celula as any)?.parceiro_id 
+                                            ? (perfis.find(p => p.parceiro_id === (celula as any).parceiro_id)?.parceiro?.nome || "Carregando...")
+                                            : (camp.parceiro_snapshot?.nome || 
+                                               (perfil ? perfilDisplayName(perfil) : "Sem parceiro"));
+
+                         const displayValue = camp.deposit_amount > 0 
+                                            ? formatMoney(camp.deposit_amount, camp.currency)
+                                            : (celula as any)?.deposito_sugerido 
+                                              ? formatMoney((celula as any).deposito_sugerido, (celula as any).moeda || "BRL")
+                                              : "R$ 0,00";
 
                         return (
                           <Card
@@ -377,9 +390,9 @@
                                          )}
                                       </span>
                                     </div>
-                                    <div className="flex items-center gap-1.5 font-medium text-foreground">
+                                    <div className="flex items-center gap-1.5 font-medium text-foreground" title={camp.deposit_amount === 0 ? "Valor sugerido pela célula" : "Valor depositado"}>
                                       <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
-                                      {formatMoney(camp.deposit_amount, camp.currency)}
+                                      {displayValue}
                                     </div>
                                   </div>
                                 </div>
