@@ -72,7 +72,7 @@ async function fetchFinanceiroData(workspaceId: string): Promise<FinanceiroData>
   ] = await Promise.all([
     // UNIFICADA: Uma única query com workspace_id (substitui Q1+Q2 que eram 2 full scans)
     supabase.from("movimentacoes_indicacao").select("tipo, valor, data_movimentacao, parceria_id, indicador_id, status, indicadores_referral(nome)").eq("workspace_id", workspaceId).limit(10000),
-    supabase.from("v_custos_aquisicao").select("custo_total, valor_indicador, valor_parceiro, valor_fornecedor, data_inicio, indicador_id, indicador_nome").limit(10000),
+    supabase.from("v_custos_aquisicao").select("custo_total, valor_indicador, valor_parceiro, valor_fornecedor, data_inicio, indicador_id, indicador_nome").eq("workspace_id", workspaceId).limit(10000),
     supabase.from("cash_ledger").select("tipo_transacao, valor, data_transacao, moeda").eq("workspace_id", workspaceId).eq("status", "CONFIRMADO").limit(10000),
     supabase.from("despesas_administrativas").select("*, operadores(nome)").eq("workspace_id", workspaceId).eq("status", "CONFIRMADO").limit(10000),
     supabase.from("despesas_administrativas").select("*, operadores(nome)").eq("workspace_id", workspaceId).eq("status", "PENDENTE").limit(10000),
@@ -103,10 +103,10 @@ async function fetchFinanceiroData(workspaceId: string): Promise<FinanceiroData>
       .eq("workspace_id", workspaceId)
       .eq("ativo", true)
       .limit(10000),
-    supabase.from("v_saldo_parceiro_contas").select("parceiro_id, conta_id, saldo, banco, parceiro_nome, moeda").limit(10000),
-    supabase.from("v_saldo_parceiro_wallets").select("parceiro_id, wallet_id, coin, saldo_coin, saldo_usd, exchange").limit(10000),
-    supabase.from("v_saldo_parceiro_contas").select("saldo, banco, parceiro_nome, moeda, parceiro_id").limit(10000),
-    supabase.from("v_saldo_parceiro_wallets").select("saldo_usd, exchange, parceiro_id").limit(10000),
+    supabase.from("v_saldo_parceiro_contas").select("parceiro_id, conta_id, saldo, banco, parceiro_nome, moeda").eq("workspace_id", workspaceId).limit(10000),
+    supabase.from("v_saldo_parceiro_wallets").select("parceiro_id, wallet_id, coin, saldo_coin, saldo_usd, exchange").eq("workspace_id", workspaceId).limit(10000),
+    supabase.from("v_saldo_parceiro_contas").select("saldo, banco, parceiro_nome, moeda, parceiro_id").eq("workspace_id", workspaceId).limit(10000),
+    supabase.from("v_saldo_parceiro_wallets").select("saldo_usd, exchange, parceiro_id").eq("workspace_id", workspaceId).limit(10000),
     supabase.from("participacao_ciclos").select("valor_participacao, data_pagamento").eq("workspace_id", workspaceId).eq("status", "PAGO").limit(10000),
     supabase.from("apostas_unificada").select("lucro_prejuizo, data_aposta").eq("workspace_id", workspaceId).not("resultado", "is", null).limit(10000),
   ]);
