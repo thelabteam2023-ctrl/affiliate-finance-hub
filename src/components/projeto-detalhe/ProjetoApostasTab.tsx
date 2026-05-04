@@ -1945,16 +1945,6 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
 
 return (
   <div className="h-full flex flex-col min-h-0 relative">
-    <div className="mb-4">
-      <StandardTimeFilter
-        period={tabFilters.period}
-        onPeriodChange={tabFilters.setPeriod}
-        customDateRange={tabFilters.customDateRange}
-        onCustomDateRangeChange={tabFilters.setCustomDateRange}
-        projetoId={projetoId}
-      />
-    </div>
-
     <OperationsHistoryModule
       projetoId={projetoId}
       title="Histórico de Operações"
