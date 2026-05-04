@@ -1525,6 +1525,9 @@ export function PlanejamentoCalendario() {
                       )}
                       <BookmakerLogo logoUrl={getLogoUrl(c.bookmaker_nome)} alt={c.bookmaker_nome} size="h-6 w-6 shrink-0" iconSize="h-3.5 w-3.5" />
                       <span className="truncate">{c.bookmaker_nome}</span>
+                      {c.is_account_created && (
+                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-success fill-success/10" />
+                      )}
                     </div>
                     <div className="truncate">{perfil ?? "—"}</div>
                     <div className="min-w-0 flex items-center gap-1.5">
