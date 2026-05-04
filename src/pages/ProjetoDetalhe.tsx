@@ -323,7 +323,7 @@ export default function ProjetoDetalhe() {
 
   // Check if a tab is valid (exists in dynamicTabs or tabGroups)
   const isValidTab = (tabKey: string): boolean => {
-    const baseTabs = ["visao-geral", "apostas", "vinculos", "modulos", "ciclos", "incidentes"];
+    const baseTabs = ["visao-geral", "apostas", "planejamento", "vinculos", "modulos", "ciclos", "incidentes"];
     if (baseTabs.includes(tabKey)) return true;
     
     // Check module tabs
@@ -1089,6 +1089,10 @@ export default function ProjetoDetalhe() {
 
           <TabsContent value="cashback" className="h-full m-0">
             <ProjetoCashbackTab projetoId={id!} />
+          </TabsContent>
+
+          <TabsContent value="planejamento" className="h-full m-0">
+            <ProjetoPlanejamentoTab projetoId={id!} refreshTrigger={refreshTrigger} />
           </TabsContent>
 
           <TabsContent value="vinculos" className="h-full m-0">
