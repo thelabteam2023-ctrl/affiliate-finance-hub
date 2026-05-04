@@ -43,8 +43,10 @@
   perfilDisplayName,
   usePlanningIps,
    planningPerfilCpfIndex,
-   useProjetos
+   useProjetos,
+   PlanningPerfil
  } from "@/hooks/usePlanningData";
+ import { useCelulasAgendadasPorCampanhas } from "@/hooks/usePlanoCelulasDisponiveis";
  import { format, parseISO, isPast, isToday, startOfDay } from "date-fns";
  import { ptBR } from "date-fns/locale";
  import { cn } from "@/lib/utils";
@@ -62,7 +64,9 @@
    
    // Para fins de simplificação, estamos buscando o mês atual. 
    // Em um cenário real, poderíamos ter um seletor de mês/ano mais robusto.
-   const { data: campanhas = [], isLoading } = usePlanningCampanhas(selectedYear, selectedMonth);
+    const { data: campanhas = [], isLoading: campanhasLoading } = usePlanningCampanhas(selectedYear, selectedMonth);
+    const campanhaIds = useMemo(() => campanhas.map(c => c.id), [campanhas]);
+    const { data: celulasAgendadas = [], isLoading: celulasLoading } = useCelulasAgendadasPorCampanhas(campanhaIds);
    const { data: perfis = [] } = usePlanningPerfis();
    const { data: ips = [] } = usePlanningIps();
    const { data: projetos = [] } = useProjetos();
@@ -121,7 +125,7 @@
      return new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(v);
    };
  
-   if (isLoading) {
+    if (campanhasLoading || celulasLoading) {
      return <div className="p-8 text-center text-muted-foreground">Carregando histórico...</div>;
    }
  
@@ -252,10 +256,20 @@
 
                     {/* Lista de Campanhas do Dia */}
                     <div className="flex-1 grid gap-3 pb-4">
-                      {camps.map((camp) => {
+                     {camps.map((camp) => {
                         const status = getStatus(camp);
-                        const perfil = perfis.find(p => p.parceiro_id === camp.parceiro_id);
-                        const displayName = camp.parceiro_snapshot?.nome || (perfil ? perfilDisplayName(perfil) : "Sem parceiro");
+                        const celula = celulasAgendadas.find(c => c.campanha_id === camp.id);
+                        
+                        // Tenta encontrar o perfil de várias formas, assim como no calendário
+                        const perfil = perfis.find(p => 
+                          (camp.parceiro_id && p.parceiro_id === camp.parceiro_id) || 
+                          (celula?.perfil_planejamento_id && p.id === celula.perfil_planejamento_id) ||
+                          (celula?.parceiro_id && p.parceiro_id === celula.parceiro_id)
+                        );
+
+                        const displayName = camp.parceiro_snapshot?.nome || 
+                                          (perfil ? perfilDisplayName(perfil) : "Sem parceiro");
+                        
                         const cpfIndex = perfil ? planningPerfilCpfIndex(perfis, perfil.id) : null;
                         const linkedIp = ips.find(i => i.id === camp.ip_id);
                         
