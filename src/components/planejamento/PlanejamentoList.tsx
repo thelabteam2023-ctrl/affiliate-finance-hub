@@ -118,29 +118,23 @@
      return "planejado";
    };
  
-   const handleToggleStatus = async (camp: PlanningCampanha) => {
-     try {
-       // Só permitimos alternar entre "Pendente" e "Concluído" via clique direto.
-       // Se o item estiver com informações incompletas, o backend ou o hook useUpsertCampanha 
-       // garantem que o registro seja atualizado, mas a UI reflete o status real baseado nos dados.
-       await updateCampanha.mutateAsync({
-         id: camp.id,
-         scheduled_date: camp.scheduled_date,
-         is_account_created: !camp.is_account_created,
-         // Repassamos campos essenciais para evitar erros de validação se o hook esperar um objeto parcial específico
-         bookmaker_catalogo_id: camp.bookmaker_catalogo_id,
-         bookmaker_nome: camp.bookmaker_nome,
-         deposit_amount: camp.deposit_amount,
-         currency: camp.currency,
-         projeto_id: camp.projeto_id,
-         parceiro_id: camp.parceiro_id,
-         ip_id: camp.ip_id,
-         wallet_id: camp.wallet_id
-       });
-     } catch (error) {
-       console.error("Erro ao atualizar status:", error);
-     }
-   };
+  const handleToggleStatus = async (camp: PlanningCampanha) => {
+    try {
+      // Quando o status é "Atrasado", ele é derivado de (isPending && campDate < today).
+      // Ao clicar para alternar, o usuário quer marcar como concluído (is_account_created: true).
+      // Repassamos TODOS os campos existentes para garantir que a atualização no Supabase seja bem-sucedida.
+      const payload = {
+        ...camp,
+        is_account_created: !camp.is_account_created,
+        // Se estava marcado como 'feito' e o usuário desmarcou, volta para 'planned' (ou derivado)
+        status: !camp.is_account_created ? 'done' : 'planned'
+      };
+
+      await updateCampanha.mutateAsync(payload);
+    } catch (error) {
+      console.error("Erro ao atualizar status:", error);
+    }
+  };
 
   const filteredCampanhas = useMemo(() => {
     return campanhas.filter(c => {
