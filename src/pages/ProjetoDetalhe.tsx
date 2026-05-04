@@ -216,6 +216,7 @@ export default function ProjetoDetalhe() {
     const baseTabs: TabItem[] = [
       { value: "visao-geral", label: "Visão Geral", icon: <LayoutDashboard className="h-3.5 w-3.5 md:h-4 md:w-4" /> },
       { value: "apostas", label: "Todas Apostas", icon: <Target className="h-3.5 w-3.5 md:h-4 md:w-4" /> },
+      { value: "planejamento", label: "Planejamento", icon: <CalendarRange className="h-3.5 w-3.5 md:h-4 md:w-4" /> },
       { value: "vinculos", label: "Vínculos", icon: <Link2 className="h-3.5 w-3.5 md:h-4 md:w-4" /> },
     ];
 
@@ -265,7 +266,7 @@ export default function ProjetoDetalhe() {
   // Handle tab change with module activation prompt
   const handleTabChange = (tabValue: string) => {
     // Base tabs that are always available (don't need module activation)
-    const baseTabs = ["visao-geral", "apostas", "vinculos", "gestao", "modulos", "ciclos", "incidentes"];
+    const baseTabs = ["visao-geral", "apostas", "planejamento", "vinculos", "gestao", "modulos", "ciclos", "incidentes"];
     
     if (baseTabs.includes(tabValue)) {
       setActiveTab(tabValue);
@@ -305,6 +306,7 @@ export default function ProjetoDetalhe() {
     const tabLabels: Record<string, string> = {
       "visao-geral": "Visão Geral",
       "apostas": "Todas Apostas",
+      "planejamento": "Planejamento",
       "vinculos": "Vínculos",
       "promocoes": "Promoções",
       "bonus": "Bônus",
