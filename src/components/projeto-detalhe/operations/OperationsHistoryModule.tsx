@@ -4,7 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Clock, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TabFiltersBar } from "../TabFiltersBar";
-import type { TabFiltersReturn } from "@/hooks/useTabFilters";
+import type { TabFiltersReturn, SortOrder } from "@/hooks/useTabFilters";
 import { OperationsSubTabHeader, type HistorySubTab } from "./OperationsSubTabHeader";
 
 export interface OperationsHistoryConfig {
@@ -65,6 +65,18 @@ export interface OperationsHistoryConfig {
   /** Altura máxima do ScrollArea (default: "calc(100vh - 400px)") */
   maxHeight?: string;
   
+  /** Query de busca */
+  searchQuery?: string;
+  
+  /** Callback para mudança na busca */
+  onSearchChange?: (query: string) => void;
+  
+  /** Ordenação atual (desc/asc) */
+  sortOrder?: SortOrder;
+  
+  /** Callback para alternar ordenação */
+  onSortOrderToggle?: () => void;
+
   /** Actions extras no header (botões de ação) */
   headerActions?: ReactNode;
 }
@@ -105,8 +117,12 @@ export interface OperationsHistoryConfig {
      emptyHistoryMessage = "Nenhuma operação no histórico",
      className,
      maxHeight = "calc(100vh - 400px)",
-     headerActions,
-   } = props;
+      headerActions,
+      searchQuery,
+      onSearchChange,
+      sortOrder,
+      onSortOrderToggle,
+    } = props;
  
    // Verificar se deve usar layout de preenchimento de altura
    const isFullHeight = className?.includes("h-full");
@@ -135,6 +151,10 @@ export interface OperationsHistoryConfig {
           viewMode={viewMode}
           onViewModeChange={onViewModeChange}
           showViewToggle={(subTab === "abertas" && hasOpenContent) || (subTab === "historico" && hasHistoryContent)}
+          searchQuery={searchQuery}
+          onSearchChange={onSearchChange}
+          sortOrder={sortOrder}
+          onSortOrderToggle={onSortOrderToggle}
         />
       </div>
 

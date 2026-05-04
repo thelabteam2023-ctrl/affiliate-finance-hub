@@ -1,4 +1,4 @@
- import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
  import { 
    ChevronUp,
    ChevronDown,
@@ -87,88 +87,10 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
   const updateCampanha = useUpsertCampanha();
   const logoMap = useBookmakerLogoMap();
   const [editingCampanha, setEditingCampanha] = useState<PlanningCampanha | null>(null);
-   const [isDialogOpen, setIsDialogOpen] = useState(false);
- 
-    // Navegação dia a dia via botões flutuantes
-    const navigateDayByDay = (direction: 'up' | 'down') => {
-      const scrollArea = document.querySelector('.planning-module-container [data-radix-scroll-area-viewport]');
-      if (!scrollArea || sortedDates.length === 0) return;
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState("");
 
-      const containerRect = scrollArea.getBoundingClientRect();
-      const currentScrollTop = scrollArea.scrollTop;
-      
-      // Encontrar o grupo de data atualmente visível no topo
-      const groups = sortedDates.map(date => {
-        const el = document.getElementById(`date-group-${date}`);
-        if (!el) return null;
-        const rect = el.getBoundingClientRect();
-        const relativeTop = rect.top - containerRect.top + currentScrollTop;
-        return { date, relativeTop, height: rect.height };
-      }).filter(Boolean) as { date: string, relativeTop: number, height: number }[];
 
-      if (groups.length === 0) return;
-
-      // Encontrar o índice do grupo atual (o que está mais próximo do topo do container)
-      // Usamos uma margem de 20px para considerar "no topo"
-      let currentIndex = groups.findIndex(g => g.relativeTop >= currentScrollTop - 20);
-      
-      if (currentIndex === -1) currentIndex = groups.length - 1;
-
-      let targetIndex;
-      if (direction === 'down') {
-        // Se o atual já está exatamente no topo, vai para o próximo. 
-        // Senão, "alinha" o atual no topo.
-        if (Math.abs(groups[currentIndex].relativeTop - currentScrollTop) < 5) {
-          targetIndex = Math.min(currentIndex + 1, groups.length - 1);
-        } else {
-          targetIndex = currentIndex;
-        }
-      } else {
-        // Para subir: se o atual está no topo, vai para o anterior.
-        targetIndex = Math.max(currentIndex - 1, 0);
-      }
-
-      const targetGroup = groups[targetIndex];
-      scrollArea.scrollTo({ 
-        top: targetGroup.relativeTop - 16, 
-        behavior: 'smooth' 
-      });
-    };
-
-    // Ajuste no scrollToToday para buscar dentro do container correto
-    const scrollToToday = () => {
-      const todayStr = format(new Date(), "yyyy-MM-dd");
-      const element = document.getElementById(`date-group-${todayStr}`);
-      const scrollArea = document.querySelector('.planning-module-container [data-radix-scroll-area-viewport]');
-      
-      if (element && scrollArea) {
-        // Calculamos a posição relativa ao topo do viewport
-        const containerRect = scrollArea.getBoundingClientRect();
-        const elementRect = element.getBoundingClientRect();
-        const relativeTop = elementRect.top - containerRect.top + scrollArea.scrollTop;
-        
-        scrollArea.scrollTo({ top: relativeTop - 16, behavior: 'smooth' });
-      } else if (!element) {
-        const nextAvailable = sortedDates.find(date => date >= todayStr);
-        if (nextAvailable && scrollArea) {
-          const nextEl = document.getElementById(`date-group-${nextAvailable}`);
-          if (nextEl) {
-            const containerRect = scrollArea.getBoundingClientRect();
-            const elementRect = nextEl.getBoundingClientRect();
-            const relativeTop = elementRect.top - containerRect.top + scrollArea.scrollTop;
-            scrollArea.scrollTo({ top: relativeTop - 16, behavior: 'smooth' });
-          }
-        }
-      }
-    };
-
-    // Scroll automático inicial
-    useEffect(() => {
-      if (!campanhasLoading && !celulasLoading && filteredData.length > 0) {
-        const timer = setTimeout(scrollToToday, 500);
-        return () => clearTimeout(timer);
-      }
-    }, [campanhasLoading, celulasLoading, subTab, viewMode]);
 
   // 3. Helpers de Resolução (Lógica espelhada do PlanejamentoList)
   const resolveCampanhaData = (c: PlanningCampanha) => {
@@ -233,7 +155,7 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
 
    // 4. Filtragem por Sub-aba (Abertas vs Histórico) e Filtros Dimensionais
    const filteredData = useMemo(() => {
-     return campanhas
+     let result = campanhas
        .map((c) => {
          const resolved = resolveCampanhaData(c);
          const status = getStatus(c, resolved.isPending);
@@ -249,9 +171,6 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
  
          // 4b. Filtro de Status (Atrasados, etc) - Se houver filtros de resultado aplicados
          if (tabFilters.resultados.length > 0) {
-           // Mapear Status do Planejamento para o padrão de ResultadoFilter
-           // "atrasado" -> "RED" (ou equivalente para filtro de atrasados)
-           // No planejamento o usuário pediu filtro de "atrasados"
            const statusMap: Record<string, string> = {
              concluido: "GREEN",
              atrasado: "RED",
@@ -265,9 +184,8 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
          // 4c. Filtros Dimensionais (Casas / Parceiros)
          if (tabFilters.bookmakerIds.length > 0) {
            const campAsAny = c as any;
-           if (!tabFilters.bookmakerIds.includes(c.bookmaker_catalogo_id || "")) {
-             // Tenta pelo ID interno também se disponível
-             if (!tabFilters.bookmakerIds.includes(campAsAny.bookmaker_id || "")) return false;
+           if (!tabFilters.bookmakerIds.includes(c.bookmaker_catalogo_id || "") && !tabFilters.bookmakerIds.includes(campAsAny.bookmaker_id || "")) {
+             return false;
            }
          }
  
@@ -275,23 +193,114 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
            if (!tabFilters.parceiroIds.includes(c.parceiroId || "")) return false;
          }
  
+         // 4d. Busca por texto (Padrão Apostas)
+         if (searchTerm.trim()) {
+           const term = searchTerm.toLowerCase();
+           const matchesBookmaker = (c.bookmaker_nome || "").toLowerCase().includes(term);
+           const matchesParceiro = (c.parceiro_snapshot?.nome || "").toLowerCase().includes(term);
+           if (!matchesBookmaker && !matchesParceiro) return false;
+         }
+ 
          return true;
-       })
-       .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));
-   }, [campanhas, celulasAgendadas, perfis, ips, subTab, tabFilters.resultados, tabFilters.bookmakerIds, tabFilters.parceiroIds]);
+       });
 
-  const groupedByDay = useMemo(() => {
-    const groups: Record<string, any[]> = {};
-    filteredData.forEach(c => {
-      if (!groups[c.scheduled_date]) groups[c.scheduled_date] = [];
-      groups[c.scheduled_date].push(c);
-    });
-    return groups;
-  }, [filteredData]);
+      // Ordenação consistente
+      return result.sort((a, b) => {
+        if (subTab === "abertas") return a.scheduled_date.localeCompare(b.scheduled_date);
+        return b.scheduled_date.localeCompare(a.scheduled_date);
+      });
+   }, [campanhas, celulasAgendadas, perfis, ips, subTab, tabFilters.resultados, tabFilters.bookmakerIds, tabFilters.parceiroIds, searchTerm]);
+ 
+   const groupedByDay = useMemo(() => {
+     const groups: Record<string, any[]> = {};
+     filteredData.forEach(c => {
+       if (!groups[c.scheduled_date]) groups[c.scheduled_date] = [];
+       groups[c.scheduled_date].push(c);
+     });
+     return groups;
+   }, [filteredData]);
+ 
+   const sortedDates = useMemo(() => {
+     return Object.keys(groupedByDay).sort((a, b) => {
+       if (subTab === "abertas") return a.localeCompare(b);
+       return b.localeCompare(a);
+     });
+   }, [groupedByDay, subTab]);
 
-  const sortedDates = useMemo(() => {
-    return Object.keys(groupedByDay).sort();
-  }, [groupedByDay]);
+      // Navegação inteligente via botões flutuantes
+      const navigateDayByDay = useCallback((direction: 'up' | 'down') => {
+        const scrollArea = document.querySelector('.planning-module-container [data-radix-scroll-area-viewport]');
+        if (!scrollArea || sortedDates.length === 0) return;
+
+        const containerRect = scrollArea.getBoundingClientRect();
+        const currentScrollTop = scrollArea.scrollTop;
+        const THRESHOLD = 30;
+
+        const groups = sortedDates.map(date => {
+          const el = document.getElementById(`date-group-${date}`);
+          if (!el) return null;
+          const rect = el.getBoundingClientRect();
+          const relativeTop = rect.top - containerRect.top + currentScrollTop;
+          return { date, relativeTop };
+        }).filter(Boolean) as { date: string, relativeTop: number }[];
+
+        if (groups.length === 0) return;
+
+        let currentIndex = groups.findIndex(g => g.relativeTop >= currentScrollTop - THRESHOLD);
+        if (currentIndex === -1) currentIndex = groups.length - 1;
+
+        let targetIndex;
+        if (direction === 'down') {
+          if (Math.abs(groups[currentIndex].relativeTop - currentScrollTop) < THRESHOLD) {
+            targetIndex = Math.min(currentIndex + 1, groups.length - 1);
+          } else {
+            targetIndex = currentIndex;
+          }
+        } else {
+          if (Math.abs(groups[currentIndex].relativeTop - currentScrollTop) < THRESHOLD) {
+            targetIndex = Math.max(currentIndex - 1, 0);
+          } else {
+            targetIndex = currentIndex;
+          }
+        }
+
+        const targetGroup = groups[targetIndex];
+        scrollArea.scrollTo({ 
+          top: targetGroup.relativeTop - 16, 
+          behavior: 'smooth' 
+        });
+      }, [sortedDates]);
+
+    const scrollToToday = useCallback(() => {
+      const todayStr = format(new Date(), "yyyy-MM-dd");
+      const element = document.getElementById(`date-group-${todayStr}`);
+      const scrollArea = document.querySelector('.planning-module-container [data-radix-scroll-area-viewport]');
+      
+      if (element && scrollArea) {
+        const containerRect = scrollArea.getBoundingClientRect();
+        const elementRect = element.getBoundingClientRect();
+        const relativeTop = elementRect.top - containerRect.top + scrollArea.scrollTop;
+        scrollArea.scrollTo({ top: relativeTop - 16, behavior: 'smooth' });
+      } else if (!element) {
+        const nextAvailable = sortedDates.find(date => date >= todayStr);
+        if (nextAvailable && scrollArea) {
+          const nextEl = document.getElementById(`date-group-${nextAvailable}`);
+          if (nextEl) {
+            const containerRect = scrollArea.getBoundingClientRect();
+            const elementRect = nextEl.getBoundingClientRect();
+            const relativeTop = elementRect.top - containerRect.top + scrollArea.scrollTop;
+            scrollArea.scrollTo({ top: relativeTop - 16, behavior: 'smooth' });
+          }
+        }
+      }
+    }, [sortedDates]);
+
+    useEffect(() => {
+      if (!campanhasLoading && !celulasLoading && filteredData.length > 0) {
+        const timer = setTimeout(scrollToToday, 500);
+        return () => clearTimeout(timer);
+      }
+    }, [campanhasLoading, celulasLoading, subTab, viewMode, scrollToToday, filteredData.length]);
 
   // Contagens para o header do módulo
   const counts = useMemo(() => {
@@ -602,19 +611,21 @@ export function ProjetoPlanejamentoTab({ projetoId, refreshTrigger = 0 }: Projet
     return (
       <div className="h-full flex flex-col min-h-0 relative">
         <OperationsHistoryModule
-         projetoId={projetoId}
-         title="Planejamento de Campanhas"
-         tabFilters={tabFilters}
-         openCount={counts.open}
-         historyCount={counts.history}
-         viewMode={viewMode}
-         onViewModeChange={setViewMode}
-         subTab={subTab}
-         onSubTabChange={setSubTab}
-         openContent={renderContent()}
-         historyContent={renderContent()}
-         emptyOpenMessage="Nenhum planejamento pendente para este projeto"
-         emptyHistoryMessage="Nenhum planejamento concluído neste projeto"
+          projetoId={projetoId}
+          title="Planejamento de Campanhas"
+          tabFilters={tabFilters}
+          openCount={counts.open}
+          historyCount={counts.history}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          subTab={subTab}
+          onSubTabChange={setSubTab}
+          searchQuery={searchTerm}
+          onSearchChange={setSearchTerm}
+          openContent={renderContent()}
+          historyContent={renderContent()}
+          emptyOpenMessage="Nenhum planejamento pendente para este projeto"
+          emptyHistoryMessage="Nenhum planejamento concluído neste projeto"
           className="flex-1 h-full min-h-0 planning-module-container"
         />
       {isDialogOpen && (
