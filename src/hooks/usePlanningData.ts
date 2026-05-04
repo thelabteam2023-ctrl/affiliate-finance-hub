@@ -55,6 +55,11 @@ export interface PlanningCampanha {
   updated_at: string;
 }
 
+export interface ProjetoLite {
+  id: string;
+  nome: string;
+}
+
 export interface ParceiroLite {
   id: string;
   nome: string;
@@ -191,6 +196,24 @@ export function usePlanningIps() {
         .order("label");
       if (error) throw error;
       return (data ?? []) as unknown as PlanningIp[];
+    },
+  });
+}
+
+export function useProjetos() {
+  const { workspaceId } = useAuth();
+  return useQuery({
+    queryKey: ["projetos-lite", workspaceId],
+    enabled: !!workspaceId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("projetos")
+        .select("id, nome")
+        .eq("workspace_id", workspaceId!)
+        .is("archived_at", null)
+        .order("nome");
+      if (error) throw error;
+      return data as ProjetoLite[];
     },
   });
 }
