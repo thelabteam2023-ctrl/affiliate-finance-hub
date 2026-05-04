@@ -137,20 +137,26 @@
   };
 
   const filteredCampanhas = useMemo(() => {
-    return campanhas.filter(c => {
-       const matchesProjeto = projetoFilter === "all" || c.projeto_id === projetoFilter;
-      const matchesSearch = 
-        c.bookmaker_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (c.parceiro_snapshot?.nome || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (c.notes || "").toLowerCase().includes(searchTerm.toLowerCase());
-      
-       const { isPending } = resolveCampanhaData(c);
-       const status = getStatus(c, isPending);
-      const matchesStatus = statusFilter === "all" || status === statusFilter;
-      
-       return matchesSearch && matchesStatus && matchesProjeto;
-     }).sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));
-   }, [campanhas, searchTerm, statusFilter, projetoFilter]);
+    return campanhas
+      .filter((c) => {
+        const matchesProjeto = projetoFilter === "all" || c.projeto_id === projetoFilter;
+        const matchesSearch =
+          c.bookmaker_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (c.parceiro_snapshot?.nome || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (c.notes || "").toLowerCase().includes(searchTerm.toLowerCase());
+
+        const { isPending } = resolveCampanhaData(c);
+        const status = getStatus(c, isPending);
+        const matchesStatus = statusFilter === "all" || status === statusFilter;
+
+        return matchesSearch && matchesStatus && matchesProjeto;
+      })
+      .sort((a, b) => {
+        const dateCompare = a.scheduled_date.localeCompare(b.scheduled_date);
+        if (dateCompare !== 0) return dateCompare;
+        return (a.created_at || "").localeCompare(b.created_at || "");
+      });
+  }, [campanhas, searchTerm, statusFilter, projetoFilter, celulasAgendadas, perfis, ips]);
 
   const groupedByDay = useMemo(() => {
     const groups: Record<string, PlanningCampanha[]> = {};
