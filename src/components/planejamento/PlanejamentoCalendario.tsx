@@ -39,6 +39,7 @@ import {
   usePlanningPerfis,
   useUpsertCampanha,
   useDeleteCampanha,
+  useProjetos,
 } from "@/hooks/usePlanningData";
 import { useGrupoRegrasValidator } from "@/hooks/useGrupoRegrasValidator";
 import { CampanhaDialog } from "./CampanhaDialog";
