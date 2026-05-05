@@ -1012,7 +1012,7 @@ export default function ProjetoDetalhe() {
             />
           </TabsContent>
 
-          <TabsContent value="bonus" forceMount className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto", activeTab !== "bonus" && "hidden")}>
+          <TabsContent value="bonus" forceMount className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto min-h-[400px]", activeTab !== "bonus" && "hidden")}>
             <ProjetoBonusArea 
               projetoId={id!} 
               refreshTrigger={refreshTrigger}
@@ -1029,7 +1029,7 @@ export default function ProjetoDetalhe() {
             />
           </TabsContent>
 
-          <TabsContent value="punter" forceMount className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto", activeTab !== "punter" && "hidden")}>
+          <TabsContent value="punter" forceMount className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto min-h-[400px]", activeTab !== "punter" && "hidden")}>
             <ProjetoPunterTab 
               projetoId={id!} 
               onDataChange={triggerGlobalRefresh}
@@ -1046,7 +1046,7 @@ export default function ProjetoDetalhe() {
             />
           </TabsContent>
 
-          <TabsContent value="surebet" forceMount className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto", activeTab !== "surebet" && "hidden")}>
+          <TabsContent value="surebet" forceMount className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto min-h-[400px]", activeTab !== "surebet" && "hidden")}>
             <ProjetoSurebetTab 
               projetoId={id!} 
               onDataChange={triggerGlobalRefresh}
