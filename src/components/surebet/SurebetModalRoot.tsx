@@ -279,6 +279,7 @@ export function SurebetModalRoot({
   const [arredondarAtivado, setArredondarAtivado] = useState(true);
   const [arredondarValor, setArredondarValor] = useState("1");
   const [saving, setSaving] = useState(false);
+  const [pernasDataRaw, setPernasDataRaw] = useState<any[]>([]);
   const [deletingPerna, setDeletingPerna] = useState(false);
   
   const [showConversionDialog, setShowConversionDialog] = useState(false);
@@ -653,9 +654,14 @@ export function SurebetModalRoot({
   const fetchLinkedPernas = async (surebetId: string, retryCount = 0) => {
     setPernasLoading(true);
     try {
+      // Buscar pernas e suas entradas detalhadas
       const { data: pernasData, error: pernasError } = await supabase
         .from("apostas_pernas")
-        .select(`*, bookmakers (nome)`)
+        .select(`
+          *, 
+          bookmakers (nome),
+          apostas_perna_entradas (*)
+        `)
         .eq("aposta_id", surebetId)
         .order("ordem", { ascending: true });
 
@@ -688,8 +694,18 @@ export function SurebetModalRoot({
       // Armazenar stakes originais por bookmaker para crédito virtual em modo edição
       // Separado por tipo (real vs freebet) para validação correta
       const stakeMap = new Map<string, { real: number; freebet: number }>();
+      setPernasDataRaw(pernasData);
       pernasData.forEach((perna: any) => {
-        if (perna.bookmaker_id && perna.stake) {
+        // Se tiver sub-entradas, usar elas para o crédito virtual
+        if (perna.apostas_perna_entradas && perna.apostas_perna_entradas.length > 0) {
+          perna.apostas_perna_entradas.forEach((ent: any) => {
+            const cur = stakeMap.get(ent.bookmaker_id) || { real: 0, freebet: 0 };
+            const val = parseFloat(ent.stake) || 0;
+            if (ent.fonte_saldo === 'FREEBET') cur.freebet += val; else cur.real += val;
+            stakeMap.set(ent.bookmaker_id, cur);
+          });
+        } else if (perna.bookmaker_id && perna.stake) {
+          // Fallback para pernas sem entradas detalhadas (legacy)
           const cur = stakeMap.get(perna.bookmaker_id) || { real: 0, freebet: 0 };
           const val = parseFloat(perna.stake) || 0;
           if (perna.fonte_saldo === 'FREEBET') cur.freebet += val; else cur.real += val;
@@ -728,35 +744,35 @@ export function SurebetModalRoot({
         groups.get(key)!.push(perna);
       }
       
-      const pernasOdds: OddEntry[] = groupOrder.map((key, groupIdx) => {
-        const groupPernas = groups.get(key)!;
-        const mainPerna = groupPernas[0];
-        const additionalPernas = groupPernas.slice(1);
-        
+      const pernasOdds: OddEntry[] = pernasData.map((perna: any, groupIdx: number) => {
+        const entradas = perna.apostas_perna_entradas || [];
+        const mainEntrada = entradas.length > 0 ? entradas[0] : perna;
+        const additionalEntradas = entradas.length > 1 ? entradas.slice(1) : [];
+
         return {
-          bookmaker_id: mainPerna.bookmaker_id || "",
-          moeda: (mainPerna.moeda || "BRL") as SupportedCurrency,
-          odd: mainPerna.odd?.toString() || "",
-          stake: mainPerna.stake?.toString() || "",
-          selecao: mainPerna.selecao,
-          selecaoLivre: mainPerna.selecao_livre || "",
+          bookmaker_id: mainEntrada.bookmaker_id || "",
+          moeda: (mainEntrada.moeda || "BRL") as SupportedCurrency,
+          odd: mainEntrada.odd?.toString() || "",
+          stake: mainEntrada.stake?.toString() || "",
+          selecao: perna.selecao,
+          selecaoLivre: perna.selecao_livre || "",
           isReference: groupIdx === 0,
           isManuallyEdited: true,
-          resultado: mainPerna.resultado,
-          lucro_prejuizo: mainPerna.lucro_prejuizo,
-          gerouFreebet: mainPerna.gerou_freebet || false,
-          valorFreebetGerada: mainPerna.valor_freebet_gerada?.toString() || "",
-          fonteSaldo: (mainPerna.fonte_saldo as 'REAL' | 'FREEBET') || 'REAL',
-          pernaId: mainPerna.id, // UUID da perna no banco
-          additionalEntries: additionalPernas.map((sub: any) => ({
-            bookmaker_id: sub.bookmaker_id || "",
-            moeda: (sub.moeda || "BRL") as SupportedCurrency,
-            odd: sub.odd?.toString() || "",
-            stake: sub.stake?.toString() || "",
-            selecaoLivre: sub.selecao_livre || "",
-            fonteSaldo: (sub.fonte_saldo as 'REAL' | 'FREEBET') || 'REAL',
-            pernaId: sub.id, // UUID da sub-entrada no banco
-          })),
+          resultado: perna.resultado,
+          lucro_prejuizo: perna.lucro_prejuizo,
+          gerouFreebet: perna.gerou_freebet || false,
+          valorFreebetGerada: perna.valor_freebet_gerada?.toString() || "",
+          fonteSaldo: (mainEntrada.fonte_saldo as 'REAL' | 'FREEBET') || 'REAL',
+          pernaId: perna.id,
+          entradaId: mainEntrada.id !== perna.id ? mainEntrada.id : undefined,
+          additionalEntries: additionalEntradas.map((ent: any) => ({
+            bookmaker_id: ent.bookmaker_id,
+            moeda: ent.moeda as SupportedCurrency,
+            odd: ent.odd?.toString() || "",
+            stake: ent.stake?.toString() || "",
+            fonteSaldo: (ent.fonte_saldo as 'REAL' | 'FREEBET') || 'REAL',
+            pernaId: ent.id
+          }))
         };
       });
       
@@ -1518,10 +1534,45 @@ export function SurebetModalRoot({
         }, 0);
         const newStakeTotal = analysis.isMultiCurrency ? newStakeConsolidado : pernasToCalc.reduce((acc, p) => acc + p.stake, 0);
         
-        // 3. Chamar RPC atômica (transação única)
-        const { data: rpcResult, error: rpcError } = await supabase.rpc('editar_surebet_completa_v1', {
+        // PREPARAR DADOS PARA RPC V2 (HIERÁRQUICA)
+        // Pernas agrupadas por seleção para serem as pernas pai
+        const pernasUnicasPai = Array.from(new Set(allPernasFlat.map(f => f.parentLegIndex)))
+          .sort((a, b) => a - b)
+          .map(parentIdx => {
+            const firstEntry = allPernasFlat.find(f => f.parentLegIndex === parentIdx)!;
+            // Tenta achar se já existia uma perna com esse UUID no banco
+            const existingPerna = pernasDataRaw?.find((p: any) => p.ordem === (parentIdx + 1));
+            return {
+              id: existingPerna?.id || null,
+              selecao: firstEntry.selecao,
+              selecao_livre: firstEntry.selecaoLivre || null,
+              resultado: firstEntry.resultado || null
+            };
+          });
+
+        // Todas as entradas flat com referência ao índice da perna pai
+        const entradasParaRPC = allPernasFlat.map((flat) => {
+          const stake = parseFloat(flat.stake) || 0;
+          const moeda = getBookmakerMoeda(flat.bookmaker_id);
+          const snapshotFields = getSnapshotFields(stake, moeda, getEffectiveRate(moeda));
+          return {
+            id: flat.pernaId || null, // Se flat.pernaId existia, é o ID da entrada (legado: perna_id era o mesmo da entrada)
+            perna_index: flat.parentLegIndex,
+            bookmaker_id: flat.bookmaker_id,
+            stake,
+            odd: parseFloat(flat.odd) || 0,
+            moeda,
+            fonte_saldo: flat.fonteSaldo || 'REAL',
+            cotacao_snapshot: snapshotFields.cotacao_snapshot,
+            stake_brl_referencia: snapshotFields.valor_brl_referencia
+          };
+        });
+
+        // 3. Chamar RPC atômica V2 (transação única e hierárquica)
+        const { data: rpcResult, error: rpcError } = await supabase.rpc('editar_surebet_completa_v2', {
           p_aposta_id: surebet.id,
-          p_pernas: pernasParaRPC as any,
+          p_pernas: pernasUnicasPai as any,
+          p_entradas: entradasParaRPC as any,
           p_evento: evento,
           p_esporte: esporte,
           p_mercado: mercado,
