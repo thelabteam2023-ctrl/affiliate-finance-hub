@@ -1034,27 +1034,33 @@ export function SurebetModalRoot({
       });
       if (!hasEmptyStakeSub) return o;
 
-      const targetPayout = targetPayoutsLocal[i] || 0;
+      const targetPayout = targetPayoutsLocal[i] || 0; // na moeda base da perna
+      const legMoeda = (bookmakerSaldos.find(b => b.id === o.bookmaker_id)?.moeda || o.moeda || "BRL") as SupportedCurrency;
+      
       if (targetPayout <= 0) return o;
 
       // Calcular payout já coberto
       const mainStake = parseFloat(o.stake) || 0;
       const mainOdd = parseFloat(o.odd) || 0;
-      let usedPayout = mainStake * (mainOdd > 1 ? mainOdd : 0);
+      let usedPayoutInLegCurrency = mainStake * (mainOdd > 1 ? mainOdd : 0);
 
       const updatedEntries = entries.map(e => {
         const oddVal = parseFloat(e.odd) || 0;
         const stakeVal = parseFloat(e.stake) || 0;
+        const eMoeda = (e.moeda as string) || legMoeda;
+
         if (stakeVal > 0 || oddVal <= 1) {
-          usedPayout += stakeVal * (oddVal > 1 ? oddVal : 0);
+          const pLocal = stakeVal * (oddVal > 1 ? oddVal : 0);
+          usedPayoutInLegCurrency += convertViaBRL(pLocal, eMoeda, legMoeda, engineConfig.brlRates);
           return e;
         }
         // Calcular payout restante e derivar stake
-        const remainingPayout = Math.max(0, targetPayout - usedPayout);
+        const remainingPayout = Math.max(0, targetPayout - usedPayoutInLegCurrency);
         if (remainingPayout > 0 && oddVal > 1) {
           needsUpdate = true;
           const filled = arredondarStake(remainingPayout / oddVal);
-          usedPayout += filled * oddVal;
+          const filledPayout = filled * oddVal;
+          usedPayoutInLegCurrency += convertViaBRL(filledPayout, eMoeda, legMoeda, engineConfig.brlRates);
           return { ...e, stake: filled.toFixed(2) };
         }
         return e;
