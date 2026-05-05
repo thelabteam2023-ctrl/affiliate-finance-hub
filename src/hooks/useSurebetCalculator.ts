@@ -143,8 +143,44 @@ export function calcularStakeTotal(
     return main + extra;
   }
 
-  const extra = (additionalEntries || []).reduce((acc, e) => acc + (parseFloat(e.stake) || 0), 0);
+  const extra = (additionalEntries || []).reduce((acc, e) => {
+    const s = parseFloat(e.stake) || 0;
+    const m = (e.moeda as string) || baseCurrency || "BRL";
+    if (brlRates && baseCurrency && m !== baseCurrency) {
+      return acc + convertViaBRL(s, m, baseCurrency, brlRates);
+    }
+    return acc + s;
+  }, 0);
   return main + extra;
+}
+
+/**
+ * Payout total de uma perna (incluindo sub-entradas) na moeda base da perna.
+ * Essencial para que o cálculo de "remaining payout" seja correto em multi-moeda.
+ */
+export function calcularPayoutTotalPerna(
+  mainEntry: { stake: string; odd: string },
+  additionalEntries?: OddFormEntry[],
+  brlRates?: BRLRates,
+  baseCurrency?: string
+): number {
+  const mainStake = parseFloat(mainEntry.stake) || 0;
+  const mainOdd = parseFloat(mainEntry.odd) || 0;
+  const mainPayout = mainStake * (mainOdd > 1 ? mainOdd : 0);
+
+  const subPayout = (additionalEntries || []).reduce((acc, e) => {
+    const s = parseFloat(e.stake) || 0;
+    const o = parseFloat(e.odd) || 0;
+    const m = (e.moeda as string) || baseCurrency || "BRL";
+    const pLocal = s * (o > 1 ? o : 0);
+
+    if (brlRates && baseCurrency && m !== baseCurrency) {
+      return acc + convertViaBRL(pLocal, m, baseCurrency, brlRates);
+    }
+    return acc + pLocal;
+  }, 0);
+
+  return mainPayout + subPayout;
 }
 
 /**
@@ -480,7 +516,21 @@ export function useSurebetCalculator({
     // Stakes efetivos para análise: direcionadas se ativo, senão reais
     const effectiveStakes = directedStakesLocal || realStakesLocal;
 
-    return analisarArbitragem(engineLegs, effectiveStakes, safeConfig, numPernas);
+    const res = analisarArbitragem(engineLegs, effectiveStakes, safeConfig, numPernas);
+    
+    // Detectar multi-moeda considerando sub-entradas (o engine só olha as pernas)
+    const moedas = new Set<string>();
+    odds.forEach(o => {
+      moedas.add(getMoedaPerna(o));
+      o.additionalEntries?.forEach(ae => {
+        if (ae.moeda) moedas.add(ae.moeda);
+      });
+    });
+    
+    return {
+      ...res,
+      isMultiCurrency: moedas.size > 1
+    };
   }, [odds, directedStakesLocal, numPernas, safeConfig, getMoedaPerna, getOddMediaPerna, getStakeTotalPerna]);
 
   // ── Pernas válidas ────────────────────────────────────────────
@@ -492,17 +542,28 @@ export function useSurebetCalculator({
     });
   }, [odds]);
 
+  const getPayoutTotalPerna = useCallback((entry: OddEntry): number => {
+    const baseCurrency = getMoedaPerna(entry);
+    return calcularPayoutTotalPerna(
+      { odd: entry.odd, stake: entry.stake },
+      entry.additionalEntries,
+      safeConfig.brlRates,
+      baseCurrency
+    );
+  }, [safeConfig.brlRates, getMoedaPerna]);
+
   return {
     analysis,
     calculatedStakes: calculatedStakesLocal,
     calculatedStakesConsolidated,
     equalizedTargetStakes,
-    targetPayoutsLocal,                         // payout alvo por perna (moeda local) para auto-fill
+    targetPayoutsLocal,
     directedStakes: directedStakesLocal,
     pernasValidas,
     arredondarStake,
     getOddMediaPerna,
     getStakeTotalPerna,
+    getPayoutTotalPerna,
     getMoedaPerna,
   };
 }

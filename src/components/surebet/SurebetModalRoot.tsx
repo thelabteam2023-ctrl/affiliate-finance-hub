@@ -977,17 +977,24 @@ export function SurebetModalRoot({
       if (field === 'odd') {
         const oddVal = parseFloat(value);
         if (oddVal > 1) {
-          const targetPayout = targetPayoutsLocal?.[pernaIndex] || 0;
+          const targetPayout = targetPayoutsLocal?.[pernaIndex] || 0; // na moeda da perna
+          const legMoeda = (bookmakerSaldos.find(b => b.id === newOdds[pernaIndex].bookmaker_id)?.moeda || newOdds[pernaIndex].moeda || "BRL") as SupportedCurrency;
+          
           const mainStake = parseFloat(newOdds[pernaIndex].stake) || 0;
           const mainOdd = parseFloat(newOdds[pernaIndex].odd) || 0;
-          const currentPayout = mainStake * (mainOdd > 1 ? mainOdd : 0);
+          const mainPayout = mainStake * (mainOdd > 1 ? mainOdd : 0);
+
           const otherSubPayout = entries.reduce((sum, e, idx) => {
             if (idx === entryIndex) return sum;
             const s = parseFloat(e.stake) || 0;
             const o = parseFloat(e.odd) || 0;
-            return sum + s * (o > 1 ? o : 0);
+            const pLocal = s * (o > 1 ? o : 0);
+            const eMoeda = (e.moeda as string) || legMoeda;
+            
+            return sum + convertViaBRL(pLocal, eMoeda, legMoeda, engineConfig.brlRates);
           }, 0);
-          const remainingPayout = Math.max(0, targetPayout - currentPayout - otherSubPayout);
+
+          const remainingPayout = Math.max(0, targetPayout - mainPayout - otherSubPayout);
           if (remainingPayout > 0) {
             entries[entryIndex] = { ...entries[entryIndex], stake: arredondarStake(remainingPayout / oddVal).toFixed(2) };
           }
@@ -1027,27 +1034,33 @@ export function SurebetModalRoot({
       });
       if (!hasEmptyStakeSub) return o;
 
-      const targetPayout = targetPayoutsLocal[i] || 0;
+      const targetPayout = targetPayoutsLocal[i] || 0; // na moeda base da perna
+      const legMoeda = (bookmakerSaldos.find(b => b.id === o.bookmaker_id)?.moeda || o.moeda || "BRL") as SupportedCurrency;
+      
       if (targetPayout <= 0) return o;
 
       // Calcular payout já coberto
       const mainStake = parseFloat(o.stake) || 0;
       const mainOdd = parseFloat(o.odd) || 0;
-      let usedPayout = mainStake * (mainOdd > 1 ? mainOdd : 0);
+      let usedPayoutInLegCurrency = mainStake * (mainOdd > 1 ? mainOdd : 0);
 
       const updatedEntries = entries.map(e => {
         const oddVal = parseFloat(e.odd) || 0;
         const stakeVal = parseFloat(e.stake) || 0;
+        const eMoeda = (e.moeda as string) || legMoeda;
+
         if (stakeVal > 0 || oddVal <= 1) {
-          usedPayout += stakeVal * (oddVal > 1 ? oddVal : 0);
+          const pLocal = stakeVal * (oddVal > 1 ? oddVal : 0);
+          usedPayoutInLegCurrency += convertViaBRL(pLocal, eMoeda, legMoeda, engineConfig.brlRates);
           return e;
         }
         // Calcular payout restante e derivar stake
-        const remainingPayout = Math.max(0, targetPayout - usedPayout);
+        const remainingPayout = Math.max(0, targetPayout - usedPayoutInLegCurrency);
         if (remainingPayout > 0 && oddVal > 1) {
           needsUpdate = true;
           const filled = arredondarStake(remainingPayout / oddVal);
-          usedPayout += filled * oddVal;
+          const filledPayout = filled * oddVal;
+          usedPayoutInLegCurrency += convertViaBRL(filledPayout, eMoeda, legMoeda, engineConfig.brlRates);
           return { ...e, stake: filled.toFixed(2) };
         }
         return e;
@@ -1255,10 +1268,17 @@ export function SurebetModalRoot({
       if (additionalEntries.length > 0) {
         const oddMedia = getOddMediaPerna(o);
         const mainOdd = parseFloat(o.odd) || 0;
+        const legMoeda = (bookmakerSaldos.find(b => b.id === o.bookmaker_id)?.moeda || o.moeda || "BRL") as SupportedCurrency;
+        
         if (mainOdd > 1 && oddMedia > 0) {
           const targetReturn = targetStake * oddMedia;
-          const subPayout = additionalEntries.reduce((sum, ae) =>
-            sum + (parseFloat(ae.stake) || 0) * (parseFloat(ae.odd) || 0), 0);
+          const subPayout = additionalEntries.reduce((sum, ae) => {
+            const s = parseFloat(ae.stake) || 0;
+            const o = parseFloat(ae.odd) || 0;
+            const pLocal = s * (o > 1 ? o : 0);
+            const eMoeda = (ae.moeda as string) || legMoeda;
+            return sum + convertViaBRL(pLocal, eMoeda, legMoeda, engineConfig.brlRates);
+          }, 0);
           if (subPayout > 0) {
             targetStake = arredondarStake(Math.max(0, (targetReturn - subPayout) / mainOdd));
           }
@@ -1492,10 +1512,11 @@ export function SurebetModalRoot({
           return !!originalPerna && (flat.resultado || null) !== (originalPerna.resultado || null);
         });
 
-        const newStakeTotal = pernasToCalc.reduce((acc, p) => acc + p.stake, 0);
+        // Em multi-currency, o stake_total do pai é o valor consolidado
         const newStakeConsolidado = pernasToCalc.reduce((acc, p) => {
           return acc + convertViaBRL(p.stake, p.moeda, engineConfig.consolidationCurrency, engineConfig.brlRates);
         }, 0);
+        const newStakeTotal = analysis.isMultiCurrency ? newStakeConsolidado : pernasToCalc.reduce((acc, p) => acc + p.stake, 0);
         
         // 3. Chamar RPC atômica (transação única)
         const { data: rpcResult, error: rpcError } = await supabase.rpc('editar_surebet_completa_v1', {
