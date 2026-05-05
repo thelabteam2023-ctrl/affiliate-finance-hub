@@ -1532,10 +1532,45 @@ export function SurebetModalRoot({
         }, 0);
         const newStakeTotal = analysis.isMultiCurrency ? newStakeConsolidado : pernasToCalc.reduce((acc, p) => acc + p.stake, 0);
         
-        // 3. Chamar RPC atômica (transação única)
-        const { data: rpcResult, error: rpcError } = await supabase.rpc('editar_surebet_completa_v1', {
+        // PREPARAR DADOS PARA RPC V2 (HIERÁRQUICA)
+        // Pernas agrupadas por seleção para serem as pernas pai
+        const pernasUnicasPai = Array.from(new Set(allPernasFlat.map(f => f.parentLegIndex)))
+          .sort((a, b) => a - b)
+          .map(parentIdx => {
+            const firstEntry = allPernasFlat.find(f => f.parentLegIndex === parentIdx)!;
+            // Tenta achar se já existia uma perna com esse UUID no banco
+            const existingPerna = pernasData?.find((p: any) => p.ordem === (parentIdx + 1));
+            return {
+              id: existingPerna?.id || null,
+              selecao: firstEntry.selecao,
+              selecao_livre: firstEntry.selecaoLivre || null,
+              resultado: firstEntry.resultado || null
+            };
+          });
+
+        // Todas as entradas flat com referência ao índice da perna pai
+        const entradasParaRPC = allPernasFlat.map((flat) => {
+          const stake = parseFloat(flat.stake) || 0;
+          const moeda = getBookmakerMoeda(flat.bookmaker_id);
+          const snapshotFields = getSnapshotFields(stake, moeda, getEffectiveRate(moeda));
+          return {
+            id: flat.pernaId || null, // Se flat.pernaId existia, é o ID da entrada (legado: perna_id era o mesmo da entrada)
+            perna_index: flat.parentLegIndex,
+            bookmaker_id: flat.bookmaker_id,
+            stake,
+            odd: parseFloat(flat.odd) || 0,
+            moeda,
+            fonte_saldo: flat.fonteSaldo || 'REAL',
+            cotacao_snapshot: snapshotFields.cotacao_snapshot,
+            stake_brl_referencia: snapshotFields.valor_brl_referencia
+          };
+        });
+
+        // 3. Chamar RPC atômica V2 (transação única e hierárquica)
+        const { data: rpcResult, error: rpcError } = await supabase.rpc('editar_surebet_completa_v2', {
           p_aposta_id: surebet.id,
-          p_pernas: pernasParaRPC as any,
+          p_pernas: pernasUnicasPai as any,
+          p_entradas: entradasParaRPC as any,
           p_evento: evento,
           p_esporte: esporte,
           p_mercado: mercado,
