@@ -132,8 +132,8 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
           {/* Header com trigger da sidebar + conteúdo contextual */}
           <TopBarHeader />
 
-          {/* Main content - flex-1 + min-h-0 + overflow-auto para scroll correto */}
-          <main className="flex-1 min-h-0 overflow-hidden">
+          {/* Main content - flex-1 + min-h-0 + overflow-y-auto para scroll correto */}
+          <main className="flex-1 min-h-0 overflow-y-auto">
             <Suspense fallback={<PageLoader />}>
               {children}
             </Suspense>
