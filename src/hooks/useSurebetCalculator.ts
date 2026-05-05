@@ -516,7 +516,21 @@ export function useSurebetCalculator({
     // Stakes efetivos para análise: direcionadas se ativo, senão reais
     const effectiveStakes = directedStakesLocal || realStakesLocal;
 
-    return analisarArbitragem(engineLegs, effectiveStakes, safeConfig, numPernas);
+    const res = analisarArbitragem(engineLegs, effectiveStakes, safeConfig, numPernas);
+    
+    // Detectar multi-moeda considerando sub-entradas (o engine só olha as pernas)
+    const moedas = new Set<string>();
+    odds.forEach(o => {
+      moedas.add(getMoedaPerna(o));
+      o.additionalEntries?.forEach(ae => {
+        if (ae.moeda) moedas.add(ae.moeda);
+      });
+    });
+    
+    return {
+      ...res,
+      isMultiCurrency: moedas.size > 1
+    };
   }, [odds, directedStakesLocal, numPernas, safeConfig, getMoedaPerna, getOddMediaPerna, getStakeTotalPerna]);
 
   // ── Pernas válidas ────────────────────────────────────────────
