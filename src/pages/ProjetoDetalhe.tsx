@@ -718,7 +718,10 @@ export default function ProjetoDetalhe() {
 
   return (
     // Filtros agora são isolados por aba - cada tab usa seu próprio useTabFilters
-    <div className="flex-1 flex flex-col min-h-0 h-full w-full max-w-full overflow-hidden p-4 md:p-6 lg:p-8 space-y-4">
+    <div className={cn(
+      "flex-1 flex flex-col min-h-0 w-full max-w-full p-4 md:p-6 lg:p-8 space-y-4",
+      activeTab === "planejamento" ? "h-full overflow-hidden" : "h-auto"
+    )}>
 
       {/* Filtro de período removido - cada aba usa seu próprio StandardTimeFilter interno (padrão Bônus/Freebets) */}
 
@@ -967,8 +970,11 @@ export default function ProjetoDetalhe() {
 
         {/* GlobalActionsBar agora é renderizada dentro de cada aba operacional via actionsSlot */}
 
-        {/* Conteúdo das abas com contenção */}
-        <div className="flex-1 min-h-0 overflow-hidden">
+        {/* Conteúdo das abas - contenção apenas quando necessário (ex: planejamento) */}
+        <div className={cn(
+          "flex-1 min-h-0",
+          activeTab === "planejamento" ? "overflow-hidden" : "overflow-visible"
+        )}>
           <TabsContent value="visao-geral" forceMount className={cn("h-full m-0", activeTab !== "visao-geral" && "hidden")}>
             <ProjetoDashboardTab 
               projetoId={id!} 
