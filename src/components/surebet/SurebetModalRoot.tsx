@@ -1270,8 +1270,13 @@ export function SurebetModalRoot({
         const mainOdd = parseFloat(o.odd) || 0;
         if (mainOdd > 1 && oddMedia > 0) {
           const targetReturn = targetStake * oddMedia;
-          const subPayout = additionalEntries.reduce((sum, ae) =>
-            sum + (parseFloat(ae.stake) || 0) * (parseFloat(ae.odd) || 0), 0);
+          const subPayout = additionalEntries.reduce((sum, ae) => {
+            const s = parseFloat(ae.stake) || 0;
+            const o = parseFloat(ae.odd) || 0;
+            const pLocal = s * (o > 1 ? o : 0);
+            const eMoeda = (ae.moeda as string) || legMoeda;
+            return sum + convertViaBRL(pLocal, eMoeda, legMoeda, engineConfig.brlRates);
+          }, 0);
           if (subPayout > 0) {
             targetStake = arredondarStake(Math.max(0, (targetReturn - subPayout) / mainOdd));
           }
