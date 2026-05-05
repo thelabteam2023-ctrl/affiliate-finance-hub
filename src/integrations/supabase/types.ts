@@ -217,6 +217,135 @@ export type Database = {
           },
         ]
       }
+      apostas_perna_entradas: {
+        Row: {
+          bookmaker_id: string
+          cotacao_snapshot: number | null
+          cotacao_snapshot_at: string | null
+          created_at: string | null
+          fonte_saldo: string | null
+          id: string
+          moeda: string
+          odd: number
+          perna_id: string
+          stake: number
+          stake_brl_referencia: number | null
+          stake_freebet: number
+          stake_real: number
+          updated_at: string | null
+        }
+        Insert: {
+          bookmaker_id: string
+          cotacao_snapshot?: number | null
+          cotacao_snapshot_at?: string | null
+          created_at?: string | null
+          fonte_saldo?: string | null
+          id?: string
+          moeda?: string
+          odd: number
+          perna_id: string
+          stake: number
+          stake_brl_referencia?: number | null
+          stake_freebet?: number
+          stake_real?: number
+          updated_at?: string | null
+        }
+        Update: {
+          bookmaker_id?: string
+          cotacao_snapshot?: number | null
+          cotacao_snapshot_at?: string | null
+          created_at?: string | null
+          fonte_saldo?: string | null
+          id?: string
+          moeda?: string
+          odd?: number
+          perna_id?: string
+          stake?: number
+          stake_brl_referencia?: number | null
+          stake_freebet?: number
+          stake_real?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "apostas_perna_entradas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_perna_entradas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_disponibilidade"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_perna_entradas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_resultado_financeiro"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "apostas_perna_entradas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_resultado_operacional"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "apostas_perna_entradas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_audit"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "apostas_perna_entradas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_operavel"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_perna_entradas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_status_operacional"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_perna_entradas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_aguardando_saque"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "apostas_perna_entradas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_perna_entradas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_financial_audit"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "apostas_perna_entradas_perna_id_fkey"
+            columns: ["perna_id"]
+            isOneToOne: false
+            referencedRelation: "apostas_pernas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       apostas_pernas: {
         Row: {
           aposta_id: string
