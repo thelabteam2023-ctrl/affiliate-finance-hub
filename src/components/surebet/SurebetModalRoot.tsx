@@ -743,7 +743,6 @@ export function SurebetModalRoot({
       }
       
       const pernasOdds: OddEntry[] = pernasData.map((perna: any, groupIdx: number) => {
-        // Se houver entradas detalhadas, a primeira é a principal, as outras vão para additionalEntries
         const entradas = perna.apostas_perna_entradas || [];
         const mainEntrada = entradas.length > 0 ? entradas[0] : perna;
         const additionalEntradas = entradas.length > 1 ? entradas.slice(1) : [];
@@ -766,23 +765,12 @@ export function SurebetModalRoot({
           entradaId: mainEntrada.id !== perna.id ? mainEntrada.id : undefined,
           additionalEntries: additionalEntradas.map((ent: any) => ({
             bookmaker_id: ent.bookmaker_id,
-            moeda: ent.moeda,
+            moeda: ent.moeda as SupportedCurrency,
             odd: ent.odd?.toString() || "",
             stake: ent.stake?.toString() || "",
-            fonteSaldo: ent.fonte_saldo || 'REAL',
-            pernaId: ent.id // Aqui é o ID da entrada
+            fonteSaldo: (ent.fonte_saldo as 'REAL' | 'FREEBET') || 'REAL',
+            pernaId: ent.id
           }))
-        };
-      });
-          additionalEntries: additionalPernas.map((sub: any) => ({
-            bookmaker_id: sub.bookmaker_id || "",
-            moeda: (sub.moeda || "BRL") as SupportedCurrency,
-            odd: sub.odd?.toString() || "",
-            stake: sub.stake?.toString() || "",
-            selecaoLivre: sub.selecao_livre || "",
-            fonteSaldo: (sub.fonte_saldo as 'REAL' | 'FREEBET') || 'REAL',
-            pernaId: sub.id, // UUID da sub-entrada no banco
-          })),
         };
       });
       
