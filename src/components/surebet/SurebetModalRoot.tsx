@@ -1268,6 +1268,8 @@ export function SurebetModalRoot({
       if (additionalEntries.length > 0) {
         const oddMedia = getOddMediaPerna(o);
         const mainOdd = parseFloat(o.odd) || 0;
+        const legMoeda = (bookmakerSaldos.find(b => b.id === o.bookmaker_id)?.moeda || o.moeda || "BRL") as SupportedCurrency;
+        
         if (mainOdd > 1 && oddMedia > 0) {
           const targetReturn = targetStake * oddMedia;
           const subPayout = additionalEntries.reduce((sum, ae) => {
