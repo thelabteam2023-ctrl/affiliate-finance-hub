@@ -14,6 +14,8 @@ import type { ApostaPerna, ApostaPernaResultado } from "@/types/apostasPernas";
 import type { SupportedCurrency } from "@/types/currency";
 
 export interface PernaComBookmaker extends ApostaPerna {
+  /** ID lógico da perna (Leg) no banco */
+  pernaId?: string;
   bookmaker_nome?: string;
   bookmaker_logo_url?: string;
   parceiro_nome?: string;
