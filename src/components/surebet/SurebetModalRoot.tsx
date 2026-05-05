@@ -977,17 +977,24 @@ export function SurebetModalRoot({
       if (field === 'odd') {
         const oddVal = parseFloat(value);
         if (oddVal > 1) {
-          const targetPayout = targetPayoutsLocal?.[pernaIndex] || 0;
+          const targetPayout = targetPayoutsLocal?.[pernaIndex] || 0; // na moeda da perna
+          const legMoeda = (bookmakerSaldos.find(b => b.id === newOdds[pernaIndex].bookmaker_id)?.moeda || newOdds[pernaIndex].moeda || "BRL") as SupportedCurrency;
+          
           const mainStake = parseFloat(newOdds[pernaIndex].stake) || 0;
           const mainOdd = parseFloat(newOdds[pernaIndex].odd) || 0;
-          const currentPayout = mainStake * (mainOdd > 1 ? mainOdd : 0);
+          const mainPayout = mainStake * (mainOdd > 1 ? mainOdd : 0);
+
           const otherSubPayout = entries.reduce((sum, e, idx) => {
             if (idx === entryIndex) return sum;
             const s = parseFloat(e.stake) || 0;
             const o = parseFloat(e.odd) || 0;
-            return sum + s * (o > 1 ? o : 0);
+            const pLocal = s * (o > 1 ? o : 0);
+            const eMoeda = (e.moeda as string) || legMoeda;
+            
+            return sum + convertViaBRL(pLocal, eMoeda, legMoeda, engineConfig.brlRates);
           }, 0);
-          const remainingPayout = Math.max(0, targetPayout - currentPayout - otherSubPayout);
+
+          const remainingPayout = Math.max(0, targetPayout - mainPayout - otherSubPayout);
           if (remainingPayout > 0) {
             entries[entryIndex] = { ...entries[entryIndex], stake: arredondarStake(remainingPayout / oddVal).toFixed(2) };
           }
