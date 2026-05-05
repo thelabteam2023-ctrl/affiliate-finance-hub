@@ -717,10 +717,9 @@ export default function ProjetoDetalhe() {
   }
 
   return (
-    // Filtros agora são isolados por aba - cada tab usa seu próprio useTabFilters
     <div className={cn(
-      "flex-1 flex flex-col min-h-0 w-full max-w-full p-4 md:p-6 lg:p-8 space-y-4",
-      activeTab === "planejamento" ? "h-full overflow-hidden" : "h-auto"
+      "w-full max-w-full p-4 md:p-6 lg:p-8 space-y-4",
+      activeTab === "planejamento" ? "flex-1 flex flex-col min-h-0 h-full overflow-hidden" : "block h-auto"
     )}>
 
       {/* Filtro de período removido - cada aba usa seu próprio StandardTimeFilter interno (padrão Bônus/Freebets) */}
@@ -939,8 +938,15 @@ export default function ProjetoDetalhe() {
         </div>
       )}
 
-      {/* Tabs - Área flexível com contenção */}
-      <Tabs defaultValue="apostas" value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col min-h-0 space-y-3 md:space-y-4">
+      <Tabs 
+        defaultValue="apostas" 
+        value={activeTab} 
+        onValueChange={handleTabChange} 
+        className={cn(
+          "space-y-3 md:space-y-4",
+          activeTab === "planejamento" ? "flex-1 flex flex-col min-h-0" : "block h-auto"
+        )}
+      >
         <div className="flex-shrink-0 overflow-hidden" style={{ contain: "layout" }}>
           <ResponsiveTabsList
             tabs={dynamicTabs}
