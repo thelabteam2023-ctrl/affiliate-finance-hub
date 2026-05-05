@@ -1505,10 +1505,11 @@ export function SurebetModalRoot({
           return !!originalPerna && (flat.resultado || null) !== (originalPerna.resultado || null);
         });
 
-        const newStakeTotal = pernasToCalc.reduce((acc, p) => acc + p.stake, 0);
+        // Em multi-currency, o stake_total do pai é o valor consolidado
         const newStakeConsolidado = pernasToCalc.reduce((acc, p) => {
           return acc + convertViaBRL(p.stake, p.moeda, engineConfig.consolidationCurrency, engineConfig.brlRates);
         }, 0);
+        const newStakeTotal = analysis.isMultiCurrency ? newStakeConsolidado : pernasToCalc.reduce((acc, p) => acc + p.stake, 0);
         
         // 3. Chamar RPC atômica (transação única)
         const { data: rpcResult, error: rpcError } = await supabase.rpc('editar_surebet_completa_v1', {
