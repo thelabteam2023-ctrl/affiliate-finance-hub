@@ -1105,19 +1105,19 @@ export default function ProjetoDetalhe() {
             <ProjetoPlanejamentoTab projetoId={id!} refreshTrigger={refreshTrigger} />
           </TabsContent>
 
-          <TabsContent value="vinculos" className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto")}>
+          <TabsContent value="vinculos" className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto min-h-[400px]")}>
             <ProjetoVinculosTab projetoId={id!} tipoProjeto={projeto.tipo_projeto} investidorId={projeto.investidor_id} isBroker={projeto.is_broker} />
           </TabsContent>
 
-          <TabsContent value="modulos" className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto")}>
+          <TabsContent value="modulos" className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto min-h-[400px]")}>
             <ProjetoGestaoTab projetoId={id!} />
           </TabsContent>
 
-          <TabsContent value="incidentes" className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto")}>
+          <TabsContent value="incidentes" className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto min-h-[400px]")}>
             <ProjetoIncidentesTab projetoId={id!} onDataChange={triggerGlobalRefresh} formatCurrency={formatCurrency} />
           </TabsContent>
 
-          <TabsContent value="ciclos" className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto")}>
+          <TabsContent value="ciclos" className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto min-h-[400px]")}>
             <ProjetoCiclosTab projetoId={id!} formatCurrency={formatCurrency} convertToConsolidation={convertToConsolidationOficial} moedaConsolidacao={projetoResultado?.moedaConsolidacao || 'BRL'} />
           </TabsContent>
 
