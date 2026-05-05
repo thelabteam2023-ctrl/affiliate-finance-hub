@@ -1642,7 +1642,7 @@ export function SurebetModalRoot({
           throw new Error(result?.message || 'Falha ao criar surebet');
         }
         
-        const effectiveApostaId = result.o_aposta_id || result.aposta_id;
+        const effectiveApostaId = (result as any).o_aposta_id || (result as any).aposta_id;
         console.log("[SurebetModalRoot] ✅ Surebet criada via RPC:", {
           aposta_id: effectiveApostaId,
           events_created: result.events_created,

@@ -154,7 +154,7 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
 
       if (error) throw error;
       const result = data?.[0];
-      const effectiveApostaId = result?.o_aposta_id || result?.aposta_id;
+      const effectiveApostaId = (result as any)?.o_aposta_id || (result as any)?.aposta_id;
 
       if (!result?.success || !effectiveApostaId) {
         throw new Error(result?.message || 'Falha ao criar arbitragem');
