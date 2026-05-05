@@ -1063,7 +1063,7 @@ export default function ProjetoDetalhe() {
             />
           </TabsContent>
 
-          <TabsContent value="valuebet" forceMount className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto", activeTab !== "valuebet" && "hidden")}>
+          <TabsContent value="valuebet" forceMount className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto min-h-[400px]", activeTab !== "valuebet" && "hidden")}>
             <ProjetoValueBetTab 
               projetoId={id!} 
               onDataChange={triggerGlobalRefresh}
@@ -1080,7 +1080,7 @@ export default function ProjetoDetalhe() {
             />
           </TabsContent>
 
-          <TabsContent value="duplogreen" forceMount className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto", activeTab !== "duplogreen" && "hidden")}>
+          <TabsContent value="duplogreen" forceMount className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto min-h-[400px]", activeTab !== "duplogreen" && "hidden")}>
             <ProjetoDuploGreenTab 
               projetoId={id!} 
               onDataChange={triggerGlobalRefresh}
@@ -1097,7 +1097,7 @@ export default function ProjetoDetalhe() {
             />
           </TabsContent>
 
-          <TabsContent value="cashback" className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto")}>
+          <TabsContent value="cashback" className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto min-h-[400px]")}>
             <ProjetoCashbackTab projetoId={id!} />
           </TabsContent>
 
