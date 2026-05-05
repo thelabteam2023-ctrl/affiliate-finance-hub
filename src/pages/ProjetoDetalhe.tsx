@@ -977,18 +977,15 @@ export default function ProjetoDetalhe() {
         {/* GlobalActionsBar agora é renderizada dentro de cada aba operacional via actionsSlot */}
 
         {/* Conteúdo das abas - contenção apenas quando necessário (ex: planejamento) */}
-        <div className={cn(
-          "flex-1 min-h-0",
-          activeTab === "planejamento" ? "overflow-hidden" : "overflow-visible"
-        )}>
-          <TabsContent value="visao-geral" forceMount className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto", activeTab !== "visao-geral" && "hidden")}>
+        <div className={cn(activeTab === "planejamento" ? "flex-1 min-h-0 overflow-hidden" : "block h-auto overflow-visible")}>
+          <TabsContent value="visao-geral" forceMount className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto min-h-[400px]", activeTab !== "visao-geral" && "hidden")}>
             <ProjetoDashboardTab 
               projetoId={id!} 
               refreshTrigger={refreshTrigger}
             />
           </TabsContent>
 
-          <TabsContent value="apostas" forceMount className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto", activeTab !== "apostas" && "hidden")}>
+          <TabsContent value="apostas" forceMount className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto min-h-[400px]", activeTab !== "apostas" && "hidden")}>
             <ProjetoApostasTab 
               projetoId={id!} 
               onDataChange={triggerGlobalRefresh}
@@ -1006,7 +1003,7 @@ export default function ProjetoDetalhe() {
             />
           </TabsContent>
 
-          <TabsContent value="promocoes" forceMount className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto", activeTab !== "promocoes" && "hidden")}>
+          <TabsContent value="promocoes" forceMount className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto min-h-[400px]", activeTab !== "promocoes" && "hidden")}>
             <ProjetoPromocoesTab 
               projetoId={id!} 
               refreshTrigger={refreshTrigger}
