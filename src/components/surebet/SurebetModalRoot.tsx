@@ -279,6 +279,7 @@ export function SurebetModalRoot({
   const [arredondarAtivado, setArredondarAtivado] = useState(true);
   const [arredondarValor, setArredondarValor] = useState("1");
   const [saving, setSaving] = useState(false);
+  const [pernasDataRaw, setPernasDataRaw] = useState<any[]>([]);
   const [deletingPerna, setDeletingPerna] = useState(false);
   
   const [showConversionDialog, setShowConversionDialog] = useState(false);
@@ -693,6 +694,7 @@ export function SurebetModalRoot({
       // Armazenar stakes originais por bookmaker para crédito virtual em modo edição
       // Separado por tipo (real vs freebet) para validação correta
       const stakeMap = new Map<string, { real: number; freebet: number }>();
+      setPernasDataRaw(pernasData);
       pernasData.forEach((perna: any) => {
         // Se tiver sub-entradas, usar elas para o crédito virtual
         if (perna.apostas_perna_entradas && perna.apostas_perna_entradas.length > 0) {
@@ -1539,7 +1541,7 @@ export function SurebetModalRoot({
           .map(parentIdx => {
             const firstEntry = allPernasFlat.find(f => f.parentLegIndex === parentIdx)!;
             // Tenta achar se já existia uma perna com esse UUID no banco
-            const existingPerna = pernasData?.find((p: any) => p.ordem === (parentIdx + 1));
+            const existingPerna = pernasDataRaw?.find((p: any) => p.ordem === (parentIdx + 1));
             return {
               id: existingPerna?.id || null,
               selecao: firstEntry.selecao,
