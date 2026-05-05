@@ -1411,16 +1411,17 @@ export function SurebetModalRoot({
           const snapshotFields = getSnapshotFields(stake, moeda, getEffectiveRate(moeda));
           
           return {
-            id: flat.pernaId || null, // null = perna nova, UUID = perna existente
-            bookmaker_id: flat.bookmaker_id,
-            stake,
-            odd: parseFloat(flat.odd) || 0,
-            moeda,
-            selecao: flat.selecao,
-            selecao_livre: flat.selecaoLivre || null,
-            fonte_saldo: flat.fonteSaldo || 'REAL',
-            cotacao_snapshot: snapshotFields.cotacao_snapshot,
-            stake_brl_referencia: snapshotFields.valor_brl_referencia,
+           id: flat.pernaId || null,
+           bookmaker_id: flat.bookmaker_id,
+           stake,
+           odd: parseFloat(flat.odd) || 0,
+           moeda,
+           selecao: flat.selecao,
+           selecao_livre: flat.selecaoLivre || null,
+           ordem: flat.parentLegIndex + 1, // Garantir que sub-entradas herdam a ordem da perna pai
+           fonte_saldo: flat.fonteSaldo || 'REAL',
+           cotacao_snapshot: snapshotFields.cotacao_snapshot,
+           stake_brl_referencia: snapshotFields.valor_brl_referencia,
           };
         });
         
@@ -1576,15 +1577,16 @@ export function SurebetModalRoot({
           const snapshotFields = getSnapshotFields(stake, moeda, getEffectiveRate(moeda));
           
           return {
-            bookmaker_id: flat.bookmaker_id,
-            stake,
-            odd: parseFloat(flat.odd) || 0,
-            moeda,
-            selecao: flat.selecao,
-            selecao_livre: flat.selecaoLivre || null,
-            cotacao_snapshot: snapshotFields.cotacao_snapshot,
-            stake_brl_referencia: snapshotFields.valor_brl_referencia,
-            fonte_saldo: flat.fonteSaldo || 'REAL',
+             bookmaker_id: flat.bookmaker_id,
+             stake,
+             odd: parseFloat(flat.odd) || 0,
+             moeda,
+             selecao: flat.selecao,
+             selecao_livre: flat.selecaoLivre || null,
+             ordem: flat.parentLegIndex + 1, // Garantir que sub-entradas herdam a ordem da perna pai
+             cotacao_snapshot: snapshotFields.cotacao_snapshot,
+             stake_brl_referencia: snapshotFields.valor_brl_referencia,
+             fonte_saldo: flat.fonteSaldo || 'REAL',
           };
         });
         
