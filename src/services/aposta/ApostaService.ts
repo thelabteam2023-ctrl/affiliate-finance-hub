@@ -111,6 +111,8 @@ export async function criarAposta(
       }
 
       const result = data?.[0];
+      const effectiveApostaId = (result as any)?.o_aposta_id || (result as any)?.aposta_id;
+
       if (!result?.success) {
         return {
           success: false,
@@ -118,7 +120,7 @@ export async function criarAposta(
         };
       }
 
-      return { success: true, data: { id: result.aposta_id } };
+      return { success: true, data: { id: effectiveApostaId } };
     } catch (err: any) {
       return {
         success: false,

@@ -154,12 +154,14 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
 
       if (error) throw error;
       const result = data?.[0];
-      if (!result?.success || !result.aposta_id) {
+      const effectiveApostaId = (result as any)?.o_aposta_id || (result as any)?.aposta_id;
+
+      if (!result?.success || !effectiveApostaId) {
         throw new Error(result?.message || 'Falha ao criar arbitragem');
       }
       
       toast.success("Operação registrada com sucesso!");
-      return result.aposta_id;
+      return effectiveApostaId;
     } catch (error: any) {
       toast.error("Erro ao criar operação: " + error.message);
       return null;
