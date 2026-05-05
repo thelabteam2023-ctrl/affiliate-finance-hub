@@ -975,14 +975,14 @@ export default function ProjetoDetalhe() {
           "flex-1 min-h-0",
           activeTab === "planejamento" ? "overflow-hidden" : "overflow-visible"
         )}>
-          <TabsContent value="visao-geral" forceMount className={cn("h-full m-0", activeTab !== "visao-geral" && "hidden")}>
+          <TabsContent value="visao-geral" forceMount className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto", activeTab !== "visao-geral" && "hidden")}>
             <ProjetoDashboardTab 
               projetoId={id!} 
               refreshTrigger={refreshTrigger}
             />
           </TabsContent>
 
-          <TabsContent value="apostas" forceMount className={cn("h-full m-0", activeTab !== "apostas" && "hidden")}>
+          <TabsContent value="apostas" forceMount className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto", activeTab !== "apostas" && "hidden")}>
             <ProjetoApostasTab 
               projetoId={id!} 
               onDataChange={triggerGlobalRefresh}
@@ -1000,7 +1000,7 @@ export default function ProjetoDetalhe() {
             />
           </TabsContent>
 
-          <TabsContent value="promocoes" forceMount className={cn("h-full m-0", activeTab !== "promocoes" && "hidden")}>
+          <TabsContent value="promocoes" forceMount className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto", activeTab !== "promocoes" && "hidden")}>
             <ProjetoPromocoesTab 
               projetoId={id!} 
               refreshTrigger={refreshTrigger}
@@ -1009,7 +1009,7 @@ export default function ProjetoDetalhe() {
             />
           </TabsContent>
 
-          <TabsContent value="bonus" forceMount className={cn("h-full m-0", activeTab !== "bonus" && "hidden")}>
+          <TabsContent value="bonus" forceMount className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto", activeTab !== "bonus" && "hidden")}>
             <ProjetoBonusArea 
               projetoId={id!} 
               refreshTrigger={refreshTrigger}
@@ -1026,7 +1026,7 @@ export default function ProjetoDetalhe() {
             />
           </TabsContent>
 
-          <TabsContent value="punter" forceMount className={cn("h-full m-0", activeTab !== "punter" && "hidden")}>
+          <TabsContent value="punter" forceMount className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto", activeTab !== "punter" && "hidden")}>
             <ProjetoPunterTab 
               projetoId={id!} 
               onDataChange={triggerGlobalRefresh}
@@ -1043,7 +1043,7 @@ export default function ProjetoDetalhe() {
             />
           </TabsContent>
 
-          <TabsContent value="surebet" forceMount className={cn("h-full m-0", activeTab !== "surebet" && "hidden")}>
+          <TabsContent value="surebet" forceMount className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto", activeTab !== "surebet" && "hidden")}>
             <ProjetoSurebetTab 
               projetoId={id!} 
               onDataChange={triggerGlobalRefresh}
@@ -1060,7 +1060,7 @@ export default function ProjetoDetalhe() {
             />
           </TabsContent>
 
-          <TabsContent value="valuebet" forceMount className={cn("h-full m-0", activeTab !== "valuebet" && "hidden")}>
+          <TabsContent value="valuebet" forceMount className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto", activeTab !== "valuebet" && "hidden")}>
             <ProjetoValueBetTab 
               projetoId={id!} 
               onDataChange={triggerGlobalRefresh}
@@ -1077,7 +1077,7 @@ export default function ProjetoDetalhe() {
             />
           </TabsContent>
 
-          <TabsContent value="duplogreen" forceMount className={cn("h-full m-0", activeTab !== "duplogreen" && "hidden")}>
+          <TabsContent value="duplogreen" forceMount className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto", activeTab !== "duplogreen" && "hidden")}>
             <ProjetoDuploGreenTab 
               projetoId={id!} 
               onDataChange={triggerGlobalRefresh}
@@ -1094,7 +1094,7 @@ export default function ProjetoDetalhe() {
             />
           </TabsContent>
 
-          <TabsContent value="cashback" className="h-full m-0">
+          <TabsContent value="cashback" className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto")}>
             <ProjetoCashbackTab projetoId={id!} />
           </TabsContent>
 
@@ -1102,19 +1102,19 @@ export default function ProjetoDetalhe() {
             <ProjetoPlanejamentoTab projetoId={id!} refreshTrigger={refreshTrigger} />
           </TabsContent>
 
-          <TabsContent value="vinculos" className="h-full m-0">
+          <TabsContent value="vinculos" className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto")}>
             <ProjetoVinculosTab projetoId={id!} tipoProjeto={projeto.tipo_projeto} investidorId={projeto.investidor_id} isBroker={projeto.is_broker} />
           </TabsContent>
 
-          <TabsContent value="modulos" className="h-full m-0">
+          <TabsContent value="modulos" className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto")}>
             <ProjetoGestaoTab projetoId={id!} />
           </TabsContent>
 
-          <TabsContent value="incidentes" className="h-full m-0">
+          <TabsContent value="incidentes" className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto")}>
             <ProjetoIncidentesTab projetoId={id!} onDataChange={triggerGlobalRefresh} formatCurrency={formatCurrency} />
           </TabsContent>
 
-          <TabsContent value="ciclos" className="h-full m-0">
+          <TabsContent value="ciclos" className={cn("m-0", activeTab === "planejamento" ? "h-full" : "h-auto")}>
             <ProjetoCiclosTab projetoId={id!} formatCurrency={formatCurrency} convertToConsolidation={convertToConsolidationOficial} moedaConsolidacao={projetoResultado?.moedaConsolidacao || 'BRL'} />
           </TabsContent>
 
