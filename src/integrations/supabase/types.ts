@@ -15159,9 +15159,9 @@ export type Database = {
           p_workspace_id: string
         }
         Returns: {
-          aposta_id: string
           events_created: number
           message: string
+          o_aposta_id: string
           success: boolean
         }[]
       }
