@@ -15247,6 +15247,29 @@ export type Database = {
         }
         Returns: Json
       }
+      editar_surebet_completa_v2: {
+        Args: {
+          p_aposta_id: string
+          p_contexto: string
+          p_data_aposta: string
+          p_entradas: Json
+          p_esporte: string
+          p_estrategia: string
+          p_evento: string
+          p_lucro_esperado: number
+          p_lucro_prejuizo?: number
+          p_mercado: string
+          p_modelo: string
+          p_pernas: Json
+          p_resultado?: string
+          p_roi_esperado: number
+          p_roi_real?: number
+          p_stake_consolidado: number
+          p_stake_total: number
+          p_status?: string
+        }
+        Returns: Json
+      }
       encerrar_ciclo_e_criar_proximo: {
         Args: { p_ciclo_id: string; p_excedente?: number; p_gatilho: string }
         Returns: string
@@ -15904,6 +15927,10 @@ export type Database = {
       recalcular_pai_surebet_multimoeda: {
         Args: { p_surebet_id: string }
         Returns: Record<string, unknown>
+      }
+      recalcular_perna_por_entradas: {
+        Args: { p_perna_id: string }
+        Returns: undefined
       }
       recalcular_saldo_por_apostas: {
         Args: { p_bookmaker_id: string }
