@@ -528,15 +528,6 @@ export function useSurebetCalculator({
     });
   }, [odds]);
 
-  return {
-    analysis,
-    calculatedStakes: calculatedStakesLocal,
-    calculatedStakesConsolidated,
-    equalizedTargetStakes,
-    targetPayoutsLocal,                         // payout alvo por perna (moeda local) para auto-fill
-    directedStakes: directedStakesLocal,
-    pernasValidas,
-    arredondarStake,
   const getPayoutTotalPerna = useCallback((entry: OddEntry): number => {
     const baseCurrency = getMoedaPerna(entry);
     return calcularPayoutTotalPerna(
