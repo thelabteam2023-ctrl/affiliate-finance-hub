@@ -1568,8 +1568,11 @@ export function SurebetModalRoot({
           };
         });
 
-        // 3. Chamar RPC atômica V2 (transação única e hierárquica)
-        const { data: rpcResult, error: rpcError } = await supabase.rpc('editar_surebet_completa_v2', {
+        // 3. Chamar RPC atômica v3 (simétrica à edição de aposta simples):
+        // - sincroniza stake no ledger via fn_sync_stake_event_v1
+        // - reliquida pernas via liquidar_perna_surebet_v1
+        // - recalcula pai via fn_recalc_pai_surebet (status/resultado/lucro)
+        const { data: rpcResult, error: rpcError } = await supabase.rpc('editar_surebet_completa_v3', {
           p_aposta_id: surebet.id,
           p_pernas: pernasUnicasPai as any,
           p_entradas: entradasParaRPC as any,
@@ -1580,14 +1583,7 @@ export function SurebetModalRoot({
           p_estrategia: estrategiaSelecionada,
           p_contexto: contexto,
           p_data_aposta: toLocalTimestamp(dataAposta),
-          p_stake_total: newStakeTotal,
-          p_stake_consolidado: newStakeConsolidado,
-          p_lucro_esperado: analysis.minLucro,
-          p_roi_esperado: analysis.minRoi,
-          p_lucro_prejuizo: hasResultadoChange ? lucroRealTotal : null,
-          p_roi_real: hasResultadoChange ? roiReal : null,
-          p_status: hasResultadoChange ? statusAposta : null,
-          p_resultado: hasResultadoChange ? resultadoAposta : null,
+          p_status_manual: hasResultadoChange ? statusAposta : null,
         });
         
         if (rpcError) {

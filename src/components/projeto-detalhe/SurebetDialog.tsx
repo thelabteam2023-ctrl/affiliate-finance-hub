@@ -2280,7 +2280,10 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
             };
           });
 
-        const { data: rpcResult, error } = await supabase.rpc('editar_surebet_completa_v2', {
+        // Migrado para editar_surebet_completa_v3: paridade com edição de
+        // aposta simples — ledger é sincronizado via fn_sync_stake_event_v1
+        // e o pai é recalculado por fn_recalc_pai_surebet (status/lucro).
+        const { data: rpcResult, error } = await supabase.rpc('editar_surebet_completa_v3', {
           p_aposta_id: surebet.id,
           p_pernas: pernasUnicasPai as any,
           p_entradas: allEntradasFlat as any,
@@ -2291,14 +2294,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
           p_estrategia: registroValues.estrategia,
           p_contexto: registroValues.contexto_operacional,
           p_data_aposta: surebet.data_operacao || null,
-          p_stake_total: stakeEditTotal,
-          p_stake_consolidado: valorBRLRefEdit,
-          p_lucro_esperado: null,
-          p_roi_esperado: roiEdit,
-          p_lucro_prejuizo: null,
-          p_roi_real: null,
-          p_status: null,
-          p_resultado: null,
+          p_status_manual: null,
         });
 
         if (error) throw error;
