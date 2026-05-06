@@ -45,7 +45,6 @@ import {
   useUpsertCampanha,
   PlanningPerfil
 } from "@/hooks/usePlanningData";
-import { usePlanningRealtimeSync } from "@/hooks/usePlanningRealtimeSync";
 import { useCelulasAgendadasPorCampanhas } from "@/hooks/usePlanoCelulasDisponiveis";
 import { format, parseISO, isToday, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -61,9 +60,6 @@ interface ProjetoPlanejamentoTabProps {
 }
 
 export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProps) {
-  // Ativa a sincronização em tempo real para o planejamento dentro do projeto
-  usePlanningRealtimeSync();
-
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [projetoFilter, setProjetoFilter] = useState<string>(projetoId);
@@ -144,23 +140,11 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
     return campanhas
       .filter((c) => {
         const matchesProjeto = projetoFilter === "all" || c.projeto_id === projetoFilter;
-        
-        const { perfil, celula, isPending } = resolveCampanhaData(c);
-        
-        const snapshotNome = (c.parceiro_snapshot?.nome || "").toLowerCase();
-        const perfilNome = (perfil ? perfilDisplayName(perfil) : "").toLowerCase();
-        const celulaParceiroNome = (celula as any)?.parceiro_id 
-          ? (perfis.find(p => p.parceiro_id === (celula as any).parceiro_id)?.parceiro?.nome || "").toLowerCase()
-          : "";
-          
-        const searchLower = searchTerm.toLowerCase();
         const matchesSearch =
-          c.bookmaker_nome.toLowerCase().includes(searchLower) ||
-          snapshotNome.includes(searchLower) ||
-          perfilNome.includes(searchLower) ||
-          celulaParceiroNome.includes(searchLower) ||
-          (c.notes || "").toLowerCase().includes(searchLower);
-
+          c.bookmaker_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (c.parceiro_snapshot?.nome || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (c.notes || "").toLowerCase().includes(searchTerm.toLowerCase());
+        const { isPending } = resolveCampanhaData(c);
         const status = getStatus(c, isPending);
         const matchesStatus = statusFilter === "all" || status === statusFilter;
         return matchesSearch && matchesStatus && matchesProjeto;
@@ -251,6 +235,25 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
             </Select>
           </div>
 
+          <div className="flex flex-col gap-1 flex-1 min-w-[150px] sm:flex-none sm:w-[200px]">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Projeto</span>
+            <Select value={projetoFilter} onValueChange={setProjetoFilter}>
+              <SelectTrigger className="h-10 px-3 flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <div className="truncate">
+                    <SelectValue placeholder="Projeto" />
+                  </div>
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Projetos</SelectItem>
+                {projetos.map(p => (
+                  <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="flex items-center gap-4 text-sm text-muted-foreground font-medium">

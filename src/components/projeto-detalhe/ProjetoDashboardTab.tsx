@@ -19,7 +19,6 @@ import {
 } from "lucide-react";
 import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
-import { getConsolidatedLucroDirect } from "@/utils/consolidatedValues";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { fetchProjetoExtras, type ProjetoExtraEntry } from "@/services/fetchProjetoExtras";
@@ -336,14 +335,20 @@ export function ProjetoDashboardTab({ projetoId, refreshTrigger = 0 }: ProjetoDa
       if (!acc[aposta.esporte]) {
         acc[aposta.esporte] = { greens: 0, reds: 0, meioGreens: 0, meioReds: 0, lucro: 0 };
       }
-       const res = aposta.resultado;
-       if (res === "GREEN") acc[aposta.esporte].greens++;
-       else if (res === "RED") acc[aposta.esporte].reds++;
-       else if (res === "MEIO_GREEN") acc[aposta.esporte].meioGreens++;
-       else if (res === "MEIO_RED") acc[aposta.esporte].meioReds++;
-
-       // USAR SSOT: Cotação de Trabalho (convertToConsolidation) para paridade com KPIs e Gráfico
-       const lucroConsolidado = getConsolidatedLucroDirect(aposta as any, aposta.pernas as any, convertToConsolidation, moedaConsolidacao);
+      if (aposta.resultado === "GREEN") acc[aposta.esporte].greens++;
+      if (aposta.resultado === "RED") acc[aposta.esporte].reds++;
+      if (aposta.resultado === "MEIO_GREEN") acc[aposta.esporte].meioGreens++;
+      if (aposta.resultado === "MEIO_RED") acc[aposta.esporte].meioReds++;
+      // CRÍTICO: Converter para moeda de consolidação do projeto
+      const moedaOp = aposta.moeda_operacao || 'BRL';
+      const rawLucro = aposta.lucro_prejuizo || 0;
+      let lucroConsolidado = rawLucro;
+      // CRÍTICO: Só usar pl_consolidado se consolidation_currency bate com moeda do projeto
+      if (aposta.pl_consolidado != null && aposta.consolidation_currency === moedaConsolidacao) {
+        lucroConsolidado = aposta.pl_consolidado;
+      } else if (moedaOp !== moedaConsolidacao) {
+        lucroConsolidado = convertToConsolidationOficial(rawLucro, moedaOp);
+      }
       acc[aposta.esporte].lucro += lucroConsolidado;
       return acc;
     }, {});

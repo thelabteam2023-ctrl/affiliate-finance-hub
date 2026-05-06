@@ -50,7 +50,7 @@ import { ResultadoPill } from "@/components/projeto-detalhe/ResultadoPill";
 import { ApostaCard, type ApostaCardData } from "@/components/projeto-detalhe/ApostaCard";
 import { useProjectBonuses, FinalizeReason } from "@/hooks/useProjectBonuses";
 import { cn, getFirstLastName } from "@/lib/utils";
-import { buildBookmakerNomeMap, collectMissingBookmakerIds, mergeBookmakerNomeMaps, formatBookmakerDisplay } from "@/lib/bookmaker-display";
+import { buildBookmakerNomeMap, collectMissingBookmakerIds, mergeBookmakerNomeMaps } from "@/lib/bookmaker-display";
 import { useUnlinkedBookmakerNames } from "@/hooks/useUnlinkedBookmakerNames";
 import { apostaMatchesBookmakerFilter, apostaMatchesParceiroFilter } from "@/utils/apostaFilterHelpers";
 import { 
@@ -186,19 +186,6 @@ type ApostaUnificada = {
   data: Aposta | ApostaMultipla | Surebet;
   data_aposta: string;
 };
-
-function getCasaLabelFromAposta(aposta: any): string {
-  const nome = (aposta.bookmaker?.nome as string | undefined)?.trim();
-  const parceiro = (aposta.bookmaker?.parceiro?.nome as string | undefined)?.trim();
-  const instance = (aposta.bookmaker as any)?.instance_identifier;
-
-  let fullName = nome || "";
-  if (parceiro) fullName += ` - ${parceiro}`;
-  if (instance) fullName += ` (${instance})`;
-
-  if (fullName) return formatBookmakerDisplay(fullName);
-  return "—";
-}
 
 export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApostasTabProps) {
   const queryClient = useQueryClient();
@@ -469,17 +456,16 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
             .select(`
               id,
               aposta_id,
-             bookmaker_id,
-             selecao,
-             selecao_livre,
-             odd,
-             stake,
-             resultado,
-             lucro_prejuizo,
-             moeda,
-             fonte_saldo,
-             bookmakers (id, nome, instance_identifier, moeda, parceiro:parceiros(nome), bookmakers_catalogo (logo_url)),
-             apostas_perna_entradas (*, bookmakers (id, nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo (logo_url)))
+              bookmaker_id,
+              selecao,
+              selecao_livre,
+              odd,
+              stake,
+              resultado,
+              lucro_prejuizo,
+              moeda,
+              fonte_saldo,
+              bookmakers (nome, moeda, parceiro:parceiros(nome))
             `)
             .in("aposta_id", idsChunk)
             .order("ordem", { ascending: true }),
@@ -492,34 +478,21 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
           }
           const bookmaker = p.bookmakers as any;
           const parceiroNome = bookmaker?.parceiro?.nome;
-           const entradas = p.apostas_perna_entradas || [];
-           pernasMap[p.aposta_id].push({
-             id: p.id,
-             bookmaker_id: p.bookmaker_id,
-             bookmaker_nome: parceiroNome 
-               ? `${bookmaker?.nome || "—"} - ${parceiroNome}${bookmaker?.instance_identifier ? ` (${bookmaker.instance_identifier})` : ''}` 
-               : `${bookmaker?.nome || "—"}${bookmaker?.instance_identifier ? ` (${bookmaker.instance_identifier})` : ''}`,
-             selecao: p.selecao,
-             selecao_livre: p.selecao_livre,
-             odd: p.odd,
-             stake: p.stake,
-             resultado: p.resultado,
-             lucro_prejuizo: p.lucro_prejuizo,
-             moeda: p.moeda || bookmaker?.moeda || 'BRL',
-             fonte_saldo: p.fonte_saldo || null,
-             entries: entradas.length > 0 ? entradas.map((ent: any) => ({
-               id: ent.id,
-               bookmaker_id: ent.bookmaker_id,
-               bookmaker_nome: ent.bookmakers?.nome 
-                 ? (ent.bookmakers.parceiro?.nome ? `${ent.bookmakers.nome} - ${ent.bookmakers.parceiro.nome}${ent.bookmakers.instance_identifier ? ` (${ent.bookmakers.instance_identifier})` : ''}` : `${ent.bookmakers.nome}${ent.bookmakers.instance_identifier ? ` (${ent.bookmakers.instance_identifier})` : ''}`)
-                 : "Outra Casa",
-               moeda: ent.moeda,
-               odd: ent.odd,
-               stake: ent.stake,
-               fonte_saldo: ent.fonte_saldo,
-               resultado: p.resultado,
-             })) : undefined
-           });
+          pernasMap[p.aposta_id].push({
+            id: p.id,
+            bookmaker_id: p.bookmaker_id,
+            bookmaker_nome: parceiroNome 
+              ? `${bookmaker?.nome || "—"} - ${parceiroNome}` 
+              : (bookmaker?.nome || "—"),
+            selecao: p.selecao,
+            selecao_livre: p.selecao_livre,
+            odd: p.odd,
+            stake: p.stake,
+            resultado: p.resultado,
+            lucro_prejuizo: p.lucro_prejuizo,
+            moeda: p.moeda || bookmaker?.moeda || 'BRL',
+            fonte_saldo: p.fonte_saldo || null,
+          });
         });
       }
       
@@ -870,20 +843,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
         VOID: "Void"
       }[resultado] || resultado;
 
-      const resultColorClass = resultLabel.includes("Green") 
-        ? "text-emerald-500" 
-        : resultLabel.includes("Red") 
-          ? "text-rose-500" 
-          : "text-amber-500";
-
-      const casaLabel = aposta ? getCasaLabelFromAposta(aposta) : "";
-
-      toast.success(
-        <div className="flex items-center gap-1.5">
-          <span className={cn("font-semibold", resultColorClass)}>{resultLabel}</span>
-          {casaLabel ? <span>na {casaLabel}</span> : <span>marcada com sucesso</span>}
-        </div>
-      );
+      toast.success(`Aposta marcada como ${resultLabel}`);
     } catch (error) {
       console.error("Erro ao resolver aposta:", error);
       toast.error("Erro ao atualizar resultado");
@@ -990,34 +950,8 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
       }[input.resultado] || input.resultado;
 
       if (!input.silent) {
-        const nomeRaw = input.bookmakerNome || '';
-        const resultColorClass = resultLabel.includes("Green") 
-          ? "text-emerald-500" 
-          : resultLabel.includes("Red") 
-            ? "text-rose-500" 
-            : "text-amber-500";
-
-        if (nomeRaw) {
-          const casas = nomeRaw.split(" & ").map(n => formatBookmakerDisplay(n));
-          
-          toast.success(
-            <div className="flex flex-col gap-0.5">
-              {casas.map((casa, idx) => (
-                <div key={idx} className="flex items-center gap-1.5">
-                  <span className={cn("font-semibold", resultColorClass)}>{resultLabel}</span>
-                  <span>na {casa}</span>
-                </div>
-              ))}
-            </div>
-          );
-        } else {
-          toast.success(
-            <div className="flex items-center gap-1.5">
-              <span className={cn("font-semibold", resultColorClass)}>{resultLabel}</span>
-              <span>alterado com sucesso</span>
-            </div>
-          );
-        }
+        const nome = input.bookmakerNome || '';
+        toast.success(nome ? `${resultLabel} na ${nome}` : `Resultado alterado com sucesso`);
       }
     } catch (error: any) {
       console.error("Erro ao liquidar perna:", error);
@@ -1228,22 +1162,21 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
               status: aposta.status,
               resultado: aposta.resultado,
               observacoes: aposta.observacoes,
-               pernas: groupPernasBySelecao(
-                 subEntries.map((p: any) => ({
-                   ...p,
-                   id: p.id,
-                   selecao: p.selecao || aposta.selecao,
-                   selecao_livre: p.selecao_livre,
-                   odd: p.odd,
-                   stake: p.stake,
-                   resultado: p.resultado,
-                   lucro_prejuizo: p.lucro_prejuizo ?? null,
-                   bookmaker_nome: p.bookmaker_nome || p.bookmaker?.nome || '—',
-                   bookmaker_id: p.bookmaker_id,
-                   moeda: p.moeda || 'BRL',
-                   fonte_saldo: p.fonte_saldo || null,
-                 }))
-               ),
+              pernas: groupPernasBySelecao(
+                subEntries.map((p: any) => ({
+                  id: p.id,
+                  selecao: p.selecao || aposta.selecao,
+                  selecao_livre: p.selecao_livre,
+                  odd: p.odd,
+                  stake: p.stake,
+                  resultado: p.resultado,
+                  lucro_prejuizo: p.lucro_prejuizo ?? null,
+                  bookmaker_nome: p.bookmaker?.nome || '—',
+                  bookmaker_id: p.bookmaker_id,
+                  moeda: p.moeda || 'BRL',
+                  fonte_saldo: p.fonte_saldo || null,
+                }))
+              ),
             };
 
             return (

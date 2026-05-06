@@ -70,7 +70,7 @@ import { UnifiedStatisticsCard } from "./UnifiedStatisticsCard";
 import { ChartEmptyState } from "@/components/ui/chart-empty-state";
 
 import { cn } from "@/lib/utils";
-import { buildBookmakerNomeMap, collectMissingBookmakerIds, mergeBookmakerNomeMaps, formatBookmakerDisplay } from "@/lib/bookmaker-display";
+import { buildBookmakerNomeMap, collectMissingBookmakerIds, mergeBookmakerNomeMaps } from "@/lib/bookmaker-display";
 import { useUnlinkedBookmakerNames } from "@/hooks/useUnlinkedBookmakerNames";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
@@ -322,7 +322,7 @@ export function ProjetoValueBetTab({
           modo_entrada, gerou_freebet, valor_freebet_gerada, tipo_freebet, forma_registro,
           contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
           back_em_exchange, back_comissao, pernas, modelo, selecoes, tipo_multipla, odd_final,
-          moeda_operacao, stake_consolidado, pl_consolidado, consolidation_currency, valor_brl_referencia, lucro_prejuizo_brl_referencia,
+          moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia,
           fonte_entrada, usar_freebet, fonte_saldo
         `;
 
@@ -412,8 +412,11 @@ export function ProjetoValueBetTab({
               .select(`
                 id, aposta_id, bookmaker_id, odd, stake, stake_real, stake_freebet, moeda, selecao, selecao_livre, ordem,
                 resultado, lucro_prejuizo, stake_brl_referencia, lucro_prejuizo_brl_referencia, cotacao_snapshot, fonte_saldo,
-               bookmaker:bookmakers (id, nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo (logo_url)),
-               apostas_perna_entradas (*, bookmakers (id, nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo (logo_url)))
+                bookmaker:bookmakers (
+                  nome, parceiro_id, instance_identifier,
+                  parceiro:parceiros (nome),
+                  bookmakers_catalogo (logo_url)
+                )
               `)
               .in("aposta_id", idsChunk)
               .order("ordem", { ascending: true }),
@@ -422,30 +425,11 @@ export function ProjetoValueBetTab({
 
         if (pernasData) {
           const pernasMap = new Map<string, any[]>();
-           pernasData.forEach((p: any) => {
-             const arr = pernasMap.get(p.aposta_id) || [];
-             const entradas = p.apostas_perna_entradas || [];
-             const parceiroNome = p.bookmaker?.parceiro?.nome;
-             arr.push({
-               ...p,
-               bookmaker_nome: parceiroNome 
-                 ? `${p.bookmaker?.nome || "—"} - ${parceiroNome}${p.bookmaker?.instance_identifier ? ` (${p.bookmaker.instance_identifier})` : ''}` 
-                 : `${p.bookmaker?.nome || "—"}${p.bookmaker?.instance_identifier ? ` (${p.bookmaker.instance_identifier})` : ''}`,
-               entries: entradas.length > 0 ? entradas.map((ent: any) => ({
-                 id: ent.id,
-                 bookmaker_id: ent.bookmaker_id,
-                 bookmaker_nome: ent.bookmakers?.nome 
-                   ? (ent.bookmakers.parceiro?.nome ? `${ent.bookmakers.nome} - ${ent.bookmakers.parceiro.nome}${ent.bookmakers.instance_identifier ? ` (${ent.bookmakers.instance_identifier})` : ''}` : `${ent.bookmakers.nome}${ent.bookmakers.instance_identifier ? ` (${ent.bookmakers.instance_identifier})` : ''}`)
-                   : "Outra Casa",
-                 moeda: ent.moeda,
-                 odd: ent.odd,
-                 stake: ent.stake,
-                 fonte_saldo: ent.fonte_saldo,
-                 resultado: p.resultado,
-               })) : undefined
-             });
-             pernasMap.set(p.aposta_id, arr);
-           });
+          for (const p of pernasData) {
+            const arr = pernasMap.get(p.aposta_id) || [];
+            arr.push(p);
+            pernasMap.set(p.aposta_id, arr);
+          }
           for (const a of mappedApostas) {
             const pernas = pernasMap.get(a.id);
             if (pernas && pernas.length > 1) {
@@ -502,21 +486,7 @@ export function ProjetoValueBetTab({
         VOID: "Void"
       }[resultado] || resultado;
 
-      const resultColorClass = resultLabel.includes("Green") 
-        ? "text-emerald-500" 
-        : resultLabel.includes("Red") 
-          ? "text-rose-500" 
-          : "text-amber-500";
-
-      const nome = aposta.bookmaker_nome ? formatBookmakerDisplay(aposta.bookmaker_nome) : "";
-
-      toast.success(
-        <div className="flex items-center gap-1.5">
-          <span className={cn("font-semibold", resultColorClass)}>{resultLabel}</span>
-          {nome ? <span>na {nome}</span> : <span>marcada com sucesso</span>}
-        </div>
-      );
-
+      toast.success(`Aposta marcada como ${resultLabel}`);
       onDataChange?.();
     } catch (error) {
       console.error("Erro ao resolver aposta:", error);
@@ -587,45 +557,11 @@ export function ProjetoValueBetTab({
       }
       invalidateSaldos(projetoId);
       fetchData();
-      const resultLabel = { 
-        GREEN: "Green", 
-        RED: "Red", 
-        MEIO_GREEN: "½ Green", 
-        MEIO_RED: "½ Red", 
-        VOID: "Void" 
-      }[input.resultado] || input.resultado;
-
+      const resultLabel = { GREEN: "Green", RED: "Red", MEIO_GREEN: "½ Green", MEIO_RED: "½ Red", VOID: "Void" }[input.resultado] || input.resultado;
       if (!input.silent) {
-        const nomeRaw = input.bookmakerNome || '';
-        const resultColorClass = resultLabel.includes("Green") 
-          ? "text-emerald-500" 
-          : resultLabel.includes("Red") 
-            ? "text-rose-500" 
-            : "text-amber-500";
-
-        if (nomeRaw) {
-          const casas = nomeRaw.split(" & ").map(n => formatBookmakerDisplay(n));
-          
-          toast.success(
-            <div className="flex flex-col gap-0.5">
-              {casas.map((casa, idx) => (
-                <div key={idx} className="flex items-center gap-1.5">
-                  <span className={cn("font-semibold", resultColorClass)}>{resultLabel}</span>
-                  <span>na {casa}</span>
-                </div>
-              ))}
-            </div>
-          );
-        } else {
-          toast.success(
-            <div className="flex items-center gap-1.5">
-              <span className={cn("font-semibold", resultColorClass)}>{resultLabel}</span>
-              <span>alterado com sucesso</span>
-            </div>
-          );
-        }
+        const nome = input.bookmakerNome || '';
+        toast.success(nome ? `${resultLabel} na ${nome}` : `Resultado alterado com sucesso`);
       }
-
       onDataChange?.();
     } catch (error: any) {
       console.error("Erro ao liquidar perna:", error);
@@ -642,20 +578,19 @@ export function ProjetoValueBetTab({
       if (!subEntries || subEntries.length < 2) return;
 
       const pernasAgrupadas = groupPernasBySelecao(
-       subEntries.map((p: any) => ({
-         ...p,
-         id: p.id,
-         selecao: p.selecao || aposta.selecao,
-         selecao_livre: p.selecao_livre,
-         odd: p.odd,
-         stake: p.stake,
-         resultado: p.resultado,
-         lucro_prejuizo: p.lucro_prejuizo ?? null,
-         bookmaker_nome: p.bookmaker_nome || p.bookmaker?.nome || '—',
-         bookmaker_id: p.bookmaker_id,
-         moeda: p.moeda || 'BRL',
-         fonte_saldo: p.fonte_saldo || null,
-       }))
+        subEntries.map((p: any) => ({
+          id: p.id,
+          selecao: p.selecao || aposta.selecao,
+          selecao_livre: p.selecao_livre,
+          odd: p.odd,
+          stake: p.stake,
+          resultado: p.resultado,
+          lucro_prejuizo: p.lucro_prejuizo ?? null,
+          bookmaker_nome: p.bookmaker?.nome || '—',
+          bookmaker_id: p.bookmaker_id,
+          moeda: p.moeda || 'BRL',
+          fonte_saldo: p.fonte_saldo || null,
+        }))
       ).filter(p => p.bookmaker_id && p.odd && p.odd > 0);
 
       for (let i = 0; i < pernasAgrupadas.length; i++) {
@@ -1320,20 +1255,19 @@ export function ProjetoValueBetTab({
                 resultado: aposta.resultado,
                 observacoes: aposta.observacoes,
                 pernas: groupPernasBySelecao(
-                   subEntries.map((p: any) => ({
-                     ...p,
-                     id: p.id,
-                     selecao: p.selecao || aposta.selecao,
-                     selecao_livre: p.selecao_livre,
-                     odd: p.odd,
-                     stake: p.stake,
-                     resultado: p.resultado,
-                     lucro_prejuizo: p.lucro_prejuizo ?? null,
-                     bookmaker_nome: p.bookmaker_nome || p.bookmaker?.nome || '—',
-                     bookmaker_id: p.bookmaker_id,
-                     moeda: p.moeda || 'BRL',
-                     fonte_saldo: p.fonte_saldo || null,
-                   }))
+                  subEntries.map((p: any) => ({
+                    id: p.id,
+                    selecao: p.selecao || aposta.selecao,
+                    selecao_livre: p.selecao_livre,
+                    odd: p.odd,
+                    stake: p.stake,
+                    resultado: p.resultado,
+                    lucro_prejuizo: p.lucro_prejuizo ?? null,
+                    bookmaker_nome: p.bookmaker?.nome || '—',
+                    bookmaker_id: p.bookmaker_id,
+                    moeda: p.moeda || 'BRL',
+                    fonte_saldo: p.fonte_saldo || null,
+                  }))
                 ),
               };
 
@@ -1413,20 +1347,19 @@ export function ProjetoValueBetTab({
                 resultado: aposta.resultado,
                 observacoes: aposta.observacoes,
                 pernas: groupPernasBySelecao(
-                   subEntries.map((p: any) => ({
-                     ...p,
-                     id: p.id,
-                     selecao: p.selecao || aposta.selecao,
-                     selecao_livre: p.selecao_livre,
-                     odd: p.odd,
-                     stake: p.stake,
-                     resultado: p.resultado,
-                     lucro_prejuizo: p.lucro_prejuizo ?? null,
-                     bookmaker_nome: p.bookmaker_nome || p.bookmaker?.nome || '—',
-                     bookmaker_id: p.bookmaker_id,
-                     moeda: p.moeda || 'BRL',
-                     fonte_saldo: p.fonte_saldo || null,
-                   }))
+                  subEntries.map((p: any) => ({
+                    id: p.id,
+                    selecao: p.selecao || aposta.selecao,
+                    selecao_livre: p.selecao_livre,
+                    odd: p.odd,
+                    stake: p.stake,
+                    resultado: p.resultado,
+                    lucro_prejuizo: p.lucro_prejuizo ?? null,
+                    bookmaker_nome: p.bookmaker?.nome || '—',
+                    bookmaker_id: p.bookmaker_id,
+                    moeda: p.moeda || 'BRL',
+                    fonte_saldo: p.fonte_saldo || null,
+                  }))
                 ),
               };
 

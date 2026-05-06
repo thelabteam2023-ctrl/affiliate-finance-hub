@@ -9,7 +9,7 @@ import { useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { criarAposta, deletarAposta } from "@/services/aposta";
+import { criarAposta, deletarAposta, liquidarAposta, reliquidarAposta } from "@/services/aposta";
 import type { PernaInput } from "@/services/aposta/types";
 
 // ============================================================================
@@ -155,82 +155,49 @@ export function useSurebetService(): UseSurebetServiceReturn {
     data: Partial<SurebetData>
   ): Promise<{ success: boolean; error?: string }> => {
     try {
-      // Padronizado com edição de aposta simples: toda persistência passa
-      // pela RPC editar_surebet_completa_v3, que sincroniza ledger e
-      // recalcula o pai via fn_recalc_pai_surebet.
-      // Buscar pernas e entradas atuais para preservar IDs e mapear deltas.
-      const { data: aposta, error: apostaErr } = await supabase
+      const updateData: Record<string, any> = {};
+      
+      if (data.evento !== undefined) updateData.evento = data.evento;
+      if (data.esporte !== undefined) updateData.esporte = data.esporte;
+      if (data.mercado !== undefined) updateData.mercado = data.mercado;
+      if (data.modelo !== undefined) updateData.modelo = data.modelo;
+      
+      const { error } = await supabase
         .from('apostas_unificada')
-        .select('estrategia, contexto_operacional, data_aposta, modelo')
-        .eq('id', id)
-        .single();
-      if (apostaErr || !aposta) return { success: false, error: apostaErr?.message || 'Aposta não encontrada' };
+        .update({
+          ...updateData,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id);
 
-      const { data: pernasAtuais } = await supabase
-        .from('apostas_pernas')
-        .select('id, ordem, selecao, selecao_livre, bookmaker_id, stake, odd, moeda, fonte_saldo, resultado')
-        .eq('aposta_id', id)
-        .order('ordem', { ascending: true });
+      if (error) {
+        return { success: false, error: error.message };
+      }
 
-      // Se não foram passadas pernas novas no payload, mantemos as atuais
-      const pernasInput = data.pernas && data.pernas.length > 0
-        ? data.pernas.map((p, idx) => ({
-            id: pernasAtuais?.[idx]?.id ?? null,
-            selecao: p.selecao ?? pernasAtuais?.[idx]?.selecao ?? '',
-            selecao_livre: p.selecaoLivre ?? pernasAtuais?.[idx]?.selecao_livre ?? null,
-            resultado: pernasAtuais?.[idx]?.resultado ?? null,
-            bookmaker_id: p.bookmakerId,
-            stake: p.stake,
-            odd: p.odd,
-            moeda: p.moeda || pernasAtuais?.[idx]?.moeda || 'BRL',
-            fonte_saldo: p.fonteSaldo || pernasAtuais?.[idx]?.fonte_saldo || 'REAL',
-          }))
-        : (pernasAtuais || []).map((p) => ({
-            id: p.id,
-            selecao: p.selecao,
-            selecao_livre: p.selecao_livre,
-            resultado: p.resultado,
-            bookmaker_id: p.bookmaker_id,
-            stake: p.stake,
-            odd: p.odd,
-            moeda: p.moeda,
-            fonte_saldo: p.fonte_saldo || 'REAL',
-          }));
+      // Se há pernas para atualizar, fazer update individual
+      if (data.pernas && data.pernas.length > 0) {
+        for (const perna of data.pernas) {
+          // Buscar perna existente por bookmaker
+          const { data: pernaExistente } = await supabase
+            .from('apostas_pernas')
+            .select('id')
+            .eq('aposta_id', id)
+            .eq('bookmaker_id', perna.bookmakerId)
+            .maybeSingle();
 
-      const pernasPaiV3 = pernasInput.map((p) => ({
-        id: p.id,
-        selecao: p.selecao,
-        selecao_livre: p.selecao_livre,
-        resultado: p.resultado,
-      }));
-      const entradasV3 = pernasInput.map((p, idx) => ({
-        id: p.id, // legado: entrada usa mesmo UUID quando 1:1
-        perna_index: idx,
-        bookmaker_id: p.bookmaker_id,
-        stake: p.stake,
-        odd: p.odd,
-        moeda: p.moeda,
-        fonte_saldo: p.fonte_saldo,
-      }));
-
-      const { data: rpcResult, error } = await supabase.rpc('editar_surebet_completa_v3', {
-        p_aposta_id: id,
-        p_pernas: pernasPaiV3 as any,
-        p_entradas: entradasV3 as any,
-        p_evento: data.evento ?? null,
-        p_esporte: data.esporte ?? null,
-        p_mercado: data.mercado ?? null,
-        p_modelo: data.modelo ?? aposta.modelo,
-        p_estrategia: data.estrategia ?? aposta.estrategia,
-        p_contexto: data.contexto ?? aposta.contexto_operacional,
-        p_data_aposta: aposta.data_aposta,
-        p_status_manual: null,
-      });
-
-      if (error) return { success: false, error: error.message };
-      const result = rpcResult as any;
-      if (result && !result.success) {
-        return { success: false, error: result.error || 'Falha ao atualizar surebet' };
+          if (pernaExistente) {
+            await supabase
+              .from('apostas_pernas')
+              .update({
+                stake: perna.stake,
+                odd: perna.odd,
+                selecao: perna.selecao,
+                selecao_livre: perna.selecaoLivre,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', pernaExistente.id);
+          }
+        }
       }
 
       if (data.projetoId) {
@@ -254,10 +221,10 @@ export function useSurebetService(): UseSurebetServiceReturn {
     lucroPrejuizo?: number
   ): Promise<{ success: boolean; error?: string }> => {
     try {
-      // Buscar aposta_id + workspace_id da perna (necessário para a RPC)
+      // Buscar aposta_id da perna
       const { data: perna, error: pernaError } = await supabase
         .from('apostas_pernas')
-        .select('aposta_id, apostas_unificada:aposta_id(workspace_id, projeto_id)')
+        .select('aposta_id')
         .eq('id', pernaId)
         .single();
 
@@ -265,29 +232,30 @@ export function useSurebetService(): UseSurebetServiceReturn {
         return { success: false, error: 'Perna não encontrada' };
       }
 
-      const wsId = (perna as any)?.apostas_unificada?.workspace_id;
-      const projetoId = (perna as any)?.apostas_unificada?.projeto_id;
-      if (!wsId) return { success: false, error: 'Workspace não encontrado para a perna' };
+      // Atualizar resultado da perna
+      const { error: updateError } = await supabase
+        .from('apostas_pernas')
+        .update({
+          resultado,
+          lucro_prejuizo: lucroPrejuizo ?? null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', pernaId);
 
-      // Padrão simétrico ao da aposta simples: a RPC sincroniza ledger
-      // (PAYOUT / VOID_REFUND / FREEBET_PAYOUT) e recalcula o pai.
-      const { data: rpcResult, error: rpcError } = await supabase.rpc(
-        'liquidar_perna_surebet_v1',
-        { p_perna_id: pernaId, p_resultado: resultado, p_workspace_id: wsId },
-      );
-      if (rpcError) return { success: false, error: rpcError.message };
-      const result = rpcResult as any;
-      if (result && result.success === false) {
-        return { success: false, error: result.error || 'Falha ao liquidar perna' };
+      if (updateError) {
+        return { success: false, error: updateError.message };
       }
 
-      if (projetoId) invalidateSaldos(projetoId);
+      // Nota: A liquidação financeira é feita via triggers ou quando
+      // todas as pernas são liquidadas. Para motor v7, cada perna
+      // precisa gerar seus próprios eventos financeiros.
+
       return { success: true };
     } catch (error: any) {
       console.error('[useSurebetService] Erro ao liquidar perna:', error);
       return { success: false, error: error.message };
     }
-  }, [invalidateSaldos]);
+  }, []);
 
   /**
    * Reliquida uma perna (muda resultado).
@@ -298,9 +266,10 @@ export function useSurebetService(): UseSurebetServiceReturn {
     lucroPrejuizo?: number
   ): Promise<{ success: boolean; error?: string }> => {
     try {
+      // Buscar aposta_id da perna
       const { data: perna, error: pernaError } = await supabase
         .from('apostas_pernas')
-        .select('aposta_id, apostas_unificada:aposta_id(workspace_id, projeto_id)')
+        .select('aposta_id')
         .eq('id', pernaId)
         .single();
 
@@ -308,29 +277,19 @@ export function useSurebetService(): UseSurebetServiceReturn {
         return { success: false, error: 'Perna não encontrada' };
       }
 
-      const wsId = (perna as any)?.apostas_unificada?.workspace_id;
-      const projetoId = (perna as any)?.apostas_unificada?.projeto_id;
-      if (!wsId) return { success: false, error: 'Workspace não encontrado para a perna' };
+      // Usar reliquidarAposta do ApostaService
+      const result = await reliquidarAposta(perna.aposta_id, novoResultado, lucroPrejuizo);
 
-      // liquidar_perna_surebet_v1 já é idempotente: estorna PAYOUT/REFUND
-      // anteriores da perna e re-emite com base no novo resultado.
-      const { data: rpcResult, error: rpcError } = await supabase.rpc(
-        'liquidar_perna_surebet_v1',
-        { p_perna_id: pernaId, p_resultado: novoResultado, p_workspace_id: wsId },
-      );
-      if (rpcError) return { success: false, error: rpcError.message };
-      const result = rpcResult as any;
-      if (result && result.success === false) {
-        return { success: false, error: result.error || 'Falha ao reliquidar perna' };
+      if (!result.success) {
+        return { success: false, error: result.error?.message };
       }
 
-      if (projetoId) invalidateSaldos(projetoId);
       return { success: true };
     } catch (error: any) {
       console.error('[useSurebetService] Erro ao reliquidar perna:', error);
       return { success: false, error: error.message };
     }
-  }, [invalidateSaldos]);
+  }, []);
 
   /**
    * Deleta uma surebet usando ApostaService.

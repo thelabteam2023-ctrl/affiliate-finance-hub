@@ -305,23 +305,18 @@ function getSurebetContexto(
   return "NORMAL";
 }
 
-import { formatBookmakerDisplay } from "@/lib/bookmaker-display";
-
 function getCasaLabelFromAposta(aposta: { bookmaker?: any; pernas?: unknown | null }): string {
   const nome = (aposta.bookmaker?.nome as string | undefined)?.trim();
   const parceiro = (aposta.bookmaker?.parceiro?.nome as string | undefined)?.trim();
-  const instance = (aposta.bookmaker as any)?.instance_identifier;
 
-  let fullName = nome || "";
-  if (parceiro) fullName += ` - ${parceiro}`;
-  if (instance) fullName += ` (${instance})`;
-
-  if (fullName) return formatBookmakerDisplay(fullName);
+  if (nome && parceiro) return `${nome} • ${parceiro}`;
+  if (nome) return nome;
+  if (parceiro) return parceiro;
 
   // Fallback: algumas apostas (ex.: registros com SUREBET) podem ter a casa apenas em JSON (pernas)
   const pernas = parsePernaFromJson((aposta as any).pernas);
   const pernaNome = (pernas[0]?.bookmaker_nome as string | undefined)?.trim();
-  return pernaNome ? formatBookmakerDisplay(pernaNome) : "—";
+  return pernaNome || "—";
 }
 
 export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, formatCurrency: formatCurrencyProp, actionsSlot }: ProjetoApostasTabProps) {
@@ -657,10 +652,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           contexto_operacional,
           workspace_id, moeda_operacao, stake_consolidado, pl_consolidado, consolidation_currency,
           valor_brl_referencia, lucro_prejuizo_brl_referencia,
-           apostas_pernas (
-             id, selecao, selecao_livre, odd, stake, resultado, lucro_prejuizo, bookmaker_id, moeda, ordem, fonte_saldo,
-             apostas_perna_entradas (*, bookmakers (id, nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo (logo_url)))
-           )
+          apostas_pernas (
+            id, selecao, selecao_livre, odd, stake, resultado, lucro_prejuizo, bookmaker_id, moeda, ordem, fonte_saldo
+          )
         `;
 
       let dateFiltersSurebet: { startUTC?: string; endUTC?: string } = {};
@@ -809,21 +803,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         VOID: "Void"
       }[resultado] || resultado;
 
-      const resultColorClass = resultLabel.includes("Green") 
-        ? "text-emerald-500" 
-        : resultLabel.includes("Red") 
-          ? "text-rose-500" 
-          : "text-amber-500";
-
-      const casaLabel = aposta ? getCasaLabelFromAposta(aposta) : "";
-
-      toast.success(
-        <div className="flex items-center gap-1.5">
-          <span className={cn("font-semibold", resultColorClass)}>{resultLabel}</span>
-          {casaLabel ? <span>na {casaLabel}</span> : <span>marcada com sucesso</span>}
-        </div>
-      );
-
+      toast.success(`Aposta marcada como ${resultLabel}`);
       onDataChange?.();
     } catch (error: any) {
       console.error("Erro ao atualizar aposta:", error);
@@ -967,36 +947,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       }[input.resultado] || input.resultado;
 
       if (!input.silent) {
-        const nomeRaw = input.bookmakerNome || '';
-        const resultColorClass = resultLabel.includes("Green") 
-          ? "text-emerald-500" 
-          : resultLabel.includes("Red") 
-            ? "text-rose-500" 
-            : "text-amber-500";
-
-        if (nomeRaw) {
-          const casas = nomeRaw.split(" & ").map(n => formatBookmakerDisplay(n));
-          
-          toast.success(
-            <div className="flex flex-col gap-0.5">
-              {casas.map((casa, idx) => (
-                <div key={idx} className="flex items-center gap-1.5">
-                  <span className={cn("font-semibold", resultColorClass)}>{resultLabel}</span>
-                  <span>na {casa}</span>
-                </div>
-              ))}
-            </div>
-          );
-        } else {
-          toast.success(
-            <div className="flex items-center gap-1.5">
-              <span className={cn("font-semibold", resultColorClass)}>{resultLabel}</span>
-              <span>alterado com sucesso</span>
-            </div>
-          );
-        }
+        const nome = input.bookmakerNome || '';
+        toast.success(nome ? `${resultLabel} na ${nome}` : `Resultado alterado com sucesso`);
       }
-
       onDataChange?.();
     } catch (error: any) {
       console.error("Erro ao liquidar perna:", error);
@@ -1664,34 +1617,19 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                 consolidation_currency: (sb as any).consolidation_currency,
                 stake_consolidado: sb.stake_consolidado,
                 pernas: groupPernasBySelecao(
-                   (sb.pernas || []).map((p: any) => {
-                     const entradas = p.apostas_perna_entradas || [];
-                     return {
-                       id: p.id,
-                       selecao: p.selecao,
-                       selecao_livre: p.selecao_livre,
-                       odd: p.odd,
-                       stake: p.stake,
-                       resultado: p.resultado,
-                       lucro_prejuizo: p.lucro_prejuizo ?? null,
-                       bookmaker_nome: p.bookmaker?.nome || p.bookmaker_nome || "—",
-                       bookmaker_id: p.bookmaker_id,
-                       moeda: p.moeda || 'BRL',
-                       fonte_saldo: p.fonte_saldo || null,
-                       entries: entradas.length > 0 ? entradas.map((ent: any) => ({
-                         id: ent.id,
-                         bookmaker_id: ent.bookmaker_id,
-                         bookmaker_nome: ent.bookmakers?.nome 
-                           ? (ent.bookmakers.parceiro?.nome ? `${ent.bookmakers.nome} - ${ent.bookmakers.parceiro.nome}${ent.bookmakers.instance_identifier ? ` (${ent.bookmakers.instance_identifier})` : ''}` : `${ent.bookmakers.nome}${ent.bookmakers.instance_identifier ? ` (${ent.bookmakers.instance_identifier})` : ''}`)
-                           : "Outra Casa",
-                         moeda: ent.moeda,
-                         odd: ent.odd,
-                         stake: ent.stake,
-                         fonte_saldo: ent.fonte_saldo,
-                         resultado: p.resultado,
-                       })) : undefined
-                     };
-                   })
+                  (sb.pernas || []).map((p: any) => ({
+                    id: p.id,
+                    selecao: p.selecao,
+                    selecao_livre: p.selecao_livre,
+                    odd: p.odd,
+                    stake: p.stake,
+                    resultado: p.resultado,
+                    lucro_prejuizo: p.lucro_prejuizo ?? null,
+                    bookmaker_nome: p.bookmaker?.nome || p.bookmaker_nome || "—",
+                    bookmaker_id: p.bookmaker_id,
+                    moeda: p.moeda || 'BRL',
+                    fonte_saldo: p.fonte_saldo || null,
+                  }))
                 ),
               };
               
@@ -1745,36 +1683,21 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                   status: aposta.status,
                   resultado: aposta.resultado,
                   observacoes: aposta.observacoes,
-                   pernas: groupPernasBySelecao(
-                     subEntries.map((p: any) => {
-                       const entradas = p.apostas_perna_entradas || [];
-                       return {
-                         id: p.id,
-                         selecao: p.selecao,
-                         selecao_livre: p.selecao_livre,
-                         odd: p.odd,
-                         stake: p.stake,
-                         resultado: p.resultado,
-                         lucro_prejuizo: p.lucro_prejuizo ?? null,
-                         bookmaker_nome: p.bookmaker?.nome || '—',
-                         bookmaker_id: p.bookmaker_id,
-                         moeda: p.moeda || 'BRL',
-                         fonte_saldo: p.fonte_saldo || null,
-                         entries: entradas.length > 0 ? entradas.map((ent: any) => ({
-                           id: ent.id,
-                           bookmaker_id: ent.bookmaker_id,
-                           bookmaker_nome: ent.bookmakers?.nome 
-                             ? (ent.bookmakers.parceiro?.nome ? `${ent.bookmakers.nome} - ${ent.bookmakers.parceiro.nome}${ent.bookmakers.instance_identifier ? ` (${ent.bookmakers.instance_identifier})` : ''}` : `${ent.bookmakers.nome}${ent.bookmakers.instance_identifier ? ` (${ent.bookmakers.instance_identifier})` : ''}`)
-                             : "Outra Casa",
-                           moeda: ent.moeda,
-                           odd: ent.odd,
-                           stake: ent.stake,
-                           fonte_saldo: ent.fonte_saldo,
-                           resultado: p.resultado,
-                         })) : undefined
-                       };
-                     })
-                   ),
+                  pernas: groupPernasBySelecao(
+                    subEntries.map((p: any) => ({
+                      id: p.id,
+                      selecao: p.selecao,
+                      selecao_livre: p.selecao_livre,
+                      odd: p.odd,
+                      stake: p.stake,
+                      resultado: p.resultado,
+                      lucro_prejuizo: p.lucro_prejuizo ?? null,
+                      bookmaker_nome: p.bookmaker?.nome || '—',
+                      bookmaker_id: p.bookmaker_id,
+                      moeda: p.moeda || 'BRL',
+                      fonte_saldo: p.fonte_saldo || null,
+                    }))
+                  ),
                 };
 
                 return (
@@ -1801,11 +1724,11 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
 
               // Single-entry simples → ApostaCard normal
               const displayInfo = getApostaDisplayInfo(aposta);
-              const bookmakerRawName = (aposta.bookmaker?.nome || "—") + 
-                (aposta.bookmaker?.parceiro?.nome ? ` - ${aposta.bookmaker.parceiro.nome}` : "") + 
-                ((aposta.bookmaker as any)?.instance_identifier ? ` (${(aposta.bookmaker as any).instance_identifier})` : "");
-              
-              const bookmakerNomeFormatted = formatBookmakerDisplay(bookmakerRawName);
+              const bookmakerNomeFormatted = formatBookmakerProjectName(
+                aposta.bookmaker?.nome || "—",
+                aposta.bookmaker?.parceiro?.nome,
+                (aposta.bookmaker as any)?.instance_identifier,
+              );
               const logoUrl = aposta.bookmaker?.bookmakers_catalogo?.logo_url;
               
               let estrategia: string = aposta.estrategia || "NORMAL";
@@ -1857,12 +1780,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
              }
             // ===== APOSTA MÚLTIPLA - Usando ApostaCard padronizado =====
             const multipla = item.data as ApostaMultipla;
-            const bookmakerRawNameMultipla = (multipla.bookmaker?.nome || "—") + 
-                (multipla.bookmaker?.parceiro?.nome ? ` - ${multipla.bookmaker.parceiro.nome}` : "") + 
-                ((multipla.bookmaker as any)?.instance_identifier ? ` (${(multipla.bookmaker as any).instance_identifier})` : "");
-            
-            const bookmakerNomeFormattedMultipla = formatBookmakerDisplay(bookmakerRawNameMultipla);
-
+            const bookmakerBaseMultipla = multipla.bookmaker?.nome?.split(" - ")[0] || multipla.bookmaker?.nome;
+            const parceiroNomeMultipla = multipla.bookmaker?.parceiro?.nome;
             const logoUrlMultipla = multipla.bookmaker?.bookmakers_catalogo?.logo_url;
             
             // Determinar estratégia - usar valor do banco diretamente
@@ -1890,7 +1809,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                  odd: parseFloat(s.odd),
                  resultado: s.resultado,
                })),
-                bookmaker_nome: bookmakerNomeFormattedMultipla,
+               bookmaker_nome: bookmakerBaseMultipla,
+               parceiro_nome: parceiroNomeMultipla,
+               instance_identifier: (multipla.bookmaker as any)?.instance_identifier,
                 logo_url: logoUrlMultipla,
                 moeda: multipla.moeda_operacao || "BRL",
                  fonte_saldo: (multipla as any).fonte_saldo || null,

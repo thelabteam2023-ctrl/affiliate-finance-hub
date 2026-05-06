@@ -59,7 +59,7 @@ import { SurebetStatisticsCard } from "./SurebetStatisticsCard";
 
 import { parsePernaFromJson, PernaArbitragem } from "@/types/apostasUnificada";
 import { cn, getFirstLastName } from "@/lib/utils";
-import { buildBookmakerNomeMap, collectMissingBookmakerIds, mergeBookmakerNomeMaps, formatBookmakerDisplay } from "@/lib/bookmaker-display";
+import { buildBookmakerNomeMap, collectMissingBookmakerIds, mergeBookmakerNomeMaps } from "@/lib/bookmaker-display";
 import { useUnlinkedBookmakerNames } from "@/hooks/useUnlinkedBookmakerNames";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
@@ -165,18 +165,16 @@ interface CasaAgregada {
 
 // Função utilitária para obter lucro de uma perna
 // Prioriza o valor salvo no banco (lucro_prejuizo), calcula se não existir
-const getLucroPerna = (perna: SurebetPerna & { lucro_prejuizo?: number | null, fonte_saldo?: string }): number => {
-  // Se já tem lucro calculado e salvo, e não tem múltiplas entradas, usar direto.
-  // Se tem múltiplas entradas, o lucro nominal da perna pode estar errado no banco (soma numérica vs conversão).
-  if (typeof perna.lucro_prejuizo === "number" && (!perna.entries || perna.entries.length <= 1)) {
+const getLucroPerna = (perna: SurebetPerna & { lucro_prejuizo?: number | null }): number => {
+  // Se já tem lucro calculado e salvo, usar direto
+  if (typeof perna.lucro_prejuizo === "number") {
     return perna.lucro_prejuizo;
   }
   
   // Fallback: calcular baseado no resultado
-  const stake = perna.stake_total || perna.stake || 0;
+  const stake = perna.stake || 0;
   const odd = perna.odd || 0;
   const resultado = perna.resultado;
-  const isFB = perna.fonte_saldo === "FREEBET";
   
   if (!resultado || resultado === "PENDENTE") {
     return 0;
@@ -188,9 +186,9 @@ const getLucroPerna = (perna: SurebetPerna & { lucro_prejuizo?: number | null, f
     case "MEIO_GREEN":
       return ((odd * stake) - stake) / 2;
     case "RED":
-      return isFB ? 0 : -stake;
+      return -stake;
     case "MEIO_RED":
-      return isFB ? 0 : -stake / 2;
+      return -stake / 2;
     case "VOID":
       return 0;
     default:
@@ -395,8 +393,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                 id, aposta_id, bookmaker_id, moeda, selecao, selecao_livre, odd, stake,
                 resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada,
                 stake_brl_referencia, lucro_prejuizo_brl_referencia, cotacao_snapshot, fonte_saldo,
-               bookmakers (id, nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo(logo_url)),
-               apostas_perna_entradas (*, bookmakers (id, nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo (logo_url)))
+                bookmakers (nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo(logo_url))
               `)
               .in("aposta_id", idsChunk)
               .order("ordem", { ascending: true }),
@@ -407,9 +404,6 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           if (!pernasMap[p.aposta_id]) pernasMap[p.aposta_id] = [];
           const bookmaker = p.bookmakers as any;
           const parceiroNome = bookmaker?.parceiro?.nome;
-          const entradas = p.apostas_perna_entradas || [];
-          const hasMultipleEntries = entradas.length > 1;
-
           pernasMap[p.aposta_id].push({
             id: p.id,
             bookmaker_id: p.bookmaker_id,
@@ -418,41 +412,25 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
             instance_identifier: bookmaker?.instance_identifier || null,
             logo_url: bookmaker?.bookmakers_catalogo?.logo_url || null,
             moeda: p.moeda || 'BRL',
-            selecao: p.selecao,
-            selecao_livre: p.selecao_livre,
-            odd: p.odd,
-            stake: p.stake,
-            resultado: p.resultado,
-            lucro_prejuizo: p.lucro_prejuizo,
-            gerou_freebet: p.gerou_freebet,
-            valor_freebet_gerada: p.valor_freebet_gerada,
+            selecao: p.selecao, selecao_livre: p.selecao_livre, odd: p.odd, stake: p.stake,
+            resultado: p.resultado, lucro_prejuizo: p.lucro_prejuizo,
+            gerou_freebet: p.gerou_freebet, valor_freebet_gerada: p.valor_freebet_gerada,
             stake_brl_referencia: p.stake_brl_referencia,
             lucro_prejuizo_brl_referencia: p.lucro_prejuizo_brl_referencia,
             cotacao_snapshot: p.cotacao_snapshot,
             fonte_saldo: p.fonte_saldo || null,
-            // Se tiver entradas detalhadas, usamos elas para popular o field 'entries' do SurebetCard
-            entries: entradas.length > 0 ? entradas.map((ent: any) => ({
-              id: ent.id,
-              bookmaker_id: ent.bookmaker_id,
-             bookmaker_nome: ent.bookmaker_id === p.bookmaker_id 
-               ? (parceiroNome ? `${bookmaker?.nome || "—"} - ${parceiroNome}${bookmaker?.instance_identifier ? ` (${bookmaker.instance_identifier})` : ''}` : `${bookmaker?.nome || "—"}${bookmaker?.instance_identifier ? ` (${bookmaker.instance_identifier})` : ''}`)
-               : (ent.bookmakers?.nome ? (ent.bookmakers?.parceiro?.nome ? `${ent.bookmakers.nome} - ${ent.bookmakers.parceiro.nome}${ent.bookmakers.instance_identifier ? ` (${ent.bookmakers.instance_identifier})` : ''}` : `${ent.bookmakers.nome}${ent.bookmakers.instance_identifier ? ` (${ent.bookmakers.instance_identifier})` : ''}`) : "Outra Casa"),
-              moeda: ent.moeda,
-              odd: ent.odd,
-              stake: ent.stake,
-              fonte_saldo: ent.fonte_saldo,
-              resultado: p.resultado,
-              stake_brl_referencia: ent.stake_brl_referencia
-            })) : undefined,
-            odd_media: hasMultipleEntries ? p.odd : undefined,
-            stake_total: hasMultipleEntries ? p.stake : undefined
           });
         });
       }
 
       return allData.map((arb: any) => {
         const pernasRaw = pernasMap[arb.id] || parsePernaFromJson(arb.pernas);
-         const pernasSurebetCard = groupPernasBySelecao(pernasRaw);
+        const pernasOrdenadas = [...pernasRaw].sort((a, b) => {
+          const order: Record<string, number> = { "Casa": 1, "1": 1, "Empate": 2, "X": 2, "Fora": 3, "2": 3 };
+          return (order[a.selecao] || 99) - (order[b.selecao] || 99);
+        });
+        
+        const pernasSurebetCard = groupPernasBySelecao(pernasOrdenadas);
         const hasValidPernas = pernasSurebetCard.length > 0;
         const isSimples = arb.forma_registro === "SIMPLES";
         return {
@@ -568,35 +546,14 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       invalidateSaldos(projetoId);
 
       const resultLabel = {
-        GREEN: "Green", RED: "Red", MEIO_GREEN: "½ Green",
-        MEIO_RED: "½ Red", VOID: "Void"
+        GREEN: "Green",
+        RED: "Red",
+        MEIO_GREEN: "½ Green",
+        MEIO_RED: "½ Red",
+        VOID: "Void"
       }[resultado] || resultado;
 
-      const resultColorClass = resultLabel.includes("Green") 
-        ? "text-emerald-500" 
-        : resultLabel.includes("Red") 
-          ? "text-rose-500" 
-          : "text-amber-500";
-
-      // Pegar nome da casa se disponível
-      const bookmakerNome = operacao.bookmaker_nome || (operacao as any).bookmaker?.nome;
-      const displayNome = bookmakerNome ? formatBookmakerDisplay(bookmakerNome) : null;
-
-      if (displayNome) {
-        toast.success(
-          <div className="flex items-center gap-1.5">
-            <span className={cn("font-semibold", resultColorClass)}>{resultLabel}</span>
-            <span>na {displayNome}</span>
-          </div>
-        );
-      } else {
-        toast.success(
-          <div className="flex items-center gap-1.5">
-            <span className={cn("font-semibold", resultColorClass)}>{resultLabel}</span>
-            <span>marcado com sucesso</span>
-          </div>
-        );
-      }
+      toast.success(`Aposta marcada como ${resultLabel}`);
       onDataChange?.();
     } catch (error: any) {
       console.error("Erro ao atualizar aposta:", error);
@@ -646,34 +603,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       }[input.resultado] || input.resultado;
 
       if (!input.silent) {
-        const nomeRaw = input.bookmakerNome || '';
-        const resultColorClass = resultLabel.includes("Green") 
-          ? "text-emerald-500" 
-          : resultLabel.includes("Red") 
-            ? "text-rose-500" 
-            : "text-amber-500";
-
-        if (nomeRaw) {
-          const casas = nomeRaw.split(" & ").map(n => formatBookmakerDisplay(n));
-          
-          toast.success(
-            <div className="flex flex-col gap-0.5">
-              {casas.map((casa, idx) => (
-                <div key={idx} className="flex items-center gap-1.5">
-                  <span className={cn("font-semibold", resultColorClass)}>{resultLabel}</span>
-                  <span>na {casa}</span>
-                </div>
-              ))}
-            </div>
-          );
-        } else {
-          toast.success(
-            <div className="flex items-center gap-1.5">
-              <span className={cn("font-semibold", resultColorClass)}>{resultLabel}</span>
-              <span>alterado com sucesso</span>
-            </div>
-          );
-        }
+        const nome = input.bookmakerNome || '';
+        toast.success(nome ? `${resultLabel} na ${nome}` : `Resultado alterado com sucesso`);
       }
       onDataChange?.();
     } catch (error: any) {
@@ -699,18 +630,38 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
         // liquidar CADA sub-entry individualmente com o mesmo resultado
         const hasEntries = perna.entries && perna.entries.length > 1;
         
-        await handleSurebetPernaResolve({
-          pernaId: perna.id,
-          surebetId,
-          bookmarkerId: perna.bookmaker_id || '', // Note: liquidar_perna_surebet_v1 looks up bookmaker_id if needed
-          resultado,
-          stake: perna.stake,
-          odd: perna.odd,
-          moeda: perna.moeda || 'BRL',
-          resultadoAnterior: perna.resultado,
-          workspaceId: operacao.workspace_id!,
-          silent: true,
-        });
+        if (hasEntries) {
+          for (const entry of perna.entries!) {
+            const entryPernaId = entry.id;
+            if (!entryPernaId || !entry.bookmaker_id) continue;
+            
+            await handleSurebetPernaResolve({
+              pernaId: entryPernaId,
+              surebetId,
+              bookmarkerId: entry.bookmaker_id,
+              resultado,
+              stake: entry.stake,
+              odd: entry.odd,
+              moeda: entry.moeda || 'BRL',
+              resultadoAnterior: perna.resultado, // grouped result
+              workspaceId: operacao.workspace_id!,
+              silent: true,
+            });
+          }
+        } else {
+          await handleSurebetPernaResolve({
+            pernaId: perna.id,
+            surebetId,
+            bookmarkerId: perna.bookmaker_id!,
+            resultado,
+            stake: perna.stake,
+            odd: perna.odd,
+            moeda: perna.moeda || 'BRL',
+            resultadoAnterior: perna.resultado,
+            workspaceId: operacao.workspace_id!,
+            silent: true,
+          });
+        }
       }
 
       toast.success("Resultado da surebet alterado com sucesso");
@@ -841,53 +792,12 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
     const liquidadas = surebetsLiquidadasArr.length;
     const greens = surebetsParaKpi.filter(s => s.resultado === "GREEN").length;
     const reds = surebetsParaKpi.filter(s => s.resultado === "RED").length;
-    // SNAPSHOT: Usa Cotação de Trabalho (congelada no registro) para eliminar variação cambial.
-    // Usamos uma função que soma o lucro de todas as pernas, permitindo que apostas PENDENTES
-    // também contribuam para o lucro global conforme as pernas são resolvidas individualmente.
-    const getLucroEfetivoAposta = (s: Surebet) => {
-      const hasComplexPernas = s.pernas?.some(p => p.entries && p.entries.length > 1);
-      
-      if (s.status === "LIQUIDADA" && typeof s.pl_consolidado === "number" && s.consolidation_currency === moedaConsolidacao && !hasComplexPernas) {
-        return s.pl_consolidado;
-      }
-      
-      const pernas = s.pernas || [];
-      return pernas.reduce((accPerna, p) => {
-        // Se a perna tem múltiplas entradas, precisamos consolidar cada uma
-        if (p.entries && p.entries.length > 0 && convertFn) {
-          const lucroPernaConsolidado = p.entries.reduce((sum, e) => {
-            const moedaEntry = e.moeda || 'BRL';
-            const isFB = e.fonte_saldo === 'FREEBET' || p.fonte_saldo === 'FREEBET';
-            const stakeEntry = e.stake || 0;
-            const odd = p.odd || 0;
-            
-            let lucroNominal = 0;
-            if (p.resultado === 'GREEN') {
-              lucroNominal = stakeEntry * (odd - 1);
-            } else if (p.resultado === 'RED') {
-              lucroNominal = isFB ? 0 : -stakeEntry;
-            } else if (p.resultado === 'MEIO_GREEN') {
-              lucroNominal = (stakeEntry * (odd - 1)) / 2;
-            } else if (p.resultado === 'MEIO_RED') {
-              lucroNominal = isFB ? 0 : -stakeEntry / 2;
-            }
-            
-            return sum + convertFn(lucroNominal, moedaEntry);
-          }, 0);
-          return accPerna + lucroPernaConsolidado;
-        }
-
-        const lucroNominal = getLucroPerna(p);
-        if (lucroNominal === 0) return accPerna;
-        
-        return accPerna + (convertFn ? convertFn(lucroNominal, p.moeda || 'BRL') : lucroNominal);
-      }, 0);
-    };
-
-    const lucroTotal = surebetsParaKpi.reduce((acc, s) => acc + getLucroEfetivoAposta(s), 0);
+    // SNAPSHOT: Usa Cotação de Trabalho (congelada no registro) para eliminar variação cambial
+    const lucroTotal = surebetsLiquidadasArr.reduce((acc, s) => acc + getConsolidatedLucro(s, convertFn, moedaConsolidacao), 0);
     const stakeTotal = surebetsParaKpi.reduce((acc, s) => acc + getConsolidatedStake(s, convertFn, moedaConsolidacao), 0);
-    // ROI usa volume TOTAL do período para bater com o lucro que agora inclui resultados parciais de pendentes
-    const roi = stakeTotal > 0 ? (lucroTotal / stakeTotal) * 100 : 0;
+    const volumeLiquidado = surebetsLiquidadasArr.reduce((acc, s) => acc + getConsolidatedStake(s, convertFn, moedaConsolidacao), 0);
+    // ROI usa volume LIQUIDADO — apostas pendentes não têm resultado
+    const roi = volumeLiquidado > 0 ? (lucroTotal / volumeLiquidado) * 100 : 0;
 
     // Breakdown de volume por moeda original
     const volumePorMoeda = new Map<string, number>();
@@ -900,14 +810,12 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       .map(([moeda, valor]) => ({ moeda, valor }))
       .filter(item => Math.abs(item.valor) > 0.01);
 
-    // Breakdown de LUCRO por moeda original (baseado no lucro efetivo calculado acima)
+    // Breakdown de LUCRO por moeda original
     const lucroPorMoedaMap = new Map<string, number>();
     surebetsParaKpi.forEach(s => {
       const moeda = s.moeda_operacao || "BRL";
-      
-      // Para o breakdown por moeda, tentamos atribuir o lucro à moeda original
-      const lucroAposta = s.pernas?.reduce((acc, p) => acc + getLucroPerna(p), 0) || s.lucro_real || 0;
-      lucroPorMoedaMap.set(moeda, (lucroPorMoedaMap.get(moeda) || 0) + lucroAposta);
+      const rawLucro = s.lucro_real || 0;
+      lucroPorMoedaMap.set(moeda, (lucroPorMoedaMap.get(moeda) || 0) + rawLucro);
     });
     const lucroPorMoeda = Array.from(lucroPorMoedaMap.entries())
       .map(([moeda, valor]) => ({ moeda, valor }))
