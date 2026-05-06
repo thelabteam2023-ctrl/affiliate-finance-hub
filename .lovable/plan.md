@@ -1,32 +1,55 @@
-Plano para deixar o calendário compacto quando houver muitas casas no mesmo dia:
+## Diagnóstico
 
-1. Limitar a prévia diária a 5 operações
-   - No calendário mensal, cada dia continuará mostrando as primeiras operações ordenadas por CPF/perfil, como já acontece hoje.
-   - Se o dia tiver mais de 5 casas, as demais ficarão ocultas na célula para evitar que o layout cresça demais e quebre a grade.
+A causa do bug está isolada em **`src/pages/ProjetoDetalhe.tsx`**, linhas 940–1100.
 
-2. Adicionar botão “+N” no próprio dia
-   - Abaixo das 5 primeiras operações, exibir um botão compacto do tipo “+17 casas” ou “+17”.
-   - Ao clicar nele, abrir a visão detalhada do dia já existente, com todas as casas daquele dia.
-   - Esse botão também servirá como indicador visual de que existem mais operações não exibidas na célula.
+O contêiner pai das abas é:
 
-3. Preservar a visão detalhada completa
-   - O modal “Casas planejadas do dia” continuará mostrando todas as operações do dia, sem limite.
-   - A edição, cópia de IP, valores, perfil/CPF e demais informações permanecem disponíveis ali.
+```tsx
+<div className="flex-1 min-h-0 overflow-hidden">   // ← trava altura e esconde overflow
+  <TabsContent value="apostas" className="h-full m-0 ..."> // ← força altura fixa
+    <ProjetoApostasTab ... />                       // ← retorna <div className="space-y-4"> SEM scroll
+  </TabsContent>
+  ...
+</div>
+```
 
-4. Ajustar altura/overflow da célula para evitar quebra visual
-   - Trocar o comportamento atual de rolagem interna por uma célula mais estável e compacta.
-   - Manter o rodapé do dia com o resumo “X casas • Σ valor”, para que o total continue visível mesmo com itens ocultos.
-   - Reduzir o risco de a semana ficar desproporcional quando um único dia tiver 20+ demandas.
+- `overflow-hidden` no wrapper + `h-full` no `TabsContent` impõem altura fixa = altura da viewport.
+- Abas "operacionais" (`Apostas`, `Visão Geral`, `Bônus`, `Surebet`, `ValueBet`, `DuploGreen`, `Punter`, `Promoções`, `Cashback`, `Vínculos`, etc.) renderizam um `<div class="space-y-4">` simples, **sem `overflow-y-auto`**, então o conteúdo que excede é cortado.
+- Só funcionam corretamente as abas que gerenciam o próprio scroll internamente: `Planejamento` (`ProjetoPlanejamentoTab` linha 200/305) e `Calendário Real` da página `/planejamento` (`PlanejamentoCalendario`).
 
+Confirmado via grep: nenhum outro local global mudou. O `App.tsx` (`h-screen overflow-hidden` no shell + `main flex-1 min-h-0 overflow-hidden`) e a página `PlanejamentoCampanhas` estão corretos e isolados.
 
-## Detalhamento de Despesas por Beneficiário (Resumo por Grupo)
+## O que mudar
 
-1. **Objetivo**: Permitir a visualização detalhada de quem recebeu os valores em cada grupo de despesas administrativas.
-2. **Ações**:
-   - Tornar as linhas do card "Resumo por Grupo" (Financeiro > Despesas) clicáveis.
-   - Ao clicar, abrir um modal (`ResumoGrupoDetalhesModal`) que exibe a somatória dos valores agrupados por beneficiário (Operador).
-   - Se a despesa não estiver vinculada a um operador, o sistema utilizará a descrição curta ou um marcador genérico como beneficiário.
-3. **Alterações Técnicas**:
-   - `src/hooks/useFinanceiroData.ts`: Atualizado para incluir o join com a tabela de `operadores`.
-   - `src/components/financeiro/ResumoGrupoDetalhesModal.tsx`: Novo componente para o modal de detalhamento.
-   - `src/components/financeiro/FinanceiroDespesasTab.tsx`: Integrada a lógica de clique e exibição do modal.
+Edição cirúrgica em **`src/pages/ProjetoDetalhe.tsx`** apenas.
+
+Adicionar `overflow-y-auto` em cada `TabsContent` que não gerencia scroll próprio. A aba `planejamento` fica intocada (já tem scroll interno e botões flutuantes que dependem do contêiner atual).
+
+Mudança por linha (className do `TabsContent`):
+
+| Tab | Antes | Depois |
+|---|---|---|
+| visao-geral, apostas, promocoes, bonus, punter, surebet, valuebet, duplogreen, cashback, vinculos, gestao, freebets, giros-gratis, ocorrencias, perdas, movimentacoes, extrato, ciclos, comparativo, modulos, incidentes, parcerias, operadores, saques-broker, historico-vinculos, historico-conciliacoes | `"h-full m-0"` | `"h-full m-0 overflow-y-auto"` |
+| **planejamento** | `"h-full m-0"` | **mantém `"h-full m-0"`** (scroll é interno) |
+
+Isso restaura o padrão recomendado pelo usuário:
+
+```
+wrapper (overflow-hidden, altura fixa)
+  └─ TabsContent (h-full overflow-y-auto)   ← scroll local da aba
+        └─ conteúdo da aba (space-y-4)
+```
+
+Cada aba ganha seu próprio contexto de scroll, sem afetar o layout global, sem mexer em `App.tsx`, `PlanejamentoCampanhas` nem em qualquer aba do Planejamento.
+
+## Validação
+
+1. `/projeto/:id?tab=apostas` → lista completa rola dentro da aba; topbar/abas ficam fixos.
+2. `/projeto/:id?tab=visao-geral` → cards e gráficos do final da página visíveis via scroll.
+3. `/projeto/:id?tab=planejamento` → scroll interno e botões flutuantes (Subir/Hoje/Descer) funcionam exatamente como antes.
+4. `/planejamento` (Calendário Real / Histórico Detalhado / Simulado) → inalterado.
+5. Demais páginas (`/caixa`, `/financeiro`, etc.) → inalteradas (não tocamos em layout global).
+
+## Fora de escopo
+
+Sem alterações em `App.tsx`, `index.css`, `PlanejamentoCampanhas`, `PlanejamentoCalendario`, `ProjetoPlanejamentoTab`, filtros, lógica de negócio ou qualquer outro arquivo.
