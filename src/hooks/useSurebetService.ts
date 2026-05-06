@@ -254,10 +254,10 @@ export function useSurebetService(): UseSurebetServiceReturn {
     lucroPrejuizo?: number
   ): Promise<{ success: boolean; error?: string }> => {
     try {
-      // Buscar aposta_id da perna
+      // Buscar aposta_id + workspace_id da perna (necessário para a RPC)
       const { data: perna, error: pernaError } = await supabase
         .from('apostas_pernas')
-        .select('aposta_id')
+        .select('aposta_id, apostas_unificada:aposta_id(workspace_id, projeto_id)')
         .eq('id', pernaId)
         .single();
 
@@ -265,30 +265,29 @@ export function useSurebetService(): UseSurebetServiceReturn {
         return { success: false, error: 'Perna não encontrada' };
       }
 
-      // Atualizar resultado da perna
-      const { error: updateError } = await supabase
-        .from('apostas_pernas')
-        .update({
-          resultado,
-          lucro_prejuizo: lucroPrejuizo ?? null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', pernaId);
+      const wsId = (perna as any)?.apostas_unificada?.workspace_id;
+      const projetoId = (perna as any)?.apostas_unificada?.projeto_id;
+      if (!wsId) return { success: false, error: 'Workspace não encontrado para a perna' };
 
-      if (updateError) {
-        return { success: false, error: updateError.message };
+      // Padrão simétrico ao da aposta simples: a RPC sincroniza ledger
+      // (PAYOUT / VOID_REFUND / FREEBET_PAYOUT) e recalcula o pai.
+      const { data: rpcResult, error: rpcError } = await supabase.rpc(
+        'liquidar_perna_surebet_v1',
+        { p_perna_id: pernaId, p_resultado: resultado, p_workspace_id: wsId },
+      );
+      if (rpcError) return { success: false, error: rpcError.message };
+      const result = rpcResult as any;
+      if (result && result.success === false) {
+        return { success: false, error: result.error || 'Falha ao liquidar perna' };
       }
 
-      // Nota: A liquidação financeira é feita via triggers ou quando
-      // todas as pernas são liquidadas. Para motor v7, cada perna
-      // precisa gerar seus próprios eventos financeiros.
-
+      if (projetoId) invalidateSaldos(projetoId);
       return { success: true };
     } catch (error: any) {
       console.error('[useSurebetService] Erro ao liquidar perna:', error);
       return { success: false, error: error.message };
     }
-  }, []);
+  }, [invalidateSaldos]);
 
   /**
    * Reliquida uma perna (muda resultado).
