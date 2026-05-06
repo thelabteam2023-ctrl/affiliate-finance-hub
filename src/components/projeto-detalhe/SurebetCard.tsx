@@ -878,42 +878,28 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
                     isSimplesMultiEntry && onSimpleQuickResolve ? async (resultado: string) => {
                       await onSimpleQuickResolve(surebet.id, resultado);
                     }
-                    // CASO 2: Surebet/Múltipla real → liquidação por perna individual
-                    : !isSimplesMultiEntry && onPernaResultChange && perna.bookmaker_id ? async (resultado: string) => {
-                    // CORREÇÃO: Para pernas agrupadas (múltiplas entradas/casas),
-                    // liquidar TODAS as sub-entradas, não apenas a primeira.
-                    if (perna.entries && perna.entries.length > 1) {
-                      for (const entry of perna.entries) {
-                        if (!entry.id || !entry.bookmaker_id) continue;
-                        await onPernaResultChange({
-                          pernaId: entry.id,
-                          surebetId: surebet.id,
-                          bookmarkerId: entry.bookmaker_id,
-                          resultado,
-                          stake: entry.stake,
-                          odd: entry.odd,
-                          moeda: entry.moeda || 'BRL',
-                          resultadoAnterior: perna.resultado,
-                          workspaceId: surebet.workspace_id || '',
-                          bookmakerNome: entry.bookmaker_nome,
-                          silent: true,
-                        });
-                      }
-                    } else {
+                    // CASO 2: Surebet/Múltipla real → liquidação por perna LÓGICA
+                    // O RPC liquidar_perna_surebet_v1 internamente itera sobre todas as
+                    // entradas (apostas_perna_entradas) gerando PAYOUT/VOID_REFUND para cada casa.
+                    // SEMPRE passamos perna.id (ID em apostas_pernas), nunca o ID das entradas.
+                    : !isSimplesMultiEntry && onPernaResultChange ? async (resultado: string) => {
+                      const bookmakerIdParaRPC = perna.bookmaker_id 
+                        || (perna.entries && perna.entries[0]?.bookmaker_id) 
+                        || '';
+                      
                       await onPernaResultChange({
                         pernaId: perna.id,
                         surebetId: surebet.id,
-                        bookmarkerId: perna.bookmaker_id!,
+                        bookmarkerId: bookmakerIdParaRPC,
                         resultado,
-                        stake: perna.stake,
-                        odd: perna.odd,
+                        stake: perna.stake_total || perna.stake,
+                        odd: perna.odd_media || perna.odd,
                         moeda: perna.moeda || 'BRL',
                         resultadoAnterior: perna.resultado,
                         workspaceId: surebet.workspace_id || '',
                         bookmakerNome: perna.bookmaker_nome,
                       });
-                    }
-                  } : undefined}
+                    } : undefined}
                 />
               ))}
           </div>
