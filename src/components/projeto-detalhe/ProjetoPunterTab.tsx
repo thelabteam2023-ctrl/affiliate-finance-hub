@@ -314,7 +314,7 @@ export function ProjetoPunterTab({
     }
   };
 
-  const fetchApostas = async () => {
+  const fetchApostasWithReturn = async (): Promise<Aposta[]> => {
     try {
       const selectFields = `
           id, created_at, data_aposta, esporte, evento, mercado, selecao, odd, stake, stake_total, stake_real, stake_freebet, estrategia, 
@@ -456,9 +456,15 @@ export function ProjetoPunterTab({
       }
       
       setApostas(mappedApostas);
-    } catch (error: unknown) {
+      return mappedApostas;
+    } catch (error) {
       console.error("Erro ao carregar apostas Punter:", error);
+      return [];
     }
+  };
+
+  const fetchApostas = async () => {
+    await fetchApostasWithReturn();
   };
 
   // Resolução rápida de apostas - USA RPC ATÔMICA + ROLLOVER
@@ -490,25 +496,15 @@ export function ProjetoPunterTab({
         }
       }
 
-      // 3. Recarregar do banco: retorno/lucro canônicos são calculados no motor financeiro.
+      // 3. Recarregar do banco (Invalida caches e estados locais)
       invalidateSaldos(projetoId);
-      await fetchApostas();
+      const novasApostas = await fetchApostasWithReturn();
 
-      // 4. VALIDAÇÃO CRÍTICA: Conferir que a aposta foi de fato liquidada
-      const apostaAtualizada = apostas.find(a => a.id === apostaId);
-      if (!apostaAtualizada || apostaAtualizada.status !== 'LIQUIDADA' || apostaAtualizada.resultado !== resultado) {
-        console.error("[ProjetoPunterTab] FALHA NA VALIDAÇÃO:", {
-          apostaId,
-          status_esperado: 'LIQUIDADA',
-          status_obtido: apostaAtualizada?.status,
-          resultado_esperado: resultado,
-          resultado_obtido: apostaAtualizada?.resultado
-        });
-        toast.error(
-          `Erro: A aposta não foi liquidada corretamente. ` +
-          `Status: ${apostaAtualizada?.status || 'desconhecido'}, ` +
-          `Resultado: ${apostaAtualizada?.resultado || 'desconhecido'}`
-        );
+      // 4. VALIDAÇÃO REAL: Conferir no retorno do fetch se o status mudou
+      const apostaNoBanco = novasApostas.find(a => a.id === apostaId);
+      if (!apostaNoBanco || apostaNoBanco.status !== 'LIQUIDADA') {
+        console.error("[ProjetoPunterTab] Falha na liquidação real no banco:", apostaNoBanco);
+        toast.error("Erro: A liquidação falhou no processamento do banco.");
         return;
       }
 
