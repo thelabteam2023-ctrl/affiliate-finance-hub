@@ -797,24 +797,23 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
   // Nestes casos, priorizamos o cálculo em tempo real que percorre cada entrada.
   const hasComplexPernas = surebet.pernas?.some(p => p.entries && p.entries.length > 1);
 
-  // Para lucro exibido: Priorizar o valor consolidado do banco (pl_consolidado)
-  // Ele agora é recalculado atômica e corretamente em tempo real, mesmo para bets pendentes.
+  // Se existem múltiplas entradas em qualquer perna, o pl_consolidado do banco pode estar incorreto
+  // devido à forma como as pernas são somadas numericamente no motor de liquidação.
+  // Nestes casos, priorizamos o cálculo em tempo real que percorre cada entrada.
+  const hasComplexPernas = surebet.pernas?.some(p => p.entries && p.entries.length > 1);
+
   const lucroExibir = (typeof plConsolidadoNormalizado === "number" && !hasComplexPernas)
     ? plConsolidadoNormalizado
     : isLiquidada 
-      ? (typeof lucroConsolidadoEfetivo === "number" ? lucroConsolidadoEfetivo : surebet.lucro_real)
+      ? (typeof lucroConsolidadoFallback === "number" ? lucroConsolidadoFallback : surebet.lucro_real)
       : (piorCenarioCalculado?.lucro ?? surebet.lucro_esperado ?? null);
 
   const roiExibir = (() => {
-    // Priorizar ROI derivado do pl_consolidado (fonte de verdade)
-    if (typeof plConsolidadoNormalizado === "number" && stakeRealTotal > 0) {
-      return (plConsolidadoNormalizado / stakeRealTotal) * 100;
+    if (typeof lucroExibir === "number" && stakeRealTotal > 0) {
+      return (lucroExibir / stakeRealTotal) * 100;
     }
     
     if (isLiquidada) {
-      if (typeof lucroConsolidadoEfetivo === "number" && stakeRealTotal > 0) {
-        return (lucroConsolidadoEfetivo / stakeRealTotal) * 100;
-      }
       return surebet.roi_real;
     }
     return piorCenarioCalculado?.roi ?? surebet.roi_esperado ?? null;
