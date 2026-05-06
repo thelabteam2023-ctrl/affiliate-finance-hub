@@ -624,15 +624,15 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
     }
   };
 
-  const handleApostaUpdated = useCallback(async () => {
+  const handleApostaUpdatedWithReturn = useCallback(async () => {
     try {
       setLoading(true);
       const currentProjetoId = projetoIdRef.current;
       const currentBonusIds = bookmakersInBonusModeRef.current;
       
-      await Promise.all([
-        fetchApostasInternal(currentProjetoId, currentBonusIds),
-        fetchApostasMultiplasInternal(currentProjetoId, currentBonusIds),
+      const [simples, multiplas] = await Promise.all([
+        fetchApostasInternalWithReturn(currentProjetoId, currentBonusIds),
+        fetchApostasMultiplasInternalWithReturn(currentProjetoId, currentBonusIds),
         fetchSurebetsInternal(currentProjetoId, currentBonusIds),
         fetchBookmakersInternal(currentProjetoId, currentBonusIds)
       ]);
