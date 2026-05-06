@@ -625,10 +625,27 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
 
       if (!input.silent) {
         const nomeRaw = input.bookmakerNome || '';
-        const nomeFormatado = nomeRaw
-          ? nomeRaw.split(" & ").map(n => formatBookmakerDisplay(n)).join(" & ")
-          : '';
-        toast.success(nomeFormatado ? `${resultLabel} na ${nomeFormatado}` : `Resultado alterado com sucesso`);
+        if (nomeRaw) {
+          const casas = nomeRaw.split(" & ").map(n => formatBookmakerDisplay(n));
+          
+          if (casas.length > 1) {
+            // Para múltiplas casas (multi-entry), renderiza cada uma em uma linha
+            toast.success(
+              <div className="flex flex-col gap-0.5">
+                {casas.map((casa, idx) => (
+                  <div key={idx} className="flex items-center gap-1.5">
+                    <span className="font-semibold text-emerald-500">{resultLabel}</span>
+                    <span>na {casa}</span>
+                  </div>
+                ))}
+              </div>
+            );
+          } else {
+            toast.success(`${resultLabel} na ${casas[0]}`);
+          }
+        } else {
+          toast.success(`Resultado alterado com sucesso`);
+        }
       }
       onDataChange?.();
     } catch (error: any) {
