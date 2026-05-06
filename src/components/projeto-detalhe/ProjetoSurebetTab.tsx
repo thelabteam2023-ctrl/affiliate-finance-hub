@@ -624,8 +624,11 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       }[input.resultado] || input.resultado;
 
       if (!input.silent) {
-        const nome = input.bookmakerNome || '';
-        toast.success(nome ? `${resultLabel} na ${nome}` : `Resultado alterado com sucesso`);
+        const nomeRaw = input.bookmakerNome || '';
+        const nomeFormatado = nomeRaw
+          ? nomeRaw.split(" & ").map(n => formatBookmakerDisplay(n)).join(" & ")
+          : '';
+        toast.success(nomeFormatado ? `${resultLabel} na ${nomeFormatado}` : `Resultado alterado com sucesso`);
       }
       onDataChange?.();
     } catch (error: any) {
