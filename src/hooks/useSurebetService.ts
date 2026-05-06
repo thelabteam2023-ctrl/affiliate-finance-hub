@@ -9,7 +9,7 @@ import { useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { criarAposta, deletarAposta, liquidarAposta, reliquidarAposta } from "@/services/aposta";
+import { criarAposta, deletarAposta } from "@/services/aposta";
 import type { PernaInput } from "@/services/aposta/types";
 
 // ============================================================================
