@@ -592,26 +592,26 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
   // Detectar contexto de bônus pela estratégia ou prop
   const showBonusBadge = isBonusContext || surebet.estrategia === "EXTRACAO_BONUS";
   
+  // Detecção canônica de freebet (em ordem de prioridade):
+  //  1. Campos do banco: stake_freebet > 0 e stake_real == 0
+  //  2. fonte_saldo da perna === 'FREEBET'
+  //  3. Todas as entries com fonte_saldo === 'FREEBET' (modo multi-entrada)
+  const isPernaFreebet = useCallback((p: SurebetPerna): boolean => {
+    const sf = p.stake_freebet || 0;
+    const sr = p.stake_real ?? null;
+    if (sf > 0 && (sr === 0 || sr === null)) return true;
+    if (p.fonte_saldo === 'FREEBET') return true;
+    if (p.entries && p.entries.length > 0) {
+      return p.entries.every(e => (e as any).fonteSaldo === 'FREEBET' || (e as any).fonte_saldo === 'FREEBET');
+    }
+    return false;
+  }, []);
+
   // Calcular cenários (pior e melhor) a partir das pernas quando pendente
   // Para multicurrency: converte cada payout para moeda de consolidação antes de comparar
   // FREEBET (SNR): stake não é custo (stake_real=0) e payout = stake*(odd-1)
   const calcularCenarios = (): { piorLucro: number; melhorLucro: number; piorRoi: number; melhorRoi: number } | null => {
     if (!surebet.pernas || surebet.pernas.length < 2) return null;
-
-    // Detecção canônica de freebet (em ordem de prioridade):
-    //  1. Campos do banco: stake_freebet > 0 e stake_real == 0
-    //  2. fonte_saldo da perna === 'FREEBET'
-    //  3. Todas as entries com fonte_saldo === 'FREEBET' (modo multi-entrada)
-    const isPernaFreebet = (p: SurebetPerna): boolean => {
-      const sf = p.stake_freebet || 0;
-      const sr = p.stake_real ?? null;
-      if (sf > 0 && (sr === 0 || sr === null)) return true;
-      if (p.fonte_saldo === 'FREEBET') return true;
-      if (p.entries && p.entries.length > 0) {
-        return p.entries.every(e => (e as any).fonteSaldo === 'FREEBET' || (e as any).fonte_saldo === 'FREEBET');
-      }
-      return false;
-    };
 
     // Calcular stake total e custo real (freebet não é custo)
     let stakeTotal: number = 0;
