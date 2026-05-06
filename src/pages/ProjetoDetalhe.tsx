@@ -1092,7 +1092,7 @@ export default function ProjetoDetalhe() {
             <ProjetoCashbackTab projetoId={id!} />
           </TabsContent>
 
-          <TabsContent value="planejamento" className="h-full m-0 overflow-y-auto">
+          <TabsContent value="planejamento" className="h-full m-0">
             <ProjetoPlanejamentoTab projetoId={id!} refreshTrigger={refreshTrigger} />
           </TabsContent>
 
