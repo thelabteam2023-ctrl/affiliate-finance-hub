@@ -876,9 +876,17 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
         }
       }
 
-      // 3. Recarregar do banco: retorno/lucro canônicos são calculados no motor financeiro.
+      // 3. Recarregar do banco (Invalida caches e estados locais)
       invalidateSaldos(projetoId);
-      await handleApostaUpdated();
+      const { simples, multiplas } = await handleApostaUpdatedWithReturn();
+
+      // 4. VALIDAÇÃO REAL: Conferir no retorno do fetch se o status mudou
+      const apostaNoBanco = [...(simples || []), ...(multiplas || [])].find(a => a.id === apostaId);
+      if (!apostaNoBanco || apostaNoBanco.status !== 'LIQUIDADA') {
+        console.error("[BonusApostasTab] Falha na liquidação real no banco:", apostaNoBanco);
+        toast.error("Erro: A liquidação falhou no processamento do banco.");
+        return;
+      }
 
       const resultLabel = {
         GREEN: "Green",
