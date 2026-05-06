@@ -1324,11 +1324,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                 lucro_prejuizo_brl_referencia: p.lucro_prejuizo_brl_referencia,
                 fonte_saldo: p.fonte_saldo || null,
               }));
-              const pernasOrdenadas = [...pernasRaw].sort((a, b) => {
-                const order: Record<string, number> = { "Casa": 1, "1": 1, "Empate": 2, "X": 2, "Fora": 3, "2": 3 };
-                return (order[a.selecao] || 99) - (order[b.selecao] || 99);
-              });
-              const pernasAgrupadas = groupPernasBySelecao(pernasOrdenadas);
+               const pernasAgrupadas = groupPernasBySelecao(pernasRaw);
 
               const surebetData = {
                 id: aposta.id,

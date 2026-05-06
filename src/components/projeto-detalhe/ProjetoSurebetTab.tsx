@@ -450,12 +450,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
 
       return allData.map((arb: any) => {
         const pernasRaw = pernasMap[arb.id] || parsePernaFromJson(arb.pernas);
-        const pernasOrdenadas = [...pernasRaw].sort((a, b) => {
-          const order: Record<string, number> = { "Casa": 1, "1": 1, "Empate": 2, "X": 2, "Fora": 3, "2": 3 };
-          return (order[a.selecao] || 99) - (order[b.selecao] || 99);
-        });
-        
-        const pernasSurebetCard = groupPernasBySelecao(pernasOrdenadas);
+         const pernasSurebetCard = groupPernasBySelecao(pernasRaw);
         const hasValidPernas = pernasSurebetCard.length > 0;
         const isSimples = arb.forma_registro === "SIMPLES";
         return {
