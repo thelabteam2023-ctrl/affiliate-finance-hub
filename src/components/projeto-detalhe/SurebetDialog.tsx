@@ -131,6 +131,7 @@ export interface SurebetPernaEntry {
 
 // Estrutura de perna armazenada no JSONB da surebet (COM SUPORTE MULTI-ENTRADA)
 export interface SurebetPerna {
+  id?: string;
   // Campos de identificação da posição
   selecao: string;
   selecao_livre: string;
