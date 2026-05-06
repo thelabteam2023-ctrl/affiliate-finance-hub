@@ -1568,10 +1568,8 @@ export function SurebetModalRoot({
           };
         });
 
-        // 3. Chamar RPC atômica V3 (Modelo Reativo com Recálculo no Backend)
-        // Reduzimos os parâmetros enviados: o backend agora recalcula lucro, stake e status
-        // garantindo integridade e consistência com o Ledger (financial_events).
-        const { data: rpcResult, error: rpcError } = await supabase.rpc('editar_surebet_completa_v3', {
+        // 3. Chamar RPC atômica V2 (transação única e hierárquica)
+        const { data: rpcResult, error: rpcError } = await supabase.rpc('editar_surebet_completa_v2', {
           p_aposta_id: surebet.id,
           p_pernas: pernasUnicasPai as any,
           p_entradas: entradasParaRPC as any,
@@ -1582,7 +1580,14 @@ export function SurebetModalRoot({
           p_estrategia: estrategiaSelecionada,
           p_contexto: contexto,
           p_data_aposta: toLocalTimestamp(dataAposta),
-          p_status_manual: null // Deixa o backend decidir baseado nas pernas
+          p_stake_total: newStakeTotal,
+          p_stake_consolidado: newStakeConsolidado,
+          p_lucro_esperado: analysis.minLucro,
+          p_roi_esperado: analysis.minRoi,
+          p_lucro_prejuizo: hasResultadoChange ? lucroRealTotal : null,
+          p_roi_real: hasResultadoChange ? roiReal : null,
+          p_status: hasResultadoChange ? statusAposta : null,
+          p_resultado: hasResultadoChange ? resultadoAposta : null,
         });
         
         if (rpcError) {
@@ -1596,6 +1601,40 @@ export function SurebetModalRoot({
         }
         
         console.log('[SurebetModalRoot] ✅ Edição atômica concluída:', result);
+        
+        // 4. Liquidar/reliquidar pernas cujo resultado mudou (pós-edição)
+        for (const flat of allPernasFlat) {
+          if (!flat.pernaId) continue; // Pernas novas não têm resultado anterior
+          
+          const originalPerna = originalPernas.find(op => op.id === flat.pernaId);
+          if (!originalPerna) continue;
+          
+          const newResultado = flat.resultado as string | null;
+          const oldResultado = originalPerna.resultado;
+          
+          if (newResultado && newResultado !== oldResultado) {
+            const liqResult = await liquidarPernaSurebet({
+              surebet_id: surebet.id,
+              perna_id: flat.pernaId,
+              bookmaker_id: flat.bookmaker_id,
+              resultado: newResultado as 'GREEN' | 'RED' | 'MEIO_GREEN' | 'MEIO_RED' | 'VOID',
+              resultado_anterior: oldResultado,
+              stake: parseFloat(flat.stake) || 0,
+              odd: parseFloat(flat.odd) || 0,
+              moeda: getBookmakerMoeda(flat.bookmaker_id),
+              workspace_id: workspaceId,
+              fonte_saldo: flat.fonteSaldo || 'REAL',
+            });
+            
+            if (!liqResult.success) {
+              console.error(`[SurebetModalRoot] Erro ao liquidar perna ${flat.pernaId}:`, liqResult.error);
+              // Não throw: a edição já foi salva, liquidação é pós-processamento
+              toast.error(`Erro ao liquidar perna: ${liqResult.error}`);
+            } else {
+              console.log(`[SurebetModalRoot] ✅ Perna ${flat.pernaId} liquidada: ${oldResultado || 'null'} → ${newResultado}`);
+            }
+          }
+        }
         
       } else {
         // ================================================================
