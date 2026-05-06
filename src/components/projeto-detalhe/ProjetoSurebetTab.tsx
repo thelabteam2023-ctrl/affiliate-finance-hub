@@ -393,8 +393,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                 id, aposta_id, bookmaker_id, moeda, selecao, selecao_livre, odd, stake,
                 resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada,
                 stake_brl_referencia, lucro_prejuizo_brl_referencia, cotacao_snapshot, fonte_saldo,
-                bookmakers (nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo(logo_url)),
-                apostas_perna_entradas (*)
+               bookmakers (id, nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo(logo_url)),
+               apostas_perna_entradas (*, bookmakers (id, nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo (logo_url)))
               `)
               .in("aposta_id", idsChunk)
               .order("ordem", { ascending: true }),
@@ -432,7 +432,9 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
             entries: entradas.length > 0 ? entradas.map((ent: any) => ({
               id: ent.id,
               bookmaker_id: ent.bookmaker_id,
-              bookmaker_nome: ent.bookmaker_id === p.bookmaker_id ? (parceiroNome ? `${bookmaker?.nome || "—"} - ${parceiroNome}` : (bookmaker?.nome || "—")) : "Outra Casa", // Simplified, as we don't have the bookmaker name for sub-entries easily here
+             bookmaker_nome: ent.bookmaker_id === p.bookmaker_id 
+               ? (parceiroNome ? `${bookmaker?.nome || "—"} - ${parceiroNome}${bookmaker?.instance_identifier ? ` (${bookmaker.instance_identifier})` : ''}` : `${bookmaker?.nome || "—"}${bookmaker?.instance_identifier ? ` (${bookmaker.instance_identifier})` : ''}`)
+               : (ent.bookmakers?.nome ? (ent.bookmakers?.parceiro?.nome ? `${ent.bookmakers.nome} - ${ent.bookmakers.parceiro.nome}${ent.bookmakers.instance_identifier ? ` (${ent.bookmakers.instance_identifier})` : ''}` : `${ent.bookmakers.nome}${ent.bookmakers.instance_identifier ? ` (${ent.bookmakers.instance_identifier})` : ''}`) : "Outra Casa"),
               moeda: ent.moeda,
               odd: ent.odd,
               stake: ent.stake,

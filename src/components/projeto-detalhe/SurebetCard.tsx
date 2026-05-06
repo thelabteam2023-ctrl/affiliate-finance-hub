@@ -273,9 +273,9 @@ function PernaItem({
    */
   parentResultado?: string | null;
 }) {
-  const hasMultipleEntries = perna.entries && perna.entries.length > 1;
+   const hasMultipleEntries = Array.isArray(perna.entries) && perna.entries.length > 0;
   const [isOpen, setIsOpen] = useState(
-    hasMultipleEntries ? (perna.entries!.length <= 3) : false
+     (hasMultipleEntries && perna.entries!.length > 1) ? (perna.entries!.length <= 3) : false
   );
   // Resultado efetivo a exibir no pill: para simples multi-entry usa o do pai;
   // para surebet/múltipla real usa o da perna individual.
@@ -299,7 +299,17 @@ function PernaItem({
   
   const bookmakerDisplay = formatBookmakerDisplay(enrichedBookmakerNome);
   
-  if (!hasMultipleEntries) {
+   if (!hasMultipleEntries || perna.entries!.length === 1) {
+     const displayPerna = (hasMultipleEntries && perna.entries!.length === 1) ? {
+       ...perna,
+       bookmaker_nome: perna.entries![0].bookmaker_nome || perna.bookmaker_nome,
+       bookmaker_id: perna.entries![0].bookmaker_id || perna.bookmaker_id,
+       moeda: perna.entries![0].moeda || perna.moeda,
+       odd: perna.entries![0].odd || perna.odd,
+       stake: perna.entries![0].stake || perna.stake,
+       fonte_saldo: perna.entries![0].fonte_saldo || perna.fonte_saldo,
+     } : perna;
+ 
     // Layout: [Badge Seleção Fixa] [Logo] [Nome Casa] [Odd + Stake à direita] - Responsivo
     return (
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 overflow-hidden">
@@ -318,24 +328,32 @@ function PernaItem({
         <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0 overflow-hidden">
           {/* Logo */}
           <div className="shrink-0">
-            <SurebetBookmakerLogo nome={perna.bookmaker_nome} getLogoUrl={getLogoUrl} />
+           <SurebetBookmakerLogo nome={displayPerna.bookmaker_nome} getLogoUrl={getLogoUrl} />
           </div>
           
           {/* Nome da casa + vínculo abreviado + FB badge - com tooltip */}
           <div className="flex items-center gap-1.5 flex-1 min-w-0 overflow-hidden">
             <TooltipProvider delayDuration={300}>
               <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="text-sm text-muted-foreground truncate uppercase min-w-0 cursor-default">
-                    {bookmakerDisplay}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-[300px]">
-                  <p className="uppercase">{enrichedBookmakerNome}</p>
-                </TooltipContent>
+               <TooltipTrigger asChild>
+                 <span className="text-sm text-muted-foreground truncate uppercase min-w-0 cursor-default">
+                   {formatBookmakerDisplay(
+                     (displayPerna.bookmaker_id && bookmakerNomeMap?.has(displayPerna.bookmaker_id))
+                       ? bookmakerNomeMap.get(displayPerna.bookmaker_id)!
+                       : displayPerna.bookmaker_nome
+                   )}
+                 </span>
+               </TooltipTrigger>
+               <TooltipContent side="top" className="max-w-[300px]">
+                 <p className="uppercase">
+                   {(displayPerna.bookmaker_id && bookmakerNomeMap?.has(displayPerna.bookmaker_id))
+                     ? bookmakerNomeMap.get(displayPerna.bookmaker_id)!
+                     : displayPerna.bookmaker_nome}
+                 </p>
+               </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            {isFreebet && (
+           {displayPerna.fonte_saldo === 'FREEBET' && (
               <span className="shrink-0 text-amber-400" title="Freebet">
                 <Gift className="h-3.5 w-3.5" />
               </span>
@@ -344,8 +362,8 @@ function PernaItem({
           
           {/* Odd e Stake à direita - larguras fixas para alinhamento */}
           <div className="flex items-center gap-2 shrink-0">
-            <span className="text-sm sm:text-base font-medium whitespace-nowrap w-[60px] text-right tabular-nums">@{perna.odd.toFixed(2)}</span>
-            <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap w-[90px] text-right tabular-nums">{formatPernaValue(perna.stake, perna.moeda)}</span>
+           <span className="text-sm sm:text-base font-medium whitespace-nowrap w-[60px] text-right tabular-nums">@{displayPerna.odd.toFixed(2)}</span>
+           <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap w-[90px] text-right tabular-nums">{formatPernaValue(displayPerna.stake, displayPerna.moeda)}</span>
           </div>
           
           {/* Result pill per perna */}
@@ -380,13 +398,13 @@ function PernaItem({
         >
           {/* Badge de seleção - cor neutra informativa */}
           <div className="w-[120px] shrink-0">
-            <SelectionBadge 
-              colorClassName={NEUTRAL_SELECTION_STYLE}
-              minWidth={100}
-              maxWidth={116}
-            >
-              {getSelecaoDisplay(perna)}
-            </SelectionBadge>
+             <SelectionBadge 
+               colorClassName={NEUTRAL_SELECTION_STYLE}
+               minWidth={100}
+               maxWidth={116}
+             >
+               {getSelecaoDisplay(perna)}
+             </SelectionBadge>
           </div>
           
           {/* Ícone de múltiplas entradas */}
@@ -397,12 +415,12 @@ function PernaItem({
           </div>
           
           {/* Indicador de múltiplas entradas */}
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0 border-amber-500/30 text-amber-400 bg-amber-500/10">
-              {perna.entries?.length} casas
-            </Badge>
-            <span className="text-xs text-muted-foreground">média:</span>
-          </div>
+           <div className="flex items-center gap-2 flex-1 min-w-0">
+             <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0 border-amber-500/30 text-amber-400 bg-amber-500/10">
+               {perna.entries?.length} casas
+             </Badge>
+             <span className="text-xs text-muted-foreground">média:</span>
+           </div>
           
           {/* Odd e Stake */}
           <div className="flex items-center gap-2 shrink-0">
@@ -555,19 +573,20 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
           0,
         );
       }
-      return sum + convertToConsolidation(p.stake_total || p.stake || 0, p.moeda || "BRL");
+       return sum + convertToConsolidation(p.stake || 0, p.moeda || "BRL");
     }, 0);
   })();
 
   const stakeRealTotal = (() => {
-    if (isMulticurrency) {
-      if (typeof stakeConsolidadoFallback === "number") return stakeConsolidadoFallback;
-      if (typeof surebet.stake_consolidado === "number") return surebet.stake_consolidado;
-      return surebet.stake_total;
-    }
-
-    if (!surebet.pernas || surebet.pernas.length === 0) return surebet.stake_total;
-    return surebet.pernas.reduce((sum, p) => sum + (p.stake_total || p.stake || 0), 0);
+     if (isMulticurrency && typeof stakeConsolidadoFallback === "number") {
+       return stakeConsolidadoFallback;
+     }
+ 
+     if (surebet.pernas && surebet.pernas.length > 0) {
+       return surebet.pernas.reduce((sum, p) => sum + (p.stake || 0), 0);
+     }
+ 
+     return surebet.stake_total;
   })();
   
   // Detectar contexto de bônus pela estratégia ou prop
@@ -598,35 +617,57 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
     let stakeTotal: number = 0;
     let stakeRealTotal: number = 0;
 
-    surebet.pernas.forEach(p => {
-      const s = p.stake_total || p.stake || 0;
-      const isFB = isPernaFreebet(p);
-      const sConv = (isMulticurrency && convertToConsolidation)
-        ? convertToConsolidation(s, p.moeda || "BRL")
-        : s;
-      stakeTotal += sConv;
-      if (!isFB) stakeRealTotal += sConv;
-    });
+     surebet.pernas.forEach(p => {
+       const isFB = isPernaFreebet(p);
+       
+       if (p.entries && p.entries.length > 0) {
+         p.entries.forEach(e => {
+           const s = e.stake || 0;
+           const sConv = (isMulticurrency && convertToConsolidation)
+             ? convertToConsolidation(s, e.moeda || "BRL")
+             : s;
+           stakeTotal += sConv;
+           if (e.fonte_saldo !== 'FREEBET') stakeRealTotal += sConv;
+         });
+       } else {
+         const s = p.stake || 0;
+         const sConv = (isMulticurrency && convertToConsolidation)
+           ? convertToConsolidation(s, p.moeda || "BRL")
+           : s;
+         stakeTotal += sConv;
+         if (!isFB) stakeRealTotal += sConv;
+       }
+     });
 
     if (stakeTotal <= 0) return null;
 
     // Para cada cenário (cada perna ganhando), calcular o lucro
-    const cenarios = surebet.pernas.map(perna => {
-      const oddEfetiva = perna.odd_media || perna.odd || 0;
-      const stakeNessaPerna = perna.stake_total || perna.stake || 0;
-      const isFB = isPernaFreebet(perna);
-
-      // SNR: Freebet payout líquido = stake*(odd-1); aposta real payout = stake*odd
-      const retornoLocal = isFB ? stakeNessaPerna * (oddEfetiva - 1) : stakeNessaPerna * oddEfetiva;
-
-      // Converter retorno para moeda de consolidação se multicurrency
-      const retorno = (isMulticurrency && convertToConsolidation)
-        ? convertToConsolidation(retornoLocal, perna.moeda || "BRL")
-        : retornoLocal;
-
-      // Lucro = retorno da perna ganhadora - custo real (somente stakes não-freebet)
-      return retorno - stakeRealTotal;
-    });
+     const cenarios = surebet.pernas.map(perna => {
+       let retornoLocalTotal = 0;
+ 
+       if (perna.entries && perna.entries.length > 0) {
+         perna.entries.forEach(e => {
+           const isFB = e.fonte_saldo === 'FREEBET';
+           const payout = isFB ? (e.stake || 0) * ((e.odd || 0) - 1) : (e.stake || 0) * (e.odd || 0);
+           
+           const payoutConv = (isMulticurrency && convertToConsolidation)
+             ? convertToConsolidation(payout, e.moeda || "BRL")
+             : payout;
+           retornoLocalTotal += payoutConv;
+         });
+       } else {
+         const isFB = isPernaFreebet(perna);
+         const payout = isFB ? (perna.stake || 0) * ((perna.odd || 0) - 1) : (perna.stake || 0) * (perna.odd || 0);
+         
+         const payoutConv = (isMulticurrency && convertToConsolidation)
+           ? convertToConsolidation(payout, perna.moeda || "BRL")
+           : payout;
+         retornoLocalTotal += payoutConv;
+       }
+ 
+       // Lucro = retorno da perna ganhadora (em consolidação) - custo real (em consolidação)
+       return retornoLocalTotal - stakeRealTotal;
+     });
 
     const piorLucro = Math.min(...cenarios);
     const melhorLucro = Math.max(...cenarios);
