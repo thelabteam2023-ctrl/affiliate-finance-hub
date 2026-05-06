@@ -9,6 +9,7 @@ import { formatBookmakerDisplay } from "@/lib/bookmaker-display";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
+import { getConsolidatedLucroDirect, getConsolidatedStakeDirect } from "@/utils/consolidatedValues";
 import { parseLocalDateTime } from "@/utils/dateUtils";
 import { SurebetRowActionsMenu, type SurebetQuickResult } from "@/components/apostas/SurebetRowActionsMenu";
 import { SurebetPernaResultPill } from "@/components/apostas/SurebetPernaResultPill";
@@ -558,36 +559,8 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
     ? (v: number) => formatPernaValue(v, moedaPernas)
     : formatValue;
   
-  // Para multicurrency, priorizar consolidação runtime (source-of-truth por perna).
-  // Quando uma perna tem entries[] com moedas diferentes (multi-entry agrupado),
-  // somar cada entry individualmente convertida — JAMAIS usar stake_total bruto.
-  const stakeConsolidadoFallback = (() => {
-    if (!isMulticurrency || !surebet.pernas || surebet.pernas.length === 0 || !convertToConsolidation) {
-      return null;
-    }
-
-    return surebet.pernas.reduce((sum, p) => {
-      if (p.entries && p.entries.length > 0) {
-        return sum + p.entries.reduce(
-          (s, e) => s + convertToConsolidation(e.stake || 0, e.moeda || "BRL"),
-          0,
-        );
-      }
-       return sum + convertToConsolidation(p.stake || 0, p.moeda || "BRL");
-    }, 0);
-  })();
-
-  const stakeRealTotal = (() => {
-     if (isMulticurrency && typeof stakeConsolidadoFallback === "number") {
-       return stakeConsolidadoFallback;
-     }
- 
-     if (surebet.pernas && surebet.pernas.length > 0) {
-       return surebet.pernas.reduce((sum, p) => sum + (p.stake || 0), 0);
-     }
- 
-     return surebet.stake_total;
-  })();
+  // USAR SSOT: utilitário centralizado que corrige discrepâncias de multi-entry
+  const stakeRealTotal = getConsolidatedStakeDirect(surebet as any, surebet.pernas as any, convertToConsolidation, moedaConsolidacao);
   
   // Detectar contexto de bônus pela estratégia ou prop
   const showBonusBadge = isBonusContext || surebet.estrategia === "EXTRACAO_BONUS";
@@ -694,114 +667,10 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
     return c ? { lucro: c.piorLucro, roi: c.piorRoi } : null;
   };
 
-  const getPernaLucroNominal = (perna: SurebetPerna): number | null => {
-    // Se tem múltiplas entradas, o lucro nominal da perna pode ser enganoso se houver moedas mistas.
-    // Só usamos o lucro_prejuizo do banco se não houver entradas ou se não for multicurrency.
-    if (typeof perna.lucro_prejuizo === "number" && (!perna.entries || perna.entries.length <= 1)) {
-      return perna.lucro_prejuizo;
-    }
-
-    const isFB = isPernaFreebet(perna);
-    const stake = isFB ? 0 : (perna.stake_total || perna.stake || 0);
-    const stakeNominal = perna.stake_total || perna.stake || 0;
-    const odd = perna.odd || 0;
-
-    switch (perna.resultado) {
-      case "GREEN":
-        return stakeNominal * (odd - 1);
-      case "MEIO_GREEN":
-        return (stakeNominal * (odd - 1)) / 2;
-      case "RED":
-        return -stake;
-      case "MEIO_RED":
-        return -stake / 2;
-      case "VOID":
-      case "PENDENTE":
-      case null:
-        return 0;
-      default:
-        return null;
-    }
-  };
-
-  const lucroConsolidadoFallback = (() => {
-    if (!isLiquidada || !isMulticurrency || !surebet.pernas || surebet.pernas.length === 0 || !convertToConsolidation) {
-      return null;
-    }
-
-    let hasAnyLucro = false;
-    const total = surebet.pernas.reduce((sum, p) => {
-      if (p.entries && p.entries.length > 0) {
-        hasAnyLucro = true;
-        const lucroPernaConsolidado = p.entries.reduce((sPerna, e) => {
-          const moedaEntry = e.moeda || 'BRL';
-          const isFB = e.fonte_saldo === 'FREEBET' || p.fonte_saldo === 'FREEBET';
-          const stakeEntry = e.stake || 0;
-          const odd = p.odd || 0;
-          
-          let lucroNominal = 0;
-          if (p.resultado === 'GREEN') {
-            lucroNominal = stakeEntry * (odd - 1);
-          } else if (p.resultado === 'RED') {
-            lucroNominal = isFB ? 0 : -stakeEntry;
-          } else if (p.resultado === 'MEIO_GREEN') {
-            lucroNominal = (stakeEntry * (odd - 1)) / 2;
-          } else if (p.resultado === 'MEIO_RED') {
-            lucroNominal = isFB ? 0 : -stakeEntry / 2;
-          } else {
-            return sPerna;
-          }
-          
-          return sPerna + convertToConsolidation(lucroNominal, moedaEntry);
-        }, 0);
-        return sum + lucroPernaConsolidado;
-      }
-
-      const lucroNominal = getPernaLucroNominal(p);
-      if (typeof lucroNominal !== "number") return sum;
-      hasAnyLucro = true;
-      return sum + convertToConsolidation(lucroNominal, p.moeda || "BRL");
-    }, 0);
-
-    return hasAnyLucro ? total : null;
-  })();
-  
-  // Usar lucro_esperado do banco (calculado com cotação congelada) como fonte primária
-  // Fallback para cálculo runtime apenas se lucro_esperado não existir
-  const cenariosCalculados = !isLiquidada ? calcularCenarios() : null;
-  const piorCenarioCalculado = cenariosCalculados ? { lucro: cenariosCalculados.piorLucro, roi: cenariosCalculados.piorRoi } : null;
-  
-  // PRIORIDADE: pl_consolidado (atômico, cotação congelada) > fallback runtime
-  // CRÍTICO: pl_consolidado pode estar em consolidation_currency diferente da moeda do projeto!
-  // Ex: pl_consolidado=0.14 BRL mas projeto usa USD → precisa converter BRL→USD
-  const plConsolidadoNormalizado = (() => {
-    if (typeof surebet.pl_consolidado !== "number") return null;
-    const ccurrency = surebet.consolidation_currency;
-    // Se consolidation_currency === moedaConsolidacao do projeto, usar direto
-    if (!ccurrency || !moedaConsolidacao || ccurrency === moedaConsolidacao) {
-      return surebet.pl_consolidado;
-    }
-    // Converter de consolidation_currency → moedaConsolidacao do projeto
-    if (convertToConsolidation) {
-      return convertToConsolidation(surebet.pl_consolidado, ccurrency);
-    }
-    return surebet.pl_consolidado; // fallback sem conversão
-  })();
-
-  const lucroConsolidadoEfetivo = typeof plConsolidadoNormalizado === "number"
-    ? plConsolidadoNormalizado
-    : (typeof lucroConsolidadoFallback === "number" ? lucroConsolidadoFallback : null);
-
-  // Se existem múltiplas entradas em qualquer perna, o pl_consolidado do banco pode estar incorreto
-  // devido à forma como as pernas são somadas numericamente no motor de liquidação.
-  // Nestes casos, priorizamos o cálculo em tempo real que percorre cada entrada.
-  const hasComplexPernas = surebet.pernas?.some(p => p.entries && p.entries.length > 1);
-
-  const lucroExibir = (typeof plConsolidadoNormalizado === "number" && !hasComplexPernas)
-    ? plConsolidadoNormalizado
-    : isLiquidada 
-      ? (typeof lucroConsolidadoFallback === "number" ? lucroConsolidadoFallback : surebet.lucro_real)
-      : (piorCenarioCalculado?.lucro ?? surebet.lucro_esperado ?? null);
+  // USAR SSOT: utilitário centralizado que corrige discrepâncias de multi-entry
+  const lucroExibir = isLiquidada 
+    ? getConsolidatedLucroDirect(surebet as any, surebet.pernas as any, convertToConsolidation, moedaConsolidacao)
+    : (piorCenarioCalculado?.lucro ?? surebet.lucro_esperado ?? null);
 
   const roiExibir = (() => {
     if (typeof lucroExibir === "number" && stakeRealTotal > 0) {
