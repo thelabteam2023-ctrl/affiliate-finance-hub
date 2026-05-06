@@ -812,8 +812,24 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
     const liquidadas = surebetsLiquidadasArr.length;
     const greens = surebetsParaKpi.filter(s => s.resultado === "GREEN").length;
     const reds = surebetsParaKpi.filter(s => s.resultado === "RED").length;
-    // SNAPSHOT: Usa Cotação de Trabalho (congelada no registro) para eliminar variação cambial
-    const lucroTotal = surebetsLiquidadasArr.reduce((acc, s) => acc + getConsolidatedLucro(s, convertFn, moedaConsolidacao), 0);
+    // SNAPSHOT: Usa Cotação de Trabalho (congelada no registro) para eliminar variação cambial.
+    // Usamos uma função que soma o lucro de todas as pernas, permitindo que apostas PENDENTES
+    // também contribuam para o lucro global conforme as pernas são resolvidas individualmente.
+    const getLucroEfetivoAposta = (s: Surebet) => {
+      if (s.status === "LIQUIDADA" && typeof s.pl_consolidado === "number" && s.consolidation_currency === moedaConsolidacao) {
+        return s.pl_consolidado;
+      }
+      
+      const pernas = s.pernas || [];
+      return pernas.reduce((accPerna, p) => {
+        const lucroNominal = getLucroPerna(p);
+        if (lucroNominal === 0) return accPerna;
+        
+        return accPerna + (convertFn ? convertFn(lucroNominal, p.moeda || 'BRL') : lucroNominal);
+      }, 0);
+    };
+
+    const lucroTotal = surebetsParaKpi.reduce((acc, s) => acc + getLucroEfetivoAposta(s), 0);
     const stakeTotal = surebetsParaKpi.reduce((acc, s) => acc + getConsolidatedStake(s, convertFn, moedaConsolidacao), 0);
     const volumeLiquidado = surebetsLiquidadasArr.reduce((acc, s) => acc + getConsolidatedStake(s, convertFn, moedaConsolidacao), 0);
     // ROI usa volume LIQUIDADO — apostas pendentes não têm resultado
