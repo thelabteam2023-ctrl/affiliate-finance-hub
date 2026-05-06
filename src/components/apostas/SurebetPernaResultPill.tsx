@@ -27,7 +27,7 @@ function getResultConfig(resultado: string | null) {
   if (found) return { ...found, pillBg: getBadgeBg(resultado) };
   return {
     value: "PENDENTE",
-    label: "•••",
+     label: "Pendente",
     icon: Clock,
     color: "text-blue-700 dark:text-blue-400",
     bg: "hover:bg-blue-500/15 dark:hover:bg-blue-500/20",
