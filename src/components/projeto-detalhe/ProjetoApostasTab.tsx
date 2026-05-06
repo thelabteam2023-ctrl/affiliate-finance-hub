@@ -305,18 +305,23 @@ function getSurebetContexto(
   return "NORMAL";
 }
 
+import { formatBookmakerDisplay } from "@/lib/bookmaker-display";
+
 function getCasaLabelFromAposta(aposta: { bookmaker?: any; pernas?: unknown | null }): string {
   const nome = (aposta.bookmaker?.nome as string | undefined)?.trim();
   const parceiro = (aposta.bookmaker?.parceiro?.nome as string | undefined)?.trim();
+  const instance = (aposta.bookmaker as any)?.instance_identifier;
 
-  if (nome && parceiro) return `${nome} • ${parceiro}`;
-  if (nome) return nome;
-  if (parceiro) return parceiro;
+  let fullName = nome || "";
+  if (parceiro) fullName += ` - ${parceiro}`;
+  if (instance) fullName += ` (${instance})`;
+
+  if (fullName) return formatBookmakerDisplay(fullName);
 
   // Fallback: algumas apostas (ex.: registros com SUREBET) podem ter a casa apenas em JSON (pernas)
   const pernas = parsePernaFromJson((aposta as any).pernas);
   const pernaNome = (pernas[0]?.bookmaker_nome as string | undefined)?.trim();
-  return pernaNome || "—";
+  return pernaNome ? formatBookmakerDisplay(pernaNome) : "—";
 }
 
 export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, formatCurrency: formatCurrencyProp, actionsSlot }: ProjetoApostasTabProps) {
