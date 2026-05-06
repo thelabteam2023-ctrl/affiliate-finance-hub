@@ -412,11 +412,8 @@ export function ProjetoPunterTab({
               .select(`
                 id, aposta_id, bookmaker_id, odd, stake, stake_real, stake_freebet, moeda, selecao, selecao_livre, ordem,
                 resultado, lucro_prejuizo, stake_brl_referencia, lucro_prejuizo_brl_referencia, cotacao_snapshot, fonte_saldo,
-                bookmaker:bookmakers (
-                  nome, parceiro_id, instance_identifier,
-                  parceiro:parceiros (nome),
-                  bookmakers_catalogo (logo_url)
-                )
+                 bookmaker:bookmakers (id, nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo (logo_url)),
+                 apostas_perna_entradas (*, bookmakers (id, nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo (logo_url)))
               `)
               .in("aposta_id", idsChunk)
               .order("ordem", { ascending: true }),
@@ -425,11 +422,30 @@ export function ProjetoPunterTab({
 
         if (pernasData) {
           const pernasMap = new Map<string, any[]>();
-          for (const p of pernasData) {
-            const arr = pernasMap.get(p.aposta_id) || [];
-            arr.push(p);
-            pernasMap.set(p.aposta_id, arr);
-          }
+           pernasData.forEach((p: any) => {
+             const arr = pernasMap.get(p.aposta_id) || [];
+             const entradas = p.apostas_perna_entradas || [];
+             const parceiroNome = p.bookmaker?.parceiro?.nome;
+             arr.push({
+               ...p,
+               bookmaker_nome: parceiroNome 
+                 ? `${p.bookmaker?.nome || "—"} - ${parceiroNome}${p.bookmaker?.instance_identifier ? ` (${p.bookmaker.instance_identifier})` : ''}` 
+                 : `${p.bookmaker?.nome || "—"}${p.bookmaker?.instance_identifier ? ` (${p.bookmaker.instance_identifier})` : ''}`,
+               entries: entradas.length > 0 ? entradas.map((ent: any) => ({
+                 id: ent.id,
+                 bookmaker_id: ent.bookmaker_id,
+                 bookmaker_nome: ent.bookmakers?.nome 
+                   ? (ent.bookmakers.parceiro?.nome ? `${ent.bookmakers.nome} - ${ent.bookmakers.parceiro.nome}${ent.bookmakers.instance_identifier ? ` (${ent.bookmakers.instance_identifier})` : ''}` : `${ent.bookmakers.nome}${ent.bookmakers.instance_identifier ? ` (${ent.bookmakers.instance_identifier})` : ''}`)
+                   : "Outra Casa",
+                 moeda: ent.moeda,
+                 odd: ent.odd,
+                 stake: ent.stake,
+                 fonte_saldo: ent.fonte_saldo,
+                 resultado: p.resultado,
+               })) : undefined
+             });
+             pernasMap.set(p.aposta_id, arr);
+           });
           for (const a of mappedApostas) {
             const pernas = pernasMap.get(a.id);
             if (pernas && pernas.length > 1) {
@@ -1254,21 +1270,22 @@ export function ProjetoPunterTab({
                 status: aposta.status,
                 resultado: aposta.resultado,
                 observacoes: aposta.observacoes,
-                pernas: groupPernasBySelecao(
-                  subEntries.map((p: any) => ({
-                    id: p.id,
-                    selecao: p.selecao || aposta.selecao,
-                    selecao_livre: p.selecao_livre,
-                    odd: p.odd,
-                    stake: p.stake,
-                    resultado: p.resultado,
-                    lucro_prejuizo: p.lucro_prejuizo ?? null,
-                    bookmaker_nome: p.bookmaker?.nome || '—',
-                    bookmaker_id: p.bookmaker_id,
-                    moeda: p.moeda || 'BRL',
-                    fonte_saldo: p.fonte_saldo || null,
-                  }))
-                ),
+                   pernas: groupPernasBySelecao(
+                     subEntries.map((p: any) => ({
+                       ...p,
+                       id: p.id,
+                       selecao: p.selecao || aposta.selecao,
+                       selecao_livre: p.selecao_livre,
+                       odd: p.odd,
+                       stake: p.stake,
+                       resultado: p.resultado,
+                       lucro_prejuizo: p.lucro_prejuizo ?? null,
+                       bookmaker_nome: p.bookmaker_nome || p.bookmaker?.nome || '—',
+                       bookmaker_id: p.bookmaker_id,
+                       moeda: p.moeda || 'BRL',
+                       fonte_saldo: p.fonte_saldo || null,
+                     }))
+                   ),
               };
 
               return (

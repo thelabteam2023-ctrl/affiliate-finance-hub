@@ -652,9 +652,10 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           contexto_operacional,
           workspace_id, moeda_operacao, stake_consolidado, pl_consolidado, consolidation_currency,
           valor_brl_referencia, lucro_prejuizo_brl_referencia,
-          apostas_pernas (
-            id, selecao, selecao_livre, odd, stake, resultado, lucro_prejuizo, bookmaker_id, moeda, ordem, fonte_saldo
-          )
+           apostas_pernas (
+             id, selecao, selecao_livre, odd, stake, resultado, lucro_prejuizo, bookmaker_id, moeda, ordem, fonte_saldo,
+             apostas_perna_entradas (*, bookmakers (id, nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo (logo_url)))
+           )
         `;
 
       let dateFiltersSurebet: { startUTC?: string; endUTC?: string } = {};
@@ -1617,19 +1618,34 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                 consolidation_currency: (sb as any).consolidation_currency,
                 stake_consolidado: sb.stake_consolidado,
                 pernas: groupPernasBySelecao(
-                  (sb.pernas || []).map((p: any) => ({
-                    id: p.id,
-                    selecao: p.selecao,
-                    selecao_livre: p.selecao_livre,
-                    odd: p.odd,
-                    stake: p.stake,
-                    resultado: p.resultado,
-                    lucro_prejuizo: p.lucro_prejuizo ?? null,
-                    bookmaker_nome: p.bookmaker?.nome || p.bookmaker_nome || "—",
-                    bookmaker_id: p.bookmaker_id,
-                    moeda: p.moeda || 'BRL',
-                    fonte_saldo: p.fonte_saldo || null,
-                  }))
+                   (sb.pernas || []).map((p: any) => {
+                     const entradas = p.apostas_perna_entradas || [];
+                     return {
+                       id: p.id,
+                       selecao: p.selecao,
+                       selecao_livre: p.selecao_livre,
+                       odd: p.odd,
+                       stake: p.stake,
+                       resultado: p.resultado,
+                       lucro_prejuizo: p.lucro_prejuizo ?? null,
+                       bookmaker_nome: p.bookmaker?.nome || p.bookmaker_nome || "—",
+                       bookmaker_id: p.bookmaker_id,
+                       moeda: p.moeda || 'BRL',
+                       fonte_saldo: p.fonte_saldo || null,
+                       entries: entradas.length > 0 ? entradas.map((ent: any) => ({
+                         id: ent.id,
+                         bookmaker_id: ent.bookmaker_id,
+                         bookmaker_nome: ent.bookmakers?.nome 
+                           ? (ent.bookmakers.parceiro?.nome ? `${ent.bookmakers.nome} - ${ent.bookmakers.parceiro.nome}${ent.bookmakers.instance_identifier ? ` (${ent.bookmakers.instance_identifier})` : ''}` : `${ent.bookmakers.nome}${ent.bookmakers.instance_identifier ? ` (${ent.bookmakers.instance_identifier})` : ''}`)
+                           : "Outra Casa",
+                         moeda: ent.moeda,
+                         odd: ent.odd,
+                         stake: ent.stake,
+                         fonte_saldo: ent.fonte_saldo,
+                         resultado: p.resultado,
+                       })) : undefined
+                     };
+                   })
                 ),
               };
               
@@ -1683,21 +1699,36 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                   status: aposta.status,
                   resultado: aposta.resultado,
                   observacoes: aposta.observacoes,
-                  pernas: groupPernasBySelecao(
-                    subEntries.map((p: any) => ({
-                      id: p.id,
-                      selecao: p.selecao,
-                      selecao_livre: p.selecao_livre,
-                      odd: p.odd,
-                      stake: p.stake,
-                      resultado: p.resultado,
-                      lucro_prejuizo: p.lucro_prejuizo ?? null,
-                      bookmaker_nome: p.bookmaker?.nome || '—',
-                      bookmaker_id: p.bookmaker_id,
-                      moeda: p.moeda || 'BRL',
-                      fonte_saldo: p.fonte_saldo || null,
-                    }))
-                  ),
+                   pernas: groupPernasBySelecao(
+                     subEntries.map((p: any) => {
+                       const entradas = p.apostas_perna_entradas || [];
+                       return {
+                         id: p.id,
+                         selecao: p.selecao,
+                         selecao_livre: p.selecao_livre,
+                         odd: p.odd,
+                         stake: p.stake,
+                         resultado: p.resultado,
+                         lucro_prejuizo: p.lucro_prejuizo ?? null,
+                         bookmaker_nome: p.bookmaker?.nome || '—',
+                         bookmaker_id: p.bookmaker_id,
+                         moeda: p.moeda || 'BRL',
+                         fonte_saldo: p.fonte_saldo || null,
+                         entries: entradas.length > 0 ? entradas.map((ent: any) => ({
+                           id: ent.id,
+                           bookmaker_id: ent.bookmaker_id,
+                           bookmaker_nome: ent.bookmakers?.nome 
+                             ? (ent.bookmakers.parceiro?.nome ? `${ent.bookmakers.nome} - ${ent.bookmakers.parceiro.nome}${ent.bookmakers.instance_identifier ? ` (${ent.bookmakers.instance_identifier})` : ''}` : `${ent.bookmakers.nome}${ent.bookmakers.instance_identifier ? ` (${ent.bookmakers.instance_identifier})` : ''}`)
+                             : "Outra Casa",
+                           moeda: ent.moeda,
+                           odd: ent.odd,
+                           stake: ent.stake,
+                           fonte_saldo: ent.fonte_saldo,
+                           resultado: p.resultado,
+                         })) : undefined
+                       };
+                     })
+                   ),
                 };
 
                 return (
