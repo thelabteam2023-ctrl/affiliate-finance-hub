@@ -11,6 +11,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { aggregateBookmakerUsage } from "@/utils/bookmakerUsageAnalytics";
+import { getConsolidatedLucroDirect, getConsolidatedStakeDirect } from "@/utils/consolidatedValues";
 
 /**
  * VISÕES DE PERFORMANCE
@@ -182,20 +183,12 @@ export function PerformancePorCasaCard({
       // CANÔNICO: Volume usa stake_consolidado (snapshot Cotação de Trabalho) quando disponível
       // Fallback: converte stake_total/stake da moeda_operacao para moeda de consolidação
       // Última opção: valor bruto sem conversão (mesma moeda)
-      const stakeRaw = aposta.stake_total || aposta.stake || 0;
-      const moedaOp = aposta.moeda_operacao || moedaConsolidacao;
-      let stakeOperacao: number;
-      if (aposta.stake_consolidado != null && aposta.consolidation_currency === moedaConsolidacao) {
-        stakeOperacao = aposta.stake_consolidado;
-      } else if (moedaOp !== moedaConsolidacao && convertToConsolidation && stakeRaw !== 0) {
-        stakeOperacao = convertToConsolidation(stakeRaw, moedaOp);
-      } else {
-        stakeOperacao = stakeRaw;
-      }
-      
-      estrategiaMap[estrategiaNome].totalStake += stakeOperacao || 0;
-      // Usa pl_consolidado se disponível, senão lucro_prejuizo
-      estrategiaMap[estrategiaNome].lucro += (aposta.pl_consolidado ?? aposta.lucro_prejuizo) || 0;
+      // USAR SSOT: utilitário centralizado que corrige discrepâncias de multi-entry
+      const stakeOperacao = getConsolidatedStakeDirect(aposta as any, aposta.pernas as any, convertToConsolidation, moedaConsolidacao);
+      const lucroOperacao = getConsolidatedLucroDirect(aposta as any, aposta.pernas as any, convertToConsolidation, moedaConsolidacao);
+
+      estrategiaMap[estrategiaNome].totalStake += stakeOperacao;
+      estrategiaMap[estrategiaNome].lucro += lucroOperacao;
 
       if (aposta.resultado === "GREEN" || aposta.resultado === "MEIO_GREEN") {
         estrategiaMap[estrategiaNome].greens++;

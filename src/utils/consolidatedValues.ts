@@ -183,31 +183,35 @@ export interface PernaConsolidavel {
  */
 export function getConsolidatedLucroDirect(
   aposta: ApostaConsolidavel & { is_multicurrency?: boolean | null },
-  pernas: PernaConsolidavel[] | undefined | null,
+  pernas: any[] | undefined | null,
   convertToConsolidation?: ConvertFn,
   moedaConsolidacao?: string,
 ): number {
-  // PRIORIDADE 1: pl_consolidado pré-calculado pelo trigger (usa snapshots imutáveis)
-  // Este valor já foi calculado por fn_recalc_pai_surebet com cotacao_snapshot de cada perna,
-  // garantindo que mudanças na cotação de trabalho não afetem apostas históricas.
-  if (
-    typeof aposta.pl_consolidado === "number" &&
-    aposta.consolidation_currency &&
-    moedaConsolidacao &&
-    aposta.consolidation_currency === moedaConsolidacao
-  ) {
-    return aposta.pl_consolidado;
-  }
+  // Detectar se existem múltiplas entradas em qualquer perna (complex pernas)
+  // Nestes casos, o pl_consolidado do banco pode estar incorreto devido à forma como as pernas
+  // são somadas numericamente no motor de liquidação (não percorre sub-entradas).
+  const hasComplexPernas = pernas?.some(p => p.entries && p.entries.length > 1);
 
-  // PRIORIDADE 1b: pl_consolidado em outra moeda → converter
-  if (
-    typeof aposta.pl_consolidado === "number" &&
-    aposta.consolidation_currency &&
-    moedaConsolidacao &&
-    aposta.consolidation_currency !== moedaConsolidacao &&
-    convertToConsolidation
-  ) {
-    return convertToConsolidation(aposta.pl_consolidado, aposta.consolidation_currency);
+  // PRIORIDADE 1: pl_consolidado pré-calculado pelo trigger (APENAS se não for complexo)
+  if (!hasComplexPernas) {
+    if (
+      typeof aposta.pl_consolidado === "number" &&
+      aposta.consolidation_currency &&
+      moedaConsolidacao &&
+      aposta.consolidation_currency === moedaConsolidacao
+    ) {
+      return aposta.pl_consolidado;
+    }
+
+    if (
+      typeof aposta.pl_consolidado === "number" &&
+      aposta.consolidation_currency &&
+      moedaConsolidacao &&
+      aposta.consolidation_currency !== moedaConsolidacao &&
+      convertToConsolidation
+    ) {
+      return convertToConsolidation(aposta.pl_consolidado, aposta.consolidation_currency);
+    }
   }
 
   // PRIORIDADE 2: Multicurrency com pernas disponíveis mas SEM pl_consolidado
