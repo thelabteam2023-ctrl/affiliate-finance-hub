@@ -1,6 +1,6 @@
 import { getFirstLastName } from "@/lib/utils";
 import { convertPernaToConsolidacao } from "@/lib/currency-conversion-snapshot";
-import { getConsolidatedLucro, getConsolidatedStake } from "@/utils/consolidatedValues";
+import { getConsolidatedLucroDirect, getConsolidatedStakeDirect } from "@/utils/consolidatedValues";
 
 type ConvertFn = (valor: number, moedaOrigem: string) => number;
 
@@ -165,8 +165,8 @@ export function extractBookmakerParticipations(
 
   const entriesWithConvertedStake = entries.map((entry) => {
     const stakeRaw = typeof entry.stake_total === "number" ? entry.stake_total : (entry.stake ?? 0);
-    const stake = entry === operation
-      ? getConsolidatedStake(operation, options.convertToConsolidation, moedaConsolidacao)
+    const stake = entry === (operation as any)
+      ? getConsolidatedStakeDirect(operation, operation.pernas as any, options.convertToConsolidation, moedaConsolidacao)
       : convertEntryValue(stakeRaw, entry, moedaFallback, options, entry.stake_brl_referencia);
     return { entry, stake };
   });
@@ -180,7 +180,7 @@ export function extractBookmakerParticipations(
     return acc + Math.max(item.stake, 0);
   }, 0);
   const missingLucroCount = entriesWithConvertedStake.filter((item) => typeof item.entry.lucro_prejuizo !== "number").length;
-  const operationLucro = getConsolidatedLucro(operation, options.convertToConsolidation, moedaConsolidacao);
+  const operationLucro = getConsolidatedLucroDirect(operation, operation.pernas as any, options.convertToConsolidation, moedaConsolidacao);
   const remainingLucro = operationLucro - knownLucro;
 
   return entriesWithConvertedStake.map(({ entry, stake }) => {
