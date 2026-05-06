@@ -775,19 +775,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       // Para múltiplas, usar odd_final; para simples, usar odd
       const odd = apostaMultipla ? (apostaMultipla.odd_final || 1) : ((aposta as any).odd || 1);
       
-      // Calcular lucro usando função canônica
-      const lucro = calcularImpactoResultado(stake, odd, resultado);
-     
-     console.log('[ProjetoApostasTab] Chamando reliquidarAposta:', { 
-       apostaId, 
-       resultado, 
-       lucro,
-       stake,
-       odd 
-     });
-
-      // 1. Liquidar via RPC atômica (atualiza aposta + registra no ledger + trigger atualiza saldo)
-      const result = await reliquidarAposta(apostaId, resultado, lucro);
+       // 1. Liquidar via RPC atômica (atualiza aposta + registra no ledger + trigger atualiza saldo)
+       // IMPORTANTE: p_lucro_prejuizo NULL para que o RPC use o motor canônico do banco
+       const result = await reliquidarAposta(apostaId, resultado, null);
       
       if (!result.success) {
        console.error('[ProjetoApostasTab] reliquidarAposta falhou:', result.error);
