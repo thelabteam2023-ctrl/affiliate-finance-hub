@@ -494,6 +494,24 @@ export function ProjetoPunterTab({
       invalidateSaldos(projetoId);
       await fetchApostas();
 
+      // 4. VALIDAÇÃO CRÍTICA: Conferir que a aposta foi de fato liquidada
+      const apostaAtualizada = apostas.find(a => a.id === apostaId);
+      if (!apostaAtualizada || apostaAtualizada.status !== 'LIQUIDADA' || apostaAtualizada.resultado !== resultado) {
+        console.error("[ProjetoPunterTab] FALHA NA VALIDAÇÃO:", {
+          apostaId,
+          status_esperado: 'LIQUIDADA',
+          status_obtido: apostaAtualizada?.status,
+          resultado_esperado: resultado,
+          resultado_obtido: apostaAtualizada?.resultado
+        });
+        toast.error(
+          `Erro: A aposta não foi liquidada corretamente. ` +
+          `Status: ${apostaAtualizada?.status || 'desconhecido'}, ` +
+          `Resultado: ${apostaAtualizada?.resultado || 'desconhecido'}`
+        );
+        return;
+      }
+
       const resultLabel = {
         GREEN: "Green",
         RED: "Red",
