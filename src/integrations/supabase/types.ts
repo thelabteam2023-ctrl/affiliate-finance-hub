@@ -217,6 +217,135 @@ export type Database = {
           },
         ]
       }
+      apostas_perna_entradas: {
+        Row: {
+          bookmaker_id: string
+          cotacao_snapshot: number | null
+          cotacao_snapshot_at: string | null
+          created_at: string | null
+          fonte_saldo: string | null
+          id: string
+          moeda: string
+          odd: number
+          perna_id: string
+          stake: number
+          stake_brl_referencia: number | null
+          stake_freebet: number
+          stake_real: number
+          updated_at: string | null
+        }
+        Insert: {
+          bookmaker_id: string
+          cotacao_snapshot?: number | null
+          cotacao_snapshot_at?: string | null
+          created_at?: string | null
+          fonte_saldo?: string | null
+          id?: string
+          moeda?: string
+          odd: number
+          perna_id: string
+          stake: number
+          stake_brl_referencia?: number | null
+          stake_freebet?: number
+          stake_real?: number
+          updated_at?: string | null
+        }
+        Update: {
+          bookmaker_id?: string
+          cotacao_snapshot?: number | null
+          cotacao_snapshot_at?: string | null
+          created_at?: string | null
+          fonte_saldo?: string | null
+          id?: string
+          moeda?: string
+          odd?: number
+          perna_id?: string
+          stake?: number
+          stake_brl_referencia?: number | null
+          stake_freebet?: number
+          stake_real?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "apostas_perna_entradas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_perna_entradas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_disponibilidade"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_perna_entradas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_resultado_financeiro"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "apostas_perna_entradas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_resultado_operacional"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "apostas_perna_entradas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_audit"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "apostas_perna_entradas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_operavel"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_perna_entradas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_status_operacional"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_perna_entradas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_aguardando_saque"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "apostas_perna_entradas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_perna_entradas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_financial_audit"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "apostas_perna_entradas_perna_id_fkey"
+            columns: ["perna_id"]
+            isOneToOne: false
+            referencedRelation: "apostas_pernas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       apostas_pernas: {
         Row: {
           aposta_id: string
@@ -398,6 +527,7 @@ export type Database = {
           gerou_freebet: boolean | null
           id: string
           is_bonus_bet: boolean | null
+          is_manual_override: boolean | null
           is_multicurrency: boolean | null
           lado_aposta: string | null
           lay_comissao: number | null
@@ -410,6 +540,9 @@ export type Database = {
           lucro_esperado: number | null
           lucro_prejuizo: number | null
           lucro_prejuizo_brl_referencia: number | null
+          manual_override_at: string | null
+          manual_override_by: string | null
+          manual_override_reason: string | null
           mercado: string | null
           modelo: string | null
           modo_entrada: string | null
@@ -473,6 +606,7 @@ export type Database = {
           gerou_freebet?: boolean | null
           id?: string
           is_bonus_bet?: boolean | null
+          is_manual_override?: boolean | null
           is_multicurrency?: boolean | null
           lado_aposta?: string | null
           lay_comissao?: number | null
@@ -485,6 +619,9 @@ export type Database = {
           lucro_esperado?: number | null
           lucro_prejuizo?: number | null
           lucro_prejuizo_brl_referencia?: number | null
+          manual_override_at?: string | null
+          manual_override_by?: string | null
+          manual_override_reason?: string | null
           mercado?: string | null
           modelo?: string | null
           modo_entrada?: string | null
@@ -548,6 +685,7 @@ export type Database = {
           gerou_freebet?: boolean | null
           id?: string
           is_bonus_bet?: boolean | null
+          is_manual_override?: boolean | null
           is_multicurrency?: boolean | null
           lado_aposta?: string | null
           lay_comissao?: number | null
@@ -560,6 +698,9 @@ export type Database = {
           lucro_esperado?: number | null
           lucro_prejuizo?: number | null
           lucro_prejuizo_brl_referencia?: number | null
+          manual_override_at?: string | null
+          manual_override_by?: string | null
+          manual_override_reason?: string | null
           mercado?: string | null
           modelo?: string | null
           modo_entrada?: string | null
@@ -15030,9 +15171,9 @@ export type Database = {
           p_workspace_id: string
         }
         Returns: {
-          aposta_id: string
           events_created: number
           message: string
+          o_aposta_id: string
           success: boolean
         }[]
       }
@@ -15118,6 +15259,45 @@ export type Database = {
         }
         Returns: Json
       }
+      editar_surebet_completa_v2: {
+        Args: {
+          p_aposta_id: string
+          p_contexto: string
+          p_data_aposta: string
+          p_entradas: Json
+          p_esporte: string
+          p_estrategia: string
+          p_evento: string
+          p_lucro_esperado: number
+          p_lucro_prejuizo?: number
+          p_mercado: string
+          p_modelo: string
+          p_pernas: Json
+          p_resultado?: string
+          p_roi_esperado: number
+          p_roi_real?: number
+          p_stake_consolidado: number
+          p_stake_total: number
+          p_status?: string
+        }
+        Returns: Json
+      }
+      editar_surebet_completa_v3: {
+        Args: {
+          p_aposta_id: string
+          p_contexto: string
+          p_data_aposta: string
+          p_entradas: Json
+          p_esporte: string
+          p_estrategia: string
+          p_evento: string
+          p_mercado: string
+          p_modelo: string
+          p_pernas: Json
+          p_status_manual?: string
+        }
+        Returns: Json
+      }
       encerrar_ciclo_e_criar_proximo: {
         Args: { p_ciclo_id: string; p_excedente?: number; p_gatilho: string }
         Returns: string
@@ -15180,6 +15360,19 @@ export type Database = {
           stake_total: number
           todas_liquidadas: boolean
         }[]
+      }
+      fn_sync_stake_event_v1: {
+        Args: {
+          p_aposta_id: string
+          p_bookmaker_id: string
+          p_entrada_id: string
+          p_fonte_saldo: string
+          p_moeda: string
+          p_stake: number
+          p_user_id: string
+          p_workspace_id: string
+        }
+        Returns: undefined
       }
       force_relogin_global: { Args: never; Returns: Json }
       force_relogin_user: { Args: { p_user_id: string }; Returns: Json }
@@ -15776,6 +15969,10 @@ export type Database = {
         Args: { p_surebet_id: string }
         Returns: Record<string, unknown>
       }
+      recalcular_perna_por_entradas: {
+        Args: { p_perna_id: string }
+        Returns: undefined
+      }
       recalcular_saldo_por_apostas: {
         Args: { p_bookmaker_id: string }
         Returns: Json
@@ -15892,6 +16089,16 @@ export type Database = {
         Args: { p_motivo: string; p_transacao_id: string }
         Returns: Json
       }
+      rpc_override_surebet_v1: {
+        Args: {
+          p_aposta_id: string
+          p_motivo: string
+          p_novo_lucro: number
+          p_novo_resultado: string
+          p_perna_id_ajuste: string
+        }
+        Returns: Json
+      }
       schedule_downgrade: {
         Args: {
           p_reason?: string
@@ -15956,6 +16163,10 @@ export type Database = {
         }[]
       }
       sync_bonus_rollover: { Args: { p_bonus_id: string }; Returns: number }
+      sync_bookmaker_balance_from_ledger: {
+        Args: { p_bookmaker_id: string }
+        Returns: number
+      }
       sync_pending_aposta_stake_v1: {
         Args: { p_aposta_id: string }
         Returns: Json
