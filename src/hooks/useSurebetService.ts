@@ -298,10 +298,9 @@ export function useSurebetService(): UseSurebetServiceReturn {
     lucroPrejuizo?: number
   ): Promise<{ success: boolean; error?: string }> => {
     try {
-      // Buscar aposta_id da perna
       const { data: perna, error: pernaError } = await supabase
         .from('apostas_pernas')
-        .select('aposta_id')
+        .select('aposta_id, apostas_unificada:aposta_id(workspace_id, projeto_id)')
         .eq('id', pernaId)
         .single();
 
@@ -309,19 +308,29 @@ export function useSurebetService(): UseSurebetServiceReturn {
         return { success: false, error: 'Perna não encontrada' };
       }
 
-      // Usar reliquidarAposta do ApostaService
-      const result = await reliquidarAposta(perna.aposta_id, novoResultado, lucroPrejuizo);
+      const wsId = (perna as any)?.apostas_unificada?.workspace_id;
+      const projetoId = (perna as any)?.apostas_unificada?.projeto_id;
+      if (!wsId) return { success: false, error: 'Workspace não encontrado para a perna' };
 
-      if (!result.success) {
-        return { success: false, error: result.error?.message };
+      // liquidar_perna_surebet_v1 já é idempotente: estorna PAYOUT/REFUND
+      // anteriores da perna e re-emite com base no novo resultado.
+      const { data: rpcResult, error: rpcError } = await supabase.rpc(
+        'liquidar_perna_surebet_v1',
+        { p_perna_id: pernaId, p_resultado: novoResultado, p_workspace_id: wsId },
+      );
+      if (rpcError) return { success: false, error: rpcError.message };
+      const result = rpcResult as any;
+      if (result && result.success === false) {
+        return { success: false, error: result.error || 'Falha ao reliquidar perna' };
       }
 
+      if (projetoId) invalidateSaldos(projetoId);
       return { success: true };
     } catch (error: any) {
       console.error('[useSurebetService] Erro ao reliquidar perna:', error);
       return { success: false, error: error.message };
     }
-  }, []);
+  }, [invalidateSaldos]);
 
   /**
    * Deleta uma surebet usando ApostaService.
