@@ -70,7 +70,7 @@ import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { DuploGreenStatisticsCard } from "./DuploGreenStatisticsCard";
 
 import { cn } from "@/lib/utils";
-import { buildBookmakerNomeMap, collectMissingBookmakerIds, mergeBookmakerNomeMaps } from "@/lib/bookmaker-display";
+import { buildBookmakerNomeMap, collectMissingBookmakerIds, mergeBookmakerNomeMaps, formatBookmakerDisplay } from "@/lib/bookmaker-display";
 import { useUnlinkedBookmakerNames } from "@/hooks/useUnlinkedBookmakerNames";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
@@ -536,7 +536,21 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
         VOID: "Void"
       }[resultado] || resultado;
 
-      toast.success(`Aposta marcada como ${resultLabel}`);
+      const resultColorClass = resultLabel.includes("Green") 
+        ? "text-emerald-500" 
+        : resultLabel.includes("Red") 
+          ? "text-rose-500" 
+          : "text-amber-500";
+
+      const nome = aposta.bookmaker_nome ? formatBookmakerDisplay(aposta.bookmaker_nome) : "";
+
+      toast.success(
+        <div className="flex items-center gap-1.5">
+          <span className={cn("font-semibold", resultColorClass)}>{resultLabel}</span>
+          {nome ? <span>na {nome}</span> : <span>marcada com sucesso</span>}
+        </div>
+      );
+
       onDataChange?.();
     } catch (error: any) {
       console.error("Erro ao atualizar aposta:", error);
@@ -586,8 +600,34 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
       }[input.resultado] || input.resultado;
 
       if (!input.silent) {
-        const nome = input.bookmakerNome || '';
-        toast.success(nome ? `${resultLabel} na ${nome}` : `Resultado alterado com sucesso`);
+        const nomeRaw = input.bookmakerNome || '';
+        const resultColorClass = resultLabel.includes("Green") 
+          ? "text-emerald-500" 
+          : resultLabel.includes("Red") 
+            ? "text-rose-500" 
+            : "text-amber-500";
+
+        if (nomeRaw) {
+          const casas = nomeRaw.split(" & ").map(n => formatBookmakerDisplay(n));
+          
+          toast.success(
+            <div className="flex flex-col gap-0.5">
+              {casas.map((casa, idx) => (
+                <div key={idx} className="flex items-center gap-1.5">
+                  <span className={cn("font-semibold", resultColorClass)}>{resultLabel}</span>
+                  <span>na {casa}</span>
+                </div>
+              ))}
+            </div>
+          );
+        } else {
+          toast.success(
+            <div className="flex items-center gap-1.5">
+              <span className={cn("font-semibold", resultColorClass)}>{resultLabel}</span>
+              <span>alterado com sucesso</span>
+            </div>
+          );
+        }
       }
     } catch (error: any) {
       console.error("Erro ao liquidar perna:", error);

@@ -50,7 +50,7 @@ import { ResultadoPill } from "@/components/projeto-detalhe/ResultadoPill";
 import { ApostaCard, type ApostaCardData } from "@/components/projeto-detalhe/ApostaCard";
 import { useProjectBonuses, FinalizeReason } from "@/hooks/useProjectBonuses";
 import { cn, getFirstLastName } from "@/lib/utils";
-import { buildBookmakerNomeMap, collectMissingBookmakerIds, mergeBookmakerNomeMaps } from "@/lib/bookmaker-display";
+import { buildBookmakerNomeMap, collectMissingBookmakerIds, mergeBookmakerNomeMaps, formatBookmakerDisplay } from "@/lib/bookmaker-display";
 import { useUnlinkedBookmakerNames } from "@/hooks/useUnlinkedBookmakerNames";
 import { apostaMatchesBookmakerFilter, apostaMatchesParceiroFilter } from "@/utils/apostaFilterHelpers";
 import { 
@@ -186,6 +186,19 @@ type ApostaUnificada = {
   data: Aposta | ApostaMultipla | Surebet;
   data_aposta: string;
 };
+
+function getCasaLabelFromAposta(aposta: any): string {
+  const nome = (aposta.bookmaker?.nome as string | undefined)?.trim();
+  const parceiro = (aposta.bookmaker?.parceiro?.nome as string | undefined)?.trim();
+  const instance = (aposta.bookmaker as any)?.instance_identifier;
+
+  let fullName = nome || "";
+  if (parceiro) fullName += ` - ${parceiro}`;
+  if (instance) fullName += ` (${instance})`;
+
+  if (fullName) return formatBookmakerDisplay(fullName);
+  return "—";
+}
 
 export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApostasTabProps) {
   const queryClient = useQueryClient();
@@ -857,7 +870,20 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
         VOID: "Void"
       }[resultado] || resultado;
 
-      toast.success(`Aposta marcada como ${resultLabel}`);
+      const resultColorClass = resultLabel.includes("Green") 
+        ? "text-emerald-500" 
+        : resultLabel.includes("Red") 
+          ? "text-rose-500" 
+          : "text-amber-500";
+
+      const casaLabel = aposta ? getCasaLabelFromAposta(aposta) : "";
+
+      toast.success(
+        <div className="flex items-center gap-1.5">
+          <span className={cn("font-semibold", resultColorClass)}>{resultLabel}</span>
+          {casaLabel ? <span>na {casaLabel}</span> : <span>marcada com sucesso</span>}
+        </div>
+      );
     } catch (error) {
       console.error("Erro ao resolver aposta:", error);
       toast.error("Erro ao atualizar resultado");
@@ -964,8 +990,34 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
       }[input.resultado] || input.resultado;
 
       if (!input.silent) {
-        const nome = input.bookmakerNome || '';
-        toast.success(nome ? `${resultLabel} na ${nome}` : `Resultado alterado com sucesso`);
+        const nomeRaw = input.bookmakerNome || '';
+        const resultColorClass = resultLabel.includes("Green") 
+          ? "text-emerald-500" 
+          : resultLabel.includes("Red") 
+            ? "text-rose-500" 
+            : "text-amber-500";
+
+        if (nomeRaw) {
+          const casas = nomeRaw.split(" & ").map(n => formatBookmakerDisplay(n));
+          
+          toast.success(
+            <div className="flex flex-col gap-0.5">
+              {casas.map((casa, idx) => (
+                <div key={idx} className="flex items-center gap-1.5">
+                  <span className={cn("font-semibold", resultColorClass)}>{resultLabel}</span>
+                  <span>na {casa}</span>
+                </div>
+              ))}
+            </div>
+          );
+        } else {
+          toast.success(
+            <div className="flex items-center gap-1.5">
+              <span className={cn("font-semibold", resultColorClass)}>{resultLabel}</span>
+              <span>alterado com sucesso</span>
+            </div>
+          );
+        }
       }
     } catch (error: any) {
       console.error("Erro ao liquidar perna:", error);
