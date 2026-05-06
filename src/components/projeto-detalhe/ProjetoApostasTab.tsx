@@ -305,18 +305,23 @@ function getSurebetContexto(
   return "NORMAL";
 }
 
+import { formatBookmakerDisplay } from "@/lib/bookmaker-display";
+
 function getCasaLabelFromAposta(aposta: { bookmaker?: any; pernas?: unknown | null }): string {
   const nome = (aposta.bookmaker?.nome as string | undefined)?.trim();
   const parceiro = (aposta.bookmaker?.parceiro?.nome as string | undefined)?.trim();
+  const instance = (aposta.bookmaker as any)?.instance_identifier;
 
-  if (nome && parceiro) return `${nome} • ${parceiro}`;
-  if (nome) return nome;
-  if (parceiro) return parceiro;
+  let fullName = nome || "";
+  if (parceiro) fullName += ` - ${parceiro}`;
+  if (instance) fullName += ` (${instance})`;
+
+  if (fullName) return formatBookmakerDisplay(fullName);
 
   // Fallback: algumas apostas (ex.: registros com SUREBET) podem ter a casa apenas em JSON (pernas)
   const pernas = parsePernaFromJson((aposta as any).pernas);
   const pernaNome = (pernas[0]?.bookmaker_nome as string | undefined)?.trim();
-  return pernaNome || "—";
+  return pernaNome ? formatBookmakerDisplay(pernaNome) : "—";
 }
 
 export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, formatCurrency: formatCurrencyProp, actionsSlot }: ProjetoApostasTabProps) {
@@ -1755,11 +1760,11 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
 
               // Single-entry simples → ApostaCard normal
               const displayInfo = getApostaDisplayInfo(aposta);
-              const bookmakerNomeFormatted = formatBookmakerProjectName(
-                aposta.bookmaker?.nome || "—",
-                aposta.bookmaker?.parceiro?.nome,
-                (aposta.bookmaker as any)?.instance_identifier,
-              );
+              const bookmakerRawName = (aposta.bookmaker?.nome || "—") + 
+                (aposta.bookmaker?.parceiro?.nome ? ` - ${aposta.bookmaker.parceiro.nome}` : "") + 
+                ((aposta.bookmaker as any)?.instance_identifier ? ` (${(aposta.bookmaker as any).instance_identifier})` : "");
+              
+              const bookmakerNomeFormatted = formatBookmakerDisplay(bookmakerRawName);
               const logoUrl = aposta.bookmaker?.bookmakers_catalogo?.logo_url;
               
               let estrategia: string = aposta.estrategia || "NORMAL";
@@ -1811,8 +1816,12 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
              }
             // ===== APOSTA MÚLTIPLA - Usando ApostaCard padronizado =====
             const multipla = item.data as ApostaMultipla;
-            const bookmakerBaseMultipla = multipla.bookmaker?.nome?.split(" - ")[0] || multipla.bookmaker?.nome;
-            const parceiroNomeMultipla = multipla.bookmaker?.parceiro?.nome;
+            const bookmakerRawNameMultipla = (multipla.bookmaker?.nome || "—") + 
+                (multipla.bookmaker?.parceiro?.nome ? ` - ${multipla.bookmaker.parceiro.nome}` : "") + 
+                ((multipla.bookmaker as any)?.instance_identifier ? ` (${(multipla.bookmaker as any).instance_identifier})` : "");
+            
+            const bookmakerNomeFormattedMultipla = formatBookmakerDisplay(bookmakerRawNameMultipla);
+
             const logoUrlMultipla = multipla.bookmaker?.bookmakers_catalogo?.logo_url;
             
             // Determinar estratégia - usar valor do banco diretamente
@@ -1840,9 +1849,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                  odd: parseFloat(s.odd),
                  resultado: s.resultado,
                })),
-               bookmaker_nome: bookmakerBaseMultipla,
-               parceiro_nome: parceiroNomeMultipla,
-               instance_identifier: (multipla.bookmaker as any)?.instance_identifier,
+                bookmaker_nome: bookmakerNomeFormattedMultipla,
                 logo_url: logoUrlMultipla,
                 moeda: multipla.moeda_operacao || "BRL",
                  fonte_saldo: (multipla as any).fonte_saldo || null,

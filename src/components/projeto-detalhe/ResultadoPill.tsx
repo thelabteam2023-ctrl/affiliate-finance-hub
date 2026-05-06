@@ -134,16 +134,18 @@ export function ResultadoPill({
 
   const resultadoOptions = getResultadoOptions();
 
-  const getResultadoColor = (value: string | null) => {
+  const getResultadoStyle = (value: string | null) => {
     switch (value) {
       case "GREEN": 
       case "GREEN_BOOKMAKER": 
-        return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-600/30 dark:border-emerald-500/30";
+        return "bg-emerald-500 text-white border-none";
       case "RED": 
       case "RED_BOOKMAKER": 
-        return "bg-red-500/15 text-red-700 dark:text-red-400 border-red-600/30 dark:border-red-500/30";
-      case "MEIO_GREEN": return "bg-teal-500/15 text-teal-700 dark:text-teal-400 border-teal-600/30 dark:border-teal-500/30";
-      case "MEIO_RED": return "bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-600/30 dark:border-orange-500/30";
+        return "bg-red-500 text-white border-none";
+      case "MEIO_GREEN": 
+        return "bg-teal-500 text-white border-none";
+      case "MEIO_RED": 
+        return "bg-orange-500 text-white border-none";
       case "VOID": return "bg-muted text-muted-foreground border-border";
       case "PENDENTE": return "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-600/30 dark:border-blue-500/30";
       default: return "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-600/30 dark:border-blue-500/30";
@@ -720,7 +722,7 @@ export function ResultadoPill({
             onClick={(e) => e.stopPropagation()}
           >
             <Badge 
-              className={`${getResultadoColor(displayValue)} text-[10px] px-1.5 py-0.5 cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-1`}
+              className={`${getResultadoStyle(displayValue)} text-[10px] px-1.5 py-0.5 cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-1`}
             >
               {loading ? (
                 <Loader2 className="h-3 w-3 animate-spin" />
