@@ -432,7 +432,9 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
             entries: entradas.length > 0 ? entradas.map((ent: any) => ({
               id: ent.id,
               bookmaker_id: ent.bookmaker_id,
-              bookmaker_nome: ent.bookmaker_id === p.bookmaker_id ? (parceiroNome ? `${bookmaker?.nome || "—"} - ${parceiroNome}` : (bookmaker?.nome || "—")) : "Outra Casa", // Simplified, as we don't have the bookmaker name for sub-entries easily here
+             bookmaker_nome: ent.bookmaker_id === p.bookmaker_id 
+               ? (parceiroNome ? `${bookmaker?.nome || "—"} - ${parceiroNome}${bookmaker?.instance_identifier ? ` (${bookmaker.instance_identifier})` : ''}` : `${bookmaker?.nome || "—"}${bookmaker?.instance_identifier ? ` (${bookmaker.instance_identifier})` : ''}`)
+               : (ent.bookmakers?.nome ? (ent.bookmakers?.parceiro?.nome ? `${ent.bookmakers.nome} - ${ent.bookmakers.parceiro.nome}${ent.bookmakers.instance_identifier ? ` (${ent.bookmakers.instance_identifier})` : ''}` : `${ent.bookmakers.nome}${ent.bookmakers.instance_identifier ? ` (${ent.bookmakers.instance_identifier})` : ''}`) : "Outra Casa"),
               moeda: ent.moeda,
               odd: ent.odd,
               stake: ent.stake,
