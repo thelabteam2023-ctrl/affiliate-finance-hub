@@ -697,14 +697,16 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
   const getPernaLucroNominal = (perna: SurebetPerna): number | null => {
     if (typeof perna.lucro_prejuizo === "number") return perna.lucro_prejuizo;
 
-    const stake = perna.stake_total || perna.stake || 0;
+    const isFB = isPernaFreebet(perna);
+    const stake = isFB ? 0 : (perna.stake_total || perna.stake || 0);
+    const stakeNominal = perna.stake_total || perna.stake || 0;
     const odd = perna.odd || 0;
 
     switch (perna.resultado) {
       case "GREEN":
-        return stake * (odd - 1);
+        return stakeNominal * (odd - 1);
       case "MEIO_GREEN":
-        return (stake * (odd - 1)) / 2;
+        return (stakeNominal * (odd - 1)) / 2;
       case "RED":
         return -stake;
       case "MEIO_RED":
