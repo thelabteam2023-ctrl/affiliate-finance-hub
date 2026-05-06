@@ -18,7 +18,8 @@ const RESULT_OPTIONS = [
   { value: "RED", label: "Red", icon: X, color: "text-red-700 dark:text-red-400", bg: "hover:bg-red-500/15 dark:hover:bg-red-500/20" },
   { value: "MEIO_GREEN", label: "½ Green", icon: CheckCircle2, color: "text-teal-700 dark:text-teal-400", bg: "hover:bg-teal-500/15 dark:hover:bg-teal-500/20" },
   { value: "MEIO_RED", label: "½ Red", icon: X, color: "text-orange-700 dark:text-orange-400", bg: "hover:bg-orange-500/15 dark:hover:bg-orange-500/20" },
-  { value: "VOID", label: "Void", icon: CircleDot, color: "text-muted-foreground", bg: "hover:bg-muted" },
+   { value: "VOID", label: "Void", icon: CircleDot, color: "text-muted-foreground", bg: "hover:bg-muted" },
+   { value: "PENDENTE", label: "Pendente", icon: Clock, color: "text-blue-700 dark:text-blue-400", bg: "hover:bg-blue-500/15 dark:hover:bg-blue-500/20" },
 ];
 
 function getResultConfig(resultado: string | null) {
