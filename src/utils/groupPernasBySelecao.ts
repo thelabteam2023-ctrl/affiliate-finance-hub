@@ -80,9 +80,18 @@ export function groupPernasBySelecao(
       lucro_prejuizo: hasEntries
         ? group.reduce((s, p) => s + (p.lucro_prejuizo || 0), 0)
         : (main.lucro_prejuizo ?? null),
-       bookmaker_nome: hasEntries 
-         ? group.map(p => resolve(p)).join(", ")
-         : resolve(main),
+        bookmaker_nome: (() => {
+          // Caso 1: Múltiplas pernas flat (modelo legado)
+          if (subs.length > 0) {
+            return group.map(p => resolve(p)).join(", ");
+          }
+          // Caso 2: Uma perna com múltiplas entries (novo modelo)
+          if ((main as any).entries?.length > 1) {
+            return (main as any).entries.map((e: any) => e.bookmaker_nome || "—").join(", ");
+          }
+          // Caso 3: Perna única
+          return resolve(main);
+        })(),
       bookmaker_id: main.bookmaker_id,
       parceiro_nome: main.parceiro_nome ?? main.bookmaker?.parceiro?.nome ?? null,
       instance_identifier: main.instance_identifier ?? null,
