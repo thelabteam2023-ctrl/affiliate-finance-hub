@@ -456,16 +456,17 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
             .select(`
               id,
               aposta_id,
-              bookmaker_id,
-              selecao,
-              selecao_livre,
-              odd,
-              stake,
-              resultado,
-              lucro_prejuizo,
-              moeda,
-              fonte_saldo,
-              bookmakers (nome, moeda, parceiro:parceiros(nome))
+             bookmaker_id,
+             selecao,
+             selecao_livre,
+             odd,
+             stake,
+             resultado,
+             lucro_prejuizo,
+             moeda,
+             fonte_saldo,
+             bookmakers (id, nome, instance_identifier, moeda, parceiro:parceiros(nome), bookmakers_catalogo (logo_url)),
+             apostas_perna_entradas (*, bookmakers (id, nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo (logo_url)))
             `)
             .in("aposta_id", idsChunk)
             .order("ordem", { ascending: true }),
@@ -478,21 +479,34 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
           }
           const bookmaker = p.bookmakers as any;
           const parceiroNome = bookmaker?.parceiro?.nome;
-          pernasMap[p.aposta_id].push({
-            id: p.id,
-            bookmaker_id: p.bookmaker_id,
-            bookmaker_nome: parceiroNome 
-              ? `${bookmaker?.nome || "—"} - ${parceiroNome}` 
-              : (bookmaker?.nome || "—"),
-            selecao: p.selecao,
-            selecao_livre: p.selecao_livre,
-            odd: p.odd,
-            stake: p.stake,
-            resultado: p.resultado,
-            lucro_prejuizo: p.lucro_prejuizo,
-            moeda: p.moeda || bookmaker?.moeda || 'BRL',
-            fonte_saldo: p.fonte_saldo || null,
-          });
+           const entradas = p.apostas_perna_entradas || [];
+           pernasMap[p.aposta_id].push({
+             id: p.id,
+             bookmaker_id: p.bookmaker_id,
+             bookmaker_nome: parceiroNome 
+               ? `${bookmaker?.nome || "—"} - ${parceiroNome}${bookmaker?.instance_identifier ? ` (${bookmaker.instance_identifier})` : ''}` 
+               : `${bookmaker?.nome || "—"}${bookmaker?.instance_identifier ? ` (${bookmaker.instance_identifier})` : ''}`,
+             selecao: p.selecao,
+             selecao_livre: p.selecao_livre,
+             odd: p.odd,
+             stake: p.stake,
+             resultado: p.resultado,
+             lucro_prejuizo: p.lucro_prejuizo,
+             moeda: p.moeda || bookmaker?.moeda || 'BRL',
+             fonte_saldo: p.fonte_saldo || null,
+             entries: entradas.length > 0 ? entradas.map((ent: any) => ({
+               id: ent.id,
+               bookmaker_id: ent.bookmaker_id,
+               bookmaker_nome: ent.bookmakers?.nome 
+                 ? (ent.bookmakers.parceiro?.nome ? `${ent.bookmakers.nome} - ${ent.bookmakers.parceiro.nome}${ent.bookmakers.instance_identifier ? ` (${ent.bookmakers.instance_identifier})` : ''}` : `${ent.bookmakers.nome}${ent.bookmakers.instance_identifier ? ` (${ent.bookmakers.instance_identifier})` : ''}`)
+                 : "Outra Casa",
+               moeda: ent.moeda,
+               odd: ent.odd,
+               stake: ent.stake,
+               fonte_saldo: ent.fonte_saldo,
+               resultado: p.resultado,
+             })) : undefined
+           });
         });
       }
       
@@ -1162,21 +1176,22 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
               status: aposta.status,
               resultado: aposta.resultado,
               observacoes: aposta.observacoes,
-              pernas: groupPernasBySelecao(
-                subEntries.map((p: any) => ({
-                  id: p.id,
-                  selecao: p.selecao || aposta.selecao,
-                  selecao_livre: p.selecao_livre,
-                  odd: p.odd,
-                  stake: p.stake,
-                  resultado: p.resultado,
-                  lucro_prejuizo: p.lucro_prejuizo ?? null,
-                  bookmaker_nome: p.bookmaker?.nome || '—',
-                  bookmaker_id: p.bookmaker_id,
-                  moeda: p.moeda || 'BRL',
-                  fonte_saldo: p.fonte_saldo || null,
-                }))
-              ),
+               pernas: groupPernasBySelecao(
+                 subEntries.map((p: any) => ({
+                   ...p,
+                   id: p.id,
+                   selecao: p.selecao || aposta.selecao,
+                   selecao_livre: p.selecao_livre,
+                   odd: p.odd,
+                   stake: p.stake,
+                   resultado: p.resultado,
+                   lucro_prejuizo: p.lucro_prejuizo ?? null,
+                   bookmaker_nome: p.bookmaker_nome || p.bookmaker?.nome || '—',
+                   bookmaker_id: p.bookmaker_id,
+                   moeda: p.moeda || 'BRL',
+                   fonte_saldo: p.fonte_saldo || null,
+                 }))
+               ),
             };
 
             return (
