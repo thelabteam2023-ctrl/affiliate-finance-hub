@@ -67,16 +67,16 @@ function getBookmakerNome(perna: Perna): string {
 // formatBookmakerDisplay imported from @/lib/bookmaker-display
 
 // Retorna classe de cor baseado no resultado
-function getResultadoColor(resultado: string | null | undefined): string {
+function getResultadoStyle(resultado: string | null | undefined): string {
   switch (resultado) {
     case "GREEN":
-      return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
+      return "bg-emerald-500 text-white border-none";
     case "RED":
-      return "bg-red-500/20 text-red-400 border-red-500/30";
+      return "bg-red-500 text-white border-none";
     case "MEIO_GREEN":
-      return "bg-teal-500/20 text-teal-400 border-teal-500/30";
+      return "bg-teal-500 text-white border-none";
     case "MEIO_RED":
-      return "bg-orange-500/20 text-orange-400 border-orange-500/30";
+      return "bg-orange-500 text-white border-none";
     case "VOID":
       return "bg-gray-500/20 text-gray-400 border-gray-500/30";
     default:
@@ -244,7 +244,7 @@ export function ApostaPernasResumo({
               {showResultado && perna.resultado && (
                 <Badge
                   variant="outline"
-                  className={`text-[9px] px-1 py-0 ml-1 ${getResultadoColor(perna.resultado)}`}
+                  className={`text-[9px] px-1 py-0 ml-1 ${getResultadoStyle(perna.resultado)}`}
                 >
                   {getResultadoLabel(perna.resultado)}
                 </Badge>
@@ -303,7 +303,7 @@ export function ApostaPernasResumo({
               {showResultado && perna.resultado && (
                 <Badge
                   variant="outline"
-                  className={`text-[9px] px-1 py-0 shrink-0 ${getResultadoColor(perna.resultado)}`}
+                  className={`text-[9px] px-1 py-0 shrink-0 ${getResultadoStyle(perna.resultado)}`}
                 >
                   {getResultadoLabel(perna.resultado)}
                 </Badge>
