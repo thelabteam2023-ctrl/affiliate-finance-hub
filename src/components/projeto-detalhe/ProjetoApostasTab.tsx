@@ -1760,11 +1760,11 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
 
               // Single-entry simples → ApostaCard normal
               const displayInfo = getApostaDisplayInfo(aposta);
-              const bookmakerNomeFormatted = formatBookmakerProjectName(
-                aposta.bookmaker?.nome || "—",
-                aposta.bookmaker?.parceiro?.nome,
-                (aposta.bookmaker as any)?.instance_identifier,
-              );
+              const bookmakerRawName = (aposta.bookmaker?.nome || "—") + 
+                (aposta.bookmaker?.parceiro?.nome ? ` - ${aposta.bookmaker.parceiro.nome}` : "") + 
+                ((aposta.bookmaker as any)?.instance_identifier ? ` (${(aposta.bookmaker as any).instance_identifier})` : "");
+              
+              const bookmakerNomeFormatted = formatBookmakerDisplay(bookmakerRawName);
               const logoUrl = aposta.bookmaker?.bookmakers_catalogo?.logo_url;
               
               let estrategia: string = aposta.estrategia || "NORMAL";
