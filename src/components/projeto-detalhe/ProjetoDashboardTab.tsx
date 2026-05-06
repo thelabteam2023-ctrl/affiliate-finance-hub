@@ -336,12 +336,14 @@ export function ProjetoDashboardTab({ projetoId, refreshTrigger = 0 }: ProjetoDa
       if (!acc[aposta.esporte]) {
         acc[aposta.esporte] = { greens: 0, reds: 0, meioGreens: 0, meioReds: 0, lucro: 0 };
       }
-      if (aposta.resultado === "GREEN") acc[aposta.esporte].greens++;
-      if (aposta.resultado === "RED") acc[aposta.esporte].reds++;
-      if (aposta.resultado === "MEIO_GREEN") acc[aposta.esporte].meioGreens++;
-      if (aposta.resultado === "MEIO_RED") acc[aposta.esporte].meioReds++;
-      // USAR SSOT: utilitário centralizado que corrige discrepâncias de multi-entry
-      const lucroConsolidado = getConsolidatedLucroDirect(aposta as any, aposta.pernas as any, convertToConsolidationOficial, moedaConsolidacao);
+       const res = aposta.resultado;
+       if (res === "GREEN") acc[aposta.esporte].greens++;
+       else if (res === "RED") acc[aposta.esporte].reds++;
+       else if (res === "MEIO_GREEN") acc[aposta.esporte].meioGreens++;
+       else if (res === "MEIO_RED") acc[aposta.esporte].meioReds++;
+
+       // USAR SSOT: Cotação de Trabalho (convertToConsolidation) para paridade com KPIs e Gráfico
+       const lucroConsolidado = getConsolidatedLucroDirect(aposta as any, aposta.pernas as any, convertToConsolidation, moedaConsolidacao);
       acc[aposta.esporte].lucro += lucroConsolidado;
       return acc;
     }, {});

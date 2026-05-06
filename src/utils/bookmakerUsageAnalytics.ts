@@ -180,7 +180,8 @@ export function extractBookmakerParticipations(
     return acc + Math.max(item.stake, 0);
   }, 0);
   const missingLucroCount = entriesWithConvertedStake.filter((item) => typeof item.entry.lucro_prejuizo !== "number").length;
-  const operationLucro = getConsolidatedLucroDirect(operation, operation.pernas as any, options.convertToConsolidation, moedaConsolidacao);
+   // Use convertToConsolidation (Cotação de Trabalho) para paridade operacional
+   const operationLucro = getConsolidatedLucroDirect(operation, operation.pernas as any, options.convertToConsolidation, moedaConsolidacao);
   const remainingLucro = operationLucro - knownLucro;
 
   return entriesWithConvertedStake.map(({ entry, stake }) => {
