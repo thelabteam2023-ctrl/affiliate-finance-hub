@@ -165,16 +165,17 @@ interface CasaAgregada {
 
 // Função utilitária para obter lucro de uma perna
 // Prioriza o valor salvo no banco (lucro_prejuizo), calcula se não existir
-const getLucroPerna = (perna: SurebetPerna & { lucro_prejuizo?: number | null }): number => {
+const getLucroPerna = (perna: SurebetPerna & { lucro_prejuizo?: number | null, fonte_saldo?: string }): number => {
   // Se já tem lucro calculado e salvo, usar direto
   if (typeof perna.lucro_prejuizo === "number") {
     return perna.lucro_prejuizo;
   }
   
   // Fallback: calcular baseado no resultado
-  const stake = perna.stake || 0;
+  const stake = perna.stake_total || perna.stake || 0;
   const odd = perna.odd || 0;
   const resultado = perna.resultado;
+  const isFB = perna.fonte_saldo === "FREEBET";
   
   if (!resultado || resultado === "PENDENTE") {
     return 0;
@@ -186,9 +187,9 @@ const getLucroPerna = (perna: SurebetPerna & { lucro_prejuizo?: number | null })
     case "MEIO_GREEN":
       return ((odd * stake) - stake) / 2;
     case "RED":
-      return -stake;
+      return isFB ? 0 : -stake;
     case "MEIO_RED":
-      return -stake / 2;
+      return isFB ? 0 : -stake / 2;
     case "VOID":
       return 0;
     default:
@@ -812,12 +813,27 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
     const liquidadas = surebetsLiquidadasArr.length;
     const greens = surebetsParaKpi.filter(s => s.resultado === "GREEN").length;
     const reds = surebetsParaKpi.filter(s => s.resultado === "RED").length;
-    // SNAPSHOT: Usa Cotação de Trabalho (congelada no registro) para eliminar variação cambial
-    const lucroTotal = surebetsLiquidadasArr.reduce((acc, s) => acc + getConsolidatedLucro(s, convertFn, moedaConsolidacao), 0);
+    // SNAPSHOT: Usa Cotação de Trabalho (congelada no registro) para eliminar variação cambial.
+    // Usamos uma função que soma o lucro de todas as pernas, permitindo que apostas PENDENTES
+    // também contribuam para o lucro global conforme as pernas são resolvidas individualmente.
+    const getLucroEfetivoAposta = (s: Surebet) => {
+      if (s.status === "LIQUIDADA" && typeof s.pl_consolidado === "number" && s.consolidation_currency === moedaConsolidacao) {
+        return s.pl_consolidado;
+      }
+      
+      const pernas = s.pernas || [];
+      return pernas.reduce((accPerna, p) => {
+        const lucroNominal = getLucroPerna(p);
+        if (lucroNominal === 0) return accPerna;
+        
+        return accPerna + (convertFn ? convertFn(lucroNominal, p.moeda || 'BRL') : lucroNominal);
+      }, 0);
+    };
+
+    const lucroTotal = surebetsParaKpi.reduce((acc, s) => acc + getLucroEfetivoAposta(s), 0);
     const stakeTotal = surebetsParaKpi.reduce((acc, s) => acc + getConsolidatedStake(s, convertFn, moedaConsolidacao), 0);
-    const volumeLiquidado = surebetsLiquidadasArr.reduce((acc, s) => acc + getConsolidatedStake(s, convertFn, moedaConsolidacao), 0);
-    // ROI usa volume LIQUIDADO — apostas pendentes não têm resultado
-    const roi = volumeLiquidado > 0 ? (lucroTotal / volumeLiquidado) * 100 : 0;
+    // ROI usa volume TOTAL do período para bater com o lucro que agora inclui resultados parciais de pendentes
+    const roi = stakeTotal > 0 ? (lucroTotal / stakeTotal) * 100 : 0;
 
     // Breakdown de volume por moeda original
     const volumePorMoeda = new Map<string, number>();
@@ -830,12 +846,14 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       .map(([moeda, valor]) => ({ moeda, valor }))
       .filter(item => Math.abs(item.valor) > 0.01);
 
-    // Breakdown de LUCRO por moeda original
+    // Breakdown de LUCRO por moeda original (baseado no lucro efetivo calculado acima)
     const lucroPorMoedaMap = new Map<string, number>();
     surebetsParaKpi.forEach(s => {
       const moeda = s.moeda_operacao || "BRL";
-      const rawLucro = s.lucro_real || 0;
-      lucroPorMoedaMap.set(moeda, (lucroPorMoedaMap.get(moeda) || 0) + rawLucro);
+      
+      // Para o breakdown por moeda, tentamos atribuir o lucro à moeda original
+      const lucroAposta = s.pernas?.reduce((acc, p) => acc + getLucroPerna(p), 0) || s.lucro_real || 0;
+      lucroPorMoedaMap.set(moeda, (lucroPorMoedaMap.get(moeda) || 0) + lucroAposta);
     });
     const lucroPorMoeda = Array.from(lucroPorMoedaMap.entries())
       .map(([moeda, valor]) => ({ moeda, valor }))

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge, SelectionBadge } from "@/components/ui/badge";
 import { format as formatDate } from "date-fns";
@@ -592,26 +592,26 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
   // Detectar contexto de bônus pela estratégia ou prop
   const showBonusBadge = isBonusContext || surebet.estrategia === "EXTRACAO_BONUS";
   
+  // Detecção canônica de freebet (em ordem de prioridade):
+  //  1. Campos do banco: stake_freebet > 0 e stake_real == 0
+  //  2. fonte_saldo da perna === 'FREEBET'
+  //  3. Todas as entries com fonte_saldo === 'FREEBET' (modo multi-entrada)
+  const isPernaFreebet = useCallback((p: SurebetPerna): boolean => {
+    const sf = p.stake_freebet || 0;
+    const sr = p.stake_real ?? null;
+    if (sf > 0 && (sr === 0 || sr === null)) return true;
+    if (p.fonte_saldo === 'FREEBET') return true;
+    if (p.entries && p.entries.length > 0) {
+      return p.entries.every(e => (e as any).fonteSaldo === 'FREEBET' || (e as any).fonte_saldo === 'FREEBET');
+    }
+    return false;
+  }, []);
+
   // Calcular cenários (pior e melhor) a partir das pernas quando pendente
   // Para multicurrency: converte cada payout para moeda de consolidação antes de comparar
   // FREEBET (SNR): stake não é custo (stake_real=0) e payout = stake*(odd-1)
   const calcularCenarios = (): { piorLucro: number; melhorLucro: number; piorRoi: number; melhorRoi: number } | null => {
     if (!surebet.pernas || surebet.pernas.length < 2) return null;
-
-    // Detecção canônica de freebet (em ordem de prioridade):
-    //  1. Campos do banco: stake_freebet > 0 e stake_real == 0
-    //  2. fonte_saldo da perna === 'FREEBET'
-    //  3. Todas as entries com fonte_saldo === 'FREEBET' (modo multi-entrada)
-    const isPernaFreebet = (p: SurebetPerna): boolean => {
-      const sf = p.stake_freebet || 0;
-      const sr = p.stake_real ?? null;
-      if (sf > 0 && (sr === 0 || sr === null)) return true;
-      if (p.fonte_saldo === 'FREEBET') return true;
-      if (p.entries && p.entries.length > 0) {
-        return p.entries.every(e => (e as any).fonteSaldo === 'FREEBET' || (e as any).fonte_saldo === 'FREEBET');
-      }
-      return false;
-    };
 
     // Calcular stake total e custo real (freebet não é custo)
     let stakeTotal: number = 0;
@@ -641,33 +641,44 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
 
     if (stakeTotal <= 0) return null;
 
+    // Filtrar possíveis vencedores baseado em resultados parciais
+    // Se alguma perna já for GREEN, ela é a única vencedora possível.
+    // Se pernas forem RED, elas não podem ser as vencedoras.
+    const pernasVencedorasManuais = surebet.pernas.filter(p => p.resultado === 'GREEN');
+    const pernasPossiveis = pernasVencedorasManuais.length > 0 
+      ? pernasVencedorasManuais 
+      : surebet.pernas.filter(p => p.resultado !== 'RED' && p.resultado !== 'VOID');
+
+    // Se não restarem pernas possíveis (ex: tudo RED), usa todas para evitar erro
+    const pernasParaCenario = pernasPossiveis.length > 0 ? pernasPossiveis : surebet.pernas;
+
     // Para cada cenário (cada perna ganhando), calcular o lucro
-     const cenarios = surebet.pernas.map(perna => {
-       let retornoLocalTotal = 0;
- 
-       if (perna.entries && perna.entries.length > 0) {
-         perna.entries.forEach(e => {
-           const isFB = e.fonte_saldo === 'FREEBET';
-           const payout = isFB ? (e.stake || 0) * ((e.odd || 0) - 1) : (e.stake || 0) * (e.odd || 0);
-           
-           const payoutConv = (isMulticurrency && convertToConsolidation)
-             ? convertToConsolidation(payout, e.moeda || "BRL")
-             : payout;
-           retornoLocalTotal += payoutConv;
-         });
-       } else {
-         const isFB = isPernaFreebet(perna);
-         const payout = isFB ? (perna.stake || 0) * ((perna.odd || 0) - 1) : (perna.stake || 0) * (perna.odd || 0);
-         
-         const payoutConv = (isMulticurrency && convertToConsolidation)
-           ? convertToConsolidation(payout, perna.moeda || "BRL")
-           : payout;
-         retornoLocalTotal += payoutConv;
-       }
- 
-       // Lucro = retorno da perna ganhadora (em consolidação) - custo real (em consolidação)
-       return retornoLocalTotal - stakeRealTotal;
-     });
+    const cenarios = pernasParaCenario.map(perna => {
+      let retornoLocalTotal = 0;
+
+      if (perna.entries && perna.entries.length > 0) {
+        perna.entries.forEach(e => {
+          const isFB = e.fonte_saldo === 'FREEBET';
+          const payout = isFB ? (e.stake || 0) * ((e.odd || 0) - 1) : (e.stake || 0) * (e.odd || 0);
+          
+          const payoutConv = (isMulticurrency && convertToConsolidation)
+            ? convertToConsolidation(payout, e.moeda || "BRL")
+            : payout;
+          retornoLocalTotal += payoutConv;
+        });
+      } else {
+        const isFB = isPernaFreebet(perna);
+        const payout = isFB ? (perna.stake || 0) * ((perna.odd || 0) - 1) : (perna.stake || 0) * (perna.odd || 0);
+        
+        const payoutConv = (isMulticurrency && convertToConsolidation)
+          ? convertToConsolidation(payout, perna.moeda || "BRL")
+          : payout;
+        retornoLocalTotal += payoutConv;
+      }
+
+      // Lucro = retorno da perna ganhadora (em consolidação) - custo real (em consolidação)
+      return retornoLocalTotal - stakeRealTotal;
+    });
 
     const piorLucro = Math.min(...cenarios);
     const melhorLucro = Math.max(...cenarios);
@@ -686,14 +697,16 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
   const getPernaLucroNominal = (perna: SurebetPerna): number | null => {
     if (typeof perna.lucro_prejuizo === "number") return perna.lucro_prejuizo;
 
-    const stake = perna.stake_total || perna.stake || 0;
+    const isFB = isPernaFreebet(perna);
+    const stake = isFB ? 0 : (perna.stake_total || perna.stake || 0);
+    const stakeNominal = perna.stake_total || perna.stake || 0;
     const odd = perna.odd || 0;
 
     switch (perna.resultado) {
       case "GREEN":
-        return stake * (odd - 1);
+        return stakeNominal * (odd - 1);
       case "MEIO_GREEN":
-        return (stake * (odd - 1)) / 2;
+        return (stakeNominal * (odd - 1)) / 2;
       case "RED":
         return -stake;
       case "MEIO_RED":

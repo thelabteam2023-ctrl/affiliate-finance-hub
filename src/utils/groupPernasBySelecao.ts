@@ -80,7 +80,9 @@ export function groupPernasBySelecao(
       lucro_prejuizo: hasEntries
         ? group.reduce((s, p) => s + (p.lucro_prejuizo || 0), 0)
         : (main.lucro_prejuizo ?? null),
-      bookmaker_nome: resolve(main),
+       bookmaker_nome: hasEntries 
+         ? group.map(p => resolve(p)).join(", ")
+         : resolve(main),
       bookmaker_id: main.bookmaker_id,
       parceiro_nome: main.parceiro_nome ?? main.bookmaker?.parceiro?.nome ?? null,
       instance_identifier: main.instance_identifier ?? null,
