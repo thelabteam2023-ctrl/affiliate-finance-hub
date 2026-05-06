@@ -393,7 +393,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                 id, aposta_id, bookmaker_id, moeda, selecao, selecao_livre, odd, stake,
                 resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada,
                 stake_brl_referencia, lucro_prejuizo_brl_referencia, cotacao_snapshot, fonte_saldo,
-                bookmakers (nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo(logo_url))
+                bookmakers (nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo(logo_url)),
+                apostas_perna_entradas (*)
               `)
               .in("aposta_id", idsChunk)
               .order("ordem", { ascending: true }),
@@ -404,6 +405,9 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           if (!pernasMap[p.aposta_id]) pernasMap[p.aposta_id] = [];
           const bookmaker = p.bookmakers as any;
           const parceiroNome = bookmaker?.parceiro?.nome;
+          const entradas = p.apostas_perna_entradas || [];
+          const hasMultipleEntries = entradas.length > 1;
+
           pernasMap[p.aposta_id].push({
             id: p.id,
             bookmaker_id: p.bookmaker_id,
@@ -412,13 +416,32 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
             instance_identifier: bookmaker?.instance_identifier || null,
             logo_url: bookmaker?.bookmakers_catalogo?.logo_url || null,
             moeda: p.moeda || 'BRL',
-            selecao: p.selecao, selecao_livre: p.selecao_livre, odd: p.odd, stake: p.stake,
-            resultado: p.resultado, lucro_prejuizo: p.lucro_prejuizo,
-            gerou_freebet: p.gerou_freebet, valor_freebet_gerada: p.valor_freebet_gerada,
+            selecao: p.selecao,
+            selecao_livre: p.selecao_livre,
+            odd: p.odd,
+            stake: p.stake,
+            resultado: p.resultado,
+            lucro_prejuizo: p.lucro_prejuizo,
+            gerou_freebet: p.gerou_freebet,
+            valor_freebet_gerada: p.valor_freebet_gerada,
             stake_brl_referencia: p.stake_brl_referencia,
             lucro_prejuizo_brl_referencia: p.lucro_prejuizo_brl_referencia,
             cotacao_snapshot: p.cotacao_snapshot,
             fonte_saldo: p.fonte_saldo || null,
+            // Se tiver entradas detalhadas, usamos elas para popular o field 'entries' do SurebetCard
+            entries: entradas.length > 0 ? entradas.map((ent: any) => ({
+              id: ent.id,
+              bookmaker_id: ent.bookmaker_id,
+              bookmaker_nome: ent.bookmaker_id === p.bookmaker_id ? (parceiroNome ? `${bookmaker?.nome || "—"} - ${parceiroNome}` : (bookmaker?.nome || "—")) : "Outra Casa", // Simplified, as we don't have the bookmaker name for sub-entries easily here
+              moeda: ent.moeda,
+              odd: ent.odd,
+              stake: ent.stake,
+              fonte_saldo: ent.fonte_saldo,
+              resultado: p.resultado,
+              stake_brl_referencia: ent.stake_brl_referencia
+            })) : undefined,
+            odd_media: hasMultipleEntries ? p.odd : undefined,
+            stake_total: hasMultipleEntries ? p.stake : undefined
           });
         });
       }
