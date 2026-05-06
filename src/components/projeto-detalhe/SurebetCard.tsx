@@ -695,7 +695,11 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
   };
 
   const getPernaLucroNominal = (perna: SurebetPerna): number | null => {
-    if (typeof perna.lucro_prejuizo === "number") return perna.lucro_prejuizo;
+    // Se tem múltiplas entradas, o lucro nominal da perna pode ser enganoso se houver moedas mistas.
+    // Só usamos o lucro_prejuizo do banco se não houver entradas ou se não for multicurrency.
+    if (typeof perna.lucro_prejuizo === "number" && (!perna.entries || perna.entries.length <= 1)) {
+      return perna.lucro_prejuizo;
+    }
 
     const isFB = isPernaFreebet(perna);
     const stake = isFB ? 0 : (perna.stake_total || perna.stake || 0);
