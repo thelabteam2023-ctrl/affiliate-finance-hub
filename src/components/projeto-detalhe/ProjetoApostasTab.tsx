@@ -809,7 +809,21 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         VOID: "Void"
       }[resultado] || resultado;
 
-      toast.success(`Aposta marcada como ${resultLabel}`);
+      const resultColorClass = resultLabel.includes("Green") 
+        ? "text-emerald-500" 
+        : resultLabel.includes("Red") 
+          ? "text-rose-500" 
+          : "text-amber-500";
+
+      const casaLabel = aposta ? getCasaLabelFromAposta(aposta) : "";
+
+      toast.success(
+        <div className="flex items-center gap-1.5">
+          <span className={cn("font-semibold", resultColorClass)}>{resultLabel}</span>
+          {casaLabel ? <span>na {casaLabel}</span> : <span>marcada com sucesso</span>}
+        </div>
+      );
+
       onDataChange?.();
     } catch (error: any) {
       console.error("Erro ao atualizar aposta:", error);
@@ -953,9 +967,36 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       }[input.resultado] || input.resultado;
 
       if (!input.silent) {
-        const nome = input.bookmakerNome || '';
-        toast.success(nome ? `${resultLabel} na ${nome}` : `Resultado alterado com sucesso`);
+        const nomeRaw = input.bookmakerNome || '';
+        const resultColorClass = resultLabel.includes("Green") 
+          ? "text-emerald-500" 
+          : resultLabel.includes("Red") 
+            ? "text-rose-500" 
+            : "text-amber-500";
+
+        if (nomeRaw) {
+          const casas = nomeRaw.split(" & ").map(n => formatBookmakerDisplay(n));
+          
+          toast.success(
+            <div className="flex flex-col gap-0.5">
+              {casas.map((casa, idx) => (
+                <div key={idx} className="flex items-center gap-1.5">
+                  <span className={cn("font-semibold", resultColorClass)}>{resultLabel}</span>
+                  <span>na {casa}</span>
+                </div>
+              ))}
+            </div>
+          );
+        } else {
+          toast.success(
+            <div className="flex items-center gap-1.5">
+              <span className={cn("font-semibold", resultColorClass)}>{resultLabel}</span>
+              <span>alterado com sucesso</span>
+            </div>
+          );
+        }
       }
+
       onDataChange?.();
     } catch (error: any) {
       console.error("Erro ao liquidar perna:", error);
