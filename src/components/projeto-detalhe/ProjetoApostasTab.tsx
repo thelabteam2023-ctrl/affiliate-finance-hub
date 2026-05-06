@@ -1816,8 +1816,13 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
              }
             // ===== APOSTA MÚLTIPLA - Usando ApostaCard padronizado =====
             const multipla = item.data as ApostaMultipla;
-            const bookmakerBaseMultipla = multipla.bookmaker?.nome?.split(" - ")[0] || multipla.bookmaker?.nome;
-            const parceiroNomeMultipla = multipla.bookmaker?.parceiro?.nome;
+            const bookmakerRawNameMultipla = (multipla.bookmaker?.nome || "—") + 
+                (multipla.bookmaker?.parceiro?.nome ? ` - ${multipla.bookmaker.parceiro.nome}` : "") + 
+                ((multipla.bookmaker as any)?.instance_identifier ? ` (${(multipla.bookmaker as any).instance_identifier})` : "");
+            
+            const bookmakerNomeFormattedMultipla = formatBookmakerDisplay(bookmakerRawNameMultipla);
+
+            const logoUrlMultipla = multipla.bookmaker?.bookmakers_catalogo?.logo_url;
             const logoUrlMultipla = multipla.bookmaker?.bookmakers_catalogo?.logo_url;
             
             // Determinar estratégia - usar valor do banco diretamente
@@ -1845,9 +1850,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                  odd: parseFloat(s.odd),
                  resultado: s.resultado,
                })),
-               bookmaker_nome: bookmakerBaseMultipla,
-               parceiro_nome: parceiroNomeMultipla,
-               instance_identifier: (multipla.bookmaker as any)?.instance_identifier,
+                bookmaker_nome: bookmakerNomeFormattedMultipla,
                 logo_url: logoUrlMultipla,
                 moeda: multipla.moeda_operacao || "BRL",
                  fonte_saldo: (multipla as any).fonte_saldo || null,
