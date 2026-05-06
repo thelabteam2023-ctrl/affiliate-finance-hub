@@ -699,38 +699,18 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
         // liquidar CADA sub-entry individualmente com o mesmo resultado
         const hasEntries = perna.entries && perna.entries.length > 1;
         
-        if (hasEntries) {
-          for (const entry of perna.entries!) {
-            const entryPernaId = entry.id;
-            if (!entryPernaId || !entry.bookmaker_id) continue;
-            
-            await handleSurebetPernaResolve({
-              pernaId: entryPernaId,
-              surebetId,
-              bookmarkerId: entry.bookmaker_id,
-              resultado,
-              stake: entry.stake,
-              odd: entry.odd,
-              moeda: entry.moeda || 'BRL',
-              resultadoAnterior: perna.resultado, // grouped result
-              workspaceId: operacao.workspace_id!,
-              silent: true,
-            });
-          }
-        } else {
-          await handleSurebetPernaResolve({
-            pernaId: perna.id,
-            surebetId,
-            bookmarkerId: perna.bookmaker_id!,
-            resultado,
-            stake: perna.stake,
-            odd: perna.odd,
-            moeda: perna.moeda || 'BRL',
-            resultadoAnterior: perna.resultado,
-            workspaceId: operacao.workspace_id!,
-            silent: true,
-          });
-        }
+        await handleSurebetPernaResolve({
+          pernaId: perna.id,
+          surebetId,
+          bookmarkerId: perna.bookmaker_id || '', // Note: liquidar_perna_surebet_v1 looks up bookmaker_id if needed
+          resultado,
+          stake: perna.stake,
+          odd: perna.odd,
+          moeda: perna.moeda || 'BRL',
+          resultadoAnterior: perna.resultado,
+          workspaceId: operacao.workspace_id!,
+          silent: true,
+        });
       }
 
       toast.success("Resultado da surebet alterado com sucesso");
