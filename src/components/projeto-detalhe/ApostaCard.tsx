@@ -208,7 +208,7 @@ function getSimpleResultConfig(resultado: string | null | undefined) {
   };
 }
 
-function ResultadoBadge({ resultado, apostaId, onQuickResolve }: ResultadoBadgeProps) {
+function ResultadoBadge({ resultado, apostaId, onQuickResolve }: ResultadoBadgeProps & { variant?: "card" | "list" }) {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   
@@ -288,8 +288,23 @@ function ResultadoBadge({ resultado, apostaId, onQuickResolve }: ResultadoBadgeP
     );
   }
   
+  const isPendente = !resultado || resultado === "PENDENTE";
+  
+  // Cores sólidas para status liquidado (Green/Red) quando for o resultado final da aposta
+  const liquidadoStyle = resultado === "GREEN" || resultado === "MEIO_GREEN" 
+    ? "bg-emerald-500 text-white border-none" 
+    : (resultado === "RED" || resultado === "MEIO_RED")
+      ? "bg-red-500 text-white border-none"
+      : config.pillBg + " " + config.color;
+
   return (
-    <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 flex items-center gap-0.5", config.pillBg, config.color)}>
+    <Badge 
+      variant="outline" 
+      className={cn(
+        "text-[10px] px-1.5 py-0 flex items-center gap-0.5", 
+        isPendente ? config.pillBg + " " + config.color : liquidadoStyle
+      )}
+    >
       <Icon className="h-2.5 w-2.5" />
       {config.label}
     </Badge>
