@@ -184,8 +184,9 @@ export function PerformancePorCasaCard({
       // Fallback: converte stake_total/stake da moeda_operacao para moeda de consolidação
       // Última opção: valor bruto sem conversão (mesma moeda)
       // USAR SSOT: utilitário centralizado que corrige discrepâncias de multi-entry
-      const stakeOperacao = getConsolidatedStakeDirect(aposta as any, aposta.pernas as any, convertToConsolidation, moedaConsolidacao);
-      const lucroOperacao = getConsolidatedLucroDirect(aposta as any, aposta.pernas as any, convertToConsolidation, moedaConsolidacao);
+       // USAR SSOT: Cotação de Trabalho (convertToConsolidation) para paridade absoluta com Visão Geral
+       const stakeOperacao = getConsolidatedStakeDirect(aposta as any, aposta.pernas as any, convertToConsolidation, moedaConsolidacao);
+       const lucroOperacao = getConsolidatedLucroDirect(aposta as any, aposta.pernas as any, convertToConsolidation, moedaConsolidacao);
 
       estrategiaMap[estrategiaNome].totalStake += stakeOperacao;
       estrategiaMap[estrategiaNome].lucro += lucroOperacao;
