@@ -573,19 +573,20 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
           0,
         );
       }
-      return sum + convertToConsolidation(p.stake_total || p.stake || 0, p.moeda || "BRL");
+       return sum + convertToConsolidation(p.stake || 0, p.moeda || "BRL");
     }, 0);
   })();
 
   const stakeRealTotal = (() => {
-    if (isMulticurrency) {
-      if (typeof stakeConsolidadoFallback === "number") return stakeConsolidadoFallback;
-      if (typeof surebet.stake_consolidado === "number") return surebet.stake_consolidado;
-      return surebet.stake_total;
-    }
-
-    if (!surebet.pernas || surebet.pernas.length === 0) return surebet.stake_total;
-    return surebet.pernas.reduce((sum, p) => sum + (p.stake_total || p.stake || 0), 0);
+     if (isMulticurrency && typeof stakeConsolidadoFallback === "number") {
+       return stakeConsolidadoFallback;
+     }
+ 
+     if (surebet.pernas && surebet.pernas.length > 0) {
+       return surebet.pernas.reduce((sum, p) => sum + (p.stake || 0), 0);
+     }
+ 
+     return surebet.stake_total;
   })();
   
   // Detectar contexto de bônus pela estratégia ou prop
@@ -616,35 +617,57 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
     let stakeTotal: number = 0;
     let stakeRealTotal: number = 0;
 
-    surebet.pernas.forEach(p => {
-      const s = p.stake_total || p.stake || 0;
-      const isFB = isPernaFreebet(p);
-      const sConv = (isMulticurrency && convertToConsolidation)
-        ? convertToConsolidation(s, p.moeda || "BRL")
-        : s;
-      stakeTotal += sConv;
-      if (!isFB) stakeRealTotal += sConv;
-    });
+     surebet.pernas.forEach(p => {
+       const isFB = isPernaFreebet(p);
+       
+       if (p.entries && p.entries.length > 0) {
+         p.entries.forEach(e => {
+           const s = e.stake || 0;
+           const sConv = (isMulticurrency && convertToConsolidation)
+             ? convertToConsolidation(s, e.moeda || "BRL")
+             : s;
+           stakeTotal += sConv;
+           if (e.fonte_saldo !== 'FREEBET') stakeRealTotal += sConv;
+         });
+       } else {
+         const s = p.stake || 0;
+         const sConv = (isMulticurrency && convertToConsolidation)
+           ? convertToConsolidation(s, p.moeda || "BRL")
+           : s;
+         stakeTotal += sConv;
+         if (!isFB) stakeRealTotal += sConv;
+       }
+     });
 
     if (stakeTotal <= 0) return null;
 
     // Para cada cenário (cada perna ganhando), calcular o lucro
-    const cenarios = surebet.pernas.map(perna => {
-      const oddEfetiva = perna.odd_media || perna.odd || 0;
-      const stakeNessaPerna = perna.stake_total || perna.stake || 0;
-      const isFB = isPernaFreebet(perna);
-
-      // SNR: Freebet payout líquido = stake*(odd-1); aposta real payout = stake*odd
-      const retornoLocal = isFB ? stakeNessaPerna * (oddEfetiva - 1) : stakeNessaPerna * oddEfetiva;
-
-      // Converter retorno para moeda de consolidação se multicurrency
-      const retorno = (isMulticurrency && convertToConsolidation)
-        ? convertToConsolidation(retornoLocal, perna.moeda || "BRL")
-        : retornoLocal;
-
-      // Lucro = retorno da perna ganhadora - custo real (somente stakes não-freebet)
-      return retorno - stakeRealTotal;
-    });
+     const cenarios = surebet.pernas.map(perna => {
+       let retornoLocalTotal = 0;
+ 
+       if (perna.entries && perna.entries.length > 0) {
+         perna.entries.forEach(e => {
+           const isFB = e.fonte_saldo === 'FREEBET';
+           const payout = isFB ? (e.stake || 0) * ((e.odd || 0) - 1) : (e.stake || 0) * (e.odd || 0);
+           
+           const payoutConv = (isMulticurrency && convertToConsolidation)
+             ? convertToConsolidation(payout, e.moeda || "BRL")
+             : payout;
+           retornoLocalTotal += payoutConv;
+         });
+       } else {
+         const isFB = isPernaFreebet(perna);
+         const payout = isFB ? (perna.stake || 0) * ((perna.odd || 0) - 1) : (perna.stake || 0) * (perna.odd || 0);
+         
+         const payoutConv = (isMulticurrency && convertToConsolidation)
+           ? convertToConsolidation(payout, perna.moeda || "BRL")
+           : payout;
+         retornoLocalTotal += payoutConv;
+       }
+ 
+       // Lucro = retorno da perna ganhadora (em consolidação) - custo real (em consolidação)
+       return retornoLocalTotal - stakeRealTotal;
+     });
 
     const piorLucro = Math.min(...cenarios);
     const melhorLucro = Math.max(...cenarios);
