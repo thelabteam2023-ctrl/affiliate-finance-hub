@@ -300,7 +300,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
     }
   };
 
-  const fetchApostas = async () => {
+  const fetchApostasWithReturn = async (): Promise<Aposta[]> => {
     try {
       const selectFields = `id, workspace_id, created_at, data_aposta, esporte, evento, mercado, selecao, odd, stake, estrategia, status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id, modo_entrada, gerou_freebet, valor_freebet_gerada, tipo_freebet, forma_registro, contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao, back_em_exchange, back_comissao, pernas, stake_total, spread_calculado, roi_esperado, roi_real, lucro_esperado, modelo, moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia`;
 
@@ -454,9 +454,15 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
       }
 
       setApostas(mapped);
+      return mapped;
     } catch (error) {
       console.error("Erro ao carregar apostas Duplo Green:", error);
+      return [];
     }
+  };
+
+  const fetchApostas = async () => {
+    await fetchApostasWithReturn();
   };
 
   // Resolução rápida de apostas simples / multi-entry simples
@@ -524,9 +530,17 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
         }
       }
 
-      // 3. Recarregar do banco: retorno/lucro canônicos são calculados no motor financeiro.
+      // 3. Recarregar do banco (Invalida caches e estados locais)
       invalidateSaldos(projetoId);
-      await fetchApostas();
+      const novasApostas = await fetchApostasWithReturn();
+
+      // 4. VALIDAÇÃO REAL: Conferir no retorno do fetch se o status mudou
+      const apostaNoBanco = novasApostas.find(a => a.id === apostaId);
+      if (!apostaNoBanco || apostaNoBanco.status !== 'LIQUIDADA') {
+        console.error("[ProjetoDuploGreenTab] Falha na liquidação real no banco:", apostaNoBanco);
+        toast.error("Erro: A liquidação falhou no processamento do banco.");
+        return;
+      }
 
       const resultLabel = {
         GREEN: "Green",
