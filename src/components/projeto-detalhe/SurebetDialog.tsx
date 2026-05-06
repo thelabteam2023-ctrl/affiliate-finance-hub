@@ -2235,9 +2235,54 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
           fonte_saldo: 'REAL',
         }));
 
-        const { data: rpcResult, error } = await supabase.rpc('editar_surebet_completa_v1', {
+        // PREPARAR DADOS PARA RPC V2 (HIERÁRQUICA)
+        const allEntradasFlat: any[] = [];
+        odds.forEach((entry, legIdx) => {
+          const mainMoeda = getBookmakerMoedaEdit(entry.bookmaker_id);
+          // Entrada principal
+          allEntradasFlat.push({
+            perna_index: legIdx,
+            bookmaker_id: entry.bookmaker_id,
+            odd: parseFloat(entry.odd) || 0,
+            stake: parseFloat(entry.stake) || 0,
+            moeda: mainMoeda,
+            fonte_saldo: entry.usarFreebet ? 'FREEBET' : 'REAL',
+            selecao: entry.selecao,
+            selecao_livre: entry.selecaoLivre || ""
+          });
+          // Entradas adicionais
+          (entry.additionalEntries || []).forEach(ae => {
+            const aeMoeda = getBookmakerMoedaEdit(ae.bookmaker_id);
+            allEntradasFlat.push({
+              perna_index: legIdx,
+              bookmaker_id: ae.bookmaker_id,
+              odd: parseFloat(ae.odd) || 0,
+              stake: parseFloat(ae.stake) || 0,
+              moeda: aeMoeda,
+              fonte_saldo: 'REAL',
+              selecao: entry.selecao,
+              selecao_livre: ae.selecaoLivre || ""
+            });
+          });
+        });
+
+        const pernasUnicasPai = Array.from(new Set(allEntradasFlat.map(f => f.perna_index)))
+          .sort((a: any, b: any) => a - b)
+          .map(idx => {
+            const firstEntry = allEntradasFlat.find(f => f.perna_index === idx)!;
+            const existingPerna = pernasOriginais[idx];
+            return {
+              id: existingPerna?.id || null,
+              selecao: firstEntry.selecao,
+              selecao_livre: firstEntry.selecao_livre,
+              resultado: pernasOriginais[idx]?.resultado || null
+            };
+          });
+
+        const { data: rpcResult, error } = await supabase.rpc('editar_surebet_completa_v2', {
           p_aposta_id: surebet.id,
-          p_pernas: pernasParaRPC as any,
+          p_pernas: pernasUnicasPai as any,
+          p_entradas: allEntradasFlat as any,
           p_evento: evento,
           p_esporte: esporte,
           p_mercado: mercado,
