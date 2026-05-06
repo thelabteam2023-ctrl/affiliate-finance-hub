@@ -166,8 +166,9 @@ interface CasaAgregada {
 // Função utilitária para obter lucro de uma perna
 // Prioriza o valor salvo no banco (lucro_prejuizo), calcula se não existir
 const getLucroPerna = (perna: SurebetPerna & { lucro_prejuizo?: number | null, fonte_saldo?: string }): number => {
-  // Se já tem lucro calculado e salvo, usar direto
-  if (typeof perna.lucro_prejuizo === "number") {
+  // Se já tem lucro calculado e salvo, e não tem múltiplas entradas, usar direto.
+  // Se tem múltiplas entradas, o lucro nominal da perna pode estar errado no banco (soma numérica vs conversão).
+  if (typeof perna.lucro_prejuizo === "number" && (!perna.entries || perna.entries.length <= 1)) {
     return perna.lucro_prejuizo;
   }
   
