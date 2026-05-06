@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Building2, Layers, Users, TrendingUp } from "lucide-react";
+import { Building2, Layers, Users, Info, TrendingUp } from "lucide-react";
 import { CurrencyBreakdownTooltip, type CurrencyBreakdownItem } from "@/components/ui/currency-breakdown-tooltip";
 import {
   Tooltip,
