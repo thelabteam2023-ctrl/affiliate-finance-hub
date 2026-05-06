@@ -792,9 +792,14 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
     ? plConsolidadoNormalizado
     : (typeof lucroConsolidadoFallback === "number" ? lucroConsolidadoFallback : null);
 
+  // Se existem múltiplas entradas em qualquer perna, o pl_consolidado do banco pode estar incorreto
+  // devido à forma como as pernas são somadas numericamente no motor de liquidação.
+  // Nestes casos, priorizamos o cálculo em tempo real que percorre cada entrada.
+  const hasComplexPernas = surebet.pernas?.some(p => p.entries && p.entries.length > 1);
+
   // Para lucro exibido: Priorizar o valor consolidado do banco (pl_consolidado)
   // Ele agora é recalculado atômica e corretamente em tempo real, mesmo para bets pendentes.
-  const lucroExibir = typeof plConsolidadoNormalizado === "number"
+  const lucroExibir = (typeof plConsolidadoNormalizado === "number" && !hasComplexPernas)
     ? plConsolidadoNormalizado
     : isLiquidada 
       ? (typeof lucroConsolidadoEfetivo === "number" ? lucroConsolidadoEfetivo : surebet.lucro_real)
