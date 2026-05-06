@@ -493,12 +493,13 @@ export function ResultadoPill({
     try {
       setLoading(true);
 
-      const lucroPrejuizo = calcularLucroPrejuizo(novoResultado);
-      const valorRetorno = calcularValorRetorno(novoResultado);
+       const lucroPrejuizo = calcularLucroPrejuizo(novoResultado);
+       const valorRetorno = calcularValorRetorno(novoResultado);
 
-      // ====== LIQUIDAÇÃO VIA RPC ATÔMICA ======
-      // O RPC cuida de: atualizar aposta, registrar no ledger, trigger atualiza saldo
-      await liquidarViaRPC(novoResultado, lucroPrejuizo);
+       // ====== LIQUIDAÇÃO VIA RPC ATÔMICA ======
+       // O RPC cuida de: atualizar aposta, registrar no ledger, trigger atualiza saldo
+       // IMPORTANTE: p_lucro_prejuizo NULL para que o RPC use o motor canônico do banco
+       await liquidarViaRPC(novoResultado, 0); // O wrapper reliquidarAposta trata 0 como null internamente para v6
       
       // Atualizar valor_retorno separadamente (RPC não trata esse campo)
       await supabase
