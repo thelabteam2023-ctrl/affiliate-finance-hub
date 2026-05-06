@@ -1823,7 +1823,6 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
             const bookmakerNomeFormattedMultipla = formatBookmakerDisplay(bookmakerRawNameMultipla);
 
             const logoUrlMultipla = multipla.bookmaker?.bookmakers_catalogo?.logo_url;
-            const logoUrlMultipla = multipla.bookmaker?.bookmakers_catalogo?.logo_url;
             
             // Determinar estratégia - usar valor do banco diretamente
             let estrategiaMultipla: string = multipla.estrategia || "NORMAL";
