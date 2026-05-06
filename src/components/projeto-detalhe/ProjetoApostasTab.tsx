@@ -423,7 +423,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     }
   };
 
-  const fetchApostas = async () => {
+  const fetchApostasWithReturn = async (): Promise<any[]> => {
     try {
       // Usa tabela unificada para apostas simples
       // NOTA: Apostas com estrategia=SUREBET e forma_registro=SIMPLES são pernas individuais
@@ -563,12 +563,14 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       });
       
       setApostas(apostasEnriquecidas || []);
+      return apostasEnriquecidas || [];
     } catch (error: any) {
       toast.error("Erro ao carregar apostas simples: " + error.message);
+      return [];
     }
   };
 
-  const fetchApostasMultiplas = async () => {
+  const fetchApostasMultiplasWithReturn = async (): Promise<any[]> => {
     try {
       // Usa tabela unificada para apostas múltiplas
       const selectFieldsMultipla = `
@@ -635,15 +637,18 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         bookmakerMap = new Map((bookmakers || []).map((b: any) => [b.id, b]));
       }
       
-      setApostasMultiplas(allData.map((am: any) => ({
+      const dataWithBookmaker = allData.map((am: any) => ({
         ...am,
         odd_final: am.odd_final ?? 0,
         stake: am.stake ?? 0,
         selecoes: Array.isArray(am.selecoes) ? am.selecoes : [],
         bookmaker: am.bookmaker_id ? bookmakerMap.get(am.bookmaker_id) : null
-      })));
+      }));
+      setApostasMultiplas(dataWithBookmaker);
+      return dataWithBookmaker;
     } catch (error: any) {
       console.error("Erro ao carregar apostas múltiplas:", error.message);
+      return [];
     }
   };
 
