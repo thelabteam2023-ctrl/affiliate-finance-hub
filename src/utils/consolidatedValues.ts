@@ -149,6 +149,12 @@ export function getConsolidatedLucro(
   return rawLucro;
 }
 
+export interface PernaEntryConsolidavel {
+  stake?: number | null;
+  moeda?: string;
+  fonte_saldo?: string;
+}
+
 /**
  * Tipo para pernas individuais usadas na conversão direta multicurrency.
  */
@@ -158,6 +164,9 @@ export interface PernaConsolidavel {
   resultado?: string | null;
   stake?: number | null;
   stake_brl_referencia?: number | null;
+  entries?: PernaEntryConsolidavel[] | null;
+  fonte_saldo?: string | null;
+  odd?: number | null;
 }
 
 /**
@@ -206,6 +215,31 @@ export function getConsolidatedLucroDirect(
   if (aposta.is_multicurrency && pernas && pernas.length > 0 && convertToConsolidation) {
     return pernas.reduce((acc, p) => {
       if (p.resultado && p.resultado === 'PENDENTE') return acc;
+      
+      // Se a perna tem múltiplas entradas (possivelmente com moedas diferentes)
+      if (p.entries && p.entries.length > 0) {
+        const lucroPernaConsolidado = p.entries.reduce((sum, e) => {
+          const moedaEntry = e.moeda || 'BRL';
+          const isFB = e.fonte_saldo === 'FREEBET' || p.fonte_saldo === 'FREEBET';
+          const stakeEntry = e.stake || 0;
+          const odd = p.odd || 0;
+          
+          let lucroNominal = 0;
+          if (p.resultado === 'GREEN') {
+            lucroNominal = stakeEntry * (odd - 1);
+          } else if (p.resultado === 'RED') {
+            lucroNominal = isFB ? 0 : -stakeEntry;
+          } else if (p.resultado === 'MEIO_GREEN') {
+            lucroNominal = (stakeEntry * (odd - 1)) / 2;
+          } else if (p.resultado === 'MEIO_RED') {
+            lucroNominal = isFB ? 0 : -stakeEntry / 2;
+          }
+          
+          return sum + convertToConsolidation(lucroNominal, moedaEntry);
+        }, 0);
+        return acc + lucroPernaConsolidado;
+      }
+
       const moeda = p.moeda || 'BRL';
       return acc + convertToConsolidation(p.lucro_prejuizo ?? 0, moeda);
     }, 0);
@@ -214,9 +248,37 @@ export function getConsolidatedLucroDirect(
   // Pernas inline com moedas mistas (detecta multicurrency mesmo sem flag)
   if (pernas && pernas.length >= 2 && convertToConsolidation) {
     const moedas = new Set(pernas.map(p => (p.moeda || 'BRL').toUpperCase()));
-    if (moedas.size > 1) {
+    
+    // Se houver múltiplas entradas em qualquer perna, também consideramos como passível de conversão direta
+    const hasEntries = pernas.some(p => p.entries && p.entries.length > 0);
+
+    if (moedas.size > 1 || hasEntries) {
       return pernas.reduce((acc, p) => {
         if (p.resultado && p.resultado === 'PENDENTE') return acc;
+        
+        if (p.entries && p.entries.length > 0) {
+          const lucroPernaConsolidado = p.entries.reduce((sum, e) => {
+            const moedaEntry = e.moeda || 'BRL';
+            const isFB = e.fonte_saldo === 'FREEBET' || p.fonte_saldo === 'FREEBET';
+            const stakeEntry = e.stake || 0;
+            const odd = p.odd || 0;
+            
+            let lucroNominal = 0;
+            if (p.resultado === 'GREEN') {
+              lucroNominal = stakeEntry * (odd - 1);
+            } else if (p.resultado === 'RED') {
+              lucroNominal = isFB ? 0 : -stakeEntry;
+            } else if (p.resultado === 'MEIO_GREEN') {
+              lucroNominal = (stakeEntry * (odd - 1)) / 2;
+            } else if (p.resultado === 'MEIO_RED') {
+              lucroNominal = isFB ? 0 : -stakeEntry / 2;
+            }
+            
+            return sum + convertToConsolidation(lucroNominal, moedaEntry);
+          }, 0);
+          return acc + lucroPernaConsolidado;
+        }
+
         const moeda = p.moeda || 'BRL';
         return acc + convertToConsolidation(p.lucro_prejuizo ?? 0, moeda);
       }, 0);
@@ -261,6 +323,13 @@ export function getConsolidatedStakeDirect(
   // PRIORIDADE 2: Multicurrency com pernas disponíveis mas sem stake_consolidado
   if (aposta.is_multicurrency && pernas && pernas.length > 0 && convertToConsolidation) {
     return pernas.reduce((acc, p) => {
+      if (p.entries && p.entries.length > 0) {
+        const stakePernaConsolidado = p.entries.reduce((sum, e) => {
+          const moedaEntry = e.moeda || 'BRL';
+          return sum + convertToConsolidation(Math.abs(e.stake ?? 0), moedaEntry);
+        }, 0);
+        return acc + stakePernaConsolidado;
+      }
       const moeda = p.moeda || 'BRL';
       return acc + convertToConsolidation(Math.abs(p.stake ?? 0), moeda);
     }, 0);
@@ -269,8 +338,17 @@ export function getConsolidatedStakeDirect(
   // Pernas inline com moedas mistas
   if (pernas && pernas.length >= 2 && convertToConsolidation) {
     const moedas = new Set(pernas.map(p => (p.moeda || 'BRL').toUpperCase()));
-    if (moedas.size > 1) {
+    const hasEntries = pernas.some(p => p.entries && p.entries.length > 0);
+
+    if (moedas.size > 1 || hasEntries) {
       return pernas.reduce((acc, p) => {
+        if (p.entries && p.entries.length > 0) {
+          const stakePernaConsolidado = p.entries.reduce((sum, e) => {
+            const moedaEntry = e.moeda || 'BRL';
+            return sum + convertToConsolidation(Math.abs(e.stake ?? 0), moedaEntry);
+          }, 0);
+          return acc + stakePernaConsolidado;
+        }
         const moeda = p.moeda || 'BRL';
         return acc + convertToConsolidation(Math.abs(p.stake ?? 0), moeda);
       }, 0);
