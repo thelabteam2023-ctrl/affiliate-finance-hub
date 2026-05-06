@@ -672,6 +672,10 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
     ? getConsolidatedLucroDirect(surebet as any, surebet.pernas as any, convertToConsolidation, moedaConsolidacao)
     : (piorCenarioCalculado?.lucro ?? surebet.lucro_esperado ?? null);
 
+  // Mantemos o cálculo de cenários para exibição de range (mín -> máx) quando pendente
+  const cenariosCalculados = !isLiquidada ? calcularCenarios() : null;
+  const piorCenarioCalculado = cenariosCalculados ? { lucro: cenariosCalculados.piorLucro, roi: cenariosCalculados.piorRoi } : null;
+
   const roiExibir = (() => {
     if (typeof lucroExibir === "number" && stakeRealTotal > 0) {
       return (lucroExibir / stakeRealTotal) * 100;
@@ -911,9 +915,9 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
                     </span>
                   )}
                   {/* Equivalência na moeda de consolidação (Cotação de Trabalho) */}
-                  {moedaPernas && moedaConsolidacao && moedaPernas !== moedaConsolidacao && isLiquidada && typeof lucroConsolidadoEfetivo === "number" && (
+                  {moedaPernas && moedaConsolidacao && moedaPernas !== moedaConsolidacao && isLiquidada && typeof lucroExibir === "number" && (
                     <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                      ≈ {formatValue(lucroConsolidadoEfetivo)}
+                      ≈ {formatValue(lucroExibir)}
                     </span>
                   )}
                 </div>
