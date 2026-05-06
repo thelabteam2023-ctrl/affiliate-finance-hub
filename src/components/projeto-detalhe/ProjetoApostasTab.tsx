@@ -389,24 +389,14 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     }, [onDataChange]),
   });
 
-  const fetchAllApostasWithReturn = async () => {
+  const fetchAllApostas = async () => {
     try {
       if (!loadedOnceRef.current) setLoading(true);
-      const [simples, multiplas] = await Promise.all([
-        fetchApostasWithReturn(),
-        fetchApostasMultiplasWithReturn(),
-        fetchSurebets(),
-        fetchBookmakers()
-      ]);
-      return { simples, multiplas };
+      await Promise.all([fetchApostas(), fetchApostasMultiplas(), fetchSurebets(), fetchBookmakers()]);
     } finally {
       setLoading(false);
       loadedOnceRef.current = true;
     }
-  };
-
-  const fetchAllApostas = async () => {
-    await fetchAllApostasWithReturn();
   };
 
   const fetchBookmakers = async () => {
@@ -433,7 +423,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     }
   };
 
-  const fetchApostasWithReturn = async (): Promise<any[]> => {
+  const fetchApostas = async () => {
     try {
       // Usa tabela unificada para apostas simples
       // NOTA: Apostas com estrategia=SUREBET e forma_registro=SIMPLES são pernas individuais
@@ -573,14 +563,12 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       });
       
       setApostas(apostasEnriquecidas || []);
-      return apostasEnriquecidas || [];
     } catch (error: any) {
       toast.error("Erro ao carregar apostas simples: " + error.message);
-      return [];
     }
   };
 
-  const fetchApostasMultiplasWithReturn = async (): Promise<any[]> => {
+  const fetchApostasMultiplas = async () => {
     try {
       // Usa tabela unificada para apostas múltiplas
       const selectFieldsMultipla = `
@@ -647,18 +635,15 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         bookmakerMap = new Map((bookmakers || []).map((b: any) => [b.id, b]));
       }
       
-      const dataWithBookmaker = allData.map((am: any) => ({
+      setApostasMultiplas(allData.map((am: any) => ({
         ...am,
         odd_final: am.odd_final ?? 0,
         stake: am.stake ?? 0,
         selecoes: Array.isArray(am.selecoes) ? am.selecoes : [],
         bookmaker: am.bookmaker_id ? bookmakerMap.get(am.bookmaker_id) : null
-      }));
-      setApostasMultiplas(dataWithBookmaker);
-      return dataWithBookmaker;
+      })));
     } catch (error: any) {
       console.error("Erro ao carregar apostas múltiplas:", error.message);
-      return [];
     }
   };
 
@@ -790,9 +775,19 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       // Para múltiplas, usar odd_final; para simples, usar odd
       const odd = apostaMultipla ? (apostaMultipla.odd_final || 1) : ((aposta as any).odd || 1);
       
-       // 1. Liquidar via RPC atômica (atualiza aposta + registra no ledger + trigger atualiza saldo)
-       // IMPORTANTE: p_lucro_prejuizo NULL para que o RPC use o motor canônico do banco
-       const result = await reliquidarAposta(apostaId, resultado, null);
+      // Calcular lucro usando função canônica
+      const lucro = calcularImpactoResultado(stake, odd, resultado);
+     
+     console.log('[ProjetoApostasTab] Chamando reliquidarAposta:', { 
+       apostaId, 
+       resultado, 
+       lucro,
+       stake,
+       odd 
+     });
+
+      // 1. Liquidar via RPC atômica (atualiza aposta + registra no ledger + trigger atualiza saldo)
+      const result = await reliquidarAposta(apostaId, resultado, lucro);
       
       if (!result.success) {
        console.error('[ProjetoApostasTab] reliquidarAposta falhou:', result.error);
@@ -802,17 +797,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
 
      console.log('[ProjetoApostasTab] reliquidarAposta sucesso, atualizando estado local');
      
-      // 2. Recarregar do banco (Invalida caches e estados locais)
+      // 2. Recarregar do banco: retorno/lucro canônicos são calculados no motor financeiro.
       invalidateSaldos(projetoId);
-      const { simples, multiplas } = await fetchAllApostasWithReturn();
-
-      // 3. VALIDAÇÃO REAL: Conferir no retorno do fetch se o status mudou
-      const apostaNoBanco = [...(simples || []), ...(multiplas || [])].find(a => a.id === apostaId);
-      if (!apostaNoBanco || apostaNoBanco.status !== 'LIQUIDADA') {
-        console.error("[ProjetoApostasTab] Falha na liquidação real no banco:", apostaNoBanco);
-        toast.error("Erro: A liquidação falhou no processamento do banco.");
-        return;
-      }
+      await fetchAllApostas();
 
       const resultLabel = {
         GREEN: "Green",

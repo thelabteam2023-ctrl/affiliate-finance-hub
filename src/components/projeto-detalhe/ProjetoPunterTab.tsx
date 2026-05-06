@@ -314,7 +314,7 @@ export function ProjetoPunterTab({
     }
   };
 
-  const fetchApostasWithReturn = async (): Promise<Aposta[]> => {
+  const fetchApostas = async () => {
     try {
       const selectFields = `
           id, created_at, data_aposta, esporte, evento, mercado, selecao, odd, stake, stake_total, stake_real, stake_freebet, estrategia, 
@@ -456,15 +456,9 @@ export function ProjetoPunterTab({
       }
       
       setApostas(mappedApostas);
-      return mappedApostas;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Erro ao carregar apostas Punter:", error);
-      return [];
     }
-  };
-
-  const fetchApostas = async () => {
-    await fetchApostasWithReturn();
   };
 
   // Resolução rápida de apostas - USA RPC ATÔMICA + ROLLOVER
@@ -496,17 +490,9 @@ export function ProjetoPunterTab({
         }
       }
 
-      // 3. Recarregar do banco (Invalida caches e estados locais)
+      // 3. Recarregar do banco: retorno/lucro canônicos são calculados no motor financeiro.
       invalidateSaldos(projetoId);
-      const novasApostas = await fetchApostasWithReturn();
-
-      // 4. VALIDAÇÃO REAL: Conferir no retorno do fetch se o status mudou
-      const apostaNoBanco = novasApostas.find(a => a.id === apostaId);
-      if (!apostaNoBanco || apostaNoBanco.status !== 'LIQUIDADA') {
-        console.error("[ProjetoPunterTab] Falha na liquidação real no banco:", apostaNoBanco);
-        toast.error("Erro: A liquidação falhou no processamento do banco.");
-        return;
-      }
+      await fetchApostas();
 
       const resultLabel = {
         GREEN: "Green",

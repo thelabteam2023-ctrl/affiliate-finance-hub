@@ -16112,10 +16112,6 @@ export type Database = {
         }[]
       }
       sync_bonus_rollover: { Args: { p_bonus_id: string }; Returns: number }
-      sync_bookmaker_balance_from_ledger: {
-        Args: { p_bookmaker_id: string }
-        Returns: number
-      }
       sync_pending_aposta_stake_v1: {
         Args: { p_aposta_id: string }
         Returns: Json

@@ -1110,9 +1110,6 @@ export async function reliquidarAposta(
       lucroPrejuizo: lucroPrejuizo ?? null,
       isMultiEntrySimples,
     });
-
-    // Garantia de compatibilidade: chamar apenas a assinatura canônica com 3 parâmetros.
-    // A RPC órfã de 1 parâmetro foi removida na migration desta correção.
     const { data: reliqData, error: reliqError } = await supabase.rpc('reliquidar_aposta_v6', {
       p_aposta_id: apostaId,
       p_novo_resultado: novoResultado,
