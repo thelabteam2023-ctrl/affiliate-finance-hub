@@ -527,6 +527,7 @@ export type Database = {
           gerou_freebet: boolean | null
           id: string
           is_bonus_bet: boolean | null
+          is_manual_override: boolean | null
           is_multicurrency: boolean | null
           lado_aposta: string | null
           lay_comissao: number | null
@@ -539,6 +540,9 @@ export type Database = {
           lucro_esperado: number | null
           lucro_prejuizo: number | null
           lucro_prejuizo_brl_referencia: number | null
+          manual_override_at: string | null
+          manual_override_by: string | null
+          manual_override_reason: string | null
           mercado: string | null
           modelo: string | null
           modo_entrada: string | null
@@ -602,6 +606,7 @@ export type Database = {
           gerou_freebet?: boolean | null
           id?: string
           is_bonus_bet?: boolean | null
+          is_manual_override?: boolean | null
           is_multicurrency?: boolean | null
           lado_aposta?: string | null
           lay_comissao?: number | null
@@ -614,6 +619,9 @@ export type Database = {
           lucro_esperado?: number | null
           lucro_prejuizo?: number | null
           lucro_prejuizo_brl_referencia?: number | null
+          manual_override_at?: string | null
+          manual_override_by?: string | null
+          manual_override_reason?: string | null
           mercado?: string | null
           modelo?: string | null
           modo_entrada?: string | null
@@ -677,6 +685,7 @@ export type Database = {
           gerou_freebet?: boolean | null
           id?: string
           is_bonus_bet?: boolean | null
+          is_manual_override?: boolean | null
           is_multicurrency?: boolean | null
           lado_aposta?: string | null
           lay_comissao?: number | null
@@ -689,6 +698,9 @@ export type Database = {
           lucro_esperado?: number | null
           lucro_prejuizo?: number | null
           lucro_prejuizo_brl_referencia?: number | null
+          manual_override_at?: string | null
+          manual_override_by?: string | null
+          manual_override_reason?: string | null
           mercado?: string | null
           modelo?: string | null
           modo_entrada?: string | null
@@ -15270,6 +15282,22 @@ export type Database = {
         }
         Returns: Json
       }
+      editar_surebet_completa_v3: {
+        Args: {
+          p_aposta_id: string
+          p_contexto: string
+          p_data_aposta: string
+          p_entradas: Json
+          p_esporte: string
+          p_estrategia: string
+          p_evento: string
+          p_mercado: string
+          p_modelo: string
+          p_pernas: Json
+          p_status_manual?: string
+        }
+        Returns: Json
+      }
       encerrar_ciclo_e_criar_proximo: {
         Args: { p_ciclo_id: string; p_excedente?: number; p_gatilho: string }
         Returns: string
@@ -15332,6 +15360,19 @@ export type Database = {
           stake_total: number
           todas_liquidadas: boolean
         }[]
+      }
+      fn_sync_stake_event_v1: {
+        Args: {
+          p_aposta_id: string
+          p_bookmaker_id: string
+          p_entrada_id: string
+          p_fonte_saldo: string
+          p_moeda: string
+          p_stake: number
+          p_user_id: string
+          p_workspace_id: string
+        }
+        Returns: undefined
       }
       force_relogin_global: { Args: never; Returns: Json }
       force_relogin_user: { Args: { p_user_id: string }; Returns: Json }
@@ -16046,6 +16087,16 @@ export type Database = {
       }
       reverter_movimentacao_caixa: {
         Args: { p_motivo: string; p_transacao_id: string }
+        Returns: Json
+      }
+      rpc_override_surebet_v1: {
+        Args: {
+          p_aposta_id: string
+          p_motivo: string
+          p_novo_lucro: number
+          p_novo_resultado: string
+          p_perna_id_ajuste: string
+        }
         Returns: Json
       }
       schedule_downgrade: {
