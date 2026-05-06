@@ -384,14 +384,11 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
             supabase
               .from("apostas_pernas")
               .select(`
-                id, aposta_id, bookmaker_id, odd, stake, stake_real, stake_freebet, moeda, selecao, selecao_livre, ordem,
-                resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada,
-                stake_brl_referencia, lucro_prejuizo_brl_referencia, cotacao_snapshot, fonte_saldo,
-                bookmaker:bookmakers (
-                  nome, parceiro_id, instance_identifier,
-                  parceiro:parceiros (nome),
-                  bookmakers_catalogo (logo_url)
-                )
+               id, aposta_id, bookmaker_id, odd, stake, stake_real, stake_freebet, moeda, selecao, selecao_livre, ordem,
+               resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada,
+               stake_brl_referencia, lucro_prejuizo_brl_referencia, cotacao_snapshot, fonte_saldo,
+               bookmaker:bookmakers (id, nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo(logo_url)),
+               apostas_perna_entradas (*, bookmakers (id, nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo (logo_url)))
               `)
               .in("aposta_id", idsChunk)
               .order("ordem", { ascending: true }),
@@ -412,27 +409,42 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
             if (a.forma_registro === "ARBITRAGEM") {
               // ARBITRAGEM/Surebet: populate pernas with full data for SurebetCard
               const parceiroNome = (p: any) => p.bookmaker?.parceiro?.nome;
-              a.pernas = pernas.map((p: any) => ({
-                id: p.id,
-                bookmaker_id: p.bookmaker_id,
-                bookmaker_nome: parceiroNome(p) 
-                  ? `${p.bookmaker?.nome || "—"} - ${parceiroNome(p)}` 
-                  : (p.bookmaker?.nome || "—"),
-                parceiro_nome: parceiroNome(p) || null,
-                moeda: p.moeda || 'BRL',
-                selecao: p.selecao,
-                selecao_livre: p.selecao_livre,
-                odd: p.odd,
-                stake: p.stake,
-                resultado: p.resultado,
-                lucro_prejuizo: p.lucro_prejuizo,
-                gerou_freebet: p.gerou_freebet,
-                valor_freebet_gerada: p.valor_freebet_gerada,
-                stake_brl_referencia: p.stake_brl_referencia,
-                lucro_prejuizo_brl_referencia: p.lucro_prejuizo_brl_referencia,
-                cotacao_snapshot: p.cotacao_snapshot,
-                fonte_saldo: p.fonte_saldo || null,
-              }));
+               a.pernas = pernas.map((p: any) => {
+                 const entradas = p.apostas_perna_entradas || [];
+                 return {
+                   id: p.id,
+                   bookmaker_id: p.bookmaker_id,
+                   bookmaker_nome: parceiroNome(p) 
+                     ? `${p.bookmaker?.nome || "—"} - ${parceiroNome(p)}${p.bookmaker?.instance_identifier ? ` (${p.bookmaker.instance_identifier})` : ''}` 
+                     : `${p.bookmaker?.nome || "—"}${p.bookmaker?.instance_identifier ? ` (${p.bookmaker.instance_identifier})` : ''}`,
+                   parceiro_nome: parceiroNome(p) || null,
+                   moeda: p.moeda || 'BRL',
+                   selecao: p.selecao,
+                   selecao_livre: p.selecao_livre,
+                   odd: p.odd,
+                   stake: p.stake,
+                   resultado: p.resultado,
+                   lucro_prejuizo: p.lucro_prejuizo,
+                   gerou_freebet: p.gerou_freebet,
+                   valor_freebet_gerada: p.valor_freebet_gerada,
+                   stake_brl_referencia: p.stake_brl_referencia,
+                   lucro_prejuizo_brl_referencia: p.lucro_prejuizo_brl_referencia,
+                   cotacao_snapshot: p.cotacao_snapshot,
+                   fonte_saldo: p.fonte_saldo || null,
+                   entries: entradas.length > 0 ? entradas.map((ent: any) => ({
+                     id: ent.id,
+                     bookmaker_id: ent.bookmaker_id,
+                     bookmaker_nome: ent.bookmakers?.nome 
+                       ? (ent.bookmakers.parceiro?.nome ? `${ent.bookmakers.nome} - ${ent.bookmakers.parceiro.nome}${ent.bookmakers.instance_identifier ? ` (${ent.bookmakers.instance_identifier})` : ''}` : `${ent.bookmakers.nome}${ent.bookmakers.instance_identifier ? ` (${ent.bookmakers.instance_identifier})` : ''}`)
+                       : "Outra Casa",
+                     moeda: ent.moeda,
+                     odd: ent.odd,
+                     stake: ent.stake,
+                     fonte_saldo: ent.fonte_saldo,
+                     resultado: p.resultado,
+                   })) : undefined
+                 };
+               });
             } else if (pernas.length > 1) {
               // SIMPLES multi-entry: store as sub_entries
               (a as any)._sub_entries = pernas;
@@ -1385,19 +1397,20 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                       resultado: aposta.resultado,
                       observacoes: aposta.observacoes,
                       pernas: groupPernasBySelecao(
-                        subEntries.map((p: any) => ({
-                          id: p.id,
-                          selecao: p.selecao || aposta.selecao,
-                          selecao_livre: p.selecao_livre,
-                          odd: p.odd,
-                          stake: p.stake,
-                          resultado: p.resultado,
-                          lucro_prejuizo: p.lucro_prejuizo ?? null,
-                          bookmaker_nome: p.bookmaker?.nome || '—',
-                          bookmaker_id: p.bookmaker_id,
-                          moeda: p.moeda || 'BRL',
-                          fonte_saldo: p.fonte_saldo || null,
-                        }))
+                         subEntries.map((p: any) => ({
+                           ...p,
+                           id: p.id,
+                           selecao: p.selecao || aposta.selecao,
+                           selecao_livre: p.selecao_livre,
+                           odd: p.odd,
+                           stake: p.stake,
+                           resultado: p.resultado,
+                           lucro_prejuizo: p.lucro_prejuizo ?? null,
+                           bookmaker_nome: p.bookmaker_nome || p.bookmaker?.nome || '—',
+                           bookmaker_id: p.bookmaker_id,
+                           moeda: p.moeda || 'BRL',
+                           fonte_saldo: p.fonte_saldo || null,
+                         }))
                       ),
                     };
 
