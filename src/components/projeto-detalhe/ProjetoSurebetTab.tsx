@@ -567,14 +567,35 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       invalidateSaldos(projetoId);
 
       const resultLabel = {
-        GREEN: "Green",
-        RED: "Red",
-        MEIO_GREEN: "½ Green",
-        MEIO_RED: "½ Red",
-        VOID: "Void"
+        GREEN: "Green", RED: "Red", MEIO_GREEN: "½ Green",
+        MEIO_RED: "½ Red", VOID: "Void"
       }[resultado] || resultado;
 
-      toast.success(`Aposta marcada como ${resultLabel}`);
+      const resultColorClass = resultLabel.includes("Green") 
+        ? "text-emerald-500" 
+        : resultLabel.includes("Red") 
+          ? "text-rose-500" 
+          : "text-amber-500";
+
+      // Pegar nome da casa se disponível
+      const bookmakerNome = operacao.bookmaker_nome || (operacao as any).bookmaker?.nome;
+      const displayNome = bookmakerNome ? formatBookmakerDisplay(bookmakerNome) : null;
+
+      if (displayNome) {
+        toast.success(
+          <div className="flex items-center gap-1.5">
+            <span className={cn("font-semibold", resultColorClass)}>{resultLabel}</span>
+            <span>na {displayNome}</span>
+          </div>
+        );
+      } else {
+        toast.success(
+          <div className="flex items-center gap-1.5">
+            <span className={cn("font-semibold", resultColorClass)}>{resultLabel}</span>
+            <span>marcado com sucesso</span>
+          </div>
+        );
+      }
       onDataChange?.();
     } catch (error: any) {
       console.error("Erro ao atualizar aposta:", error);
@@ -625,26 +646,32 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
 
       if (!input.silent) {
         const nomeRaw = input.bookmakerNome || '';
+        const resultColorClass = resultLabel.includes("Green") 
+          ? "text-emerald-500" 
+          : resultLabel.includes("Red") 
+            ? "text-rose-500" 
+            : "text-amber-500";
+
         if (nomeRaw) {
           const casas = nomeRaw.split(" & ").map(n => formatBookmakerDisplay(n));
           
-          if (casas.length > 1) {
-            // Para múltiplas casas (multi-entry), renderiza cada uma em uma linha
-            toast.success(
-              <div className="flex flex-col gap-0.5">
-                {casas.map((casa, idx) => (
-                  <div key={idx} className="flex items-center gap-1.5">
-                    <span className="font-semibold text-emerald-500">{resultLabel}</span>
-                    <span>na {casa}</span>
-                  </div>
-                ))}
-              </div>
-            );
-          } else {
-            toast.success(`${resultLabel} na ${casas[0]}`);
-          }
+          toast.success(
+            <div className="flex flex-col gap-0.5">
+              {casas.map((casa, idx) => (
+                <div key={idx} className="flex items-center gap-1.5">
+                  <span className={cn("font-semibold", resultColorClass)}>{resultLabel}</span>
+                  <span>na {casa}</span>
+                </div>
+              ))}
+            </div>
+          );
         } else {
-          toast.success(`Resultado alterado com sucesso`);
+          toast.success(
+            <div className="flex items-center gap-1.5">
+              <span className={cn("font-semibold", resultColorClass)}>{resultLabel}</span>
+              <span>alterado com sucesso</span>
+            </div>
+          );
         }
       }
       onDataChange?.();
