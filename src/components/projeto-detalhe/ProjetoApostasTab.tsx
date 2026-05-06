@@ -389,14 +389,24 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     }, [onDataChange]),
   });
 
-  const fetchAllApostas = async () => {
+  const fetchAllApostasWithReturn = async () => {
     try {
       if (!loadedOnceRef.current) setLoading(true);
-      await Promise.all([fetchApostas(), fetchApostasMultiplas(), fetchSurebets(), fetchBookmakers()]);
+      const [simples, multiplas] = await Promise.all([
+        fetchApostasWithReturn(),
+        fetchApostasMultiplasWithReturn(),
+        fetchSurebets(),
+        fetchBookmakers()
+      ]);
+      return { simples, multiplas };
     } finally {
       setLoading(false);
       loadedOnceRef.current = true;
     }
+  };
+
+  const fetchAllApostas = async () => {
+    await fetchAllApostasWithReturn();
   };
 
   const fetchBookmakers = async () => {
