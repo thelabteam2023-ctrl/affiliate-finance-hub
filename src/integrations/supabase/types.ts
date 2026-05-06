@@ -15282,6 +15282,22 @@ export type Database = {
         }
         Returns: Json
       }
+      editar_surebet_completa_v3: {
+        Args: {
+          p_aposta_id: string
+          p_contexto: string
+          p_data_aposta: string
+          p_entradas: Json
+          p_esporte: string
+          p_estrategia: string
+          p_evento: string
+          p_mercado: string
+          p_modelo: string
+          p_pernas: Json
+          p_status_manual?: string
+        }
+        Returns: Json
+      }
       encerrar_ciclo_e_criar_proximo: {
         Args: { p_ciclo_id: string; p_excedente?: number; p_gatilho: string }
         Returns: string
@@ -15344,6 +15360,19 @@ export type Database = {
           stake_total: number
           todas_liquidadas: boolean
         }[]
+      }
+      fn_sync_stake_event_v1: {
+        Args: {
+          p_aposta_id: string
+          p_bookmaker_id: string
+          p_entrada_id: string
+          p_fonte_saldo: string
+          p_moeda: string
+          p_stake: number
+          p_user_id: string
+          p_workspace_id: string
+        }
+        Returns: undefined
       }
       force_relogin_global: { Args: never; Returns: Json }
       force_relogin_user: { Args: { p_user_id: string }; Returns: Json }
