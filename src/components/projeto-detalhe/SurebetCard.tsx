@@ -762,25 +762,26 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
     ? plConsolidadoNormalizado
     : (typeof lucroConsolidadoFallback === "number" ? lucroConsolidadoFallback : null);
 
-  // Para lucro exibido: FONTE ÚNICA DE VERDADE
-  // Liquidada: pl_consolidado (RPC atômica) > lucro_real > fallback
-  // Pendente: PRIORIZAR cálculo runtime (que detecta freebet/multi-entrada corretamente).
-  //   Só usa lucro_esperado do banco como fallback quando não há pernas para calcular.
-  //   Motivo: lucro_esperado pode estar desatualizado em apostas legadas criadas antes
-  //   das correções de detecção de freebet (mem://finance/surebet-freebet-detection-canonical).
-  const lucroExibir = isLiquidada 
-    ? (typeof lucroConsolidadoEfetivo === "number" ? lucroConsolidadoEfetivo : surebet.lucro_real)
-    : (piorCenarioCalculado?.lucro ?? surebet.lucro_esperado ?? null);
+  // Para lucro exibido: Priorizar o valor consolidado do banco (pl_consolidado)
+  // Ele agora é recalculado atômica e corretamente em tempo real, mesmo para bets pendentes.
+  const lucroExibir = typeof plConsolidadoNormalizado === "number"
+    ? plConsolidadoNormalizado
+    : isLiquidada 
+      ? (typeof lucroConsolidadoEfetivo === "number" ? lucroConsolidadoEfetivo : surebet.lucro_real)
+      : (piorCenarioCalculado?.lucro ?? surebet.lucro_esperado ?? null);
 
   const roiExibir = (() => {
+    // Priorizar ROI derivado do pl_consolidado (fonte de verdade)
+    if (typeof plConsolidadoNormalizado === "number" && stakeRealTotal > 0) {
+      return (plConsolidadoNormalizado / stakeRealTotal) * 100;
+    }
+    
     if (isLiquidada) {
-      // Priorizar ROI derivado do pl_consolidado (fonte de verdade)
       if (typeof lucroConsolidadoEfetivo === "number" && stakeRealTotal > 0) {
         return (lucroConsolidadoEfetivo / stakeRealTotal) * 100;
       }
       return surebet.roi_real;
     }
-    // Pendente: PRIORIZAR cálculo runtime (mesma justificativa do lucro)
     return piorCenarioCalculado?.roi ?? surebet.roi_esperado ?? null;
   })();
   
