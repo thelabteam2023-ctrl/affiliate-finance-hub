@@ -70,7 +70,7 @@ import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { DuploGreenStatisticsCard } from "./DuploGreenStatisticsCard";
 
 import { cn } from "@/lib/utils";
-import { buildBookmakerNomeMap, collectMissingBookmakerIds, mergeBookmakerNomeMaps } from "@/lib/bookmaker-display";
+import { buildBookmakerNomeMap, collectMissingBookmakerIds, mergeBookmakerNomeMaps, formatBookmakerDisplay } from "@/lib/bookmaker-display";
 import { useUnlinkedBookmakerNames } from "@/hooks/useUnlinkedBookmakerNames";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
