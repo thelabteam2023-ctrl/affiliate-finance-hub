@@ -802,9 +802,17 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
 
      console.log('[ProjetoApostasTab] reliquidarAposta sucesso, atualizando estado local');
      
-      // 2. Recarregar do banco: retorno/lucro canônicos são calculados no motor financeiro.
+      // 2. Recarregar do banco (Invalida caches e estados locais)
       invalidateSaldos(projetoId);
-      await fetchAllApostas();
+      const { simples, multiplas } = await fetchAllApostasWithReturn();
+
+      // 3. VALIDAÇÃO REAL: Conferir no retorno do fetch se o status mudou
+      const apostaNoBanco = [...(simples || []), ...(multiplas || [])].find(a => a.id === apostaId);
+      if (!apostaNoBanco || apostaNoBanco.status !== 'LIQUIDADA') {
+        console.error("[ProjetoApostasTab] Falha na liquidação real no banco:", apostaNoBanco);
+        toast.error("Erro: A liquidação falhou no processamento do banco.");
+        return;
+      }
 
       const resultLabel = {
         GREEN: "Green",
