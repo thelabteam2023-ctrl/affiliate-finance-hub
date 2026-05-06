@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
+import { getConsolidatedLucroDirect } from "@/utils/consolidatedValues";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { fetchProjetoExtras, type ProjetoExtraEntry } from "@/services/fetchProjetoExtras";
@@ -339,16 +340,8 @@ export function ProjetoDashboardTab({ projetoId, refreshTrigger = 0 }: ProjetoDa
       if (aposta.resultado === "RED") acc[aposta.esporte].reds++;
       if (aposta.resultado === "MEIO_GREEN") acc[aposta.esporte].meioGreens++;
       if (aposta.resultado === "MEIO_RED") acc[aposta.esporte].meioReds++;
-      // CRÍTICO: Converter para moeda de consolidação do projeto
-      const moedaOp = aposta.moeda_operacao || 'BRL';
-      const rawLucro = aposta.lucro_prejuizo || 0;
-      let lucroConsolidado = rawLucro;
-      // CRÍTICO: Só usar pl_consolidado se consolidation_currency bate com moeda do projeto
-      if (aposta.pl_consolidado != null && aposta.consolidation_currency === moedaConsolidacao) {
-        lucroConsolidado = aposta.pl_consolidado;
-      } else if (moedaOp !== moedaConsolidacao) {
-        lucroConsolidado = convertToConsolidationOficial(rawLucro, moedaOp);
-      }
+      // USAR SSOT: utilitário centralizado que corrige discrepâncias de multi-entry
+      const lucroConsolidado = getConsolidatedLucroDirect(aposta as any, aposta.pernas as any, convertToConsolidationOficial, moedaConsolidacao);
       acc[aposta.esporte].lucro += lucroConsolidado;
       return acc;
     }, {});
