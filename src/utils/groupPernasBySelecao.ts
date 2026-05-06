@@ -59,7 +59,9 @@ export function groupPernasBySelecao(
     const group = groups.get(key)!;
     const main = group[0];
     const subs = group.slice(1);
-    const hasEntries = subs.length > 0;
+    // Agora consideramos múltiplas entradas se houver sub-registros flat OU 
+    // se o registro principal já vier com entries pré-populadas do banco
+    const hasEntries = subs.length > 0 || (main as any).entries?.length > 0;
 
     // Calcular odd média ponderada e stake total
     const allEntries = group.map(p => ({ odd: p.odd, stake: p.stake }));
@@ -93,24 +95,31 @@ export function groupPernasBySelecao(
     if (hasEntries) {
       result.odd_media = oddMedia;
       result.stake_total = stakeTotal;
-      result.entries = group.map(p => ({
-        id: p.id,
-        bookmaker_id: p.bookmaker_id || '',
-        bookmaker_nome: resolve(p),
-        parceiro_nome: p.parceiro_nome ?? p.bookmaker?.parceiro?.nome ?? null,
-        instance_identifier: p.instance_identifier ?? null,
-        logo_url: p.logo_url ?? null,
-        moeda: p.moeda || 'BRL',
-        odd: p.odd,
-        stake: p.stake,
-        resultado: p.resultado ?? null,
-        lucro_prejuizo: p.lucro_prejuizo ?? null,
-        stake_brl_referencia: p.stake_brl_referencia ?? null,
-        lucro_prejuizo_brl_referencia: p.lucro_prejuizo_brl_referencia ?? null,
-        cotacao_snapshot: p.cotacao_snapshot ?? null,
-        selecao_livre: p.selecao_livre || undefined,
-        fonte_saldo: p.fonte_saldo || undefined,
-      }));
+      
+      // Se já veio com entries pré-populadas (novo modelo 1:N), prioriza elas
+      if ((main as any).entries?.length > 0) {
+        result.entries = (main as any).entries;
+      } else {
+        // Fallback para modelo legado onde múltiplas pernas flat representavam divisões
+        result.entries = group.map(p => ({
+          id: p.id,
+          bookmaker_id: p.bookmaker_id || '',
+          bookmaker_nome: resolve(p),
+          parceiro_nome: p.parceiro_nome ?? p.bookmaker?.parceiro?.nome ?? null,
+          instance_identifier: p.instance_identifier ?? null,
+          logo_url: p.logo_url ?? null,
+          moeda: p.moeda || 'BRL',
+          odd: p.odd,
+          stake: p.stake,
+          resultado: p.resultado ?? null,
+          lucro_prejuizo: p.lucro_prejuizo ?? null,
+          stake_brl_referencia: p.stake_brl_referencia ?? null,
+          lucro_prejuizo_brl_referencia: p.lucro_prejuizo_brl_referencia ?? null,
+          cotacao_snapshot: p.cotacao_snapshot ?? null,
+          selecao_livre: p.selecao_livre || undefined,
+          fonte_saldo: p.fonte_saldo || undefined,
+        }));
+      }
     }
 
     return result;

@@ -131,6 +131,7 @@ export interface SurebetPernaEntry {
 
 // Estrutura de perna armazenada no JSONB da surebet (COM SUPORTE MULTI-ENTRADA)
 export interface SurebetPerna {
+  id?: string;
   // Campos de identificação da posição
   selecao: string;
   selecao_livre: string;
@@ -1020,9 +1021,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       .from("apostas_pernas")
       .select(`
         *,
-        bookmakers (
-          nome
-        )
+        bookmakers (nome),
+        apostas_perna_entradas (*)
       `)
       .eq("aposta_id", surebetId)
       .order("ordem", { ascending: true });
@@ -1040,19 +1040,24 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
 
     if (pernasData && pernasData.length > 0) {
       // Usar dados da tabela normalizada
-      sortedPernas = pernasData.map((p: any) => ({
-        bookmaker_id: p.bookmaker_id,
-        bookmaker_nome: p.bookmakers?.nome || "Casa",
-        selecao: p.selecao,
-        selecao_livre: p.selecao_livre,
-        odd: p.odd,
-        stake: p.stake,
-        moeda: p.moeda,
-        resultado: p.resultado,
-        lucro_prejuizo: p.lucro_prejuizo,
-        gerou_freebet: p.gerou_freebet,
-        valor_freebet_gerada: p.valor_freebet_gerada,
-      }));
+      sortedPernas = pernasData.map((p: any) => {
+        const entradas = p.apostas_perna_entradas || [];
+        return {
+          bookmaker_id: p.bookmaker_id,
+          bookmaker_nome: p.bookmakers?.nome || "Casa",
+          selecao: p.selecao,
+          selecao_livre: p.selecao_livre,
+          odd: p.odd,
+          stake: p.stake,
+          moeda: p.moeda,
+          resultado: p.resultado,
+          lucro_prejuizo: p.lucro_prejuizo,
+          gerou_freebet: p.gerou_freebet,
+          valor_freebet_gerada: p.valor_freebet_gerada,
+          // Adicionar as entradas detalhadas para que o formulário possa reconstruir o estado
+          entries: entradas.length > 0 ? entradas : undefined
+        };
+      });
     } else {
       // Fallback para JSONB legado
       const { data: legacyData } = await supabase
@@ -2231,9 +2236,54 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
           fonte_saldo: 'REAL',
         }));
 
-        const { data: rpcResult, error } = await supabase.rpc('editar_surebet_completa_v1', {
+        // PREPARAR DADOS PARA RPC V2 (HIERÁRQUICA)
+        const allEntradasFlat: any[] = [];
+        odds.forEach((entry, legIdx) => {
+          const mainMoeda = getBookmakerMoedaEdit(entry.bookmaker_id);
+          // Entrada principal
+          allEntradasFlat.push({
+            perna_index: legIdx,
+            bookmaker_id: entry.bookmaker_id,
+            odd: parseFloat(entry.odd) || 0,
+            stake: parseFloat(entry.stake) || 0,
+            moeda: mainMoeda,
+            fonte_saldo: entry.usarFreebet ? 'FREEBET' : 'REAL',
+            selecao: entry.selecao,
+            selecao_livre: entry.selecaoLivre || ""
+          });
+          // Entradas adicionais
+          (entry.additionalEntries || []).forEach(ae => {
+            const aeMoeda = getBookmakerMoedaEdit(ae.bookmaker_id);
+            allEntradasFlat.push({
+              perna_index: legIdx,
+              bookmaker_id: ae.bookmaker_id,
+              odd: parseFloat(ae.odd) || 0,
+              stake: parseFloat(ae.stake) || 0,
+              moeda: aeMoeda,
+              fonte_saldo: 'REAL',
+              selecao: entry.selecao,
+              selecao_livre: ae.selecaoLivre || ""
+            });
+          });
+        });
+
+        const pernasUnicasPai = Array.from(new Set(allEntradasFlat.map(f => f.perna_index)))
+          .sort((a: any, b: any) => a - b)
+          .map(idx => {
+            const firstEntry = allEntradasFlat.find(f => f.perna_index === idx)!;
+            const existingPerna = pernasOriginais[idx];
+            return {
+              id: existingPerna?.id || null,
+              selecao: firstEntry.selecao,
+              selecao_livre: firstEntry.selecao_livre,
+              resultado: pernasOriginais[idx]?.resultado || null
+            };
+          });
+
+        const { data: rpcResult, error } = await supabase.rpc('editar_surebet_completa_v2', {
           p_aposta_id: surebet.id,
-          p_pernas: pernasParaRPC as any,
+          p_pernas: pernasUnicasPai as any,
+          p_entradas: allEntradasFlat as any,
           p_evento: evento,
           p_esporte: esporte,
           p_mercado: mercado,
