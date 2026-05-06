@@ -797,11 +797,6 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
   // Nestes casos, priorizamos o cálculo em tempo real que percorre cada entrada.
   const hasComplexPernas = surebet.pernas?.some(p => p.entries && p.entries.length > 1);
 
-  // Se existem múltiplas entradas em qualquer perna, o pl_consolidado do banco pode estar incorreto
-  // devido à forma como as pernas são somadas numericamente no motor de liquidação.
-  // Nestes casos, priorizamos o cálculo em tempo real que percorre cada entrada.
-  const hasComplexPernas = surebet.pernas?.some(p => p.entries && p.entries.length > 1);
-
   const lucroExibir = (typeof plConsolidadoNormalizado === "number" && !hasComplexPernas)
     ? plConsolidadoNormalizado
     : isLiquidada 
