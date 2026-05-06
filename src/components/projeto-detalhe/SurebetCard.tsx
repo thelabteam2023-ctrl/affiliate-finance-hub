@@ -730,11 +730,37 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
     }
 
     let hasAnyLucro = false;
-    const total = surebet.pernas.reduce((sum, perna) => {
-      const lucroNominal = getPernaLucroNominal(perna);
+    const total = surebet.pernas.reduce((sum, p) => {
+      if (p.entries && p.entries.length > 0) {
+        hasAnyLucro = true;
+        const lucroPernaConsolidado = p.entries.reduce((sPerna, e) => {
+          const moedaEntry = e.moeda || 'BRL';
+          const isFB = e.fonte_saldo === 'FREEBET' || p.fonte_saldo === 'FREEBET';
+          const stakeEntry = e.stake || 0;
+          const odd = p.odd || 0;
+          
+          let lucroNominal = 0;
+          if (p.resultado === 'GREEN') {
+            lucroNominal = stakeEntry * (odd - 1);
+          } else if (p.resultado === 'RED') {
+            lucroNominal = isFB ? 0 : -stakeEntry;
+          } else if (p.resultado === 'MEIO_GREEN') {
+            lucroNominal = (stakeEntry * (odd - 1)) / 2;
+          } else if (p.resultado === 'MEIO_RED') {
+            lucroNominal = isFB ? 0 : -stakeEntry / 2;
+          } else {
+            return sPerna;
+          }
+          
+          return sPerna + convertToConsolidation(lucroNominal, moedaEntry);
+        }, 0);
+        return sum + lucroPernaConsolidado;
+      }
+
+      const lucroNominal = getPernaLucroNominal(p);
       if (typeof lucroNominal !== "number") return sum;
       hasAnyLucro = true;
-      return sum + convertToConsolidation(lucroNominal, perna.moeda || "BRL");
+      return sum + convertToConsolidation(lucroNominal, p.moeda || "BRL");
     }, 0);
 
     return hasAnyLucro ? total : null;
