@@ -15996,14 +15996,16 @@ export type Database = {
         Args: { p_workspace_id: string }
         Returns: Json
       }
-      reliquidar_aposta_v6: {
-        Args: {
-          p_aposta_id: string
-          p_lucro_prejuizo?: number
-          p_novo_resultado: string
-        }
-        Returns: Json
-      }
+      reliquidar_aposta_v6:
+        | { Args: { p_aposta_id: string }; Returns: Json }
+        | {
+            Args: {
+              p_aposta_id: string
+              p_lucro_prejuizo?: number
+              p_novo_resultado: string
+            }
+            Returns: Json
+          }
       renew_subscription: {
         Args: { p_new_price_id?: string; p_workspace_id: string }
         Returns: string
