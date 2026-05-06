@@ -59,7 +59,7 @@ import { SurebetStatisticsCard } from "./SurebetStatisticsCard";
 
 import { parsePernaFromJson, PernaArbitragem } from "@/types/apostasUnificada";
 import { cn, getFirstLastName } from "@/lib/utils";
-import { buildBookmakerNomeMap, collectMissingBookmakerIds, mergeBookmakerNomeMaps } from "@/lib/bookmaker-display";
+import { buildBookmakerNomeMap, collectMissingBookmakerIds, mergeBookmakerNomeMaps, formatBookmakerDisplay } from "@/lib/bookmaker-display";
 import { useUnlinkedBookmakerNames } from "@/hooks/useUnlinkedBookmakerNames";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
@@ -624,8 +624,11 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       }[input.resultado] || input.resultado;
 
       if (!input.silent) {
-        const nome = input.bookmakerNome || '';
-        toast.success(nome ? `${resultLabel} na ${nome}` : `Resultado alterado com sucesso`);
+        const nomeRaw = input.bookmakerNome || '';
+        const nomeFormatado = nomeRaw
+          ? nomeRaw.split(" & ").map(n => formatBookmakerDisplay(n)).join(" & ")
+          : '';
+        toast.success(nomeFormatado ? `${resultLabel} na ${nomeFormatado}` : `Resultado alterado com sucesso`);
       }
       onDataChange?.();
     } catch (error: any) {

@@ -911,7 +911,9 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
                         moeda: perna.moeda || 'BRL',
                         resultadoAnterior: perna.resultado,
                         workspaceId: surebet.workspace_id || '',
-                        bookmakerNome: perna.bookmaker_nome,
+                        bookmakerNome: perna.entries && perna.entries.length > 0
+                          ? perna.entries.map(e => e.bookmaker_nome).join(" & ")
+                          : perna.bookmaker_nome,
                       });
                     } : undefined}
                 />
