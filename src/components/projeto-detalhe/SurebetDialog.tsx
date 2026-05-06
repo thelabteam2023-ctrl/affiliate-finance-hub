@@ -1020,9 +1020,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       .from("apostas_pernas")
       .select(`
         *,
-        bookmakers (
-          nome
-        )
+        bookmakers (nome),
+        apostas_perna_entradas (*)
       `)
       .eq("aposta_id", surebetId)
       .order("ordem", { ascending: true });
@@ -1040,19 +1039,24 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
 
     if (pernasData && pernasData.length > 0) {
       // Usar dados da tabela normalizada
-      sortedPernas = pernasData.map((p: any) => ({
-        bookmaker_id: p.bookmaker_id,
-        bookmaker_nome: p.bookmakers?.nome || "Casa",
-        selecao: p.selecao,
-        selecao_livre: p.selecao_livre,
-        odd: p.odd,
-        stake: p.stake,
-        moeda: p.moeda,
-        resultado: p.resultado,
-        lucro_prejuizo: p.lucro_prejuizo,
-        gerou_freebet: p.gerou_freebet,
-        valor_freebet_gerada: p.valor_freebet_gerada,
-      }));
+      sortedPernas = pernasData.map((p: any) => {
+        const entradas = p.apostas_perna_entradas || [];
+        return {
+          bookmaker_id: p.bookmaker_id,
+          bookmaker_nome: p.bookmakers?.nome || "Casa",
+          selecao: p.selecao,
+          selecao_livre: p.selecao_livre,
+          odd: p.odd,
+          stake: p.stake,
+          moeda: p.moeda,
+          resultado: p.resultado,
+          lucro_prejuizo: p.lucro_prejuizo,
+          gerou_freebet: p.gerou_freebet,
+          valor_freebet_gerada: p.valor_freebet_gerada,
+          // Adicionar as entradas detalhadas para que o formulário possa reconstruir o estado
+          entries: entradas.length > 0 ? entradas : undefined
+        };
+      });
     } else {
       // Fallback para JSONB legado
       const { data: legacyData } = await supabase
