@@ -667,14 +667,14 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
     return c ? { lucro: c.piorLucro, roi: c.piorRoi } : null;
   };
 
+  // Mantemos o cálculo de cenários para exibição de range (mín -> máx) quando pendente
+  const cenariosCalculados = !isLiquidada ? calcularCenarios() : null;
+  const piorCenarioCalculado = cenariosCalculados ? { lucro: cenariosCalculados.piorLucro, roi: cenariosCalculados.piorRoi } : null;
+
   // USAR SSOT: utilitário centralizado que corrige discrepâncias de multi-entry
   const lucroExibir = isLiquidada 
     ? getConsolidatedLucroDirect(surebet as any, surebet.pernas as any, convertToConsolidation, moedaConsolidacao)
     : (piorCenarioCalculado?.lucro ?? surebet.lucro_esperado ?? null);
-
-  // Mantemos o cálculo de cenários para exibição de range (mín -> máx) quando pendente
-  const cenariosCalculados = !isLiquidada ? calcularCenarios() : null;
-  const piorCenarioCalculado = cenariosCalculados ? { lucro: cenariosCalculados.piorLucro, roi: cenariosCalculados.piorRoi } : null;
 
   const roiExibir = (() => {
     if (typeof lucroExibir === "number" && stakeRealTotal > 0) {
