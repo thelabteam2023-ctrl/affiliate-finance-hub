@@ -695,7 +695,11 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
   };
 
   const getPernaLucroNominal = (perna: SurebetPerna): number | null => {
-    if (typeof perna.lucro_prejuizo === "number") return perna.lucro_prejuizo;
+    // Se tem múltiplas entradas, o lucro nominal da perna pode ser enganoso se houver moedas mistas.
+    // Só usamos o lucro_prejuizo do banco se não houver entradas ou se não for multicurrency.
+    if (typeof perna.lucro_prejuizo === "number" && (!perna.entries || perna.entries.length <= 1)) {
+      return perna.lucro_prejuizo;
+    }
 
     const isFB = isPernaFreebet(perna);
     const stake = isFB ? 0 : (perna.stake_total || perna.stake || 0);
@@ -726,11 +730,37 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
     }
 
     let hasAnyLucro = false;
-    const total = surebet.pernas.reduce((sum, perna) => {
-      const lucroNominal = getPernaLucroNominal(perna);
+    const total = surebet.pernas.reduce((sum, p) => {
+      if (p.entries && p.entries.length > 0) {
+        hasAnyLucro = true;
+        const lucroPernaConsolidado = p.entries.reduce((sPerna, e) => {
+          const moedaEntry = e.moeda || 'BRL';
+          const isFB = e.fonte_saldo === 'FREEBET' || p.fonte_saldo === 'FREEBET';
+          const stakeEntry = e.stake || 0;
+          const odd = p.odd || 0;
+          
+          let lucroNominal = 0;
+          if (p.resultado === 'GREEN') {
+            lucroNominal = stakeEntry * (odd - 1);
+          } else if (p.resultado === 'RED') {
+            lucroNominal = isFB ? 0 : -stakeEntry;
+          } else if (p.resultado === 'MEIO_GREEN') {
+            lucroNominal = (stakeEntry * (odd - 1)) / 2;
+          } else if (p.resultado === 'MEIO_RED') {
+            lucroNominal = isFB ? 0 : -stakeEntry / 2;
+          } else {
+            return sPerna;
+          }
+          
+          return sPerna + convertToConsolidation(lucroNominal, moedaEntry);
+        }, 0);
+        return sum + lucroPernaConsolidado;
+      }
+
+      const lucroNominal = getPernaLucroNominal(p);
       if (typeof lucroNominal !== "number") return sum;
       hasAnyLucro = true;
-      return sum + convertToConsolidation(lucroNominal, perna.moeda || "BRL");
+      return sum + convertToConsolidation(lucroNominal, p.moeda || "BRL");
     }, 0);
 
     return hasAnyLucro ? total : null;
@@ -762,24 +792,23 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
     ? plConsolidadoNormalizado
     : (typeof lucroConsolidadoFallback === "number" ? lucroConsolidadoFallback : null);
 
-  // Para lucro exibido: Priorizar o valor consolidado do banco (pl_consolidado)
-  // Ele agora é recalculado atômica e corretamente em tempo real, mesmo para bets pendentes.
-  const lucroExibir = typeof plConsolidadoNormalizado === "number"
+  // Se existem múltiplas entradas em qualquer perna, o pl_consolidado do banco pode estar incorreto
+  // devido à forma como as pernas são somadas numericamente no motor de liquidação.
+  // Nestes casos, priorizamos o cálculo em tempo real que percorre cada entrada.
+  const hasComplexPernas = surebet.pernas?.some(p => p.entries && p.entries.length > 1);
+
+  const lucroExibir = (typeof plConsolidadoNormalizado === "number" && !hasComplexPernas)
     ? plConsolidadoNormalizado
     : isLiquidada 
-      ? (typeof lucroConsolidadoEfetivo === "number" ? lucroConsolidadoEfetivo : surebet.lucro_real)
+      ? (typeof lucroConsolidadoFallback === "number" ? lucroConsolidadoFallback : surebet.lucro_real)
       : (piorCenarioCalculado?.lucro ?? surebet.lucro_esperado ?? null);
 
   const roiExibir = (() => {
-    // Priorizar ROI derivado do pl_consolidado (fonte de verdade)
-    if (typeof plConsolidadoNormalizado === "number" && stakeRealTotal > 0) {
-      return (plConsolidadoNormalizado / stakeRealTotal) * 100;
+    if (typeof lucroExibir === "number" && stakeRealTotal > 0) {
+      return (lucroExibir / stakeRealTotal) * 100;
     }
     
     if (isLiquidada) {
-      if (typeof lucroConsolidadoEfetivo === "number" && stakeRealTotal > 0) {
-        return (lucroConsolidadoEfetivo / stakeRealTotal) * 100;
-      }
       return surebet.roi_real;
     }
     return piorCenarioCalculado?.roi ?? surebet.roi_esperado ?? null;

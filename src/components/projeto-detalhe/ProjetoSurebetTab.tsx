@@ -166,8 +166,9 @@ interface CasaAgregada {
 // Função utilitária para obter lucro de uma perna
 // Prioriza o valor salvo no banco (lucro_prejuizo), calcula se não existir
 const getLucroPerna = (perna: SurebetPerna & { lucro_prejuizo?: number | null, fonte_saldo?: string }): number => {
-  // Se já tem lucro calculado e salvo, usar direto
-  if (typeof perna.lucro_prejuizo === "number") {
+  // Se já tem lucro calculado e salvo, e não tem múltiplas entradas, usar direto.
+  // Se tem múltiplas entradas, o lucro nominal da perna pode estar errado no banco (soma numérica vs conversão).
+  if (typeof perna.lucro_prejuizo === "number" && (!perna.entries || perna.entries.length <= 1)) {
     return perna.lucro_prejuizo;
   }
   
@@ -864,12 +865,38 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
     // Usamos uma função que soma o lucro de todas as pernas, permitindo que apostas PENDENTES
     // também contribuam para o lucro global conforme as pernas são resolvidas individualmente.
     const getLucroEfetivoAposta = (s: Surebet) => {
-      if (s.status === "LIQUIDADA" && typeof s.pl_consolidado === "number" && s.consolidation_currency === moedaConsolidacao) {
+      const hasComplexPernas = s.pernas?.some(p => p.entries && p.entries.length > 1);
+      
+      if (s.status === "LIQUIDADA" && typeof s.pl_consolidado === "number" && s.consolidation_currency === moedaConsolidacao && !hasComplexPernas) {
         return s.pl_consolidado;
       }
       
       const pernas = s.pernas || [];
       return pernas.reduce((accPerna, p) => {
+        // Se a perna tem múltiplas entradas, precisamos consolidar cada uma
+        if (p.entries && p.entries.length > 0 && convertFn) {
+          const lucroPernaConsolidado = p.entries.reduce((sum, e) => {
+            const moedaEntry = e.moeda || 'BRL';
+            const isFB = e.fonte_saldo === 'FREEBET' || p.fonte_saldo === 'FREEBET';
+            const stakeEntry = e.stake || 0;
+            const odd = p.odd || 0;
+            
+            let lucroNominal = 0;
+            if (p.resultado === 'GREEN') {
+              lucroNominal = stakeEntry * (odd - 1);
+            } else if (p.resultado === 'RED') {
+              lucroNominal = isFB ? 0 : -stakeEntry;
+            } else if (p.resultado === 'MEIO_GREEN') {
+              lucroNominal = (stakeEntry * (odd - 1)) / 2;
+            } else if (p.resultado === 'MEIO_RED') {
+              lucroNominal = isFB ? 0 : -stakeEntry / 2;
+            }
+            
+            return sum + convertFn(lucroNominal, moedaEntry);
+          }, 0);
+          return accPerna + lucroPernaConsolidado;
+        }
+
         const lucroNominal = getLucroPerna(p);
         if (lucroNominal === 0) return accPerna;
         
