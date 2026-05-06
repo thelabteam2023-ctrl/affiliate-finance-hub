@@ -331,7 +331,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
     }
   };
 
-  const fetchApostasInternal = async (projId: string, bonusIds: string[]) => {
+  const fetchApostasInternalWithReturn = async (projId: string, bonusIds: string[]): Promise<Aposta[]> => {
     try {
       const selectFields = `
           *,
@@ -404,12 +404,18 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
       }
 
       setApostas(mapped);
+      return mapped;
     } catch (error: any) {
       toast.error("Erro ao carregar apostas: " + error.message);
+      return [];
     }
   };
 
-  const fetchApostasMultiplasInternal = async (projId: string, bonusIds: string[]) => {
+  const fetchApostasInternal = async (projId: string, bonusIds: string[]) => {
+    await fetchApostasInternalWithReturn(projId, bonusIds);
+  };
+
+  const fetchApostasMultiplasInternalWithReturn = async (projId: string, bonusIds: string[]): Promise<ApostaMultipla[]> => {
     try {
       const selectFields = `
           *,
@@ -436,15 +442,21 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
           .order("data_aposta", { ascending: false })
       );
       
-      setApostasMultiplas((data || []).map((am: any) => ({
+      const mappedMultiplas = (data || []).map((am: any) => ({
         ...am,
         selecoes: Array.isArray(am.selecoes) ? am.selecoes : []
-      })));
+      }));
+      setApostasMultiplas(mappedMultiplas);
+      return mappedMultiplas;
     } catch (error: any) {
       console.error("Erro ao carregar apostas múltiplas:", error.message);
+      return [];
     }
   };
 
+  const fetchApostasMultiplasInternal = async (projId: string, bonusIds: string[]) => {
+    await fetchApostasMultiplasInternalWithReturn(projId, bonusIds);
+  };
   const fetchSurebetsInternal = async (projId: string, bonusIds: string[]) => {
     try {
       // Buscar operações multi-leg (ARBITRAGEM ou SUREBET) com estratégia BONUS ou contexto BONUS
