@@ -831,9 +831,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
 
     const lucroTotal = surebetsParaKpi.reduce((acc, s) => acc + getLucroEfetivoAposta(s), 0);
     const stakeTotal = surebetsParaKpi.reduce((acc, s) => acc + getConsolidatedStake(s, convertFn, moedaConsolidacao), 0);
-    const volumeLiquidado = surebetsLiquidadasArr.reduce((acc, s) => acc + getConsolidatedStake(s, convertFn, moedaConsolidacao), 0);
-    // ROI usa volume LIQUIDADO — apostas pendentes não têm resultado
-    const roi = volumeLiquidado > 0 ? (lucroTotal / volumeLiquidado) * 100 : 0;
+    // ROI usa volume TOTAL do período para bater com o lucro que agora inclui resultados parciais de pendentes
+    const roi = stakeTotal > 0 ? (lucroTotal / stakeTotal) * 100 : 0;
 
     // Breakdown de volume por moeda original
     const volumePorMoeda = new Map<string, number>();
@@ -846,12 +845,14 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       .map(([moeda, valor]) => ({ moeda, valor }))
       .filter(item => Math.abs(item.valor) > 0.01);
 
-    // Breakdown de LUCRO por moeda original
+    // Breakdown de LUCRO por moeda original (baseado no lucro efetivo calculado acima)
     const lucroPorMoedaMap = new Map<string, number>();
     surebetsParaKpi.forEach(s => {
       const moeda = s.moeda_operacao || "BRL";
-      const rawLucro = s.lucro_real || 0;
-      lucroPorMoedaMap.set(moeda, (lucroPorMoedaMap.get(moeda) || 0) + rawLucro);
+      
+      // Para o breakdown por moeda, tentamos atribuir o lucro à moeda original
+      const lucroAposta = s.pernas?.reduce((acc, p) => acc + getLucroPerna(p), 0) || s.lucro_real || 0;
+      lucroPorMoedaMap.set(moeda, (lucroPorMoedaMap.get(moeda) || 0) + lucroAposta);
     });
     const lucroPorMoeda = Array.from(lucroPorMoedaMap.entries())
       .map(([moeda, valor]) => ({ moeda, valor }))
