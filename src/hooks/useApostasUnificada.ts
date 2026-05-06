@@ -206,9 +206,31 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
         fonte_saldo: perna.fonte_saldo || "REAL",
       }));
 
-      const { data: rpcResult, error } = await supabase.rpc('editar_surebet_completa_v1', {
+      // v3 espera (p_pernas = pernas pai com id/selecao/resultado) +
+      // (p_entradas = casas/moedas com perna_index). Como aqui não temos
+      // sub-entradas, mapeamos 1:1 entre perna pai e entrada.
+      const pernasPaiV3 = pernasParaRpc.map((p, idx) => ({
+        id: p.id,
+        selecao: p.selecao,
+        selecao_livre: p.selecao_livre,
+        resultado: null,
+      }));
+      const entradasV3 = pernasParaRpc.map((p, idx) => ({
+        id: p.id,
+        perna_index: idx,
+        bookmaker_id: p.bookmaker_id,
+        stake: p.stake,
+        odd: p.odd,
+        moeda: p.moeda,
+        fonte_saldo: p.fonte_saldo || 'REAL',
+        cotacao_snapshot: p.cotacao_snapshot,
+        stake_brl_referencia: p.stake_brl_referencia,
+      }));
+
+      const { data: rpcResult, error } = await supabase.rpc('editar_surebet_completa_v3', {
         p_aposta_id: params.id,
-        p_pernas: pernasParaRpc as any,
+        p_pernas: pernasPaiV3 as any,
+        p_entradas: entradasV3 as any,
         p_evento: params.evento ?? null,
         p_esporte: params.esporte ?? null,
         p_mercado: params.mercado ?? null,
@@ -216,14 +238,7 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
         p_estrategia: apostaAtual.estrategia,
         p_contexto: apostaAtual.contexto_operacional,
         p_data_aposta: apostaAtual.data_aposta,
-        p_stake_total: null,
-        p_stake_consolidado: null,
-        p_lucro_esperado: null,
-        p_roi_esperado: null,
-        p_lucro_prejuizo: null,
-        p_roi_real: null,
-        p_status: null,
-        p_resultado: null,
+        p_status_manual: null,
       });
 
       if (error) throw error;
