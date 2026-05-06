@@ -648,12 +648,18 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
       
       // Notificar pai para refresh global (KPIs, Visão Geral, outras abas)
       onDataChange?.();
+      return { simples, multiplas };
     } catch (error) {
       console.error("Erro ao atualizar dados:", error);
+      return { simples: [], multiplas: [] };
     } finally {
       setLoading(false);
     }
   }, [onDataChange, queryClient]);
+
+  const handleApostaUpdated = useCallback(async () => {
+    await handleApostaUpdatedWithReturn();
+  }, [handleApostaUpdatedWithReturn]);
 
   // Hook centralizado para sincronização cross-window
   useCrossWindowSync({
