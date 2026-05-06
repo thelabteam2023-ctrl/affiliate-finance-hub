@@ -331,7 +331,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
     }
   };
 
-  const fetchApostasInternal = async (projId: string, bonusIds: string[]) => {
+  const fetchApostasInternalWithReturn = async (projId: string, bonusIds: string[]): Promise<Aposta[]> => {
     try {
       const selectFields = `
           *,
@@ -404,12 +404,18 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
       }
 
       setApostas(mapped);
+      return mapped;
     } catch (error: any) {
       toast.error("Erro ao carregar apostas: " + error.message);
+      return [];
     }
   };
 
-  const fetchApostasMultiplasInternal = async (projId: string, bonusIds: string[]) => {
+  const fetchApostasInternal = async (projId: string, bonusIds: string[]) => {
+    await fetchApostasInternalWithReturn(projId, bonusIds);
+  };
+
+  const fetchApostasMultiplasInternalWithReturn = async (projId: string, bonusIds: string[]): Promise<ApostaMultipla[]> => {
     try {
       const selectFields = `
           *,
@@ -436,15 +442,21 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
           .order("data_aposta", { ascending: false })
       );
       
-      setApostasMultiplas((data || []).map((am: any) => ({
+      const mappedMultiplas = (data || []).map((am: any) => ({
         ...am,
         selecoes: Array.isArray(am.selecoes) ? am.selecoes : []
-      })));
+      }));
+      setApostasMultiplas(mappedMultiplas);
+      return mappedMultiplas;
     } catch (error: any) {
       console.error("Erro ao carregar apostas múltiplas:", error.message);
+      return [];
     }
   };
 
+  const fetchApostasMultiplasInternal = async (projId: string, bonusIds: string[]) => {
+    await fetchApostasMultiplasInternalWithReturn(projId, bonusIds);
+  };
   const fetchSurebetsInternal = async (projId: string, bonusIds: string[]) => {
     try {
       // Buscar operações multi-leg (ARBITRAGEM ou SUREBET) com estratégia BONUS ou contexto BONUS
@@ -612,15 +624,15 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
     }
   };
 
-  const handleApostaUpdated = useCallback(async () => {
+  const handleApostaUpdatedWithReturn = useCallback(async () => {
     try {
       setLoading(true);
       const currentProjetoId = projetoIdRef.current;
       const currentBonusIds = bookmakersInBonusModeRef.current;
       
-      await Promise.all([
-        fetchApostasInternal(currentProjetoId, currentBonusIds),
-        fetchApostasMultiplasInternal(currentProjetoId, currentBonusIds),
+      const [simples, multiplas] = await Promise.all([
+        fetchApostasInternalWithReturn(currentProjetoId, currentBonusIds),
+        fetchApostasMultiplasInternalWithReturn(currentProjetoId, currentBonusIds),
         fetchSurebetsInternal(currentProjetoId, currentBonusIds),
         fetchBookmakersInternal(currentProjetoId, currentBonusIds)
       ]);
@@ -636,12 +648,18 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
       
       // Notificar pai para refresh global (KPIs, Visão Geral, outras abas)
       onDataChange?.();
+      return { simples, multiplas };
     } catch (error) {
       console.error("Erro ao atualizar dados:", error);
+      return { simples: [], multiplas: [] };
     } finally {
       setLoading(false);
     }
   }, [onDataChange, queryClient]);
+
+  const handleApostaUpdated = useCallback(async () => {
+    await handleApostaUpdatedWithReturn();
+  }, [handleApostaUpdatedWithReturn]);
 
   // Hook centralizado para sincronização cross-window
   useCrossWindowSync({
@@ -858,9 +876,17 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
         }
       }
 
-      // 3. Recarregar do banco: retorno/lucro canônicos são calculados no motor financeiro.
+      // 3. Recarregar do banco (Invalida caches e estados locais)
       invalidateSaldos(projetoId);
-      await handleApostaUpdated();
+      const { simples, multiplas } = await handleApostaUpdatedWithReturn();
+
+      // 4. VALIDAÇÃO REAL: Conferir no retorno do fetch se o status mudou
+      const apostaNoBanco = [...(simples || []), ...(multiplas || [])].find(a => a.id === apostaId);
+      if (!apostaNoBanco || apostaNoBanco.status !== 'LIQUIDADA') {
+        console.error("[BonusApostasTab] Falha na liquidação real no banco:", apostaNoBanco);
+        toast.error("Erro: A liquidação falhou no processamento do banco.");
+        return;
+      }
 
       const resultLabel = {
         GREEN: "Green",
