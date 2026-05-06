@@ -393,8 +393,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                 id, aposta_id, bookmaker_id, moeda, selecao, selecao_livre, odd, stake,
                 resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada,
                 stake_brl_referencia, lucro_prejuizo_brl_referencia, cotacao_snapshot, fonte_saldo,
-                bookmakers (nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo(logo_url)),
-                apostas_perna_entradas (*)
+               bookmakers (id, nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo(logo_url)),
+               apostas_perna_entradas (*, bookmakers (id, nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo (logo_url)))
               `)
               .in("aposta_id", idsChunk)
               .order("ordem", { ascending: true }),
