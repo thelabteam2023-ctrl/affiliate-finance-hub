@@ -39,21 +39,23 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
-interface PlanningExtraDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  extra?: PlanningExtra | null;
-  projetoId?: string;
-  planoId?: string;
-}
-
-export function PlanningExtraDialog({
-  open,
-  onOpenChange,
-  extra,
-  projetoId,
-  planoId
-}: PlanningExtraDialogProps) {
+ interface PlanningExtraDialogProps {
+   open: boolean;
+   onOpenChange: (open: boolean) => void;
+   extra?: PlanningExtra | null;
+   projetoId?: string;
+   planoId?: string;
+   initialDate?: string;
+ }
+ 
+ export function PlanningExtraDialog({
+   open,
+   onOpenChange,
+   extra,
+   projetoId,
+   planoId,
+   initialDate
+ }: PlanningExtraDialogProps) {
   const upsertExtra = useUpsertPlanningExtra();
   const deleteExtra = useDeletePlanningExtra();
   const { data: parceiros = [] } = useParceirosLite();
@@ -124,37 +126,37 @@ export function PlanningExtraDialog({
 
   const [profileSearchOpen, setProfileSearchOpen] = useState(false);
 
-  useEffect(() => {
-    if (extra) {
-      setFormData({
-        bookmaker_nome: extra.bookmaker_nome,
-        bookmaker_catalogo_id: extra.bookmaker_catalogo_id || "",
-        parceiro_id: extra.parceiro_id || "",
-        projeto_id: extra.projeto_id || projetoId || "",
-        deposit_amount: extra.deposit_amount.toString(),
-        currency: extra.currency,
-        scheduled_date: extra.scheduled_date || "",
-        status: extra.status,
-        notes: extra.notes || "",
-        perfil_id: extra.perfil_id || "",
-        ip_id: extra.ip_id || ""
-      });
-    } else {
-      setFormData({
-        bookmaker_nome: "",
-        bookmaker_catalogo_id: "",
-        parceiro_id: "",
-        projeto_id: projetoId || "",
-        deposit_amount: "",
-        currency: "BRL",
-        scheduled_date: "",
-        status: "pending",
-        notes: "",
-        perfil_id: "",
-        ip_id: ""
-      });
-    }
-  }, [extra, open, projetoId]);
+   useEffect(() => {
+     if (extra) {
+       setFormData({
+         bookmaker_nome: extra.bookmaker_nome,
+         bookmaker_catalogo_id: extra.bookmaker_catalogo_id || "",
+         parceiro_id: extra.parceiro_id || "",
+         projeto_id: extra.projeto_id || projetoId || "",
+         deposit_amount: extra.deposit_amount.toString(),
+         currency: extra.currency,
+         scheduled_date: extra.scheduled_date || "",
+         status: extra.status,
+         notes: extra.notes || "",
+         perfil_id: extra.perfil_id || "",
+         ip_id: extra.ip_id || ""
+       });
+     } else {
+       setFormData({
+         bookmaker_nome: "",
+         bookmaker_catalogo_id: "",
+         parceiro_id: "",
+         projeto_id: projetoId || "",
+         deposit_amount: "",
+         currency: "BRL",
+         scheduled_date: initialDate || "",
+         status: "pending",
+         notes: "",
+         perfil_id: "",
+         ip_id: ""
+       });
+     }
+   }, [extra, open, projetoId, initialDate]);
 
   // Sugerir IP baseado no perfil e bookmaker selecionados
   useEffect(() => {
@@ -206,9 +208,10 @@ export function PlanningExtraDialog({
       scheduled_date: formData.scheduled_date || null,
       status: formData.status,
       notes: formData.notes || null,
-      perfil_id: formData.perfil_id || null,
-      ip_id: formData.ip_id || null,
-    });
+       perfil_id: formData.perfil_id || null,
+       ip_id: formData.ip_id || null,
+       plano_id: planoId || null,
+     });
 
     onOpenChange(false);
   };

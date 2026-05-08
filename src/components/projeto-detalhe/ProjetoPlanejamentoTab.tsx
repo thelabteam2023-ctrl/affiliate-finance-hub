@@ -175,21 +175,21 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
         return matchesSearch && matchesStatus && matchesProjeto && matchesPlano;
       });
 
-    const projectExtras = extras
-      .filter((e) => {
-        if (!e.scheduled_date) return false;
-        const matchesProjeto = projetoFilter === "all" || e.projeto_id === projetoFilter;
-        const matchesPlano = planoFiltroId === "all" || (e.projeto_id === projetoId); // No contexto do projeto, o extra deve ser do projeto
-        
-        const matchesSearch =
-          e.bookmaker_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (e.notes || "").toLowerCase().includes(searchTerm.toLowerCase());
-        
-        const status = e.status === "done" ? "concluido" : (e.status === "pending" ? "pendente" : (e.status === "atrasado" ? "atrasado" : "planejado"));
-        const matchesStatus = statusFilter === "all" || status === statusFilter;
-        
-        return matchesSearch && matchesStatus && matchesProjeto && matchesPlano;
-      });
+     const projectExtras = extras
+       .filter((e) => {
+         if (!e.scheduled_date) return false;
+         const matchesProjeto = projetoFilter === "all" || e.projeto_id === projetoFilter;
+         const matchesPlano = planoFiltroId === "all" || e.plano_id === planoFiltroId;
+         
+         const matchesSearch =
+           e.bookmaker_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+           (e.notes || "").toLowerCase().includes(searchTerm.toLowerCase());
+         
+         const status = e.status === "done" ? "concluido" : (e.status === "pending" ? "pendente" : (e.status === "atrasado" ? "atrasado" : "planejado"));
+         const matchesStatus = statusFilter === "all" || status === statusFilter;
+         
+         return matchesSearch && matchesStatus && matchesProjeto && matchesPlano;
+       });
 
     const unified = [
       ...projectCampanhas.map(c => ({ ...c, ui_type: 'campanha' })),
@@ -377,7 +377,7 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
       /* Lista com Navegação Flutuante */
       <div className="flex-1 overflow-auto p-4 scroll-smooth planning-list-scroll relative space-y-4">
         {/* Extras Operacionais sem Data */}
-        {extras.filter(e => !e.scheduled_date && (projetoFilter === "all" || e.projeto_id === projetoFilter)).length > 0 && (
+         {extras.filter(e => !e.scheduled_date && (projetoFilter === "all" || e.projeto_id === projetoFilter) && (planoFiltroId === "all" || e.plano_id === planoFiltroId)).length > 0 && (
           <div className="max-w-5xl mx-auto space-y-4">
             <div className="flex items-center gap-2 px-2">
               <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 font-black tracking-widest text-[10px] uppercase">
@@ -386,7 +386,7 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
               <div className="h-px flex-1 bg-border/50" />
             </div>
             <div className="grid gap-3">
-              {extras.filter(e => !e.scheduled_date && (projetoFilter === "all" || e.projeto_id === projetoFilter)).map((extra) => {
+               {extras.filter(e => !e.scheduled_date && (projetoFilter === "all" || e.projeto_id === projetoFilter) && (planoFiltroId === "all" || e.plano_id === planoFiltroId)).map((extra) => {
                 const perfil = perfis.find(p => p.id === extra.perfil_id);
                 const status = extra.status === 'done' ? 'concluido' : (extra.status === 'atrasado' ? 'atrasado' : 'pendente');
                 const displayName = perfil ? perfilDisplayName(perfil) : (extra.parceiro_id ? (parceiros.find(p => p.id === extra.parceiro_id)?.nome || "Parceiro") : "Sem parceiro");

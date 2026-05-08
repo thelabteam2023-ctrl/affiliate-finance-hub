@@ -512,9 +512,10 @@ export function PlanejamentoCalendario() {
   const [detailsDate, setDetailsDate] = useState<string | null>(null);
 
    const { data: campanhas = [] } = usePlanningCampanhas(year, month);
-   const { data: extras = [] } = usePlanningExtras(year, month);
-   const [isExtraDialogOpen, setIsExtraDialogOpen] = useState(false);
-   const [editingExtra, setEditingExtra] = useState<PlanningExtra | null>(null);
+    const { data: extras = [] } = usePlanningExtras(year, month);
+    const [isExtraDialogOpen, setIsExtraDialogOpen] = useState(false);
+    const [editingExtra, setEditingExtra] = useState<PlanningExtra | null>(null);
+    const [extraDialogInitialDate, setExtraDialogInitialDate] = useState<string | undefined>(undefined);
   const { data: ips = [] } = usePlanningIps();
   const { data: wallets = [] } = usePlanningWallets();
   const { data: parceiros = [] } = useParceirosLite();
@@ -1388,19 +1389,20 @@ export function PlanejamentoCalendario() {
             </Button>
           </div>
 
-           <PlanningProgressBar 
-             campanhas={campanhas} 
-             extras={extras}
-             year={year} 
-             month={month} 
-             convertToConsolidation={convertToConsolidation}
-             displayCurrency={displayCurrency}
-             onDisplayCurrencyChange={setDisplayCurrency}
-             onAddExtra={() => {
-               setEditingExtra(null);
-               setIsExtraDialogOpen(true);
-             }}
-           />
+            <PlanningProgressBar 
+              campanhas={campanhas} 
+              extras={extras}
+              year={year} 
+              month={month} 
+              projetoId={planoSelecionado?.projeto_id}
+              convertToConsolidation={convertToConsolidation}
+              displayCurrency={displayCurrency}
+              onDisplayCurrencyChange={setDisplayCurrency}
+              onAddExtra={() => {
+                setEditingExtra(null);
+                setIsExtraDialogOpen(true);
+              }}
+            />
 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -1441,18 +1443,21 @@ export function PlanejamentoCalendario() {
               const dayConflicts = conflictMap.get(key) ?? new Set();
               return (
                 <div key={idx} className="group">
-                  <DayCell
-                    date={cell.date}
-                    isCurrentMonth={cell.isCurrentMonth}
-                    onAdd={() => undefined}
-                    onOpenDetails={() => setDetailsDate(key)}
-                  >
-                     {extras.filter(e => {
-                        if (e.scheduled_date !== key) return false;
-                        // Se estamos no modo plano, só mostramos extras que pertençam ao projeto desse plano
-                        if (modoPlano && planoSelecionado?.projeto_id && e.projeto_id !== planoSelecionado.projeto_id) return false;
-                        return true;
-                      }).map(extra => (
+                   <DayCell
+                     date={cell.date}
+                     isCurrentMonth={cell.isCurrentMonth}
+                     onAdd={() => {
+                       setEditingExtra(null);
+                       setExtraDialogInitialDate(key);
+                       setIsExtraDialogOpen(true);
+                     }}
+                     onOpenDetails={() => setDetailsDate(key)}
+                   >
+                      {extras.filter(e => {
+                         if (e.scheduled_date !== key) return false;
+                         if (modoPlano && e.plano_id !== planoFiltroId) return false;
+                         return true;
+                       }).map(extra => (
                        <div 
                          key={extra.id}
                          onClick={(e) => {
@@ -1573,11 +1578,11 @@ export function PlanejamentoCalendario() {
                <div className="text-center">Status</div>
             </div>
              <div className="min-w-[920px] divide-y">
-               {extras.filter(e => {
-                  if (e.scheduled_date !== detailsDate) return false;
-                  if (modoPlano && planoSelecionado?.projeto_id && e.projeto_id !== planoSelecionado.projeto_id) return false;
-                  return true;
-                }).map(extra => (
+                {extras.filter(e => {
+                   if (e.scheduled_date !== detailsDate) return false;
+                   if (modoPlano && e.plano_id !== planoFiltroId) return false;
+                   return true;
+                 }).map(extra => (
                  <div key={extra.id} className="grid grid-cols-[1.15fr_0.95fr_1.45fr_1.35fr_0.45fr_0.75fr_40px] gap-2 px-3 py-2 text-xs items-center hover:bg-blue-500/5 bg-blue-500/10 cursor-pointer" onClick={() => { setEditingExtra(extra); setIsExtraDialogOpen(true); }}>
                    <div className="font-medium truncate flex items-center gap-2">
                      <div className="h-5 w-5 shrink-0 rounded bg-blue-500 flex items-center justify-center text-[8px] font-bold text-white">EX</div>
@@ -1706,12 +1711,17 @@ export function PlanejamentoCalendario() {
       </AlertDialog>
 
  
-       <PlanningExtraDialog
-         open={isExtraDialogOpen}
-         onOpenChange={setIsExtraDialogOpen}
-        extra={editingExtra}
-        planoId={planoFiltroId}
-      />
+        <PlanningExtraDialog
+          open={isExtraDialogOpen}
+          onOpenChange={(open) => {
+            setIsExtraDialogOpen(open);
+            if (!open) setExtraDialogInitialDate(undefined);
+          }}
+          extra={editingExtra}
+          planoId={planoFiltroId}
+          projetoId={planoSelecionado?.projeto_id}
+          initialDate={extraDialogInitialDate}
+        />
  
        <SimulacaoDistribuicaoDialog
         open={simulacaoOpen}
