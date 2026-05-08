@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+ import React, { useState, useEffect, useMemo } from "react";
+ import { Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -22,7 +23,8 @@ import {
   useParceirosLite,
   useBookmakersCatalogo,
   useProjetos,
-  PlanningExtra
+   PlanningExtra,
+   useDeletePlanningExtra
 } from "@/hooks/usePlanningData";
 import { FIAT_CURRENCIES } from "@/types/currency";
 
@@ -39,7 +41,8 @@ export function PlanningExtraDialog({
   extra,
   projetoId
 }: PlanningExtraDialogProps) {
-  const upsertExtra = useUpsertPlanningExtra();
+   const upsertExtra = useUpsertPlanningExtra();
+   const deleteExtra = useDeletePlanningExtra();
   const { data: parceiros = [] } = useParceirosLite();
   const { data: bookmakers = [] } = useBookmakersCatalogo();
   const { data: projetos = [] } = useProjetos();
@@ -241,9 +244,28 @@ export function PlanningExtraDialog({
             </div>
           </div>
 
-          <DialogFooter>
-            <Button type="submit">Salvar</Button>
-          </DialogFooter>
+           <DialogFooter className="gap-2">
+             {extra && (
+               <Button 
+                 type="button" 
+                 variant="ghost" 
+                 className="text-destructive mr-auto"
+                 onClick={async () => {
+                   if (confirm("Deseja realmente excluir esta casa extra?")) {
+                     await deleteExtra.mutateAsync(extra.id);
+                     onOpenChange(false);
+                   }
+                 }}
+               >
+                 <Trash2 className="h-4 w-4 mr-2" />
+                 Excluir
+               </Button>
+             )}
+             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+             <Button type="submit" disabled={upsertExtra.isPending}>
+               {upsertExtra.isPending ? "Salvando..." : "Salvar"}
+             </Button>
+           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
