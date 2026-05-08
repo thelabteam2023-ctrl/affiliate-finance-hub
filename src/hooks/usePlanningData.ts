@@ -18,8 +18,9 @@ export interface PlanningIp {
   provider: string | null;
   notes: string | null;
   is_active: boolean;
-  created_at: string;
-  updated_at: string;
+   created_at: string;
+   updated_at: string;
+   created_by?: string;
 }
 
 export interface PlanningWallet {
@@ -31,8 +32,9 @@ export interface PlanningWallet {
   address: string | null;
   notes: string | null;
   is_active: boolean;
-  created_at: string;
-  updated_at: string;
+   created_at: string;
+   updated_at: string;
+   created_by?: string;
 }
 
  export interface PlanningCampanha {
@@ -340,7 +342,7 @@ export function usePlanningCampanhas(year: number, month: number) {
        const row = {
          ...rest,
          workspace_id: workspaceId,
-         created_by: payload.created_by || user.id,
+         created_by: user.id,
        };
        if (id) {
          const { error } = await supabase.from("planning_extras").update(row).eq("id", id);
@@ -419,7 +421,7 @@ export function useAddPlanningPerfis() {
       const rows = parceiroIds.map(pid => ({
         workspace_id: workspaceId,
         parceiro_id: pid,
-        created_by: payload.created_by || user.id,
+           created_by: user.id,
         is_active: true,
       }));
       const { error } = await supabase
