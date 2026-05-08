@@ -69,7 +69,7 @@ type DisplayCurrency = "BRL" | "USD";
 const MES_NOMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const PLANO_FILTRO_STORAGE_KEY = "planejamento:planoFiltroId";
-const MAX_VISIBLE_CAMPANHAS_PER_DAY = 5;
+const MAX_VISIBLE_CAMPANHAS_PER_DAY = 4;
 
 function formatDateKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -1433,8 +1433,10 @@ export function PlanejamentoCalendario() {
            <div className="grid grid-cols-7 gap-1 flex-1 overflow-y-auto pr-1">
             {grid.map((cell, idx) => {
               const key = formatDateKey(cell.date);
-              const dayCamps = campanhasByDay.get(key) ?? [];
-              const visibleDayCamps = dayCamps.slice(0, MAX_VISIBLE_CAMPANHAS_PER_DAY);
+               const dayCamps = campanhasByDay.get(key) ?? [];
+               const dayExtras = extras.filter(e => e.scheduled_date === key);
+               const visibleDayCamps = dayCamps.slice(0, Math.max(1, MAX_VISIBLE_CAMPANHAS_PER_DAY - dayExtras.length));
+               const hiddenDayCampsCount = dayCamps.length - visibleDayCamps.length;
               const hiddenDayCampsCount = dayCamps.length - visibleDayCamps.length;
               const dayTotal = totalDia.get(key) ?? 0;
               const dayConflicts = conflictMap.get(key) ?? new Set();
