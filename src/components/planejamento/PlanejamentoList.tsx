@@ -211,7 +211,7 @@ import { toast } from "sonner";
 
   const groupedByDay = useMemo(() => {
     const groups: Record<string, any[]> = {};
-    filteredItems.forEach(c => {
+    filteredItems.forEach((c: any) => {
       if (!groups[c.scheduled_date]) groups[c.scheduled_date] = [];
       groups[c.scheduled_date].push(c);
     });
@@ -468,7 +468,7 @@ import { toast } from "sonner";
 
            {/* Lista de Campanhas do Dia (incluindo Extras) */}
                     <div className="flex-1 grid gap-3 pb-4">
-             {camps.map((camp) => {
+              {camps.map((camp: any) => {
                         const isExtra = camp.ui_type === 'extra';
                         
                         let perfil, linkedIp, isPending, celula, bookmakerCatalogoId, status, cpfIndex, displayName, displayValue;
@@ -511,7 +511,7 @@ import { toast } from "sonner";
                             )}
                             onClick={() => {
                               if (isExtra) {
-                                setEditingExtra(camp);
+                                 setEditingExtra(camp as PlanningExtra);
                                 setIsExtraDialogOpen(true);
                               }
                             }}
@@ -608,7 +608,7 @@ import { toast } from "sonner";
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       if (isExtra) {
-                                        setEditingExtra(camp);
+                                         setEditingExtra(camp as PlanningExtra);
                                         setIsExtraDialogOpen(true);
                                       } else {
                                         handleToggleStatus(camp);
@@ -640,7 +640,7 @@ import { toast } from "sonner";
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     if (isExtra) {
-                                      setEditingExtra(camp);
+                                       setEditingExtra(camp as PlanningExtra);
                                       setIsExtraDialogOpen(true);
                                     } else {
                                       setEditingCampanha(camp);
