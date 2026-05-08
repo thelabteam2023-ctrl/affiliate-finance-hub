@@ -336,8 +336,72 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
         </div>
       </div>
 
-      {/* Lista com Navegação Flutuante */}
-      <div className="flex-1 overflow-auto p-4 scroll-smooth planning-list-scroll relative space-y-4">
+      /* Lista com Navegação Flutuante */
+      <div className="flex-1 overflow-auto p-4 scroll-smooth planning-list-scroll relative space-y-4">\n
+        {/* Extras Operacionais sem Data */}
+        {extras.filter(e => !e.scheduled_date && (projetoFilter === "all" || e.projeto_id === projetoFilter)).length > 0 && (
+          <div className="max-w-5xl mx-auto space-y-4">
+            <div className="flex items-center gap-2 px-2">
+              <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 font-black tracking-widest text-[10px] uppercase">
+                Extras Operacionais (Sem Data)
+              </Badge>
+              <div className="h-px flex-1 bg-border/50" />
+            </div>
+            <div className="grid gap-3">
+              {extras.filter(e => !e.scheduled_date && (projetoFilter === "all" || e.projeto_id === projetoFilter)).map((extra) => {
+                const perfil = perfis.find(p => p.id === extra.perfil_id);
+                const status = extra.status === 'done' ? 'concluido' : (extra.status === 'atrasado' ? 'atrasado' : 'pendente');
+                const displayName = perfil ? perfilDisplayName(perfil) : (extra.parceiro_id ? (parceiros.find(p => p.id === extra.parceiro_id)?.nome || "Parceiro") : "Sem parceiro");
+                
+                return (
+                  <Card
+                    key={extra.id}
+                    onClick={() => {
+                      setEditingExtra(extra);
+                      setIsExtraDialogOpen(true);
+                    }}
+                    className={cn(
+                      "group relative overflow-hidden transition-all hover:shadow-md border-l-4 border-dashed border-opacity-60 cursor-pointer",
+                      status === "concluido" && "border-l-[#00FF66] bg-[#00FF66]/5",
+                      status === "atrasado" && "border-l-destructive bg-destructive/5",
+                      status === "pendente" && "border-l-[#FFD700] bg-[#FFD700]/5"
+                    )}
+                  >
+                    <div className="p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <BookmakerLogo
+                          logoUrl={logoMap[extra.bookmaker_catalogo_id || ""] || null}
+                          alt={extra.bookmaker_nome}
+                          size="h-10 w-10"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-bold text-base truncate">{extra.bookmaker_nome}</h3>
+                            <Badge variant="secondary" className="text-[10px] h-4 bg-primary/10 text-primary border-primary/20 font-bold">EXTRA</Badge>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                            <User className="h-3.5 w-3.5" />
+                            <span className="truncate">{displayName}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
+                        <div className="text-right">
+                          <div className="font-bold text-base text-primary">
+                            {formatMoney(extra.deposit_amount, extra.currency)}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">
+                            Sem Data Agendada
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
         <div className="max-w-5xl mx-auto">
            <PlanningProgressBar 
              campanhas={filteredData} 
