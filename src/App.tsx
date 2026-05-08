@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect, useRef } from "react";
 import type { ComponentType } from "react";
 import { ThemeProvider } from "next-themes";
 import { TopBarProvider, useTopBar } from "@/contexts/TopBarContext";
@@ -10,7 +10,7 @@ import { ApostaPopupContainer } from "@/components/popups/ApostaPopupContainer";
 import { ExchangeRatesProvider } from "@/contexts/ExchangeRatesContext";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { PermissionsProvider } from "@/contexts/PermissionsContext";
@@ -113,6 +113,12 @@ function PageLoader() {
 // Layout component for authenticated routes with inactivity monitoring
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const { minutesUntilTimeout, showingWarning, resetActivity } = useInactivityTimeout();
+  const location = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0, left: 0 });
+  }, [location.pathname]);
   
   return (
     <TopBarProvider>
@@ -133,7 +139,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
           <TopBarHeader />
 
           {/* Main content: scroll local do viewport autenticado, sem depender do body */}
-          <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+          <main ref={mainRef} className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
             <Suspense fallback={<PageLoader />}>
               {children}
             </Suspense>
