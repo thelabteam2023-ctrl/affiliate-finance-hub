@@ -51,8 +51,12 @@ import {
     planningPerfilCpfIndex,
     useProjetos,
     PlanningPerfil,
-    useUpsertCampanha
+    useUpsertCampanha,
+    usePlanningExtras,
+    useDeletePlanningExtra,
+    PlanningExtra
  } from "@/hooks/usePlanningData";
+ import { PlanningExtraDialog } from "./PlanningExtraDialog";
  import { useCelulasAgendadasPorCampanhas } from "@/hooks/usePlanoCelulasDisponiveis";
  import { format, parseISO, isPast, isToday, startOfDay } from "date-fns";
  import { ptBR } from "date-fns/locale";
@@ -76,6 +80,10 @@ import { toast } from "sonner";
    // Para fins de simplificação, estamos buscando o mês atual. 
    // Em um cenário real, poderíamos ter um seletor de mês/ano mais robusto.
     const { data: campanhas = [], isLoading: campanhasLoading } = usePlanningCampanhas(selectedYear, selectedMonth);
+    const { data: extras = [], isLoading: extrasLoading } = usePlanningExtras(selectedYear, selectedMonth);
+    const [isExtraDialogOpen, setIsExtraDialogOpen] = useState(false);
+    const [editingExtra, setEditingExtra] = useState<PlanningExtra | null>(null);
+    const [displayCurrency, setDisplayCurrency] = useState<"BRL" | "USD">("BRL");
     const campanhaIds = useMemo(() => campanhas.map(c => c.id), [campanhas]);
     const { data: celulasAgendadas = [], isLoading: celulasLoading } = useCelulasAgendadasPorCampanhas(campanhaIds);
    const { data: perfis = [] } = usePlanningPerfis();
@@ -200,7 +208,7 @@ import { toast } from "sonner";
      return new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(v);
    };
  
-    if (campanhasLoading || celulasLoading) {
+    if (campanhasLoading || celulasLoading || extrasLoading) {
      return <div className="p-8 text-center text-muted-foreground">Carregando histórico...</div>;
    }
  
@@ -315,10 +323,22 @@ import { toast } from "sonner";
          <div className="max-w-5xl mx-auto">
            <PlanningProgressBar 
              campanhas={filteredCampanhas} 
+             extras={extras}
              year={selectedYear} 
              month={selectedMonth} 
              convertToConsolidation={convertToConsolidation}
+             displayCurrency={displayCurrency}
+             onDisplayCurrencyChange={setDisplayCurrency}
+             onAddExtra={() => {
+               setEditingExtra(null);
+               setIsExtraDialogOpen(true);
+             }}
            />
+          <PlanningExtraDialog 
+            open={isExtraDialogOpen}
+            onOpenChange={setIsExtraDialogOpen}
+            extra={editingExtra}
+          />
          </div>
 
          {filteredCampanhas.length === 0 ? (
