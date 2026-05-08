@@ -1699,8 +1699,9 @@ export function PlanejamentoCalendario() {
        <PlanningExtraDialog
          open={isExtraDialogOpen}
          onOpenChange={setIsExtraDialogOpen}
-         extra={editingExtra}
-       />
+        extra={editingExtra}
+        planoId={planoFiltroId}
+      />
  
        <SimulacaoDistribuicaoDialog
         open={simulacaoOpen}
