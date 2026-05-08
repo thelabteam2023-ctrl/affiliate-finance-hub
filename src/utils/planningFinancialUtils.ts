@@ -1,8 +1,12 @@
 import { getDaysInMonth } from "date-fns";
 
-export interface PlanningFinancialMetrics {
+ export interface PlanningFinancialMetrics {
   totalPlanned: number;
+  totalPlannedOriginal: number;
+  totalExtras: number;
   completed: number;
+  completedOriginal: number;
+  completedExtras: number;
   expectedToday: number;
   realPercentage: number;
   expectedPercentage: number;
@@ -14,6 +18,7 @@ export interface PlanningFinancialMetrics {
 
 export function calculatePlanningMetrics(
   campanhas: any[],
+  extras: any[],
   year: number,
   month: number,
   convertToConsolidation: (valor: number, moedaOrigem: string) => number
@@ -33,30 +38,56 @@ export function calculatePlanningMetrics(
     }
   }
 
-  let totalPlanned = 0;
-  let completed = 0;
+  let totalPlannedOriginal = 0;
+  let completedOriginal = 0;
+  let totalExtras = 0;
+  let completedExtras = 0;
+  let expectedTodayFromPlanned = 0;
+  let expectedTodayFromExtras = 0;
+
+  const progressTemporal = daysInMonth > 0 ? currentDay / daysInMonth : 0;
 
   campanhas.forEach((camp) => {
     const valorConvertido = convertToConsolidation(camp.deposit_amount || 0, camp.currency || "BRL");
-    totalPlanned += valorConvertido;
+    totalPlannedOriginal += valorConvertido;
     
     if (camp.is_account_created || camp.status === "done") {
-      completed += valorConvertido;
+      completedOriginal += valorConvertido;
+    }
+    
+    expectedTodayFromPlanned += valorConvertido * progressTemporal;
+  });
+
+  extras.forEach((ext) => {
+    const valorConvertido = convertToConsolidation(ext.deposit_amount || 0, ext.currency || "BRL");
+    totalExtras += valorConvertido;
+    
+    if (ext.status === "done") {
+      completedExtras += valorConvertido;
+    }
+
+    if (ext.scheduled_date) {
+      expectedTodayFromExtras += valorConvertido * progressTemporal;
     }
   });
 
-  const progressTemporal = totalPlanned > 0 ? currentDay / daysInMonth : 0;
-  const expectedToday = totalPlanned * progressTemporal;
+  const totalPlanned = totalPlannedOriginal + totalExtras;
+  const completed = completedOriginal + completedExtras;
+  const expectedToday = expectedTodayFromPlanned + expectedTodayFromExtras;
   
   const realPercentage = totalPlanned > 0 ? (completed / totalPlanned) * 100 : 0;
   const expectedPercentage = totalPlanned > 0 ? (expectedToday / totalPlanned) * 100 : 0;
   
   const gap = expectedToday - completed;
-  const isAtrasado = gap > 0.01; // Pequena margem para evitar erros de ponto flutuante
+  const isAtrasado = gap > 0.01;
 
   return {
     totalPlanned,
+    totalPlannedOriginal,
+    totalExtras,
     completed,
+    completedOriginal,
+    completedExtras,
     expectedToday,
     realPercentage,
     expectedPercentage,
