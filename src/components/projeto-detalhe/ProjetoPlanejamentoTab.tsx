@@ -377,7 +377,7 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
       /* Lista com Navegação Flutuante */
       <div className="flex-1 overflow-auto p-4 scroll-smooth planning-list-scroll relative space-y-4">
         {/* Extras Operacionais sem Data */}
-        {extras.filter(e => !e.scheduled_date && (projetoFilter === "all" || e.projeto_id === projetoFilter)).length > 0 && (
+         {extras.filter(e => !e.scheduled_date && (projetoFilter === "all" || e.projeto_id === projetoFilter) && (planoFiltroId === "all" || e.plano_id === planoFiltroId)).length > 0 && (
           <div className="max-w-5xl mx-auto space-y-4">
             <div className="flex items-center gap-2 px-2">
               <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 font-black tracking-widest text-[10px] uppercase">
@@ -386,7 +386,7 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
               <div className="h-px flex-1 bg-border/50" />
             </div>
             <div className="grid gap-3">
-              {extras.filter(e => !e.scheduled_date && (projetoFilter === "all" || e.projeto_id === projetoFilter)).map((extra) => {
+               {extras.filter(e => !e.scheduled_date && (projetoFilter === "all" || e.projeto_id === projetoFilter) && (planoFiltroId === "all" || e.plano_id === planoFiltroId)).map((extra) => {
                 const perfil = perfis.find(p => p.id === extra.perfil_id);
                 const status = extra.status === 'done' ? 'concluido' : (extra.status === 'atrasado' ? 'atrasado' : 'pendente');
                 const displayName = perfil ? perfilDisplayName(perfil) : (extra.parceiro_id ? (parceiros.find(p => p.id === extra.parceiro_id)?.nome || "Parceiro") : "Sem parceiro");
