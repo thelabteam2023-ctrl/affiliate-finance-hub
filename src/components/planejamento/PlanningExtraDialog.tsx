@@ -208,9 +208,10 @@ import { Badge } from "@/components/ui/badge";
       scheduled_date: formData.scheduled_date || null,
       status: formData.status,
       notes: formData.notes || null,
-      perfil_id: formData.perfil_id || null,
-      ip_id: formData.ip_id || null,
-    });
+       perfil_id: formData.perfil_id || null,
+       ip_id: formData.ip_id || null,
+       plano_id: planoId || null,
+     });
 
     onOpenChange(false);
   };
