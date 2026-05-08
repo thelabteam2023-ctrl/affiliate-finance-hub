@@ -1,10 +1,11 @@
-import React, { useMemo } from "react";
+ import React, { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { TrendingDown, TrendingUp, AlertCircle, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { calculatePlanningMetrics, getProgressBarColor } from "@/utils/planningFinancialUtils";
 import { useFormatProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+ import { Button } from "@/components/ui/button";
 
  import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
  import { useMultiCurrencyConversion } from "@/hooks/useMultiCurrencyConversion";
