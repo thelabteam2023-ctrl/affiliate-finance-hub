@@ -531,32 +531,29 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
               {destinoMode === "other" && (
                 <div className="space-y-2">
                   <Label className="text-xs">Wallet de destino</Label>
-                  <Select value={walletDestinoId} onValueChange={setWalletDestinoId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a wallet de destino" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {destinoWallets.map(w => (
-                        <SelectItem key={w.id} value={w.id}>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{formatExchangeName(w)}</span>
-                            <span className="text-muted-foreground text-xs font-mono">{truncAddr(w.endereco)}</span>
-                            {w.network && (
-                              <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 uppercase">
-                                {w.network}
-                              </Badge>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))}
-                      <SelectItem value="__new__">
-                        <div className="flex items-center gap-2 text-primary">
-                          <Plus className="h-3 w-3" />
-                          <span>Criar nova wallet (outra rede)</span>
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                   <WalletCryptoSelect
+                     wallets={destinoWallets.map(w => ({
+                       ...w,
+                       endereco: w.endereco || "",
+                       moeda: w.moedas
+                     }))}
+                     value={walletDestinoId === "__new__" ? "" : walletDestinoId}
+                     onValueChange={setWalletDestinoId}
+                     placeholder="Selecione a wallet de destino"
+                   />
+                   <Select value={walletDestinoId === "__new__" ? "__new__" : ""} onValueChange={(v) => v === "__new__" && setWalletDestinoId("__new__")}>
+                     <SelectTrigger className="mt-2 h-8 text-xs border-dashed">
+                       <SelectValue placeholder="Ou criar nova..." />
+                     </SelectTrigger>
+                     <SelectContent>
+                       <SelectItem value="__new__">
+                         <div className="flex items-center gap-2 text-primary">
+                           <Plus className="h-3 w-3" />
+                           <span>Criar nova wallet (outra rede)</span>
+                         </div>
+                       </SelectItem>
+                     </SelectContent>
+                   </Select>
 
                   {/* New wallet: select network */}
                   {needsNewWallet && (
