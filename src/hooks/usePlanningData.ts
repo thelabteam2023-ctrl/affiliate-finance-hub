@@ -35,7 +35,7 @@ export interface PlanningWallet {
   updated_at: string;
 }
 
-export interface PlanningCampanha {
+ export interface PlanningCampanha {
   id: string;
   workspace_id: string;
   scheduled_date: string; // YYYY-MM-DD
@@ -54,6 +54,23 @@ export interface PlanningCampanha {
   created_at: string;
   updated_at: string;
 }
+
+ export interface PlanningExtra {
+   id: string;
+   workspace_id: string;
+   projeto_id: string | null;
+   parceiro_id: string | null;
+   bookmaker_catalogo_id: string | null;
+   bookmaker_nome: string;
+   deposit_amount: number;
+   currency: string;
+   status: string;
+   notes: string | null;
+   scheduled_date: string | null;
+   created_at: string;
+   updated_at: string;
+   created_by: string | null;
+ }
 
 export interface ProjetoLite {
   id: string;
@@ -258,6 +275,71 @@ export function usePlanningCampanhas(year: number, month: number) {
     },
   });
 }
+
+ export function usePlanningExtras(year: number, month: number) {
+   const { workspaceId } = useAuth();
+   const start = `${year}-${String(month).padStart(2, "0")}-01`;
+   const endDate = new Date(year, month, 0).getDate();
+   const end = `${year}-${String(month).padStart(2, "0")}-${String(endDate).padStart(2, "0")}`;
+ 
+   return useQuery({
+     queryKey: ["planning-extras", workspaceId, year, month],
+     enabled: !!workspaceId,
+     queryFn: async () => {
+       // Fetch extras that are either within the month or have no date
+       const { data, error } = await supabase
+         .from("planning_extras")
+         .select("*")
+         .eq("workspace_id", workspaceId!)
+         .or(`scheduled_date.is.null,and(scheduled_date.gte.${start},scheduled_date.lte.${end})`)
+         .order("created_at");
+       if (error) throw error;
+       return (data ?? []) as unknown as PlanningExtra[];
+     },
+   });
+ }
+ 
+ export function useUpsertPlanningExtra() {
+   const qc = useQueryClient();
+   const { workspaceId, user } = useAuth();
+   return useMutation({
+     mutationFn: async (payload: Partial<PlanningExtra> & { bookmaker_nome: string }) => {
+       if (!workspaceId || !user) throw new Error("Sem workspace");
+       const { id, ...rest } = payload;
+       const row = {
+         ...rest,
+         workspace_id: workspaceId,
+         created_by: user.id,
+       };
+       if (id) {
+         const { error } = await supabase.from("planning_extras").update(row).eq("id", id);
+         if (error) throw error;
+       } else {
+         const { error } = await supabase.from("planning_extras").insert([row]);
+         if (error) throw error;
+       }
+     },
+     onSuccess: () => {
+       qc.invalidateQueries({ queryKey: ["planning-extras"] });
+       toast.success("Casa extra salva");
+     },
+     onError: (e: any) => toast.error("Erro ao salvar casa extra", { description: e.message }),
+   });
+ }
+ 
+ export function useDeletePlanningExtra() {
+   const qc = useQueryClient();
+   return useMutation({
+     mutationFn: async (id: string) => {
+       const { error } = await supabase.from("planning_extras").delete().eq("id", id);
+       if (error) throw error;
+     },
+     onSuccess: () => {
+       qc.invalidateQueries({ queryKey: ["planning-extras"] });
+       toast.success("Casa extra removida");
+     },
+   });
+ }
 
 export function useParceirosLite() {
   const { workspaceId } = useAuth();

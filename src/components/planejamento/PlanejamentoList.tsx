@@ -51,8 +51,12 @@ import {
     planningPerfilCpfIndex,
     useProjetos,
     PlanningPerfil,
-    useUpsertCampanha
+    useUpsertCampanha,
+    usePlanningExtras,
+    useDeletePlanningExtra,
+    PlanningExtra
  } from "@/hooks/usePlanningData";
+ import { PlanningExtraDialog } from "./PlanningExtraDialog";
  import { useCelulasAgendadasPorCampanhas } from "@/hooks/usePlanoCelulasDisponiveis";
  import { format, parseISO, isPast, isToday, startOfDay } from "date-fns";
  import { ptBR } from "date-fns/locale";
@@ -62,7 +66,8 @@ import {
 import { toast } from "sonner";
   import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
   import { PlanningProgressBar } from "./progress/PlanningProgressBar";
-  import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
+   import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
+   import { useMultiCurrencyConversion } from "@/hooks/useMultiCurrencyConversion";
   import { TooltipProvider } from "@/components/ui/tooltip";
  
  export function PlanejamentoList() {
@@ -76,6 +81,10 @@ import { toast } from "sonner";
    // Para fins de simplificação, estamos buscando o mês atual. 
    // Em um cenário real, poderíamos ter um seletor de mês/ano mais robusto.
     const { data: campanhas = [], isLoading: campanhasLoading } = usePlanningCampanhas(selectedYear, selectedMonth);
+    const { data: extras = [], isLoading: extrasLoading } = usePlanningExtras(selectedYear, selectedMonth);
+    const [isExtraDialogOpen, setIsExtraDialogOpen] = useState(false);
+    const [editingExtra, setEditingExtra] = useState<PlanningExtra | null>(null);
+    const [displayCurrency, setDisplayCurrency] = useState<"BRL" | "USD">("BRL");
     const campanhaIds = useMemo(() => campanhas.map(c => c.id), [campanhas]);
     const { data: celulasAgendadas = [], isLoading: celulasLoading } = useCelulasAgendadasPorCampanhas(campanhaIds);
    const { data: perfis = [] } = usePlanningPerfis();
@@ -192,18 +201,26 @@ import { toast } from "sonner";
     return groups;
   }, [filteredCampanhas]);
 
-  const sortedDates = useMemo(() => {
-    return Object.keys(groupedByDay).sort();
-  }, [groupedByDay]);
+   const sortedDates = useMemo(() => {
+     const allDates = new Set([...Object.keys(groupedByDay), ...extras.filter(e => e.scheduled_date).map(e => e.scheduled_date!)]);
+     return Array.from(allDates).sort();
+   }, [groupedByDay, extras]);
  
-   const formatMoney = (v: number, currency: string) => {
-     return new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(v);
-   };
+    const { convert, formatCurrency } = useMultiCurrencyConversion();
+
+    const formatMoney = (v: number, currency: string) => {
+      if (displayCurrency === "BRL") {
+        return new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(v);
+      }
+      const valUSD = convert(v, currency, "USD");
+      return formatCurrency(valUSD, "USD");
+    };
  
-    if (campanhasLoading || celulasLoading) {
-     return <div className="p-8 text-center text-muted-foreground">Carregando histórico...</div>;
-   }
- 
+    if (campanhasLoading || celulasLoading || extrasLoading) {
+      return <div className="p-8 text-center text-muted-foreground">Carregando histórico...</div>;
+    }
+
+
     return (
       <TooltipProvider>
       <div className="flex flex-col h-full bg-background overflow-hidden">
@@ -304,9 +321,10 @@ import { toast } from "sonner";
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
-            <Badge variant="outline" className="font-mono">
-              {filteredCampanhas.length} registros
-            </Badge>
+             <Badge variant="outline" className="font-mono gap-1.5 px-2.5 py-1 bg-muted/30">
+               <span className="text-primary font-black">{filteredCampanhas.length + extras.length}</span>
+               <span className="opacity-60 text-[10px] uppercase tracking-tighter font-bold">Registros</span>
+             </Badge>
           </div>
        </div>
  
@@ -315,22 +333,96 @@ import { toast } from "sonner";
          <div className="max-w-5xl mx-auto">
            <PlanningProgressBar 
              campanhas={filteredCampanhas} 
+             extras={extras}
              year={selectedYear} 
              month={selectedMonth} 
              convertToConsolidation={convertToConsolidation}
+             displayCurrency={displayCurrency}
+             onDisplayCurrencyChange={setDisplayCurrency}
+             onAddExtra={() => {
+               setEditingExtra(null);
+               setIsExtraDialogOpen(true);
+             }}
            />
+          <PlanningExtraDialog 
+            open={isExtraDialogOpen}
+            onOpenChange={setIsExtraDialogOpen}
+            extra={editingExtra}
+            projetoId={projetoFilter !== "all" ? projetoFilter : undefined}
+          />
          </div>
 
-         {filteredCampanhas.length === 0 ? (
+          {filteredCampanhas.length === 0 && extras.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
             <Filter className="h-12 w-12 opacity-20" />
             <p>Nenhum registro encontrado para os filtros selecionados.</p>
           </div>
         ) : (
           <div className="space-y-8 max-w-5xl mx-auto">
+            {extras.filter(e => !e.scheduled_date).length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 px-2">
+                  <Badge variant="outline" className="bg-blue-500/5 text-blue-500 border-blue-500/20 font-black tracking-widest text-[10px] uppercase">
+                    Extras Operacionais (Sem Data)
+                  </Badge>
+                  <div className="h-px flex-1 bg-border/50" />
+                </div>
+                <div className="grid gap-3">
+                  {extras.filter(e => !e.scheduled_date).map((extra) => (
+                    <Card
+                      key={extra.id}
+                      onClick={() => {
+                        setEditingExtra(extra);
+                        setIsExtraDialogOpen(true);
+                      }}
+                      className="group relative overflow-hidden transition-all hover:shadow-md border-l-4 border-l-blue-500 bg-blue-500/5 cursor-pointer"
+                    >
+                      <div className="p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500 font-bold shrink-0">
+                            EX
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-bold text-sm truncate">{extra.bookmaker_nome}</h3>
+                              <Badge variant="secondary" className="text-[10px] h-4 bg-blue-500/10 text-blue-500 border-blue-500/20 font-bold">EXTRA</Badge>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <User className="h-3 w-3" />
+                              <span className="truncate">
+                                {perfis.find(p => p.parceiro_id === extra.parceiro_id)?.parceiro?.nome || "Sem parceiro"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
+                          <div className="text-right">
+                            <div className="font-bold text-sm text-blue-500">
+                              {formatMoney(extra.deposit_amount, extra.currency)}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">
+                              Extra A-Temporal
+                            </div>
+                          </div>
+                          <div className={cn(
+                            "h-8 px-3 rounded-full flex items-center gap-1.5 text-[10px] font-bold border",
+                            extra.status === "done" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" : "bg-warning/10 border-warning/20 text-warning"
+                          )}>
+                            {extra.status === "done" ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
+                            {extra.status === "done" ? "CONCLUÍDO" : "PENDENTE"}
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {sortedDates.map((dateStr) => {
-              const camps = groupedByDay[dateStr];
-              const dateObj = parseISO(dateStr);
+               const camps = groupedByDay[dateStr] || [];
+               const dayExtras = extras.filter(e => e.scheduled_date === dateStr);
+               const dateObj = parseISO(dateStr);
               const isDateToday = isToday(dateObj);
 
               return (
@@ -353,12 +445,60 @@ import { toast } from "sonner";
                           isDateToday && "text-primary scale-110 transition-transform"
                         )}>
                           {format(dateObj, "dd")}
-                        </span>
-                      </div>
-                    </div>
+               </span>
+             </div>
+           </div>
 
-                    {/* Lista de Campanhas do Dia */}
+           {/* Lista de Campanhas do Dia (incluindo Extras) */}
                     <div className="flex-1 grid gap-3 pb-4">
+             {dayExtras.map((extra) => (
+               <Card
+                 key={extra.id}
+                 onClick={() => {
+                   setEditingExtra(extra);
+                   setIsExtraDialogOpen(true);
+                 }}
+                 className="group relative overflow-hidden transition-all hover:shadow-md border-l-4 border-l-blue-500 bg-blue-500/5 cursor-pointer"
+               >
+                 <div className="p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                   <div className="flex items-center gap-3 flex-1 min-w-0">
+                     <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500 font-bold shrink-0">
+                       EX
+                     </div>
+                     <div className="min-w-0">
+                       <div className="flex items-center gap-2">
+                         <h3 className="font-bold text-sm truncate">{extra.bookmaker_nome}</h3>
+                         <Badge variant="secondary" className="text-[10px] h-4 bg-blue-500/10 text-blue-500 border-blue-500/20 font-bold">EXTRA</Badge>
+                       </div>
+                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                         <User className="h-3 w-3" />
+                         <span className="truncate">
+                           {perfis.find(p => p.parceiro_id === extra.parceiro_id)?.parceiro?.nome || "Sem parceiro"}
+                         </span>
+                       </div>
+                     </div>
+                   </div>
+                   <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
+                     <div className="text-right">
+                        <div className="font-bold text-sm text-blue-500">
+                          {formatMoney(extra.deposit_amount, extra.currency)}
+                        </div>
+                       <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">
+                         Depósito Extra
+                       </div>
+                     </div>
+                     <div className={cn(
+                       "h-8 px-3 rounded-full flex items-center gap-1.5 text-[10px] font-bold border",
+                       extra.status === "done" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" : "bg-warning/10 border-warning/20 text-warning"
+                     )}>
+                       {extra.status === "done" ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
+                       {extra.status === "done" ? "CONCLUÍDO" : "PENDENTE"}
+                     </div>
+                   </div>
+                 </div>
+               </Card>
+             ))}
+
                       {camps.map((camp) => {
                         const { perfil, linkedIp, isPending, celula, bookmakerCatalogoId } = resolveCampanhaData(camp);
                         const status = getStatus(camp, isPending);
@@ -374,7 +514,7 @@ import { toast } from "sonner";
                                             ? formatMoney(camp.deposit_amount, camp.currency)
                                             : (celula as any)?.deposito_sugerido 
                                               ? formatMoney((celula as any).deposito_sugerido, (celula as any).moeda || "BRL")
-                                              : "R$ 0,00";
+                                              : formatMoney(0, "BRL");
 
                         return (
                           <Card

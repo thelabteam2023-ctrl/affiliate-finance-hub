@@ -38,12 +38,15 @@ import {
   usePlanningWallets,
   useParceirosLite,
   usePlanningPerfis,
-  useUpsertCampanha,
-  useDeleteCampanha,
-  useProjetos,
+   useUpsertCampanha,
+   useDeleteCampanha,
+   useProjetos,
+   usePlanningExtras,
+   PlanningExtra
 } from "@/hooks/usePlanningData";
 import { useGrupoRegrasValidator } from "@/hooks/useGrupoRegrasValidator";
-import { CampanhaDialog } from "./CampanhaDialog";
+ import { CampanhaDialog } from "./CampanhaDialog";
+ import { PlanningExtraDialog } from "./PlanningExtraDialog";
 import { RecursosManager } from "./RecursosManager";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
@@ -508,7 +511,10 @@ export function PlanejamentoCalendario() {
   const [simulacaoOpen, setSimulacaoOpen] = useState(false);
   const [detailsDate, setDetailsDate] = useState<string | null>(null);
 
-  const { data: campanhas = [] } = usePlanningCampanhas(year, month);
+   const { data: campanhas = [] } = usePlanningCampanhas(year, month);
+   const { data: extras = [] } = usePlanningExtras(year, month);
+   const [isExtraDialogOpen, setIsExtraDialogOpen] = useState(false);
+   const [editingExtra, setEditingExtra] = useState<PlanningExtra | null>(null);
   const { data: ips = [] } = usePlanningIps();
   const { data: wallets = [] } = usePlanningWallets();
   const { data: parceiros = [] } = useParceirosLite();
@@ -1382,12 +1388,19 @@ export function PlanejamentoCalendario() {
             </Button>
           </div>
 
-          <PlanningProgressBar 
-            campanhas={campanhas} 
-            year={year} 
-            month={month} 
-            convertToConsolidation={convertToConsolidation}
-          />
+           <PlanningProgressBar 
+             campanhas={campanhas} 
+             extras={extras}
+             year={year} 
+             month={month} 
+             convertToConsolidation={convertToConsolidation}
+             displayCurrency={displayCurrency}
+             onDisplayCurrencyChange={setDisplayCurrency}
+             onAddExtra={() => {
+               setEditingExtra(null);
+               setIsExtraDialogOpen(true);
+             }}
+           />
 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -1410,25 +1423,6 @@ export function PlanejamentoCalendario() {
                   Simular distribuição
                 </Button>
               )}
-              <div className="flex items-center rounded-md border bg-card p-0.5">
-                <Button
-                  variant={displayCurrency === "BRL" ? "default" : "ghost"}
-                  size="sm"
-                  className="h-6 px-2 text-[11px]"
-                  onClick={() => setDisplayCurrency("BRL")}
-                >
-                  BRL
-                </Button>
-                <Button
-                  variant={displayCurrency === "USD" ? "default" : "ghost"}
-                  size="sm"
-                  className="h-6 px-2 text-[11px]"
-                  onClick={() => setDisplayCurrency("USD")}
-                  title={isUsingFallback ? "Usando cotação de fallback" : `1 USD = R$ ${cotacaoUSD.toFixed(4)}`}
-                >
-                  USD {isUsingFallback && "⚠️"}
-                </Button>
-              </div>
             </div>
           </div>
 
@@ -1452,7 +1446,26 @@ export function PlanejamentoCalendario() {
                     onAdd={() => undefined}
                     onOpenDetails={() => setDetailsDate(key)}
                   >
-                    {visibleDayCamps.map(c => {
+                     {extras.filter(e => e.scheduled_date === key).map(extra => (
+                       <div 
+                         key={extra.id}
+                         onClick={(e) => {
+                           e.stopPropagation();
+                           setEditingExtra(extra);
+                           setIsExtraDialogOpen(true);
+                         }}
+                         className="relative rounded border border-blue-500/30 bg-blue-500/10 px-1.5 py-1 text-[10px] leading-tight cursor-pointer hover:bg-blue-500/20 mb-1 transition-colors"
+                       >
+                         <div className="flex items-center gap-1.5">
+                           <div className="h-4 w-4 shrink-0 rounded bg-blue-500 flex items-center justify-center text-[8px] font-bold text-white">EX</div>
+                           <span className="font-semibold truncate flex-1">{extra.bookmaker_nome}</span>
+                           <span className="font-bold text-blue-500 tabular-nums">
+                             {formatMoney(Number(extra.deposit_amount), extra.currency)}
+                           </span>
+                         </div>
+                       </div>
+                     ))}
+                     {visibleDayCamps.map(c => {
                       const grupoStatus = grupoViolationMap.get(c.id);
                       const resolvedIpId = resolveCampanhaIpId(c);
                       return (
@@ -1554,7 +1567,26 @@ export function PlanejamentoCalendario() {
                <div className="text-center">Status</div>
             </div>
              <div className="min-w-[920px] divide-y">
-              {detailsCampanhas.map((c) => {
+               {extras.filter(e => e.scheduled_date === detailsDate).map(extra => (
+                 <div key={extra.id} className="grid grid-cols-[1.15fr_0.95fr_1.45fr_1.35fr_0.45fr_0.75fr_40px] gap-2 px-3 py-2 text-xs items-center hover:bg-blue-500/5 bg-blue-500/10 cursor-pointer" onClick={() => { setEditingExtra(extra); setIsExtraDialogOpen(true); }}>
+                   <div className="font-medium truncate flex items-center gap-2">
+                     <div className="h-5 w-5 shrink-0 rounded bg-blue-500 flex items-center justify-center text-[8px] font-bold text-white">EX</div>
+                     <span className="truncate">{extra.bookmaker_nome}</span>
+                     <Badge variant="secondary" className="text-[8px] h-3 px-1 bg-blue-500/20 text-blue-600 border-none font-bold">EXTRA</Badge>
+                   </div>
+                   <div className="truncate">{extra.parceiro_id ? parceiroMap[extra.parceiro_id]?.nome : "—"}</div>
+                   <div className="min-w-0 italic text-muted-foreground">—</div>
+                   <div className="truncate italic text-muted-foreground">—</div>
+                   <div className="font-semibold">{extra.currency}</div>
+                   <div className="text-right font-semibold tabular-nums text-blue-600">{formatMoney(Number(extra.deposit_amount), extra.currency)}</div>
+                   <div className="flex justify-center">
+                     <div className={cn("h-4 w-4 rounded-full flex items-center justify-center", extra.status === "done" ? "text-emerald-500" : "text-warning")}>
+                       {extra.status === "done" ? <CheckCircle2 className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
+                     </div>
+                   </div>
+                 </div>
+               ))}
+               {detailsCampanhas.map((c) => {
                 const perfilInfo = campanhaPerfilMap.get(c.id);
                 const celula = celulaAgendadaByCampanhaIdMap.get(c.id);
                 const linkedIpId = resolveCampanhaIpId(c);
@@ -1663,7 +1695,14 @@ export function PlanejamentoCalendario() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <SimulacaoDistribuicaoDialog
+ 
+       <PlanningExtraDialog
+         open={isExtraDialogOpen}
+         onOpenChange={setIsExtraDialogOpen}
+         extra={editingExtra}
+       />
+ 
+       <SimulacaoDistribuicaoDialog
         open={simulacaoOpen}
         onOpenChange={setSimulacaoOpen}
         celulas={celulasPlano}
