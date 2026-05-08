@@ -743,12 +743,13 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
         )}
       </div>
 
-       <PlanningExtraDialog
-         open={isExtraDialogOpen}
-         onOpenChange={setIsExtraDialogOpen}
-         extra={editingExtra}
-         projetoId={projetoId}
-       />
+        <PlanningExtraDialog
+          open={isExtraDialogOpen}
+          onOpenChange={setIsExtraDialogOpen}
+          extra={editingExtra}
+          projetoId={projetoId}
+          planoId={planoFiltroId !== "all" ? planoFiltroId : undefined}
+        />
  
        {isDialogOpen && (
         <CampanhaDialog
