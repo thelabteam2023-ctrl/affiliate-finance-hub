@@ -308,9 +308,18 @@ import { toast } from "sonner";
           </div>
        </div>
  
-      {/* Lista de Histórico */}
-      <div className="flex-1 overflow-auto p-4 scroll-smooth">
-        {filteredCampanhas.length === 0 ? (
+       {/* Lista de Histórico */}
+       <div className="flex-1 overflow-auto p-4 scroll-smooth space-y-4">
+         <div className="max-w-5xl mx-auto">
+           <PlanningProgressBar 
+             campanhas={campanhas} 
+             year={selectedYear} 
+             month={selectedMonth} 
+             convertToConsolidation={convertToConsolidation}
+           />
+         </div>
+
+         {filteredCampanhas.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
             <Filter className="h-12 w-12 opacity-20" />
             <p>Nenhum registro encontrado para os filtros selecionados.</p>
