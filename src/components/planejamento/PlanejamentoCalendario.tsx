@@ -1423,25 +1423,6 @@ export function PlanejamentoCalendario() {
                   Simular distribuição
                 </Button>
               )}
-              <div className="flex items-center rounded-md border bg-card p-0.5">
-                <Button
-                  variant={displayCurrency === "BRL" ? "default" : "ghost"}
-                  size="sm"
-                  className="h-6 px-2 text-[11px]"
-                  onClick={() => setDisplayCurrency("BRL")}
-                >
-                  BRL
-                </Button>
-                <Button
-                  variant={displayCurrency === "USD" ? "default" : "ghost"}
-                  size="sm"
-                  className="h-6 px-2 text-[11px]"
-                  onClick={() => setDisplayCurrency("USD")}
-                  title={isUsingFallback ? "Usando cotação de fallback" : `1 USD = R$ ${cotacaoUSD.toFixed(4)}`}
-                >
-                  USD {isUsingFallback && "⚠️"}
-                </Button>
-              </div>
             </div>
           </div>
 
