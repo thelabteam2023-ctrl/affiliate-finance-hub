@@ -317,9 +317,10 @@ import { toast } from "sonner";
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
-            <Badge variant="outline" className="font-mono">
-              {filteredCampanhas.length} registros
-            </Badge>
+             <Badge variant="outline" className="font-mono gap-1.5 px-2.5 py-1 bg-muted/30">
+               <span className="text-primary font-black">{filteredCampanhas.length + extras.length}</span>
+               <span className="opacity-60 text-[10px] uppercase tracking-tighter font-bold">Registros</span>
+             </Badge>
           </div>
        </div>
  
