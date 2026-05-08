@@ -302,6 +302,34 @@ export function usePlanningCampanhas(year: number, month: number) {
    });
  }
  
+ export function usePlanningBookmakersPorProjeto(projetoId?: string | null) {
+   const { workspaceId } = useAuth();
+   return useQuery({
+     queryKey: ["planning-bookmakers-projeto", workspaceId, projetoId],
+     enabled: !!workspaceId && !!projetoId,
+     queryFn: async () => {
+       const { data: planos } = await (supabase as any)
+         .from("distribuicao_planos")
+         .select("id")
+         .eq("projeto_id", projetoId);
+       
+       if (!planos || planos.length === 0) return [];
+       
+       const planoIds = planos.map((p: any) => p.id);
+       
+       const { data: celulas, error } = await (supabase as any)
+         .from("distribuicao_plano_celulas")
+         .select("bookmaker_catalogo_id")
+         .in("plano_id", planoIds);
+         
+       if (error) throw error;
+       
+       const ids = Array.from(new Set((celulas ?? []).map((c: any) => c.bookmaker_catalogo_id)));
+       return ids;
+     },
+   });
+ }
+ 
  export function useUpsertPlanningExtra() {
    const qc = useQueryClient();
    const { workspaceId, user } = useAuth();
