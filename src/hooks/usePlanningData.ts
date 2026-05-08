@@ -303,15 +303,16 @@ export function usePlanningCampanhas(year: number, month: number) {
    const qc = useQueryClient();
    const { workspaceId, user } = useAuth();
    return useMutation({
-     mutationFn: async (payload: Partial<PlanningExtra>) => {
+     mutationFn: async (payload: Partial<PlanningExtra> & { bookmaker_nome: string }) => {
        if (!workspaceId || !user) throw new Error("Sem workspace");
+       const { id, ...rest } = payload;
        const row = {
-         ...payload,
+         ...rest,
          workspace_id: workspaceId,
          created_by: user.id,
        };
-       if (payload.id) {
-         const { error } = await supabase.from("planning_extras").update(row).eq("id", payload.id);
+       if (id) {
+         const { error } = await supabase.from("planning_extras").update(row).eq("id", id);
          if (error) throw error;
        } else {
          const { error } = await supabase.from("planning_extras").insert([row]);
