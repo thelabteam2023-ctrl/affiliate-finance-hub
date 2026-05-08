@@ -164,6 +164,7 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
     const projectCampanhas = campanhas
       .filter((c) => {
         const matchesProjeto = projetoFilter === "all" || c.projeto_id === projetoFilter;
+        const matchesPlano = planoFiltroId === "all" || campanhaPlanoIdMap.get(c.id) === planoFiltroId;
         const matchesSearch =
           c.bookmaker_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
           (c.parceiro_snapshot?.nome || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -171,13 +172,15 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
         const { isPending } = resolveCampanhaData(c);
         const status = getStatus(c, isPending);
         const matchesStatus = statusFilter === "all" || status === statusFilter;
-        return matchesSearch && matchesStatus && matchesProjeto;
+        return matchesSearch && matchesStatus && matchesProjeto && matchesPlano;
       });
 
     const projectExtras = extras
       .filter((e) => {
         if (!e.scheduled_date) return false;
         const matchesProjeto = projetoFilter === "all" || e.projeto_id === projetoFilter;
+        const matchesPlano = planoFiltroId === "all" || (e.projeto_id === projetoId); // No contexto do projeto, o extra deve ser do projeto
+        
         const matchesSearch =
           e.bookmaker_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
           (e.notes || "").toLowerCase().includes(searchTerm.toLowerCase());
@@ -185,7 +188,7 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
         const status = e.status === "done" ? "concluido" : (e.status === "pending" ? "pendente" : (e.status === "atrasado" ? "atrasado" : "planejado"));
         const matchesStatus = statusFilter === "all" || status === statusFilter;
         
-        return matchesSearch && matchesStatus && matchesProjeto;
+        return matchesSearch && matchesStatus && matchesProjeto && matchesPlano;
       });
 
     const unified = [
@@ -194,7 +197,7 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
     ];
 
     return unified.sort((a, b) => (a.scheduled_date || "").localeCompare(b.scheduled_date || ""));
-  }, [campanhas, extras, searchTerm, statusFilter, projetoFilter, celulasAgendadas, perfis, ips]);
+  }, [campanhas, extras, searchTerm, statusFilter, projetoFilter, planoFiltroId, campanhaPlanoIdMap, celulasAgendadas, perfis, ips, projetoId]);
 
   const groupedByDay = useMemo(() => {
     const groups = {};
