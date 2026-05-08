@@ -410,8 +410,9 @@ import { toast } from "sonner";
             )}
 
             {sortedDates.map((dateStr) => {
-              const camps = groupedByDay[dateStr] || [];
-              const dateObj = parseISO(dateStr);
+               const camps = groupedByDay[dateStr] || [];
+               const dayExtras = extras.filter(e => e.scheduled_date === dateStr);
+               const dateObj = parseISO(dateStr);
               const isDateToday = isToday(dateObj);
 
               return (
