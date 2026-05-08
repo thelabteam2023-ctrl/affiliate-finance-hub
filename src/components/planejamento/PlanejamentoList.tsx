@@ -517,7 +517,7 @@ import { toast } from "sonner";
                                             ? formatMoney(camp.deposit_amount, camp.currency)
                                             : (celula as any)?.deposito_sugerido 
                                               ? formatMoney((celula as any).deposito_sugerido, (celula as any).moeda || "BRL")
-                                              : "R$ 0,00";
+                                              : formatMoney(0, "BRL");
 
                         return (
                           <Card
