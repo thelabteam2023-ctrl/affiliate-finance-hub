@@ -387,20 +387,20 @@ import { toast } from "sonner";
        {/* Lista de Histórico */}
        <div className="flex-1 overflow-auto p-4 scroll-smooth space-y-4">
          <div className="max-w-5xl mx-auto">
-           <PlanningProgressBar 
-             campanhas={filteredItems} 
-             extras={extras}
-             year={selectedYear} 
-             month={selectedMonth} 
-             convertToConsolidation={convertToConsolidation}
-             displayCurrency={displayCurrency}
-             onDisplayCurrencyChange={setDisplayCurrency}
-             onAddExtra={() => {
-               setEditingExtra(null);
-               setIsExtraDialogOpen(true);
-             }}
-             projetoId={projetoFilter !== "all" ? projetoFilter : undefined}
-           />
+            <PlanningProgressBar 
+              campanhas={filteredItems} 
+              extras={extras}
+              year={selectedYear} 
+              month={selectedMonth} 
+              convertToConsolidation={convertToConsolidation}
+              displayCurrency={displayCurrency}
+              onDisplayCurrencyChange={setDisplayCurrency}
+              onAddExtra={() => {
+                setEditingExtra(null);
+                setIsExtraDialogOpen(true);
+              }}
+              projetoId={projetoFilter !== "all" ? projetoFilter : (planoFiltroId !== "all" ? (planosDoProjeto.find(p => p.id === planoFiltroId)?.projeto_id) : undefined)}
+            />
            <PlanningExtraDialog 
              open={isExtraDialogOpen}
              onOpenChange={setIsExtraDialogOpen}
