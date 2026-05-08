@@ -205,9 +205,15 @@ import { toast } from "sonner";
      return Array.from(allDates).sort();
    }, [groupedByDay, extras]);
  
-   const formatMoney = (v: number, currency: string) => {
-     return new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(v);
-   };
+    const { convert, formatCurrency } = useMultiCurrencyConversion();
+
+    const formatMoney = (v: number, currency: string) => {
+      if (displayCurrency === "BRL") {
+        return new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(v);
+      }
+      const valUSD = convert(v, currency, "USD");
+      return formatCurrency(valUSD, "USD");
+    };
  
     if (campanhasLoading || celulasLoading || extrasLoading) {
       return <div className="p-8 text-center text-muted-foreground">Carregando histórico...</div>;
