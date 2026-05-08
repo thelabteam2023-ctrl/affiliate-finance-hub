@@ -75,6 +75,14 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
   const [selectedMonth, setSelectedMonth] = useState(today.getMonth() + 1);
 
   const { data: allCampanhas = [], isLoading: campanhasLoading } = usePlanningCampanhas(selectedYear, selectedMonth);
+   const { data: extras = [], isLoading: extrasLoading } = usePlanningExtras(selectedYear, selectedMonth);
+   const [isExtraDialogOpen, setIsExtraDialogOpen] = useState(false);
+   const [editingExtra, setEditingExtra] = useState<PlanningExtra | null>(null);
+   const [displayCurrency, setDisplayCurrency] = useState<"BRL" | "USD">("BRL");
+  const campanhas = useMemo(() => allCampanhas, [allCampanhas]);
+  const campanhaIds = useMemo(() => campanhas.map(c => c.id), [campanhas]);
+  const { data: celulasAgendadas = [], isLoading: celulasLoading } = useCelulasAgendadasPorCampanhas(campanhaIds.length > 0 ? campanhaIds : ["00000000-0000-0000-0000-000000000000"]);
+  
   const [planoFiltroId, setPlanoFiltroId] = useState<string>("all");
   const { data: planosDoProjeto = [] } = useDistribuicaoPlanosPorProjeto(projetoId);
 
@@ -85,14 +93,6 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
     });
     return map;
   }, [celulasAgendadas]);
-
-   const { data: extras = [], isLoading: extrasLoading } = usePlanningExtras(selectedYear, selectedMonth);
-   const [isExtraDialogOpen, setIsExtraDialogOpen] = useState(false);
-   const [editingExtra, setEditingExtra] = useState<PlanningExtra | null>(null);
-   const [displayCurrency, setDisplayCurrency] = useState<"BRL" | "USD">("BRL");
-  const campanhas = useMemo(() => allCampanhas, [allCampanhas]);
-  const campanhaIds = useMemo(() => campanhas.map(c => c.id), [campanhas]);
-  const { data: celulasAgendadas = [], isLoading: celulasLoading } = useCelulasAgendadasPorCampanhas(campanhaIds);
   const { data: perfis = [] } = usePlanningPerfis();
   const { data: ips = [] } = usePlanningIps();
   const { data: projetos = [] } = useProjetos();
