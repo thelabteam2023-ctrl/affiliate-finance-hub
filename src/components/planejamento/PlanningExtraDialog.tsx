@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Trash2, Check, ChevronsUpDown, MapPin } from "lucide-react";
+import { Trash2, Check, ChevronsUpDown, MapPin, AlertCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +33,7 @@ import {
 import { FIAT_CURRENCIES } from "@/types/currency";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
@@ -41,19 +42,28 @@ interface PlanningExtraDialogProps {
   onOpenChange: (open: boolean) => void;
   extra?: PlanningExtra | null;
   projetoId?: string;
+  planoId?: string;
 }
 
 export function PlanningExtraDialog({
   open,
   onOpenChange,
   extra,
-  projetoId
+  projetoId,
+  planoId
 }: PlanningExtraDialogProps) {
   const upsertExtra = useUpsertPlanningExtra();
   const deleteExtra = useDeletePlanningExtra();
   const { data: parceiros = [] } = useParceirosLite();
   const { data: bookmakers = [] } = useBookmakersCatalogo();
-  const { data: projetos = [] } = useProjetos();
+  const { data: allProjetos = [] } = useProjetos();
+  const filteredProjetos = useMemo(() => {
+    if (projetoId) {
+      return allProjetos.filter(p => p.id === projetoId);
+    }
+    return allProjetos;
+  }, [allProjetos, projetoId]);
+
   const { data: allPerfis = [] } = usePlanningPerfis();
   const { data: allIps = [] } = usePlanningIps();
 
