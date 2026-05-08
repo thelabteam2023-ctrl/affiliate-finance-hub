@@ -1453,12 +1453,11 @@ export function PlanejamentoCalendario() {
                      }}
                      onOpenDetails={() => setDetailsDate(key)}
                    >
-                     {extras.filter(e => {
-                        if (e.scheduled_date !== key) return false;
-                        // Se estamos no modo plano, só mostramos extras que pertençam ao projeto desse plano
-                        if (modoPlano && planoSelecionado?.projeto_id && e.projeto_id !== planoSelecionado.projeto_id) return false;
-                        return true;
-                      }).map(extra => (
+                      {extras.filter(e => {
+                         if (e.scheduled_date !== key) return false;
+                         if (modoPlano && e.plano_id !== planoFiltroId) return false;
+                         return true;
+                       }).map(extra => (
                        <div 
                          key={extra.id}
                          onClick={(e) => {
