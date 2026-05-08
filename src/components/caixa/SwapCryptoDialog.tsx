@@ -23,7 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowRightLeft, Loader2, ArrowDown, AlertTriangle, Plus } from "lucide-react";
+ import { ArrowRightLeft, Loader2, ArrowDown, AlertTriangle, Plus, Wallet } from "lucide-react";
+ import { WalletCryptoSelect } from "@/components/wallets/WalletCryptoSelect";
 import { RedeSelect } from "@/components/parceiros/RedeSelect";
 
 const MOEDAS_CRYPTO = [
@@ -372,68 +373,24 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
 
         <div className="space-y-4">
           {/* ═══ ORIGEM ═══ */}
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold uppercase tracking-wider">Wallet de Origem</Label>
-            {parceiroNome && (
-              <p className="text-[11px] text-primary uppercase tracking-wider">
-                {parceiroNome}
-              </p>
-            )}
-            <div className="space-y-2 max-h-[180px] overflow-y-auto">
-              {wallets.map(w => {
-                const walletBalances = balances.filter(b => b.wallet_id === w.id);
-                const isSelected = walletOrigemId === w.id;
-
-                return (
-                  <button
-                    key={w.id}
-                    type="button"
-                    onClick={() => {
-                      setWalletOrigemId(w.id);
-                      setCoinOrigem("");
-                      setCoinDestino("");
-                      setWalletDestinoId("");
-                    }}
-                    className={`w-full text-left rounded-lg border p-3 transition-colors ${
-                      isSelected 
-                        ? "border-primary bg-primary/10" 
-                        : "border-border/50 bg-muted/20 hover:border-border hover:bg-muted/40"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-semibold text-sm text-foreground">{formatExchangeName(w)}</span>
-                      <div className="flex gap-1">
-                        {w.moedas.map(coin => (
-                          <Badge key={coin} variant="outline" className="text-[10px] px-1.5 py-0 h-5">
-                            {coin}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                    <p className="text-xs font-mono text-muted-foreground">
-                      {truncAddr(w.endereco)}
-                      {w.network && <span className="ml-2 text-[10px] uppercase text-muted-foreground/70">({w.network})</span>}
-                    </p>
-                    {walletBalances.length > 0 && (
-                      <div className="flex flex-col gap-0.5 mt-1.5">
-                        {walletBalances.map(b => (
-                          <span key={b.coin} className="text-[11px] text-foreground">
-                            {b.coin} {b.saldo_coin.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            <span className="text-muted-foreground ml-1">
-                              ≈ R$ {(b.saldo_usd * (cotacaoUSD || 1)).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </span>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-              {wallets.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-4">Nenhuma wallet encontrada</p>
-              )}
-            </div>
-          </div>
+           <div className="space-y-1.5">
+             <Label className="text-xs font-semibold uppercase tracking-wider">Wallet de Origem</Label>
+             <WalletCryptoSelect
+               wallets={wallets.map(w => ({
+                 ...w,
+                 endereco: w.endereco || "",
+                 moeda: w.moedas,
+               }))}
+               value={walletOrigemId}
+               onValueChange={(v) => {
+                 setWalletOrigemId(v);
+                 setCoinOrigem("");
+                 setCoinDestino("");
+                 setWalletDestinoId("");
+               }}
+               placeholder="Selecione a wallet de origem"
+             />
+           </div>
 
           {/* ═══ ENVIO ═══ */}
           {walletOrigemId && (
@@ -531,32 +488,29 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
               {destinoMode === "other" && (
                 <div className="space-y-2">
                   <Label className="text-xs">Wallet de destino</Label>
-                  <Select value={walletDestinoId} onValueChange={setWalletDestinoId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a wallet de destino" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {destinoWallets.map(w => (
-                        <SelectItem key={w.id} value={w.id}>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{formatExchangeName(w)}</span>
-                            <span className="text-muted-foreground text-xs font-mono">{truncAddr(w.endereco)}</span>
-                            {w.network && (
-                              <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 uppercase">
-                                {w.network}
-                              </Badge>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))}
-                      <SelectItem value="__new__">
-                        <div className="flex items-center gap-2 text-primary">
-                          <Plus className="h-3 w-3" />
-                          <span>Criar nova wallet (outra rede)</span>
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                   <WalletCryptoSelect
+                     wallets={destinoWallets.map(w => ({
+                       ...w,
+                       endereco: w.endereco || "",
+                       moeda: w.moedas
+                     }))}
+                     value={walletDestinoId === "__new__" ? "" : walletDestinoId}
+                     onValueChange={setWalletDestinoId}
+                     placeholder="Selecione a wallet de destino"
+                   />
+                   <Select value={walletDestinoId === "__new__" ? "__new__" : ""} onValueChange={(v) => v === "__new__" && setWalletDestinoId("__new__")}>
+                     <SelectTrigger className="mt-2 h-8 text-xs border-dashed">
+                       <SelectValue placeholder="Ou criar nova..." />
+                     </SelectTrigger>
+                     <SelectContent>
+                       <SelectItem value="__new__">
+                         <div className="flex items-center gap-2 text-primary">
+                           <Plus className="h-3 w-3" />
+                           <span>Criar nova wallet (outra rede)</span>
+                         </div>
+                       </SelectItem>
+                     </SelectContent>
+                   </Select>
 
                   {/* New wallet: select network */}
                   {needsNewWallet && (

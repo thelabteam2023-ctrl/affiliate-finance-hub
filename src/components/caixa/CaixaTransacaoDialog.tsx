@@ -50,7 +50,8 @@ import ParceiroSelect, { ParceiroSelectRef } from "@/components/parceiros/Parcei
 import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
 import BookmakerSelect, { BookmakerSelectRef } from "@/components/bookmakers/BookmakerSelect";
 import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
-import { Loader2, ArrowLeftRight, ArrowRightLeft, AlertTriangle, TrendingDown, TrendingUp, Info } from "lucide-react";
+ import { Loader2, ArrowLeftRight, ArrowRightLeft, AlertTriangle, TrendingDown, TrendingUp, Info, Wallet } from "lucide-react";
+ import { WalletCryptoSelect } from "@/components/wallets/WalletCryptoSelect";
 
 // Constantes de moedas disponíveis (todas as 8 moedas FIAT suportadas)
 const MOEDAS_FIAT = [
@@ -3410,59 +3411,39 @@ export function CaixaTransacaoDialog({
               </AlertDescription>
             </Alert>
           )}
-          {origemParceiroId && tipoMoeda === "CRYPTO" && (
-            <div className="space-y-2">
-              <Label>Wallet Crypto</Label>
-              <Select 
-                value={origemWalletId} 
-                onValueChange={(value) => {
-                  setOrigemWalletId(value);
-                }}
-              >
-                <SelectTrigger ref={walletCryptoSelectRef}>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  {walletsCrypto
-                    .filter((w) => {
-                      // Filtrar apenas wallets do parceiro selecionado
-                      if (w.parceiro_id !== origemParceiroId) return false;
-                      
-                      // Filtrar apenas wallets com saldo DISPONÍVEL para a moeda selecionada
-                      // Usa saldo_disponivel que já desconta locked (dinheiro em trânsito)
-                      const saldo = saldosParceirosWallets.find(
-                        s => s.wallet_id === w.id && s.coin === coin
-                      );
-                      return saldo && (saldo.saldo_disponivel ?? saldo.saldo_usd) > 0;
-                    })
-                    .map((wallet) => {
-                      const saldo = saldosParceirosWallets.find(
-                        s => s.wallet_id === wallet.id && s.coin === coin
-                      );
-                      const walletName = (wallet.label || wallet.exchange || 'WALLET').replace(/-/g, ' ').toUpperCase();
-                      const shortenedAddress = wallet.endereco 
-                        ? `${wallet.endereco.slice(0, 5)}....${wallet.endereco.slice(-5)}`
-                        : '';
-                           // No contexto de transferência de moedas, o saldo real é o saldo_coin.
-                           // O saldo_disponivel da view é em USD e pode divergir em stablecoins se o valor_usd no ledger estiver inconsistente.
-                           const saldoDisponivel = (coin === 'USDT' || coin === 'USDC') 
-                             ? (saldo?.saldo_coin ?? 0) 
-                             : (saldo?.saldo_disponivel ?? saldo?.saldo_usd ?? 0);
-                             
-                      const temLocked = (saldo?.saldo_locked ?? 0) > 0;
-                      return (
-                        <SelectItem key={wallet.id} value={wallet.id}>
-                          <span className="font-mono">
-                                 {walletName} - {shortenedAddress} - Disp: {saldoDisponivel.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 6 })} {coin}
-                            {temLocked && <span className="text-warning ml-1">(🔒)</span>}
-                          </span>
-                        </SelectItem>
-                      );
-                    })}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+           {origemParceiroId && tipoMoeda === "CRYPTO" && (
+             <div className="space-y-2">
+               <Label>Wallet Crypto</Label>
+               <WalletCryptoSelect
+                 wallets={walletsCrypto
+                   .filter((w) => {
+                     if (w.parceiro_id !== origemParceiroId) return false;
+                     const saldo = saldosParceirosWallets.find(
+                       (s) => s.wallet_id === w.id && s.coin === coin
+                     );
+                     return saldo && (saldo.saldo_disponivel ?? saldo.saldo_usd) > 0;
+                   })
+                   .map((w) => {
+                     const saldo = saldosParceirosWallets.find(
+                       (s) => s.wallet_id === w.id && s.coin === coin
+                     );
+                     const saldoCoin = (coin === "USDT" || coin === "USDC")
+                       ? (saldo?.saldo_coin ?? 0)
+                       : (saldo?.saldo_disponivel ?? saldo?.saldo_usd ?? 0);
+                     return {
+                       ...w,
+                       saldo_coin: saldoCoin,
+                       saldo_usd: saldo?.saldo_usd,
+                     };
+                   })}
+                 value={origemWalletId}
+                 onValueChange={setOrigemWalletId}
+                 showBalance={true}
+                 coinFilter={coin}
+                 placeholder="Selecione a wallet de origem"
+               />
+             </div>
+           )}
           {origemParceiroId && tipoMoeda === "CRYPTO" && !coin && (
             <Alert className="border-blue-500/50 bg-blue-500/10">
               <Info className="h-4 w-4 text-blue-500" />
@@ -3713,55 +3694,39 @@ export function CaixaTransacaoDialog({
                   saldosWallets={saldosParceirosWallets}
                 />
               </div>
-              {origemParceiroId && (
-                <div className="space-y-2">
-                  <Label>Wallet Crypto</Label>
-                  <Select 
-                    value={origemWalletId} 
-                    onValueChange={(value) => {
-                      setOrigemWalletId(value);
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {walletsCrypto
-                        .filter((w) => {
-                          if (w.parceiro_id !== origemParceiroId || !isWalletCompatibleWithCoin(w, coin)) return false;
-                          const saldo = saldosParceirosWallets.find(
-                            s => s.wallet_id === w.id && s.coin === coin
-                          );
-                          return saldo && (saldo.saldo_disponivel ?? saldo.saldo_usd) > 0;
-                        })
-                        .map((wallet) => {
-                          const saldo = saldosParceirosWallets.find(
-                            s => s.wallet_id === wallet.id && s.coin === coin
-                          );
-                          const walletName = wallet.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET';
-                          const shortenedAddress = wallet.endereco 
-                            ? `${wallet.endereco.slice(0, 5)}....${wallet.endereco.slice(-5)}`
-                            : '';
-                           // No contexto de transferência de moedas, o saldo real é o saldo_coin.
-                           // O saldo_disponivel da view é em USD e pode divergir em stablecoins se o valor_usd no ledger estiver inconsistente.
-                           const saldoDisponivel = (coin === 'USDT' || coin === 'USDC') 
-                             ? (saldo?.saldo_coin ?? 0) 
-                             : (saldo?.saldo_disponivel ?? saldo?.saldo_usd ?? 0);
-                             
-                           const temLocked = (saldo?.saldo_locked ?? 0) > 0;
-                          return (
-                            <SelectItem key={wallet.id} value={wallet.id}>
-                              <span className="font-mono">
-                                 {walletName} - {shortenedAddress} - Disp: {saldoDisponivel.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 6 })} {coin}
-                                {temLocked && <span className="text-warning ml-1">(🔒)</span>}
-                              </span>
-                            </SelectItem>
-                          );
-                        })}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+               {origemParceiroId && (
+                 <div className="space-y-2">
+                   <Label>Wallet Crypto</Label>
+                   <WalletCryptoSelect
+                     wallets={walletsCrypto
+                       .filter((w) => {
+                         if (w.parceiro_id !== origemParceiroId || !isWalletCompatibleWithCoin(w, coin)) return false;
+                         const saldo = saldosParceirosWallets.find(
+                           (s) => s.wallet_id === w.id && s.coin === coin
+                         );
+                         return saldo && (saldo.saldo_disponivel ?? saldo.saldo_usd) > 0;
+                       })
+                       .map((w) => {
+                         const saldo = saldosParceirosWallets.find(
+                           (s) => s.wallet_id === w.id && s.coin === coin
+                         );
+                         const saldoCoin = (coin === "USDT" || coin === "USDC")
+                           ? (saldo?.saldo_coin ?? 0)
+                           : (saldo?.saldo_disponivel ?? saldo?.saldo_usd ?? 0);
+                         return {
+                           ...w,
+                           saldo_coin: saldoCoin,
+                           saldo_usd: saldo?.saldo_usd,
+                         };
+                       })}
+                     value={origemWalletId}
+                     onValueChange={setOrigemWalletId}
+                     showBalance={true}
+                     coinFilter={coin}
+                     placeholder="Selecione a wallet de origem"
+                   />
+                 </div>
+               )}
               {origemParceiroId && coin && (() => {
                 const walletsDoParceiroComMoeda = walletsCrypto.filter(
                   (w) => w.parceiro_id === origemParceiroId && isWalletCompatibleWithCoin(w, coin)
@@ -3926,36 +3891,19 @@ export function CaixaTransacaoDialog({
               </AlertDescription>
             </Alert>
           )}
-          {destinoParceiroId && (
-            <div className="space-y-2">
-              <Label>Wallet Crypto</Label>
-              <Select 
-                value={destinoWalletId} 
-                onValueChange={(value) => {
-                  setDestinoWalletId(value);
-                }}
-              >
-                <SelectTrigger ref={walletCryptoSelectRef}>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  {walletsCrypto
-                    .filter((w) => w.parceiro_id === destinoParceiroId && isWalletCompatibleWithCoin(w, coin))
-                    .map((wallet) => {
-                      const walletName = (wallet.label || wallet.exchange || 'WALLET').replace(/-/g, ' ').toUpperCase();
-                      const shortenedAddress = wallet.endereco 
-                        ? `${wallet.endereco.slice(0, 5)}....${wallet.endereco.slice(-5)}`
-                        : '';
-                      return (
-                        <SelectItem key={wallet.id} value={wallet.id}>
-                          <span className="font-mono">{walletName} - {shortenedAddress}</span>
-                        </SelectItem>
-                      );
-                    })}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+           {destinoParceiroId && (
+             <div className="space-y-2">
+               <Label>Wallet Crypto</Label>
+               <WalletCryptoSelect
+                 wallets={walletsCrypto.filter(
+                   (w) => w.parceiro_id === destinoParceiroId && isWalletCompatibleWithCoin(w, coin)
+                 )}
+                 value={destinoWalletId}
+                 onValueChange={setDestinoWalletId}
+                 placeholder="Selecione a wallet de destino"
+               />
+             </div>
+           )}
           {destinoParceiroId && walletsCrypto.filter((w) => w.parceiro_id === destinoParceiroId && isWalletCompatibleWithCoin(w, coin)).length === 0 && (
             <Alert variant="destructive" className="border-warning/50 bg-warning/10">
               <AlertTriangle className="h-4 w-4 text-warning" />
@@ -4315,40 +4263,25 @@ export function CaixaTransacaoDialog({
                 saldosWallets={saldosParceirosWallets}
               />
             </div>
-            {destinoParceiroId && (
-              <div className="space-y-2">
-                <Label>Wallet Crypto</Label>
-                <Select 
-                  value={destinoWalletId} 
-                  onValueChange={(value) => {
-                    setDestinoWalletId(value);
-                    if (tipoTransacao === "TRANSFERENCIA" && fluxoTransferencia === "PARCEIRO_PARCEIRO" && tipoMoeda === "CRYPTO") {
-                      setTimeout(() => {
-                        valorFiatInputRef.current?.focus();
-                      }, 180);
-                    }
-                  }}
-                  disabled={!origemEstaCompleta}
-                >
-                  <SelectTrigger ref={destinoWalletSelectRef}>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {getWalletsDisponiveisDestino(destinoParceiroId).map((wallet) => {
-                      const walletName = wallet.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET';
-                      const shortenedAddress = wallet.endereco 
-                        ? `${wallet.endereco.slice(0, 5)}....${wallet.endereco.slice(-5)}`
-                        : '';
-                      return (
-                        <SelectItem key={wallet.id} value={wallet.id}>
-                          <span className="font-mono">{walletName} - {shortenedAddress}</span>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+             {destinoParceiroId && (
+               <div className="space-y-2">
+                 <Label>Wallet Crypto</Label>
+                 <WalletCryptoSelect
+                   wallets={getWalletsDisponiveisDestino(destinoParceiroId)}
+                   value={destinoWalletId}
+                   onValueChange={(value) => {
+                     setDestinoWalletId(value);
+                     if (tipoTransacao === "TRANSFERENCIA" && fluxoTransferencia === "PARCEIRO_PARCEIRO" && tipoMoeda === "CRYPTO") {
+                       setTimeout(() => {
+                         valorFiatInputRef.current?.focus();
+                       }, 180);
+                     }
+                   }}
+                   disabled={!origemEstaCompleta}
+                   placeholder="Selecione a wallet de destino"
+                 />
+               </div>
+             )}
             {destinoParceiroId && getWalletsDisponiveisDestino(destinoParceiroId).length === 0 && (
               <Alert variant="destructive" className="border-warning/50 bg-warning/10">
                 <AlertTriangle className="h-4 w-4 text-warning" />

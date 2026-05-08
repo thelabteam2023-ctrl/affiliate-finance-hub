@@ -243,9 +243,16 @@ export function ExposicaoCryptoCard({
                                 <div className="flex items-start gap-2.5 min-w-0">
                                   <Bitcoin className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                                   <div className="min-w-0">
-                                    <p className="text-sm font-semibold">
-                                      {(wallet.label || wallet.exchange || "Wallet").replace(/-/g, " ").toUpperCase()}
-                                    </p>
+                                     <div className="flex flex-col">
+                                       <p className="text-sm font-semibold uppercase tracking-tight">
+                                         {wallet.label || (wallet.exchange || "Wallet").replace(/-/g, " ").toUpperCase()}
+                                       </p>
+                                       {wallet.label && wallet.exchange && (
+                                         <span className="text-[10px] text-muted-foreground uppercase opacity-70">
+                                           {wallet.exchange.replace(/-/g, " ")}
+                                         </span>
+                                       )}
+                                     </div>
                                     {wallet.network && (
                                       <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 uppercase font-medium mt-1">
                                         {wallet.network}
