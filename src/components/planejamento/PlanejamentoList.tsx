@@ -56,6 +56,7 @@ import {
     useDeletePlanningExtra,
     PlanningExtra
  } from "@/hooks/usePlanningData";
+ import { useDistribuicaoPlanosPorProjeto } from "@/hooks/useDistribuicaoPlanos";
  import { PlanningExtraDialog } from "./PlanningExtraDialog";
  import { useCelulasAgendadasPorCampanhas } from "@/hooks/usePlanoCelulasDisponiveis";
  import { format, parseISO, isPast, isToday, startOfDay } from "date-fns";
