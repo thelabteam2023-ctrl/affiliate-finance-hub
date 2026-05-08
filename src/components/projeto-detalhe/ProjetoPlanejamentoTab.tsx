@@ -33,6 +33,7 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
+  TooltipProvider,
 } from "@/components/ui/tooltip";
 import { 
   PlanningCampanha, 
@@ -200,6 +201,7 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
   }
 
   return (
+    <TooltipProvider>
     <div className="flex flex-col h-full bg-background overflow-hidden relative">
       {/* Header com Filtros (Espelhado do PlanejamentoList) */}
       <div className="p-4 border-b flex flex-col lg:flex-row gap-4 items-start lg:items-end justify-between bg-card/50">
@@ -573,5 +575,6 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
         />
       )}
     </div>
+    </TooltipProvider>
   );
 }
