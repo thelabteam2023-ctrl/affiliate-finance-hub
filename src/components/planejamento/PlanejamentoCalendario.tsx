@@ -1152,6 +1152,7 @@ export function PlanejamentoCalendario() {
   const nextMonth = () => { if (month === 12) { setMonth(1); setYear(year + 1); } else setMonth(month + 1); };
 
   return (
+    <TooltipProvider>
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex h-full gap-3 p-3">
         {/* Sidebar de bookmakers */}
