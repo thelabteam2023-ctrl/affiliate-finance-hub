@@ -1437,7 +1437,6 @@ export function PlanejamentoCalendario() {
                const dayExtras = extras.filter(e => e.scheduled_date === key);
                const visibleDayCamps = dayCamps.slice(0, Math.max(1, MAX_VISIBLE_CAMPANHAS_PER_DAY - dayExtras.length));
                const hiddenDayCampsCount = dayCamps.length - visibleDayCamps.length;
-              const hiddenDayCampsCount = dayCamps.length - visibleDayCamps.length;
               const dayTotal = totalDia.get(key) ?? 0;
               const dayConflicts = conflictMap.get(key) ?? new Set();
               return (
