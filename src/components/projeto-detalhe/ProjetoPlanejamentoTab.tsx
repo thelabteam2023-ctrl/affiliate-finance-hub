@@ -338,7 +338,7 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
       </div>
 
       /* Lista com Navegação Flutuante */
-      <div className="flex-1 overflow-auto p-4 scroll-smooth planning-list-scroll relative space-y-4">\n
+      <div className="flex-1 overflow-auto p-4 scroll-smooth planning-list-scroll relative space-y-4">
         {/* Extras Operacionais sem Data */}
         {extras.filter(e => !e.scheduled_date && (projetoFilter === "all" || e.projeto_id === projetoFilter)).length > 0 && (
           <div className="max-w-5xl mx-auto space-y-4">
