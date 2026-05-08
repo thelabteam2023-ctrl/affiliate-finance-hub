@@ -57,12 +57,28 @@ export function PlanningExtraDialog({
   const { data: parceiros = [] } = useParceirosLite();
   const { data: bookmakers = [] } = useBookmakersCatalogo();
   const { data: allProjetos = [] } = useProjetos();
+  const { planos = [] } = useDistribuicaoPlanos();
+
   const filteredProjetos = useMemo(() => {
     if (projetoId) {
       return allProjetos.filter(p => p.id === projetoId);
     }
+    
+    if (planoId) {
+      const currentPlano = planos.find(p => p.id === planoId);
+      if (currentPlano?.projeto_id) {
+        return allProjetos.filter(p => p.id === currentPlano.projeto_id);
+      }
+    }
+
     return allProjetos;
-  }, [allProjetos, projetoId]);
+  }, [allProjetos, projetoId, planoId, planos]);
+  useEffect(() => {
+    if (!formData.projeto_id && filteredProjetos.length === 1) {
+      setFormData(prev => ({ ...prev, projeto_id: filteredProjetos[0].id }));
+    }
+  }, [filteredProjetos, formData.projeto_id]);
+
 
   const { data: allPerfis = [] } = usePlanningPerfis();
   const { data: allIps = [] } = usePlanningIps();
