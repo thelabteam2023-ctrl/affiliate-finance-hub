@@ -56,7 +56,9 @@ import {
   type CelulaDisponivel,
 } from "@/hooks/usePlanoCelulasDisponiveis";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useQueryClient } from "@tanstack/react-query";
+  import { useQueryClient } from "@tanstack/react-query";
+  import { PlanningProgressBar } from "./progress/PlanningProgressBar";
+  import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 
 type DisplayCurrency = "BRL" | "USD";
 
@@ -541,7 +543,10 @@ export function PlanejamentoCalendario() {
   );
   const campanhaIds = useMemo(() => campanhas.map((c) => c.id), [campanhas]);
   const { data: celulasAgendadas = [] } = useCelulasAgendadasPorCampanhas(campanhaIds);
-  const qc = useQueryClient();
+    const qc = useQueryClient();
+    
+    // Hook para conversão multi-moeda centralizada
+    const { convertToConsolidation } = useProjetoCurrency(undefined);
 
   // Converte qualquer valor da moeda nativa para a moeda de exibição (BRL ou USD)
   const convertToDisplay = useCallback((value: number, fromCurrency: string): number => {
@@ -1374,6 +1379,13 @@ export function PlanejamentoCalendario() {
               Novo plano
             </Button>
           </div>
+
+          <PlanningProgressBar 
+            campanhas={campanhas} 
+            year={year} 
+            month={month} 
+            convertToConsolidation={convertToConsolidation}
+          />
 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
