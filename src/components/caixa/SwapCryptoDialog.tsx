@@ -23,7 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowRightLeft, Loader2, ArrowDown, AlertTriangle, Plus } from "lucide-react";
+ import { ArrowRightLeft, Loader2, ArrowDown, AlertTriangle, Plus, Wallet } from "lucide-react";
+ import { WalletCryptoSelect } from "@/components/wallets/WalletCryptoSelect";
 import { RedeSelect } from "@/components/parceiros/RedeSelect";
 
 const MOEDAS_CRYPTO = [
