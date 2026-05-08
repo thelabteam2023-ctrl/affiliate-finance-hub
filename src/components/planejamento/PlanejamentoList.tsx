@@ -204,9 +204,7 @@ import { toast } from "sonner";
         if (!e.scheduled_date) return false;
         
         const matchesProjeto = projetoFilter === "all" || e.projeto_id === projetoFilter;
-        // Se o plano selecionado tem um projeto, o extra deve pertencer a esse projeto
-        const planoSelecionado = planosDoProjeto.find(p => p.id === planoFiltroId);
-        const matchesPlano = planoFiltroId === "all" || (planoSelecionado?.projeto_id ? e.projeto_id === planoSelecionado.projeto_id : true);
+         const matchesPlano = planoFiltroId === "all" || e.plano_id === planoFiltroId;
         
         const matchesSearch =
           e.bookmaker_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
