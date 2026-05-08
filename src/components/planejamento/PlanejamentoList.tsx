@@ -210,9 +210,13 @@ import { toast } from "sonner";
    };
  
     if (campanhasLoading || celulasLoading || extrasLoading) {
-     return <div className="p-8 text-center text-muted-foreground">Carregando histórico...</div>;
-   }
- 
+      return <div className="p-8 text-center text-muted-foreground">Carregando histórico...</div>;
+    }
+
+    const totalPlanned = campanhas.reduce((sum, c) => sum + convertToConsolidation(c.deposit_amount, c.currency), 0);
+    const totalExtras = extras.reduce((sum, e) => sum + convertToConsolidation(e.deposit_amount, e.currency), 0);
+    const grandTotal = totalPlanned + totalExtras;
+
     return (
       <TooltipProvider>
       <div className="flex flex-col h-full bg-background overflow-hidden">
