@@ -327,28 +327,28 @@ import { toast } from "sonner";
               </Select>
             </div>
 
-            <div className="flex flex-col gap-1 flex-1 min-w-[150px] sm:flex-none sm:w-[180px]">
-            {projetoFilter !== "all" && planosDoProjeto.length > 0 && (
-              <div className="flex flex-col gap-1 flex-1 min-w-[150px] sm:flex-none sm:w-[180px]">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Plano</span>
-                <Select value={planoFiltroId} onValueChange={setPlanoFiltroId}>
-                  <SelectTrigger className="h-10 px-3 flex items-center gap-2">
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <Target className="h-4 w-4 shrink-0 text-muted-foreground" />
-                      <div className="truncate">
-                        <SelectValue placeholder="Plano" />
-                      </div>
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os Planos</SelectItem>
-                    {planosDoProjeto.map(p => (
-                      <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+             <div className="flex flex-col gap-1 flex-1 min-w-[150px] sm:flex-none sm:w-[180px]">
+             {todosPlanos.length > 0 && (
+               <div className="flex flex-col gap-1 flex-1 min-w-[150px] sm:flex-none sm:w-[180px]">
+                 <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Plano</span>
+                 <Select value={planoFiltroId} onValueChange={handlePlanoChange}>
+                   <SelectTrigger className="h-10 px-3 flex items-center gap-2">
+                     <div className="flex items-center gap-2 min-w-0 flex-1">
+                       <Target className="h-4 w-4 shrink-0 text-muted-foreground" />
+                       <div className="truncate">
+                         <SelectValue placeholder="Plano" />
+                       </div>
+                     </div>
+                   </SelectTrigger>
+                   <SelectContent>
+                     <SelectItem value="all">Todos os Planos</SelectItem>
+                     {todosPlanos.map(p => (
+                       <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                     ))}
+                   </SelectContent>
+                 </Select>
+               </div>
+             )}
 
               <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Projeto</span>
               <Select value={projetoFilter} onValueChange={setProjetoFilter}>
