@@ -417,14 +417,15 @@ import { toast } from "sonner";
           </div>
         ) : (
           <div className="space-y-8 max-w-5xl mx-auto">
-            {extras.filter(e => {
-              if (e.scheduled_date) return false;
-              const matchesProjeto = projetoFilter === "all" || e.projeto_id === projetoFilter;
-              const matchesSearch = e.bookmaker_nome.toLowerCase().includes(searchTerm.toLowerCase()) || (e.notes || "").toLowerCase().includes(searchTerm.toLowerCase());
-              const status = e.status === "done" ? "concluido" : (e.status === "pending" ? "pendente" : (e.status === "atrasado" ? "atrasado" : "planejado"));
-              const matchesStatus = statusFilter === "all" || status === statusFilter;
-              return matchesProjeto && matchesSearch && matchesStatus;
-            }).length > 0 && (
+             {extras.filter(e => {
+               if (e.scheduled_date) return false;
+               const matchesProjeto = projetoFilter === "all" || e.projeto_id === projetoFilter;
+               const matchesPlano = planoFiltroId === "all" || e.plano_id === planoFiltroId;
+               const matchesSearch = e.bookmaker_nome.toLowerCase().includes(searchTerm.toLowerCase()) || (e.notes || "").toLowerCase().includes(searchTerm.toLowerCase());
+               const status = e.status === "done" ? "concluido" : (e.status === "pending" ? "pendente" : (e.status === "atrasado" ? "atrasado" : "planejado"));
+               const matchesStatus = statusFilter === "all" || status === statusFilter;
+               return matchesProjeto && matchesPlano && matchesSearch && matchesStatus;
+             }).length > 0 && (
               <div className="space-y-4">
                 <div className="flex items-center gap-2 px-2">
                   <Badge variant="outline" className="bg-blue-500/5 text-blue-500 border-blue-500/20 font-black tracking-widest text-[10px] uppercase">
@@ -433,14 +434,15 @@ import { toast } from "sonner";
                   <div className="h-px flex-1 bg-border/50" />
                 </div>
                 <div className="grid gap-3">
-                  {extras.filter(e => {
-                    if (e.scheduled_date) return false;
-                    const matchesProjeto = projetoFilter === "all" || e.projeto_id === projetoFilter;
-                    const matchesSearch = e.bookmaker_nome.toLowerCase().includes(searchTerm.toLowerCase()) || (e.notes || "").toLowerCase().includes(searchTerm.toLowerCase());
-                    const status = e.status === "done" ? "concluido" : (e.status === "pending" ? "pendente" : (e.status === "atrasado" ? "atrasado" : "planejado"));
-                    const matchesStatus = statusFilter === "all" || status === statusFilter;
-                    return matchesProjeto && matchesSearch && matchesStatus;
-                  }).map((extra) => (
+                   {extras.filter(e => {
+                     if (e.scheduled_date) return false;
+                     const matchesProjeto = projetoFilter === "all" || e.projeto_id === projetoFilter;
+                     const matchesPlano = planoFiltroId === "all" || e.plano_id === planoFiltroId;
+                     const matchesSearch = e.bookmaker_nome.toLowerCase().includes(searchTerm.toLowerCase()) || (e.notes || "").toLowerCase().includes(searchTerm.toLowerCase());
+                     const status = e.status === "done" ? "concluido" : (e.status === "pending" ? "pendente" : (e.status === "atrasado" ? "atrasado" : "planejado"));
+                     const matchesStatus = statusFilter === "all" || status === statusFilter;
+                     return matchesProjeto && matchesPlano && matchesSearch && matchesStatus;
+                   }).map((extra) => (
                     <Card
                       key={extra.id}
                       onClick={() => {
