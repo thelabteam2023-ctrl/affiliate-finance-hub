@@ -1,4 +1,3 @@
-   usePlanningBookmakersPorProjeto,
 import React, { useState, useEffect, useMemo } from "react";
 import { Trash2, Check, ChevronsUpDown, MapPin } from "lucide-react";
 import {
@@ -28,7 +27,8 @@ import {
   useDeletePlanningExtra,
   usePlanningPerfis,
   usePlanningIps,
-  perfilDisplayName
+  perfilDisplayName,
+  usePlanningBookmakersPorProjeto
 } from "@/hooks/usePlanningData";
 import { FIAT_CURRENCIES } from "@/types/currency";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -52,16 +52,7 @@ export function PlanningExtraDialog({
   const upsertExtra = useUpsertPlanningExtra();
   const deleteExtra = useDeletePlanningExtra();
   const { data: parceiros = [] } = useParceirosLite();
-   const { data: bookmakers = [] } = useBookmakersCatalogo();
-   const { data: plannedBookmakerIds } = usePlanningBookmakersPorProjeto(formData.projeto_id);
-   const filteredBookmakers = useMemo(() => {
-     if (!formData.projeto_id || !plannedBookmakerIds || plannedBookmakerIds.length === 0) return bookmakers;
-     return bookmakers.filter(b => 
-       plannedBookmakerIds.includes(b.id) || 
-       (extra && extra.bookmaker_catalogo_id === b.id)
-     );
-   }, [bookmakers, plannedBookmakerIds, formData.projeto_id, extra]);
- 
+  const { data: bookmakers = [] } = useBookmakersCatalogo();
   const { data: projetos = [] } = useProjetos();
   const { data: allPerfis = [] } = usePlanningPerfis();
   const { data: allIps = [] } = usePlanningIps();
@@ -79,6 +70,15 @@ export function PlanningExtraDialog({
     perfil_id: "",
     ip_id: ""
   });
+
+  const { data: plannedBookmakerIds } = usePlanningBookmakersPorProjeto(formData.projeto_id);
+  const filteredBookmakers = useMemo(() => {
+    if (!formData.projeto_id || !plannedBookmakerIds || plannedBookmakerIds.length === 0) return bookmakers;
+    return bookmakers.filter(b => 
+      plannedBookmakerIds.includes(b.id) || 
+      (extra && extra.bookmaker_catalogo_id === b.id)
+    );
+  }, [bookmakers, plannedBookmakerIds, formData.projeto_id, extra]);
 
   const [profileSearchOpen, setProfileSearchOpen] = useState(false);
 
