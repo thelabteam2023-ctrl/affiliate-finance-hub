@@ -187,6 +187,7 @@ import { toast } from "sonner";
     const projectCampanhas = campanhas
       .filter((c) => {
         const matchesProjeto = projetoFilter === "all" || c.projeto_id === projetoFilter;
+        const matchesPlano = planoFiltroId === "all" || campanhaPlanoIdMap.get(c.id) === planoFiltroId;
         const matchesSearch =
           c.bookmaker_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
           (c.parceiro_snapshot?.nome || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -194,22 +195,24 @@ import { toast } from "sonner";
         const { isPending } = resolveCampanhaData(c);
         const status = getStatus(c, isPending);
         const matchesStatus = statusFilter === "all" || status === statusFilter;
-        return matchesSearch && matchesStatus && matchesProjeto;
+        return matchesSearch && matchesStatus && matchesProjeto && matchesPlano;
       });
 
     const projectExtras = extras
       .filter((e) => {
-        // Se tem data, incluímos no fluxo temporal (unificado)
-        // Se não tem data, ele será mostrado na seção separada "Extras Operacionais (Sem Data)"
         if (!e.scheduled_date) return false;
         
         const matchesProjeto = projetoFilter === "all" || e.projeto_id === projetoFilter;
+        // Se o plano selecionado tem um projeto, o extra deve pertencer a esse projeto
+        const planoSelecionado = planosDoProjeto.find(p => p.id === planoFiltroId);
+        const matchesPlano = planoFiltroId === "all" || (planoSelecionado?.projeto_id ? e.projeto_id === planoSelecionado.projeto_id : true);
+        
         const matchesSearch =
           e.bookmaker_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
           (e.notes || "").toLowerCase().includes(searchTerm.toLowerCase());
         const status = e.status === "done" ? "concluido" : (e.status === "pending" ? "pendente" : (e.status === "atrasado" ? "atrasado" : "planejado"));
         const matchesStatus = statusFilter === "all" || status === statusFilter;
-        return matchesSearch && matchesStatus && matchesProjeto;
+        return matchesSearch && matchesStatus && matchesProjeto && matchesPlano;
       });
 
     const unified = [
@@ -222,7 +225,7 @@ import { toast } from "sonner";
         if (dateCompare !== 0) return dateCompare;
         return (a.created_at || "").localeCompare(b.created_at || "");
     });
-  }, [campanhas, extras, searchTerm, statusFilter, projetoFilter, celulasAgendadas, perfis, ips]);
+  }, [campanhas, extras, searchTerm, statusFilter, projetoFilter, planoFiltroId, campanhaPlanoIdMap, planosDoProjeto, celulasAgendadas, perfis, ips]);
 
   const groupedByDay = useMemo(() => {
     const groups: Record<string, any[]> = {};
