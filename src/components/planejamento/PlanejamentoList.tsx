@@ -200,9 +200,10 @@ import { toast } from "sonner";
     return groups;
   }, [filteredCampanhas]);
 
-  const sortedDates = useMemo(() => {
-    return Object.keys(groupedByDay).sort();
-  }, [groupedByDay]);
+   const sortedDates = useMemo(() => {
+     const allDates = new Set([...Object.keys(groupedByDay), ...extras.filter(e => e.scheduled_date).map(e => e.scheduled_date!)]);
+     return Array.from(allDates).sort();
+   }, [groupedByDay, extras]);
  
    const formatMoney = (v: number, currency: string) => {
      return new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(v);
