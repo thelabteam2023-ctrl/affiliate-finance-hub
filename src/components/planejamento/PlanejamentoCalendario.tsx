@@ -512,9 +512,10 @@ export function PlanejamentoCalendario() {
   const [detailsDate, setDetailsDate] = useState<string | null>(null);
 
    const { data: campanhas = [] } = usePlanningCampanhas(year, month);
-   const { data: extras = [] } = usePlanningExtras(year, month);
-   const [isExtraDialogOpen, setIsExtraDialogOpen] = useState(false);
-   const [editingExtra, setEditingExtra] = useState<PlanningExtra | null>(null);
+    const { data: extras = [] } = usePlanningExtras(year, month);
+    const [isExtraDialogOpen, setIsExtraDialogOpen] = useState(false);
+    const [editingExtra, setEditingExtra] = useState<PlanningExtra | null>(null);
+    const [extraDialogInitialDate, setExtraDialogInitialDate] = useState<string | undefined>(undefined);
   const { data: ips = [] } = usePlanningIps();
   const { data: wallets = [] } = usePlanningWallets();
   const { data: parceiros = [] } = useParceirosLite();
@@ -1441,12 +1442,16 @@ export function PlanejamentoCalendario() {
               const dayConflicts = conflictMap.get(key) ?? new Set();
               return (
                 <div key={idx} className="group">
-                  <DayCell
-                    date={cell.date}
-                    isCurrentMonth={cell.isCurrentMonth}
-                    onAdd={() => undefined}
-                    onOpenDetails={() => setDetailsDate(key)}
-                  >
+                   <DayCell
+                     date={cell.date}
+                     isCurrentMonth={cell.isCurrentMonth}
+                     onAdd={() => {
+                       setEditingExtra(null);
+                       setExtraDialogInitialDate(key);
+                       setIsExtraDialogOpen(true);
+                     }}
+                     onOpenDetails={() => setDetailsDate(key)}
+                   >
                      {extras.filter(e => {
                         if (e.scheduled_date !== key) return false;
                         // Se estamos no modo plano, só mostramos extras que pertençam ao projeto desse plano
@@ -1706,12 +1711,17 @@ export function PlanejamentoCalendario() {
       </AlertDialog>
 
  
-       <PlanningExtraDialog
-         open={isExtraDialogOpen}
-         onOpenChange={setIsExtraDialogOpen}
-        extra={editingExtra}
-        planoId={planoFiltroId}
-      />
+        <PlanningExtraDialog
+          open={isExtraDialogOpen}
+          onOpenChange={(open) => {
+            setIsExtraDialogOpen(open);
+            if (!open) setExtraDialogInitialDate(undefined);
+          }}
+          extra={editingExtra}
+          planoId={planoFiltroId}
+          projetoId={planoSelecionado?.projeto_id}
+          initialDate={extraDialogInitialDate}
+        />
  
        <SimulacaoDistribuicaoDialog
         open={simulacaoOpen}
