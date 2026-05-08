@@ -43,9 +43,12 @@ import {
   usePlanningIps,
   planningPerfilCpfIndex,
   useProjetos,
-  useUpsertCampanha,
-  PlanningPerfil
+   useUpsertCampanha,
+   PlanningPerfil,
+   usePlanningExtras,
+   PlanningExtra
 } from "@/hooks/usePlanningData";
+ import { PlanningExtraDialog } from "../planejamento/PlanningExtraDialog";
 import { useCelulasAgendadasPorCampanhas } from "@/hooks/usePlanoCelulasDisponiveis";
 import { format, parseISO, isToday, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -70,7 +73,11 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
   const [selectedYear, setSelectedYear] = useState(today.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(today.getMonth() + 1);
 
-  const { data: allCampanhas = [], isLoading: campanhasLoading } = usePlanningCampanhas(selectedYear, selectedMonth);
+   const { data: allCampanhas = [], isLoading: campanhasLoading } = usePlanningCampanhas(selectedYear, selectedMonth);
+   const { data: extras = [], isLoading: extrasLoading } = usePlanningExtras(selectedYear, selectedMonth);
+   const [isExtraDialogOpen, setIsExtraDialogOpen] = useState(false);
+   const [editingExtra, setEditingExtra] = useState<PlanningExtra | null>(null);
+   const [displayCurrency, setDisplayCurrency] = useState<"BRL" | "USD">("BRL");
   const campanhas = useMemo(() => allCampanhas, [allCampanhas]);
   const campanhaIds = useMemo(() => campanhas.map(c => c.id), [campanhas]);
   const { data: celulasAgendadas = [], isLoading: celulasLoading } = useCelulasAgendadasPorCampanhas(campanhaIds);
@@ -309,13 +316,20 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
       {/* Lista com Navegação Flutuante */}
       <div className="flex-1 overflow-auto p-4 scroll-smooth planning-list-scroll relative space-y-4">
         <div className="max-w-5xl mx-auto">
-          <PlanningProgressBar 
-            campanhas={filteredData} 
-            year={selectedYear} 
-            month={selectedMonth} 
-            projetoId={projetoId}
-            convertToConsolidation={convertToConsolidation}
-          />
+           <PlanningProgressBar 
+             campanhas={filteredData} 
+             extras={extras.filter(e => e.projeto_id === projetoId)}
+             year={selectedYear} 
+             month={selectedMonth} 
+             projetoId={projetoId}
+             convertToConsolidation={convertToConsolidation}
+             displayCurrency={displayCurrency}
+             onDisplayCurrencyChange={setDisplayCurrency}
+             onAddExtra={() => {
+               setEditingExtra(null);
+               setIsExtraDialogOpen(true);
+             }}
+           />
         </div>
 
         {filteredData.length > 0 && (
@@ -565,7 +579,14 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
         )}
       </div>
 
-      {isDialogOpen && (
+       <PlanningExtraDialog
+         open={isExtraDialogOpen}
+         onOpenChange={setIsExtraDialogOpen}
+         extra={editingExtra}
+         projetoId={projetoId}
+       />
+ 
+       {isDialogOpen && (
         <CampanhaDialog
           open={isDialogOpen}
           onOpenChange={setIsDialogOpen}

@@ -38,12 +38,15 @@ import {
   usePlanningWallets,
   useParceirosLite,
   usePlanningPerfis,
-  useUpsertCampanha,
-  useDeleteCampanha,
-  useProjetos,
+   useUpsertCampanha,
+   useDeleteCampanha,
+   useProjetos,
+   usePlanningExtras,
+   PlanningExtra
 } from "@/hooks/usePlanningData";
 import { useGrupoRegrasValidator } from "@/hooks/useGrupoRegrasValidator";
-import { CampanhaDialog } from "./CampanhaDialog";
+ import { CampanhaDialog } from "./CampanhaDialog";
+ import { PlanningExtraDialog } from "./PlanningExtraDialog";
 import { RecursosManager } from "./RecursosManager";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
@@ -508,7 +511,10 @@ export function PlanejamentoCalendario() {
   const [simulacaoOpen, setSimulacaoOpen] = useState(false);
   const [detailsDate, setDetailsDate] = useState<string | null>(null);
 
-  const { data: campanhas = [] } = usePlanningCampanhas(year, month);
+   const { data: campanhas = [] } = usePlanningCampanhas(year, month);
+   const { data: extras = [] } = usePlanningExtras(year, month);
+   const [isExtraDialogOpen, setIsExtraDialogOpen] = useState(false);
+   const [editingExtra, setEditingExtra] = useState<PlanningExtra | null>(null);
   const { data: ips = [] } = usePlanningIps();
   const { data: wallets = [] } = usePlanningWallets();
   const { data: parceiros = [] } = useParceirosLite();
@@ -1382,12 +1388,19 @@ export function PlanejamentoCalendario() {
             </Button>
           </div>
 
-          <PlanningProgressBar 
-            campanhas={campanhas} 
-            year={year} 
-            month={month} 
-            convertToConsolidation={convertToConsolidation}
-          />
+           <PlanningProgressBar 
+             campanhas={campanhas} 
+             extras={extras}
+             year={year} 
+             month={month} 
+             convertToConsolidation={convertToConsolidation}
+             displayCurrency={displayCurrency}
+             onDisplayCurrencyChange={setDisplayCurrency}
+             onAddExtra={() => {
+               setEditingExtra(null);
+               setIsExtraDialogOpen(true);
+             }}
+           />
 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -1663,7 +1676,13 @@ export function PlanejamentoCalendario() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <SimulacaoDistribuicaoDialog
+       <PlanningExtraDialog
+         open={isExtraDialogOpen}
+         onOpenChange={setIsExtraDialogOpen}
+         extra={editingExtra}
+       />
+ 
+       <SimulacaoDistribuicaoDialog
         open={simulacaoOpen}
         onOpenChange={setSimulacaoOpen}
         celulas={celulasPlano}
