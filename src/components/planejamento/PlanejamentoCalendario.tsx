@@ -1429,9 +1429,6 @@ export function PlanejamentoCalendario() {
                   USD {isUsingFallback && "⚠️"}
                 </Button>
               </div>
-              <Badge variant="secondary" className="text-sm">
-                {totalCasasMes} casas • Total do mês: {formatMoney(totalMes, displayCurrency)}
-              </Badge>
             </div>
           </div>
 
