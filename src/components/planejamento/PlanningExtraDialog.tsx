@@ -60,6 +60,20 @@ export function PlanningExtraDialog({
   const { data: allProjetos = [] } = useProjetos();
   const { planos = [] } = useDistribuicaoPlanos();
 
+  const [formData, setFormData] = useState({
+    bookmaker_nome: "",
+    bookmaker_catalogo_id: "",
+    parceiro_id: "",
+    projeto_id: projetoId || "",
+    deposit_amount: "",
+    currency: "BRL",
+    scheduled_date: "",
+    status: "pending",
+    notes: "",
+    perfil_id: "",
+    ip_id: ""
+  });
+
   const filteredProjetos = useMemo(() => {
     if (projetoId) {
       return allProjetos.filter(p => p.id === projetoId);
@@ -74,29 +88,15 @@ export function PlanningExtraDialog({
 
     return allProjetos;
   }, [allProjetos, projetoId, planoId, planos]);
+
   useEffect(() => {
     if (!formData.projeto_id && filteredProjetos.length === 1) {
       setFormData(prev => ({ ...prev, projeto_id: filteredProjetos[0].id }));
     }
   }, [filteredProjetos, formData.projeto_id]);
 
-
   const { data: allPerfis = [] } = usePlanningPerfis();
   const { data: allIps = [] } = usePlanningIps();
-
-  const [formData, setFormData] = useState({
-    bookmaker_nome: "",
-    bookmaker_catalogo_id: "",
-    parceiro_id: "",
-    projeto_id: projetoId || "",
-    deposit_amount: "",
-    currency: "BRL",
-    scheduled_date: "",
-    status: "pending",
-    notes: "",
-    perfil_id: "",
-    ip_id: ""
-  });
 
   const { data: plannedBookmakerIds } = usePlanningBookmakersPorProjeto(formData.projeto_id);
   const filteredBookmakers = useMemo(() => {
