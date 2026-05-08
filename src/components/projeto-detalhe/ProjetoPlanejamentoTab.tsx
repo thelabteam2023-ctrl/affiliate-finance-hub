@@ -46,10 +46,11 @@ import {
    useUpsertCampanha,
    PlanningPerfil,
    usePlanningExtras, useParceirosLite,
-   PlanningExtra
+  PlanningExtra
 } from "@/hooks/usePlanningData";
  import { PlanningExtraDialog } from "../planejamento/PlanningExtraDialog";
 import { useCelulasAgendadasPorCampanhas } from "@/hooks/usePlanoCelulasDisponiveis";
+import { useDistribuicaoPlanosPorProjeto } from "@/hooks/useDistribuicaoPlanos";
 import { format, parseISO, isToday, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -73,7 +74,18 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
   const [selectedYear, setSelectedYear] = useState(today.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(today.getMonth() + 1);
 
-   const { data: allCampanhas = [], isLoading: campanhasLoading } = usePlanningCampanhas(selectedYear, selectedMonth);
+  const { data: allCampanhas = [], isLoading: campanhasLoading } = usePlanningCampanhas(selectedYear, selectedMonth);
+  const [planoFiltroId, setPlanoFiltroId] = useState<string>("all");
+  const { data: planosDoProjeto = [] } = useDistribuicaoPlanosPorProjeto(projetoId);
+
+  const campanhaPlanoIdMap = useMemo(() => {
+    const map = new Map<string, string>();
+    celulasAgendadas.forEach((celula) => {
+      if (celula.campanha_id && celula.plano_id) map.set(celula.campanha_id, celula.plano_id);
+    });
+    return map;
+  }, [celulasAgendadas]);
+
    const { data: extras = [], isLoading: extrasLoading } = usePlanningExtras(selectedYear, selectedMonth);
    const [isExtraDialogOpen, setIsExtraDialogOpen] = useState(false);
    const [editingExtra, setEditingExtra] = useState<PlanningExtra | null>(null);
