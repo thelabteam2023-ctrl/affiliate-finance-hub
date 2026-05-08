@@ -1620,7 +1620,7 @@ export function SurebetModalRoot({
         }
         
         console.log("[SurebetModalRoot] ✅ Surebet criada via RPC:", {
-          aposta_id: result.aposta_id,
+          aposta_id: result.o_aposta_id,
           events_created: result.events_created,
         });
         
@@ -1639,12 +1639,12 @@ export function SurebetModalRoot({
           }))
           .filter(p => p.resultado && ['GREEN', 'RED', 'MEIO_GREEN', 'MEIO_RED', 'VOID'].includes(p.resultado!));
         
-        if (pernasComResultado.length > 0 && result.aposta_id) {
+        if (pernasComResultado.length > 0 && result.o_aposta_id) {
           // Buscar IDs das pernas recém-criadas
           const { data: pernasDB } = await supabase
             .from('apostas_pernas')
             .select('id, ordem, bookmaker_id')
-            .eq('aposta_id', result.aposta_id)
+            .eq('aposta_id', result.o_aposta_id)
             .order('ordem', { ascending: true });
           
           if (pernasDB && pernasDB.length > 0) {
@@ -1653,7 +1653,7 @@ export function SurebetModalRoot({
               const pernaDB = pernasDB.find(db => db.ordem === p.index + 1);
               if (pernaDB && p.resultado) {
                 const liqResult = await liquidarPernaSurebet({
-                  surebet_id: result.aposta_id,
+                  surebet_id: result.o_aposta_id,
                   perna_id: pernaDB.id,
                   bookmaker_id: p.bookmaker_id,
                   resultado: p.resultado as 'GREEN' | 'RED' | 'MEIO_GREEN' | 'MEIO_RED' | 'VOID',
