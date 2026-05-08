@@ -312,7 +312,7 @@ import { toast } from "sonner";
        <div className="flex-1 overflow-auto p-4 scroll-smooth space-y-4">
          <div className="max-w-5xl mx-auto">
            <PlanningProgressBar 
-             campanhas={campanhas} 
+             campanhas={filteredCampanhas} 
              year={selectedYear} 
              month={selectedMonth} 
              convertToConsolidation={convertToConsolidation}
