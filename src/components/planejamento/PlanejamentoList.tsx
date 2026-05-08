@@ -339,6 +339,7 @@ import { toast } from "sonner";
             open={isExtraDialogOpen}
             onOpenChange={setIsExtraDialogOpen}
             extra={editingExtra}
+            projetoId={projetoFilter !== "all" ? projetoFilter : undefined}
           />
          </div>
 
