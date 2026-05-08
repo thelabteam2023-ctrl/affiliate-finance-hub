@@ -210,8 +210,8 @@ import { toast } from "sonner";
   }, [campanhas, extras, searchTerm, statusFilter, projetoFilter, celulasAgendadas, perfis, ips]);
 
   const groupedByDay = useMemo(() => {
-    const groups: Record<string, PlanningCampanha[]> = {};
-    filteredItems.forEach(c => {
+    const groups: Record<string, any[]> = {};
+    filteredItems.forEach((c: any) => {
       if (!groups[c.scheduled_date]) groups[c.scheduled_date] = [];
       groups[c.scheduled_date].push(c);
     });
@@ -339,7 +339,7 @@ import { toast } from "sonner";
               </Button>
             </div>
              <Badge variant="outline" className="font-mono gap-1.5 px-2.5 py-1 bg-muted/30">
-               <span className="text-primary font-black">{filteredCampanhas.length + extras.length}</span>
+               <span className="text-primary font-black">{filteredItems.length}</span>
                <span className="opacity-60 text-[10px] uppercase tracking-tighter font-bold">Registros</span>
              </Badge>
           </div>
@@ -369,7 +369,7 @@ import { toast } from "sonner";
           />
          </div>
 
-          {filteredCampanhas.length === 0 && extras.length === 0 ? (
+          {filteredItems.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
             <Filter className="h-12 w-12 opacity-20" />
             <p>Nenhum registro encontrado para os filtros selecionados.</p>
@@ -468,7 +468,7 @@ import { toast } from "sonner";
 
            {/* Lista de Campanhas do Dia (incluindo Extras) */}
                     <div className="flex-1 grid gap-3 pb-4">
-             {camps.map((camp) => {
+              {camps.map((camp: any) => {
                         const isExtra = camp.ui_type === 'extra';
                         
                         let perfil, linkedIp, isPending, celula, bookmakerCatalogoId, status, cpfIndex, displayName, displayValue;
@@ -511,7 +511,7 @@ import { toast } from "sonner";
                             )}
                             onClick={() => {
                               if (isExtra) {
-                                setEditingExtra(camp);
+                                 setEditingExtra(camp as PlanningExtra);
                                 setIsExtraDialogOpen(true);
                               }
                             }}
@@ -608,7 +608,7 @@ import { toast } from "sonner";
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       if (isExtra) {
-                                        setEditingExtra(camp);
+                                         setEditingExtra(camp as PlanningExtra);
                                         setIsExtraDialogOpen(true);
                                       } else {
                                         handleToggleStatus(camp);
@@ -640,7 +640,7 @@ import { toast } from "sonner";
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     if (isExtra) {
-                                      setEditingExtra(camp);
+                                       setEditingExtra(camp as PlanningExtra);
                                       setIsExtraDialogOpen(true);
                                     } else {
                                       setEditingCampanha(camp);

@@ -18,8 +18,9 @@ export interface PlanningIp {
   provider: string | null;
   notes: string | null;
   is_active: boolean;
-  created_at: string;
-  updated_at: string;
+   created_at: string;
+   updated_at: string;
+   created_by?: string;
 }
 
 export interface PlanningWallet {
@@ -31,8 +32,9 @@ export interface PlanningWallet {
   address: string | null;
   notes: string | null;
   is_active: boolean;
-  created_at: string;
-  updated_at: string;
+   created_at: string;
+   updated_at: string;
+   created_by?: string;
 }
 
  export interface PlanningCampanha {
@@ -302,6 +304,34 @@ export function usePlanningCampanhas(year: number, month: number) {
    });
  }
  
+ export function usePlanningBookmakersPorProjeto(projetoId?: string | null) {
+   const { workspaceId } = useAuth();
+   return useQuery({
+     queryKey: ["planning-bookmakers-projeto", workspaceId, projetoId],
+     enabled: !!workspaceId && !!projetoId,
+     queryFn: async () => {
+       const { data: planos } = await (supabase as any)
+         .from("distribuicao_planos")
+         .select("id")
+         .eq("projeto_id", projetoId);
+       
+       if (!planos || planos.length === 0) return [];
+       
+       const planoIds = planos.map((p: any) => p.id);
+       
+       const { data: celulas, error } = await (supabase as any)
+         .from("distribuicao_plano_celulas")
+         .select("bookmaker_catalogo_id")
+         .in("plano_id", planoIds);
+         
+       if (error) throw error;
+       
+       const ids = Array.from(new Set((celulas ?? []).map((c: any) => c.bookmaker_catalogo_id)));
+       return ids;
+     },
+   });
+ }
+ 
  export function useUpsertPlanningExtra() {
    const qc = useQueryClient();
    const { workspaceId, user } = useAuth();
@@ -312,7 +342,7 @@ export function usePlanningCampanhas(year: number, month: number) {
        const row = {
          ...rest,
          workspace_id: workspaceId,
-         created_by: payload.created_by || user.id,
+         created_by: user.id,
        };
        if (id) {
          const { error } = await supabase.from("planning_extras").update(row).eq("id", id);
@@ -391,7 +421,7 @@ export function useAddPlanningPerfis() {
       const rows = parceiroIds.map(pid => ({
         workspace_id: workspaceId,
         parceiro_id: pid,
-        created_by: payload.created_by || user.id,
+           created_by: user.id,
         is_active: true,
       }));
       const { error } = await supabase
@@ -469,7 +499,7 @@ export function useAddPlanningPerfisGenericos() {
           parceiro_id: null,
           nome_generico: `${prefixo} #${cursor}`,
           cor: pickPerfilCor(totalExistentes + i),
-          created_by: payload.created_by || user.id,
+          created_by: user.id,
           is_active: true,
         });
         usedNumbers.add(cursor);
@@ -640,7 +670,7 @@ export function useAddPlanningCasas() {
       const rows = bookmakerIds.map(bid => ({
         workspace_id: workspaceId,
         bookmaker_catalogo_id: bid,
-        created_by: payload.created_by || user.id,
+        created_by: user.id,
         is_active: true,
       }));
       const { error } = await supabase

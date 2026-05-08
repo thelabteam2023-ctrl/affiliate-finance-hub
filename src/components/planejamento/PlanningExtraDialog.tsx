@@ -27,7 +27,8 @@ import {
   useDeletePlanningExtra,
   usePlanningPerfis,
   usePlanningIps,
-  perfilDisplayName
+  perfilDisplayName,
+  usePlanningBookmakersPorProjeto
 } from "@/hooks/usePlanningData";
 import { FIAT_CURRENCIES } from "@/types/currency";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -69,6 +70,15 @@ export function PlanningExtraDialog({
     perfil_id: "",
     ip_id: ""
   });
+
+  const { data: plannedBookmakerIds } = usePlanningBookmakersPorProjeto(formData.projeto_id);
+  const filteredBookmakers = useMemo(() => {
+    if (!formData.projeto_id || !plannedBookmakerIds) return bookmakers;
+    return bookmakers.filter(b => 
+      plannedBookmakerIds.includes(b.id) || 
+      (extra && extra.bookmaker_catalogo_id === b.id)
+    );
+  }, [bookmakers, plannedBookmakerIds, formData.projeto_id, extra]);
 
   const [profileSearchOpen, setProfileSearchOpen] = useState(false);
 
@@ -237,7 +247,12 @@ export function PlanningExtraDialog({
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {bookmakers.map((b) => (
+                    {filteredBookmakers.length === 0 && (
+                      <div className="p-4 text-center text-xs text-muted-foreground">
+                        Nenhuma casa planejada encontrada para este projeto.
+                      </div>
+                    )}
+                    {filteredBookmakers.map((b) => (
                       <SelectItem key={b.id} value={b.id}>{b.nome}</SelectItem>
                     ))}
                   </SelectContent>
