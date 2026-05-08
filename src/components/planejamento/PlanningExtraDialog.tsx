@@ -73,7 +73,7 @@ export function PlanningExtraDialog({
 
   const { data: plannedBookmakerIds } = usePlanningBookmakersPorProjeto(formData.projeto_id);
   const filteredBookmakers = useMemo(() => {
-    if (!formData.projeto_id || !plannedBookmakerIds || plannedBookmakerIds.length === 0) return bookmakers;
+    if (!formData.projeto_id || !plannedBookmakerIds) return bookmakers;
     return bookmakers.filter(b => 
       plannedBookmakerIds.includes(b.id) || 
       (extra && extra.bookmaker_catalogo_id === b.id)
@@ -247,7 +247,12 @@ export function PlanningExtraDialog({
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
                   <SelectContent>
-                     {filteredBookmakers.map((b) => (
+                    {filteredBookmakers.length === 0 && (
+                      <div className="p-4 text-center text-xs text-muted-foreground">
+                        Nenhuma casa planejada encontrada para este projeto.
+                      </div>
+                    )}
+                    {filteredBookmakers.map((b) => (
                       <SelectItem key={b.id} value={b.id}>{b.nome}</SelectItem>
                     ))}
                   </SelectContent>
