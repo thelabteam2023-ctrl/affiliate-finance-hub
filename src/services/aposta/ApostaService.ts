@@ -118,7 +118,7 @@ export async function criarAposta(
         };
       }
 
-      return { success: true, data: { id: result.aposta_id } };
+      return { success: true, data: { id: result.o_aposta_id } };
     } catch (err: any) {
       return {
         success: false,
