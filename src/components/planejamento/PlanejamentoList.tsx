@@ -355,7 +355,7 @@ import { toast } from "sonner";
           />
          </div>
 
-         {filteredCampanhas.length === 0 ? (
+          {filteredCampanhas.length === 0 && extras.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
             <Filter className="h-12 w-12 opacity-20" />
             <p>Nenhum registro encontrado para os filtros selecionados.</p>
