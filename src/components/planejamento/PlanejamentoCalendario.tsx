@@ -1446,7 +1446,26 @@ export function PlanejamentoCalendario() {
                     onAdd={() => undefined}
                     onOpenDetails={() => setDetailsDate(key)}
                   >
-                    {visibleDayCamps.map(c => {
+                     {extras.filter(e => e.scheduled_date === key).map(extra => (
+                       <div 
+                         key={extra.id}
+                         onClick={(e) => {
+                           e.stopPropagation();
+                           setEditingExtra(extra);
+                           setIsExtraDialogOpen(true);
+                         }}
+                         className="relative rounded border border-blue-500/30 bg-blue-500/10 px-1.5 py-1 text-[10px] leading-tight cursor-pointer hover:bg-blue-500/20 mb-1 transition-colors"
+                       >
+                         <div className="flex items-center gap-1.5">
+                           <div className="h-4 w-4 shrink-0 rounded bg-blue-500 flex items-center justify-center text-[8px] font-bold text-white">EX</div>
+                           <span className="font-semibold truncate flex-1">{extra.bookmaker_nome}</span>
+                           <span className="font-bold text-blue-500 tabular-nums">
+                             {formatMoney(Number(extra.deposit_amount), extra.currency)}
+                           </span>
+                         </div>
+                       </div>
+                     ))}
+                     {visibleDayCamps.map(c => {
                       const grupoStatus = grupoViolationMap.get(c.id);
                       const resolvedIpId = resolveCampanhaIpId(c);
                       return (
