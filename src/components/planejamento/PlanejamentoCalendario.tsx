@@ -1389,19 +1389,20 @@ export function PlanejamentoCalendario() {
             </Button>
           </div>
 
-           <PlanningProgressBar 
-             campanhas={campanhas} 
-             extras={extras}
-             year={year} 
-             month={month} 
-             convertToConsolidation={convertToConsolidation}
-             displayCurrency={displayCurrency}
-             onDisplayCurrencyChange={setDisplayCurrency}
-             onAddExtra={() => {
-               setEditingExtra(null);
-               setIsExtraDialogOpen(true);
-             }}
-           />
+            <PlanningProgressBar 
+              campanhas={campanhas} 
+              extras={extras}
+              year={year} 
+              month={month} 
+              projetoId={planoSelecionado?.projeto_id}
+              convertToConsolidation={convertToConsolidation}
+              displayCurrency={displayCurrency}
+              onDisplayCurrencyChange={setDisplayCurrency}
+              onAddExtra={() => {
+                setEditingExtra(null);
+                setIsExtraDialogOpen(true);
+              }}
+            />
 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
