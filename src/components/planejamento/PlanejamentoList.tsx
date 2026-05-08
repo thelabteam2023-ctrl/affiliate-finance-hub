@@ -60,7 +60,9 @@ import {
  import { CampanhaDialog } from "./CampanhaDialog";
  import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
 import { toast } from "sonner";
- import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
+  import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
+  import { PlanningProgressBar } from "./progress/PlanningProgressBar";
+  import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
  
  export function PlanejamentoList() {
     const [searchTerm, setSearchTerm] = useState("");
@@ -77,9 +79,12 @@ import { toast } from "sonner";
     const { data: celulasAgendadas = [], isLoading: celulasLoading } = useCelulasAgendadasPorCampanhas(campanhaIds);
    const { data: perfis = [] } = usePlanningPerfis();
    const { data: ips = [] } = usePlanningIps();
-   const { data: projetos = [] } = useProjetos();
-  const updateCampanha = useUpsertCampanha();
-   const logoMap = useBookmakerLogoMap();
+    const { data: projetos = [] } = useProjetos();
+    const updateCampanha = useUpsertCampanha();
+    const logoMap = useBookmakerLogoMap();
+    
+    // Hook para conversão multi-moeda centralizada
+    const { convertToConsolidation } = useProjetoCurrency(undefined);
  
    const [editingCampanha, setEditingCampanha] = useState<PlanningCampanha | null>(null);
    const [isDialogOpen, setIsDialogOpen] = useState(false);
