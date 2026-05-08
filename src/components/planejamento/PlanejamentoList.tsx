@@ -1,4 +1,4 @@
- import { useState, useMemo } from "react";
+  import { useState, useMemo, useEffect } from "react";
   import { 
     Search, 
     CheckCircle2, 
@@ -57,7 +57,7 @@ import {
     useDeletePlanningExtra,
     PlanningExtra
  } from "@/hooks/usePlanningData";
- import { useDistribuicaoPlanosPorProjeto } from "@/hooks/useDistribuicaoPlanos";
+  import { useDistribuicaoPlanosPorProjeto, useDistribuicaoPlanos } from "@/hooks/useDistribuicaoPlanos";
  import { PlanningExtraDialog } from "./PlanningExtraDialog";
  import { useCelulasAgendadasPorCampanhas } from "@/hooks/usePlanoCelulasDisponiveis";
  import { format, parseISO, isPast, isToday, startOfDay } from "date-fns";
@@ -102,8 +102,40 @@ import { toast } from "sonner";
    const [editingCampanha, setEditingCampanha] = useState<PlanningCampanha | null>(null);
    const [isDialogOpen, setIsDialogOpen] = useState(false);
  
-    const [planoFiltroId, setPlanoFiltroId] = useState<string>("all");
-    const { data: planosDoProjeto = [] } = useDistribuicaoPlanosPorProjeto(projetoFilter !== "all" ? projetoFilter : null);
+     const PLANO_FILTRO_STORAGE_KEY = "planejamento:planoFiltroId";
+     const [planoFiltroId, setPlanoFiltroId] = useState<string>(() => {
+       if (typeof window === "undefined") return "all";
+       return window.localStorage.getItem(PLANO_FILTRO_STORAGE_KEY) || "all";
+     });
+     const { planos: todosPlanos = [] } = useDistribuicaoPlanos();
+     const { data: planosDoProjeto = [] } = useDistribuicaoPlanosPorProjeto(projetoFilter !== "all" ? projetoFilter : null);
+ 
+     // Auto-seleciona o primeiro plano disponível (espelha o Calendário Real)
+     useEffect(() => {
+       if ((planoFiltroId === "all" || !todosPlanos.some(p => p.id === planoFiltroId)) && todosPlanos.length > 0) {
+         const firstId = todosPlanos[0].id;
+         setPlanoFiltroId(firstId);
+         try { window.localStorage.setItem(PLANO_FILTRO_STORAGE_KEY, firstId); } catch {}
+       }
+     }, [todosPlanos, planoFiltroId]);
+ 
+     // Sincroniza o filtro de Projeto automaticamente com o plano selecionado
+     const planoSelecionadoGlobal = useMemo(
+       () => todosPlanos.find(p => p.id === planoFiltroId) ?? null,
+       [todosPlanos, planoFiltroId]
+     );
+     useEffect(() => {
+       if (planoSelecionadoGlobal?.projeto_id && projetoFilter === "all") {
+         setProjetoFilter(planoSelecionadoGlobal.projeto_id);
+       }
+     }, [planoSelecionadoGlobal, projetoFilter]);
+ 
+     const handlePlanoChange = (id: string) => {
+       setPlanoFiltroId(id);
+       try { window.localStorage.setItem(PLANO_FILTRO_STORAGE_KEY, id); } catch {}
+       const plano = todosPlanos.find(p => p.id === id);
+       if (plano?.projeto_id) setProjetoFilter(plano.projeto_id);
+     };
 
     const campanhaPlanoIdMap = useMemo(() => {
       const map = new Map<string, string>();
