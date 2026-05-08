@@ -86,7 +86,7 @@ import { toast } from "sonner";
     const [editingExtra, setEditingExtra] = useState<PlanningExtra | null>(null);
     const [displayCurrency, setDisplayCurrency] = useState<"BRL" | "USD">("BRL");
     const campanhaIds = useMemo(() => campanhas.map(c => c.id), [campanhas]);
-    const { data: celulasAgendadas = [], isLoading: celulasLoading } = useCelulasAgendadasPorCampanhas(campanhaIds);
+  const { data: celulasAgendadas = [], isLoading: celulasLoading } = useCelulasAgendadasPorCampanhas(campanhaIds.length > 0 ? campanhaIds : ["00000000-0000-0000-0000-000000000000"]);
    const { data: perfis = [] } = usePlanningPerfis();
    const { data: ips = [] } = usePlanningIps();
     const { data: projetos = [] } = useProjetos();
@@ -100,6 +100,17 @@ import { toast } from "sonner";
    const [editingCampanha, setEditingCampanha] = useState<PlanningCampanha | null>(null);
    const [isDialogOpen, setIsDialogOpen] = useState(false);
  
+    const [planoFiltroId, setPlanoFiltroId] = useState<string>("all");
+    const { data: planosDoProjeto = [] } = useDistribuicaoPlanosPorProjeto(projetoFilter !== "all" ? projetoFilter : null);
+
+    const campanhaPlanoIdMap = useMemo(() => {
+      const map = new Map<string, string>();
+      celulasAgendadas.forEach((celula) => {
+        if (celula.campanha_id && celula.plano_id) map.set(celula.campanha_id, celula.plano_id);
+      });
+      return map;
+    }, [celulasAgendadas]);
+
     const resolveCampanhaData = (c: PlanningCampanha) => {
       const celula = celulasAgendadas.find(cel => cel.campanha_id === c.id);
       
