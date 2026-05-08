@@ -335,12 +335,27 @@ export function PlanningExtraDialog({
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Data (Opcional)</Label>
+                <Label className="flex items-center gap-1.5">
+                  Data (Opcional)
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <AlertCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[200px] text-[11px] bg-popover text-popover-foreground border shadow-md p-2">
+                        Se uma data for informada, esta casa extra será integrada visualmente ao calendário e ao histórico operacional daquele dia.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </Label>
                 <Input
                   type="date"
                   value={formData.scheduled_date}
                   onChange={(e) => setFormData({ ...formData, scheduled_date: e.target.value })}
                 />
+                <p className="text-[10px] text-muted-foreground leading-tight">
+                  Vincula a operação ao calendário diário.
+                </p>
               </div>
             </div>
 
@@ -364,20 +379,25 @@ export function PlanningExtraDialog({
               </div>
               <div className="space-y-2">
                 <Label>Projeto</Label>
-                <Select
-                  value={formData.projeto_id}
-                  onValueChange={(v) => setFormData({ ...formData, projeto_id: v })}
-                  disabled={!!projetoId}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um projeto" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {projetos.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {projetoId ? (
+                  <div className="h-10 px-3 py-2 rounded-md border bg-muted/50 text-sm flex items-center text-muted-foreground">
+                    {allProjetos.find(p => p.id === projetoId)?.nome || "Projeto Selecionado"}
+                  </div>
+                ) : (
+                  <Select
+                    value={formData.projeto_id}
+                    onValueChange={(v) => setFormData({ ...formData, projeto_id: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um projeto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredProjetos.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
 
