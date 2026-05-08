@@ -63,6 +63,7 @@ import { toast } from "sonner";
   import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
   import { PlanningProgressBar } from "./progress/PlanningProgressBar";
   import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
+  import { TooltipProvider } from "@/components/ui/tooltip";
  
  export function PlanejamentoList() {
     const [searchTerm, setSearchTerm] = useState("");
@@ -203,8 +204,9 @@ import { toast } from "sonner";
      return <div className="p-8 text-center text-muted-foreground">Carregando histórico...</div>;
    }
  
-   return (
-     <div className="flex flex-col h-full bg-background overflow-hidden">
+    return (
+      <TooltipProvider>
+      <div className="flex flex-col h-full bg-background overflow-hidden">
        {/* Header com Filtros */}
         <div className="p-4 border-b flex flex-col lg:flex-row gap-4 items-start lg:items-end justify-between bg-card/50">
           <div className="flex flex-wrap items-end gap-3 w-full lg:w-auto">
@@ -532,6 +534,7 @@ import { toast } from "sonner";
            campanhasDoMes={campanhas}
          />
        )}
-     </div>
-   );
- }
+      </div>
+      </TooltipProvider>
+    );
+  }
