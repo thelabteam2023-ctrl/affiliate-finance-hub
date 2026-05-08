@@ -431,13 +431,13 @@ import { toast } from "sonner";
                 setEditingExtra(null);
                 setIsExtraDialogOpen(true);
               }}
-              projetoId={projetoFilter !== "all" ? projetoFilter : (planoFiltroId !== "all" ? (planosDoProjeto.find(p => p.id === planoFiltroId)?.projeto_id) : undefined)}
+              projetoId={projetoFilter !== "all" ? projetoFilter : (planoSelecionadoGlobal?.projeto_id ?? undefined)}
             />
             <PlanningExtraDialog 
               open={isExtraDialogOpen}
               onOpenChange={setIsExtraDialogOpen}
               extra={editingExtra}
-              projetoId={projetoFilter !== "all" ? projetoFilter : (planoFiltroId !== "all" ? (planosDoProjeto.find(p => p.id === planoFiltroId)?.projeto_id) : undefined)}
+              projetoId={projetoFilter !== "all" ? projetoFilter : (planoSelecionadoGlobal?.projeto_id ?? undefined)}
               planoId={planoFiltroId !== "all" ? planoFiltroId : undefined}
             />
          </div>
