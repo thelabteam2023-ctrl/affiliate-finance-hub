@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -56,7 +57,9 @@ import {
   type CelulaDisponivel,
 } from "@/hooks/usePlanoCelulasDisponiveis";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useQueryClient } from "@tanstack/react-query";
+  import { useQueryClient } from "@tanstack/react-query";
+  import { PlanningProgressBar } from "./progress/PlanningProgressBar";
+  import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 
 type DisplayCurrency = "BRL" | "USD";
 
@@ -541,7 +544,10 @@ export function PlanejamentoCalendario() {
   );
   const campanhaIds = useMemo(() => campanhas.map((c) => c.id), [campanhas]);
   const { data: celulasAgendadas = [] } = useCelulasAgendadasPorCampanhas(campanhaIds);
-  const qc = useQueryClient();
+    const qc = useQueryClient();
+    
+    // Hook para conversão multi-moeda centralizada
+    const { convertToConsolidation } = useProjetoCurrency(undefined);
 
   // Converte qualquer valor da moeda nativa para a moeda de exibição (BRL ou USD)
   const convertToDisplay = useCallback((value: number, fromCurrency: string): number => {
@@ -1147,6 +1153,7 @@ export function PlanejamentoCalendario() {
   const nextMonth = () => { if (month === 12) { setMonth(1); setYear(year + 1); } else setMonth(month + 1); };
 
   return (
+    <TooltipProvider>
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex h-full gap-3 p-3">
         {/* Sidebar de bookmakers */}
@@ -1375,6 +1382,13 @@ export function PlanejamentoCalendario() {
             </Button>
           </div>
 
+          <PlanningProgressBar 
+            campanhas={campanhas} 
+            year={year} 
+            month={month} 
+            convertToConsolidation={convertToConsolidation}
+          />
+
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="icon" onClick={prevMonth}><ChevronLeft className="h-4 w-4" /></Button>
@@ -1415,9 +1429,6 @@ export function PlanejamentoCalendario() {
                   USD {isUsingFallback && "⚠️"}
                 </Button>
               </div>
-              <Badge variant="secondary" className="text-sm">
-                {totalCasasMes} casas • Total do mês: {formatMoney(totalMes, displayCurrency)}
-              </Badge>
             </div>
           </div>
 
@@ -1662,5 +1673,6 @@ export function PlanejamentoCalendario() {
         planoId={planoFiltroId}
       />
     </DndContext>
+    </TooltipProvider>
   );
 }

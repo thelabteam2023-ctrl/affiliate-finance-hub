@@ -60,7 +60,10 @@ import {
  import { CampanhaDialog } from "./CampanhaDialog";
  import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
 import { toast } from "sonner";
- import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
+  import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
+  import { PlanningProgressBar } from "./progress/PlanningProgressBar";
+  import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
+  import { TooltipProvider } from "@/components/ui/tooltip";
  
  export function PlanejamentoList() {
     const [searchTerm, setSearchTerm] = useState("");
@@ -77,9 +80,12 @@ import { toast } from "sonner";
     const { data: celulasAgendadas = [], isLoading: celulasLoading } = useCelulasAgendadasPorCampanhas(campanhaIds);
    const { data: perfis = [] } = usePlanningPerfis();
    const { data: ips = [] } = usePlanningIps();
-   const { data: projetos = [] } = useProjetos();
-  const updateCampanha = useUpsertCampanha();
-   const logoMap = useBookmakerLogoMap();
+    const { data: projetos = [] } = useProjetos();
+    const updateCampanha = useUpsertCampanha();
+    const logoMap = useBookmakerLogoMap();
+    
+    // Hook para conversão multi-moeda centralizada
+    const { convertToConsolidation } = useProjetoCurrency(undefined);
  
    const [editingCampanha, setEditingCampanha] = useState<PlanningCampanha | null>(null);
    const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -198,8 +204,9 @@ import { toast } from "sonner";
      return <div className="p-8 text-center text-muted-foreground">Carregando histórico...</div>;
    }
  
-   return (
-     <div className="flex flex-col h-full bg-background overflow-hidden">
+    return (
+      <TooltipProvider>
+      <div className="flex flex-col h-full bg-background overflow-hidden">
        {/* Header com Filtros */}
         <div className="p-4 border-b flex flex-col lg:flex-row gap-4 items-start lg:items-end justify-between bg-card/50">
           <div className="flex flex-wrap items-end gap-3 w-full lg:w-auto">
@@ -303,9 +310,18 @@ import { toast } from "sonner";
           </div>
        </div>
  
-      {/* Lista de Histórico */}
-      <div className="flex-1 overflow-auto p-4 scroll-smooth">
-        {filteredCampanhas.length === 0 ? (
+       {/* Lista de Histórico */}
+       <div className="flex-1 overflow-auto p-4 scroll-smooth space-y-4">
+         <div className="max-w-5xl mx-auto">
+           <PlanningProgressBar 
+             campanhas={filteredCampanhas} 
+             year={selectedYear} 
+             month={selectedMonth} 
+             convertToConsolidation={convertToConsolidation}
+           />
+         </div>
+
+         {filteredCampanhas.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
             <Filter className="h-12 w-12 opacity-20" />
             <p>Nenhum registro encontrado para os filtros selecionados.</p>
@@ -518,6 +534,7 @@ import { toast } from "sonner";
            campanhasDoMes={campanhas}
          />
        )}
-     </div>
-   );
- }
+      </div>
+      </TooltipProvider>
+    );
+  }
