@@ -1,4 +1,4 @@
- import { useState, useMemo } from "react";
+  import { useState, useMemo, useEffect } from "react";
   import { 
     Search, 
     CheckCircle2, 
@@ -57,7 +57,7 @@ import {
     useDeletePlanningExtra,
     PlanningExtra
  } from "@/hooks/usePlanningData";
- import { useDistribuicaoPlanosPorProjeto } from "@/hooks/useDistribuicaoPlanos";
+  import { useDistribuicaoPlanosPorProjeto, useDistribuicaoPlanos } from "@/hooks/useDistribuicaoPlanos";
  import { PlanningExtraDialog } from "./PlanningExtraDialog";
  import { useCelulasAgendadasPorCampanhas } from "@/hooks/usePlanoCelulasDisponiveis";
  import { format, parseISO, isPast, isToday, startOfDay } from "date-fns";
@@ -102,8 +102,40 @@ import { toast } from "sonner";
    const [editingCampanha, setEditingCampanha] = useState<PlanningCampanha | null>(null);
    const [isDialogOpen, setIsDialogOpen] = useState(false);
  
-    const [planoFiltroId, setPlanoFiltroId] = useState<string>("all");
-    const { data: planosDoProjeto = [] } = useDistribuicaoPlanosPorProjeto(projetoFilter !== "all" ? projetoFilter : null);
+     const PLANO_FILTRO_STORAGE_KEY = "planejamento:planoFiltroId";
+     const [planoFiltroId, setPlanoFiltroId] = useState<string>(() => {
+       if (typeof window === "undefined") return "all";
+       return window.localStorage.getItem(PLANO_FILTRO_STORAGE_KEY) || "all";
+     });
+     const { planos: todosPlanos = [] } = useDistribuicaoPlanos();
+     const { data: planosDoProjeto = [] } = useDistribuicaoPlanosPorProjeto(projetoFilter !== "all" ? projetoFilter : null);
+ 
+     // Auto-seleciona o primeiro plano disponível (espelha o Calendário Real)
+     useEffect(() => {
+       if ((planoFiltroId === "all" || !todosPlanos.some(p => p.id === planoFiltroId)) && todosPlanos.length > 0) {
+         const firstId = todosPlanos[0].id;
+         setPlanoFiltroId(firstId);
+         try { window.localStorage.setItem(PLANO_FILTRO_STORAGE_KEY, firstId); } catch {}
+       }
+     }, [todosPlanos, planoFiltroId]);
+ 
+     // Sincroniza o filtro de Projeto automaticamente com o plano selecionado
+     const planoSelecionadoGlobal = useMemo(
+       () => todosPlanos.find(p => p.id === planoFiltroId) ?? null,
+       [todosPlanos, planoFiltroId]
+     );
+     useEffect(() => {
+       if (planoSelecionadoGlobal?.projeto_id && projetoFilter === "all") {
+         setProjetoFilter(planoSelecionadoGlobal.projeto_id);
+       }
+     }, [planoSelecionadoGlobal, projetoFilter]);
+ 
+     const handlePlanoChange = (id: string) => {
+       setPlanoFiltroId(id);
+       try { window.localStorage.setItem(PLANO_FILTRO_STORAGE_KEY, id); } catch {}
+       const plano = todosPlanos.find(p => p.id === id);
+       if (plano?.projeto_id) setProjetoFilter(plano.projeto_id);
+     };
 
     const campanhaPlanoIdMap = useMemo(() => {
       const map = new Map<string, string>();
@@ -295,28 +327,28 @@ import { toast } from "sonner";
               </Select>
             </div>
 
-            <div className="flex flex-col gap-1 flex-1 min-w-[150px] sm:flex-none sm:w-[180px]">
-            {projetoFilter !== "all" && planosDoProjeto.length > 0 && (
-              <div className="flex flex-col gap-1 flex-1 min-w-[150px] sm:flex-none sm:w-[180px]">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Plano</span>
-                <Select value={planoFiltroId} onValueChange={setPlanoFiltroId}>
-                  <SelectTrigger className="h-10 px-3 flex items-center gap-2">
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <Target className="h-4 w-4 shrink-0 text-muted-foreground" />
-                      <div className="truncate">
-                        <SelectValue placeholder="Plano" />
-                      </div>
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os Planos</SelectItem>
-                    {planosDoProjeto.map(p => (
-                      <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+             <div className="flex flex-col gap-1 flex-1 min-w-[150px] sm:flex-none sm:w-[180px]">
+             {todosPlanos.length > 0 && (
+               <div className="flex flex-col gap-1 flex-1 min-w-[150px] sm:flex-none sm:w-[180px]">
+                 <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Plano</span>
+                 <Select value={planoFiltroId} onValueChange={handlePlanoChange}>
+                   <SelectTrigger className="h-10 px-3 flex items-center gap-2">
+                     <div className="flex items-center gap-2 min-w-0 flex-1">
+                       <Target className="h-4 w-4 shrink-0 text-muted-foreground" />
+                       <div className="truncate">
+                         <SelectValue placeholder="Plano" />
+                       </div>
+                     </div>
+                   </SelectTrigger>
+                   <SelectContent>
+                     <SelectItem value="all">Todos os Planos</SelectItem>
+                     {todosPlanos.map(p => (
+                       <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                     ))}
+                   </SelectContent>
+                 </Select>
+               </div>
+             )}
 
               <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Projeto</span>
               <Select value={projetoFilter} onValueChange={setProjetoFilter}>
@@ -399,13 +431,13 @@ import { toast } from "sonner";
                 setEditingExtra(null);
                 setIsExtraDialogOpen(true);
               }}
-              projetoId={projetoFilter !== "all" ? projetoFilter : (planoFiltroId !== "all" ? (planosDoProjeto.find(p => p.id === planoFiltroId)?.projeto_id) : undefined)}
+              projetoId={projetoFilter !== "all" ? projetoFilter : (planoSelecionadoGlobal?.projeto_id ?? undefined)}
             />
             <PlanningExtraDialog 
               open={isExtraDialogOpen}
               onOpenChange={setIsExtraDialogOpen}
               extra={editingExtra}
-              projetoId={projetoFilter !== "all" ? projetoFilter : (planoFiltroId !== "all" ? (planosDoProjeto.find(p => p.id === planoFiltroId)?.projeto_id) : undefined)}
+              projetoId={projetoFilter !== "all" ? projetoFilter : (planoSelecionadoGlobal?.projeto_id ?? undefined)}
               planoId={planoFiltroId !== "all" ? planoFiltroId : undefined}
             />
          </div>
