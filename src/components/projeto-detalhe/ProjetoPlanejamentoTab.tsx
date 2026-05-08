@@ -83,7 +83,8 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
   const { data: celulasAgendadas = [], isLoading: celulasLoading } = useCelulasAgendadasPorCampanhas(campanhaIds);
   const { data: perfis = [] } = usePlanningPerfis();
   const { data: ips = [] } = usePlanningIps();
-  const { data: projetos = [] } = useProjetos();\n  const { data: parceiros = [] } = useParceirosLite();
+  const { data: projetos = [] } = useProjetos();
+  const { data: parceiros = [] } = useParceirosLite();
     const updateCampanha = useUpsertCampanha();
     const logoMap = useBookmakerLogoMap();
     const { convertToConsolidation } = useProjetoCurrency(projetoId);
