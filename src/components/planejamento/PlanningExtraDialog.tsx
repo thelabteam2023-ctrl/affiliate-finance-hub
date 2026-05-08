@@ -28,7 +28,8 @@ import {
   usePlanningPerfis,
   usePlanningIps,
   perfilDisplayName,
-  usePlanningBookmakersPorProjeto
+  usePlanningBookmakersPorProjeto,
+  usePlanningBookmakersPorPlano
 } from "@/hooks/usePlanningData";
 import { useDistribuicaoPlanos } from "@/hooks/useDistribuicaoPlanos";
 import { FIAT_CURRENCIES } from "@/types/currency";
@@ -98,14 +99,28 @@ export function PlanningExtraDialog({
   const { data: allPerfis = [] } = usePlanningPerfis();
   const { data: allIps = [] } = usePlanningIps();
 
-  const { data: plannedBookmakerIds } = usePlanningBookmakersPorProjeto(formData.projeto_id);
+  const { data: bookmakersByPlano } = usePlanningBookmakersPorPlano(planoId);
+  const { data: bookmakersByProjeto } = usePlanningBookmakersPorProjeto(formData.projeto_id);
+  
   const filteredBookmakers = useMemo(() => {
-    if (!formData.projeto_id || !plannedBookmakerIds) return bookmakers;
-    return bookmakers.filter(b => 
-      plannedBookmakerIds.includes(b.id) || 
-      (extra && extra.bookmaker_catalogo_id === b.id)
-    );
-  }, [bookmakers, plannedBookmakerIds, formData.projeto_id, extra]);
+    // Se temos um plano direto (vido do calendário por exemplo), filtramos por ele primeiro
+    if (planoId && bookmakersByPlano) {
+      return bookmakers.filter(b => 
+        bookmakersByPlano.includes(b.id) || 
+        (extra && extra.bookmaker_catalogo_id === b.id)
+      );
+    }
+
+    // Caso contrário, filtramos pelo projeto selecionado
+    if (formData.projeto_id && bookmakersByProjeto) {
+      return bookmakers.filter(b => 
+        bookmakersByProjeto.includes(b.id) || 
+        (extra && extra.bookmaker_catalogo_id === b.id)
+      );
+    }
+    
+    return bookmakers;
+  }, [bookmakers, bookmakersByPlano, bookmakersByProjeto, formData.projeto_id, planoId, extra]);
 
   const [profileSearchOpen, setProfileSearchOpen] = useState(false);
 
