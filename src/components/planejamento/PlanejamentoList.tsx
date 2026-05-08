@@ -401,7 +401,7 @@ import { toast } from "sonner";
                         <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
                           <div className="text-right">
                             <div className="font-bold text-sm text-blue-500">
-                              {new Intl.NumberFormat("pt-BR", { style: "currency", currency: extra.currency }).format(extra.deposit_amount)}
+                              {formatMoney(extra.deposit_amount, extra.currency)}
                             </div>
                             <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">
                               Extra A-Temporal
