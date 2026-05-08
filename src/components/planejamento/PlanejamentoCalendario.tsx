@@ -1578,11 +1578,11 @@ export function PlanejamentoCalendario() {
                <div className="text-center">Status</div>
             </div>
              <div className="min-w-[920px] divide-y">
-               {extras.filter(e => {
-                  if (e.scheduled_date !== detailsDate) return false;
-                  if (modoPlano && planoSelecionado?.projeto_id && e.projeto_id !== planoSelecionado.projeto_id) return false;
-                  return true;
-                }).map(extra => (
+                {extras.filter(e => {
+                   if (e.scheduled_date !== detailsDate) return false;
+                   if (modoPlano && e.plano_id !== planoFiltroId) return false;
+                   return true;
+                 }).map(extra => (
                  <div key={extra.id} className="grid grid-cols-[1.15fr_0.95fr_1.45fr_1.35fr_0.45fr_0.75fr_40px] gap-2 px-3 py-2 text-xs items-center hover:bg-blue-500/5 bg-blue-500/10 cursor-pointer" onClick={() => { setEditingExtra(extra); setIsExtraDialogOpen(true); }}>
                    <div className="font-medium truncate flex items-center gap-2">
                      <div className="h-5 w-5 shrink-0 rounded bg-blue-500 flex items-center justify-center text-[8px] font-bold text-white">EX</div>
