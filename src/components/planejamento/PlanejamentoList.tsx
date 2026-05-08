@@ -441,7 +441,7 @@ import { toast } from "sonner";
 
            {/* Lista de Campanhas do Dia (incluindo Extras) */}
                     <div className="flex-1 grid gap-3 pb-4">
-             {extras.filter(e => e.scheduled_date === dateStr).map((extra) => (
+             {dayExtras.map((extra) => (
                <Card
                  key={extra.id}
                  onClick={() => {
