@@ -16,7 +16,8 @@
     ChevronUp,
     ChevronLeft,
     ChevronRight,
-    Copy
+    Copy,
+    Target
   } from "lucide-react";
  import { Card } from "@/components/ui/card";
  import { Input } from "@/components/ui/input";
