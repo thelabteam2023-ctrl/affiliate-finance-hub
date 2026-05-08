@@ -66,7 +66,8 @@ import {
 import { toast } from "sonner";
   import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
   import { PlanningProgressBar } from "./progress/PlanningProgressBar";
-  import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
+   import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
+   import { useMultiCurrencyConversion } from "@/hooks/useMultiCurrencyConversion";
   import { TooltipProvider } from "@/components/ui/tooltip";
  
  export function PlanejamentoList() {
