@@ -16,7 +16,8 @@
     ChevronUp,
     ChevronLeft,
     ChevronRight,
-    Copy
+    Copy,
+    Target
   } from "lucide-react";
  import { Card } from "@/components/ui/card";
  import { Input } from "@/components/ui/input";
@@ -56,6 +57,7 @@ import {
     useDeletePlanningExtra,
     PlanningExtra
  } from "@/hooks/usePlanningData";
+ import { useDistribuicaoPlanosPorProjeto } from "@/hooks/useDistribuicaoPlanos";
  import { PlanningExtraDialog } from "./PlanningExtraDialog";
  import { useCelulasAgendadasPorCampanhas } from "@/hooks/usePlanoCelulasDisponiveis";
  import { format, parseISO, isPast, isToday, startOfDay } from "date-fns";
@@ -86,7 +88,7 @@ import { toast } from "sonner";
     const [editingExtra, setEditingExtra] = useState<PlanningExtra | null>(null);
     const [displayCurrency, setDisplayCurrency] = useState<"BRL" | "USD">("BRL");
     const campanhaIds = useMemo(() => campanhas.map(c => c.id), [campanhas]);
-    const { data: celulasAgendadas = [], isLoading: celulasLoading } = useCelulasAgendadasPorCampanhas(campanhaIds);
+  const { data: celulasAgendadas = [], isLoading: celulasLoading } = useCelulasAgendadasPorCampanhas(campanhaIds.length > 0 ? campanhaIds : ["00000000-0000-0000-0000-000000000000"]);
    const { data: perfis = [] } = usePlanningPerfis();
    const { data: ips = [] } = usePlanningIps();
     const { data: projetos = [] } = useProjetos();
@@ -100,6 +102,17 @@ import { toast } from "sonner";
    const [editingCampanha, setEditingCampanha] = useState<PlanningCampanha | null>(null);
    const [isDialogOpen, setIsDialogOpen] = useState(false);
  
+    const [planoFiltroId, setPlanoFiltroId] = useState<string>("all");
+    const { data: planosDoProjeto = [] } = useDistribuicaoPlanosPorProjeto(projetoFilter !== "all" ? projetoFilter : null);
+
+    const campanhaPlanoIdMap = useMemo(() => {
+      const map = new Map<string, string>();
+      celulasAgendadas.forEach((celula) => {
+        if (celula.campanha_id && celula.plano_id) map.set(celula.campanha_id, celula.plano_id);
+      });
+      return map;
+    }, [celulasAgendadas]);
+
     const resolveCampanhaData = (c: PlanningCampanha) => {
       const celula = celulasAgendadas.find(cel => cel.campanha_id === c.id);
       
@@ -175,6 +188,7 @@ import { toast } from "sonner";
     const projectCampanhas = campanhas
       .filter((c) => {
         const matchesProjeto = projetoFilter === "all" || c.projeto_id === projetoFilter;
+        const matchesPlano = planoFiltroId === "all" || campanhaPlanoIdMap.get(c.id) === planoFiltroId;
         const matchesSearch =
           c.bookmaker_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
           (c.parceiro_snapshot?.nome || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -182,22 +196,24 @@ import { toast } from "sonner";
         const { isPending } = resolveCampanhaData(c);
         const status = getStatus(c, isPending);
         const matchesStatus = statusFilter === "all" || status === statusFilter;
-        return matchesSearch && matchesStatus && matchesProjeto;
+        return matchesSearch && matchesStatus && matchesProjeto && matchesPlano;
       });
 
     const projectExtras = extras
       .filter((e) => {
-        // Se tem data, incluímos no fluxo temporal (unificado)
-        // Se não tem data, ele será mostrado na seção separada "Extras Operacionais (Sem Data)"
         if (!e.scheduled_date) return false;
         
         const matchesProjeto = projetoFilter === "all" || e.projeto_id === projetoFilter;
+        // Se o plano selecionado tem um projeto, o extra deve pertencer a esse projeto
+        const planoSelecionado = planosDoProjeto.find(p => p.id === planoFiltroId);
+        const matchesPlano = planoFiltroId === "all" || (planoSelecionado?.projeto_id ? e.projeto_id === planoSelecionado.projeto_id : true);
+        
         const matchesSearch =
           e.bookmaker_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
           (e.notes || "").toLowerCase().includes(searchTerm.toLowerCase());
         const status = e.status === "done" ? "concluido" : (e.status === "pending" ? "pendente" : (e.status === "atrasado" ? "atrasado" : "planejado"));
         const matchesStatus = statusFilter === "all" || status === statusFilter;
-        return matchesSearch && matchesStatus && matchesProjeto;
+        return matchesSearch && matchesStatus && matchesProjeto && matchesPlano;
       });
 
     const unified = [
@@ -210,7 +226,7 @@ import { toast } from "sonner";
         if (dateCompare !== 0) return dateCompare;
         return (a.created_at || "").localeCompare(b.created_at || "");
     });
-  }, [campanhas, extras, searchTerm, statusFilter, projetoFilter, celulasAgendadas, perfis, ips]);
+  }, [campanhas, extras, searchTerm, statusFilter, projetoFilter, planoFiltroId, campanhaPlanoIdMap, planosDoProjeto, celulasAgendadas, perfis, ips]);
 
   const groupedByDay = useMemo(() => {
     const groups: Record<string, any[]> = {};
@@ -281,7 +297,29 @@ import { toast } from "sonner";
               </Select>
             </div>
 
-            <div className="flex flex-col gap-1 flex-1 min-w-[150px] sm:flex-none sm:w-[200px]">
+            <div className="flex flex-col gap-1 flex-1 min-w-[150px] sm:flex-none sm:w-[180px]">
+            {projetoFilter !== "all" && planosDoProjeto.length > 0 && (
+              <div className="flex flex-col gap-1 flex-1 min-w-[150px] sm:flex-none sm:w-[180px]">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Plano</span>
+                <Select value={planoFiltroId} onValueChange={setPlanoFiltroId}>
+                  <SelectTrigger className="h-10 px-3 flex items-center gap-2">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <Target className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <div className="truncate">
+                        <SelectValue placeholder="Plano" />
+                      </div>
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os Planos</SelectItem>
+                    {planosDoProjeto.map(p => (
+                      <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
               <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Projeto</span>
               <Select value={projetoFilter} onValueChange={setProjetoFilter}>
                 <SelectTrigger className="h-10 px-3 flex items-center gap-2">
@@ -369,6 +407,7 @@ import { toast } from "sonner";
             onOpenChange={setIsExtraDialogOpen}
             extra={editingExtra}
             projetoId={projetoFilter !== "all" ? projetoFilter : undefined}
+            planoId={planoFiltroId !== "all" ? planoFiltroId : undefined}
           />
          </div>
 

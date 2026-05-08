@@ -46,10 +46,11 @@ import {
    useUpsertCampanha,
    PlanningPerfil,
    usePlanningExtras, useParceirosLite,
-   PlanningExtra
+  PlanningExtra
 } from "@/hooks/usePlanningData";
  import { PlanningExtraDialog } from "../planejamento/PlanningExtraDialog";
 import { useCelulasAgendadasPorCampanhas } from "@/hooks/usePlanoCelulasDisponiveis";
+import { useDistribuicaoPlanosPorProjeto } from "@/hooks/useDistribuicaoPlanos";
 import { format, parseISO, isToday, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -73,14 +74,25 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
   const [selectedYear, setSelectedYear] = useState(today.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(today.getMonth() + 1);
 
-   const { data: allCampanhas = [], isLoading: campanhasLoading } = usePlanningCampanhas(selectedYear, selectedMonth);
+  const { data: allCampanhas = [], isLoading: campanhasLoading } = usePlanningCampanhas(selectedYear, selectedMonth);
    const { data: extras = [], isLoading: extrasLoading } = usePlanningExtras(selectedYear, selectedMonth);
    const [isExtraDialogOpen, setIsExtraDialogOpen] = useState(false);
    const [editingExtra, setEditingExtra] = useState<PlanningExtra | null>(null);
    const [displayCurrency, setDisplayCurrency] = useState<"BRL" | "USD">("BRL");
   const campanhas = useMemo(() => allCampanhas, [allCampanhas]);
   const campanhaIds = useMemo(() => campanhas.map(c => c.id), [campanhas]);
-  const { data: celulasAgendadas = [], isLoading: celulasLoading } = useCelulasAgendadasPorCampanhas(campanhaIds);
+  const { data: celulasAgendadas = [], isLoading: celulasLoading } = useCelulasAgendadasPorCampanhas(campanhaIds.length > 0 ? campanhaIds : ["00000000-0000-0000-0000-000000000000"]);
+  
+  const [planoFiltroId, setPlanoFiltroId] = useState<string>("all");
+  const { data: planosDoProjeto = [] } = useDistribuicaoPlanosPorProjeto(projetoId);
+
+  const campanhaPlanoIdMap = useMemo(() => {
+    const map = new Map<string, string>();
+    celulasAgendadas.forEach((celula) => {
+      if (celula.campanha_id && celula.plano_id) map.set(celula.campanha_id, celula.plano_id);
+    });
+    return map;
+  }, [celulasAgendadas]);
   const { data: perfis = [] } = usePlanningPerfis();
   const { data: ips = [] } = usePlanningIps();
   const { data: projetos = [] } = useProjetos();
@@ -152,6 +164,7 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
     const projectCampanhas = campanhas
       .filter((c) => {
         const matchesProjeto = projetoFilter === "all" || c.projeto_id === projetoFilter;
+        const matchesPlano = planoFiltroId === "all" || campanhaPlanoIdMap.get(c.id) === planoFiltroId;
         const matchesSearch =
           c.bookmaker_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
           (c.parceiro_snapshot?.nome || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -159,13 +172,15 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
         const { isPending } = resolveCampanhaData(c);
         const status = getStatus(c, isPending);
         const matchesStatus = statusFilter === "all" || status === statusFilter;
-        return matchesSearch && matchesStatus && matchesProjeto;
+        return matchesSearch && matchesStatus && matchesProjeto && matchesPlano;
       });
 
     const projectExtras = extras
       .filter((e) => {
         if (!e.scheduled_date) return false;
         const matchesProjeto = projetoFilter === "all" || e.projeto_id === projetoFilter;
+        const matchesPlano = planoFiltroId === "all" || (e.projeto_id === projetoId); // No contexto do projeto, o extra deve ser do projeto
+        
         const matchesSearch =
           e.bookmaker_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
           (e.notes || "").toLowerCase().includes(searchTerm.toLowerCase());
@@ -173,7 +188,7 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
         const status = e.status === "done" ? "concluido" : (e.status === "pending" ? "pendente" : (e.status === "atrasado" ? "atrasado" : "planejado"));
         const matchesStatus = statusFilter === "all" || status === statusFilter;
         
-        return matchesSearch && matchesStatus && matchesProjeto;
+        return matchesSearch && matchesStatus && matchesProjeto && matchesPlano;
       });
 
     const unified = [
@@ -182,7 +197,7 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
     ];
 
     return unified.sort((a, b) => (a.scheduled_date || "").localeCompare(b.scheduled_date || ""));
-  }, [campanhas, extras, searchTerm, statusFilter, projetoFilter, celulasAgendadas, perfis, ips]);
+  }, [campanhas, extras, searchTerm, statusFilter, projetoFilter, planoFiltroId, campanhaPlanoIdMap, celulasAgendadas, perfis, ips, projetoId]);
 
   const groupedByDay = useMemo(() => {
     const groups = {};
@@ -271,7 +286,29 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
             </Select>
           </div>
 
-          <div className="flex flex-col gap-1 flex-1 min-w-[150px] sm:flex-none sm:w-[200px]">
+          <div className="flex flex-col gap-1 flex-1 min-w-[150px] sm:flex-none sm:w-[180px]">
+          {planosDoProjeto.length > 0 && (
+            <div className="flex flex-col gap-1 flex-1 min-w-[150px] sm:flex-none sm:w-[180px]">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Plano</span>
+              <Select value={planoFiltroId} onValueChange={setPlanoFiltroId}>
+                <SelectTrigger className="h-10 px-3 flex items-center gap-2">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <Target className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <div className="truncate">
+                      <SelectValue placeholder="Plano" />
+                    </div>
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Planos</SelectItem>
+                  {planosDoProjeto.map(p => (
+                    <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
             <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground ml-1">Projeto</span>
             <Select value={projetoFilter} onValueChange={setProjetoFilter}>
               <SelectTrigger className="h-10 px-3 flex items-center gap-2">
@@ -706,12 +743,13 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
         )}
       </div>
 
-       <PlanningExtraDialog
-         open={isExtraDialogOpen}
-         onOpenChange={setIsExtraDialogOpen}
-         extra={editingExtra}
-         projetoId={projetoId}
-       />
+        <PlanningExtraDialog
+          open={isExtraDialogOpen}
+          onOpenChange={setIsExtraDialogOpen}
+          extra={editingExtra}
+          projetoId={projetoId}
+          planoId={planoFiltroId !== "all" ? planoFiltroId : undefined}
+        />
  
        {isDialogOpen && (
         <CampanhaDialog
