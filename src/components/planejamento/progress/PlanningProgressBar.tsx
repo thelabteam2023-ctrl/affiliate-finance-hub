@@ -53,7 +53,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
      return formatCurrency(valUSD, "USD");
    };
  
-   if (metrics.totalPlanned === 0) {
+   if (metrics.totalPlanned === 0 && campanhas.length === 0 && extras.length === 0) {
     return (
       <div className={cn("p-4 border rounded-xl bg-card/30 flex items-center justify-center gap-2 text-muted-foreground italic text-sm", className)}>
         <AlertCircle className="h-4 w-4" />
