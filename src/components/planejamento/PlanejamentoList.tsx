@@ -187,7 +187,10 @@ import { toast } from "sonner";
 
     const projectExtras = extras
       .filter((e) => {
+        // Se tem data, incluímos no fluxo temporal (unificado)
+        // Se não tem data, ele será mostrado na seção separada "Extras Operacionais (Sem Data)"
         if (!e.scheduled_date) return false;
+        
         const matchesProjeto = projetoFilter === "all" || e.projeto_id === projetoFilter;
         const matchesSearch =
           e.bookmaker_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -376,7 +379,14 @@ import { toast } from "sonner";
           </div>
         ) : (
           <div className="space-y-8 max-w-5xl mx-auto">
-            {extras.filter(e => !e.scheduled_date).length > 0 && (
+            {extras.filter(e => {
+              if (e.scheduled_date) return false;
+              const matchesProjeto = projetoFilter === "all" || e.projeto_id === projetoFilter;
+              const matchesSearch = e.bookmaker_nome.toLowerCase().includes(searchTerm.toLowerCase()) || (e.notes || "").toLowerCase().includes(searchTerm.toLowerCase());
+              const status = e.status === "done" ? "concluido" : (e.status === "pending" ? "pendente" : (e.status === "atrasado" ? "atrasado" : "planejado"));
+              const matchesStatus = statusFilter === "all" || status === statusFilter;
+              return matchesProjeto && matchesSearch && matchesStatus;
+            }).length > 0 && (
               <div className="space-y-4">
                 <div className="flex items-center gap-2 px-2">
                   <Badge variant="outline" className="bg-blue-500/5 text-blue-500 border-blue-500/20 font-black tracking-widest text-[10px] uppercase">
@@ -385,7 +395,14 @@ import { toast } from "sonner";
                   <div className="h-px flex-1 bg-border/50" />
                 </div>
                 <div className="grid gap-3">
-                  {extras.filter(e => !e.scheduled_date).map((extra) => (
+                  {extras.filter(e => {
+                    if (e.scheduled_date) return false;
+                    const matchesProjeto = projetoFilter === "all" || e.projeto_id === projetoFilter;
+                    const matchesSearch = e.bookmaker_nome.toLowerCase().includes(searchTerm.toLowerCase()) || (e.notes || "").toLowerCase().includes(searchTerm.toLowerCase());
+                    const status = e.status === "done" ? "concluido" : (e.status === "pending" ? "pendente" : (e.status === "atrasado" ? "atrasado" : "planejado"));
+                    const matchesStatus = statusFilter === "all" || status === statusFilter;
+                    return matchesProjeto && matchesSearch && matchesStatus;
+                  }).map((extra) => (
                     <Card
                       key={extra.id}
                       onClick={() => {
@@ -407,7 +424,7 @@ import { toast } from "sonner";
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                               <User className="h-3 w-3" />
                               <span className="truncate">
-                                {perfis.find(p => p.parceiro_id === extra.parceiro_id)?.parceiro?.nome || "Sem parceiro"}
+                                {perfis.find(p => p.id === extra.perfil_id)?.label_custom || perfis.find(p => p.parceiro_id === extra.parceiro_id)?.parceiro?.nome || "Sem parceiro"}
                               </span>
                             </div>
                           </div>
@@ -438,7 +455,6 @@ import { toast } from "sonner";
 
             {sortedDates.map((dateStr) => {
                const camps = groupedByDay[dateStr] || [];
-               const dayExtras = extras.filter(e => e.scheduled_date === dateStr);
                const dateObj = parseISO(dateStr);
               const isDateToday = isToday(dateObj);
 

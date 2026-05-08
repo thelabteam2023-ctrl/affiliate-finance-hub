@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Trash2, Check, ChevronsUpDown, MapPin } from "lucide-react";
+import { Trash2, Check, ChevronsUpDown, MapPin, AlertCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -30,9 +30,11 @@ import {
   perfilDisplayName,
   usePlanningBookmakersPorProjeto
 } from "@/hooks/usePlanningData";
+import { useDistribuicaoPlanos } from "@/hooks/useDistribuicaoPlanos";
 import { FIAT_CURRENCIES } from "@/types/currency";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
@@ -41,21 +43,22 @@ interface PlanningExtraDialogProps {
   onOpenChange: (open: boolean) => void;
   extra?: PlanningExtra | null;
   projetoId?: string;
+  planoId?: string;
 }
 
 export function PlanningExtraDialog({
   open,
   onOpenChange,
   extra,
-  projetoId
+  projetoId,
+  planoId
 }: PlanningExtraDialogProps) {
   const upsertExtra = useUpsertPlanningExtra();
   const deleteExtra = useDeletePlanningExtra();
   const { data: parceiros = [] } = useParceirosLite();
   const { data: bookmakers = [] } = useBookmakersCatalogo();
-  const { data: projetos = [] } = useProjetos();
-  const { data: allPerfis = [] } = usePlanningPerfis();
-  const { data: allIps = [] } = usePlanningIps();
+  const { data: allProjetos = [] } = useProjetos();
+  const { planos = [] } = useDistribuicaoPlanos();
 
   const [formData, setFormData] = useState({
     bookmaker_nome: "",
@@ -70,6 +73,30 @@ export function PlanningExtraDialog({
     perfil_id: "",
     ip_id: ""
   });
+
+  const filteredProjetos = useMemo(() => {
+    if (projetoId) {
+      return allProjetos.filter(p => p.id === projetoId);
+    }
+    
+    if (planoId) {
+      const currentPlano = planos.find(p => p.id === planoId);
+      if (currentPlano?.projeto_id) {
+        return allProjetos.filter(p => p.id === currentPlano.projeto_id);
+      }
+    }
+
+    return allProjetos;
+  }, [allProjetos, projetoId, planoId, planos]);
+
+  useEffect(() => {
+    if (!formData.projeto_id && filteredProjetos.length === 1) {
+      setFormData(prev => ({ ...prev, projeto_id: filteredProjetos[0].id }));
+    }
+  }, [filteredProjetos, formData.projeto_id]);
+
+  const { data: allPerfis = [] } = usePlanningPerfis();
+  const { data: allIps = [] } = usePlanningIps();
 
   const { data: plannedBookmakerIds } = usePlanningBookmakersPorProjeto(formData.projeto_id);
   const filteredBookmakers = useMemo(() => {
@@ -325,12 +352,27 @@ export function PlanningExtraDialog({
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Data (Opcional)</Label>
+                <Label className="flex items-center gap-1.5">
+                  Data (Opcional)
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <AlertCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[200px] text-[11px] bg-popover text-popover-foreground border shadow-md p-2">
+                        Se uma data for informada, esta casa extra será integrada visualmente ao calendário e ao histórico operacional daquele dia.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </Label>
                 <Input
                   type="date"
                   value={formData.scheduled_date}
                   onChange={(e) => setFormData({ ...formData, scheduled_date: e.target.value })}
                 />
+                <p className="text-[10px] text-muted-foreground leading-tight">
+                  Vincula a operação ao calendário diário.
+                </p>
               </div>
             </div>
 
@@ -354,20 +396,25 @@ export function PlanningExtraDialog({
               </div>
               <div className="space-y-2">
                 <Label>Projeto</Label>
-                <Select
-                  value={formData.projeto_id}
-                  onValueChange={(v) => setFormData({ ...formData, projeto_id: v })}
-                  disabled={!!projetoId}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um projeto" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {projetos.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {projetoId ? (
+                  <div className="h-10 px-3 py-2 rounded-md border bg-muted/50 text-sm flex items-center text-muted-foreground">
+                    {allProjetos.find(p => p.id === projetoId)?.nome || "Projeto Selecionado"}
+                  </div>
+                ) : (
+                  <Select
+                    value={formData.projeto_id}
+                    onValueChange={(v) => setFormData({ ...formData, projeto_id: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um projeto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredProjetos.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
 

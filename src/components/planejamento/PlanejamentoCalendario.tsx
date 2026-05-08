@@ -69,7 +69,7 @@ type DisplayCurrency = "BRL" | "USD";
 const MES_NOMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const PLANO_FILTRO_STORAGE_KEY = "planejamento:planoFiltroId";
-const MAX_VISIBLE_CAMPANHAS_PER_DAY = 5;
+const MAX_VISIBLE_CAMPANHAS_PER_DAY = 4;
 
 function formatDateKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -1433,9 +1433,10 @@ export function PlanejamentoCalendario() {
            <div className="grid grid-cols-7 gap-1 flex-1 overflow-y-auto pr-1">
             {grid.map((cell, idx) => {
               const key = formatDateKey(cell.date);
-              const dayCamps = campanhasByDay.get(key) ?? [];
-              const visibleDayCamps = dayCamps.slice(0, MAX_VISIBLE_CAMPANHAS_PER_DAY);
-              const hiddenDayCampsCount = dayCamps.length - visibleDayCamps.length;
+               const dayCamps = campanhasByDay.get(key) ?? [];
+               const dayExtras = extras.filter(e => e.scheduled_date === key);
+               const visibleDayCamps = dayCamps.slice(0, Math.max(1, MAX_VISIBLE_CAMPANHAS_PER_DAY - dayExtras.length));
+               const hiddenDayCampsCount = dayCamps.length - visibleDayCamps.length;
               const dayTotal = totalDia.get(key) ?? 0;
               const dayConflicts = conflictMap.get(key) ?? new Set();
               return (
@@ -1446,7 +1447,12 @@ export function PlanejamentoCalendario() {
                     onAdd={() => undefined}
                     onOpenDetails={() => setDetailsDate(key)}
                   >
-                     {extras.filter(e => e.scheduled_date === key).map(extra => (
+                     {extras.filter(e => {
+                        if (e.scheduled_date !== key) return false;
+                        // Se estamos no modo plano, só mostramos extras que pertençam ao projeto desse plano
+                        if (modoPlano && planoSelecionado?.projeto_id && e.projeto_id !== planoSelecionado.projeto_id) return false;
+                        return true;
+                      }).map(extra => (
                        <div 
                          key={extra.id}
                          onClick={(e) => {
@@ -1567,7 +1573,11 @@ export function PlanejamentoCalendario() {
                <div className="text-center">Status</div>
             </div>
              <div className="min-w-[920px] divide-y">
-               {extras.filter(e => e.scheduled_date === detailsDate).map(extra => (
+               {extras.filter(e => {
+                  if (e.scheduled_date !== detailsDate) return false;
+                  if (modoPlano && planoSelecionado?.projeto_id && e.projeto_id !== planoSelecionado.projeto_id) return false;
+                  return true;
+                }).map(extra => (
                  <div key={extra.id} className="grid grid-cols-[1.15fr_0.95fr_1.45fr_1.35fr_0.45fr_0.75fr_40px] gap-2 px-3 py-2 text-xs items-center hover:bg-blue-500/5 bg-blue-500/10 cursor-pointer" onClick={() => { setEditingExtra(extra); setIsExtraDialogOpen(true); }}>
                    <div className="font-medium truncate flex items-center gap-2">
                      <div className="h-5 w-5 shrink-0 rounded bg-blue-500 flex items-center justify-center text-[8px] font-bold text-white">EX</div>
@@ -1699,8 +1709,9 @@ export function PlanejamentoCalendario() {
        <PlanningExtraDialog
          open={isExtraDialogOpen}
          onOpenChange={setIsExtraDialogOpen}
-         extra={editingExtra}
-       />
+        extra={editingExtra}
+        planoId={planoFiltroId}
+      />
  
        <SimulacaoDistribuicaoDialog
         open={simulacaoOpen}
