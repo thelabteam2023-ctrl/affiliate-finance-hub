@@ -499,7 +499,7 @@ export function useAddPlanningPerfisGenericos() {
           parceiro_id: null,
           nome_generico: `${prefixo} #${cursor}`,
           cor: pickPerfilCor(totalExistentes + i),
-          created_by: payload.created_by || user.id,
+          created_by: user.id,
           is_active: true,
         });
         usedNumbers.add(cursor);
@@ -670,7 +670,7 @@ export function useAddPlanningCasas() {
       const rows = bookmakerIds.map(bid => ({
         workspace_id: workspaceId,
         bookmaker_catalogo_id: bid,
-        created_by: payload.created_by || user.id,
+        created_by: user.id,
         is_active: true,
       }));
       const { error } = await supabase
