@@ -51,8 +51,10 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
 import { toast } from "sonner";
-import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
-import { CampanhaDialog } from "../planejamento/CampanhaDialog";
+  import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
+  import { CampanhaDialog } from "../planejamento/CampanhaDialog";
+  import { PlanningProgressBar } from "../planejamento/progress/PlanningProgressBar";
+  import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 
 interface ProjetoPlanejamentoTabProps {
   projetoId: string;
@@ -74,8 +76,9 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
   const { data: perfis = [] } = usePlanningPerfis();
   const { data: ips = [] } = usePlanningIps();
   const { data: projetos = [] } = useProjetos();
-  const updateCampanha = useUpsertCampanha();
-  const logoMap = useBookmakerLogoMap();
+    const updateCampanha = useUpsertCampanha();
+    const logoMap = useBookmakerLogoMap();
+    const { convertToConsolidation } = useProjetoCurrency(projetoId);
 
   const [editingCampanha, setEditingCampanha] = useState<PlanningCampanha | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -302,7 +305,17 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
       </div>
 
       {/* Lista com Navegação Flutuante */}
-      <div className="flex-1 overflow-auto p-4 scroll-smooth planning-list-scroll relative">
+      <div className="flex-1 overflow-auto p-4 scroll-smooth planning-list-scroll relative space-y-4">
+        <div className="max-w-5xl mx-auto">
+          <PlanningProgressBar 
+            campanhas={filteredData} 
+            year={selectedYear} 
+            month={selectedMonth} 
+            projetoId={projetoId}
+            convertToConsolidation={convertToConsolidation}
+          />
+        </div>
+
         {filteredData.length > 0 && (
           <div className="sticky top-1/2 -translate-y-1/2 z-50 h-0 w-0">
             <div className="flex flex-col gap-2 absolute left-1 md:left-2">
