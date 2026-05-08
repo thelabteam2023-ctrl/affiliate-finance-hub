@@ -291,7 +291,8 @@ export function usePlanningCampanhas(year: number, month: number) {
          .from("planning_extras")
          .select("*")
          .eq("workspace_id", workspaceId!)
-         .or(`scheduled_date.is.null,and(scheduled_date.gte.${start},scheduled_date.lte.${end})`);
+         .or(`scheduled_date.is.null,and(scheduled_date.gte.${start},scheduled_date.lte.${end})`)
+         .order("created_at");
        if (error) throw error;
        return (data ?? []) as unknown as PlanningExtra[];
      },
