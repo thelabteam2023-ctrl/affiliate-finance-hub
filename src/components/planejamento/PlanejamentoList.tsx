@@ -401,14 +401,15 @@ import { toast } from "sonner";
                setEditingExtra(null);
                setIsExtraDialogOpen(true);
              }}
+             projetoId={projetoFilter !== "all" ? projetoFilter : undefined}
            />
-          <PlanningExtraDialog 
-            open={isExtraDialogOpen}
-            onOpenChange={setIsExtraDialogOpen}
-            extra={editingExtra}
-            projetoId={projetoFilter !== "all" ? projetoFilter : undefined}
-            planoId={planoFiltroId !== "all" ? planoFiltroId : undefined}
-          />
+           <PlanningExtraDialog 
+             open={isExtraDialogOpen}
+             onOpenChange={setIsExtraDialogOpen}
+             extra={editingExtra}
+             projetoId={projetoFilter !== "all" ? projetoFilter : undefined}
+             planoId={planoFiltroId !== "all" ? planoFiltroId : undefined}
+           />
          </div>
 
           {filteredItems.length === 0 ? (
