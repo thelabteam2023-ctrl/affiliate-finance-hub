@@ -1567,7 +1567,26 @@ export function PlanejamentoCalendario() {
                <div className="text-center">Status</div>
             </div>
              <div className="min-w-[920px] divide-y">
-              {detailsCampanhas.map((c) => {
+               {extras.filter(e => e.scheduled_date === detailsDate).map(extra => (
+                 <div key={extra.id} className="grid grid-cols-[1.15fr_0.95fr_1.45fr_1.35fr_0.45fr_0.75fr_40px] gap-2 px-3 py-2 text-xs items-center hover:bg-blue-500/5 bg-blue-500/10 cursor-pointer" onClick={() => { setEditingExtra(extra); setIsExtraDialogOpen(true); }}>
+                   <div className="font-medium truncate flex items-center gap-2">
+                     <div className="h-5 w-5 shrink-0 rounded bg-blue-500 flex items-center justify-center text-[8px] font-bold text-white">EX</div>
+                     <span className="truncate">{extra.bookmaker_nome}</span>
+                     <Badge variant="secondary" className="text-[8px] h-3 px-1 bg-blue-500/20 text-blue-600 border-none font-bold">EXTRA</Badge>
+                   </div>
+                   <div className="truncate">{extra.parceiro_id ? parceiroMap[extra.parceiro_id]?.nome : "—"}</div>
+                   <div className="min-w-0 italic text-muted-foreground">—</div>
+                   <div className="truncate italic text-muted-foreground">—</div>
+                   <div className="font-semibold">{extra.currency}</div>
+                   <div className="text-right font-semibold tabular-nums text-blue-600">{formatMoney(Number(extra.deposit_amount), extra.currency)}</div>
+                   <div className="flex justify-center">
+                     <div className={cn("h-4 w-4 rounded-full flex items-center justify-center", extra.status === "done" ? "text-emerald-500" : "text-warning")}>
+                       {extra.status === "done" ? <CheckCircle2 className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
+                     </div>
+                   </div>
+                 </div>
+               ))}
+               {detailsCampanhas.map((c) => {
                 const perfilInfo = campanhaPerfilMap.get(c.id);
                 const celula = celulaAgendadaByCampanhaIdMap.get(c.id);
                 const linkedIpId = resolveCampanhaIpId(c);
