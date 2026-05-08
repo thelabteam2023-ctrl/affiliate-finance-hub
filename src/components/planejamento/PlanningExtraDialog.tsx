@@ -1,3 +1,4 @@
+   usePlanningBookmakersPorProjeto,
 import React, { useState, useEffect, useMemo } from "react";
 import { Trash2, Check, ChevronsUpDown, MapPin } from "lucide-react";
 import {
@@ -51,7 +52,16 @@ export function PlanningExtraDialog({
   const upsertExtra = useUpsertPlanningExtra();
   const deleteExtra = useDeletePlanningExtra();
   const { data: parceiros = [] } = useParceirosLite();
-  const { data: bookmakers = [] } = useBookmakersCatalogo();
+   const { data: bookmakers = [] } = useBookmakersCatalogo();
+   const { data: plannedBookmakerIds } = usePlanningBookmakersPorProjeto(formData.projeto_id);
+   const filteredBookmakers = useMemo(() => {
+     if (!formData.projeto_id || !plannedBookmakerIds || plannedBookmakerIds.length === 0) return bookmakers;
+     return bookmakers.filter(b => 
+       plannedBookmakerIds.includes(b.id) || 
+       (extra && extra.bookmaker_catalogo_id === b.id)
+     );
+   }, [bookmakers, plannedBookmakerIds, formData.projeto_id, extra]);
+ 
   const { data: projetos = [] } = useProjetos();
   const { data: allPerfis = [] } = usePlanningPerfis();
   const { data: allIps = [] } = usePlanningIps();
@@ -237,7 +247,7 @@ export function PlanningExtraDialog({
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {bookmakers.map((b) => (
+                     {filteredBookmakers.map((b) => (
                       <SelectItem key={b.id} value={b.id}>{b.nome}</SelectItem>
                     ))}
                   </SelectContent>
