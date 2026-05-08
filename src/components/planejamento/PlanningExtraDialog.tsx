@@ -142,11 +142,20 @@ import { Badge } from "@/components/ui/badge";
          ip_id: extra.ip_id || ""
        });
      } else {
+       // Se temos um plano selecionado, tentamos descobrir o projeto dele
+       let resolvedProjetoId = projetoId || "";
+       if (!resolvedProjetoId && planoId) {
+         const currentPlano = planos.find(p => p.id === planoId);
+         if (currentPlano?.projeto_id) {
+           resolvedProjetoId = currentPlano.projeto_id;
+         }
+       }
+
        setFormData({
          bookmaker_nome: "",
          bookmaker_catalogo_id: "",
          parceiro_id: "",
-         projeto_id: projetoId || "",
+         projeto_id: resolvedProjetoId,
          deposit_amount: "",
          currency: "BRL",
          scheduled_date: initialDate || "",
@@ -156,7 +165,7 @@ import { Badge } from "@/components/ui/badge";
          ip_id: ""
        });
      }
-   }, [extra, open, projetoId, initialDate]);
+   }, [extra, open, projetoId, initialDate, planoId, planos]);
 
   // Sugerir IP baseado no perfil e bookmaker selecionados
   useEffect(() => {
