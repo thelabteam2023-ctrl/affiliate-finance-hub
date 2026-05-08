@@ -45,7 +45,7 @@ import {
   useProjetos,
    useUpsertCampanha,
    PlanningPerfil,
-   usePlanningExtras,
+   usePlanningExtras, useParceirosLite,
    PlanningExtra
 } from "@/hooks/usePlanningData";
  import { PlanningExtraDialog } from "../planejamento/PlanningExtraDialog";
@@ -84,6 +84,7 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
   const { data: perfis = [] } = usePlanningPerfis();
   const { data: ips = [] } = usePlanningIps();
   const { data: projetos = [] } = useProjetos();
+  const { data: parceiros = [] } = useParceirosLite();
     const updateCampanha = useUpsertCampanha();
     const logoMap = useBookmakerLogoMap();
     const { convertToConsolidation } = useProjetoCurrency(projetoId);
@@ -148,7 +149,7 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
   };
 
   const filteredData = useMemo(() => {
-    return campanhas
+    const projectCampanhas = campanhas
       .filter((c) => {
         const matchesProjeto = projetoFilter === "all" || c.projeto_id === projetoFilter;
         const matchesSearch =
@@ -159,15 +160,38 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
         const status = getStatus(c, isPending);
         const matchesStatus = statusFilter === "all" || status === statusFilter;
         return matchesSearch && matchesStatus && matchesProjeto;
-      })
-      .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));
-  }, [campanhas, searchTerm, statusFilter, projetoFilter, celulasAgendadas, perfis, ips]);
+      });
+
+    const projectExtras = extras
+      .filter((e) => {
+        if (!e.scheduled_date) return false;
+        const matchesProjeto = projetoFilter === "all" || e.projeto_id === projetoFilter;
+        const matchesSearch =
+          e.bookmaker_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (e.notes || "").toLowerCase().includes(searchTerm.toLowerCase());
+        
+        const status = e.status === "done" ? "concluido" : (e.status === "pending" ? "pendente" : (e.status === "atrasado" ? "atrasado" : "planejado"));
+        const matchesStatus = statusFilter === "all" || status === statusFilter;
+        
+        return matchesSearch && matchesStatus && matchesProjeto;
+      });
+
+    const unified = [
+      ...projectCampanhas.map(c => ({ ...c, ui_type: 'campanha' })),
+      ...projectExtras.map(e => ({ ...e, ui_type: 'extra' }))
+    ];
+
+    return unified.sort((a, b) => (a.scheduled_date || "").localeCompare(b.scheduled_date || ""));
+  }, [campanhas, extras, searchTerm, statusFilter, projetoFilter, celulasAgendadas, perfis, ips]);
 
   const groupedByDay = useMemo(() => {
-    const groups: Record<string, any[]> = {};
+    const groups = {};
     filteredData.forEach(c => {
-      if (!groups[c.scheduled_date]) groups[c.scheduled_date] = [];
-      groups[c.scheduled_date].push(c);
+      const date = c.scheduled_date;
+      if (date) {
+        if (!groups[date]) groups[date] = [];
+        groups[date].push(c);
+      }
     });
     return groups;
   }, [filteredData]);
@@ -313,8 +337,72 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
         </div>
       </div>
 
-      {/* Lista com Navegação Flutuante */}
+      /* Lista com Navegação Flutuante */
       <div className="flex-1 overflow-auto p-4 scroll-smooth planning-list-scroll relative space-y-4">
+        {/* Extras Operacionais sem Data */}
+        {extras.filter(e => !e.scheduled_date && (projetoFilter === "all" || e.projeto_id === projetoFilter)).length > 0 && (
+          <div className="max-w-5xl mx-auto space-y-4">
+            <div className="flex items-center gap-2 px-2">
+              <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 font-black tracking-widest text-[10px] uppercase">
+                Extras Operacionais (Sem Data)
+              </Badge>
+              <div className="h-px flex-1 bg-border/50" />
+            </div>
+            <div className="grid gap-3">
+              {extras.filter(e => !e.scheduled_date && (projetoFilter === "all" || e.projeto_id === projetoFilter)).map((extra) => {
+                const perfil = perfis.find(p => p.id === extra.perfil_id);
+                const status = extra.status === 'done' ? 'concluido' : (extra.status === 'atrasado' ? 'atrasado' : 'pendente');
+                const displayName = perfil ? perfilDisplayName(perfil) : (extra.parceiro_id ? (parceiros.find(p => p.id === extra.parceiro_id)?.nome || "Parceiro") : "Sem parceiro");
+                
+                return (
+                  <Card
+                    key={extra.id}
+                    onClick={() => {
+                      setEditingExtra(extra);
+                      setIsExtraDialogOpen(true);
+                    }}
+                    className={cn(
+                      "group relative overflow-hidden transition-all hover:shadow-md border-l-4 border-dashed border-opacity-60 cursor-pointer",
+                      status === "concluido" && "border-l-[#00FF66] bg-[#00FF66]/5",
+                      status === "atrasado" && "border-l-destructive bg-destructive/5",
+                      status === "pendente" && "border-l-[#FFD700] bg-[#FFD700]/5"
+                    )}
+                  >
+                    <div className="p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <BookmakerLogo
+                          logoUrl={logoMap[extra.bookmaker_catalogo_id || ""] || null}
+                          alt={extra.bookmaker_nome}
+                          size="h-10 w-10"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-bold text-base truncate">{extra.bookmaker_nome}</h3>
+                            <Badge variant="secondary" className="text-[10px] h-4 bg-primary/10 text-primary border-primary/20 font-bold">EXTRA</Badge>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                            <User className="h-3.5 w-3.5" />
+                            <span className="truncate">{displayName}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
+                        <div className="text-right">
+                          <div className="font-bold text-base text-primary">
+                            {formatMoney(extra.deposit_amount, extra.currency)}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">
+                            Sem Data Agendada
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
         <div className="max-w-5xl mx-auto">
            <PlanningProgressBar 
              campanhas={filteredData} 
@@ -423,28 +511,52 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
                     </div>
                     <div className="flex-1 grid gap-3 pb-4">
                       {camps.map((camp) => {
-                        const { perfil, linkedIp, isPending, celula, bookmakerCatalogoId } = resolveCampanhaData(camp);
-                        const status = getStatus(camp, isPending);
-                        const cpfIndex = (celula as any)?.cpf_index || (perfil ? planningPerfilCpfIndex(perfis, perfil.id) : null);
-                        const displayName = (celula as any)?.parceiro_id 
-                                          ? (perfis.find(p => p.parceiro_id === (celula as any).parceiro_id)?.parceiro?.nome || "Carregando...")
-                                          : (camp.parceiro_snapshot?.nome || (perfil ? perfilDisplayName(perfil) : "Sem parceiro"));
-                        const displayValue = camp.deposit_amount > 0 
-                                          ? formatMoney(camp.deposit_amount, camp.currency)
-                                          : (celula as any)?.deposito_sugerido 
-                                            ? formatMoney((celula as any).deposito_sugerido, (celula as any).moeda || "BRL")
-                                            : "R$ 0,00";
+                        const isExtra = camp.ui_type === 'extra';
+                        
+                        let perfil, linkedIp, isPending, celula, bookmakerCatalogoId, status, cpfIndex, displayName, displayValue;
+                        
+                        if (isExtra) {
+                          const extra = camp;
+                          perfil = perfis.find(p => p.id === extra.perfil_id);
+                          linkedIp = ips.find(i => i.id === extra.ip_id);
+                          isPending = extra.status === 'pending';
+                          status = extra.status === 'done' ? 'concluido' : (extra.status === 'atrasado' ? 'atrasado' : 'pendente');
+                          bookmakerCatalogoId = extra.bookmaker_catalogo_id;
+                          cpfIndex = perfil ? planningPerfilCpfIndex(perfis, perfil.id) : null;
+                          displayName = perfil ? perfilDisplayName(perfil) : (extra.parceiro_id ? (parceiros.find(p => p.id === extra.parceiro_id)?.nome || "Parceiro") : "Sem parceiro");
+                          displayValue = formatMoney(extra.deposit_amount, extra.currency);
+                        } else {
+                          const res = resolveCampanhaData(camp);
+                          perfil = res.perfil; linkedIp = res.linkedIp; isPending = res.isPending; celula = res.celula; bookmakerCatalogoId = res.bookmakerCatalogoId;
+                          status = getStatus(camp, isPending);
+                          cpfIndex = celula?.cpf_index || (perfil ? planningPerfilCpfIndex(perfis, perfil.id) : null);
+                          displayName = celula?.parceiro_id 
+                                            ? (perfis.find(p => p.parceiro_id === celula.parceiro_id)?.parceiro?.nome || "Carregando...")
+                                            : (camp.parceiro_snapshot?.nome || (perfil ? perfilDisplayName(perfil) : "Sem parceiro"));
+                          displayValue = camp.deposit_amount > 0 
+                                            ? formatMoney(camp.deposit_amount, camp.currency)
+                                            : celula?.deposito_sugerido 
+                                              ? formatMoney(celula.deposito_sugerido, celula.moeda || "BRL")
+                                              : "R$ 0,00";
+                        }
 
                         return (
                           <Card
                             key={camp.id}
                             className={cn(
                               "group relative overflow-hidden transition-all hover:shadow-md border-l-4",
+                              isExtra && "border-dashed border-opacity-60",
                               status === "concluido" && "border-l-[#00FF66] bg-[#00FF66]/5",
                               status === "atrasado" && "border-l-destructive bg-destructive/5",
                               status === "pendente" && "border-l-[#FFD700] bg-[#FFD700]/5",
                               status === "planejado" && "border-l-primary/50 bg-primary/5"
                             )}
+                            onClick={() => {
+                              if (isExtra) {
+                                setEditingExtra(camp);
+                                setIsExtraDialogOpen(true);
+                              }
+                            }}
                           >
                             <div className="p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
                               <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -456,6 +568,7 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2">
                                     <h3 className="font-bold text-base truncate">{camp.bookmaker_nome || "Sem Nome"}</h3>
+                                    {isExtra && <Badge variant="secondary" className="text-[10px] h-4 bg-primary/10 text-primary border-primary/20 font-bold">EXTRA</Badge>}
                                     {status === "concluido" && (
                                       <Badge className="bg-[#00FF66] hover:bg-[#00FF66]/80 text-[#00331a] text-[10px] h-5 font-bold border-none shadow-sm">
                                         FEITO
@@ -509,7 +622,10 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
                                         <TooltipTrigger asChild>
                                           <span 
                                             className="max-w-[120px] truncate cursor-pointer hover:text-primary transition-colors flex items-center gap-1 group/proxy"
-                                            onClick={() => handleCopyProxy(linkedIp.ip_address)}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleCopyProxy(linkedIp.ip_address);
+                                            }}
                                           >
                                             {linkedIp.label}
                                             <Copy className="h-3 w-3 opacity-0 group-hover/proxy:opacity-100 transition-opacity" />
@@ -533,7 +649,12 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
                                     className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-all active:scale-95 group/status"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      handleToggleStatus(camp);
+                                      if (isExtra) {
+                                        setEditingExtra(camp);
+                                        setIsExtraDialogOpen(true);
+                                      } else {
+                                        handleToggleStatus(camp);
+                                      }
                                     }}
                                   >
                                     {status === "concluido" ? (
@@ -558,9 +679,15 @@ export function ProjetoPlanejamentoTab({ projetoId }: ProjetoPlanejamentoTabProp
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8 hover:bg-primary/10 hover:text-primary transition-colors"
-                                  onClick={() => {
-                                    setEditingCampanha(camp);
-                                    setIsDialogOpen(true);
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (isExtra) {
+                                      setEditingExtra(camp);
+                                      setIsExtraDialogOpen(true);
+                                    } else {
+                                      setEditingCampanha(camp);
+                                      setIsDialogOpen(true);
+                                    }
                                   }}
                                 >
                                   <Pencil className="h-4 w-4" />

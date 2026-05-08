@@ -70,6 +70,9 @@ export interface PlanningWallet {
    created_at: string;
    updated_at: string;
    created_by: string | null;
+    perfil_id: string | null;
+    ip_id: string | null;
+    plano_id: string | null;
  }
 
 export interface ProjetoLite {
@@ -309,7 +312,7 @@ export function usePlanningCampanhas(year: number, month: number) {
        const row = {
          ...rest,
          workspace_id: workspaceId,
-         created_by: user.id,
+         created_by: payload.created_by || user.id,
        };
        if (id) {
          const { error } = await supabase.from("planning_extras").update(row).eq("id", id);
@@ -388,7 +391,7 @@ export function useAddPlanningPerfis() {
       const rows = parceiroIds.map(pid => ({
         workspace_id: workspaceId,
         parceiro_id: pid,
-        created_by: user.id,
+        created_by: payload.created_by || user.id,
         is_active: true,
       }));
       const { error } = await supabase
@@ -466,7 +469,7 @@ export function useAddPlanningPerfisGenericos() {
           parceiro_id: null,
           nome_generico: `${prefixo} #${cursor}`,
           cor: pickPerfilCor(totalExistentes + i),
-          created_by: user.id,
+          created_by: payload.created_by || user.id,
           is_active: true,
         });
         usedNumbers.add(cursor);
@@ -637,7 +640,7 @@ export function useAddPlanningCasas() {
       const rows = bookmakerIds.map(bid => ({
         workspace_id: workspaceId,
         bookmaker_catalogo_id: bid,
-        created_by: user.id,
+        created_by: payload.created_by || user.id,
         is_active: true,
       }));
       const { error } = await supabase
@@ -695,7 +698,7 @@ export function useUpsertPlanningIp() {
       if (!workspaceId || !user) throw new Error("Sem workspace");
       const base = {
         workspace_id: workspaceId,
-        created_by: user.id,
+        created_by: payload.created_by || user.id,
         bookmaker_catalogo_id: payload.bookmaker_catalogo_id ?? null,
         perfil_planejamento_id: payload.perfil_planejamento_id ?? null,
         label: payload.label ?? "",
@@ -745,7 +748,7 @@ export function useUpsertPlanningWallet() {
       if (!workspaceId || !user) throw new Error("Sem workspace");
       const base = {
         workspace_id: workspaceId,
-        created_by: user.id,
+        created_by: payload.created_by || user.id,
         label: payload.label ?? "",
         asset: payload.asset ?? "",
         network: payload.network ?? null,

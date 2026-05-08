@@ -49,7 +49,7 @@ import {
   perfilDisplayName,
     usePlanningIps,
     planningPerfilCpfIndex,
-    useProjetos,
+    useProjetos, useParceirosLite,
     PlanningPerfil,
     useUpsertCampanha,
     usePlanningExtras,
@@ -90,6 +90,7 @@ import { toast } from "sonner";
    const { data: perfis = [] } = usePlanningPerfis();
    const { data: ips = [] } = usePlanningIps();
     const { data: projetos = [] } = useProjetos();
+    const { data: parceiros = [] } = useParceirosLite();
     const updateCampanha = useUpsertCampanha();
     const logoMap = useBookmakerLogoMap();
     
@@ -170,39 +171,55 @@ import { toast } from "sonner";
     toast.success("Proxy copiado para a área de transferência!");
   };
 
-  const filteredCampanhas = useMemo(() => {
-    return campanhas
+  const filteredItems = useMemo(() => {
+    const projectCampanhas = campanhas
       .filter((c) => {
         const matchesProjeto = projetoFilter === "all" || c.projeto_id === projetoFilter;
         const matchesSearch =
           c.bookmaker_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
           (c.parceiro_snapshot?.nome || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
           (c.notes || "").toLowerCase().includes(searchTerm.toLowerCase());
-
         const { isPending } = resolveCampanhaData(c);
         const status = getStatus(c, isPending);
         const matchesStatus = statusFilter === "all" || status === statusFilter;
-
         return matchesSearch && matchesStatus && matchesProjeto;
-      })
-      .sort((a, b) => {
-        const dateCompare = a.scheduled_date.localeCompare(b.scheduled_date);
+      });
+
+    const projectExtras = extras
+      .filter((e) => {
+        if (!e.scheduled_date) return false;
+        const matchesProjeto = projetoFilter === "all" || e.projeto_id === projetoFilter;
+        const matchesSearch =
+          e.bookmaker_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (e.notes || "").toLowerCase().includes(searchTerm.toLowerCase());
+        const status = e.status === "done" ? "concluido" : (e.status === "pending" ? "pendente" : (e.status === "atrasado" ? "atrasado" : "planejado"));
+        const matchesStatus = statusFilter === "all" || status === statusFilter;
+        return matchesSearch && matchesStatus && matchesProjeto;
+      });
+
+    const unified = [
+      ...projectCampanhas.map(c => ({ ...c, ui_type: 'campanha' })),
+      ...projectExtras.map(e => ({ ...e, ui_type: 'extra' }))
+    ];
+
+    return unified.sort((a, b) => {
+        const dateCompare = (a.scheduled_date || "").localeCompare(b.scheduled_date || "");
         if (dateCompare !== 0) return dateCompare;
         return (a.created_at || "").localeCompare(b.created_at || "");
-      });
-  }, [campanhas, searchTerm, statusFilter, projetoFilter, celulasAgendadas, perfis, ips]);
+    });
+  }, [campanhas, extras, searchTerm, statusFilter, projetoFilter, celulasAgendadas, perfis, ips]);
 
   const groupedByDay = useMemo(() => {
     const groups: Record<string, PlanningCampanha[]> = {};
-    filteredCampanhas.forEach(c => {
+    filteredItems.forEach(c => {
       if (!groups[c.scheduled_date]) groups[c.scheduled_date] = [];
       groups[c.scheduled_date].push(c);
     });
     return groups;
-  }, [filteredCampanhas]);
+  }, [filteredItems]);
 
    const sortedDates = useMemo(() => {
-     const allDates = new Set([...Object.keys(groupedByDay), ...extras.filter(e => e.scheduled_date).map(e => e.scheduled_date!)]);
+     const allDates = new Set(Object.keys(groupedByDay));
      return Array.from(allDates).sort();
    }, [groupedByDay, extras]);
  
@@ -332,7 +349,7 @@ import { toast } from "sonner";
        <div className="flex-1 overflow-auto p-4 scroll-smooth space-y-4">
          <div className="max-w-5xl mx-auto">
            <PlanningProgressBar 
-             campanhas={filteredCampanhas} 
+             campanhas={filteredItems} 
              extras={extras}
              year={selectedYear} 
              month={selectedMonth} 
@@ -451,84 +468,55 @@ import { toast } from "sonner";
 
            {/* Lista de Campanhas do Dia (incluindo Extras) */}
                     <div className="flex-1 grid gap-3 pb-4">
-             {dayExtras.map((extra) => (
-               <Card
-                 key={extra.id}
-                 onClick={() => {
-                   setEditingExtra(extra);
-                   setIsExtraDialogOpen(true);
-                 }}
-                 className="group relative overflow-hidden transition-all hover:shadow-md border-l-4 border-l-blue-500 bg-blue-500/5 cursor-pointer"
-               >
-                 <div className="p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                     <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500 font-bold shrink-0">
-                       EX
-                     </div>
-                     <div className="min-w-0">
-                       <div className="flex items-center gap-2">
-                         <h3 className="font-bold text-sm truncate">{extra.bookmaker_nome}</h3>
-                         <Badge variant="secondary" className="text-[10px] h-4 bg-blue-500/10 text-blue-500 border-blue-500/20 font-bold">EXTRA</Badge>
-                       </div>
-                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                         <User className="h-3 w-3" />
-                         <span className="truncate">
-                           {perfis.find(p => p.parceiro_id === extra.parceiro_id)?.parceiro?.nome || "Sem parceiro"}
-                         </span>
-                       </div>
-                     </div>
-                   </div>
-                   <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
-                     <div className="text-right">
-                        <div className="font-bold text-sm text-blue-500">
-                          {formatMoney(extra.deposit_amount, extra.currency)}
-                        </div>
-                       <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">
-                         Depósito Extra
-                       </div>
-                     </div>
-                     <div className={cn(
-                       "h-8 px-3 rounded-full flex items-center gap-1.5 text-[10px] font-bold border",
-                       extra.status === "done" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" : "bg-warning/10 border-warning/20 text-warning"
-                     )}>
-                       {extra.status === "done" ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
-                       {extra.status === "done" ? "CONCLUÍDO" : "PENDENTE"}
-                     </div>
-                   </div>
-                 </div>
-               </Card>
-             ))}
-
-                      {camps.map((camp) => {
-                        const { perfil, linkedIp, isPending, celula, bookmakerCatalogoId } = resolveCampanhaData(camp);
-                        const status = getStatus(camp, isPending);
+             {camps.map((camp) => {
+                        const isExtra = camp.ui_type === 'extra';
                         
-                        // A lógica de exibição deve priorizar os dados da célula agendada para garantir consistência com o calendário
-                        const cpfIndex = (celula as any)?.cpf_index || (perfil ? planningPerfilCpfIndex(perfis, perfil.id) : null);
-                         const displayName = (celula as any)?.parceiro_id 
-                                            ? (perfis.find(p => p.parceiro_id === (celula as any).parceiro_id)?.parceiro?.nome || "Carregando...")
-                                            : (camp.parceiro_snapshot?.nome || 
-                                               (perfil ? perfilDisplayName(perfil) : "Sem parceiro"));
-
-                         const displayValue = camp.deposit_amount > 0 
+                        let perfil, linkedIp, isPending, celula, bookmakerCatalogoId, status, cpfIndex, displayName, displayValue;
+                        
+                        if (isExtra) {
+                          const extra = camp;
+                          perfil = perfis.find(p => p.id === extra.perfil_id);
+                          linkedIp = ips.find(i => i.id === extra.ip_id);
+                          isPending = extra.status === 'pending';
+                          status = extra.status === 'done' ? 'concluido' : (extra.status === 'atrasado' ? 'atrasado' : 'pendente');
+                          bookmakerCatalogoId = extra.bookmaker_catalogo_id;
+                          cpfIndex = perfil ? planningPerfilCpfIndex(perfis, perfil.id) : null;
+                          displayName = perfil ? perfilDisplayName(perfil) : (extra.parceiro_id ? (parceiros.find(p => p.id === extra.parceiro_id)?.nome || "Parceiro") : "Sem parceiro");
+                          displayValue = formatMoney(extra.deposit_amount, extra.currency);
+                        } else {
+                          const res = resolveCampanhaData(camp);
+                          perfil = res.perfil; linkedIp = res.linkedIp; isPending = res.isPending; celula = res.celula; bookmakerCatalogoId = res.bookmakerCatalogoId;
+                          status = getStatus(camp, isPending);
+                          cpfIndex = celula?.cpf_index || (perfil ? planningPerfilCpfIndex(perfis, perfil.id) : null);
+                          displayName = celula?.parceiro_id 
+                                            ? (perfis.find(p => p.parceiro_id === celula.parceiro_id)?.parceiro?.nome || "Carregando...")
+                                            : (camp.parceiro_snapshot?.nome || (perfil ? perfilDisplayName(perfil) : "Sem parceiro"));
+                          displayValue = camp.deposit_amount > 0 
                                             ? formatMoney(camp.deposit_amount, camp.currency)
-                                            : (celula as any)?.deposito_sugerido 
-                                              ? formatMoney((celula as any).deposito_sugerido, (celula as any).moeda || "BRL")
+                                            : celula?.deposito_sugerido 
+                                              ? formatMoney(celula.deposito_sugerido, celula.moeda || "BRL")
                                               : formatMoney(0, "BRL");
+                        }
 
                         return (
                           <Card
                             key={camp.id}
                             className={cn(
                               "group relative overflow-hidden transition-all hover:shadow-md border-l-4",
+                              isExtra && "border-dashed border-opacity-60",
                               status === "concluido" && "border-l-[#00FF66] bg-[#00FF66]/5",
                               status === "atrasado" && "border-l-destructive bg-destructive/5",
                               status === "pendente" && "border-l-[#FFD700] bg-[#FFD700]/5",
                               status === "planejado" && "border-l-primary/50 bg-primary/5"
                             )}
+                            onClick={() => {
+                              if (isExtra) {
+                                setEditingExtra(camp);
+                                setIsExtraDialogOpen(true);
+                              }
+                            }}
                           >
                             <div className="p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                              {/* Casa e Info Principal */}
                               <div className="flex items-center gap-3 flex-1 min-w-0">
                                 <BookmakerLogo
                                   logoUrl={logoMap[bookmakerCatalogoId || ""] || null}
@@ -538,16 +526,17 @@ import { toast } from "sonner";
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2">
                                     <h3 className="font-bold text-base truncate">{camp.bookmaker_nome || "Sem Nome"}</h3>
+                                    {isExtra && <Badge variant="secondary" className="text-[10px] h-4 bg-primary/10 text-primary border-primary/20 font-bold">EXTRA</Badge>}
                                     {status === "concluido" && (
                                       <Badge className="bg-[#00FF66] hover:bg-[#00FF66]/80 text-[#00331a] text-[10px] h-5 font-bold border-none shadow-sm">
                                         FEITO
                                       </Badge>
                                     )}
-                                     {status === "atrasado" && (
-                                       <Badge variant="destructive" className="text-[10px] h-5 font-bold border-none shadow-sm">
-                                         ATRASADO
-                                       </Badge>
-                                     )}
+                                    {status === "atrasado" && (
+                                      <Badge variant="destructive" className="text-[10px] h-5 font-bold border-none shadow-sm">
+                                        ATRASADO
+                                      </Badge>
+                                    )}
                                     {status === "pendente" && (
                                       <Badge className="bg-[#FFD700] hover:bg-[#FFD700]/80 text-[#332b00] text-[10px] h-5 font-bold border-none shadow-sm">
                                         PENDENTE
@@ -559,21 +548,21 @@ import { toast } from "sonner";
                                       <User className="h-3.5 w-3.5" />
                                       <span className="truncate">
                                         {displayName}
-                                         {cpfIndex && (
-                                           <span 
-                                             className="ml-1.5 text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm border"
-                                             style={{
-                                               backgroundColor: perfil?.cor ? `${perfil.cor}26` : 'hsl(var(--primary)/0.1)',
-                                               borderColor: perfil?.cor || 'hsl(var(--primary))',
-                                               color: perfil?.cor || 'hsl(var(--primary))'
-                                             }}
-                                           >
-                                             CPF {cpfIndex}
-                                           </span>
-                                         )}
+                                        {cpfIndex && (
+                                          <span 
+                                            className="ml-1.5 text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm border"
+                                            style={{
+                                              backgroundColor: perfil?.cor ? `${perfil.cor}26` : 'hsl(var(--primary)/0.1)',
+                                              borderColor: perfil?.cor || 'hsl(var(--primary))',
+                                              color: perfil?.cor || 'hsl(var(--primary))'
+                                            }}
+                                          >
+                                            CPF {cpfIndex}
+                                          </span>
+                                        )}
                                       </span>
                                     </div>
-                                    <div className="flex items-center gap-1.5 font-medium text-foreground" title={camp.deposit_amount === 0 ? "Valor sugerido pela célula" : "Valor depositado"}>
+                                    <div className="flex items-center gap-1.5 font-medium text-foreground">
                                       <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
                                       {displayValue}
                                     </div>
@@ -581,7 +570,6 @@ import { toast } from "sonner";
                                 </div>
                               </div>
 
-                              {/* Detalhes Técnicos (Desktop) */}
                               <div className="hidden lg:flex items-center gap-6 px-4 border-x text-sm text-muted-foreground">
                                 <div className="flex flex-col gap-0.5">
                                   <span className="text-[10px] uppercase tracking-wider font-semibold opacity-60">IP / Proxy</span>
@@ -592,16 +580,19 @@ import { toast } from "sonner";
                                         <TooltipTrigger asChild>
                                           <span 
                                             className="max-w-[120px] truncate cursor-pointer hover:text-primary transition-colors flex items-center gap-1 group/proxy"
-                                            onClick={() => handleCopyProxy(linkedIp.ip_address)}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleCopyProxy(linkedIp.ip_address);
+                                            }}
                                           >
                                             {linkedIp.label}
                                             <Copy className="h-3 w-3 opacity-0 group-hover/proxy:opacity-100 transition-opacity" />
                                           </span>
                                         </TooltipTrigger>
-                                        <TooltipContent side="top" className="bg-popover border-border shadow-md">
+                                        <TooltipContent side="top">
                                           <div className="flex flex-col gap-1">
                                             <p className="text-xs font-mono font-medium">{linkedIp.ip_address}</p>
-                                            <p className="text-[10px] text-muted-foreground">Clique para copiar o proxy</p>
+                                            <p className="text-[10px] text-muted-foreground">Clique para copiar</p>
                                           </div>
                                         </TooltipContent>
                                       </Tooltip>
@@ -610,49 +601,57 @@ import { toast } from "sonner";
                                     )}
                                   </div>
                                 </div>
-                                  <div className="flex flex-col gap-0.5 min-w-[110px]">
-                                    <span className="text-[10px] uppercase tracking-wider font-semibold opacity-60">Status</span>
-                                    <div 
-                                      className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-all active:scale-95 group/status"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
+                                <div className="flex flex-col gap-0.5 min-w-[110px]">
+                                  <span className="text-[10px] uppercase tracking-wider font-semibold opacity-60">Status</span>
+                                  <div 
+                                    className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-all active:scale-95 group/status"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (isExtra) {
+                                        setEditingExtra(camp);
+                                        setIsExtraDialogOpen(true);
+                                      } else {
                                         handleToggleStatus(camp);
-                                      }}
-                                      title="Clique para alternar o status"
-                                    >
-                                      {status === "concluido" ? (
-                                        <span className="flex items-center gap-1 text-[#00FF66] font-bold">
-                                          <CheckCircle2 className="h-3.5 w-3.5 fill-[#00FF66]/20" /> Concluído
-                                        </span>
-                                      ) : (
-                                         <span className={cn(
-                                           "flex items-center gap-1 font-bold",
-                                           status === "atrasado" ? "text-destructive" : "text-[#FFD700]"
-                                         )}>
-                                           <Clock className="h-3.5 w-3.5" /> 
-                                           {status === "atrasado" ? "Atrasado" : "Pendente"}
-                                         </span>
-                                      )}
-                                    </div>
+                                      }
+                                    }}
+                                  >
+                                    {status === "concluido" ? (
+                                      <span className="flex items-center gap-1 text-[#00FF66] font-bold">
+                                        <CheckCircle2 className="h-3.5 w-3.5 fill-[#00FF66]/20" /> Concluído
+                                      </span>
+                                    ) : (
+                                      <span className={cn(
+                                        "flex items-center gap-1 font-bold",
+                                        status === "atrasado" ? "text-destructive" : "text-[#FFD700]"
+                                      )}>
+                                        <Clock className="h-3.5 w-3.5" /> 
+                                        {status === "atrasado" ? "Atrasado" : "Pendente"}
+                                      </span>
+                                    )}
                                   </div>
+                                </div>
                               </div>
 
-                              {/* Ações */}
                               <div className="flex items-center gap-2 self-end sm:self-center">
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8 hover:bg-primary/10 hover:text-primary transition-colors"
-                                  onClick={() => {
-                                    setEditingCampanha(camp);
-                                    setIsDialogOpen(true);
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (isExtra) {
+                                      setEditingExtra(camp);
+                                      setIsExtraDialogOpen(true);
+                                    } else {
+                                      setEditingCampanha(camp);
+                                      setIsDialogOpen(true);
+                                    }
                                   }}
                                 >
                                   <Pencil className="h-4 w-4" />
                                 </Button>
                               </div>
                             </div>
-
                           </Card>
                         );
                       })}

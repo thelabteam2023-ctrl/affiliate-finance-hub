@@ -7940,8 +7940,11 @@ export type Database = {
           currency: string
           deposit_amount: number
           id: string
+          ip_id: string | null
           notes: string | null
           parceiro_id: string | null
+          perfil_id: string | null
+          plano_id: string | null
           projeto_id: string | null
           scheduled_date: string | null
           status: string
@@ -7956,8 +7959,11 @@ export type Database = {
           currency?: string
           deposit_amount?: number
           id?: string
+          ip_id?: string | null
           notes?: string | null
           parceiro_id?: string | null
+          perfil_id?: string | null
+          plano_id?: string | null
           projeto_id?: string | null
           scheduled_date?: string | null
           status?: string
@@ -7972,8 +7978,11 @@ export type Database = {
           currency?: string
           deposit_amount?: number
           id?: string
+          ip_id?: string | null
           notes?: string | null
           parceiro_id?: string | null
+          perfil_id?: string | null
+          plano_id?: string | null
           projeto_id?: string | null
           scheduled_date?: string | null
           status?: string
@@ -7994,6 +8003,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_community_bookmaker_stats"
             referencedColumns: ["bookmaker_catalogo_id"]
+          },
+          {
+            foreignKeyName: "planning_extras_ip_id_fkey"
+            columns: ["ip_id"]
+            isOneToOne: false
+            referencedRelation: "planning_ips"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "planning_extras_parceiro_id_fkey"
@@ -8043,6 +8059,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_wallet_crypto_balances"
             referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "planning_extras_perfil_id_fkey"
+            columns: ["perfil_id"]
+            isOneToOne: false
+            referencedRelation: "planning_perfis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planning_extras_plano_id_fkey"
+            columns: ["plano_id"]
+            isOneToOne: false
+            referencedRelation: "distribuicao_planos"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "planning_extras_projeto_id_fkey"
