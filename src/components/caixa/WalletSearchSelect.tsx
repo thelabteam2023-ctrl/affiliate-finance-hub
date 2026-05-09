@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { Check, ChevronsUpDown, Search, User } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { WalletDisplayItem } from "../wallets/WalletDisplayItem";
 import {
   Popover,
   PopoverContent,
@@ -140,32 +140,17 @@ export function WalletSearchSelect({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between h-auto min-h-10 font-normal"
+          className="w-full justify-between h-auto min-h-12 font-normal py-2"
         >
           {selected ? (
-            <div className="flex flex-col items-start gap-0.5 text-left">
-              <div className="flex items-center gap-2">
-                <span className="font-medium uppercase text-sm">{selected.exchange}</span>
-                <div className="flex gap-1">
-                  {selected.moeda.slice(0, 3).map((m) => (
-                    <Badge key={m} variant="secondary" className="text-[10px] px-1.5 py-0">
-                      {m}
-                    </Badge>
-                  ))}
-                  {selected.moeda.length > 3 && (
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                      +{selected.moeda.length - 3}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                {selected.parceiro_nome && <span>{selected.parceiro_nome}</span>}
-                {selected.parceiro_nome && <span>•</span>}
-                <span className="font-mono">
-                  {selected.endereco.slice(0, 6)}...{selected.endereco.slice(-4)}
-                </span>
-              </div>
+            <div className="flex flex-col items-start w-full min-w-0">
+              <WalletDisplayItem
+                nickname={selected.parceiro_nome}
+                name={selected.exchange}
+                address={selected.endereco}
+                size="sm"
+                showIcon={true}
+              />
               {renderCoinBalances(selected.id)}
             </div>
           ) : (
@@ -215,27 +200,15 @@ export function WalletSearchSelect({
                       value === wallet.id ? "opacity-100" : "opacity-0"
                     )}
                   />
-                  <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium uppercase">{wallet.exchange}</span>
-                      <div className="flex gap-1">
-                        {wallet.moeda.slice(0, 3).map((m) => (
-                          <Badge key={m} variant="secondary" className="text-[10px] px-1.5 py-0">
-                            {m}
-                          </Badge>
-                        ))}
-                        {wallet.moeda.length > 3 && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                            +{wallet.moeda.length - 3}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                      <span className="font-mono">
-                        {wallet.endereco.slice(0, 6)}...{wallet.endereco.slice(-4)}
-                      </span>
-                    </div>
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <WalletDisplayItem
+                      nickname={wallet.parceiro_nome}
+                      name={wallet.exchange}
+                      address={wallet.endereco}
+                      size="sm"
+                      showIcon={false}
+                      variant="list"
+                    />
                     {renderCoinBalances(wallet.id)}
                   </div>
                 </button>
