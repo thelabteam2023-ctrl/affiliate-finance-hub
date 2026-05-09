@@ -187,22 +187,62 @@ export function SurebetDialogCompact({
     return completeLegs >= 2;
   }, [legs]);
 
-  // Handler para salvar
-  const handleSave = async () => {
-    if (!canSave) return;
-    
-    setSaving(true);
-    try {
-      // TODO: Implementar lógica de salvamento convertendo Leg[] para formato do banco
-      toast.success(isEditing ? "Operação atualizada!" : "Operação registrada!");
-      onSuccess();
-      onOpenChange(false);
-    } catch (error: any) {
-      toast.error("Erro ao salvar: " + error.message);
-    } finally {
-      setSaving(false);
-    }
-  };
+   // Handler para salvar
+   const handleSave = async () => {
+     if (!canSave) return;
+     
+     setSaving(true);
+     try {
+       // Transformar Leg[] (compacta) para o formato esperado pelo serviço
+       const pernasParaServico = legs.map((leg, idx) => {
+         const mainEntry = leg.entries[0];
+         return {
+           bookmakerId: mainEntry.bookmaker_id,
+           stake: parseFloat(mainEntry.stake) || 0,
+           odd: parseFloat(mainEntry.odd) || 0,
+           selecao: leg.selecao,
+           selecaoLivre: mainEntry.selecaoLivre || '',
+           moeda: getBookmakerMoeda(mainEntry.bookmaker_id),
+           fonteSaldo: (mainEntry as any).fonteSaldo || 'REAL',
+         };
+       });
+
+       const { data: { user } } = await supabase.auth.getUser();
+       if (!user) throw new Error("Usuário não autenticado");
+
+       if (isEditing && surebet) {
+         await atualizarSurebet(surebet.id, {
+           projetoId,
+           evento,
+           esporte,
+           mercado,
+           modelo,
+           pernas: pernasParaServico,
+         });
+         toast.success("Operação atualizada!");
+       } else {
+         await criarSurebet({
+           projetoId,
+           workspaceId: workspaceId!,
+           userId: user.id,
+           evento,
+           esporte,
+           mercado,
+           modelo,
+           estrategia: 'SUREBET',
+           pernas: pernasParaServico,
+         });
+         toast.success("Operação registrada!");
+       }
+       
+       onSuccess();
+       onOpenChange(false);
+     } catch (error: any) {
+       toast.error("Erro ao salvar: " + error.message);
+     } finally {
+       setSaving(false);
+     }
+   };
 
   // Handler para deletar
   const handleDelete = async () => {
