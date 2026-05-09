@@ -994,7 +994,7 @@ export async function reliquidarAposta(
       }
 
        // Usar RPC atômica de reliquidação global para evitar loops e garantir atomicidade no ledger
-       const { data: rpcData, error: rpcError } = await supabase.rpc('reliquidar_surebet_global_v1', {
+       const { data: rpcData, error: rpcError } = await (supabase.rpc as any)('reliquidar_surebet_global_v1', {
          p_aposta_id: apostaId,
          p_novo_resultado: (novoResultado || '').toUpperCase(),
          p_workspace_id: apostaPai.workspace_id
