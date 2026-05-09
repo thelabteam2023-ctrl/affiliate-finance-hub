@@ -1,5 +1,7 @@
-import { Copy } from "lucide-react";
+import { Copy, Check } from "lucide-react";
+import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { WalletDisplayItem } from "../wallets/WalletDisplayItem";
 
 interface WalletItemProps {
   wallet: {
@@ -14,41 +16,36 @@ interface WalletItemProps {
 
 export function WalletItem({ wallet, variant = "card" }: WalletItemProps) {
   const { toast } = useToast();
+  const [copied, setCopied] = useState(false);
   
-  const exchangeName = wallet.exchange || wallet.network;
-  const formattedName = exchangeName
-    .split(/[-\s]/)
-    .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(' ')
-    .toUpperCase();
-  
-  const truncatedAddress = `${wallet.endereco.slice(0, 6)}...${wallet.endereco.slice(-6)}`;
-
-  const moedaDisplay = wallet.moeda && wallet.moeda.length > 0 ? wallet.moeda.join(", ") : "";
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(wallet.endereco);
+    setCopied(true);
+    toast({ title: "Endereço copiado!" });
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
-    <div className={`flex items-center justify-between text-xs bg-accent/30 rounded ${variant === "card" ? "p-2" : "px-2 py-1.5"}`}>
-      <div className="flex-1 min-w-0">
-        <p className="truncate">
-          <span className="font-medium">{formattedName}</span>
-          {moedaDisplay && (
-            <>
-              <span className="text-muted-foreground"> - </span>
-              <span className="text-primary font-semibold">{moedaDisplay}</span>
-            </>
-          )}
-          <span className="text-muted-foreground"> - </span>
-          <span className="font-mono">{truncatedAddress}</span>
-        </p>
-      </div>
+    <div className={`flex items-center justify-between gap-2 bg-accent/30 rounded-lg group ${variant === "card" ? "p-2.5" : "px-3 py-2"}`}>
+      <WalletDisplayItem
+        nickname={wallet.exchange}
+        network={wallet.network}
+        address={wallet.endereco}
+        size="sm"
+        showIcon={false}
+        variant="list"
+        className="flex-1"
+      />
       <button
-        onClick={() => {
-          navigator.clipboard.writeText(wallet.endereco);
-          toast({ title: "Endereço copiado!" });
-        }}
-        className="ml-2 p-1 hover:bg-accent rounded transition-colors"
+        onClick={copyToClipboard}
+        className="shrink-0 p-1.5 hover:bg-accent rounded-md transition-colors text-muted-foreground hover:text-foreground"
+        title="Copiar endereço"
       >
-        <Copy className="h-3 w-3" />
+        {copied ? (
+          <Check className="h-3.5 w-3.5 text-emerald-500" />
+        ) : (
+          <Copy className="h-3.5 w-3.5 opacity-40 group-hover:opacity-100 transition-opacity" />
+        )}
       </button>
     </div>
   );

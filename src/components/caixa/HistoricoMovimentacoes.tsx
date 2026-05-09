@@ -26,6 +26,7 @@ import { SimplePagination } from "@/components/ui/simple-pagination";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { parseLocalDateTime, extractCivilDateKey } from "@/utils/dateUtils";
+import { truncateAddress } from "@/utils/cryptoUtils";
 import { DashboardPeriodFilterBar } from "@/components/shared/DashboardPeriodFilterBar";
 import { DashboardPeriodFilter, getDashboardDateRange } from "@/types/dashboardFilters";
 import { EditarDataTransacaoDialog } from "./EditarDataTransacaoDialog";
@@ -212,18 +213,7 @@ function ParceiroFilterSelect({ value, onChange, parceiros }: { value: string; o
 }
 
 // Helper: abbreviate crypto wallet address for display
-const abbreviateWalletAddress = (address: string | null | undefined): string | null => {
-  if (!address || address.length <= 14) return address || null;
-  return `${address.slice(0, 6)}...${address.slice(-4)}`;
-};
-
 // Helper: get wallet address from walletsDetalhes by wallet id
-const getWalletAddress = (walletId: string | null, walletsDetalhes: WalletDetalhe[]): string | null => {
-  if (!walletId) return null;
-  const wallet = walletsDetalhes.find(w => w.id === walletId);
-  return abbreviateWalletAddress(wallet?.endereco);
-};
-
 export function HistoricoMovimentacoes({
   loading,
   filtroTipo,
@@ -793,7 +783,10 @@ export function HistoricoMovimentacoes({
                               : transacao.destino_conta_bancaria_id 
                                 ? contasBancarias.find(c => c.id === transacao.destino_conta_bancaria_id)?.banco || 'Conta' 
                                 : 'Destino';
-                            const walletAddr = getWalletAddress(transacao.destino_wallet_id, walletsDetalhes);
+                            const wallet = transacao.destino_wallet_id 
+                              ? walletsDetalhes.find(w => w.id === transacao.destino_wallet_id)
+                              : null;
+                            const walletAddr = wallet?.endereco ? truncateAddress(wallet.endereco, 6, 4) : null;
                             return (
                               <div className="flex flex-col">
                                 <span className="text-sm text-muted-foreground">{walletName}</span>
@@ -819,7 +812,10 @@ export function HistoricoMovimentacoes({
                           ) : null}
                           {(() => {
                             const origemInfo = getOrigemInfo ? getOrigemInfo(transacao) : { primary: getOrigemLabel(transacao) };
-                            const walletAddr = getWalletAddress(transacao.origem_wallet_id, walletsDetalhes);
+                            const wallet = transacao.origem_wallet_id
+                              ? walletsDetalhes.find(w => w.id === transacao.origem_wallet_id)
+                              : null;
+                            const walletAddr = wallet?.endereco ? truncateAddress(wallet.endereco, 6, 4) : null;
                             return (
                               <div className="flex flex-col">
                                 <span className="text-sm text-muted-foreground">{origemInfo.primary}</span>
@@ -879,7 +875,10 @@ export function HistoricoMovimentacoes({
                                   <span className="text-xs text-muted-foreground/70">{origemInfo.secondary}</span>
                                 )}
                                 {transacao.origem_wallet_id && (() => {
-                                  const walletAddr = getWalletAddress(transacao.origem_wallet_id, walletsDetalhes);
+                                  const wallet = transacao.origem_wallet_id
+                                    ? walletsDetalhes.find(w => w.id === transacao.origem_wallet_id)
+                                    : null;
+                                  const walletAddr = wallet?.endereco ? truncateAddress(wallet.endereco, 6, 4) : null;
                                   return walletAddr ? <span className="text-[10px] font-mono text-muted-foreground/50">{walletAddr}</span> : null;
                                 })()}
                               </div>
@@ -915,7 +914,10 @@ export function HistoricoMovimentacoes({
                                     <span className="text-xs text-muted-foreground/70">{destinoInfo.secondary}</span>
                                   )}
                                   {transacao.destino_wallet_id && (() => {
-                                    const walletAddr = getWalletAddress(transacao.destino_wallet_id, walletsDetalhes);
+                                  const wallet = transacao.destino_wallet_id
+                                    ? walletsDetalhes.find(w => w.id === transacao.destino_wallet_id)
+                                    : null;
+                                  const walletAddr = wallet?.endereco ? truncateAddress(wallet.endereco, 6, 4) : null;
                                     return walletAddr ? <span className="text-[10px] font-mono text-muted-foreground/50">{walletAddr}</span> : null;
                                   })()}
                                 </div>
