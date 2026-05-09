@@ -205,7 +205,7 @@ export function SurebetDialogCompact({
            selecao: leg.selecao,
            selecaoLivre: typedEntry.selecaoLivre || '',
            moeda: getBookmakerMoeda(typedEntry.bookmaker_id),
-           fonteSaldo: typedEntry.fonteSaldo || 'REAL',
+           fonteSaldo: (typedEntry.fonteSaldo || 'REAL') as 'REAL' | 'FREEBET',
          };
        });
 
