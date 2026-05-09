@@ -10,6 +10,8 @@ import { WalletDisplayItem } from "../wallets/WalletDisplayItem";
 interface CryptoWalletCardProps {
   wallet: {
     label?: string;
+    nickname?: string;
+    identificacao_wallet?: string;
     moeda: string[];
     network: string;
     endereco: string;
@@ -49,8 +51,10 @@ export function CryptoWalletCard({ wallet, parceiroId }: CryptoWalletCardProps) 
         <CardContent className="pt-6 space-y-4">
           <div className="flex items-start justify-between gap-3 min-w-0">
             <WalletDisplayItem
-              nickname={wallet.label}
-              name={wallet.exchange}
+              label={wallet.label}
+              nickname={wallet.nickname}
+              identificacao_wallet={wallet.identificacao_wallet}
+              exchange={wallet.exchange}
               network={wallet.network}
               address={wallet.endereco}
               size="lg"
