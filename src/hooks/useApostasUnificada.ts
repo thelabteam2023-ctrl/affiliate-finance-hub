@@ -19,7 +19,8 @@ import {
 import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
 import { SupportedCurrency } from "@/types/currency";
 import { useCurrencySnapshot } from "./useCurrencySnapshot";
-import { useWorkspace } from "./useWorkspace";
+ import { useWorkspace } from "./useWorkspace";
+ import { useInvalidateFinancialState } from "./useInvalidateFinancialState";
  import { 
    liquidarAposta as liquidarApostaService, 
    reliquidarAposta as reliquidarApostaService,
@@ -45,7 +46,8 @@ export interface UseApostasUnificadaReturn {
 export function useApostasUnificada(): UseApostasUnificadaReturn {
   const [loading, setLoading] = useState(false);
   const { workspaceId } = useWorkspace();
-  const { getSnapshotFields } = useCurrencySnapshot();
+   const { getSnapshotFields } = useCurrencySnapshot();
+   const invalidateFinancialState = useInvalidateFinancialState();
   const { getRate } = useCotacoes();
 
   // Buscar operações de arbitragem de um projeto
@@ -162,7 +164,8 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
         throw new Error(result?.message || 'Falha ao criar arbitragem');
       }
       
-      toast.success("Operação registrada com sucesso!");
+       toast.success("Operação registrada com sucesso!");
+       invalidateFinancialState(params.projeto_id, { operation: "aposta" });
       return result.o_aposta_id;
     } catch (error: any) {
       toast.error("Erro ao criar operação: " + error.message);
@@ -234,7 +237,10 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
         throw new Error(result.error || 'Falha ao atualizar arbitragem');
       }
       
-      toast.success("Operação atualizada!");
+       toast.success("Operação atualizada!");
+       // Buscar projeto_id da aposta atual para invalidar
+       const { data: aposta } = await supabase.from('apostas_unificada').select('projeto_id').eq('id', params.id).single();
+       if (aposta) invalidateFinancialState(aposta.projeto_id, { operation: "aposta" });
       return true;
     } catch (error: any) {
       toast.error("Erro ao atualizar: " + error.message);
@@ -274,7 +280,8 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
 
       if (error) throw error;
       
-      toast.success("Operação excluída!");
+       toast.success("Operação excluída!");
+       if (operacao) invalidateFinancialState(operacao.projeto_id, { operation: "aposta" });
       return true;
     } catch (error: any) {
       console.error("[useApostasUnificada] Erro ao excluir:", error);
@@ -346,7 +353,8 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
          }
        }
 
-      toast.success("Operação liquidada!");
+       toast.success("Operação liquidada!");
+       invalidateFinancialState(operacao.projeto_id, { operation: "aposta" });
       return true;
     } catch (error: any) {
       console.error("[useApostasUnificada] Erro ao liquidar:", error);
@@ -441,7 +449,8 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
         console.error("[useApostasUnificada] Erro ao resetar pernas normalizadas:", pernasResetError);
       }
 
-      toast.success("Liquidação revertida!");
+       toast.success("Liquidação revertida!");
+       invalidateFinancialState(operacao.projeto_id, { operation: "aposta" });
       return true;
     } catch (error: any) {
       console.error("[useApostasUnificada] Erro ao reverter:", error);
