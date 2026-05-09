@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getWalletDisplayName } from "@/utils/cryptoUtils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -245,9 +246,12 @@ export function ExposicaoCryptoCard({
                                   <div className="min-w-0">
                                      <div className="flex flex-col">
                                        <p className="text-sm font-semibold uppercase tracking-tight">
-                                         {wallet.label || (wallet.exchange || "Wallet").replace(/-/g, " ").toUpperCase()}
+                                         {getWalletDisplayName({
+                                           label: wallet.label,
+                                           exchange: wallet.exchange
+                                         })}
                                        </p>
-                                       {wallet.label && wallet.exchange && (
+                                       {wallet.label && wallet.exchange && wallet.label.toLowerCase() !== wallet.exchange.toLowerCase() && (
                                          <span className="text-[10px] text-muted-foreground uppercase opacity-70">
                                            {wallet.exchange.replace(/-/g, " ")}
                                          </span>
