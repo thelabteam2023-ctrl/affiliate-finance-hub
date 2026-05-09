@@ -1,10 +1,11 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Wallet, Copy, Check, ArrowRightLeft } from "lucide-react";
+import { Copy, Check, ArrowRightLeft } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { SwapCryptoDialog } from "@/components/caixa/SwapCryptoDialog";
+import { WalletDisplayItem } from "../wallets/WalletDisplayItem";
 
 interface CryptoWalletCardProps {
   wallet: {
@@ -24,18 +25,6 @@ export function CryptoWalletCard({ wallet, parceiroId }: CryptoWalletCardProps) 
   const [swapOpen, setSwapOpen] = useState(false);
   const { toast } = useToast();
   
-  const truncateAddress = (addr: string) => {
-    if (addr.length <= 12) return addr;
-    return `${addr.slice(0, 6)}...${addr.slice(-6)}`;
-  };
-
-  const formatExchangeName = (name: string) => {
-    return name
-      .split(/[-\s]/)
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ');
-  };
-
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -58,60 +47,56 @@ export function CryptoWalletCard({ wallet, parceiroId }: CryptoWalletCardProps) 
     <>
       <Card className="bg-card/50 backdrop-blur border-border/50">
         <CardContent className="pt-6 space-y-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <Wallet className="w-5 h-5 text-primary" />
-              </div>
-              <div className="flex flex-col min-w-0">
-                <h3 className="font-semibold text-foreground truncate">
-                  {wallet.label || formatExchangeName(wallet.exchange || "Wallet")}
-                </h3>
-                {wallet.label && wallet.exchange && (
-                  <p className="text-xs text-muted-foreground truncate">
-                    {formatExchangeName(wallet.exchange)}
-                  </p>
-                )}
+          <div className="flex items-start justify-between gap-3 min-w-0">
+            <WalletDisplayItem
+              nickname={wallet.label}
+              name={wallet.exchange}
+              network={wallet.network}
+              address={wallet.endereco}
+              size="lg"
+              variant="default"
+              className="flex-1"
+            />
+            
+            <div className="flex flex-col items-end gap-1.5 shrink-0">
+              {parceiroId && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setSwapOpen(true);
+                  }}
+                  title="Swap Crypto"
+                >
+                  <ArrowRightLeft className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 py-2">
+            <div className="space-y-1">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Saldo Atual</p>
+              <div className="flex flex-col">
+                <span className="text-lg font-bold text-primary tabular-nums">
+                  {(wallet.saldo || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
+                  <span className="ml-1 text-xs font-medium text-muted-foreground">{wallet.saldoCoin || "USDT"}</span>
+                </span>
               </div>
             </div>
-            <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-              <div className="flex items-center gap-2">
-                {parceiroId && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setSwapOpen(true);
-                    }}
-                    title="Swap Crypto"
-                  >
-                    <ArrowRightLeft className="h-4 w-4" />
-                  </Button>
-                )}
-                <Badge variant="outline" className="bg-accent/20 text-accent-foreground uppercase text-xs">
-                  {wallet.network}
-                </Badge>
+            <div className="space-y-1">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Moedas Suportadas</p>
+              <div className="flex flex-wrap gap-1">
+                {wallet.moeda.map((coin, idx) => (
+                  <Badge key={idx} variant="outline" className="text-[10px] px-1 py-0 h-4 uppercase">
+                    {coin}
+                  </Badge>
+                ))}
               </div>
-              {typeof wallet.saldo === "number" && (
-                <div className="flex items-center gap-1.5">
-                  <Wallet className="w-3 h-3 text-muted-foreground" />
-                  <span
-                    className={`text-sm font-bold tabular-nums ${
-                      wallet.saldo > 0
-                        ? "text-success"
-                        : wallet.saldo < 0
-                        ? "text-destructive"
-                        : "text-foreground"
-                    }`}
-                  >
-                    {wallet.saldo.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 8 })} {wallet.saldoCoin || "USDT"}
-                  </span>
-                </div>
-              )}
             </div>
           </div>
 
@@ -127,20 +112,24 @@ export function CryptoWalletCard({ wallet, parceiroId }: CryptoWalletCardProps) 
               </div>
             </div>
 
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Endereço</p>
-              <p 
-                className="text-sm text-foreground font-mono font-semibold mt-1 cursor-pointer hover:text-primary transition-colors flex items-center gap-2"
-                onClick={() => copyToClipboard(wallet.endereco)}
-                title="Clique para copiar"
-              >
-                {truncateAddress(wallet.endereco)}
+            <div 
+              className="bg-muted/30 rounded-lg p-2 flex items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors"
+              onClick={() => copyToClipboard(wallet.endereco)}
+              title="Clique para copiar o endereço completo"
+            >
+              <div className="flex flex-col">
+                <span className="text-[9px] text-muted-foreground uppercase font-medium">Endereço da Carteira</span>
+                <span className="text-sm font-mono text-foreground break-all leading-tight pr-4">
+                  {wallet.endereco}
+                </span>
+              </div>
+              <div className="shrink-0">
                 {copied ? (
-                  <Check className="w-3 h-3 text-primary" />
+                  <Check className="w-4 h-4 text-emerald-500" />
                 ) : (
-                  <Copy className="w-3 h-3 opacity-50" />
+                  <Copy className="w-4 h-4 text-muted-foreground opacity-50" />
                 )}
-              </p>
+              </div>
             </div>
           </div>
         </CardContent>
