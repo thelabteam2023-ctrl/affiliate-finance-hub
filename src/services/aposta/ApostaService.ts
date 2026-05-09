@@ -1007,26 +1007,15 @@ export async function reliquidarAposta(
        const rpcResult = rpcData as any;
        if (!rpcResult.success) {
          return { success: false, error: { code: 'RELIQUIDATION_FAILED', message: rpcResult.error || 'Falha na reliquidação global' } };
-       }
+        }
 
-       return {
-         success: true,
-         data: {
-           resultado_anterior: resultadoAnterior || undefined,
-           impacto_total: rpcResult.events_created
-         }
-       };
-        pernas_processadas: pernas.length,
-        delta_total: totalDelta,
-      });
-
-      return {
-        success: true,
-        data: {
-          resultado_anterior: resultadoAnterior || undefined,
-          impacto_total: totalDelta,
-        },
-      };
+        return {
+          success: true,
+          data: {
+            resultado_anterior: resultadoAnterior || undefined,
+            impacto_total: rpcResult.events_created
+          }
+        };
     }
     
     // ============================================================
