@@ -26,7 +26,8 @@ import { SimplePagination } from "@/components/ui/simple-pagination";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { parseLocalDateTime, extractCivilDateKey } from "@/utils/dateUtils";
-import { truncateAddress } from "@/utils/cryptoUtils";
+import { truncateAddress, getWalletDisplayName } from "@/utils/cryptoUtils";
+import { WalletDisplayItem } from "../wallets/WalletDisplayItem";
 import { DashboardPeriodFilterBar } from "@/components/shared/DashboardPeriodFilterBar";
 import { DashboardPeriodFilter, getDashboardDateRange } from "@/types/dashboardFilters";
 import { EditarDataTransacaoDialog } from "./EditarDataTransacaoDialog";
@@ -85,6 +86,9 @@ interface ContaBancaria {
 interface WalletDetalhe {
   id: string;
   exchange: string;
+  label?: string | null;
+  nickname?: string | null;
+  identificacao_wallet?: string | null;
   endereco: string;
   network: string;
   parceiro_id: string;
@@ -362,8 +366,23 @@ export function HistoricoMovimentacoes({
       // Search in wallet details
       const origemWallet = t.origem_wallet_id ? walletsDetalhes.find(w => w.id === t.origem_wallet_id) : null;
       const destinoWallet = t.destino_wallet_id ? walletsDetalhes.find(w => w.id === t.destino_wallet_id) : null;
-      const walletOrigemStr = origemWallet ? `${origemWallet.exchange} ${origemWallet.endereco}`.toLowerCase() : "";
-      const walletDestinoStr = destinoWallet ? `${destinoWallet.exchange} ${destinoWallet.endereco}`.toLowerCase() : "";
+      
+      const walletOrigemLabel = origemWallet ? getWalletDisplayName({
+        label: origemWallet.label,
+        nickname: origemWallet.nickname,
+        identificacao_wallet: origemWallet.identificacao_wallet,
+        exchange: origemWallet.exchange
+      }).toLowerCase() : "";
+      
+      const walletDestinoLabel = destinoWallet ? getWalletDisplayName({
+        label: destinoWallet.label,
+        nickname: destinoWallet.nickname,
+        identificacao_wallet: destinoWallet.identificacao_wallet,
+        exchange: destinoWallet.exchange
+      }).toLowerCase() : "";
+
+      const walletOrigemStr = origemWallet ? `${origemWallet.exchange} ${origemWallet.endereco} ${walletOrigemLabel}`.toLowerCase() : "";
+      const walletDestinoStr = destinoWallet ? `${destinoWallet.exchange} ${destinoWallet.endereco} ${walletDestinoLabel}`.toLowerCase() : "";
       
       // Search in bank account details
       const origemConta = t.origem_conta_bancaria_id ? contasBancarias.find(c => c.id === t.origem_conta_bancaria_id) : null;
@@ -390,6 +409,8 @@ export function HistoricoMovimentacoes({
         destinoParceiro.includes(termo) ||
         walletOrigemStr.includes(termo) ||
         walletDestinoStr.includes(termo) ||
+        walletOrigemLabel.includes(termo) ||
+        walletDestinoLabel.includes(termo) ||
         contaOrigemStr.includes(termo) ||
         contaDestinoStr.includes(termo) ||
         descricao.includes(termo) ||

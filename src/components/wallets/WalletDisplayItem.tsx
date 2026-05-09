@@ -1,12 +1,15 @@
 import React from "react";
 import { Wallet, Network } from "lucide-react";
-import { truncateAddress, formatNetworkName } from "@/utils/cryptoUtils";
+import { truncateAddress, formatNetworkName, getWalletDisplayName } from "@/utils/cryptoUtils";
 import { cn } from "@/lib/utils";
 
 interface WalletDisplayItemProps {
   nickname?: string | null;
+  identificacao_wallet?: string | null;
+  label?: string | null;
   name?: string | null;
   exchange?: string | null;
+  exchangeWallet?: string | null;
   network?: string | null;
   address: string;
   balance?: string | number | null;
@@ -20,8 +23,11 @@ interface WalletDisplayItemProps {
 
 export function WalletDisplayItem({
   nickname,
+  identificacao_wallet,
+  label,
   name,
   exchange,
+  exchangeWallet,
   network,
   address,
   balance,
@@ -32,8 +38,15 @@ export function WalletDisplayItem({
   size = "md",
   variant = "default",
 }: WalletDisplayItemProps) {
-  // Primary line: Nickname > Name > Exchange > "Sem nome"
-  const primaryLabel = nickname || name || exchange || "Carteira sem nome";
+  // Primary line: centralized display logic
+  const primaryLabel = getWalletDisplayName({
+    nickname,
+    identificacao_wallet,
+    label,
+    name,
+    exchange,
+    exchangeWallet
+  });
   
   // Secondary line: Network + Truncated Address
   const formattedNetwork = formatNetworkName(network);

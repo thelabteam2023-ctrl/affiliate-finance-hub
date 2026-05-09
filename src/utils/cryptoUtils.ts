@@ -1,3 +1,30 @@
+
+export interface WalletIdentifier {
+  label?: string | null;
+  nickname?: string | null;
+  identificacao_wallet?: string | null;
+  exchange?: string | null;
+  exchangeWallet?: string | null;
+  name?: string | null;
+}
+
+/**
+ * Returns the best display name for a wallet based on priority rules.
+ * Priority: nickname/identificacao_wallet/label > exchangeWallet/exchange/name
+ */
+export const getWalletDisplayName = (wallet: WalletIdentifier): string => {
+  const name = 
+    wallet.nickname?.trim() || 
+    wallet.identificacao_wallet?.trim() || 
+    wallet.label?.trim() || 
+    wallet.exchangeWallet?.trim() || 
+    wallet.exchange?.trim() || 
+    wallet.name?.trim() ||
+    'Wallet sem identificação';
+  
+  return name;
+};
+
 /**
  * Truncates a crypto address to show the beginning and the end.
  * Example: 0xB718Af...F3A2

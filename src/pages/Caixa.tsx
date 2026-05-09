@@ -41,6 +41,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { parseLocalDateTime, extractCivilDateKey, getCivilDateRangeForQuery } from "@/utils/dateUtils";
+import { getWalletDisplayName, truncateAddress } from "@/utils/cryptoUtils";
 
 interface LocationState {
   openDialog?: boolean;
@@ -306,8 +307,8 @@ export default function Caixa() {
       
       const { data: walletsData } = await supabase
         .from("wallets_crypto")
-        .select("id, exchange, endereco, network, parceiro_id");
-      
+        .select("id, label, exchange, endereco, network, parceiro_id");
+
       const { data: bookmakersData } = await supabase
         .from("bookmakers")
         .select("id, nome, status, parceiro_id, projeto_id");
@@ -789,8 +790,9 @@ export default function Caixa() {
       const wallet = walletsDetalhes.find(w => w.id === transacao.origem_wallet_id);
       if (wallet) {
         const parceiroNome = wallet.parceiro_id ? parceiros[wallet.parceiro_id] : undefined;
+        const displayName = getWalletDisplayName(wallet);
         return {
-          primary: `Wallet ${parceiroNome || wallet.exchange || 'Crypto'}`,
+          primary: displayName !== 'Wallet sem identificação' ? displayName : `Wallet ${parceiroNome || wallet.exchange || 'Crypto'}`,
           secondary: `${transacao.coin || transacao.moeda_origem || ''}`
         };
       }
@@ -847,8 +849,9 @@ export default function Caixa() {
       const wallet = walletsDetalhes.find(w => w.id === transacao.origem_wallet_id);
       if (wallet) {
         const parceiroNome = wallet.parceiro_id ? parceiros[wallet.parceiro_id] : undefined;
+        const displayName = getWalletDisplayName(wallet);
         return { 
-          primary: wallet.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET',
+          primary: displayName,
           secondary: parceiroNome
         };
       }
@@ -878,8 +881,9 @@ export default function Caixa() {
       const wallet = walletsDetalhes.find(w => w.id === transacao.destino_wallet_id);
       if (wallet) {
         const parceiroNome = wallet.parceiro_id ? parceiros[wallet.parceiro_id] : undefined;
+        const displayName = getWalletDisplayName(wallet);
         return {
-          primary: `Wallet ${parceiroNome || wallet.exchange || 'Crypto'}`,
+          primary: displayName !== 'Wallet sem identificação' ? displayName : `Wallet ${parceiroNome || wallet.exchange || 'Crypto'}`,
           secondary: `${transacao.coin || transacao.moeda_destino || ''}`
         };
       }
@@ -925,8 +929,9 @@ export default function Caixa() {
       const wallet = walletsDetalhes.find(w => w.id === transacao.destino_wallet_id);
       if (wallet) {
         const parceiroNome = wallet.parceiro_id ? parceiros[wallet.parceiro_id] : undefined;
+        const displayName = getWalletDisplayName(wallet);
         return { 
-          primary: wallet.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET',
+          primary: displayName,
           secondary: parceiroNome
         };
       }

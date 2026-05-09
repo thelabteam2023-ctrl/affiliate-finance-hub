@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { Check, ChevronsUpDown, Search, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WalletDisplayItem } from "../wallets/WalletDisplayItem";
+import { getWalletDisplayName } from "@/utils/cryptoUtils";
 import {
   Popover,
   PopoverContent,
@@ -12,6 +13,10 @@ import { cn } from "@/lib/utils";
 interface WalletOption {
   id: string;
   exchange: string;
+  network?: string | null;
+  label?: string | null;
+  nickname?: string | null;
+  identificacao_wallet?: string | null;
   endereco: string;
   parceiro_id?: string;
   parceiro_nome?: string;
@@ -52,13 +57,23 @@ export function WalletSearchSelect({
   const filtered = useMemo(() => {
     if (!search.trim()) return wallets;
     const q = search.toLowerCase();
-    return wallets.filter(
-      (w) =>
+    return wallets.filter((w) => {
+      const displayName = getWalletDisplayName({
+        label: w.label,
+        nickname: w.nickname,
+        identificacao_wallet: w.identificacao_wallet,
+        exchange: w.exchange,
+      }).toLowerCase();
+
+      return (
+        displayName.includes(q) ||
         w.exchange?.toLowerCase().includes(q) ||
+        w.network?.toLowerCase().includes(q) ||
         w.parceiro_nome?.toLowerCase().includes(q) ||
         w.endereco?.toLowerCase().includes(q) ||
         w.moeda?.some((m) => m.toLowerCase().includes(q))
-    );
+      );
+    });
   }, [wallets, search]);
 
   // Group saldos by wallet_id
@@ -145,8 +160,11 @@ export function WalletSearchSelect({
           {selected ? (
             <div className="flex flex-col items-start w-full min-w-0">
               <WalletDisplayItem
-                nickname={selected.parceiro_nome}
-                name={selected.exchange}
+                label={selected.label}
+                nickname={selected.nickname}
+                identificacao_wallet={selected.identificacao_wallet}
+                exchange={selected.exchange}
+                network={selected.network}
                 address={selected.endereco}
                 size="sm"
                 showIcon={true}
@@ -202,8 +220,11 @@ export function WalletSearchSelect({
                   />
                   <div className="flex flex-col min-w-0 flex-1">
                     <WalletDisplayItem
-                      nickname={wallet.parceiro_nome}
-                      name={wallet.exchange}
+                      label={wallet.label}
+                      nickname={wallet.nickname}
+                      identificacao_wallet={wallet.identificacao_wallet}
+                      exchange={wallet.exchange}
+                      network={wallet.network}
                       address={wallet.endereco}
                       size="sm"
                       showIcon={false}
