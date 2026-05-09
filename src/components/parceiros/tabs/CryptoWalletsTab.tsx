@@ -3,11 +3,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, Wallet, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import { RedeSelect } from "../RedeSelect";
 import { MoedaMultiSelect } from "../MoedaMultiSelect";
 import { ExchangeSelect } from "../ExchangeSelect";
 import { CryptoWalletCard } from "../CryptoWalletCard";
+import { WalletDisplayItem } from "../../wallets/WalletDisplayItem";
 
 interface CryptoWalletsTabProps {
   cryptoWallets: any[];
@@ -76,30 +77,28 @@ export function CryptoWalletsTab({
             : "Sem endereço";
 
           return (
-            <Card key={index} className="overflow-hidden">
+            <Card key={index} className="overflow-hidden border-border/50">
               <div
-                className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-accent/30 transition-colors"
+                className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-accent/30 transition-colors group"
                 onClick={() => setExpandedWalletIndex(isExpanded ? null : index)}
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                    <Wallet className="w-4 h-4 text-primary" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold truncate">
-                      {label || exchangeNome || redeNome}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {label && exchangeNome && `${exchangeNome} · `}{moedaDisplay} · {redeNome} · <span className="font-mono">{truncAddr}</span>
-                    </p>
-                  </div>
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <WalletDisplayItem
+                    nickname={label}
+                    name={exchangeNome}
+                    network={redeNome}
+                    address={wallet.endereco || ""}
+                    size="sm"
+                    showIcon={true}
+                    className="flex-1"
+                  />
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                    className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                     onClick={(e) => { e.stopPropagation(); removeCryptoWallet(index); }}
                   >
                     <Trash2 className="h-4 w-4" />
