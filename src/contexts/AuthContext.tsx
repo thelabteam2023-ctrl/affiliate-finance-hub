@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useReducer, useCallback, ReactNode } from "react";
+import { createContext, useContext, useEffect, useReducer, useCallback, ReactNode, useMemo } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
@@ -365,36 +365,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const resolveSession = async (session: Session) => {
       const userId = session.user.id;
 
-      // Retry helper inline for profile fetch
-      const fetchProfileWithRetry = async (retries = 3) => {
-        for (let i = 0; i < retries; i++) {
-          const { data, error } = await supabase
+      // Try to get cached workspace ID first to speed up boot
+      const cachedTabWsId = getTabWorkspaceId();
+      const tabInitialized = isTabWorkspaceInitialized();
+
+      // Parallel fetch: profile data AND (potentially) workspace membership
+      const [profileData, membershipData] = await Promise.all([
+        // Fetch profile (mandatory)
+        retryQuery(async () => {
+          const result = await supabase
             .from('profiles')
             .select('is_system_owner, is_blocked, public_id, default_workspace_id')
             .eq('id', userId)
             .single();
-          
-          if (!error || !error.message?.includes('fetch')) {
-            return data;
-          }
-          
-          console.warn(`[Auth][${tabId}] Profile fetch attempt ${i + 1}/${retries} failed, retrying...`);
-          if (i < retries - 1) {
-            await new Promise(r => setTimeout(r, 500 * (i + 1)));
-          }
-        }
-        return null;
-      };
+          if (result.error && result.error.message?.includes('fetch')) throw new Error('Network error');
+          return result.data;
+        }),
+        // Only fetch first membership if we don't have a valid tab workspace AND no profile default
+        (cachedTabWsId && tabInitialized) ? Promise.resolve(null) : retryQuery(async () => {
+          const result = await supabase
+            .from('workspace_members')
+            .select('workspace_id')
+            .eq('user_id', userId)
+            .eq('is_active', true)
+            .order('created_at', { ascending: true })
+            .limit(1)
+            .single();
+          if (result.error && result.error.message?.includes('fetch')) throw new Error('Network error');
+          return result.data;
+        }).catch(() => null) // Suppress error for memberships
+      ]);
 
-      const profileData = await fetchProfileWithRetry();
-
-      const wsId = await resolveWorkspaceId(userId, {
-        default_workspace_id: profileData?.default_workspace_id ?? null,
-      });
+      // Resolve final wsId
+      let wsId: string | null = null;
+      if (cachedTabWsId && tabInitialized) {
+        wsId = cachedTabWsId;
+      } else if (profileData?.default_workspace_id) {
+        wsId = profileData.default_workspace_id;
+        setTabWorkspaceId(wsId);
+        markTabAsInitialized();
+      } else if (membershipData?.workspace_id) {
+        wsId = membershipData.workspace_id;
+        setTabWorkspaceId(wsId);
+        markTabAsInitialized();
+      } else {
+        markTabAsInitialized();
+      }
 
       let workspace: Workspace | null = null;
       let role: AppRole | null = null;
+      
       if (wsId) {
+        // If we found a workspace, fetch its details and user's role
         const res = await fetchWorkspaceAndRole(userId, wsId);
         workspace = res.workspace;
         role = res.role;
@@ -568,11 +590,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const isOwnerOrAdmin = (): boolean => {
+  const isOwnerOrAdmin = useCallback((): boolean => {
     return state.role === 'owner' || state.role === 'admin';
-  };
+  }, [state.role]);
 
-  const value: AuthContextType = {
+  const value: AuthContextType = useMemo(() => ({
     user: state.user,
     session: state.session,
     workspace: state.workspace,
@@ -592,7 +614,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setWorkspaceForTab,
     hasPermission,
     isOwnerOrAdmin,
-  };
+  }), [
+    state.user, state.session, state.workspace, state.role, 
+    loading, initialized, state.status, state.isSystemOwner, 
+    state.isBlocked, state.publicId, tabId, 
+    signIn, signUp, signOut, refreshWorkspace, setWorkspaceForTab, 
+    hasPermission, isOwnerOrAdmin
+  ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
