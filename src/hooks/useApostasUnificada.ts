@@ -20,7 +20,11 @@ import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
 import { SupportedCurrency } from "@/types/currency";
 import { useCurrencySnapshot } from "./useCurrencySnapshot";
 import { useWorkspace } from "./useWorkspace";
-import { liquidarAposta as liquidarApostaService, reliquidarAposta as reliquidarApostaService } from "@/services/aposta/ApostaService";
+ import { 
+   liquidarAposta as liquidarApostaService, 
+   reliquidarAposta as reliquidarApostaService,
+   liquidarPernaSurebet
+ } from "@/services/aposta/ApostaService";
 import { useCotacoes } from "./useCotacoes";
 import { resolveEffectiveProjectRate } from "./useProjetoWorkingRates";
 
