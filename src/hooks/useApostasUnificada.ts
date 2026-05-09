@@ -310,71 +310,37 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
         }
       }
 
-      // Calcular resultado geral e lucro
-      const resultadoGeral = determinarResultadoArbitragem(pernasAtuais);
-      const lucroReal = calcularLucroReal(pernasAtuais);
+       // Usar orquestrador por perna do ApostaService para cada perna atualizada.
+       // O motor v10 cuida da atomicidade, reversão e recálculo do pai automaticamente.
+       for (const update of params.pernas) {
+         const perna = pernasAtuais[update.index];
+         if (!perna) continue;
 
-      // Determinar se todas as pernas estão liquidadas
-      const todasLiquidadas = pernasAtuais.every(p => 
-        p.resultado && p.resultado !== "PENDENTE"
-      );
+         const { data: pernaRow } = await supabase
+           .from('apostas_pernas')
+           .select('id')
+           .eq('aposta_id', params.id)
+           .eq('ordem', update.index)
+           .single();
 
-      // Só chamar RPC atômica se todas liquidadas (impacto financeiro)
-      if (todasLiquidadas) {
-        // Preparar resultados por perna para o RPC
-        const resultadosPernas = params.pernas.map((update) => ({
-          ordem: update.index,
-          resultado: update.resultado,
-          lucro_prejuizo: update.lucro_prejuizo ?? 0,
-        }));
+         if (pernaRow?.id) {
+           const result = await liquidarPernaSurebet({
+             surebet_id: params.id,
+             perna_id: pernaRow.id,
+             bookmaker_id: perna.bookmaker_id,
+             resultado: update.resultado as any,
+             resultado_anterior: perna.resultado || null,
+             stake: perna.stake,
+             odd: perna.odd,
+             moeda: perna.moeda,
+             workspace_id: workspaceId!,
+           });
 
-        // Mapear resultado geral para tipo esperado pelo RPC
-        const resultadoMapped = resultadoGeral === 'PENDENTE' ? 'VOID' : resultadoGeral;
-
-        // Usar ApostaService.liquidarAposta (RPC atômica com ledger)
-        const result = await liquidarApostaService({
-          id: params.id,
-          resultado: resultadoMapped as 'GREEN' | 'RED' | 'MEIO_GREEN' | 'MEIO_RED' | 'VOID',
-          lucro_prejuizo: lucroReal,
-          resultados_pernas: resultadosPernas,
-        });
-
-        if (!result.success) {
-          throw new Error(result.error?.message || "Erro ao liquidar via RPC");
-        }
-      } else {
-        // Liquidação parcial - apenas atualizar dados sem impacto financeiro
-        const stakeTotal = calcularStakeTotalPernas(pernasAtuais);
-        const roiReal = stakeTotal && stakeTotal > 0 ? (lucroReal / stakeTotal) * 100 : 0;
-
-        const { error: updateError } = await supabase
-          .from("apostas_unificada")
-          .update({
-            pernas: pernasAtuais as any,
-            status: "PENDENTE",
-            resultado: resultadoGeral,
-            lucro_prejuizo: lucroReal,
-            roi_real: roiReal,
-            updated_at: new Date().toISOString()
-          })
-          .eq("id", params.id);
-
-        if (updateError) throw updateError;
-
-        // DUAL-WRITE: Atualizar pernas na tabela normalizada
-        for (const update of params.pernas) {
-          if (update.index >= 0 && update.index < pernasAtuais.length) {
-            await supabase
-              .from("apostas_pernas")
-              .update({
-                resultado: update.resultado,
-                lucro_prejuizo: update.lucro_prejuizo ?? null,
-              })
-              .eq("aposta_id", params.id)
-              .eq("ordem", update.index);
-          }
-        }
-      }
+           if (!result.success) {
+             throw new Error(result.error?.message || `Erro ao liquidar perna ${update.index}`);
+           }
+         }
+       }
 
       toast.success("Operação liquidada!");
       return true;
