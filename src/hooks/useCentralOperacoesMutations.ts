@@ -10,7 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { getTodayCivilDate } from "@/utils/dateUtils";
 import { getFirstLastName } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import { useCentralOperacoesCache } from "@/hooks/useCentralOperacoesCache";
+ import { useCentralOperacoesCache } from "@/hooks/useCentralOperacoesCache";
+ import { useInvalidateFinancialState } from "@/hooks/useInvalidateFinancialState";
 import type {
   Alerta,
   EntregaPendente,
@@ -46,7 +47,8 @@ export interface PerdaLimitadaState {
 export function useCentralOperacoesMutations(fetchData: (isRefresh?: boolean) => void) {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { optimisticUpdate, removeFromList, fullRefetch } = useCentralOperacoesCache();
+   const { optimisticUpdate, removeFromList, fullRefetch } = useCentralOperacoesCache();
+   const invalidateFinancialState = useInvalidateFinancialState();
 
   const handleSaqueAction = useCallback((alerta: Alerta) => {
     const moedaAlerta = alerta.moeda || "BRL";
@@ -77,11 +79,9 @@ export function useCentralOperacoesMutations(fetchData: (isRefresh?: boolean) =>
         })
         .eq("id", alerta.entidade_id);
       if (error) throw error;
-      toast.success(`"${alerta.titulo}" devolvida para Contas Disponíveis`, {
-        description: "Você pode vincular a um projeto ou tomar outra decisão.",
-      });
-      // Optimistic: remove alert from list
-      removeFromList('alertas', 'entidade_id', alerta.entidade_id);
+       toast.success(`"${alerta.titulo}" devolvida para Contas Disponíveis`);
+       removeFromList('alertas', 'entidade_id', alerta.entidade_id);
+       if (alerta.projeto_id) invalidateFinancialState(alerta.projeto_id, { operation: 'vinculo' });
     } catch (err) {
       console.error("Erro ao cancelar liberação:", err);
       toast.error("Erro ao cancelar liberação");
