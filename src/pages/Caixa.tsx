@@ -41,6 +41,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { parseLocalDateTime, extractCivilDateKey, getCivilDateRangeForQuery } from "@/utils/dateUtils";
+import { getWalletDisplayName, truncateAddress } from "@/utils/cryptoUtils";
 
 interface LocationState {
   openDialog?: boolean;
@@ -307,8 +308,7 @@ export default function Caixa() {
       const { data: walletsData } = await supabase
         .from("wallets_crypto")
         .select("id, label, exchange, endereco, network, parceiro_id");
-import { getWalletDisplayName } from "@/utils/cryptoUtils";
-      
+
       const { data: bookmakersData } = await supabase
         .from("bookmakers")
         .select("id, nome, status, parceiro_id, projeto_id");
