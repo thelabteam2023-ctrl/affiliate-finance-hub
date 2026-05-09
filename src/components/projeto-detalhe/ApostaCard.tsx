@@ -441,7 +441,7 @@ export function ApostaCard({
             <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
               <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 flex items-center gap-0.5", config.bgColor, config.color, config.borderColor)}>
                 <Icon className="h-2.5 w-2.5" />
-                {config.label}
+                {config.short}
               </Badge>
               {isMultipla && (
                 <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-purple-600/30 dark:border-purple-500/30 text-purple-700 dark:text-purple-400 bg-purple-500/15 dark:bg-purple-500/20 flex items-center gap-0.5">
@@ -741,7 +741,7 @@ export function ApostaCard({
           
           <Badge variant="outline" className={cn("text-[10px] sm:text-xs px-1.5 py-0 flex items-center gap-0.5", config.bgColor, config.color, config.borderColor)}>
             <Icon className="h-3 w-3" />
-            {config.label}
+            {config.short}
           </Badge>
           {isMultipla && (
             <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 py-0 border-purple-500/30 text-purple-400 bg-purple-500/20 flex items-center gap-0.5">
