@@ -1133,8 +1133,6 @@ export function SurebetModalRoot({
    * Resultado: stakes balanceadas mesmo com moedas diferentes por perna.
    */
   useEffect(() => {
-    if (isEditing) return;
-    
     // Pular se há direcionamento ativo (checkbox D customizado)
     const hasCustomDirection = directedProfitLegs.length > 0 && directedProfitLegs.length < odds.length;
     if (hasCustomDirection) return;
