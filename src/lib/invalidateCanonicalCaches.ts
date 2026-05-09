@@ -37,6 +37,13 @@ export async function invalidateCanonicalCaches(queryClient: QueryClient, projet
     // Listas operacionais com filtros/períodos: invalidar por prefixo do projeto
     queryClient.invalidateQueries({ queryKey: ["surebets-tab", projetoId], ...opts }),
     queryClient.invalidateQueries({ queryKey: ["apostas", projetoId], ...opts }),
+    // Aliases canônicos por aba (Correção 4 — invalidação uniforme).
+    // Mantidos mesmo que ainda não existam todas as queries hoje, para que
+    // novas listagens herdem invalidação correta sem retrabalho.
+    queryClient.invalidateQueries({ queryKey: ["bonus-apostas", projetoId], ...opts }),
+    queryClient.invalidateQueries({ queryKey: ["freebet-apostas", projetoId], ...opts }),
+    queryClient.invalidateQueries({ queryKey: ["surebets", projetoId], ...opts }),
+    queryClient.invalidateQueries({ queryKey: ["visao-geral", projetoId], ...opts }),
     // Módulos promocionais e financeiros dependentes
     queryClient.invalidateQueries({ queryKey: ["bonus", "project", projetoId], ...opts }),
     queryClient.invalidateQueries({ queryKey: ["bonus-bets-summary", projetoId], ...opts }),

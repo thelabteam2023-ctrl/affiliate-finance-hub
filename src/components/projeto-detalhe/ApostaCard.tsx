@@ -21,6 +21,7 @@ import { useState } from "react";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { BetRowActionsMenu, type BetResultado } from "@/components/apostas/BetRowActionsMenu";
 import { formatCurrency as formatCurrencyUtil } from "@/utils/formatCurrency";
+import { getStrategyDisplay } from "@/lib/strategyDisplay";
 
 // Tipos de estratégia para badge
 export type EstrategiaType = 
@@ -98,7 +99,13 @@ export interface ApostaCardData {
 
 interface ApostaCardProps {
   aposta: ApostaCardData;
-  estrategia: EstrategiaType;
+  /**
+   * @deprecated O badge é sempre derivado de `aposta.estrategia` via
+   * `getStrategyDisplay`. Esta prop é ignorada e existe apenas para
+   * retrocompatibilidade com call sites antigos. Não passe contexto
+   * operacional (BONUS/FREEBET/NORMAL) aqui — ele NÃO é estratégia.
+   */
+  estrategia?: EstrategiaType;
   onEdit?: (apostaId: string) => void;
   onQuickResolve?: (apostaId: string, resultado: string) => void;
   onDelete?: (apostaId: string) => void;
@@ -114,72 +121,8 @@ interface ApostaCardProps {
   moedaConsolidacao?: string;
 }
 
-// Configuração de cores por estratégia
-const ESTRATEGIA_CONFIG: Record<string, { label: string; icon: typeof Zap; color: string; bgColor: string; borderColor: string }> = {
-  DUPLO_GREEN: {
-    label: "DG",
-    icon: Zap,
-    color: "text-teal-700 dark:text-teal-400",
-    bgColor: "bg-teal-500/15 dark:bg-teal-500/20",
-    borderColor: "border-teal-600/30 dark:border-teal-500/30",
-  },
-  SUREBET: {
-    label: "SUREBET",
-    icon: ArrowLeftRight,
-    color: "text-amber-700 dark:text-amber-400",
-    bgColor: "bg-amber-500/15 dark:bg-amber-500/20",
-    borderColor: "border-amber-600/30 dark:border-amber-500/30",
-  },
-  VALUEBET: {
-    label: "VB",
-    icon: TrendingUp,
-    color: "text-purple-700 dark:text-purple-400",
-    bgColor: "bg-purple-500/15 dark:bg-purple-500/20",
-    borderColor: "border-purple-600/30 dark:border-purple-500/30",
-  },
-  PUNTER: {
-    label: "PUNTER",
-    icon: Target,
-    color: "text-blue-700 dark:text-blue-400",
-    bgColor: "bg-blue-500/15 dark:bg-blue-500/20",
-    borderColor: "border-blue-600/30 dark:border-blue-500/30",
-  },
-  FREEBET: {
-    label: "FREEBET",
-    icon: Gift,
-    color: "text-cyan-700 dark:text-cyan-400",
-    bgColor: "bg-cyan-500/15 dark:bg-cyan-500/20",
-    borderColor: "border-cyan-600/30 dark:border-cyan-500/30",
-  },
-  EXTRACAO_FREEBET: {
-    label: "EXT. FREEBET",
-    icon: Gift,
-    color: "text-cyan-700 dark:text-cyan-400",
-    bgColor: "bg-cyan-500/15 dark:bg-cyan-500/20",
-    borderColor: "border-cyan-600/30 dark:border-cyan-500/30",
-  },
-  BONUS: {
-    label: "BÔNUS",
-    icon: Coins,
-    color: "text-yellow-700 dark:text-yellow-400",
-    bgColor: "bg-yellow-500/15 dark:bg-yellow-500/20",
-    borderColor: "border-yellow-600/30 dark:border-yellow-500/30",
-  },
-  EXTRACAO_BONUS: {
-    label: "EXT. BÔNUS",
-    icon: Coins,
-    color: "text-yellow-700 dark:text-yellow-400",
-    bgColor: "bg-yellow-500/15 dark:bg-yellow-500/20",
-    borderColor: "border-yellow-600/30 dark:border-yellow-500/30",
-  },
-  NORMAL: {
-    label: "NORMAL",
-    icon: Target,
-    color: "text-blue-700 dark:text-blue-400",
-    bgColor: "bg-blue-500/15 dark:bg-blue-500/20",
-    borderColor: "border-blue-600/30 dark:border-blue-500/30",
-  },
-};
+// NOTE: Configuração de estratégia foi movida para `src/lib/strategyDisplay.ts`
+// (mapa canônico ÚNICO baseado em `aposta.estrategia`). Não recriar aqui.
 
 interface ResultadoBadgeProps {
   resultado: string | null | undefined;
@@ -358,7 +301,10 @@ export function ApostaCard({
     return formatCurrencyUtil(value, moeda);
   };
   
-  const config = ESTRATEGIA_CONFIG[estrategia] || ESTRATEGIA_CONFIG.NORMAL;
+  // Badge SEMPRE derivado de `aposta.estrategia`. A prop `estrategia` é
+  // ignorada (mantida apenas para retrocompatibilidade) — ela podia
+  // contaminar o badge com `contexto_operacional` (BONUS/FREEBET/NORMAL).
+  const config = getStrategyDisplay(aposta);
   const Icon = config.icon;
   
   const hasPernas = aposta.pernas && aposta.pernas.length > 1;
@@ -495,7 +441,7 @@ export function ApostaCard({
             <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
               <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 flex items-center gap-0.5", config.bgColor, config.color, config.borderColor)}>
                 <Icon className="h-2.5 w-2.5" />
-                {config.label}
+                {config.short}
               </Badge>
               {isMultipla && (
                 <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-purple-600/30 dark:border-purple-500/30 text-purple-700 dark:text-purple-400 bg-purple-500/15 dark:bg-purple-500/20 flex items-center gap-0.5">
@@ -795,7 +741,7 @@ export function ApostaCard({
           
           <Badge variant="outline" className={cn("text-[10px] sm:text-xs px-1.5 py-0 flex items-center gap-0.5", config.bgColor, config.color, config.borderColor)}>
             <Icon className="h-3 w-3" />
-            {config.label}
+            {config.short}
           </Badge>
           {isMultipla && (
             <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 py-0 border-purple-500/30 text-purple-400 bg-purple-500/20 flex items-center gap-0.5">
