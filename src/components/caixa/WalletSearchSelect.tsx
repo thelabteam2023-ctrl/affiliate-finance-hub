@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 interface WalletOption {
   id: string;
   exchange: string;
+  network?: string | null;
   label?: string | null;
   nickname?: string | null;
   identificacao_wallet?: string | null;
@@ -67,6 +68,7 @@ export function WalletSearchSelect({
       return (
         displayName.includes(q) ||
         w.exchange?.toLowerCase().includes(q) ||
+        w.network?.toLowerCase().includes(q) ||
         w.parceiro_nome?.toLowerCase().includes(q) ||
         w.endereco?.toLowerCase().includes(q) ||
         w.moeda?.some((m) => m.toLowerCase().includes(q))
@@ -221,6 +223,7 @@ export function WalletSearchSelect({
                       nickname={wallet.nickname}
                       identificacao_wallet={wallet.identificacao_wallet}
                       exchange={wallet.exchange}
+                      network={wallet.network}
                       address={wallet.endereco}
                       size="sm"
                       showIcon={false}
