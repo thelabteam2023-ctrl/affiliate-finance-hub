@@ -13,10 +13,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useBookmakerSaldosQuery } from '@/hooks/useBookmakerSaldosQuery';
 import { useCurrencySnapshot, type SupportedCurrency } from '@/hooks/useCurrencySnapshot';
-import { SurebetCompactForm } from './SurebetCompactForm';
-import { type Leg, type LegEntry } from './SurebetExecutionTable';
-import { toast } from 'sonner';
-import { useSurebetService } from '@/hooks/useSurebetService';
+ import { SurebetCompactForm, type OddEntry as CompactOddEntry } from './SurebetCompactForm';
+ import { type Leg, type LegEntry } from './SurebetExecutionTable';
+ import { toast } from 'sonner';
+ import { useSurebetService } from '@/hooks/useSurebetService';
+ import { supabase } from "@/integrations/supabase/client";
 
 interface Surebet {
   id: string;
@@ -187,22 +188,63 @@ export function SurebetDialogCompact({
     return completeLegs >= 2;
   }, [legs]);
 
-  // Handler para salvar
-  const handleSave = async () => {
-    if (!canSave) return;
-    
-    setSaving(true);
-    try {
-      // TODO: Implementar lógica de salvamento convertendo Leg[] para formato do banco
-      toast.success(isEditing ? "Operação atualizada!" : "Operação registrada!");
-      onSuccess();
-      onOpenChange(false);
-    } catch (error: any) {
-      toast.error("Erro ao salvar: " + error.message);
-    } finally {
-      setSaving(false);
-    }
-  };
+   // Handler para salvar
+   const handleSave = async () => {
+     if (!canSave) return;
+     
+     setSaving(true);
+     try {
+       // Transformar Leg[] (compacta) para o formato esperado pelo serviço
+       const pernasParaServico = legs.map((leg, idx) => {
+         const mainEntry = leg.entries[0];
+         const typedEntry = mainEntry as LegEntry & { selecaoLivre?: string; fonteSaldo?: string };
+         return {
+           bookmakerId: typedEntry.bookmaker_id,
+           stake: parseFloat(typedEntry.stake) || 0,
+           odd: parseFloat(typedEntry.odd) || 0,
+           selecao: leg.selecao,
+           selecaoLivre: typedEntry.selecaoLivre || '',
+           moeda: getBookmakerMoeda(typedEntry.bookmaker_id),
+           fonteSaldo: (typedEntry.fonteSaldo || 'REAL') as 'REAL' | 'FREEBET',
+         };
+       });
+
+       const { data: { user } } = await supabase.auth.getUser();
+       if (!user) throw new Error("Usuário não autenticado");
+
+       if (isEditing && surebet) {
+         await atualizarSurebet(surebet.id, {
+           projetoId,
+           evento,
+           esporte,
+           mercado,
+           modelo,
+           pernas: pernasParaServico,
+         });
+         toast.success("Operação atualizada!");
+       } else {
+         await criarSurebet({
+           projetoId,
+           workspaceId: workspaceId!,
+           userId: user.id,
+           evento,
+           esporte,
+           mercado,
+           modelo,
+           estrategia: 'SUREBET',
+           pernas: pernasParaServico,
+         });
+         toast.success("Operação registrada!");
+       }
+       
+       onSuccess();
+       onOpenChange(false);
+     } catch (error: any) {
+       toast.error("Erro ao salvar: " + error.message);
+     } finally {
+       setSaving(false);
+     }
+   };
 
   // Handler para deletar
   const handleDelete = async () => {

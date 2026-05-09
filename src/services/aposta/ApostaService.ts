@@ -914,7 +914,7 @@ export async function reliquidarAposta(
    }
    
     const resultadoAnterior = apostaAtual?.resultado;
-    const isArbitragem = apostaAtual?.forma_registro === 'ARBITRAGEM' || apostaAtual?.forma_registro === 'SUREBET';
+     const isArbitragem = apostaAtual?.forma_registro === 'ARBITRAGEM';
     const hasNullBookmaker = !apostaAtual?.bookmaker_id;
 
     // Detectar se é multi-entry SIMPLES (ex: PUNTER multi-casa) que tem pernas em apostas_pernas
@@ -993,92 +993,29 @@ export async function reliquidarAposta(
         };
       }
 
-      // 3. Mapear resultado global → resultado por perna
-      //    - RED  global → todas as pernas RED
-      //    - VOID global → todas as pernas VOID
-      //    - GREEN global → BLOQUEADO (ambíguo: qual perna ganha?)
-      //      → exigir uso do menu "Liquidar" (Quick Resolve por cenário)
-      const upperResult = (novoResultado || '').toUpperCase();
-      let resultadoPorPerna: 'RED' | 'VOID';
+       // Usar RPC atômica de reliquidação global para evitar loops e garantir atomicidade no ledger
+       const { data: rpcData, error: rpcError } = await (supabase.rpc as any)('reliquidar_surebet_global_v1', {
+         p_aposta_id: apostaId,
+         p_novo_resultado: (novoResultado || '').toUpperCase(),
+         p_workspace_id: apostaPai.workspace_id
+       });
 
-      if (upperResult === 'RED') {
-        resultadoPorPerna = 'RED';
-      } else if (upperResult === 'VOID') {
-        resultadoPorPerna = 'VOID';
-      } else if (upperResult === 'GREEN') {
+       if (rpcError) {
+         return { success: false, error: { code: 'RPC_ERROR', message: rpcError.message } };
+       }
+
+       const rpcResult = rpcData as any;
+       if (!rpcResult.success) {
+         return { success: false, error: { code: 'RELIQUIDATION_FAILED', message: rpcResult.error || 'Falha na reliquidação global' } };
+        }
+
         return {
-          success: false,
-          error: {
-            code: 'SUREBET_GLOBAL_GREEN_AMBIGUOUS',
-            message: 'Liquidação global como GREEN não é permitida em Surebet ' +
-                     '(ambíguo: qual perna ganha?). Use o menu "Liquidar" → ' +
-                     'selecione o cenário específico (ex.: "Bet365 Win", "Duplo Green").',
-          },
+          success: true,
+          data: {
+            resultado_anterior: resultadoAnterior || undefined,
+            impacto_total: rpcResult.events_created
+          }
         };
-      } else {
-        return {
-          success: false,
-          error: {
-            code: 'SUREBET_RESULT_NOT_SUPPORTED',
-            message: `Resultado global "${novoResultado}" não suportado para Surebet via re-liquidação. ` +
-                     'Use o menu "Liquidar" (Quick Resolve) para cenários específicos.',
-          },
-        };
-      }
-
-      // 4. Chamar liquidarPernaSurebet em paralelo para todas as pernas
-      console.log("[ApostaService] Orquestrando re-liquidação de surebet por perna:", {
-        apostaId,
-        novoResultado,
-        resultadoPorPerna,
-        pernas_count: pernas.length,
-      });
-
-      const results = await Promise.all(
-        pernas.map(p => liquidarPernaSurebet({
-          surebet_id: apostaId,
-          perna_id: p.id,
-          bookmaker_id: p.bookmaker_id,
-          resultado: resultadoPorPerna,
-          resultado_anterior: p.resultado ?? null,
-          stake: Number(p.stake) || 0,
-          odd: Number(p.odd) || 0,
-          moeda: p.moeda || 'BRL',
-          workspace_id: apostaPai.workspace_id,
-          fonte_saldo: p.fonte_saldo || 'REAL',
-        }))
-      );
-
-      const failures = results.filter(r => !r.success);
-      if (failures.length > 0) {
-        console.error("[ApostaService] Falhas em re-liquidação de pernas:", failures);
-        return {
-          success: false,
-          error: {
-            code: 'SUREBET_PARTIAL_FAILURE',
-            message: `Falha ao re-liquidar ${failures.length}/${pernas.length} pernas: ` +
-                     failures.map(f => f.error?.message).filter(Boolean).join(' | '),
-            details: { failures },
-          },
-        };
-      }
-
-      const totalDelta = results.reduce((sum, r) => sum + (r.data?.delta ?? 0), 0);
-
-      console.log("[ApostaService] ✅ Surebet re-liquidada via orquestrador:", {
-        apostaId,
-        resultado: resultadoPorPerna,
-        pernas_processadas: pernas.length,
-        delta_total: totalDelta,
-      });
-
-      return {
-        success: true,
-        data: {
-          resultado_anterior: resultadoAnterior || undefined,
-          impacto_total: totalDelta,
-        },
-      };
     }
     
     // ============================================================

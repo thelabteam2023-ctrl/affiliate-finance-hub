@@ -10,7 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { getTodayCivilDate } from "@/utils/dateUtils";
 import { getFirstLastName } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import { useCentralOperacoesCache } from "@/hooks/useCentralOperacoesCache";
+ import { useCentralOperacoesCache } from "@/hooks/useCentralOperacoesCache";
+ import { useInvalidateFinancialState } from "@/hooks/useInvalidateFinancialState";
 import type {
   Alerta,
   EntregaPendente,
@@ -46,7 +47,8 @@ export interface PerdaLimitadaState {
 export function useCentralOperacoesMutations(fetchData: (isRefresh?: boolean) => void) {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { optimisticUpdate, removeFromList, fullRefetch } = useCentralOperacoesCache();
+   const { optimisticUpdate, removeFromList, fullRefetch } = useCentralOperacoesCache();
+   const invalidateFinancialState = useInvalidateFinancialState();
 
   const handleSaqueAction = useCallback((alerta: Alerta) => {
     const moedaAlerta = alerta.moeda || "BRL";
@@ -77,11 +79,9 @@ export function useCentralOperacoesMutations(fetchData: (isRefresh?: boolean) =>
         })
         .eq("id", alerta.entidade_id);
       if (error) throw error;
-      toast.success(`"${alerta.titulo}" devolvida para Contas Disponíveis`, {
-        description: "Você pode vincular a um projeto ou tomar outra decisão.",
-      });
-      // Optimistic: remove alert from list
-      removeFromList('alertas', 'entidade_id', alerta.entidade_id);
+       toast.success(`"${alerta.titulo}" devolvida para Contas Disponíveis`);
+       removeFromList('alertas', 'entidade_id', alerta.entidade_id);
+       if (alerta.projeto_id) invalidateFinancialState(alerta.projeto_id, { operation: 'vinculo' });
     } catch (err) {
       console.error("Erro ao cancelar liberação:", err);
       toast.error("Erro ao cancelar liberação");
@@ -92,9 +92,9 @@ export function useCentralOperacoesMutations(fetchData: (isRefresh?: boolean) =>
     try {
       const { error } = await supabase.rpc('marcar_para_saque', { p_bookmaker_id: casa.id });
       if (error) throw error;
-      toast.success(`"${casa.nome}" marcada para saque`);
-      // Optimistic: remove from casasDesvinculadas
-      removeFromList('casasDesvinculadas', 'id', casa.id);
+       toast.success(`"${casa.nome}" marcada para saque`);
+       removeFromList('casasDesvinculadas', 'id', casa.id);
+       invalidateFinancialState(undefined, { includeGlobal: true, operation: 'transacao' });
     } catch (err) {
       console.error("Erro ao marcar para saque:", err);
       toast.error("Erro ao marcar para saque");
@@ -105,9 +105,9 @@ export function useCentralOperacoesMutations(fetchData: (isRefresh?: boolean) =>
     try {
       const { error } = await supabase.rpc('confirmar_saque_concluido', { p_bookmaker_id: casa.id });
       if (error) throw error;
-      toast.success(`"${casa.nome}" disponibilizada para novos projetos`);
-      // Optimistic: remove from casasDesvinculadas
-      removeFromList('casasDesvinculadas', 'id', casa.id);
+       toast.success(`"${casa.nome}" disponibilizada para novos projetos`);
+       removeFromList('casasDesvinculadas', 'id', casa.id);
+       invalidateFinancialState(undefined, { includeGlobal: true, operation: 'vinculo' });
     } catch (err) {
       console.error("Erro ao disponibilizar casa:", err);
       toast.error("Erro ao disponibilizar casa");
@@ -154,8 +154,9 @@ export function useCentralOperacoesMutations(fetchData: (isRefresh?: boolean) =>
         .update({ status: "ENCERRADA", data_fim_real: hojeStr })
         .eq("id", parceriaToEncerrar.id);
       if (error) throw error;
-      toast.success(`Parceria com ${parceriaToEncerrar.parceiroNome} encerrada com sucesso`);
-      setParceriasEncerramento(prev => prev.filter(p => p.id !== parceriaToEncerrar.id));
+       toast.success(`Parceria com ${parceriaToEncerrar.parceiroNome} encerrada com sucesso`);
+       setParceriasEncerramento(prev => prev.filter(p => p.id !== parceriaToEncerrar.id));
+       invalidateFinancialState(undefined, { includeGlobal: true, operation: 'vinculo' });
     } catch (error: any) {
       toast.error("Erro ao encerrar parceria: " + error.message);
     } finally {
@@ -283,10 +284,10 @@ export function useCentralOperacoesMutations(fetchData: (isRefresh?: boolean) =>
         await supabase.from("movimentacoes_indicacao").insert(auditRecords);
       }
 
-      toast.success(`Pagamento de ${dispensaState.parceiroNome} dispensado${dispensaState.comissaoJaPaga && dispensaState.estornar ? ". Estorno da comissão registrado." : ""}`);
-      resetDispensa();
-      // Complex mutation — full refetch for consistency
-      fullRefetch();
+       toast.success(`Pagamento de ${dispensaState.parceiroNome} dispensado${dispensaState.comissaoJaPaga && dispensaState.estornar ? ". Estorno da comissão registrado." : ""}`);
+       resetDispensa();
+       fullRefetch();
+       invalidateFinancialState(undefined, { includeGlobal: true, operation: 'transacao' });
     } catch (err) {
       console.error("Erro ao dispensar pagamento:", err);
       toast.error("Erro ao dispensar pagamento");
