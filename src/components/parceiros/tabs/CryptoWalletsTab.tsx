@@ -84,8 +84,10 @@ export function CryptoWalletsTab({
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <WalletDisplayItem
-                    nickname={label}
-                    name={exchangeNome}
+                    label={wallet.label}
+                    nickname={wallet.nickname}
+                    identificacao_wallet={wallet.identificacao_wallet}
+                    exchange={wallet.exchange}
                     network={redeNome}
                     address={wallet.endereco || ""}
                     size="sm"
