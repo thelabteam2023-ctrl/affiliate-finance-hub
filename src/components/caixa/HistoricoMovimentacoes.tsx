@@ -25,7 +25,8 @@ import { usePagination } from "@/hooks/usePagination";
 import { SimplePagination } from "@/components/ui/simple-pagination";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
-import { parseLocalDateTime, extractCivilDateKey, truncateAddress } from "@/utils/dateUtils";
+import { parseLocalDateTime, extractCivilDateKey } from "@/utils/dateUtils";
+import { truncateAddress } from "@/utils/cryptoUtils";
 import { DashboardPeriodFilterBar } from "@/components/shared/DashboardPeriodFilterBar";
 import { DashboardPeriodFilter, getDashboardDateRange } from "@/types/dashboardFilters";
 import { EditarDataTransacaoDialog } from "./EditarDataTransacaoDialog";
@@ -213,12 +214,6 @@ function ParceiroFilterSelect({ value, onChange, parceiros }: { value: string; o
 
 // Helper: abbreviate crypto wallet address for display
 // Helper: get wallet address from walletsDetalhes by wallet id
-const getWalletAddress = (walletId: string | null, walletsDetalhes: WalletDetalhe[]): string | null => {
-  if (!walletId) return null;
-  const wallet = walletsDetalhes.find(w => w.id === walletId);
-  return abbreviateWalletAddress(wallet?.endereco);
-};
-
 export function HistoricoMovimentacoes({
   loading,
   filtroTipo,
