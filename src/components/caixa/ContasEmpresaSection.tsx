@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Building2, Plus, RefreshCw, Landmark, Bitcoin, Copy, Check } from "lucide-react";
+import { Building2, Plus, RefreshCw, Landmark, Bitcoin, Copy, Check, Wallet } from "lucide-react";
+import { WalletDisplayItem } from "../wallets/WalletDisplayItem";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrencyValue, getCurrencySymbol } from "@/types/currency";
 import { useExchangeRates } from "@/contexts/ExchangeRatesContext";
@@ -410,24 +411,16 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
                             <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center">
                               <Bitcoin className="h-4 w-4 text-primary" />
                             </div>
-                            <div>
-                              <p className="text-sm font-medium">
-                                {(first.label || first.exchange || "Wallet").replace(/-/g, " ").toUpperCase()}
-                              </p>
-                              <p
-                                className="text-[11px] text-muted-foreground font-mono cursor-pointer hover:text-primary transition-colors flex items-center gap-1"
-                                onClick={() => copyToClipboard(first.endereco, `wallet-${endereco}`)}
-                                title="Clique para copiar endereço"
-                              >
-                                {endereco.slice(0, 8)}...{endereco.slice(-6)}
-                                {copiedId === `wallet-${endereco}` ? <Check className="h-2.5 w-2.5 text-primary" /> : <Copy className="h-2.5 w-2.5 opacity-50" />}
-                              </p>
-                              <div className="flex items-center gap-1.5 mt-0.5">
-                                {first.network && (
-                                  <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 uppercase">
-                                    {first.network}
-                                  </Badge>
-                                )}
+                            <div className="flex-1 min-w-0">
+                              <WalletDisplayItem
+                                label={first.label}
+                                exchange={first.exchange}
+                                network={first.network}
+                                address={first.endereco}
+                                size="sm"
+                                showIcon={false}
+                              />
+                              <div className="flex items-center gap-1.5 mt-1 ml-0">
                                 {allMoedas.map((m: string) => (
                                   <Badge key={m} className="text-[9px] px-1 py-0 h-3.5 bg-primary/20 text-primary border-primary/30">
                                     {m}
