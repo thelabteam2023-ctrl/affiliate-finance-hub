@@ -40,10 +40,10 @@ import {
   Clock,
   Wallet,
   AlertTriangle,
-  Network,
   Coins,
   Info,
 } from "lucide-react";
+import { WalletDisplayItem } from "../wallets/WalletDisplayItem";
 import {
   Tooltip,
   TooltipContent,
@@ -554,21 +554,29 @@ export function ConfirmarSaqueDialog({
                     )}
                     <span>Destino</span>
                   </div>
-                  <div className="text-right">
-                    <span className="font-medium">
-                      {saque.wallet_nome || saque.banco_nome || (isCryptoWithdrawal ? "Wallet Crypto" : "Conta Bancária")}
-                    </span>
-                    {saque.parceiro_nome && (
-                      <div className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
-                        <User className="h-3 w-3" />
-                        {saque.parceiro_nome}
-                      </div>
-                    )}
-                    {isCryptoWithdrawal && saque.wallet_network && (
-                      <div className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
-                        <Network className="h-3 w-3" />
-                        {saque.wallet_network}
-                      </div>
+                  <div className="text-right min-w-0">
+                    {isCryptoWithdrawal && saque.destino_wallet_id ? (
+                      <WalletDisplayItem
+                        nickname={saque.parceiro_nome}
+                        name={saque.wallet_nome || saque.wallet_exchange}
+                        network={saque.wallet_network}
+                        address={saque.descricao?.match(/0x[a-fA-F0-9]{40}/)?.[0] || ""} // Fallback check if address is in description or other field if needed
+                        showIcon={false}
+                        size="sm"
+                        className="items-end"
+                      />
+                    ) : (
+                      <>
+                        <span className="font-medium">
+                          {saque.wallet_nome || saque.banco_nome || (isCryptoWithdrawal ? "Wallet Crypto" : "Conta Bancária")}
+                        </span>
+                        {saque.parceiro_nome && (
+                          <div className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
+                            <User className="h-3 w-3" />
+                            {saque.parceiro_nome}
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
