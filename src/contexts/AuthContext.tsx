@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useReducer, useCallback, ReactNode } from "react";
+import { createContext, useContext, useEffect, useReducer, useCallback, ReactNode, useMemo } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
