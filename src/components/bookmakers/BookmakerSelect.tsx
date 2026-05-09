@@ -535,19 +535,26 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
                       onError={(e) => { e.currentTarget.style.display = "none"; }}
                     />
                   )}
-                  <span className="uppercase truncate text-center">
-                    {displayData?.nome 
-                      ? displayData.nome 
-                      : loading
-                        ? "Carregando..." 
-                        : loadingDisplay
-                          ? "Carregando..."
-                          : modoSaqueAguardandoWorkspace
-                            ? "Carregando workspace..."
-                            : !prerequisitesReady
-                              ? "Aguardando..."
-                              : "Selecione..."}
-                  </span>
+                  <div className="flex flex-col items-center justify-center truncate">
+                    <span className="uppercase truncate text-sm font-medium leading-none">
+                      {displayData?.nome 
+                        ? (displayData.nome.includes(" [") ? displayData.nome.split(" [")[0] : displayData.nome)
+                        : loading
+                          ? "Carregando..." 
+                          : loadingDisplay
+                            ? "Carregando..."
+                            : modoSaqueAguardandoWorkspace
+                              ? "Carregando workspace..."
+                              : !prerequisitesReady
+                                ? "Aguardando..."
+                                : "Selecione..."}
+                    </span>
+                    {displayData?.nome && displayData.nome.includes(" [") && (
+                      <span className="text-[10px] text-muted-foreground font-normal mt-[1px] leading-tight">
+                        {displayData.nome.split(" [")[1].replace("]", "")}
+                      </span>
+                    )}
+                  </div>
                   <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
                 </div>
               </Button>
@@ -607,101 +614,16 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
                           : "Nenhuma bookmaker encontrada"}
               </CommandEmpty>
               <CommandGroup>
-                {filteredItems.map((item) => {
-                  const isLimitada = item.status === "LIMITADA";
-                  const isSelected = value === item.id;
-                  const isDuplicate = duplicateNames.has(item.nome);
-                  
-                  return (
-                    <CommandItem
-                      key={item.id}
-                      ref={isSelected ? selectedItemRef : undefined}
-                      value={item.id}
-                      onSelect={() => handleSelect(item.id)}
-                      className={cn(
-                        "py-3 cursor-pointer flex items-center justify-center",
-                        isLimitada && "data-[selected=true]:bg-yellow-500/20",
-                        !isLimitada && "data-[selected=true]:bg-emerald-500/20"
-                      )}
-                    >
-                      <div className="flex items-center justify-center gap-2 w-full">
-                        <Check
-                          className={cn(
-                            "h-4 w-4 flex-shrink-0",
-                            isSelected ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                        {item.logo_url && (
-                          <img
-                            src={item.logo_url}
-                            alt=""
-                            className="h-6 w-6 rounded object-contain flex-shrink-0"
-                            onError={(e) => { e.currentTarget.style.display = "none"; }}
-                          />
-                        )}
-                        <div className="flex flex-col items-start">
-                          <span className={cn(
-                            "uppercase text-sm font-medium",
-                            isLimitada && "text-yellow-400"
-                          )}>
-                            {item.nome}{isDuplicate && item.instance_identifier && ` [${item.instance_identifier}]`}
-                          </span>
-                          {/* Modo saque: exibir nome curto do parceiro */}
-                          {isModoSaque && item.parceiro_nome && (
-                            <span className="text-[10px] text-muted-foreground leading-tight">
-                              {getFirstLastName(item.parceiro_nome)}
-                            </span>
-                          )}
-                        </div>
-                        {(item.saldo_atual !== undefined || item.saldo_usd !== undefined) && (
-                          <span className="text-xs text-muted-foreground flex-shrink-0 flex items-center gap-1">
-                            {/* Exibir saldo baseado na moeda nativa da bookmaker */}
-                            {(() => {
-                              const moeda = item.moeda || "BRL";
-                              // Usar saldo_atual como fonte única de verdade (arquitetura v3)
-                              const saldo = item.saldo_atual ?? 0;
-                              
-                              // Mapear símbolos e cores por moeda (badges distintas)
-                              const currencyConfig: Record<string, { symbol: string; suffix: string; bg: string; text: string }> = {
-                                BRL: { symbol: "R$", suffix: "", bg: "bg-emerald-500/15", text: "text-emerald-400" },
-                                USD: { symbol: "$", suffix: " USD", bg: "bg-cyan-500/15", text: "text-cyan-400" },
-                                EUR: { symbol: "€", suffix: " EUR", bg: "bg-blue-500/15", text: "text-blue-400" },
-                                GBP: { symbol: "£", suffix: " GBP", bg: "bg-purple-500/15", text: "text-purple-400" },
-                                MXN: { symbol: "$", suffix: " MXN", bg: "bg-orange-500/15", text: "text-orange-400" },
-                                MYR: { symbol: "RM", suffix: " MYR", bg: "bg-pink-500/15", text: "text-pink-400" },
-                                ARS: { symbol: "$", suffix: " ARS", bg: "bg-sky-500/15", text: "text-sky-400" },
-                                COP: { symbol: "$", suffix: " COP", bg: "bg-yellow-500/15", text: "text-yellow-400" },
-                              };
-                              
-                              const config = currencyConfig[moeda] || { symbol: moeda, suffix: "", bg: "bg-muted/50", text: "text-muted-foreground" };
-                              
-                              if (saldo > 0) {
-                                return (
-                                  <span className={`${config.bg} ${config.text} px-1.5 py-0.5 rounded font-medium`}>
-                                    {config.symbol} {saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}{config.suffix}
-                                  </span>
-                                );
-                              }
-                              
-                              // Saldo zero - exibir na moeda correta com opacidade reduzida
-                              return (
-                                <span className={`${config.bg} ${config.text} px-1.5 py-0.5 rounded opacity-60`}>
-                                  {config.symbol} 0,00{config.suffix}
-                                </span>
-                              );
-                            })()}
-                            {/* Freebet */}
-                            {(item.saldo_freebet ?? 0) > 0 && (
-                              <span className="bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded">
-                                +FB {item.saldo_freebet?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                              </span>
-                            )}
-                          </span>
-                        )}
-                      </div>
-                    </CommandItem>
-                  );
-                })}
+                {filteredItems.map((item) => (
+                  <BookmakerCommandItem 
+                    key={item.id}
+                    item={item}
+                    isSelected={value === item.id}
+                    isModoSaque={isModoSaque}
+                    onSelect={handleSelect}
+                    selectedItemRef={selectedItemRef}
+                  />
+                ))}
                 {hasMoreItems && !searchTerm && (
                   <div className="py-2 px-3 text-xs text-center text-muted-foreground">
                     Mostrando {MAX_VISIBLE_ITEMS} de {allFilteredItems.length} — digite para filtrar
