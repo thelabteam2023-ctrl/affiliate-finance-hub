@@ -46,7 +46,7 @@ export interface SurebetData {
 export interface UseSurebetServiceReturn {
   criarSurebet: (data: SurebetData) => Promise<{ success: boolean; id?: string; error?: string }>;
   atualizarSurebet: (id: string, data: Partial<SurebetData>) => Promise<{ success: boolean; error?: string }>;
-  liquidarPerna: (pernaId: string, resultado: string, lucroPrejuizo?: number) => Promise<{ success: boolean; error?: string }>;
+   liquidarPerna: (pernaId: string, resultado: string, lucroPrejuizo?: number, options?: { surebetId?: string; bookmakerId?: string; stake?: number; odd?: number; moeda?: string; workspaceId?: string; resultadoAnterior?: string | null }) => Promise<{ success: boolean; error?: string }>;
   deletarSurebet: (id: string, projetoId: string) => Promise<{ success: boolean; error?: string }>;
   reliquidarPerna: (pernaId: string, novoResultado: string, lucroPrejuizo?: number) => Promise<{ success: boolean; error?: string }>;
 }
@@ -211,51 +211,58 @@ export function useSurebetService(): UseSurebetServiceReturn {
     }
   }, [invalidateSaldos]);
 
-  /**
-   * Liquida uma perna de surebet.
-   * Usa o ID da perna para buscar o aposta_id e liquidar.
-   */
-  const liquidarPerna = useCallback(async (
-    pernaId: string,
-    resultado: string,
-    lucroPrejuizo?: number
-  ): Promise<{ success: boolean; error?: string }> => {
-    try {
-      // Buscar aposta_id da perna
-      const { data: perna, error: pernaError } = await supabase
-        .from('apostas_pernas')
-        .select('aposta_id')
-        .eq('id', pernaId)
-        .single();
+   /**
+    * Liquida uma perna de surebet usando o motor unificado v10.
+    * Delega para liquidarPernaSurebet do ApostaService (RPC liquidar_perna_surebet_v1).
+    */
+   const liquidarPerna = useCallback(async (
+     pernaId: string,
+     resultado: string,
+     _lucroPrejuizo?: number,
+     options?: { surebetId?: string; bookmakerId?: string; stake?: number; odd?: number; moeda?: string; workspaceId?: string; resultadoAnterior?: string | null }
+   ): Promise<{ success: boolean; error?: string }> => {
+     try {
+       // Se faltarem dados essenciais, buscamos da perna
+       let { surebetId, bookmakerId, stake, odd, moeda, workspaceId, resultadoAnterior } = options || {};
 
-      if (pernaError || !perna) {
-        return { success: false, error: 'Perna não encontrada' };
-      }
+       if (!surebetId || !bookmakerId || stake === undefined || odd === undefined || !moeda || !workspaceId) {
+         const { data: perna, error: pernaError } = await supabase
+           .from('apostas_pernas')
+           .select('aposta_id, bookmaker_id, stake, odd, moeda, resultado, apostas_unificada(workspace_id)')
+           .eq('id', pernaId)
+           .single();
 
-      // Atualizar resultado da perna
-      const { error: updateError } = await supabase
-        .from('apostas_pernas')
-        .update({
-          resultado,
-          lucro_prejuizo: lucroPrejuizo ?? null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', pernaId);
+         if (pernaError || !perna) return { success: false, error: 'Perna não encontrada ou incompleta para liquidação' };
+         
+         surebetId = perna.aposta_id;
+         bookmakerId = perna.bookmaker_id;
+         stake = Number(perna.stake);
+         odd = Number(perna.odd);
+         moeda = perna.moeda;
+         workspaceId = (perna as any).apostas_unificada?.workspace_id;
+         resultadoAnterior = perna.resultado;
+       }
 
-      if (updateError) {
-        return { success: false, error: updateError.message };
-      }
+       const result = await liquidarPernaSurebet({
+         surebet_id: surebetId!,
+         perna_id: pernaId,
+         bookmaker_id: bookmakerId!,
+         resultado: resultado as any,
+         resultado_anterior: resultadoAnterior || null,
+         stake: stake!,
+         odd: odd!,
+         moeda: moeda!,
+         workspace_id: workspaceId!,
+       });
 
-      // Nota: A liquidação financeira é feita via triggers ou quando
-      // todas as pernas são liquidadas. Para motor v7, cada perna
-      // precisa gerar seus próprios eventos financeiros.
-
-      return { success: true };
-    } catch (error: any) {
-      console.error('[useSurebetService] Erro ao liquidar perna:', error);
-      return { success: false, error: error.message };
-    }
-  }, []);
+       if (!result.success) return { success: false, error: result.error?.message };
+       
+       return { success: true };
+     } catch (error: any) {
+       console.error('[useSurebetService] Erro ao liquidar perna:', error);
+       return { success: false, error: error.message };
+     }
+   }, []);
 
   /**
    * Reliquida uma perna (muda resultado).
