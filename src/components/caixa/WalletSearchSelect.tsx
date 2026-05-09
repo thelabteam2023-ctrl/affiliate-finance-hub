@@ -164,6 +164,7 @@ export function WalletSearchSelect({
                 nickname={selected.nickname}
                 identificacao_wallet={selected.identificacao_wallet}
                 exchange={selected.exchange}
+                network={selected.network}
                 address={selected.endereco}
                 size="sm"
                 showIcon={true}
