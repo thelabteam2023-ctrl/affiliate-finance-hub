@@ -590,11 +590,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const isOwnerOrAdmin = (): boolean => {
+  const isOwnerOrAdmin = useCallback((): boolean => {
     return state.role === 'owner' || state.role === 'admin';
-  };
+  }, [state.role]);
 
-  const value: AuthContextType = {
+  const value: AuthContextType = useMemo(() => ({
     user: state.user,
     session: state.session,
     workspace: state.workspace,
@@ -614,7 +614,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setWorkspaceForTab,
     hasPermission,
     isOwnerOrAdmin,
-  };
+  }), [
+    state.user, state.session, state.workspace, state.role, 
+    loading, initialized, state.status, state.isSystemOwner, 
+    state.isBlocked, state.publicId, tabId, 
+    signIn, signUp, signOut, refreshWorkspace, setWorkspaceForTab, 
+    hasPermission, isOwnerOrAdmin
+  ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
