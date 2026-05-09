@@ -385,6 +385,7 @@ export function AjusteManualDialog({
 
       const mappedWallets: WalletCrypto[] = (walletsRes.data || []).map((w: any) => ({
         id: w.id,
+        label: w.label,
         exchange: w.exchange,
         endereco: w.endereco,
         parceiro_id: w.parceiro_id,
