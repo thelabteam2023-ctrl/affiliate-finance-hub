@@ -13,10 +13,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useBookmakerSaldosQuery } from '@/hooks/useBookmakerSaldosQuery';
 import { useCurrencySnapshot, type SupportedCurrency } from '@/hooks/useCurrencySnapshot';
-import { SurebetCompactForm } from './SurebetCompactForm';
-import { type Leg, type LegEntry } from './SurebetExecutionTable';
-import { toast } from 'sonner';
-import { useSurebetService } from '@/hooks/useSurebetService';
+ import { SurebetCompactForm, type OddEntry as CompactOddEntry } from './SurebetCompactForm';
+ import { type Leg, type LegEntry } from './SurebetExecutionTable';
+ import { toast } from 'sonner';
+ import { useSurebetService } from '@/hooks/useSurebetService';
+ import { supabase } from "@/integrations/supabase/client";
 
 interface Surebet {
   id: string;
@@ -196,14 +197,15 @@ export function SurebetDialogCompact({
        // Transformar Leg[] (compacta) para o formato esperado pelo serviço
        const pernasParaServico = legs.map((leg, idx) => {
          const mainEntry = leg.entries[0];
+         const typedEntry = mainEntry as LegEntry & { selecaoLivre?: string; fonteSaldo?: string };
          return {
-           bookmakerId: mainEntry.bookmaker_id,
-           stake: parseFloat(mainEntry.stake) || 0,
-           odd: parseFloat(mainEntry.odd) || 0,
+           bookmakerId: typedEntry.bookmaker_id,
+           stake: parseFloat(typedEntry.stake) || 0,
+           odd: parseFloat(typedEntry.odd) || 0,
            selecao: leg.selecao,
-           selecaoLivre: mainEntry.selecaoLivre || '',
-           moeda: getBookmakerMoeda(mainEntry.bookmaker_id),
-           fonteSaldo: (mainEntry as any).fonteSaldo || 'REAL',
+           selecaoLivre: typedEntry.selecaoLivre || '',
+           moeda: getBookmakerMoeda(typedEntry.bookmaker_id),
+           fonteSaldo: typedEntry.fonteSaldo || 'REAL',
          };
        });
 
