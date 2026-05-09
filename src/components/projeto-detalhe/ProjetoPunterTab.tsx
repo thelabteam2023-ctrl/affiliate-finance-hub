@@ -423,9 +423,12 @@ export function ProjetoPunterTab({
           apostaIds
         );
 
-        if (pernasData) {
+        if (pernasData && pernasData.length > 0) {
+          const pernasOrdenadas = [...pernasData].sort(
+            (a: any, b: any) => (a.ordem ?? 0) - (b.ordem ?? 0)
+          );
           const pernasMap = new Map<string, any[]>();
-          for (const p of pernasData) {
+          for (const p of pernasOrdenadas) {
             const arr = pernasMap.get(p.aposta_id) || [];
             arr.push(p);
             pernasMap.set(p.aposta_id, arr);
