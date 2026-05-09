@@ -390,7 +390,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
             supabase
               .from("apostas_pernas")
               .select(`
-                id, aposta_id, bookmaker_id, moeda, selecao, selecao_livre, odd, stake,
+                id, aposta_id, bookmaker_id, moeda, selecao, selecao_livre, odd, stake, ordem,
                 resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada,
                 stake_brl_referencia, lucro_prejuizo_brl_referencia, cotacao_snapshot, fonte_saldo,
                 bookmakers (nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo(logo_url))
@@ -400,7 +400,10 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           apostaIdsMultiLeg
         );
         
-        (pernasData || []).forEach((p: any) => {
+        const pernasOrdenadas = [...(pernasData || [])].sort(
+          (a: any, b: any) => (a.ordem ?? 0) - (b.ordem ?? 0)
+        );
+        pernasOrdenadas.forEach((p: any) => {
           if (!pernasMap[p.aposta_id]) pernasMap[p.aposta_id] = [];
           const bookmaker = p.bookmakers as any;
           const parceiroNome = bookmaker?.parceiro?.nome;
