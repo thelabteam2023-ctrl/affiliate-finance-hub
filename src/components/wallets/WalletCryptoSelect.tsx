@@ -10,11 +10,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { WalletDisplayItem } from "./WalletDisplayItem";
+import { getWalletDisplayName } from "@/utils/cryptoUtils";
 
 export interface WalletCryptoOption {
   id: string;
   label?: string | null;
+  nickname?: string | null;
+  identificacao_wallet?: string | null;
   exchange?: string | null;
+  exchangeWallet?: string | null;
   endereco: string;
   network?: string | null;
   moeda?: string[] | null;
@@ -49,9 +53,18 @@ export function WalletCryptoSelect({
     const search = searchTerm.toLowerCase().trim();
     if (!search) return wallets;
     return wallets.filter((w) => {
+      const displayName = getWalletDisplayName({
+        label: w.label,
+        nickname: w.nickname,
+        identificacao_wallet: w.identificacao_wallet,
+        exchange: w.exchange,
+        exchangeWallet: w.exchangeWallet
+      }).toLowerCase();
+
       return (
-        (w.label?.toLowerCase().includes(search)) ||
+        displayName.includes(search) ||
         (w.exchange?.toLowerCase().includes(search)) ||
+        (w.exchangeWallet?.toLowerCase().includes(search)) ||
         (w.network?.toLowerCase().includes(search)) ||
         (w.endereco.toLowerCase().includes(search))
       );
