@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
+import { useState, useEffect, useRef, forwardRef, useImperativeHandle, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn, getFirstLastName } from "@/lib/utils";
@@ -64,6 +64,7 @@ interface BookmakerItem {
   moeda?: string;
   status?: string;
   parceiro_nome?: string; // Para modo saque: exibir o nome do parceiro
+  instance_identifier?: string | null;
 }
 
 const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({ 
@@ -226,7 +227,8 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
               ),
               bookmakers_catalogo:bookmaker_catalogo_id (
                 logo_url
-              )
+              ),
+              instance_identifier
             `)
             .eq("workspace_id", workspaceId!)
             .eq("parceiro_id", parceiroId) // CRÍTICO: Filtrar por parceiro!
@@ -255,6 +257,7 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
             moeda: b.moeda,
             status: b.status,
             parceiro_nome: b.parceiros?.nome || null,
+            instance_identifier: b.instance_identifier,
           }));
 
           setItems(mapped);
@@ -287,7 +290,8 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
               status,
               bookmakers_catalogo:bookmaker_catalogo_id (
                 logo_url
-              )
+              ),
+              instance_identifier
             `)
             .eq("parceiro_id", parceiroId)
             // PROTEÇÃO: Excluir bookmakers bloqueadas (parceiro inativo) e encerradas
@@ -320,6 +324,7 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
             saldo_freebet: b.saldo_freebet,
             moeda: b.moeda,
             status: b.status,
+            instance_identifier: b.instance_identifier,
           }));
 
           setItems(mapped);
@@ -420,6 +425,7 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
             .from("bookmakers")
             .select(`
               nome,
+              instance_identifier,
               bookmakers_catalogo:bookmaker_catalogo_id (
                 logo_url
               )
@@ -429,7 +435,7 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
           
           if (data) {
             setDisplayData({ 
-              nome: data.nome, 
+              nome: data.instance_identifier ? `${data.nome} [${data.instance_identifier}]` : data.nome, 
               logo_url: (data.bookmakers_catalogo as any)?.logo_url || null 
             });
           } else {
@@ -486,6 +492,19 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
   const filteredItems = hasMoreItems && !searchTerm 
     ? allFilteredItems.slice(0, MAX_VISIBLE_ITEMS) 
     : allFilteredItems;
+
+  // Detect duplicated bookmaker names in the current items list
+  const duplicateNames = useMemo(() => {
+    const counts: Record<string, number> = {};
+    items.forEach(item => {
+      counts[item.nome] = (counts[item.nome] || 0) + 1;
+    });
+    return new Set(
+      Object.entries(counts)
+        .filter(([_, count]) => count > 1)
+        .map(([name]) => name)
+    );
+  }, [items]);
 
   const handleSelect = (itemId: string) => {
     onValueChange(itemId);
@@ -591,6 +610,7 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
                 {filteredItems.map((item) => {
                   const isLimitada = item.status === "LIMITADA";
                   const isSelected = value === item.id;
+                  const isDuplicate = duplicateNames.has(item.nome);
                   
                   return (
                     <CommandItem
@@ -624,7 +644,7 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
                             "uppercase text-sm font-medium",
                             isLimitada && "text-yellow-400"
                           )}>
-                            {item.nome}
+                            {item.nome}{isDuplicate && item.instance_identifier && ` [${item.instance_identifier}]`}
                           </span>
                           {/* Modo saque: exibir nome curto do parceiro */}
                           {isModoSaque && item.parceiro_nome && (
