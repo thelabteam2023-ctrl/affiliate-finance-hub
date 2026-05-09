@@ -259,6 +259,7 @@ function PernaItem({
   onResultChange,
   convertToConsolidation,
   parentResultado,
+  isColumn = false,
 }: { 
   perna: SurebetPerna; 
   formatValue: (value: number) => string;
@@ -272,6 +273,7 @@ function PernaItem({
    * é único no nível do pai (apostas_unificada.resultado) e as pernas individuais ficam null.
    */
   parentResultado?: string | null;
+  isColumn?: boolean;
 }) {
   const hasMultipleEntries = perna.entries && perna.entries.length > 1;
   const [isOpen, setIsOpen] = useState(
@@ -300,7 +302,63 @@ function PernaItem({
   const bookmakerDisplay = formatBookmakerDisplay(enrichedBookmakerNome);
   
   if (!hasMultipleEntries) {
-    // Layout: [Badge Seleção Fixa] [Logo] [Nome Casa] [Odd + Stake à direita] - Responsivo
+    // Modo Coluna (Desktop Surebet): Similar ao layout do Dialog de edição
+    if (isColumn) {
+      return (
+        <div className="flex flex-col gap-2 p-2.5 rounded-lg border border-border/30 bg-muted/5 h-full">
+          <div className="flex items-center justify-between gap-2">
+            <SelectionBadge 
+              colorClassName={NEUTRAL_SELECTION_STYLE}
+              minWidth={60}
+              maxWidth={110}
+            >
+              {getSelecaoDisplay(perna)}
+            </SelectionBadge>
+            
+            {onResultChange && (
+              <SurebetPernaResultPill
+                resultado={resultadoExibir}
+                onResultChange={onResultChange}
+              />
+            )}
+          </div>
+          
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="shrink-0 scale-75 origin-left">
+              <SurebetBookmakerLogo nome={perna.bookmaker_nome} getLogoUrl={getLogoUrl} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-[11px] text-muted-foreground truncate uppercase block cursor-default">
+                      {bookmakerDisplay}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[300px]">
+                    <p className="uppercase">{enrichedBookmakerNome}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            {isFreebet && (
+              <span className="shrink-0 text-amber-400" title="Freebet">
+                <Gift className="h-3.5 w-3.5" />
+              </span>
+            )}
+          </div>
+          
+          <div className="flex items-baseline justify-between mt-auto pt-1 border-t border-border/10">
+            <span className="text-sm font-bold tabular-nums">@{perna.odd.toFixed(2)}</span>
+            <span className="text-xs text-muted-foreground tabular-nums font-medium">
+              {formatPernaValue(perna.stake, perna.moeda)}
+            </span>
+          </div>
+        </div>
+      );
+    }
+
+    // Layout: [Badge Seleção Fixa] [Logo] [Nome Casa] [Odd + Stake à direita] - Responsivo (Lista)
     return (
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 overflow-hidden">
         {/* Badge de seleção - responsivo */}
