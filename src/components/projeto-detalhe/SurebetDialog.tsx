@@ -1069,17 +1069,6 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       sortedPernas = legacyData.pernas as any[];
     }
     
-    // Ordenar pela ordem fixa do modelo E mercado (para labels corretos)
-    const ordemFixa = getOrdemFixa(surebetModelo as "1-X-2" | "1-2", operacaoMercado);
-    sortedPernas = [...sortedPernas].sort((a, b) => {
-      const indexA = ordemFixa.indexOf(a.selecao);
-      const indexB = ordemFixa.indexOf(b.selecao);
-      if (indexA === -1 && indexB === -1) return 0;
-      if (indexA === -1) return 1;
-      if (indexB === -1) return -1;
-      return indexA - indexB;
-    });
-    
     // Converter para formato de linkedApostas para compatibilidade
     const apostaLikeData = sortedPernas.map((perna, idx) => ({
       id: `perna-${idx}`,
