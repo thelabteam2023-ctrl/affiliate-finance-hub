@@ -332,17 +332,22 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
           )
         `;
       
-      const orFilter = bonusIds.length > 0
-        ? `bookmaker_id.in.(${bonusIds.join(',')}),contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`
-        : `contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`;
-
+      // Fonte da verdade ÚNICA: estrategia=EXTRACAO_BONUS.
+      // - Removido filtro silencioso por bookmaker_id IN bonusIds (escondia
+      //   apostas legítimas quando o bookmaker não tinha bônus ativo).
+      // - Removido OR com contexto_operacional (deprecated como filtro
+      //   semântico — serve apenas para UX, não para listagem).
+      // O parâmetro `bonusIds` é mantido na assinatura por retrocompatibilidade,
+      // mas pode ser removido em refator futuro.
+      void bonusIds;
       const data = await fetchAllPaginated(() =>
         supabase
           .from("apostas_unificada")
           .select(selectFields)
           .eq("projeto_id", projId)
           .eq("forma_registro", "SIMPLES")
-          .or(orFilter)
+          .eq("estrategia", "EXTRACAO_BONUS")
+          .is("cancelled_at", null)
           .order("data_aposta", { ascending: false })
       );
 
@@ -1231,7 +1236,6 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
              <ApostaCard
                key={aposta.id}
                aposta={apostaCardData}
-               estrategia="BONUS"
                variant={viewMode === "cards" ? "card" : "list"}
                onEdit={() => handleOpenDialog(aposta)}
                onQuickResolve={handleQuickResolve}
@@ -1276,7 +1280,6 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
            <ApostaCard
              key={multipla.id}
              aposta={multiplaCardData}
-             estrategia="BONUS"
              variant={viewMode === "cards" ? "card" : "list"}
              onEdit={() => handleOpenMultiplaDialog(multipla)}
              onQuickResolve={handleQuickResolve}
