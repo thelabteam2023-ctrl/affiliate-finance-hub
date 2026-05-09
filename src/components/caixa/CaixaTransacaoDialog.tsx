@@ -1790,6 +1790,7 @@ export function CaixaTransacaoDialog({
         .from("wallets_crypto")
         .select(`
           id, 
+          label,
           exchange, 
           endereco, 
           parceiro_id, 
