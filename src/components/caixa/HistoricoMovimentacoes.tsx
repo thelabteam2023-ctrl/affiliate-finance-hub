@@ -914,7 +914,10 @@ export function HistoricoMovimentacoes({
                                     <span className="text-xs text-muted-foreground/70">{destinoInfo.secondary}</span>
                                   )}
                                   {transacao.destino_wallet_id && (() => {
-                                    const walletAddr = getWalletAddress(transacao.destino_wallet_id, walletsDetalhes);
+                                  const wallet = transacao.destino_wallet_id
+                                    ? walletsDetalhes.find(w => w.id === transacao.destino_wallet_id)
+                                    : null;
+                                  const walletAddr = wallet?.endereco ? truncateAddress(wallet.endereco, 6, 4) : null;
                                     return walletAddr ? <span className="text-[10px] font-mono text-muted-foreground/50">{walletAddr}</span> : null;
                                   })()}
                                 </div>
