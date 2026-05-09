@@ -87,7 +87,7 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
   const [searchTerm, setSearchTerm] = useState("");
   // CRÍTICO: Iniciar como false para evitar flash - loading só deve ser true durante fetch ativo
   const [loading, setLoading] = useState(false);
-  const [displayData, setDisplayData] = useState<{ nome: string; logo_url: string | null } | null>(null);
+  const [displayData, setDisplayData] = useState<{ nome: string; identifier?: string; logo_url: string | null } | null>(null);
   const [loadingDisplay, setLoadingDisplay] = useState(false);
   // Flag para indicar se os pré-requisitos estão completos para fetch
   const [prerequisitesReady, setPrerequisitesReady] = useState(false);
@@ -435,7 +435,8 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
           
           if (data) {
             setDisplayData({ 
-              nome: data.instance_identifier ? `${data.nome} [${data.instance_identifier}]` : data.nome, 
+              nome: data.nome, 
+              identifier: data.instance_identifier || undefined,
               logo_url: (data.bookmakers_catalogo as any)?.logo_url || null 
             });
           } else {
@@ -493,19 +494,6 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
     ? allFilteredItems.slice(0, MAX_VISIBLE_ITEMS) 
     : allFilteredItems;
 
-  // Detect duplicated bookmaker names in the current items list
-  const duplicateNames = useMemo(() => {
-    const counts: Record<string, number> = {};
-    items.forEach(item => {
-      counts[item.nome] = (counts[item.nome] || 0) + 1;
-    });
-    return new Set(
-      Object.entries(counts)
-        .filter(([_, count]) => count > 1)
-        .map(([name]) => name)
-    );
-  }, [items]);
-
   const handleSelect = (itemId: string) => {
     onValueChange(itemId);
     setOpen(false);
@@ -535,10 +523,10 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
                       onError={(e) => { e.currentTarget.style.display = "none"; }}
                     />
                   )}
-                  <div className="flex flex-col items-center justify-center truncate">
-                    <span className="uppercase truncate text-sm font-medium leading-none">
+                  <div className="flex flex-col items-center justify-center truncate px-2">
+                    <span className="uppercase truncate text-sm font-medium leading-tight">
                       {displayData?.nome 
-                        ? (displayData.nome.includes(" [") ? displayData.nome.split(" [")[0] : displayData.nome)
+                        ? displayData.nome 
                         : loading
                           ? "Carregando..." 
                           : loadingDisplay
@@ -549,9 +537,9 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
                                 ? "Aguardando..."
                                 : "Selecione..."}
                     </span>
-                    {displayData?.nome && displayData.nome.includes(" [") && (
+                    {displayData?.identifier && (
                       <span className="text-[10px] text-muted-foreground font-normal mt-[1px] leading-tight">
-                        {displayData.nome.split(" [")[1].replace("]", "")}
+                        {displayData.identifier}
                       </span>
                     )}
                   </div>
