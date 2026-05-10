@@ -15539,6 +15539,7 @@ export type Database = {
         Args: { p_workspace_id: string }
         Returns: Json
       }
+      force_sync_all_balances: { Args: never; Returns: undefined }
       generate_public_id: { Args: never; Returns: string }
       get_avg_withdrawal_duration_by_catalogo: {
         Args: { p_workspace_id: string }
