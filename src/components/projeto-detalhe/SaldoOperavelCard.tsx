@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Wallet, ChevronDown, AlertTriangle, RefreshCw, Gift, Search, X, Clock, Lock, User, Copy, Check } from "lucide-react";
+import { Wallet, ChevronDown, AlertTriangle, RefreshCw, Gift, Search, X, Clock, Lock, User, Copy, Check, ShieldCheck } from "lucide-react";
 import { useSaldoOperavel } from "@/hooks/useSaldoOperavel";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useCotacoes } from "@/hooks/useCotacoes";
@@ -376,20 +376,29 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                         {casa.nome}
                       </span>
                       {hasCredentials && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className={cn(
-                            "h-6 w-6 p-0 rounded-full hover:bg-primary/10 hover:text-primary transition-colors",
-                            isExpanded && "text-primary bg-primary/10"
-                          )}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleCredentials(casa.id);
-                          }}
-                        >
-                          <Lock className="h-3 w-3" />
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className={cn(
+                                  "h-6 w-6 p-0 rounded-full hover:bg-primary/10 hover:text-primary transition-colors",
+                                  isExpanded && "text-primary bg-primary/10"
+                                )}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleCredentials(casa.id);
+                                }}
+                              >
+                                <ShieldCheck className="h-3.5 w-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <p className="text-[10px] font-medium">Credenciais</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
                     </div>
                   </div>
