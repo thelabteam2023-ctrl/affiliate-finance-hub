@@ -66,8 +66,35 @@ export function useSaldoOperavel(projetoId: string) {
         throw error;
       }
       
+      // Buscar dados complementares (credenciais) que a RPC não retorna
+      const bookmakerIds = (data || []).map((s: any) => s.id);
+      let credentialsMap: Record<string, { 
+        login_username: string; 
+        login_password_encrypted: string | null;
+      }> = {};
+
+      if (bookmakerIds.length > 0) {
+        const { data: bookmarkersDetails } = await supabase
+          .from("bookmakers")
+          .select("id, login_username, login_password_encrypted")
+          .in("id", bookmakerIds);
+
+        if (bookmarkersDetails) {
+          bookmarkersDetails.forEach((b: any) => {
+            credentialsMap[b.id] = {
+              login_username: b.login_username || "",
+              login_password_encrypted: b.login_password_encrypted || null,
+            };
+          });
+        }
+      }
+
       console.log("[useSaldoOperavel] RPC retornou", data?.length || 0, "casas");
-      return (data || []) as BookmakerSaldoCompleto[];
+      return (data || []).map((s: any) => ({
+        ...s,
+        login_username: credentialsMap[s.id]?.login_username || "",
+        login_password_encrypted: credentialsMap[s.id]?.login_password_encrypted || null,
+      })) as (BookmakerSaldoCompleto & { login_username: string; login_password_encrypted: string | null })[];
     },
     enabled: !!projetoId,
     staleTime: 5000, // 5 segundos - permite reatividade após invalidação
