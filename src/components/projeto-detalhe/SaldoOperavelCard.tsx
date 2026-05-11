@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Wallet, ChevronDown, AlertTriangle, RefreshCw, Gift, Search, X, Clock, Lock, User, Copy, Check, ShieldCheck } from "lucide-react";
+import { Wallet, ChevronDown, AlertTriangle, RefreshCw, Gift, Search, X, Clock, Lock, User, Copy, Check, IdCard } from "lucide-react";
 import { useSaldoOperavel } from "@/hooks/useSaldoOperavel";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useCotacoes } from "@/hooks/useCotacoes";
@@ -391,7 +391,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                                   toggleCredentials(casa.id);
                                 }}
                               >
-                                <ShieldCheck className="h-3.5 w-3.5" />
+                                <IdCard className="h-3.5 w-3.5" />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent side="top">
