@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Wallet, ChevronDown, AlertTriangle, RefreshCw, Gift, Search, X, Clock, Lock, User, Copy, Check, IdCard } from "lucide-react";
@@ -117,23 +118,10 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
   
   const [isRetrying, setIsRetrying] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [expandedCredentials, setExpandedCredentials] = useState<Set<string>>(new Set());
-  const [copiedField, setCopiedField] = useState<string | null>(null);
+   const [isPanelOpen, setIsPanelOpen] = useState(false);
+   const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const { requestDecrypt, isDecrypted, getCached } = usePasswordDecryption();
-
-  const toggleCredentials = (casaId: string) => {
-    setExpandedCredentials(prev => {
-      const next = new Set(prev);
-      if (next.has(casaId)) {
-        next.delete(casaId);
-      } else {
-        next.add(casaId);
-      }
-      return next;
-    });
-  };
 
   const copyToClipboard = async (text: string, fieldName: string) => {
     try {
@@ -351,9 +339,8 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
           style={{ gridTemplateColumns: "repeat(auto-fit, minmax(270px, 1fr))" }}
         >
           {filteredCasas.map((casa) => {
-            const titular = casa.instanceIdentifier || casa.parceiroPrimeiroNome;
-            const isExpanded = expandedCredentials.has(casa.id);
-            const hasCredentials = (casa as any).loginUsername || (casa as any).loginPasswordEncrypted;
+             const titular = casa.instanceIdentifier || casa.parceiroPrimeiroNome;
+             const hasCredentials = (casa as any).loginUsername || (casa as any).loginPasswordEncrypted;
 
             return (
               <div 
@@ -375,31 +362,82 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                       <span className="text-xs font-bold text-foreground truncate uppercase tracking-wide">
                         {casa.nome}
                       </span>
-                      {hasCredentials && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className={cn(
-                                  "h-6 w-6 p-0 rounded-full hover:bg-primary/10 hover:text-primary transition-colors",
-                                  isExpanded && "text-primary bg-primary/10"
-                                )}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleCredentials(casa.id);
-                                }}
-                              >
-                                <IdCard className="h-3.5 w-3.5" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="top">
-                              <p className="text-[10px] font-medium">Credenciais</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
+                       {hasCredentials && (
+                         <TooltipProvider>
+                           <Popover>
+                             <Tooltip>
+                               <TooltipTrigger asChild>
+                                 <PopoverTrigger asChild>
+                                   <Button
+                                     variant="ghost"
+                                     size="icon"
+                                     className="h-6 w-6 p-0 rounded-full hover:bg-primary/10 hover:text-primary transition-colors"
+                                     onClick={(e) => e.stopPropagation()}
+                                   >
+                                     <IdCard className="h-3.5 w-3.5" />
+                                   </Button>
+                                 </PopoverTrigger>
+                               </TooltipTrigger>
+                               <TooltipContent side="top">
+                                 <p className="text-[10px] font-medium">Credenciais</p>
+                               </TooltipContent>
+                             </Tooltip>
+                             <PopoverContent 
+                               className="w-64 p-3 bg-background border border-border shadow-xl z-[9999]" 
+                               side="right" 
+                               align="start"
+                               onClick={(e) => e.stopPropagation()}
+                             >
+                               <div className="space-y-3">
+                                 <div className="flex items-center gap-2 border-b border-border/40 pb-2 mb-2">
+                                   <IdCard className="h-4 w-4 text-primary" />
+                                   <span className="text-xs font-bold uppercase tracking-tight">Credenciais {casa.nome}</span>
+                                 </div>
+                                 
+                                 {(casa as any).loginUsername && (
+                                   <div className="flex flex-col gap-1">
+                                     <span className="text-[10px] text-muted-foreground flex items-center gap-1 uppercase tracking-wider font-semibold">
+                                       <User className="h-2.5 w-2.5" /> Usuário
+                                     </span>
+                                     <div className="flex items-center gap-1">
+                                       <code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate font-mono">
+                                         {(casa as any).loginUsername}
+                                       </code>
+                                       <Button
+                                         variant="ghost"
+                                         size="sm"
+                                         className="h-6 w-6 p-0 shrink-0"
+                                         onClick={() => copyToClipboard((casa as any).loginUsername, `user-${casa.id}`)}
+                                       >
+                                         {copiedField === `user-${casa.id}` ? (
+                                           <Check className="h-3 w-3 text-success" />
+                                         ) : (
+                                           <Copy className="h-3 w-3" />
+                                         )}
+                                       </Button>
+                                     </div>
+                                   </div>
+                                 )}
+                                 
+                                 {(casa as any).loginPasswordEncrypted && (
+                                   <div className="flex flex-col gap-1">
+                                     <span className="text-[10px] text-muted-foreground flex items-center gap-1 uppercase tracking-wider font-semibold">
+                                       <Lock className="h-2.5 w-2.5" /> Senha
+                                     </span>
+                                     <LazyPasswordField
+                                       cacheKey={`bk-pwd-${casa.id}`}
+                                       encrypted={(casa as any).loginPasswordEncrypted}
+                                       requestDecrypt={requestDecrypt}
+                                       isDecrypted={isDecrypted}
+                                       getCached={getCached}
+                                     />
+                                   </div>
+                                 )}
+                               </div>
+                             </PopoverContent>
+                           </Popover>
+                         </TooltipProvider>
+                       )}
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
@@ -436,51 +474,6 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                     </span>
                   )}
                 </div>
-
-                {/* Credentials Section (Expandable) */}
-                {isExpanded && hasCredentials && (
-                  <div className="mt-3 p-2 rounded-lg bg-background/50 border border-border/40 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                    {(casa as any).loginUsername && (
-                      <div className="flex flex-col gap-1">
-                        <span className="text-[10px] text-muted-foreground flex items-center gap-1 uppercase tracking-wider font-semibold">
-                          <User className="h-2.5 w-2.5" /> Usuário
-                        </span>
-                        <div className="flex items-center gap-1">
-                          <code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate font-mono">
-                            {(casa as any).loginUsername}
-                          </code>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 shrink-0"
-                            onClick={() => copyToClipboard((casa as any).loginUsername, `user-${casa.id}`)}
-                          >
-                            {copiedField === `user-${casa.id}` ? (
-                              <Check className="h-3 w-3 text-success" />
-                            ) : (
-                              <Copy className="h-3 w-3" />
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {(casa as any).loginPasswordEncrypted && (
-                      <div className="flex flex-col gap-1">
-                        <span className="text-[10px] text-muted-foreground flex items-center gap-1 uppercase tracking-wider font-semibold">
-                          <Lock className="h-2.5 w-2.5" /> Senha
-                        </span>
-                        <LazyPasswordField
-                          cacheKey={`bk-pwd-${casa.id}`}
-                          encrypted={(casa as any).loginPasswordEncrypted}
-                          requestDecrypt={requestDecrypt}
-                          isDecrypted={isDecrypted}
-                          getCached={getCached}
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
 
                 {/* Row 3: Em Saque badge */}
                 {casa.aguardandoSaque && (
