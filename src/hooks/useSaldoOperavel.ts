@@ -222,6 +222,8 @@ export function useSaldoOperavel(projetoId: string) {
           instanceIdentifier: bk.instance_identifier || null,
           parceiroPrimeiroNome: bk.parceiro_primeiro_nome || "",
           parceiroNome: bk.parceiro_nome || "",
+          loginUsername: (bk as any).login_username || "",
+          loginPasswordEncrypted: (bk as any).login_password_encrypted || null,
           saldoOperavel,
           saldoReal,
           saldoDisponivel,
