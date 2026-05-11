@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Wallet, ChevronDown, AlertTriangle, RefreshCw, Gift, Search, X, Clock } from "lucide-react";
+import { Wallet, ChevronDown, AlertTriangle, RefreshCw, Gift, Search, X, Clock, Lock, User, Copy, Check } from "lucide-react";
 import { useSaldoOperavel } from "@/hooks/useSaldoOperavel";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useCotacoes } from "@/hooks/useCotacoes";
@@ -13,6 +13,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils";
 import { SaldoCompostoSimples } from "@/components/ui/saldo-composto";
 import { formatCurrency as formatCurrencyUtil } from "@/utils/formatCurrency";
+import { usePasswordDecryption } from "@/hooks/usePasswordDecryption";
+import { LazyPasswordField } from "@/components/parceiros/LazyPasswordField";
+import { toast } from "sonner";
 import { createPortal } from "react-dom";
 
 interface SaldoOperavelCardProps {
@@ -115,6 +118,33 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
   const [isRetrying, setIsRetrying] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [expandedCredentials, setExpandedCredentials] = useState<Set<string>>(new Set());
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const { requestDecrypt, isDecrypted, getCached } = usePasswordDecryption();
+
+  const toggleCredentials = (casaId: string) => {
+    setExpandedCredentials(prev => {
+      const next = new Set(prev);
+      if (next.has(casaId)) {
+        next.delete(casaId);
+      } else {
+        next.add(casaId);
+      }
+      return next;
+    });
+  };
+
+  const copyToClipboard = async (text: string, fieldName: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(fieldName);
+      toast.success("Copiado para a área de transferência");
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch (err) {
+      toast.error("Erro ao copiar");
+    }
+  };
 
   const openPanel = useCallback(() => {
     console.log("[SaldoOperavelCard] openPanel called, setting isPanelOpen to true");
@@ -322,6 +352,9 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
         >
           {filteredCasas.map((casa) => {
             const titular = casa.instanceIdentifier || casa.parceiroPrimeiroNome;
+            const isExpanded = expandedCredentials.has(casa.id);
+            const hasCredentials = (casa as any).loginUsername || (casa as any).loginPasswordEncrypted;
+
             return (
               <div 
                 key={casa.id} 
@@ -335,13 +368,29 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                 {/* Row 1: Casa name + Balance + Currency */}
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       {casa.logoUrl && (
                         <img src={casa.logoUrl} alt="" className="h-4 w-4 rounded-sm object-contain flex-shrink-0" />
                       )}
                       <span className="text-xs font-bold text-foreground truncate uppercase tracking-wide">
                         {casa.nome}
                       </span>
+                      {hasCredentials && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className={cn(
+                            "h-6 w-6 p-0 rounded-full hover:bg-primary/10 hover:text-primary transition-colors",
+                            isExpanded && "text-primary bg-primary/10"
+                          )}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleCredentials(casa.id);
+                          }}
+                        >
+                          <Lock className="h-3 w-3" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
@@ -378,6 +427,51 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                     </span>
                   )}
                 </div>
+
+                {/* Credentials Section (Expandable) */}
+                {isExpanded && hasCredentials && (
+                  <div className="mt-3 p-2 rounded-lg bg-background/50 border border-border/40 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                    {(casa as any).loginUsername && (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] text-muted-foreground flex items-center gap-1 uppercase tracking-wider font-semibold">
+                          <User className="h-2.5 w-2.5" /> Usuário
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate font-mono">
+                            {(casa as any).loginUsername}
+                          </code>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 shrink-0"
+                            onClick={() => copyToClipboard((casa as any).loginUsername, `user-${casa.id}`)}
+                          >
+                            {copiedField === `user-${casa.id}` ? (
+                              <Check className="h-3 w-3 text-success" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {(casa as any).loginPasswordEncrypted && (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] text-muted-foreground flex items-center gap-1 uppercase tracking-wider font-semibold">
+                          <Lock className="h-2.5 w-2.5" /> Senha
+                        </span>
+                        <LazyPasswordField
+                          cacheKey={`bk-pwd-${casa.id}`}
+                          encrypted={(casa as any).loginPasswordEncrypted}
+                          requestDecrypt={requestDecrypt}
+                          isDecrypted={isDecrypted}
+                          getCached={getCached}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Row 3: Em Saque badge */}
                 {casa.aguardandoSaque && (
