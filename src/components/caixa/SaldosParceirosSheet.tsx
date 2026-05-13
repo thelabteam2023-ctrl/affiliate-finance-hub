@@ -3,7 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTabWorkspace } from "@/hooks/useTabWorkspace";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
- import { Users, RefreshCw, ArrowUpDown, Wallet, Landmark, Bitcoin, Info, ArrowRightLeft, Truck, Building2, User } from "lucide-react";
+  import { Users, RefreshCw, ArrowUpDown, Wallet, Landmark, Bitcoin, Info, ArrowRightLeft, Truck, Building2, User, Search, SortAsc } from "lucide-react";
+ import { Input } from "@/components/ui/input";
+ import { Switch } from "@/components/ui/switch";
+ import { Label } from "@/components/ui/label";
 import { SwapCryptoDialog } from "./SwapCryptoDialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -82,6 +85,8 @@ interface TransacaoPendente {
 interface ParceiroSaldoAgrupado {
   parceiro_id: string;
   parceiro_nome: string;
+    status: string;
+    total_brl: number;
   saldos_fiat: Array<{ moeda: string; saldo: number; banco: string }>;
   saldos_crypto: Array<{ 
     coin: string; 
@@ -276,6 +281,9 @@ const BookmakerListByMoeda = ({
  export function SaldosParceirosSheet() {
   const [open, setOpen] = useState(false);
   const [parceirosAgrupados, setParceirosAgrupados] = useState<ParceiroSaldoAgrupado[]>([]);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [sortBy, setSortBy] = useState<"balance" | "alphabetical">("balance");
+    const [showAll, setShowAll] = useState(false);
   const [fornecedores, setFornecedores] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [cryptoPrices, setCryptoPrices] = useState<Record<string, number>>({});
@@ -391,14 +399,26 @@ const BookmakerListByMoeda = ({
        // Buscar preços atualizados da Binance
        const prices = await fetchCryptoPrices(uniqueCoins);
  
+       const { data: allParceiros } = await supabase
+         .from("parceiros")
+         .select("id, nome, is_caixa_operacional, status")
+         .eq("workspace_id", workspaceId);
+
+       const parceiroInfoMap = new Map<string, any>();
+       if (allParceiros) {
+         allParceiros.forEach(p => parceiroInfoMap.set(p.id, p));
+       }
+
        const parceirosMap = new Map<string, ParceiroSaldoAgrupado>();
- 
-       // Helper to get or create parceiro entry
+
        const getOrCreateParceiro = (parceiroId: string, nome: string = "Parceiro"): ParceiroSaldoAgrupado => {
          if (!parceirosMap.has(parceiroId)) {
+           const pInfo = parceiroInfoMap.get(parceiroId);
            parceirosMap.set(parceiroId, {
              parceiro_id: parceiroId,
-             parceiro_nome: nome,
+             parceiro_nome: pInfo?.nome || nome,
+             status: pInfo?.status || "ativo",
+             total_brl: 0,
              saldos_fiat: [],
              saldos_crypto: [],
              saldos_bookmakers: [],
@@ -412,16 +432,6 @@ const BookmakerListByMoeda = ({
          }
          return parceirosMap.get(parceiroId)!;
        };
- 
-       const { data: allParceiros } = await supabase
-         .from("parceiros")
-         .select("id, nome, is_caixa_operacional")
-         .eq("workspace_id", workspaceId);
- 
-       const parceiroInfoMap = new Map<string, any>();
-       if (allParceiros) {
-         allParceiros.forEach(p => parceiroInfoMap.set(p.id, p));
-       }
 
       // Process FIAT accounts (multi-currency)
       (saldosContas as SaldoContaParceiro[] || []).forEach((conta) => {
@@ -539,19 +549,26 @@ const BookmakerListByMoeda = ({
         return Object.values(saldos).reduce((sum, v) => sum + (v || 0), 0);
       };
 
-       const parceirosComSaldo = Array.from(parceirosMap.values())
+       const finalParceiros = Array.from(parceirosMap.values())
          .filter((p) =>
            p.saldos_fiat.length > 0 ||
            p.saldos_crypto.length > 0 ||
            p.saldos_bookmakers.length > 0
          )
-         .sort((a, b) => {
-           const totalA = getTotalFromCurrencies(a.total_fiat_por_moeda) + a.total_crypto_usd + getTotalFromCurrencies(a.total_bookmakers_por_moeda);
-           const totalB = getTotalFromCurrencies(b.total_fiat_por_moeda) + b.total_crypto_usd + getTotalFromCurrencies(b.total_bookmakers_por_moeda);
-           return totalA - totalB;
+         .map(p => {
+           let totalBRL = 0;
+           Object.entries(p.total_fiat_por_moeda).forEach(([moeda, v]) => {
+             if (v) totalBRL += convertToBRL(v, moeda);
+           });
+           const cryptoUsd = p.total_crypto_usd - p.total_crypto_locked_usd;
+           if (cryptoUsd > 0) totalBRL += convertToBRL(cryptoUsd, "USD");
+           Object.entries(p.total_bookmakers_por_moeda).forEach(([moeda, v]) => {
+             if (v) totalBRL += convertToBRL(v, moeda);
+           });
+           return { ...p, total_brl: totalBRL };
          });
 
-      setParceirosAgrupados(parceirosComSaldo);
+       setParceirosAgrupados(finalParceiros);
     } catch (error) {
       console.error("Erro ao carregar saldos dos parceiros:", error);
     } finally {
@@ -593,7 +610,28 @@ const BookmakerListByMoeda = ({
     return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   };
 
-  const totalParceiros = parceirosAgrupados.length;
+  const filteredAndSortedParceiros = useMemo(() => {
+    let result = [...parceirosAgrupados];
+    
+    if (!showAll) {
+      result = result.filter(p => p.status === "ativo");
+    }
+    
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(p => p.parceiro_nome.toLowerCase().includes(term));
+    }
+    
+    if (sortBy === "balance") {
+      result.sort((a, b) => b.total_brl - a.total_brl);
+    } else {
+      result.sort((a, b) => a.parceiro_nome.localeCompare(b.parceiro_nome));
+    }
+    
+    return result;
+  }, [parceirosAgrupados, searchTerm, sortBy, showAll]);
+
+  const totalParceiros = filteredAndSortedParceiros.length;
 
   const FiatHoverContent = ({ saldos }: { saldos: ParceiroSaldoAgrupado["saldos_fiat"] }) => {
     const [ascending, setAscending] = useState(false);
@@ -780,7 +818,57 @@ const BookmakerListByMoeda = ({
           </SheetTitle>
         </SheetHeader>
 
-        <div className="mt-4">
+        <div className="mt-4 flex flex-col h-full overflow-hidden">
+          {/* Controls Bar */}
+          {!loading && parceirosAgrupados.length > 0 && (
+            <div className="flex flex-col gap-3 mb-4 p-3 rounded-lg border border-border/40 bg-muted/10 shrink-0">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar parceiro..."
+                  className="pl-9 h-9 bg-background/50 border-border/40 focus:ring-primary/20"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-muted-foreground">Ordenar:</span>
+                  <div className="flex rounded-md border border-border/40 overflow-hidden bg-background/30">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`h-7 px-2.5 text-[10px] rounded-none ${sortBy === "balance" ? "bg-primary/20 text-primary hover:bg-primary/30" : "hover:bg-muted/50"}`}
+                      onClick={() => setSortBy("balance")}
+                    >
+                      <ArrowUpDown className="h-3 w-3 mr-1" />
+                      Saldo
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`h-7 px-2.5 text-[10px] rounded-none ${sortBy === "alphabetical" ? "bg-primary/20 text-primary hover:bg-primary/30" : "hover:bg-muted/50"}`}
+                      onClick={() => setSortBy("alphabetical")}
+                    >
+                      <SortAsc className="h-3 w-3 mr-1" />
+                      A-Z
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="show-all"
+                    checked={showAll}
+                    onCheckedChange={setShowAll}
+                    className="scale-75"
+                  />
+                  <Label htmlFor="show-all" className="text-xs cursor-pointer text-muted-foreground">
+                    {showAll ? "Todos" : "Ativos"}
+                  </Label>
+                </div>
+              </div>
+            </div>
+          )}
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -846,8 +934,10 @@ const BookmakerListByMoeda = ({
                 );
               })()}
               <div className="flex items-center justify-between mb-3 px-1">
-                <span className="text-sm text-muted-foreground">
-                  {totalParceiros} parceiro{totalParceiros !== 1 ? "s" : ""} com capital
+                <span className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
+                  <Users className="h-3.5 w-3.5 opacity-50" />
+                  {totalParceiros} parceiro{totalParceiros !== 1 ? "s" : ""} {searchTerm ? "encontrado" : "com capital"}
+                  {!showAll && !searchTerm && <span className="text-[10px] opacity-60 bg-muted/50 px-1.5 py-0.5 rounded ml-1">filtrado por ativos</span>}
                 </span>
                 {lastPriceUpdate && (
                   <Badge variant="outline" className="text-xs gap-1 font-normal">
@@ -861,30 +951,23 @@ const BookmakerListByMoeda = ({
                 )}
               </div>
 
-               <ScrollArea className="h-[calc(100vh-320px)] pr-4">
+                <ScrollArea className="flex-1 pr-4 -mr-4 h-[calc(100vh-450px)]">
                  {loading ? (
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-8">
                      {[1, 2, 3, 4].map((i) => <ParceiroSkeleton key={i} />)}
                    </div>
                  ) : (
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                     {parceirosAgrupados.map((parceiro) => {
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-8">
+                      {filteredAndSortedParceiros.map((parceiro) => {
                        const fiatEntries = Object.entries(parceiro.total_fiat_por_moeda).filter(([_, v]) => v > 0).sort(([, a], [, b]) => b - a);
                        const primaryFiat = fiatEntries[0];
                        const bookmakerEntries = Object.entries(parceiro.total_bookmakers_por_moeda).filter(([_, v]) => v > 0).sort(([, a], [, b]) => b - a);
                        const hasBookmakerBalance = bookmakerEntries.length > 0;
-                       const inicial = parceiro.parceiro_nome.charAt(0).toUpperCase();
                        return (
-                         <Card key={parceiro.parceiro_id} className="bg-card/40 border-border/40 backdrop-blur-sm hover:border-primary/30 transition-all duration-300 overflow-hidden group">
-                           <CardHeader className="pb-3 pt-4 px-4 flex flex-row items-center gap-3 bg-muted/10">
-                             <Avatar className="h-10 w-10 border border-primary/20 shadow-inner">
-                               <AvatarFallback className="bg-primary/10 text-primary font-bold">{inicial}</AvatarFallback>
-                             </Avatar>
-                             <div className="flex flex-col min-w-0">
-                               <CardTitle className="text-sm font-bold text-foreground truncate">{parceiro.parceiro_nome}</CardTitle>
-                               <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium">Parceiro Estratégico</span>
-                             </div>
-                           </CardHeader>
+                          <Card key={parceiro.parceiro_id} className="bg-card/40 border-border/40 backdrop-blur-sm hover:border-primary/20 transition-all duration-300 overflow-hidden group">
+                            <CardHeader className="pb-2.5 pt-3 px-4 bg-muted/10">
+                              <CardTitle className="text-[13px] font-bold text-foreground truncate">{parceiro.parceiro_nome}</CardTitle>
+                            </CardHeader>
                            <CardContent className="px-4 pb-4 pt-4 space-y-4">
                              <div className="grid grid-cols-3 gap-2">
                                <div className="flex flex-col p-2 rounded-lg bg-muted/20 border border-border/20 items-center justify-center text-center">
