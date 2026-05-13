@@ -1,11 +1,13 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ModernDonutChart } from "@/components/ui/modern-donut-chart";
 import { PieChart as PieChartIcon, Wallet, Building2, Coins, CreditCard, HelpCircle, CheckCircle2, AlertTriangle, BriefcaseBusiness } from "lucide-react";
 import { useMultiCurrencyConversion } from "@/hooks/useMultiCurrencyConversion";
-import { formatCurrencyValue, getCurrencySymbol } from "@/types/currency";
+import { getCurrencySymbol } from "@/types/currency";
+import { useTabWorkspace } from "@/hooks/useTabWorkspace";
+import { CurrencyBreakdownModal } from "./CurrencyBreakdownModal";
 
 interface SaldoFiat {
   moeda: string;
@@ -52,6 +54,17 @@ export function PosicaoCapital({
   saldoWalletsParceiros,
   cotacaoUSD,
 }: PosicaoCapitalProps) {
+  const { workspaceId } = useTabWorkspace();
+  const [breakdownConfig, setBreakdownConfig] = useState<{
+    isOpen: boolean;
+    category: string;
+    currency: string;
+  }>({
+    isOpen: false,
+    category: "",
+    currency: "",
+  });
+
   // Hook de conversão multi-moeda com fontes e status de dados
   const { convert, sources, cotacoes, dataSource, isUsingFallback } = useMultiCurrencyConversion();
 
@@ -293,7 +306,8 @@ export function PosicaoCapital({
   }
 
   return (
-    <Card className="bg-card/50 backdrop-blur border-border/50">
+    <>
+      <Card className="bg-card/50 backdrop-blur border-border/50">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -409,7 +423,12 @@ export function PosicaoCapital({
                                     return (
                                       <div 
                                         key={i} 
-                                        className="flex flex-col items-center justify-between min-w-[90px] max-w-[110px] p-2.5 rounded-lg bg-muted/50 border border-border/50"
+                                        className="flex flex-col items-center justify-between min-w-[90px] max-w-[110px] p-2.5 rounded-lg bg-muted/50 border border-border/50 cursor-pointer hover:bg-muted/80 hover:border-primary/30 transition-all active:scale-95 group"
+                                        onClick={() => setBreakdownConfig({
+                                          isOpen: true,
+                                          category: item.name,
+                                          currency: d.moeda
+                                        })}
                                       >
                                         {/* Linha 1: Código da moeda + ícone de status */}
                                         <div className="flex items-center gap-1 mb-1">
@@ -484,6 +503,15 @@ export function PosicaoCapital({
           </div>
         </div>
       </CardContent>
-    </Card>
+      </Card>
+
+      <CurrencyBreakdownModal 
+        isOpen={breakdownConfig.isOpen}
+        onClose={() => setBreakdownConfig(prev => ({ ...prev, isOpen: false }))}
+        category={breakdownConfig.category}
+        currency={breakdownConfig.currency}
+        workspaceId={workspaceId}
+      />
+    </>
   );
 }
