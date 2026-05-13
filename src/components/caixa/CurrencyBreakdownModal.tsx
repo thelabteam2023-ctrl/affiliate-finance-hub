@@ -27,17 +27,25 @@ export function CurrencyBreakdownModal({ isOpen, onClose, category, currency, wo
         const isBroker = category === "Broker";
         const { data } = await supabase
           .from("bookmakers")
-          .select("nome, saldo_atual, moeda, parceiro:parceiros(nome)")
+          .select("nome, saldo_atual, moeda, parceiro_id")
           .eq("workspace_id", workspaceId)
           .eq("moeda", currency)
           .eq("is_broker_account", isBroker)
           .in("status", ["ativo", "limitada", "AGUARDANDO_SAQUE"]);
         
-        result = data?.map(d => ({
-          nome: d.nome,
-          parceiro: (d.parceiro as any)?.nome || 'N/A',
-          valor: d.saldo_atual || 0
-        })) || [];
+        if (data && data.length > 0) {
+          const partnerIds = data.map(d => d.parceiro_id).filter(Boolean) as string[];
+          const { data: partners } = await supabase
+            .from("parceiros")
+            .select("id, nome")
+            .in("id", partnerIds);
+            
+          result = data.map(d => ({
+            nome: d.nome,
+            parceiro: partners?.find(p => p.id === d.parceiro_id)?.nome || 'N/A',
+            valor: d.saldo_atual || 0
+          }));
+        }
       } else if (category === "Contas Parceiros" || category === "Caixa Operacional") {
         const isCaixa = category === "Caixa Operacional";
         
