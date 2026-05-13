@@ -934,8 +934,10 @@ const BookmakerListByMoeda = ({
                 );
               })()}
               <div className="flex items-center justify-between mb-3 px-1">
-                <span className="text-sm text-muted-foreground">
-                  {totalParceiros} parceiro{totalParceiros !== 1 ? "s" : ""} com capital
+                <span className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
+                  <Users className="h-3.5 w-3.5 opacity-50" />
+                  {totalParceiros} parceiro{totalParceiros !== 1 ? "s" : ""} {searchTerm ? "encontrado" : "com capital"}
+                  {!showAll && !searchTerm && <span className="text-[10px] opacity-60 bg-muted/50 px-1.5 py-0.5 rounded ml-1">filtrado por ativos</span>}
                 </span>
                 {lastPriceUpdate && (
                   <Badge variant="outline" className="text-xs gap-1 font-normal">
@@ -949,30 +951,23 @@ const BookmakerListByMoeda = ({
                 )}
               </div>
 
-               <ScrollArea className="h-[calc(100vh-320px)] pr-4">
+                <ScrollArea className="flex-1 pr-4 -mr-4 h-[calc(100vh-450px)]">
                  {loading ? (
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-8">
                      {[1, 2, 3, 4].map((i) => <ParceiroSkeleton key={i} />)}
                    </div>
                  ) : (
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                     {parceirosAgrupados.map((parceiro) => {
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-8">
+                      {filteredAndSortedParceiros.map((parceiro) => {
                        const fiatEntries = Object.entries(parceiro.total_fiat_por_moeda).filter(([_, v]) => v > 0).sort(([, a], [, b]) => b - a);
                        const primaryFiat = fiatEntries[0];
                        const bookmakerEntries = Object.entries(parceiro.total_bookmakers_por_moeda).filter(([_, v]) => v > 0).sort(([, a], [, b]) => b - a);
                        const hasBookmakerBalance = bookmakerEntries.length > 0;
-                       const inicial = parceiro.parceiro_nome.charAt(0).toUpperCase();
                        return (
-                         <Card key={parceiro.parceiro_id} className="bg-card/40 border-border/40 backdrop-blur-sm hover:border-primary/30 transition-all duration-300 overflow-hidden group">
-                           <CardHeader className="pb-3 pt-4 px-4 flex flex-row items-center gap-3 bg-muted/10">
-                             <Avatar className="h-10 w-10 border border-primary/20 shadow-inner">
-                               <AvatarFallback className="bg-primary/10 text-primary font-bold">{inicial}</AvatarFallback>
-                             </Avatar>
-                             <div className="flex flex-col min-w-0">
-                               <CardTitle className="text-sm font-bold text-foreground truncate">{parceiro.parceiro_nome}</CardTitle>
-                               <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium">Parceiro Estratégico</span>
-                             </div>
-                           </CardHeader>
+                          <Card key={parceiro.parceiro_id} className="bg-card/40 border-border/40 backdrop-blur-sm hover:border-primary/20 transition-all duration-300 overflow-hidden group">
+                            <CardHeader className="pb-2.5 pt-3 px-4 bg-muted/10">
+                              <CardTitle className="text-[13px] font-bold text-foreground truncate">{parceiro.parceiro_nome}</CardTitle>
+                            </CardHeader>
                            <CardContent className="px-4 pb-4 pt-4 space-y-4">
                              <div className="grid grid-cols-3 gap-2">
                                <div className="flex flex-col p-2 rounded-lg bg-muted/20 border border-border/20 items-center justify-center text-center">
