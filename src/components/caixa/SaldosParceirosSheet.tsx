@@ -281,6 +281,9 @@ const BookmakerListByMoeda = ({
  export function SaldosParceirosSheet() {
   const [open, setOpen] = useState(false);
   const [parceirosAgrupados, setParceirosAgrupados] = useState<ParceiroSaldoAgrupado[]>([]);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [sortBy, setSortBy] = useState<"balance" | "alphabetical">("balance");
+    const [showAll, setShowAll] = useState(false);
   const [fornecedores, setFornecedores] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [cryptoPrices, setCryptoPrices] = useState<Record<string, number>>({});
@@ -546,19 +549,26 @@ const BookmakerListByMoeda = ({
         return Object.values(saldos).reduce((sum, v) => sum + (v || 0), 0);
       };
 
-       const parceirosComSaldo = Array.from(parceirosMap.values())
+       const finalParceiros = Array.from(parceirosMap.values())
          .filter((p) =>
            p.saldos_fiat.length > 0 ||
            p.saldos_crypto.length > 0 ||
            p.saldos_bookmakers.length > 0
          )
-         .sort((a, b) => {
-           const totalA = getTotalFromCurrencies(a.total_fiat_por_moeda) + a.total_crypto_usd + getTotalFromCurrencies(a.total_bookmakers_por_moeda);
-           const totalB = getTotalFromCurrencies(b.total_fiat_por_moeda) + b.total_crypto_usd + getTotalFromCurrencies(b.total_bookmakers_por_moeda);
-           return totalA - totalB;
+         .map(p => {
+           let totalBRL = 0;
+           Object.entries(p.total_fiat_por_moeda).forEach(([moeda, v]) => {
+             if (v) totalBRL += convertToBRL(v, moeda);
+           });
+           const cryptoUsd = p.total_crypto_usd - p.total_crypto_locked_usd;
+           if (cryptoUsd > 0) totalBRL += convertToBRL(cryptoUsd, "USD");
+           Object.entries(p.total_bookmakers_por_moeda).forEach(([moeda, v]) => {
+             if (v) totalBRL += convertToBRL(v, moeda);
+           });
+           return { ...p, total_brl: totalBRL };
          });
 
-      setParceirosAgrupados(parceirosComSaldo);
+       setParceirosAgrupados(finalParceiros);
     } catch (error) {
       console.error("Erro ao carregar saldos dos parceiros:", error);
     } finally {
