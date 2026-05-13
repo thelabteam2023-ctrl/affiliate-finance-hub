@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Building2, User, Landmark, Loader2, ArrowDownAZ, ArrowDown01 } from "lucide-react";
+import { useTabWorkspace } from "@/hooks/useTabWorkspace";
 import { supabase } from "@/integrations/supabase/client";
 import { formatMoneyValue } from "@/components/ui/money-display";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ interface Props {
 type SortMode = "valor" | "alfabetica";
 
 export function SaldoBancosParceiroModal({ open, onOpenChange, caixaParceiroId }: Props) {
+  const { workspaceId } = useTabWorkspace();
   const [loading, setLoading] = useState(false);
   const [parceiros, setParceiros] = useState<ParceiroAgrupado[]>([]);
   const [total, setTotal] = useState(0);
@@ -38,10 +40,13 @@ export function SaldoBancosParceiroModal({ open, onOpenChange, caixaParceiroId }
 
     const fetchData = async () => {
       setLoading(true);
+      if (!workspaceId) return;
+      
       try {
         const query = supabase
           .from("v_saldo_parceiro_contas")
           .select("parceiro_id, parceiro_nome, banco, saldo, moeda")
+          .eq("workspace_id", workspaceId)
           .limit(5000);
 
         if (caixaParceiroId) {
