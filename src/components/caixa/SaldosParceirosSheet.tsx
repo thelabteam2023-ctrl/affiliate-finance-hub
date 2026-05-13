@@ -3,7 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTabWorkspace } from "@/hooks/useTabWorkspace";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
- import { Users, RefreshCw, ArrowUpDown, Wallet, Landmark, Bitcoin, Info, ArrowRightLeft, Truck, Building2, User } from "lucide-react";
+  import { Users, RefreshCw, ArrowUpDown, Wallet, Landmark, Bitcoin, Info, ArrowRightLeft, Truck, Building2, User, Search, SortAsc } from "lucide-react";
+ import { Input } from "@/components/ui/input";
+ import { Switch } from "@/components/ui/switch";
+ import { Label } from "@/components/ui/label";
 import { SwapCryptoDialog } from "./SwapCryptoDialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -82,6 +85,8 @@ interface TransacaoPendente {
 interface ParceiroSaldoAgrupado {
   parceiro_id: string;
   parceiro_nome: string;
+    status: string;
+    total_brl: number;
   saldos_fiat: Array<{ moeda: string; saldo: number; banco: string }>;
   saldos_crypto: Array<{ 
     coin: string; 
