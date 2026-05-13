@@ -3,11 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTabWorkspace } from "@/hooks/useTabWorkspace";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
- import { Users, RefreshCw, ArrowUpDown, Wallet, Landmark, Bitcoin, Info, ArrowRightLeft, Truck, Building2 } from "lucide-react";
+ import { Users, RefreshCw, ArrowUpDown, Wallet, Landmark, Bitcoin, Info, ArrowRightLeft, Truck, Building2, User } from "lucide-react";
 import { SwapCryptoDialog } from "./SwapCryptoDialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+ import { Skeleton } from "@/components/ui/skeleton";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -171,7 +173,7 @@ const BookmakerListByMoeda = ({
   );
 };
 
-const BookmakerHoverContent = ({
+ const BookmakerDetailsContent = ({
   saldos,
   pendentes,
 }: {
@@ -280,7 +282,32 @@ const BookmakerHoverContent = ({
   );
 };
 
-export function SaldosParceirosSheet() {
+ function ParceiroSkeleton() {
+   return (
+     <Card className="bg-card/40 border-border/40 backdrop-blur-sm overflow-hidden">
+       <CardHeader className="pb-3 pt-4 px-4 flex flex-row items-center gap-3">
+         <Skeleton className="h-10 w-10 rounded-full" />
+         <div className="space-y-2">
+           <Skeleton className="h-4 w-24" />
+           <Skeleton className="h-3 w-32" />
+         </div>
+       </CardHeader>
+       <CardContent className="px-4 pb-4 pt-0 space-y-4">
+         <div className="grid grid-cols-3 gap-2">
+           <Skeleton className="h-12 rounded-lg" />
+           <Skeleton className="h-12 rounded-lg" />
+           <Skeleton className="h-12 rounded-lg" />
+         </div>
+         <div className="space-y-2">
+           <Skeleton className="h-8 w-full rounded-md" />
+           <Skeleton className="h-8 w-full rounded-md" />
+         </div>
+       </CardContent>
+     </Card>
+   );
+ }
+ 
+ export function SaldosParceirosSheet() {
   const [open, setOpen] = useState(false);
   const [parceirosAgrupados, setParceirosAgrupados] = useState<ParceiroSaldoAgrupado[]>([]);
   const [fornecedores, setFornecedores] = useState<Record<string, string>>({});
