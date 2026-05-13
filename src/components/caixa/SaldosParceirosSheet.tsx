@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTabWorkspace } from "@/hooks/useTabWorkspace";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-  import { Users, RefreshCw, ArrowUpDown, Wallet, Landmark, Bitcoin, Info, ArrowRightLeft, Truck, Building2, User, Search, SortAsc } from "lucide-react";
+  import { Users, RefreshCw, ArrowUpDown, Wallet, Landmark, Bitcoin, Info, ArrowRightLeft, Truck, Building2, User, Search, SortAsc, ChevronUp, ChevronDown } from "lucide-react";
  import { Input } from "@/components/ui/input";
  import { Switch } from "@/components/ui/switch";
  import { Label } from "@/components/ui/label";
@@ -278,7 +278,10 @@ const BookmakerListByMoeda = ({
    );
  }
  
- export function SaldosParceirosSheet() {
+  import { useRef } from "react";
+
+  export function SaldosParceirosSheet() {
+   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [parceirosAgrupados, setParceirosAgrupados] = useState<ParceiroSaldoAgrupado[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
@@ -295,6 +298,13 @@ const BookmakerListByMoeda = ({
   });
   const { workspaceId } = useTabWorkspace();
   const { convertToBRL } = useExchangeRates();
+
+  const scrollBy = (amount: number) => {
+    const viewport = scrollContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+    if (viewport) {
+      viewport.scrollBy({ top: amount, behavior: "smooth" });
+    }
+  };
 
   const fetchCryptoPrices = async (coins: string[]) => {
     if (coins.length === 0) return {};
@@ -818,57 +828,7 @@ const BookmakerListByMoeda = ({
           </SheetTitle>
         </SheetHeader>
 
-        <div className="mt-4 flex flex-col h-full overflow-hidden">
-          {/* Controls Bar */}
-          {!loading && parceirosAgrupados.length > 0 && (
-            <div className="flex flex-col gap-3 mb-4 p-3 rounded-lg border border-border/40 bg-muted/10 shrink-0">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar parceiro..."
-                  className="pl-9 h-9 bg-background/50 border-border/40 focus:ring-primary/20"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-muted-foreground">Ordenar:</span>
-                  <div className="flex rounded-md border border-border/40 overflow-hidden bg-background/30">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={`h-7 px-2.5 text-[10px] rounded-none ${sortBy === "balance" ? "bg-primary/20 text-primary hover:bg-primary/30" : "hover:bg-muted/50"}`}
-                      onClick={() => setSortBy("balance")}
-                    >
-                      <ArrowUpDown className="h-3 w-3 mr-1" />
-                      Saldo
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={`h-7 px-2.5 text-[10px] rounded-none ${sortBy === "alphabetical" ? "bg-primary/20 text-primary hover:bg-primary/30" : "hover:bg-muted/50"}`}
-                      onClick={() => setSortBy("alphabetical")}
-                    >
-                      <SortAsc className="h-3 w-3 mr-1" />
-                      A-Z
-                    </Button>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="show-all"
-                    checked={showAll}
-                    onCheckedChange={setShowAll}
-                    className="scale-75"
-                  />
-                  <Label htmlFor="show-all" className="text-xs cursor-pointer text-muted-foreground">
-                    {showAll ? "Todos" : "Ativos"}
-                  </Label>
-                </div>
-              </div>
-            </div>
-          )}
+        <div className="mt-4 flex flex-col h-full overflow-hidden relative">
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -880,7 +840,7 @@ const BookmakerListByMoeda = ({
             </div>
           ) : (
             <>
-              {/* KPIs Consolidados */}
+              {/* KPIs Consolidados (Cards de Totais) */}
               {(() => {
                 const totalFiatPorMoeda: SaldosPorMoeda = {};
                 let totalCryptoUsd = 0;
@@ -900,7 +860,7 @@ const BookmakerListByMoeda = ({
                 const bkEntries = Object.entries(totalBkPorMoeda).filter(([_, v]) => v > 0).sort(([, a], [, b]) => b - a);
                 
                 return (
-                  <div className="grid grid-cols-3 gap-2 mb-4">
+                  <div className="grid grid-cols-3 gap-2 mb-4 shrink-0">
                     <div className="rounded-lg border border-border/50 bg-muted/20 p-3">
                       <div className="flex items-center gap-1.5 mb-1.5">
                         <Landmark className="h-3.5 w-3.5 text-chart-1" />
@@ -933,6 +893,58 @@ const BookmakerListByMoeda = ({
                   </div>
                 );
               })()}
+
+              {/* Controls Bar (Search and Filters) */}
+              {!loading && parceirosAgrupados.length > 0 && (
+                <div className="flex flex-col gap-3 mb-4 p-3 rounded-lg border border-border/40 bg-muted/10 shrink-0">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar parceiro..."
+                      className="pl-9 h-9 bg-background/50 border-border/40 focus:ring-primary/20"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-muted-foreground">Ordenar:</span>
+                      <div className="flex rounded-md border border-border/40 overflow-hidden bg-background/30">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={`h-7 px-2.5 text-[10px] rounded-none ${sortBy === "balance" ? "bg-primary/20 text-primary hover:bg-primary/30" : "hover:bg-muted/50"}`}
+                          onClick={() => setSortBy("balance")}
+                        >
+                          <ArrowUpDown className="h-3 w-3 mr-1" />
+                          Saldo
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={`h-7 px-2.5 text-[10px] rounded-none ${sortBy === "alphabetical" ? "bg-primary/20 text-primary hover:bg-primary/30" : "hover:bg-muted/50"}`}
+                          onClick={() => setSortBy("alphabetical")}
+                        >
+                          <SortAsc className="h-3 w-3 mr-1" />
+                          A-Z
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="show-all"
+                        checked={showAll}
+                        onCheckedChange={setShowAll}
+                        className="scale-75"
+                      />
+                      <Label htmlFor="show-all" className="text-xs cursor-pointer text-muted-foreground">
+                        {showAll ? "Todos" : "Ativos"}
+                      </Label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center justify-between mb-3 px-1">
                 <span className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
                   <Users className="h-3.5 w-3.5 opacity-50" />
@@ -951,7 +963,19 @@ const BookmakerListByMoeda = ({
                 )}
               </div>
 
-                <ScrollArea className="flex-1 pr-4 -mr-4 h-[calc(100vh-450px)]">
+                <ScrollArea 
+                  className="flex-1 pr-4 -mr-4 h-[calc(100vh-450px)] [&>[data-radix-scroll-area-viewport]]:overflow-y-scroll" 
+                  ref={scrollContainerRef as any}
+                >
+                  <style>
+                    {`
+                      [data-radix-scroll-area-viewport]::-webkit-scrollbar { width: 6px; }
+                      [data-radix-scroll-area-viewport]::-webkit-scrollbar-track { background: transparent; }
+                      [data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+                      [data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+                    `}
+                  </style>
+                  <div className="h-full">
                  {loading ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-8">
                      {[1, 2, 3, 4].map((i) => <ParceiroSkeleton key={i} />)}
@@ -1036,7 +1060,28 @@ const BookmakerListByMoeda = ({
                      })}
                    </div>
                  )}
-               </ScrollArea>
+                  </div>
+                </ScrollArea>
+
+                {/* Scroll Buttons */}
+                <div className="absolute bottom-6 right-6 flex flex-col gap-2 z-50">
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="h-8 w-8 rounded-full bg-background/60 backdrop-blur-md border border-border/50 hover:bg-background/80 shadow-lg transition-all active:scale-95"
+                    onClick={() => scrollBy(-300)}
+                  >
+                    <ChevronUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="h-8 w-8 rounded-full bg-background/60 backdrop-blur-md border border-border/50 hover:bg-background/80 shadow-lg transition-all active:scale-95"
+                    onClick={() => scrollBy(300)}
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </div>
               <SwapCryptoDialog
                 open={swapDialog.open}
                 onClose={() => setSwapDialog({ open: false, parceiroId: null })}
