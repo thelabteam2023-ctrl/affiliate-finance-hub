@@ -1,11 +1,13 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ModernDonutChart } from "@/components/ui/modern-donut-chart";
 import { PieChart as PieChartIcon, Wallet, Building2, Coins, CreditCard, HelpCircle, CheckCircle2, AlertTriangle, BriefcaseBusiness } from "lucide-react";
 import { useMultiCurrencyConversion } from "@/hooks/useMultiCurrencyConversion";
-import { formatCurrencyValue, getCurrencySymbol } from "@/types/currency";
+import { getCurrencySymbol } from "@/types/currency";
+import { useTabWorkspace } from "@/hooks/useTabWorkspace";
+import { CurrencyBreakdownModal } from "./CurrencyBreakdownModal";
 
 interface SaldoFiat {
   moeda: string;
@@ -52,6 +54,17 @@ export function PosicaoCapital({
   saldoWalletsParceiros,
   cotacaoUSD,
 }: PosicaoCapitalProps) {
+  const { workspaceId } = useTabWorkspace();
+  const [breakdownConfig, setBreakdownConfig] = useState<{
+    isOpen: boolean;
+    category: string;
+    currency: string;
+  }>({
+    isOpen: false,
+    category: "",
+    currency: "",
+  });
+
   // Hook de conversão multi-moeda com fontes e status de dados
   const { convert, sources, cotacoes, dataSource, isUsingFallback } = useMultiCurrencyConversion();
 
