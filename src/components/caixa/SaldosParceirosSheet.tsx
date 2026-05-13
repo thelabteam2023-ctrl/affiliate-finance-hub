@@ -396,14 +396,26 @@ const BookmakerListByMoeda = ({
        // Buscar preços atualizados da Binance
        const prices = await fetchCryptoPrices(uniqueCoins);
  
+       const { data: allParceiros } = await supabase
+         .from("parceiros")
+         .select("id, nome, is_caixa_operacional, status")
+         .eq("workspace_id", workspaceId);
+
+       const parceiroInfoMap = new Map<string, any>();
+       if (allParceiros) {
+         allParceiros.forEach(p => parceiroInfoMap.set(p.id, p));
+       }
+
        const parceirosMap = new Map<string, ParceiroSaldoAgrupado>();
- 
-       // Helper to get or create parceiro entry
+
        const getOrCreateParceiro = (parceiroId: string, nome: string = "Parceiro"): ParceiroSaldoAgrupado => {
          if (!parceirosMap.has(parceiroId)) {
+           const pInfo = parceiroInfoMap.get(parceiroId);
            parceirosMap.set(parceiroId, {
              parceiro_id: parceiroId,
-             parceiro_nome: nome,
+             parceiro_nome: pInfo?.nome || nome,
+             status: pInfo?.status || "ativo",
+             total_brl: 0,
              saldos_fiat: [],
              saldos_crypto: [],
              saldos_bookmakers: [],
@@ -417,16 +429,6 @@ const BookmakerListByMoeda = ({
          }
          return parceirosMap.get(parceiroId)!;
        };
- 
-       const { data: allParceiros } = await supabase
-         .from("parceiros")
-         .select("id, nome, is_caixa_operacional")
-         .eq("workspace_id", workspaceId);
- 
-       const parceiroInfoMap = new Map<string, any>();
-       if (allParceiros) {
-         allParceiros.forEach(p => parceiroInfoMap.set(p.id, p));
-       }
 
       // Process FIAT accounts (multi-currency)
       (saldosContas as SaldoContaParceiro[] || []).forEach((conta) => {
