@@ -1,7 +1,7 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatCurrencyValue, getCurrencySymbol } from "@/types/currency";
+import { getCurrencySymbol } from "@/types/currency";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -59,13 +59,11 @@ export function CurrencyBreakdownModal({ isOpen, onClose, category, currency, wo
           .select("id, is_caixa_operacional")
           .eq("workspace_id", workspaceId);
         
-        // Filter by partner type (caixa vs others)
         const filtered = data?.filter(d => {
           const p = partners?.find(p => p.id === d.parceiro_id);
           return isCaixa ? p?.is_caixa_operacional === true : p?.is_caixa_operacional === false;
         }) || [];
 
-        // Group by wallet_id to sum different coins in the same wallet
         const grouped: Record<string, any> = {};
         filtered.forEach(d => {
           const key = d.wallet_id || d.exchange || 'wallet';
@@ -83,7 +81,6 @@ export function CurrencyBreakdownModal({ isOpen, onClose, category, currency, wo
       } else if (category === "Contas Parceiros" || category === "Caixa Operacional") {
         const isCaixa = category === "Caixa Operacional";
         
-        // FIAT
         const { data } = await supabase
           .from("v_saldo_parceiro_contas")
           .select("banco, saldo, parceiro_nome, parceiro_id, moeda")
@@ -105,40 +102,6 @@ export function CurrencyBreakdownModal({ isOpen, onClose, category, currency, wo
             parceiro: d.parceiro_nome || 'N/A',
             valor: d.saldo || 0
           })) || [];
-      }
-        const isCaixa = category === "Caixa Operacional";
-        
-        const { data } = await supabase
-          .from("v_saldo_parceiro_wallets")
-          .select("exchange, saldo_usd, parceiro_nome, parceiro_id, wallet_id")
-          .eq("workspace_id", workspaceId);
-        
-        const { data: partners } = await supabase
-          .from("parceiros")
-          .select("id, is_caixa_operacional")
-          .eq("workspace_id", workspaceId);
-        
-        // Filter by partner type (caixa vs others)
-        const filtered = data?.filter(d => {
-          const p = partners?.find(p => p.id === d.parceiro_id);
-          return isCaixa ? p?.is_caixa_operacional === true : p?.is_caixa_operacional === false;
-        }) || [];
-
-        // Group by wallet_id to sum different coins in the same wallet
-        const grouped: Record<string, any> = {};
-        filtered.forEach(d => {
-          const key = d.wallet_id || d.exchange || 'wallet';
-          if (!grouped[key]) {
-            grouped[key] = {
-              nome: d.exchange || 'Wallet',
-              parceiro: d.parceiro_nome || 'N/A',
-              valor: 0
-            };
-          }
-          grouped[key].valor += d.saldo_usd || 0;
-        });
-        
-        result = Object.values(grouped);
       }
 
       return result.sort((a, b) => b.valor - a.valor);
