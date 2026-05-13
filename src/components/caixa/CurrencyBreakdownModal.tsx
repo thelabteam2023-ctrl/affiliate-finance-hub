@@ -46,57 +46,66 @@ export function CurrencyBreakdownModal({ isOpen, onClose, category, currency, wo
             valor: d.saldo_atual || 0
           }));
         }
+      } else if (category === "Wallets Parceiros" || (category === "Caixa Operacional" && currency === "CRYPTO")) {
+        const isCaixa = category === "Caixa Operacional";
+        
+        const { data } = await supabase
+          .from("v_saldo_parceiro_wallets")
+          .select("exchange, saldo_usd, parceiro_nome, parceiro_id, wallet_id")
+          .eq("workspace_id", workspaceId);
+        
+        const { data: partners } = await supabase
+          .from("parceiros")
+          .select("id, is_caixa_operacional")
+          .eq("workspace_id", workspaceId);
+        
+        // Filter by partner type (caixa vs others)
+        const filtered = data?.filter(d => {
+          const p = partners?.find(p => p.id === d.parceiro_id);
+          return isCaixa ? p?.is_caixa_operacional === true : p?.is_caixa_operacional === false;
+        }) || [];
+
+        // Group by wallet_id to sum different coins in the same wallet
+        const grouped: Record<string, any> = {};
+        filtered.forEach(d => {
+          const key = d.wallet_id || d.exchange || 'wallet';
+          if (!grouped[key]) {
+            grouped[key] = {
+              nome: d.exchange || 'Wallet',
+              parceiro: d.parceiro_nome || 'N/A',
+              valor: 0
+            };
+          }
+          grouped[key].valor += d.saldo_usd || 0;
+        });
+        
+        result = Object.values(grouped);
       } else if (category === "Contas Parceiros" || category === "Caixa Operacional") {
         const isCaixa = category === "Caixa Operacional";
         
-        if (currency === "CRYPTO") {
-          // Para Caixa Operacional Crypto (USD)
-          const { data } = await supabase
-            .from("v_saldo_parceiro_wallets")
-            .select("exchange, saldo_usd, parceiro_nome, parceiro_id")
-            .eq("workspace_id", workspaceId);
-          
-          // Precisamos verificar is_caixa_operacional dos parceiros
-          const { data: partners } = await supabase
-            .from("parceiros")
-            .select("id, is_caixa_operacional")
-            .eq("workspace_id", workspaceId);
-          
-          result = data
-            ?.filter(d => {
-              const p = partners?.find(p => p.id === d.parceiro_id);
-              return isCaixa ? p?.is_caixa_operacional === true : p?.is_caixa_operacional === false;
-            })
-            .map(d => ({
-              nome: d.exchange || 'Wallet',
-              parceiro: d.parceiro_nome || 'N/A',
-              valor: d.saldo_usd || 0
-            })) || [];
-        } else {
-          // FIAT
-          const { data } = await supabase
-            .from("v_saldo_parceiro_contas")
-            .select("banco, saldo, parceiro_nome, parceiro_id, moeda")
-            .eq("workspace_id", workspaceId)
-            .eq("moeda", currency);
-          
-          const { data: partners } = await supabase
-            .from("parceiros")
-            .select("id, is_caixa_operacional")
-            .eq("workspace_id", workspaceId);
+        // FIAT
+        const { data } = await supabase
+          .from("v_saldo_parceiro_contas")
+          .select("banco, saldo, parceiro_nome, parceiro_id, moeda")
+          .eq("workspace_id", workspaceId)
+          .eq("moeda", currency);
+        
+        const { data: partners } = await supabase
+          .from("parceiros")
+          .select("id, is_caixa_operacional")
+          .eq("workspace_id", workspaceId);
 
-          result = data
-            ?.filter(d => {
-              const p = partners?.find(p => p.id === d.parceiro_id);
-              return isCaixa ? p?.is_caixa_operacional === true : p?.is_caixa_operacional === false;
-            })
-            .map(d => ({
-              nome: d.banco || 'Conta',
-              parceiro: d.parceiro_nome || 'N/A',
-              valor: d.saldo || 0
-            })) || [];
-        }
-      } else if (category === "Wallets Parceiros" || (category === "Caixa Operacional" && currency === "CRYPTO")) {
+        result = data
+          ?.filter(d => {
+            const p = partners?.find(p => p.id === d.parceiro_id);
+            return isCaixa ? p?.is_caixa_operacional === true : p?.is_caixa_operacional === false;
+          })
+          .map(d => ({
+            nome: d.banco || 'Conta',
+            parceiro: d.parceiro_nome || 'N/A',
+            valor: d.saldo || 0
+          })) || [];
+      }
         const isCaixa = category === "Caixa Operacional";
         
         const { data } = await supabase
