@@ -422,7 +422,12 @@ export function PosicaoCapital({
                                     return (
                                       <div 
                                         key={i} 
-                                        className="flex flex-col items-center justify-between min-w-[90px] max-w-[110px] p-2.5 rounded-lg bg-muted/50 border border-border/50"
+                                        className="flex flex-col items-center justify-between min-w-[90px] max-w-[110px] p-2.5 rounded-lg bg-muted/50 border border-border/50 cursor-pointer hover:bg-muted/80 hover:border-primary/30 transition-all active:scale-95 group"
+                                        onClick={() => setBreakdownConfig({
+                                          isOpen: true,
+                                          category: item.name,
+                                          currency: d.moeda
+                                        })}
                                       >
                                         {/* Linha 1: Código da moeda + ícone de status */}
                                         <div className="flex items-center gap-1 mb-1">
