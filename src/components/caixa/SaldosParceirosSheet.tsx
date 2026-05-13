@@ -610,7 +610,28 @@ const BookmakerListByMoeda = ({
     return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   };
 
-  const totalParceiros = parceirosAgrupados.length;
+  const filteredAndSortedParceiros = useMemo(() => {
+    let result = [...parceirosAgrupados];
+    
+    if (!showAll) {
+      result = result.filter(p => p.status === "ativo");
+    }
+    
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(p => p.parceiro_nome.toLowerCase().includes(term));
+    }
+    
+    if (sortBy === "balance") {
+      result.sort((a, b) => b.total_brl - a.total_brl);
+    } else {
+      result.sort((a, b) => a.parceiro_nome.localeCompare(b.parceiro_nome));
+    }
+    
+    return result;
+  }, [parceirosAgrupados, searchTerm, sortBy, showAll]);
+
+  const totalParceiros = filteredAndSortedParceiros.length;
 
   const FiatHoverContent = ({ saldos }: { saldos: ParceiroSaldoAgrupado["saldos_fiat"] }) => {
     const [ascending, setAscending] = useState(false);
@@ -797,7 +818,57 @@ const BookmakerListByMoeda = ({
           </SheetTitle>
         </SheetHeader>
 
-        <div className="mt-4">
+        <div className="mt-4 flex flex-col h-full overflow-hidden">
+          {/* Controls Bar */}
+          {!loading && parceirosAgrupados.length > 0 && (
+            <div className="flex flex-col gap-3 mb-4 p-3 rounded-lg border border-border/40 bg-muted/10 shrink-0">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar parceiro..."
+                  className="pl-9 h-9 bg-background/50 border-border/40 focus:ring-primary/20"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-muted-foreground">Ordenar:</span>
+                  <div className="flex rounded-md border border-border/40 overflow-hidden bg-background/30">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`h-7 px-2.5 text-[10px] rounded-none ${sortBy === "balance" ? "bg-primary/20 text-primary hover:bg-primary/30" : "hover:bg-muted/50"}`}
+                      onClick={() => setSortBy("balance")}
+                    >
+                      <ArrowUpDown className="h-3 w-3 mr-1" />
+                      Saldo
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`h-7 px-2.5 text-[10px] rounded-none ${sortBy === "alphabetical" ? "bg-primary/20 text-primary hover:bg-primary/30" : "hover:bg-muted/50"}`}
+                      onClick={() => setSortBy("alphabetical")}
+                    >
+                      <SortAsc className="h-3 w-3 mr-1" />
+                      A-Z
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="show-all"
+                    checked={showAll}
+                    onCheckedChange={setShowAll}
+                    className="scale-75"
+                  />
+                  <Label htmlFor="show-all" className="text-xs cursor-pointer text-muted-foreground">
+                    {showAll ? "Todos" : "Ativos"}
+                  </Label>
+                </div>
+              </div>
+            </div>
+          )}
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
