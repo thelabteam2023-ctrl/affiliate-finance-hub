@@ -306,7 +306,8 @@ export function PosicaoCapital({
   }
 
   return (
-    <Card className="bg-card/50 backdrop-blur border-border/50">
+    <>
+      <Card className="bg-card/50 backdrop-blur border-border/50">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -502,6 +503,15 @@ export function PosicaoCapital({
           </div>
         </div>
       </CardContent>
-    </Card>
+      </Card>
+
+      <CurrencyBreakdownModal 
+        isOpen={breakdownConfig.isOpen}
+        onClose={() => setBreakdownConfig(prev => ({ ...prev, isOpen: false }))}
+        category={breakdownConfig.category}
+        currency={breakdownConfig.currency}
+        workspaceId={workspaceId}
+      />
+    </>
   );
 }
