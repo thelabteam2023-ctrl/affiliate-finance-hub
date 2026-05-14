@@ -485,20 +485,24 @@ export default function Caixa() {
 
       // Fetch partner wallets balance in USD (EXCLUDING caixa operacional to avoid double-counting)
       // FIX: Filtrar por parceiros do workspace ativo para isolar dados
-      let walletsSaldoData: any[] = [];
-      if (parceirosDoWorkspace.length > 0) {
-        const walletsQuery = supabase
-          .from("v_saldo_parceiro_wallets")
-          .select("saldo_usd")
-          .in("parceiro_id", parceirosDoWorkspace);
-        if (caixaParceiro?.id) {
-          walletsQuery.neq("parceiro_id", caixaParceiro.id);
-        }
-        const result = await walletsQuery;
-        walletsSaldoData = result.data || [];
-      }
-      
-      const totalWallets = walletsSaldoData?.reduce((sum, w) => sum + Math.max(0, w.saldo_usd || 0), 0) || 0;
+       let walletsSaldoData: any[] = [];
+       if (parceirosDoWorkspace.length > 0) {
+         const walletsQuery = supabase
+           .from("v_saldo_parceiro_wallets")
+           .select("coin, saldo_coin, saldo_usd")
+           .in("parceiro_id", parceirosDoWorkspace);
+         if (caixaParceiro?.id) {
+           walletsQuery.neq("parceiro_id", caixaParceiro.id);
+         }
+         const result = await walletsQuery;
+         walletsSaldoData = result.data || [];
+       }
+       
+       // Unificar cálculo de USD para wallets de parceiros usando preços atuais se disponíveis
+       const totalWallets = walletsSaldoData?.reduce((sum, w) => {
+         const currentUSD = getCryptoUSDValue(w.coin, w.saldo_coin, w.saldo_usd);
+         return sum + Math.max(0, currentUSD);
+       }, 0) || 0;
       setSaldoWalletsParceiros(totalWallets);
 
     } catch (error: any) {
