@@ -361,6 +361,77 @@ const BookmakerListByMoeda = ({
   });
   const [open, setOpen] = useState(false);
   const [parceirosAgrupados, setParceirosAgrupados] = useState<ParceiroSaldoAgrupado[]>([]);
+  const isDragging = useRef(false);
+  const dragOffset = useRef({ x: 0, y: 0 });
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleCopy = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleOpenCryptoPanel = (e: React.MouseEvent, parceiro: ParceiroSaldoAgrupado) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    
+    let x = rect.left - 350;
+    if (x < 10) x = rect.right + 10;
+    if (x + 340 > window.innerWidth) x = window.innerWidth - 350;
+    
+    let y = rect.top;
+    if (y + 400 > window.innerHeight) y = window.innerHeight - 410;
+    if (y < 10) y = 10;
+
+    setCryptoPanel({
+      open: true,
+      parceiroId: parceiro.parceiro_id,
+      parceiroNome: parceiro.parceiro_nome,
+      saldos: parceiro.saldos_crypto,
+      totalLocked: parceiro.total_crypto_locked_usd,
+      x,
+      y,
+    });
+  };
+
+  const onMouseDownDrag = (e: ReactMouseEvent) => {
+    isDragging.current = true;
+    dragOffset.current = {
+      x: e.clientX - cryptoPanel.x,
+      y: e.clientY - cryptoPanel.y,
+    };
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'grabbing';
+  };
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (isDragging.current) {
+        setCryptoPanel((prev) => ({
+          ...prev,
+          x: e.clientX - dragOffset.current.x,
+          y: e.clientY - dragOffset.current.y,
+        }));
+      }
+    };
+
+    const onMouseUp = () => {
+      isDragging.current = false;
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    };
+
+    if (cryptoPanel.open) {
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [cryptoPanel.open]);
     const [searchTerm, setSearchTerm] = useState("");
     const [sortBy, setSortBy] = useState<"balance" | "alphabetical">("balance");
     const [showAll, setShowAll] = useState(false);
