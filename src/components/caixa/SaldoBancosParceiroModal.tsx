@@ -126,8 +126,8 @@ export function SaldoBancosParceiroModal({ open, onOpenChange, caixaParceiroId }
           </DialogHeader>
         </div>
 
-        <ScrollArea className="flex-1 min-h-0 px-6">
-          <div className="py-6">
+        <div className="flex-1 overflow-y-auto px-6">
+          <div className="py-6 max-h-[calc(100vh-280px)] sm:max-h-[calc(90vh-180px)]">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-12 gap-3">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -176,7 +176,7 @@ export function SaldoBancosParceiroModal({ open, onOpenChange, caixaParceiroId }
               </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
 
         <div className="p-6 bg-white/[0.04] border-t border-white/10 flex items-center justify-between shrink-0">
           <span className="text-white/40 text-sm font-medium uppercase tracking-wider">Total Consolidado</span>
