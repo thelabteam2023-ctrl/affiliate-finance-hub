@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import React, { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,7 +26,7 @@ import {
   type RpcCallLog,
 } from "@/lib/dev/rpcInterceptor";
 import { explainRpcCall } from "@/lib/dev/rpcExplain";
- import { Activity, AlertTriangle, Database, Receipt, Wallet, Zap, Trash2, Pause, Play, HelpCircle, ArrowRight, History, Search, CheckCircle2 } from "lucide-react";
+ import { Activity, AlertTriangle, Database, Receipt, Wallet, Zap, Trash2, Pause, Play, HelpCircle, ArrowRight, History, Search, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
  import {
    Tooltip,
    TooltipContent,
@@ -84,8 +84,9 @@ import { explainRpcCall } from "@/lib/dev/rpcExplain";
  }
  
  // ─── Deep Ledger View Component ───
- function DeepLedgerView({ bookmakerId, bookmakerNome, onClose }: { bookmakerId: string; bookmakerNome: string; onClose: () => void }) {
-   const deepLedger = useDeepLedger(bookmakerId, true);
+  function DeepLedgerView({ bookmakerId, bookmakerNome, onClose }: { bookmakerId: string; bookmakerNome: string; onClose: () => void }) {
+    const deepLedger = useDeepLedger(bookmakerId, true);
+    const [expandedLedgerId, setExpandedLedgerId] = useState<string | null>(null);
  
    return (
      <Dialog open={!!bookmakerId} onOpenChange={(open) => !open && onClose()}>
@@ -114,10 +115,23 @@ import { explainRpcCall } from "@/lib/dev/rpcExplain";
                    </tr>
                  </thead>
                  <tbody className="font-mono">
-                   {deepLedger.data?.map((r: any) => {
-                     const isDivergent = r.audit_saldo_novo !== null && Math.abs(r.audit_saldo_novo - r.running_balance) > 0.01;
-                     return (
-                       <tr key={r.ledger_id} className={`border-b hover:bg-accent/30 ${isDivergent ? 'bg-destructive/5' : ''}`}>
+                    {deepLedger.data?.map((r: any) => {
+                      const isDivergent = r.audit_saldo_novo !== null && Math.abs(r.audit_saldo_novo - r.running_balance) > 0.01;
+                      const isExpanded = expandedLedgerId === r.ledger_id;
+                      
+                      // Ciclo de Aposta Logic
+                      const isSettlement = ['APOSTA_GREEN', 'APOSTA_MEIO_GREEN', 'APOSTA_RED', 'APOSTA_MEIO_RED', 'APOSTA_VOID', 'APOSTA_REEMBOLSO'].includes(r.tipo_transacao);
+                      let stakeRow = null;
+                      if (isSettlement && r.referencia_id) {
+                        stakeRow = deepLedger.data.find((s: any) => s.ledger_id === r.referencia_id);
+                      }
+
+                      return (
+                        <React.Fragment key={r.ledger_id}>
+                        <tr 
+                          className={`border-b hover:bg-accent/30 cursor-pointer transition-colors ${isDivergent ? 'bg-destructive/5' : ''} ${isExpanded ? 'bg-primary/5' : ''}`}
+                          onClick={() => setExpandedLedgerId(isExpanded ? null : r.ledger_id)}
+                        >
                          <td className="px-2 py-1 whitespace-nowrap text-muted-foreground">{fmtTime(r.created_at)}</td>
                          <td className="px-2 py-1">
                            <div className="flex flex-col">
@@ -125,8 +139,11 @@ import { explainRpcCall } from "@/lib/dev/rpcExplain";
                              <span className="text-[9px] opacity-60 truncate max-w-[120px]">{r.ledger_id.slice(0, 8)}</span>
                            </div>
                          </td>
-                         <td className={`px-2 py-1 text-right tabular-nums font-semibold ${r.impacto < 0 ? 'text-destructive' : 'text-emerald-500'}`}>
-                           {r.impacto > 0 ? '+' : ''}{fmtMoney(r.impacto, r.moeda)}
+                          <td className={`px-2 py-1 text-right tabular-nums font-semibold group relative ${r.impacto < 0 ? 'text-destructive' : 'text-emerald-500'}`}>
+                            <div className="flex items-center justify-end gap-1">
+                              {r.impacto > 0 ? '+' : ''}{fmtMoney(r.impacto, r.moeda)}
+                              {isExpanded ? <ChevronUp className="h-3 w-3 opacity-50" /> : <ChevronDown className="h-3 w-3 opacity-0 group-hover:opacity-50" />}
+                            </div>
                          </td>
                          <td className="px-2 py-1 text-right tabular-nums font-bold bg-primary/5">
                            {fmtMoney(r.running_balance, r.moeda)}
@@ -147,12 +164,73 @@ import { explainRpcCall } from "@/lib/dev/rpcExplain";
                              </Tooltip>
                            )}
                          </td>
-                         <td className="px-2 py-1 text-muted-foreground text-[10px] max-w-[200px] truncate" title={r.descricao}>
-                           {r.descricao}
-                         </td>
-                       </tr>
-                     );
-                   })}
+                          <td className="px-2 py-1 text-muted-foreground text-[10px] max-w-[200px] truncate" title={r.descricao}>
+                            {r.descricao}
+                          </td>
+                        </tr>
+                        {isExpanded && (
+                          <tr className="bg-primary/5 border-b">
+                            <td colSpan={7} className="px-4 py-3">
+                              <div className="flex flex-col gap-2 max-w-md ml-auto">
+                                <h4 className="text-[10px] font-bold uppercase text-primary mb-1 flex items-center gap-1">
+                                  <Receipt className="h-3 w-3" /> Decomposição do Ciclo de Operação
+                                </h4>
+                                
+                                {stakeRow ? (
+                                  <div className="space-y-1 text-xs border-l-2 border-primary/20 pl-3 py-1">
+                                    <div className="flex justify-between">
+                                      <span className="text-muted-foreground">Saldo antes da aposta:</span>
+                                      <span className="font-semibold">{fmtMoney(stakeRow.audit_saldo_anterior, r.moeda)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-destructive">
+                                      <span>(-) Stake reservado:</span>
+                                      <span className="font-bold">{fmtMoney(Math.abs(stakeRow.impacto), r.moeda)}</span>
+                                    </div>
+                                    <div className="flex justify-between border-t border-primary/10 pt-1">
+                                      <span className="text-muted-foreground italic">(=) Remanescente durante aposta:</span>
+                                      <span className="italic">{fmtMoney(Number(stakeRow.audit_saldo_anterior) - Math.abs(Number(stakeRow.impacto)), r.moeda)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-emerald-500 font-medium">
+                                      <span>(+) Retorno recebido:</span>
+                                      <span>{fmtMoney(r.impacto, r.moeda)}</span>
+                                    </div>
+                                    <div className="flex justify-between border-t-2 border-primary/20 pt-1 font-bold">
+                                      <span>Saldo final:</span>
+                                      <span>{fmtMoney(r.audit_saldo_novo, r.moeda)}</span>
+                                    </div>
+                                    <div className={`flex justify-between text-[11px] mt-1 p-1 rounded ${Number(r.impacto) - Math.abs(Number(stakeRow.impacto)) >= 0 ? 'bg-emerald-500/10 text-emerald-600' : 'bg-destructive/10 text-destructive'}`}>
+                                      <span className="font-bold">(=) Delta líquido da operação:</span>
+                                      <span className="font-black">{fmtMoney(Number(r.impacto) - Math.abs(Number(stakeRow.impacto)), r.moeda)}</span>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-1 text-xs border-l-2 border-primary/20 pl-3 py-1">
+                                    <div className="flex justify-between">
+                                      <span className="text-muted-foreground">Saldo antes:</span>
+                                      <span className="font-semibold">{fmtMoney(r.audit_saldo_anterior, r.moeda)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-muted-foreground">Impacto direto:</span>
+                                      <span className={`font-bold ${r.impacto < 0 ? 'text-destructive' : 'text-emerald-500'}`}>
+                                        {r.impacto > 0 ? '+' : ''}{fmtMoney(r.impacto, r.moeda)}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between border-t border-primary/20 pt-1 font-bold">
+                                      <span>Saldo final:</span>
+                                      <span>{fmtMoney(r.audit_saldo_novo, r.moeda)}</span>
+                                    </div>
+                                    <p className="text-[9px] text-muted-foreground mt-2 italic">
+                                      {isSettlement ? "* Stake correspondente não encontrado no histórico recente para decomposição completa." : "* Operação avulsa (não vinculada a ciclo de aposta detectado)."}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                        </React.Fragment>
+                      );
+                    })}
                  </tbody>
                </table>
              </ScrollArea>
@@ -546,8 +624,9 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
                       <th className="px-2 py-1.5">Moeda</th>
                       <th className="px-2 py-1.5 text-right">Saldo Registrado</th>
                       <th className="px-2 py-1.5 text-right">Saldo Calculado (Ledger)</th>
-                      <th className="px-2 py-1.5 text-right font-bold">Delta</th>
-                      <th className="px-2 py-1.5">Status</th>
+                       <th className="px-2 py-1.5 text-right font-bold">Delta</th>
+                       <th className="px-2 py-1.5 text-right text-orange-500">Stake Risco</th>
+                       <th className="px-2 py-1.5">Status</th>
                       <th className="px-2 py-1.5">Última Transação</th>
                       <th className="px-2 py-1.5">Ações</th>
                     </tr>
@@ -559,9 +638,12 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
                         <td className="px-2 py-2">{r.moeda}</td>
                         <td className="px-2 py-2 text-right tabular-nums">{fmtMoney(r.saldo_registrado, r.moeda)}</td>
                         <td className="px-2 py-2 text-right tabular-nums text-primary/80">{fmtMoney(r.saldo_calculado, r.moeda)}</td>
-                        <td className={`px-2 py-2 text-right tabular-nums font-bold ${Math.abs(r.delta) > 0.01 ? 'text-destructive' : 'text-emerald-500'}`}>
-                          {r.delta > 0 ? '+' : ''}{fmtMoney(r.delta, r.moeda)}
-                        </td>
+                         <td className={`px-2 py-2 text-right tabular-nums font-bold ${Math.abs(r.delta) > 0.01 ? 'text-destructive' : 'text-emerald-500'}`}>
+                           {r.delta > 0 ? '+' : ''}{fmtMoney(r.delta, r.moeda)}
+                         </td>
+                         <td className="px-2 py-2 text-right tabular-nums text-orange-500 font-semibold">
+                           {fmtMoney(r.stake_em_risco, r.moeda)}
+                         </td>
                         <td className="px-2 py-2">
                           <Badge variant={r.status_reconciliacao.includes('OK') ? 'default' : 'destructive'} className="text-[10px] whitespace-nowrap">
                             {r.status_reconciliacao}
