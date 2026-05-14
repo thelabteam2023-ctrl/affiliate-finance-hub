@@ -15536,7 +15536,7 @@ export type Database = {
         }[]
       }
       fn_reconciliar_saldos_bookmakers: {
-        Args: never
+        Args: { p_workspace_id?: string }
         Returns: {
           bookmaker_id: string
           delta: number
