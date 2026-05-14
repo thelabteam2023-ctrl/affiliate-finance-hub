@@ -4,7 +4,14 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useExchangeRates } from "@/contexts/ExchangeRatesContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+ import {
+   Select,
+   SelectContent,
+   SelectItem,
+   SelectTrigger,
+   SelectValue,
+ } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,16 +38,34 @@ import { explainRpcCall } from "@/lib/dev/rpcExplain";
    DialogHeader,
    DialogTitle,
  } from "@/components/ui/dialog";
- // ─── Reconciliation Hook ───
- function useReconciliation(enabled: boolean) {
+  // ─── Workspaces Hook (for System Owner) ───
+  function useWorkspaces(enabled: boolean) {
+    return useQuery({
+      queryKey: ["dev-monitor", "workspaces"],
+      queryFn: async () => {
+        const { data, error } = await supabase
+          .from("workspaces")
+          .select("id, name")
+          .order("name");
+        if (error) throw error;
+        return data ?? [];
+      },
+      enabled,
+    });
+  }
+ 
+  // ─── Reconciliation Hook ───
+  function useReconciliation(workspaceId: string | null, enabled: boolean) {
    return useQuery({
      queryKey: ["dev-monitor", "reconciliation"],
-     queryFn: async () => {
-       const { data, error } = await supabase.rpc("fn_reconciliar_saldos_bookmakers");
-       if (error) throw error;
-       return data ?? [];
-     },
-     refetchInterval: enabled ? POLL_MS * 5 : false,
+      queryFn: async () => {
+        const { data, error } = await supabase.rpc("fn_reconciliar_saldos_bookmakers", { 
+          p_workspace_id: workspaceId 
+        });
+        if (error) throw error;
+        return data ?? [];
+      },
+      refetchInterval: enabled ? POLL_MS * 5 : false,
    });
  }
  
@@ -276,6 +301,14 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
 
  export default function DevLedgerMonitor() {
    const { user, isSystemOwner, initialized, workspaceId, role } = useAuthContext();
+   const [selectedFilterWs, setSelectedFilterWs] = useState<string | null>(null);
+   // Initialize filter workspace to current user's workspace
+   useEffect(() => {
+     if (workspaceId && !selectedFilterWs) {
+       setSelectedFilterWs(workspaceId);
+     }
+   }, [workspaceId]);
+ 
   const navigate = useNavigate();
   const [paused, setPaused] = useState(false);
   const [filter, setFilter] = useState("");
@@ -298,7 +331,8 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
   const ledger = useCashLedger(enabled);
   const apostas = useApostas(enabled);
   const bookmakers = useBookmakerSaldos(enabled);
-   const reconciliation = useReconciliation(enabled);
+    const reconciliation = useReconciliation(isSystemOwner ? selectedFilterWs : workspaceId, enabled);
+   const workspacesList = useWorkspaces(isSystemOwner && enabled);
   const rpcLogs = useRpcLogs();
 
   // Snapshots de cotação congelados por bookmaker (último ledger CONFIRMADO)
@@ -450,26 +484,59 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
           <TabsTrigger value="rpc">RPCs</TabsTrigger>
         </TabsList>
 
-        {/* Reconciliação */}
-        <TabsContent value="reconciliacao" className="flex-1 min-h-0 mt-2">
-          <Card className="h-full flex flex-col">
-            <CardHeader className="py-2">
-              <CardTitle className="text-sm flex items-center justify-between">
-                <span>Auditoria de Integridade (Ledger vs Saldo Atual)</span>
-                <div className="flex items-center gap-2">
-                  {reconciliation.isFetching && <span className="text-xs text-muted-foreground animate-pulse">recalculando...</span>}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-[300px]">
-                      Esta aba compara o `saldo_atual` registrado no banco com a soma real de todas as entradas do Ledger.
-                      Divergências indicam falhas em triggers ou atualizações manuais indevidas.
-                    </TooltipContent>
-                  </Tooltip>
+          {/* Reconciliação */}
+          <TabsContent value="reconciliacao" className="flex-1 min-h-0 mt-2">
+            <Card className="h-full flex flex-col">
+              <CardHeader className="py-2 border-b mb-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-sm">Auditoria de Integridade (Ledger vs Saldo Atual)</CardTitle>
+                    <CardDescription className="text-[11px]">
+                      Soma histórica do Ledger comparada ao campo `saldo_atual` do banco.
+                    </CardDescription>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    {/* Workspace Selector */}
+                    {isSystemOwner ? (
+                      <div className="flex items-center gap-2">
+                        <Label className="text-[10px] text-muted-foreground uppercase font-bold">Workspace:</Label>
+                        <Select 
+                          value={selectedFilterWs || 'ALL'} 
+                          onValueChange={(v) => setSelectedFilterWs(v === 'ALL' ? null : v)}
+                        >
+                          <SelectTrigger className="h-8 text-xs min-w-[200px] w-auto">
+                            <SelectValue placeholder="Todos os Workspaces" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="ALL">Todos os Workspaces</SelectItem>
+                            {workspacesList.data?.map(ws => (
+                              <SelectItem key={ws.id} value={ws.id}>{ws.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px] h-6 px-2 bg-muted/50">
+                        Workspace: {workspacesList.data?.find(w => w.id === workspaceId)?.name || 'Carregando...'}
+                      </Badge>
+                    )}
+
+                    <div className="flex items-center gap-2">
+                      {reconciliation.isFetching && <span className="text-xs text-muted-foreground animate-pulse">recalculando...</span>}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-[300px]">
+                          Esta aba compara o `saldo_atual` registrado no banco com a soma real de todas as entradas do Ledger.
+                          Divergências indicam falhas em triggers ou atualizações manuais indevidas.
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  </div>
                 </div>
-              </CardTitle>
-            </CardHeader>
+              </CardHeader>
             <CardContent className="flex-1 min-h-0 p-0">
               <ScrollArea className="h-full">
                 <table className="w-full text-xs">
