@@ -19,7 +19,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { FIAT_CURRENCIES, CURRENCY_SYMBOLS } from "@/types/currency";
 import { getFirstLastName } from "@/lib/utils";
-import { useExchangeRates } from "@/contexts/ExchangeRatesContext";
+ import { useExchangeRates } from "@/contexts/ExchangeRatesContext";
+ import { useCotacoes } from "@/hooks/useCotacoes";
 
 // Multi-currency type
 type SaldosPorMoeda = Record<string, number>;
@@ -391,40 +392,15 @@ import { useRef, MouseEvent as ReactMouseEvent } from "react";
       localStorage.setItem("parceiros-view-mode", viewMode);
     }, [viewMode]);
   const [fornecedores, setFornecedores] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(false);
-  const [cryptoPrices, setCryptoPrices] = useState<Record<string, number>>({});
-  const [pricesLoading, setPricesLoading] = useState(false);
-  const [lastPriceUpdate, setLastPriceUpdate] = useState<Date | null>(null);
+   const [loading, setLoading] = useState(false);
   const [swapDialog, setSwapDialog] = useState<{ open: boolean; parceiroId: string | null }>({
     open: false,
     parceiroId: null,
   });
-  const { workspaceId } = useTabWorkspace();
-  const { convertToBRL } = useExchangeRates();
+   const { workspaceId } = useTabWorkspace();
+   const { convertToBRL } = useExchangeRates();
+   const { cryptoPrices, getCryptoUSDValue, loading: pricesLoading, lastUpdate: lastPriceUpdate } = useCotacoes();
 
-  const fetchCryptoPrices = async (coins: string[]) => {
-    if (coins.length === 0) return {};
-    
-    try {
-      setPricesLoading(true);
-      const uniqueCoins = [...new Set(coins)];
-      
-      const { data, error } = await supabase.functions.invoke("get-crypto-prices", {
-        body: { symbols: uniqueCoins },
-      });
-
-      if (error) throw error;
-      
-      setCryptoPrices(data.prices || {});
-      setLastPriceUpdate(new Date());
-      return data.prices || {};
-    } catch (error) {
-      console.error("Erro ao buscar preços crypto:", error);
-      return {};
-    } finally {
-      setPricesLoading(false);
-    }
-  };
 
   const fetchSaldosParceiros = useCallback(async () => {
     if (!workspaceId) return;
@@ -446,12 +422,14 @@ import { useRef, MouseEvent as ReactMouseEvent } from "react";
 
       if (walletsError) throw walletsError;
 
-      // Buscar bookmakers vinculadas aos parceiros COM saldo freebet
-      const { data: bookmakers, error: bookmakersError } = await supabase
-        .from("bookmakers")
-        .select("id, parceiro_id, nome, saldo_atual, saldo_usd, saldo_freebet, moeda")
-        .eq("workspace_id", workspaceId)
-        .not("parceiro_id", "is", null);
+       // Buscar bookmakers vinculadas aos parceiros COM saldo freebet e status operacional
+       // REGRA UNIFICADA: status in ['ativo', 'limitada', 'AGUARDANDO_SAQUE']
+       const { data: bookmakers, error: bookmakersError } = await supabase
+         .from("bookmakers")
+         .select("id, parceiro_id, nome, saldo_atual, saldo_usd, saldo_freebet, moeda")
+         .eq("workspace_id", workspaceId)
+         .in("status", ["ativo", "limitada", "AGUARDANDO_SAQUE"])
+         .not("parceiro_id", "is", null);
 
       if (bookmakersError) throw bookmakersError;
 
@@ -495,15 +473,6 @@ import { useRef, MouseEvent as ReactMouseEvent } from "react";
         bonusMap.set(bonus.bookmaker_id, current + (bonus.saldo_atual || 0));
       });
 
-      // Extrair coins únicos para buscar preços
-      const uniqueCoins = [...new Set(
-        (saldosWallets as SaldoWalletParceiro[] || [])
-          .filter(w => w.coin)
-          .map(w => w.coin)
-      )];
-
-       // Buscar preços atualizados da Binance
-       const prices = await fetchCryptoPrices(uniqueCoins);
  
        const { data: allParceiros } = await supabase
          .from("parceiros")
@@ -565,9 +534,8 @@ import { useRef, MouseEvent as ReactMouseEvent } from "react";
 
          const parceiro = getOrCreateParceiro(wallet.parceiro_id, wallet.parceiro_nome);
         
-        // Calcular USD com preço atual da Binance
-        const currentPrice = prices[wallet.coin] || 0;
-        const saldoUsdAtualizado = Math.max(0, wallet.saldo_coin * currentPrice);
+         // Calcular USD com preço atual do hook centralizado useCotacoes
+         const saldoUsdAtualizado = getCryptoUSDValue(wallet.coin, wallet.saldo_coin, wallet.saldo_usd);
         const saldoLockedUsd = Math.max(0, wallet.saldo_locked || 0);
 
         parceiro.saldos_crypto.push({
