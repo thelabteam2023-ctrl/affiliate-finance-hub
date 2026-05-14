@@ -532,9 +532,8 @@ import { useRef, MouseEvent as ReactMouseEvent } from "react";
 
          const parceiro = getOrCreateParceiro(wallet.parceiro_id, wallet.parceiro_nome);
         
-        // Calcular USD com preço atual da Binance
-        const currentPrice = prices[wallet.coin] || 0;
-        const saldoUsdAtualizado = Math.max(0, wallet.saldo_coin * currentPrice);
+         // Calcular USD com preço atual do hook centralizado useCotacoes
+         const saldoUsdAtualizado = getCryptoUSDValue(wallet.coin, wallet.saldo_coin, wallet.saldo_usd);
         const saldoLockedUsd = Math.max(0, wallet.saldo_locked || 0);
 
         parceiro.saldos_crypto.push({
