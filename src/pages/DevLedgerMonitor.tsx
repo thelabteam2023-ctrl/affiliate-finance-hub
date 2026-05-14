@@ -19,12 +19,125 @@ import {
   type RpcCallLog,
 } from "@/lib/dev/rpcInterceptor";
 import { explainRpcCall } from "@/lib/dev/rpcExplain";
-import { Activity, AlertTriangle, Database, Receipt, Wallet, Zap, Trash2, Pause, Play, HelpCircle } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+ import { Activity, AlertTriangle, Database, Receipt, Wallet, Zap, Trash2, Pause, Play, HelpCircle, ArrowRight, History, Search, CheckCircle2 } from "lucide-react";
+ import {
+   Tooltip,
+   TooltipContent,
+   TooltipTrigger,
+ } from "@/components/ui/tooltip";
+ import {
+   Dialog,
+   DialogContent,
+   DialogHeader,
+   DialogTitle,
+ } from "@/components/ui/dialog";
+ // ─── Reconciliation Hook ───
+ function useReconciliation(enabled: boolean) {
+   return useQuery({
+     queryKey: ["dev-monitor", "reconciliation"],
+     queryFn: async () => {
+       const { data, error } = await supabase.rpc("fn_reconciliar_saldos_bookmakers");
+       if (error) throw error;
+       return data ?? [];
+     },
+     refetchInterval: enabled ? POLL_MS * 5 : false,
+   });
+ }
+ 
+ // ─── Deep Ledger Hook ───
+ function useDeepLedger(bookmakerId: string | null, enabled: boolean) {
+   return useQuery({
+     queryKey: ["dev-monitor", "deep-ledger", bookmakerId],
+     queryFn: async () => {
+       if (!bookmakerId) return [];
+       const { data, error } = await supabase.rpc("fn_ledger_profundo_bookmaker", { p_bookmaker_id: bookmakerId });
+       if (error) throw error;
+       return data ?? [];
+     },
+     enabled: enabled && !!bookmakerId,
+   });
+ }
+ 
+ // ─── Deep Ledger View Component ───
+ function DeepLedgerView({ bookmakerId, bookmakerNome, onClose }: { bookmakerId: string; bookmakerNome: string; onClose: () => void }) {
+   const deepLedger = useDeepLedger(bookmakerId, true);
+ 
+   return (
+     <Dialog open={!!bookmakerId} onOpenChange={(open) => !open && onClose()}>
+       <DialogContent className="max-w-5xl h-[90vh] flex flex-col">
+         <DialogHeader>
+           <DialogTitle className="flex items-center gap-2">
+             <History className="h-5 w-5 text-primary" />
+             Linha do Tempo (Deep Ledger) — {bookmakerNome}
+           </DialogTitle>
+         </DialogHeader>
+         <div className="flex-1 min-h-0 overflow-hidden mt-4">
+           {deepLedger.isLoading ? (
+             <div className="flex items-center justify-center h-full">Carregando histórico...</div>
+           ) : (
+             <ScrollArea className="h-full">
+               <table className="w-full text-xs">
+                 <thead className="sticky top-0 bg-background border-b z-10">
+                   <tr className="text-left text-muted-foreground">
+                     <th className="px-2 py-2">Data/Hora</th>
+                     <th className="px-2 py-2">Operação</th>
+                     <th className="px-2 py-2 text-right">Impacto</th>
+                     <th className="px-2 py-2 text-right font-bold text-primary bg-primary/5">Running Balance</th>
+                     <th className="px-2 py-2 text-right">Audit Antes</th>
+                     <th className="px-2 py-2 text-right">Audit Depois</th>
+                     <th className="px-2 py-2">Descrição</th>
+                   </tr>
+                 </thead>
+                 <tbody className="font-mono">
+                   {deepLedger.data?.map((r: any) => {
+                     const isDivergent = r.audit_saldo_novo !== null && Math.abs(r.audit_saldo_novo - r.running_balance) > 0.01;
+                     return (
+                       <tr key={r.ledger_id} className={`border-b hover:bg-accent/30 ${isDivergent ? 'bg-destructive/5' : ''}`}>
+                         <td className="px-2 py-1 whitespace-nowrap text-muted-foreground">{fmtTime(r.created_at)}</td>
+                         <td className="px-2 py-1">
+                           <div className="flex flex-col">
+                             <Badge variant="outline" className="text-[9px] w-fit">{r.tipo_transacao}</Badge>
+                             <span className="text-[9px] opacity-60 truncate max-w-[120px]">{r.ledger_id.slice(0, 8)}</span>
+                           </div>
+                         </td>
+                         <td className={`px-2 py-1 text-right tabular-nums font-semibold ${r.impacto < 0 ? 'text-destructive' : 'text-emerald-500'}`}>
+                           {r.impacto > 0 ? '+' : ''}{fmtMoney(r.impacto, r.moeda)}
+                         </td>
+                         <td className="px-2 py-1 text-right tabular-nums font-bold bg-primary/5">
+                           {fmtMoney(r.running_balance, r.moeda)}
+                         </td>
+                         <td className="px-2 py-1 text-right tabular-nums text-muted-foreground italic">
+                           {fmtMoney(r.audit_saldo_anterior, r.moeda)}
+                         </td>
+                         <td className={`px-2 py-1 text-right tabular-nums ${isDivergent ? 'text-destructive font-bold' : 'text-muted-foreground italic'}`}>
+                           {fmtMoney(r.audit_saldo_novo, r.moeda)}
+                           {isDivergent && (
+                             <Tooltip>
+                               <TooltipTrigger asChild>
+                                 <AlertTriangle className="h-3 w-3 inline ml-1 text-destructive" />
+                               </TooltipTrigger>
+                               <TooltipContent>
+                                 Divergência detectada! O audit registrou {fmtMoney(r.audit_saldo_novo, r.moeda)} mas o cálculo real do ledger aponta {fmtMoney(r.running_balance, r.moeda)}.
+                               </TooltipContent>
+                             </Tooltip>
+                           )}
+                         </td>
+                         <td className="px-2 py-1 text-muted-foreground text-[10px] max-w-[200px] truncate" title={r.descricao}>
+                           {r.descricao}
+                         </td>
+                       </tr>
+                     );
+                   })}
+                 </tbody>
+               </table>
+             </ScrollArea>
+           )}
+         </div>
+       </DialogContent>
+     </Dialog>
+   );
+ }
+ 
 
 const POLL_MS = 3000;
 
@@ -167,6 +280,7 @@ export default function DevLedgerMonitor() {
   const [paused, setPaused] = useState(false);
   const [filter, setFilter] = useState("");
   const [rpcExplainedMode, setRpcExplainedMode] = useState(true);
+   const [selectedBookmaker, setSelectedBookmaker] = useState<{ id: string; nome: string } | null>(null);
   const { getRate } = useExchangeRates();
 
   // Hard guard — only system owner
@@ -180,6 +294,7 @@ export default function DevLedgerMonitor() {
   const ledger = useCashLedger(enabled);
   const apostas = useApostas(enabled);
   const bookmakers = useBookmakerSaldos(enabled);
+   const reconciliation = useReconciliation(enabled);
   const rpcLogs = useRpcLogs();
 
   // Snapshots de cotação congelados por bookmaker (último ledger CONFIRMADO)
@@ -212,6 +327,11 @@ export default function DevLedgerMonitor() {
     () => (bookmakers.data ?? []).filter((r) => filterFn(`${r.nome} ${r.moeda} ${r.status}`)),
     [bookmakers.data, filter]
   );
+ 
+   const reconciliationFiltered = useMemo(
+     () => (reconciliation.data ?? []).filter((r: any) => filterFn(`${r.nome} ${r.moeda} ${r.status_reconciliacao}`)),
+     [reconciliation.data, filter]
+   );
 
   const rpcFiltered = useMemo(
     () => rpcLogs.filter((r) => {
@@ -317,10 +437,86 @@ export default function DevLedgerMonitor() {
           <TabsTrigger value="ledger">Cash Ledger</TabsTrigger>
           <TabsTrigger value="apostas">Apostas</TabsTrigger>
           <TabsTrigger value="bookmakers">Saldos Bookmakers</TabsTrigger>
+          <TabsTrigger value="reconciliacao">
+            Reconciliação
+            {reconciliation.data?.some((r: any) => r.status_reconciliacao.includes('DIVERTENTE')) && (
+              <AlertTriangle className="h-3 w-3 ml-1 text-destructive animate-pulse" />
+            )}
+          </TabsTrigger>
           <TabsTrigger value="rpc">RPCs</TabsTrigger>
         </TabsList>
 
-        {/* Ledger */}
+        {/* Reconciliação */}
+        <TabsContent value="reconciliacao" className="flex-1 min-h-0 mt-2">
+          <Card className="h-full flex flex-col">
+            <CardHeader className="py-2">
+              <CardTitle className="text-sm flex items-center justify-between">
+                <span>Auditoria de Integridade (Ledger vs Saldo Atual)</span>
+                <div className="flex items-center gap-2">
+                  {reconciliation.isFetching && <span className="text-xs text-muted-foreground animate-pulse">recalculando...</span>}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[300px]">
+                      Esta aba compara o `saldo_atual` registrado no banco com a soma real de todas as entradas do Ledger.
+                      Divergências indicam falhas em triggers ou atualizações manuais indevidas.
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 min-h-0 p-0">
+              <ScrollArea className="h-full">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-card border-b z-10">
+                    <tr className="text-left text-muted-foreground">
+                      <th className="px-2 py-1.5">Bookmaker</th>
+                      <th className="px-2 py-1.5">Moeda</th>
+                      <th className="px-2 py-1.5 text-right">Saldo Registrado</th>
+                      <th className="px-2 py-1.5 text-right">Saldo Calculado (Ledger)</th>
+                      <th className="px-2 py-1.5 text-right font-bold">Delta</th>
+                      <th className="px-2 py-1.5">Status</th>
+                      <th className="px-2 py-1.5">Última Transação</th>
+                      <th className="px-2 py-1.5">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody className="font-mono">
+                    {reconciliationFiltered.map((r: any) => (
+                      <tr key={r.bookmaker_id} className={`border-b hover:bg-accent/30 ${r.status_reconciliacao.includes('DIVERTENTE') ? 'bg-destructive/5' : ''}`}>
+                        <td className="px-2 py-2 font-semibold">{r.nome}</td>
+                        <td className="px-2 py-2">{r.moeda}</td>
+                        <td className="px-2 py-2 text-right tabular-nums">{fmtMoney(r.saldo_registrado, r.moeda)}</td>
+                        <td className="px-2 py-2 text-right tabular-nums text-primary/80">{fmtMoney(r.saldo_calculado, r.moeda)}</td>
+                        <td className={`px-2 py-2 text-right tabular-nums font-bold ${Math.abs(r.delta) > 0.01 ? 'text-destructive' : 'text-emerald-500'}`}>
+                          {r.delta > 0 ? '+' : ''}{fmtMoney(r.delta, r.moeda)}
+                        </td>
+                        <td className="px-2 py-2">
+                          <Badge variant={r.status_reconciliacao.includes('OK') ? 'default' : 'destructive'} className="text-[10px] whitespace-nowrap">
+                            {r.status_reconciliacao}
+                          </Badge>
+                        </td>
+                        <td className="px-2 py-2 text-muted-foreground whitespace-nowrap">{fmtTime(r.last_transaction_at)}</td>
+                        <td className="px-2 py-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-7 text-[10px] px-2"
+                            onClick={() => setSelectedBookmaker({ id: r.bookmaker_id, nome: r.nome })}
+                          >
+                            <Search className="h-3 w-3 mr-1" /> Deep Ledger
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+ 
+         {/* Ledger */}
         <TabsContent value="ledger" className="flex-1 min-h-0 mt-2">
           <Card className="h-full flex flex-col">
             <CardHeader className="py-2">
