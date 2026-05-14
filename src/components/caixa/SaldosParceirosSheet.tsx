@@ -19,7 +19,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { FIAT_CURRENCIES, CURRENCY_SYMBOLS } from "@/types/currency";
 import { getFirstLastName } from "@/lib/utils";
-import { useExchangeRates } from "@/contexts/ExchangeRatesContext";
+ import { useExchangeRates } from "@/contexts/ExchangeRatesContext";
+ import { useCotacoes } from "@/hooks/useCotacoes";
 
 // Multi-currency type
 type SaldosPorMoeda = Record<string, number>;
