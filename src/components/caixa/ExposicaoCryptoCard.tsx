@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+ import { supabase } from "@/integrations/supabase/client";
+ import { useTabWorkspace } from "@/hooks/useTabWorkspace";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getWalletDisplayName } from "@/utils/cryptoUtils";
 import { Button } from "@/components/ui/button";
