@@ -140,7 +140,7 @@ export function AppSidebar() {
   const { canManageWorkspace } = useRole();
   const { favorites } = useFavorites();
   const { favorites: projectFavorites } = useProjectFavorites();
-  const { workspace, workspaceId } = useWorkspace();
+   const { workspace } = useWorkspace();
   const { canAccess } = useModuleAccess();
   const { count: alertsCount } = useCentralAlertsCount();
   const { data: kpisSolicitacoes } = useSolicitacoesKpis();
