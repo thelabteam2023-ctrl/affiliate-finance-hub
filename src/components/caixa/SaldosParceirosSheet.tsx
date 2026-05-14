@@ -149,14 +149,14 @@ const BookmakerListByMoeda = ({
   return (
     <>
       {sorted.map((s, idx) => (
-        <div key={`${s.nome}-${s.moeda}-${idx}`} className="flex justify-between items-center gap-4 py-0.5">
-          <div className="flex items-center gap-1.5 truncate max-w-[160px]">
-            <span className="text-[13px] font-medium tracking-wide uppercase text-foreground/90 truncate leading-tight">{s.nome}</span>
+        <div key={`${s.nome}-${s.moeda}-${idx}`} className="flex justify-between items-start gap-4 py-1">
+          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+            <span className="text-[13px] font-medium tracking-wide uppercase text-foreground/90 leading-tight break-words">{s.nome}</span>
             {s.has_bonus && (
-              <span className="text-[10px] text-primary" title="Inclui bônus/freebet">🎁</span>
+              <span className="text-[10px] text-primary shrink-0" title="Inclui bônus/freebet">🎁</span>
             )}
           </div>
-          <span className="text-[13px] font-mono font-medium text-chart-4 whitespace-nowrap tabular-nums leading-tight">
+          <span className="text-[13px] font-mono font-medium text-chart-4 whitespace-nowrap tabular-nums leading-tight mt-0.5">
             {CURRENCY_SYMBOLS[s.moeda] || s.moeda} {s.saldo_operavel.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
           </span>
         </div>
@@ -658,9 +658,9 @@ const BookmakerListByMoeda = ({
           </button>
         </div>
         {sorted.map((s, idx) => (
-          <div key={idx} className="flex justify-between items-center gap-4 py-0.5">
-            <span className="text-[13px] text-foreground/90 truncate max-w-[160px] leading-tight">{s.banco}</span>
-            <span className="text-[13px] font-mono font-medium text-chart-1 whitespace-nowrap tabular-nums">{formatCurrency(s.saldo, s.moeda)}</span>
+          <div key={idx} className="flex justify-between items-start gap-4 py-1">
+            <span className="text-[13px] text-foreground/90 leading-tight flex-1 break-words">{s.banco}</span>
+            <span className="text-[13px] font-mono font-medium text-chart-1 whitespace-nowrap tabular-nums mt-0.5">{formatCurrency(s.saldo, s.moeda)}</span>
           </div>
         ))}
       </div>
