@@ -1163,32 +1163,23 @@ const BookmakerListByMoeda = ({
                             <div className="text-[12px] font-semibold text-foreground truncate group-hover:text-primary transition-colors">{parceiro.parceiro_nome}</div>
                             <div className="text-[11px] font-mono text-chart-1 text-right">
                               {fiatTotalBRL > 0 ? (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger className="cursor-help">{formatCurrency(fiatTotalBRL, "BRL").split(",")[0]}</TooltipTrigger>
-                                    <TooltipContent className="p-2 w-48 bg-popover border-border"><FiatHoverContent saldos={parceiro.saldos_fiat} /></TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
+                                <InteractiveTooltip content={<FiatHoverContent saldos={parceiro.saldos_fiat} />}>
+                                  {formatCurrency(fiatTotalBRL, "BRL").split(",")[0]}
+                                </InteractiveTooltip>
                               ) : "—"}
                             </div>
                             <div className="text-[11px] font-mono text-chart-2 text-right">
                               {cryptoTotalUSD > 0 ? (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger className="cursor-help">{formatCurrency(cryptoTotalUSD, "USD").split(",")[0]}</TooltipTrigger>
-                                    <TooltipContent className="p-2 w-64 bg-popover border-border"><CryptoHoverContent saldos={parceiro.saldos_crypto} totalLocked={parceiro.total_crypto_locked_usd} onOpenSwap={() => setSwapDialog({ open: true, parceiroId: parceiro.parceiro_id })} /></TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
+                                <InteractiveTooltip content={<CryptoHoverContent saldos={parceiro.saldos_crypto} totalLocked={parceiro.total_crypto_locked_usd} onOpenSwap={() => setSwapDialog({ open: true, parceiroId: parceiro.parceiro_id })} />}>
+                                  {formatCurrency(cryptoTotalUSD, "USD").split(",")[0]}
+                                </InteractiveTooltip>
                               ) : "—"}
                             </div>
                             <div className="text-[11px] font-mono text-chart-4 text-right">
                               {casasTotalBRL > 0 ? (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger className="cursor-help">{formatCurrency(casasTotalBRL, "BRL").split(",")[0]}</TooltipTrigger>
-                                    <TooltipContent className="p-2 w-64 bg-popover border-border"><BookmakerDetailsContent saldos={parceiro.saldos_bookmakers} pendentes={parceiro.pendentes_bookmakers} /></TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
+                                <InteractiveTooltip content={<BookmakerDetailsContent saldos={parceiro.saldos_bookmakers} pendentes={parceiro.pendentes_bookmakers} />}>
+                                  {formatCurrency(casasTotalBRL, "BRL").split(",")[0]}
+                                </InteractiveTooltip>
                               ) : "—"}
                             </div>
                             <div className="text-[11px] font-mono font-bold text-foreground text-right">{formatCurrency(parceiro.total_brl, "BRL")}</div>
