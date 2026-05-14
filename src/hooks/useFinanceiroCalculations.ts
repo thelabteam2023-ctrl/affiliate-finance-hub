@@ -132,13 +132,13 @@ export function useFinanceiroCalculations({
     
     // Bookmakers: consolidar TODAS as moedas via cotação real
     // ALINHAMENTO: Usar Math.max(0) igual ao Caixa Operacional
-    const saldoBookmakersBRL = bookmakersSaldos.filter(b => !b.moeda || b.moeda === "BRL").reduce((acc, b) => acc + Math.max(0, b.saldo_atual || 0), 0);
-    const saldoBookmakersUSD = bookmakersSaldos.filter(b => b.moeda === "USD" || b.moeda === "USDT").reduce((acc, b) => acc + Math.max(0, b.saldo_atual || 0), 0);
-    const saldoBookmakersEUR = bookmakersSaldos.filter(b => b.moeda === "EUR").reduce((acc, b) => acc + Math.max(0, b.saldo_atual || 0), 0);
-    let saldoBookmakers = 0;
-    bookmakersSaldos.forEach(b => {
-      saldoBookmakers += convertToBRL(Math.max(0, b.saldo_atual || 0), b.moeda || 'BRL');
-    });
+     const saldoBookmakersBRL = bookmakersSaldos.filter(b => !b.moeda || b.moeda === "BRL").reduce((acc, b) => acc + Math.max(0, (b.saldo_atual || 0) + (b.saldo_freebet || 0)), 0);
+     const saldoBookmakersUSD = bookmakersSaldos.filter(b => b.moeda === "USD" || b.moeda === "USDT").reduce((acc, b) => acc + Math.max(0, (b.saldo_atual || 0) + (b.saldo_freebet || 0)), 0);
+     const saldoBookmakersEUR = bookmakersSaldos.filter(b => b.moeda === "EUR").reduce((acc, b) => acc + Math.max(0, (b.saldo_atual || 0) + (b.saldo_freebet || 0)), 0);
+     let saldoBookmakers = 0;
+     bookmakersSaldos.forEach(b => {
+       saldoBookmakers += convertToBRL(Math.max(0, (b.saldo_atual || 0) + (b.saldo_freebet || 0)), b.moeda || 'BRL');
+     });
     const hasBookmakersUSD = saldoBookmakersUSD > 0 || saldoBookmakersEUR > 0;
     
     // Contas Parceiros: consolidar por moeda com conversão real
