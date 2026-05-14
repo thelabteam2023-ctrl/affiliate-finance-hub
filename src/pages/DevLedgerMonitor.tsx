@@ -26,7 +26,7 @@ import {
   type RpcCallLog,
 } from "@/lib/dev/rpcInterceptor";
 import { explainRpcCall } from "@/lib/dev/rpcExplain";
- import { Activity, AlertTriangle, Database, Receipt, Wallet, Zap, Trash2, Pause, Play, HelpCircle, ArrowRight, History, Search, CheckCircle2 } from "lucide-react";
+ import { Activity, AlertTriangle, Database, Receipt, Wallet, Zap, Trash2, Pause, Play, HelpCircle, ArrowRight, History, Search, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
  import {
    Tooltip,
    TooltipContent,
@@ -84,8 +84,9 @@ import { explainRpcCall } from "@/lib/dev/rpcExplain";
  }
  
  // ─── Deep Ledger View Component ───
- function DeepLedgerView({ bookmakerId, bookmakerNome, onClose }: { bookmakerId: string; bookmakerNome: string; onClose: () => void }) {
-   const deepLedger = useDeepLedger(bookmakerId, true);
+  function DeepLedgerView({ bookmakerId, bookmakerNome, onClose }: { bookmakerId: string; bookmakerNome: string; onClose: () => void }) {
+    const deepLedger = useDeepLedger(bookmakerId, true);
+    const [expandedLedgerId, setExpandedLedgerId] = useState<string | null>(null);
  
    return (
      <Dialog open={!!bookmakerId} onOpenChange={(open) => !open && onClose()}>
@@ -546,8 +547,9 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
                       <th className="px-2 py-1.5">Moeda</th>
                       <th className="px-2 py-1.5 text-right">Saldo Registrado</th>
                       <th className="px-2 py-1.5 text-right">Saldo Calculado (Ledger)</th>
-                      <th className="px-2 py-1.5 text-right font-bold">Delta</th>
-                      <th className="px-2 py-1.5">Status</th>
+                       <th className="px-2 py-1.5 text-right font-bold">Delta</th>
+                       <th className="px-2 py-1.5 text-right text-orange-500">Stake Risco</th>
+                       <th className="px-2 py-1.5">Status</th>
                       <th className="px-2 py-1.5">Última Transação</th>
                       <th className="px-2 py-1.5">Ações</th>
                     </tr>
@@ -559,9 +561,12 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
                         <td className="px-2 py-2">{r.moeda}</td>
                         <td className="px-2 py-2 text-right tabular-nums">{fmtMoney(r.saldo_registrado, r.moeda)}</td>
                         <td className="px-2 py-2 text-right tabular-nums text-primary/80">{fmtMoney(r.saldo_calculado, r.moeda)}</td>
-                        <td className={`px-2 py-2 text-right tabular-nums font-bold ${Math.abs(r.delta) > 0.01 ? 'text-destructive' : 'text-emerald-500'}`}>
-                          {r.delta > 0 ? '+' : ''}{fmtMoney(r.delta, r.moeda)}
-                        </td>
+                         <td className={`px-2 py-2 text-right tabular-nums font-bold ${Math.abs(r.delta) > 0.01 ? 'text-destructive' : 'text-emerald-500'}`}>
+                           {r.delta > 0 ? '+' : ''}{fmtMoney(r.delta, r.moeda)}
+                         </td>
+                         <td className="px-2 py-2 text-right tabular-nums text-orange-500 font-semibold">
+                           {fmtMoney(r.stake_em_risco, r.moeda)}
+                         </td>
                         <td className="px-2 py-2">
                           <Badge variant={r.status_reconciliacao.includes('OK') ? 'default' : 'destructive'} className="text-[10px] whitespace-nowrap">
                             {r.status_reconciliacao}
