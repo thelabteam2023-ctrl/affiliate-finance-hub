@@ -271,16 +271,23 @@ function fmtRate(rate: number | null | undefined, from?: string | null, to?: str
   return `1 ${from ?? "?"} = ${r} ${to ?? "?"}`;
 }
 
-// ─── Cash Ledger Stream ───
-function useCashLedger(enabled: boolean) {
+   // ─── Cash Ledger Stream (Filtered by Workspace) ───
+   function useCashLedger(workspaceId: string | null, enabled: boolean) {
   return useQuery({
-    queryKey: ["dev-monitor", "cash-ledger"],
+      queryKey: ["dev-monitor", "cash-ledger", workspaceId],
     queryFn: async () => {
-      const { data, error } = await supabase
+        let query = supabase
         .from("cash_ledger")
-        .select("id, created_at, data_transacao, tipo_transacao, status, moeda, valor, descricao, origem_tipo, destino_tipo, origem_bookmaker_id, destino_bookmaker_id, projeto_id_snapshot, balance_processed_at, reversed_at, moeda_origem, valor_origem, moeda_destino, valor_destino, qtd_coin, coin, cotacao, cotacao_origem_usd, cotacao_destino_usd")
-        .order("created_at", { ascending: false })
-        .limit(100);
+          .select("id, created_at, data_transacao, tipo_transacao, status, moeda, valor, descricao, origem_tipo, destino_tipo, origem_bookmaker_id, destino_bookmaker_id, projeto_id_snapshot, balance_processed_at, reversed_at, moeda_origem, valor_origem, moeda_destino, valor_destino, qtd_coin, coin, cotacao, cotacao_origem_usd, cotacao_destino_usd");
+        
+        if (workspaceId) {
+          query = query.eq("workspace_id", workspaceId);
+        }
+
+        const { data, error } = await query
+          .order("created_at", { ascending: false })
+          .limit(100);
+
       if (error) throw error;
       return data ?? [];
     },
@@ -289,16 +296,23 @@ function useCashLedger(enabled: boolean) {
   });
 }
 
-// ─── Apostas Stream ───
-function useApostas(enabled: boolean) {
+   // ─── Apostas Stream (Filtered by Workspace) ───
+   function useApostas(workspaceId: string | null, enabled: boolean) {
   return useQuery({
-    queryKey: ["dev-monitor", "apostas"],
+      queryKey: ["dev-monitor", "apostas", workspaceId],
     queryFn: async () => {
-      const { data, error } = await supabase
+        let query = supabase
         .from("apostas_unificada")
-        .select("id, created_at, updated_at, estrategia, status, resultado, evento, stake, moeda_operacao, lucro_prejuizo, projeto_id, bookmaker_id")
-        .order("updated_at", { ascending: false })
-        .limit(100);
+          .select("id, created_at, updated_at, estrategia, status, resultado, evento, stake, moeda_operacao, lucro_prejuizo, projeto_id, bookmaker_id");
+
+        if (workspaceId) {
+          query = query.eq("workspace_id", workspaceId);
+        }
+
+        const { data, error } = await query
+          .order("updated_at", { ascending: false })
+          .limit(100);
+
       if (error) throw error;
       return data ?? [];
     },
@@ -307,16 +321,23 @@ function useApostas(enabled: boolean) {
   });
 }
 
-// ─── Bookmaker Saldos ───
-function useBookmakerSaldos(enabled: boolean) {
+   // ─── Bookmaker Saldos (Filtered by Workspace) ───
+   function useBookmakerSaldos(workspaceId: string | null, enabled: boolean) {
   return useQuery({
-    queryKey: ["dev-monitor", "bookmakers"],
+      queryKey: ["dev-monitor", "bookmakers", workspaceId],
     queryFn: async () => {
-      const { data, error } = await supabase
+        let query = supabase
         .from("bookmakers")
-        .select("id, nome, moeda, saldo_atual, saldo_freebet, saldo_bonus, status, projeto_id, updated_at")
-        .order("updated_at", { ascending: false })
-        .limit(50);
+          .select("id, nome, moeda, saldo_atual, saldo_freebet, saldo_bonus, status, projeto_id, updated_at");
+
+        if (workspaceId) {
+          query = query.eq("workspace_id", workspaceId);
+        }
+
+        const { data, error } = await query
+          .order("updated_at", { ascending: false })
+          .limit(50);
+
       if (error) throw error;
       return data ?? [];
     },
@@ -382,16 +403,23 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
   return "outline";
 }
 
- export default function DevLedgerMonitor() {
-   const { user, isSystemOwner, initialized, workspaceId, role } = useAuthContext();
-   const [selectedFilterWs, setSelectedFilterWs] = useState<string | null>(null);
-   // Initialize filter workspace to current user's workspace
-   useEffect(() => {
-     if (workspaceId && !selectedFilterWs) {
-       setSelectedFilterWs(workspaceId);
-     }
-   }, [workspaceId]);
- 
+  const AUTHORIZED_EMAILS = ['lu-lipe@hotmail.com', 'labbetconsultoria@gmail.com'];
+
+  export default function DevLedgerMonitor() {
+    const { user, isSystemOwner: originalIsSystemOwner, initialized, workspaceId, role } = useAuthContext();
+    
+    // System Owner check: either flag is true or email is in the authorized list
+    const isSystemOwner = Boolean(originalIsSystemOwner || (user?.email && AUTHORIZED_EMAILS.includes(user.email)));
+
+    const [selectedFilterWs, setSelectedFilterWs] = useState<string | null>(null);
+
+    // Initialize filter workspace: if System Owner, default to null (All Workspaces), else current workspaceId
+    useEffect(() => {
+      if (initialized && !selectedFilterWs) {
+        setSelectedFilterWs(isSystemOwner ? null : workspaceId);
+      }
+    }, [initialized, isSystemOwner, workspaceId]);
+
   const navigate = useNavigate();
   const [paused, setPaused] = useState(false);
   const [filter, setFilter] = useState("");
@@ -410,11 +438,16 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
      }
    }, [initialized, user, isAuthorized, navigate]);
  
-   const enabled = !paused && isAuthorized;
-  const ledger = useCashLedger(enabled);
-  const apostas = useApostas(enabled);
-  const bookmakers = useBookmakerSaldos(enabled);
-    const reconciliation = useReconciliation(isSystemOwner ? selectedFilterWs : workspaceId, enabled);
+    const enabled = !paused && isAuthorized;
+    
+    // Effective workspaceId to use for queries
+    const effectiveWorkspaceId = isSystemOwner ? selectedFilterWs : workspaceId;
+
+    const ledger = useCashLedger(effectiveWorkspaceId, enabled);
+    const apostas = useApostas(effectiveWorkspaceId, enabled);
+    const bookmakers = useBookmakerSaldos(effectiveWorkspaceId, enabled);
+    const reconciliation = useReconciliation(effectiveWorkspaceId, enabled);
+
    const workspacesList = useWorkspaces(isSystemOwner && enabled);
   const rpcLogs = useRpcLogs();
 
@@ -474,13 +507,52 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
     <div className="p-4 space-y-4 h-full flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-3">
-          <Activity className="h-6 w-6 text-primary" />
-          <div>
-            <h1 className="text-xl font-bold">Ledger Monitor</h1>
-             <p className="text-xs text-muted-foreground">
-               {isSystemOwner ? "System Owner" : "Restricted Access"} · Polling {POLL_MS / 1000}s · {paused ? "Pausado" : "Ao vivo"}
-             </p>
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3">
+            <Activity className="h-6 w-6 text-primary" />
+            <div>
+              <h1 className="text-xl font-bold">Ledger Monitor</h1>
+               <p className="text-xs text-muted-foreground">
+                  {isSystemOwner ? "System Owner" : "Restricted Access"} · Polling {POLL_MS / 1000}s · {paused ? "Pausado" : "Ao vivo"}
+               </p>
+            </div>
+          </div>
+
+          {/* Global Workspace Selector */}
+          <div className="flex items-center gap-3 bg-accent/20 px-4 py-2 rounded-lg border border-primary/10">
+            {isSystemOwner ? (
+              <div className="flex items-center gap-3">
+                <div className="flex flex-col">
+                  <Label className="text-[10px] text-muted-foreground uppercase font-black tracking-wider">Workspace Ativo</Label>
+                  {!selectedFilterWs && (
+                    <Badge variant="outline" className="mt-0.5 bg-orange-500/10 text-orange-600 border-orange-500/20 text-[9px] font-bold h-4">
+                      GLOBAL
+                    </Badge>
+                  )}
+                </div>
+                <Select 
+                  value={selectedFilterWs || 'ALL'} 
+                  onValueChange={(v) => setSelectedFilterWs(v === 'ALL' ? null : v)}
+                >
+                  <SelectTrigger className="h-9 text-xs min-w-[220px] w-auto bg-background/50 border-primary/20 hover:border-primary/40 transition-colors">
+                    <SelectValue placeholder="Todos os Workspaces" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL" className="font-bold text-orange-600">Todos os Workspaces (Global)</SelectItem>
+                    {workspacesList.data?.map(ws => (
+                      <SelectItem key={ws.id} value={ws.id}>{ws.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div className="flex flex-col">
+                <Label className="text-[10px] text-muted-foreground uppercase font-black tracking-wider">Workspace</Label>
+                <Badge variant="outline" className="mt-0.5 text-xs h-6 px-3 bg-primary/5 border-primary/20 font-semibold">
+                  {workspacesList.data?.find(w => w.id === workspaceId)?.name || '...'}
+                </Badge>
+              </div>
+            )}
           </div>
         </div>
 
@@ -579,34 +651,9 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
                     </CardDescription>
                   </div>
                   
-                  <div className="flex items-center gap-3">
-                    {/* Workspace Selector */}
-                    {isSystemOwner ? (
-                      <div className="flex items-center gap-2">
-                        <Label className="text-[10px] text-muted-foreground uppercase font-bold">Workspace:</Label>
-                        <Select 
-                          value={selectedFilterWs || 'ALL'} 
-                          onValueChange={(v) => setSelectedFilterWs(v === 'ALL' ? null : v)}
-                        >
-                          <SelectTrigger className="h-8 text-xs min-w-[200px] w-auto">
-                            <SelectValue placeholder="Todos os Workspaces" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="ALL">Todos os Workspaces</SelectItem>
-                            {workspacesList.data?.map(ws => (
-                              <SelectItem key={ws.id} value={ws.id}>{ws.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    ) : (
-                      <Badge variant="outline" className="text-[10px] h-6 px-2 bg-muted/50">
-                        Workspace: {workspacesList.data?.find(w => w.id === workspaceId)?.name || 'Carregando...'}
-                      </Badge>
-                    )}
-
+                  <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2">
-                      {reconciliation.isFetching && <span className="text-xs text-muted-foreground animate-pulse">recalculando...</span>}
+                      {reconciliation.isFetching && <span className="text-[10px] text-muted-foreground animate-pulse italic uppercase font-bold">recalculando ledger...</span>}
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
