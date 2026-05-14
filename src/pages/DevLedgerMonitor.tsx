@@ -271,16 +271,23 @@ function fmtRate(rate: number | null | undefined, from?: string | null, to?: str
   return `1 ${from ?? "?"} = ${r} ${to ?? "?"}`;
 }
 
-// ─── Cash Ledger Stream ───
-function useCashLedger(enabled: boolean) {
+   // ─── Cash Ledger Stream (Filtered by Workspace) ───
+   function useCashLedger(workspaceId: string | null, enabled: boolean) {
   return useQuery({
-    queryKey: ["dev-monitor", "cash-ledger"],
+      queryKey: ["dev-monitor", "cash-ledger", workspaceId],
     queryFn: async () => {
-      const { data, error } = await supabase
+        let query = supabase
         .from("cash_ledger")
-        .select("id, created_at, data_transacao, tipo_transacao, status, moeda, valor, descricao, origem_tipo, destino_tipo, origem_bookmaker_id, destino_bookmaker_id, projeto_id_snapshot, balance_processed_at, reversed_at, moeda_origem, valor_origem, moeda_destino, valor_destino, qtd_coin, coin, cotacao, cotacao_origem_usd, cotacao_destino_usd")
-        .order("created_at", { ascending: false })
-        .limit(100);
+          .select("id, created_at, data_transacao, tipo_transacao, status, moeda, valor, descricao, origem_tipo, destino_tipo, origem_bookmaker_id, destino_bookmaker_id, projeto_id_snapshot, balance_processed_at, reversed_at, moeda_origem, valor_origem, moeda_destino, valor_destino, qtd_coin, coin, cotacao, cotacao_origem_usd, cotacao_destino_usd");
+        
+        if (workspaceId) {
+          query = query.eq("workspace_id", workspaceId);
+        }
+
+        const { data, error } = await query
+          .order("created_at", { ascending: false })
+          .limit(100);
+
       if (error) throw error;
       return data ?? [];
     },
@@ -289,16 +296,23 @@ function useCashLedger(enabled: boolean) {
   });
 }
 
-// ─── Apostas Stream ───
-function useApostas(enabled: boolean) {
+   // ─── Apostas Stream (Filtered by Workspace) ───
+   function useApostas(workspaceId: string | null, enabled: boolean) {
   return useQuery({
-    queryKey: ["dev-monitor", "apostas"],
+      queryKey: ["dev-monitor", "apostas", workspaceId],
     queryFn: async () => {
-      const { data, error } = await supabase
+        let query = supabase
         .from("apostas_unificada")
-        .select("id, created_at, updated_at, estrategia, status, resultado, evento, stake, moeda_operacao, lucro_prejuizo, projeto_id, bookmaker_id")
-        .order("updated_at", { ascending: false })
-        .limit(100);
+          .select("id, created_at, updated_at, estrategia, status, resultado, evento, stake, moeda_operacao, lucro_prejuizo, projeto_id, bookmaker_id");
+
+        if (workspaceId) {
+          query = query.eq("workspace_id", workspaceId);
+        }
+
+        const { data, error } = await query
+          .order("updated_at", { ascending: false })
+          .limit(100);
+
       if (error) throw error;
       return data ?? [];
     },
@@ -307,16 +321,23 @@ function useApostas(enabled: boolean) {
   });
 }
 
-// ─── Bookmaker Saldos ───
-function useBookmakerSaldos(enabled: boolean) {
+   // ─── Bookmaker Saldos (Filtered by Workspace) ───
+   function useBookmakerSaldos(workspaceId: string | null, enabled: boolean) {
   return useQuery({
-    queryKey: ["dev-monitor", "bookmakers"],
+      queryKey: ["dev-monitor", "bookmakers", workspaceId],
     queryFn: async () => {
-      const { data, error } = await supabase
+        let query = supabase
         .from("bookmakers")
-        .select("id, nome, moeda, saldo_atual, saldo_freebet, saldo_bonus, status, projeto_id, updated_at")
-        .order("updated_at", { ascending: false })
-        .limit(50);
+          .select("id, nome, moeda, saldo_atual, saldo_freebet, saldo_bonus, status, projeto_id, updated_at");
+
+        if (workspaceId) {
+          query = query.eq("workspace_id", workspaceId);
+        }
+
+        const { data, error } = await query
+          .order("updated_at", { ascending: false })
+          .limit(50);
+
       if (error) throw error;
       return data ?? [];
     },
