@@ -471,15 +471,6 @@ import { useRef, MouseEvent as ReactMouseEvent } from "react";
         bonusMap.set(bonus.bookmaker_id, current + (bonus.saldo_atual || 0));
       });
 
-      // Extrair coins únicos para buscar preços
-      const uniqueCoins = [...new Set(
-        (saldosWallets as SaldoWalletParceiro[] || [])
-          .filter(w => w.coin)
-          .map(w => w.coin)
-      )];
-
-       // Buscar preços atualizados da Binance
-       const prices = await fetchCryptoPrices(uniqueCoins);
  
        const { data: allParceiros } = await supabase
          .from("parceiros")
