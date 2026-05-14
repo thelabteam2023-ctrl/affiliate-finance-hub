@@ -437,153 +437,84 @@ export default function DevLedgerMonitor() {
           <TabsTrigger value="ledger">Cash Ledger</TabsTrigger>
           <TabsTrigger value="apostas">Apostas</TabsTrigger>
           <TabsTrigger value="bookmakers">Saldos Bookmakers</TabsTrigger>
-           <TabsTrigger value="reconciliacao">
-             Reconciliação
-             {reconciliation.data?.some((r: any) => r.status_reconciliacao.includes('DIVERTENTE')) && (
-               <AlertTriangle className="h-3 w-3 ml-1 text-destructive animate-pulse" />
-             )}
-           </TabsTrigger>
+          <TabsTrigger value="reconciliacao">
+            Reconciliação
+            {reconciliation.data?.some((r: any) => r.status_reconciliacao.includes('DIVERTENTE')) && (
+              <AlertTriangle className="h-3 w-3 ml-1 text-destructive animate-pulse" />
+            )}
+          </TabsTrigger>
           <TabsTrigger value="rpc">RPCs</TabsTrigger>
         </TabsList>
-         {/* Reconciliação */}
-         <TabsContent value="reconciliacao" className="flex-1 min-h-0 mt-2">
-           <Card className="h-full flex flex-col">
-             <CardHeader className="py-2">
-               <CardTitle className="text-sm flex items-center justify-between">
-                 <span>Auditoria de Integridade (Ledger vs Saldo Atual)</span>
-                 <div className="flex items-center gap-2">
-                   {reconciliation.isFetching && <span className="text-xs text-muted-foreground animate-pulse">recalculando...</span>}
-                   <Tooltip>
-                     <TooltipTrigger asChild>
-                       <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
-                     </TooltipTrigger>
-                     <TooltipContent className="max-w-[300px]">
-                       Esta aba compara o `saldo_atual` registrado no banco com a soma real de todas as entradas do Ledger.
-                       Divergências indicam falhas em triggers ou atualizações manuais indevidas.
-                     </TooltipContent>
-                   </Tooltip>
-                 </div>
-               </CardTitle>
-             </CardHeader>
-             <CardContent className="flex-1 min-h-0 p-0">
-               <ScrollArea className="h-full">
-                 <table className="w-full text-xs">
-                   <thead className="sticky top-0 bg-card border-b z-10">
-                     <tr className="text-left text-muted-foreground">
-                       <th className="px-2 py-1.5">Bookmaker</th>
-                       <th className="px-2 py-1.5">Moeda</th>
-                       <th className="px-2 py-1.5 text-right">Saldo Registrado</th>
-                       <th className="px-2 py-1.5 text-right">Saldo Calculado (Ledger)</th>
-                       <th className="px-2 py-1.5 text-right font-bold">Delta</th>
-                       <th className="px-2 py-1.5">Status</th>
-                       <th className="px-2 py-1.5">Última Transação</th>
-                       <th className="px-2 py-1.5">Ações</th>
-                     </tr>
-                   </thead>
-                   <tbody className="font-mono">
-                     {reconciliationFiltered.map((r: any) => (
-                       <tr key={r.bookmaker_id} className={`border-b hover:bg-accent/30 ${r.status_reconciliacao.includes('DIVERTENTE') ? 'bg-destructive/5' : ''}`}>
-                         <td className="px-2 py-2 font-semibold">{r.nome}</td>
-                         <td className="px-2 py-2">{r.moeda}</td>
-                         <td className="px-2 py-2 text-right tabular-nums">{fmtMoney(r.saldo_registrado, r.moeda)}</td>
-                         <td className="px-2 py-2 text-right tabular-nums text-primary/80">{fmtMoney(r.saldo_calculado, r.moeda)}</td>
-                         <td className={`px-2 py-2 text-right tabular-nums font-bold ${Math.abs(r.delta) > 0.01 ? 'text-destructive' : 'text-emerald-500'}`}>
-                           {r.delta > 0 ? '+' : ''}{fmtMoney(r.delta, r.moeda)}
-                         </td>
-                         <td className="px-2 py-2">
-                           <Badge variant={r.status_reconciliacao.includes('OK') ? 'default' : 'destructive'} className="text-[10px] whitespace-nowrap">
-                             {r.status_reconciliacao}
-                           </Badge>
-                         </td>
-                         <td className="px-2 py-2 text-muted-foreground whitespace-nowrap">{fmtTime(r.last_transaction_at)}</td>
-                         <td className="px-2 py-2">
-                           <Button 
-                             variant="outline" 
-                             size="sm" 
-                             className="h-7 text-[10px] px-2"
-                             onClick={() => setSelectedBookmaker({ id: r.bookmaker_id, nome: r.nome })}
-                           >
-                             <Search className="h-3 w-3 mr-1" /> Deep Ledger
-                           </Button>
-                         </td>
-                       </tr>
-                     ))}
-                   </tbody>
-                 </table>
-               </ScrollArea>
-             </CardContent>
-           </Card>
-         </TabsContent>
- 
-         {/* Reconciliação */}
-         <TabsContent value="reconciliacao" className="flex-1 min-h-0 mt-2">
-           <Card className="h-full flex flex-col">
-             <CardHeader className="py-2">
-               <CardTitle className="text-sm flex items-center justify-between">
-                 <span>Auditoria de Integridade (Ledger vs Saldo Atual)</span>
-                 <div className="flex items-center gap-2">
-                   {reconciliation.isFetching && <span className="text-xs text-muted-foreground animate-pulse">recalculando...</span>}
-                   <Tooltip>
-                     <TooltipTrigger asChild>
-                       <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
-                     </TooltipTrigger>
-                     <TooltipContent className="max-w-[300px]">
-                       Esta aba compara o `saldo_atual` registrado no banco com a soma real de todas as entradas do Ledger.
-                       Divergências indicam falhas em triggers ou atualizações manuais indevidas.
-                     </TooltipContent>
-                   </Tooltip>
-                 </div>
-               </CardTitle>
-             </CardHeader>
-             <CardContent className="flex-1 min-h-0 p-0">
-               <ScrollArea className="h-full">
-                 <table className="w-full text-xs">
-                   <thead className="sticky top-0 bg-card border-b z-10">
-                     <tr className="text-left text-muted-foreground">
-                       <th className="px-2 py-1.5">Bookmaker</th>
-                       <th className="px-2 py-1.5">Moeda</th>
-                       <th className="px-2 py-1.5 text-right">Saldo Registrado</th>
-                       <th className="px-2 py-1.5 text-right">Saldo Calculado (Ledger)</th>
-                       <th className="px-2 py-1.5 text-right font-bold">Delta</th>
-                       <th className="px-2 py-1.5">Status</th>
-                       <th className="px-2 py-1.5">Última Transação</th>
-                       <th className="px-2 py-1.5">Ações</th>
-                     </tr>
-                   </thead>
-                   <tbody className="font-mono">
-                     {reconciliationFiltered.map((r: any) => (
-                       <tr key={r.bookmaker_id} className={`border-b hover:bg-accent/30 ${r.status_reconciliacao.includes('DIVERTENTE') ? 'bg-destructive/5' : ''}`}>
-                         <td className="px-2 py-2 font-semibold">{r.nome}</td>
-                         <td className="px-2 py-2">{r.moeda}</td>
-                         <td className="px-2 py-2 text-right tabular-nums">{fmtMoney(r.saldo_registrado, r.moeda)}</td>
-                         <td className="px-2 py-2 text-right tabular-nums text-primary/80">{fmtMoney(r.saldo_calculado, r.moeda)}</td>
-                         <td className={`px-2 py-2 text-right tabular-nums font-bold ${Math.abs(r.delta) > 0.01 ? 'text-destructive' : 'text-emerald-500'}`}>
-                           {r.delta > 0 ? '+' : ''}{fmtMoney(r.delta, r.moeda)}
-                         </td>
-                         <td className="px-2 py-2">
-                           <Badge variant={r.status_reconciliacao.includes('OK') ? 'default' : 'destructive'} className="text-[10px] whitespace-nowrap">
-                             {r.status_reconciliacao}
-                           </Badge>
-                         </td>
-                         <td className="px-2 py-2 text-muted-foreground whitespace-nowrap">{fmtTime(r.last_transaction_at)}</td>
-                         <td className="px-2 py-2">
-                           <Button 
-                             variant="outline" 
-                             size="sm" 
-                             className="h-7 text-[10px] px-2"
-                             onClick={() => setSelectedBookmaker({ id: r.bookmaker_id, nome: r.nome })}
-                           >
-                             <Search className="h-3 w-3 mr-1" /> Deep Ledger
-                           </Button>
-                         </td>
-                       </tr>
-                     ))}
-                   </tbody>
-                 </table>
-               </ScrollArea>
-             </CardContent>
-           </Card>
-         </TabsContent>
+
+        {/* Reconciliação */}
+        <TabsContent value="reconciliacao" className="flex-1 min-h-0 mt-2">
+          <Card className="h-full flex flex-col">
+            <CardHeader className="py-2">
+              <CardTitle className="text-sm flex items-center justify-between">
+                <span>Auditoria de Integridade (Ledger vs Saldo Atual)</span>
+                <div className="flex items-center gap-2">
+                  {reconciliation.isFetching && <span className="text-xs text-muted-foreground animate-pulse">recalculando...</span>}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[300px]">
+                      Esta aba compara o `saldo_atual` registrado no banco com a soma real de todas as entradas do Ledger.
+                      Divergências indicam falhas em triggers ou atualizações manuais indevidas.
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 min-h-0 p-0">
+              <ScrollArea className="h-full">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-card border-b z-10">
+                    <tr className="text-left text-muted-foreground">
+                      <th className="px-2 py-1.5">Bookmaker</th>
+                      <th className="px-2 py-1.5">Moeda</th>
+                      <th className="px-2 py-1.5 text-right">Saldo Registrado</th>
+                      <th className="px-2 py-1.5 text-right">Saldo Calculado (Ledger)</th>
+                      <th className="px-2 py-1.5 text-right font-bold">Delta</th>
+                      <th className="px-2 py-1.5">Status</th>
+                      <th className="px-2 py-1.5">Última Transação</th>
+                      <th className="px-2 py-1.5">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody className="font-mono">
+                    {reconciliationFiltered.map((r: any) => (
+                      <tr key={r.bookmaker_id} className={`border-b hover:bg-accent/30 ${r.status_reconciliacao.includes('DIVERTENTE') ? 'bg-destructive/5' : ''}`}>
+                        <td className="px-2 py-2 font-semibold">{r.nome}</td>
+                        <td className="px-2 py-2">{r.moeda}</td>
+                        <td className="px-2 py-2 text-right tabular-nums">{fmtMoney(r.saldo_registrado, r.moeda)}</td>
+                        <td className="px-2 py-2 text-right tabular-nums text-primary/80">{fmtMoney(r.saldo_calculado, r.moeda)}</td>
+                        <td className={`px-2 py-2 text-right tabular-nums font-bold ${Math.abs(r.delta) > 0.01 ? 'text-destructive' : 'text-emerald-500'}`}>
+                          {r.delta > 0 ? '+' : ''}{fmtMoney(r.delta, r.moeda)}
+                        </td>
+                        <td className="px-2 py-2">
+                          <Badge variant={r.status_reconciliacao.includes('OK') ? 'default' : 'destructive'} className="text-[10px] whitespace-nowrap">
+                            {r.status_reconciliacao}
+                          </Badge>
+                        </td>
+                        <td className="px-2 py-2 text-muted-foreground whitespace-nowrap">{fmtTime(r.last_transaction_at)}</td>
+                        <td className="px-2 py-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-7 text-[10px] px-2"
+                            onClick={() => setSelectedBookmaker({ id: r.bookmaker_id, nome: r.nome })}
+                          >
+                            <Search className="h-3 w-3 mr-1" /> Deep Ledger
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
  
          {/* Ledger */}
         <TabsContent value="ledger" className="flex-1 min-h-0 mt-2">
