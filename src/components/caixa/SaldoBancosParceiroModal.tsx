@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Building2, User, Landmark, Loader2, ArrowDownAZ, ArrowDown01 } from "lucide-react";
+import { Building2, User, Landmark, Loader2, ArrowDownAZ, ArrowDown01, Landmark as LandmarkIcon } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTabWorkspace } from "@/hooks/useTabWorkspace";
 import { supabase } from "@/integrations/supabase/client";
 import { formatMoneyValue } from "@/components/ui/money-display";
