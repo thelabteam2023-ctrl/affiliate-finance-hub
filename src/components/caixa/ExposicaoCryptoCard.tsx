@@ -59,7 +59,7 @@ export function ExposicaoCryptoCard({
    const fetchWallets = useCallback(async () => {
      if (!caixaParceiroId || !workspaceId) return;
      const [walletsViewRes, walletsDetailRes] = await Promise.all([
-       supabase.from("v_saldo_parceiro_wallets")
+       (supabase.from("v_saldo_parceiro_wallets") as any)
          .select("coin, saldo_coin, saldo_usd, wallet_id, exchange, endereco")
          .eq("parceiro_id", caixaParceiroId)
          .eq("workspace_id", workspaceId),
