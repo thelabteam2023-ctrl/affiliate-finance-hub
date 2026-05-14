@@ -409,8 +409,8 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
     const { user, isSystemOwner: originalIsSystemOwner, initialized, workspaceId, role } = useAuthContext();
     
     // System Owner check: either flag is true or email is in the authorized list
-    const isSystemOwner = originalIsSystemOwner || (user?.email && AUTHORIZED_EMAILS.includes(user.email));
-    
+    const isSystemOwner = Boolean(originalIsSystemOwner || (user?.email && AUTHORIZED_EMAILS.includes(user.email)));
+
     const [selectedFilterWs, setSelectedFilterWs] = useState<string | null>(null);
 
     // Initialize filter workspace: if System Owner, default to null (All Workspaces), else current workspaceId
