@@ -15518,6 +15518,7 @@ export type Database = {
           impacto: number
           ledger_id: string
           moeda: string
+          referencia_id: string
           running_balance: number
           tipo_transacao: string
         }[]
@@ -15545,6 +15546,7 @@ export type Database = {
           nome: string
           saldo_calculado: number
           saldo_registrado: number
+          stake_em_risco: number
           status_reconciliacao: string
         }[]
       }
