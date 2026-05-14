@@ -422,12 +422,14 @@ import { useRef, MouseEvent as ReactMouseEvent } from "react";
 
       if (walletsError) throw walletsError;
 
-      // Buscar bookmakers vinculadas aos parceiros COM saldo freebet
-      const { data: bookmakers, error: bookmakersError } = await supabase
-        .from("bookmakers")
-        .select("id, parceiro_id, nome, saldo_atual, saldo_usd, saldo_freebet, moeda")
-        .eq("workspace_id", workspaceId)
-        .not("parceiro_id", "is", null);
+       // Buscar bookmakers vinculadas aos parceiros COM saldo freebet e status operacional
+       // REGRA UNIFICADA: status in ['ativo', 'limitada', 'AGUARDANDO_SAQUE']
+       const { data: bookmakers, error: bookmakersError } = await supabase
+         .from("bookmakers")
+         .select("id, parceiro_id, nome, saldo_atual, saldo_usd, saldo_freebet, moeda")
+         .eq("workspace_id", workspaceId)
+         .in("status", ["ativo", "limitada", "AGUARDANDO_SAQUE"])
+         .not("parceiro_id", "is", null);
 
       if (bookmakersError) throw bookmakersError;
 
