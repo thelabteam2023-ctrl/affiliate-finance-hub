@@ -323,7 +323,12 @@ import { useRef, MouseEvent as ReactMouseEvent } from "react";
     if (x < 10) x = rect.right + 10;
     if (x + 340 > window.innerWidth) x = window.innerWidth - 350;
     
-    let y = rect.top;
+    let y = rect.top - 410; // Preferir abrir para cima
+    if (y < 10) {
+      y = rect.top; // Se não houver espaço em cima, abre alinhado ao topo (para baixo)
+    }
+    
+    // Garantir que não saia pela borda inferior
     if (y + 400 > window.innerHeight) y = window.innerHeight - 410;
     if (y < 10) y = 10;
 

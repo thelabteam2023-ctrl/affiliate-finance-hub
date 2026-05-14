@@ -496,11 +496,11 @@ export function PosicaoCapital({
 
               if (hasDetail) {
                 return (
-                  <InteractiveTooltip 
+                  <InteractiveTooltip
                     key={item.name}
                     className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors"
                     content={tooltipContent}
-                    side="bottom"
+                    side="top"
                     align="center"
                   >
                     {cardContent}
