@@ -1071,7 +1071,7 @@ const BookmakerListByMoeda = ({
                         const bookmakerEntries = Object.entries(parceiro.total_bookmakers_por_moeda).filter(([_, v]) => v > 0).sort(([, a], [, b]) => b - a);
                         const hasBookmakerBalance = bookmakerEntries.length > 0;
                         return (
-                           <Card key={parceiro.parceiro_id} className="bg-card/40 border-border/40 backdrop-blur-sm hover:border-primary/20 transition-all duration-300 overflow-hidden group">
+                           <Card key={parceiro.parceiro_id} className="relative bg-card/40 border-border/40 backdrop-blur-sm hover:border-primary/20 transition-all duration-300 overflow-visible group">
                              <CardHeader className="pb-2.5 pt-3 px-4 bg-muted/10">
                                <CardTitle className="text-[13px] font-bold text-foreground truncate">{parceiro.parceiro_nome}</CardTitle>
                              </CardHeader>
