@@ -280,7 +280,7 @@ const BookmakerListByMoeda = ({
  
    import { useRef } from "react";
 
-    const InteractiveTooltip = ({ children, content, className, containerRef }: { children: React.ReactNode, content: React.ReactNode, className?: string, containerRef?: React.RefObject<HTMLDivElement> }) => {
+    const InteractiveTooltip = ({ children, content, className, containerRef }: { children: React.ReactNode, content: React.ReactNode, className?: string, containerRef?: React.RefObject<any> }) => {
      const [isPinned, setIsPinned] = useState(false);
      const [isHovered, setIsHovered] = useState(false);
      const ref = useRef<HTMLDivElement>(null);
@@ -317,9 +317,9 @@ const BookmakerListByMoeda = ({
                {children}
              </div>
            </TooltipTrigger>
-            <TooltipContent
+            <TooltipContent 
               portal={false}
-              className={`p-3 min-w-[260px] max-w-[380px] max-h-[400px] overflow-y-auto bg-popover border-border shadow-2xl z-50 transition-all duration-200 ${isPinned ? 'border-primary/50 ring-1 ring-primary/20' : ''}`}
+              className={`p-3 min-w-[260px] max-w-[380px] max-h-[300px] overflow-y-auto bg-popover border-border shadow-2xl z-50 transition-all duration-200 ${isPinned ? 'border-primary/50 ring-1 ring-primary/20' : ''}`}
              onMouseEnter={() => setIsHovered(true)}
              onMouseLeave={() => setIsHovered(false)}
              side="top"
