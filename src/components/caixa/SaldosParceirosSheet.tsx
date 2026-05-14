@@ -397,8 +397,9 @@ import { useRef, MouseEvent as ReactMouseEvent } from "react";
     open: false,
     parceiroId: null,
   });
-  const { workspaceId } = useTabWorkspace();
-  const { convertToBRL } = useExchangeRates();
+   const { workspaceId } = useTabWorkspace();
+   const { convertToBRL } = useExchangeRates();
+   const { cryptoPrices, getCryptoUSDValue, loading: pricesLoading, lastUpdate: lastPriceUpdate } = useCotacoes();
 
 
   const fetchSaldosParceiros = useCallback(async () => {
