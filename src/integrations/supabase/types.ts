@@ -15507,6 +15507,21 @@ export type Database = {
           saldo_materializado: number
         }[]
       }
+      fn_ledger_profundo_bookmaker: {
+        Args: { p_bookmaker_id: string }
+        Returns: {
+          audit_id: string
+          audit_saldo_anterior: number
+          audit_saldo_novo: number
+          created_at: string
+          descricao: string
+          impacto: number
+          ledger_id: string
+          moeda: string
+          running_balance: number
+          tipo_transacao: string
+        }[]
+      }
       fn_recalc_pai_surebet: {
         Args: { p_surebet_id: string }
         Returns: {
@@ -15518,6 +15533,19 @@ export type Database = {
           stake_consolidado: number
           stake_total: number
           todas_liquidadas: boolean
+        }[]
+      }
+      fn_reconciliar_saldos_bookmakers: {
+        Args: never
+        Returns: {
+          bookmaker_id: string
+          delta: number
+          last_transaction_at: string
+          moeda: string
+          nome: string
+          saldo_calculado: number
+          saldo_registrado: number
+          status_reconciliacao: string
         }[]
       }
       fn_sync_stake_event_v1: {
