@@ -120,10 +120,13 @@ import { explainRpcCall } from "@/lib/dev/rpcExplain";
                       const isExpanded = expandedLedgerId === r.ledger_id;
                       
                       // Ciclo de Aposta Logic
-                      const isSettlement = ['APOSTA_GREEN', 'APOSTA_MEIO_GREEN', 'APOSTA_RED', 'APOSTA_MEIO_RED', 'APOSTA_VOID', 'APOSTA_REEMBOLSO'].includes(r.tipo_transacao);
+                      const isSettlement = ['APOSTA_GREEN', 'APOSTA_MEIO_GREEN', 'APOSTA_RED', 'APOSTA_MEIO_RED', 'APOSTA_VOID', 'APOSTA_REEMBOLSO', 'PAYOUT'].includes(r.tipo_transacao);
                       let stakeRow = null;
                       if (isSettlement && r.referencia_id) {
-                        stakeRow = deepLedger.data.find((s: any) => s.ledger_id === r.referencia_id);
+                        stakeRow = deepLedger.data.find((s: any) => 
+                          s.referencia_id === r.referencia_id && 
+                          (s.tipo_transacao === 'STAKE' || s.tipo_transacao === 'APOSTA_STAKE')
+                        );
                       }
 
                       return (
@@ -133,18 +136,20 @@ import { explainRpcCall } from "@/lib/dev/rpcExplain";
                           onClick={() => setExpandedLedgerId(isExpanded ? null : r.ledger_id)}
                         >
                          <td className="px-2 py-1 whitespace-nowrap text-muted-foreground">{fmtTime(r.created_at)}</td>
-                         <td className="px-2 py-1">
-                           <div className="flex flex-col">
-                             <Badge variant="outline" className="text-[9px] w-fit">{r.tipo_transacao}</Badge>
-                             <span className="text-[9px] opacity-60 truncate max-w-[120px]">{r.ledger_id.slice(0, 8)}</span>
-                           </div>
-                         </td>
+                          <td className="px-2 py-1 whitespace-nowrap">
+                            <Badge variant={r.tipo_transacao === 'STAKE' ? 'outline' : 'secondary'} className="text-[9px] font-bold">
+                              {r.tipo_transacao}
+                            </Badge>
+                          </td>
                           <td className={`px-2 py-1 text-right tabular-nums font-semibold group relative ${r.impacto < 0 ? 'text-destructive' : 'text-emerald-500'}`}>
                             <div className="flex items-center justify-end gap-1">
                               {r.impacto > 0 ? '+' : ''}{fmtMoney(r.impacto, r.moeda)}
                               {isExpanded ? <ChevronUp className="h-3 w-3 opacity-50" /> : <ChevronDown className="h-3 w-3 opacity-0 group-hover:opacity-50" />}
                             </div>
-                         </td>
+                          </td>
+                          <td className="px-2 py-1 text-right tabular-nums text-muted-foreground italic">
+                            {fmtMoney(r.audit_saldo_anterior, r.moeda)}
+                          </td>
                          <td className="px-2 py-1 text-right tabular-nums font-bold bg-primary/5">
                            {fmtMoney(r.running_balance, r.moeda)}
                          </td>
