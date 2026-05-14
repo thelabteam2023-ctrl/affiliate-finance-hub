@@ -1,11 +1,12 @@
-
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getCurrencySymbol } from "@/types/currency";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Copy, CheckCircle2 } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 
 interface CurrencyBreakdownModalProps {
   isOpen: boolean;
@@ -16,6 +17,8 @@ interface CurrencyBreakdownModalProps {
 }
 
 export function CurrencyBreakdownModal({ isOpen, onClose, category, currency, workspaceId }: CurrencyBreakdownModalProps) {
+  const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
+
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['currency-breakdown', category, currency, workspaceId],
     queryFn: async () => {
@@ -43,7 +46,8 @@ export function CurrencyBreakdownModal({ isOpen, onClose, category, currency, wo
           result = data.map(d => ({
             nome: d.nome,
             parceiro: partners?.find(p => p.id === d.parceiro_id)?.nome || 'N/A',
-            valor: d.saldo_atual || 0
+            valor: d.saldo_atual || 0,
+            type: 'bookmaker'
           }));
         }
       } else if (category === "Wallets Parceiros" || (category === "Caixa Operacional" && currency === "CRYPTO")) {
@@ -51,7 +55,7 @@ export function CurrencyBreakdownModal({ isOpen, onClose, category, currency, wo
         
         const { data } = await supabase
           .from("v_saldo_parceiro_wallets")
-          .select("exchange, saldo_usd, parceiro_nome, parceiro_id, wallet_id")
+          .select("exchange, saldo_usd, parceiro_nome, parceiro_id, wallet_id, endereco, coin")
           .eq("workspace_id", workspaceId);
         
         const { data: partners } = await supabase
@@ -71,10 +75,23 @@ export function CurrencyBreakdownModal({ isOpen, onClose, category, currency, wo
             grouped[key] = {
               nome: d.exchange || 'Wallet',
               parceiro: d.parceiro_nome || 'N/A',
-              valor: 0
+              valor: 0,
+              endereco: d.endereco,
+              coins: [],
+              type: 'wallet'
             };
           }
           grouped[key].valor += d.saldo_usd || 0;
+          
+          const existingCoin = grouped[key].coins.find((c: any) => c.coin === d.coin);
+          if (existingCoin) {
+            existingCoin.valor += d.saldo_usd || 0;
+          } else {
+            grouped[key].coins.push({
+              coin: d.coin,
+              valor: d.saldo_usd || 0
+            });
+          }
         });
         
         result = Object.values(grouped);
@@ -100,7 +117,8 @@ export function CurrencyBreakdownModal({ isOpen, onClose, category, currency, wo
           .map(d => ({
             nome: d.banco || 'Conta',
             parceiro: d.parceiro_nome || 'N/A',
-            valor: d.saldo || 0
+            valor: d.saldo || 0,
+            type: 'account'
           })) || [];
       }
 
@@ -109,76 +127,131 @@ export function CurrencyBreakdownModal({ isOpen, onClose, category, currency, wo
     enabled: isOpen && !!workspaceId,
   });
 
+  const handleCopy = (address: string) => {
+    navigator.clipboard.writeText(address);
+    setCopiedAddress(address);
+    toast.success("Endereço copiado!");
+    setTimeout(() => setCopiedAddress(null), 2000);
+  };
+
+  const formatAddress = (addr: string) => {
+    if (!addr) return "";
+    if (addr.length <= 15) return addr;
+    return `${addr.substring(0, 6)}...${addr.substring(addr.length - 5)}`;
+  };
+
   const totalConsolidado = items.reduce((sum, item) => sum + item.valor, 0);
   const symbol = currency === "CRYPTO" ? "$" : getCurrencySymbol(currency);
   const displayCurrency = currency === "CRYPTO" ? "USD" : currency;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-2xl bg-card border-border/50 text-card-foreground">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-bold flex items-center gap-2">
-            {displayCurrency} — {symbol} {totalConsolidado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="py-4">
-          <ScrollArea className="h-[400px] pr-4">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent border-border/50">
-                  <TableHead className="text-muted-foreground">Nome</TableHead>
-                  <TableHead className="text-muted-foreground">Parceiro</TableHead>
-                  <TableHead className="text-right text-muted-foreground">Valor</TableHead>
-                  <TableHead className="text-right text-muted-foreground">%</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <TableRow key={i}>
-                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                      <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
-                      <TableCell className="text-right"><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
-                    </TableRow>
-                  ))
-                ) : items.length > 0 ? (
-                  items.map((item, index) => {
-                    const percentual = totalConsolidado > 0 ? (item.valor / totalConsolidado) * 100 : 0;
-                    return (
-                      <TableRow key={index} className="hover:bg-muted/30 border-border/50">
-                        <TableCell className="font-medium">{item.nome}</TableCell>
-                        <TableCell className="text-muted-foreground text-xs">{item.parceiro}</TableCell>
-                        <TableCell className="text-right font-mono">
-                          {symbol} {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </TableCell>
-                        <TableCell className="text-right text-xs text-muted-foreground">
-                          {percentual.toFixed(1)}%
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                      Nenhum registro encontrado para esta moeda.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </ScrollArea>
+      <DialogContent className="max-w-2xl bg-[#0F1115] border-white/10 text-white p-0 overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="p-6 border-b border-white/5 bg-white/[0.02]">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold flex items-center gap-3">
+              <span className="text-primary">{displayCurrency}</span>
+              <span className="text-white/40 font-light">—</span>
+              <span className="font-mono">{symbol} {totalConsolidado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </DialogTitle>
+          </DialogHeader>
         </div>
 
-        <DialogFooter className="flex items-center justify-between border-t border-border/50 pt-4 mt-2">
-          <div className="text-sm text-muted-foreground">
-            Total Consolidado
+        <ScrollArea className="flex-1 px-6">
+          <div className="py-6 space-y-4">
+            {isLoading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="p-4 rounded-xl border border-white/5 bg-white/[0.01] space-y-3">
+                  <div className="flex justify-between">
+                    <Skeleton className="h-5 w-32 bg-white/5" />
+                    <Skeleton className="h-5 w-24 bg-white/5" />
+                  </div>
+                  <Skeleton className="h-4 w-48 bg-white/5" />
+                </div>
+              ))
+            ) : items.length > 0 ? (
+              items.map((item, index) => {
+                const percentual = totalConsolidado > 0 ? (item.valor / totalConsolidado) * 100 : 0;
+                const isCrypto = item.type === 'wallet';
+
+                return (
+                  <div key={index} className="group relative">
+                    <div className="flex flex-col gap-1 p-4 rounded-xl border border-white/5 bg-white/[0.01] hover:bg-white/[0.03] hover:border-white/10 transition-all duration-200">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <span className="font-bold text-lg text-white group-hover:text-primary transition-colors truncate">
+                            {item.nome}
+                          </span>
+                          <span className="text-white/40 text-sm font-medium leading-tight">
+                            {item.parceiro}
+                          </span>
+                        </div>
+                        <div className="flex flex-col items-end shrink-0">
+                          <span className="font-mono font-bold text-lg text-white">
+                            {symbol} {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-white/5 text-white/40">
+                            {percentual.toFixed(1)}%
+                          </span>
+                        </div>
+                      </div>
+
+                      {isCrypto && item.endereco && (
+                        <div className="mt-3 pt-3 border-t border-white/5 space-y-3">
+                          <div className="flex items-center gap-2 text-primary/80 bg-primary/5 px-3 py-2 rounded-lg w-fit border border-primary/10">
+                            <code className="text-xs font-mono tracking-wider">
+                              {formatAddress(item.endereco)}
+                            </code>
+                            <button 
+                              onClick={() => handleCopy(item.endereco)}
+                              className="p-1 hover:bg-white/10 rounded transition-colors"
+                              title="Copiar endereço"
+                            >
+                              {copiedAddress === item.endereco ? (
+                                <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          </div>
+
+                          {item.coins && item.coins.length > 0 && (
+                            <div className="grid grid-cols-1 gap-1.5 pl-2">
+                              {item.coins.map((coin: any, cIdx: number) => (
+                                <div key={cIdx} className="flex items-center justify-between text-xs py-1 border-b border-white/[0.02] last:border-0">
+                                  <span className="font-bold text-white/50">{coin.coin}</span>
+                                  <span className="font-mono text-white/70">
+                                    $ {coin.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center">
+                  <span className="text-white/20 text-2xl">?</span>
+                </div>
+                <p className="text-white/40 font-medium">Nenhum registro encontrado para esta moeda.</p>
+              </div>
+            )}
           </div>
-          <div className="text-lg font-bold font-mono">
-            {symbol} {totalConsolidado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </ScrollArea>
+
+        <div className="p-6 bg-white/[0.02] border-t border-white/5 flex items-center justify-between mt-auto">
+          <span className="text-white/40 text-sm font-medium uppercase tracking-wider">Total Consolidado</span>
+          <div className="flex flex-col items-end">
+            <span className="text-2xl font-mono font-bold text-white">
+              {symbol} {totalConsolidado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
           </div>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
