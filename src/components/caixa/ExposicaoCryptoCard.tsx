@@ -92,7 +92,7 @@ export function ExposicaoCryptoCard({
       }
     });
 
-    (walletsDetailRes.data || []).forEach((d: any) => {
+     ((walletsDetailRes.data || []) as any[]).forEach((d) => {
       if (!grouped[d.id]) {
         grouped[d.id] = {
           wallet_id: d.id, label: d.label, exchange: d.exchange, endereco: d.endereco,
