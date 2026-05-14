@@ -1177,8 +1177,156 @@ const formatTime = (date: Date) => {
                   setSwapDialog({ open: false, parceiroId: null });
                   fetchSaldosParceiros();
                 }}
-                caixaParceiroId={swapDialog.parceiroId}
-              />
+               caixaParceiroId={swapDialog.parceiroId}
+             />
+
+              {cryptoPanel.open && (
+                <div 
+                  ref={panelRef}
+                  style={{ 
+                    position: 'fixed', 
+                    left: cryptoPanel.x, 
+                    top: cryptoPanel.y, 
+                    zIndex: 9999,
+                    width: 340,
+                    backgroundColor: 'hsl(var(--popover))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: 'var(--radius)',
+                    boxShadow: 'var(--shadow-2xl)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    maxHeight: '80vh'
+                  }}
+                  className="animate-in fade-in zoom-in-95 duration-200"
+                >
+                  {/* Header */}
+                  <div 
+                    className="flex items-center justify-between p-3 border-b border-border/50 cursor-grab active:cursor-grabbing bg-muted/30 rounded-t-[var(--radius)]"
+                    onMouseDown={onMouseDownDrag}
+                  >
+                    <div className="flex flex-col">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/70">Saldo por Carteira</span>
+                      <span className="text-[10px] font-medium text-primary/80 truncate max-w-[200px]">{cryptoPanel.parceiroNome}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                       <button
+                          type="button"
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            setSwapDialog({ open: true, parceiroId: cryptoPanel.parceiroId });
+                          }}
+                          className="p-1 text-muted-foreground/60 hover:text-primary transition-colors"
+                          title="Swap entre moedas"
+                        >
+                          <ArrowRightLeft className="h-3.5 w-3.5" />
+                        </button>
+                      <button 
+                        onClick={() => setCryptoPanel(prev => ({ ...prev, open: false }))}
+                        className="p-1 hover:bg-muted rounded-full transition-colors"
+                      >
+                        <X className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Content */}
+                  <ScrollArea 
+                    className="flex-1" 
+                    style={{ 
+                      maxHeight: cryptoPanel.saldos.length > 6 ? 'calc(80vh - 120px)' : 'auto',
+                      overflowY: 'auto'
+                    }}
+                  >
+                    <div className="p-4 space-y-4">
+                      {(() => {
+                        const grouped = cryptoPanel.saldos.reduce<Record<string, { exchange: string; endereco: string; label?: string; items: any[] }>>((acc, s) => {
+                          const key = s.endereco || s.exchange || "Wallet";
+                          if (!acc[key]) acc[key] = { exchange: s.exchange, endereco: s.endereco, label: s.label, items: [] };
+                          acc[key].items.push(s);
+                          return acc;
+                        }, {});
+
+                        const walletKeys = Object.keys(grouped).sort();
+                        
+                        return walletKeys.map((wKey, wIdx) => {
+                          const wallet = grouped[wKey];
+                          const items = [...wallet.items].sort((a, b) => b.saldo_usd - a.saldo_usd);
+                          const walletTotal = items.reduce((sum, s) => sum + s.saldo_usd, 0);
+                          const walletId = `panel-wallet-${wIdx}`;
+                          
+                          return (
+                            <div key={wKey} className={`space-y-2 ${wIdx > 0 ? "pt-3 border-t border-border/20" : ""}`}>
+                              <div className="flex flex-col gap-0.5">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[11px] font-bold text-chart-2 uppercase tracking-wide">
+                                    {wallet.label || wallet.exchange || "Wallet"}
+                                  </span>
+                                  <span className="text-[10px] text-muted-foreground/50 font-medium uppercase">
+                                    {wallet.exchange && wallet.exchange !== "Wallet" ? wallet.exchange : ""}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[12px] font-mono text-foreground/80 tracking-tight leading-none">
+                                      {truncateAddr(wallet.endereco)}
+                                    </span>
+                                    {wallet.endereco && (
+                                      <button 
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleCopy(wallet.endereco, walletId);
+                                        }}
+                                        className="text-muted-foreground/40 hover:text-primary transition-colors"
+                                      >
+                                        {copiedId === walletId ? (
+                                          <div className="flex items-center gap-1">
+                                            <Check className="h-3 w-3 text-green-500" />
+                                            <span className="text-[9px] font-bold text-green-500">Copiado!</span>
+                                          </div>
+                                        ) : (
+                                          <Copy className="h-3 w-3" />
+                                        )}
+                                      </button>
+                                    )}
+                                  </div>
+                                  <span className="text-[12px] font-mono font-bold text-foreground">
+                                    {formatCurrency(walletTotal, "USD")}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="pl-2 space-y-1">
+                                {items.map((s, idx) => (
+                                  <div key={idx} className="flex justify-between items-center text-[11px]">
+                                    <span className="text-muted-foreground font-medium">{s.coin}</span>
+                                    <div className="flex items-center gap-2">
+                                      {s.saldo_locked_usd > 0 && (
+                                        <span className="text-[10px] text-chart-3/70 italic tabular-nums">
+                                          (⏳ {formatCurrency(s.saldo_locked_usd, "USD")})
+                                        </span>
+                                      )}
+                                      <span className="font-mono text-foreground/90 tabular-nums">
+                                        {formatCurrency(s.saldo_usd, "USD")}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()}
+                      
+                      {cryptoPanel.totalLocked > 0 && (
+                        <div className="pt-2 border-t border-border/30 flex justify-between items-center bg-chart-3/5 px-2 py-1 rounded">
+                          <span className="text-[11px] text-chart-3 font-semibold uppercase tracking-tighter">⏳ Total em Trânsito</span>
+                          <span className="text-[12px] font-mono font-bold text-chart-3 tabular-nums">{formatCurrency(cryptoPanel.totalLocked, "USD")}</span>
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
             </>
           )}
         </div>
