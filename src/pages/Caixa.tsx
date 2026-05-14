@@ -420,24 +420,25 @@ export default function Caixa() {
       // Inclui status 'ativo' e 'limitada' (casas com saldo mas operacionalmente limitadas)
       // FIX: Incluir AGUARDANDO_SAQUE - essas casas ainda têm saldo real
       // FIX: Filtrar por workspace_id para isolar dados do workspace ativo
-      const { data: bookmakersBalanceData } = await supabase
-        .from("bookmakers")
-        .select("saldo_atual, moeda, is_broker_account")
-        .eq("workspace_id", workspaceId)
-        .in("status", ["ativo", "limitada", "AGUARDANDO_SAQUE"]);
-      
-      // Agregar saldos por moeda, mantendo contas Broker fora de Bookmakers operacionais
-      const saldosPorMoeda: Record<string, number> = {};
-      const saldosBrokerPorMoedaMap: Record<string, number> = {};
-      bookmakersBalanceData?.forEach(b => {
-        const moeda = b.moeda || 'BRL';
-        const saldoPositivo = Math.max(0, b.saldo_atual || 0);
-        if (b.is_broker_account) {
-          saldosBrokerPorMoedaMap[moeda] = (saldosBrokerPorMoedaMap[moeda] || 0) + saldoPositivo;
-        } else {
-          saldosPorMoeda[moeda] = (saldosPorMoeda[moeda] || 0) + saldoPositivo;
-        }
-      });
+       const { data: bookmakersBalanceData } = await supabase
+         .from("bookmakers")
+         .select("saldo_atual, saldo_freebet, moeda, is_broker_account")
+         .eq("workspace_id", workspaceId)
+         .in("status", ["ativo", "limitada", "AGUARDANDO_SAQUE"]);
+       
+       // Agregar saldos por moeda, mantendo contas Broker fora de Bookmakers operacionais
+       // REGRA UNIFICADA: Saldo Operável = saldo_atual (inclui bônus) + saldo_freebet
+       const saldosPorMoeda: Record<string, number> = {};
+       const saldosBrokerPorMoedaMap: Record<string, number> = {};
+       bookmakersBalanceData?.forEach(b => {
+         const moeda = b.moeda || 'BRL';
+         const saldoPositivo = Math.max(0, (b.saldo_atual || 0) + (b.saldo_freebet || 0));
+         if (b.is_broker_account) {
+           saldosBrokerPorMoedaMap[moeda] = (saldosBrokerPorMoedaMap[moeda] || 0) + saldoPositivo;
+         } else {
+           saldosPorMoeda[moeda] = (saldosPorMoeda[moeda] || 0) + saldoPositivo;
+         }
+       });
       
       // Converter para array
       const saldosArray = Object.entries(saldosPorMoeda)
