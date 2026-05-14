@@ -1094,17 +1094,20 @@ const formatTime = (date: Date) => {
                                      </Button>
                                    </InteractiveTooltip>
                                  )}
-                                 {parceiro.saldos_crypto.length > 0 && (
-                                   <InteractiveTooltip containerRef={scrollContainerRef} className="w-full" content={<CryptoHoverContent saldos={parceiro.saldos_crypto} totalLocked={parceiro.total_crypto_locked_usd} onOpenSwap={() => setSwapDialog({ open: true, parceiroId: parceiro.parceiro_id })} />}>
-                                     <Button variant="ghost" size="sm" className="w-full justify-between h-8 px-2 bg-muted/10 hover:bg-muted/20 text-[11px] font-medium border border-border/10">
-                                       <div className="flex items-center gap-1.5"><Bitcoin className="h-3 w-3 text-chart-2" /><span>Wallets</span></div>
-                                       <div className="flex items-center gap-1 font-mono text-chart-2">
-                                         {formatCurrency(parceiro.total_crypto_usd - parceiro.total_crypto_locked_usd, "USD")}
-                                         {parceiro.total_crypto_locked_usd > 0 && <span className="text-[9px] text-chart-3">⏳ {formatCurrency(parceiro.total_crypto_locked_usd, "USD")}</span>}
-                                       </div>
-                                     </Button>
-                                   </InteractiveTooltip>
-                                 )}
+                                  {parceiro.saldos_crypto.length > 0 && (
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      className="w-full justify-between h-8 px-2 bg-muted/10 hover:bg-muted/20 text-[11px] font-medium border border-border/10"
+                                      onClick={(e) => handleOpenCryptoPanel(e, parceiro)}
+                                    >
+                                      <div className="flex items-center gap-1.5"><Bitcoin className="h-3 w-3 text-chart-2" /><span>Wallets</span></div>
+                                      <div className="flex items-center gap-1 font-mono text-chart-2">
+                                        {formatCurrency(parceiro.total_crypto_usd - parceiro.total_crypto_locked_usd, "USD")}
+                                        {parceiro.total_crypto_locked_usd > 0 && <span className="text-[9px] text-chart-3">⏳ {formatCurrency(parceiro.total_crypto_locked_usd, "USD")}</span>}
+                                      </div>
+                                    </Button>
+                                  )}
                                  {(hasBookmakerBalance || parceiro.pendentes_bookmakers.length > 0) && (
                                    <InteractiveTooltip containerRef={scrollContainerRef} className="w-full" content={<BookmakerDetailsContent saldos={parceiro.saldos_bookmakers} pendentes={parceiro.pendentes_bookmakers} />}>
                                      <Button variant="ghost" size="sm" className="w-full justify-between h-8 px-2 bg-muted/10 hover:bg-muted/20 text-[11px] font-medium border border-border/10">
@@ -1149,12 +1152,8 @@ const formatTime = (date: Date) => {
                                  </InteractiveTooltip>
                                ) : "—"}
                              </div>
-                             <div className="text-[11px] font-mono text-chart-2 text-right">
-                               {cryptoTotalUSD > 0 ? (
-                                 <InteractiveTooltip containerRef={scrollContainerRef} content={<CryptoHoverContent saldos={parceiro.saldos_crypto} totalLocked={parceiro.total_crypto_locked_usd} onOpenSwap={() => setSwapDialog({ open: true, parceiroId: parceiro.parceiro_id })} />}>
-                                   {formatCurrency(cryptoTotalUSD, "USD").split(",")[0]}
-                                 </InteractiveTooltip>
-                               ) : "—"}
+                             <div className="text-[11px] font-mono text-chart-2 text-right cursor-pointer hover:text-primary transition-colors" onClick={(e) => handleOpenCryptoPanel(e, parceiro)}>
+                               {cryptoTotalUSD > 0 ? formatCurrency(cryptoTotalUSD, "USD").split(",")[0] : "—"}
                              </div>
                              <div className="text-[11px] font-mono text-chart-4 text-right">
                                {casasTotalBRL > 0 ? (
