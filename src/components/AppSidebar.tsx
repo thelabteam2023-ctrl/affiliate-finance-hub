@@ -136,7 +136,7 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, signOut, role, isSystemOwner, publicId } = useAuth();
+   const { user, signOut, role, isSystemOwner, publicId, workspaceId } = useAuth();
   const { canManageWorkspace } = useRole();
   const { favorites } = useFavorites();
   const { favorites: projectFavorites } = useProjectFavorites();
@@ -669,16 +669,20 @@ export function AppSidebar() {
                 Administração do Sistema
               </DropdownMenuItem>
             )}
-            {isSystemOwner && (
-              <DropdownMenuItem
-                onClick={() =>
-                  window.open("/dev/ledger-monitor", "_blank", "noopener,noreferrer")
-                }
-              >
-                <Activity className="mr-2 h-4 w-4" />
-                Ledger Monitor
-              </DropdownMenuItem>
-            )}
+             {/* Ledger Monitor for specific workspaces or system owners */}
+             {(isSystemOwner || 
+               ((workspaceId === 'f8b6f7ce-92b9-4d26-899a-0f0eeb1324cd' || workspaceId === 'feee9758-a7f4-474c-b2b1-679b66ec1cd9') && 
+                (role === 'owner' || role === 'admin'))
+             ) && (
+               <DropdownMenuItem
+                 onClick={() =>
+                   window.open("/dev/ledger-monitor", "_blank", "noopener,noreferrer")
+                 }
+               >
+                 <Activity className="mr-2 h-4 w-4" />
+                 Ledger Monitor
+               </DropdownMenuItem>
+             )}
             {canManageWorkspace && (
               <DropdownMenuItem onClick={() => navigate("/workspace")}>
                 <Settings className="mr-2 h-4 w-4" />

@@ -274,8 +274,8 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
   return "outline";
 }
 
-export default function DevLedgerMonitor() {
-  const { user, isSystemOwner, initialized } = useAuthContext();
+ export default function DevLedgerMonitor() {
+   const { user, isSystemOwner, initialized, workspaceId, role } = useAuthContext();
   const navigate = useNavigate();
   const [paused, setPaused] = useState(false);
   const [filter, setFilter] = useState("");
@@ -283,14 +283,18 @@ export default function DevLedgerMonitor() {
    const [selectedBookmaker, setSelectedBookmaker] = useState<{ id: string; nome: string } | null>(null);
   const { getRate } = useExchangeRates();
 
-  // Hard guard — only system owner
-  useEffect(() => {
-    if (initialized && (!user || !isSystemOwner)) {
-      navigate("/", { replace: true });
-    }
-  }, [initialized, user, isSystemOwner, navigate]);
-
-  const enabled = !paused && isSystemOwner;
+   // Authorized workspace IDs
+   const AUTHORIZED_WORKSPACES = ['f8b6f7ce-92b9-4d26-899a-0f0eeb1324cd', 'feee9758-a7f4-474c-b2b1-679b66ec1cd9'];
+   const isAuthorized = isSystemOwner || (workspaceId && AUTHORIZED_WORKSPACES.includes(workspaceId) && (role === 'owner' || role === 'admin'));
+ 
+   // Hard guard — authorized users only
+   useEffect(() => {
+     if (initialized && (!user || !isAuthorized)) {
+       navigate("/", { replace: true });
+     }
+   }, [initialized, user, isAuthorized, navigate]);
+ 
+   const enabled = !paused && isAuthorized;
   const ledger = useCashLedger(enabled);
   const apostas = useApostas(enabled);
   const bookmakers = useBookmakerSaldos(enabled);
@@ -345,7 +349,7 @@ export default function DevLedgerMonitor() {
     return <div className="p-8 text-muted-foreground">Carregando...</div>;
   }
 
-  if (!isSystemOwner) {
+   if (!isAuthorized) {
     return null;
   }
 
@@ -357,9 +361,9 @@ export default function DevLedgerMonitor() {
           <Activity className="h-6 w-6 text-primary" />
           <div>
             <h1 className="text-xl font-bold">Ledger Monitor</h1>
-            <p className="text-xs text-muted-foreground">
-              System Owner Only · Polling {POLL_MS / 1000}s · {paused ? "Pausado" : "Ao vivo"}
-            </p>
+             <p className="text-xs text-muted-foreground">
+               {isSystemOwner ? "System Owner" : "Restricted Access"} · Polling {POLL_MS / 1000}s · {paused ? "Pausado" : "Ao vivo"}
+             </p>
           </div>
         </div>
 
