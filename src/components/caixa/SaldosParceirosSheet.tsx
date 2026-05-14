@@ -392,10 +392,7 @@ import { useRef, MouseEvent as ReactMouseEvent } from "react";
       localStorage.setItem("parceiros-view-mode", viewMode);
     }, [viewMode]);
   const [fornecedores, setFornecedores] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(false);
-  const [cryptoPrices, setCryptoPrices] = useState<Record<string, number>>({});
-  const [pricesLoading, setPricesLoading] = useState(false);
-  const [lastPriceUpdate, setLastPriceUpdate] = useState<Date | null>(null);
+   const [loading, setLoading] = useState(false);
   const [swapDialog, setSwapDialog] = useState<{ open: boolean; parceiroId: string | null }>({
     open: false,
     parceiroId: null,
