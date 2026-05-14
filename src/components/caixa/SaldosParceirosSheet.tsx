@@ -280,7 +280,7 @@ const BookmakerListByMoeda = ({
  
    import { useRef } from "react";
 
-   const InteractiveTooltip = ({ children, content, className }: { children: React.ReactNode, content: React.ReactNode, className?: string }) => {
+    const InteractiveTooltip = ({ children, content, className, containerRef }: { children: React.ReactNode, content: React.ReactNode, className?: string, containerRef?: React.RefObject<any> }) => {
      const [isPinned, setIsPinned] = useState(false);
      const [isHovered, setIsHovered] = useState(false);
      const ref = useRef<HTMLDivElement>(null);
@@ -317,8 +317,9 @@ const BookmakerListByMoeda = ({
                {children}
              </div>
            </TooltipTrigger>
-           <TooltipContent 
-             className={`p-3 min-w-[260px] max-w-[380px] bg-popover border-border shadow-2xl z-50 transition-all duration-200 ${isPinned ? 'border-primary/50 ring-1 ring-primary/20' : ''}`}
+            <TooltipContent 
+              portal={false}
+              className={`p-3 min-w-[260px] max-w-[380px] max-h-[300px] overflow-y-auto bg-popover border-border shadow-2xl z-50 transition-all duration-200 ${isPinned ? 'border-primary/50 ring-1 ring-primary/20' : ''}`}
              onMouseEnter={() => setIsHovered(true)}
              onMouseLeave={() => setIsHovered(false)}
              side="top"
@@ -1070,7 +1071,7 @@ const BookmakerListByMoeda = ({
                         const bookmakerEntries = Object.entries(parceiro.total_bookmakers_por_moeda).filter(([_, v]) => v > 0).sort(([, a], [, b]) => b - a);
                         const hasBookmakerBalance = bookmakerEntries.length > 0;
                         return (
-                           <Card key={parceiro.parceiro_id} className="bg-card/40 border-border/40 backdrop-blur-sm hover:border-primary/20 transition-all duration-300 overflow-hidden group">
+                           <Card key={parceiro.parceiro_id} className="relative bg-card/40 border-border/40 backdrop-blur-sm hover:border-primary/20 transition-all duration-300 overflow-visible group">
                              <CardHeader className="pb-2.5 pt-3 px-4 bg-muted/10">
                                <CardTitle className="text-[13px] font-bold text-foreground truncate">{parceiro.parceiro_nome}</CardTitle>
                              </CardHeader>
@@ -1088,45 +1089,45 @@ const BookmakerListByMoeda = ({
                                     {parceiro.saldos_crypto.length > 0 ? formatCurrency(parceiro.total_crypto_usd - parceiro.total_crypto_locked_usd, "USD") : "—"}
                                   </span>
                                 </div>
-                                <div className="flex flex-col p-2 rounded-lg bg-muted/20 border border-border/20 items-center justify-center text-center">
-                                  <Wallet className="h-3 w-3 text-chart-4 mb-1 opacity-70" />
-                                  <span className="text-[11px] font-mono font-bold text-chart-4 truncate w-full">
-                                    {hasBookmakerBalance ? `${CURRENCY_SYMBOLS[bookmakerEntries[0][0]] || bookmakerEntries[0][0]} ${bookmakerEntries[0][1].toLocaleString('pt-BR', { minimumFractionDigits: 1 })}` : "—"}
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="space-y-2">
-                                {primaryFiat && (
-                                  <InteractiveTooltip className="w-full" content={<FiatHoverContent saldos={parceiro.saldos_fiat} />}>
-                                    <Button variant="ghost" size="sm" className="w-full justify-between h-8 px-2 bg-muted/10 hover:bg-muted/20 text-[11px] font-medium border border-border/10">
-                                      <div className="flex items-center gap-1.5"><Landmark className="h-3 w-3 text-chart-1" /><span>Bancos</span></div>
-                                      <div className="flex items-center gap-1 font-mono text-chart-1">{formatCurrency(primaryFiat[1], primaryFiat[0])}{fiatEntries.length > 1 && <span className="text-[9px] text-muted-foreground">+{fiatEntries.length - 1}</span>}</div>
-                                    </Button>
-                                  </InteractiveTooltip>
-                                )}
-                                {parceiro.saldos_crypto.length > 0 && (
-                                  <InteractiveTooltip className="w-full" content={<CryptoHoverContent saldos={parceiro.saldos_crypto} totalLocked={parceiro.total_crypto_locked_usd} onOpenSwap={() => setSwapDialog({ open: true, parceiroId: parceiro.parceiro_id })} />}>
-                                    <Button variant="ghost" size="sm" className="w-full justify-between h-8 px-2 bg-muted/10 hover:bg-muted/20 text-[11px] font-medium border border-border/10">
-                                      <div className="flex items-center gap-1.5"><Bitcoin className="h-3 w-3 text-chart-2" /><span>Wallets</span></div>
-                                      <div className="flex items-center gap-1 font-mono text-chart-2">
-                                        {formatCurrency(parceiro.total_crypto_usd - parceiro.total_crypto_locked_usd, "USD")}
-                                        {parceiro.total_crypto_locked_usd > 0 && <span className="text-[9px] text-chart-3">⏳ {formatCurrency(parceiro.total_crypto_locked_usd, "USD")}</span>}
-                                      </div>
-                                    </Button>
-                                  </InteractiveTooltip>
-                                )}
-                                {(hasBookmakerBalance || parceiro.pendentes_bookmakers.length > 0) && (
-                                  <InteractiveTooltip className="w-full" content={<BookmakerDetailsContent saldos={parceiro.saldos_bookmakers} pendentes={parceiro.pendentes_bookmakers} />}>
-                                    <Button variant="ghost" size="sm" className="w-full justify-between h-8 px-2 bg-muted/10 hover:bg-muted/20 text-[11px] font-medium border border-border/10">
-                                      <div className="flex items-center gap-1.5"><Wallet className="h-3 w-3 text-chart-4" /><span>Casas</span></div>
-                                      <div className="flex items-center gap-1 font-mono text-chart-4">
-                                        {bookmakerEntries.slice(0, 1).map(([moeda, valor]) => (<span key={moeda}>{CURRENCY_SYMBOLS[moeda] || moeda} {valor.toLocaleString('pt-BR', { minimumFractionDigits: 1 })}</span>))}
-                                        {parceiro.pendentes_bookmakers.length > 0 && <span className="text-[9px] text-chart-3">⏳ +{formatCurrency(Object.values(parceiro.total_pendente_por_moeda).reduce((a, b) => a + b, 0), "USD")}</span>}
-                                      </div>
-                                    </Button>
-                                  </InteractiveTooltip>
-                                )}
-                              </div>
+                                 <div className="flex flex-col p-2 rounded-lg bg-muted/20 border border-border/20 items-center justify-center text-center">
+                                   <Wallet className="h-3 w-3 text-chart-4 mb-1 opacity-70" />
+                                   <span className="text-[11px] font-mono font-bold text-chart-4 truncate w-full">
+                                     {hasBookmakerBalance ? `${CURRENCY_SYMBOLS[bookmakerEntries[0][0]] || bookmakerEntries[0][0]} ${bookmakerEntries[0][1].toLocaleString('pt-BR', { minimumFractionDigits: 1 })}` : "—"}
+                                   </span>
+                                 </div>
+                               </div>
+                               <div className="space-y-2">
+                                 {primaryFiat && (
+                                   <InteractiveTooltip containerRef={scrollContainerRef} className="w-full" content={<FiatHoverContent saldos={parceiro.saldos_fiat} />}>
+                                     <Button variant="ghost" size="sm" className="w-full justify-between h-8 px-2 bg-muted/10 hover:bg-muted/20 text-[11px] font-medium border border-border/10">
+                                       <div className="flex items-center gap-1.5"><Landmark className="h-3 w-3 text-chart-1" /><span>Bancos</span></div>
+                                       <div className="flex items-center gap-1 font-mono text-chart-1">{formatCurrency(primaryFiat[1], primaryFiat[0])}{fiatEntries.length > 1 && <span className="text-[9px] text-muted-foreground">+{fiatEntries.length - 1}</span>}</div>
+                                     </Button>
+                                   </InteractiveTooltip>
+                                 )}
+                                 {parceiro.saldos_crypto.length > 0 && (
+                                   <InteractiveTooltip containerRef={scrollContainerRef} className="w-full" content={<CryptoHoverContent saldos={parceiro.saldos_crypto} totalLocked={parceiro.total_crypto_locked_usd} onOpenSwap={() => setSwapDialog({ open: true, parceiroId: parceiro.parceiro_id })} />}>
+                                     <Button variant="ghost" size="sm" className="w-full justify-between h-8 px-2 bg-muted/10 hover:bg-muted/20 text-[11px] font-medium border border-border/10">
+                                       <div className="flex items-center gap-1.5"><Bitcoin className="h-3 w-3 text-chart-2" /><span>Wallets</span></div>
+                                       <div className="flex items-center gap-1 font-mono text-chart-2">
+                                         {formatCurrency(parceiro.total_crypto_usd - parceiro.total_crypto_locked_usd, "USD")}
+                                         {parceiro.total_crypto_locked_usd > 0 && <span className="text-[9px] text-chart-3">⏳ {formatCurrency(parceiro.total_crypto_locked_usd, "USD")}</span>}
+                                       </div>
+                                     </Button>
+                                   </InteractiveTooltip>
+                                 )}
+                                 {(hasBookmakerBalance || parceiro.pendentes_bookmakers.length > 0) && (
+                                   <InteractiveTooltip containerRef={scrollContainerRef} className="w-full" content={<BookmakerDetailsContent saldos={parceiro.saldos_bookmakers} pendentes={parceiro.pendentes_bookmakers} />}>
+                                     <Button variant="ghost" size="sm" className="w-full justify-between h-8 px-2 bg-muted/10 hover:bg-muted/20 text-[11px] font-medium border border-border/10">
+                                       <div className="flex items-center gap-1.5"><Wallet className="h-3 w-3 text-chart-4" /><span>Casas</span></div>
+                                       <div className="flex items-center gap-1 font-mono text-chart-4">
+                                         {bookmakerEntries.slice(0, 1).map(([moeda, valor]) => (<span key={moeda}>{CURRENCY_SYMBOLS[moeda] || moeda} {valor.toLocaleString('pt-BR', { minimumFractionDigits: 1 })}</span>))}
+                                         {parceiro.pendentes_bookmakers.length > 0 && <span className="text-[9px] text-chart-3">⏳ +{formatCurrency(Object.values(parceiro.total_pendente_por_moeda).reduce((a, b) => a + b, 0), "USD")}</span>}
+                                       </div>
+                                     </Button>
+                                   </InteractiveTooltip>
+                                 )}
+                               </div>
                             </CardContent>
                           </Card>
                         );
@@ -1152,27 +1153,27 @@ const BookmakerListByMoeda = ({
                         return (
                           <div key={parceiro.parceiro_id} className="grid grid-cols-[1fr,80px,80px,80px,100px] gap-2 px-4 py-2.5 hover:bg-muted/30 transition-colors items-center border-b border-border/10 last:border-0 group">
                             <div className="text-[12px] font-semibold text-foreground truncate group-hover:text-primary transition-colors">{parceiro.parceiro_nome}</div>
-                            <div className="text-[11px] font-mono text-chart-1 text-right">
-                              {fiatTotalBRL > 0 ? (
-                                <InteractiveTooltip content={<FiatHoverContent saldos={parceiro.saldos_fiat} />}>
-                                  {formatCurrency(fiatTotalBRL, "BRL").split(",")[0]}
-                                </InteractiveTooltip>
-                              ) : "—"}
-                            </div>
-                            <div className="text-[11px] font-mono text-chart-2 text-right">
-                              {cryptoTotalUSD > 0 ? (
-                                <InteractiveTooltip content={<CryptoHoverContent saldos={parceiro.saldos_crypto} totalLocked={parceiro.total_crypto_locked_usd} onOpenSwap={() => setSwapDialog({ open: true, parceiroId: parceiro.parceiro_id })} />}>
-                                  {formatCurrency(cryptoTotalUSD, "USD").split(",")[0]}
-                                </InteractiveTooltip>
-                              ) : "—"}
-                            </div>
-                            <div className="text-[11px] font-mono text-chart-4 text-right">
-                              {casasTotalBRL > 0 ? (
-                                <InteractiveTooltip content={<BookmakerDetailsContent saldos={parceiro.saldos_bookmakers} pendentes={parceiro.pendentes_bookmakers} />}>
-                                  {formatCurrency(casasTotalBRL, "BRL").split(",")[0]}
-                                </InteractiveTooltip>
-                              ) : "—"}
-                            </div>
+                             <div className="text-[11px] font-mono text-chart-1 text-right">
+                               {fiatTotalBRL > 0 ? (
+                                 <InteractiveTooltip containerRef={scrollContainerRef} content={<FiatHoverContent saldos={parceiro.saldos_fiat} />}>
+                                   {formatCurrency(fiatTotalBRL, "BRL").split(",")[0]}
+                                 </InteractiveTooltip>
+                               ) : "—"}
+                             </div>
+                             <div className="text-[11px] font-mono text-chart-2 text-right">
+                               {cryptoTotalUSD > 0 ? (
+                                 <InteractiveTooltip containerRef={scrollContainerRef} content={<CryptoHoverContent saldos={parceiro.saldos_crypto} totalLocked={parceiro.total_crypto_locked_usd} onOpenSwap={() => setSwapDialog({ open: true, parceiroId: parceiro.parceiro_id })} />}>
+                                   {formatCurrency(cryptoTotalUSD, "USD").split(",")[0]}
+                                 </InteractiveTooltip>
+                               ) : "—"}
+                             </div>
+                             <div className="text-[11px] font-mono text-chart-4 text-right">
+                               {casasTotalBRL > 0 ? (
+                                 <InteractiveTooltip containerRef={scrollContainerRef} content={<BookmakerDetailsContent saldos={parceiro.saldos_bookmakers} pendentes={parceiro.pendentes_bookmakers} />}>
+                                   {formatCurrency(casasTotalBRL, "BRL").split(",")[0]}
+                                 </InteractiveTooltip>
+                               ) : "—"}
+                             </div>
                             <div className="text-[11px] font-mono font-bold text-foreground text-right">{formatCurrency(parceiro.total_brl, "BRL")}</div>
                           </div>
                         );
