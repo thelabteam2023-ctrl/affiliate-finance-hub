@@ -342,6 +342,7 @@ const BookmakerListByMoeda = ({
 
     export function SaldosParceirosSheet() {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const [cryptoPanel, setCryptoPanel] = useState<{
     open: boolean;
     parceiroId: string | null;
