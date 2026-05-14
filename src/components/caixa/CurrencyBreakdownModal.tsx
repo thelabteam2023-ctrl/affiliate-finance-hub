@@ -1,11 +1,12 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { getCurrencySymbol } from "@/types/currency";
+ import { getCurrencySymbol, formatCurrencyValue } from "@/types/currency";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Copy, CheckCircle2 } from "lucide-react";
-import { useState } from "react";
+ import { Copy, CheckCircle2, Bitcoin } from "lucide-react";
+ import { useState, useMemo } from "react";
+ import { useCotacoes } from "@/hooks/useCotacoes";
 import { toast } from "sonner";
 
 interface CurrencyBreakdownModalProps {
@@ -18,6 +19,7 @@ interface CurrencyBreakdownModalProps {
 
 export function CurrencyBreakdownModal({ isOpen, onClose, category, currency, workspaceId }: CurrencyBreakdownModalProps) {
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
+  const { getCryptoUSDValue, cryptoPrices } = useCotacoes();
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['currency-breakdown', category, currency, workspaceId],
@@ -55,7 +57,7 @@ export function CurrencyBreakdownModal({ isOpen, onClose, category, currency, wo
         
         const { data } = await supabase
           .from("v_saldo_parceiro_wallets")
-          .select("exchange, saldo_usd, parceiro_nome, parceiro_id, wallet_id, endereco, coin")
+          .select("exchange, saldo_coin, saldo_usd, parceiro_nome, parceiro_id, wallet_id, endereco, coin")
           .eq("workspace_id", workspaceId);
         
         const { data: partners } = await supabase
@@ -81,15 +83,18 @@ export function CurrencyBreakdownModal({ isOpen, onClose, category, currency, wo
               type: 'wallet'
             };
           }
-          grouped[key].valor += d.saldo_usd || 0;
+           const currentCoinUsd = getCryptoUSDValue(d.coin, d.saldo_coin || 0, d.saldo_usd || 0);
+           grouped[key].valor += currentCoinUsd;
           
           const existingCoin = grouped[key].coins.find((c: any) => c.coin === d.coin);
           if (existingCoin) {
-            existingCoin.valor += d.saldo_usd || 0;
+             existingCoin.quantidade += d.saldo_coin || 0;
+             existingCoin.valor += currentCoinUsd;
           } else {
             grouped[key].coins.push({
               coin: d.coin,
-              valor: d.saldo_usd || 0
+               quantidade: d.saldo_coin || 0,
+               valor: currentCoinUsd
             });
           }
         });
@@ -141,8 +146,9 @@ export function CurrencyBreakdownModal({ isOpen, onClose, category, currency, wo
   };
 
   const totalConsolidado = items.reduce((sum, item) => sum + item.valor, 0);
-  const symbol = currency === "CRYPTO" ? "$" : getCurrencySymbol(currency);
-  const displayCurrency = currency === "CRYPTO" ? "USD" : currency;
+   const isCryptoCategory = category === "Wallets Parceiros" || (category === "Caixa Operacional" && currency === "CRYPTO");
+   const symbol = (currency === "CRYPTO" || isCryptoCategory) ? "$" : getCurrencySymbol(currency);
+   const displayCurrency = (currency === "CRYPTO" || isCryptoCategory) ? "USD" : currency;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -218,9 +224,15 @@ export function CurrencyBreakdownModal({ isOpen, onClose, category, currency, wo
                           {item.coins && item.coins.length > 0 && (
                             <div className="grid grid-cols-1 gap-1.5 pl-2">
                               {item.coins.map((coin: any, cIdx: number) => (
-                                <div key={cIdx} className="flex items-center justify-between text-xs py-1 border-b border-white/[0.02] last:border-0">
-                                  <span className="font-bold text-white/50">{coin.coin}</span>
-                                  <span className="font-mono text-white/70">
+                                <div key={cIdx} className="grid grid-cols-[60px_1fr_auto] items-center gap-4 text-xs py-1.5 border-b border-white/[0.02] last:border-0">
+                                  <span className="font-bold text-white/50 uppercase tracking-wider">{coin.coin}</span>
+                                  <span className="font-mono text-white/40 text-left">
+                                    {coin.quantidade.toLocaleString('pt-BR', { 
+                                      minimumFractionDigits: coin.quantidade < 1 ? 8 : 2,
+                                      maximumFractionDigits: coin.quantidade < 1 ? 8 : 2 
+                                    })}
+                                  </span>
+                                  <span className="font-mono font-medium text-white/80">
                                     $ {coin.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </span>
                                 </div>
