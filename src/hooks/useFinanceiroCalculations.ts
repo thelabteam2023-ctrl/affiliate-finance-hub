@@ -148,8 +148,11 @@ export function useFinanceiroCalculations({
       totalContasParceiros += convertToBRL(Math.max(0, c.saldo || 0), c.moeda || 'BRL');
     });
 
-    // Wallets Parceiros: Math.max(0) para paridade com Caixa
-    const totalWalletsParceiros = walletsParceiros.reduce((acc: number, w: any) => acc + (Math.max(0, w.saldo_usd || 0) * cotacaoUSD), 0);
+     // Wallets Parceiros: Usar valor atualizado se possível, ou fallback para USD do ledger
+     const totalWalletsParceiros = walletsParceiros.reduce((acc: number, w: any) => {
+       const valorUSD = getCryptoUSDValue(w.coin, w.saldo_coin, w.saldo_usd);
+       return acc + (Math.max(0, valorUSD) * cotacaoUSD);
+     }, 0);
     
     return { saldoBRL, saldoUSD, totalCryptoUSD, capitalOperacional, saldoBookmakersBRL, saldoBookmakersUSD, saldoBookmakersEUR, saldoBookmakers, hasBookmakersUSD, totalContasParceiros, totalWalletsParceiros };
   }, [caixaFiat, caixaCrypto, bookmakersSaldos, contasParceiros, walletsParceiros, cotacaoUSD, getCryptoUSDValue, convertToBRL]);
