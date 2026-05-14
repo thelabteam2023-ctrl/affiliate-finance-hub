@@ -340,8 +340,25 @@ const BookmakerListByMoeda = ({
      );
    };
 
-   export function SaldosParceirosSheet() {
-   const scrollContainerRef = useRef<HTMLDivElement>(null);
+    export function SaldosParceirosSheet() {
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [cryptoPanel, setCryptoPanel] = useState<{
+    open: boolean;
+    parceiroId: string | null;
+    parceiroNome: string;
+    saldos: ParceiroSaldoAgrupado["saldos_crypto"];
+    totalLocked: number;
+    x: number;
+    y: number;
+  }>({
+    open: false,
+    parceiroId: null,
+    parceiroNome: "",
+    saldos: [],
+    totalLocked: 0,
+    x: 0,
+    y: 0,
+  });
   const [open, setOpen] = useState(false);
   const [parceirosAgrupados, setParceirosAgrupados] = useState<ParceiroSaldoAgrupado[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
