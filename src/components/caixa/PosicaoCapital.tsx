@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { InteractiveTooltip } from "./InteractiveTooltip";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ModernDonutChart } from "@/components/ui/modern-donut-chart";
@@ -371,25 +372,26 @@ export function PosicaoCapital({
                 ? ((item.value / dadosPosicao.total) * 100).toFixed(1) 
                 : "0";
               
-              return (
-                <div 
-                  key={item.name}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors"
-                >
+              const hasDetail = item.detailItems.some(d => d.moeda !== 'BRL');
+              const cardContent = (
+                <>
                   <div 
-                    className="w-10 h-10 rounded-lg flex items-center justify-center"
+                    className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
                     style={{ backgroundColor: `${GRADIENT_COLORS[index]?.[0]}20` }}
                   >
                     <Icon className="h-5 w-5" style={{ color: GRADIENT_COLORS[index]?.[0] }} />
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1">
-                        <span className="font-medium text-sm">{item.name}</span>
+                      <div className="flex items-center gap-1 min-w-0">
+                        <span className="font-medium text-sm truncate">{item.name}</span>
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <HelpCircle className="h-3 w-3 text-muted-foreground hover:text-foreground cursor-help transition-colors" />
+                              <HelpCircle 
+                                className="h-3 w-3 text-muted-foreground hover:text-foreground cursor-help transition-colors shrink-0" 
+                                onClick={(e) => e.stopPropagation()} // Evitar fixar o card ao clicar no ícone de ajuda
+                              />
                             </TooltipTrigger>
                             <TooltipContent side="top" className="max-w-[200px] text-xs">
                               {item.help}
@@ -397,106 +399,121 @@ export function PosicaoCapital({
                           </Tooltip>
                         </TooltipProvider>
                       </div>
-                      <span className="text-xs text-muted-foreground">{percentual}%</span>
+                      <span className="text-xs text-muted-foreground shrink-0">{percentual}%</span>
                     </div>
-                    <div className="flex items-center justify-between mt-0.5">
-                      {item.detailItems.some(d => d.moeda !== 'BRL') ? (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="text-xs text-muted-foreground cursor-help hover:text-foreground transition-colors">
-                                {item.detail}
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent side="bottom" className="max-w-[400px] p-3">
-                              <div className="space-y-3">
-                                <p className="text-xs font-medium text-muted-foreground">Composição por moeda:</p>
-                                
-                                {/* Grid de chips verticais - 2 por linha */}
-                                <div className="grid grid-cols-2 gap-2">
-                                  {item.detailItems.map((d, i) => {
-                                    const sourceInfo = d.moeda !== 'BRL' && d.moeda !== 'CRYPTO' ? getSourceInfo(d.moeda) : null;
-                                    const isRealFallback = sourceInfo?.isRealFallback === true;
-                                    const isBRL = d.moeda === 'BRL';
-                                    const isCrypto = d.moeda === 'CRYPTO';
-                                    
-                                    return (
-                                      <div 
-                                        key={i} 
-                                        className="flex flex-col items-center justify-between min-w-[90px] max-w-[110px] p-2.5 rounded-lg bg-muted/50 border border-border/50 cursor-pointer hover:bg-muted/80 hover:border-primary/30 transition-all active:scale-95 group"
-                                        onClick={() => setBreakdownConfig({
-                                          isOpen: true,
-                                          category: item.name,
-                                          currency: d.moeda
-                                        })}
-                                      >
-                                        {/* Linha 1: Código da moeda + ícone de status */}
-                                        <div className="flex items-center gap-1 mb-1">
-                                          {sourceInfo && (
-                                            isRealFallback ? (
-                                              <AlertTriangle className="h-3 w-3 text-warning shrink-0" />
-                                            ) : (
-                                              <CheckCircle2 className="h-3 w-3 text-success shrink-0" />
-                                            )
-                                          )}
-                                          <span className="text-xs font-semibold text-foreground">
-                                            {isCrypto ? 'CRYPTO' : d.moeda}
-                                          </span>
-                                        </div>
-                                        
-                                        {/* Linha 2: Cotação */}
-                                        <div className="text-[10px] text-muted-foreground mb-1.5">
-                                          {isBRL ? (
-                                            <span>base</span>
-                                          ) : isCrypto ? (
-                                            <span>@USD</span>
-                                          ) : sourceInfo?.cotacao ? (
-                                            <span>@{sourceInfo.cotacao.toFixed(4)}</span>
-                                          ) : (
-                                            <span>—</span>
-                                          )}
-                                        </div>
-                                        
-                                        {/* Linha 3: Saldo nativo */}
-                                        <div className="text-sm font-mono font-medium text-foreground text-center break-all leading-tight">
-                                          {d.symbol} {d.valorOriginal.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}
-                                        </div>
-                                        
-                                        {/* Linha 4: Aproximação em BRL */}
-                                        {!isBRL && (
-                                          <div className="text-[10px] text-muted-foreground mt-1 text-center">
-                                            ≈ R$ {d.valorBRL.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
-                                          </div>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                                
-                                {/* Legenda */}
-                                <div className="border-t border-border/50 pt-2">
-                                  <p className="text-[10px] text-muted-foreground flex items-center justify-center gap-2">
-                                    <span className="flex items-center gap-1">
-                                      <CheckCircle2 className="h-3 w-3 text-success" /> Oficial
-                                    </span>
-                                    <span className="text-border">•</span>
-                                    <span className="flex items-center gap-1">
-                                      <AlertTriangle className="h-3 w-3 text-warning" /> Fallback
-                                    </span>
-                                  </p>
-                                </div>
-                              </div>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">{item.detail}</span>
-                      )}
-                      <span className="font-mono text-sm font-medium" style={{ color: GRADIENT_COLORS[index]?.[0] }}>
+                    <div className="flex items-center justify-between mt-0.5 gap-2">
+                      <span className="text-xs text-muted-foreground truncate">{item.detail}</span>
+                      <span className="font-mono text-sm font-medium whitespace-nowrap" style={{ color: GRADIENT_COLORS[index]?.[0] }}>
                         {formatCurrency(item.value)}
                       </span>
                     </div>
                   </div>
+                </>
+              );
+
+              const tooltipContent = hasDetail ? (
+                <div className="space-y-3">
+                  <p className="text-xs font-medium text-muted-foreground">Composição por moeda:</p>
+                  
+                  {/* Grid de chips verticais - 2 por linha */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {item.detailItems.map((d, i) => {
+                      const sourceInfo = d.moeda !== 'BRL' && d.moeda !== 'CRYPTO' ? getSourceInfo(d.moeda) : null;
+                      const isRealFallback = sourceInfo?.isRealFallback === true;
+                      const isBRL = d.moeda === 'BRL';
+                      const isCrypto = d.moeda === 'CRYPTO';
+                      
+                      return (
+                        <div 
+                          key={i} 
+                          className="flex flex-col items-center justify-between min-w-[90px] max-w-[110px] p-2.5 rounded-lg bg-muted/50 border border-border/50 cursor-pointer hover:bg-muted/80 hover:border-primary/30 transition-all active:scale-95 group"
+                          onClick={(e) => {
+                            e.stopPropagation(); // Evitar que o clique no chip feche/abra o card
+                            setBreakdownConfig({
+                              isOpen: true,
+                              category: item.name,
+                              currency: d.moeda
+                            });
+                          }}
+                        >
+                          {/* Linha 1: Código da moeda + ícone de status */}
+                          <div className="flex items-center gap-1 mb-1">
+                            {sourceInfo && (
+                              isRealFallback ? (
+                                <AlertTriangle className="h-3 w-3 text-warning shrink-0" />
+                              ) : (
+                                <CheckCircle2 className="h-3 w-3 text-success shrink-0" />
+                              )
+                            )}
+                            <span className="text-xs font-semibold text-foreground">
+                              {isCrypto ? 'CRYPTO' : d.moeda}
+                            </span>
+                          </div>
+                          
+                          {/* Linha 2: Cotação */}
+                          <div className="text-[10px] text-muted-foreground mb-1.5">
+                            {isBRL ? (
+                              <span>base</span>
+                            ) : isCrypto ? (
+                              <span>@USD</span>
+                            ) : sourceInfo?.cotacao ? (
+                              <span>@{sourceInfo.cotacao.toFixed(4)}</span>
+                            ) : (
+                              <span>—</span>
+                            )}
+                          </div>
+                          
+                          {/* Linha 3: Saldo nativo */}
+                          <div className="text-sm font-mono font-medium text-foreground text-center break-all leading-tight">
+                            {d.symbol} {d.valorOriginal.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}
+                          </div>
+                          
+                          {/* Linha 4: Aproximação em BRL */}
+                          {!isBRL && (
+                            <div className="text-[10px] text-muted-foreground mt-1 text-center">
+                              ≈ R$ {d.valorBRL.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Legenda */}
+                  <div className="border-t border-border/50 pt-2">
+                    <p className="text-[10px] text-muted-foreground flex items-center justify-center gap-2">
+                      <span className="flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3 text-success" /> Oficial
+                      </span>
+                      <span className="text-border">•</span>
+                      <span className="flex items-center gap-1">
+                        <AlertTriangle className="h-3 w-3 text-warning" /> Fallback
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              ) : null;
+
+              if (hasDetail) {
+                return (
+                  <InteractiveTooltip 
+                    key={item.name}
+                    className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors"
+                    content={tooltipContent}
+                    side="bottom"
+                    align="center"
+                  >
+                    {cardContent}
+                  </InteractiveTooltip>
+                );
+              }
+
+              return (
+                <div 
+                  key={item.name}
+                  className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/50 transition-colors"
+                >
+                  {cardContent}
                 </div>
               );
             })}
