@@ -278,9 +278,68 @@ const BookmakerListByMoeda = ({
    );
  }
  
-  import { useRef } from "react";
+   import { useRef } from "react";
 
-  export function SaldosParceirosSheet() {
+   const InteractiveTooltip = ({ children, content, className }: { children: React.ReactNode, content: React.ReactNode, className?: string }) => {
+     const [isPinned, setIsPinned] = useState(false);
+     const [isHovered, setIsHovered] = useState(false);
+     const ref = useRef<HTMLDivElement>(null);
+
+     useEffect(() => {
+       const handleClickOutside = (event: MouseEvent) => {
+         if (ref.current && !ref.current.contains(event.target as Node)) {
+           setIsPinned(false);
+         }
+       };
+       if (isPinned) {
+         document.addEventListener("mousedown", handleClickOutside);
+       }
+       return () => {
+         document.removeEventListener("mousedown", handleClickOutside);
+       };
+     }, [isPinned]);
+
+     return (
+       <TooltipProvider>
+         <Tooltip open={isHovered || isPinned}>
+           <TooltipTrigger asChild>
+             <div 
+               ref={ref}
+               className={`cursor-help inline-block ${className}`}
+               onMouseEnter={() => setIsHovered(true)}
+               onMouseLeave={() => setIsHovered(false)}
+               onClick={(e) => {
+                 e.preventDefault();
+                 e.stopPropagation();
+                 setIsPinned(!isPinned);
+               }}
+             >
+               {children}
+             </div>
+           </TooltipTrigger>
+           <TooltipContent 
+             className={`p-3 min-w-[260px] max-w-[380px] bg-popover border-border shadow-2xl z-50 transition-all duration-200 ${isPinned ? 'border-primary/50 ring-1 ring-primary/20' : ''}`}
+             onMouseEnter={() => setIsHovered(true)}
+             onMouseLeave={() => setIsHovered(false)}
+             side="top"
+             align="end"
+           >
+             {isPinned && (
+               <div className="absolute top-2 right-2 flex items-center gap-1 bg-primary/10 px-1.5 py-0.5 rounded text-[9px] text-primary font-bold uppercase tracking-tighter">
+                  <Pin className="h-2.5 w-2.5 fill-current" />
+                  <span>Fixado</span>
+               </div>
+             )}
+             <div className="pt-1">
+              {content}
+             </div>
+           </TooltipContent>
+         </Tooltip>
+       </TooltipProvider>
+     );
+   };
+
+   export function SaldosParceirosSheet() {
    const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [parceirosAgrupados, setParceirosAgrupados] = useState<ParceiroSaldoAgrupado[]>([]);
