@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTabWorkspace } from "@/hooks/useTabWorkspace";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-  import { Users, RefreshCw, ArrowUpDown, Wallet, Landmark, Bitcoin, Info, ArrowRightLeft, Truck, Building2, User, Search, SortAsc, ChevronUp, ChevronDown } from "lucide-react";
+   import { Users, RefreshCw, ArrowUpDown, Wallet, Landmark, Bitcoin, Info, ArrowRightLeft, Truck, Building2, User, Search, SortAsc, ChevronUp, ChevronDown, LayoutGrid, List } from "lucide-react";
  import { Input } from "@/components/ui/input";
  import { Switch } from "@/components/ui/switch";
  import { Label } from "@/components/ui/label";
@@ -287,6 +287,14 @@ const BookmakerListByMoeda = ({
     const [searchTerm, setSearchTerm] = useState("");
     const [sortBy, setSortBy] = useState<"balance" | "alphabetical">("balance");
     const [showAll, setShowAll] = useState(false);
+    const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
+      const saved = localStorage.getItem("parceiros-view-mode");
+      return (saved as "grid" | "list") || "grid";
+    });
+
+    useEffect(() => {
+      localStorage.setItem("parceiros-view-mode", viewMode);
+    }, [viewMode]);
   const [fornecedores, setFornecedores] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [cryptoPrices, setCryptoPrices] = useState<Record<string, number>>({});
@@ -298,13 +306,6 @@ const BookmakerListByMoeda = ({
   });
   const { workspaceId } = useTabWorkspace();
   const { convertToBRL } = useExchangeRates();
-
-  const scrollBy = (amount: number) => {
-    const viewport = scrollContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]');
-    if (viewport) {
-      viewport.scrollBy({ top: amount, behavior: "smooth" });
-    }
-  };
 
   const fetchCryptoPrices = async (coins: string[]) => {
     if (coins.length === 0) return {};
@@ -930,16 +931,38 @@ const BookmakerListByMoeda = ({
                         </Button>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="show-all"
-                        checked={showAll}
-                        onCheckedChange={setShowAll}
-                        className="scale-75"
-                      />
-                      <Label htmlFor="show-all" className="text-xs cursor-pointer text-muted-foreground">
-                        {showAll ? "Todos" : "Ativos"}
-                      </Label>
+                    <div className="flex items-center gap-4">
+                      <div className="flex rounded-md border border-border/40 overflow-hidden bg-background/30">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={`h-7 w-8 p-0 rounded-none ${viewMode === "grid" ? "bg-primary/20 text-primary" : "hover:bg-muted/50"}`}
+                          onClick={() => setViewMode("grid")}
+                          title="Modo Card"
+                        >
+                          <LayoutGrid className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={`h-7 w-8 p-0 rounded-none ${viewMode === "list" ? "bg-primary/20 text-primary" : "hover:bg-muted/50"}`}
+                          onClick={() => setViewMode("list")}
+                          title="Modo Lista"
+                        >
+                          <List className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id="show-all"
+                          checked={showAll}
+                          onCheckedChange={setShowAll}
+                          className="scale-75"
+                        />
+                        <Label htmlFor="show-all" className="text-xs cursor-pointer text-muted-foreground">
+                          {showAll ? "Todos" : "Ativos"}
+                        </Label>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -977,111 +1000,146 @@ const BookmakerListByMoeda = ({
                   </style>
                   <div className="h-full">
                  {loading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-8">
+                    <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 gap-3 pb-8" : "flex flex-col gap-1 pb-8"}>
                      {[1, 2, 3, 4].map((i) => <ParceiroSkeleton key={i} />)}
                    </div>
-                 ) : (
+                 ) : viewMode === "grid" ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-8">
+                       {filteredAndSortedParceiros.map((parceiro) => {
+                        const fiatEntries = Object.entries(parceiro.total_fiat_por_moeda).filter(([_, v]) => v > 0).sort(([, a], [, b]) => b - a);
+                        const primaryFiat = fiatEntries[0];
+                        const bookmakerEntries = Object.entries(parceiro.total_bookmakers_por_moeda).filter(([_, v]) => v > 0).sort(([, a], [, b]) => b - a);
+                        const hasBookmakerBalance = bookmakerEntries.length > 0;
+                        return (
+                           <Card key={parceiro.parceiro_id} className="bg-card/40 border-border/40 backdrop-blur-sm hover:border-primary/20 transition-all duration-300 overflow-hidden group">
+                             <CardHeader className="pb-2.5 pt-3 px-4 bg-muted/10">
+                               <CardTitle className="text-[13px] font-bold text-foreground truncate">{parceiro.parceiro_nome}</CardTitle>
+                             </CardHeader>
+                            <CardContent className="px-4 pb-4 pt-4 space-y-4">
+                              <div className="grid grid-cols-3 gap-2">
+                                <div className="flex flex-col p-2 rounded-lg bg-muted/20 border border-border/20 items-center justify-center text-center">
+                                  <Landmark className="h-3 w-3 text-chart-1 mb-1 opacity-70" />
+                                  <span className="text-[11px] font-mono font-bold text-chart-1 truncate w-full">
+                                    {primaryFiat ? formatCurrency(primaryFiat[1], primaryFiat[0]) : "—"}
+                                  </span>
+                                </div>
+                                <div className="flex flex-col p-2 rounded-lg bg-muted/20 border border-border/20 items-center justify-center text-center">
+                                  <Bitcoin className="h-3 w-3 text-chart-2 mb-1 opacity-70" />
+                                  <span className="text-[11px] font-mono font-bold text-chart-2 truncate w-full">
+                                    {parceiro.saldos_crypto.length > 0 ? formatCurrency(parceiro.total_crypto_usd - parceiro.total_crypto_locked_usd, "USD") : "—"}
+                                  </span>
+                                </div>
+                                <div className="flex flex-col p-2 rounded-lg bg-muted/20 border border-border/20 items-center justify-center text-center">
+                                  <Wallet className="h-3 w-3 text-chart-4 mb-1 opacity-70" />
+                                  <span className="text-[11px] font-mono font-bold text-chart-4 truncate w-full">
+                                    {hasBookmakerBalance ? `${CURRENCY_SYMBOLS[bookmakerEntries[0][0]] || bookmakerEntries[0][0]} ${bookmakerEntries[0][1].toLocaleString('pt-BR', { minimumFractionDigits: 1 })}` : "—"}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="space-y-2">
+                                {primaryFiat && (
+                                  <HoverCard openDelay={100}>
+                                    <HoverCardTrigger asChild>
+                                      <Button variant="ghost" size="sm" className="w-full justify-between h-8 px-2 bg-muted/10 hover:bg-muted/20 text-[11px] font-medium border border-border/10">
+                                        <div className="flex items-center gap-1.5"><Landmark className="h-3 w-3 text-chart-1" /><span>Bancos</span></div>
+                                        <div className="flex items-center gap-1 font-mono text-chart-1">{formatCurrency(primaryFiat[1], primaryFiat[0])}{fiatEntries.length > 1 && <span className="text-[9px] text-muted-foreground">+{fiatEntries.length - 1}</span>}</div>
+                                      </Button>
+                                    </HoverCardTrigger>
+                                    <HoverCardContent align="end" className="w-72"><FiatHoverContent saldos={parceiro.saldos_fiat} /></HoverCardContent>
+                                  </HoverCard>
+                                )}
+                                {parceiro.saldos_crypto.length > 0 && (
+                                  <HoverCard openDelay={100}>
+                                    <HoverCardTrigger asChild>
+                                      <Button variant="ghost" size="sm" className="w-full justify-between h-8 px-2 bg-muted/10 hover:bg-muted/20 text-[11px] font-medium border border-border/10">
+                                        <div className="flex items-center gap-1.5"><Bitcoin className="h-3 w-3 text-chart-2" /><span>Wallets</span></div>
+                                        <div className="flex items-center gap-1 font-mono text-chart-2">
+                                          {formatCurrency(parceiro.total_crypto_usd - parceiro.total_crypto_locked_usd, "USD")}
+                                          {parceiro.total_crypto_locked_usd > 0 && <span className="text-[9px] text-chart-3">⏳ {formatCurrency(parceiro.total_crypto_locked_usd, "USD")}</span>}
+                                        </div>
+                                      </Button>
+                                    </HoverCardTrigger>
+                                    <HoverCardContent align="end" className="w-80"><CryptoHoverContent saldos={parceiro.saldos_crypto} totalLocked={parceiro.total_crypto_locked_usd} onOpenSwap={() => setSwapDialog({ open: true, parceiroId: parceiro.parceiro_id })} /></HoverCardContent>
+                                  </HoverCard>
+                                )}
+                                {(hasBookmakerBalance || parceiro.pendentes_bookmakers.length > 0) && (
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <Button variant="ghost" size="sm" className="w-full justify-between h-8 px-2 bg-muted/10 hover:bg-muted/20 text-[11px] font-medium border border-border/10">
+                                        <div className="flex items-center gap-1.5"><Wallet className="h-3 w-3 text-chart-4" /><span>Casas</span></div>
+                                        <div className="flex items-center gap-1 font-mono text-chart-4">
+                                          {bookmakerEntries.slice(0, 1).map(([moeda, valor]) => (<span key={moeda}>{CURRENCY_SYMBOLS[moeda] || moeda} {valor.toLocaleString('pt-BR', { minimumFractionDigits: 1 })}</span>))}
+                                          {parceiro.pendentes_bookmakers.length > 0 && <span className="text-[9px] text-chart-3">⏳ +{formatCurrency(Object.values(parceiro.total_pendente_por_moeda).reduce((a, b) => a + b, 0), "USD")}</span>}
+                                        </div>
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent align="end" className="w-80"><BookmakerDetailsContent saldos={parceiro.saldos_bookmakers} pendentes={parceiro.pendentes_bookmakers} /></PopoverContent>
+                                  </Popover>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-1.5 pb-8 border border-border/20 rounded-lg bg-card/20 overflow-hidden">
+                      <div className="grid grid-cols-[1fr,80px,80px,80px,100px] gap-2 px-4 py-2 border-b border-border/30 bg-muted/20 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        <div>Nome</div>
+                        <div className="text-right">Fiat</div>
+                        <div className="text-right">Crypto</div>
+                        <div className="text-right">Casas</div>
+                        <div className="text-right">Total</div>
+                      </div>
                       {filteredAndSortedParceiros.map((parceiro) => {
-                       const fiatEntries = Object.entries(parceiro.total_fiat_por_moeda).filter(([_, v]) => v > 0).sort(([, a], [, b]) => b - a);
-                       const primaryFiat = fiatEntries[0];
-                       const bookmakerEntries = Object.entries(parceiro.total_bookmakers_por_moeda).filter(([_, v]) => v > 0).sort(([, a], [, b]) => b - a);
-                       const hasBookmakerBalance = bookmakerEntries.length > 0;
-                       return (
-                          <Card key={parceiro.parceiro_id} className="bg-card/40 border-border/40 backdrop-blur-sm hover:border-primary/20 transition-all duration-300 overflow-hidden group">
-                            <CardHeader className="pb-2.5 pt-3 px-4 bg-muted/10">
-                              <CardTitle className="text-[13px] font-bold text-foreground truncate">{parceiro.parceiro_nome}</CardTitle>
-                            </CardHeader>
-                           <CardContent className="px-4 pb-4 pt-4 space-y-4">
-                             <div className="grid grid-cols-3 gap-2">
-                               <div className="flex flex-col p-2 rounded-lg bg-muted/20 border border-border/20 items-center justify-center text-center">
-                                 <Landmark className="h-3 w-3 text-chart-1 mb-1 opacity-70" />
-                                 <span className="text-[11px] font-mono font-bold text-chart-1 truncate w-full">
-                                   {primaryFiat ? formatCurrency(primaryFiat[1], primaryFiat[0]) : "—"}
-                                 </span>
-                               </div>
-                               <div className="flex flex-col p-2 rounded-lg bg-muted/20 border border-border/20 items-center justify-center text-center">
-                                 <Bitcoin className="h-3 w-3 text-chart-2 mb-1 opacity-70" />
-                                 <span className="text-[11px] font-mono font-bold text-chart-2 truncate w-full">
-                                   {parceiro.saldos_crypto.length > 0 ? formatCurrency(parceiro.total_crypto_usd - parceiro.total_crypto_locked_usd, "USD") : "—"}
-                                 </span>
-                               </div>
-                               <div className="flex flex-col p-2 rounded-lg bg-muted/20 border border-border/20 items-center justify-center text-center">
-                                 <Wallet className="h-3 w-3 text-chart-4 mb-1 opacity-70" />
-                                 <span className="text-[11px] font-mono font-bold text-chart-4 truncate w-full">
-                                   {hasBookmakerBalance ? `${CURRENCY_SYMBOLS[bookmakerEntries[0][0]] || bookmakerEntries[0][0]} ${bookmakerEntries[0][1].toLocaleString('pt-BR', { minimumFractionDigits: 1 })}` : "—"}
-                                 </span>
-                               </div>
-                             </div>
-                             <div className="space-y-2">
-                               {primaryFiat && (
-                                 <HoverCard openDelay={100}>
-                                   <HoverCardTrigger asChild>
-                                     <Button variant="ghost" size="sm" className="w-full justify-between h-8 px-2 bg-muted/10 hover:bg-muted/20 text-[11px] font-medium border border-border/10">
-                                       <div className="flex items-center gap-1.5"><Landmark className="h-3 w-3 text-chart-1" /><span>Bancos</span></div>
-                                       <div className="flex items-center gap-1 font-mono text-chart-1">{formatCurrency(primaryFiat[1], primaryFiat[0])}{fiatEntries.length > 1 && <span className="text-[9px] text-muted-foreground">+{fiatEntries.length - 1}</span>}</div>
-                                     </Button>
-                                   </HoverCardTrigger>
-                                   <HoverCardContent align="end" className="w-72"><FiatHoverContent saldos={parceiro.saldos_fiat} /></HoverCardContent>
-                                 </HoverCard>
-                               )}
-                               {parceiro.saldos_crypto.length > 0 && (
-                                 <HoverCard openDelay={100}>
-                                   <HoverCardTrigger asChild>
-                                     <Button variant="ghost" size="sm" className="w-full justify-between h-8 px-2 bg-muted/10 hover:bg-muted/20 text-[11px] font-medium border border-border/10">
-                                       <div className="flex items-center gap-1.5"><Bitcoin className="h-3 w-3 text-chart-2" /><span>Wallets</span></div>
-                                       <div className="flex items-center gap-1 font-mono text-chart-2">
-                                         {formatCurrency(parceiro.total_crypto_usd - parceiro.total_crypto_locked_usd, "USD")}
-                                         {parceiro.total_crypto_locked_usd > 0 && <span className="text-[9px] text-chart-3">⏳ {formatCurrency(parceiro.total_crypto_locked_usd, "USD")}</span>}
-                                       </div>
-                                     </Button>
-                                   </HoverCardTrigger>
-                                   <HoverCardContent align="end" className="w-80"><CryptoHoverContent saldos={parceiro.saldos_crypto} totalLocked={parceiro.total_crypto_locked_usd} onOpenSwap={() => setSwapDialog({ open: true, parceiroId: parceiro.parceiro_id })} /></HoverCardContent>
-                                 </HoverCard>
-                               )}
-                               {(hasBookmakerBalance || parceiro.pendentes_bookmakers.length > 0) && (
-                                 <Popover>
-                                   <PopoverTrigger asChild>
-                                     <Button variant="ghost" size="sm" className="w-full justify-between h-8 px-2 bg-muted/10 hover:bg-muted/20 text-[11px] font-medium border border-border/10">
-                                       <div className="flex items-center gap-1.5"><Wallet className="h-3 w-3 text-chart-4" /><span>Casas</span></div>
-                                       <div className="flex items-center gap-1 font-mono text-chart-4">
-                                         {bookmakerEntries.slice(0, 1).map(([moeda, valor]) => (<span key={moeda}>{CURRENCY_SYMBOLS[moeda] || moeda} {valor.toLocaleString('pt-BR', { minimumFractionDigits: 1 })}</span>))}
-                                         {parceiro.pendentes_bookmakers.length > 0 && <span className="text-[9px] text-chart-3">⏳ +{formatCurrency(Object.values(parceiro.total_pendente_por_moeda).reduce((a, b) => a + b, 0), "USD")}</span>}
-                                       </div>
-                                     </Button>
-                                   </PopoverTrigger>
-                                   <PopoverContent align="end" className="w-80"><BookmakerDetailsContent saldos={parceiro.saldos_bookmakers} pendentes={parceiro.pendentes_bookmakers} /></PopoverContent>
-                                 </Popover>
-                               )}
-                             </div>
-                           </CardContent>
-                         </Card>
-                       );
-                     })}
-                   </div>
-                 )}
-                  </div>
-                </ScrollArea>
+                        const fiatEntries = Object.entries(parceiro.total_fiat_por_moeda).filter(([_, v]) => v > 0).sort(([, a], [, b]) => b - a);
+                        const primaryFiat = fiatEntries[0];
+                        const bookmakerEntries = Object.entries(parceiro.total_bookmakers_por_moeda).filter(([_, v]) => v > 0).sort(([, a], [, b]) => b - a);
+                        const fiatTotalBRL = fiatEntries.reduce((sum, [m, v]) => sum + convertToBRL(v, m), 0);
+                        const cryptoTotalUSD = parceiro.total_crypto_usd - parceiro.total_crypto_locked_usd;
+                        const casasTotalBRL = bookmakerEntries.reduce((sum, [m, v]) => sum + convertToBRL(v, m), 0);
 
-                {/* Scroll Buttons */}
-                <div className="absolute bottom-6 right-6 flex flex-col gap-2 z-50">
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="h-8 w-8 rounded-full bg-background/60 backdrop-blur-md border border-border/50 hover:bg-background/80 shadow-lg transition-all active:scale-95"
-                    onClick={() => scrollBy(-300)}
-                  >
-                    <ChevronUp className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="h-8 w-8 rounded-full bg-background/60 backdrop-blur-md border border-border/50 hover:bg-background/80 shadow-lg transition-all active:scale-95"
-                    onClick={() => scrollBy(300)}
-                  >
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </div>
+                        return (
+                          <div key={parceiro.parceiro_id} className="grid grid-cols-[1fr,80px,80px,80px,100px] gap-2 px-4 py-2.5 hover:bg-muted/30 transition-colors items-center border-b border-border/10 last:border-0 group">
+                            <div className="text-[12px] font-semibold text-foreground truncate group-hover:text-primary transition-colors">{parceiro.parceiro_nome}</div>
+                            <div className="text-[11px] font-mono text-chart-1 text-right">
+                              {fiatTotalBRL > 0 ? (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger className="cursor-help">{formatCurrency(fiatTotalBRL, "BRL").split(",")[0]}</TooltipTrigger>
+                                    <TooltipContent className="p-2 w-48 bg-popover border-border"><FiatHoverContent saldos={parceiro.saldos_fiat} /></TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              ) : "—"}
+                            </div>
+                            <div className="text-[11px] font-mono text-chart-2 text-right">
+                              {cryptoTotalUSD > 0 ? (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger className="cursor-help">{formatCurrency(cryptoTotalUSD, "USD").split(",")[0]}</TooltipTrigger>
+                                    <TooltipContent className="p-2 w-64 bg-popover border-border"><CryptoHoverContent saldos={parceiro.saldos_crypto} totalLocked={parceiro.total_crypto_locked_usd} onOpenSwap={() => setSwapDialog({ open: true, parceiroId: parceiro.parceiro_id })} /></TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              ) : "—"}
+                            </div>
+                            <div className="text-[11px] font-mono text-chart-4 text-right">
+                              {casasTotalBRL > 0 ? (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger className="cursor-help">{formatCurrency(casasTotalBRL, "BRL").split(",")[0]}</TooltipTrigger>
+                                    <TooltipContent className="p-2 w-64 bg-popover border-border"><BookmakerDetailsContent saldos={parceiro.saldos_bookmakers} pendentes={parceiro.pendentes_bookmakers} /></TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              ) : "—"}
+                            </div>
+                            <div className="text-[11px] font-mono font-bold text-foreground text-right">{formatCurrency(parceiro.total_brl, "BRL")}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                   </div>
+                 </ScrollArea>
               <SwapCryptoDialog
                 open={swapDialog.open}
                 onClose={() => setSwapDialog({ open: false, parceiroId: null })}
