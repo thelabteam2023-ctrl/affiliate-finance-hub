@@ -106,12 +106,12 @@ import { explainRpcCall } from "@/lib/dev/rpcExplain";
                  <thead className="sticky top-0 bg-background border-b z-10">
                    <tr className="text-left text-muted-foreground">
                      <th className="px-2 py-2">Data/Hora</th>
-                     <th className="px-2 py-2">Operação</th>
-                     <th className="px-2 py-2 text-right">Impacto</th>
-                     <th className="px-2 py-2 text-right font-bold text-primary bg-primary/5">Running Balance</th>
-                     <th className="px-2 py-2 text-right">Audit Antes</th>
-                     <th className="px-2 py-2 text-right">Audit Depois</th>
-                     <th className="px-2 py-2">Descrição</th>
+                      <th className="px-2 py-2">Tipo / ID</th>
+                      <th className="px-2 py-2 text-right">Stake/Retorno</th>
+                      <th className="px-2 py-2 text-right">Saldo Antes</th>
+                      <th className="px-2 py-2 text-right font-bold text-primary bg-primary/5">Saldo Depois (Ledger)</th>
+                      <th className="px-2 py-2 text-right text-muted-foreground italic">Saldo Depois (Audit)</th>
+                      <th className="px-2 py-2">Observação</th>
                    </tr>
                  </thead>
                  <tbody className="font-mono">
@@ -164,8 +164,8 @@ import { explainRpcCall } from "@/lib/dev/rpcExplain";
                              </Tooltip>
                            )}
                          </td>
-                          <td className="px-2 py-1 text-muted-foreground text-[10px] max-w-[200px] truncate" title={r.descricao}>
-                            {r.descricao}
+                          <td className="px-2 py-1 text-muted-foreground text-[10px] max-w-[150px] truncate" title={r.descricao}>
+                            {r.descricao || '—'}
                           </td>
                         </tr>
                         {isExpanded && (
@@ -1115,6 +1115,15 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Deep Ledger Slide-over / Dialog */}
+      {selectedBookmaker && (
+        <DeepLedgerView 
+          bookmakerId={selectedBookmaker.id} 
+          bookmakerNome={selectedBookmaker.nome} 
+          onClose={() => setSelectedBookmaker(null)} 
+        />
+      )}
     </div>
   );
 }
