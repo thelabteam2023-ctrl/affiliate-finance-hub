@@ -786,8 +786,8 @@ const BookmakerListByMoeda = ({
                   )}
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[12px] font-semibold text-foreground/90 font-mono tracking-wide" title={wallet.label ? `${wallet.label} (${wallet.endereco})` : wallet.endereco}>
-                    {truncateAddr(wallet.endereco) || wallet.exchange}
+                  <span className="text-[12px] font-semibold text-foreground/90 font-mono tracking-wide break-all" title={wallet.label ? `${wallet.label} (${wallet.endereco})` : wallet.endereco}>
+                    {wallet.endereco || wallet.exchange}
                   </span>
                   <span className="text-[11px] font-mono text-muted-foreground/60 tabular-nums">{formatCurrency(walletTotal, "USD")}</span>
                 </div>
