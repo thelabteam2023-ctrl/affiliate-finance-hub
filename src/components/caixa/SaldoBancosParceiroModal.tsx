@@ -126,8 +126,8 @@ export function SaldoBancosParceiroModal({ open, onOpenChange, caixaParceiroId }
           </DialogHeader>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6">
-          <div className="py-6 max-h-[calc(100vh-280px)] sm:max-h-[calc(90vh-180px)]">
+        <div className="flex-1 overflow-y-auto px-6 max-h-[calc(100vh-280px)] sm:max-h-[calc(90vh-180px)]">
+          <div className="py-6">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-12 gap-3">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />

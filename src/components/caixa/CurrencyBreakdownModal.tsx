@@ -163,8 +163,8 @@ export function CurrencyBreakdownModal({ isOpen, onClose, category, currency, wo
           </DialogHeader>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6">
-          <div className="py-6 space-y-4 max-h-[calc(100vh-280px)] sm:max-h-[calc(90vh-180px)]">
+        <div className="flex-1 overflow-y-auto px-6 max-h-[calc(100vh-280px)] sm:max-h-[calc(90vh-180px)]">
+          <div className="py-6 space-y-4">
             {isLoading ? (
               Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="p-4 rounded-xl border border-white/5 bg-white/[0.01] space-y-3">
