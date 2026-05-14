@@ -1246,19 +1246,25 @@ const formatTime = (date: Date) => {
                               </div>
                               <div className="pl-2 space-y-1">
                                 {items.map((s, idx) => (
-                                  <div key={idx} className="flex justify-between items-center text-[11px]">
-                                    <span className="text-muted-foreground font-medium">{s.coin}</span>
-                                    <div className="flex items-center gap-2">
-                                      {s.saldo_locked_usd > 0 && (
-                                        <span className="text-[10px] text-chart-3/70 italic tabular-nums">
-                                          (⏳ {formatCurrency(s.saldo_locked_usd, "USD")})
-                                        </span>
-                                      )}
-                                      <span className="font-mono text-foreground/90 tabular-nums">
-                                        {formatCurrency(s.saldo_usd, "USD")}
-                                      </span>
-                                    </div>
-                                  </div>
+                                   <div key={idx} className="grid grid-cols-[50px_1fr_auto] items-center gap-3 text-[11px] py-0.5">
+                                     <span className="text-muted-foreground font-bold uppercase tracking-wider">{s.coin}</span>
+                                     <span className="font-mono text-muted-foreground/60 text-left tabular-nums">
+                                       {(s.saldo_coin || 0).toLocaleString('pt-BR', { 
+                                         minimumFractionDigits: (s.saldo_coin || 0) < 1 ? 8 : 2,
+                                         maximumFractionDigits: (s.saldo_coin || 0) < 1 ? 8 : 2 
+                                       })}
+                                     </span>
+                                     <div className="flex items-center gap-2">
+                                       {s.saldo_locked_usd > 0 && (
+                                         <span className="text-[10px] text-chart-3/70 italic tabular-nums">
+                                           (⏳ {formatCurrency(s.saldo_locked_usd, "USD")})
+                                         </span>
+                                       )}
+                                       <span className="font-mono font-medium text-foreground tabular-nums">
+                                         {formatCurrency(s.saldo_usd, "USD")}
+                                       </span>
+                                     </div>
+                                   </div>
                                 ))}
                               </div>
                             </div>
