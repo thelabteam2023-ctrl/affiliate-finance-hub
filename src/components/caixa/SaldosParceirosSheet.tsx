@@ -400,29 +400,6 @@ import { useRef, MouseEvent as ReactMouseEvent } from "react";
   const { workspaceId } = useTabWorkspace();
   const { convertToBRL } = useExchangeRates();
 
-  const fetchCryptoPrices = async (coins: string[]) => {
-    if (coins.length === 0) return {};
-    
-    try {
-      setPricesLoading(true);
-      const uniqueCoins = [...new Set(coins)];
-      
-      const { data, error } = await supabase.functions.invoke("get-crypto-prices", {
-        body: { symbols: uniqueCoins },
-      });
-
-      if (error) throw error;
-      
-      setCryptoPrices(data.prices || {});
-      setLastPriceUpdate(new Date());
-      return data.prices || {};
-    } catch (error) {
-      console.error("Erro ao buscar preços crypto:", error);
-      return {};
-    } finally {
-      setPricesLoading(false);
-    }
-  };
 
   const fetchSaldosParceiros = useCallback(async () => {
     if (!workspaceId) return;
