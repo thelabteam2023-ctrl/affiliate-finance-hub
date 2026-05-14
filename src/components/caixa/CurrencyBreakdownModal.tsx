@@ -26,32 +26,31 @@ export function CurrencyBreakdownModal({ isOpen, onClose, category, currency, wo
 
       let result: any[] = [];
 
-       if (category === "Bookmakers" || category === "Broker") {
-         const isBroker = category === "Broker";
-         const { data } = await supabase
-           .from("bookmakers")
-           .select("nome, saldo_atual, saldo_freebet, moeda, parceiro_id")
-           .eq("workspace_id", workspaceId)
-           .eq("moeda", currency)
-           .eq("is_broker_account", isBroker)
-           .in("status", ["ativo", "limitada", "AGUARDANDO_SAQUE"]);
-         
-         if (data && data.length > 0) {
-           const partnerIds = data.map(d => d.parceiro_id).filter(Boolean) as string[];
-           const { data: partners } = await supabase
-             .from("parceiros")
-             .select("id, nome")
-             .in("id", partnerIds);
-             
-           result = data.map(d => ({
-             nome: d.nome,
-             parceiro: partners?.find(p => p.id === d.parceiro_id)?.nome || 'N/A',
-             // O saldo_operavel para casas é saldo_atual (que já inclui bônus) + saldo_freebet
-             valor: (Number(d.saldo_atual) || 0) + (Number(d.saldo_freebet) || 0),
-             type: 'bookmaker'
-           }));
-         }
-       } else if (category === "Wallets Parceiros" || (category === "Caixa Operacional" && currency === "CRYPTO")) {
+      if (category === "Bookmakers" || category === "Broker") {
+        const isBroker = category === "Broker";
+        const { data } = await supabase
+          .from("bookmakers")
+          .select("nome, saldo_atual, moeda, parceiro_id")
+          .eq("workspace_id", workspaceId)
+          .eq("moeda", currency)
+          .eq("is_broker_account", isBroker)
+          .in("status", ["ativo", "limitada", "AGUARDANDO_SAQUE"]);
+        
+        if (data && data.length > 0) {
+          const partnerIds = data.map(d => d.parceiro_id).filter(Boolean) as string[];
+          const { data: partners } = await supabase
+            .from("parceiros")
+            .select("id, nome")
+            .in("id", partnerIds);
+            
+          result = data.map(d => ({
+            nome: d.nome,
+            parceiro: partners?.find(p => p.id === d.parceiro_id)?.nome || 'N/A',
+            valor: d.saldo_atual || 0,
+            type: 'bookmaker'
+          }));
+        }
+      } else if (category === "Wallets Parceiros" || (category === "Caixa Operacional" && currency === "CRYPTO")) {
         const isCaixa = category === "Caixa Operacional";
         
         const { data } = await supabase

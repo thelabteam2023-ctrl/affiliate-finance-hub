@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
- import { supabase } from "@/integrations/supabase/client";
- import { useTabWorkspace } from "@/hooks/useTabWorkspace";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getWalletDisplayName } from "@/utils/cryptoUtils";
 import { Button } from "@/components/ui/button";
@@ -54,26 +53,18 @@ export function ExposicaoCryptoCard({
     label: "", exchange: "", endereco: "", rede_id: "", network: "TRC20", moeda: [] as string[], observacoes: "",
   });
 
-   const { workspaceId } = useTabWorkspace();
- 
-   const fetchWallets = useCallback(async () => {
-     if (!caixaParceiroId || !workspaceId) return;
-     const [walletsViewRes, walletsDetailRes] = await Promise.all([
-       (supabase.from("v_saldo_parceiro_wallets") as any)
-         .select("coin, saldo_coin, saldo_usd, wallet_id, exchange, endereco")
-         .eq("parceiro_id", caixaParceiroId)
-         .eq("workspace_id", workspaceId),
-       (supabase.from("wallets_crypto") as any)
-         .select("id, label, exchange, endereco, network, moeda")
-         .eq("parceiro_id", caixaParceiroId)
-         .eq("workspace_id", workspaceId),
-     ]);
+  const fetchWallets = useCallback(async () => {
+    if (!caixaParceiroId) return;
+    const [walletsViewRes, walletsDetailRes] = await Promise.all([
+      supabase.from("v_saldo_parceiro_wallets").select("*").eq("parceiro_id", caixaParceiroId),
+      supabase.from("wallets_crypto").select("id, label, exchange, endereco, network, moeda").eq("parceiro_id", caixaParceiroId),
+    ]);
 
     const detailMap = new Map((walletsDetailRes.data || []).map((d: any) => [d.id, d]));
     const grouped: Record<string, WalletInfo> = {};
 
-     ((walletsViewRes.data || []) as any[]).forEach((w) => {
-       const detail = detailMap.get(w.wallet_id) as any;
+    (walletsViewRes.data || []).forEach((w: any) => {
+      const detail = detailMap.get(w.wallet_id);
       if (!grouped[w.wallet_id]) {
         grouped[w.wallet_id] = {
           wallet_id: w.wallet_id,
@@ -92,7 +83,7 @@ export function ExposicaoCryptoCard({
       }
     });
 
-     ((walletsDetailRes.data || []) as any[]).forEach((d) => {
+    (walletsDetailRes.data || []).forEach((d: any) => {
       if (!grouped[d.id]) {
         grouped[d.id] = {
           wallet_id: d.id, label: d.label, exchange: d.exchange, endereco: d.endereco,

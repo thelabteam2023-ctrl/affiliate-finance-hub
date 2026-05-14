@@ -132,13 +132,13 @@ export function useFinanceiroCalculations({
     
     // Bookmakers: consolidar TODAS as moedas via cotação real
     // ALINHAMENTO: Usar Math.max(0) igual ao Caixa Operacional
-     const saldoBookmakersBRL = bookmakersSaldos.filter(b => !b.moeda || b.moeda === "BRL").reduce((acc, b) => acc + Math.max(0, (b.saldo_atual || 0) + (b.saldo_freebet || 0)), 0);
-     const saldoBookmakersUSD = bookmakersSaldos.filter(b => b.moeda === "USD" || b.moeda === "USDT").reduce((acc, b) => acc + Math.max(0, (b.saldo_atual || 0) + (b.saldo_freebet || 0)), 0);
-     const saldoBookmakersEUR = bookmakersSaldos.filter(b => b.moeda === "EUR").reduce((acc, b) => acc + Math.max(0, (b.saldo_atual || 0) + (b.saldo_freebet || 0)), 0);
-     let saldoBookmakers = 0;
-     bookmakersSaldos.forEach(b => {
-       saldoBookmakers += convertToBRL(Math.max(0, (b.saldo_atual || 0) + (b.saldo_freebet || 0)), b.moeda || 'BRL');
-     });
+    const saldoBookmakersBRL = bookmakersSaldos.filter(b => !b.moeda || b.moeda === "BRL").reduce((acc, b) => acc + Math.max(0, b.saldo_atual || 0), 0);
+    const saldoBookmakersUSD = bookmakersSaldos.filter(b => b.moeda === "USD" || b.moeda === "USDT").reduce((acc, b) => acc + Math.max(0, b.saldo_atual || 0), 0);
+    const saldoBookmakersEUR = bookmakersSaldos.filter(b => b.moeda === "EUR").reduce((acc, b) => acc + Math.max(0, b.saldo_atual || 0), 0);
+    let saldoBookmakers = 0;
+    bookmakersSaldos.forEach(b => {
+      saldoBookmakers += convertToBRL(Math.max(0, b.saldo_atual || 0), b.moeda || 'BRL');
+    });
     const hasBookmakersUSD = saldoBookmakersUSD > 0 || saldoBookmakersEUR > 0;
     
     // Contas Parceiros: consolidar por moeda com conversão real
@@ -148,11 +148,8 @@ export function useFinanceiroCalculations({
       totalContasParceiros += convertToBRL(Math.max(0, c.saldo || 0), c.moeda || 'BRL');
     });
 
-     // Wallets Parceiros: Usar valor atualizado se possível, ou fallback para USD do ledger
-     const totalWalletsParceiros = walletsParceiros.reduce((acc: number, w: any) => {
-       const valorUSD = getCryptoUSDValue(w.coin, w.saldo_coin, w.saldo_usd);
-       return acc + (Math.max(0, valorUSD) * cotacaoUSD);
-     }, 0);
+    // Wallets Parceiros: Math.max(0) para paridade com Caixa
+    const totalWalletsParceiros = walletsParceiros.reduce((acc: number, w: any) => acc + (Math.max(0, w.saldo_usd || 0) * cotacaoUSD), 0);
     
     return { saldoBRL, saldoUSD, totalCryptoUSD, capitalOperacional, saldoBookmakersBRL, saldoBookmakersUSD, saldoBookmakersEUR, saldoBookmakers, hasBookmakersUSD, totalContasParceiros, totalWalletsParceiros };
   }, [caixaFiat, caixaCrypto, bookmakersSaldos, contasParceiros, walletsParceiros, cotacaoUSD, getCryptoUSDValue, convertToBRL]);
