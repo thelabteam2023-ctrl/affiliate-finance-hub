@@ -72,8 +72,8 @@ export function ExposicaoCryptoCard({
     const detailMap = new Map((walletsDetailRes.data || []).map((d: any) => [d.id, d]));
     const grouped: Record<string, WalletInfo> = {};
 
-    (walletsViewRes.data || []).forEach((w: any) => {
-      const detail = detailMap.get(w.wallet_id);
+     ((walletsViewRes.data || []) as any[]).forEach((w) => {
+       const detail = detailMap.get(w.wallet_id) as any;
       if (!grouped[w.wallet_id]) {
         grouped[w.wallet_id] = {
           wallet_id: w.wallet_id,
