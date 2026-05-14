@@ -670,16 +670,16 @@ const BookmakerListByMoeda = ({
     };
   }, [open]);
 
-  const formatCurrency = (value: number, currency: string) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: currency,
-    }).format(value);
-  };
+const formatCurrency = (value: number, currency: string) => {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: currency,
+  }).format(value);
+};
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-  };
+const formatTime = (date: Date) => {
+  return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+};
 
   const filteredAndSortedParceiros = useMemo(() => {
     let result = [...parceirosAgrupados];
