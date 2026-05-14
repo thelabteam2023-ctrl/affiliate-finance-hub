@@ -53,12 +53,20 @@ export function ExposicaoCryptoCard({
     label: "", exchange: "", endereco: "", rede_id: "", network: "TRC20", moeda: [] as string[], observacoes: "",
   });
 
-  const fetchWallets = useCallback(async () => {
-    if (!caixaParceiroId) return;
-    const [walletsViewRes, walletsDetailRes] = await Promise.all([
-      supabase.from("v_saldo_parceiro_wallets").select("*").eq("parceiro_id", caixaParceiroId),
-      supabase.from("wallets_crypto").select("id, label, exchange, endereco, network, moeda").eq("parceiro_id", caixaParceiroId),
-    ]);
+   const { workspaceId } = useTabWorkspace();
+ 
+   const fetchWallets = useCallback(async () => {
+     if (!caixaParceiroId || !workspaceId) return;
+     const [walletsViewRes, walletsDetailRes] = await Promise.all([
+       supabase.from("v_saldo_parceiro_wallets")
+         .select("*")
+         .eq("parceiro_id", caixaParceiroId)
+         .eq("workspace_id", workspaceId),
+       supabase.from("wallets_crypto")
+         .select("id, label, exchange, endereco, network, moeda")
+         .eq("parceiro_id", caixaParceiroId)
+         .eq("workspace_id", workspaceId),
+     ]);
 
     const detailMap = new Map((walletsDetailRes.data || []).map((d: any) => [d.id, d]));
     const grouped: Record<string, WalletInfo> = {};
