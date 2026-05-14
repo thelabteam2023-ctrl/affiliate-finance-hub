@@ -63,7 +63,7 @@ export function ExposicaoCryptoCard({
          .select("coin, saldo_coin, saldo_usd, wallet_id, exchange, endereco")
          .eq("parceiro_id", caixaParceiroId)
          .eq("workspace_id", workspaceId),
-       supabase.from("wallets_crypto")
+       (supabase.from("wallets_crypto") as any)
          .select("id, label, exchange, endereco, network, moeda")
          .eq("parceiro_id", caixaParceiroId)
          .eq("workspace_id", workspaceId),
