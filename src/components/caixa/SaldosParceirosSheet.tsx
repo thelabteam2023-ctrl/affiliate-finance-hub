@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTabWorkspace } from "@/hooks/useTabWorkspace";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Users, RefreshCw, ArrowUpDown, Wallet, Landmark, Bitcoin, Info, ArrowRightLeft, Truck, Building2, User, Search, SortAsc, LayoutGrid, List, Pin } from "lucide-react";
+import { Users, RefreshCw, ArrowUpDown, Wallet, Landmark, Bitcoin, Info, ArrowRightLeft, Truck, Building2, User, Search, SortAsc, LayoutGrid, List, Pin, Copy, Check } from "lucide-react";
  import { Input } from "@/components/ui/input";
  import { Switch } from "@/components/ui/switch";
  import { Label } from "@/components/ui/label";
@@ -729,13 +729,19 @@ const BookmakerListByMoeda = ({
 
   const CryptoHoverContent = ({ saldos, totalLocked, onOpenSwap }: { saldos: ParceiroSaldoAgrupado["saldos_crypto"]; totalLocked: number; onOpenSwap: () => void }) => {
     const [ascending, setAscending] = useState(false);
+    const [copiedId, setCopiedId] = useState<string | null>(null);
 
-    const truncateAddr = (addr: string) => {
-      if (!addr || addr.length <= 12) return addr || "—";
-      return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+    const handleCopy = (text: string, id: string) => {
+      navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
     };
 
-    // Group by endereco (unique wallet address)
+    const truncateAddr = (addr: string) => {
+      if (!addr || addr.length <= 12) return addr || "";
+      return `${addr.slice(0, 6)}...${addr.slice(-5)}`;
+    };
+
     const grouped = saldos.reduce<Record<string, { exchange: string; endereco: string; label?: string; items: typeof saldos }>>((acc, s) => {
       const key = s.endereco || s.exchange || "Wallet";
       if (!acc[key]) acc[key] = { exchange: s.exchange, endereco: s.endereco, label: s.label, items: [] };
@@ -746,88 +752,99 @@ const BookmakerListByMoeda = ({
     const walletKeys = Object.keys(grouped).sort();
 
     return (
-      <>
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between pb-1 mb-0.5 border-b border-border/30">
+      <div className="space-y-3">
+        <div className="flex items-center justify-between pb-1 border-b border-border/30">
           <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
             Saldo por Carteira
           </p>
-          <button onClick={() => setAscending(!ascending)} className="text-muted-foreground/60 hover:text-foreground transition-colors" title="Ordenar por valor">
-            <ArrowUpDown className="h-3 w-3" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onOpenSwap(); }}
+              className="flex items-center gap-1.5 text-[10px] text-muted-foreground/60 hover:text-primary transition-colors"
+              title="Swap entre moedas"
+            >
+              <ArrowRightLeft className="h-3 w-3" />
+              <span>Swap</span>
+            </button>
+            <button type="button" onClick={() => setAscending(!ascending)} className="text-muted-foreground/60 hover:text-foreground transition-colors" title="Ordenar por valor">
+              <ArrowUpDown className="h-3 w-3" />
+            </button>
+          </div>
         </div>
-        <button
-          onClick={(e) => { e.stopPropagation(); onOpenSwap(); }}
-          className="flex items-center gap-1.5 text-[10px] text-muted-foreground/60 hover:text-primary transition-colors mb-1"
-          title="Swap entre moedas"
-        >
-          <ArrowRightLeft className="h-3 w-3" />
-          <span>Swap</span>
-        </button>
         {walletKeys.map((wKey, wIdx) => {
           const wallet = grouped[wKey];
           const items = [...wallet.items].sort((a, b) => ascending ? a.saldo_usd - b.saldo_usd : b.saldo_usd - a.saldo_usd);
           const walletTotal = items.reduce((sum, s) => sum + s.saldo_usd, 0);
-          const coins = items.map(s => s.coin).join(", ");
+          const walletId = `wallet-${wIdx}`;
           return (
-            <div key={wKey}>
-              {/* Wallet header: exchange name + address + total */}
-              <div className={`py-1 ${wIdx > 0 ? "mt-2 border-t border-border/30 pt-2" : ""}`}>
-                <div className="flex flex-col mb-0.5">
-                  {wallet.label ? (
-                    <span className="text-[11px] font-bold text-primary uppercase tracking-wider">
-                      {wallet.label}
-                    </span>
-                  ) : (
-                    wallet.exchange && wallet.exchange !== "Wallet" && (
-                      <span className="text-[11px] font-semibold text-primary/80 uppercase tracking-wider">
-                        {wallet.exchange.split(/[-\s]/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')}
-                      </span>
-                    )
-                  )}
+            <div key={wKey} className={`space-y-2 ${wIdx > 0 ? "pt-3 border-t border-border/20" : ""}`}>
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-chart-2 uppercase tracking-wide">
+                    {wallet.label || wallet.exchange || "Wallet"}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground/50 font-medium uppercase">
+                    {wallet.exchange && wallet.exchange !== "Wallet" ? wallet.exchange : ""}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[12px] font-semibold text-foreground/90 font-mono tracking-wide break-all" title={wallet.label ? `${wallet.label} (${wallet.endereco})` : wallet.endereco}>
-                    {wallet.endereco || wallet.exchange}
-                  </span>
-                  <span className="text-[11px] font-mono text-muted-foreground/60 tabular-nums">{formatCurrency(walletTotal, "USD")}</span>
-                </div>
-                {wallet.label && wallet.exchange && wallet.exchange !== "Wallet" && (
-                  <div className="text-[10px] text-muted-foreground/60 uppercase tracking-tight">
-                    {wallet.exchange.split(/[-\s]/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')}
-                  </div>
-                )}
-                
-              </div>
-              {items.map((s, idx) => (
-                <div key={idx} className="flex justify-between items-start gap-4 py-0.5">
-                  <div className="flex flex-col gap-0">
-                    <span className="text-[13px] font-semibold text-foreground leading-tight">{s.coin}</span>
-                    <span className="text-[11px] text-muted-foreground/50 font-mono tabular-nums leading-tight">
-                      {s.saldo_coin.toLocaleString("pt-BR", { maximumFractionDigits: 4 })} {s.coin}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[12px] font-mono text-foreground/80 tracking-tight leading-none">
+                      {truncateAddr(wallet.endereco)}
                     </span>
-                  </div>
-                  <div className="flex flex-col items-end gap-0">
-                    <span className="text-[13px] font-mono font-medium text-chart-2 whitespace-nowrap tabular-nums leading-tight">{formatCurrency(s.saldo_usd, "USD")}</span>
-                    {s.saldo_locked_usd > 0 && (
-                      <span className="text-[11px] font-mono text-chart-3/80 whitespace-nowrap tabular-nums leading-tight">
-                        -{formatCurrency(s.saldo_locked_usd, "USD")} trânsito
-                      </span>
+                    {wallet.endereco && (
+                      <button 
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCopy(wallet.endereco, walletId);
+                        }}
+                        className="text-muted-foreground/40 hover:text-primary transition-colors"
+                      >
+                        {copiedId === walletId ? (
+                          <div className="flex items-center gap-1">
+                            <Check className="h-3 w-3 text-green-500" />
+                            <span className="text-[9px] font-bold text-green-500">Copiado!</span>
+                          </div>
+                        ) : (
+                          <Copy className="h-3 w-3" />
+                        )}
+                      </button>
                     )}
                   </div>
+                  <span className="text-[12px] font-mono font-bold text-foreground">
+                    {formatCurrency(walletTotal, "USD")}
+                  </span>
                 </div>
-              ))}
+              </div>
+              <div className="pl-2 space-y-1">
+                {items.map((s, idx) => (
+                  <div key={idx} className="flex justify-between items-center text-[11px]">
+                    <span className="text-muted-foreground font-medium">{s.coin}</span>
+                    <div className="flex items-center gap-2">
+                      {s.saldo_locked_usd > 0 && (
+                        <span className="text-[10px] text-chart-3/70 italic tabular-nums">
+                          (⏳ {formatCurrency(s.saldo_locked_usd, "USD")})
+                        </span>
+                      )}
+                      <span className="font-mono text-foreground/90 tabular-nums">
+                        {formatCurrency(s.saldo_usd, "USD")}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           );
         })}
         {totalLocked > 0 && (
-          <div className="pt-1.5 mt-1 border-t border-border/30 flex justify-between items-center">
-            <span className="text-[11px] text-chart-3/80 font-medium">⏳ Em Trânsito</span>
-            <span className="text-[13px] font-mono font-medium text-chart-3 tabular-nums">{formatCurrency(totalLocked, "USD")}</span>
+          <div className="pt-2 border-t border-border/30 flex justify-between items-center bg-chart-3/5 px-2 py-1 rounded">
+            <span className="text-[11px] text-chart-3 font-semibold uppercase tracking-tighter">⏳ Total em Trânsito</span>
+            <span className="text-[12px] font-mono font-bold text-chart-3 tabular-nums">{formatCurrency(totalLocked, "USD")}</span>
           </div>
         )}
       </div>
-      </>
     );
   };
 
