@@ -146,7 +146,7 @@ export function CurrencyBreakdownModal({ isOpen, onClose, category, currency, wo
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-2xl bg-[#0F1115] border-white/10 text-white p-0 overflow-hidden flex flex-col max-h-[90vh]">
+      <DialogContent className="max-w-2xl bg-[#0F1115] border-white/10 text-white p-0 overflow-hidden flex flex-col max-h-[85vh] sm:max-h-[90vh] gap-0">
         <div className="p-6 border-b border-white/5 bg-white/[0.02]">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold flex items-center gap-3">
@@ -157,7 +157,7 @@ export function CurrencyBreakdownModal({ isOpen, onClose, category, currency, wo
           </DialogHeader>
         </div>
 
-        <ScrollArea className="flex-1 px-6">
+        <ScrollArea className="flex-1 min-h-0 px-6">
           <div className="py-6 space-y-4">
             {isLoading ? (
               Array.from({ length: 4 }).map((_, i) => (
@@ -244,7 +244,7 @@ export function CurrencyBreakdownModal({ isOpen, onClose, category, currency, wo
           </div>
         </ScrollArea>
 
-        <div className="p-6 bg-white/[0.02] border-t border-white/5 flex items-center justify-between mt-auto">
+        <div className="p-6 bg-white/[0.04] border-t border-white/10 flex items-center justify-between shrink-0">
           <span className="text-white/40 text-sm font-medium uppercase tracking-wider">Total Consolidado</span>
           <div className="flex flex-col items-end">
             <span className="text-2xl font-mono font-bold text-white">
