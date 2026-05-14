@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTabWorkspace } from "@/hooks/useTabWorkspace";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Users, RefreshCw, ArrowUpDown, Wallet, Landmark, Bitcoin, Info, ArrowRightLeft, Truck, Building2, User, Search, SortAsc, LayoutGrid, List, Pin, Copy, Check } from "lucide-react";
+import { Users, RefreshCw, ArrowUpDown, Wallet, Landmark, Bitcoin, Info, ArrowRightLeft, Truck, Building2, User, Search, SortAsc, LayoutGrid, List, Pin, Copy, Check, X } from "lucide-react";
  import { Input } from "@/components/ui/input";
  import { Switch } from "@/components/ui/switch";
  import { Label } from "@/components/ui/label";
@@ -278,7 +278,7 @@ const BookmakerListByMoeda = ({
    );
  }
  
-   import { useRef } from "react";
+    import { useRef, MouseEvent as ReactMouseEvent } from "react";
 
     const InteractiveTooltip = ({ children, content, className, containerRef }: { children: React.ReactNode, content: React.ReactNode, className?: string, containerRef?: React.RefObject<any> }) => {
      const [isPinned, setIsPinned] = useState(false);
@@ -340,10 +340,99 @@ const BookmakerListByMoeda = ({
      );
    };
 
-   export function SaldosParceirosSheet() {
-   const scrollContainerRef = useRef<HTMLDivElement>(null);
+    export function SaldosParceirosSheet() {
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [cryptoPanel, setCryptoPanel] = useState<{
+    open: boolean;
+    parceiroId: string | null;
+    parceiroNome: string;
+    saldos: ParceiroSaldoAgrupado["saldos_crypto"];
+    totalLocked: number;
+    x: number;
+    y: number;
+  }>({
+    open: false,
+    parceiroId: null,
+    parceiroNome: "",
+    saldos: [],
+    totalLocked: 0,
+    x: 0,
+    y: 0,
+  });
   const [open, setOpen] = useState(false);
   const [parceirosAgrupados, setParceirosAgrupados] = useState<ParceiroSaldoAgrupado[]>([]);
+  const isDragging = useRef(false);
+  const dragOffset = useRef({ x: 0, y: 0 });
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleCopy = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleOpenCryptoPanel = (e: React.MouseEvent, parceiro: ParceiroSaldoAgrupado) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    
+    let x = rect.left - 350;
+    if (x < 10) x = rect.right + 10;
+    if (x + 340 > window.innerWidth) x = window.innerWidth - 350;
+    
+    let y = rect.top;
+    if (y + 400 > window.innerHeight) y = window.innerHeight - 410;
+    if (y < 10) y = 10;
+
+    setCryptoPanel({
+      open: true,
+      parceiroId: parceiro.parceiro_id,
+      parceiroNome: parceiro.parceiro_nome,
+      saldos: parceiro.saldos_crypto,
+      totalLocked: parceiro.total_crypto_locked_usd,
+      x,
+      y,
+    });
+  };
+
+  const onMouseDownDrag = (e: ReactMouseEvent) => {
+    isDragging.current = true;
+    dragOffset.current = {
+      x: e.clientX - cryptoPanel.x,
+      y: e.clientY - cryptoPanel.y,
+    };
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'grabbing';
+  };
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (isDragging.current) {
+        setCryptoPanel((prev) => ({
+          ...prev,
+          x: e.clientX - dragOffset.current.x,
+          y: e.clientY - dragOffset.current.y,
+        }));
+      }
+    };
+
+    const onMouseUp = () => {
+      isDragging.current = false;
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    };
+
+    if (cryptoPanel.open) {
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [cryptoPanel.open]);
     const [searchTerm, setSearchTerm] = useState("");
     const [sortBy, setSortBy] = useState<"balance" | "alphabetical">("balance");
     const [showAll, setShowAll] = useState(false);
@@ -650,6 +739,8 @@ const BookmakerListByMoeda = ({
   useEffect(() => {
     if (open) {
       fetchSaldosParceiros();
+    } else {
+      setCryptoPanel(prev => ({ ...prev, open: false }));
     }
   }, [open]);
 
@@ -670,16 +761,16 @@ const BookmakerListByMoeda = ({
     };
   }, [open]);
 
-  const formatCurrency = (value: number, currency: string) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: currency,
-    }).format(value);
-  };
+const formatCurrency = (value: number, currency: string) => {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: currency,
+  }).format(value);
+};
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-  };
+const formatTime = (date: Date) => {
+  return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+};
 
   const filteredAndSortedParceiros = useMemo(() => {
     let result = [...parceirosAgrupados];
@@ -727,125 +818,9 @@ const BookmakerListByMoeda = ({
     );
   };
 
-  const CryptoHoverContent = ({ saldos, totalLocked, onOpenSwap }: { saldos: ParceiroSaldoAgrupado["saldos_crypto"]; totalLocked: number; onOpenSwap: () => void }) => {
-    const [ascending, setAscending] = useState(false);
-    const [copiedId, setCopiedId] = useState<string | null>(null);
-
-    const handleCopy = (text: string, id: string) => {
-      navigator.clipboard.writeText(text);
-      setCopiedId(id);
-      setTimeout(() => setCopiedId(null), 2000);
-    };
-
-    const truncateAddr = (addr: string) => {
-      if (!addr || addr.length <= 12) return addr || "";
-      return `${addr.slice(0, 6)}...${addr.slice(-5)}`;
-    };
-
-    const grouped = saldos.reduce<Record<string, { exchange: string; endereco: string; label?: string; items: typeof saldos }>>((acc, s) => {
-      const key = s.endereco || s.exchange || "Wallet";
-      if (!acc[key]) acc[key] = { exchange: s.exchange, endereco: s.endereco, label: s.label, items: [] };
-      acc[key].items.push(s);
-      return acc;
-    }, {});
-
-    const walletKeys = Object.keys(grouped).sort();
-
-    return (
-      <div className="space-y-3">
-        <div className="flex items-center justify-between pb-1 border-b border-border/30">
-          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
-            Saldo por Carteira
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onOpenSwap(); }}
-              className="flex items-center gap-1.5 text-[10px] text-muted-foreground/60 hover:text-primary transition-colors"
-              title="Swap entre moedas"
-            >
-              <ArrowRightLeft className="h-3 w-3" />
-              <span>Swap</span>
-            </button>
-            <button type="button" onClick={() => setAscending(!ascending)} className="text-muted-foreground/60 hover:text-foreground transition-colors" title="Ordenar por valor">
-              <ArrowUpDown className="h-3 w-3" />
-            </button>
-          </div>
-        </div>
-        {walletKeys.map((wKey, wIdx) => {
-          const wallet = grouped[wKey];
-          const items = [...wallet.items].sort((a, b) => ascending ? a.saldo_usd - b.saldo_usd : b.saldo_usd - a.saldo_usd);
-          const walletTotal = items.reduce((sum, s) => sum + s.saldo_usd, 0);
-          const walletId = `wallet-${wIdx}`;
-          return (
-            <div key={wKey} className={`space-y-2 ${wIdx > 0 ? "pt-3 border-t border-border/20" : ""}`}>
-              <div className="flex flex-col gap-0.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-chart-2 uppercase tracking-wide">
-                    {wallet.label || wallet.exchange || "Wallet"}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground/50 font-medium uppercase">
-                    {wallet.exchange && wallet.exchange !== "Wallet" ? wallet.exchange : ""}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[12px] font-mono text-foreground/80 tracking-tight leading-none">
-                      {truncateAddr(wallet.endereco)}
-                    </span>
-                    {wallet.endereco && (
-                      <button 
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCopy(wallet.endereco, walletId);
-                        }}
-                        className="text-muted-foreground/40 hover:text-primary transition-colors"
-                      >
-                        {copiedId === walletId ? (
-                          <div className="flex items-center gap-1">
-                            <Check className="h-3 w-3 text-green-500" />
-                            <span className="text-[9px] font-bold text-green-500">Copiado!</span>
-                          </div>
-                        ) : (
-                          <Copy className="h-3 w-3" />
-                        )}
-                      </button>
-                    )}
-                  </div>
-                  <span className="text-[12px] font-mono font-bold text-foreground">
-                    {formatCurrency(walletTotal, "USD")}
-                  </span>
-                </div>
-              </div>
-              <div className="pl-2 space-y-1">
-                {items.map((s, idx) => (
-                  <div key={idx} className="flex justify-between items-center text-[11px]">
-                    <span className="text-muted-foreground font-medium">{s.coin}</span>
-                    <div className="flex items-center gap-2">
-                      {s.saldo_locked_usd > 0 && (
-                        <span className="text-[10px] text-chart-3/70 italic tabular-nums">
-                          (⏳ {formatCurrency(s.saldo_locked_usd, "USD")})
-                        </span>
-                      )}
-                      <span className="font-mono text-foreground/90 tabular-nums">
-                        {formatCurrency(s.saldo_usd, "USD")}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-        {totalLocked > 0 && (
-          <div className="pt-2 border-t border-border/30 flex justify-between items-center bg-chart-3/5 px-2 py-1 rounded">
-            <span className="text-[11px] text-chart-3 font-semibold uppercase tracking-tighter">⏳ Total em Trânsito</span>
-            <span className="text-[12px] font-mono font-bold text-chart-3 tabular-nums">{formatCurrency(totalLocked, "USD")}</span>
-          </div>
-        )}
-      </div>
-    );
+  const truncateAddr = (addr: string) => {
+    if (!addr || addr.length <= 12) return addr || "";
+    return `${addr.slice(0, 6)}...${addr.slice(-5)}`;
   };
 
   return (
@@ -1122,17 +1097,20 @@ const BookmakerListByMoeda = ({
                                      </Button>
                                    </InteractiveTooltip>
                                  )}
-                                 {parceiro.saldos_crypto.length > 0 && (
-                                   <InteractiveTooltip containerRef={scrollContainerRef} className="w-full" content={<CryptoHoverContent saldos={parceiro.saldos_crypto} totalLocked={parceiro.total_crypto_locked_usd} onOpenSwap={() => setSwapDialog({ open: true, parceiroId: parceiro.parceiro_id })} />}>
-                                     <Button variant="ghost" size="sm" className="w-full justify-between h-8 px-2 bg-muted/10 hover:bg-muted/20 text-[11px] font-medium border border-border/10">
-                                       <div className="flex items-center gap-1.5"><Bitcoin className="h-3 w-3 text-chart-2" /><span>Wallets</span></div>
-                                       <div className="flex items-center gap-1 font-mono text-chart-2">
-                                         {formatCurrency(parceiro.total_crypto_usd - parceiro.total_crypto_locked_usd, "USD")}
-                                         {parceiro.total_crypto_locked_usd > 0 && <span className="text-[9px] text-chart-3">⏳ {formatCurrency(parceiro.total_crypto_locked_usd, "USD")}</span>}
-                                       </div>
-                                     </Button>
-                                   </InteractiveTooltip>
-                                 )}
+                                  {parceiro.saldos_crypto.length > 0 && (
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      className="w-full justify-between h-8 px-2 bg-muted/10 hover:bg-muted/20 text-[11px] font-medium border border-border/10"
+                                      onClick={(e) => handleOpenCryptoPanel(e, parceiro)}
+                                    >
+                                      <div className="flex items-center gap-1.5"><Bitcoin className="h-3 w-3 text-chart-2" /><span>Wallets</span></div>
+                                      <div className="flex items-center gap-1 font-mono text-chart-2">
+                                        {formatCurrency(parceiro.total_crypto_usd - parceiro.total_crypto_locked_usd, "USD")}
+                                        {parceiro.total_crypto_locked_usd > 0 && <span className="text-[9px] text-chart-3">⏳ {formatCurrency(parceiro.total_crypto_locked_usd, "USD")}</span>}
+                                      </div>
+                                    </Button>
+                                  )}
                                  {(hasBookmakerBalance || parceiro.pendentes_bookmakers.length > 0) && (
                                    <InteractiveTooltip containerRef={scrollContainerRef} className="w-full" content={<BookmakerDetailsContent saldos={parceiro.saldos_bookmakers} pendentes={parceiro.pendentes_bookmakers} />}>
                                      <Button variant="ghost" size="sm" className="w-full justify-between h-8 px-2 bg-muted/10 hover:bg-muted/20 text-[11px] font-medium border border-border/10">
@@ -1177,12 +1155,8 @@ const BookmakerListByMoeda = ({
                                  </InteractiveTooltip>
                                ) : "—"}
                              </div>
-                             <div className="text-[11px] font-mono text-chart-2 text-right">
-                               {cryptoTotalUSD > 0 ? (
-                                 <InteractiveTooltip containerRef={scrollContainerRef} content={<CryptoHoverContent saldos={parceiro.saldos_crypto} totalLocked={parceiro.total_crypto_locked_usd} onOpenSwap={() => setSwapDialog({ open: true, parceiroId: parceiro.parceiro_id })} />}>
-                                   {formatCurrency(cryptoTotalUSD, "USD").split(",")[0]}
-                                 </InteractiveTooltip>
-                               ) : "—"}
+                             <div className="text-[11px] font-mono text-chart-2 text-right cursor-pointer hover:text-primary transition-colors" onClick={(e) => handleOpenCryptoPanel(e, parceiro)}>
+                               {cryptoTotalUSD > 0 ? formatCurrency(cryptoTotalUSD, "USD").split(",")[0] : "—"}
                              </div>
                              <div className="text-[11px] font-mono text-chart-4 text-right">
                                {casasTotalBRL > 0 ? (
@@ -1206,8 +1180,156 @@ const BookmakerListByMoeda = ({
                   setSwapDialog({ open: false, parceiroId: null });
                   fetchSaldosParceiros();
                 }}
-                caixaParceiroId={swapDialog.parceiroId}
-              />
+               caixaParceiroId={swapDialog.parceiroId}
+             />
+
+              {cryptoPanel.open && (
+                <div 
+                  ref={panelRef}
+                  style={{ 
+                    position: 'fixed', 
+                    left: cryptoPanel.x, 
+                    top: cryptoPanel.y, 
+                    zIndex: 9999,
+                    width: 340,
+                    backgroundColor: 'hsl(var(--popover))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: 'var(--radius)',
+                    boxShadow: 'var(--shadow-2xl)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    maxHeight: '80vh'
+                  }}
+                  className="animate-in fade-in zoom-in-95 duration-200"
+                >
+                  {/* Header */}
+                  <div 
+                    className="flex items-center justify-between p-3 border-b border-border/50 cursor-grab active:cursor-grabbing bg-muted/30 rounded-t-[var(--radius)]"
+                    onMouseDown={onMouseDownDrag}
+                  >
+                    <div className="flex flex-col">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/70">Saldo por Carteira</span>
+                      <span className="text-[10px] font-medium text-primary/80 truncate max-w-[200px]">{cryptoPanel.parceiroNome}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                       <button
+                          type="button"
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            setSwapDialog({ open: true, parceiroId: cryptoPanel.parceiroId });
+                          }}
+                          className="p-1 text-muted-foreground/60 hover:text-primary transition-colors"
+                          title="Swap entre moedas"
+                        >
+                          <ArrowRightLeft className="h-3.5 w-3.5" />
+                        </button>
+                      <button 
+                        onClick={() => setCryptoPanel(prev => ({ ...prev, open: false }))}
+                        className="p-1 hover:bg-muted rounded-full transition-colors"
+                      >
+                        <X className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Content */}
+                  <ScrollArea 
+                    className="flex-1" 
+                    style={{ 
+                      maxHeight: cryptoPanel.saldos.length > 6 ? 'calc(80vh - 120px)' : 'auto',
+                      overflowY: 'auto'
+                    }}
+                  >
+                    <div className="p-4 space-y-4">
+                      {(() => {
+                        const grouped = cryptoPanel.saldos.reduce<Record<string, { exchange: string; endereco: string; label?: string; items: any[] }>>((acc, s) => {
+                          const key = s.endereco || s.exchange || "Wallet";
+                          if (!acc[key]) acc[key] = { exchange: s.exchange, endereco: s.endereco, label: s.label, items: [] };
+                          acc[key].items.push(s);
+                          return acc;
+                        }, {});
+
+                        const walletKeys = Object.keys(grouped).sort();
+                        
+                        return walletKeys.map((wKey, wIdx) => {
+                          const wallet = grouped[wKey];
+                          const items = [...wallet.items].sort((a, b) => b.saldo_usd - a.saldo_usd);
+                          const walletTotal = items.reduce((sum, s) => sum + s.saldo_usd, 0);
+                          const walletId = `panel-wallet-${wIdx}`;
+                          
+                          return (
+                            <div key={wKey} className={`space-y-2 ${wIdx > 0 ? "pt-3 border-t border-border/20" : ""}`}>
+                              <div className="flex flex-col gap-0.5">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[11px] font-bold text-chart-2 uppercase tracking-wide">
+                                    {wallet.label || wallet.exchange || "Wallet"}
+                                  </span>
+                                  <span className="text-[10px] text-muted-foreground/50 font-medium uppercase">
+                                    {wallet.exchange && wallet.exchange !== "Wallet" ? wallet.exchange : ""}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[12px] font-mono text-foreground/80 tracking-tight leading-none">
+                                      {truncateAddr(wallet.endereco)}
+                                    </span>
+                                    {wallet.endereco && (
+                                      <button 
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleCopy(wallet.endereco, walletId);
+                                        }}
+                                        className="text-muted-foreground/40 hover:text-primary transition-colors"
+                                      >
+                                        {copiedId === walletId ? (
+                                          <div className="flex items-center gap-1">
+                                            <Check className="h-3 w-3 text-green-500" />
+                                            <span className="text-[9px] font-bold text-green-500">Copiado!</span>
+                                          </div>
+                                        ) : (
+                                          <Copy className="h-3 w-3" />
+                                        )}
+                                      </button>
+                                    )}
+                                  </div>
+                                  <span className="text-[12px] font-mono font-bold text-foreground">
+                                    {formatCurrency(walletTotal, "USD")}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="pl-2 space-y-1">
+                                {items.map((s, idx) => (
+                                  <div key={idx} className="flex justify-between items-center text-[11px]">
+                                    <span className="text-muted-foreground font-medium">{s.coin}</span>
+                                    <div className="flex items-center gap-2">
+                                      {s.saldo_locked_usd > 0 && (
+                                        <span className="text-[10px] text-chart-3/70 italic tabular-nums">
+                                          (⏳ {formatCurrency(s.saldo_locked_usd, "USD")})
+                                        </span>
+                                      )}
+                                      <span className="font-mono text-foreground/90 tabular-nums">
+                                        {formatCurrency(s.saldo_usd, "USD")}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()}
+                      
+                      {cryptoPanel.totalLocked > 0 && (
+                        <div className="pt-2 border-t border-border/30 flex justify-between items-center bg-chart-3/5 px-2 py-1 rounded">
+                          <span className="text-[11px] text-chart-3 font-semibold uppercase tracking-tighter">⏳ Total em Trânsito</span>
+                          <span className="text-[12px] font-mono font-bold text-chart-3 tabular-nums">{formatCurrency(cryptoPanel.totalLocked, "USD")}</span>
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
             </>
           )}
         </div>
