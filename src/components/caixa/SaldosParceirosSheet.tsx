@@ -739,6 +739,8 @@ const BookmakerListByMoeda = ({
   useEffect(() => {
     if (open) {
       fetchSaldosParceiros();
+    } else {
+      setCryptoPanel(prev => ({ ...prev, open: false }));
     }
   }, [open]);
 
