@@ -286,8 +286,7 @@ export function SurebetModalRoot({
   
   const [focusedLeg, setFocusedLeg] = useState<number | null>(null);
    const [viewLayout, setViewLayout] = useState<'vertical' | 'horizontal'>('vertical');
-   const [errosPorPerna, setErrosPorPerna] = useState<Record<number, string>>({});
- }
+    const [errosPorPerna, setErrosPorPerna] = useState<Record<number, string>>({});
  /**
   * Função pura para calcular o saldo disponível e validar stakes em tempo real.
   */
