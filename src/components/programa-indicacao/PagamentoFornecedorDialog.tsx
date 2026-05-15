@@ -59,8 +59,12 @@ export function PagamentoFornecedorDialog({
    }, [open, parceria]);
  
    const valorNumerico = parseFloat(valor) || 0;
-   const isDivergente = parceria && Math.abs(valorNumerico - parceria.valorFornecedor) > 0.01;
    const isSaldoInsuficiente = Boolean(origemData.saldoInsuficiente) || (valorNumerico > 0 && origemData.saldoDisponivel < valorNumerico);
+ 
+   const formatCurrency = (value: number) =>
+     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+ 
+   const isDivergente = parceria && Math.abs(valorNumerico - parceria.valorFornecedor) > 0.01;
  
    const handleSubmit = async () => {
     if (!parceria || !dataPagamento) return;
@@ -215,9 +219,6 @@ export function PagamentoFornecedorDialog({
            )}
  
 
-   const formatCurrency = (value: number) =>
-     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
- 
    return (
      <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
