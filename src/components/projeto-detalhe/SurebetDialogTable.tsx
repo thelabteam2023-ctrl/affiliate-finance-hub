@@ -1679,6 +1679,15 @@ export function SurebetDialogTable({
                       </div>
                     )}
                     
+                     {/* Mensagem de Erro de Saldo (Mobile/Contexto) */}
+                     {errosSaldo[pernaIndex] && (
+                       <div className="absolute -bottom-4 left-0 right-0 text-center z-10">
+                         <span className="bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded shadow-sm">
+                           {errosSaldo[pernaIndex]}
+                         </span>
+                       </div>
+                     )}
+
                     {/* Perna Label */}
                     {row.rowSpan > 0 && (
                       <td 
@@ -1768,24 +1777,29 @@ export function SurebetDialogTable({
                         <TooltipProvider>
                           <Tooltip open={!!validarSaldoPerna(pernaIndex, entry.bookmaker_id, entry.stake)}>
                             <TooltipTrigger asChild>
-                              <div>
+                              <div className="relative">
                                 <MoneyInput 
                                   value={entry.stake}
                                   onChange={(val) => updateOdd(pernaIndex, "stake", val)}
                                   currency={entry.moeda}
                                   minDigits={5}
                                   className={`h-7 text-xs text-center ${
-                                    validarSaldoPerna(pernaIndex, entry.bookmaker_id, entry.stake) 
-                                      ? "border-red-500 focus-visible:ring-red-500" 
+                                    errosSaldo[pernaIndex] 
+                                      ? "border-red-500 focus-visible:ring-red-500 text-red-500" 
                                       : ""
                                   }`}
                                   data-field-type="stake"
                                   onKeyDown={(e) => handleFieldKeyDown(e as any, 'stake')}
                                 />
+                                {errosSaldo[pernaIndex] && (
+                                  <div className="absolute top-full left-0 right-0 mt-1 text-[9px] text-red-500 font-medium leading-tight text-center">
+                                    {errosSaldo[pernaIndex]}
+                                  </div>
+                                )}
                               </div>
                             </TooltipTrigger>
                             <TooltipContent side="top" className="bg-red-500 text-white border-red-600">
-                              <p className="text-[10px]">{validarSaldoPerna(pernaIndex, entry.bookmaker_id, entry.stake)?.mensagem}</p>
+                              <p className="text-[10px]">{errosSaldo[pernaIndex]}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
