@@ -1690,14 +1690,6 @@ export function SurebetDialogTable({
                       </div>
                     )}
                     
-                     {/* Mensagem de Erro de Saldo (Mobile/Contexto) */}
-                     {errosSaldo[pernaIndex] && (
-                       <div className="absolute -bottom-4 left-0 right-0 text-center z-10">
-                         <span className="bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded shadow-sm">
-                           {errosSaldo[pernaIndex]}
-                         </span>
-                       </div>
-                     )}
 
                     {/* Perna Label */}
                     {row.rowSpan > 0 && (
@@ -1781,12 +1773,19 @@ export function SurebetDialogTable({
                     {/* Stake */}
                     <td className="py-6 px-2">
                       {isEditing ? (
-                        <div className="text-xs font-medium text-center">
-                          {formatCurrency(parseFloat(entry.stake) || 0, entry.moeda)}
+                        <div className="relative flex flex-col items-center gap-1">
+                          <div className={`text-xs font-medium text-center ${errosSaldo[pernaIndex] ? "text-red-500" : ""}`}>
+                            {formatCurrency(parseFloat(entry.stake) || 0, entry.moeda)}
+                          </div>
+                          {errosSaldo[pernaIndex] && (
+                            <span className="text-[9px] text-red-500 font-medium leading-tight text-center">
+                              {errosSaldo[pernaIndex]}
+                            </span>
+                          )}
                         </div>
                       ) : (
                         <TooltipProvider>
-                          <Tooltip open={!!validarSaldoPerna(pernaIndex, entry.bookmaker_id, entry.stake)}>
+                          <Tooltip open={!!errosSaldo[pernaIndex]}>
                             <TooltipTrigger asChild>
                               <div className="relative">
                                 <MoneyInput 
