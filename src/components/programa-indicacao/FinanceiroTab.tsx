@@ -409,7 +409,10 @@ export function FinanceiroTab() {
              valorParceiroAjustado: p.valor_parceiro_ajustado || null,
              origemTipo: p.origem_tipo || "DIRETO",
            }))
-            .filter((p: any) => (p.valorParceiroAjustado !== null ? p.valorParceiroAjustado >= 0.01 : p.valorParceiro >= 0.01));
+            .filter((p: any) => {
+              const valorEfetivo = p.valorParceiroAjustado !== null ? p.valorParceiroAjustado : p.valorParceiro;
+              return valorEfetivo >= 0.01;
+            });
          setParceirosPendentes(pendentes);
       }
 
@@ -445,7 +448,10 @@ export function FinanceiroTab() {
                valorRestante,
              };
            })
-            .filter((p) => (p.valorFornecedorAjustado !== null ? p.valorFornecedorAjustado > 0 : p.valorFornecedor > 0) && p.valorRestante >= 0.01);
+            .filter((p) => {
+              const valorEfetivo = p.valorFornecedorAjustado !== null ? p.valorFornecedorAjustado : p.valorFornecedor;
+              return valorEfetivo > 0 && p.valorRestante >= 0.01;
+            });
          setFornecedoresPendentes(pendentesForn);
       }
     } catch (error: any) {
