@@ -7246,8 +7246,10 @@ export type Database = {
           user_id: string
           valor_comissao_indicador: number | null
           valor_fornecedor: number | null
+          valor_fornecedor_ajustado: number | null
           valor_indicador: number | null
           valor_parceiro: number | null
+          valor_parceiro_ajustado: number | null
           workspace_id: string
         }
         Insert: {
@@ -7275,8 +7277,10 @@ export type Database = {
           user_id: string
           valor_comissao_indicador?: number | null
           valor_fornecedor?: number | null
+          valor_fornecedor_ajustado?: number | null
           valor_indicador?: number | null
           valor_parceiro?: number | null
+          valor_parceiro_ajustado?: number | null
           workspace_id: string
         }
         Update: {
@@ -7304,8 +7308,10 @@ export type Database = {
           user_id?: string
           valor_comissao_indicador?: number | null
           valor_fornecedor?: number | null
+          valor_fornecedor_ajustado?: number | null
           valor_indicador?: number | null
           valor_parceiro?: number | null
+          valor_parceiro_ajustado?: number | null
           workspace_id?: string
         }
         Relationships: [
