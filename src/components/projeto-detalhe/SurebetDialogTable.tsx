@@ -364,7 +364,48 @@ export function SurebetDialogTable({
   // Controles
   const [arredondarAtivado, setArredondarAtivado] = useState(true);
   const [arredondarValor, setArredondarValor] = useState("0.01");
-  const [saving, setSaving] = useState(false);
+   const [saving, setSaving] = useState(false);
+
+   // Ref para capturar stakes originais no modo edição
+   const originalStakesByBookmaker = useRef<Map<string, number>>(new Map());
+
+   // Função de diagnóstico para validar saldo
+   const validarSaldoPerna = useCallback((
+     pernaIndex: number,
+     bookmakerId: string,
+     stakeValue: string
+   ) => {
+     const stakeNum = parseFloat(stakeValue) || 0;
+     if (!bookmakerId || stakeNum <= 0) return null;
+
+     const bookmaker = bookmakerSaldos.find(b => b.id === bookmakerId);
+     if (!bookmaker) return null;
+
+     const originalStake = originalStakesByBookmaker.current.get(bookmakerId) || 0;
+     const saldoOperavel = bookmaker.saldo_operavel || 0;
+     const limiteDisponivel = saldoOperavel + originalStake;
+     const excedeu = stakeNum > (limiteDisponivel + 0.01);
+
+     // LOG DE DIAGNÓSTICO SOLICITADO
+     console.log("DIAGNOSTICO_SALDO:", {
+       perna: pernaIndex + 1,
+       bookmaker_id: bookmakerId,
+       nome: bookmaker.nome,
+       saldo_operavel: saldoOperavel,
+       credito_original: originalStake,
+       limite_total: limiteDisponivel,
+       stake_digitada: stakeNum,
+       excedeu
+     });
+
+     if (excedeu) {
+       return {
+         disponivel: limiteDisponivel,
+         mensagem: `Saldo insuficiente na ${bookmaker.nome}. Disponível: ${formatCurrency(limiteDisponivel, bookmaker.moeda as any)}`
+       };
+     }
+     return null;
+   }, [bookmakerSaldos]);
   
   // Estado para conversão de operação parcial para apostas simples
   const [showConversionDialog, setShowConversionDialog] = useState(false);
@@ -746,7 +787,16 @@ export function SurebetDialogTable({
       }));
       setOdds(pernasOdds);
       setLinkedApostas(pernasData);
-      setDirectedProfitLegs(Array.from({ length: pernasOdds.length }, (_, i) => i));
+       setDirectedProfitLegs(Array.from({ length: pernasOdds.length }, (_, i) => i));
+
+       // Popular originalStakesByBookmaker
+       originalStakesByBookmaker.current.clear();
+       pernasOdds.forEach(p => {
+         if (p.bookmaker_id && p.stake) {
+           const current = originalStakesByBookmaker.current.get(p.bookmaker_id) || 0;
+           originalStakesByBookmaker.current.set(p.bookmaker_id, current + parseFloat(p.stake));
+         }
+       });
     }
   };
 
@@ -1718,15 +1768,30 @@ export function SurebetDialogTable({
                           {formatCurrency(parseFloat(entry.stake) || 0, entry.moeda)}
                         </div>
                       ) : (
-                        <MoneyInput 
-                          value={entry.stake}
-                          onChange={(val) => updateOdd(pernaIndex, "stake", val)}
-                          currency={entry.moeda}
-                          minDigits={5}
-                          className="h-7 text-xs text-center"
-                          data-field-type="stake"
-                          onKeyDown={(e) => handleFieldKeyDown(e as any, 'stake')}
-                        />
+                        <TooltipProvider>
+                          <Tooltip open={!!validarSaldoPerna(pernaIndex, entry.bookmaker_id, entry.stake)}>
+                            <TooltipTrigger asChild>
+                              <div>
+                                <MoneyInput 
+                                  value={entry.stake}
+                                  onChange={(val) => updateOdd(pernaIndex, "stake", val)}
+                                  currency={entry.moeda}
+                                  minDigits={5}
+                                  className={`h-7 text-xs text-center ${
+                                    validarSaldoPerna(pernaIndex, entry.bookmaker_id, entry.stake) 
+                                      ? "border-red-500 focus-visible:ring-red-500" 
+                                      : ""
+                                  }`}
+                                  data-field-type="stake"
+                                  onKeyDown={(e) => handleFieldKeyDown(e as any, 'stake')}
+                                />
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="bg-red-500 text-white border-red-600">
+                              <p className="text-[10px]">{validarSaldoPerna(pernaIndex, entry.bookmaker_id, entry.stake)?.mensagem}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
                     </td>
                     
