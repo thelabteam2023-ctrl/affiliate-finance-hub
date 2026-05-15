@@ -357,14 +357,12 @@ export function SurebetModalRoot({
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   
-  // Crédito virtual: armazena stakes originais por bookmaker_id para modo edição
-  // Permite que o saldo "bloqueado" pela aposta original seja reconhecido como disponível
-  // Separado em real vs freebet para validação correta de ambos os saldos
-  const originalStakesByBookmaker = useRef<Map<string, { real: number; freebet: number }>>(new Map());
-  // IDs das pernas originais (do banco) para usar na RPC de edição atômica
-  const originalPernaIds = useRef<string[]>([]);
-  // Snapshot das pernas originais para detectar mudanças
-  const originalPernasSnapshot = useRef<Array<{ id: string; bookmaker_id: string; stake: number; odd: number; selecao: string; selecao_livre: string; resultado: string | null; fonte_saldo: string | null }>>([]);
+  // Crédito virtual: armazena dados originais para modo edição
+  // Transformados em estado para garantir que memos dependentes (bookmakersDisponiveis, balanceValidation) recomputem
+  const [originalStakesByBookmaker, setOriginalStakesByBookmaker] = useState<Map<string, { real: number; freebet: number }>>(new Map());
+  const [originalPernaIds, setOriginalPernaIds] = useState<string[]>([]);
+  const [originalPernasSnapshot, setOriginalPernasSnapshot] = useState<Array<{ id: string; bookmaker_id: string; stake: number; odd: number; selecao: string; selecao_livre: string; resultado: string | null; fonte_saldo: string | null }>>([]);
+
   const [selectedLegForPrint, setSelectedLegForPrint] = useState<number | null>(null);
   
   const {
