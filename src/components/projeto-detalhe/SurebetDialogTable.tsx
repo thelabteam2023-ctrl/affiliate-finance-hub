@@ -365,6 +365,7 @@ export function SurebetDialogTable({
   const [arredondarAtivado, setArredondarAtivado] = useState(true);
   const [arredondarValor, setArredondarValor] = useState("0.01");
    const [saving, setSaving] = useState(false);
+   const [errosSaldo, setErrosSaldo] = useState<Record<number, string>>({});
 
    // Ref para capturar stakes originais no modo edição
    const originalStakesByBookmaker = useRef<Map<string, number>>(new Map());
@@ -385,24 +386,29 @@ export function SurebetDialogTable({
       const originalStake = originalStakesByBookmaker.current.get(bookmakerId) || 0;
       const saldoOperavel = bookmaker.saldo_operavel || 0;
       
-      console.log("DIAGNOSTICO_SALDO:", {
-        bookmaker_id: bookmakerId,
-        nome: bookmaker.nome,
-        saldo_operavel: saldoOperavel,
-        credito_original: originalStake
-      });
-
       const limiteDisponivel = saldoOperavel + originalStake;
       const excedeu = stakeNum > (limiteDisponivel + 0.01);
 
-     if (excedeu) {
-       return {
-         disponivel: limiteDisponivel,
-         mensagem: `Saldo insuficiente na ${bookmaker.nome}. Disponível: ${formatCurrency(limiteDisponivel, bookmaker.moeda as any)}`
-       };
-     }
-     return null;
+      return excedeu 
+        ? { disponivel: limiteDisponivel, mensagem: `Saldo insuficiente. Disponível: ${formatCurrency(limiteDisponivel, bookmaker.moeda as any)}` }
+        : null;
    }, [bookmakerSaldos]);
+
+   // Validar todos os campos e atualizar estado de erros
+   const validarTodosSaldos = useCallback(() => {
+     const novosErros: Record<number, string> = {};
+     odds.forEach((perna, idx) => {
+       const erro = validarSaldoPerna(idx, perna.bookmaker_id, perna.stake);
+       if (erro) novosErros[idx] = erro.mensagem;
+     });
+     setErrosSaldo(novosErros);
+     return Object.keys(novosErros).length === 0;
+   }, [odds, validarSaldoPerna]);
+
+   // Efeito para validar em tempo real
+   useEffect(() => {
+     validarTodosSaldos();
+   }, [odds, validarTodosSaldos]);
   
   // Estado para conversão de operação parcial para apostas simples
   const [showConversionDialog, setShowConversionDialog] = useState(false);
