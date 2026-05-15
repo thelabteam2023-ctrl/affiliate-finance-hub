@@ -1262,6 +1262,11 @@ export function SurebetDialogTable({
       return;
     }
 
+    if (!validarTodosSaldos()) {
+      toast.error("Corrija os erros de saldo antes de salvar.");
+      return;
+    }
+
     try {
       setSaving(true);
       const { data: { user } } = await supabase.auth.getUser();
@@ -2326,7 +2331,7 @@ export function SurebetDialogTable({
               )}
               <Button 
                 onClick={handleSave} 
-                disabled={saving || analysis.stakeTotal <= 0 || pernasCompletasCount < numPernas}
+                disabled={saving || analysis.stakeTotal <= 0 || pernasCompletasCount < numPernas || Object.keys(errosSaldo).length > 0}
               >
                 <Save className="h-4 w-4 mr-1" />
                 {isEditing ? "Salvar" : "Registrar"}
