@@ -85,7 +85,7 @@ export function SurebetMobileCard({
   scenario,
   isEditing,
   isProcessing,
-  bookmakers,
+  bookmakersByLeg,
   directedProfitLegs,
   numPernas,
   moedaDominante,

@@ -102,7 +102,7 @@ export function SurebetTableRow({
   isEditing,
   isFocused,
   isProcessing,
-  bookmakers,
+  bookmakersByLeg,
   directedProfitLegs,
   numPernas,
   moedaDominante,
