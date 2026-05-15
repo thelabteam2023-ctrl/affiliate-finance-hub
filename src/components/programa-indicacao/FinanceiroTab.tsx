@@ -433,7 +433,7 @@ export function FinanceiroTab() {
              const valorAjustado = p.valor_fornecedor_ajustado || null;
              const valorEfetivo = valorAjustado !== null ? valorAjustado : valorTotal;
              const valorPago = pagamentosPorParceria.get(p.id) || 0;
-             const valorRestante = Math.max(0, valorEfetivo - valorPago);
+              const valorRestante = valorEfetivo - valorPago;
              return {
                parceriaId: p.id,
                parceiroNome: p.parceiro?.nome || "N/A",
@@ -445,7 +445,7 @@ export function FinanceiroTab() {
                valorRestante,
              };
            })
-           .filter((p) => (p.valorFornecedorAjustado !== null ? p.valorFornecedorAjustado > 0 : p.valorFornecedor > 0) && p.valorRestante > 0);
+            .filter((p) => (p.valorFornecedorAjustado !== null ? p.valorFornecedorAjustado > 0 : p.valorFornecedor > 0) && p.valorRestante >= 0.01);
          setFornecedoresPendentes(pendentesForn);
       }
     } catch (error: any) {
