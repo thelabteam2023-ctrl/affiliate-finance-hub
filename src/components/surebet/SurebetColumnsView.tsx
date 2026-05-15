@@ -40,12 +40,11 @@ interface SurebetColumnsViewProps {
   odds: OddEntry[];
   scenarios: (LegScenario | undefined)[];
   isEditing: boolean;
-  bookmakersByLeg: (legIndex: number, subEntryIndex?: number) => BookmakerOption[];
+  bookmakersByLeg: (legIndex: number) => BookmakerOption[];
   directedProfitLegs: number[];
   numPernas: number;
   moedaDominante: SupportedCurrency;
   insufficientLegs: number[];
-  errosPorPerna?: Record<number, string>;
   insufficientEntries?: Map<string, boolean>;
   onResultadoChange?: (index: number, resultado: PernaResultado) => void;
   onUpdateOdd: (index: number, field: keyof OddEntry, value: string | boolean) => void;
@@ -100,7 +99,6 @@ export function SurebetColumnsView({
   numPernas,
   moedaDominante,
   insufficientLegs,
-  errosPorPerna,
   insufficientEntries,
   onResultadoChange,
   onUpdateOdd,
@@ -129,7 +127,7 @@ export function SurebetColumnsView({
           const roi = scenario?.roi ?? 0;
           const hasData = parseFloat(String(entry.odd)) > 0 && parseFloat(entry.stake) > 0;
           const isPositive = lucro >= 0;
-          const bookmakers = bookmakersByLeg(pernaIndex, undefined);
+          const bookmakers = bookmakersByLeg(pernaIndex);
           const selectedBookmaker = bookmakers.find(b => b.id === entry.bookmaker_id);
           const isDirected = directedProfitLegs.includes(pernaIndex);
           const hasInsufficientBalance = insufficientLegs.includes(pernaIndex);
@@ -296,16 +294,10 @@ export function SurebetColumnsView({
                               </button>
                             )}
                           </div>
-                          {mainInsuf && selectedBookmaker && (
-                            <div className="text-[9px] text-destructive font-medium mt-0.5 leading-tight text-center">
-                              <div>{entry.fonteSaldo === 'FREEBET' ? 'FB insuficiente' : 'Saldo insuficiente'}</div>
-                              <div className="opacity-80">
-                                Disp: {formatCurrency(
-                                  entry.fonteSaldo === 'FREEBET' ? selectedBookmaker.saldo_freebet : selectedBookmaker.saldo_operavel, 
-                                  selectedBookmaker.moeda
-                                )}
-                              </div>
-                            </div>
+                          {mainInsuf && (
+                            <span className="text-[9px] text-destructive font-medium mt-0.5 block text-center">
+                              {entry.fonteSaldo === 'FREEBET' ? 'FB insuf.' : 'Saldo insuf.'}
+                            </span>
                           )}
                         </>
                       );
@@ -352,8 +344,7 @@ export function SurebetColumnsView({
 
                 {/* Sub-entradas adicionais */}
                 {additionalEntries.map((addEntry, addIndex) => {
-                  const subBookmakers = bookmakersByLeg(pernaIndex, addIndex);
-                  const addBookmaker = subBookmakers.find(b => b.id === addEntry.bookmaker_id);
+                  const addBookmaker = bookmakers.find(b => b.id === addEntry.bookmaker_id);
                   return (
                     <div key={`add-${addIndex}`} className="pt-2 mt-2 border-t border-primary/15 space-y-1.5">
                       <div className="flex items-center justify-between">
@@ -379,7 +370,10 @@ export function SurebetColumnsView({
                             )}
                           </SelectValue>
                         </SelectTrigger>
-                        <BookmakerSearchableSelectContent bookmakers={subBookmakers} className="max-w-[300px]" />
+                        <BookmakerSearchableSelectContent
+                          bookmakers={bookmakers}
+                          className="max-w-[300px]"
+                        />
                       </Select>
                       {/* Saldo info da sub-entrada */}
                       <BookmakerMetaRow 
@@ -438,16 +432,10 @@ export function SurebetColumnsView({
                                     </button>
                                   )}
                                 </div>
-                                {subInsuf && addBookmaker && (
-                                  <div className="text-[8px] text-destructive font-medium mt-0.5 leading-tight text-center">
-                                    <div>{isSubFB ? 'FB insuficiente' : 'Saldo insuficiente'}</div>
-                                    <div className="opacity-80">
-                                      Disp: {formatCurrency(
-                                        isSubFB ? addBookmaker.saldo_freebet : addBookmaker.saldo_operavel, 
-                                        addBookmaker.moeda
-                                      )}
-                                    </div>
-                                  </div>
+                                {subInsuf && (
+                                  <span className="text-[8px] text-destructive font-medium mt-0.5 block">
+                                    {isSubFB ? 'FB insuf.' : 'Saldo insuf.'}
+                                  </span>
                                 )}
                               </>
                             );
