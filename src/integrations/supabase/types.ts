@@ -15422,6 +15422,24 @@ export type Database = {
         | {
             Args: {
               p_aposta_id: string
+              p_contexto?: string
+              p_data_aposta?: string
+              p_esporte?: string
+              p_estrategia?: string
+              p_evento?: string
+              p_lucro?: number
+              p_mercado?: string
+              p_modelo?: string
+              p_pernas: Json
+              p_roi?: number
+              p_stake_total?: number
+              p_status?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_aposta_id: string
               p_contexto: string
               p_data_aposta: string
               p_esporte: string
