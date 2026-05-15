@@ -51,22 +51,18 @@ export function PagamentoFornecedorDialog({
     saldoDisponivel: 0,
   });
 
-  useEffect(() => {
-    if (parceria) {
-      setValor(parceria.valorFornecedor.toString());
-    }
-  }, [parceria]);
-
-  useEffect(() => {
-    if (open) {
-      resetForm();
-    }
-  }, [open]);
-
-  const valorNumerico = parseFloat(valor) || 0;
-  const isSaldoInsuficiente = Boolean(origemData.saldoInsuficiente) || (valorNumerico > 0 && origemData.saldoDisponivel < valorNumerico);
-
-  const handleSubmit = async () => {
+   // Somente inicializa o valor quando o diálogo abre e o valor está vazio
+   useEffect(() => {
+     if (open && parceria && !valor) {
+       setValor(parceria.valorFornecedor.toString());
+     }
+   }, [open, parceria]);
+ 
+   const valorNumerico = parseFloat(valor) || 0;
+   const isDivergente = parceria && Math.abs(valorNumerico - parceria.valorFornecedor) > 0.01;
+   const isSaldoInsuficiente = Boolean(origemData.saldoInsuficiente) || (valorNumerico > 0 && origemData.saldoDisponivel < valorNumerico);
+ 
+   const handleSubmit = async () => {
     if (!parceria || !dataPagamento) return;
 
     if (isNaN(valorNumerico) || valorNumerico <= 0) {
@@ -198,17 +194,26 @@ export function PagamentoFornecedorDialog({
     }
   };
 
-  const resetForm = () => {
-    setDataPagamento(format(new Date(), "yyyy-MM-dd"));
-    setValor(parceria?.valorFornecedor.toString() || "");
-    setDescricao("");
-    setOrigemData({
-      origemTipo: "CAIXA_OPERACIONAL",
-      tipoMoeda: "FIAT",
-      moeda: "BRL",
-      saldoDisponivel: 0,
-    });
-  };
+   const resetForm = () => {
+     setDataPagamento(format(new Date(), "yyyy-MM-dd"));
+     setValor("");
+     setDescricao("");
+     setOrigemData({
+       origemTipo: "CAIXA_OPERACIONAL",
+       tipoMoeda: "FIAT",
+       moeda: "BRL",
+       saldoDisponivel: 0,
+     });
+   };
+           {isDivergente && (
+             <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-start gap-2 animate-in fade-in slide-in-from-top-1">
+               <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+               <p className="text-xs text-amber-600 font-medium">
+                 O valor informado é diferente do valor contratado ({formatCurrency(parceria?.valorFornecedor || 0)}). Deseja continuar?
+               </p>
+             </div>
+           )}
+ 
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
