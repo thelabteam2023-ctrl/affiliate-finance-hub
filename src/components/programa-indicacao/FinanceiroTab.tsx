@@ -16,8 +16,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Ban, AlertTriangle } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+ import { Ban, AlertTriangle, Pencil, Check, X } from "lucide-react";
+ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -83,22 +84,24 @@ interface ComissaoPendente {
   valorComissao: number;
 }
 
-interface ParceiroPendente {
-  parceriaId: string;
-  parceiroNome: string;
-  valorParceiro: number;
-  origemTipo: string;
-}
-
-interface FornecedorPendente {
-  parceriaId: string;
-  parceiroNome: string;
-  fornecedorNome: string;
-  fornecedorId: string;
-  valorFornecedor: number;
-  valorPago: number;
-  valorRestante: number;
-}
+ interface ParceiroPendente {
+   parceriaId: string;
+   parceiroNome: string;
+   valorParceiro: number;
+   valorParceiroAjustado: number | null;
+   origemTipo: string;
+ }
+ 
+ interface FornecedorPendente {
+   parceriaId: string;
+   parceiroNome: string;
+   fornecedorNome: string;
+   fornecedorId: string;
+   valorFornecedor: number;
+   valorFornecedorAjustado: number | null;
+   valorPago: number;
+   valorRestante: number;
+ }
 
 export function FinanceiroTab() {
   const { toast } = useToast();
@@ -120,9 +123,12 @@ export function FinanceiroTab() {
   const [selectedBonus, setSelectedBonus] = useState<BonusPendente | null>(null);
   const [selectedComissao, setSelectedComissao] = useState<ComissaoPendente | null>(null);
   const [selectedParceiro, setSelectedParceiro] = useState<ParceiroPendente | null>(null);
-  const [selectedFornecedor, setSelectedFornecedor] = useState<FornecedorPendente | null>(null);
-  
-  // Dispensar pagamento state
+   const [selectedFornecedor, setSelectedFornecedor] = useState<FornecedorPendente | null>(null);
+ 
+   // Estados para ajuste de valor
+   const [editingValor, setEditingValor] = useState<{ id: string; tipo: 'parceiro' | 'fornecedor'; valor: string } | null>(null);
+   
+   // Dispensar pagamento state
   const [dispensaOpen, setDispensaOpen] = useState(false);
   const [dispensaParceriaId, setDispensaParceriaId] = useState<string | null>(null);
   const [dispensaParceiroNome, setDispensaParceiroNome] = useState('');
@@ -138,44 +144,74 @@ export function FinanceiroTab() {
   const [editParceriaOpen, setEditParceriaOpen] = useState(false);
   const [editParceriaData, setEditParceriaData] = useState<any>(null);
 
-  const handleRenovacao = async (parceiroId: string) => {
-    try {
-      // Buscar parceria ativa do parceiro
-      const { data: parceria } = await supabase
-        .from("parcerias")
-        .select("*, parceiros!inner(nome)")
-        .eq("parceiro_id", parceiroId)
-        .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (parceria) {
-        // Calcular dias restantes
-        const dataFim = parseLocalDate(parceria.data_inicio);
-        dataFim.setDate(dataFim.getDate() + parceria.duracao_dias);
-        const hoje = new Date();
-        const diffMs = dataFim.getTime() - hoje.getTime();
-        const diasRestantes = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
-
-        setEditParceriaData({
-          ...parceria,
-          parceiro_nome: (parceria.parceiros as any)?.nome || "",
-          dias_restantes: diasRestantes,
-          data_fim_prevista: dataFim.toISOString().split("T")[0],
-        });
-        setEditParceriaOpen(true);
-      } else {
-        toast({
-          title: "Parceria não encontrada",
-          description: "Nenhuma parceria ativa encontrada para este parceiro.",
-          variant: "destructive",
-        });
-      }
-    } catch (error: any) {
-      console.error("Erro ao buscar parceria:", error);
-    }
-  };
+   const handleRenovacao = async (parceiroId: string) => {
+     try {
+       // Buscar parceria ativa do parceiro
+       const { data: parceria } = await supabase
+         .from("parcerias")
+         .select("*, parceiros!inner(nome)")
+         .eq("parceiro_id", parceiroId)
+         .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
+         .order("created_at", { ascending: false })
+         .limit(1)
+         .maybeSingle();
+ 
+       if (parceria) {
+         // Calcular dias restantes
+         const dataFim = parseLocalDate(parceria.data_inicio);
+         dataFim.setDate(dataFim.getDate() + parceria.duracao_dias);
+         const hoje = new Date();
+         const diffMs = dataFim.getTime() - hoje.getTime();
+         const diasRestantes = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+ 
+         setEditParceriaData({
+           ...parceria,
+           parceiro_nome: (parceria.parceiros as any)?.nome || "",
+           dias_restantes: diasRestantes,
+           data_fim_prevista: dataFim.toISOString().split("T")[0],
+         });
+         setEditParceriaOpen(true);
+       } else {
+         toast({
+           title: "Parceria não encontrada",
+           description: "Nenhuma parceria ativa encontrada para este parceiro.",
+           variant: "destructive",
+         });
+       }
+     } catch (error: any) {
+       console.error("Erro ao buscar parceria:", error);
+     }
+   };
+ 
+   const handleAjustarValor = async () => {
+     if (!editingValor) return;
+     
+     const { id, tipo, valor } = editingValor;
+     const valorNum = parseFloat(valor);
+     
+     if (isNaN(valorNum) || valorNum < 0) {
+       toast({ title: "Valor inválido", description: "Informe um valor numérico válido.", variant: "destructive" });
+       return;
+     }
+ 
+     try {
+       const field = tipo === 'parceiro' ? 'valor_parceiro_ajustado' : 'valor_fornecedor_ajustado';
+       
+       const { error } = await supabase
+         .from("parcerias")
+         .update({ [field]: valorNum })
+         .eq("id", id);
+ 
+       if (error) throw error;
+ 
+       toast({ title: "Valor atualizado", description: "O valor da pendência foi ajustado com sucesso." });
+       setEditingValor(null);
+       fetchData();
+     } catch (err: any) {
+       console.error("Erro ao ajustar valor:", err);
+       toast({ title: "Erro ao atualizar", description: err.message, variant: "destructive" });
+     }
+   };
 
   const getFirstLastName = (nome: string) => {
     const parts = nome.trim().split(/\s+/);
@@ -224,35 +260,35 @@ export function FinanceiroTab() {
           .from("indicadores_referral")
           .select("id, nome")
           .limit(10000),
-        supabase
-          .from("parcerias")
-          .select(`
-            id,
-            valor_parceiro,
-            origem_tipo,
-            status,
-            custo_aquisicao_isento,
-            pagamento_dispensado,
-            parceiro:parceiros(nome)
-          `)
-          .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
-          .or("custo_aquisicao_isento.is.null,custo_aquisicao_isento.eq.false")
-          .gt("valor_parceiro", 0)
-          .eq("pagamento_dispensado", false)
-          .limit(10000),
+         supabase
+           .from("parcerias")
+           .select(`
+             id,
+             valor_parceiro,
+             valor_parceiro_ajustado,
+             origem_tipo,
+             status,
+             custo_aquisicao_isento,
+             pagamento_dispensado,
+             parceiro:parceiros(nome)
+           `)
+           .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
+           .or("custo_aquisicao_isento.is.null,custo_aquisicao_isento.eq.false")
+           .eq("pagamento_dispensado", false)
+           .limit(10000),
         supabase.from("parceiros").select("id, nome").limit(10000),
-        supabase
-          .from("parcerias")
-          .select(`
-            id,
-            fornecedor_id,
-            valor_fornecedor,
-            parceiro:parceiros(nome)
-          `)
-          .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
-          .not("fornecedor_id", "is", null)
-          .gt("valor_fornecedor", 0)
-          .limit(10000),
+         supabase
+           .from("parcerias")
+           .select(`
+             id,
+             fornecedor_id,
+             valor_fornecedor,
+             valor_fornecedor_ajustado,
+             parceiro:parceiros(nome)
+           `)
+           .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
+           .not("fornecedor_id", "is", null)
+           .limit(10000),
         supabase.from("fornecedores").select("id, nome").limit(10000),
       ]);
 
@@ -364,15 +400,17 @@ export function FinanceiroTab() {
           .filter((m) => m.tipo === "PAGTO_PARCEIRO" && m.status === "CONFIRMADO")
           .map((m) => m.parceria_id);
 
-        const pendentes: ParceiroPendente[] = parceirosResult.data
-          .filter((p: any) => !parceriasPagas.includes(p.id))
-          .map((p: any) => ({
-            parceriaId: p.id,
-            parceiroNome: p.parceiro?.nome || "N/A",
-            valorParceiro: p.valor_parceiro || 0,
-            origemTipo: p.origem_tipo || "DIRETO",
-          }));
-        setParceirosPendentes(pendentes);
+         const pendentes: ParceiroPendente[] = (parceirosResult.data || [])
+           .filter((p: any) => !parceriasPagas.includes(p.id))
+           .map((p: any) => ({
+             parceriaId: p.id,
+             parceiroNome: p.parceiro?.nome || "N/A",
+             valorParceiro: p.valor_parceiro || 0,
+             valorParceiroAjustado: p.valor_parceiro_ajustado || null,
+             origemTipo: p.origem_tipo || "DIRETO",
+           }))
+           .filter((p: any) => (p.valorParceiroAjustado !== null ? p.valorParceiroAjustado > 0 : p.valorParceiro > 0));
+         setParceirosPendentes(pendentes);
       }
 
       // Calculate fornecedores pendentes (supplier payments) - supports partial payments
@@ -389,23 +427,26 @@ export function FinanceiroTab() {
             pagamentosPorParceria.set(m.parceria_id, atual + (m.valor || 0));
           });
 
-        const pendentesForn: FornecedorPendente[] = (fornecedoresParceriasResult.data || [])
-          .map((p: any) => {
-            const valorTotal = p.valor_fornecedor || 0;
-            const valorPago = pagamentosPorParceria.get(p.id) || 0;
-            const valorRestante = Math.max(0, valorTotal - valorPago);
-            return {
-              parceriaId: p.id,
-              parceiroNome: p.parceiro?.nome || "N/A",
-              fornecedorNome: fornecedoresMap.get(p.fornecedor_id) || "Fornecedor",
-              fornecedorId: p.fornecedor_id,
-              valorFornecedor: valorTotal,
-              valorPago,
-              valorRestante,
-            };
-          })
-          .filter((p) => p.valorRestante > 0);
-        setFornecedoresPendentes(pendentesForn);
+         const pendentesForn: FornecedorPendente[] = (fornecedoresParceriasResult.data || [])
+           .map((p: any) => {
+             const valorTotal = p.valor_fornecedor || 0;
+             const valorAjustado = p.valor_fornecedor_ajustado || null;
+             const valorEfetivo = valorAjustado !== null ? valorAjustado : valorTotal;
+             const valorPago = pagamentosPorParceria.get(p.id) || 0;
+             const valorRestante = Math.max(0, valorEfetivo - valorPago);
+             return {
+               parceriaId: p.id,
+               parceiroNome: p.parceiro?.nome || "N/A",
+               fornecedorNome: fornecedoresMap.get(p.fornecedor_id) || "Fornecedor",
+               fornecedorId: p.fornecedor_id,
+               valorFornecedor: valorTotal,
+               valorFornecedorAjustado: valorAjustado,
+               valorPago,
+               valorRestante,
+             };
+           })
+           .filter((p) => (p.valorFornecedorAjustado !== null ? p.valorFornecedorAjustado > 0 : p.valorFornecedor > 0) && p.valorRestante > 0);
+         setFornecedoresPendentes(pendentesForn);
       }
     } catch (error: any) {
       toast({
@@ -787,11 +828,50 @@ export function FinanceiroTab() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="font-bold text-emerald-500">
-                        {formatCurrency(parceiro.valorParceiro)}
-                      </span>
-                      <Button
+                     <div className="flex items-center gap-2">
+                       {editingValor?.id === parceiro.parceriaId && editingValor.tipo === 'parceiro' ? (
+                         <div className="flex items-center gap-1 animate-in fade-in slide-in-from-right-1">
+                           <Input
+                             className="w-24 h-8 text-sm"
+                             type="number"
+                             value={editingValor.valor}
+                             onChange={(e) => setEditingValor({ ...editingValor, valor: e.target.value })}
+                             autoFocus
+                           />
+                           <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-600" onClick={handleAjustarValor}>
+                             <Check className="h-4 w-4" />
+                           </Button>
+                           <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => setEditingValor(null)}>
+                             <X className="h-4 w-4" />
+                           </Button>
+                         </div>
+                       ) : (
+                         <div className="flex items-center gap-2">
+                           <div className="text-right">
+                             <span className="font-bold text-emerald-500 block">
+                               {formatCurrency(parceiro.valorParceiroAjustado !== null ? parceiro.valorParceiroAjustado : parceiro.valorParceiro)}
+                             </span>
+                             {parceiro.valorParceiroAjustado !== null && (
+                               <p className="text-[10px] text-muted-foreground line-through">
+                                 Original: {formatCurrency(parceiro.valorParceiro)}
+                               </p>
+                             )}
+                           </div>
+                           <Button
+                             size="icon"
+                             variant="ghost"
+                             className="h-7 w-7 text-muted-foreground hover:text-primary"
+                             onClick={() => setEditingValor({
+                               id: parceiro.parceriaId,
+                               tipo: 'parceiro',
+                               valor: (parceiro.valorParceiroAjustado !== null ? parceiro.valorParceiroAjustado : parceiro.valorParceiro).toString()
+                             })}
+                           >
+                             <Pencil className="h-3 w-3" />
+                           </Button>
+                         </div>
+                       )}
+                       <Button
                         size="sm"
                         variant="ghost"
                         className="text-muted-foreground hover:text-destructive"
@@ -874,11 +954,50 @@ export function FinanceiroTab() {
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="font-bold text-orange-500">
-                        {formatCurrency(forn.valorRestante)}
-                      </span>
-                      <Button
+                     <div className="flex items-center gap-2">
+                       {editingValor?.id === forn.parceriaId && editingValor.tipo === 'fornecedor' ? (
+                         <div className="flex items-center gap-1 animate-in fade-in slide-in-from-right-1">
+                           <Input
+                             className="w-24 h-8 text-sm"
+                             type="number"
+                             value={editingValor.valor}
+                             onChange={(e) => setEditingValor({ ...editingValor, valor: e.target.value })}
+                             autoFocus
+                           />
+                           <Button size="icon" variant="ghost" className="h-8 w-8 text-orange-600" onClick={handleAjustarValor}>
+                             <Check className="h-4 w-4" />
+                           </Button>
+                           <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => setEditingValor(null)}>
+                             <X className="h-4 w-4" />
+                           </Button>
+                         </div>
+                       ) : (
+                         <div className="flex items-center gap-2">
+                           <div className="text-right">
+                             <span className="font-bold text-orange-500 block">
+                               {formatCurrency(forn.valorRestante)}
+                             </span>
+                             {forn.valorFornecedorAjustado !== null && (
+                               <p className="text-[10px] text-muted-foreground line-through">
+                                 Original: {formatCurrency(forn.valorFornecedor)}
+                               </p>
+                             )}
+                           </div>
+                           <Button
+                             size="icon"
+                             variant="ghost"
+                             className="h-7 w-7 text-muted-foreground hover:text-primary"
+                             onClick={() => setEditingValor({
+                               id: forn.parceriaId,
+                               tipo: 'fornecedor',
+                               valor: (forn.valorFornecedorAjustado !== null ? forn.valorFornecedorAjustado : forn.valorFornecedor).toString()
+                             })}
+                           >
+                             <Pencil className="h-3 w-3" />
+                           </Button>
+                         </div>
+                       )}
+                       <Button
                         size="sm"
                         variant="default"
                         onClick={() => {
@@ -1108,15 +1227,15 @@ export function FinanceiroTab() {
       <PagamentoParceiroDialog
         open={parceiroDialogOpen}
         onOpenChange={setParceiroDialogOpen}
-        parceria={
-          selectedParceiro
-            ? {
-                id: selectedParceiro.parceriaId,
-                parceiroNome: selectedParceiro.parceiroNome,
-                valorParceiro: selectedParceiro.valorParceiro,
-              }
-            : null
-        }
+         parceria={
+           selectedParceiro
+             ? {
+                 id: selectedParceiro.parceriaId,
+                 parceiroNome: selectedParceiro.parceiroNome,
+                 valorParceiro: selectedParceiro.valorParceiroAjustado !== null ? selectedParceiro.valorParceiroAjustado : selectedParceiro.valorParceiro,
+               }
+             : null
+         }
         onSuccess={fetchData}
       />
       <PagamentoCaptacaoDialog

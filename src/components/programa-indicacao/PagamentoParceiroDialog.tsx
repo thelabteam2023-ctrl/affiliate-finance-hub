@@ -50,12 +50,15 @@ export function PagamentoParceiroDialog({
     saldoDisponivel: 0,
   });
 
-   // Somente inicializa o valor quando o diálogo abre e o valor está vazio
-   useEffect(() => {
-     if (open && parceria && !valor) {
-       setValor(parceria.valorParceiro.toString());
-     }
-   }, [open, parceria]);
+    // Inicializa o valor quando o diálogo abre ou quando a parceria muda
+    useEffect(() => {
+      if (open && parceria) {
+        setValor(parceria.valorParceiro.toString());
+      }
+      if (!open) {
+        setValor("");
+      }
+    }, [open, parceria?.id]);
  
    const valorNumerico = parseFloat(valor) || 0;
  
