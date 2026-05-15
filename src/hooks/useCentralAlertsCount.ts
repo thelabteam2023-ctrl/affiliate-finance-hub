@@ -92,7 +92,7 @@ export function useCentralAlertsCount() {
           canSeePartnerData
             ? supabase
                 .from("parcerias")
-                .select("id")
+                .select("id, valor_parceiro, valor_parceiro_ajustado, valor_fornecedor, valor_fornecedor_ajustado, fornecedor_id")
                 .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
                 .or("custo_aquisicao_isento.is.null,custo_aquisicao_isento.eq.false")
                 .gt("valor_parceiro", 0)
@@ -102,7 +102,7 @@ export function useCentralAlertsCount() {
           canSeePartnerData
             ? supabase
                 .from("movimentacoes_indicacao")
-                .select("parceria_id, tipo, status, indicador_id")
+                .select("parceria_id, tipo, status, indicador_id, valor")
             : Promise.resolve({ data: [], error: null }),
           // Alertas de lucro - partner_event
           canSeePartnerData
@@ -194,6 +194,15 @@ export function useCentralAlertsCount() {
           conciliacaoPendenteResult,
         ] = results as any[];
 
+        // Map para somar pagamentos por parceria (fornecedores)
+        const pagamentosPorParceria = new Map<string, number>();
+        (movimentacoesResult.data || [])
+          .filter((m: any) => m.tipo === "PAGTO_FORNECEDOR" && m.status === "CONFIRMADO")
+          .forEach((m: any) => {
+            const atual = pagamentosPorParceria.get(m.parceria_id) || 0;
+            pagamentosPorParceria.set(m.parceria_id, atual + (m.valor || 0));
+          });
+
         let totalCount = 0;
 
         // Count from v_painel_operacional (admin_event)
@@ -236,9 +245,24 @@ export function useCentralAlertsCount() {
             .filter((m: any) => m.tipo === "PAGTO_PARCEIRO" && m.status === "CONFIRMADO")
             .map((m: any) => m.parceria_id);
           
-          const pagamentosPendentes = (parceriasResult.data || [])
-            .filter((p: any) => !parceriasPagas.includes(p.id)).length;
-          totalCount += pagamentosPendentes;
+          const parceriasAjustadas = (parceriasResult.data || []).filter((p: any) => {
+            // 1. Pagamento ao Parceiro (CPF)
+            const jaPagoParceiro = parceriasPagas.includes(p.id);
+            const valorParceiroEfetivo = p.valor_parceiro_ajustado !== null ? p.valor_parceiro_ajustado : p.valor_parceiro;
+            const pendenteParceiro = !jaPagoParceiro && valorParceiroEfetivo >= 0.01;
+            
+            // 2. Pagamento ao Fornecedor
+            let pendenteFornecedor = false;
+            if (p.fornecedor_id || (p.valor_fornecedor && p.valor_fornecedor > 0)) {
+              const valorFornEfetivo = p.valor_fornecedor_ajustado !== null ? p.valor_fornecedor_ajustado : (p.valor_fornecedor || 0);
+              const valorFornPago = pagamentosPorParceria.get(p.id) || 0;
+              pendenteFornecedor = (valorFornEfetivo - valorFornPago) >= 0.01;
+            }
+            
+            return pendenteParceiro || pendenteFornecedor;
+          });
+          
+          totalCount += parceriasAjustadas.length;
         }
 
         // Count parcerias próximas do encerramento (≤ 10 dias) - partner_event
