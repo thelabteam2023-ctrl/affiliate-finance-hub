@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Loader2, Truck, Calendar, Banknote, User } from "lucide-react";
+ import { Loader2, Truck, Calendar, Banknote, User, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { OrigemPagamentoSelect, OrigemPagamentoData } from "./OrigemPagamentoSelect";
 
@@ -215,11 +215,11 @@ export function PagamentoFornecedorDialog({
            )}
  
 
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+   const formatCurrency = (value: number) =>
+     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+ 
+   return (
+     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
