@@ -194,6 +194,15 @@ export function useCentralAlertsCount() {
           conciliacaoPendenteResult,
         ] = results as any[];
 
+        // Map para somar pagamentos por parceria (fornecedores)
+        const pagamentosPorParceria = new Map<string, number>();
+        (movimentacoesResult.data || [])
+          .filter((m: any) => m.tipo === "PAGTO_FORNECEDOR" && m.status === "CONFIRMADO")
+          .forEach((m: any) => {
+            const atual = pagamentosPorParceria.get(m.parceria_id) || 0;
+            pagamentosPorParceria.set(m.parceria_id, atual + (m.valor || 0));
+          });
+
         let totalCount = 0;
 
         // Count from v_painel_operacional (admin_event)
