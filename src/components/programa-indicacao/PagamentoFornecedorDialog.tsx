@@ -51,12 +51,15 @@ export function PagamentoFornecedorDialog({
     saldoDisponivel: 0,
   });
 
-   // Somente inicializa o valor quando o diálogo abre e o valor está vazio
-   useEffect(() => {
-     if (open && parceria && !valor) {
-       setValor(parceria.valorFornecedor.toString());
-     }
-   }, [open, parceria]);
+    // Inicializa o valor quando o diálogo abre ou quando a parceria muda
+    useEffect(() => {
+      if (open && parceria) {
+        setValor(parceria.valorFornecedor.toString());
+      }
+      if (!open) {
+        setValor("");
+      }
+    }, [open, parceria?.parceriaId]);
  
    const valorNumerico = parseFloat(valor) || 0;
    const isSaldoInsuficiente = Boolean(origemData.saldoInsuficiente) || (valorNumerico > 0 && origemData.saldoDisponivel < valorNumerico);
@@ -198,26 +201,17 @@ export function PagamentoFornecedorDialog({
     }
   };
 
-   const resetForm = () => {
-     setDataPagamento(format(new Date(), "yyyy-MM-dd"));
-     setValor("");
-     setDescricao("");
-     setOrigemData({
-       origemTipo: "CAIXA_OPERACIONAL",
-       tipoMoeda: "FIAT",
-       moeda: "BRL",
-       saldoDisponivel: 0,
-     });
-   };
-           {isDivergente && (
-             <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-start gap-2 animate-in fade-in slide-in-from-top-1">
-               <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-               <p className="text-xs text-amber-600 font-medium">
-                 O valor informado é diferente do valor contratado ({formatCurrency(parceria?.valorFornecedor || 0)}). Deseja continuar?
-               </p>
-             </div>
-           )}
- 
+    const resetForm = () => {
+      setDataPagamento(format(new Date(), "yyyy-MM-dd"));
+      setValor("");
+      setDescricao("");
+      setOrigemData({
+        origemTipo: "CAIXA_OPERACIONAL",
+        tipoMoeda: "FIAT",
+        moeda: "BRL",
+        saldoDisponivel: 0,
+      });
+    };
 
    return (
      <Dialog open={open} onOpenChange={onOpenChange}>
@@ -267,16 +261,25 @@ export function PagamentoFornecedorDialog({
               type="number"
               step="0.01"
               min="0"
-              value={valor}
-              onChange={(e) => setValor(e.target.value)}
-              placeholder="0,00"
-            />
-            {parceria && parceria.valorFornecedor > 0 && (
-              <p className="text-xs text-muted-foreground">
-                Valor contratado: {formatCurrency(parceria.valorFornecedor)}
-              </p>
-            )}
-          </div>
+               value={valor}
+               onChange={(e) => setValor(e.target.value)}
+               placeholder="0,00"
+             />
+             {parceria && parceria.valorFornecedor > 0 && (
+               <p className="text-xs text-muted-foreground">
+                 Valor contratado: {formatCurrency(parceria.valorFornecedor)}
+               </p>
+             )}
+ 
+             {isDivergente && (
+               <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-start gap-2 animate-in fade-in slide-in-from-top-1">
+                 <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                 <p className="text-xs text-amber-600 font-medium">
+                   O valor informado é diferente do valor contratado ({formatCurrency(parceria?.valorFornecedor || 0)}). Deseja continuar?
+                 </p>
+               </div>
+             )}
+           </div>
 
           {/* Data do Pagamento */}
           <div className="space-y-2">
