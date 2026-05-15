@@ -1,55 +1,28 @@
-## Diagnóstico
+I will fix the payment amount persistence bug in both `PagamentoFornecedorDialog` and `PagamentoParceiroDialog`. The issue stems from the `resetForm` function being called every time the dialog opens, which uses the original contract value from the `parceria` object, and a `useEffect` that also resets the value when the `parceria` prop changes.
 
-A causa do bug está isolada em **`src/pages/ProjetoDetalhe.tsx`**, linhas 940–1100.
+### Analysis of the Bug
+- The `useEffect` hook in both dialogs resets the `valor` state to the `parceria.valorFornecedor` (or `valorParceiro`) whenever the `parceria` object changes.
+- In `CentralOperacoesDialogs.tsx`, the `selectedPagamentoFornecedor` and `selectedPagamentoParceiro` are state variables. Any change in the parent component might cause a re-render that passes a "new" (though identical in content) partnership object, triggering the `useEffect` and reverting the value.
+- `resetForm` is also called on `open`, which overwrites any partially typed value if the component re-mounts or just resets state.
 
-O contêiner pai das abas é:
+### Proposed Changes
 
-```tsx
-<div className="flex-1 min-h-0 overflow-hidden">   // ← trava altura e esconde overflow
-  <TabsContent value="apostas" className="h-full m-0 ..."> // ← força altura fixa
-    <ProjetoApostasTab ... />                       // ← retorna <div className="space-y-4"> SEM scroll
-  </TabsContent>
-  ...
-</div>
-```
+#### 1. src/components/programa-indicacao/PagamentoFornecedorDialog.tsx
+- Remove the `useEffect` that resets `valor` when `parceria` changes to prevent auto-reversion.
+- Modify `resetForm` to only set the initial value if `valor` is currently empty, or better, handle initialization only once when the dialog is actually triggered.
+- Add an alert/confirmation message if the entered value differs from the contracted value.
+- Ensure the contracted value is displayed clearly as a reference.
 
-- `overflow-hidden` no wrapper + `h-full` no `TabsContent` impõem altura fixa = altura da viewport.
-- Abas "operacionais" (`Apostas`, `Visão Geral`, `Bônus`, `Surebet`, `ValueBet`, `DuploGreen`, `Punter`, `Promoções`, `Cashback`, `Vínculos`, etc.) renderizam um `<div class="space-y-4">` simples, **sem `overflow-y-auto`**, então o conteúdo que excede é cortado.
-- Só funcionam corretamente as abas que gerenciam o próprio scroll internamente: `Planejamento` (`ProjetoPlanejamentoTab` linha 200/305) e `Calendário Real` da página `/planejamento` (`PlanejamentoCalendario`).
+#### 2. src/components/programa-indicacao/PagamentoParceiroDialog.tsx
+- Apply the same fixes as above for the partner payment dialog.
 
-Confirmado via grep: nenhum outro local global mudou. O `App.tsx` (`h-screen overflow-hidden` no shell + `main flex-1 min-h-0 overflow-hidden`) e a página `PlanejamentoCampanhas` estão corretos e isolados.
+#### 3. src/components/central-operacoes/CentralOperacoesDialogs.tsx
+- Wrap the partnership objects passed to the dialogs in `useMemo` to ensure stable references, similar to what was already done for `parceriaForDialog` in the same file. This prevents unnecessary `useEffect` triggers.
 
-## O que mudar
+### Technical Details
+- **Warning UI**: Use a simple conditional message or a native `window.confirm` / custom alert within `handleSubmit` before processing if `valorNumerico !== parceria.valorFornecedor`. Given the instructions, an "aviso informativo (não bloqueante)" is requested. I'll implement a state-based warning shown above the confirm button.
+- **State Management**: Use a ref or a flag to track if the user has already seen/acknowledged the divergence warning.
 
-Edição cirúrgica em **`src/pages/ProjetoDetalhe.tsx`** apenas.
-
-Adicionar `overflow-y-auto` em cada `TabsContent` que não gerencia scroll próprio. A aba `planejamento` fica intocada (já tem scroll interno e botões flutuantes que dependem do contêiner atual).
-
-Mudança por linha (className do `TabsContent`):
-
-| Tab | Antes | Depois |
-|---|---|---|
-| visao-geral, apostas, promocoes, bonus, punter, surebet, valuebet, duplogreen, cashback, vinculos, gestao, freebets, giros-gratis, ocorrencias, perdas, movimentacoes, extrato, ciclos, comparativo, modulos, incidentes, parcerias, operadores, saques-broker, historico-vinculos, historico-conciliacoes | `"h-full m-0"` | `"h-full m-0 overflow-y-auto"` |
-| **planejamento** | `"h-full m-0"` | **mantém `"h-full m-0"`** (scroll é interno) |
-
-Isso restaura o padrão recomendado pelo usuário:
-
-```
-wrapper (overflow-hidden, altura fixa)
-  └─ TabsContent (h-full overflow-y-auto)   ← scroll local da aba
-        └─ conteúdo da aba (space-y-4)
-```
-
-Cada aba ganha seu próprio contexto de scroll, sem afetar o layout global, sem mexer em `App.tsx`, `PlanejamentoCampanhas` nem em qualquer aba do Planejamento.
-
-## Validação
-
-1. `/projeto/:id?tab=apostas` → lista completa rola dentro da aba; topbar/abas ficam fixos.
-2. `/projeto/:id?tab=visao-geral` → cards e gráficos do final da página visíveis via scroll.
-3. `/projeto/:id?tab=planejamento` → scroll interno e botões flutuantes (Subir/Hoje/Descer) funcionam exatamente como antes.
-4. `/planejamento` (Calendário Real / Histórico Detalhado / Simulado) → inalterado.
-5. Demais páginas (`/caixa`, `/financeiro`, etc.) → inalteradas (não tocamos em layout global).
-
-## Fora de escopo
-
-Sem alterações em `App.tsx`, `index.css`, `PlanejamentoCampanhas`, `PlanejamentoCalendario`, `ProjetoPlanejamentoTab`, filtros, lógica de negócio ou qualquer outro arquivo.
+### User Review Required
+> [!IMPORTANT]
+> The fix involves adding a confirmation step when values differ. I will implement a non-blocking visual warning that appears when a divergence is detected, and a confirmation dialog when clicking "Confirmar" if the warning hasn't been acknowledged. Does this meet the "aviso informativo" requirement?

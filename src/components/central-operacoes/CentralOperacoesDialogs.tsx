@@ -283,37 +283,53 @@ export function CentralOperacoesDialogs(props: CentralOperacoesDialogsProps) {
         />
       )}
 
-      {/* Dialog Pagamento Parceiro */}
-      <PagamentoParceiroDialog
-        open={pagamentoParceiroDialogOpen}
-        onOpenChange={(open) => {
-          setPagamentoParceiroDialogOpen(open);
-          if (!open) setSelectedPagamentoParceiro(null);
-        }}
-        parceria={selectedPagamentoParceiro ? {
-          id: selectedPagamentoParceiro.parceriaId,
-          parceiroNome: selectedPagamentoParceiro.parceiroNome,
-          valorParceiro: selectedPagamentoParceiro.valorParceiro,
-        } : null}
-        onSuccess={() => fetchData()}
-      />
-
-      {/* Dialog Pagamento Fornecedor */}
-      <PagamentoFornecedorDialog
-        open={pagamentoFornecedorOpen}
-        onOpenChange={(open) => {
-          setPagamentoFornecedorOpen(open);
-          if (!open) setSelectedPagamentoFornecedor(null);
-        }}
-        parceria={selectedPagamentoFornecedor ? {
-          parceriaId: selectedPagamentoFornecedor.parceriaId,
-          fornecedorNome: selectedPagamentoFornecedor.fornecedorNome,
-          fornecedorId: selectedPagamentoFornecedor.fornecedorId,
-          parceiroNome: selectedPagamentoFornecedor.parceiroNome,
-          valorFornecedor: selectedPagamentoFornecedor.valorRestante,
-        } : null}
-        onSuccess={() => fetchData()}
-      />
+   // Estabiliza referências para evitar resets indesejados no PagamentoParceiroDialog
+   const selectedPagamentoParceiroMemo = useMemo(() => {
+     if (!selectedPagamentoParceiro) return null;
+     return {
+       id: selectedPagamentoParceiro.parceriaId,
+       parceiroNome: selectedPagamentoParceiro.parceiroNome,
+       valorParceiro: selectedPagamentoParceiro.valorParceiro,
+     };
+   }, [selectedPagamentoParceiro?.parceriaId, selectedPagamentoParceiro?.valorParceiro]);
+ 
+   // Estabiliza referências para evitar resets indesejados no PagamentoFornecedorDialog
+   const selectedPagamentoFornecedorMemo = useMemo(() => {
+     if (!selectedPagamentoFornecedor) return null;
+     return {
+       parceriaId: selectedPagamentoFornecedor.parceriaId,
+       fornecedorNome: selectedPagamentoFornecedor.fornecedorNome,
+       fornecedorId: selectedPagamentoFornecedor.fornecedorId,
+       parceiroNome: selectedPagamentoFornecedor.parceiroNome,
+       valorFornecedor: selectedPagamentoFornecedor.valorRestante,
+     };
+   }, [selectedPagamentoFornecedor?.parceriaId, selectedPagamentoFornecedor?.valorRestante]);
+ 
+   return (
+     <>
+       {/* ... existing code ... */}
+ 
+       {/* Dialog Pagamento Parceiro */}
+       <PagamentoParceiroDialog
+         open={pagamentoParceiroDialogOpen}
+         onOpenChange={(open) => {
+           setPagamentoParceiroDialogOpen(open);
+           if (!open) setSelectedPagamentoParceiro(null);
+         }}
+         parceria={selectedPagamentoParceiroMemo}
+         onSuccess={() => fetchData()}
+       />
+ 
+       {/* Dialog Pagamento Fornecedor */}
+       <PagamentoFornecedorDialog
+         open={pagamentoFornecedorOpen}
+         onOpenChange={(open) => {
+           setPagamentoFornecedorOpen(open);
+           if (!open) setSelectedPagamentoFornecedor(null);
+         }}
+         parceria={selectedPagamentoFornecedorMemo}
+         onSuccess={() => fetchData()}
+       />
 
       {/* Dialog Encerrar Parceria — auditoria de pendências */}
       <EncerrarParceriaDialog
