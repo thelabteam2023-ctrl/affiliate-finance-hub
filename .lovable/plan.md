@@ -1,28 +1,43 @@
-I will fix the payment amount persistence bug in both `PagamentoFornecedorDialog` and `PagamentoParceiroDialog`. The issue stems from the `resetForm` function being called every time the dialog opens, which uses the original contract value from the `parceria` object, and a `useEffect` that also resets the value when the `parceria` prop changes.
-
-### Analysis of the Bug
-- The `useEffect` hook in both dialogs resets the `valor` state to the `parceria.valorFornecedor` (or `valorParceiro`) whenever the `parceria` object changes.
-- In `CentralOperacoesDialogs.tsx`, the `selectedPagamentoFornecedor` and `selectedPagamentoParceiro` are state variables. Any change in the parent component might cause a re-render that passes a "new" (though identical in content) partnership object, triggering the `useEffect` and reverting the value.
-- `resetForm` is also called on `open`, which overwrites any partially typed value if the component re-mounts or just resets state.
-
-### Proposed Changes
-
-#### 1. src/components/programa-indicacao/PagamentoFornecedorDialog.tsx
-- Remove the `useEffect` that resets `valor` when `parceria` changes to prevent auto-reversion.
-- Modify `resetForm` to only set the initial value if `valor` is currently empty, or better, handle initialization only once when the dialog is actually triggered.
-- Add an alert/confirmation message if the entered value differs from the contracted value.
-- Ensure the contracted value is displayed clearly as a reference.
-
-#### 2. src/components/programa-indicacao/PagamentoParceiroDialog.tsx
-- Apply the same fixes as above for the partner payment dialog.
-
-#### 3. src/components/central-operacoes/CentralOperacoesDialogs.tsx
-- Wrap the partnership objects passed to the dialogs in `useMemo` to ensure stable references, similar to what was already done for `parceriaForDialog` in the same file. This prevents unnecessary `useEffect` triggers.
+I will implement the requested changes to allow editing pending payment values both in the "Pagamentos Pendentes" list and within the payment modals, ensuring the adjusted values are tracked and reflected throughout the system.
 
 ### Technical Details
-- **Warning UI**: Use a simple conditional message or a native `window.confirm` / custom alert within `handleSubmit` before processing if `valorNumerico !== parceria.valorFornecedor`. Given the instructions, an "aviso informativo (não bloqueante)" is requested. I'll implement a state-based warning shown above the confirm button.
-- **State Management**: Use a ref or a flag to track if the user has already seen/acknowledged the divergence warning.
 
-### User Review Required
-> [!IMPORTANT]
-> The fix involves adding a confirmation step when values differ. I will implement a non-blocking visual warning that appears when a divergence is detected, and a confirmation dialog when clicking "Confirmar" if the warning hasn't been acknowledged. Does this meet the "aviso informativo" requirement?
+#### 1. Database Schema Changes
+Add two new columns to the `parcerias` table to store adjusted values without losing the original contract values:
+- `valor_parceiro_ajustado` (NUMERIC, nullable)
+- `valor_fornecedor_ajustado` (NUMERIC, nullable)
+
+#### 2. Inline Editing in Financeiro > Pagamentos Pendentes
+- **Component**: `src/components/programa-indicacao/FinanceiroTab.tsx`
+- **Logic**: 
+    - Update the `FornecedorPendente` and `ParceiroPendente` interfaces to include adjusted values.
+    - Implement a local state `editingId` to track which item is being edited.
+    - Add a "pencil" icon next to the values in the "Pagamentos ao Parceiro (CPF)" and "Pagamentos a Fornecedores" lists.
+    - When editing, replace the static text with an input field.
+    - On save (Enter or check icon):
+        - Update the `parcerias` table in Supabase.
+        - Create an entry in the `audit_logs` table (Action: 'UPDATE', Entity: 'parceria', includes before/after data).
+        - Refresh the list data to update totals and display values.
+- **Totals**: Ensure the "Pendências" count and display values use `valor_ajustado ?? valor_original`.
+
+#### 3. Modal Improvements
+- **Components**: `src/components/programa-indicacao/PagamentoFornecedorDialog.tsx` and `PagamentoParceiroDialog.tsx`
+- **Fixes**:
+    - Modify `useEffect` to only initialize the `valor` state once when the dialog opens, preventing it from resetting if the parent component re-renders.
+    - Ensure the `valor` field remains editable and does not reset on blur.
+    - Display a clear, non-blocking warning message if the typed value differs from the original contracted value.
+    - The "Confirmar" action will use the value currently in the input field.
+
+#### 4. Audit Trail
+Use the existing `audit_logs` table to record:
+- `actor_user_id`: Current operator ID.
+- `action`: 'UPDATE'.
+- `entity_type`: 'parceria'.
+- `entity_id`: The partnership ID.
+- `before_data` and `after_data`: Capturing the value change.
+
+### Plan
+1. **Migration**: Create and run the SQL migration to add the adjusted value columns.
+2. **List Implementation**: Edit `FinanceiroTab.tsx` to add the inline editing UI and the save handler (with audit logging).
+3. **Modal Implementation**: Edit both `PagamentoFornecedorDialog.tsx` and `PagamentoParceiroDialog.tsx` to stabilize the value field and add the divergence warning.
+4. **Verification**: Confirm that editing a value in the list updates the display, that the modal opens with the new value, and that totals (where applicable) are updated.
