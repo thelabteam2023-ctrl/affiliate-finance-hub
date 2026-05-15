@@ -995,22 +995,6 @@ export function SurebetModalRoot({
         newOdds[index].stakeOrigem = "manual";
       }
  
-      // Validação em tempo real
-       const validation = calcularSaldoDisponivel(
-         index,
-         newOdds,
-         bookmakerSaldos,
-         isEditing,
-         originalStakesByBookmaker
-       );
- 
-      setErrosPorPerna(prevErros => {
-        const next = { ...prevErros };
-        if (validation.excedeu) next[index] = validation.mensagem;
-        else delete next[index];
-        return next;
-      });
-      
       return newOdds;
     });
   }, [bookmakerSaldos, isEditing]);
@@ -1101,22 +1085,24 @@ export function SurebetModalRoot({
 
       newOdds[pernaIndex] = { ...newOdds[pernaIndex], additionalEntries: entries };
  
-      // Re-validar a perna pai quando uma sub-entrada muda
-       const validation = calcularSaldoDisponivel(
-         pernaIndex,
-         newOdds,
-         bookmakerSaldos,
-         isEditing,
-         originalStakesByBookmaker
-       );
- 
-      setErrosPorPerna(prevErros => {
-        const next = { ...prevErros };
-        if (validation.excedeu) next[pernaIndex] = validation.mensagem;
-        else delete next[pernaIndex];
-        return next;
-      });
- 
+  // Sincronizar erros por perna em tempo real com base no estado atual das odds e saldos
+  useEffect(() => {
+    const newErros: Record<number, string> = {};
+    odds.forEach((_, index) => {
+      const validation = calcularSaldoDisponivel(
+        index,
+        odds,
+        bookmakerSaldos,
+        isEditing,
+        originalStakesByBookmaker
+      );
+      if (validation.excedeu) {
+        newErros[index] = validation.mensagem;
+      }
+    });
+    setErrosPorPerna(newErros);
+  }, [odds, bookmakerSaldos, isEditing, originalStakesByBookmaker]);
+
       return newOdds;
     });
   }, [bookmakerSaldos, isEditing, targetPayoutsLocal, arredondarStake]);
@@ -2538,12 +2524,14 @@ export function SurebetModalRoot({
               )}
                 <Button 
                   onClick={handleSave} 
-                  disabled={saving || !isEstruturaCompleta || Object.keys(errosPorPerna).length > 0}
+                  disabled={saving || !isEstruturaCompleta || Object.keys(errosPorPerna).length > 0 || balanceValidation.hasInsufficientBalance}
                   title={
                     !isEstruturaCompleta 
                       ? "Preencha todos os dados obrigatórios para registrar" 
                       : Object.keys(errosPorPerna).length > 0
-                        ? "Saldo insuficiente em uma ou mais casas" 
+                        ? "Saldo insuficiente em uma ou mais casas"
+                        : balanceValidation.hasInsufficientBalance
+                          ? "Saldo insuficiente em uma ou mais casas (verifique os campos)"
                         : undefined
                   }
                 >
