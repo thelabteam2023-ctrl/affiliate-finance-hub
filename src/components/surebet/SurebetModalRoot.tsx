@@ -303,6 +303,14 @@ export function SurebetModalRoot({
  
    const selectedBk = bookmakerSaldos.find(b => b.id === entry.bookmaker_id);
    if (!selectedBk) return { disponivel: 0, excedeu: false, mensagem: "" };
+    if (selectedBk.nome?.toLowerCase().includes("talismania")) { 
+      console.log("DEBUG_SALDO [Talismania]:", { 
+        bookmaker_id: entry.bookmaker_id, 
+        nome: selectedBk.nome, 
+        saldo_operavel: selectedBk.saldo_operavel, 
+        credito_original: originalStakes.get(entry.bookmaker_id) 
+      }); 
+    }
  
    const isFB = entry.fonteSaldo === 'FREEBET';
    const parseStake = (s: any) => Number(String(s).replace(/[^0-9.]/g, '')) || 0;
