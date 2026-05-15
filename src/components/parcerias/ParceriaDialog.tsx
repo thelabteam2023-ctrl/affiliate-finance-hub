@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useWorkspace } from "@/hooks/useWorkspace";
-import { useQueryClient } from "@tanstack/react-query";
+ import { useCentralOperacoesCache } from "@/hooks/useCentralOperacoesCache";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,7 +60,7 @@ interface Fornecedor {
 export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRenewalMode = false, preSelectedParceiroId, pagamentoJaRealizado = false, onRenewalSuccess }: ParceriaDialogProps) {
   const { toast } = useToast();
   const { workspaceId } = useWorkspace();
-  const queryClient = useQueryClient();
+   const { removeFromList, fullRefetch } = useCentralOperacoesCache();
   const [loading, setLoading] = useState(false);
   const [parceiros, setParceiros] = useState<Parceiro[]>([]);
   const [indicadores, setIndicadores] = useState<Indicador[]>([]);
