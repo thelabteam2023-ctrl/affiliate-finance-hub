@@ -83,22 +83,24 @@ interface ComissaoPendente {
   valorComissao: number;
 }
 
-interface ParceiroPendente {
-  parceriaId: string;
-  parceiroNome: string;
-  valorParceiro: number;
-  origemTipo: string;
-}
-
-interface FornecedorPendente {
-  parceriaId: string;
-  parceiroNome: string;
-  fornecedorNome: string;
-  fornecedorId: string;
-  valorFornecedor: number;
-  valorPago: number;
-  valorRestante: number;
-}
+ interface ParceiroPendente {
+   parceriaId: string;
+   parceiroNome: string;
+   valorParceiro: number;
+   valorParceiroAjustado: number | null;
+   origemTipo: string;
+ }
+ 
+ interface FornecedorPendente {
+   parceriaId: string;
+   parceiroNome: string;
+   fornecedorNome: string;
+   fornecedorId: string;
+   valorFornecedor: number;
+   valorFornecedorAjustado: number | null;
+   valorPago: number;
+   valorRestante: number;
+ }
 
 export function FinanceiroTab() {
   const { toast } = useToast();
