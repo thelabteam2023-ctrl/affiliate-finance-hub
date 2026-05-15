@@ -798,11 +798,50 @@ export function FinanceiroTab() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="font-bold text-emerald-500">
-                        {formatCurrency(parceiro.valorParceiro)}
-                      </span>
-                      <Button
+                     <div className="flex items-center gap-2">
+                       {editingValor?.id === parceiro.parceriaId && editingValor.tipo === 'parceiro' ? (
+                         <div className="flex items-center gap-1 animate-in fade-in slide-in-from-right-1">
+                           <Input
+                             className="w-24 h-8 text-sm"
+                             type="number"
+                             value={editingValor.valor}
+                             onChange={(e) => setEditingValor({ ...editingValor, valor: e.target.value })}
+                             autoFocus
+                           />
+                           <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-600" onClick={handleAjustarValor}>
+                             <Check className="h-4 w-4" />
+                           </Button>
+                           <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => setEditingValor(null)}>
+                             <X className="h-4 w-4" />
+                           </Button>
+                         </div>
+                       ) : (
+                         <div className="flex items-center gap-2">
+                           <div className="text-right">
+                             <span className="font-bold text-emerald-500 block">
+                               {formatCurrency(parceiro.valorParceiroAjustado !== null ? parceiro.valorParceiroAjustado : parceiro.valorParceiro)}
+                             </span>
+                             {parceiro.valorParceiroAjustado !== null && (
+                               <p className="text-[10px] text-muted-foreground line-through">
+                                 Original: {formatCurrency(parceiro.valorParceiro)}
+                               </p>
+                             )}
+                           </div>
+                           <Button
+                             size="icon"
+                             variant="ghost"
+                             className="h-7 w-7 text-muted-foreground hover:text-primary"
+                             onClick={() => setEditingValor({
+                               id: parceiro.parceriaId,
+                               tipo: 'parceiro',
+                               valor: (parceiro.valorParceiroAjustado !== null ? parceiro.valorParceiroAjustado : parceiro.valorParceiro).toString()
+                             })}
+                           >
+                             <Pencil className="h-3 w-3" />
+                           </Button>
+                         </div>
+                       )}
+                       <Button
                         size="sm"
                         variant="ghost"
                         className="text-muted-foreground hover:text-destructive"
@@ -885,11 +924,50 @@ export function FinanceiroTab() {
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="font-bold text-orange-500">
-                        {formatCurrency(forn.valorRestante)}
-                      </span>
-                      <Button
+                     <div className="flex items-center gap-2">
+                       {editingValor?.id === forn.parceriaId && editingValor.tipo === 'fornecedor' ? (
+                         <div className="flex items-center gap-1 animate-in fade-in slide-in-from-right-1">
+                           <Input
+                             className="w-24 h-8 text-sm"
+                             type="number"
+                             value={editingValor.valor}
+                             onChange={(e) => setEditingValor({ ...editingValor, valor: e.target.value })}
+                             autoFocus
+                           />
+                           <Button size="icon" variant="ghost" className="h-8 w-8 text-orange-600" onClick={handleAjustarValor}>
+                             <Check className="h-4 w-4" />
+                           </Button>
+                           <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => setEditingValor(null)}>
+                             <X className="h-4 w-4" />
+                           </Button>
+                         </div>
+                       ) : (
+                         <div className="flex items-center gap-2">
+                           <div className="text-right">
+                             <span className="font-bold text-orange-500 block">
+                               {formatCurrency(forn.valorRestante)}
+                             </span>
+                             {forn.valorFornecedorAjustado !== null && (
+                               <p className="text-[10px] text-muted-foreground line-through">
+                                 Original: {formatCurrency(forn.valorFornecedor)}
+                               </p>
+                             )}
+                           </div>
+                           <Button
+                             size="icon"
+                             variant="ghost"
+                             className="h-7 w-7 text-muted-foreground hover:text-primary"
+                             onClick={() => setEditingValor({
+                               id: forn.parceriaId,
+                               tipo: 'fornecedor',
+                               valor: (forn.valorFornecedorAjustado !== null ? forn.valorFornecedorAjustado : forn.valorFornecedor).toString()
+                             })}
+                           >
+                             <Pencil className="h-3 w-3" />
+                           </Button>
+                         </div>
+                       )}
+                       <Button
                         size="sm"
                         variant="default"
                         onClick={() => {
