@@ -78,6 +78,8 @@ interface SurebetTableRowProps {
   hasInsufficientBalance?: boolean;
   /** Map granular de entradas insuficientes: "main-{idx}" ou "sub-{idx}-{subIdx}" */
   insufficientEntries?: Map<string, boolean>;
+   /** Erro de validação em tempo real para esta perna */
+   error?: string;
   /** Callback para alterar resultado da perna (modo edição) */
   onResultadoChange?: (index: number, resultado: PernaResultado) => void;
   onUpdateOdd: (index: number, field: keyof OddEntry, value: string | boolean) => void;
@@ -108,6 +110,7 @@ export function SurebetTableRow({
   moedaDominante,
   hasInsufficientBalance = false,
   insufficientEntries,
+  error,
   onResultadoChange,
   onUpdateOdd,
   onSetReference,
@@ -313,17 +316,23 @@ export function SurebetTableRow({
                     </button>
                   )}
                 </div>
-                {mainInsufficient && selectedBookmaker && (
-                  <div className="text-[9px] text-destructive font-medium leading-tight text-center max-w-[100px]">
-                    <div>{entry.fonteSaldo === 'FREEBET' ? 'FB insuficiente' : 'Saldo insuficiente'}</div>
-                    <div className="opacity-80">
-                      Disponível: {formatCurrency(
-                        entry.fonteSaldo === 'FREEBET' 
-                          ? selectedBookmaker.saldo_freebet 
-                          : selectedBookmaker.saldo_operavel, 
-                        selectedBookmaker.moeda
-                      )}
-                    </div>
+                {(error || (mainInsufficient && selectedBookmaker)) && (
+                  <div className="text-[9px] text-destructive font-medium leading-tight text-center max-w-[120px]">
+                    {error ? (
+                      <div>{error}</div>
+                    ) : (
+                      <>
+                        <div>{entry.fonteSaldo === 'FREEBET' ? 'FB insuficiente' : 'Saldo insuficiente'}</div>
+                        <div className="opacity-80">
+                          Disponível: {formatCurrency(
+                            entry.fonteSaldo === 'FREEBET' 
+                              ? selectedBookmaker.saldo_freebet 
+                              : selectedBookmaker.saldo_operavel, 
+                            selectedBookmaker.moeda
+                          )}
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
