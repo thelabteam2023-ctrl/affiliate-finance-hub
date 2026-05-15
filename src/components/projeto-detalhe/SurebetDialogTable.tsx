@@ -365,6 +365,7 @@ export function SurebetDialogTable({
   const [arredondarAtivado, setArredondarAtivado] = useState(true);
   const [arredondarValor, setArredondarValor] = useState("0.01");
    const [saving, setSaving] = useState(false);
+   const [errosSaldo, setErrosSaldo] = useState<Record<number, string>>({});
 
    // Ref para capturar stakes originais no modo edição
    const originalStakesByBookmaker = useRef<Map<string, number>>(new Map());
@@ -385,24 +386,29 @@ export function SurebetDialogTable({
       const originalStake = originalStakesByBookmaker.current.get(bookmakerId) || 0;
       const saldoOperavel = bookmaker.saldo_operavel || 0;
       
-      console.log("DIAGNOSTICO_SALDO:", {
-        bookmaker_id: bookmakerId,
-        nome: bookmaker.nome,
-        saldo_operavel: saldoOperavel,
-        credito_original: originalStake
-      });
-
       const limiteDisponivel = saldoOperavel + originalStake;
       const excedeu = stakeNum > (limiteDisponivel + 0.01);
 
-     if (excedeu) {
-       return {
-         disponivel: limiteDisponivel,
-         mensagem: `Saldo insuficiente na ${bookmaker.nome}. Disponível: ${formatCurrency(limiteDisponivel, bookmaker.moeda as any)}`
-       };
-     }
-     return null;
+      return excedeu 
+        ? { disponivel: limiteDisponivel, mensagem: `Saldo insuficiente. Disponível: ${formatCurrency(limiteDisponivel, bookmaker.moeda as any)}` }
+        : null;
    }, [bookmakerSaldos]);
+
+   // Validar todos os campos e atualizar estado de erros
+   const validarTodosSaldos = useCallback(() => {
+     const novosErros: Record<number, string> = {};
+     odds.forEach((perna, idx) => {
+       const erro = validarSaldoPerna(idx, perna.bookmaker_id, perna.stake);
+       if (erro) novosErros[idx] = erro.mensagem;
+     });
+     setErrosSaldo(novosErros);
+     return Object.keys(novosErros).length === 0;
+   }, [odds, validarSaldoPerna]);
+
+   // Efeito para validar em tempo real
+   useEffect(() => {
+     validarTodosSaldos();
+   }, [odds, validarTodosSaldos]);
   
   // Estado para conversão de operação parcial para apostas simples
   const [showConversionDialog, setShowConversionDialog] = useState(false);
@@ -1256,6 +1262,11 @@ export function SurebetDialogTable({
       return;
     }
 
+    if (!validarTodosSaldos()) {
+      toast.error("Corrija os erros de saldo antes de salvar.");
+      return;
+    }
+
     try {
       setSaving(true);
       const { data: { user } } = await supabase.auth.getUser();
@@ -1679,6 +1690,7 @@ export function SurebetDialogTable({
                       </div>
                     )}
                     
+
                     {/* Perna Label */}
                     {row.rowSpan > 0 && (
                       <td 
@@ -1761,31 +1773,43 @@ export function SurebetDialogTable({
                     {/* Stake */}
                     <td className="py-6 px-2">
                       {isEditing ? (
-                        <div className="text-xs font-medium text-center">
-                          {formatCurrency(parseFloat(entry.stake) || 0, entry.moeda)}
+                        <div className="relative flex flex-col items-center gap-1">
+                          <div className={`text-xs font-medium text-center ${errosSaldo[pernaIndex] ? "text-red-500" : ""}`}>
+                            {formatCurrency(parseFloat(entry.stake) || 0, entry.moeda)}
+                          </div>
+                          {errosSaldo[pernaIndex] && (
+                            <span className="text-[9px] text-red-500 font-medium leading-tight text-center">
+                              {errosSaldo[pernaIndex]}
+                            </span>
+                          )}
                         </div>
                       ) : (
                         <TooltipProvider>
-                          <Tooltip open={!!validarSaldoPerna(pernaIndex, entry.bookmaker_id, entry.stake)}>
+                          <Tooltip open={!!errosSaldo[pernaIndex]}>
                             <TooltipTrigger asChild>
-                              <div>
+                              <div className="relative">
                                 <MoneyInput 
                                   value={entry.stake}
                                   onChange={(val) => updateOdd(pernaIndex, "stake", val)}
                                   currency={entry.moeda}
                                   minDigits={5}
                                   className={`h-7 text-xs text-center ${
-                                    validarSaldoPerna(pernaIndex, entry.bookmaker_id, entry.stake) 
-                                      ? "border-red-500 focus-visible:ring-red-500" 
+                                    errosSaldo[pernaIndex] 
+                                      ? "border-red-500 focus-visible:ring-red-500 text-red-500" 
                                       : ""
                                   }`}
                                   data-field-type="stake"
                                   onKeyDown={(e) => handleFieldKeyDown(e as any, 'stake')}
                                 />
+                                {errosSaldo[pernaIndex] && (
+                                  <div className="absolute top-full left-0 right-0 mt-1 text-[9px] text-red-500 font-medium leading-tight text-center">
+                                    {errosSaldo[pernaIndex]}
+                                  </div>
+                                )}
                               </div>
                             </TooltipTrigger>
                             <TooltipContent side="top" className="bg-red-500 text-white border-red-600">
-                              <p className="text-[10px]">{validarSaldoPerna(pernaIndex, entry.bookmaker_id, entry.stake)?.mensagem}</p>
+                              <p className="text-[10px]">{errosSaldo[pernaIndex]}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -2306,7 +2330,7 @@ export function SurebetDialogTable({
               )}
               <Button 
                 onClick={handleSave} 
-                disabled={saving || analysis.stakeTotal <= 0 || pernasCompletasCount < numPernas}
+                disabled={saving || analysis.stakeTotal <= 0 || pernasCompletasCount < numPernas || Object.keys(errosSaldo).length > 0}
               >
                 <Save className="h-4 w-4 mr-1" />
                 {isEditing ? "Salvar" : "Registrar"}
