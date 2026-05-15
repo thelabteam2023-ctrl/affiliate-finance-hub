@@ -2,8 +2,9 @@
  * ParceirosSemParceriaCardGrid — Grid de cards para parceiros sem origem
  */
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { UserPlus } from "lucide-react";
+import { UserPlus, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getFirstLastName } from "@/lib/utils";
 import type { ParceiroSemParceria } from "@/hooks/useCentralOperacoesData";
@@ -14,6 +15,8 @@ interface ParceirosSemParceriaCardGridProps {
 }
 
 export function ParceirosSemParceriaCardGrid({ parceiros, onDefinirOrigem }: ParceirosSemParceriaCardGridProps) {
+  const [pendingId, setPendingId] = useState<string | null>(null);
+
   if (parceiros.length === 0) {
     return <p className="text-xs text-muted-foreground text-center py-4">Nenhum parceiro sem origem.</p>;
   }
@@ -41,8 +44,22 @@ export function ParceirosSemParceriaCardGrid({ parceiros, onDefinirOrigem }: Par
 
           {/* Row 2: Ação */}
           <div className="flex items-center justify-end mt-2">
-            <Button size="sm" variant="outline" onClick={() => onDefinirOrigem(parceiro)} className="h-6 text-[10px] px-2.5 shrink-0 font-semibold">
-              Definir Origem
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={() => {
+                setPendingId(parceiro.id);
+                onDefinirOrigem(parceiro);
+                // Reset loading state after a short delay or on next render cycle
+                setTimeout(() => setPendingId(null), 1000);
+              }} 
+              disabled={pendingId === parceiro.id}
+              className="h-6 text-[10px] px-2.5 shrink-0 font-semibold"
+            >
+              {pendingId === parceiro.id ? (
+                <Loader2 className="h-3 w-3 animate-spin mr-1" />
+              ) : null}
+              {pendingId === parceiro.id ? "Processando..." : "Definir Origem"}
             </Button>
           </div>
         </div>

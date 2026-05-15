@@ -98,27 +98,22 @@ export function FornecedorDialog({ open, onOpenChange, fornecedor, isViewMode }:
         if (error) throw error;
         toast({ title: "Fornecedor atualizado com sucesso" });
       } else {
-        // 1. Criar fornecedor na tabela mestre
-        const { data: newFornecedor, error } = await supabase
-          .from("fornecedores")
-          .insert(payload)
-          .select("id")
-          .single();
-        if (error) throw error;
-
-        // 2. Ativar portal do fornecedor via RPC segura
+        // Criar fornecedor e ativar portal atomicamente via RPC
         const { data: rpcResult, error: rpcError } = await supabase.rpc("activate_supplier_portal", {
           p_parent_workspace_id: workspaceId,
           p_nome: formData.nome,
           p_contato: formData.cpf || null,
           p_observacoes: formData.observacoes || null,
-          p_fornecedor_id: newFornecedor.id,
+          p_fornecedor_id: null,
+          p_documento: formData.cpf || null,
+          p_email: null,
         });
+
         if (rpcError) throw rpcError;
         const result = rpcResult as any;
         if (!result?.success) throw new Error(result?.error || "Erro ao ativar portal");
 
-        toast({ title: "Fornecedor criado com sucesso (portal ativado)" });
+        toast({ title: "Fornecedor criado e portal ativado com sucesso" });
       }
 
       onOpenChange(false);

@@ -7117,6 +7117,7 @@ export type Database = {
           observacoes: string | null
           qualidade: number | null
           status: string
+          supplier_profile_id: string | null
           supplier_titular_id: string | null
           telefone: string | null
           updated_at: string
@@ -7138,6 +7139,7 @@ export type Database = {
           observacoes?: string | null
           qualidade?: number | null
           status?: string
+          supplier_profile_id?: string | null
           supplier_titular_id?: string | null
           telefone?: string | null
           updated_at?: string
@@ -7159,6 +7161,7 @@ export type Database = {
           observacoes?: string | null
           qualidade?: number | null
           status?: string
+          supplier_profile_id?: string | null
           supplier_titular_id?: string | null
           telefone?: string | null
           updated_at?: string
@@ -7171,6 +7174,13 @@ export type Database = {
             columns: ["fornecedor_origem_id"]
             isOneToOne: false
             referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parceiros_supplier_profile_id_fkey"
+            columns: ["supplier_profile_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_profiles"
             referencedColumns: ["id"]
           },
           {
@@ -14601,16 +14611,29 @@ export type Database = {
     }
     Functions: {
       accept_workspace_invite: { Args: { _token: string }; Returns: Json }
-      activate_supplier_portal: {
-        Args: {
-          p_contato?: string
-          p_fornecedor_id?: string
-          p_nome: string
-          p_observacoes?: string
-          p_parent_workspace_id: string
-        }
-        Returns: Json
-      }
+      activate_supplier_portal:
+        | {
+            Args: {
+              p_contato?: string
+              p_fornecedor_id?: string
+              p_nome: string
+              p_observacoes?: string
+              p_parent_workspace_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_contato?: string
+              p_documento?: string
+              p_email?: string
+              p_fornecedor_id?: string
+              p_nome: string
+              p_observacoes?: string
+              p_parent_workspace_id: string
+            }
+            Returns: Json
+          }
       admin_add_user_to_workspace: {
         Args: {
           _role?: Database["public"]["Enums"]["app_role"]
