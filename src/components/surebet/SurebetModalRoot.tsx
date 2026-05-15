@@ -1603,7 +1603,7 @@ export function SurebetModalRoot({
           else resultadoAposta = 'VOID';
         }
 
-        const originalPernas = originalPernasSnapshot.current;
+        const originalPernas = originalPernasSnapshot;
         const hasResultadoChange = allPernasFlat.some((flat) => {
           if (!flat.pernaId) return !!flat.resultado;
           const originalPerna = originalPernas.find(op => op.id === flat.pernaId);
@@ -1923,7 +1923,7 @@ export function SurebetModalRoot({
       return;
     }
     
-    const originalPerna = originalPernasSnapshot.current.find(op => op.id === pernaId);
+    const originalPerna = originalPernasSnapshot.find(op => op.id === pernaId);
     if (!originalPerna) {
       toast.error("Perna não encontrada no banco de dados");
       return;
@@ -2427,6 +2427,7 @@ export function SurebetModalRoot({
                         moedaDominante={analysis.moedaDominante}
                         hasInsufficientBalance={balanceValidation.insufficientLegs.includes(pernaIndex)}
                         insufficientEntries={balanceValidation.insufficientEntries}
+                        error={errosPorPerna[pernaIndex]}
                         onResultadoChange={handlePernaResultadoChange}
                         onUpdateOdd={updateOdd}
                         onSetReference={setReferenceIndex}
