@@ -409,7 +409,7 @@ export function FinanceiroTab() {
              valorParceiroAjustado: p.valor_parceiro_ajustado || null,
              origemTipo: p.origem_tipo || "DIRETO",
            }))
-           .filter((p: any) => (p.valorParceiroAjustado !== null ? p.valorParceiroAjustado > 0 : p.valorParceiro > 0));
+            .filter((p: any) => (p.valorParceiroAjustado !== null ? p.valorParceiroAjustado >= 0.01 : p.valorParceiro >= 0.01));
          setParceirosPendentes(pendentes);
       }
 
