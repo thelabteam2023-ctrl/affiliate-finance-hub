@@ -285,7 +285,6 @@ export function SurebetMobileCard({
                     data-field-type="stake"
                     onKeyDown={(e) => onFieldKeyDown(e as any, 'stake')}
                   />
-                  {mainInsuf && (
                   {mainInsuf && selectedBookmaker && (
                     <div className="text-[9px] text-destructive font-medium mt-0.5 leading-tight text-center">
                       <div>{entry.fonteSaldo === 'FREEBET' ? 'FB insuficiente' : 'Saldo insuficiente'}</div>
@@ -296,7 +295,6 @@ export function SurebetMobileCard({
                         )}
                       </div>
                     </div>
-                  )}
                   )}
                 </>
               );
