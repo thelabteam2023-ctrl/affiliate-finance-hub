@@ -102,7 +102,7 @@ export function useCentralAlertsCount() {
           canSeePartnerData
             ? supabase
                 .from("movimentacoes_indicacao")
-                .select("parceria_id, tipo, status, indicador_id")
+                .select("parceria_id, tipo, status, indicador_id, valor")
             : Promise.resolve({ data: [], error: null }),
           // Alertas de lucro - partner_event
           canSeePartnerData
