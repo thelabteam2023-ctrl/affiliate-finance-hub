@@ -2353,7 +2353,7 @@ export function SurebetModalRoot({
                   odds={odds}
                   scenarios={analysis.scenarios}
                   isEditing={isEditing}
-                  bookmakersByLeg={getAdjustedBookmakersForLeg}
+                  bookmakersByLeg={(idx, subIdx) => getAdjustedBookmakersForLeg(idx, subIdx)}
                   directedProfitLegs={directedProfitLegs}
                   numPernas={numPernas}
                   moedaDominante={analysis.moedaDominante}

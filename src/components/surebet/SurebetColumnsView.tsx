@@ -294,10 +294,16 @@ export function SurebetColumnsView({
                               </button>
                             )}
                           </div>
-                          {mainInsuf && (
-                            <span className="text-[9px] text-destructive font-medium mt-0.5 block text-center">
-                              {entry.fonteSaldo === 'FREEBET' ? 'FB insuf.' : 'Saldo insuf.'}
-                            </span>
+                          {mainInsuf && selectedBookmaker && (
+                            <div className="text-[9px] text-destructive font-medium mt-0.5 leading-tight text-center">
+                              <div>{entry.fonteSaldo === 'FREEBET' ? 'FB insuficiente' : 'Saldo insuficiente'}</div>
+                              <div className="opacity-80">
+                                Disp: {formatCurrency(
+                                  entry.fonteSaldo === 'FREEBET' ? selectedBookmaker.saldo_freebet : selectedBookmaker.saldo_operavel, 
+                                  selectedBookmaker.moeda
+                                )}
+                              </div>
+                            </div>
                           )}
                         </>
                       );
@@ -432,10 +438,16 @@ export function SurebetColumnsView({
                                     </button>
                                   )}
                                 </div>
-                                {subInsuf && (
-                                  <span className="text-[8px] text-destructive font-medium mt-0.5 block">
-                                    {isSubFB ? 'FB insuf.' : 'Saldo insuf.'}
-                                  </span>
+                                {subInsuf && addBookmaker && (
+                                  <div className="text-[8px] text-destructive font-medium mt-0.5 leading-tight text-center">
+                                    <div>{isSubFB ? 'FB insuficiente' : 'Saldo insuficiente'}</div>
+                                    <div className="opacity-80">
+                                      Disp: {formatCurrency(
+                                        isSubFB ? addBookmaker.saldo_freebet : addBookmaker.saldo_operavel, 
+                                        addBookmaker.moeda
+                                      )}
+                                    </div>
+                                  </div>
                                 )}
                               </>
                             );
