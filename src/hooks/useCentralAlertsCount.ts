@@ -246,12 +246,20 @@ export function useCentralAlertsCount() {
             .map((m: any) => m.parceria_id);
           
           const parceriasAjustadas = (parceriasResult.data || []).filter((p: any) => {
-            // Se já foi pago integralmente, remove
-            if (parceriasPagas.includes(p.id)) return false;
+            // 1. Pagamento ao Parceiro (CPF)
+            const jaPagoParceiro = parceriasPagas.includes(p.id);
+            const valorParceiroEfetivo = p.valor_parceiro_ajustado !== null ? p.valor_parceiro_ajustado : p.valor_parceiro;
+            const pendenteParceiro = !jaPagoParceiro && valorParceiroEfetivo >= 0.01;
             
-            // Se o valor ajustado foi zerado, remove
-            const valorEfetivo = p.valor_parceiro_ajustado !== null ? p.valor_parceiro_ajustado : p.valor_parceiro;
-            return valorEfetivo >= 0.01;
+            // 2. Pagamento ao Fornecedor
+            let pendenteFornecedor = false;
+            if (p.fornecedor_id || (p.valor_fornecedor && p.valor_fornecedor > 0)) {
+              const valorFornEfetivo = p.valor_fornecedor_ajustado !== null ? p.valor_fornecedor_ajustado : (p.valor_fornecedor || 0);
+              const valorFornPago = pagamentosPorParceria.get(p.id) || 0;
+              pendenteFornecedor = (valorFornEfetivo - valorFornPago) >= 0.01;
+            }
+            
+            return pendenteParceiro || pendenteFornecedor;
           });
           
           totalCount += parceriasAjustadas.length;
