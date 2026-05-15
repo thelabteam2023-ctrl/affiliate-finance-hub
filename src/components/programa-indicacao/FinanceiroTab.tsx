@@ -1227,15 +1227,15 @@ export function FinanceiroTab() {
       <PagamentoParceiroDialog
         open={parceiroDialogOpen}
         onOpenChange={setParceiroDialogOpen}
-        parceria={
-          selectedParceiro
-            ? {
-                id: selectedParceiro.parceriaId,
-                parceiroNome: selectedParceiro.parceiroNome,
-                valorParceiro: selectedParceiro.valorParceiro,
-              }
-            : null
-        }
+         parceria={
+           selectedParceiro
+             ? {
+                 id: selectedParceiro.parceriaId,
+                 parceiroNome: selectedParceiro.parceiroNome,
+                 valorParceiro: selectedParceiro.valorParceiroAjustado !== null ? selectedParceiro.valorParceiroAjustado : selectedParceiro.valorParceiro,
+               }
+             : null
+         }
         onSuccess={fetchData}
       />
       <PagamentoCaptacaoDialog
