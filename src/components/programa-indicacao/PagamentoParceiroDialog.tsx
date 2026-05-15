@@ -50,24 +50,28 @@ export function PagamentoParceiroDialog({
     saldoDisponivel: 0,
   });
 
-  useEffect(() => {
-    if (parceria) {
-      setValor(parceria.valorParceiro.toString());
-    }
-  }, [parceria]);
-
-  useEffect(() => {
-    if (open) {
-      resetForm();
-    }
-  }, [open]);
-
-  const valorNumerico = parseFloat(valor) || 0;
-
-  // 🔒 VALIDAÇÃO CENTRAL DE SALDO - Usa o valor calculado pelo OrigemPagamentoSelect
-  const isSaldoInsuficiente = Boolean(origemData.saldoInsuficiente) || (valorNumerico > 0 && origemData.saldoDisponivel < valorNumerico);
-
-  const handleSubmit = async () => {
+   // Somente inicializa o valor quando o diálogo abre e o valor está vazio
+   useEffect(() => {
+     if (open && parceria && !valor) {
+       setValor(parceria.valorParceiro.toString());
+     }
+   }, [open, parceria]);
+ 
+   const valorNumerico = parseFloat(valor) || 0;
+ 
+   const formatCurrency = (value: number) => {
+     return new Intl.NumberFormat("pt-BR", {
+       style: "currency",
+       currency: "BRL",
+     }).format(value);
+   };
+ 
+   const isDivergente = parceria && Math.abs(valorNumerico - parceria.valorParceiro) > 0.01;
+ 
+   // 🔒 VALIDAÇÃO CENTRAL DE SALDO - Usa o valor calculado pelo OrigemPagamentoSelect
+   const isSaldoInsuficiente = Boolean(origemData.saldoInsuficiente) || (valorNumerico > 0 && origemData.saldoDisponivel < valorNumerico);
+ 
+   const handleSubmit = async () => {
     if (!parceria || !dataPagamento) return;
 
     if (isNaN(valorNumerico) || valorNumerico <= 0) {
@@ -209,24 +213,17 @@ export function PagamentoParceiroDialog({
     }
   };
 
-  const resetForm = () => {
-    setDataPagamento(format(new Date(), "yyyy-MM-dd"));
-    setValor(parceria?.valorParceiro.toString() || "");
-    setDescricao("");
-    setOrigemData({
-      origemTipo: "CAIXA_OPERACIONAL",
-      tipoMoeda: "FIAT",
-      moeda: "BRL",
-      saldoDisponivel: 0,
-    });
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
+   const resetForm = () => {
+     setDataPagamento(format(new Date(), "yyyy-MM-dd"));
+     setValor("");
+     setDescricao("");
+     setOrigemData({
+       origemTipo: "CAIXA_OPERACIONAL",
+       tipoMoeda: "FIAT",
+       moeda: "BRL",
+       saldoDisponivel: 0,
+     });
+   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
