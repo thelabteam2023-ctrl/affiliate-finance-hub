@@ -285,110 +285,19 @@ export function SurebetModalRoot({
   const [conversionInProgress, setConversionInProgress] = useState(false);
   
   const [focusedLeg, setFocusedLeg] = useState<number | null>(null);
-   const [viewLayout, setViewLayout] = useState<'vertical' | 'horizontal'>('vertical');
-    const [errosPorPerna, setErrosPorPerna] = useState<Record<number, string>>({});
-
- /**
-  * Função pura para calcular o saldo disponível e validar stakes em tempo real.
-  */
- const calcularSaldoDisponivel = (
-   pernaIndex: number,
-   allOdds: OddEntry[],
-   bookmakerSaldos: any[],
-   isEditing: boolean,
-   originalStakes: Map<string, { real: number; freebet: number }>
- ): { disponivel: number; excedeu: boolean; mensagem: string } => {
-   const entry = allOdds[pernaIndex];
-   if (!entry.bookmaker_id) return { disponivel: 0, excedeu: false, mensagem: "" };
- 
-   const selectedBk = bookmakerSaldos.find(b => b.id === entry.bookmaker_id);
-   if (!selectedBk) return { disponivel: 0, excedeu: false, mensagem: "" };
-    if (selectedBk.nome?.toLowerCase().includes("talismania")) { 
-      console.log("DEBUG_SALDO [Talismania]:", { 
-        bookmaker_id: entry.bookmaker_id, 
-        nome: selectedBk.nome, 
-        saldo_operavel: selectedBk.saldo_operavel, 
-        credito_original: originalStakes.get(entry.bookmaker_id) 
-      }); 
-    }
- 
-   const isFB = entry.fonteSaldo === 'FREEBET';
-   const parseStake = (s: any) => Number(String(s).replace(/[^0-9.]/g, '')) || 0;
-   
-   // 1. Saldo base + Crédito de edição
-   const credito = isEditing ? (originalStakes.get(entry.bookmaker_id) || { real: 0, freebet: 0 }) : { real: 0, freebet: 0 };
-   const saldoBase = isFB ? (selectedBk.saldo_freebet ?? 0) : (selectedBk.saldo_operavel ?? 0);
-   const saldoDisponivelTotal = saldoBase + (isFB ? credito.freebet : credito.real);
- 
-   // 2. Descontar outras pernas/entradas que usem a mesma casa e mesmo tipo de saldo
-   let alocadoOutras = 0;
-   allOdds.forEach((other, idx) => {
-     // Mesma perna: descontar apenas sub-entradas (se houver)
-     if (idx === pernaIndex) {
-       (other.additionalEntries || []).forEach(sub => {
-         const subBk = sub.bookmaker_id || other.bookmaker_id;
-         const subFB = sub.fonteSaldo === 'FREEBET';
-         if (subBk === entry.bookmaker_id && subFB === isFB) {
-           alocadoOutras += parseStake(sub.stake);
-         }
-       });
-       return;
-     }
- 
-     // Outras pernas
-     const otherFB = other.fonteSaldo === 'FREEBET';
-     if (other.bookmaker_id === entry.bookmaker_id && otherFB === isFB) {
-       alocadoOutras += parseStake(other.stake);
-     }
-     (other.additionalEntries || []).forEach(sub => {
-       const subBk = sub.bookmaker_id || other.bookmaker_id;
-       const subFB = sub.fonteSaldo === 'FREEBET';
-       if (subBk === entry.bookmaker_id && subFB === isFB) {
-         alocadoOutras += parseStake(sub.stake);
-       }
-     });
-   });
- 
-   const disponivelFinal = Math.max(0, saldoDisponivelTotal - alocadoOutras);
-   const stakeAtual = parseStake(entry.stake);
-   const excedeu = stakeAtual > disponivelFinal + 0.01;
- 
-   return {
-     disponivel: disponivelFinal,
-     excedeu,
-     mensagem: excedeu ? `Saldo insuficiente. Disponível: ${new Intl.NumberFormat('en-US', { style: 'currency', currency: selectedBk.moeda || 'USD' }).format(disponivelFinal)}` : ""
-   };
- }
-
- 
+  const [viewLayout, setViewLayout] = useState<'vertical' | 'horizontal'>('vertical');
   
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   
-  // Crédito virtual: armazena dados originais para modo edição
-  // Transformados em estado para garantir que memos dependentes (bookmakersDisponiveis, balanceValidation) recomputem
-  const [originalStakesByBookmaker, setOriginalStakesByBookmaker] = useState<Map<string, { real: number; freebet: number }>>(new Map());
-  const [originalPernaIds, setOriginalPernaIds] = useState<string[]>([]);
-  const [originalPernasSnapshot, setOriginalPernasSnapshot] = useState<Array<{ id: string; bookmaker_id: string; stake: number; odd: number; selecao: string; selecao_livre: string; resultado: string | null; fonte_saldo: string | null }>>([]);
-
-  // Sincronizar erros por perna em tempo real com base no estado atual das odds e saldos
-  useEffect(() => {
-    const newErros: Record<number, string> = {};
-    odds.forEach((_, index) => {
-      const validation = calcularSaldoDisponivel(
-        index,
-        odds,
-        bookmakerSaldos,
-        isEditing,
-        originalStakesByBookmaker
-      );
-      if (validation.excedeu) {
-        newErros[index] = validation.mensagem;
-      }
-    });
-    setErrosPorPerna(newErros);
-  }, [odds, bookmakerSaldos, isEditing, originalStakesByBookmaker]);
-
+  // Crédito virtual: armazena stakes originais por bookmaker_id para modo edição
+  // Permite que o saldo "bloqueado" pela aposta original seja reconhecido como disponível
+  // Separado em real vs freebet para validação correta de ambos os saldos
+  const originalStakesByBookmaker = useRef<Map<string, { real: number; freebet: number }>>(new Map());
+  // IDs das pernas originais (do banco) para usar na RPC de edição atômica
+  const originalPernaIds = useRef<string[]>([]);
+  // Snapshot das pernas originais para detectar mudanças
+  const originalPernasSnapshot = useRef<Array<{ id: string; bookmaker_id: string; stake: number; odd: number; selecao: string; selecao_livre: string; resultado: string | null; fonte_saldo: string | null }>>([]);
   const [selectedLegForPrint, setSelectedLegForPrint] = useState<number | null>(null);
   
   const {
@@ -405,7 +314,7 @@ export function SurebetModalRoot({
   const bookmakersDisponiveis = useMemo(() => {
     if (isEditing) {
       return bookmakerSaldos.map(bk => {
-        const credito = originalStakesByBookmaker.get(bk.id) || { real: 0, freebet: 0 };
+        const credito = originalStakesByBookmaker.current.get(bk.id) || { real: 0, freebet: 0 };
         if (credito.real > 0 || credito.freebet > 0) {
           return {
             ...bk,
@@ -418,7 +327,7 @@ export function SurebetModalRoot({
       });
     }
     return bookmakerSaldos.filter((bk) => bk.saldo_operavel >= 0.50);
-  }, [bookmakerSaldos, isEditing, originalStakesByBookmaker]);
+  }, [bookmakerSaldos, isEditing]);
 
   /**
    * Retorna bookmakers com saldos ajustados para uma perna específica.
@@ -426,46 +335,21 @@ export function SurebetModalRoot({
    * 
    * CRÍTICO para evitar overbetting na mesma casa em múltiplas pernas.
    */
-  /**
-   * Retorna bookmakers com saldos ajustados para uma perna específica ou sub-entrada.
-   * Desconta stakes já alocadas em TODAS AS OUTRAS pernas e sub-entradas que usam a mesma bookmaker.
-   * 
-   * @param legIndex Índice da perna
-   * @param subEntryIndex Índice da sub-entrada (se aplicável)
-   */
-  const getAdjustedBookmakersForLeg = useCallback((legIndex: number, subEntryIndex?: number) => {
+  const getAdjustedBookmakersForLeg = useCallback((legIndex: number) => {
     return bookmakersDisponiveis.map(bk => {
-      let alocadoOutros = 0;
-      let alocadoOutrosFB = 0;
-
-      odds.forEach((entry, i) => {
-        // Perna principal
-        if (entry.bookmaker_id === bk.id) {
-          // Se não é a entrada que estamos calculando
-          if (i !== legIndex || subEntryIndex !== undefined) {
-            const s = parseFloat(entry.stake) || 0;
-            if (entry.fonteSaldo === 'FREEBET') alocadoOutrosFB += s; else alocadoOutros += s;
-          }
+      // Calcular quanto já foi alocado em pernas ANTERIORES para esta bookmaker
+      let alocadoEmPernasAnteriores = 0;
+      for (let i = 0; i < legIndex; i++) {
+        if (odds[i].bookmaker_id === bk.id) {
+          alocadoEmPernasAnteriores += parseFloat(odds[i].stake) || 0;
         }
-
-        // Sub-entradas
-        (entry.additionalEntries || []).forEach((sub, si) => {
-          const subBk = sub.bookmaker_id || entry.bookmaker_id;
-          if (subBk === bk.id) {
-            // Se não é a sub-entrada que estamos calculando
-            if (i !== legIndex || si !== subEntryIndex) {
-              const s = parseFloat(sub.stake) || 0;
-              if (sub.fonteSaldo === 'FREEBET') alocadoOutrosFB += s; else alocadoOutros += s;
-            }
-          }
-        });
-      });
+      }
       
+      // Retornar bookmaker com saldo ajustado
       return {
         ...bk,
-        saldo_operavel: Math.max(0, bk.saldo_operavel - alocadoOutros),
-        saldo_disponivel: Math.max(0, bk.saldo_disponivel - alocadoOutros),
-        saldo_freebet: Math.max(0, (bk.saldo_freebet || 0) - alocadoOutrosFB),
+        saldo_operavel: Math.max(0, bk.saldo_operavel - alocadoEmPernasAnteriores),
+        saldo_disponivel: Math.max(0, bk.saldo_disponivel - alocadoEmPernasAnteriores),
       };
     });
   }, [bookmakersDisponiveis, odds]);
@@ -516,9 +400,9 @@ export function SurebetModalRoot({
   // Cleanup: resetar refs quando modal fecha para nunca reusar estado stale
   useEffect(() => {
     if (!open) {
-      setOriginalPernasSnapshot([]);
-      setOriginalPernaIds([]);
-      setOriginalStakesByBookmaker(new Map());
+      originalPernasSnapshot.current = [];
+      originalPernaIds.current = [];
+      originalStakesByBookmaker.current = new Map();
     }
   }, [open]);
 
@@ -812,9 +696,11 @@ export function SurebetModalRoot({
           stakeMap.set(perna.bookmaker_id, cur);
         }
       });
-      setOriginalStakesByBookmaker(stakeMap);
-      setOriginalPernaIds(pernasData.map((p: any) => p.id));
-      setOriginalPernasSnapshot(pernasData.map((p: any) => ({
+      originalStakesByBookmaker.current = stakeMap;
+      
+      // Armazenar IDs e snapshot de TODAS as pernas originais (flat) para edição atômica
+      originalPernaIds.current = pernasData.map((p: any) => p.id);
+      originalPernasSnapshot.current = pernasData.map((p: any) => ({
         id: p.id,
         bookmaker_id: p.bookmaker_id || "",
         stake: parseFloat(p.stake) || 0,
@@ -823,7 +709,7 @@ export function SurebetModalRoot({
         selecao_livre: p.selecao_livre || "",
         resultado: p.resultado || null,
         fonte_saldo: p.fonte_saldo || null,
-      })));
+      }));
       
       // ================================================================
       // AGRUPAR pernas por selecao para reconstruir additionalEntries
@@ -1020,10 +906,10 @@ export function SurebetModalRoot({
         newOdds[index].isManuallyEdited = true;
         newOdds[index].stakeOrigem = "manual";
       }
- 
+      
       return newOdds;
     });
-  }, [bookmakerSaldos, isEditing]);
+  }, [bookmakerSaldos]);
 
   const setReferenceIndex = useCallback((index: number) => {
     setOdds(prev => prev.map((o, i) => ({
@@ -1110,11 +996,9 @@ export function SurebetModalRoot({
       // Stake editada manualmente: NÃO recalcular (respeitar valor do usuário)
 
       newOdds[pernaIndex] = { ...newOdds[pernaIndex], additionalEntries: entries };
- 
-
       return newOdds;
     });
-  }, [bookmakerSaldos, isEditing, targetPayoutsLocal, arredondarStake]);
+  }, [bookmakerSaldos, targetPayoutsLocal, arredondarStake]);
 
   const removeAdditionalEntry = useCallback((pernaIndex: number, entryIndex: number) => {
     setOdds(prev => {
@@ -1598,7 +1482,7 @@ export function SurebetModalRoot({
           else resultadoAposta = 'VOID';
         }
 
-        const originalPernas = originalPernasSnapshot;
+        const originalPernas = originalPernasSnapshot.current;
         const hasResultadoChange = allPernasFlat.some((flat) => {
           if (!flat.pernaId) return !!flat.resultado;
           const originalPerna = originalPernas.find(op => op.id === flat.pernaId);
@@ -1795,9 +1679,9 @@ export function SurebetModalRoot({
       invalidateCanonicalCaches(queryClient, projetoId);
       
       // Limpar refs de estado local — backend é a fonte da verdade
-      setOriginalPernasSnapshot([]);
-      setOriginalPernaIds([]);
-      setOriginalStakesByBookmaker(new Map());
+      originalPernasSnapshot.current = [];
+      originalPernaIds.current = [];
+      originalStakesByBookmaker.current = new Map();
       
       onSuccess('save');
       if (!embedded) onOpenChange(false);
@@ -1918,7 +1802,7 @@ export function SurebetModalRoot({
       return;
     }
     
-    const originalPerna = originalPernasSnapshot.find(op => op.id === pernaId);
+    const originalPerna = originalPernasSnapshot.current.find(op => op.id === pernaId);
     if (!originalPerna) {
       toast.error("Perna não encontrada no banco de dados");
       return;
@@ -1955,17 +1839,18 @@ export function SurebetModalRoot({
         prev.filter(i => i !== pernaIndex).map(i => i > pernaIndex ? i - 1 : i)
       );
       
-      const newSnapshot = originalPernasSnapshot.filter(p => p.id !== pernaId);
-      setOriginalPernasSnapshot(newSnapshot);
-      setOriginalPernaIds(originalPernaIds.filter(id => id !== pernaId));
-
+      // Atualizar snapshots (ID-based)
+      originalPernasSnapshot.current = originalPernasSnapshot.current.filter(p => p.id !== pernaId);
+      originalPernaIds.current = originalPernaIds.current.filter(id => id !== pernaId);
+      
+      // Recalcular crédito virtual (separado por tipo)
       const stakeMap = new Map<string, { real: number; freebet: number }>();
-      newSnapshot.forEach(p => {
+      originalPernasSnapshot.current.forEach(p => {
         const cur = stakeMap.get(p.bookmaker_id) || { real: 0, freebet: 0 };
         if (p.fonte_saldo === 'FREEBET') cur.freebet += p.stake; else cur.real += p.stake;
         stakeMap.set(p.bookmaker_id, cur);
       });
-      setOriginalStakesByBookmaker(stakeMap);
+      originalStakesByBookmaker.current = stakeMap;
       
       // Atualizar modelo visual
       const newCount = odds.length - 1;
@@ -2046,7 +1931,7 @@ export function SurebetModalRoot({
     for (const [bkId, alocado] of alocadoPorBookmaker.entries()) {
       const bookmaker = bookmakerSaldos.find(b => b.id === bkId);
       if (!bookmaker) continue;
-      const credito = isEditing ? (originalStakesByBookmaker.get(bkId) || { real: 0, freebet: 0 }) : { real: 0, freebet: 0 };
+      const credito = isEditing ? (originalStakesByBookmaker.current.get(bkId) || { real: 0, freebet: 0 }) : { real: 0, freebet: 0 };
       const saldoReal = (bookmaker.saldo_operavel ?? 0) + credito.real;
       const saldoFB = (bookmaker.saldo_freebet ?? 0) + credito.freebet;
       if (alocado.real > saldoReal + 0.01) bookmakerInsuficientes.add(bkId);
@@ -2087,7 +1972,7 @@ export function SurebetModalRoot({
       adjustedBalances,
       bookmakerFBInsuficientes,
     };
-  }, [odds, bookmakerSaldos, isEditing, originalStakesByBookmaker]);
+  }, [odds, bookmakerSaldos, isEditing]);
 
   // ============================================
   // RASCUNHO
@@ -2355,14 +2240,12 @@ export function SurebetModalRoot({
                     scenario={analysis.scenarios[pernaIndex]}
                     isEditing={isEditing}
                     isProcessing={legPrints[pernaIndex]?.isProcessing || false}
-                    bookmakersByLeg={getAdjustedBookmakersForLeg}
+                    bookmakers={getAdjustedBookmakersForLeg(pernaIndex)}
                     directedProfitLegs={directedProfitLegs}
                     numPernas={numPernas}
                     moedaDominante={analysis.moedaDominante}
-                         hasInsufficientBalance={balanceValidation.insufficientLegs.includes(pernaIndex)}
-                          erro={errosPorPerna[pernaIndex]}
-                          errosPorPerna={errosPorPerna}
-                         insufficientEntries={balanceValidation.insufficientEntries}
+                    hasInsufficientBalance={balanceValidation.insufficientLegs.includes(pernaIndex)}
+                    insufficientEntries={balanceValidation.insufficientEntries}
                     onResultadoChange={handlePernaResultadoChange}
                     onUpdateOdd={updateOdd}
                     onSetReference={setReferenceIndex}
@@ -2416,13 +2299,12 @@ export function SurebetModalRoot({
                         isEditing={isEditing}
                         isFocused={focusedLeg === pernaIndex}
                         isProcessing={legPrints[pernaIndex]?.isProcessing || false}
-                        bookmakersByLeg={getAdjustedBookmakersForLeg}
+                        bookmakers={getAdjustedBookmakersForLeg(pernaIndex)}
                         directedProfitLegs={directedProfitLegs}
                         numPernas={numPernas}
                         moedaDominante={analysis.moedaDominante}
                         hasInsufficientBalance={balanceValidation.insufficientLegs.includes(pernaIndex)}
                         insufficientEntries={balanceValidation.insufficientEntries}
-                        error={errosPorPerna[pernaIndex]}
                         onResultadoChange={handlePernaResultadoChange}
                         onUpdateOdd={updateOdd}
                         onSetReference={setReferenceIndex}
@@ -2446,13 +2328,12 @@ export function SurebetModalRoot({
                   odds={odds}
                   scenarios={analysis.scenarios}
                   isEditing={isEditing}
-                  bookmakersByLeg={(idx, subIdx) => getAdjustedBookmakersForLeg(idx, subIdx)}
+                  bookmakersByLeg={getAdjustedBookmakersForLeg}
                   directedProfitLegs={directedProfitLegs}
                   numPernas={numPernas}
                   moedaDominante={analysis.moedaDominante}
-                         insufficientLegs={balanceValidation.insufficientLegs}
-                         errosPorPerna={errosPorPerna}
-                         insufficientEntries={balanceValidation.insufficientEntries}
+                  insufficientLegs={balanceValidation.insufficientLegs}
+                  insufficientEntries={balanceValidation.insufficientEntries}
                   onResultadoChange={handlePernaResultadoChange}
                   onUpdateOdd={updateOdd}
                   onSetReference={setReferenceIndex}
@@ -2531,19 +2412,11 @@ export function SurebetModalRoot({
                   Simples ({pernasValidas.length})
                 </Button>
               )}
-                <Button 
-                  onClick={handleSave} 
-                  disabled={saving || !isEstruturaCompleta || Object.keys(errosPorPerna).length > 0 || balanceValidation.hasInsufficientBalance}
-                  title={
-                    !isEstruturaCompleta 
-                      ? "Preencha todos os dados obrigatórios para registrar" 
-                      : Object.keys(errosPorPerna).length > 0
-                        ? "Saldo insuficiente em uma ou mais casas"
-                        : balanceValidation.hasInsufficientBalance
-                          ? "Saldo insuficiente em uma ou mais casas (verifique os campos)"
-                        : undefined
-                  }
-                >
+               <Button 
+                 onClick={handleSave} 
+                 disabled={saving || !isEstruturaCompleta || (!isEditing && balanceValidation.hasInsufficientBalance)}
+                 title={!isEstruturaCompleta ? "Preencha todos os dados obrigatórios para registrar" : balanceValidation.hasInsufficientBalance ? "Saldo insuficiente em uma ou mais casas" : undefined}
+               >
                  <Save className="h-4 w-4 mr-1" />
                  {isEditing ? "Salvar Alterações" : "Registrar Operação"}
                </Button>
