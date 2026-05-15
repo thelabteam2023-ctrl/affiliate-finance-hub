@@ -15396,28 +15396,51 @@ export type Database = {
         }
         Returns: Json
       }
-      editar_surebet_completa_v1: {
-        Args: {
-          p_aposta_id: string
-          p_contexto?: string
-          p_data_aposta?: string
-          p_esporte?: string
-          p_estrategia?: string
-          p_evento?: string
-          p_lucro_esperado?: number
-          p_lucro_prejuizo?: number
-          p_mercado?: string
-          p_modelo?: string
-          p_pernas: Json
-          p_resultado?: string
-          p_roi_esperado?: number
-          p_roi_real?: number
-          p_stake_consolidado?: number
-          p_stake_total?: number
-          p_status?: string
-        }
-        Returns: Json
-      }
+      editar_surebet_completa_v1:
+        | {
+            Args: {
+              p_aposta_id: string
+              p_contexto?: string
+              p_data_aposta?: string
+              p_esporte?: string
+              p_estrategia?: string
+              p_evento?: string
+              p_lucro_esperado?: number
+              p_lucro_prejuizo?: number
+              p_mercado?: string
+              p_modelo?: string
+              p_pernas: Json
+              p_resultado?: string
+              p_roi_esperado?: number
+              p_roi_real?: number
+              p_stake_consolidado?: number
+              p_stake_total?: number
+              p_status?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_aposta_id: string
+              p_contexto: string
+              p_data_aposta: string
+              p_esporte: string
+              p_estrategia: string
+              p_evento: string
+              p_lucro_esperado: number
+              p_lucro_prejuizo: number
+              p_mercado: string
+              p_modelo: string
+              p_pernas: Json
+              p_resultado: string
+              p_roi_esperado: number
+              p_roi_real: number
+              p_stake_consolidado: number
+              p_stake_total: number
+              p_status: string
+            }
+            Returns: Json
+          }
       editar_surebet_completa_v2: {
         Args: {
           p_aposta_id: string

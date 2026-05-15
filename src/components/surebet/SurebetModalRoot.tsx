@@ -2414,8 +2414,14 @@ export function SurebetModalRoot({
               )}
                <Button 
                  onClick={handleSave} 
-                 disabled={saving || !isEstruturaCompleta || (!isEditing && balanceValidation.hasInsufficientBalance)}
-                 title={!isEstruturaCompleta ? "Preencha todos os dados obrigatórios para registrar" : balanceValidation.hasInsufficientBalance ? "Saldo insuficiente em uma ou mais casas" : undefined}
+                 disabled={saving || !isEstruturaCompleta || balanceValidation.hasInsufficientBalance}
+                 title={
+                   !isEstruturaCompleta 
+                     ? "Preencha todos os dados obrigatórios para registrar" 
+                     : balanceValidation.hasInsufficientBalance 
+                       ? "Saldo insuficiente em uma ou mais casas" 
+                       : undefined
+                 }
                >
                  <Save className="h-4 w-4 mr-1" />
                  {isEditing ? "Salvar Alterações" : "Registrar Operação"}
