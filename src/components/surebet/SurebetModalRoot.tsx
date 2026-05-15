@@ -363,6 +363,24 @@ export function SurebetModalRoot({
   const [originalPernaIds, setOriginalPernaIds] = useState<string[]>([]);
   const [originalPernasSnapshot, setOriginalPernasSnapshot] = useState<Array<{ id: string; bookmaker_id: string; stake: number; odd: number; selecao: string; selecao_livre: string; resultado: string | null; fonte_saldo: string | null }>>([]);
 
+  // Sincronizar erros por perna em tempo real com base no estado atual das odds e saldos
+  useEffect(() => {
+    const newErros: Record<number, string> = {};
+    odds.forEach((_, index) => {
+      const validation = calcularSaldoDisponivel(
+        index,
+        odds,
+        bookmakerSaldos,
+        isEditing,
+        originalStakesByBookmaker
+      );
+      if (validation.excedeu) {
+        newErros[index] = validation.mensagem;
+      }
+    });
+    setErrosPorPerna(newErros);
+  }, [odds, bookmakerSaldos, isEditing, originalStakesByBookmaker]);
+
   const [selectedLegForPrint, setSelectedLegForPrint] = useState<number | null>(null);
   
   const {
