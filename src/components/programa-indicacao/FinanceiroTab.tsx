@@ -122,9 +122,12 @@ export function FinanceiroTab() {
   const [selectedBonus, setSelectedBonus] = useState<BonusPendente | null>(null);
   const [selectedComissao, setSelectedComissao] = useState<ComissaoPendente | null>(null);
   const [selectedParceiro, setSelectedParceiro] = useState<ParceiroPendente | null>(null);
-  const [selectedFornecedor, setSelectedFornecedor] = useState<FornecedorPendente | null>(null);
-  
-  // Dispensar pagamento state
+   const [selectedFornecedor, setSelectedFornecedor] = useState<FornecedorPendente | null>(null);
+ 
+   // Estados para ajuste de valor
+   const [editingValor, setEditingValor] = useState<{ id: string; tipo: 'parceiro' | 'fornecedor'; valor: string } | null>(null);
+   
+   // Dispensar pagamento state
   const [dispensaOpen, setDispensaOpen] = useState(false);
   const [dispensaParceriaId, setDispensaParceriaId] = useState<string | null>(null);
   const [dispensaParceiroNome, setDispensaParceiroNome] = useState('');
@@ -226,35 +229,35 @@ export function FinanceiroTab() {
           .from("indicadores_referral")
           .select("id, nome")
           .limit(10000),
-        supabase
-          .from("parcerias")
-          .select(`
-            id,
-            valor_parceiro,
-            origem_tipo,
-            status,
-            custo_aquisicao_isento,
-            pagamento_dispensado,
-            parceiro:parceiros(nome)
-          `)
-          .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
-          .or("custo_aquisicao_isento.is.null,custo_aquisicao_isento.eq.false")
-          .gt("valor_parceiro", 0)
-          .eq("pagamento_dispensado", false)
-          .limit(10000),
+         supabase
+           .from("parcerias")
+           .select(`
+             id,
+             valor_parceiro,
+             valor_parceiro_ajustado,
+             origem_tipo,
+             status,
+             custo_aquisicao_isento,
+             pagamento_dispensado,
+             parceiro:parceiros(nome)
+           `)
+           .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
+           .or("custo_aquisicao_isento.is.null,custo_aquisicao_isento.eq.false")
+           .eq("pagamento_dispensado", false)
+           .limit(10000),
         supabase.from("parceiros").select("id, nome").limit(10000),
-        supabase
-          .from("parcerias")
-          .select(`
-            id,
-            fornecedor_id,
-            valor_fornecedor,
-            parceiro:parceiros(nome)
-          `)
-          .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
-          .not("fornecedor_id", "is", null)
-          .gt("valor_fornecedor", 0)
-          .limit(10000),
+         supabase
+           .from("parcerias")
+           .select(`
+             id,
+             fornecedor_id,
+             valor_fornecedor,
+             valor_fornecedor_ajustado,
+             parceiro:parceiros(nome)
+           `)
+           .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
+           .not("fornecedor_id", "is", null)
+           .limit(10000),
         supabase.from("fornecedores").select("id, nome").limit(10000),
       ]);
 
@@ -366,15 +369,17 @@ export function FinanceiroTab() {
           .filter((m) => m.tipo === "PAGTO_PARCEIRO" && m.status === "CONFIRMADO")
           .map((m) => m.parceria_id);
 
-        const pendentes: ParceiroPendente[] = parceirosResult.data
-          .filter((p: any) => !parceriasPagas.includes(p.id))
-          .map((p: any) => ({
-            parceriaId: p.id,
-            parceiroNome: p.parceiro?.nome || "N/A",
-            valorParceiro: p.valor_parceiro || 0,
-            origemTipo: p.origem_tipo || "DIRETO",
-          }));
-        setParceirosPendentes(pendentes);
+         const pendentes: ParceiroPendente[] = (parceirosResult.data || [])
+           .filter((p: any) => !parceriasPagas.includes(p.id))
+           .map((p: any) => ({
+             parceriaId: p.id,
+             parceiroNome: p.parceiro?.nome || "N/A",
+             valorParceiro: p.valor_parceiro || 0,
+             valorParceiroAjustado: p.valor_parceiro_ajustado || null,
+             origemTipo: p.origem_tipo || "DIRETO",
+           }))
+           .filter((p: any) => (p.valorParceiroAjustado !== null ? p.valorParceiroAjustado > 0 : p.valorParceiro > 0));
+         setParceirosPendentes(pendentes);
       }
 
       // Calculate fornecedores pendentes (supplier payments) - supports partial payments
@@ -391,23 +396,26 @@ export function FinanceiroTab() {
             pagamentosPorParceria.set(m.parceria_id, atual + (m.valor || 0));
           });
 
-        const pendentesForn: FornecedorPendente[] = (fornecedoresParceriasResult.data || [])
-          .map((p: any) => {
-            const valorTotal = p.valor_fornecedor || 0;
-            const valorPago = pagamentosPorParceria.get(p.id) || 0;
-            const valorRestante = Math.max(0, valorTotal - valorPago);
-            return {
-              parceriaId: p.id,
-              parceiroNome: p.parceiro?.nome || "N/A",
-              fornecedorNome: fornecedoresMap.get(p.fornecedor_id) || "Fornecedor",
-              fornecedorId: p.fornecedor_id,
-              valorFornecedor: valorTotal,
-              valorPago,
-              valorRestante,
-            };
-          })
-          .filter((p) => p.valorRestante > 0);
-        setFornecedoresPendentes(pendentesForn);
+         const pendentesForn: FornecedorPendente[] = (fornecedoresParceriasResult.data || [])
+           .map((p: any) => {
+             const valorTotal = p.valor_fornecedor || 0;
+             const valorAjustado = p.valor_fornecedor_ajustado || null;
+             const valorEfetivo = valorAjustado !== null ? valorAjustado : valorTotal;
+             const valorPago = pagamentosPorParceria.get(p.id) || 0;
+             const valorRestante = Math.max(0, valorEfetivo - valorPago);
+             return {
+               parceriaId: p.id,
+               parceiroNome: p.parceiro?.nome || "N/A",
+               fornecedorNome: fornecedoresMap.get(p.fornecedor_id) || "Fornecedor",
+               fornecedorId: p.fornecedor_id,
+               valorFornecedor: valorTotal,
+               valorFornecedorAjustado: valorAjustado,
+               valorPago,
+               valorRestante,
+             };
+           })
+           .filter((p) => (p.valorFornecedorAjustado !== null ? p.valorFornecedorAjustado > 0 : p.valorFornecedor > 0) && p.valorRestante > 0);
+         setFornecedoresPendentes(pendentesForn);
       }
     } catch (error: any) {
       toast({
