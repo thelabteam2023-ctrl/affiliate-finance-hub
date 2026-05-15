@@ -270,30 +270,6 @@ export function CentralOperacoesDialogs(props: CentralOperacoesDialogsProps) {
         </AlertDialogContent>
       </AlertDialog>
 
-   // Estabiliza referências para evitar resets indesejados no PagamentoParceiroDialog
-   const selectedPagamentoParceiroMemo = useMemo(() => {
-     if (!selectedPagamentoParceiro) return null;
-     return {
-       id: selectedPagamentoParceiro.parceriaId,
-       parceiroNome: selectedPagamentoParceiro.parceiroNome,
-       valorParceiro: selectedPagamentoParceiro.valorParceiro,
-     };
-   }, [selectedPagamentoParceiro?.parceriaId, selectedPagamentoParceiro?.valorParceiro]);
- 
-   // Estabiliza referências para evitar resets indesejados no PagamentoFornecedorDialog
-   const selectedPagamentoFornecedorMemo = useMemo(() => {
-     if (!selectedPagamentoFornecedor) return null;
-     return {
-       parceriaId: selectedPagamentoFornecedor.parceriaId,
-       fornecedorNome: selectedPagamentoFornecedor.fornecedorNome,
-       fornecedorId: selectedPagamentoFornecedor.fornecedorId,
-       parceiroNome: selectedPagamentoFornecedor.parceiroNome,
-       valorFornecedor: selectedPagamentoFornecedor.valorRestante,
-     };
-   }, [selectedPagamentoFornecedor?.parceriaId, selectedPagamentoFornecedor?.valorRestante]);
- 
-   return (
-     <>
        {selectedEntrega && (
          <EntregaConciliacaoDialog
            open={conciliacaoOpen}
