@@ -119,6 +119,9 @@ export function CentralOperacoesDialogs(props: CentralOperacoesDialogsProps) {
   // Estabiliza a referência do objeto parceria para evitar que o useEffect
   // do ParceriaDialog re-execute em todo render e resete o formData
   // (bug que sobrescrevia o valor digitado pelo usuário na renovação).
+  // Estabiliza a referência do objeto parceria para evitar que o useEffect
+  // do ParceriaDialog re-execute em todo render e resete o formData
+  // (bug que sobrescrevia o valor digitado pelo usuário na renovação).
   const parceriaForDialog = useMemo(() => {
     if (!parceriaToRenovar) return null;
     return {
@@ -138,7 +141,29 @@ export function CentralOperacoesDialogs(props: CentralOperacoesDialogsProps) {
       observacoes: parceriaToRenovar.observacoes,
       status: parceriaToRenovar.status,
     };
-  }, [parceriaToRenovar]);
+  }, [parceriaToRenovar?.id, parceriaToRenovar?.valor_parceiro]);
+
+  // Estabiliza referências para evitar resets indesejados no PagamentoParceiroDialog
+  const selectedPagamentoParceiroMemo = useMemo(() => {
+    if (!selectedPagamentoParceiro) return null;
+    return {
+      id: selectedPagamentoParceiro.parceriaId,
+      parceiroNome: selectedPagamentoParceiro.parceiroNome,
+      valorParceiro: selectedPagamentoParceiro.valorParceiro,
+    };
+  }, [selectedPagamentoParceiro?.parceriaId, selectedPagamentoParceiro?.valorParceiro]);
+
+  // Estabiliza referências para evitar resets indesejados no PagamentoFornecedorDialog
+  const selectedPagamentoFornecedorMemo = useMemo(() => {
+    if (!selectedPagamentoFornecedor) return null;
+    return {
+      parceriaId: selectedPagamentoFornecedor.parceriaId,
+      fornecedorNome: selectedPagamentoFornecedor.fornecedorNome,
+      fornecedorId: selectedPagamentoFornecedor.fornecedorId,
+      parceiroNome: selectedPagamentoFornecedor.parceiroNome,
+      valorFornecedor: selectedPagamentoFornecedor.valorRestante,
+    };
+  }, [selectedPagamentoFornecedor?.parceriaId, selectedPagamentoFornecedor?.valorRestante]);
 
   return (
     <>
