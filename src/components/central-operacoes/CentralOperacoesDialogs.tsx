@@ -270,19 +270,6 @@ export function CentralOperacoesDialogs(props: CentralOperacoesDialogsProps) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Dialog Registrar Perda */}
-      {perdaLimitadaDialog && (
-        <RegistrarPerdaRapidaDialog
-          open={perdaLimitadaDialog.open}
-          onOpenChange={(open) => { if (!open) setPerdaLimitadaDialog(null); }}
-          bookmakerId={perdaLimitadaDialog.bookmakerId}
-          bookmakerNome={perdaLimitadaDialog.bookmakerNome}
-          moeda={perdaLimitadaDialog.moeda}
-          saldoAtual={perdaLimitadaDialog.saldoAtual}
-          onSuccess={() => fetchData()}
-        />
-      )}
-
    // Estabiliza referências para evitar resets indesejados no PagamentoParceiroDialog
    const selectedPagamentoParceiroMemo = useMemo(() => {
      if (!selectedPagamentoParceiro) return null;
@@ -307,7 +294,146 @@ export function CentralOperacoesDialogs(props: CentralOperacoesDialogsProps) {
  
    return (
      <>
-       {/* ... existing code ... */}
+       {selectedEntrega && (
+         <EntregaConciliacaoDialog
+           open={conciliacaoOpen}
+           onOpenChange={setConciliacaoOpen}
+           entrega={{
+             id: selectedEntrega.id,
+             numero_entrega: selectedEntrega.numero_entrega,
+             resultado_nominal: selectedEntrega.resultado_nominal,
+             saldo_inicial: selectedEntrega.saldo_inicial,
+             meta_valor: selectedEntrega.meta_valor,
+             meta_percentual: selectedEntrega.meta_percentual,
+             tipo_gatilho: selectedEntrega.tipo_gatilho,
+             data_inicio: selectedEntrega.data_inicio,
+             data_fim_prevista: selectedEntrega.data_fim_prevista,
+             operador_projeto_id: selectedEntrega.operador_projeto_id,
+           }}
+           operadorNome={selectedEntrega.operador_nome}
+           operadorId={selectedEntrega.operador_id}
+           projetoId={selectedEntrega.projeto_id}
+           modeloPagamento={selectedEntrega.modelo_pagamento}
+           valorFixo={selectedEntrega.valor_fixo || 0}
+           percentual={selectedEntrega.percentual || 0}
+           onSuccess={() => fetchData(true)}
+         />
+       )}
+ 
+       <ConfirmarSaqueDialog
+         open={confirmarSaqueOpen}
+         onClose={() => { setConfirmarSaqueOpen(false); setSelectedSaque(null); }}
+         onSuccess={() => fetchData(true)}
+         saque={selectedSaque}
+       />
+ 
+       <PagamentoOperadorDialog
+         open={pagamentoOperadorOpen}
+         onOpenChange={(open) => { setPagamentoOperadorOpen(open); if (!open) setSelectedPagamentoOperador(null); }}
+         pagamento={selectedPagamentoOperador ? {
+           id: selectedPagamentoOperador.id,
+           operador_id: selectedPagamentoOperador.operador_id,
+           projeto_id: selectedPagamentoOperador.projeto_id || null,
+           tipo_pagamento: selectedPagamentoOperador.tipo_pagamento,
+           valor: selectedPagamentoOperador.valor,
+           moeda: "BRL",
+           data_pagamento: selectedPagamentoOperador.data_pagamento,
+           data_competencia: null,
+           descricao: null,
+           status: "PENDENTE",
+         } : undefined}
+         onSuccess={() => fetchData(true)}
+       />
+ 
+       <PagamentoParticipacaoDialog
+         open={pagamentoParticipacaoOpen}
+         onOpenChange={(open) => { setPagamentoParticipacaoOpen(open); if (!open) setSelectedParticipacao(null); }}
+         participacao={selectedParticipacao ? {
+           id: selectedParticipacao.id,
+           projeto_id: selectedParticipacao.projeto_id,
+           ciclo_id: selectedParticipacao.ciclo_id,
+           investidor_id: selectedParticipacao.investidor_id,
+           percentual_aplicado: selectedParticipacao.percentual_aplicado,
+           base_calculo: selectedParticipacao.base_calculo,
+           lucro_base: selectedParticipacao.lucro_base,
+           valor_participacao: selectedParticipacao.valor_participacao,
+           data_apuracao: selectedParticipacao.data_apuracao,
+           status: "A_PAGAR",
+         } : undefined}
+         onSuccess={() => fetchData(true)}
+       />
+ 
+       {/* Dialog de Dispensar Pagamento */}
+       <AlertDialog open={dispensaState.open} onOpenChange={setDispensaOpen}>
+         <AlertDialogContent>
+           <AlertDialogHeader>
+             <AlertDialogTitle>Dispensar pagamento</AlertDialogTitle>
+             <AlertDialogDescription>
+               O pagamento a <strong>{getFirstLastName(dispensaState.parceiroNome)}</strong> será dispensado. Esta parceria não será contabilizada como indicação bem-sucedida.
+             </AlertDialogDescription>
+           </AlertDialogHeader>
+ 
+           {dispensaState.comissaoJaPaga && (
+             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 space-y-3">
+               <div className="flex items-start gap-2">
+                 <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                 <div className="text-sm">
+                   <p className="font-semibold text-amber-500">Comissão já paga ao indicador</p>
+                   <p className="text-muted-foreground mt-1">
+                     A comissão de <strong>R$ {dispensaState.valorComissao.toFixed(2)}</strong>
+                     {dispensaState.indicadorNome ? ` para ${getFirstLastName(dispensaState.indicadorNome)}` : ""} já foi creditada.
+                     Ao dispensar sem estorno, esse valor ficará registrado como sobrepagamento.
+                   </p>
+                 </div>
+               </div>
+               <div className="flex items-center gap-2 ml-7">
+                 <Checkbox
+                   id="estornar-comissao-central"
+                   checked={dispensaState.estornar}
+                   onCheckedChange={(checked) => setDispensaEstornar(checked === true)}
+                 />
+                 <label htmlFor="estornar-comissao-central" className="text-sm font-medium cursor-pointer">
+                   Estornar comissão (devolver R$ {dispensaState.valorComissao.toFixed(2)} ao caixa)
+                 </label>
+               </div>
+             </div>
+           )}
+ 
+           <div className="py-2">
+             <label className="text-sm font-medium mb-1.5 block">Motivo *</label>
+             <Textarea
+               placeholder="Ex: Parceiro desistiu, parceria não concretizada..."
+               value={dispensaState.motivo}
+               onChange={(e) => setDispensaMotivo(e.target.value)}
+               rows={3}
+             />
+           </div>
+           <AlertDialogFooter>
+             <AlertDialogCancel>Cancelar</AlertDialogCancel>
+             <AlertDialogAction
+               onClick={onDispensarPagamento}
+               disabled={!dispensaState.motivo.trim() || dispensaState.loading}
+               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+             >
+               {dispensaState.loading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+               {dispensaState.comissaoJaPaga && dispensaState.estornar ? "Dispensar + Estornar" : "Dispensar"}
+             </AlertDialogAction>
+           </AlertDialogFooter>
+         </AlertDialogContent>
+       </AlertDialog>
+ 
+       {/* Dialog Registrar Perda */}
+       {perdaLimitadaDialog && (
+         <RegistrarPerdaRapidaDialog
+           open={perdaLimitadaDialog.open}
+           onOpenChange={(open) => { if (!open) setPerdaLimitadaDialog(null); }}
+           bookmakerId={perdaLimitadaDialog.bookmakerId}
+           bookmakerNome={perdaLimitadaDialog.bookmakerNome}
+           moeda={perdaLimitadaDialog.moeda}
+           saldoAtual={perdaLimitadaDialog.saldoAtual}
+           onSuccess={() => fetchData()}
+         />
+       )}
  
        {/* Dialog Pagamento Parceiro */}
        <PagamentoParceiroDialog
