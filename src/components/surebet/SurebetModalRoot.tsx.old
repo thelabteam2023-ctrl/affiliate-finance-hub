@@ -1,0 +1,2477 @@
+/**
+ * SurebetModalRoot - Painel de Operação de Arbitragem
+ * 
+ * ARQUITETURA:
+ * - Painel fullscreen (não modal tradicional)
+ * - Sem overlay clicável - fecha apenas por X ou Cancelar
+ * - Comportamento de calculadora profissional (surebet.com)
+ * - Integra formulário completo
+ * - Suporte a N pernas dinâmico
+ * - Checkbox D para distribuição de lucro
+ * - Carregamento de rascunhos
+ * - Conversão de operações parciais
+ */
+
+import { useState, useEffect, useMemo, useRef, useCallback, KeyboardEvent } from "react";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { invalidateCanonicalCaches } from "@/lib/invalidateCanonicalCaches";
+import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/hooks/useWorkspace";
+import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
+import { deletarAposta, liquidarPernaSurebet } from "@/services/aposta";
+import { useCurrencySnapshot, type SupportedCurrency } from "@/hooks/useCurrencySnapshot";
+import { useProjetoConsolidacao } from "@/hooks/useProjetoConsolidacao";
+import { useCotacoes } from "@/hooks/useCotacoes";
+import { useApostaRascunho, type ApostaRascunho, type RascunhoPernaData } from "@/hooks/useApostaRascunho";
+import { useSurebetPrintImport } from "@/hooks/useSurebetPrintImport";
+import { useSurebetCalculator, type OddEntry, type OddFormEntry } from "@/hooks/useSurebetCalculator";
+import { pernasToInserts } from "@/types/apostasPernas";
+import { type SurebetEngineConfig, convertViaBRL } from "@/utils/surebetCurrencyEngine";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Columns3, Rows3 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import { Calculator, Save, Trash2, X, AlertTriangle, ArrowRight, Target, FileText } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { BetFormHeaderV2 } from "@/components/apostas/BetFormHeaderV2";
+import { toLocalTimestamp, validarDataAposta } from "@/utils/dateUtils";
+import { calcSurebetWindowHeight } from "@/lib/windowHelper";
+
+import { SurebetTableRow } from "./SurebetTableRow";
+import { SurebetTableFooter } from "./SurebetTableFooter";
+import { SurebetColumnsView } from "./SurebetColumnsView";
+import { SurebetMobileCard } from "./SurebetMobileCard";
+import { useIsMobile } from "@/hooks/use-mobile";
+
+// ============================================
+// TIPOS
+// ============================================
+
+interface Surebet {
+  id: string;
+  data_operacao: string;
+  data_aposta?: string | null;
+  evento: string;
+  esporte: string;
+  modelo: string;
+  mercado?: string | null;
+  stake_total: number;
+  spread_calculado: number | null;
+  roi_esperado: number | null;
+  lucro_esperado: number | null;
+  lucro_real: number | null;
+  roi_real: number | null;
+  status: string;
+  resultado: string | null;
+  observacoes: string | null;
+  forma_registro?: string | null;
+  estrategia?: string | null;
+  contexto_operacional?: string | null;
+  __seedPernas?: any[];
+}
+
+interface SurebetPerna {
+  selecao: string;
+  selecao_livre: string;
+  bookmaker_id: string;
+  bookmaker_nome: string;
+  moeda: SupportedCurrency;
+  odd: number;
+  stake: number;
+  stake_brl_referencia: number | null;
+  cotacao_snapshot: number | null;
+  cotacao_snapshot_at: string | null;
+  resultado: string | null;
+  lucro_prejuizo: number | null;
+  lucro_prejuizo_brl_referencia: number | null;
+  gerou_freebet: boolean;
+  valor_freebet_gerada: number | null;
+}
+
+/** Tipo de ação executada para distinguir save de delete */
+export type SurebetActionType = 'save' | 'delete';
+
+interface SurebetModalRootProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  projetoId: string;
+  surebet?: Surebet | null;
+  rascunho?: ApostaRascunho | null;
+  activeTab?: string;
+  /** Callback após sucesso. O parâmetro action distingue 'save' (criar/atualizar) de 'delete' (exclusão) */
+  onSuccess: (action?: SurebetActionType) => void;
+  /** Quando true, não fecha automaticamente após salvar (modo workstation contínuo) */
+  embedded?: boolean;
+}
+
+// ============================================
+// CONSTANTES
+// ============================================
+
+const ESPORTES = [
+  "Futebol", "Basquete", "Tênis", "Baseball", "Hockey", "Handebol",
+  "Futebol Americano", "Vôlei", "MMA/UFC", "Boxe", "Golfe", "Rugby",
+  "League of Legends", "Counter-Strike", "Dota 2", "Valorant", "eFootball"
+];
+
+// Importar constantes canônicas do sistema
+import {
+  ESTRATEGIAS_LIST,
+  CONTEXTOS_LIST,
+  APOSTA_ESTRATEGIA,
+  CONTEXTO_OPERACIONAL,
+  getContextoFromTab,
+  getEstrategiaFromTab,
+  isAbaContextoFixo,
+  isAbaEstrategiaFixa,
+  type ApostaEstrategia,
+  type ContextoOperacional,
+} from "@/lib/apostaConstants";
+
+const ARBITRAGEM_ESTRATEGIA: ApostaEstrategia = APOSTA_ESTRATEGIA.SUREBET;
+
+const getPernaLabel = (index: number, total: number): string => {
+  if (total === 2) return index === 0 ? "1" : "2";
+  if (total === 3) return index === 0 ? "1" : index === 1 ? "X" : "2";
+  return String(index + 1);
+};
+
+const getDefaultSelecoes = (numPernas: number): string[] => {
+  if (numPernas === 2) return ["Sim", "Não"];
+  if (numPernas === 3) return ["Casa", "Empate", "Fora"];
+  return Array.from({ length: numPernas }, (_, i) => `Opção ${i + 1}`);
+};
+
+// ============================================
+// COMPONENTE PRINCIPAL
+// ============================================
+
+export function SurebetModalRoot({ 
+  open, 
+  onOpenChange, 
+  projetoId, 
+  surebet = null,
+  rascunho = null,
+  activeTab = 'surebet',
+  onSuccess,
+  embedded = false
+}: SurebetModalRootProps) {
+  const isEditing = !!surebet?.id;
+  const { workspaceId } = useWorkspace();
+  const isMobile = useIsMobile();
+  const queryClient = useQueryClient();
+  
+  // Hook de rascunhos
+  const { criarRascunho, atualizarRascunho, deletarRascunho } = useApostaRascunho(projetoId, workspaceId || '');
+  
+  // Rastrear ID do rascunho salvo para evitar duplicatas
+  const [rascunhoIdLocal, setRascunhoIdLocal] = useState<string | null>(rascunho?.id || null);
+  
+  const { getSnapshotFields } = useCurrencySnapshot();
+  const {
+    moedaConsolidacao,
+    cotacaoAtual: cotacaoUsdFormulario, // REGRA: formulários SEMPRE usam cotação de trabalho (se configurada)
+  } = useProjetoConsolidacao({ projetoId });
+  const { getRate: getCotacaoRate } = useCotacoes();
+  
+  // Buscar cotações de trabalho multi-moeda do projeto
+  const { data: workingRates } = useQuery({
+    queryKey: ["projeto-working-rates", projetoId],
+    queryFn: async () => {
+      if (!projetoId) return null;
+      const { data, error } = await supabase
+        .from("projetos")
+        .select("cotacao_trabalho, cotacao_trabalho_eur, cotacao_trabalho_gbp, cotacao_trabalho_myr, cotacao_trabalho_mxn, cotacao_trabalho_ars, cotacao_trabalho_cop, fonte_cotacao")
+        .eq("id", projetoId)
+        .single();
+      if (error) return null;
+      return data;
+    },
+    enabled: !!projetoId,
+    staleTime: 30_000,
+  });
+  
+  // Retorna a cotação efetiva (trabalho ou oficial) para uma moeda
+  const getEffectiveRate = useCallback((moeda: string): number => {
+    const m = moeda.toUpperCase();
+    if (m === "BRL") return 1;
+    
+    const usarTrabalho = workingRates?.fonte_cotacao === "TRABALHO";
+    
+    if (usarTrabalho && workingRates) {
+      const workRateMap: Record<string, number | null> = {
+        USD: workingRates.cotacao_trabalho,
+        EUR: workingRates.cotacao_trabalho_eur,
+        GBP: workingRates.cotacao_trabalho_gbp,
+        MYR: (workingRates as any).cotacao_trabalho_myr,
+        MXN: (workingRates as any).cotacao_trabalho_mxn,
+        ARS: (workingRates as any).cotacao_trabalho_ars,
+        COP: (workingRates as any).cotacao_trabalho_cop,
+      };
+      const key = ["USDT", "USDC"].includes(m) ? "USD" : m;
+      const workRate = workRateMap[key];
+      if (workRate && workRate > 0) return workRate;
+    }
+    
+    return getCotacaoRate(moeda) || 1;
+  }, [workingRates, getCotacaoRate]);
+
+  const { data: bookmakerSaldos = [], isLoading: saldosLoading } = useBookmakerSaldosQuery({
+    projetoId,
+    enabled: open,
+    includeZeroBalance: isEditing,
+  });
+  const invalidateSaldos = useInvalidateBookmakerSaldos();
+
+  // ============================================
+  // ESTADOS DO FORMULÁRIO
+  // ============================================
+  
+  const [estrategia, setEstrategia] = useState<ApostaEstrategia | null>(null);
+  const [contexto, setContexto] = useState<ContextoOperacional>(CONTEXTO_OPERACIONAL.NORMAL);
+  const [esporte, setEsporte] = useState("Futebol");
+  const [evento, setEvento] = useState("");
+  const [mercado, setMercado] = useState("");
+  const [dataAposta, setDataAposta] = useState("");
+  
+  const [modeloTipo, setModeloTipo] = useState<"2" | "3" | "4+">("3");
+  const [numPernasCustom, setNumPernasCustom] = useState<number>(4);
+  
+  const numPernas = useMemo(() => {
+    if (modeloTipo === "2") return 2;
+    if (modeloTipo === "3") return 3;
+    return numPernasCustom;
+  }, [modeloTipo, numPernasCustom]);
+  
+  // Redimensionar janela apenas para 4+ pernas (2 e 3 mantêm tamanho fixo)
+  useEffect(() => {
+    if (!embedded || !open || numPernas <= 3) return;
+    try {
+      const targetHeight = calcSurebetWindowHeight(numPernas);
+      window.resizeTo(window.outerWidth, targetHeight);
+    } catch {
+      // Silently ignore if resize not supported
+    }
+  }, [numPernas, embedded, open]);
+  const [odds, setOdds] = useState<OddEntry[]>(() => 
+    getDefaultSelecoes(2).map((sel, i) => ({
+      bookmaker_id: "",
+      moeda: "BRL" as SupportedCurrency,
+      odd: "",
+      stake: "",
+      selecao: sel,
+      selecaoLivre: "",
+      isReference: i === 0,
+      isManuallyEdited: false,
+      stakeOrigem: undefined,
+      additionalEntries: []
+    }))
+  );
+  
+  const [directedProfitLegs, setDirectedProfitLegs] = useState<number[]>([0, 1]);
+  const [equalizedStakesSnapshot, setEqualizedStakesSnapshot] = useState<number[]>([]);
+  
+  const [arredondarAtivado, setArredondarAtivado] = useState(true);
+  const [arredondarValor, setArredondarValor] = useState("1");
+  const [saving, setSaving] = useState(false);
+  const [deletingPerna, setDeletingPerna] = useState(false);
+  
+  const [showConversionDialog, setShowConversionDialog] = useState(false);
+  const [conversionInProgress, setConversionInProgress] = useState(false);
+  
+  const [focusedLeg, setFocusedLeg] = useState<number | null>(null);
+  const [viewLayout, setViewLayout] = useState<'vertical' | 'horizontal'>('vertical');
+  
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  
+  // Crédito virtual: armazena stakes originais por bookmaker_id para modo edição
+  // Permite que o saldo "bloqueado" pela aposta original seja reconhecido como disponível
+  // Separado em real vs freebet para validação correta de ambos os saldos
+  const originalStakesByBookmaker = useRef<Map<string, { real: number; freebet: number }>>(new Map());
+  // IDs das pernas originais (do banco) para usar na RPC de edição atômica
+  const originalPernaIds = useRef<string[]>([]);
+  // Snapshot das pernas originais para detectar mudanças
+  const originalPernasSnapshot = useRef<Array<{ id: string; bookmaker_id: string; stake: number; odd: number; selecao: string; selecao_livre: string; resultado: string | null; fonte_saldo: string | null }>>([]);
+  const [selectedLegForPrint, setSelectedLegForPrint] = useState<number | null>(null);
+  
+  const {
+    legPrints,
+    processLegImage,
+    clearLegPrint,
+    initializeLegPrints,
+    applyLegData,
+    sharedContext,
+  } = useSurebetPrintImport();
+
+  // Bookmakers disponíveis (base - sem ajuste intra-form)
+  // Em modo edição: incluir TODOS e aplicar crédito virtual das stakes originais
+  const bookmakersDisponiveis = useMemo(() => {
+    if (isEditing) {
+      return bookmakerSaldos.map(bk => {
+        const credito = originalStakesByBookmaker.current.get(bk.id) || { real: 0, freebet: 0 };
+        if (credito.real > 0 || credito.freebet > 0) {
+          return {
+            ...bk,
+            saldo_operavel: bk.saldo_operavel + credito.real,
+            saldo_disponivel: bk.saldo_disponivel + credito.real,
+            saldo_freebet: (bk.saldo_freebet ?? 0) + credito.freebet,
+          };
+        }
+        return bk;
+      });
+    }
+    return bookmakerSaldos.filter((bk) => bk.saldo_operavel >= 0.50);
+  }, [bookmakerSaldos, isEditing]);
+
+  /**
+   * Retorna bookmakers com saldos ajustados para uma perna específica.
+   * Desconta stakes já alocadas em pernas ANTERIORES que usam a mesma bookmaker.
+   * 
+   * CRÍTICO para evitar overbetting na mesma casa em múltiplas pernas.
+   */
+  const getAdjustedBookmakersForLeg = useCallback((legIndex: number) => {
+    return bookmakersDisponiveis.map(bk => {
+      // Calcular quanto já foi alocado em pernas ANTERIORES para esta bookmaker
+      let alocadoEmPernasAnteriores = 0;
+      for (let i = 0; i < legIndex; i++) {
+        if (odds[i].bookmaker_id === bk.id) {
+          alocadoEmPernasAnteriores += parseFloat(odds[i].stake) || 0;
+        }
+      }
+      
+      // Retornar bookmaker com saldo ajustado
+      return {
+        ...bk,
+        saldo_operavel: Math.max(0, bk.saldo_operavel - alocadoEmPernasAnteriores),
+        saldo_disponivel: Math.max(0, bk.saldo_disponivel - alocadoEmPernasAnteriores),
+      };
+    });
+  }, [bookmakersDisponiveis, odds]);
+
+  // ============================================
+  // CALCULATOR HOOK
+  // ============================================
+
+  // Construir engineConfig com taxas BRL corretas
+  // REGRA UNIFICADA PARA FORMULÁRIOS:
+  //   Usa getEffectiveRate (Trabalho > Oficial) para TODAS as moedas — não só USD.
+  //   Isso garante paridade absoluta com useProjetoCurrency.convertToConsolidation
+  //   (que é usado pelo SurebetCard e pela persistência de lucro_esperado).
+  //   ANTES: USD usava cotação de trabalho mas EUR/MXN/etc usavam PTAX live → drift.
+  const engineConfig = useMemo((): import("@/utils/surebetCurrencyEngine").SurebetEngineConfig => {
+    const consolidation = (moedaConsolidacao || "BRL") as SupportedCurrency;
+    
+    return {
+      consolidationCurrency: consolidation,
+      brlRates: {
+        BRL: 1,
+        USD: getEffectiveRate("USD"),
+        EUR: getEffectiveRate("EUR"),
+        GBP: getEffectiveRate("GBP"),
+        MXN: getEffectiveRate("MXN"),
+        MYR: getEffectiveRate("MYR"),
+        ARS: getEffectiveRate("ARS"),
+        COP: getEffectiveRate("COP"),
+      },
+    };
+  }, [moedaConsolidacao, getEffectiveRate]);
+
+  const { analysis, calculatedStakes, equalizedTargetStakes, targetPayoutsLocal, pernasValidas, arredondarStake, getOddMediaPerna, getStakeTotalPerna, directedStakes } = useSurebetCalculator({
+    odds,
+    directedProfitLegs,
+    numPernas,
+    arredondarAtivado,
+    arredondarValor,
+    bookmakerSaldos: bookmakerSaldos.map(b => ({ id: b.id, moeda: b.moeda })),
+    engineConfig,
+    equalizedStakesSnapshot,
+  });
+
+  // ============================================
+  // INICIALIZAÇÃO E RESET
+  // ============================================
+
+  // Cleanup: resetar refs quando modal fecha para nunca reusar estado stale
+  useEffect(() => {
+    if (!open) {
+      originalPernasSnapshot.current = [];
+      originalPernaIds.current = [];
+      originalStakesByBookmaker.current = new Map();
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    
+    if (surebet) {
+      // Modo edição ou duplicação
+      setEvento(surebet.evento);
+      setEsporte(surebet.esporte);
+      setMercado(surebet.mercado || "");
+      setEstrategia((surebet.estrategia || ARBITRAGEM_ESTRATEGIA) as ApostaEstrategia);
+      setContexto((surebet.contexto_operacional || CONTEXTO_OPERACIONAL.NORMAL) as ContextoOperacional);
+      
+      // Preservar Data/Hora original no modo edição
+      const dataOrigem = surebet.data_aposta || surebet.data_operacao;
+      if (dataOrigem) {
+        const d = new Date(dataOrigem);
+        if (!isNaN(d.getTime())) {
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          const hours = String(d.getHours()).padStart(2, '0');
+          const minutes = String(d.getMinutes()).padStart(2, '0');
+          setDataAposta(`${year}-${month}-${day}T${hours}:${minutes}`);
+        }
+      }
+      
+      const modeloSalvo = surebet.modelo || "1-2";
+      if (modeloSalvo === "1-2") setModeloTipo("2");
+      else if (modeloSalvo === "1-X-2") setModeloTipo("3");
+      else {
+        setModeloTipo("4+");
+        const match = modeloSalvo.match(/(\d+)/);
+        if (match) setNumPernasCustom(parseInt(match[1]));
+      }
+      
+      if (surebet.id) {
+        fetchLinkedPernas(surebet.id);
+      } else if (surebet.__seedPernas && surebet.__seedPernas.length > 0) {
+        hydratePernasIntoForm(surebet.__seedPernas, false);
+      }
+    } else if (rascunho) {
+      // Modo rascunho: carregar TODOS os dados
+      // IMPORTANTE: NÃO pré-selecionar estratégia se não estava definida no rascunho
+      setEvento(rascunho.evento || "");
+      setEsporte(rascunho.esporte || "Futebol");
+      setMercado(rascunho.mercado || "");
+      setEstrategia(ARBITRAGEM_ESTRATEGIA);
+      setContexto((rascunho.contexto_operacional || CONTEXTO_OPERACIONAL.NORMAL) as ContextoOperacional);
+      
+      const numPernasRascunho = rascunho.quantidade_pernas || rascunho.pernas?.length || 2;
+      
+      if (rascunho.modelo_tipo) {
+        setModeloTipo(rascunho.modelo_tipo);
+        if (rascunho.modelo_tipo === "4+") setNumPernasCustom(numPernasRascunho);
+      } else {
+        if (numPernasRascunho === 2) setModeloTipo("2");
+        else if (numPernasRascunho === 3) setModeloTipo("3");
+        else {
+          setModeloTipo("4+");
+          setNumPernasCustom(numPernasRascunho);
+        }
+      }
+      
+      if (rascunho.pernas && rascunho.pernas.length > 0) {
+        const defaultSelecoes = getDefaultSelecoes(numPernasRascunho);
+        const rascunhoOdds: OddEntry[] = rascunho.pernas.map((perna, i) => ({
+          bookmaker_id: perna.bookmaker_id || "",
+          moeda: (perna.moeda as SupportedCurrency) || "BRL",
+          odd: perna.odd?.toString() || "",
+          stake: perna.stake?.toString() || "",
+          selecao: perna.selecao || defaultSelecoes[i] || "",
+          selecaoLivre: perna.selecao_livre || "",
+          isReference: i === 0,
+          isManuallyEdited: !!(perna.odd && perna.stake),
+          stakeOrigem: undefined,
+          additionalEntries: []
+        }));
+        setOdds(rascunhoOdds);
+        setDirectedProfitLegs(Array.from({ length: numPernasRascunho }, (_, i) => i));
+      } else {
+        resetToNewForm(numPernasRascunho);
+      }
+      
+      initializeLegPrints(numPernasRascunho);
+    } else {
+      // Novo formulário
+      resetToNewForm(3);
+      setModeloTipo("3");
+      
+      // Se a aba tiver estratégia fixa, pré-selecionar automaticamente
+      // Em "apostas-livres" ou "apostas", o usuário deve escolher manualmente
+      setEstrategia(ARBITRAGEM_ESTRATEGIA);
+      
+      // Contexto baseado na aba
+      if (activeTab === 'bonus') {
+        setContexto(CONTEXTO_OPERACIONAL.BONUS);
+      } else if (activeTab === 'freebets') {
+        setContexto(CONTEXTO_OPERACIONAL.FREEBET);
+      } else {
+        setContexto(CONTEXTO_OPERACIONAL.NORMAL);
+      }
+      
+      setEsporte("Futebol");
+      setEvento("");
+      setMercado("");
+      
+      // Inicializar Data/Hora com momento atual (igual Aposta Simples)
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      setDataAposta(`${year}-${month}-${day}T${hours}:${minutes}`);
+      
+      initializeLegPrints(2);
+    }
+  }, [open, surebet, rascunho, activeTab]);
+
+  // Sincronizar estratégia quando está "travada" pela aba
+  // CRÍTICO: Garante que o estado de estratégia acompanhe a aba ativa mesmo após mudanças
+  // Sincronizar estratégia E contexto quando estão "travados" pela aba
+  // CRÍTICO: Quando a aba define estratégia/contexto fixos (ex: bonus, freebets),
+  // precisamos atualizar os estados automaticamente
+  useEffect(() => {
+    if (!isEditing && open) {
+      const lockedEstrategia = isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : null;
+      const lockedContexto = isAbaContextoFixo(activeTab) ? getContextoFromTab(activeTab) : null;
+      
+      // Sincronizar estratégia se locked
+      if (lockedEstrategia && estrategia !== lockedEstrategia) {
+        setEstrategia(lockedEstrategia);
+      }
+      
+      // Sincronizar contexto se locked (abas bonus/freebets)
+      if (lockedContexto && contexto !== lockedContexto) {
+        setContexto(lockedContexto);
+      }
+    }
+  }, [open, isEditing, activeTab, estrategia, contexto]);
+
+  // Atualizar pernas quando numPernas muda
+  useEffect(() => {
+    if (isEditing || !open) return;
+    
+    const currentCount = odds.length;
+    if (currentCount === numPernas) return;
+    
+    const defaultSelecoes = getDefaultSelecoes(numPernas);
+    
+    if (numPernas > currentCount) {
+      const newOdds = [...odds];
+      for (let i = currentCount; i < numPernas; i++) {
+        newOdds.push({
+          bookmaker_id: "",
+          moeda: "BRL" as SupportedCurrency,
+          odd: "",
+          stake: "",
+          selecao: defaultSelecoes[i] || `Opção ${i + 1}`,
+          selecaoLivre: "",
+          isReference: false,
+          isManuallyEdited: false,
+          stakeOrigem: undefined,
+          additionalEntries: []
+        });
+      }
+      setOdds(newOdds);
+      setDirectedProfitLegs(Array.from({ length: numPernas }, (_, i) => i));
+      setEqualizedStakesSnapshot([]);
+    } else {
+      setOdds(odds.slice(0, numPernas));
+      setDirectedProfitLegs(prev => prev.filter(i => i < numPernas));
+      setEqualizedStakesSnapshot(prev => prev.slice(0, numPernas));
+    }
+    
+    initializeLegPrints(numPernas);
+  }, [numPernas, isEditing, open]);
+
+  const resetToNewForm = (n: number) => {
+    const defaultSelecoes = getDefaultSelecoes(n);
+    setOdds(defaultSelecoes.map((sel, i) => ({
+      bookmaker_id: "",
+      moeda: "BRL" as SupportedCurrency,
+      odd: "",
+      stake: "",
+      selecao: sel,
+      selecaoLivre: "",
+      isReference: i === 0,
+      isManuallyEdited: false,
+      stakeOrigem: undefined,
+      additionalEntries: []
+    })));
+    setDirectedProfitLegs(Array.from({ length: n }, (_, i) => i));
+    setEqualizedStakesSnapshot([]);
+  };
+
+  const [pernasLoading, setPernasLoading] = useState(false);
+
+  const hydratePernasIntoForm = (pernasData: any[], preserveIds: boolean) => {
+    const groups = new Map<string, any[]>();
+    const groupOrder: string[] = [];
+    for (const perna of pernasData) {
+      const key = perna.selecao || `__unnamed_${perna.id || groupOrder.length}`;
+      if (!groups.has(key)) {
+        groups.set(key, []);
+        groupOrder.push(key);
+      }
+      groups.get(key)!.push(perna);
+    }
+
+    const pernasOdds: OddEntry[] = groupOrder.map((key, groupIdx) => {
+      const groupPernas = groups.get(key)!;
+      const mainPerna = groupPernas[0];
+      const additionalPernas = groupPernas.slice(1);
+      return {
+        bookmaker_id: mainPerna.bookmaker_id || "",
+        moeda: (mainPerna.moeda || "BRL") as SupportedCurrency,
+        odd: mainPerna.odd?.toString() || "",
+        stake: mainPerna.stake?.toString() || "",
+        selecao: mainPerna.selecao,
+        selecaoLivre: mainPerna.selecao_livre || "",
+        isReference: groupIdx === 0,
+        isManuallyEdited: true,
+        resultado: preserveIds ? mainPerna.resultado : null,
+        lucro_prejuizo: preserveIds ? mainPerna.lucro_prejuizo : null,
+        gerouFreebet: preserveIds ? (mainPerna.gerou_freebet || false) : false,
+        valorFreebetGerada: preserveIds ? (mainPerna.valor_freebet_gerada?.toString() || "") : "",
+        fonteSaldo: (mainPerna.fonte_saldo as 'REAL' | 'FREEBET') || 'REAL',
+        pernaId: preserveIds ? mainPerna.id : undefined,
+        additionalEntries: additionalPernas.map((sub: any) => ({
+          bookmaker_id: sub.bookmaker_id || "",
+          moeda: (sub.moeda || "BRL") as SupportedCurrency,
+          odd: sub.odd?.toString() || "",
+          stake: sub.stake?.toString() || "",
+          selecaoLivre: sub.selecao_livre || "",
+          fonteSaldo: (sub.fonte_saldo as 'REAL' | 'FREEBET') || 'REAL',
+          pernaId: preserveIds ? sub.id : undefined,
+        })),
+      };
+    });
+
+    setOdds(pernasOdds);
+    setDirectedProfitLegs(Array.from({ length: pernasOdds.length }, (_, i) => i));
+  };
+
+  const fetchLinkedPernas = async (surebetId: string, retryCount = 0) => {
+    setPernasLoading(true);
+    try {
+      const { data: pernasData, error: pernasError } = await supabase
+        .from("apostas_pernas")
+        .select(`*, bookmakers (nome)`)
+        .eq("aposta_id", surebetId)
+        .order("ordem", { ascending: true });
+
+      if (pernasError) {
+        console.error("[SurebetModalRoot] Erro ao buscar pernas:", pernasError);
+        
+        // Retry up to 2 times (auth session might not be ready in new window)
+        if (retryCount < 2) {
+          console.log(`[SurebetModalRoot] Retry ${retryCount + 1}/2 em 500ms...`);
+          await new Promise(resolve => setTimeout(resolve, 500));
+          return fetchLinkedPernas(surebetId, retryCount + 1);
+        }
+        
+        toast.error("Erro ao carregar entradas da operação. Recarregue a página.");
+        return;
+      }
+
+      if (!pernasData || pernasData.length === 0) {
+        console.warn("[SurebetModalRoot] Nenhuma perna encontrada para aposta:", surebetId);
+        
+        // Retry once - data might not be immediately available
+        if (retryCount < 1) {
+          console.log("[SurebetModalRoot] Retry em 300ms...");
+          await new Promise(resolve => setTimeout(resolve, 300));
+          return fetchLinkedPernas(surebetId, retryCount + 1);
+        }
+        return;
+      }
+
+      // Armazenar stakes originais por bookmaker para crédito virtual em modo edição
+      // Separado por tipo (real vs freebet) para validação correta
+      const stakeMap = new Map<string, { real: number; freebet: number }>();
+      pernasData.forEach((perna: any) => {
+        if (perna.bookmaker_id && perna.stake) {
+          const cur = stakeMap.get(perna.bookmaker_id) || { real: 0, freebet: 0 };
+          const val = parseFloat(perna.stake) || 0;
+          if (perna.fonte_saldo === 'FREEBET') cur.freebet += val; else cur.real += val;
+          stakeMap.set(perna.bookmaker_id, cur);
+        }
+      });
+      originalStakesByBookmaker.current = stakeMap;
+      
+      // Armazenar IDs e snapshot de TODAS as pernas originais (flat) para edição atômica
+      originalPernaIds.current = pernasData.map((p: any) => p.id);
+      originalPernasSnapshot.current = pernasData.map((p: any) => ({
+        id: p.id,
+        bookmaker_id: p.bookmaker_id || "",
+        stake: parseFloat(p.stake) || 0,
+        odd: parseFloat(p.odd) || 0,
+        selecao: p.selecao || "",
+        selecao_livre: p.selecao_livre || "",
+        resultado: p.resultado || null,
+        fonte_saldo: p.fonte_saldo || null,
+      }));
+      
+      // ================================================================
+      // AGRUPAR pernas por selecao para reconstruir additionalEntries
+      // A primeira perna de cada grupo vira a entrada principal,
+      // as demais viram additionalEntries
+      // ================================================================
+      const groups = new Map<string, any[]>();
+      const groupOrder: string[] = [];
+      
+      for (const perna of pernasData) {
+        const key = perna.selecao || `__unnamed_${perna.id}`;
+        if (!groups.has(key)) {
+          groups.set(key, []);
+          groupOrder.push(key);
+        }
+        groups.get(key)!.push(perna);
+      }
+      
+      const pernasOdds: OddEntry[] = groupOrder.map((key, groupIdx) => {
+        const groupPernas = groups.get(key)!;
+        const mainPerna = groupPernas[0];
+        const additionalPernas = groupPernas.slice(1);
+        
+        return {
+          bookmaker_id: mainPerna.bookmaker_id || "",
+          moeda: (mainPerna.moeda || "BRL") as SupportedCurrency,
+          odd: mainPerna.odd?.toString() || "",
+          stake: mainPerna.stake?.toString() || "",
+          selecao: mainPerna.selecao,
+          selecaoLivre: mainPerna.selecao_livre || "",
+          isReference: groupIdx === 0,
+          isManuallyEdited: true,
+          resultado: mainPerna.resultado,
+          lucro_prejuizo: mainPerna.lucro_prejuizo,
+          gerouFreebet: mainPerna.gerou_freebet || false,
+          valorFreebetGerada: mainPerna.valor_freebet_gerada?.toString() || "",
+          fonteSaldo: (mainPerna.fonte_saldo as 'REAL' | 'FREEBET') || 'REAL',
+          pernaId: mainPerna.id, // UUID da perna no banco
+          additionalEntries: additionalPernas.map((sub: any) => ({
+            bookmaker_id: sub.bookmaker_id || "",
+            moeda: (sub.moeda || "BRL") as SupportedCurrency,
+            odd: sub.odd?.toString() || "",
+            stake: sub.stake?.toString() || "",
+            selecaoLivre: sub.selecao_livre || "",
+            fonteSaldo: (sub.fonte_saldo as 'REAL' | 'FREEBET') || 'REAL',
+            pernaId: sub.id, // UUID da sub-entrada no banco
+          })),
+        };
+      });
+      
+      setOdds(pernasOdds);
+      setDirectedProfitLegs(Array.from({ length: pernasOdds.length }, (_, i) => i));
+      
+      console.log("[SurebetModalRoot] ✅ Pernas carregadas com agrupamento:", {
+        total_pernas: pernasData.length,
+        grupos: pernasOdds.length,
+        com_sub_entradas: pernasOdds.filter(o => (o.additionalEntries?.length || 0) > 0).length,
+      });
+    } catch (err) {
+      console.error("[SurebetModalRoot] Exceção ao buscar pernas:", err);
+      
+      if (retryCount < 2) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return fetchLinkedPernas(surebetId, retryCount + 1);
+      }
+      
+      toast.error("Erro inesperado ao carregar entradas. Recarregue a página.");
+    } finally {
+      setPernasLoading(false);
+    }
+  };
+
+  // ============================================
+  // HANDLERS DE PASTE/OCR
+  // ============================================
+
+  useEffect(() => {
+    if (isEditing || !open) return;
+    
+    const handlePaste = async (e: ClipboardEvent) => {
+      if (focusedLeg === null) return;
+      
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) {
+            e.preventDefault();
+            await processLegImage(focusedLeg, file, mercado);
+            break;
+          }
+        }
+      }
+    };
+    
+    document.addEventListener("paste", handlePaste);
+    return () => document.removeEventListener("paste", handlePaste);
+  }, [open, isEditing, focusedLeg, processLegImage]);
+
+  useEffect(() => {
+    if (!legPrints || legPrints.length === 0) return;
+    
+    legPrints.forEach((legPrint, legIndex) => {
+      if (!legPrint.parsedData || legPrint.isProcessing) return;
+      
+      const legData = applyLegData(legIndex);
+      if (!legData) return;
+      
+      setOdds(prev => {
+        const newOdds = [...prev];
+        if (newOdds[legIndex]) {
+          if (legData.odd) newOdds[legIndex] = { ...newOdds[legIndex], odd: legData.odd, isManuallyEdited: false };
+          if (legData.stake) newOdds[legIndex] = { ...newOdds[legIndex], stake: legData.stake, isManuallyEdited: false, stakeOrigem: "print" as const, isReference: legIndex === 0 };
+          if (legData.selecaoLivre) newOdds[legIndex] = { ...newOdds[legIndex], selecaoLivre: legData.selecaoLivre };
+        }
+        return newOdds;
+      });
+      
+      clearLegPrint(legIndex);
+    });
+    
+    if (sharedContext.evento && !evento) setEvento(sharedContext.evento);
+    if (sharedContext.esporte) setEsporte(sharedContext.esporte);
+    if (sharedContext.mercado && !mercado) setMercado(sharedContext.mercado);
+  }, [legPrints]);
+
+  // Encontrar a próxima perna vazia para importação incremental
+  const getNextEmptyLegIndex = useCallback((): number | null => {
+    for (let i = 0; i < odds.length; i++) {
+      const leg = odds[i];
+      // Considera vazia se não tem odd E não tem stake (campos obrigatórios)
+      const isEmpty = !leg.odd || parseFloat(leg.odd) === 0;
+      if (isEmpty) {
+        return i;
+      }
+    }
+    return null; // Todas as pernas estão preenchidas
+  }, [odds]);
+
+  const handleImportButtonClick = useCallback(() => {
+    const nextEmptyLeg = getNextEmptyLegIndex();
+    if (nextEmptyLeg === null) {
+      toast.info(`Todas as ${numPernas} pernas já estão preenchidas`);
+      return;
+    }
+    setSelectedLegForPrint(nextEmptyLeg);
+    setFocusedLeg(nextEmptyLeg);
+    fileInputRef.current?.click();
+  }, [getNextEmptyLegIndex, numPernas]);
+
+  const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || selectedLegForPrint === null) return;
+    
+    if (!file.type.startsWith('image/')) {
+      toast.error('Por favor, selecione uma imagem');
+      return;
+    }
+    
+    await processLegImage(selectedLegForPrint, file, mercado);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, [selectedLegForPrint, processLegImage]);
+
+  // ============================================
+  // MANIPULAÇÃO DE ODDS
+  // ============================================
+
+  const updateOdd = useCallback((index: number, field: keyof OddEntry, value: string | boolean) => {
+    setOdds(prev => {
+      const newOdds = [...prev];
+      newOdds[index] = { ...newOdds[index], [field]: value };
+      
+      if (field === "bookmaker_id" && typeof value === "string") {
+        const selectedBk = bookmakerSaldos.find(b => b.id === value);
+        newOdds[index].moeda = (selectedBk?.moeda as SupportedCurrency) || "BRL";
+      }
+      
+      if (field === "isReference" && value === true) {
+        newOdds.forEach((o, i) => {
+          if (i !== index) {
+            o.isReference = false;
+            if (o.stakeOrigem !== "print") {
+              o.isManuallyEdited = false;
+              o.stakeOrigem = undefined;
+            }
+          }
+        });
+      }
+      
+      if (field === "stake" && !newOdds[index].isReference) {
+        newOdds[index].isManuallyEdited = true;
+        newOdds[index].stakeOrigem = "manual";
+      }
+      
+      return newOdds;
+    });
+  }, [bookmakerSaldos]);
+
+  const setReferenceIndex = useCallback((index: number) => {
+    setOdds(prev => prev.map((o, i) => ({
+      ...o,
+      isReference: i === index,
+      isManuallyEdited: i === index ? o.isManuallyEdited : (o.stakeOrigem === "print"),
+      stakeOrigem: i === index ? o.stakeOrigem : (o.stakeOrigem === "print" ? "print" : undefined)
+    })));
+  }, []);
+
+  const toggleDirectedLeg = useCallback((index: number) => {
+    setDirectedProfitLegs(prev => {
+      if (prev.includes(index)) {
+        if (prev.length <= 1) return prev; // Manter pelo menos 1 marcado
+        return prev.filter(i => i !== index);
+      }
+      return [...prev, index].sort((a, b) => a - b);
+    });
+  }, []);
+
+   const addAdditionalEntry = useCallback((pernaIndex: number) => {
+    setOdds(prev => {
+      const newOdds = [...prev];
+      const currentEntries = newOdds[pernaIndex].additionalEntries || [];
+      if (currentEntries.length >= 4) return prev;
+
+      // Calcular stake restante via PAYOUT: targetPayout - payoutExistente = payoutRestante
+      const targetPayout = targetPayoutsLocal?.[pernaIndex] || 0;
+      const mainStake = parseFloat(newOdds[pernaIndex].stake) || 0;
+      const mainOdd = parseFloat(newOdds[pernaIndex].odd) || 0;
+      const mainPayout = mainStake * (mainOdd > 1 ? mainOdd : 0);
+      const existingSubPayout = currentEntries.reduce((sum, e) => {
+        const s = parseFloat(e.stake) || 0;
+        const o = parseFloat(e.odd) || 0;
+        return sum + s * (o > 1 ? o : 0);
+      }, 0);
+      const remainingPayout = Math.max(0, targetPayout - mainPayout - existingSubPayout);
+
+      // Sem odd conhecida, usar odd da perna principal como estimativa
+      const estimatedOdd = mainOdd > 1 ? mainOdd : 2;
+      const prefilledStake = remainingPayout > 0 ? arredondarStake(remainingPayout / estimatedOdd).toFixed(2) : "";
+
+      newOdds[pernaIndex] = {
+        ...newOdds[pernaIndex],
+        additionalEntries: [
+          ...currentEntries,
+          { bookmaker_id: "", moeda: "BRL" as SupportedCurrency, odd: "", stake: prefilledStake, selecaoLivre: "" }
+        ]
+      };
+      return newOdds;
+    });
+  }, [targetPayoutsLocal, arredondarStake]);
+
+  const updateAdditionalEntry = useCallback((pernaIndex: number, entryIndex: number, field: string, value: string) => {
+    setOdds(prev => {
+      const newOdds = [...prev];
+      const entries = [...(newOdds[pernaIndex].additionalEntries || [])];
+      entries[entryIndex] = { ...entries[entryIndex], [field]: value };
+      if (field === 'bookmaker_id') {
+        const bk = bookmakerSaldos.find(b => b.id === value);
+        if (bk) entries[entryIndex].moeda = bk.moeda as SupportedCurrency;
+      }
+
+      // Auto-calcular stake via PAYOUT quando odd muda (recalcula sempre que a odd é alterada)
+      if (field === 'odd') {
+        const oddVal = parseFloat(value);
+        if (oddVal > 1) {
+          const targetPayout = targetPayoutsLocal?.[pernaIndex] || 0;
+          const mainStake = parseFloat(newOdds[pernaIndex].stake) || 0;
+          const mainOdd = parseFloat(newOdds[pernaIndex].odd) || 0;
+          const currentPayout = mainStake * (mainOdd > 1 ? mainOdd : 0);
+          const otherSubPayout = entries.reduce((sum, e, idx) => {
+            if (idx === entryIndex) return sum;
+            const s = parseFloat(e.stake) || 0;
+            const o = parseFloat(e.odd) || 0;
+            return sum + s * (o > 1 ? o : 0);
+          }, 0);
+          const remainingPayout = Math.max(0, targetPayout - currentPayout - otherSubPayout);
+          if (remainingPayout > 0) {
+            entries[entryIndex] = { ...entries[entryIndex], stake: arredondarStake(remainingPayout / oddVal).toFixed(2) };
+          }
+        }
+      }
+      // Stake editada manualmente: NÃO recalcular (respeitar valor do usuário)
+
+      newOdds[pernaIndex] = { ...newOdds[pernaIndex], additionalEntries: entries };
+      return newOdds;
+    });
+  }, [bookmakerSaldos, targetPayoutsLocal, arredondarStake]);
+
+  const removeAdditionalEntry = useCallback((pernaIndex: number, entryIndex: number) => {
+    setOdds(prev => {
+      const newOdds = [...prev];
+      const entries = [...(newOdds[pernaIndex].additionalEntries || [])];
+      entries.splice(entryIndex, 1);
+      newOdds[pernaIndex] = { ...newOdds[pernaIndex], additionalEntries: entries };
+      return newOdds;
+    });
+  }, []);
+
+  // ── Auto-fill reativo: quando main stake muda e sub-entradas têm stake vazia ──
+  useEffect(() => {
+    if (!targetPayoutsLocal || targetPayoutsLocal.length === 0) return;
+
+    let needsUpdate = false;
+    const newOdds = odds.map((o, i) => {
+      const entries = o.additionalEntries;
+      if (!entries || entries.length === 0) return o;
+
+      // Verificar se alguma sub-entrada tem odd preenchida mas stake vazia
+      const hasEmptyStakeSub = entries.some(e => {
+        const oddVal = parseFloat(e.odd) || 0;
+        const stakeVal = parseFloat(e.stake) || 0;
+        return oddVal > 1 && stakeVal === 0;
+      });
+      if (!hasEmptyStakeSub) return o;
+
+      const targetPayout = targetPayoutsLocal[i] || 0;
+      if (targetPayout <= 0) return o;
+
+      // Calcular payout já coberto
+      const mainStake = parseFloat(o.stake) || 0;
+      const mainOdd = parseFloat(o.odd) || 0;
+      let usedPayout = mainStake * (mainOdd > 1 ? mainOdd : 0);
+
+      const updatedEntries = entries.map(e => {
+        const oddVal = parseFloat(e.odd) || 0;
+        const stakeVal = parseFloat(e.stake) || 0;
+        if (stakeVal > 0 || oddVal <= 1) {
+          usedPayout += stakeVal * (oddVal > 1 ? oddVal : 0);
+          return e;
+        }
+        // Calcular payout restante e derivar stake
+        const remainingPayout = Math.max(0, targetPayout - usedPayout);
+        if (remainingPayout > 0 && oddVal > 1) {
+          needsUpdate = true;
+          const filled = arredondarStake(remainingPayout / oddVal);
+          usedPayout += filled * oddVal;
+          return { ...e, stake: filled.toFixed(2) };
+        }
+        return e;
+      });
+
+      return { ...o, additionalEntries: updatedEntries };
+    });
+
+    if (needsUpdate) {
+      setOdds(newOdds);
+    }
+  }, [
+    odds.map(o => `${o.stake}-${o.odd}-${(o.additionalEntries || []).map(e => `${e.odd}:${e.stake}`).join('|')}`).join(','),
+    targetPayoutsLocal?.join(','),
+  ]);
+
+  const handlePernaResultadoChange = useCallback((index: number, resultado: 'GREEN' | 'RED' | 'VOID' | null) => {
+    setOdds(prev => {
+      const newOdds = [...prev];
+      (newOdds[index] as any).resultado = resultado;
+      return newOdds;
+    });
+  }, []);
+
+  const handleFieldKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement>, fieldType: 'odd' | 'stake') => {
+    const key = e.key.toLowerCase();
+    
+    // Atalhos Q (navega odds) e S (navega stakes)
+    if (key === 'q' || key === 's') {
+      e.preventDefault();
+      const container = tableContainerRef.current;
+      if (!container) return;
+
+      const targetFieldType: 'odd' | 'stake' = key === 'q' ? 'odd' : 'stake';
+      const selector = `input[data-field-type="${targetFieldType}"]`;
+      const allFields = Array.from(container.querySelectorAll<HTMLInputElement>(selector));
+      
+      if (allFields.length === 0) return;
+      
+      const sameTypeNavigation = targetFieldType === fieldType;
+      const currentIndex = allFields.indexOf(e.currentTarget);
+      const nextIndex = sameTypeNavigation && currentIndex >= 0
+        ? (currentIndex + 1) % allFields.length
+        : 0;
+
+      allFields[nextIndex]?.focus();
+      allFields[nextIndex]?.select();
+      return;
+    }
+    
+    // Enter também navega para próximo campo do mesmo tipo
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const container = tableContainerRef.current;
+      if (!container) return;
+      
+      const selector = `input[data-field-type="${fieldType}"]`;
+      const allFields = Array.from(container.querySelectorAll<HTMLInputElement>(selector));
+      
+      if (allFields.length === 0) return;
+      
+      const currentIndex = allFields.indexOf(e.currentTarget);
+      const nextIndex = (currentIndex + 1) % allFields.length;
+      allFields[nextIndex]?.focus();
+      allFields[nextIndex]?.select();
+    }
+  }, []);
+
+  // ============================================
+  // AUTO-CÁLCULO DE STAKES
+  // ============================================
+
+  /**
+   * AUTO-CÁLCULO DE STAKES — Motor Multi-Moeda
+   *
+   * FLUXO CORRETO (usando surebetCurrencyEngine):
+   *   1. retorno-alvo = refStake × refOdd          (moeda da referência)
+   *   2. retornoAlvoConv = retornoAlvo → consolidation (pivot BRL)
+   *   3. Para cada perna não-referência:
+   *        retornoNaPerna = retornoAlvoConv → moeda da perna (pivot BRL)
+   *        stakeCalculada = retornoNaPerna / odd
+   *
+   * Resultado: stakes balanceadas mesmo com moedas diferentes por perna.
+   */
+  useEffect(() => {
+    // Pular se há direcionamento ativo (checkbox D customizado)
+    const hasCustomDirection = directedProfitLegs.length > 0 && directedProfitLegs.length < odds.length;
+    if (hasCustomDirection) return;
+    
+    const refIndex = odds.findIndex(o => o.isReference);
+    if (refIndex === -1) return;
+    
+    const refEntry = odds[refIndex];
+    const refStake = getStakeTotalPerna(refEntry);
+    const refOdd = getOddMediaPerna(refEntry);
+    
+    if (refStake <= 0 || refOdd <= 1) return;
+    
+    const validOddsCount = odds.filter(o => getOddMediaPerna(o) > 1).length;
+    if (validOddsCount < odds.length) return;
+    
+    const { brlRates, consolidationCurrency } = engineConfig;
+    const refMoeda = (bookmakerSaldos.find(b => b.id === refEntry.bookmaker_id)?.moeda || refEntry.moeda || "BRL") as SupportedCurrency;
+    
+    // Passo 1: retorno-alvo na moeda da referência
+    const targetReturnRef = refStake * refOdd;
+    
+    // Passo 2: converter retorno-alvo para moeda de consolidação
+    const targetReturnConsolidated = convertViaBRL(targetReturnRef, refMoeda, consolidationCurrency, brlRates);
+    
+    let needsUpdate = false;
+    const newOdds = odds.map((o, i) => {
+      if (i === refIndex) return o;
+      if (o.isManuallyEdited || o.stakeOrigem === "print" || o.stakeOrigem === "manual") return o;
+      
+      const oddMedia = getOddMediaPerna(o);
+      if (oddMedia <= 1) return o;
+      
+      const legMoeda = (bookmakerSaldos.find(b => b.id === o.bookmaker_id)?.moeda || o.moeda || "BRL") as SupportedCurrency;
+      
+      // Passo 3: converter retorno-alvo da consolidação para moeda da perna
+      const targetReturnInLegCurrency = convertViaBRL(targetReturnConsolidated, consolidationCurrency, legMoeda, brlRates);
+      
+      // Passo 4: calcular stake da entrada PRINCIPAL considerando sub-entradas
+      const mainOdd = parseFloat(o.odd) || 0;
+      const additionalEntries = o.additionalEntries || [];
+      
+      let calculatedStake: number;
+      if (additionalEntries.length > 0 && mainOdd > 1) {
+        // Fix: subtrair PAYOUT das sub-entradas (não stake) do retorno-alvo
+        // mainStake = (targetReturn - subPayout) / mainOdd
+        const subPayoutInLegCurrency = additionalEntries.reduce((sum, ae) => {
+          const s = parseFloat(ae.stake) || 0;
+          const aeOdd = parseFloat(ae.odd) || 0;
+          if (s <= 0 || aeOdd <= 0) return sum;
+          const payoutInAeMoeda = s * aeOdd;
+          const aeMoeda = (ae.moeda as string) || legMoeda;
+          return sum + convertViaBRL(payoutInAeMoeda, aeMoeda, legMoeda, brlRates);
+        }, 0);
+        
+        calculatedStake = arredondarStake(Math.max(0, (targetReturnInLegCurrency - subPayoutInLegCurrency) / mainOdd));
+      } else {
+        calculatedStake = arredondarStake(targetReturnInLegCurrency / oddMedia);
+      }
+      const currentStake = parseFloat(o.stake) || 0;
+      
+      if (Math.abs(calculatedStake - currentStake) > 0.01) {
+        needsUpdate = true;
+        return { ...o, stake: calculatedStake.toFixed(2), stakeOrigem: "referencia" as const };
+      }
+      return o;
+    });
+    
+    if (needsUpdate) {
+      // Salvar snapshot das stakes equalizadas (TOTAL da perna, incluindo sub-entradas)
+      const snapshot = newOdds.map(o => getStakeTotalPerna(o));
+      setEqualizedStakesSnapshot(snapshot);
+      setOdds(newOdds);
+    } else {
+      // Mesmo sem mudanças, garantir que snapshot existe quando todas as pernas estão calculadas
+      const allValid = odds.every(o => getOddMediaPerna(o) > 1 && (parseFloat(o.stake) || 0) > 0);
+      if (allValid && equalizedStakesSnapshot.length !== odds.length) {
+        setEqualizedStakesSnapshot(odds.map(o => getStakeTotalPerna(o)));
+      }
+    }
+  }, [
+    odds.map(o => `${o.odd}-${o.stake}-${o.isManuallyEdited}-${o.bookmaker_id}-${(o.additionalEntries || []).map(e => `${e.odd}:${e.stake}:${e.moeda}`).join('|')}`).join(','),
+    odds.map(o => o.isReference).join(','),
+    arredondarAtivado,
+    arredondarValor,
+    isEditing,
+    directedProfitLegs,
+    engineConfig,
+    bookmakerSaldos,
+  ]);
+
+  // ============================================
+  // APLICAR STAKES DIRECIONADAS (CHECKBOX D)
+  // ============================================
+  // 
+  // REGRA DE NEGÓCIO (v2 — sem loop de feedback):
+  // - directedStakes é calculado a partir do snapshot IMUTÁVEL
+  // - Pernas DESMARCADAS: restauradas para valor do snapshot
+  // - Perna MARCADA: recebe stake calculada
+  // - Dependências NÃO incluem odds.stake (quebra o loop)
+  // ============================================
+
+  useEffect(() => {
+    // Só aplicar se há direcionamento parcial ativo
+    const hasCustomDirection = directedProfitLegs.length > 0 && directedProfitLegs.length < odds.length;
+    if (!hasCustomDirection) return;
+    
+    // Verificar se temos stakes calculadas
+    if (!directedStakes || directedStakes.length !== odds.length) return;
+    
+    // Aplicar todas as stakes do resultado (marcadas E desmarcadas vêm do snapshot)
+    let needsUpdate = false;
+    const newOdds = odds.map((o, i) => {
+      let targetStake = directedStakes[i];
+      
+      // Fix: ajustar para sub-entradas (directedStakes são TOTAIS por perna)
+      const additionalEntries = o.additionalEntries || [];
+      if (additionalEntries.length > 0) {
+        const oddMedia = getOddMediaPerna(o);
+        const mainOdd = parseFloat(o.odd) || 0;
+        if (mainOdd > 1 && oddMedia > 0) {
+          const targetReturn = targetStake * oddMedia;
+          const subPayout = additionalEntries.reduce((sum, ae) =>
+            sum + (parseFloat(ae.stake) || 0) * (parseFloat(ae.odd) || 0), 0);
+          if (subPayout > 0) {
+            targetStake = arredondarStake(Math.max(0, (targetReturn - subPayout) / mainOdd));
+          }
+        }
+      }
+      
+      const currentStake = parseFloat(o.stake) || 0;
+      
+      if (Math.abs(targetStake - currentStake) > 0.01) {
+        needsUpdate = true;
+        return { 
+          ...o, 
+          stake: targetStake.toFixed(2), 
+          stakeOrigem: "referencia" as const,
+          isManuallyEdited: false
+        };
+      }
+      return o;
+    });
+    
+    if (needsUpdate) {
+      setOdds(newOdds);
+    }
+  }, [
+    directedProfitLegs.join(','),
+    directedStakes?.join(','),
+    odds.map(o => o.odd).join(','),
+    arredondarAtivado,
+    arredondarValor
+  ]);
+
+  // ============================================
+  // SAVE E DELETE
+  // ============================================
+
+  /**
+   * handleSave - Criação/Edição de Surebet usando RPC atômica
+   * 
+   * ARQUITETURA v7:
+   * - Para CRIAÇÃO: usa RPC `criar_surebet_atomica` que:
+   *   1. Valida saldos de TODAS as pernas antes de inserir
+   *   2. Insere apostas_unificada + apostas_pernas em transação única
+   *   3. Gera eventos STAKE em financial_events para cada perna
+   *   4. Debita saldos das bookmakers atomicamente
+   * 
+   * - Para EDIÇÃO: mantém fluxo de update direto (sem impacto financeiro novo)
+   */
+  const handleSave = async () => {
+    // GUARD: Impede múltiplos saves simultâneos (double-click, Enter key, etc.)
+    if (saving) return;
+    if (!contexto) { toast.error("Selecione um contexto"); return; }
+    if (!evento.trim()) { toast.error("Informe o evento"); return; }
+    if (odds.length < numPernas || analysis.pernasCompletasCount < numPernas) {
+      toast.error(`Preencha todas as ${numPernas} pernas (${analysis.pernasCompletasCount} preenchidas)`);
+      return;
+    }
+    
+    // TRAVA DEFINITIVA: Validar data antes de salvar
+    const dataValidation = validarDataAposta(dataAposta);
+    if (!dataValidation.valid) {
+      toast.error(dataValidation.error || "Data inválida");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      const estrategiaSelecionada = (estrategia || ARBITRAGEM_ESTRATEGIA) as ApostaEstrategia;
+
+      const getBookmakerMoeda = (bookmakerId: string): SupportedCurrency => {
+        const bk = bookmakerSaldos.find(b => b.id === bookmakerId);
+        return (bk?.moeda as SupportedCurrency) || "BRL";
+      };
+
+      const pernasPreenchidas = odds.filter(entry => {
+        return entry.bookmaker_id && parseFloat(entry.odd) > 1 && parseFloat(entry.stake) > 0;
+      });
+
+      // ================================================================
+      // FLATTEN: Expandir additionalEntries em pernas individuais
+      // Cada sub-entrada herda selecao da perna pai mas tem seu próprio
+      // bookmaker_id, odd, stake e moeda
+      // ================================================================
+      interface FlatPerna {
+        /** UUID da perna no banco. Undefined para pernas novas. */
+        pernaId?: string;
+        bookmaker_id: string;
+        odd: string;
+        stake: string;
+        selecao: string;
+        selecaoLivre: string;
+        moeda: SupportedCurrency;
+        resultado?: string | null;
+        fonteSaldo?: 'REAL' | 'FREEBET';
+        /** Index da perna pai no array odds (para agrupar resultado) */
+        parentLegIndex: number;
+      }
+
+      const allPernasFlat: FlatPerna[] = [];
+      for (let legIdx = 0; legIdx < pernasPreenchidas.length; legIdx++) {
+        const entry = pernasPreenchidas[legIdx];
+        // Entrada principal
+        allPernasFlat.push({
+          pernaId: entry.pernaId, // UUID do banco (undefined se nova)
+          bookmaker_id: entry.bookmaker_id,
+          odd: entry.odd,
+          stake: entry.stake,
+          selecao: entry.selecao,
+          selecaoLivre: entry.selecaoLivre || '',
+          moeda: entry.moeda,
+          resultado: (entry as any).resultado || null,
+          fonteSaldo: entry.fonteSaldo || 'REAL',
+          parentLegIndex: legIdx,
+        });
+        // Sub-entradas (additionalEntries)
+        if (entry.additionalEntries && entry.additionalEntries.length > 0) {
+          for (const sub of entry.additionalEntries) {
+            if (sub.bookmaker_id && parseFloat(sub.odd) > 1 && parseFloat(sub.stake) > 0) {
+              allPernasFlat.push({
+                pernaId: sub.pernaId, // UUID do banco (undefined se nova)
+                bookmaker_id: sub.bookmaker_id,
+                odd: sub.odd,
+                stake: sub.stake,
+                selecao: entry.selecao, // herda seleção da perna pai
+                selecaoLivre: sub.selecaoLivre || entry.selecaoLivre || '',
+                moeda: sub.moeda || entry.moeda,
+                resultado: (entry as any).resultado || null, // mesmo resultado da perna pai
+                fonteSaldo: sub.fonteSaldo || 'REAL',
+                parentLegIndex: legIdx,
+              });
+            }
+          }
+        }
+      }
+
+      const modelo = numPernas === 2 ? "1-2" : numPernas === 3 ? "1-X-2" : `${numPernas}-way`;
+
+      if (isEditing && surebet) {
+        // ================================================================
+        // MODO EDIÇÃO: RPC atômica (ID-based, transação única)
+        // Se qualquer parte falhar, NENHUMA alteração é persistida
+        // ================================================================
+        
+        // 1. Montar array de pernas com IDs para a RPC
+        const pernasParaRPC = allPernasFlat.map((flat, idx) => {
+          const stake = parseFloat(flat.stake) || 0;
+          const moeda = getBookmakerMoeda(flat.bookmaker_id);
+          const snapshotFields = getSnapshotFields(stake, moeda, getEffectiveRate(moeda));
+          
+          return {
+            id: flat.pernaId || null, // null = perna nova, UUID = perna existente
+            bookmaker_id: flat.bookmaker_id,
+            stake,
+            odd: parseFloat(flat.odd) || 0,
+            moeda,
+            selecao: flat.selecao,
+            selecao_livre: flat.selecaoLivre || null,
+            fonte_saldo: flat.fonteSaldo || 'REAL',
+            cotacao_snapshot: snapshotFields.cotacao_snapshot,
+            stake_brl_referencia: snapshotFields.valor_brl_referencia,
+          };
+        });
+        
+        // 2. Calcular campos do registro pai
+        const pernasToCalc: SurebetPerna[] = allPernasFlat.map((flat) => {
+          const stake = parseFloat(flat.stake) || 0;
+          const moeda = getBookmakerMoeda(flat.bookmaker_id);
+          const odd = parseFloat(flat.odd) || 0;
+          const resultado = flat.resultado as ('GREEN' | 'RED' | 'MEIO_GREEN' | 'MEIO_RED' | 'VOID' | null);
+          const isFreebet = flat.fonteSaldo === 'FREEBET';
+          let lucro_prejuizo: number | null = null;
+          
+          if (resultado === 'GREEN') lucro_prejuizo = isFreebet ? (stake * (odd - 1)) : (stake * odd) - stake;
+          else if (resultado === 'MEIO_GREEN') lucro_prejuizo = isFreebet ? ((stake * (odd - 1)) / 2) : (((stake * odd) - stake) / 2);
+          else if (resultado === 'MEIO_RED') lucro_prejuizo = isFreebet ? 0 : -stake / 2;
+          else if (resultado === 'RED') lucro_prejuizo = isFreebet ? 0 : -stake;
+          else if (resultado === 'VOID') lucro_prejuizo = 0;
+          
+          return {
+            selecao: flat.selecao,
+            selecao_livre: flat.selecaoLivre || "",
+            bookmaker_id: flat.bookmaker_id,
+            bookmaker_nome: bookmakerSaldos.find(b => b.id === flat.bookmaker_id)?.nome || "",
+            moeda,
+            odd,
+            stake,
+            resultado,
+            lucro_prejuizo,
+          } as SurebetPerna;
+        });
+        
+        const resultados = pernasToCalc.map(p => p.resultado);
+        const todasComResultado = resultados.every(r => r !== null);
+        const temGreen = resultados.includes('GREEN') || resultados.includes('MEIO_GREEN');
+        const todasVoid = resultados.every(r => r === 'VOID');
+        
+        let statusAposta = 'PENDENTE';
+        let resultadoAposta: string | null = null;
+        let lucroRealTotal: number | null = null;
+        let roiReal: number | null = null;
+        
+        if (todasComResultado) {
+          statusAposta = 'LIQUIDADA';
+          lucroRealTotal = pernasToCalc.reduce((acc, p) => {
+            const lucroLocal = p.lucro_prejuizo || 0;
+            const lucroConsolidado = convertViaBRL(
+              lucroLocal,
+              p.moeda,
+              engineConfig.consolidationCurrency,
+              engineConfig.brlRates
+            );
+            return acc + lucroConsolidado;
+          }, 0);
+          
+          roiReal = analysis.stakeTotal > 0 ? (lucroRealTotal / analysis.stakeTotal) * 100 : 0;
+          
+          if (todasVoid) resultadoAposta = 'VOID';
+          else if (temGreen && lucroRealTotal >= 0) resultadoAposta = 'GREEN';
+          else if (lucroRealTotal > 0) resultadoAposta = 'GREEN';
+          else if (lucroRealTotal < 0) resultadoAposta = 'RED';
+          else resultadoAposta = 'VOID';
+        }
+
+        const originalPernas = originalPernasSnapshot.current;
+        const hasResultadoChange = allPernasFlat.some((flat) => {
+          if (!flat.pernaId) return !!flat.resultado;
+          const originalPerna = originalPernas.find(op => op.id === flat.pernaId);
+          return !!originalPerna && (flat.resultado || null) !== (originalPerna.resultado || null);
+        });
+
+        const newStakeTotal = pernasToCalc.reduce((acc, p) => acc + p.stake, 0);
+        const newStakeConsolidado = pernasToCalc.reduce((acc, p) => {
+          return acc + convertViaBRL(p.stake, p.moeda, engineConfig.consolidationCurrency, engineConfig.brlRates);
+        }, 0);
+        
+        // 3. Chamar RPC atômica (transação única)
+        const { data: rpcResult, error: rpcError } = await supabase.rpc('editar_surebet_completa_v1', {
+          p_aposta_id: surebet.id,
+          p_pernas: pernasParaRPC as any,
+          p_evento: evento,
+          p_esporte: esporte,
+          p_mercado: mercado,
+          p_modelo: modelo,
+          p_estrategia: estrategiaSelecionada,
+          p_contexto: contexto,
+          p_data_aposta: toLocalTimestamp(dataAposta),
+          p_stake_total: newStakeTotal,
+          p_stake_consolidado: newStakeConsolidado,
+          p_lucro_esperado: analysis.minLucro,
+          p_roi_esperado: analysis.minRoi,
+          p_lucro_prejuizo: hasResultadoChange ? lucroRealTotal : null,
+          p_roi_real: hasResultadoChange ? roiReal : null,
+          p_status: hasResultadoChange ? statusAposta : null,
+          p_resultado: hasResultadoChange ? resultadoAposta : null,
+        });
+        
+        if (rpcError) {
+          console.error('[SurebetModalRoot] Erro na RPC atômica:', rpcError);
+          throw new Error(`Erro ao salvar: ${rpcError.message}`);
+        }
+        
+        const result = rpcResult as any;
+        if (result && !result.success) {
+          throw new Error(`Erro ao salvar: ${result.error || 'Falha desconhecida'}`);
+        }
+        
+        console.log('[SurebetModalRoot] ✅ Edição atômica concluída:', result);
+        
+        // 4. Liquidar/reliquidar pernas cujo resultado mudou (pós-edição)
+        for (const flat of allPernasFlat) {
+          if (!flat.pernaId) continue; // Pernas novas não têm resultado anterior
+          
+          const originalPerna = originalPernas.find(op => op.id === flat.pernaId);
+          if (!originalPerna) continue;
+          
+          const newResultado = flat.resultado as string | null;
+          const oldResultado = originalPerna.resultado;
+          
+          if (newResultado && newResultado !== oldResultado) {
+            const liqResult = await liquidarPernaSurebet({
+              surebet_id: surebet.id,
+              perna_id: flat.pernaId,
+              bookmaker_id: flat.bookmaker_id,
+              resultado: newResultado as 'GREEN' | 'RED' | 'MEIO_GREEN' | 'MEIO_RED' | 'VOID',
+              resultado_anterior: oldResultado,
+              stake: parseFloat(flat.stake) || 0,
+              odd: parseFloat(flat.odd) || 0,
+              moeda: getBookmakerMoeda(flat.bookmaker_id),
+              workspace_id: workspaceId,
+              fonte_saldo: flat.fonteSaldo || 'REAL',
+            });
+            
+            if (!liqResult.success) {
+              console.error(`[SurebetModalRoot] Erro ao liquidar perna ${flat.pernaId}:`, liqResult.error);
+              // Não throw: a edição já foi salva, liquidação é pós-processamento
+              toast.error(`Erro ao liquidar perna: ${liqResult.error}`);
+            } else {
+              console.log(`[SurebetModalRoot] ✅ Perna ${flat.pernaId} liquidada: ${oldResultado || 'null'} → ${newResultado}`);
+            }
+          }
+        }
+        
+      } else {
+        // ================================================================
+        // MODO CRIAÇÃO: Usar RPC atômica (Motor Financeiro v7)
+        // ================================================================
+        
+        // Preparar pernas no formato esperado pela RPC
+        // USA allPernasFlat para incluir sub-entradas como pernas individuais
+        const pernasParaRPC = allPernasFlat.map((flat, idx) => {
+          const stake = parseFloat(flat.stake) || 0;
+          const moeda = getBookmakerMoeda(flat.bookmaker_id);
+          const snapshotFields = getSnapshotFields(stake, moeda, getEffectiveRate(moeda));
+          
+          return {
+            bookmaker_id: flat.bookmaker_id,
+            stake,
+            odd: parseFloat(flat.odd) || 0,
+            moeda,
+            selecao: flat.selecao,
+            selecao_livre: flat.selecaoLivre || null,
+            cotacao_snapshot: snapshotFields.cotacao_snapshot,
+            stake_brl_referencia: snapshotFields.valor_brl_referencia,
+            fonte_saldo: flat.fonteSaldo || 'REAL',
+          };
+        });
+        
+        console.log("[SurebetModalRoot] Pernas para RPC (com sub-entradas expandidas):", {
+          pernasPreenchidas: pernasPreenchidas.length,
+          totalComSubEntradas: allPernasFlat.length,
+        });
+        
+        // Chamar RPC atômica
+        const { data: rpcResult, error: rpcError } = await supabase.rpc('criar_surebet_atomica', {
+          p_workspace_id: workspaceId,
+          p_user_id: user.id,
+          p_projeto_id: projetoId,
+          p_evento: evento,
+          p_esporte: esporte,
+          p_mercado: mercado || null,
+          p_modelo: modelo,
+          p_estrategia: estrategiaSelecionada,
+          p_contexto_operacional: contexto,
+          p_data_aposta: toLocalTimestamp(dataAposta),
+          p_pernas: pernasParaRPC,
+        });
+        
+        if (rpcError) {
+          console.error("[SurebetModalRoot] Erro RPC criar_surebet_atomica:", rpcError);
+          throw new Error(rpcError.message);
+        }
+        
+        // Verificar resultado da RPC
+        const result = rpcResult?.[0];
+        if (!result?.success) {
+          throw new Error(result?.message || 'Falha ao criar surebet');
+        }
+        
+        console.log("[SurebetModalRoot] ✅ Surebet criada via RPC:", {
+          aposta_id: result.o_aposta_id,
+          events_created: result.events_created,
+        });
+        
+        // ================================================================
+        // PÓS-CRIAÇÃO: Liquidar pernas que já possuem resultado definido
+        // Usa allPernasFlat para incluir sub-entradas
+        // ================================================================
+        const pernasComResultado = allPernasFlat
+          .map((flat, idx) => ({
+            resultado: flat.resultado as string | null,
+            index: idx,
+            bookmaker_id: flat.bookmaker_id,
+            stake: flat.stake,
+            odd: flat.odd,
+            fonteSaldo: flat.fonteSaldo || 'REAL',
+          }))
+          .filter(p => p.resultado && ['GREEN', 'RED', 'MEIO_GREEN', 'MEIO_RED', 'VOID'].includes(p.resultado!));
+        
+        if (pernasComResultado.length > 0 && result.o_aposta_id) {
+          // Buscar IDs das pernas recém-criadas
+          const { data: pernasDB } = await supabase
+            .from('apostas_pernas')
+            .select('id, ordem, bookmaker_id')
+            .eq('aposta_id', result.o_aposta_id)
+            .order('ordem', { ascending: true });
+          
+          if (pernasDB && pernasDB.length > 0) {
+            for (const p of pernasComResultado) {
+              // Matching por ordem (1-indexed)
+              const pernaDB = pernasDB.find(db => db.ordem === p.index + 1);
+              if (pernaDB && p.resultado) {
+                const liqResult = await liquidarPernaSurebet({
+                  surebet_id: result.o_aposta_id,
+                  perna_id: pernaDB.id,
+                  bookmaker_id: p.bookmaker_id,
+                  resultado: p.resultado as 'GREEN' | 'RED' | 'MEIO_GREEN' | 'MEIO_RED' | 'VOID',
+                  resultado_anterior: null,
+                  stake: parseFloat(p.stake) || 0,
+                  odd: parseFloat(p.odd) || 0,
+                  moeda: getBookmakerMoeda(p.bookmaker_id),
+                  workspace_id: workspaceId,
+                  fonte_saldo: p.fonteSaldo || 'REAL',
+                });
+                
+                if (!liqResult.success) {
+                  console.error(`[SurebetModalRoot] Erro ao liquidar perna ${pernaDB.id}:`, liqResult.error);
+                } else {
+                  console.log(`[SurebetModalRoot] ✅ Perna ${pernaDB.id} liquidada como ${p.resultado}`);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Invalidar TODOS os caches (saldos + KPIs + calendário + dashboard)
+      invalidateSaldos(projetoId);
+      invalidateCanonicalCaches(queryClient, projetoId);
+      
+      // Limpar refs de estado local — backend é a fonte da verdade
+      originalPernasSnapshot.current = [];
+      originalPernaIds.current = [];
+      originalStakesByBookmaker.current = new Map();
+      
+      onSuccess('save');
+      if (!embedded) onOpenChange(false);
+    } catch (error: any) {
+      toast.error("Erro ao salvar: " + error.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleConvertToSimpleBets = async () => {
+    if (pernasValidas.length < 2) {
+      toast.error("Mínimo de 2 pernas válidas para conversão");
+      return;
+    }
+
+    try {
+      setConversionInProgress(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      const getBookmakerMoeda = (bookmakerId: string): SupportedCurrency => {
+        const bk = bookmakerSaldos.find(b => b.id === bookmakerId);
+        return (bk?.moeda as SupportedCurrency) || "BRL";
+      };
+
+      const operationGroupId = crypto.randomUUID();
+      
+      const apostasSimples = pernasValidas.map((entry) => {
+        const stake = parseFloat(entry.stake) || 0;
+        const moeda = getBookmakerMoeda(entry.bookmaker_id);
+        const snapshotFields = getSnapshotFields(stake, moeda, getEffectiveRate(moeda));
+        
+        return {
+          user_id: user.id,
+          workspace_id: workspaceId,
+          projeto_id: projetoId,
+          bookmaker_id: entry.bookmaker_id,
+          forma_registro: 'SIMPLES',
+          estrategia: (estrategia || ARBITRAGEM_ESTRATEGIA) as ApostaEstrategia,
+          contexto_operacional: contexto,
+          evento,
+          esporte,
+          mercado,
+          selecao: entry.selecao,
+          selecao_livre: entry.selecaoLivre || null,
+          moeda_operacao: moeda,
+          stake,
+          odd: parseFloat(entry.odd),
+          valor_brl_referencia: snapshotFields.valor_brl_referencia,
+          cotacao_snapshot: snapshotFields.cotacao_snapshot,
+          cotacao_snapshot_at: snapshotFields.cotacao_snapshot_at,
+          status: "PENDENTE",
+          resultado: "PENDENTE",
+          data_aposta: toLocalTimestamp(dataAposta),
+          observacoes: `Convertida de operação parcial (grupo: ${operationGroupId.slice(0, 8)})`
+        };
+      });
+
+      const { error: insertError } = await supabase
+        .from("apostas_unificada")
+        .insert(apostasSimples);
+
+      if (insertError) throw insertError;
+
+      // CRÍTICO: Invalidar cache de saldos após inserção direta
+      invalidateSaldos(projetoId);
+
+      toast.success(`${apostasSimples.length} apostas simples registradas!`);
+      setShowConversionDialog(false);
+      onSuccess();
+      if (!embedded) onOpenChange(false);
+    } catch (error: any) {
+      toast.error("Erro ao converter: " + error.message);
+    } finally {
+      setConversionInProgress(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!surebet) return;
+    
+    try {
+      const result = await deletarAposta(surebet.id);
+      if (!result.success) throw new Error(result.error?.message || 'Falha ao excluir');
+      
+      // CRÍTICO: Invalidar saldos imediatamente após exclusão
+      // Garante que o "Saldo Operável" no formulário reflita o valor atualizado
+      invalidateSaldos(projetoId);
+      invalidateCanonicalCaches(queryClient, projetoId);
+      
+      toast.success("Operação excluída!");
+      onSuccess('delete');
+      if (!embedded) onOpenChange(false);
+    } catch (error: any) {
+      toast.error("Erro ao excluir: " + error.message);
+    }
+  };
+
+  // ============================================
+  // EXCLUIR PERNA INDIVIDUAL (MODO EDIÇÃO)
+  // ============================================
+  
+  const handleDeletePerna = useCallback(async (pernaIndex: number) => {
+    if (!isEditing || !surebet) return;
+    
+    // Buscar pernaId do OddEntry (ID-based, não index-based)
+    const oddEntry = odds[pernaIndex];
+    const pernaId = oddEntry?.pernaId;
+    
+    if (!pernaId) {
+      // Perna nova (ainda não persistida) — remover apenas da UI
+      setOdds(prev => prev.filter((_, i) => i !== pernaIndex));
+      setDirectedProfitLegs(prev => 
+        prev.filter(i => i !== pernaIndex).map(i => i > pernaIndex ? i - 1 : i)
+      );
+      toast.success("Sub-entrada removida");
+      return;
+    }
+    
+    const originalPerna = originalPernasSnapshot.current.find(op => op.id === pernaId);
+    if (!originalPerna) {
+      toast.error("Perna não encontrada no banco de dados");
+      return;
+    }
+    
+    // Mínimo de 2 pernas
+    if (odds.length <= 2) {
+      toast.error("Mínimo de 2 pernas. Use 'Excluir' para remover toda a operação.");
+      return;
+    }
+    
+    try {
+      setDeletingPerna(true);
+      
+      const { data: rpcResult, error: rpcError } = await supabase.rpc('deletar_perna_surebet_v1', {
+        p_perna_id: pernaId,
+      });
+      
+      if (rpcError) {
+        console.error(`[SurebetModalRoot] Erro ao deletar perna ${pernaId}:`, rpcError);
+        throw new Error(rpcError.message);
+      }
+      
+      const result = rpcResult as any;
+      if (result && !result.success) {
+        throw new Error(result.error || 'Falha ao excluir perna');
+      }
+      
+      console.log(`[SurebetModalRoot] ✅ Perna ${pernaId} excluída via RPC:`, result);
+      
+      // Remover da UI
+      setOdds(prev => prev.filter((_, i) => i !== pernaIndex));
+      setDirectedProfitLegs(prev => 
+        prev.filter(i => i !== pernaIndex).map(i => i > pernaIndex ? i - 1 : i)
+      );
+      
+      // Atualizar snapshots (ID-based)
+      originalPernasSnapshot.current = originalPernasSnapshot.current.filter(p => p.id !== pernaId);
+      originalPernaIds.current = originalPernaIds.current.filter(id => id !== pernaId);
+      
+      // Recalcular crédito virtual (separado por tipo)
+      const stakeMap = new Map<string, { real: number; freebet: number }>();
+      originalPernasSnapshot.current.forEach(p => {
+        const cur = stakeMap.get(p.bookmaker_id) || { real: 0, freebet: 0 };
+        if (p.fonte_saldo === 'FREEBET') cur.freebet += p.stake; else cur.real += p.stake;
+        stakeMap.set(p.bookmaker_id, cur);
+      });
+      originalStakesByBookmaker.current = stakeMap;
+      
+      // Atualizar modelo visual
+      const newCount = odds.length - 1;
+      if (newCount === 2) setModeloTipo("2");
+      else if (newCount === 3) setModeloTipo("3");
+      else {
+        setModeloTipo("4+");
+        setNumPernasCustom(newCount);
+      }
+      
+      // Invalidar saldos
+      invalidateSaldos(projetoId);
+      invalidateCanonicalCaches(queryClient, projetoId);
+      
+      toast.success(`Perna ${pernaIndex + 1} excluída`, {
+        description: "O valor foi devolvido à casa de aposta.",
+      });
+    } catch (error: any) {
+      toast.error("Erro ao excluir perna: " + error.message);
+    } finally {
+      setDeletingPerna(false);
+    }
+  }, [isEditing, surebet, odds.length, invalidateSaldos, projetoId]);
+
+  // ============================================
+  // VALIDAÇÃO DE SALDO POR PERNA
+  // ============================================
+
+  /**
+   * Verifica se alguma perna possui stake maior que o saldo disponível da casa.
+   * 
+   * CRÍTICO: Desconta stakes já alocadas em OUTRAS pernas usando a mesma bookmaker.
+   * Isso evita overbetting quando a mesma casa é usada em múltiplas pernas.
+   * 
+   * Exemplo: Bankonbet tem $100
+   * - Perna 1: Bankonbet $60 → Saldo disponível para perna 1 = $100
+   * - Perna 2: Bankonbet $50 → Saldo disponível para perna 2 = $100 - $60 = $40 → INSUFICIENTE
+   * 
+   * Retorna um objeto com:
+   * - hasInsufficientBalance: true se alguma perna excede o saldo
+   * - insufficientLegs: índices das pernas com saldo insuficiente
+   * - adjustedBalances: Map de bookmaker_id → saldo ajustado (para exibição)
+   */
+  const balanceValidation = useMemo(() => {
+    const insufficientLegs: number[] = [];
+    // Granular: Map<"main-{legIdx}" | "sub-{legIdx}-{subIdx}", true>
+    const insufficientEntries = new Map<string, boolean>();
+    const adjustedBalances = new Map<string, number>();
+    
+    // Acumular alocações separadas por bookmaker: real vs freebet
+    const alocadoPorBookmaker = new Map<string, { real: number; freebet: number }>();
+    
+    odds.forEach((entry, index) => {
+      if (entry.bookmaker_id) {
+        const mainStake = parseFloat(entry.stake) || 0;
+        if (mainStake > 0) {
+          const cur = alocadoPorBookmaker.get(entry.bookmaker_id) || { real: 0, freebet: 0 };
+          if (entry.fonteSaldo === 'FREEBET') cur.freebet += mainStake; else cur.real += mainStake;
+          alocadoPorBookmaker.set(entry.bookmaker_id, cur);
+        }
+      }
+      (entry.additionalEntries || []).forEach(sub => {
+        const subBk = sub.bookmaker_id || entry.bookmaker_id;
+        if (!subBk) return;
+        const subStake = parseFloat(sub.stake) || 0;
+        if (subStake > 0) {
+          const cur = alocadoPorBookmaker.get(subBk) || { real: 0, freebet: 0 };
+          if (sub.fonteSaldo === 'FREEBET') cur.freebet += subStake; else cur.real += subStake;
+          alocadoPorBookmaker.set(subBk, cur);
+        }
+      });
+    });
+    
+    // Validar cada bookmaker
+    const bookmakerInsuficientes = new Set<string>();
+    const bookmakerFBInsuficientes = new Set<string>();
+    
+    for (const [bkId, alocado] of alocadoPorBookmaker.entries()) {
+      const bookmaker = bookmakerSaldos.find(b => b.id === bkId);
+      if (!bookmaker) continue;
+      const credito = isEditing ? (originalStakesByBookmaker.current.get(bkId) || { real: 0, freebet: 0 }) : { real: 0, freebet: 0 };
+      const saldoReal = (bookmaker.saldo_operavel ?? 0) + credito.real;
+      const saldoFB = (bookmaker.saldo_freebet ?? 0) + credito.freebet;
+      if (alocado.real > saldoReal + 0.01) bookmakerInsuficientes.add(bkId);
+      if (alocado.freebet > saldoFB + 0.01) bookmakerFBInsuficientes.add(bkId);
+    }
+    
+    // Marcar entradas específicas com problema
+    odds.forEach((entry, index) => {
+      let legHasIssue = false;
+      
+      if (entry.bookmaker_id) {
+        const isMainFB = entry.fonteSaldo === 'FREEBET';
+        if ((isMainFB && bookmakerFBInsuficientes.has(entry.bookmaker_id)) ||
+            (!isMainFB && bookmakerInsuficientes.has(entry.bookmaker_id))) {
+          insufficientEntries.set(`main-${index}`, true);
+          legHasIssue = true;
+        }
+      }
+      
+      (entry.additionalEntries || []).forEach((sub, subIdx) => {
+        const subBk = sub.bookmaker_id || entry.bookmaker_id;
+        if (!subBk) return;
+        const isSubFB = sub.fonteSaldo === 'FREEBET';
+        if ((isSubFB && bookmakerFBInsuficientes.has(subBk)) ||
+            (!isSubFB && bookmakerInsuficientes.has(subBk))) {
+          insufficientEntries.set(`sub-${index}-${subIdx}`, true);
+          legHasIssue = true;
+        }
+      });
+      
+      if (legHasIssue) insufficientLegs.push(index);
+    });
+    
+    return {
+      hasInsufficientBalance: insufficientLegs.length > 0,
+      insufficientLegs,
+      insufficientEntries,
+      adjustedBalances,
+      bookmakerFBInsuficientes,
+    };
+  }, [odds, bookmakerSaldos, isEditing]);
+
+  // ============================================
+  // RASCUNHO
+  // ============================================
+
+  // Verifica se tem dados parciais para salvar como rascunho
+  const temDadosParciais = useMemo(() => {
+    const hasAnyPerna = odds.some(entry => {
+      return entry.bookmaker_id || parseFloat(entry.odd) > 0 || parseFloat(entry.stake) > 0;
+    });
+    const hasEvento = evento.trim() !== "";
+    return hasAnyPerna || hasEvento;
+  }, [odds, evento]);
+
+   // ESTADOS DE OPERAÇÃO (Rascunho vs Registrado)
+   // Rascunho é sempre verdadeiro se não for edição direta do banco
+   const isOperacaoRascunho = !isEditing;
+   const isOperacaoRegistrada = isEditing;
+   
+   // ESTADOS DE ESTRUTURA (Completude)
+   const isEstruturaCompleta = analysis.pernasCompletasCount >= numPernas && 
+                              odds.length >= numPernas && 
+                              !!evento.trim() && 
+                              !!estrategia;
+ 
+   // Pode salvar como rascunho: tem qualquer dado e não é edição do banco
+   const podeSalvarRascunho = !isEditing && temDadosParciais;
+   const isAtualizandoRascunho = !!rascunhoIdLocal || !!rascunho?.id;
+  const rascunhoIdEfetivo = rascunho?.id || rascunhoIdLocal;
+  // Handler para salvar como rascunho
+  const handleSalvarRascunho = useCallback(() => {
+    if (!workspaceId) {
+      toast.error("Workspace não identificado");
+      return;
+    }
+    
+    // Converter odds para formato de rascunho
+    const pernasRascunho: RascunhoPernaData[] = odds.map(entry => ({
+      bookmaker_id: entry.bookmaker_id || undefined,
+      bookmaker_nome: bookmakerSaldos.find(b => b.id === entry.bookmaker_id)?.nome,
+      selecao: entry.selecao || undefined,
+      selecao_livre: entry.selecaoLivre || undefined,
+      odd: parseFloat(entry.odd) || undefined,
+      stake: parseFloat(entry.stake) || undefined,
+      moeda: entry.moeda,
+    }));
+    
+    const modelo = numPernas === 2 ? "1-2" : numPernas === 3 ? "1-X-2" : `${numPernas}-way`;
+    
+    const dadosRascunho = {
+      evento: evento || undefined,
+      mercado: mercado || undefined,
+      esporte: esporte || undefined,
+      estrategia: (estrategia || ARBITRAGEM_ESTRATEGIA) as ApostaEstrategia,
+      contexto_operacional: contexto || undefined,
+      modelo,
+      modelo_tipo: modeloTipo,
+      quantidade_pernas: numPernas,
+      pernas: pernasRascunho,
+    };
+
+    let rascunhoSalvo;
+    if (rascunhoIdEfetivo) {
+      // Atualizar rascunho existente (veio de prop ou já foi salvo antes nesta sessão)
+      rascunhoSalvo = atualizarRascunho(rascunhoIdEfetivo, dadosRascunho);
+    } else {
+      // Criar novo rascunho
+      rascunhoSalvo = criarRascunho('SUREBET', dadosRascunho);
+      // Guardar o ID para que cliques subsequentes atualizem em vez de criar duplicatas
+      if (rascunhoSalvo) {
+        setRascunhoIdLocal(rascunhoSalvo.id);
+      }
+    }
+    
+    toast.success(
+      rascunhoIdEfetivo ? `Rascunho atualizado!` : `Rascunho salvo!`,
+      { 
+        description: rascunhoSalvo?.motivo_incompleto || 'Acesse seus rascunhos para continuar depois',
+        icon: <FileText className="h-4 w-4 text-blue-500" />
+      }
+    );
+    
+     // NÃO fechar o formulário automaticamente se estiver completo (deixa usuário decidir registrar)
+     // Se estiver incompleto, costuma fechar para "continuar depois"
+     if (!embedded && !isEstruturaCompleta) onOpenChange(false);
+  }, [odds, evento, mercado, esporte, estrategia, contexto, modeloTipo, numPernas, workspaceId, bookmakerSaldos, criarRascunho, atualizarRascunho, rascunhoIdEfetivo, onOpenChange]);
+
+  const getBookmakerNome = (id: string) => bookmakerSaldos.find(b => b.id === id)?.nome || "";
+
+  // ============================================
+  // RENDERIZAÇÃO
+  // ============================================
+
+  if (!open) return null;
+
+  return (
+    <>
+      {/* Painel Fullscreen - Ocupa 100% da janela */}
+      <div className="z-50 bg-background flex flex-col animate-in fade-in-0 duration-200">
+        <div className="relative w-full flex flex-col overflow-hidden">
+          {/* Hidden file input */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept="image/*"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+          
+           {/* HEADER UNIFICADO V2 - com badges de estado */}
+          <BetFormHeaderV2
+            formType="arbitragem"
+            estrategia={estrategia}
+            contexto={contexto}
+            onEstrategiaChange={(v) => setEstrategia(v)}
+            onContextoChange={(v) => setContexto(v)}
+            isEditing={isEditing}
+            activeTab={activeTab}
+            lockedEstrategia={isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : null}
+            gameFields={{
+              esporte,
+              evento,
+              mercado,
+              dataAposta,
+              onEsporteChange: setEsporte,
+              onEventoChange: setEvento,
+              onMercadoChange: setMercado,
+              onDataApostaChange: setDataAposta,
+              esportesList: ESPORTES,
+            }}
+            showImport={false}
+            legPrintStatuses={legPrints}
+            showCloseButton={!embedded}
+            onClose={() => onOpenChange(false)}
+            embedded={embedded}
+             extraBadge={
+               <div className="flex items-center gap-1.5 ml-1">
+                 {/* Badge de Intenção */}
+                 {isOperacaoRegistrada ? (
+                   <Badge variant="outline" className="text-[10px] h-4 px-1.5 py-0 bg-green-500/10 text-green-500 border-green-500/20 uppercase font-bold tracking-wider">
+                     Registrado
+                   </Badge>
+                 ) : (
+                   <Badge variant="outline" className="text-[10px] h-4 px-1.5 py-0 bg-blue-500/10 text-blue-500 border-blue-500/20 uppercase font-bold tracking-wider">
+                     Rascunho
+                   </Badge>
+                 )}
+                 
+                 {/* Badge de Estrutura */}
+                 {isEstruturaCompleta ? (
+                   <Badge variant="secondary" className="text-[10px] h-4 px-1.5 py-0 bg-muted text-muted-foreground border-transparent uppercase font-medium">
+                     Completo
+                   </Badge>
+                 ) : (
+                   <Badge variant="secondary" className="text-[10px] h-4 px-1.5 py-0 bg-amber-500/10 text-amber-500 border-amber-500/20 uppercase font-medium">
+                     Incompleto
+                   </Badge>
+                 )}
+               </div>
+             }
+          />
+
+          {/* CONTENT */}
+          <div className="p-3 md:p-4 space-y-3 overflow-auto flex-1">
+            {/* Operação parcial warning */}
+            {analysis.isOperacaoParcial && !isEditing && (
+              <div className="flex items-center gap-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm">
+                <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+                <div className="flex-1">
+                  <span className="font-medium text-amber-500">Operação parcial:</span>{" "}
+                  <span className="text-muted-foreground">
+                    {analysis.pernasCompletasCount}/{numPernas} pernas preenchidas.
+                  </span>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="shrink-0 h-7 text-xs border-amber-500/50 text-amber-500 hover:bg-amber-500/10"
+                  onClick={() => setShowConversionDialog(true)}
+                >
+                  Converter para simples
+                </Button>
+              </div>
+            )}
+
+            {/* Modelo de Pernas */}
+            <div className="flex flex-wrap items-center gap-4 pb-3 border-b border-border/50">
+              <div className="flex items-center gap-2">
+                <Label className="text-xs text-muted-foreground whitespace-nowrap">Modelo</Label>
+                <div className={`flex bg-muted/50 rounded p-0.5 ${isEditing ? 'opacity-60' : ''}`}>
+                  {(["2", "3", "4+"] as const).map((tipo) => (
+                    <button
+                      key={tipo}
+                      type="button"
+                      onClick={() => !isEditing && setModeloTipo(tipo)}
+                      disabled={isEditing}
+                      className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                        modeloTipo === tipo ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {tipo === "4+" ? "4+ pernas" : `${tipo} pernas`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              {modeloTipo === "4+" && !isEditing && (
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs text-muted-foreground">Qtd:</Label>
+                  <Input
+                    type="number"
+                    min="4"
+                    max="10"
+                    value={numPernasCustom}
+                    onChange={(e) => setNumPernasCustom(Math.max(4, Math.min(10, parseInt(e.target.value) || 4)))}
+                    className="h-7 w-16 text-center text-xs"
+                  />
+                </div>
+              )}
+              {/* Toggle de layout - hidden on mobile */}
+              {!isMobile && (
+                <div className="flex items-center rounded-md border border-border/40 overflow-hidden ml-auto">
+                  <button
+                    type="button"
+                    onClick={() => setViewLayout('vertical')}
+                    className={cn(
+                      "p-1.5 transition-colors",
+                      viewLayout === 'vertical' ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
+                    )}
+                    title="Layout vertical (tabela)"
+                  >
+                    <Rows3 className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewLayout('horizontal')}
+                    className={cn(
+                      "p-1.5 transition-colors",
+                      viewLayout === 'horizontal' ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
+                    )}
+                    title="Layout horizontal (colunas)"
+                  >
+                    <Columns3 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Loading state for pernas */}
+            {pernasLoading && isEditing ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-center space-y-2">
+                  <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+                  <p className="text-xs text-muted-foreground">Carregando entradas...</p>
+                </div>
+              </div>
+            ) : isMobile ? (
+              <div className="space-y-3" ref={tableContainerRef}>
+                {odds.map((entry, pernaIndex) => (
+                  <SurebetMobileCard
+                    key={pernaIndex}
+                    entry={entry}
+                    pernaIndex={pernaIndex}
+                    label={getPernaLabel(pernaIndex, numPernas)}
+                    scenario={analysis.scenarios[pernaIndex]}
+                    isEditing={isEditing}
+                    isProcessing={legPrints[pernaIndex]?.isProcessing || false}
+                    bookmakers={getAdjustedBookmakersForLeg(pernaIndex)}
+                    directedProfitLegs={directedProfitLegs}
+                    numPernas={numPernas}
+                    moedaDominante={analysis.moedaDominante}
+                    hasInsufficientBalance={balanceValidation.insufficientLegs.includes(pernaIndex)}
+                    insufficientEntries={balanceValidation.insufficientEntries}
+                    onResultadoChange={handlePernaResultadoChange}
+                    onUpdateOdd={updateOdd}
+                    onSetReference={setReferenceIndex}
+                    onToggleDirected={toggleDirectedLeg}
+                    onAddEntry={addAdditionalEntry}
+                    onUpdateAdditionalEntry={updateAdditionalEntry}
+                    onRemoveAdditionalEntry={removeAdditionalEntry}
+                    onDeletePerna={handleDeletePerna}
+                    canDeletePerna={isEditing && odds.length > 2}
+                    onFieldKeyDown={handleFieldKeyDown}
+                  />
+                ))}
+              </div>
+            ) : viewLayout === 'vertical' ? (
+              <div className="overflow-x-auto" ref={tableContainerRef}>
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-border/50">
+                      <th className="py-2 px-2 text-left font-medium text-muted-foreground w-16">Perna</th>
+                      <th className="py-2 px-2 text-left font-medium text-muted-foreground min-w-[160px]">Casa</th>
+                      <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20">Odd</th>
+                      <th className="py-2 px-2 text-center font-medium text-muted-foreground w-24">Stake</th>
+                      <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20">Linha</th>
+                      {!isEditing && (
+                        <th className="py-2 px-2 text-center font-medium text-muted-foreground w-10" title="Referência">
+                          <Target className="h-3.5 w-3.5 mx-auto" />
+                        </th>
+                      )}
+                      {isEditing && (
+                        <th className="py-2 px-2 text-center font-medium text-muted-foreground w-28">Resultado</th>
+                      )}
+                      {!isEditing && (
+                        <th className="py-2 px-2 text-center font-medium text-muted-foreground w-10" title="Distribuição de lucro">
+                          D
+                        </th>
+                      )}
+                      <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20">Lucro</th>
+                      <th className="py-2 px-2 text-center font-medium text-muted-foreground w-16">ROI</th>
+                      <th className="py-2 px-2 w-8"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {odds.map((entry, pernaIndex) => (
+                      <SurebetTableRow
+                        key={pernaIndex}
+                        entry={entry}
+                        pernaIndex={pernaIndex}
+                        label={getPernaLabel(pernaIndex, numPernas)}
+                        rowSpan={1}
+                        scenario={analysis.scenarios[pernaIndex]}
+                        isEditing={isEditing}
+                        isFocused={focusedLeg === pernaIndex}
+                        isProcessing={legPrints[pernaIndex]?.isProcessing || false}
+                        bookmakers={getAdjustedBookmakersForLeg(pernaIndex)}
+                        directedProfitLegs={directedProfitLegs}
+                        numPernas={numPernas}
+                        moedaDominante={analysis.moedaDominante}
+                        hasInsufficientBalance={balanceValidation.insufficientLegs.includes(pernaIndex)}
+                        insufficientEntries={balanceValidation.insufficientEntries}
+                        onResultadoChange={handlePernaResultadoChange}
+                        onUpdateOdd={updateOdd}
+                        onSetReference={setReferenceIndex}
+                        onToggleDirected={toggleDirectedLeg}
+                        onAddEntry={addAdditionalEntry}
+                        onUpdateAdditionalEntry={updateAdditionalEntry}
+                        onRemoveAdditionalEntry={removeAdditionalEntry}
+                        onDeletePerna={handleDeletePerna}
+                        canDeletePerna={isEditing && odds.length > 2}
+                        onFocus={setFocusedLeg}
+                        onBlur={() => setFocusedLeg(null)}
+                        onFieldKeyDown={handleFieldKeyDown}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div ref={tableContainerRef}>
+                <SurebetColumnsView
+                  odds={odds}
+                  scenarios={analysis.scenarios}
+                  isEditing={isEditing}
+                  bookmakersByLeg={getAdjustedBookmakersForLeg}
+                  directedProfitLegs={directedProfitLegs}
+                  numPernas={numPernas}
+                  moedaDominante={analysis.moedaDominante}
+                  insufficientLegs={balanceValidation.insufficientLegs}
+                  insufficientEntries={balanceValidation.insufficientEntries}
+                  onResultadoChange={handlePernaResultadoChange}
+                  onUpdateOdd={updateOdd}
+                  onSetReference={setReferenceIndex}
+                  onToggleDirected={toggleDirectedLeg}
+                  onAddEntry={addAdditionalEntry}
+                  onUpdateAdditionalEntry={updateAdditionalEntry}
+                  onRemoveAdditionalEntry={removeAdditionalEntry}
+                  onDeletePerna={handleDeletePerna}
+                  canDeletePerna={isEditing && odds.length > 2}
+                  onFocus={setFocusedLeg}
+                  onBlur={() => setFocusedLeg(null)}
+                  onFieldKeyDown={handleFieldKeyDown}
+                  getPernaLabel={getPernaLabel}
+                />
+              </div>
+            )}
+
+            {/* FOOTER - Totais e Controles */}
+            <SurebetTableFooter
+              analysis={analysis}
+              isEditing={isEditing}
+              arredondarAtivado={arredondarAtivado}
+              setArredondarAtivado={setArredondarAtivado}
+              arredondarValor={arredondarValor}
+              setArredondarValor={setArredondarValor}
+              
+            />
+          </div>
+
+          {/* ACTIONS */}
+          <div className="flex flex-wrap items-center justify-between gap-2 px-3 md:px-4 py-2 border-t border-border/50 bg-muted/30">
+            <div>
+              {isEditing && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm">
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Excluir
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Excluir Arbitragem?</AlertDialogTitle>
+                      <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDelete}>Excluir</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+               {!isEditing && (
+                 <Button 
+                   variant="outline"
+                   onClick={handleSalvarRascunho}
+                   disabled={saving || !temDadosParciais}
+                   className="border-blue-500/30 text-blue-500 hover:bg-blue-500/10"
+                 >
+                   <FileText className="h-4 w-4 mr-1" />
+                   {isAtualizandoRascunho ? 'Atualizar Rascunho' : 'Salvar Rascunho'}
+                 </Button>
+               )}
+              {analysis.isOperacaoParcial && !isEditing && (
+                <Button 
+                  variant="secondary"
+                  onClick={() => setShowConversionDialog(true)}
+                  disabled={saving || pernasValidas.length < 2}
+                >
+                  <ArrowRight className="h-4 w-4 mr-1" />
+                  Simples ({pernasValidas.length})
+                </Button>
+              )}
+               <Button 
+                 onClick={handleSave} 
+                 disabled={saving || !isEstruturaCompleta || (!isEditing && balanceValidation.hasInsufficientBalance)}
+                 title={!isEstruturaCompleta ? "Preencha todos os dados obrigatórios para registrar" : balanceValidation.hasInsufficientBalance ? "Saldo insuficiente em uma ou mais casas" : undefined}
+               >
+                 <Save className="h-4 w-4 mr-1" />
+                 {isEditing ? "Salvar Alterações" : "Registrar Operação"}
+               </Button>
+            </div>
+          </div>
+
+          {/* Aviso de saldo insuficiente */}
+          {!isEditing && balanceValidation.hasInsufficientBalance && (
+            <div className="px-4 pb-3 -mt-2">
+              <div className="flex items-center gap-2 p-2 bg-destructive/10 border border-destructive/30 rounded text-xs text-destructive">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                <span>
+                  {balanceValidation.bookmakerFBInsuficientes && balanceValidation.bookmakerFBInsuficientes.size > 0
+                    ? `Saldo de Freebet insuficiente na(s) perna(s) ${balanceValidation.insufficientLegs.map(i => i + 1).join(", ")}. O valor FB excede o saldo disponível.`
+                    : `Saldo insuficiente na(s) perna(s) ${balanceValidation.insufficientLegs.map(i => i + 1).join(", ")}. Reduza o stake ou selecione outra casa.`
+                  }
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Dialog de Conversão */}
+      <AlertDialog open={showConversionDialog} onOpenChange={setShowConversionDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Converter para Apostas Simples?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta operação não cobre todos os resultados do modelo {numPernas} pernas.
+              Deseja registrar as {pernasValidas.length} pernas válidas como apostas simples independentes?
+              
+              <div className="mt-3 p-3 bg-muted/50 rounded-lg text-xs">
+                <div className="font-medium mb-1">Pernas que serão registradas:</div>
+                {pernasValidas.map((p, i) => (
+                  <div key={i} className="flex items-center gap-2 py-0.5">
+                    <ArrowRight className="h-3 w-3 text-primary" />
+                    <span>{p.selecao} • {getBookmakerNome(p.bookmaker_id)} • Odd {p.odd} • Stake {p.stake}</span>
+                  </div>
+                ))}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={conversionInProgress}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConvertToSimpleBets}
+              disabled={conversionInProgress}
+              className="bg-primary"
+            >
+              {conversionInProgress ? "Registrando..." : "Registrar como Apostas Simples"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
