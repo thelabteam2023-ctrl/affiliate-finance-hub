@@ -236,9 +236,16 @@ export function useCentralAlertsCount() {
             .filter((m: any) => m.tipo === "PAGTO_PARCEIRO" && m.status === "CONFIRMADO")
             .map((m: any) => m.parceria_id);
           
-          const pagamentosPendentes = (parceriasResult.data || [])
-            .filter((p: any) => !parceriasPagas.includes(p.id)).length;
-          totalCount += pagamentosPendentes;
+          const parceriasAjustadas = (parceriasResult.data || []).filter((p: any) => {
+            // Se já foi pago integralmente, remove
+            if (parceriasPagas.includes(p.id)) return false;
+            
+            // Se o valor ajustado foi zerado, remove
+            const valorEfetivo = p.valor_parceiro_ajustado !== null ? p.valor_parceiro_ajustado : p.valor_parceiro;
+            return valorEfetivo >= 0.01;
+          });
+          
+          totalCount += parceriasAjustadas.length;
         }
 
         // Count parcerias próximas do encerramento (≤ 10 dias) - partner_event
