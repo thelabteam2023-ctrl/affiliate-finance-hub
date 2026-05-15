@@ -65,6 +65,8 @@ interface SurebetMobileCardProps {
   numPernas: number;
   moedaDominante: SupportedCurrency;
   hasInsufficientBalance?: boolean;
+   erro?: string;
+   errosPorPerna?: Record<number, string>;
   insufficientEntries?: Map<string, boolean>;
   onResultadoChange?: (index: number, resultado: PernaResultado) => void;
   onUpdateOdd: (index: number, field: keyof OddEntry, value: string | boolean) => void;
@@ -89,8 +91,10 @@ export function SurebetMobileCard({
   directedProfitLegs,
   numPernas,
   moedaDominante,
-  hasInsufficientBalance = false,
-  insufficientEntries,
+   hasInsufficientBalance = false,
+   erro,
+   errosPorPerna,
+   insufficientEntries,
   onResultadoChange,
   onUpdateOdd,
   onSetReference,
@@ -278,24 +282,30 @@ export function SurebetMobileCard({
                     onChange={(val) => onUpdateOdd(pernaIndex, "stake", val)}
                     currency={entry.moeda}
                     minDigits={6}
-                    className={cn(
-                      "h-9 text-sm text-center tabular-nums",
-                      mainInsuf && "border-destructive focus-visible:ring-destructive/50"
-                    )}
+                     className={cn(
+                       "h-9 text-sm text-center tabular-nums",
+                       (mainInsuf || erro || errosPorPerna?.[pernaIndex]) && "border-destructive focus-visible:ring-destructive/50"
+                     )}
                     data-field-type="stake"
                     onKeyDown={(e) => onFieldKeyDown(e as any, 'stake')}
                   />
-                  {mainInsuf && selectedBookmaker && (
-                    <div className="text-[9px] text-destructive font-medium mt-0.5 leading-tight text-center">
-                      <div>{entry.fonteSaldo === 'FREEBET' ? 'FB insuficiente' : 'Saldo insuficiente'}</div>
-                      <div className="opacity-80">
-                        Disp: {formatCurrency(
-                          entry.fonteSaldo === 'FREEBET' ? selectedBookmaker.saldo_freebet : selectedBookmaker.saldo_operavel, 
-                          selectedBookmaker.moeda
-                        )}
-                      </div>
-                    </div>
-                  )}
+                   {(mainInsuf || erro || errosPorPerna?.[pernaIndex]) && selectedBookmaker && (
+                     <div className="text-[9px] text-destructive font-medium mt-0.5 leading-tight text-center">
+                       {erro || errosPorPerna?.[pernaIndex] ? (
+                         <div>{erro || errosPorPerna?.[pernaIndex]}</div>
+                       ) : (
+                         <>
+                           <div>{entry.fonteSaldo === 'FREEBET' ? 'FB insuficiente' : 'Saldo insuficiente'}</div>
+                           <div className="opacity-80">
+                             Disp: {formatCurrency(
+                               entry.fonteSaldo === 'FREEBET' ? selectedBookmaker.saldo_freebet : selectedBookmaker.saldo_operavel, 
+                               selectedBookmaker.moeda
+                             )}
+                           </div>
+                         </>
+                       )}
+                     </div>
+                   )}
                 </>
               );
             })()}
