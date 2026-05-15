@@ -1,4 +1,4 @@
- import { useState, useEffect } from "react";
+ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useWorkspace } from "@/hooks/useWorkspace";
@@ -235,10 +235,6 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
     setOrcamentoDisponivel(indicador?.orcamento_por_parceiro || 0);
   };
 
-  const invalidateCentralData = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ["central-operacoes-data"] });
-  }, [queryClient]);
-
   const handleSubmit = async () => {
     if (!formData.parceiro_id) {
       toast({ title: "Selecione um parceiro", variant: "destructive" });
@@ -330,7 +326,8 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
           .single();
         if (insertError) throw insertError;
         toast({ title: "Parceria renovada com sucesso" });
-        invalidateCentralData();
+         removeFromList("parceirosSemParceria", "id", formData.parceiro_id);
+         fullRefetch();
 
         // Find partner and supplier names for payment dialog
         const parceiroNome = parceiros.find(p => p.id === formData.parceiro_id)?.nome || "";
@@ -355,14 +352,16 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
           .eq("id", parceria.id);
         if (error) throw error;
         toast({ title: "Parceria atualizada com sucesso" });
-        invalidateCentralData();
+         removeFromList("parceirosSemParceria", "id", formData.parceiro_id);
+         fullRefetch();
       } else {
         const { error } = await supabase
           .from("parcerias")
           .insert(payload);
         if (error) throw error;
         toast({ title: "Parceria criada com sucesso" });
-        invalidateCentralData();
+         removeFromList("parceirosSemParceria", "id", formData.parceiro_id);
+         fullRefetch();
       }
 
       onOpenChange(false);
