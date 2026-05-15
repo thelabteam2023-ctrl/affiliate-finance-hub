@@ -92,7 +92,7 @@ export function useCentralAlertsCount() {
           canSeePartnerData
             ? supabase
                 .from("parcerias")
-                .select("id, valor_parceiro, valor_parceiro_ajustado, valor_fornecedor, valor_fornecedor_ajustado")
+                .select("id, valor_parceiro, valor_parceiro_ajustado, valor_fornecedor, valor_fornecedor_ajustado, fornecedor_id")
                 .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
                 .or("custo_aquisicao_isento.is.null,custo_aquisicao_isento.eq.false")
                 .gt("valor_parceiro", 0)
