@@ -381,22 +381,19 @@ export function SurebetDialogTable({
      const bookmaker = bookmakerSaldos.find(b => b.id === bookmakerId);
      if (!bookmaker) return null;
 
-     const originalStake = originalStakesByBookmaker.current.get(bookmakerId) || 0;
-     const saldoOperavel = bookmaker.saldo_operavel || 0;
-     const limiteDisponivel = saldoOperavel + originalStake;
-     const excedeu = stakeNum > (limiteDisponivel + 0.01);
+      // LOG DE DIAGNÓSTICO SOLICITADO PELO USUÁRIO (Passo 1)
+      const originalStake = originalStakesByBookmaker.current.get(bookmakerId) || 0;
+      const saldoOperavel = bookmaker.saldo_operavel || 0;
+      
+      console.log("DIAGNOSTICO_SALDO:", {
+        bookmaker_id: bookmakerId,
+        nome: bookmaker.nome,
+        saldo_operavel: saldoOperavel,
+        credito_original: originalStake
+      });
 
-     // LOG DE DIAGNÓSTICO SOLICITADO
-     console.log("DIAGNOSTICO_SALDO:", {
-       perna: pernaIndex + 1,
-       bookmaker_id: bookmakerId,
-       nome: bookmaker.nome,
-       saldo_operavel: saldoOperavel,
-       credito_original: originalStake,
-       limite_total: limiteDisponivel,
-       stake_digitada: stakeNum,
-       excedeu
-     });
+      const limiteDisponivel = saldoOperavel + originalStake;
+      const excedeu = stakeNum > (limiteDisponivel + 0.01);
 
      if (excedeu) {
        return {
