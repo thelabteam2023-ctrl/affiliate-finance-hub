@@ -144,44 +144,74 @@ export function FinanceiroTab() {
   const [editParceriaOpen, setEditParceriaOpen] = useState(false);
   const [editParceriaData, setEditParceriaData] = useState<any>(null);
 
-  const handleRenovacao = async (parceiroId: string) => {
-    try {
-      // Buscar parceria ativa do parceiro
-      const { data: parceria } = await supabase
-        .from("parcerias")
-        .select("*, parceiros!inner(nome)")
-        .eq("parceiro_id", parceiroId)
-        .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (parceria) {
-        // Calcular dias restantes
-        const dataFim = parseLocalDate(parceria.data_inicio);
-        dataFim.setDate(dataFim.getDate() + parceria.duracao_dias);
-        const hoje = new Date();
-        const diffMs = dataFim.getTime() - hoje.getTime();
-        const diasRestantes = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
-
-        setEditParceriaData({
-          ...parceria,
-          parceiro_nome: (parceria.parceiros as any)?.nome || "",
-          dias_restantes: diasRestantes,
-          data_fim_prevista: dataFim.toISOString().split("T")[0],
-        });
-        setEditParceriaOpen(true);
-      } else {
-        toast({
-          title: "Parceria não encontrada",
-          description: "Nenhuma parceria ativa encontrada para este parceiro.",
-          variant: "destructive",
-        });
-      }
-    } catch (error: any) {
-      console.error("Erro ao buscar parceria:", error);
-    }
-  };
+   const handleRenovacao = async (parceiroId: string) => {
+     try {
+       // Buscar parceria ativa do parceiro
+       const { data: parceria } = await supabase
+         .from("parcerias")
+         .select("*, parceiros!inner(nome)")
+         .eq("parceiro_id", parceiroId)
+         .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
+         .order("created_at", { ascending: false })
+         .limit(1)
+         .maybeSingle();
+ 
+       if (parceria) {
+         // Calcular dias restantes
+         const dataFim = parseLocalDate(parceria.data_inicio);
+         dataFim.setDate(dataFim.getDate() + parceria.duracao_dias);
+         const hoje = new Date();
+         const diffMs = dataFim.getTime() - hoje.getTime();
+         const diasRestantes = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+ 
+         setEditParceriaData({
+           ...parceria,
+           parceiro_nome: (parceria.parceiros as any)?.nome || "",
+           dias_restantes: diasRestantes,
+           data_fim_prevista: dataFim.toISOString().split("T")[0],
+         });
+         setEditParceriaOpen(true);
+       } else {
+         toast({
+           title: "Parceria não encontrada",
+           description: "Nenhuma parceria ativa encontrada para este parceiro.",
+           variant: "destructive",
+         });
+       }
+     } catch (error: any) {
+       console.error("Erro ao buscar parceria:", error);
+     }
+   };
+ 
+   const handleAjustarValor = async () => {
+     if (!editingValor) return;
+     
+     const { id, tipo, valor } = editingValor;
+     const valorNum = parseFloat(valor);
+     
+     if (isNaN(valorNum) || valorNum < 0) {
+       toast({ title: "Valor inválido", description: "Informe um valor numérico válido.", variant: "destructive" });
+       return;
+     }
+ 
+     try {
+       const field = tipo === 'parceiro' ? 'valor_parceiro_ajustado' : 'valor_fornecedor_ajustado';
+       
+       const { error } = await supabase
+         .from("parcerias")
+         .update({ [field]: valorNum })
+         .eq("id", id);
+ 
+       if (error) throw error;
+ 
+       toast({ title: "Valor atualizado", description: "O valor da pendência foi ajustado com sucesso." });
+       setEditingValor(null);
+       fetchData();
+     } catch (err: any) {
+       console.error("Erro ao ajustar valor:", err);
+       toast({ title: "Erro ao atualizar", description: err.message, variant: "destructive" });
+     }
+   };
 
   const getFirstLastName = (nome: string) => {
     const parts = nome.trim().split(/\s+/);
