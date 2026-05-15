@@ -2265,7 +2265,7 @@ export function SurebetModalRoot({
                     scenario={analysis.scenarios[pernaIndex]}
                     isEditing={isEditing}
                     isProcessing={legPrints[pernaIndex]?.isProcessing || false}
-                    bookmakers={getAdjustedBookmakersForLeg(pernaIndex)}
+                    bookmakersByLeg={getAdjustedBookmakersForLeg}
                     directedProfitLegs={directedProfitLegs}
                     numPernas={numPernas}
                     moedaDominante={analysis.moedaDominante}
@@ -2324,7 +2324,7 @@ export function SurebetModalRoot({
                         isEditing={isEditing}
                         isFocused={focusedLeg === pernaIndex}
                         isProcessing={legPrints[pernaIndex]?.isProcessing || false}
-                        bookmakers={getAdjustedBookmakersForLeg(pernaIndex)}
+                        bookmakersByLeg={getAdjustedBookmakersForLeg}
                         directedProfitLegs={directedProfitLegs}
                         numPernas={numPernas}
                         moedaDominante={analysis.moedaDominante}

@@ -40,7 +40,7 @@ interface SurebetColumnsViewProps {
   odds: OddEntry[];
   scenarios: (LegScenario | undefined)[];
   isEditing: boolean;
-  bookmakersByLeg: (legIndex: number) => BookmakerOption[];
+  bookmakersByLeg: (legIndex: number, subEntryIndex?: number) => BookmakerOption[];
   directedProfitLegs: number[];
   numPernas: number;
   moedaDominante: SupportedCurrency;
@@ -127,7 +127,7 @@ export function SurebetColumnsView({
           const roi = scenario?.roi ?? 0;
           const hasData = parseFloat(String(entry.odd)) > 0 && parseFloat(entry.stake) > 0;
           const isPositive = lucro >= 0;
-          const bookmakers = bookmakersByLeg(pernaIndex);
+          const bookmakers = bookmakersByLeg(pernaIndex, undefined);
           const selectedBookmaker = bookmakers.find(b => b.id === entry.bookmaker_id);
           const isDirected = directedProfitLegs.includes(pernaIndex);
           const hasInsufficientBalance = insufficientLegs.includes(pernaIndex);
@@ -350,7 +350,8 @@ export function SurebetColumnsView({
 
                 {/* Sub-entradas adicionais */}
                 {additionalEntries.map((addEntry, addIndex) => {
-                  const addBookmaker = bookmakers.find(b => b.id === addEntry.bookmaker_id);
+                  const subBookmakers = bookmakersByLeg(pernaIndex, addIndex);
+                  const addBookmaker = subBookmakers.find(b => b.id === addEntry.bookmaker_id);
                   return (
                     <div key={`add-${addIndex}`} className="pt-2 mt-2 border-t border-primary/15 space-y-1.5">
                       <div className="flex items-center justify-between">
@@ -376,10 +377,7 @@ export function SurebetColumnsView({
                             )}
                           </SelectValue>
                         </SelectTrigger>
-                        <BookmakerSearchableSelectContent
-                          bookmakers={bookmakers}
-                          className="max-w-[300px]"
-                        />
+                        <BookmakerSearchableSelectContent bookmakers={subBookmakers} className="max-w-[300px]" />
                       </Select>
                       {/* Saldo info da sub-entrada */}
                       <BookmakerMetaRow 

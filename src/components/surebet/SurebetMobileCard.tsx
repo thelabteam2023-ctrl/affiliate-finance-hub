@@ -60,7 +60,7 @@ interface SurebetMobileCardProps {
   scenario: LegScenario | undefined;
   isEditing: boolean;
   isProcessing: boolean;
-  bookmakers: BookmakerOption[];
+  bookmakersByLeg: (legIndex: number, subEntryIndex?: number) => BookmakerOption[];
   directedProfitLegs: number[];
   numPernas: number;
   moedaDominante: SupportedCurrency;
@@ -102,6 +102,7 @@ export function SurebetMobileCard({
   canDeletePerna = false,
   onFieldKeyDown,
 }: SurebetMobileCardProps) {
+  const bookmakers = bookmakersByLeg(pernaIndex, undefined);
   const selectedBookmaker = bookmakers.find(b => b.id === entry.bookmaker_id);
   const lucro = scenario?.lucro ?? 0;
   const roi = scenario?.roi ?? 0;
@@ -285,9 +286,17 @@ export function SurebetMobileCard({
                     onKeyDown={(e) => onFieldKeyDown(e as any, 'stake')}
                   />
                   {mainInsuf && (
-                    <span className="text-[9px] text-destructive font-medium mt-0.5 block text-center">
-                      {entry.fonteSaldo === 'FREEBET' ? 'FB insuficiente' : 'Saldo insuficiente'}
-                    </span>
+                  {mainInsuf && selectedBookmaker && (
+                    <div className="text-[9px] text-destructive font-medium mt-0.5 leading-tight text-center">
+                      <div>{entry.fonteSaldo === 'FREEBET' ? 'FB insuficiente' : 'Saldo insuficiente'}</div>
+                      <div className="opacity-80">
+                        Disp: {formatCurrency(
+                          entry.fonteSaldo === 'FREEBET' ? selectedBookmaker.saldo_freebet : selectedBookmaker.saldo_operavel, 
+                          selectedBookmaker.moeda
+                        )}
+                      </div>
+                    </div>
+                  )}
                   )}
                 </>
               );
@@ -357,7 +366,8 @@ export function SurebetMobileCard({
 
         {/* Sub-entradas adicionais */}
         {additionalEntries.map((addEntry: any, addIndex: number) => {
-          const addBookmaker = bookmakers.find(b => b.id === addEntry.bookmaker_id);
+          const subBookmakers = bookmakersByLeg(pernaIndex, addIndex);
+          const addBookmaker = subBookmakers.find(b => b.id === addEntry.bookmaker_id);
           return (
             <div key={`add-${pernaIndex}-${addIndex}`} className="pt-2 border-t border-border/20 space-y-2">
               <div className="flex items-center justify-between">
@@ -383,9 +393,7 @@ export function SurebetMobileCard({
                     )}
                   </SelectValue>
                 </SelectTrigger>
-                <BookmakerSearchableSelectContent
-                  bookmakers={bookmakers}
-                />
+                <BookmakerSearchableSelectContent bookmakers={subBookmakers} />
               </Select>
               <div className="grid grid-cols-2 gap-2">
                 <Input 
@@ -429,10 +437,16 @@ export function SurebetMobileCard({
                           </button>
                         )}
                       </div>
-                      {subInsuf && (
-                        <span className="text-[9px] text-destructive font-medium mt-0.5">
-                          {isSubFB ? 'FB insuf.' : 'Saldo insuf.'}
-                        </span>
+                      {subInsuf && addBookmaker && (
+                        <div className="text-[9px] text-destructive font-medium mt-0.5 leading-tight text-center">
+                          <div>{isSubFB ? 'FB insuficiente' : 'Saldo insuficiente'}</div>
+                          <div className="opacity-80">
+                            Disp: {formatCurrency(
+                              isSubFB ? addBookmaker.saldo_freebet : addBookmaker.saldo_operavel, 
+                              addBookmaker.moeda
+                            )}
+                          </div>
+                        </div>
                       )}
                     </div>
                   );

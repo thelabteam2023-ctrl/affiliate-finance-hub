@@ -70,7 +70,7 @@ interface SurebetTableRowProps {
   isEditing: boolean;
   isFocused: boolean;
   isProcessing: boolean;
-  bookmakers: BookmakerOption[];
+  bookmakersByLeg: (legIndex: number, subEntryIndex?: number) => BookmakerOption[];
   directedProfitLegs: number[];
   numPernas: number;
   moedaDominante: SupportedCurrency;
@@ -121,6 +121,7 @@ export function SurebetTableRow({
   onBlur,
   onFieldKeyDown
 }: SurebetTableRowProps) {
+  const bookmakers = bookmakersByLeg(pernaIndex, undefined);
   const selectedBookmaker = bookmakers.find(b => b.id === entry.bookmaker_id);
   const lucro = scenario?.lucro ?? 0;
   const roi = scenario?.roi ?? 0;
@@ -443,7 +444,8 @@ export function SurebetTableRow({
 
       {/* Sub-entradas adicionais */}
       {additionalEntries.map((addEntry, addIndex) => {
-        const addBookmaker = bookmakers.find(b => b.id === addEntry.bookmaker_id);
+        const subBookmakers = bookmakersByLeg(pernaIndex, addIndex);
+        const addBookmaker = subBookmakers.find(b => b.id === addEntry.bookmaker_id);
         return (
           <tr 
             key={`add-${pernaIndex}-${addIndex}`}
@@ -464,10 +466,7 @@ export function SurebetTableRow({
                       )}
                     </SelectValue>
                   </SelectTrigger>
-                  <BookmakerSearchableSelectContent
-                    bookmakers={bookmakers}
-                    className="max-w-[300px]"
-                  />
+                  <BookmakerSearchableSelectContent bookmakers={subBookmakers} className="max-w-[300px]" />
                 </Select>
                 <BookmakerMetaRow 
                   bookmaker={addBookmaker ? {
