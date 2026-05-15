@@ -287,16 +287,17 @@ export function SurebetModalRoot({
   const [focusedLeg, setFocusedLeg] = useState<number | null>(null);
    const [viewLayout, setViewLayout] = useState<'vertical' | 'horizontal'>('vertical');
     const [errosPorPerna, setErrosPorPerna] = useState<Record<number, string>>({});
+
  /**
   * Função pura para calcular o saldo disponível e validar stakes em tempo real.
   */
- export function calcularSaldoDisponivel(
+ const calcularSaldoDisponivel = (
    pernaIndex: number,
    allOdds: OddEntry[],
    bookmakerSaldos: any[],
    isEditing: boolean,
    originalStakes: Map<string, { real: number; freebet: number }>
- ): { disponivel: number; excedeu: boolean; mensagem: string } {
+ ): { disponivel: number; excedeu: boolean; mensagem: string } => {
    const entry = allOdds[pernaIndex];
    if (!entry.bookmaker_id) return { disponivel: 0, excedeu: false, mensagem: "" };
  
@@ -350,6 +351,7 @@ export function SurebetModalRoot({
      mensagem: excedeu ? `Saldo insuficiente. Disponível: ${new Intl.NumberFormat('en-US', { style: 'currency', currency: selectedBk.moeda || 'USD' }).format(disponivelFinal)}` : ""
    };
  }
+
  
   
   const tableContainerRef = useRef<HTMLDivElement>(null);
