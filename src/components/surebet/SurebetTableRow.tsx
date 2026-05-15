@@ -312,10 +312,18 @@ export function SurebetTableRow({
                     </button>
                   )}
                 </div>
-                {mainInsufficient && (
-                  <span className="text-[9px] text-destructive font-medium">
-                    {entry.fonteSaldo === 'FREEBET' ? 'FB insuf.' : 'Saldo insuf.'}
-                  </span>
+                {mainInsufficient && selectedBookmaker && (
+                  <div className="text-[9px] text-destructive font-medium leading-tight text-center max-w-[100px]">
+                    <div>{entry.fonteSaldo === 'FREEBET' ? 'FB insuficiente' : 'Saldo insuficiente'}</div>
+                    <div className="opacity-80">
+                      Disponível: {formatCurrency(
+                        entry.fonteSaldo === 'FREEBET' 
+                          ? selectedBookmaker.saldo_freebet 
+                          : selectedBookmaker.saldo_operavel, 
+                        selectedBookmaker.moeda
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
             );
@@ -522,10 +530,16 @@ export function SurebetTableRow({
                         </button>
                       )}
                     </div>
-                    {subInsufficient && (
-                      <span className="text-[9px] text-destructive font-medium">
-                        {isSubFB ? 'FB insuf.' : 'Saldo insuf.'}
-                      </span>
+                    {subInsufficient && addBookmaker && (
+                      <div className="text-[9px] text-destructive font-medium leading-tight text-center max-w-[100px]">
+                        <div>{isSubFB ? 'FB insuficiente' : 'Saldo insuficiente'}</div>
+                        <div className="opacity-80">
+                          Disp: {formatCurrency(
+                            isSubFB ? addBookmaker.saldo_freebet : addBookmaker.saldo_operavel, 
+                            addBookmaker.moeda
+                          )}
+                        </div>
+                      </div>
                     )}
                   </div>
                 );

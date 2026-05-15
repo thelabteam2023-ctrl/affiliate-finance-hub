@@ -335,21 +335,46 @@ export function SurebetModalRoot({
    * 
    * CRÍTICO para evitar overbetting na mesma casa em múltiplas pernas.
    */
-  const getAdjustedBookmakersForLeg = useCallback((legIndex: number) => {
+  /**
+   * Retorna bookmakers com saldos ajustados para uma perna específica ou sub-entrada.
+   * Desconta stakes já alocadas em TODAS AS OUTRAS pernas e sub-entradas que usam a mesma bookmaker.
+   * 
+   * @param legIndex Índice da perna
+   * @param subEntryIndex Índice da sub-entrada (se aplicável)
+   */
+  const getAdjustedBookmakersForLeg = useCallback((legIndex: number, subEntryIndex?: number) => {
     return bookmakersDisponiveis.map(bk => {
-      // Calcular quanto já foi alocado em pernas ANTERIORES para esta bookmaker
-      let alocadoEmPernasAnteriores = 0;
-      for (let i = 0; i < legIndex; i++) {
-        if (odds[i].bookmaker_id === bk.id) {
-          alocadoEmPernasAnteriores += parseFloat(odds[i].stake) || 0;
+      let alocadoOutros = 0;
+      let alocadoOutrosFB = 0;
+
+      odds.forEach((entry, i) => {
+        // Perna principal
+        if (entry.bookmaker_id === bk.id) {
+          // Se não é a entrada que estamos calculando
+          if (i !== legIndex || subEntryIndex !== undefined) {
+            const s = parseFloat(entry.stake) || 0;
+            if (entry.fonteSaldo === 'FREEBET') alocadoOutrosFB += s; else alocadoOutros += s;
+          }
         }
-      }
+
+        // Sub-entradas
+        (entry.additionalEntries || []).forEach((sub, si) => {
+          const subBk = sub.bookmaker_id || entry.bookmaker_id;
+          if (subBk === bk.id) {
+            // Se não é a sub-entrada que estamos calculando
+            if (i !== legIndex || si !== subEntryIndex) {
+              const s = parseFloat(sub.stake) || 0;
+              if (sub.fonteSaldo === 'FREEBET') alocadoOutrosFB += s; else alocadoOutros += s;
+            }
+          }
+        });
+      });
       
-      // Retornar bookmaker com saldo ajustado
       return {
         ...bk,
-        saldo_operavel: Math.max(0, bk.saldo_operavel - alocadoEmPernasAnteriores),
-        saldo_disponivel: Math.max(0, bk.saldo_disponivel - alocadoEmPernasAnteriores),
+        saldo_operavel: Math.max(0, bk.saldo_operavel - alocadoOutros),
+        saldo_disponivel: Math.max(0, bk.saldo_disponivel - alocadoOutros),
+        saldo_freebet: Math.max(0, (bk.saldo_freebet || 0) - alocadoOutrosFB),
       };
     });
   }, [bookmakersDisponiveis, odds]);
