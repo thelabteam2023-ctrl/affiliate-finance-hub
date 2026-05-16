@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { getFirstLastName } from "@/lib/utils";
 import { Gift } from "lucide-react";
 
-export type SupportedCurrency = "BRL" | "USD" | "EUR" | "GBP" | "USDT";
+ export type SupportedCurrency = "BRL" | "USD" | "EUR" | "GBP" | "MYR" | "MXN" | "ARS" | "COP" | "USDT";
 
 export interface BookmakerOptionData {
   id: string;
@@ -285,12 +285,20 @@ function getCurrencyBadgeColors(moeda: string): string {
       return "bg-blue-500/10 border-blue-500/30 text-blue-400";
     case "EUR":
       return "bg-purple-500/10 border-purple-500/30 text-purple-400";
-    case "GBP":
-      return "bg-amber-500/10 border-amber-500/30 text-amber-400";
-    default:
-      return "bg-muted border-border text-muted-foreground";
-  }
-}
+     case "GBP":
+       return "bg-amber-500/10 border-amber-500/30 text-amber-400";
+     case "MYR":
+       return "bg-teal-500/10 border-teal-500/30 text-teal-400";
+     case "MXN":
+       return "bg-orange-500/10 border-orange-500/30 text-orange-400";
+     case "ARS":
+       return "bg-cyan-500/10 border-cyan-500/30 text-cyan-400";
+     case "COP":
+       return "bg-rose-500/10 border-rose-500/30 text-rose-400";
+     default:
+       return "bg-muted border-border text-muted-foreground";
+   }
+ }
 
 /**
  * Cor do texto do saldo por moeda
@@ -304,12 +312,20 @@ export function getCurrencyTextColor(moeda: string): string {
       return "text-blue-400";
     case "EUR":
       return "text-purple-400";
-    case "GBP":
-      return "text-amber-400";
-    default:
-      return "text-muted-foreground";
-  }
-}
+     case "GBP":
+       return "text-amber-400";
+     case "MYR":
+       return "text-teal-400";
+     case "MXN":
+       return "text-orange-400";
+     case "ARS":
+       return "text-cyan-400";
+     case "COP":
+       return "text-rose-400";
+     default:
+       return "text-muted-foreground";
+   }
+ }
 
 /**
  * Símbolo da moeda
@@ -318,12 +334,16 @@ export function getCurrencySymbol(moeda: string): string {
   const symbols: Record<string, string> = { 
     BRL: "R$", 
     USD: "$", 
-    EUR: "€", 
-    GBP: "£", 
-    USDT: "$" 
-  };
-  return symbols[moeda] || moeda;
-}
+     EUR: "€", 
+     GBP: "£", 
+     MYR: "RM",
+     MXN: "MX$",
+     ARS: "AR$",
+     COP: "CO$",
+     USDT: "$" 
+   };
+   return symbols[moeda] || moeda;
+ }
 
 /**
  * Formata valor na moeda correta

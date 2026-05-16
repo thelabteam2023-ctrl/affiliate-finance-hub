@@ -469,7 +469,7 @@ export default function GestaoProjetos() {
   };
 
   const MOEDA_SYMBOLS: Record<string, string> = {
-    BRL: 'R$', USD: '$', EUR: '€', GBP: '£', MYR: 'RM', MXN: 'MX$', ARS: 'AR$', COP: 'COL$',
+     BRL: 'R$', USD: '$', EUR: '€', GBP: '£', MYR: 'RM', MXN: 'MX$', ARS: 'AR$', COP: 'CO$',
   };
 
   const formatCurrencyValue = (value: number, moeda: string = "BRL") => {

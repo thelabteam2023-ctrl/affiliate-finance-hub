@@ -8,10 +8,6 @@
  * 4. Valores históricos NUNCA são recalculados
  */
 
-// Moedas FIAT suportadas pelo sistema
-export type FiatCurrency = "BRL" | "USD" | "EUR" | "GBP" | "MYR" | "MXN" | "ARS" | "COP";
-
-// Moedas CRYPTO suportadas pelo sistema
 export type CryptoCurrency = 
   | "USDT" 
   | "USDC" 
@@ -35,17 +31,21 @@ export type SupportedCurrency = FiatCurrency | CryptoCurrency;
 // Tipo para moeda com discriminador
 export type CurrencyType = "FIAT" | "CRYPTO";
 
-// Lista de moedas FIAT disponíveis para bookmakers
-export const FIAT_CURRENCIES: Array<{ value: FiatCurrency; label: string; symbol: string }> = [
-  { value: "BRL", label: "Real Brasileiro", symbol: "R$" },
-  { value: "USD", label: "Dólar Americano", symbol: "$" },
-  { value: "EUR", label: "Euro", symbol: "€" },
-  { value: "GBP", label: "Libra Esterlina", symbol: "£" },
-  { value: "MYR", label: "Ringgit Malaio", symbol: "RM" },
-  { value: "MXN", label: "Peso Mexicano", symbol: "MX$" },
-  { value: "ARS", label: "Peso Argentino", symbol: "AR$" },
-  { value: "COP", label: "Peso Colombiano", symbol: "CO$" },
-];
+ // Moedas FIAT suportadas pelo sistema
+ export type FiatCurrency = "BRL" | "USD" | "EUR" | "GBP" | "MYR" | "MXN" | "ARS" | "COP";
+ 
+ // Moedas CRYPTO suportadas pelo sistema
+ // Lista de moedas FIAT disponíveis para bookmakers
+ export const FIAT_CURRENCIES: Array<{ value: FiatCurrency; label: string; symbol: string }> = [
+   { value: "BRL", label: "Real Brasileiro", symbol: "R$" },
+   { value: "USD", label: "Dólar Americano", symbol: "$" },
+   { value: "EUR", label: "Euro", symbol: "€" },
+   { value: "GBP", label: "Libra Esterlina", symbol: "£" },
+   { value: "MYR", label: "Ringgit Malaio", symbol: "RM" },
+   { value: "MXN", label: "Peso Mexicano", symbol: "MX$" },
+   { value: "ARS", label: "Peso Argentino", symbol: "AR$" },
+   { value: "COP", label: "Peso Colombiano", symbol: "CO$" },
+ ];
 
 // Lista de moedas CRYPTO disponíveis
 export const CRYPTO_CURRENCIES: Array<{ value: CryptoCurrency; label: string; symbol: string; isStablecoin: boolean }> = [
