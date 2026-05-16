@@ -642,6 +642,7 @@ function deriveBreakdowns(
     // Resultado Cambial REMOVIDO — vive em Indicadores Financeiros/Caixa, não no Lucro Operacional.
     createModuleContribution('promocional', 'Eventos Promocionais', extrasAgrupados.promocional?.total || 0, (extrasAgrupados.promocional?.count || 0) > 0, { icon: 'Megaphone', color: (extrasAgrupados.promocional?.total || 0) >= 0 ? 'positive' : 'negative' }),
     createModuleContribution('freebet', 'Freebet Convertida', extrasAgrupados.freebet?.total || 0, (extrasAgrupados.freebet?.count || 0) > 0, { icon: 'Gift', color: (extrasAgrupados.freebet?.total || 0) >= 0 ? 'positive' : 'negative' }),
+    createModuleContribution('bonus_perdas', 'Cancelamento de Bônus', extrasAgrupados.bonus?.total || 0, (extrasAgrupados.bonus?.count || 0) > 0, { icon: 'XCircle', color: 'negative' }),
   ], moedaConsolidacao);
 
   // RECONCILIAÇÃO
