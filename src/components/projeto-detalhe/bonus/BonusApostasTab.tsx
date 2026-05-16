@@ -1122,11 +1122,11 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
               key={sb.id}
               surebet={surebetData}
               isBonusContext={true}
-              formatCurrency={formatProjectCurrency}
-              convertToConsolidation={convertToConsolidation}
-              moedaConsolidacao={moedaConsolidacao}
-              bookmakerNomeMap={bookmakerNomeMap}
-              onEdit={(surebet) => {
+               formatCurrency={formatCurrency}
+               convertToConsolidation={convertToConsolidation}
+               moedaConsolidacao={moedaConsolidacao}
+               bookmakerNomeMap={bookmakerNomeMap}
+               onEdit={(surebet) => {
                 // Abrir em janela externa
                 const url = `/janela/surebet/${surebet.id}?projetoId=${encodeURIComponent(projetoId)}&tab=bonus`;
                 window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
@@ -1194,13 +1194,13 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
                 onQuickResolve={(surebetId, result) => handleQuickResolveSurebet(surebetId, result)}
                 onSimpleMenuQuickResolve={handleQuickResolve}
                 onPernaResultChange={handleSurebetPernaResolve}
-                 onDelete={handleDeleteAposta}
-                 onDuplicate={handleDuplicateSimples}
-                formatCurrency={formatProjectCurrency}
-                convertToConsolidation={convertToConsolidation}
-                moedaConsolidacao={moedaConsolidacao}
-                bookmakerNomeMap={bookmakerNomeMap}
-              />
+                  onDelete={handleDeleteAposta}
+                  onDuplicate={handleDuplicateSimples}
+                 formatCurrency={formatCurrency}
+                 convertToConsolidation={convertToConsolidation}
+                 moedaConsolidacao={moedaConsolidacao}
+                 bookmakerNomeMap={bookmakerNomeMap}
+               />
             );
           }
 
@@ -1237,12 +1237,12 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
                variant={viewMode === "cards" ? "card" : "list"}
                onEdit={() => handleOpenDialog(aposta)}
                onQuickResolve={handleQuickResolve}
-                onDelete={handleDeleteAposta}
-                onDuplicate={handleDuplicateSimples}
-               formatCurrency={formatProjectCurrency}
-               convertToConsolidation={convertToConsolidation}
-               moedaConsolidacao={moedaConsolidacao}
-             />
+                 onDelete={handleDeleteAposta}
+                 onDuplicate={handleDuplicateSimples}
+                formatCurrency={formatCurrency}
+                convertToConsolidation={convertToConsolidation}
+                moedaConsolidacao={moedaConsolidacao}
+              />
            );
         }
         
@@ -1281,12 +1281,12 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
              variant={viewMode === "cards" ? "card" : "list"}
              onEdit={() => handleOpenMultiplaDialog(multipla)}
              onQuickResolve={handleQuickResolve}
-              onDelete={handleDeleteAposta}
-              onDuplicate={handleDuplicateMultipla}
-             formatCurrency={formatProjectCurrency}
-             convertToConsolidation={convertToConsolidation}
-             moedaConsolidacao={moedaConsolidacao}
-           />
+                onDelete={handleDeleteAposta}
+                onDuplicate={handleDuplicateMultipla}
+               formatCurrency={formatCurrency}
+               convertToConsolidation={convertToConsolidation}
+               moedaConsolidacao={moedaConsolidacao}
+             />
          );
       })}
     </div>
