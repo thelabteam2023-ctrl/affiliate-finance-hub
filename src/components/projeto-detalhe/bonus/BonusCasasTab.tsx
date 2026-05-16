@@ -246,13 +246,16 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
     setFinalizeDialogOpen(true);
   };
 
-  const handleConfirmFinalize = async (reason: FinalizeReason): Promise<boolean> => {
-    if (!bonusToFinalize) return false;
-    const success = await finalizeBonus(bonusToFinalize.id, reason);
-      if (success) setFinalizeDialogOpen(false);
-      setBonusToFinalize(null);
-    };
-    if (!expiryDate) return null;
+   const handleConfirmFinalize = async (reason: FinalizeReason): Promise<boolean> => {
+     if (!bonusToFinalize) return false;
+     const success = await finalizeBonus(bonusToFinalize.id, reason);
+     if (success) setFinalizeDialogOpen(false);
+     setBonusToFinalize(null);
+     return success;
+   };
+ 
+   const getExpiryBadge = (expiryDate: Date | null) => {
+     if (!expiryDate) return null;
     // Compare against start of today to avoid partial-day miscounts
     const today = new Date();
     today.setHours(0, 0, 0, 0);
