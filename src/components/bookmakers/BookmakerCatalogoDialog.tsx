@@ -659,11 +659,13 @@ export default function BookmakerCatalogoDialog({
                             <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="BRL">BRL</SelectItem>
-                              <SelectItem value="USD">USD</SelectItem>
-                              <SelectItem value="EUR">EUR</SelectItem>
-                            </SelectContent>
+                             <SelectContent>
+                               {FIAT_CURRENCIES.map((currency) => (
+                                 <SelectItem key={currency.value} value={currency.value}>
+                                   {currency.symbol} {currency.value} ({currency.label})
+                                 </SelectItem>
+                               ))}
+                             </SelectContent>
                           </Select>
                         </div>
                         <div className="space-y-2">
