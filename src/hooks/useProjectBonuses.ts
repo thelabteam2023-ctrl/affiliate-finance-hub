@@ -4,7 +4,7 @@ import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { registrarBonusCreditadoViaLedger, estornarBonusViaLedger, getBookmakerMoeda } from "@/lib/ledgerService";
+import { registrarBonusCreditadoViaLedger, estornarBonusViaLedger, getBookmakerMoeda, registrarAjusteViaLedger } from "@/lib/ledgerService";
 import { creditarFreebetViaLedger, estornarFreebetViaLedger } from "@/lib/freebetLedgerService";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { FREEBET_ESTOQUE_KEYS } from "@/hooks/freebet-estoque/types";
@@ -688,35 +688,19 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
             }
           }
         } else {
-          // Para BONUS: débito via cash_ledger (comportamento existente)
-          const { error: ledgerError } = await supabase
-            .from("cash_ledger")
-            .insert({
-              tipo_transacao: "AJUSTE_SALDO",
-              tipo_moeda: "FIAT",
-              moeda: currentBonus.currency || "BRL",
-              valor: debitAmount!,
-              status: "CONFIRMADO",
-              data_transacao: getTodayCivilDate(),
-              data_confirmacao: new Date().toISOString(),
-              impacta_caixa_operacional: false,
-              user_id: userData.user.id,
-              workspace_id: currentBonus.workspace_id || "",
-              origem_tipo: "BOOKMAKER",
-              origem_bookmaker_id: currentBonus.bookmaker_id,
-              projeto_id_snapshot: currentBonus.project_id,
-              ajuste_direcao: "SAIDA",
-              ajuste_motivo: `BONUS_CANCELAMENTO`,
-              descricao: `Débito por cancelamento de bônus: ${currentBonus.title || "Bônus"} — valor perdido`,
-              auditoria_metadata: {
-                tipo: "BONUS_CANCELAMENTO",
-                bonus_id: id,
-                bonus_title: currentBonus.title,
-                valor_perdido: debitAmount,
-              },
-            });
+          // Para BONUS: débito via ledgerService (com suporte a projetoIdSnapshot)
+          const result = await registrarAjusteViaLedger({
+            bookmakerId: currentBonus.bookmaker_id,
+            delta: -Math.abs(debitAmount!),
+            moeda: currentBonus.currency || "BRL",
+            workspaceId: currentBonus.workspace_id || "",
+            userId: userData.user.id,
+            descricao: `Débito por cancelamento de bônus: ${currentBonus.title || "Bônus"} — valor perdido`,
+            motivo: "BONUS_CANCELAMENTO",
+            projetoIdSnapshot: currentBonus.project_id,
+          });
 
-          if (ledgerError) {
+          if (!result.success) {
             // Rollback de estado para evitar bônus finalizado sem débito financeiro
             await supabase
               .from("project_bookmaker_link_bonuses")
