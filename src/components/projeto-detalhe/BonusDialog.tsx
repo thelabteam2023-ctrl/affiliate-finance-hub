@@ -50,11 +50,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { 
-  FIAT_CURRENCIES, 
-  CRYPTO_CURRENCIES, 
-  getCurrencySymbol,
-  type SupportedCurrency 
-} from "@/types/currency";
+   FIAT_CURRENCIES, 
+   CRYPTO_CURRENCIES, 
+   type SupportedCurrency 
+ } from "@/types/currency";
 
 interface BookmakerOption {
   id: string;
@@ -89,11 +88,19 @@ const STATUS_OPTIONS: { value: BonusStatus; label: string; color: string }[] = [
   { value: "reversed", label: "Estornado", color: "text-orange-400" },
 ];
 
-// Todas as moedas suportadas pelo sistema (FIAT + CRYPTO mais comuns)
-const ALL_CURRENCY_OPTIONS: { value: string; label: string }[] = [
-  ...FIAT_CURRENCIES.map(c => ({ value: c.value, label: `${c.symbol} ${c.value}` })),
-  ...CRYPTO_CURRENCIES.filter(c => c.isStablecoin).map(c => ({ value: c.value, label: `${c.symbol} ${c.value}` })),
-];
+ import { getCurrencySymbol } from "@/components/bookmakers/BookmakerSelectOption";
+ 
+ // Todas as moedas suportadas pelo sistema (FIAT + CRYPTO mais comuns)
+ const ALL_CURRENCY_OPTIONS: { value: string; label: string }[] = [
+   ...FIAT_CURRENCIES.map(c => ({ 
+     value: c.value, 
+     label: `${getCurrencySymbol(c.value)} ${c.value} (${c.label})` 
+   })),
+   ...CRYPTO_CURRENCIES.filter(c => c.isStablecoin).map(c => ({ 
+     value: c.value, 
+     label: `${getCurrencySymbol(c.value)} ${c.value} (${c.label})` 
+   })),
+ ];
 
 const ROLLOVER_BASE_OPTIONS: { value: string; label: string }[] = [
   { value: "DEPOSITO", label: "Depósito" },

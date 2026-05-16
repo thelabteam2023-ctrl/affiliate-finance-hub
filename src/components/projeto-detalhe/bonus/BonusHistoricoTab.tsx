@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+ import { useState, useMemo } from "react";
+ import { formatCurrency as formatCurrencyValue } from "@/components/bookmakers/BookmakerSelectOption";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -132,18 +133,11 @@ export function BonusHistoricoTab({ projetoId }: BonusHistoricoTabProps) {
     gcTime: PERIOD_GC_TIME,
   });
 
-  const debitByBonusId = useMemo(() => {
-    const map = new Map<string, number>();
-    bonusDebits.forEach(d => map.set(d.bonusId, (map.get(d.bonusId) || 0) + d.valor));
-    return map;
-  }, [bonusDebits]);
-
-  const formatCurrencyValue = (value: number, moeda: string = 'BRL') => {
-    const symbols: Record<string, string> = { BRL: 'R$', USD: '$', EUR: '€', GBP: '£', USDT: '$', USDC: '$' };
-    return `${symbols[moeda] || moeda} ${value.toFixed(2)}`;
-  };
-
-  // Merge bonus finalizados + ajustes into unified timeline
+    const debitByBonusId = useMemo(() => {
+      const map = new Map<string, number>();
+      bonusDebits.forEach(d => map.set(d.bonusId, (map.get(d.bonusId) || 0) + d.valor));
+      return map;
+    }, [bonusDebits]);
   const entries = useMemo((): HistoricoEntry[] => {
     const finalizedBonuses = bonuses.filter(b => b.status === 'finalized');
     const bonusEntries: HistoricoEntry[] = finalizedBonuses.map(b => ({

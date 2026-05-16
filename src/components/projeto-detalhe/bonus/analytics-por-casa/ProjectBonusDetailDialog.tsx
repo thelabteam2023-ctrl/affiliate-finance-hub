@@ -32,10 +32,7 @@ interface ProjectBonusDetailDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-function formatCurrency(value: number, currency: string): string {
-  const symbols: Record<string, string> = { BRL: 'R$', USD: '$', EUR: '€', GBP: '£', USDT: 'USDT' };
-  return `${symbols[currency] || currency} ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
-}
+ import { formatCurrency } from "@/components/bookmakers/BookmakerSelectOption";
 
 function getRiskLevel(problemIndex: number): { label: string; color: string; bg: string } {
   if (problemIndex === 0) return { label: 'Confiável', color: 'text-emerald-500', bg: 'bg-emerald-500/10' };
