@@ -673,11 +673,12 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
           // Para FREEBET: estornar saldo_freebet via engine financeiro
           const valorEstorno = debitAmount || (currentBonus as any).valor_creditado_no_saldo || (currentBonus as any).bonus_amount || 0;
           if (valorEstorno > 0) {
-            const result = await estornarFreebetViaLedger(
-              currentBonus.bookmaker_id,
-              valorEstorno,
-              `Estorno por cancelamento de freebet: ${currentBonus.title || 'Freebet'}`
-            );
+          const result = await estornarFreebetViaLedger(
+            currentBonus.bookmaker_id,
+            valorEstorno,
+            `Estorno por cancelamento de freebet: ${currentBonus.title || 'Freebet'}`,
+            { projetoIdSnapshot: currentBonus.project_id }
+          );
             if (!result.success) {
               // Rollback
               await supabase
