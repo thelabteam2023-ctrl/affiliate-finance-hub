@@ -126,7 +126,7 @@ export async function fetchProjetoExtras(projetoId: string): Promise<ProjetoExtr
     fetchGirosGratis(projetoId),
     fetchBonusCreditados(projetoId, projectBookmakerMoeda, moedaConsolidacaoProjeto),
     fetchEventosPromocionais(projectBookmakerIds),
-    fetchPerdasCancelamentoBonuses(projectBookmakerIds),
+    fetchPerdasCancelamentoBonuses(projetoId, projectBookmakerIds),
     fetchAjustesSaldo(projetoId),
     fetchConciliacoes(projetoId, projectBookmakerMoeda),
     fetchPerdasOperacionais(projetoId),
@@ -259,16 +259,15 @@ async function fetchEventosPromocionais(
 }
 
 async function fetchPerdasCancelamentoBonuses(
+  projetoId: string,
   projectBookmakerIds: Set<string>
 ): Promise<ProjetoExtraEntry[]> {
-  if (projectBookmakerIds.size === 0) return [];
-
   const { data } = await supabase
     .from('cash_ledger')
     .select('valor, moeda, origem_bookmaker_id, data_transacao, auditoria_metadata')
     .eq('ajuste_motivo', 'BONUS_CANCELAMENTO')
     .eq('ajuste_direcao', 'SAIDA')
-    .in('origem_bookmaker_id', Array.from(projectBookmakerIds));
+    .filter('projeto_id_snapshot', 'eq', projetoId);
 
   return (data || []).map((entry: any) => {
     const meta = typeof entry.auditoria_metadata === 'string'
@@ -279,7 +278,7 @@ async function fetchPerdasCancelamentoBonuses(
       data: extractCivilDateKey(entry.data_transacao),
       valor: -valorPerdido,
       moeda: entry.moeda || 'BRL',
-      tipo: 'promocional' as ExtraTipo,
+      tipo: 'bonus' as ExtraTipo,
     };
   }).filter(e => e.valor !== 0);
 }
