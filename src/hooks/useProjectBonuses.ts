@@ -706,7 +706,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
               .from("project_bookmaker_link_bonuses")
               .update({ status: "credited", finalized_at: null, finalized_by: null, finalize_reason: null } as any)
               .eq("id", id);
-            throw new Error(`Falha ao debitar valor perdido no saldo: ${ledgerError.message}`);
+            throw new Error(`Falha ao debitar valor perdido no saldo: ${result.error}`);
           }
         }
       }
