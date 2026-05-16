@@ -657,16 +657,16 @@ export default function BookmakerDialog({
                       <SelectTrigger className={cn("h-9 text-sm", hasFinancialOperations && "bg-muted/50 cursor-not-allowed")}>
                         <SelectValue placeholder="Selecione a moeda" />
                       </SelectTrigger>
-                      <SelectContent>
-                        {FIAT_CURRENCIES.map((currency) => (
-                          <SelectItem key={currency.value} value={currency.value}>
-                            <div className="flex items-center gap-2">
-                              <span className="font-mono text-xs">{currency.symbol}</span>
-                              <span>{currency.value} - {currency.label}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
+                       <SelectContent>
+                         {FIAT_CURRENCIES.map((currency) => (
+                           <SelectItem key={currency.value} value={currency.value}>
+                             <div className="flex items-center gap-2">
+                               <span className="font-mono text-xs">{currency.symbol} {currency.value}</span>
+                               <span className="text-muted-foreground">({currency.label})</span>
+                             </div>
+                           </SelectItem>
+                         ))}
+                       </SelectContent>
                     </Select>
 
                     {hasFinancialOperations ? (
