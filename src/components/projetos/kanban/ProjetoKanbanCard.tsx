@@ -86,7 +86,7 @@ const getStatusLabel = (status: string) => {
 };
 
 const MOEDA_SYMBOLS: Record<string, string> = {
-  BRL: 'R$', USD: '$', EUR: '€', GBP: '£', MYR: 'RM', MXN: 'MX$', ARS: 'AR$', COP: 'COL$',
+   BRL: 'R$', USD: '$', EUR: '€', GBP: '£', MYR: 'RM', MXN: 'MX$', ARS: 'AR$', COP: 'CO$',
 };
 
 const formatByMoeda = (value: number, moeda: string) => {
