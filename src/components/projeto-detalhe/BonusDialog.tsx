@@ -50,11 +50,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { 
-  FIAT_CURRENCIES, 
-  CRYPTO_CURRENCIES, 
-  getCurrencySymbol,
-  type SupportedCurrency 
-} from "@/types/currency";
+   FIAT_CURRENCIES, 
+   CRYPTO_CURRENCIES, 
+   type SupportedCurrency 
+ } from "@/types/currency";
 
 interface BookmakerOption {
   id: string;
