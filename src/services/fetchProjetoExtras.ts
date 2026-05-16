@@ -267,7 +267,7 @@ async function fetchPerdasCancelamentoBonuses(
     .select('valor, moeda, origem_bookmaker_id, data_transacao, auditoria_metadata')
     .eq('ajuste_motivo', 'BONUS_CANCELAMENTO')
     .eq('ajuste_direcao', 'SAIDA')
-    .or(`projeto_id_snapshot.eq.${projetoId},origem_bookmaker_id.in.(${Array.from(projectBookmakerIds).join(',') || '00000000-0000-0000-0000-000000000000'})`);
+    .filter('projeto_id_snapshot', 'eq', projetoId);
 
   return (data || []).map((entry: any) => {
     const meta = typeof entry.auditoria_metadata === 'string'
