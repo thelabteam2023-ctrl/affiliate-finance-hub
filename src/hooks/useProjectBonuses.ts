@@ -676,8 +676,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
           const result = await estornarFreebetViaLedger(
             currentBonus.bookmaker_id,
             valorEstorno,
-            `Estorno por cancelamento de freebet: ${currentBonus.title || 'Freebet'}`,
-            { projetoIdSnapshot: currentBonus.project_id }
+            `Estorno por cancelamento de freebet: ${currentBonus.title || 'Freebet'}`
           );
             if (!result.success) {
               // Rollback
