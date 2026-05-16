@@ -35,7 +35,8 @@ import { liquidarSurebet, deletarAposta, reliquidarAposta, liquidarPernaSurebet,
 import { ExportMenu, transformSurebetToExport, transformApostaToExport } from "../ExportMenu";
 import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
 import { getConsolidatedStake, getConsolidatedLucro } from "@/utils/consolidatedValues";
-import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
+ import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
+ import { formatCurrency } from "@/components/bookmakers/BookmakerSelectOption";
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { type SurebetQuickResult } from "@/components/apostas/SurebetRowActionsMenu";
@@ -190,7 +191,7 @@ type ApostaUnificada = {
 export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApostasTabProps) {
   const queryClient = useQueryClient();
   const { getBookmakersWithActiveBonus, bonuses } = useProjectBonuses({ projectId: projetoId });
-  const { convertToConsolidation, moedaConsolidacao, formatCurrency: formatProjectCurrency } = useProjetoCurrency(projetoId);
+   const { convertToConsolidation, moedaConsolidacao } = useProjetoCurrency(projetoId);
   
   // Use refs to track previous values and prevent infinite loops
   const prevBonusIdsRef = useRef<string>("");
