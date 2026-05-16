@@ -279,7 +279,7 @@ async function fetchPerdasCancelamentoBonuses(
       data: extractCivilDateKey(entry.data_transacao),
       valor: -valorPerdido,
       moeda: entry.moeda || 'BRL',
-      tipo: 'promocional' as ExtraTipo,
+      tipo: 'bonus' as ExtraTipo,
     };
   }).filter(e => e.valor !== 0);
 }
