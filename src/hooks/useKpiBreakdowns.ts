@@ -311,7 +311,7 @@ interface ExtraAgrupado {
 
 // NOTA: 'resultado_cambial' (GANHO/PERDA_CAMBIAL) foi REMOVIDO do Lucro Operacional.
 // FX é evento de tesouraria, não de operação de aposta. Vive em Indicadores Financeiros/Caixa.
-type ExtraTipo = 'ajuste_saldo' | 'promocional' | 'freebet';
+type ExtraTipo = 'ajuste_saldo' | 'promocional' | 'freebet' | 'bonus';
 
 function deriveExtrasFromRpc(
   rawData: ProjetoDashboardRawData,
@@ -345,7 +345,7 @@ function deriveExtrasFromRpc(
           const meta = typeof le.auditoria_metadata === 'string' ? JSON.parse(le.auditoria_metadata) : le.auditoria_metadata;
           const valorPerdido = Number(meta?.valor_perdido ?? valor) || 0;
           if (valorPerdido !== 0) {
-            addEntry('promocional', -valorPerdido, moeda);
+            addEntry('bonus', -valorPerdido, moeda);
           }
         } else {
           // Ajuste de saldo normal
@@ -372,7 +372,7 @@ function deriveExtrasFromRpc(
 
   // Converter Maps para arrays
   const formatted: Record<string, ExtraAgrupado> = {};
-  const tipos: ExtraTipo[] = ['ajuste_saldo', 'promocional', 'freebet'];
+  const tipos: ExtraTipo[] = ['ajuste_saldo', 'promocional', 'freebet', 'bonus'];
   tipos.forEach(tipo => {
     const data = result[tipo];
     formatted[tipo] = {
