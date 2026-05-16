@@ -252,10 +252,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
     setBonusToFinalize(null);
   };
 
-  const formatCurrency = (value: number, moeda: string = 'BRL') => {
-    const symbols: Record<string, string> = { BRL: 'R$', USD: '$', EUR: '€', GBP: '£' };
-    return `${symbols[moeda] || moeda} ${value.toFixed(2)}`;
-  };
+   import { formatCurrency } from "@/components/bookmakers/BookmakerSelectOption";
 
   const getExpiryBadge = (expiryDate: Date | null) => {
     if (!expiryDate) return null;

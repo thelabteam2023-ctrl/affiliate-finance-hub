@@ -138,10 +138,7 @@ export function BonusHistoricoTab({ projetoId }: BonusHistoricoTabProps) {
     return map;
   }, [bonusDebits]);
 
-  const formatCurrencyValue = (value: number, moeda: string = 'BRL') => {
-    const symbols: Record<string, string> = { BRL: 'R$', USD: '$', EUR: '€', GBP: '£', USDT: '$', USDC: '$' };
-    return `${symbols[moeda] || moeda} ${value.toFixed(2)}`;
-  };
+   import { formatCurrency as formatCurrencyValue } from "@/components/bookmakers/BookmakerSelectOption";
 
   // Merge bonus finalizados + ajustes into unified timeline
   const entries = useMemo((): HistoricoEntry[] => {

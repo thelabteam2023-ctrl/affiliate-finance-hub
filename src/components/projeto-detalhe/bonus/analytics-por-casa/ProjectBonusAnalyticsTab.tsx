@@ -22,10 +22,7 @@ import { useWithdrawalLeadTime, formatLeadTimeDays } from "@/hooks/useWithdrawal
 import { ProjectBonusAnalyticsSummary } from "./ProjectBonusAnalyticsSummary";
 import { ProjectBonusDetailDialog } from "./ProjectBonusDetailDialog";
 
-function formatCurrency(value: number, currency: string): string {
-  const symbols: Record<string, string> = { BRL: 'R$', USD: '$', EUR: '€', GBP: '£', USDT: 'USDT' };
-  return `${symbols[currency] || currency} ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
-}
+ import { formatCurrency } from "@/components/bookmakers/BookmakerSelectOption";
 
 interface ProjectBonusAnalyticsTabProps {
   projectId: string;
