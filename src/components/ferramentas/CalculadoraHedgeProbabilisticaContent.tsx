@@ -829,10 +829,13 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                               className="p-3 rounded-lg bg-muted/20 border border-border/50 hover:border-primary/50 transition-all cursor-pointer group"
                               onClick={() => applyGoldenCombo(combo.legs)}
                             >
-                              <div className="flex justify-between items-start mb-1">
-                                <span className="text-[10px] font-bold text-primary uppercase">{combo.type}</span>
-                                <Badge variant="secondary" className="text-[9px] h-4">{combo.expectedROI} ROI</Badge>
-                              </div>
+                               <div className="flex justify-between items-start mb-1">
+                                 <div className="flex flex-col">
+                                   <span className="text-[10px] font-bold text-primary uppercase">{combo.type}</span>
+                                   <span className="text-[8px] text-muted-foreground">Comissão ref: {combo.commission}</span>
+                                 </div>
+                                 <Badge variant="secondary" className="text-[9px] h-4">{combo.expectedROI} ROI</Badge>
+                               </div>
                               <h5 className="text-sm font-bold flex items-center gap-2 group-hover:text-primary transition-colors">
                                 {combo.name}
                                 <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
