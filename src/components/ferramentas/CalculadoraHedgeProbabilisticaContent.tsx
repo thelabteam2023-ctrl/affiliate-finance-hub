@@ -145,10 +145,10 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
     }, [legs, freebet, commission, bankroll]);
 
     const monteCarloSim = useMemo(() => {
-      const trials = 1000;
+      const trials = 100000; // 100 mil ciclos para precisão máxima
       let totalProfit = 0;
       let bankruptcies = 0;
-      const results = [];
+      const samples: number[] = [];
 
       for (let i = 0; i < trials; i++) {
         const rand = Math.random();
@@ -163,19 +163,21 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
           }
         }
         
-        results.push(outcome);
+        if (i < 10) samples.push(outcome);
         totalProfit += outcome;
         if (bankroll + outcome <= 0) bankruptcies++;
       }
 
-      const winRate = results.filter(r => r > 0).length / trials;
+      const winRate = metrics.aggregatedScenarios
+        .filter(s => s.result > 0)
+        .reduce((acc, s) => acc + s.probability, 0);
       
       return {
         trials,
         avgResult: totalProfit / trials,
         winRate,
         bankruptcies,
-        samples: results.slice(0, 10)
+        samples
       };
     }, [metrics, bankroll]);
  
@@ -805,7 +807,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <LineChart className="h-4 w-4 text-emerald-400" />
-                            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Simulação Real (1.000 Eventos)</h4>
+                             <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Simulação Real (100.000 Eventos)</h4>
                           </div>
                           <Badge variant="outline" className="text-[9px] text-emerald-400 border-emerald-500/30">
                             Monte Carlo Run
