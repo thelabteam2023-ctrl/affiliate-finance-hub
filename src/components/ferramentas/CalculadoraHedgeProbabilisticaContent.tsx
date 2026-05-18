@@ -99,15 +99,6 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
      ];
    });
 
-    const [mainLayout, setMainLayout] = useState<string[]>(() => {
-      const saved = localStorage.getItem('hedge-calc-main-layout');
-      return saved ? JSON.parse(saved) : [
-        'simulation-lab',
-        'operational-profile',
-        'golden-library'
-      ];
-    });
-
    const sensors = useSensors(
      useSensor(PointerSensor, {
        activationConstraint: {
@@ -131,19 +122,6 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
        });
      }
    };
-
-    const handleMainDragEnd = (event: DragEndEvent) => {
-      const { active, over } = event;
-      if (over && active.id !== over.id) {
-        setMainLayout((items) => {
-          const oldIndex = items.indexOf(active.id as string);
-          const newIndex = items.indexOf(over.id as string);
-          const newLayout = arrayMove(items, oldIndex, newIndex);
-          localStorage.setItem('hedge-calc-main-layout', JSON.stringify(newLayout));
-          return newLayout;
-        });
-      }
-    };
 
    const applyGoldenCombo = (comboLegs: number[]) => {
      const newLegs = comboLegs.map((odd, i) => ({
@@ -1344,22 +1322,9 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                       </Card>
                     </div>
  
-                    {/* Draggable Main Sections */}
-                    <DndContext 
-                      sensors={sensors}
-                      collisionDetection={closestCenter}
-                      onDragEnd={handleMainDragEnd}
-                      modifiers={[restrictToVerticalAxis]}
-                    >
-                      <SortableContext 
-                        items={mainLayout}
-                        strategy={verticalListSortingStrategy}
-                      >
-                        <div className="space-y-6">
-                          {mainLayout.map((id) => (
-                            <SortableLabCard key={id} id={id}>
-                              {id === 'simulation-lab' && (
-                                <Card>
+                    <div className="space-y-6">
+                      {/* Laboratório de Simulação e Dados */}
+                      <Card>
                                   <CardHeader>
                                     <CardTitle className="text-sm font-medium flex items-center gap-2">
                                       <Dna className="h-4 w-4 text-primary" /> Laboratório de Simulação e Dados
@@ -1494,10 +1459,9 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                     </div>
                                   </CardContent>
                                 </Card>
-                              )}
 
-                              {id === 'operational-profile' && (
-                                <Card className="bg-muted/10 border-border/50 shadow-none overflow-hidden">
+                      {/* Perfil Operacional Ativo */}
+                      <Card className="bg-muted/10 border-border/50 shadow-none overflow-hidden">
                                   <div className="p-4 border-b border-border/50 bg-muted/20 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                                     <div>
                                       <div className="flex items-center gap-2">
@@ -1576,10 +1540,9 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                     )}
                                   </CardContent>
                                 </Card>
-                              )}
 
-                              {id === 'golden-library' && (
-                                <Card>
+                      {/* Biblioteca de Ouro */}
+                      <Card>
                                   <CardContent className="pt-6">
                                     <div className="space-y-4">
                                       <div className="flex items-center justify-between">
@@ -1646,12 +1609,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                     </div>
                                   </CardContent>
                                 </Card>
-                              )}
-                            </SortableLabCard>
-                          ))}
-                        </div>
-                      </SortableContext>
-                    </DndContext>
+                    </div>
                   </div>
                 </div>
               )
