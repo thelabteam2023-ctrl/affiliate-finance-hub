@@ -14,9 +14,11 @@ import {
 import { 
   HedgeProbabilisticoEngine, 
   type LegInput,
-  type HedgeResult 
+  type HedgeResult,
+  type AggregatedScenario
 } from '@/lib/hedge-probabilistico-engine';
 import { CardInfoTooltip } from '@/components/ui/card-info-tooltip';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
@@ -29,6 +31,7 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
     { name: 'Evento 1', backOdd: 2.0, layOdd: 2.0 },
     { name: 'Evento 2', backOdd: 2.0, layOdd: 2.0 }
   ]);
+  const [expanded, setExpanded] = useState<AggregatedScenario | null>(null);
 
   const metrics: HedgeResult = useMemo(() => {
     return HedgeProbabilisticoEngine.calculateMetrics(
@@ -309,14 +312,24 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {metrics.scenarios
-                    .sort((a, b) => b.probability - a.probability)
-                    .map((scenario, idx) => (
-                    <div key={idx} className="flex items-center gap-3 p-2 rounded-lg bg-muted/20 border border-border/50">
+                  {metrics.aggregatedScenarios.map((scenario, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => scenario.subScenarios.length > 1 && setExpanded(scenario)}
+                      className={`w-full text-left flex items-center gap-3 p-2 rounded-lg bg-muted/20 border border-border/50 transition-colors ${
+                        scenario.subScenarios.length > 1 ? 'hover:bg-muted/40 cursor-pointer' : 'cursor-default'
+                      }`}
+                    >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Cenário {idx + 1}</span>
                           <span className="text-xs font-medium truncate">{scenario.description}</span>
+                          {scenario.subScenarios.length > 1 && (
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4">
+                              {scenario.subScenarios.length} combinações
+                            </Badge>
+                          )}
                         </div>
                         <div className="flex gap-4">
                           <div className="flex flex-col">
@@ -337,13 +350,46 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
                           style={{ width: `${scenario.probability * 100}%` }}
                         />
                       </div>
-                    </div>
+                      {scenario.subScenarios.length > 1 && (
+                        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                      )}
+                    </button>
                   ))}
                 </div>
               </CardContent>
             </Card>
           </div>
         </div>
+
+        <Dialog open={!!expanded} onOpenChange={(o) => !o && setExpanded(null)}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Combinações agregadas — {expanded?.description}</DialogTitle>
+              <DialogDescription>
+                Após a primeira perda a cascata para, então estas combinações brutas convergem
+                para o mesmo resultado. Probabilidade somada: {fmtPct((expanded?.probability || 0) * 100)}.
+              </DialogDescription>
+            </DialogHeader>
+            <ScrollArea className="max-h-[60vh]">
+              <div className="space-y-2 pr-2">
+                {expanded?.subScenarios
+                  .slice()
+                  .sort((a, b) => b.probability - a.probability)
+                  .map((sub, i) => (
+                    <div key={i} className="flex items-center justify-between p-2 rounded-md bg-muted/30 border border-border/40">
+                      <span className="text-xs font-mono">{sub.path.join(' → ')}</span>
+                      <div className="flex gap-4 text-xs font-mono">
+                        <span className="text-primary">{fmtPct(sub.probability * 100)}</span>
+                        <span className={sub.result >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+                          R$ {fmt(sub.result)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
       </div>
     </ScrollArea>
   );
