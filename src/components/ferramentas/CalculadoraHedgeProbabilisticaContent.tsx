@@ -107,49 +107,6 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
    }, [maxLabTotalOdd]);
 
 
-  export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
-   const [labLayout, setLabLayout] = useState<string[]>(() => {
-     const saved = localStorage.getItem('hedge-calc-lab-layout');
-     return saved ? JSON.parse(saved) : LAB_DEFAULT_LAYOUT;
-   });
-
-   useEffect(() => {
-     localStorage.setItem('hedge-calc-lab-layout', JSON.stringify(labLayout));
-   }, [labLayout]);
-
-   const sensors = useSensors(
-     useSensor(PointerSensor, {
-       activationConstraint: {
-         distance: 8,
-       },
-     }),
-     useSensor(KeyboardSensor, {
-       coordinateGetter: sortableKeyboardCoordinates,
-     })
-   );
-
-   const handleDragEnd = (event: DragEndEvent) => {
-     const { active, over } = event;
-     if (over && active.id !== over.id) {
-       setLabLayout((items) => {
-         const oldIndex = items.indexOf(active.id as string);
-         const newIndex = items.indexOf(over.id as string);
-         return arrayMove(items, oldIndex, newIndex);
-       });
-     }
-   };
-
-   const applyGoldenCombo = (comboLegs: number[]) => {
-     const newLegs = comboLegs.map((odd, i) => ({
-       name: `Evento ${i + 1}`,
-       backOdd: odd,
-       layOdd: odd
-     }));
-      setLegs(newLegs);
-      // Removido o redirecionamento para manter o usuário no Laboratório
-    };
-
-
   const [maxLabTotalOdd, setMaxLabTotalOdd] = useState<number>(() => {
     const saved = localStorage.getItem('hedge-calc-lab-max-odd');
     return saved ? Number(saved) : 8.0;
@@ -1124,7 +1081,6 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                <ShieldAlert className="h-4 w-4" /> Risco de Ruína
                              </CardTitle>
                            </CardHeader>
-                           <CardContent>
                              <div className="text-xl font-bold font-mono">{fmtPct(riskOfRuin)}</div>
                              <div className="mt-1 w-full h-1 bg-muted rounded-full overflow-hidden">
                                <div className={`h-full ${riskOfRuin > 10 ? 'bg-red-500' : 'bg-emerald-500'}`} style={{ width: `${riskOfRuin}%` }} />
