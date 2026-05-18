@@ -1354,12 +1354,18 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                               Visão dos mil primeiros ciclos (Simulação de 100.000) operando com ROI de {fmtPct(metrics.totalROI)}.
                             </p>
                           </div>
-                          <div className="flex gap-4">
-                            <div className="text-right">
-                              <span className="text-[9px] text-muted-foreground uppercase block">ROE p/ Ciclo</span>
-                              <span className="text-xs font-bold text-emerald-400">+{((metrics.totalEV / metrics.maxResponsibility) * 100).toFixed(2)}%</span>
-                            </div>
-                            <div className="text-right border-l border-border/50 pl-4">
+                           <div className="flex gap-4">
+                             <div className="text-right">
+                               <div className="flex items-center justify-end gap-1">
+                                 <span className="text-[9px] text-muted-foreground uppercase block">ROE p/ Ciclo</span>
+                                 <CardInfoTooltip 
+                                   title="ROE — Return on Exposure" 
+                                   description="Retorno esperado por ciclo sobre o capital máximo travado em Lays na Exchange. Diferença vs ROI: o ROI mede o lucro sobre o valor da freebet; o ROE mede o lucro sobre o dinheiro real que fica preso na Exchange."
+                                 />
+                               </div>
+                               <span className="text-xs font-bold text-emerald-400">+{((metrics.totalEV / metrics.maxResponsibility) * 100).toFixed(2)}%</span>
+                             </div>
+                             <div className="text-right border-l border-border/50 pl-4">
                               <span className="text-[9px] text-muted-foreground uppercase block">Exposição</span>
                               <span className="text-xs font-bold text-orange-400">{fmtPct((metrics.maxResponsibility / bankroll) * 100)}</span>
                             </div>
@@ -1450,7 +1456,13 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                    </Badge>
                                    <div className="flex flex-col items-end">
                                      <span className="text-[10px] font-bold text-white">{combo.roi} ROI</span>
-                                     <span className="text-[8px] text-muted-foreground">ROE: {combo.roe}</span>
+                                     <div className="flex items-center gap-1">
+                                       <span className="text-[8px] text-muted-foreground">ROE: {combo.roe}</span>
+                                       <CardInfoTooltip 
+                                         title="ROE (Return on Exposure)" 
+                                         description="Métrica de eficiência de capital: Lucro Esperado / Responsabilidade Máxima. Indica quanto seu dinheiro na Exchange rende por ciclo."
+                                       />
+                                     </div>
                                    </div>
                                  </div>
                                  <h5 className="text-xs font-bold flex items-center gap-2 group-hover:text-primary transition-colors mt-1">
