@@ -7,10 +7,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { CardInfoTooltip } from '@/components/ui/card-info-tooltip';
 import {
-  Zap, TrendingDown, DollarSign, BarChart3, Target,
-  Shield, ChevronDown, ChevronUp, Lightbulb, HelpCircle, Info, Percent, Plus, Copy,
+   Zap, TrendingDown, DollarSign, BarChart3, Target, LayoutGrid,
+   Shield, ChevronDown, ChevronUp, Lightbulb, HelpCircle, Info, Percent, Plus, Copy, Settings2
 } from 'lucide-react';
 import {
+  type ExtractionMode,
   type ExtractionConfig,
   type EventInput,
   type StrategyResults,
@@ -263,6 +264,8 @@ const DEFAULT_EVENTS: Record<number, EventInput[]> = {
 
 export const CalculadoraExtracaoContent: React.FC = () => {
   const [targetExtraction, setTargetExtraction] = useState('1000');
+  const [extractionMode, setExtractionMode] = useState<ExtractionMode>('proportional');
+  const [targetPercent, setTargetPercent] = useState('100');
   
   const [exchangeCommission, setExchangeCommission] = useState('2.8');
   const [numEvents, setNumEvents] = useState('2');
@@ -301,6 +304,8 @@ export const CalculadoraExtracaoContent: React.FC = () => {
 
     const config: ExtractionConfig = {
       targetExtraction: isNaN(parseFloat(targetExtraction)) ? 1000 : parseFloat(targetExtraction),
+      mode: extractionMode,
+      targetPercent: isNaN(parseFloat(targetPercent)) ? 100 : parseFloat(targetPercent),
       bankrollAvailable: 99999,
       exchangeCommission: (isNaN(parseFloat(exchangeCommission)) ? 2.8 : parseFloat(exchangeCommission)) / 100,
       events,
@@ -329,27 +334,46 @@ export const CalculadoraExtracaoContent: React.FC = () => {
 
   return (
     <ScrollArea className="h-full">
-      <div className="p-4 space-y-4 max-w-5xl mx-auto">
+      <div className="p-4 space-y-6 max-w-5xl mx-auto">
 
         {/* Header */}
-        <div className="p-3 rounded-lg bg-muted/50 border border-border">
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            <strong className="text-foreground">Como funciona:</strong> Insira as odds reais que você está vendo no mercado (back na casa + lay na exchange).
-            A calculadora simula o hedge sequencial e calcula o <strong className="text-foreground">custo real de conversão</strong> do seu bônus/freebet.
-          </p>
+        <div className="flex flex-col gap-4">
+          <div className="p-3 rounded-lg bg-muted/50 border border-border">
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              <strong className="text-foreground">Como funciona:</strong> Escolha entre o modelo <strong className="text-foreground">Proporcional</strong> (extração otimizada para as odds) ou <strong className="text-foreground">Meta de Extração</strong> (você define quanto quer converter).
+              A calculadora simula o hedge sequencial e calcula o custo real de conversão do seu bônus/freebet.
+            </p>
+          </div>
+
+          <Tabs 
+            value={extractionMode} 
+            onValueChange={(v) => setExtractionMode(v as ExtractionMode)}
+            className="w-full"
+          >
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="proportional" className="gap-2">
+                <BarChart3 className="h-4 w-4" />
+                Modelo Proporcional
+              </TabsTrigger>
+              <TabsTrigger value="target" className="gap-2">
+                <Target className="h-4 w-4" />
+                Modelo por Meta
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
         {/* Inputs */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
-              <Target className="h-4 w-4 text-primary" />
+              <Settings2 className="h-4 w-4 text-primary" />
               Parâmetros
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Financial row */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className={`grid ${extractionMode === 'target' ? 'grid-cols-3' : 'grid-cols-2'} gap-3`}>
               <div className="space-y-1.5">
                 <div className="flex items-center">
                   <Label className="text-xs">Valor a Extrair (R$)</Label>
@@ -357,6 +381,25 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                 </div>
                 <Input type="number" value={targetExtraction} onChange={e => setTargetExtraction(e.target.value)} className="h-9 text-sm" />
               </div>
+              
+              {extractionMode === 'target' && (
+                <div className="space-y-1.5">
+                  <div className="flex items-center">
+                    <Label className="text-xs">Meta de Extração (%)</Label>
+                    <InputTooltip title="Meta de Extração" description="Qual porcentagem do valor nominal da freebet você deseja extrair?" />
+                  </div>
+                  <div className="relative">
+                    <Input 
+                      type="number" 
+                      value={targetPercent} 
+                      onChange={e => setTargetPercent(e.target.value)} 
+                      className="h-9 text-sm pr-7" 
+                    />
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">%</span>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-1.5">
                 <div className="flex items-center">
                   <Label className="text-xs">Comissão Exchange (%)</Label>
@@ -413,9 +456,9 @@ export const CalculadoraExtracaoContent: React.FC = () => {
               </Tabs>
             </div>
 
-            <Button onClick={handleCalculate} className="w-full">
+             <Button onClick={handleCalculate} className="w-full" size="lg">
               <Zap className="h-4 w-4 mr-2" />
-              Calcular Custo de Conversão
+               {extractionMode === 'target' ? 'Calcular Hedge de Meta' : 'Calcular Custo de Conversão'}
             </Button>
           </CardContent>
         </Card>
@@ -425,6 +468,21 @@ export const CalculadoraExtracaoContent: React.FC = () => {
           <React.Fragment key={calcKey}>
             {/* Strategy explainer */}
             <StrategyExplainer results={results} monteCarlo={monteCarlo} targetExtraction={targetVal} />
+
+             {extractionMode === 'target' && (
+               <Card className="border-warning/30 bg-warning/5">
+                 <CardContent className="pt-4 flex gap-3 items-start">
+                   <Info className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+                   <div className="space-y-1">
+                     <p className="text-sm font-medium text-warning">Modo Meta de Extração Ativo</p>
+                     <p className="text-xs text-muted-foreground leading-relaxed">
+                       O sistema está calculando os Lays necessários para que, se qualquer evento da sequência perder na casa, 
+                       você receba exatamente <span className="text-foreground font-bold">{targetPercent}%</span> do valor nominal da freebet (R$ {fmt(targetVal * parseFloat(targetPercent) / 100)}) limpos na Exchange.
+                     </p>
+                   </div>
+                 </CardContent>
+               </Card>
+             )}
 
             {/* Strategy overview */}
             <Card className="border-primary/30">
@@ -611,9 +669,16 @@ export const CalculadoraExtracaoContent: React.FC = () => {
             {/* Hedge Table */}
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Shield className="h-4 w-4" /> Hedge Detalhado (Sequencial Condicional)
-                </CardTitle>
+                 <div className="flex items-center justify-between">
+                   <CardTitle className="text-base flex items-center gap-2">
+                     <Shield className="h-4 w-4" /> Hedge Detalhado (Sequencial Condicional)
+                   </CardTitle>
+                   {extractionMode === 'target' && (
+                     <span className="px-2 py-0.5 rounded-full bg-warning/20 text-warning text-[10px] font-bold border border-warning/30">
+                       PROTEÇÃO EM CASCATA
+                     </span>
+                   )}
+                 </div>
                 <CardDescription className="text-xs">Cada lay só é executado se o evento anterior ganhar. O Lay 1 é sempre executado.</CardDescription>
               </CardHeader>
               <CardContent>
