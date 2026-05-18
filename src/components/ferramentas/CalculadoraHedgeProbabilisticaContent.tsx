@@ -146,8 +146,9 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
            </div>
          </div>
  
-         <Tabs value={activeTab} onValueChange={setActiveTab}>
-           <TabsContent value="calculadora" className="mt-0 space-y-6">
+         <div className="space-y-6">
+           {activeTab === 'calculadora' ? (
+             <>
 
         {/* KPIs Section */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -482,9 +483,142 @@ Para corrigir, reduza a Meta de Extração no slider.`}
               </CardContent>
             </Card>
           </div>
-        </div>
-
-        <Dialog open={!!expanded} onOpenChange={(o) => !o && setExpanded(null)}>
+             </>
+           ) : (
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+               <div className="md:col-span-1 space-y-6">
+                 <Card>
+                   <CardHeader>
+                     <CardTitle className="text-sm font-medium flex items-center gap-2">
+                       <Coins className="h-4 w-4 text-primary" /> Parâmetros do Laboratório
+                     </CardTitle>
+                   </CardHeader>
+                   <CardContent className="space-y-4">
+                     <div className="space-y-2">
+                       <Label className="text-xs">Sua Banca Disponível (R$)</Label>
+                       <div className="relative">
+                         <Input 
+                           type="number" 
+                           value={bankroll} 
+                           onChange={(e) => setBankroll(Number(e.target.value))}
+                           className="pl-8"
+                         />
+                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">R$</span>
+                       </div>
+                       <p className="text-[10px] text-muted-foreground italic">
+                         Define o limite de exposição máxima e o cálculo do Risco de Ruína.
+                       </p>
+                     </div>
+                     
+                     <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg space-y-2">
+                       <div className="flex items-center gap-2 text-primary">
+                         <Sparkles className="h-3.5 w-3.5" />
+                         <span className="text-xs font-bold">Otimizador Inteligente</span>
+                       </div>
+                       <p className="text-[10px] leading-relaxed">
+                         Nossa "IA" analisou {legs.length} eventos e sugere a meta de extração ideal baseada na sua banca.
+                       </p>
+                       <div className="flex justify-between items-center bg-background/50 p-2 rounded border border-border/50">
+                         <span className="text-[10px]">Meta Recomendada:</span>
+                         <span className="text-xs font-bold text-emerald-400">{(optimalConfig.target * 100).toFixed(0)}%</span>
+                       </div>
+                       <Button 
+                         className="w-full h-8 text-xs gap-2" 
+                         variant="outline"
+                         onClick={() => setTargetExtraction(optimalConfig.target)}
+                       >
+                         <Wand2 className="h-3 w-3" /> Aplicar Recomendação
+                       </Button>
+                     </div>
+                   </CardContent>
+                 </Card>
+               </div>
+ 
+               <div className="md:col-span-2 space-y-6">
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                   <Card className="border-l-4 border-l-red-500">
+                     <CardHeader className="pb-2">
+                       <CardTitle className="text-xs font-medium flex items-center gap-2 text-red-400">
+                         <ShieldAlert className="h-4 w-4" /> Risco de Ruína
+                       </CardTitle>
+                     </CardHeader>
+                     <CardContent>
+                       <div className="text-2xl font-bold font-mono">
+                         {fmtPct(riskOfRuin)}
+                       </div>
+                       <p className="text-[10px] text-muted-foreground mt-1">
+                         Probabilidade de quebrar a banca com esta configuração no longo prazo.
+                       </p>
+                       <div className="mt-3 w-full h-2 bg-muted rounded-full overflow-hidden">
+                         <div 
+                           className={`h-full transition-all duration-500 ${riskOfRuin > 10 ? 'bg-red-500' : 'bg-emerald-500'}`}
+                           style={{ width: `${riskOfRuin}%` }}
+                         />
+                       </div>
+                     </CardContent>
+                   </Card>
+ 
+                   <Card className="border-l-4 border-l-emerald-500">
+                     <CardHeader className="pb-2">
+                       <CardTitle className="text-xs font-medium flex items-center gap-2 text-emerald-400">
+                         <BrainCircuit className="h-4 w-4" /> Eficiência de Capital
+                       </CardTitle>
+                     </CardHeader>
+                     <CardContent>
+                       <div className="text-2xl font-bold font-mono text-white">
+                         {fmtPct((metrics.maxResponsibility / bankroll) * 100)}
+                       </div>
+                       <p className="text-[10px] text-muted-foreground mt-1">
+                         Uso da banca disponível (R$ {fmt(metrics.maxResponsibility)} utilizados).
+                       </p>
+                     </CardContent>
+                   </Card>
+                 </div>
+ 
+                 <Card>
+                   <CardHeader>
+                     <CardTitle className="text-sm font-medium flex items-center gap-2">
+                       <Lightbulb className="h-4 w-4 text-primary" /> Análise do Especialista (Simulação)
+                     </CardTitle>
+                   </CardHeader>
+                   <CardContent className="space-y-4">
+                     <div className="p-4 rounded-lg bg-muted/30 border border-border/50 space-y-3">
+                       <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Diagnóstico</h4>
+                       <p className="text-sm leading-relaxed">
+                         {riskOfRuin > 10 ? (
+                           <span className="text-red-400 flex items-start gap-2">
+                             <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                             Atenção: Seu Risco de Ruína está elevado ({fmtPct(riskOfRuin)}). Isso significa que, embora o EV possa ser positivo, a variância desta operação pode consumir sua banca de R$ {fmt(bankroll)} rapidamente. Sugerimos reduzir a Meta de Extração ou aumentar sua banca.
+                           </span>
+                         ) : (
+                           <span className="text-emerald-400 flex items-start gap-2">
+                             <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />
+                             Operação Segura: Seu perfil de risco está excelente. O uso de {fmtPct((metrics.maxResponsibility / bankroll) * 100)} da banca é saudável e o risco de ruína é quase nulo.
+                           </span>
+                         )}
+                       </p>
+                       <div className="pt-3 border-t border-border/50">
+                         <h4 className="text-[10px] font-bold uppercase text-muted-foreground mb-2">Simulação de 1.000 Operações</h4>
+                         <div className="grid grid-cols-2 gap-4">
+                           <div className="p-2 rounded bg-background/50 border border-border/50">
+                             <span className="text-[9px] text-muted-foreground block">Lucro Médio Esperado</span>
+                             <span className="text-sm font-bold text-emerald-400">R$ {fmt(metrics.totalEV * 1000)}</span>
+                           </div>
+                           <div className="p-2 rounded bg-background/50 border border-border/50">
+                             <span className="text-[9px] text-muted-foreground block">Pior Cenário Acumulado</span>
+                             <span className="text-sm font-bold text-red-400">-R$ {fmt(metrics.maxDrawdown)}</span>
+                           </div>
+                         </div>
+                       </div>
+                     </div>
+                   </CardContent>
+                 </Card>
+               </div>
+             </div>
+           )}
+         </div>
+ 
+         <Dialog open={!!expanded} onOpenChange={(o) => !o && setExpanded(null)}>
           <DialogContent className="max-w-2xl">
             <DialogHeader className="mb-4">
               <DialogTitle className="flex items-center gap-2">
