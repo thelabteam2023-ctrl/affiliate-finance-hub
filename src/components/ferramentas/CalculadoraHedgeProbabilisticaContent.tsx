@@ -1369,7 +1369,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                   <CardContent className="space-y-6">
                                     {/* Math Section */}
                                     <div className="p-4 rounded-lg bg-muted/30 border border-border/50 space-y-4">
-                        <div className="flex items-center gap-2 mb-2">
+                                      <div className="flex items-center gap-2 mb-2">
                           <History className="h-4 w-4 text-primary" />
                           <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Como chegamos neste Risco?</h4>
                         </div>
