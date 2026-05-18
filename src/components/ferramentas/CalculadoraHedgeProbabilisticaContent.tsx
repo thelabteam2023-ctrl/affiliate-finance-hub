@@ -1729,7 +1729,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
               </DialogDescription>
             </DialogHeader>
             
-            <ScrollArea className="flex-1 p-6 pt-2">
+             <ScrollArea className="flex-1 p-6 pt-2">
               <div className="space-y-6 pb-6">
                 <section className="space-y-3">
                   <h3 className="text-sm font-semibold flex items-center gap-2 text-primary uppercase tracking-wider">
