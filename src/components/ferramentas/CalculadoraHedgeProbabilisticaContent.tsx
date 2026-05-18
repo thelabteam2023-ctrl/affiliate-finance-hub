@@ -1059,30 +1059,27 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                         </div>
                       </div>
 
-                      {/* Optimal Strategy Explanation */}
-                      <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 space-y-3">
-                        <div className="flex items-center gap-2">
-                          <Sparkles className="h-4 w-4 text-primary" />
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-primary">Por que a Meta de {(optimalConfig.target * 100).toFixed(0)}%?</h4>
-                        </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
-                          Nossa análise de background testou <strong>10.000 variações</strong> de meta (60% a 95%). A meta de <strong>{(optimalConfig.target * 100).toFixed(0)}%</strong> foi identificada como o ponto de equilíbrio matemático ideal porque:
-                        </p>
-                        <ul className="text-[10px] space-y-1 text-muted-foreground">
-                          <li className="flex items-center gap-2">
-                            <div className="w-1 h-1 rounded-full bg-primary" />
-                            Maximiza o <strong>EV Matemático</strong> (R$ {fmt(optimalConfig.ev)}) sem quebrar a banca.
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <div className="w-1 h-1 rounded-full bg-primary" />
-                            Mantém a exposição máxima (R$ {fmt(metrics.maxResponsibility)}) dentro do seu limite de banca.
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <div className="w-1 h-1 rounded-full bg-primary" />
-                            Garante que o cenário "Tudo Ganha" ainda seja lucrativo na casa.
-                          </li>
-                        </ul>
-                      </div>
+                      <Card className="bg-primary/5 border-primary/20 shadow-none border-dashed">
+                        <CardContent className="pt-6 text-center space-y-4">
+                          <div className="inline-flex p-3 rounded-full bg-primary/10 text-primary mb-2">
+                            <Sparkles className="h-6 w-6" />
+                          </div>
+                          <h3 className="text-sm font-bold text-white uppercase tracking-wider">Perfil Operacional Ativo</h3>
+                          <p className="text-[10px] text-muted-foreground leading-relaxed max-w-[280px] mx-auto">
+                            Configurado para extrair <strong>{Math.round(targetExtraction * 100)}%</strong> da FreeBet. Otimizado matematicamente para gerar um retorno médio de <strong>R$ {fmt(metrics.totalEV)}</strong> por ciclo.
+                          </p>
+                          <div className="flex flex-col gap-2 pt-2">
+                            <div className="flex justify-between text-[10px] border-b border-border/40 pb-2">
+                              <span className="text-muted-foreground">Crescimento Estimado (ROE)</span>
+                              <span className="font-bold text-emerald-400">+{((metrics.totalEV / metrics.maxResponsibility) * 100).toFixed(2)}%</span>
+                            </div>
+                            <div className="flex justify-between text-[10px] pt-1">
+                              <span className="text-muted-foreground">Exposição na Banca</span>
+                              <span className="font-bold text-orange-400">{fmtPct((metrics.maxResponsibility / bankroll) * 100)}</span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
 
                        {/* Golden Combinations Section */}
                        <div className="space-y-4 pt-4 border-t border-border/50">
