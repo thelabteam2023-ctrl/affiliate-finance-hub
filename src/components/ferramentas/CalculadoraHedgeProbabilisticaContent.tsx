@@ -1656,8 +1656,9 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                 </div>
               )
             }
-          </div>
-        </ScrollArea>
+        </div>
+      </ScrollArea>
+    </>
     <Dialog open={!!expanded} onOpenChange={(o) => !o && setExpanded(null)}>
           <DialogContent className="max-w-2xl">
             <DialogHeader className="mb-4">
