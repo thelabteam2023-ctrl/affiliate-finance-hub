@@ -298,6 +298,31 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
     }, [metrics, bankroll, simMode, bankrollCeilingMultiplier]);
     const riskOfRuin = monteCarloSim.riskOfRuin;
 
+    const heatmapData = useMemo(() => {
+      const extractionTargets = [0.60, 0.65, 0.70, 0.75, 0.80];
+      const oddsRange = [1.5, 2.0, 2.5, 3.0, 3.5, 4.0];
+      const results: any[] = [];
+
+      extractionTargets.forEach(target => {
+        oddsRange.forEach(odd => {
+          const testLegs = legs.map(l => ({ ...l, backOdd: odd, layOdd: odd }));
+          const m = HedgeProbabilisticoEngine.calculateMetrics(testLegs, freebet, commission / 100, target);
+          
+          const roe = m.maxResponsibility > 0 ? (m.totalEV / m.maxResponsibility) : 0;
+          const score = m.allWonProfit > 0 ? (roe * 100) : -10;
+          
+          results.push({
+            target,
+            odd,
+            score,
+            roi: m.totalROI,
+            isValid: m.allWonProfit > 0 && m.maxResponsibility <= bankroll
+          });
+        });
+      });
+      return results;
+    }, [legs, freebet, commission, bankroll]);
+
     const advancedStats = useMemo(() => {
       const winRate = monteCarloSim.winRate;
       const lossRate = 1 - winRate;
@@ -1063,6 +1088,68 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                       <p className="text-[9px] text-muted-foreground italic leading-tight text-center mt-2">
                         "No mundo probabilístico, a sorte é apenas o resíduo de um bom design estatístico."
                       </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-primary/20 bg-primary/5">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium flex items-center gap-2">
+                        <BrainCircuit className="h-4 w-4 text-primary" /> Matriz de Eficiência
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-7 gap-1">
+                        <div className="text-[8px] text-muted-foreground uppercase font-bold flex items-center justify-center">Odd \ Ext</div>
+                        {[0.60, 0.65, 0.70, 0.75, 0.80].map(t => (
+                          <div key={t} className="text-[8px] text-muted-foreground font-mono text-center">{Math.round(t*100)}%</div>
+                        ))}
+                        
+                        {[1.5, 2.0, 2.5, 3.0, 3.5, 4.0].map(odd => (
+                          <React.Fragment key={odd}>
+                            <div className="text-[8px] text-muted-foreground font-mono flex items-center justify-center bg-muted/20 rounded">{odd.toFixed(1)}</div>
+                            {[0.60, 0.65, 0.70, 0.75, 0.80].map(target => {
+                              const cell = heatmapData.find(d => d.target === target && d.odd === odd);
+                              const score = cell?.score || 0;
+                              const isValid = cell?.isValid;
+                              
+                              let bgColor = "bg-muted/10";
+                              if (isValid) {
+                                if (score > 10) bgColor = "bg-emerald-500/40";
+                                else if (score > 5) bgColor = "bg-emerald-500/20";
+                                else if (score > 0) bgColor = "bg-blue-500/20";
+                                else bgColor = "bg-yellow-500/10";
+                              } else {
+                                bgColor = "bg-red-500/5";
+                              }
+
+                              return (
+                                <button
+                                  key={`${target}-${odd}`}
+                                  onClick={() => {
+                                    setTargetExtraction(target);
+                                    setLegs(legs.map(l => ({ ...l, backOdd: odd, layOdd: odd })));
+                                  }}
+                                  className={`aspect-square rounded-[2px] flex items-center justify-center text-[7px] font-mono transition-all hover:scale-110 hover:z-10 cursor-pointer border border-white/5 ${bgColor} ${Math.abs(targetExtraction - target) < 0.01 && Math.abs(legs[0].backOdd - odd) < 0.01 ? 'ring-1 ring-primary border-primary shadow-[0_0_8px_rgba(var(--primary),0.5)]' : ''}`}
+                                  title={`Extração ${Math.round(target*100)}% | Odd ${odd.toFixed(2)} | Score: ${score.toFixed(1)}`}
+                                >
+                                  {isValid ? score.toFixed(0) : 'X'}
+                                </button>
+                              );
+                            })}
+                          </React.Fragment>
+                        ))}
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center text-[10px] uppercase font-bold text-muted-foreground">
+                          <span>Veredito do Doutor</span>
+                          <Trophy className="h-3 w-3 text-yellow-500" />
+                        </div>
+                        <p className="text-[10px] text-muted-foreground leading-tight italic">
+                          {targetExtraction > 0.75 
+                            ? "Você está priorizando o lucro bruto, o que sobrecarrega a sua banca. Considere reduzir a extração para 70% para aumentar o ROE (Retorno sobre Exposição)."
+                            : "Excelente design. Sua extração está equilibrada com as odds, permitindo uma cascata sustentável e menor volatilidade de banca."}
+                        </p>
+                      </div>
                     </CardContent>
                   </Card>
                 </div>
