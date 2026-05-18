@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+ import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,11 +7,13 @@ import { Slider } from '@/components/ui/slider';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { 
-   Target, Activity, TrendingUp, AlertTriangle, Shield, 
+ import {
+   Target, Activity, TrendingUp, AlertTriangle, Shield,
    Plus, Trash2, Info, ChevronRight, Zap, BarChart3, HelpCircle,
-   CheckCircle2, Lightbulb, BookOpen
-} from 'lucide-react';
+   CheckCircle2, Lightbulb, BookOpen, FlaskConical, BrainCircuit,
+   ShieldAlert, Coins, Sparkles, Wand2
+ } from 'lucide-react';
+ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   HedgeProbabilisticoEngine, 
   type LegInput,
@@ -27,7 +29,9 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
 export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
   const [freebet, setFreebet] = useState(100);
   const [commission, setCommission] = useState(2.8);
-    const [targetExtraction, setTargetExtraction] = useState(1.0);
+   const [targetExtraction, setTargetExtraction] = useState(0.7);
+   const [bankroll, setBankroll] = useState(5000);
+   const [activeTab, setActiveTab] = useState('calculadora');
   const [legs, setLegs] = useState<LegInput[]>([
     { name: 'Evento 1', backOdd: 2.0, layOdd: 2.0 },
     { name: 'Evento 2', backOdd: 2.0, layOdd: 2.0 }
