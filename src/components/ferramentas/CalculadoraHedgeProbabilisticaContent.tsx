@@ -712,7 +712,8 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
           </div>
  
          <div className="space-y-6">
-            {activeTab === 'calculadora' ? (
+            {activeTab === "calculadora" ? (
+{activeTab === 'calculadora' ? (
                <>
 
         {/* KPIs Section */}
@@ -1066,7 +1067,9 @@ Para corrigir, reduza a Meta de Extração no slider.`}
           </div>
         </div>
                </>
-              ) : activeTab === 'laboratorio' ? (
+
+) : activeTab === "laboratorio" ? (
+
                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div className="lg:col-span-4 xl:col-span-3 space-y-6">
                   <DndContext
@@ -1803,7 +1806,9 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                  </div>
                                                </div>
                </div>
-             ) : activeTab === 'laboratorio' ? (
+             
+) : (
+
                                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-in fade-in duration-300">
                                                {ODDS_RULESETS.find(r => r.id === activeRulesetId) && (
                                                  <>
@@ -2235,7 +2240,8 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                     </div>
                   </div>
                 </div>
-              )
+              
+)})
             }
           </div>
          <Dialog open={!!expanded} onOpenChange={(o) => !o && setExpanded(null)}>
