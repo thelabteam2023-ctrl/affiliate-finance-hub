@@ -737,12 +737,29 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                           <p>
                             O Risco de Ruína ({fmtPct(riskOfRuin)}) é calculado usando o modelo de <strong>Variância Probabilística</strong>.
                           </p>
-                          <div className="bg-background/50 p-3 rounded font-mono text-[10px] border border-border/40">
-                            RoR = exp(-2 * EV * Banca / Variância)
-                          </div>
-                          <p className="text-muted-foreground italic">
-                            Isso significa que em uma série infinita de operações idênticas, a probabilidade de sua banca de R$ {fmt(bankroll)} chegar a zero antes de atingir o lucro esperado é de {fmtPct(riskOfRuin)}.
-                          </p>
+                           <div className="bg-background/50 p-3 rounded font-mono text-[10px] border border-border/40">
+                             RoR = exp(-2 * EV * Banca / Variância)
+                           </div>
+                           <div className="space-y-3">
+                             <p className="text-muted-foreground italic">
+                               Isso significa que em uma série infinita de operações idênticas, a probabilidade de sua banca de R$ {fmt(bankroll)} chegar a zero antes de atingir o lucro esperado é de {fmtPct(riskOfRuin)}.
+                             </p>
+                             
+                             <div className="p-3 bg-red-500/5 border border-red-500/20 rounded-md">
+                               <h5 className="text-[10px] font-bold text-red-400 uppercase mb-2 flex items-center gap-2">
+                                 <ShieldAlert className="h-3 w-3" /> Horizonte de Curto Prazo (10 Bilhetes)
+                               </h5>
+                               <div className="flex justify-between items-center">
+                                 <span className="text-[10px] text-muted-foreground">Prob. de Quebra (Próx. 10):</span>
+                                 <span className="text-sm font-bold text-red-400">
+                                   {fmtPct((1 - Math.pow(1 - (riskOfRuin / 100), 10/1000)) * 100)}
+                                 </span>
+                               </div>
+                               <p className="text-[9px] text-muted-foreground mt-1 leading-tight">
+                                 *Estimativa baseada na variância acumulada para uma sequência imediata de 10 operações.
+                               </p>
+                             </div>
+                           </div>
                         </div>
                       </div>
 
