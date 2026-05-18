@@ -12,7 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
     Plus, Trash2, Info, ChevronRight, Zap, BarChart3, HelpCircle, Link2,
     CheckCircle2, Lightbulb, BookOpen, FlaskConical, BrainCircuit,
     ShieldAlert, Coins, Sparkles, Wand2, Dna, LineChart, History,
-     Trophy, Star, ArrowRight, RefreshCcw, GripVertical
+      Trophy, Star, ArrowRight, RefreshCcw, GripVertical, GripHorizontal
  } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
  import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -98,6 +98,15 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
        'efficiency-matrix'
      ];
    });
+
+   const [mainLayout, setMainLayout] = useState<string[]>(() => {
+     const saved = localStorage.getItem('hedge-calc-main-layout');
+     return saved ? JSON.parse(saved) : [
+       'simulation-lab',
+       'operational-profile',
+       'golden-library'
+     ];
+   });
  
    const sensors = useSensors(
      useSensor(PointerSensor, {
@@ -110,7 +119,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
      })
    );
  
-   const handleDragEnd = (event: DragEndEvent) => {
+   const handleLabDragEnd = (event: DragEndEvent) => {
      const { active, over } = event;
      if (over && active.id !== over.id) {
        setLabLayout((items) => {
@@ -118,6 +127,19 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
          const newIndex = items.indexOf(over.id as string);
          const newLayout = arrayMove(items, oldIndex, newIndex);
          localStorage.setItem('hedge-calc-lab-layout', JSON.stringify(newLayout));
+         return newLayout;
+       });
+     }
+   };
+
+   const handleMainDragEnd = (event: DragEndEvent) => {
+     const { active, over } = event;
+     if (over && active.id !== over.id) {
+       setMainLayout((items) => {
+         const oldIndex = items.indexOf(active.id as string);
+         const newIndex = items.indexOf(over.id as string);
+         const newLayout = arrayMove(items, oldIndex, newIndex);
+         localStorage.setItem('hedge-calc-main-layout', JSON.stringify(newLayout));
          return newLayout;
        });
      }
