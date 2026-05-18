@@ -1493,10 +1493,14 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                           <p className="text-[8px] text-muted-foreground italic leading-tight text-center">
                             Simulação de uma jornada real de 10 operações consecutivas.
                           </p>
-                        </div>
-                      </div>
+                         </div>
+                       </div>
+                      </CardContent>
+                    </Card>
+                  )}
 
-                      <Card className="bg-muted/10 border-border/50 shadow-none overflow-hidden">
+                  {id === 'operational-profile' && (
+                    <Card className="bg-muted/10 border-border/50 shadow-none overflow-hidden">
                         <div className="p-4 border-b border-border/50 bg-muted/20 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                           <div>
                             <div className="flex items-center gap-2">
@@ -1574,10 +1578,14 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                             </div>
                           )}
                         </CardContent>
-                      </Card>
+                    </Card>
+                  )}
 
-                       {/* Golden Combinations Section */}
-                       <div className="space-y-4 pt-4 border-t border-border/50">
+                  {id === 'golden-library' && (
+                    <Card>
+                      <CardContent className="pt-6">
+                        {/* Golden Combinations Section */}
+                        <div className="space-y-4">
                          <div className="flex items-center justify-between">
                            <div className="flex items-center gap-2">
                              <Trophy className="h-4 w-4 text-yellow-400" />
@@ -1639,13 +1647,16 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                              </div>
                            ))}
                          </div>
-                       </div>
-                    </CardContent>
-                  </Card>
-               </div>
-             </div>
-            )}
-         </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </SortableLabCard>
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+      </div>
  
          <Dialog open={!!expanded} onOpenChange={(o) => !o && setExpanded(null)}>
           <DialogContent className="max-w-2xl">
