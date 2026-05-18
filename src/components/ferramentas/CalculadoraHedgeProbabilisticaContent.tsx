@@ -27,36 +27,40 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
 
- const goldenCombinations = [
-   {
-     name: "Duo Conservador",
-     description: "Foco em saída rápida e baixo risco.",
-     legs: [2.0, 2.0],
-     expectedROI: "35%",
-     type: "Segurança"
-   },
-   {
-     name: "Triple Threat",
-     description: "O equilíbrio perfeito entre risco e retorno.",
-     legs: [2.0, 2.2, 2.5],
-     expectedROI: "52%",
-     type: "Equilibrado"
-   },
-   {
-     name: "Mestre da Extração",
-     description: "Maximiza o ROI em 3 eventos selecionados.",
-     legs: [2.5, 2.8, 3.2],
-     expectedROI: "68%",
-     type: "Alta Performance"
-   },
-   {
-     name: "Cascata Longa",
-     description: "Para extrações agressivas em 5 eventos.",
-     legs: [1.8, 1.8, 1.8, 1.8, 1.8],
-     expectedROI: "45%",
-     type: "Estratégico"
-   }
- ];
+   const goldenCombinations = [
+     {
+       name: "Duo de Ataque",
+       description: "A melhor combinação para 2 pernas. Equilíbrio entre odd inicial baixa e final alta.",
+       legs: [1.80, 4.00],
+       expectedROI: "39.6%",
+       type: "Alta Eficiência",
+       commission: "2.8%"
+     },
+     {
+       name: "Triple Threat Otimizado",
+       description: "Ponto de equilíbrio ideal para extração consistente em 3 eventos.",
+       legs: [1.80, 1.80, 4.00],
+       expectedROI: "20.3%",
+       type: "Equilibrado",
+       commission: "2.8%"
+     },
+     {
+       name: "Quarteto Estratégico",
+       description: "Mantenha o controle da banca mesmo com 4 eventos sequenciais.",
+       legs: [1.80, 1.80, 1.80, 4.00],
+       expectedROI: "9.2%",
+       type: "Estabilidade",
+       commission: "2.8%"
+     },
+     {
+       name: "Full House (5 Pernas)",
+       description: "Otimizado para extrações longas onde a banca é o fator limitante.",
+       legs: [1.80, 1.80, 1.80, 1.80, 4.00],
+       expectedROI: "2.6%",
+       type: "Segurança Máxima",
+       commission: "2.8%"
+     }
+   ];
 
  export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
    const applyGoldenCombo = (comboLegs: number[]) => {
@@ -825,10 +829,13 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                               className="p-3 rounded-lg bg-muted/20 border border-border/50 hover:border-primary/50 transition-all cursor-pointer group"
                               onClick={() => applyGoldenCombo(combo.legs)}
                             >
-                              <div className="flex justify-between items-start mb-1">
-                                <span className="text-[10px] font-bold text-primary uppercase">{combo.type}</span>
-                                <Badge variant="secondary" className="text-[9px] h-4">{combo.expectedROI} ROI</Badge>
-                              </div>
+                               <div className="flex justify-between items-start mb-1">
+                                 <div className="flex flex-col">
+                                   <span className="text-[10px] font-bold text-primary uppercase">{combo.type}</span>
+                                   <span className="text-[8px] text-muted-foreground">Comissão ref: {combo.commission}</span>
+                                 </div>
+                                 <Badge variant="secondary" className="text-[9px] h-4">{combo.expectedROI} ROI</Badge>
+                               </div>
                               <h5 className="text-sm font-bold flex items-center gap-2 group-hover:text-primary transition-colors">
                                 {combo.name}
                                 <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
