@@ -237,7 +237,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
 
     targets.forEach(target => {
       const optimizations: any[] = [];
-      const legCounts = Array.from({ length: maxLegs - 1 }, (_, i) => i + 2);
+     const legCounts = Array.from({ length: maxLegs }, (_, i) => i + 1);
 
       legCounts.forEach(numLegs => {
         let bestROE = -Infinity;
@@ -309,15 +309,16 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
      );
    }, [legs, freebet, commission, targetExtraction]);
 
-  const addLeg = () => {
-    if (legs.length >= 5) return;
-    setLegs([...legs, { name: `Evento ${legs.length + 1}`, backOdd: 2.0, layOdd: 2.0 }]);
-  };
+   const addLeg = () => {
+     const maxLegs = activeRulesetId === 'custom' ? customRules.maxLegs : 6;
+     if (legs.length >= maxLegs) return;
+     setLegs([...legs, { name: `Evento ${legs.length + 1}`, backOdd: 2.0, layOdd: 2.0 }]);
+   };
 
-  const removeLeg = (index: number) => {
-    if (legs.length <= 1) return;
-    setLegs(legs.filter((_, i) => i !== index));
-  };
+   const removeLeg = (index: number) => {
+     if (legs.length <= 1) return;
+     setLegs(legs.filter((_, i) => i !== index));
+   };
 
   const updateLeg = (index: number, field: keyof LegInput, value: any) => {
     const newLegs = [...legs];
