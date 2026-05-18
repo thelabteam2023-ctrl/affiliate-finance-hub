@@ -116,18 +116,6 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
     critical: 'Crítica'
    }[metrics.score];
  
-   const riskOfRuin = useMemo(() => {
-     if (metrics.totalEV <= 0) return 100;
-     // Variance: Σ p * (x - μ)²
-     const variance = metrics.scenarios.reduce((acc, s) => {
-       return acc + s.probability * Math.pow(s.result - metrics.totalEV, 2);
-     }, 0);
-     if (variance === 0) return 0;
-     // RoR = exp(-2 * EV * Bank / Var)
-     const ror = Math.exp((-2 * metrics.totalEV * bankroll) / variance);
-     return Math.min(100, ror * 100);
-   }, [metrics, bankroll]);
- 
     const optimalConfig = useMemo(() => {
       let bestEV = -Infinity;
       let bestTarget = 0.7;
@@ -151,41 +139,86 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
     }, [legs, freebet, commission, bankroll]);
 
     const monteCarloSim = useMemo(() => {
-      const trials = 100000; // 100 mil ciclos para precisão máxima
-      let totalProfit = 0;
-      let bankruptcies = 0;
+      const numTraj = 5000; // Número de trajetórias
+      const maxSteps = 500; // Máximo de bilhetes por trajetória
+      
+      let totalBankruptcies = 0;
+      let bankruptciesIn10 = 0;
+      let totalDoubleups = 0;
+      let doubleupSteps: number[] = [];
+      let cumulativeOutcome = 0;
       const samples: number[] = [];
+      
+      // Pré-calcula a CDF dos cenários para performance
+      const cdf = metrics.aggregatedScenarios.map((s, i, arr) => ({
+        ...s,
+        upper: arr.slice(0, i + 1).reduce((sum, current) => sum + current.probability, 0)
+      }));
 
-      for (let i = 0; i < trials; i++) {
-        const rand = Math.random();
-        let cumulativeProb = 0;
-        let outcome = 0;
+      for (let t = 0; t < numTraj; t++) {
+        let currentBank = bankroll;
+        let broken = false;
         
-        for (const scenario of metrics.aggregatedScenarios) {
-          cumulativeProb += scenario.probability;
-          if (rand <= cumulativeProb) {
-            outcome = scenario.result;
+        for (let step = 0; step < maxSteps; step++) {
+          // Sorteia cenário
+          const rand = Math.random();
+          const scenario = cdf.find(s => rand <= s.upper) || cdf[cdf.length - 1];
+          const outcome = scenario.result;
+          
+          // Verifica se pode pagar a exposição do próximo bilhete
+          // A exposição máxima é necessária ANTES de saber o resultado do bilhete
+          if (currentBank < metrics.maxResponsibility) {
+            totalBankruptcies++;
+            if (step < 10) bankruptciesIn10++;
+            broken = true;
+            break;
+          }
+
+          currentBank += outcome;
+          
+          // Coleta amostra do primeiro bilhete da primeira trajetória para o UI
+          if (t === 0 && step < 10) samples.push(outcome);
+          if (t === 0) cumulativeOutcome += outcome;
+
+          if (currentBank >= bankroll * 2) {
+            totalDoubleups++;
+            doubleupSteps.push(step + 1);
+            break;
+          }
+          
+          if (currentBank <= 0) {
+            totalBankruptcies++;
+            if (step < 10) bankruptciesIn10++;
+            broken = true;
             break;
           }
         }
-        
-        if (i < 10) samples.push(outcome);
-        totalProfit += outcome;
-        if (bankroll + outcome <= 0) bankruptcies++;
       }
 
       const winRate = metrics.aggregatedScenarios
         .filter(s => s.result > 0)
         .reduce((acc, s) => acc + s.probability, 0);
       
+      // Mediana de passos para dobrar
+      const sortedSteps = [...doubleupSteps].sort((a, b) => a - b);
+      const medianSteps = sortedSteps.length > 0 
+        ? sortedSteps[Math.floor(sortedSteps.length / 2)] 
+        : Math.ceil(bankroll / Math.max(0.01, metrics.totalEV));
+
       return {
-        trials,
-        avgResult: totalProfit / trials,
+        trials: numTraj,
+        avgResult: metrics.totalEV,
         winRate,
-        bankruptcies,
+        bankruptcies: totalBankruptcies,
+        riskOfRuin: (totalBankruptcies / numTraj) * 100,
+        riskOfRuin10: (bankruptciesIn10 / numTraj) * 100,
+        probDouble: (totalDoubleups / numTraj) * 100,
+        medianSteps,
         samples
       };
     }, [metrics, bankroll]);
+
+    const riskOfRuin = monteCarloSim.riskOfRuin;
  
    return (
      <ScrollArea className="h-full">
