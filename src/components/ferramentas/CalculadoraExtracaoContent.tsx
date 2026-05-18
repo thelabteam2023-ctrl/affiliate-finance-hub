@@ -11,6 +11,7 @@ import {
    Shield, ChevronDown, ChevronUp, Lightbulb, HelpCircle, Info, Percent, Plus, Copy, Settings2
 } from 'lucide-react';
 import {
+  type ExtractionMode,
   type ExtractionConfig,
   type EventInput,
   type StrategyResults,
