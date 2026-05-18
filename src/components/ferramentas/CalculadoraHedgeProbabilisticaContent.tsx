@@ -357,10 +357,26 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                 <Table>
                    <TableHeader>
                      <TableRow>
-                        <TableHead className="w-[120px]">Evento</TableHead>
-                        <TableHead className="w-[180px]">Odds (Back / Lay)</TableHead>
-                        <TableHead className="text-right">Stake</TableHead>
-                        <TableHead className="text-right">Resp.</TableHead>
+                         <TableHead className="w-[120px]">Evento</TableHead>
+                         <TableHead className="w-[180px]">Odds (Back / Lay)</TableHead>
+                         <TableHead className="text-right">
+                           <div className="flex items-center justify-end gap-1">
+                             Stake Lay
+                             <CardInfoTooltip 
+                               title="Stake Lay" 
+                               description="Este é o valor exato que você deve digitar no campo 'Aposta' (Stake) ao realizar o Lay na Exchange/Bolsa." 
+                             />
+                           </div>
+                         </TableHead>
+                         <TableHead className="text-right">
+                           <div className="flex items-center justify-end gap-1">
+                             Risco (Resp.)
+                             <CardInfoTooltip 
+                               title="Responsabilidade" 
+                               description="Representa o quanto você está arriscando nesta perna. Esse valor será 'travado' da sua banca na Exchange para cobrir a aposta." 
+                             />
+                           </div>
+                         </TableHead>
                         <TableHead className="text-right">R. Acum</TableHead>
                         <TableHead className="text-right font-bold">Exp. Tot</TableHead>
                         <TableHead className="w-[50px]"></TableHead>
@@ -488,6 +504,20 @@ Para corrigir, reduza a Meta de Extração no slider.`}
             ) : (
              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                <div className="md:col-span-1 space-y-6">
+                 <Card className="bg-primary/5 border-primary/20">
+                   <CardContent className="pt-6">
+                     <div className="flex items-start gap-3">
+                       <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                       <div className="space-y-1">
+                         <p className="text-sm font-medium text-primary">Dica de Execução</p>
+                         <p className="text-xs text-muted-foreground leading-relaxed">
+                           Os valores na coluna <span className="text-blue-400 font-mono">Stake Lay</span> são os que você deve inserir diretamente na sua Exchange (ex: Betfair) ao fazer a contra-aposta.
+                         </p>
+                       </div>
+                     </div>
+                   </CardContent>
+                 </Card>
+
                  <Card>
                    <CardHeader>
                      <CardTitle className="text-sm font-medium flex items-center gap-2">
