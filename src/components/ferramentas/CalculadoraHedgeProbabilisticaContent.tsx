@@ -522,8 +522,9 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
     }[finalScore.score];
  
    return (
-     <ScrollArea className="h-full">
-       <div className="p-4 space-y-6 max-w-6xl mx-auto">
+     <>
+       <ScrollArea className="h-full">
+         <div className="p-4 space-y-6 max-w-6xl mx-auto">
          <div className="flex flex-col md:flex-row gap-4 items-start justify-between">
            <div className="flex-1">
              <div className="flex items-center gap-3">
@@ -1656,10 +1657,11 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                 </div>
               )
             }
-        </div>
-      </ScrollArea>
-    </>
-    <Dialog open={!!expanded} onOpenChange={(o) => !o && setExpanded(null)}>
+           </div>
+         </ScrollArea>
+       </div>
+ 
+       <Dialog open={!!expanded} onOpenChange={(o) => !o && setExpanded(null)}>
           <DialogContent className="max-w-2xl">
             <DialogHeader className="mb-4">
               <DialogTitle className="flex items-center gap-2">
@@ -1861,8 +1863,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
               </div>
             </ScrollArea>
           </DialogContent>
-        </Dialog>
-      </div>
-    </ScrollArea>
-  );
+         </Dialog>
+       </>
+    );
 };
