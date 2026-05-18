@@ -50,7 +50,8 @@ export interface AggregatedScenario {
    maxResponsibility: number;
    maxDrawdown: number;
    capitalRequired: number;
-   score: 'excellent' | 'good' | 'risky' | 'critical';
+      score: 'excellent' | 'good' | 'risky' | 'critical';
+      scoreReason?: string;
    cumulativeCascadeCost: number;
    allWonProfit: number;
   totalBackOdd: number;
@@ -226,11 +227,12 @@ export class HedgeProbabilisticoEngine {
  
      const totalROI = (totalEV / freebet) * 100;
      
-     let score: 'excellent' | 'good' | 'risky' | 'critical' = 'good';
-     if (totalROI > 80) score = 'excellent';
-     else if (totalROI > 60) score = 'good';
-     else if (totalROI > 40) score = 'risky';
-     else score = 'critical';
+      // Base score on ROI initially, will be refined in component with Risk of Ruin
+      let score: 'excellent' | 'good' | 'risky' | 'critical' = 'good';
+      if (totalROI > 75) score = 'excellent';
+      else if (totalROI > 55) score = 'good';
+      else if (totalROI > 35) score = 'risky';
+      else score = 'critical';
  
      // All won profit calculation
      let totalResponsibilities = 0;
