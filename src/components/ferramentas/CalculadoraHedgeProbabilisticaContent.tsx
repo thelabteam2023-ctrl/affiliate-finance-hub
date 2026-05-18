@@ -1927,6 +1927,9 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                     </div>
                                   </CardContent>
                                 </Card>
+                            </div>
+                          </div>
+                        </div>
                     </div>
                   </div>
                </div>
