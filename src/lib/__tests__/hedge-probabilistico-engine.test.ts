@@ -74,4 +74,29 @@ describe('HedgeProbabilisticoEngine', () => {
     const scenarioWinLost = result.scenarios.find(s => s.path[0] === 'won' && s.path[1] === 'lost');
     expect(scenarioWinLost?.result).toBe(80);
   });
+
+  it('should have total probability sum of 1 and correct canonical probabilities', () => {
+    const legs = [
+      { name: 'E1', backOdd: 2, layOdd: 2 },
+      { name: 'E2', backOdd: 2, layOdd: 2 }
+    ];
+    const freebet = 100;
+    const result = HedgeProbabilisticoEngine.calculateMetrics(legs, freebet, 0, 1);
+
+    const totalProb = result.aggregatedScenarios.reduce((sum, s) => sum + s.probability, 0);
+    expect(totalProb).toBeCloseTo(1, 5);
+
+    // 2 legs, odds 2.0 each
+    // P(lost at 1) = 0.5
+    // P(won at 1, lost at 2) = 0.5 * 0.5 = 0.25
+    // P(won at 1, won at 2) = 0.5 * 0.5 = 0.25
+    
+    const pLost1 = result.aggregatedScenarios.find(as => as.description === 'lost')?.probability;
+    const pWonLost = result.aggregatedScenarios.find(as => as.description === 'won → lost')?.probability;
+    const pWonWon = result.aggregatedScenarios.find(as => as.description === 'won → won')?.probability;
+
+    expect(pLost1).toBe(0.5);
+    expect(pWonLost).toBe(0.25);
+    expect(pWonWon).toBe(0.25);
+  });
 });
