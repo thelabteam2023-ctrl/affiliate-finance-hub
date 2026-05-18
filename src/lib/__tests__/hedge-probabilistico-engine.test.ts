@@ -46,9 +46,11 @@ describe('HedgeProbabilisticoEngine', () => {
 
     const result = HedgeProbabilisticoEngine.calculateMetrics(legs, freebet, commission, efficiency);
 
-    // Profit if all won = Freebet * (LastOdd - 1) - Sum(Resp)
-    // = 100 * (2 - 1) - (100 + 200) = 100 - 300 = -200
-    expect(result.allWonProfit).toBe(-200);
+    // Profit if all won = Freebet * (TotalOdd - 1) - Sum(Resp)
+    // TotalOdd = 2 * 2 = 4
+    // Profit = 100 * (4 - 1) - (100 + 200) = 300 - 300 = 0
+    expect(result.totalBackOdd).toBe(4);
+    expect(result.allWonProfit).toBe(0);
   });
 
   it('should guarantee meta in each scenario', () => {

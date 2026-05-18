@@ -91,7 +91,16 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
         </div>
 
         {/* KPIs Section */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <Card className="bg-muted/30">
+            <CardContent className="pt-4 flex flex-col items-center text-center">
+              <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                <BarChart3 className="h-3 w-3" /> Odd Total
+              </div>
+              <div className="text-xl font-bold text-white">{metrics.totalBackOdd.toFixed(2)}</div>
+              <div className="text-[10px] text-muted-foreground mt-1">Multiplicação das odds</div>
+            </CardContent>
+          </Card>
           <Card className="bg-muted/30">
             <CardContent className="pt-4 flex flex-col items-center text-center">
               <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
@@ -113,19 +122,19 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
           <Card className="bg-muted/30">
             <CardContent className="pt-4 flex flex-col items-center text-center">
               <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                <AlertTriangle className="h-3 w-3" /> Risco Máximo
+                <AlertTriangle className="h-3 w-3" /> Risco Real
               </div>
-              <div className="text-xl font-bold text-red-400">R$ {fmt(metrics.maxResponsibility)}</div>
-              <div className="text-[10px] text-muted-foreground mt-1">Exposição na exchange</div>
+              <div className="text-xl font-bold text-red-400">R$ {fmt(metrics.maxDrawdown)}</div>
+              <div className="text-[10px] text-muted-foreground mt-1">Maior perda possível</div>
             </CardContent>
           </Card>
           <Card className="bg-muted/30">
             <CardContent className="pt-4 flex flex-col items-center text-center">
               <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                <Shield className="h-3 w-3" /> Capital Mínimo
+                <Shield className="h-3 w-3" /> Exposição Máx.
               </div>
-              <div className="text-xl font-bold text-primary">R$ {fmt(metrics.capitalRequired)}</div>
-              <div className="text-[10px] text-muted-foreground mt-1">Necessidade de caixa</div>
+              <div className="text-xl font-bold text-orange-400">R$ {fmt(metrics.maxResponsibility)}</div>
+              <div className="text-[10px] text-muted-foreground mt-1">Saldo necessário</div>
             </CardContent>
           </Card>
         </div>
