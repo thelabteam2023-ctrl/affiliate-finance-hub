@@ -13,16 +13,18 @@ import { ScrollArea } from '@/components/ui/scroll-area';
     CheckCircle2, Lightbulb, BookOpen, FlaskConical, BrainCircuit,
     ShieldAlert, Coins, Sparkles, Wand2, Dna, LineChart, History,
      Trophy, Star, ArrowRight, RefreshCcw, GripVertical, GripHorizontal,
-     Sliders, Settings2, ShieldCheck, ZapOff, Infinity as InfinityIcon
+      Sliders, Settings2, ShieldCheck, ZapOff, Infinity as InfinityIcon,
+      Clock, Gauge, ArrowUpRight, Timer, MousePointer2
  } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
  import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  HedgeProbabilisticoEngine, 
-  type LegInput,
-  type HedgeResult,
-  type AggregatedScenario
-} from '@/lib/hedge-probabilistico-engine';
+ import {
+   HedgeProbabilisticoEngine,
+   type LegInput,
+   type HedgeResult,
+   type AggregatedScenario
+ } from '@/lib/hedge-probabilistico-engine';
+ import { LiveHedgeEngine, type LiveHedgeInput, type LiveHedgeResult } from '@/lib/live-hedge-engine';
 import { CardInfoTooltip } from '@/components/ui/card-info-tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
