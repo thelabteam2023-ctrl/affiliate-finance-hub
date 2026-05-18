@@ -29,28 +29,28 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
 
    const goldenCombinationsByCommission: Record<string, any[]> = {
      "2.8": [
-       { name: "Duo de Ataque", legs: [1.8, 4.0], roi: "39.6%", type: "Alta Eficiência" },
-       { name: "Triple Threat", legs: [1.8, 1.8, 4.0], roi: "20.3%", type: "Equilibrado" },
-       { name: "Quarteto Estratégico", legs: [1.8, 1.8, 1.8, 4.0], roi: "9.2%", type: "Estabilidade" },
-       { name: "Full House", legs: [1.8, 1.8, 1.8, 1.8, 4.0], roi: "2.6%", type: "Segurança" }
+       { name: "Duo Otimizado", legs: [1.8, 4.0], roi: "39.4%", type: "Alta Performance" },
+       { name: "Triple Otimizado", legs: [1.8, 1.8, 4.0], roi: "20.4%", type: "Alta Performance" },
+       { name: "Quarteto Estável", legs: [1.8, 1.8, 1.8, 4.0], roi: "8.6%", type: "Estável" },
+       { name: "Full House", legs: [1.8, 1.8, 1.8, 1.8, 4.0], roi: "2.7%", type: "Risco Baixo" }
      ],
      "3.0": [
-       { name: "Duo de Ataque", legs: [1.8, 4.0], roi: "39.4%", type: "Alta Eficiência" },
-       { name: "Triple Threat", legs: [1.8, 1.8, 4.0], roi: "20.1%", type: "Equilibrado" },
-       { name: "Quarteto Estratégico", legs: [1.8, 1.8, 1.8, 4.0], roi: "8.9%", type: "Estabilidade" },
-       { name: "Full House", legs: [1.8, 1.8, 1.8, 1.8, 4.0], roi: "2.3%", type: "Segurança" }
+       { name: "Duo Otimizado", legs: [1.8, 4.0], roi: "39.2%", type: "Alta Performance" },
+       { name: "Triple Otimizado", legs: [1.8, 1.8, 4.0], roi: "19.6%", type: "Estável" },
+       { name: "Quarteto Estável", legs: [1.8, 1.8, 1.8, 4.0], roi: "7.7%", type: "Estável" },
+       { name: "Full House", legs: [1.8, 1.8, 1.8, 1.8, 4.0], roi: "0.5%", type: "Risco Baixo" }
      ],
      "4.8": [
-       { name: "Duo de Ataque", legs: [1.8, 4.0], roi: "35.2%", type: "Eficiência Média" },
-       { name: "Triple Threat", legs: [1.8, 1.8, 4.0], roi: "14.8%", type: "Risco Moderado" },
-       { name: "Quarteto Estratégico", legs: [1.8, 1.8, 1.8, 4.0], roi: "2.1%", type: "Margem Estreita" },
-       { name: "Full House", legs: [1.8, 1.8, 1.8, 1.8, 4.0], roi: "-5.4%", type: "Inviável" }
+       { name: "Duo Otimizado", legs: [1.8, 4.0], roi: "37.7%", type: "Alta Performance" },
+       { name: "Triple Otimizado", legs: [1.8, 1.8, 4.0], roi: "17.2%", type: "Estável" },
+       { name: "Quarteto Estável", legs: [1.8, 1.8, 1.8, 4.0], roi: "5.4%", type: "Estável" },
+       { name: "Full House", legs: [1.8, 1.8, 1.8, 1.8, 4.0], roi: "-2.1%", type: "Risco Alto" }
      ],
      "6.0": [
-       { name: "Duo de Ataque", legs: [1.8, 4.0], roi: "32.4%", type: "Baixa Eficiência" },
-       { name: "Triple Threat", legs: [1.8, 1.8, 4.0], roi: "11.2%", type: "Risco Alto" },
-       { name: "Quarteto Estratégico", legs: [1.8, 1.8, 1.8, 4.0], roi: "-1.8%", type: "Inviável" },
-       { name: "Full House", legs: [1.8, 1.8, 1.8, 1.8, 4.0], roi: "-9.7%", type: "Inviável" }
+       { name: "Duo Otimizado", legs: [1.8, 4.0], roi: "36.8%", type: "Alta Performance" },
+       { name: "Triple Otimizado", legs: [1.8, 1.8, 4.0], roi: "16.9%", type: "Estável" },
+       { name: "Quarteto Estável", legs: [1.8, 1.8, 1.8, 4.0], roi: "4.3%", type: "Risco Alto" },
+       { name: "Full House", legs: [1.8, 1.8, 1.8, 1.8, 4.0], roi: "-1.2%", type: "Inviável" }
      ]
    };
 
