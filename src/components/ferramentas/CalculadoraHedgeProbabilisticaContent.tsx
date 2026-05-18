@@ -99,15 +99,6 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
      ];
    });
 
-   const [mainLayout, setMainLayout] = useState<string[]>(() => {
-     const saved = localStorage.getItem('hedge-calc-main-layout');
-     return saved ? JSON.parse(saved) : [
-       'simulation-lab',
-       'operational-profile',
-       'golden-library'
-     ];
-   });
- 
    const sensors = useSensors(
      useSensor(PointerSensor, {
        activationConstraint: {
@@ -132,19 +123,6 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
      }
    };
 
-   const handleMainDragEnd = (event: DragEndEvent) => {
-     const { active, over } = event;
-     if (over && active.id !== over.id) {
-       setMainLayout((items) => {
-         const oldIndex = items.indexOf(active.id as string);
-         const newIndex = items.indexOf(over.id as string);
-         const newLayout = arrayMove(items, oldIndex, newIndex);
-         localStorage.setItem('hedge-calc-main-layout', JSON.stringify(newLayout));
-         return newLayout;
-       });
-     }
-   };
- 
    const applyGoldenCombo = (comboLegs: number[]) => {
      const newLegs = comboLegs.map((odd, i) => ({
        name: `Evento ${i + 1}`,
@@ -1655,9 +1633,8 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                   </div>
                 </div>
              )
-           }
          </div>
- 
+           }
          <Dialog open={!!expanded} onOpenChange={(o) => !o && setExpanded(null)}>
           <DialogContent className="max-w-2xl">
             <DialogHeader className="mb-4">
