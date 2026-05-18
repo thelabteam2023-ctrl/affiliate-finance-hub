@@ -456,9 +456,9 @@ export const CalculadoraExtracaoContent: React.FC = () => {
               </Tabs>
             </div>
 
-            <Button onClick={handleCalculate} className="w-full">
+             <Button onClick={handleCalculate} className="w-full" size="lg">
               <Zap className="h-4 w-4 mr-2" />
-              Calcular Custo de Conversão
+               {extractionMode === 'target' ? 'Calcular Hedge de Meta' : 'Calcular Custo de Conversão'}
             </Button>
           </CardContent>
         </Card>
@@ -468,6 +468,21 @@ export const CalculadoraExtracaoContent: React.FC = () => {
           <React.Fragment key={calcKey}>
             {/* Strategy explainer */}
             <StrategyExplainer results={results} monteCarlo={monteCarlo} targetExtraction={targetVal} />
+
+             {extractionMode === 'target' && (
+               <Card className="border-warning/30 bg-warning/5">
+                 <CardContent className="pt-4 flex gap-3 items-start">
+                   <Info className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+                   <div className="space-y-1">
+                     <p className="text-sm font-medium text-warning">Modo Meta de Extração Ativo</p>
+                     <p className="text-xs text-muted-foreground leading-relaxed">
+                       O sistema está calculando os Lays necessários para que, se qualquer evento da sequência perder na casa, 
+                       você receba exatamente <span className="text-foreground font-bold">{targetPercent}%</span> do valor nominal da freebet (R$ {fmt(targetVal * parseFloat(targetPercent) / 100)}) limpos na Exchange.
+                     </p>
+                   </div>
+                 </CardContent>
+               </Card>
+             )}
 
             {/* Strategy overview */}
             <Card className="border-primary/30">
