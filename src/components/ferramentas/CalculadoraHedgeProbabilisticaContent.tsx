@@ -9,7 +9,11 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
  import {
    Target, Activity, TrendingUp, AlertTriangle, Shield,
-    Plus, Trash2, Info, ChevronRight, Zap, BarChart3, HelpCircle, GripVertical,
+   Plus, Trash2, Info, ChevronRight, Zap, BarChart3, HelpCircle, GripVertical,
+   CheckCircle2, Lightbulb, BookOpen, FlaskConical, BrainCircuit,
+   ShieldAlert, Coins, Sparkles, Wand2, Dna, LineChart, History,
+   Trophy, Star, ArrowRight, RefreshCcw
+ } from 'lucide-react';
  import {
    DndContext,
    closestCenter,
@@ -29,11 +33,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
  } from '@dnd-kit/sortable';
  import { CSS } from '@dnd-kit/utilities';
  import { restrictToWindowEdges } from '@dnd-kit/modifiers';
-
-    CheckCircle2, Lightbulb, BookOpen, FlaskConical, BrainCircuit,
-    ShieldAlert, Coins, Sparkles, Wand2, Dna, LineChart, History,
-    Trophy, Star, ArrowRight, RefreshCcw
- } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
  import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
