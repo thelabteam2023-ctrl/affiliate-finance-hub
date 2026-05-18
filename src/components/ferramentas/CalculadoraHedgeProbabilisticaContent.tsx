@@ -102,44 +102,6 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
     setLegs(newLegs);
   };
 
-  const finalScore = useMemo(() => {
-    const roi = metrics.totalROI;
-    const ror = monteCarloSim.riskOfRuin;
-    const drawdownRatio = metrics.maxDrawdown / bankroll;
-    
-    let score: 'excellent' | 'good' | 'risky' | 'critical' = 'good';
-    let reason = "Equilíbrio adequado entre lucro e segurança.";
-
-    if (ror > 20 || metrics.allWonProfit < 0 || roi < 30) {
-      score = 'critical';
-      reason = ror > 20 ? "Risco de Ruína extremamente alto." : "Operação inviável ou ROI muito baixo.";
-    } else if (ror > 5 || drawdownRatio > 0.4 || roi < 50) {
-      score = 'risky';
-      reason = ror > 5 ? "Risco de Ruína considerável para esta banca." : "Drawdown elevado ou extração mediana.";
-    } else if (roi > 75 && ror < 1 && drawdownRatio < 0.15) {
-      score = 'excellent';
-      reason = "Alta eficiência de extração com risco controlado.";
-    } else {
-      score = 'good';
-    }
-
-    return { score, reason };
-  }, [metrics, monteCarloSim.riskOfRuin, bankroll]);
-
-  const scoreColor = {
-    excellent: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-    good: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-    risky: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
-    critical: 'bg-red-500/15 text-red-400 border-red-500/30'
-  }[finalScore.score];
-
-  const scoreLabel = {
-    excellent: 'Excelente',
-    good: 'Boa',
-    risky: 'Arriscada',
-    critical: 'Crítica'
-  }[finalScore.score];
- 
     const optimalConfig = useMemo(() => {
       let bestEV = -Infinity;
       let bestTarget = 0.7;
@@ -243,6 +205,44 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
     }, [metrics, bankroll]);
 
     const riskOfRuin = monteCarloSim.riskOfRuin;
+
+    const finalScore = useMemo(() => {
+      const roi = metrics.totalROI;
+      const ror = riskOfRuin;
+      const drawdownRatio = metrics.maxDrawdown / bankroll;
+      
+      let score: 'excellent' | 'good' | 'risky' | 'critical' = 'good';
+      let reason = "Equilíbrio adequado entre lucro e segurança.";
+
+      if (ror > 20 || metrics.allWonProfit < 0 || roi < 30) {
+        score = 'critical';
+        reason = ror > 20 ? "Risco de Ruína extremamente alto." : "Operação inviável ou ROI muito baixo.";
+      } else if (ror > 5 || drawdownRatio > 0.4 || roi < 50) {
+        score = 'risky';
+        reason = ror > 5 ? "Risco de Ruína considerável para esta banca." : "Drawdown elevado ou extração mediana.";
+      } else if (roi > 75 && ror < 1 && drawdownRatio < 0.15) {
+        score = 'excellent';
+        reason = "Alta eficiência de extração com risco controlado.";
+      } else {
+        score = 'good';
+      }
+
+      return { score, reason };
+    }, [metrics, riskOfRuin, bankroll]);
+
+    const scoreColor = {
+      excellent: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+      good: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+      risky: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
+      critical: 'bg-red-500/15 text-red-400 border-red-500/30'
+    }[finalScore.score];
+
+    const scoreLabel = {
+      excellent: 'Excelente',
+      good: 'Boa',
+      risky: 'Arriscada',
+      critical: 'Crítica'
+    }[finalScore.score];
  
    return (
      <ScrollArea className="h-full">
