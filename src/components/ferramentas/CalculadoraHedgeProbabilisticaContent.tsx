@@ -929,7 +929,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                   <DndContext
                     sensors={sensors}
                     collisionDetection={closestCenter}
-                    onDragEnd={handleDragEnd}
+                     onDragEnd={handleLabDragEnd}
                     modifiers={[restrictToVerticalAxis, restrictToWindowEdges]}
                   >
                     <SortableContext 
