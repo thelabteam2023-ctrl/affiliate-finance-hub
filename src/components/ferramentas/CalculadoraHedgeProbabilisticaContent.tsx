@@ -10,9 +10,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
  import {
    Target, Activity, TrendingUp, AlertTriangle, Shield,
    Plus, Trash2, Info, ChevronRight, Zap, BarChart3, HelpCircle,
-   CheckCircle2, Lightbulb, BookOpen, FlaskConical, BrainCircuit,
-   ShieldAlert, Coins, Sparkles, Wand2, Dna, LineChart, History,
-   Trophy, Star, ArrowRight
+    CheckCircle2, Lightbulb, BookOpen, FlaskConical, BrainCircuit,
+    ShieldAlert, Coins, Sparkles, Wand2, Dna, LineChart, History,
+    Trophy, Star, ArrowRight, RefreshCcw
  } from 'lucide-react';
  import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
