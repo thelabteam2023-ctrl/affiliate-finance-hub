@@ -907,198 +907,212 @@ Para corrigir, reduza a Meta de Extração no slider.`}
           </div>
         </div>
                </>
-            ) : (
-             <DndContext 
-               sensors={sensors}
-               collisionDetection={closestCenter}
-               onDragEnd={handleDragEnd}
-             >
-               <SortableContext 
-                 items={labLayout}
-                 strategy={rectSortingStrategy}
-               >
-                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-min">
-                   {labLayout.map((layoutId) => {
-                     if (layoutId === 'visual-sim') return (
-                       <SortableCard key={layoutId} id={layoutId}>
-                         <Card className="bg-emerald-500/5 border-emerald-500/20 overflow-hidden h-full">
-                           <div className="bg-emerald-500/10 px-4 py-2 border-b border-emerald-500/20">
-                             <h4 className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
-                               <CheckCircle2 className="h-3 w-3" /> Simulação Visual
-                             </h4>
-                           </div>
-                           <CardContent className="pt-4 space-y-4">
-                             <div className="flex items-end gap-1 h-24 mb-6 items-baseline">
-                               {monteCarloSim.samples.map((s, i) => {
-                                 const height = Math.min(100, Math.max(20, (Math.abs(s) / Math.max(metrics.allWonProfit, Math.abs(metrics.maxDrawdown))) * 100));
-                                 return (
-                                   <div 
-                                     key={i} 
-                                     className={`flex-1 rounded-t-sm transition-all cursor-help relative group ${s >= 0 ? 'bg-emerald-500/40 hover:bg-emerald-400' : 'bg-red-500/40 hover:bg-red-400'}`}
-                                     style={{ height: `${height}%` }}
-                                   />
-                                 );
-                               })}
-                             </div>
-                             <p className="text-[10px] text-muted-foreground italic leading-relaxed border-t border-border/40 pt-2">
-                               Amostra da variância em 10 ciclos reais.
-                             </p>
-                           </CardContent>
-                         </Card>
-                       </SortableCard>
-                     );
-
-                     if (layoutId === 'double-bankroll') return (
-                       <SortableCard key={layoutId} id={layoutId}>
-                         <div className="p-4 rounded-lg bg-orange-500/5 border border-orange-500/20 space-y-3 h-full flex flex-col justify-center">
-                           <div className="flex items-center gap-2">
-                             <TrendingUp className="h-4 w-4 text-orange-400" />
-                             <h4 className="text-xs font-bold uppercase tracking-wider text-orange-400">Projeção: Dobra</h4>
-                           </div>
-                           <div className="grid grid-cols-2 gap-4">
-                             <div className="space-y-1">
-                               <span className="text-[9px] text-muted-foreground uppercase">Eventos</span>
-                               <p className="text-lg font-bold text-white font-mono">{monteCarloSim.medianSteps}</p>
-                             </div>
-                             <div className="space-y-1 text-right">
-                               <span className="text-[9px] text-muted-foreground uppercase">Prob. Sucesso</span>
-                               <p className={`text-lg font-bold font-mono ${monteCarloSim.probDouble > 70 ? 'text-emerald-400' : 'text-orange-400'}`}>{fmtPct(monteCarloSim.probDouble)}</p>
-                             </div>
-                           </div>
+             ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="md:col-span-1 space-y-6">
+                     <div className="space-y-4">
+                       <Card className="bg-emerald-500/5 border-emerald-500/20 overflow-hidden">
+                         <div className="bg-emerald-500/10 px-4 py-2 border-b border-emerald-500/20">
+                           <h4 className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+                             <CheckCircle2 className="h-3 w-3" /> Simulação Visual de 100 Mil Ciclos
+                           </h4>
                          </div>
-                       </SortableCard>
-                     );
-
-                     if (layoutId === 'lab-params') return (
-                       <SortableCard key={layoutId} id={layoutId}>
-                         <Card className="h-full">
-                   <CardHeader>
-                     <CardTitle className="text-sm font-medium flex items-center gap-2">
-                       <Coins className="h-4 w-4 text-primary" /> Parâmetros do Laboratório
-                     </CardTitle>
-                   </CardHeader>
-                   <CardContent className="space-y-4">
-                      <div className="space-y-3">
-                        <Label className="text-[10px] uppercase font-bold text-muted-foreground">Referência de Extração (Benchmark)</Label>
-                        <Tabs 
-                          value={labBenchmark} 
-                          onValueChange={(val) => {
-                            setLabBenchmark(val);
-                            if (val !== 'custom') setTargetExtraction(Number(val) / 100);
-                          }} 
-                          className="w-full"
-                        >
-                          <TabsList className="grid grid-cols-4 h-9 w-full">
-                            <TabsTrigger value="65" className="text-[10px]">65%</TabsTrigger>
-                            <TabsTrigger value="70" className="text-[10px]">70%</TabsTrigger>
-                            <TabsTrigger value="75" className="text-[10px]">75%</TabsTrigger>
-                            <TabsTrigger value="custom" className="text-[10px]">Livre</TabsTrigger>
-                          </TabsList>
-                        </Tabs>
-                        <div className="p-2 rounded bg-muted/30 border border-border/50">
-                          <p className="text-[9px] text-muted-foreground leading-tight italic">
-                            {labBenchmark === '65' && "Conservador: Menor exposição na Exchange, maior segurança para bancas pequenas."}
-                            {labBenchmark === '70' && "Equilibrado: O padrão ouro da indústria para extração sustentável."}
-                            {labBenchmark === '75' && "Agressivo: Maior lucro por freebet, exige banca robusta para suportar a variância."}
-                            {labBenchmark === 'custom' && "Manual: Ajuste livre conforme sua estratégia específica."}
-                          </p>
-                        </div>
-                      </div>
-
-                      {labBenchmark === 'custom' && (
-                        <div className="space-y-3 p-3 bg-muted/20 border border-border rounded-lg">
-                          <div className="flex justify-between items-center">
-                            <Label className="text-[10px] uppercase font-bold text-primary">Ajuste Manual</Label>
-                            <span className="text-xs font-mono font-bold text-white">{Math.round(targetExtraction * 100)}%</span>
-                          </div>
-                          <Slider 
-                            value={[targetExtraction * 100]} 
-                            min={50} max={95} step={1}
-                            onValueChange={(vals) => setTargetExtraction(vals[0] / 100)}
-                          />
-                        </div>
-                      )}
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label className="text-[10px] uppercase font-bold text-muted-foreground">Valor da Freebet (Base)</Label>
-                          <div className="h-10 px-3 flex items-center bg-muted/50 border border-border rounded-md font-mono text-sm text-white">
-                            R$ {fmt(freebet)}
-                          </div>
-                          <p className="text-[9px] text-muted-foreground italic leading-tight">
-                            Definido na aba principal.
-                          </p>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-[10px] uppercase font-bold text-primary">Sua Banca Exchange</Label>
-                          <div className="relative">
-                            <Input 
-                              type="number" 
-                              value={bankroll} 
-                              onChange={(e) => setBankroll(Number(e.target.value))}
-                              className="h-10 pl-8 font-mono text-sm"
-                            />
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">R$</span>
-                          </div>
-                          <p className="text-[9px] text-muted-foreground italic leading-tight">
-                            Saldo disponível para cobrir Lays.
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-3 pt-2 border-t border-border/30">
-                        <Label className="text-[10px] uppercase font-bold text-muted-foreground">Modelo de Gestão (Simulação)</Label>
-                        <Tabs 
-                          value={simMode} 
-                          onValueChange={(val) => setSimMode(val as 'accumulative' | 'capped')} 
-                          className="w-full"
-                        >
-                          <TabsList className="grid grid-cols-2 h-9 w-full">
-                            <TabsTrigger value="accumulative" className="text-[10px]">Accumulativa</TabsTrigger>
-                            <TabsTrigger value="capped" className="text-[10px]">Banca Fixa (Teto)</TabsTrigger>
-                          </TabsList>
-                        </Tabs>
-                        
-                        {simMode === 'capped' && (
-                          <div className="space-y-3 p-3 bg-blue-500/5 border border-blue-500/10 rounded-lg">
-                            <div className="flex justify-between items-center">
-                              <Label className="text-[10px] uppercase font-bold text-blue-400">Limite de Crescimento</Label>
-                              <span className="text-xs font-mono font-bold text-white">{bankrollCeilingMultiplier}x Banca</span>
-                            </div>
-                            <Slider 
-                              value={[bankrollCeilingMultiplier]} 
-                              min={1} max={20} step={1}
-                              onValueChange={(vals) => setBankrollCeilingMultiplier(vals[0])}
-                            />
-                            <p className="text-[9px] text-muted-foreground italic leading-tight">
-                              Simula a realidade onde você saca o lucro ao atingir R$ {fmt(bankroll * bankrollCeilingMultiplier)}.
+                         <CardContent className="pt-4 space-y-4">
+                           <div className="flex items-end gap-1 h-24 mb-10 items-baseline">
+                             {monteCarloSim.samples.map((s, i) => {
+                               const height = Math.min(100, Math.max(20, (Math.abs(s) / Math.max(metrics.allWonProfit, Math.abs(metrics.maxDrawdown))) * 100));
+                               const isWin = s >= 0;
+                               return (
+                                 <div 
+                                   key={i} 
+                                   className={`flex-1 rounded-t-sm transition-all cursor-help relative group ${isWin ? 'bg-emerald-500/40 hover:bg-emerald-400' : 'bg-red-500/40 hover:bg-red-400'}`}
+                                   style={{ height: `${height}%` }}
+                                 >
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2 py-1 bg-popover text-[9px] text-popover-foreground rounded border border-border shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none z-[60] whitespace-nowrap">
+                                     <div className="font-bold">{isWin ? 'LUCRO' : 'PREJUÍZO'}</div>
+                                     <div>Resultado: R$ {fmt(s)}</div>
+                                      <div className="text-muted-foreground font-mono italic">Evento #{i + 1}</div>
+                                   </div>
+                                 </div>
+                               );
+                             })}
+                           </div>
+                           <div className="flex justify-between text-[9px] text-muted-foreground uppercase font-medium">
+                             <span>Início</span>
+                             <span>Amostra da Variância de Longo Prazo</span>
+                             <span>Fim</span>
+                           </div>
+                           <p className="text-[10px] text-muted-foreground leading-relaxed italic border-t border-border/40 pt-2">
+                             Passe o mouse sobre as barras para ver o resultado de cada ciclo individual.
+                           </p>
+                         </div>
+                       </CardContent>
+                     </Card>
+                     {/* Meta de Dobra da Banca */}
+                     <div className="p-4 rounded-lg bg-orange-500/5 border border-orange-500/20 space-y-3">
+                       <div className="flex items-center gap-2">
+                         <TrendingUp className="h-4 w-4 text-orange-400" />
+                         <h4 className="text-xs font-bold uppercase tracking-wider text-orange-400">Projeção: Dobrar a Banca</h4>
+                       </div>
+                       <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <span className="text-[9px] text-muted-foreground uppercase">Eventos Necessários</span>
+                            <p className="text-lg font-bold text-white font-mono">
+                              {monteCarloSim.medianSteps}
                             </p>
                           </div>
-                        )}
-                      </div>
+                          <div className="space-y-1 text-right">
+                            <span className="text-[9px] text-muted-foreground uppercase">Prob. de Sucesso</span>
+                            <p className={`text-lg font-bold font-mono ${monteCarloSim.probDouble > 70 ? 'text-emerald-400' : 'text-orange-400'}`}>
+                              {fmtPct(monteCarloSim.probDouble)}
+                            </p>
+                          </div>
+                        </div>
+                         <div className="text-[10px] text-muted-foreground leading-relaxed italic border-t border-border/40 pt-2 space-y-3">
+                           <p>
+                             <strong>Hipótese de Reinvestimento:</strong> Esta simulação assume que você <strong>não realiza saques</strong>, reinvestindo 100% dos lucros para compor a banca (Juros Compostos).
+                           </p>
+                           <p>
+                             {metrics.totalEV > 0 
+                               ? "Em cenários de EV+, a banca tende ao infinito, mas a variância pode causar ruína se a exposição for alta." 
+                               : "Atenção: Em cenários de EV negativo, a quebra é estatisticamente inevitável no longo prazo."}
+                           </p>
+                           <p>
+                             Para dobrar a banca (ganhar R$ {fmt(bankroll)}), a mediana necessária é de <strong>{monteCarloSim.medianSteps} eventos</strong>, com <strong>{fmtPct(monteCarloSim.probDouble)}</strong> de chance de sucesso antes da quebra.
+                           </p>
+                         </div>
+                     </div>
 
-                      <div className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/20 space-y-2">
-                        <div className="flex justify-between items-center text-[10px] uppercase font-bold text-blue-400">
+                  </div>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <Coins className="h-4 w-4 text-primary" /> Parâmetros do Laboratório
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                     <div className="space-y-3">
+                       <Label className="text-[10px] uppercase font-bold text-muted-foreground">Referência de Extração (Benchmark)</Label>
+                       <Tabs 
+                         value={labBenchmark} 
+                         onValueChange={(val) => {
+                           setLabBenchmark(val);
+                           if (val !== 'custom') setTargetExtraction(Number(val) / 100);
+                         }} 
+                         className="w-full"
+                       >
+                         <TabsList className="grid grid-cols-4 h-9 w-full">
+                           <TabsTrigger value="65" className="text-[10px]">65%</TabsTrigger>
+                           <TabsTrigger value="70" className="text-[10px]">70%</TabsTrigger>
+                           <TabsTrigger value="75" className="text-[10px]">75%</TabsTrigger>
+                           <TabsTrigger value="custom" className="text-[10px]">Livre</TabsTrigger>
+                         </TabsList>
+                       </Tabs>
+                       <div className="p-2 rounded bg-muted/30 border border-border/50">
+                         <p className="text-[9px] text-muted-foreground leading-tight italic">
+                           {labBenchmark === '65' && "Conservador: Menor exposição na Exchange, maior segurança para bancas pequenas."}
+                           {labBenchmark === '70' && "Equilibrado: O padrão ouro da indústria para extração sustentável."}
+                           {labBenchmark === '75' && "Agressivo: Maior lucro por freebet, exige banca robusta para suportar a variância."}
+                           {labBenchmark === 'custom' && "Manual: Ajuste livre conforme sua estratégia específica."}
+                         </p>
+                       </div>
+                     </div>
+
+                     {labBenchmark === 'custom' && (
+                       <div className="space-y-3 p-3 bg-muted/20 border border-border rounded-lg">
+                         <div className="flex justify-between items-center">
+                           <Label className="text-[10px] uppercase font-bold text-primary">Ajuste Manual</Label>
+                           <span className="text-xs font-mono font-bold text-white">{Math.round(targetExtraction * 100)}%</span>
+                         </div>
+                         <Slider 
+                           value={[targetExtraction * 100]} 
+                           min={50} max={95} step={1}
+                           onValueChange={(vals) => setTargetExtraction(vals[0] / 100)}
+                         />
+                       </div>
+                     )}
+
+                     <div className="grid grid-cols-2 gap-4">
+                       <div className="space-y-2">
+                         <Label className="text-[10px] uppercase font-bold text-muted-foreground">Valor da Freebet (Base)</Label>
+                         <div className="h-10 px-3 flex items-center bg-muted/50 border border-border rounded-md font-mono text-sm text-white">
+                           R$ {fmt(freebet)}
+                         </div>
+                         <p className="text-[9px] text-muted-foreground italic leading-tight">
+                           Definido na aba principal.
+                         </p>
+                       </div>
+
+                       <div className="space-y-2">
+                         <Label className="text-[10px] uppercase font-bold text-primary">Sua Banca Exchange</Label>
+                         <div className="relative">
+                           <Input 
+                             type="number" 
+                             value={bankroll} 
+                             onChange={(e) => setBankroll(Number(e.target.value))}
+                             className="h-10 pl-8 font-mono text-sm"
+                           />
+                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">R$</span>
+                         </div>
+                         <p className="text-[9px] text-muted-foreground italic leading-tight">
+                           Saldo disponível para cobrir Lays.
+                         </p>
+                       </div>
+                     </div>
+
+                     <div className="space-y-3 pt-2 border-t border-border/30">
+                       <Label className="text-[10px] uppercase font-bold text-muted-foreground">Modelo de Gestão (Simulação)</Label>
+                       <Tabs 
+                         value={simMode} 
+                         onValueChange={(val) => setSimMode(val as 'accumulative' | 'capped')} 
+                         className="w-full"
+                       >
+                         <TabsList className="grid grid-cols-2 h-9 w-full">
+                           <TabsTrigger value="accumulative" className="text-[10px]">Accumulativa</TabsTrigger>
+                           <TabsTrigger value="capped" className="text-[10px]">Banca Fixa (Teto)</TabsTrigger>
+                         </TabsList>
+                       </Tabs>
+                       
+                       {simMode === 'capped' && (
+                         <div className="space-y-3 p-3 bg-blue-500/5 border border-blue-500/10 rounded-lg">
+                           <div className="flex justify-between items-center">
+                             <Label className="text-[10px] uppercase font-bold text-blue-400">Limite de Crescimento</Label>
+                             <span className="text-xs font-mono font-bold text-white">{bankrollCeilingMultiplier}x Banca</span>
+                           </div>
+                           <Slider 
+                             value={[bankrollCeilingMultiplier]} 
+                             min={1} max={20} step={1}
+                             onValueChange={(vals) => setBankrollCeilingMultiplier(vals[0])}
+                           />
+                           <p className="text-[9px] text-muted-foreground italic leading-tight">
+                             Simula a realidade onde você saca o lucro ao atingir R$ {fmt(bankroll * bankrollCeilingMultiplier)}.
+                           </p>
+                         </div>
+                       )}
+                     </div>
+
+                     <div className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/20 space-y-2">
+                       <div className="flex justify-between items-center text-[10px] uppercase font-bold text-blue-400">
                           <span>Proporção Banca vs Freebet</span>
                           <span>{Math.round(bankroll / freebet)}x</span>
-                        </div>
-                        <div className="w-full h-1.5 bg-blue-500/10 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-blue-500 transition-all duration-500" 
-                            style={{ width: `${Math.min(100, (freebet / bankroll) * 100 * 10)}%` }}
-                          />
-                        </div>
-                        <p className="text-[9px] text-muted-foreground leading-relaxed">
-                          Sua banca é <strong>{Math.round(bankroll / freebet)} vezes maior</strong> que o valor da Freebet. 
-                          Uma banca saudável deve ser de no mínimo 15-20x o valor da Freebet para absorver variância em cascatas longas.
-                        </p>
-                      </div>
-                     
-                    </CardContent>
-                  </Card>
+                       </div>
+                       <div className="w-full h-1.5 bg-blue-500/10 rounded-full overflow-hidden">
+                         <div 
+                           className="h-full bg-blue-500 transition-all duration-500" 
+                           style={{ width: `${Math.min(100, (freebet / bankroll) * 100 * 10)}%` }}
+                         />
+                       </div>
+                       <p className="text-[9px] text-muted-foreground leading-relaxed">
+                         Sua banca é <strong>{Math.round(bankroll / freebet)} vezes maior</strong> que o valor da Freebet. 
+                         Uma banca saudável deve ser de no mínimo 15-20x o valor da Freebet para absorver variância em cascatas longas.
+                       </p>
+                     </div>
+                    
+                   </CardContent>
+                 </Card>
 
-                  <Card className="bg-primary/5 border-primary/20">
+                 <Card className="bg-primary/5 border-primary/20">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium flex items-center gap-2">
                         <Sparkles className="h-4 w-4 text-primary" /> Insights do Doutor em Estatística
