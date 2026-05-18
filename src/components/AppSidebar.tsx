@@ -109,7 +109,7 @@ const menuGroups: MenuGroup[] = [
       { title: "Prot. Progressiva", url: "#calculadora-lay", icon: Calculator, iconName: "Calculator", moduleKey: "ferramentas" },
       { title: "Calculadora EV", url: "#calculadora-ev", icon: Calculator, iconName: "Calculator", moduleKey: "ferramentas" },
       { title: "Calc. Extração", url: "#calculadora-extracao", icon: Calculator, iconName: "Calculator", moduleKey: "ferramentas" },
-      { title: "Calc. Hedge Prob.", url: "#calculadora-hedge-prob", icon: Target, iconName: "Target", moduleKey: "ferramentas" },
+      { title: "Hedge Probabilístico", url: "#calculadora-hedge-prob", icon: Target, iconName: "Target", moduleKey: "ferramentas" },
       { title: "Planejamento Campanhas", url: "/ferramentas/planejamento", icon: CalendarDays, iconName: "CalendarDays", moduleKey: "ferramentas" },
     ],
   },
