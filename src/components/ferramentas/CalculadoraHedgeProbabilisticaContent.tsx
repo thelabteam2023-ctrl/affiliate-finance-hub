@@ -1181,7 +1181,6 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                          </Card>
                        </SortableCard>
                      );
-                     return null;
 
                      if (layoutId === 'restricted-golden-library') return (
                        <SortableCard key={layoutId} id={layoutId}>
