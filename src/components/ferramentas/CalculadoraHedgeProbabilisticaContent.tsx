@@ -685,14 +685,17 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
                   Score: {scoreLabel}
                 </Badge>
               </div>
-             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-               <TabsList className="grid grid-cols-2 h-9 w-[280px]">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-auto">
+                <TabsList className="grid grid-cols-3 h-9 w-[420px]">
                  <TabsTrigger value="calculadora" className="text-xs gap-2">
                    <Activity className="h-3.5 w-3.5" /> Calculadora
                  </TabsTrigger>
-                 <TabsTrigger value="laboratorio" className="text-xs gap-2">
-                   <FlaskConical className="h-3.5 w-3.5" /> Laboratório
-                 </TabsTrigger>
+                  <TabsTrigger value="laboratorio" className="text-xs gap-2">
+                    <FlaskConical className="h-3.5 w-3.5" /> Laboratório
+                  </TabsTrigger>
+                  <TabsTrigger value="live" className="text-xs gap-2">
+                    <Clock className="h-3.5 w-3.5" /> Calculadora Live
+                  </TabsTrigger>
                </TabsList>
              </Tabs>
             </div>
