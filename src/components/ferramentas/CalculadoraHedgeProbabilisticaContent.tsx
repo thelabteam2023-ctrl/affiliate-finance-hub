@@ -1274,12 +1274,12 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                 </CardContent>
                               </Card>
                             )}
-                          </SortableLabCard>
-                        ))}
-                      </div>
-                    </SortableContext>
-                  </DndContext>
-                </div>
+                           </SortableLabCard>
+                         ))}
+                       </div>
+                     </SortableContext>
+                   </DndContext>
+                 </div>
 
                         <div className="p-3 rounded-lg bg-background/40 border border-border/40 space-y-1">
                           <div className="flex justify-between items-center text-[10px] uppercase font-bold text-muted-foreground">
