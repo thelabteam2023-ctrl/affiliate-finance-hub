@@ -27,40 +27,32 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
 
-   const goldenCombinations = [
-     {
-       name: "Duo de Ataque",
-       description: "A melhor combinação para 2 pernas. Equilíbrio entre odd inicial baixa e final alta.",
-       legs: [1.80, 4.00],
-       expectedROI: "39.6%",
-       type: "Alta Eficiência",
-       commission: "2.8%"
-     },
-     {
-       name: "Triple Threat Otimizado",
-       description: "Ponto de equilíbrio ideal para extração consistente em 3 eventos.",
-       legs: [1.80, 1.80, 4.00],
-       expectedROI: "20.3%",
-       type: "Equilibrado",
-       commission: "2.8%"
-     },
-     {
-       name: "Quarteto Estratégico",
-       description: "Mantenha o controle da banca mesmo com 4 eventos sequenciais.",
-       legs: [1.80, 1.80, 1.80, 4.00],
-       expectedROI: "9.2%",
-       type: "Estabilidade",
-       commission: "2.8%"
-     },
-     {
-       name: "Full House (5 Pernas)",
-       description: "Otimizado para extrações longas onde a banca é o fator limitante.",
-       legs: [1.80, 1.80, 1.80, 1.80, 4.00],
-       expectedROI: "2.6%",
-       type: "Segurança Máxima",
-       commission: "2.8%"
-     }
-   ];
+   const goldenCombinationsByCommission: Record<string, any[]> = {
+     "2.8": [
+       { name: "Duo de Ataque", legs: [1.8, 4.0], roi: "39.6%", type: "Alta Eficiência" },
+       { name: "Triple Threat", legs: [1.8, 1.8, 4.0], roi: "20.3%", type: "Equilibrado" },
+       { name: "Quarteto Estratégico", legs: [1.8, 1.8, 1.8, 4.0], roi: "9.2%", type: "Estabilidade" },
+       { name: "Full House", legs: [1.8, 1.8, 1.8, 1.8, 4.0], roi: "2.6%", type: "Segurança" }
+     ],
+     "3.0": [
+       { name: "Duo de Ataque", legs: [1.8, 4.0], roi: "39.4%", type: "Alta Eficiência" },
+       { name: "Triple Threat", legs: [1.8, 1.8, 4.0], roi: "20.1%", type: "Equilibrado" },
+       { name: "Quarteto Estratégico", legs: [1.8, 1.8, 1.8, 4.0], roi: "8.9%", type: "Estabilidade" },
+       { name: "Full House", legs: [1.8, 1.8, 1.8, 1.8, 4.0], roi: "2.3%", type: "Segurança" }
+     ],
+     "4.8": [
+       { name: "Duo de Ataque", legs: [1.8, 4.0], roi: "38.0%", type: "Alta Eficiência" },
+       { name: "Triple Threat", legs: [1.8, 1.8, 4.0], roi: "18.1%", type: "Equilibrado" },
+       { name: "Quarteto Estratégico", legs: [1.8, 1.8, 1.8, 4.0], roi: "6.3%", type: "Estabilidade" },
+       { name: "Full House", legs: [1.8, 1.8, 1.8, 1.8, 4.0], roi: "-0.9%", type: "Risco Alto" }
+     ],
+     "6.0": [
+       { name: "Duo de Ataque", legs: [1.8, 4.0], roi: "37.0%", type: "Alta Eficiência" },
+       { name: "Triple Threat", legs: [1.8, 1.8, 4.0], roi: "16.7%", type: "Equilibrado" },
+       { name: "Quarteto Estratégico", legs: [1.8, 1.8, 1.8, 4.0], roi: "4.5%", type: "Estabilidade" },
+       { name: "Full House", legs: [1.8, 1.8, 1.8, 1.8, 4.0], roi: "-3.2%", type: "Inviável" }
+     ]
+   };
 
  export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
    const applyGoldenCombo = (comboLegs: number[]) => {
