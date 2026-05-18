@@ -7,8 +7,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { CardInfoTooltip } from '@/components/ui/card-info-tooltip';
 import {
-  Zap, TrendingDown, DollarSign, BarChart3, Target,
-  Shield, ChevronDown, ChevronUp, Lightbulb, HelpCircle, Info, Percent, Plus, Copy,
+   Zap, TrendingDown, DollarSign, BarChart3, Target, LayoutGrid,
+   Shield, ChevronDown, ChevronUp, Lightbulb, HelpCircle, Info, Percent, Plus, Copy, Settings2
 } from 'lucide-react';
 import {
   type ExtractionConfig,
@@ -263,6 +263,8 @@ const DEFAULT_EVENTS: Record<number, EventInput[]> = {
 
 export const CalculadoraExtracaoContent: React.FC = () => {
   const [targetExtraction, setTargetExtraction] = useState('1000');
+  const [extractionMode, setExtractionMode] = useState<ExtractionMode>('proportional');
+  const [targetPercent, setTargetPercent] = useState('100');
   
   const [exchangeCommission, setExchangeCommission] = useState('2.8');
   const [numEvents, setNumEvents] = useState('2');
@@ -301,6 +303,8 @@ export const CalculadoraExtracaoContent: React.FC = () => {
 
     const config: ExtractionConfig = {
       targetExtraction: isNaN(parseFloat(targetExtraction)) ? 1000 : parseFloat(targetExtraction),
+      mode: extractionMode,
+      targetPercent: isNaN(parseFloat(targetPercent)) ? 100 : parseFloat(targetPercent),
       bankrollAvailable: 99999,
       exchangeCommission: (isNaN(parseFloat(exchangeCommission)) ? 2.8 : parseFloat(exchangeCommission)) / 100,
       events,
@@ -329,27 +333,46 @@ export const CalculadoraExtracaoContent: React.FC = () => {
 
   return (
     <ScrollArea className="h-full">
-      <div className="p-4 space-y-4 max-w-5xl mx-auto">
+      <div className="p-4 space-y-6 max-w-5xl mx-auto">
 
         {/* Header */}
-        <div className="p-3 rounded-lg bg-muted/50 border border-border">
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            <strong className="text-foreground">Como funciona:</strong> Insira as odds reais que você está vendo no mercado (back na casa + lay na exchange).
-            A calculadora simula o hedge sequencial e calcula o <strong className="text-foreground">custo real de conversão</strong> do seu bônus/freebet.
-          </p>
+        <div className="flex flex-col gap-4">
+          <div className="p-3 rounded-lg bg-muted/50 border border-border">
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              <strong className="text-foreground">Como funciona:</strong> Escolha entre o modelo <strong className="text-foreground">Proporcional</strong> (extração otimizada para as odds) ou <strong className="text-foreground">Meta de Extração</strong> (você define quanto quer converter).
+              A calculadora simula o hedge sequencial e calcula o custo real de conversão do seu bônus/freebet.
+            </p>
+          </div>
+
+          <Tabs 
+            value={extractionMode} 
+            onValueChange={(v) => setExtractionMode(v as ExtractionMode)}
+            className="w-full"
+          >
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="proportional" className="gap-2">
+                <BarChart3 className="h-4 w-4" />
+                Modelo Proporcional
+              </TabsTrigger>
+              <TabsTrigger value="target" className="gap-2">
+                <Target className="h-4 w-4" />
+                Modelo por Meta
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
         {/* Inputs */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
-              <Target className="h-4 w-4 text-primary" />
+              <Settings2 className="h-4 w-4 text-primary" />
               Parâmetros
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Financial row */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className={`grid ${extractionMode === 'target' ? 'grid-cols-3' : 'grid-cols-2'} gap-3`}>
               <div className="space-y-1.5">
                 <div className="flex items-center">
                   <Label className="text-xs">Valor a Extrair (R$)</Label>
@@ -357,6 +380,25 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                 </div>
                 <Input type="number" value={targetExtraction} onChange={e => setTargetExtraction(e.target.value)} className="h-9 text-sm" />
               </div>
+              
+              {extractionMode === 'target' && (
+                <div className="space-y-1.5">
+                  <div className="flex items-center">
+                    <Label className="text-xs">Meta de Extração (%)</Label>
+                    <InputTooltip title="Meta de Extração" description="Qual porcentagem do valor nominal da freebet você deseja extrair?" />
+                  </div>
+                  <div className="relative">
+                    <Input 
+                      type="number" 
+                      value={targetPercent} 
+                      onChange={e => setTargetPercent(e.target.value)} 
+                      className="h-9 text-sm pr-7" 
+                    />
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">%</span>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-1.5">
                 <div className="flex items-center">
                   <Label className="text-xs">Comissão Exchange (%)</Label>
