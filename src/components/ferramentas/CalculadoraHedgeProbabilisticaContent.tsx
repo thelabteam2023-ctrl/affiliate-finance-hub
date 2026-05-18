@@ -44,6 +44,8 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
    const [targetExtraction, setTargetExtraction] = useState(0.7);
   const [labBenchmark, setLabBenchmark] = useState<string>('70');
    const [bankroll, setBankroll] = useState(5000);
+   const [simMode, setSimMode] = useState<'accumulative' | 'capped'>('accumulative');
+   const [bankrollCeilingMultiplier, setBankrollCeilingMultiplier] = useState(5);
    const [activeTab, setActiveTab] = useState('calculadora');
   const [legs, setLegs] = useState<LegInput[]>([
     { name: 'Evento 1', backOdd: 2.0, layOdd: 2.0 },
@@ -178,8 +180,9 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
     }, [legs, freebet, commission, bankroll]);
 
     const monteCarloSim = useMemo(() => {
-      const numTraj = 100000; // Número de trajetórias
+      const numTraj = 100000;
       const maxSteps = 1000; // Máximo de bilhetes por trajetória
+      const ceiling = simMode === 'capped' ? bankroll * bankrollCeilingMultiplier : Infinity;
       
       let totalBankruptcies = 0;
       let bankruptciesIn10 = 0;
@@ -214,7 +217,8 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
           }
 
           currentBank += outcome;
-          
+          if (currentBank > ceiling) currentBank = ceiling;
+
           // Coleta amostra dos primeiros 10 eventos da primeira trajetória para o UI
           if (t === 0 && samples.length < 10) {
             samples.push(outcome);
@@ -257,13 +261,13 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
         medianSteps,
         samples
       };
-    }, [metrics, bankroll]);
+    }, [metrics, bankroll, simMode, bankrollCeilingMultiplier]);
 
     const longTermSim = useMemo(() => {
       const cycles = 100000;
-      const dataPoints = 200;
       const step = 5;
       const trajectory = [];
+      const ceiling = simMode === 'capped' ? bankroll * bankrollCeilingMultiplier : Infinity;
       
       let currentBank = bankroll;
       const cdf = metrics.aggregatedScenarios.map((s, i, arr) => ({
@@ -283,6 +287,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
         const rand = Math.random();
         const scenario = cdf.find(s => rand <= s.upper) || cdf[cdf.length - 1];
         currentBank += scenario.result;
+        if (currentBank > ceiling) currentBank = ceiling;
 
         if (i % step === 0 && i <= 1000) {
           trajectory.push({ cycle: i, balance: Math.max(0, currentBank) });
@@ -290,7 +295,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
       }
 
       return trajectory;
-    }, [metrics, bankroll]);
+    }, [metrics, bankroll, simMode, bankrollCeilingMultiplier]);
     const riskOfRuin = monteCarloSim.riskOfRuin;
 
     const finalScore = useMemo(() => {
@@ -886,6 +891,37 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                         </div>
                       </div>
 
+                      <div className="space-y-3 pt-2 border-t border-border/30">
+                        <Label className="text-[10px] uppercase font-bold text-muted-foreground">Modelo de Gestão (Simulação)</Label>
+                        <Tabs 
+                          value={simMode} 
+                          onValueChange={(val) => setSimMode(val as 'accumulative' | 'capped')} 
+                          className="w-full"
+                        >
+                          <TabsList className="grid grid-cols-2 h-9 w-full">
+                            <TabsTrigger value="accumulative" className="text-[10px]">Accumulativa</TabsTrigger>
+                            <TabsTrigger value="capped" className="text-[10px]">Banca Fixa (Teto)</TabsTrigger>
+                          </TabsList>
+                        </Tabs>
+                        
+                        {simMode === 'capped' && (
+                          <div className="space-y-3 p-3 bg-blue-500/5 border border-blue-500/10 rounded-lg">
+                            <div className="flex justify-between items-center">
+                              <Label className="text-[10px] uppercase font-bold text-blue-400">Limite de Crescimento</Label>
+                              <span className="text-xs font-mono font-bold text-white">{bankrollCeilingMultiplier}x Banca</span>
+                            </div>
+                            <Slider 
+                              value={[bankrollCeilingMultiplier]} 
+                              min={1} max={20} step={1}
+                              onValueChange={(vals) => setBankrollCeilingMultiplier(vals[0])}
+                            />
+                            <p className="text-[9px] text-muted-foreground italic leading-tight">
+                              Simula a realidade onde você saca o lucro ao atingir R$ {fmt(bankroll * bankrollCeilingMultiplier)}.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
                       <div className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/20 space-y-2">
                         <div className="flex justify-between items-center text-[10px] uppercase font-bold text-blue-400">
                           <span>Proporção Banca vs Freebet</span>
@@ -989,7 +1025,9 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                    <RefreshCcw className="h-3 w-3" /> Regra de Saques
                                  </h5>
                                  <p className="text-[9px] text-muted-foreground leading-tight">
-                                   Simulação baseada em <strong>Banca Fechada</strong>: todos os lucros retornam para o capital de giro, sem retiradas durante o processo.
+                                   {simMode === 'accumulative' 
+                                     ? "Baseada em Banca Fechada: todos os lucros retornam para o capital de giro (juros compostos)." 
+                                     : `Baseada em Banca Fixa: o crescimento é limitado a ${bankrollCeilingMultiplier}x o inicial, simulando saques regulares.`}
                                  </p>
                                </div>
                              </div>
