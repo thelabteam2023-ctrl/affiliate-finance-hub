@@ -957,12 +957,12 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                       if (layoutId === 'lab-params') return (
                         <SortableCard key={layoutId} id={layoutId}>
                           <Card className="h-full">
-                  <CardHeader>
-                    <CardTitle className="text-sm font-medium flex items-center gap-2">
-                      <Coins className="h-4 w-4 text-primary" /> Parâmetros do Laboratório
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
+                            <CardHeader>
+                              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                                <Coins className="h-4 w-4 text-primary" /> Parâmetros do Laboratório
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
                      <div className="space-y-3">
                        <Label className="text-[10px] uppercase font-bold text-muted-foreground">Referência de Extração (Benchmark)</Label>
                        <Tabs 
