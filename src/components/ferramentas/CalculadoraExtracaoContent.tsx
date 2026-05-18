@@ -669,9 +669,16 @@ export const CalculadoraExtracaoContent: React.FC = () => {
             {/* Hedge Table */}
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Shield className="h-4 w-4" /> Hedge Detalhado (Sequencial Condicional)
-                </CardTitle>
+                 <div className="flex items-center justify-between">
+                   <CardTitle className="text-base flex items-center gap-2">
+                     <Shield className="h-4 w-4" /> Hedge Detalhado (Sequencial Condicional)
+                   </CardTitle>
+                   {extractionMode === 'target' && (
+                     <span className="px-2 py-0.5 rounded-full bg-warning/20 text-warning text-[10px] font-bold border border-warning/30">
+                       PROTEÇÃO EM CASCATA
+                     </span>
+                   )}
+                 </div>
                 <CardDescription className="text-xs">Cada lay só é executado se o evento anterior ganhar. O Lay 1 é sempre executado.</CardDescription>
               </CardHeader>
               <CardContent>
