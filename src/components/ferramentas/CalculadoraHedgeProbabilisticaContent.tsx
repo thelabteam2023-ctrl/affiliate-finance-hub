@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
  import {
    Target, Activity, TrendingUp, AlertTriangle, Shield,
-   Plus, Trash2, Info, ChevronRight, Zap, BarChart3, HelpCircle,
+    Plus, Trash2, Info, ChevronRight, Zap, BarChart3, HelpCircle, Link2,
     CheckCircle2, Lightbulb, BookOpen, FlaskConical, BrainCircuit,
     ShieldAlert, Coins, Sparkles, Wand2, Dna, LineChart, History,
     Trophy, Star, ArrowRight, RefreshCcw
@@ -934,12 +934,21 @@ Para corrigir, reduza a Meta de Extração no slider.`}
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label className="text-[10px] uppercase font-bold text-muted-foreground">Valor da Freebet (Base)</Label>
-                          <div className="h-10 px-3 flex items-center bg-muted/50 border border-border rounded-md font-mono text-sm text-white">
-                            R$ {fmt(freebet)}
+                          <div className="flex items-center gap-1.5">
+                            <Label className="text-[10px] uppercase font-bold text-muted-foreground">Valor da Freebet (Base)</Label>
+                            <Link2 className="h-2.5 w-2.5 text-muted-foreground/50" />
+                          </div>
+                          <div className="relative">
+                            <Input 
+                              type="number" 
+                              value={freebet} 
+                              onChange={(e) => setFreebet(Number(e.target.value))}
+                              className="h-10 pl-8 font-mono text-sm"
+                            />
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">R$</span>
                           </div>
                           <p className="text-[9px] text-muted-foreground italic leading-tight">
-                            Definido na aba principal.
+                            Sincronizado com a aba Calculadora.
                           </p>
                         </div>
 
