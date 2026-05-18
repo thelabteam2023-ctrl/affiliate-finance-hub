@@ -80,6 +80,7 @@ const ProtecaoProgressiva = lazyWithChunkRetry(() => import("./pages/ProtecaoPro
 const CalculadoraEV = lazyWithChunkRetry(() => import("./pages/CalculadoraEV"));
 const CalculadoraExtracao = lazyWithChunkRetry(() => import("./pages/CalculadoraExtracao"));
 const PlanejamentoCampanhas = lazyWithChunkRetry(() => import("./pages/PlanejamentoCampanhas"));
+const CalculadoraHedgeProbabilistica = lazyWithChunkRetry(() => import("./pages/CalculadoraHedgeProbabilistica"));
 const SurebetWindowPage = lazyWithChunkRetry(() => import("./pages/SurebetWindowPage"));
 const ApostaWindowPage = lazyWithChunkRetry(() => import("./pages/ApostaWindowPage"));
 const ApostaMultiplaWindowPage = lazyWithChunkRetry(() => import("./pages/ApostaMultiplaWindowPage"));
@@ -400,6 +401,15 @@ const App = () => (
               <ProtectedRoute>
                 <Suspense fallback={<PageLoader />}>
                   <CalculadoraExtracao />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+
+            {/* Calculadora de Hedge Probabilístico - standalone */}
+            <Route path="/ferramentas/calculadora-hedge-probabilistica" element={
+              <ProtectedRoute>
+                <Suspense fallback={<PageLoader />}>
+                  <CalculadoraHedgeProbabilistica />
                 </Suspense>
               </ProtectedRoute>
             } />
