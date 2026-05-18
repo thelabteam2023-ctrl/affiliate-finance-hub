@@ -1365,14 +1365,14 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                       <Dna className="h-4 w-4 text-primary" /> Laboratório de Simulação e Dados
                                     </CardTitle>
                                   </CardHeader>
-                                   <CardContent className="space-y-6">
-                                     {/* Math Section */}
-                                     <div className="p-4 rounded-lg bg-muted/30 border border-border/50 space-y-4">
-                                       <div className="flex items-center gap-2 mb-2">
-                                         <History className="h-4 w-4 text-primary" />
-                                         <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Como chegamos neste Risco?</h4>
-                                       </div>
-                                       <div className="text-xs space-y-2 leading-relaxed">
+                                  <CardContent className="space-y-6">
+                                    {/* Math Section */}
+                                    <div className="p-4 rounded-lg bg-muted/30 border border-border/50 space-y-4">
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <History className="h-4 w-4 text-primary" />
+                                        <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Como chegamos neste Risco?</h4>
+                                      </div>
+                                      <div className="text-xs space-y-2 leading-relaxed">
                           <p>
                             O Risco de Ruína ({fmtPct(riskOfRuin)}) é calculado via <strong>Simulação de Trajetória</strong> (Monte Carlo).
                           </p>
