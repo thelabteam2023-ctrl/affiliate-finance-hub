@@ -1925,8 +1925,8 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                     </div>
                   </div>
                </div>
-              ) : (
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              ) : activeTab === 'laboratorio' ? (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                   {/* Calculadora Live - KPIs */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <Card className="bg-primary/5 border-primary/20">
