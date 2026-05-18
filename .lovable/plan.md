@@ -1,43 +1,22 @@
-I will implement the requested changes to allow editing pending payment values both in the "Pagamentos Pendentes" list and within the payment modals, ensuring the adjusted values are tracked and reflected throughout the system.
+## Objetivo
+Melhorar a explicação do **EV (Expected Value)** na Calculadora de Hedge Probabilístico para que o usuário entenda claramente o conceito de retorno médio no longo prazo.
 
-### Technical Details
+## Alterações Sugeridas
 
-#### 1. Database Schema Changes
-Add two new columns to the `parcerias` table to store adjusted values without losing the original contract values:
-- `valor_parceiro_ajustado` (NUMERIC, nullable)
-- `valor_fornecedor_ajustado` (NUMERIC, nullable)
+### 1. Atualização do Tooltip de EV
+- Modificar o texto do `CardInfoTooltip` para o campo \\"Extração Estimada (EV)\\" para incluir um exemplo de longo prazo:
+  - *\\"O EV (Valor Esperado) é a média matemática do que você ganhará por operação se repeti-la muitas vezes. Por exemplo: se o seu EV é R$ 22,00, após 1.000 operações idênticas, seu retorno total acumulado será de aproximadamente R$ 22.000,00, independentemente do resultado individual de cada uma.\\"*
 
-#### 2. Inline Editing in Financeiro > Pagamentos Pendentes
-- **Component**: `src/components/programa-indicacao/FinanceiroTab.tsx`
-- **Logic**: 
-    - Update the `FornecedorPendente` and `ParceiroPendente` interfaces to include adjusted values.
-    - Implement a local state `editingId` to track which item is being edited.
-    - Add a "pencil" icon next to the values in the "Pagamentos ao Parceiro (CPF)" and "Pagamentos a Fornecedores" lists.
-    - When editing, replace the static text with an input field.
-    - On save (Enter or check icon):
-        - Update the `parcerias` table in Supabase.
-        - Create an entry in the `audit_logs` table (Action: 'UPDATE', Entity: 'parceria', includes before/after data).
-        - Refresh the list data to update totals and display values.
-- **Totals**: Ensure the "Pendências" count and display values use `valor_ajustado ?? valor_original`.
+### 2. Refinamento do Glossário no Guia de Ajuda
+- No modal \\"Como funciona?\\", aprimorar a seção de **Extração Estimada (EV)** para ser mais didática:
+  - Explicar que em algumas operações você ganhará mais, em outras ganhará menos (ou terá o drawdown), mas a média converge para esse valor.
+  - Adicionar explicitamente a frase: \\"Em mil operações com este EV, seu lucro total esperado seria de R$ [EV * 1000].\\"
 
-#### 3. Modal Improvements
-- **Components**: `src/components/programa-indicacao/PagamentoFornecedorDialog.tsx` and `PagamentoParceiroDialog.tsx`
-- **Fixes**:
-    - Modify `useEffect` to only initialize the `valor` state once when the dialog opens, preventing it from resetting if the parent component re-renders.
-    - Ensure the `valor` field remains editable and does not reset on blur.
-    - Display a clear, non-blocking warning message if the typed value differs from the original contracted value.
-    - The "Confirmar" action will use the value currently in the input field.
+### 3. Melhoria na UI do KPI de EV
+- Adicionar uma pequena etiqueta ou subtexto abaixo do valor do EV indicando \\"Média por operação no longo prazo\\" para reforçar o conceito sem poluir a interface.
 
-#### 4. Audit Trail
-Use the existing `audit_logs` table to record:
-- `actor_user_id`: Current operator ID.
-- `action`: 'UPDATE'.
-- `entity_type`: 'parceria'.
-- `entity_id`: The partnership ID.
-- `before_data` and `after_data`: Capturing the value change.
-
-### Plan
-1. **Migration**: Create and run the SQL migration to add the adjusted value columns.
-2. **List Implementation**: Edit `FinanceiroTab.tsx` to add the inline editing UI and the save handler (with audit logging).
-3. **Modal Implementation**: Edit both `PagamentoFornecedorDialog.tsx` and `PagamentoParceiroDialog.tsx` to stabilize the value field and add the divergence warning.
-4. **Verification**: Confirm that editing a value in the list updates the display, that the modal opens with the new value, and that totals (where applicable) are updated.
+## Detalhes Técnicos
+- **Componente**: `src/components/ferramentas/CalculadoraHedgeProbabilisticaContent.tsx`
+  - Editar o `CardInfoTooltip` na linha 123.
+  - Editar a seção de glossário de EV (por volta da linha 565).
+  - Adicionar um subtexto opcional no Card de Extração Estimada.

@@ -120,13 +120,13 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
             <CardContent className="pt-4 flex flex-col items-center text-center">
               <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
                 <Target className="h-3 w-3" /> Extração Estimada
-                <CardInfoTooltip 
-                  title="Extração Estimada (EV)" 
-                  description="É a média matemática de quanto você vai extrair da FreeBet considerando todos os cenários e suas probabilidades. Não é o lucro fixo, mas o valor esperado no longo prazo." 
+                <CardInfoTooltip
+                  title="Extração Estimada (EV)"
+                  description={`O EV (Valor Esperado) de R$ ${fmt(metrics.totalEV)} é a média matemática do que você ganhará por operação no longo prazo. Por exemplo: após 1.000 operações idênticas a esta, seu lucro total acumulado seria de aproximadamente R$ ${fmt(metrics.totalEV * 1000)}, mesmo que resultados individuais variem.`}
                 />
               </div>
               <div className="text-xl font-bold text-emerald-400">R$ {fmt(metrics.totalEV)}</div>
-              <div className="text-[10px] text-muted-foreground mt-1">Valor médio da operação</div>
+              <div className="text-[10px] text-muted-foreground mt-1">Média (EV) por operação</div>
             </CardContent>
           </Card>
           <Card className="bg-muted/30">
@@ -561,10 +561,14 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
                     <Info className="h-4 w-4" /> Glossário de Conceitos
                   </h3>
                   <div className="space-y-3">
-                    <div className="p-3 bg-muted/20 border border-border/50 rounded-md">
-                      <p className="text-xs font-semibold mb-1">Extração Estimada (EV)</p>
+                    <div className="p-3 bg-primary/10 border border-primary/30 rounded-md">
+                      <p className="text-xs font-semibold mb-1 text-primary">Extração Estimada (EV - Expected Value)</p>
                       <p className="text-[11px] text-muted-foreground leading-relaxed">
-                        O "Expected Value" não é o seu lucro garantido hoje, mas a <strong>média matemática</strong> de retorno da operação. Como você está fazendo coberturas sequenciais, o EV mostra quanto você extrai da FreeBet (em média) considerando todos os caminhos possíveis.
+                        O EV representa o seu lucro médio <strong>no longo prazo</strong>. 
+                        <br /><br />
+                        Diferente de um lucro fixo, em algumas operações você ganhará mais e em outras menos (ou terá o drawdown), mas se repetir esta estratégia <strong>1.000 vezes</strong>, seu lucro total será de aproximadamente <strong>R$ {fmt(metrics.totalEV * 1000)}</strong>.
+                        <br /><br />
+                        É a métrica mais importante para saber se uma operação de FreeBet vale a pena.
                       </p>
                     </div>
                     <div className="p-3 bg-muted/20 border border-border/50 rounded-md">
