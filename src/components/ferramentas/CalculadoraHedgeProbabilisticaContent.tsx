@@ -1132,7 +1132,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                 contentStyle={{ backgroundColor: "#1a1a1a", border: "1px solid #333", borderRadius: "4px", fontSize: "10px" }}
                                 labelStyle={{ color: "#666" }}
                                 itemStyle={{ color: "#10b981" }}
-                                formatter={(value) => [`R$ ${fmt(value)}`, "Banca"]}
+                                formatter={(value: number) => [`R$ ${fmt(Number(value))}`, "Banca"]}
                                 labelFormatter={(label) => `Ciclo: ${label.toLocaleString()}`}
                               />
                               <Area 
