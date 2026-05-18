@@ -61,9 +61,9 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
        backOdd: odd,
        layOdd: odd
      }));
-     setLegs(newLegs);
-     setActiveTab('calculadora');
-   };
+      setLegs(newLegs);
+      // Removido o redirecionamento para manter o usuário no Laboratório
+    };
 
   const [freebet, setFreebet] = useState(100);
   const [commission, setCommission] = useState(2.8);
