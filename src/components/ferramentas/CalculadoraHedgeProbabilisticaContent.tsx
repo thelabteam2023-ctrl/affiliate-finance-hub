@@ -260,8 +260,8 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
     }, [metrics, bankroll]);
 
     const longTermSim = useMemo(() => {
-      const cycles = 100000;
-      const dataPoints = 100;
+      const cycles = 1000;
+      const dataPoints = 200;
       const step = cycles / dataPoints;
       const trajectory = [];
       
@@ -1093,7 +1093,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                               </Badge>
                             </div>
                             <p className="text-[10px] text-muted-foreground mt-1">
-                              Simulação visual de 100.000 ciclos operando com ROI de {fmtPct(metrics.totalROI)}.
+                              Trajetória projetada para as próximas 1.000 entradas operando com ROI de {fmtPct(metrics.totalROI)}.
                             </p>
                           </div>
                           <div className="flex gap-4">
