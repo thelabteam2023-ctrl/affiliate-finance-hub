@@ -8,8 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  Target, Activity, TrendingUp, AlertTriangle, Shield, 
-  Plus, Trash2, Info, ChevronRight, Zap, BarChart3
+   Target, Activity, TrendingUp, AlertTriangle, Shield, 
+   Plus, Trash2, Info, ChevronRight, Zap, BarChart3, HelpCircle,
+   CheckCircle2, Lightbulb, BookOpen
 } from 'lucide-react';
 import { 
   HedgeProbabilisticoEngine, 
@@ -32,6 +33,7 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
     { name: 'Evento 2', backOdd: 2.0, layOdd: 2.0 }
   ]);
   const [expanded, setExpanded] = useState<AggregatedScenario | null>(null);
+  const [showHelp, setShowHelp] = useState(false);
 
   const metrics: HedgeResult = useMemo(() => {
     return HedgeProbabilisticoEngine.calculateMetrics(
@@ -76,18 +78,31 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
     <ScrollArea className="h-full">
       <div className="p-4 space-y-6 max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row gap-4 items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Zap className="h-6 w-6 text-primary" />
-              Calculadora de Hedge Probabilístico
-            </h1>
+          <div className="flex-1">
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold flex items-center gap-2">
+                <Zap className="h-6 w-6 text-primary" />
+                Calculadora de Hedge Probabilístico
+              </h1>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+                onClick={() => setShowHelp(true)}
+              >
+                <HelpCircle className="h-4 w-4" />
+                Como funciona?
+              </Button>
+            </div>
             <p className="text-sm text-muted-foreground mt-1">
               Motor quantitativo para extração de freebets com análise de risco e cascata.
             </p>
           </div>
-          <Badge className={`px-4 py-1 text-sm ${scoreColor}`}>
-            Score: {scoreLabel}
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Badge className={`px-4 py-1 text-sm ${scoreColor}`}>
+              Score: {scoreLabel}
+            </Badge>
+          </div>
         </div>
 
         {/* KPIs Section */}
