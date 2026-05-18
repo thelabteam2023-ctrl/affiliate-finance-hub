@@ -13,16 +13,18 @@ import { ScrollArea } from '@/components/ui/scroll-area';
     CheckCircle2, Lightbulb, BookOpen, FlaskConical, BrainCircuit,
     ShieldAlert, Coins, Sparkles, Wand2, Dna, LineChart, History,
      Trophy, Star, ArrowRight, RefreshCcw, GripVertical, GripHorizontal,
-     Sliders, Settings2, ShieldCheck, ZapOff, Infinity as InfinityIcon
+      Sliders, Settings2, ShieldCheck, ZapOff, Infinity as InfinityIcon,
+      Clock, Gauge, ArrowUpRight, Timer, MousePointer2
  } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
  import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  HedgeProbabilisticoEngine, 
-  type LegInput,
-  type HedgeResult,
-  type AggregatedScenario
-} from '@/lib/hedge-probabilistico-engine';
+ import {
+   HedgeProbabilisticoEngine,
+   type LegInput,
+   type HedgeResult,
+   type AggregatedScenario
+ } from '@/lib/hedge-probabilistico-engine';
+ import { LiveHedgeEngine, type LiveHedgeInput, type LiveHedgeResult } from '@/lib/live-hedge-engine';
 import { CardInfoTooltip } from '@/components/ui/card-info-tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
@@ -142,6 +144,14 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
    const [simMode, setSimMode] = useState<'accumulative' | 'capped'>('accumulative');
    const [bankrollCeilingMultiplier, setBankrollCeilingMultiplier] = useState(5);
    const [activeTab, setActiveTab] = useState('calculadora');
+ 
+   const [liveInput, setLiveInput] = useState<LiveHedgeInput>({
+     layOdd: 3.00,
+     backOddActual: 2.70,
+     backOddProjected: 3.00,
+     backStake: 100,
+     commission: 2.0
+   });
 
   const ODDS_RULESETS = useMemo(() => [
     {
@@ -642,12 +652,14 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
       critical: 'bg-red-500/15 text-red-400 border-red-500/30'
     }[finalScore.score];
 
-    const scoreLabel = {
-      excellent: 'Excelente',
-      good: 'Boa',
-      risky: 'Arriscada',
-      critical: 'Crítica'
-    }[finalScore.score];
+     const scoreLabel = {
+       excellent: 'Excelente',
+       good: 'Boa',
+       risky: 'Arriscada',
+       critical: 'Crítica'
+     }[finalScore.score];
+ 
+     const liveResults = useMemo(() => LiveHedgeEngine.calculate(liveInput), [liveInput]);
  
    return (
      <ScrollArea className="h-full">
@@ -683,21 +695,25 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
                   Score: {scoreLabel}
                 </Badge>
               </div>
-             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-               <TabsList className="grid grid-cols-2 h-9 w-[280px]">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-auto">
+                <TabsList className="grid grid-cols-3 h-9 w-[420px]">
                  <TabsTrigger value="calculadora" className="text-xs gap-2">
                    <Activity className="h-3.5 w-3.5" /> Calculadora
                  </TabsTrigger>
-                 <TabsTrigger value="laboratorio" className="text-xs gap-2">
-                   <FlaskConical className="h-3.5 w-3.5" /> Laboratório
-                 </TabsTrigger>
+                  <TabsTrigger value="laboratorio" className="text-xs gap-2">
+                    <FlaskConical className="h-3.5 w-3.5" /> Laboratório
+                  </TabsTrigger>
+                  <TabsTrigger value="live" className="text-xs gap-2">
+                    <Clock className="h-3.5 w-3.5" /> Calculadora Live
+                  </TabsTrigger>
                </TabsList>
              </Tabs>
             </div>
           </div>
  
          <div className="space-y-6">
-            {activeTab === 'calculadora' ? (
+            {activeTab === "calculadora" ? (
+{activeTab === 'calculadora' ? (
                <>
 
         {/* KPIs Section */}
@@ -722,7 +738,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
               </div>
               <div className={`text-xl font-bold ${metrics.totalEV >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                 R$ {fmt(metrics.totalEV)}
-                <span className="text-sm font-normal ml-1 opacity-80">({fmtPct(metrics.totalROI)})</span>
+                <span className="text-sm font-normal ml-1 opacity-80">({fmtPct(metrics.totalROI)}</span>
               </div>
               {metrics.totalEV < 0 && (
                 <div className="text-[10px] text-red-400 font-medium flex items-center justify-center gap-1 mt-1">
@@ -787,7 +803,7 @@ A Taxa de Extração é o ROI (Retorno sobre Investimento) calculado especificam
                   <Input 
                     type="number" 
                     value={freebet} 
-                    onChange={(e) => setFreebet(Number(e.target.value))}
+                    onChange={(e) => setFreebet(Number(e.target.value)})
                     className="h-9 text-sm"
                   />
                 </div>
@@ -800,7 +816,7 @@ A Taxa de Extração é o ROI (Retorno sobre Investimento) calculado especificam
                     type="number" 
                     step="0.1"
                     value={commission} 
-                    onChange={(e) => setCommission(Number(e.target.value))}
+                    onChange={(e) => setCommission(Number(e.target.value)})
                     className="h-9 text-sm"
                   />
                 </div>
@@ -840,9 +856,9 @@ A Taxa de Extração é o ROI (Retorno sobre Investimento) calculado especificam
                   {metrics.allWonProfit < 0 && (
                     <CardInfoTooltip 
                       title="Alerta de Inviabilidade"
-                      description={`O cenário "Todas Ganham" está gerando prejuízo (R$ ${fmt(metrics.allWonProfit)}). 
+                      description={`O cenário "Todas Ganham" está gerando prejuízo (R$ ${fmt(metrics.allWonProfit)}. 
                       
-Isso ocorre porque o lucro da FreeBet na casa (R$ ${fmt(freebet * (metrics.totalBackOdd - 1))}) é menor do que a soma das responsabilidades dos Lays na Exchange (R$ ${fmt(metrics.cumulativeCascadeCost)}).
+Isso ocorre porque o lucro da FreeBet na casa (R$ ${fmt(freebet * (metrics.totalBackOdd - 1))} é menor do que a soma das responsabilidades dos Lays na Exchange (R$ ${fmt(metrics.cumulativeCascadeCost)}.
 
 Para corrigir, reduza a Meta de Extração no slider.`}
                     />
@@ -951,7 +967,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                   <Input 
                                     type="number"
                                     value={leg.backOdd} 
-                                    onChange={(e) => updateLeg(index, 'backOdd', Number(e.target.value))}
+                                    onChange={(e) => updateLeg(index, 'backOdd', Number(e.target.value)})
                                     className="h-8 text-[11px] font-mono w-16"
                                   />
                                 </div>
@@ -960,7 +976,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                   <Input 
                                     type="number"
                                     value={leg.layOdd} 
-                                    onChange={(e) => updateLeg(index, 'layOdd', Number(e.target.value))}
+                                    onChange={(e) => updateLeg(index, 'layOdd', Number(e.target.value)})
                                     className="h-8 text-[11px] font-mono w-16"
                                   />
                                 </div>
@@ -1051,8 +1067,10 @@ Para corrigir, reduza a Meta de Extração no slider.`}
           </div>
         </div>
                </>
-             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+) : activeTab === "laboratorio" ? (
+
+               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div className="lg:col-span-4 xl:col-span-3 space-y-6">
                   <DndContext
                     sensors={sensors}
@@ -1136,7 +1154,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                         : "Atenção: Em cenários de EV negativo, a quebra é estatisticamente inevitável no longo prazo."}
                                     </p>
                                     <p>
-                                      Para dobrar a banca (ganhar R$ {fmt(bankroll)}), a mediana necessária é de <strong>{monteCarloSim.medianSteps} eventos</strong>, com <strong>{fmtPct(monteCarloSim.probDouble)}</strong> de chance de sucesso antes da quebra.
+                                      Para dobrar a banca (ganhar R$ {fmt(bankroll)}, a mediana necessária é de <strong>{monteCarloSim.medianSteps} eventos</strong>, com <strong>{fmtPct(monteCarloSim.probDouble)}</strong> de chance de sucesso antes da quebra.
                                     </p>
                                   </div>
                               </div>
@@ -1201,7 +1219,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                           <Input 
                                             type="number" 
                                             value={freebet} 
-                                            onChange={(e) => setFreebet(Number(e.target.value))}
+                                            onChange={(e) => setFreebet(Number(e.target.value)})
                                             className="h-10 pl-8 font-mono text-sm"
                                           />
                                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">R$</span>
@@ -1217,7 +1235,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                           <Input 
                                             type="number" 
                                             value={bankroll} 
-                                            onChange={(e) => setBankroll(Number(e.target.value))}
+                                            onChange={(e) => setBankroll(Number(e.target.value)})
                                             className="h-10 pl-8 font-mono text-sm"
                                           />
                                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">R$</span>
@@ -1489,10 +1507,10 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                       </div>
                                       <div className="text-xs space-y-2 leading-relaxed">
                                         <p>
-                                          O Risco de Ruína ({fmtPct(riskOfRuin)}) é calculado via <strong>Simulação de Trajetória</strong> (Monte Carlo).
+                                          O Risco de Ruína ({fmtPct(riskOfRuin)} é calculado via <strong>Simulação de Trajetória</strong> (Monte Carlo).
                                         </p>
                                         <div className="bg-background/50 p-3 rounded font-mono text-[9px] border border-border/40 leading-relaxed text-muted-foreground">
-                                          Diferente de fórmulas estáticas, simulamos 5.000 jornadas reais. O risco aumenta drasticamente se a exposição (R$ {fmt(metrics.maxResponsibility)}) for alta em relação à banca (R$ {fmt(bankroll)}).
+                                          Diferente de fórmulas estáticas, simulamos 5.000 jornadas reais. O risco aumenta drasticamente se a exposição (R$ {fmt(metrics.maxResponsibility)} for alta em relação à banca (R$ {fmt(bankroll)}.
                                         </div>
                                         <div className="space-y-4">
                                           <p className="text-muted-foreground italic border-l-2 border-primary/30 pl-3">
@@ -1745,7 +1763,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                    <Input 
                                                      type="number" 
                                                      value={customRules.minOdd} 
-                                                     onChange={(e) => setCustomRules({...customRules, minOdd: Number(e.target.value)})}
+                                                     onChange={(e) => setCustomRules({...customRules, minOdd: Number(e.target.value)})
                                                      className="h-8 text-xs font-mono"
                                                    />
                                                    <Slider 
@@ -1761,7 +1779,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                    <Input 
                                                      type="number" 
                                                      value={customRules.maxOdd} 
-                                                     onChange={(e) => setCustomRules({...customRules, maxOdd: Number(e.target.value)})}
+                                                     onChange={(e) => setCustomRules({...customRules, maxOdd: Number(e.target.value)})
                                                      className="h-8 text-xs font-mono"
                                                    />
                                                    <Slider 
@@ -1777,7 +1795,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                    <Input 
                                                      type="number" 
                                                      value={customRules.maxLegs} 
-                                                     onChange={(e) => setCustomRules({...customRules, maxLegs: Math.min(6, Math.max(2, Number(e.target.value)))})}
+                                                     onChange={(e) => setCustomRules({...customRules, maxLegs: Math.min(6, Math.max(2, Number(e.target.value)))}}
                                                      className="h-8 text-xs font-mono"
                                                    />
                                                    <Slider 
@@ -1787,8 +1805,10 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                    />
                                                  </div>
                                                </div>
-                                             </div>
-                                           ) : (
+               </div>
+             
+) : (
+
                                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-in fade-in duration-300">
                                                {ODDS_RULESETS.find(r => r.id === activeRulesetId) && (
                                                  <>
@@ -1822,11 +1842,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                      </span>
                                                    </div>
                                                  </>
-                                               )}
-                                             </div>
-                                           )}
-                                         </div>
-                                       </div>
+                                               )} </div> </div> </div>
 
                                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                            {/* Estratégia de 1 Perna (Hedge Simples) */}
@@ -1907,11 +1923,325 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                     </div>
                                   </CardContent>
                                 </Card>
+                            </div>
+                          </div>
+                        </div>
+                    </div>
+                  </div>
+               </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <Card className="bg-primary/5 border-primary/20">
+                      <CardContent className="pt-4 flex flex-col items-center text-center">
+                        <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1 uppercase font-bold tracking-tighter">
+                          <Target className="h-3 w-3 text-primary" /> Proteção Recomendada
+                        </div>
+                        <div className="text-2xl font-bold text-primary font-mono">
+                          R$ {fmt(liveResults.recommendedLayStake)}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground mt-1">Stake no Lay (Exchange)</div>
+                      </CardContent>
+                    </Card>
+                    <Card className="bg-muted/30">
+                      <CardContent className="pt-4 flex flex-col items-center text-center">
+                        <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1 uppercase font-bold tracking-tighter text-red-400">
+                          <ShieldAlert className="h-3 w-3" /> Responsabilidade
+                        </div>
+                        <div className="text-2xl font-bold text-red-400 font-mono">
+                          R$ {fmt(liveResults.liability)}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground mt-1">Exposição na Bolsa</div>
+                      </CardContent>
+                    </Card>
+                    <Card className="bg-muted/30">
+                      <CardContent className="pt-4 flex flex-col items-center text-center">
+                        <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1 uppercase font-bold tracking-tighter text-emerald-400">
+                          <TrendingUp className="h-3 w-3" /> Lucro Projetado
+                        </div>
+                        <div className="text-2xl font-bold text-emerald-400 font-mono">
+                          R$ {fmt(liveResults.expectedProfit)}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground mt-1">Extração Líquida: {fmtPct(liveResults.expectedNetExtraction)}</div>
+                      </CardContent>
+                    </Card>
+                    <Card className="bg-muted/30">
+                      <CardContent className="pt-4 flex flex-col items-center text-center">
+                        <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1 uppercase font-bold tracking-tighter text-blue-400">
+                          <Gauge className="h-3 w-3" /> Ganho de Spread
+                        </div>
+                        <div className="text-2xl font-bold text-blue-400 font-mono">
+                          +{liveResults.spreadReduction.toFixed(2)}%
+                        </div>
+                        <div className="text-[10px] text-muted-foreground mt-1">Redução vs Spread Atual</div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Live Inputs */}
+                    <div className="lg:col-span-1 space-y-6">
+                      <Card className="border-primary/20">
+                        <CardHeader className="pb-3 bg-primary/5">
+                          <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-wider">
+                            <Settings2 className="h-4 w-4 text-primary" /> Parâmetros Operacionais
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-5 pt-5">
+                          <div className="space-y-4 p-4 rounded-lg bg-primary/5 border border-primary/10">
+                            <div className="space-y-2">
+                              <Label className="text-[10px] uppercase font-bold text-primary flex items-center gap-1">
+                                <MousePointer2 className="h-3 w-3" /> Valor Desejado no Back (Stake)
+                              </Label>
+                              <div className="relative">
+                                <Input 
+                                  type="number"
+                                  value={liveInput.backStake}
+                                  onChange={(e) => setLiveInput({...liveInput, backStake: Number(e.target.value)})
+                                  className="h-10 pl-8 font-mono text-lg border-primary/30 focus:border-primary"
+                                />
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-mono">R$</span>
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label className="text-[10px] uppercase font-bold text-emerald-400 flex items-center gap-1">
+                                <TrendingUp className="h-3 w-3" /> Odd Futura Projetada (Back)
+                              </Label>
+                              <Input 
+                                type="number"
+                                value={liveInput.backOddProjected}
+                                onChange={(e) => setLiveInput({...liveInput, backOddProjected: Number(e.target.value)})
+                                className="h-10 font-mono text-lg border-emerald-500/30 focus:border-emerald-500"
+                                step="0.01"
+                              />
+                              <p className="text-[9px] text-muted-foreground italic leading-tight">
+                                Odd que você espera pegar na Sportsbook após a convergência.
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label className="text-[10px] uppercase font-bold text-muted-foreground">Odd Atual Lay</Label>
+                              <Input 
+                                type="number"
+                                value={liveInput.layOdd}
+                                onChange={(e) => setLiveInput({...liveInput, layOdd: Number(e.target.value)})
+                                className="h-9 font-mono text-sm"
+                                step="0.01"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-[10px] uppercase font-bold text-muted-foreground">Odd Atual Back</Label>
+                              <Input 
+                                type="number"
+                                value={liveInput.backOddActual}
+                                onChange={(e) => setLiveInput({...liveInput, backOddActual: Number(e.target.value)})
+                                className="h-9 font-mono text-sm opacity-60"
+                                step="0.01"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                              <Label className="text-[10px] uppercase font-bold text-muted-foreground">Comissão Exchange (%)</Label>
+                              <span className="text-xs font-mono text-primary">{liveInput.commission}%</span>
+                            </div>
+                            <Slider 
+                              value={[liveInput.commission]}
+                              min={0} max={10} step={0.1}
+                              onValueChange={(v) => setLiveInput({...liveInput, commission: v[0]})}
+                            />
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="bg-blue-500/5 border-blue-500/20">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-2">
+                            <Activity className="h-3 w-3" /> Análise de Convergência
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-[10px] uppercase font-bold">
+                              <span className="text-muted-foreground">Distância p/ Alvo</span>
+                              <span className="text-blue-400">+{liveResults.distanceToConvergence.toFixed(1)}%</span>
+                            </div>
+                            <div className="w-full h-1.5 bg-blue-500/10 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-blue-500 transition-all duration-1000" 
+                                style={{ width: `${Math.min(100, liveResults.distanceToConvergence * 2)}%` }}
+                              />
+                            </div>
+                            <p className="text-[9px] text-muted-foreground italic leading-tight">
+                              O mercado precisa subir <strong>{liveResults.distanceToConvergence.toFixed(2)}%</strong> para atingir seu Back projetado.
+                            </p>
+                          </div>
+
+                          <div className="p-3 rounded-lg bg-background/40 border border-border/40 flex justify-between items-center">
+                            <div className="space-y-1">
+                              <span className="text-[9px] text-muted-foreground uppercase block">Spread Atual</span>
+                              <span className="text-xs font-bold text-red-400 font-mono">{liveResults.currentSpread.toFixed(1)}%</span>
+                            </div>
+                            <ArrowRight className="h-3 w-3 text-muted-foreground opacity-50" />
+                            <div className="space-y-1 text-right">
+                              <span className="text-[9px] text-muted-foreground uppercase block">Spread Projetado</span>
+                              <span className="text-xs font-bold text-emerald-400 font-mono">{liveResults.projectedSpread.toFixed(1)}%</span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* Visual Timeline & Analytics */}
+                    <div className="lg:col-span-2 space-y-6">
+                      {/* Operational Timeline */}
+                      <Card className="bg-muted/10">
+                        <CardContent className="pt-6">
+                          <div className="relative flex justify-between items-center px-4 mb-8">
+                            {/* Line */}
+                            <div className="absolute top-1/2 left-0 w-full h-0.5 bg-muted -translate-y-1/2 z-0">
+                              <div 
+                                className="h-full bg-primary/40 animate-pulse" 
+                                style={{ width: '100%' }}
+                              />
+                            </div>
+                            
+                            {/* Step 1 */}
+                            <div className="relative z-10 flex flex-col items-center gap-2 group">
+                              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-[0_0_15px_rgba(var(--primary),0.5)]">
+                                <MousePointer2 className="h-5 w-5" />
+                              </div>
+                              <div className="text-center">
+                                <span className="text-[9px] font-bold uppercase text-primary block">Executar AGORA</span>
+                                <span className="text-[11px] font-bold text-white">Lay na Exchange</span>
+                                <Badge className="text-[8px] bg-primary/20 text-primary mt-1">Stake R$ {fmt(liveResults.recommendedLayStake)}</Badge>
+                              </div>
+                            </div>
+
+                            {/* Market Move */}
+                            <div className="relative z-10 flex flex-col items-center gap-2 opacity-50">
+                              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground border border-border">
+                                <TrendingUp className="h-4 w-4" />
+                              </div>
+                              <div className="text-center">
+                                <span className="text-[9px] font-bold uppercase block text-muted-foreground">Convergência</span>
+                                <span className="text-[11px] font-medium italic">Aguardando Odd</span>
+                              </div>
+                            </div>
+
+                            {/* Step 2 */}
+                            <div className="relative z-10 flex flex-col items-center gap-2">
+                              <div className="w-10 h-10 rounded-full bg-emerald-500/20 border-2 border-emerald-500 flex items-center justify-center text-emerald-500">
+                                <Clock className="h-5 w-5" />
+                              </div>
+                              <div className="text-center">
+                                <span className="text-[9px] font-bold uppercase text-emerald-400 block">Executar DEPOIS</span>
+                                <span className="text-[11px] font-bold text-white">Back na Sportsbook</span>
+                                <Badge className="text-[8px] bg-emerald-500/20 text-emerald-400 mt-1">Odd @ {liveInput.backOddProjected.toFixed(2)}</Badge>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="p-4 rounded-lg bg-emerald-500/5 border border-emerald-500/20 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 rounded-full bg-emerald-500/10">
+                                <Sparkles className="h-4 w-4 text-emerald-400" />
+                              </div>
+                              <div>
+                                <p className="text-xs font-bold text-emerald-400 uppercase tracking-tight">Vantagem Operacional Live</p>
+                                <p className="text-[10px] text-muted-foreground">Você extrai <strong>{liveResults.efficiencyGain.toFixed(2)}%</strong> mais valor do que aceitando o spread atual.</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-[9px] text-muted-foreground uppercase block">ROI Final</span>
+                              <span className="text-lg font-bold text-emerald-400 font-mono">{liveResults.roi.toFixed(2)}%</span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Sensitivity Analysis */}
+                      <Card className="border-border/50">
+                        <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                          <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-wider text-muted-foreground">
+                            <BarChart3 className="h-4 w-4" /> Matriz de Sensibilidade Operacional
+                          </CardTitle>
+                          <Badge variant="outline" className="text-[9px] uppercase opacity-60">Escala de 0.1 ticks</Badge>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-4">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow className="hover:bg-transparent border-border/40">
+                                    <TableHead className="text-[9px] uppercase h-8">Odd Back Real</TableHead>
+                                    <TableHead className="text-right text-[9px] uppercase h-8">Lucro (R$)</TableHead>
+                                    <TableHead className="text-right text-[9px] uppercase h-8">Extração</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {liveResults.sensitivity.map((s, idx) => (
+                                    <TableRow key={idx} className={`hover:bg-muted/30 border-border/20 ${s.odd === liveInput.backOddProjected ? 'bg-primary/5' : ''}`}>
+                                      <TableCell className="py-2 font-mono text-xs">{s.odd.toFixed(2)}</TableCell>
+                                      <TableCell className={`py-2 text-right font-mono text-xs ${s.profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                        R$ {fmt(s.profit)}
+                                      </TableCell>
+                                      <TableCell className="py-2 text-right font-mono text-xs text-muted-foreground">
+                                        {s.extraction.toFixed(1)}%
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+
+                            <div className="space-y-4">
+                              <div className="p-4 rounded-lg bg-orange-500/5 border border-orange-500/20 space-y-3">
+                                <div className="flex items-center gap-2">
+                                  <AlertTriangle className="h-4 w-4 text-orange-400" />
+                                  <h4 className="text-xs font-bold uppercase tracking-wider text-orange-400">Risco de Não Convergência</h4>
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-[10px] text-muted-foreground uppercase">Nível de Slippage</span>
+                                    <Badge className={
+                                      liveResults.slippageRisk === 'low' ? 'bg-emerald-500/20 text-emerald-400' :
+                                      liveResults.slippageRisk === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                                      'bg-red-500/20 text-red-400'
+                                    }>
+                                      {liveResults.slippageRisk.toUpperCase()}
+                                    </Badge>
+                                  </div>
+                                  <p className="text-[10px] text-muted-foreground leading-relaxed italic">
+                                    Se o Back não atingir {liveInput.backOddProjected.toFixed(2)} e você precisar fechar o hedge no spread atual ({liveInput.backOddActual.toFixed(2)}), 
+                                    seu lucro será reduzido em <strong>R$ {fmt(liveResults.expectedProfit - liveResults.sensitivity[0].profit)}</strong>.
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <Timer className="h-4 w-4 text-primary" />
+                                  <h4 className="text-xs font-bold uppercase tracking-wider text-primary">Exposição Temporária</h4>
+                                </div>
+                                <p className="text-[10px] text-muted-foreground leading-relaxed">
+                                  Entre o Lay e o Back, você estará exposto em <strong>R$ {fmt(liveResults.liability)}</strong> na Exchange. 
+                                  Certifique-se de que sua banca suporta essa responsabilidade durante o tempo de espera da odd.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
                     </div>
                   </div>
                 </div>
-              )
-            }
+              
+)}
+          
           </div>
          <Dialog open={!!expanded} onOpenChange={(o) => !o && setExpanded(null)}>
           <DialogContent className="max-w-2xl">
