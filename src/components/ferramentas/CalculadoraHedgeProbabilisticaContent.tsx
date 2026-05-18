@@ -652,12 +652,14 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
       critical: 'bg-red-500/15 text-red-400 border-red-500/30'
     }[finalScore.score];
 
-    const scoreLabel = {
-      excellent: 'Excelente',
-      good: 'Boa',
-      risky: 'Arriscada',
-      critical: 'Crítica'
-    }[finalScore.score];
+     const scoreLabel = {
+       excellent: 'Excelente',
+       good: 'Boa',
+       risky: 'Arriscada',
+       critical: 'Crítica'
+     }[finalScore.score];
+ 
+     const liveResults = useMemo(() => LiveHedgeEngine.calculate(liveInput), [liveInput]);
  
    return (
      <ScrollArea className="h-full">
