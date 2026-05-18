@@ -97,25 +97,6 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
     'golden-library',
     'restricted-golden-library'
   ];
-   const [maxLabTotalOdd, setMaxLabTotalOdd] = useState<number>(() => {
-     const saved = localStorage.getItem('hedge-calc-lab-max-odd');
-     return saved ? Number(saved) : 8.0;
-   });
-
-   useEffect(() => {
-     localStorage.setItem('hedge-calc-lab-max-odd', maxLabTotalOdd.toString());
-   }, [maxLabTotalOdd]);
-
-
-  const [maxLabTotalOdd, setMaxLabTotalOdd] = useState<number>(() => {
-    const saved = localStorage.getItem('hedge-calc-lab-max-odd');
-    return saved ? Number(saved) : 8.0;
-  });
-
-  useEffect(() => {
-    localStorage.setItem('hedge-calc-lab-max-odd', maxLabTotalOdd.toString());
-  }, [maxLabTotalOdd]);
-
   const restrictedGoldenCombinations = useMemo(() => {
     const targets = [0.65, 0.70, 0.75];
     const result: any[] = [];
