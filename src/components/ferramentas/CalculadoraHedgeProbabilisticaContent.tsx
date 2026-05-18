@@ -76,38 +76,78 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
     good: 'Boa',
     risky: 'Arriscada',
     critical: 'Crítica'
-  }[metrics.score];
-
-  return (
-    <ScrollArea className="h-full">
-      <div className="p-4 space-y-6 max-w-6xl mx-auto">
-        <div className="flex flex-col md:flex-row gap-4 items-start justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold flex items-center gap-2">
-                <Zap className="h-6 w-6 text-primary" />
-                Calculadora de Hedge Probabilístico
-              </h1>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
-                onClick={() => setShowHelp(true)}
-              >
-                <HelpCircle className="h-4 w-4" />
-                Como funciona?
-              </Button>
-            </div>
-            <p className="text-sm text-muted-foreground mt-1">
-              Motor quantitativo para extração de freebets com análise de risco e cascata.
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Badge className={`px-4 py-1 text-sm ${scoreColor}`}>
-              Score: {scoreLabel}
-            </Badge>
-          </div>
-        </div>
+   }[metrics.score];
+ 
+   const riskOfRuin = useMemo(() => {
+     if (metrics.totalEV <= 0) return 100;
+     // Variance: Σ p * (x - μ)²
+     const variance = metrics.scenarios.reduce((acc, s) => {
+       return acc + s.probability * Math.pow(s.result - metrics.totalEV, 2);
+     }, 0);
+     if (variance === 0) return 0;
+     // RoR = exp(-2 * EV * Bank / Var)
+     const ror = Math.exp((-2 * metrics.totalEV * bankroll) / variance);
+     return Math.min(100, ror * 100);
+   }, [metrics, bankroll]);
+ 
+   const optimalConfig = useMemo(() => {
+     let bestEV = -Infinity;
+     let bestTarget = 0.7;
+     for (let t = 0.1; t <= 1.0; t += 0.05) {
+       const m = HedgeProbabilisticoEngine.calculateMetrics(legs, freebet, commission / 100, t);
+       if (m.allWonProfit >= 0 && m.maxResponsibility <= bankroll) {
+         if (m.totalEV > bestEV) {
+           bestEV = m.totalEV;
+           bestTarget = t;
+         }
+       }
+     }
+     return { target: bestTarget, ev: bestEV };
+   }, [legs, freebet, commission, bankroll]);
+ 
+   return (
+     <ScrollArea className="h-full">
+       <div className="p-4 space-y-6 max-w-6xl mx-auto">
+         <div className="flex flex-col md:flex-row gap-4 items-start justify-between">
+           <div className="flex-1">
+             <div className="flex items-center gap-3">
+               <h1 className="text-2xl font-bold flex items-center gap-2">
+                 <Zap className="h-6 w-6 text-primary" />
+                 Calculadora de Hedge Probabilístico
+               </h1>
+               <Button 
+                 variant="ghost" 
+                 size="sm" 
+                 className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+                 onClick={() => setShowHelp(true)}
+               >
+                 <HelpCircle className="h-4 w-4" />
+                 Como funciona?
+               </Button>
+             </div>
+             <p className="text-sm text-muted-foreground mt-1">
+               Motor quantitativo para extração de freebets com análise de risco e cascata.
+             </p>
+           </div>
+           <div className="flex flex-col items-end gap-2">
+             <Badge className={`px-4 py-1 text-sm ${scoreColor}`}>
+               Score: {scoreLabel}
+             </Badge>
+             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+               <TabsList className="grid grid-cols-2 h-9 w-[280px]">
+                 <TabsTrigger value="calculadora" className="text-xs gap-2">
+                   <Activity className="h-3.5 w-3.5" /> Calculadora
+                 </TabsTrigger>
+                 <TabsTrigger value="laboratorio" className="text-xs gap-2">
+                   <FlaskConical className="h-3.5 w-3.5" /> Laboratório
+                 </TabsTrigger>
+               </TabsList>
+             </Tabs>
+           </div>
+         </div>
+ 
+         <Tabs value={activeTab} onValueChange={setActiveTab}>
+           <TabsContent value="calculadora" className="mt-0 space-y-6">
 
         {/* KPIs Section */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
