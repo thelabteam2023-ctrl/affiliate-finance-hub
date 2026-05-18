@@ -14,25 +14,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
    ShieldAlert, Coins, Sparkles, Wand2, Dna, LineChart, History,
    Trophy, Star, ArrowRight, RefreshCcw
  } from 'lucide-react';
- import {
-   DndContext,
-   closestCenter,
-   KeyboardSensor,
-   PointerSensor,
-   useSensor,
-   useSensors,
-   DragEndEvent
- } from '@dnd-kit/core';
- import {
-   arrayMove,
-   SortableContext,
-   sortableKeyboardCoordinates,
-   verticalListSortingStrategy,
-   useSortable,
-   rectSortingStrategy
- } from '@dnd-kit/sortable';
- import { CSS } from '@dnd-kit/utilities';
- import { restrictToWindowEdges } from '@dnd-kit/modifiers';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
  import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
@@ -47,66 +28,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
 
-  interface SortableCardProps {
-    id: string;
-    children: React.ReactNode;
-  }
-
-  const SortableCard: React.FC<SortableCardProps> = ({ id, children }) => {
-    const {
-      attributes,
-      listeners,
-      setNodeRef,
-      transform,
-      transition,
-      isDragging
-    } = useSortable({ id });
-
-    const style = {
-      transform: CSS.Transform.toString(transform),
-      transition,
-      zIndex: isDragging ? 50 : 'auto',
-      opacity: isDragging ? 0.5 : 1,
-    };
-
-    return (
-      <div ref={setNodeRef} style={style} className="h-full">
-        <div className="relative h-full group">
-          <div 
-            {...attributes} 
-            {...listeners}
-            className="absolute top-3 right-3 p-1 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-muted rounded"
-          >
-            <GripVertical className="h-4 w-4 text-muted-foreground" />
-          </div>
-          {children}
-        </div>
-      </div>
-    );
-  };
-
-  const LAB_DEFAULT_LAYOUT = [
-    'visual-sim',
-    'double-bankroll',
-    'lab-params',
-    'advanced-stats',
-    'efficiency-matrix',
-    'risk-ruin',
-    'capital-efficiency',
-    'lab-details',
-    'golden-library',
-    'restricted-golden-library'
-  ];
   export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
-   const [labLayout, setLabLayout] = useState<string[]>(() => {
-     const saved = localStorage.getItem('hedge-calc-lab-layout');
-     return saved ? JSON.parse(saved) : LAB_DEFAULT_LAYOUT;
-   });
-
-   useEffect(() => {
-     localStorage.setItem('hedge-calc-lab-layout', JSON.stringify(labLayout));
-   }, [labLayout]);
-
    const [maxLabTotalOdd, setMaxLabTotalOdd] = useState<number>(() => {
      const saved = localStorage.getItem('hedge-calc-lab-max-odd');
      return saved ? Number(saved) : 8.0;
@@ -115,22 +37,6 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
    useEffect(() => {
      localStorage.setItem('hedge-calc-lab-max-odd', maxLabTotalOdd.toString());
    }, [maxLabTotalOdd]);
-
-   const sensors = useSensors(
-     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-   );
-
-   const handleDragEnd = (event: DragEndEvent) => {
-     const { active, over } = event;
-     if (over && active.id !== over.id) {
-       setLabLayout((items) => {
-         const oldIndex = items.indexOf(active.id as string);
-         const newIndex = items.indexOf(over.id as string);
-         return arrayMove(items, oldIndex, newIndex);
-       });
-     }
-   };
 
    const applyGoldenCombo = (comboLegs: number[]) => {
      const newLegs = comboLegs.map((odd, i) => ({
