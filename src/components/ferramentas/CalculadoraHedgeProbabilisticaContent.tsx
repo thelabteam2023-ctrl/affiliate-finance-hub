@@ -259,6 +259,38 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
       };
     }, [metrics, bankroll]);
 
+    const longTermSim = useMemo(() => {
+      const cycles = 100000;
+      const dataPoints = 100;
+      const step = cycles / dataPoints;
+      const trajectory = [];
+      
+      let currentBank = bankroll;
+      const cdf = metrics.aggregatedScenarios.map((s, i, arr) => ({
+        ...s,
+        upper: arr.slice(0, i + 1).reduce((sum, current) => sum + current.probability, 0)
+      }));
+
+      trajectory.push({ cycle: 0, balance: currentBank });
+
+      for (let i = 1; i <= cycles; i++) {
+        if (currentBank < metrics.maxResponsibility || currentBank <= 0) {
+          currentBank = 0;
+          if (i % step === 0) trajectory.push({ cycle: i, balance: 0 });
+          continue;
+        }
+
+        const rand = Math.random();
+        const scenario = cdf.find(s => rand <= s.upper) || cdf[cdf.length - 1];
+        currentBank += scenario.result;
+
+        if (i % step === 0) {
+          trajectory.push({ cycle: i, balance: Math.max(0, currentBank) });
+        }
+      }
+
+      return trajectory;
+    }, [metrics, bankroll]);
     const riskOfRuin = monteCarloSim.riskOfRuin;
 
     const finalScore = useMemo(() => {
