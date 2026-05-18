@@ -298,6 +298,50 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
     }, [metrics, bankroll, simMode, bankrollCeilingMultiplier]);
     const riskOfRuin = monteCarloSim.riskOfRuin;
 
+    const advancedStats = useMemo(() => {
+      const winRate = monteCarloSim.winRate;
+      const lossRate = 1 - winRate;
+      
+      // 1. Sequências (Greens e Reds)
+      const prob10Greens = Math.pow(winRate, 10);
+      const prob10Reds = Math.pow(lossRate, 10);
+
+      // 2. Desvio Padrão da Operação (Variação de lucro/prejuízo)
+      const mean = metrics.totalEV;
+      const variance = metrics.aggregatedScenarios.reduce((acc, s) => {
+        return acc + s.probability * Math.pow(s.result - mean, 2);
+      }, 0);
+      const stdDev = Math.sqrt(variance);
+
+      // 3. Fator de Recuperação (Quantos ganhos médios para pagar 1 perda média)
+      const avgWin = metrics.aggregatedScenarios.filter(s => s.result > 0).reduce((acc, s, _, arr) => acc + (s.result * s.probability), 0) / winRate;
+      const avgLoss = Math.abs(metrics.aggregatedScenarios.filter(s => s.result < 0).reduce((acc, s) => acc + (s.result * s.probability), 0) / (lossRate || 1));
+      const recoveryFactor = avgLoss / (avgWin || 1);
+
+      // 4. Expectativa Kelly (Fração Sugerida da Banca)
+      // b = odd líquida (lucro/risco), p = prob sucesso, q = prob falha
+      // f = (bp - q) / b
+      const b = avgWin / (avgLoss || 1);
+      const kelly = b > 0 ? (b * winRate - lossRate) / b : 0;
+
+      // 5. Probabilidade de Lucro em 100 Ciclos (Teorema do Limite Central)
+      // Z = (X - n*mean) / (sqrt(n) * stdDev)
+      // Para X = 0 (ponto de equilíbrio)
+      const n = 100;
+      const z = (0 - n * mean) / (Math.sqrt(n) * stdDev);
+      // Função de distribuição cumulativa normal aproximada
+      const probProfit100 = 1 - (0.5 * (1 + Math.tanh(0.79788456 * (z + 0.035677408 * Math.pow(z, 3)))));
+
+      return {
+        prob10Greens,
+        prob10Reds,
+        stdDev,
+        recoveryFactor,
+        kelly: Math.max(0, kelly),
+        probProfit100
+      };
+    }, [metrics, monteCarloSim.winRate]);
+
     const finalScore = useMemo(() => {
       const roi = metrics.totalROI;
       const ror = riskOfRuin;
