@@ -845,10 +845,31 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                            <div className="bg-background/50 p-3 rounded font-mono text-[9px] border border-border/40 leading-relaxed text-muted-foreground">
                              Diferente de fórmulas estáticas, simulamos 5.000 jornadas reais. O risco aumenta drasticamente se a exposição (R$ {fmt(metrics.maxResponsibility)}) for alta em relação à banca (R$ {fmt(bankroll)}).
                            </div>
-                           <div className="space-y-3">
-                             <p className="text-muted-foreground italic">
-                               Neste cenário, a probabilidade de sua banca ser consumida pela variância antes de atingir o lucro de longo prazo é de {fmtPct(riskOfRuin)}.
+                           <div className="space-y-4">
+                             <p className="text-muted-foreground italic border-l-2 border-primary/30 pl-3">
+                               A ruína ocorre quando a banca cai para R$ 0 ou se torna insuficiente para cobrir a responsabilidade de R$ {fmt(metrics.maxResponsibility)}.
                              </p>
+
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                               <div className="p-3 bg-muted/20 rounded-md border border-border/50">
+                                 <h5 className="text-[10px] font-bold uppercase mb-1 text-primary flex items-center gap-1">
+                                   <Zap className="h-3 w-3" /> Dinâmica de EV
+                                 </h5>
+                                 <p className="text-[9px] text-muted-foreground leading-tight">
+                                   {metrics.totalEV > 0 
+                                     ? "O lucro esperado é positivo, mas a exposição agressiva pode forçar a quebra antes da lei dos grandes números atuar." 
+                                     : "O lucro esperado é negativo. Mesmo com sorte no curto prazo, a quebra é matematicamente garantida no infinito."}
+                                 </p>
+                               </div>
+                               <div className="p-3 bg-muted/20 rounded-md border border-border/50">
+                                 <h5 className="text-[10px] font-bold uppercase mb-1 text-primary flex items-center gap-1">
+                                   <RefreshCcw className="h-3 w-3" /> Regra de Saques
+                                 </h5>
+                                 <p className="text-[9px] text-muted-foreground leading-tight">
+                                   Simulação baseada em <strong>Banca Fechada</strong>: todos os lucros retornam para o capital de giro, sem retiradas durante o processo.
+                                 </p>
+                               </div>
+                             </div>
                              
                              <div className={`p-3 border rounded-md ${monteCarloSim.riskOfRuin10 > 5 ? 'bg-red-500/10 border-red-500/20' : 'bg-muted/30 border-border/50'}`}>
                                <h5 className={`text-[10px] font-bold uppercase mb-2 flex items-center gap-2 ${monteCarloSim.riskOfRuin10 > 5 ? 'text-red-400' : 'text-muted-foreground'}`}>
