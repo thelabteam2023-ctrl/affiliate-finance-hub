@@ -1281,33 +1281,9 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                    </DndContext>
                  </div>
 
-                                  title={`Extração ${Math.round(target*100)}% | Odd ${odd.toFixed(2)} | Score: ${score.toFixed(1)}`}
-                                >
-                                  {isValid ? score.toFixed(0) : 'X'}
-                                </button>
-                              );
-                            })}
-                          </React.Fragment>
-                        ))}
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center text-[10px] uppercase font-bold text-muted-foreground">
-                          <span>Veredito do Doutor</span>
-                          <Trophy className="h-3 w-3 text-yellow-500" />
-                        </div>
-                        <p className="text-[10px] text-muted-foreground leading-tight italic">
-                          {targetExtraction > 0.75 
-               </div>
-             </div>
-            )}
-                            ? "Você está priorizando o lucro bruto, o que sobrecarrega a sua banca. Considere reduzir a extração para 70% para aumentar o ROE (Retorno sobre Exposição)."
-                            : "Excelente design. Sua extração está equilibrada com as odds, permitindo uma cascata sustentável e menor volatilidade de banca."}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
                 </div>
-
+              </div>
+            )}
                <div className="md:col-span-2 space-y-6">
                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                    <Card className="border-l-4 border-l-red-500">
