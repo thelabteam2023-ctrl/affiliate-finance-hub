@@ -4,7 +4,6 @@ file_path = 'src/components/ferramentas/CalculadoraHedgeProbabilisticaContent.ts
 with open(file_path, 'r') as f:
     lines = f.readlines()
 
-# Localizar o ponto de início do bloco problemático
 start_idx = -1
 for i, line in enumerate(lines):
     if ') : (' in line and 'activeTab === \'calculadora\'' in lines[i-1]:
@@ -12,29 +11,32 @@ for i, line in enumerate(lines):
         break
 
 if start_idx == -1:
+    # Try alternate match based on current content
+    for i, line in enumerate(lines):
+        if ') : (' in line and i > 500:
+            start_idx = i
+            break
+
+if start_idx == -1:
     print("Start point not found")
     sys.exit(1)
 
-# Localizar o ponto de fim do bloco problemático
 end_idx = -1
 for i in range(start_idx, len(lines)):
-    if ')}' in lines[i] and '</div>' in lines[i+1] and '</ScrollArea>' in lines[i+2]:
+    if ')}' in lines[i] and '</div>' in lines[i+1] and ')}' in lines[i+2]: # Matching outer block
+         # No, lines 1540-1543 in view show:
+         # 1540:                </div>
+         # 1541:              </div>
+         # 1542:             )}
+         # 1543:          </div>
+         pass
+    if ')}' in lines[i] and '</div>' in lines[i+1] and 'Dialog' in lines[i+3]:
         end_idx = i
         break
 
 if end_idx == -1:
-    # Tentar outro critério
-    for i in range(start_idx, len(lines)):
-         if '*** End Patch' in lines[i]: # Se por algum motivo restou lixo
-             pass
-         if i + 3 < len(lines) and 'Dialog' in lines[i+3]:
-             end_idx = i
-             break
-
-if end_idx == -1:
-    print("End point not found")
-    # sys.exit(1)
-    end_idx = 1542 # Hardcoded based on view if needed, but let's try to find it better
+    # Fallback to hardcoded safe line if possible
+    end_idx = 1542
 
 new_content = lines[:start_idx+1]
 new_content.append('             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>\n')
@@ -42,7 +44,6 @@ new_content.append('               <SortableContext items={labLayout} strategy={
 new_content.append('                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-min">\n')
 new_content.append('                   {labLayout.map((layoutId) => {\n')
 
-# Adicionar os blocos dinâmicos
 dynamic_blocks = """
                      if (layoutId === 'visual-sim') return (
                        <SortableCard key={layoutId} id={layoutId}>
@@ -134,10 +135,6 @@ dynamic_blocks = """
                                <span className="text-[10px] uppercase font-bold text-muted-foreground">10 Reds</span>
                                <span className="text-sm font-bold font-mono text-red-400">{(advancedStats.prob10Reds * 100).toFixed(4)}%</span>
                              </div>
-                             <div className="p-2 rounded-lg bg-background/40 border border-border/40 flex justify-between items-center">
-                               <span className="text-[10px] uppercase font-bold text-muted-foreground">Kelly Sugerido</span>
-                               <span className="text-sm font-bold font-mono text-primary">{fmtPct(advancedStats.kelly * 100)}</span>
-                             </div>
                            </CardContent>
                          </Card>
                        </SortableCard>
@@ -145,23 +142,23 @@ dynamic_blocks = """
                      if (layoutId === 'efficiency-matrix') return (
                        <SortableCard key={layoutId} id={layoutId}>
                          <Card className="border-primary/20 bg-primary/5 h-full">
-                           <CardHeader className="pb-2">
-                             <CardTitle className="text-sm font-medium flex items-center gap-2">
-                               <BrainCircuit className="h-4 w-4 text-primary" /> Matriz de Eficiência
+                           <CardHeader className="pb-2 text-center">
+                             <CardTitle className="text-[10px] font-medium flex items-center justify-center gap-2">
+                               <BrainCircuit className="h-3 w-3 text-primary" /> Matriz de Eficiência
                              </CardTitle>
                            </CardHeader>
-                           <CardContent>
+                           <CardContent className="p-2">
                              <div className="grid grid-cols-7 gap-1">
-                               <div className="text-[7px] text-muted-foreground font-bold flex items-center justify-center">O\E</div>
-                               {[0.60, 0.65, 0.70, 0.75, 0.80].map(t => <div key={t} className="text-[7px] text-muted-foreground font-mono text-center">{Math.round(t*100)}%</div>)}
+                               <div className="text-[6px] text-muted-foreground font-bold flex items-center justify-center">O\\E</div>
+                               {[0.60, 0.65, 0.70, 0.75, 0.80].map(t => <div key={t} className="text-[6px] text-muted-foreground font-mono text-center">{Math.round(t*100)}%</div>)}
                                {[1.5, 2.0, 2.5, 3.0, 3.5, 4.0].map(odd => (
                                  <React.Fragment key={odd}>
-                                   <div className="text-[7px] text-muted-foreground font-mono flex items-center justify-center bg-muted/20 rounded">{odd.toFixed(1)}</div>
+                                   <div className="text-[6px] text-muted-foreground font-mono flex items-center justify-center bg-muted/20 rounded">{odd.toFixed(1)}</div>
                                    {[0.60, 0.65, 0.70, 0.75, 0.80].map(target => {
                                       const cell = heatmapData.find(d => d.target === target && d.odd === odd);
                                       const score = cell?.score || 0;
                                       const isValid = cell?.isValid;
-                                      return <div key={`${target}-${odd}`} className={`aspect-square rounded-[1px] flex items-center justify-center text-[6px] font-mono border border-white/5 ${isValid ? (score > 5 ? 'bg-emerald-500/30' : 'bg-blue-500/20') : 'bg-red-500/5'}`}>{isValid ? score.toFixed(0) : 'X'}</div>
+                                      return <div key={`${target}-${odd}`} className={`aspect-square rounded-[1px] flex items-center justify-center text-[5px] font-mono border border-white/5 ${isValid ? (score > 5 ? 'bg-emerald-500/30' : 'bg-blue-500/20') : 'bg-red-500/5'}`}>{isValid ? score.toFixed(0) : 'X'}</div>
                                    })}
                                  </React.Fragment>
                                ))}
@@ -173,14 +170,14 @@ dynamic_blocks = """
                      if (layoutId === 'risk-ruin') return (
                        <SortableCard key={layoutId} id={layoutId}>
                          <Card className="border-l-4 border-l-red-500 h-full">
-                           <CardHeader className="pb-2">
+                           <CardHeader className="pb-1">
                              <CardTitle className="text-xs font-medium flex items-center gap-2 text-red-400">
                                <ShieldAlert className="h-4 w-4" /> Risco de Ruína
                              </CardTitle>
                            </CardHeader>
                            <CardContent>
                              <div className="text-xl font-bold font-mono">{fmtPct(riskOfRuin)}</div>
-                             <div className="mt-2 w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                             <div className="mt-1 w-full h-1 bg-muted rounded-full overflow-hidden">
                                <div className={`h-full ${riskOfRuin > 10 ? 'bg-red-500' : 'bg-emerald-500'}`} style={{ width: `${riskOfRuin}%` }} />
                              </div>
                            </CardContent>
@@ -190,14 +187,14 @@ dynamic_blocks = """
                      if (layoutId === 'capital-efficiency') return (
                        <SortableCard key={layoutId} id={layoutId}>
                          <Card className="border-l-4 border-l-emerald-500 h-full">
-                           <CardHeader className="pb-2">
+                           <CardHeader className="pb-1">
                              <CardTitle className="text-xs font-medium flex items-center gap-2 text-emerald-400">
-                               <BrainCircuit className="h-4 w-4" /> Eficiência de Capital
+                               <BrainCircuit className="h-4 w-4" /> Eficiência
                              </CardTitle>
                            </CardHeader>
                            <CardContent>
                              <div className="text-xl font-bold font-mono">{fmtPct((metrics.maxResponsibility / bankroll) * 100)}</div>
-                             <p className="text-[9px] text-muted-foreground mt-1">Uso da banca (R$ {fmt(metrics.maxResponsibility)})</p>
+                             <p className="text-[8px] text-muted-foreground mt-1">Uso da banca (R$ {fmt(metrics.maxResponsibility)})</p>
                            </CardContent>
                          </Card>
                        </SortableCard>
@@ -205,16 +202,16 @@ dynamic_blocks = """
                      if (layoutId === 'lab-details') return (
                        <SortableCard key={layoutId} id={layoutId}>
                          <Card className="h-full">
-                           <CardHeader className="pb-2">
-                             <CardTitle className="text-sm font-medium flex items-center gap-2">
+                           <CardHeader className="pb-1">
+                             <CardTitle className="text-xs font-medium flex items-center gap-2">
                                <Dna className="h-4 w-4 text-primary" /> Dados do Lab
                              </CardTitle>
                            </CardHeader>
-                           <CardContent className="space-y-2">
-                              <div className="p-2 bg-muted/20 rounded border border-border/50 text-[10px]">
+                           <CardContent className="space-y-1">
+                              <div className="p-1 bg-muted/20 rounded border border-border/50 text-[9px]">
                                  Lucro Médio: <span className="font-bold text-emerald-400">R$ {fmt(monteCarloSim.avgResult)}</span>
                               </div>
-                              <div className="p-2 bg-muted/20 rounded border border-border/50 text-[10px]">
+                              <div className="p-1 bg-muted/20 rounded border border-border/50 text-[9px]">
                                  Win Rate: <span className="font-bold text-blue-400">{fmtPct(monteCarloSim.winRate * 100)}</span>
                               </div>
                            </CardContent>
@@ -224,13 +221,13 @@ dynamic_blocks = """
                      if (layoutId === 'golden-library') return (
                        <SortableCard key={layoutId} id={layoutId}>
                          <Card className="h-full border-dashed">
-                           <CardHeader className="pb-2">
-                             <CardTitle className="text-sm font-medium flex items-center gap-2">
-                               <Trophy className="h-4 w-4 text-yellow-400" /> Biblioteca de Ouro
+                           <CardHeader className="pb-1">
+                             <CardTitle className="text-xs font-medium flex items-center gap-2">
+                               <Trophy className="h-4 w-4 text-yellow-400" /> Biblioteca
                              </CardTitle>
                            </CardHeader>
                            <CardContent>
-                             <p className="text-[10px] text-muted-foreground">Sugestões baseadas no seu benchmark.</p>
+                             <p className="text-[9px] text-muted-foreground leading-tight">Sugestões otimizadas para seu benchmark de {Math.round(targetExtraction * 100)}%.</p>
                            </CardContent>
                          </Card>
                        </SortableCard>
@@ -244,17 +241,8 @@ new_content.append('               </SortableContext>\n')
 new_content.append('             </DndContext>\n')
 new_content.append('            )}\n')
 
-# Pular as linhas corrompidas e adicionar o resto
-rest_of_file = []
-for i in range(len(lines)):
-    if i >= 1542: # Hardcoded safety if end_idx failed
-        rest_of_file = lines[i:]
-        break
-
-# Se end_idx funcionou, usar ele
-if end_idx != -1:
-    rest_of_file = lines[end_idx+1:]
-
+# Jump exactly to the line after 1542
+rest_of_file = lines[end_idx+1:]
 new_content.extend(rest_of_file)
 
 with open(file_path, 'w') as f:

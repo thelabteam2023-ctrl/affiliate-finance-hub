@@ -908,637 +908,203 @@ Para corrigir, reduza a Meta de Extração no slider.`}
         </div>
                </>
              ) : (
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                <SortableContext items={labLayout} strategy={rectSortingStrategy}>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-min">
-                    {labLayout.map((layoutId) => {
-                      if (layoutId === 'visual-sim') return (
-                        <SortableCard key={layoutId} id={layoutId}>
-                          <Card className="bg-emerald-500/5 border-emerald-500/20 overflow-hidden h-full">
-                            <div className="bg-emerald-500/10 px-4 py-2 border-b border-emerald-500/20">
-                              <h4 className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
-                                <CheckCircle2 className="h-3 w-3" /> Simulação Visual
-                              </h4>
-                            </div>
-                            <CardContent className="pt-4 space-y-4">
-                              <div className="flex items-end gap-1 h-24 mb-6 items-baseline">
-                                {monteCarloSim.samples.map((s, i) => {
-                                  const height = Math.min(100, Math.max(20, (Math.abs(s) / Math.max(metrics.allWonProfit, Math.abs(metrics.maxDrawdown))) * 100));
-                                  return (
-                                    <div key={i} className={`flex-1 rounded-t-sm transition-all cursor-help relative group ${s >= 0 ? 'bg-emerald-500/40 hover:bg-emerald-400' : 'bg-red-500/40 hover:bg-red-400'}`} style={{ height: `${height}%` }} />
-                                  );
-                                })}
-                              </div>
-                              <p className="text-[10px] text-muted-foreground italic border-t border-border/40 pt-2">Amostra da variância em 10 ciclos.</p>
-                            </CardContent>
-                          </Card>
-                        </SortableCard>
-                      );
-                      if (layoutId === 'double-bankroll') return (
-                        <SortableCard key={layoutId} id={layoutId}>
-                          <div className="p-4 rounded-lg bg-orange-500/5 border border-orange-500/20 space-y-3 h-full flex flex-col justify-center">
-                            <div className="flex items-center gap-2">
-                              <TrendingUp className="h-4 w-4 text-orange-400" />
-                              <h4 className="text-xs font-bold uppercase tracking-wider text-orange-400">Projeção: Dobra</h4>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-1">
-                                <span className="text-[9px] text-muted-foreground uppercase">Eventos</span>
-                                <p className="text-lg font-bold text-white font-mono">{monteCarloSim.medianSteps}</p>
-                              </div>
-                              <div className="space-y-1 text-right">
-                                <span className="text-[9px] text-muted-foreground uppercase">Prob. Sucesso</span>
-                                <p className={`text-lg font-bold font-mono ${monteCarloSim.probDouble > 70 ? 'text-emerald-400' : 'text-orange-400'}`}>{fmtPct(monteCarloSim.probDouble)}</p>
-                              </div>
-                            </div>
-                          </div>
-                        </SortableCard>
-                      );
-                      if (layoutId === 'lab-params') return (
-                        <SortableCard key={layoutId} id={layoutId}>
-                          <Card className="h-full">
-                            <CardHeader>
-                              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                                <Coins className="h-4 w-4 text-primary" /> Parâmetros do Laboratório
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                     <div className="space-y-3">
-                       <Label className="text-[10px] uppercase font-bold text-muted-foreground">Referência de Extração (Benchmark)</Label>
-                       <Tabs 
-                         value={labBenchmark} 
-                         onValueChange={(val) => {
-                           setLabBenchmark(val);
-                           if (val !== 'custom') setTargetExtraction(Number(val) / 100);
-                         }} 
-                         className="w-full"
-                       >
-                         <TabsList className="grid grid-cols-4 h-9 w-full">
-                           <TabsTrigger value="65" className="text-[10px]">65%</TabsTrigger>
-                           <TabsTrigger value="70" className="text-[10px]">70%</TabsTrigger>
-                           <TabsTrigger value="75" className="text-[10px]">75%</TabsTrigger>
-                           <TabsTrigger value="custom" className="text-[10px]">Livre</TabsTrigger>
-                         </TabsList>
-                       </Tabs>
-                       <div className="p-2 rounded bg-muted/30 border border-border/50">
-                         <p className="text-[9px] text-muted-foreground leading-tight italic">
-                           {labBenchmark === '65' && "Conservador: Menor exposição na Exchange, maior segurança para bancas pequenas."}
-                           {labBenchmark === '70' && "Equilibrado: O padrão ouro da indústria para extração sustentável."}
-                           {labBenchmark === '75' && "Agressivo: Maior lucro por freebet, exige banca robusta para suportar a variância."}
-                           {labBenchmark === 'custom' && "Manual: Ajuste livre conforme sua estratégia específica."}
-                         </p>
-                       </div>
-                     </div>
+             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+               <SortableContext items={labLayout} strategy={rectSortingStrategy}>
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-min">
+                   {labLayout.map((layoutId) => {
 
-                     {labBenchmark === 'custom' && (
-                       <div className="space-y-3 p-3 bg-muted/20 border border-border rounded-lg">
-                         <div className="flex justify-between items-center">
-                           <Label className="text-[10px] uppercase font-bold text-primary">Ajuste Manual</Label>
-                           <span className="text-xs font-mono font-bold text-white">{Math.round(targetExtraction * 100)}%</span>
-                         </div>
-                         <Slider 
-                           value={[targetExtraction * 100]} 
-                           min={50} max={95} step={1}
-                           onValueChange={(vals) => setTargetExtraction(vals[0] / 100)}
-                         />
-                       </div>
-                     )}
-
-                     <div className="grid grid-cols-2 gap-4">
-                       <div className="space-y-2">
-                         <Label className="text-[10px] uppercase font-bold text-muted-foreground">Valor da Freebet (Base)</Label>
-                         <div className="h-10 px-3 flex items-center bg-muted/50 border border-border rounded-md font-mono text-sm text-white">
-                           R$ {fmt(freebet)}
-                         </div>
-                         <p className="text-[9px] text-muted-foreground italic leading-tight">
-                           Definido na aba principal.
-                         </p>
-                       </div>
-
-                       <div className="space-y-2">
-                         <Label className="text-[10px] uppercase font-bold text-primary">Sua Banca Exchange</Label>
-                         <div className="relative">
-                           <Input 
-                             type="number" 
-                             value={bankroll} 
-                             onChange={(e) => setBankroll(Number(e.target.value))}
-                             className="h-10 pl-8 font-mono text-sm"
-                           />
-                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">R$</span>
-                         </div>
-                         <p className="text-[9px] text-muted-foreground italic leading-tight">
-                           Saldo disponível para cobrir Lays.
-                         </p>
-                       </div>
-                     </div>
-
-                     <div className="space-y-3 pt-2 border-t border-border/30">
-                       <Label className="text-[10px] uppercase font-bold text-muted-foreground">Modelo de Gestão (Simulação)</Label>
-                       <Tabs 
-                         value={simMode} 
-                         onValueChange={(val) => setSimMode(val as 'accumulative' | 'capped')} 
-                         className="w-full"
-                       >
-                         <TabsList className="grid grid-cols-2 h-9 w-full">
-                           <TabsTrigger value="accumulative" className="text-[10px]">Accumulativa</TabsTrigger>
-                           <TabsTrigger value="capped" className="text-[10px]">Banca Fixa (Teto)</TabsTrigger>
-                         </TabsList>
-                       </Tabs>
-                       
-                       {simMode === 'capped' && (
-                         <div className="space-y-3 p-3 bg-blue-500/5 border border-blue-500/10 rounded-lg">
-                           <div className="flex justify-between items-center">
-                             <Label className="text-[10px] uppercase font-bold text-blue-400">Limite de Crescimento</Label>
-                             <span className="text-xs font-mono font-bold text-white">{bankrollCeilingMultiplier}x Banca</span>
+                     if (layoutId === 'visual-sim') return (
+                       <SortableCard key={layoutId} id={layoutId}>
+                         <Card className="bg-emerald-500/5 border-emerald-500/20 overflow-hidden h-full">
+                           <div className="bg-emerald-500/10 px-4 py-2 border-b border-emerald-500/20">
+                             <h4 className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+                               <CheckCircle2 className="h-3 w-3" /> Simulação Visual
+                             </h4>
                            </div>
-                           <Slider 
-                             value={[bankrollCeilingMultiplier]} 
-                             min={1} max={20} step={1}
-                             onValueChange={(vals) => setBankrollCeilingMultiplier(vals[0])}
-                           />
-                           <p className="text-[9px] text-muted-foreground italic leading-tight">
-                             Simula a realidade onde você saca o lucro ao atingir R$ {fmt(bankroll * bankrollCeilingMultiplier)}.
-                           </p>
-                         </div>
-                       )}
-                     </div>
-
-                     <div className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/20 space-y-2">
-                       <div className="flex justify-between items-center text-[10px] uppercase font-bold text-blue-400">
-                          <span>Proporção Banca vs Freebet</span>
-                          <span>{Math.round(bankroll / freebet)}x</span>
-                       </div>
-                       <div className="w-full h-1.5 bg-blue-500/10 rounded-full overflow-hidden">
-                         <div 
-                           className="h-full bg-blue-500 transition-all duration-500" 
-                           style={{ width: `${Math.min(100, (freebet / bankroll) * 100 * 10)}%` }}
-                         />
-                       </div>
-                       <p className="text-[9px] text-muted-foreground leading-relaxed">
-                         Sua banca é <strong>{Math.round(bankroll / freebet)} vezes maior</strong> que o valor da Freebet. 
-                         Uma banca saudável deve ser de no mínimo 15-20x o valor da Freebet para absorver variância em cascatas longas.
-                       </p>
-                     </div>
-                    
-                   </CardContent>
-                 </Card>
-
-                 <Card className="bg-primary/5 border-primary/20">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium flex items-center gap-2">
-                        <Sparkles className="h-4 w-4 text-primary" /> Insights do Doutor em Estatística
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-1 gap-3">
-                        <div className="p-3 rounded-lg bg-background/40 border border-border/40 space-y-1">
-                          <div className="flex justify-between items-center text-[10px] uppercase font-bold text-muted-foreground">
-                            <span>Sequência de 10 Greens</span>
-                            <CardInfoTooltip 
-                              title="Probabilidade de 10 Greens" 
-                              description="A chance matemática de você realizar 10 operações seguidas sem nenhum red. Baseado na taxa de sucesso atual."
-                            />
-                          </div>
-                          <p className="text-lg font-bold font-mono text-emerald-400">
-                            {fmtPct(advancedStats.prob10Greens * 100)}
-                          </p>
-                        </div>
-
-                        <div className="p-3 rounded-lg bg-background/40 border border-border/40 space-y-1">
-                          <div className="flex justify-between items-center text-[10px] uppercase font-bold text-muted-foreground">
-                            <span>Sequência de 10 Reds</span>
-                            <CardInfoTooltip 
-                              title="Probabilidade de 10 Reds" 
-                              description="Raridade estatística de enfrentar 10 derrotas consecutivas. Se este valor for maior que 1%, seu risco de ruína é preocupante."
-                            />
-                          </div>
-                          <p className="text-lg font-bold font-mono text-red-400">
-                            {(advancedStats.prob10Reds * 100).toFixed(6)}%
-                          </p>
-                        </div>
-
-                        <div className="p-3 rounded-lg bg-background/40 border border-border/40 space-y-1">
-                          <div className="flex justify-between items-center text-[10px] uppercase font-bold text-muted-foreground">
-                            <span>Fator de Recuperação</span>
-                            <CardInfoTooltip 
-                              title="Fator de Recuperação" 
-                              description="Quantas operações vitoriosas (em média) são necessárias para cobrir o prejuízo de uma única operação perdedora."
-                            />
-                          </div>
-                          <p className="text-lg font-bold font-mono text-blue-400">
-                            {advancedStats.recoveryFactor.toFixed(2)} ops
-                          </p>
-                        </div>
-
-                        <div className="p-3 rounded-lg bg-background/40 border border-border/40 space-y-1">
-                          <div className="flex justify-between items-center text-[10px] uppercase font-bold text-muted-foreground">
-                            <span>Crescimento (100 Ciclos)</span>
-                            <CardInfoTooltip 
-                              title="Probabilidade de Lucro" 
-                              description="Chance de você estar no lucro após completar um bloco de 100 operações, considerando a variância e o EV esperado."
-                            />
-                          </div>
-                          <p className={`text-lg font-bold font-mono ${advancedStats.probProfit100 > 0.8 ? 'text-emerald-400' : 'text-orange-400'}`}>
-                            {fmtPct(advancedStats.probProfit100 * 100)}
-                          </p>
-                        </div>
-
-                        <div className="p-3 rounded-lg bg-background/40 border border-border/40 space-y-1">
-                          <div className="flex justify-between items-center text-[10px] uppercase font-bold text-muted-foreground">
-                            <span>Kelly Sugerido (Risco)</span>
-                            <CardInfoTooltip 
-                              title="Critério de Kelly" 
-                              description="Teoria matemática de otimização de banca. Sugere a porcentagem máxima da banca que deveria ser exposta neste cenário específico."
-                            />
-                          </div>
-                          <p className="text-lg font-bold font-mono text-primary">
-                            {fmtPct(advancedStats.kelly * 100)}
-                          </p>
-                        </div>
-                      </div>
-
-                      <p className="text-[9px] text-muted-foreground italic leading-tight text-center mt-2">
-                        "No mundo probabilístico, a sorte é apenas o resíduo de um bom design estatístico."
-                      </p>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-primary/20 bg-primary/5">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium flex items-center gap-2">
-                        <BrainCircuit className="h-4 w-4 text-primary" /> Matriz de Eficiência
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-7 gap-1">
-                        <div className="text-[8px] text-muted-foreground uppercase font-bold flex items-center justify-center">Odd \ Ext</div>
-                        {[0.60, 0.65, 0.70, 0.75, 0.80].map(t => (
-                          <div key={t} className="text-[8px] text-muted-foreground font-mono text-center">{Math.round(t*100)}%</div>
-                        ))}
-                        
-                        {[1.5, 2.0, 2.5, 3.0, 3.5, 4.0].map(odd => (
-                          <React.Fragment key={odd}>
-                            <div className="text-[8px] text-muted-foreground font-mono flex items-center justify-center bg-muted/20 rounded">{odd.toFixed(1)}</div>
-                            {[0.60, 0.65, 0.70, 0.75, 0.80].map(target => {
-                              const cell = heatmapData.find(d => d.target === target && d.odd === odd);
-                              const score = cell?.score || 0;
-                              const isValid = cell?.isValid;
-                              
-                              let bgColor = "bg-muted/10";
-                              if (isValid) {
-                                if (score > 10) bgColor = "bg-emerald-500/40";
-                                else if (score > 5) bgColor = "bg-emerald-500/20";
-                                else if (score > 0) bgColor = "bg-blue-500/20";
-                                else bgColor = "bg-yellow-500/10";
-                              } else {
-                                bgColor = "bg-red-500/5";
-                              }
-
-                              return (
-                                <button
-                                  key={`${target}-${odd}`}
-                                  onClick={() => {
-                                    setTargetExtraction(target);
-                                    setLegs(legs.map(l => ({ ...l, backOdd: odd, layOdd: odd })));
-                                  }}
-                                  className={`aspect-square rounded-[2px] flex items-center justify-center text-[7px] font-mono transition-all hover:scale-110 hover:z-10 cursor-pointer border border-white/5 ${bgColor} ${Math.abs(targetExtraction - target) < 0.01 && Math.abs(legs[0].backOdd - odd) < 0.01 ? 'ring-1 ring-primary border-primary shadow-[0_0_8px_rgba(var(--primary),0.5)]' : ''}`}
-                                  title={`Extração ${Math.round(target*100)}% | Odd ${odd.toFixed(2)} | Score: ${score.toFixed(1)}`}
-                                >
-                                  {isValid ? score.toFixed(0) : 'X'}
-                                </button>
-                              );
-                            })}
-                          </React.Fragment>
-                        ))}
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center text-[10px] uppercase font-bold text-muted-foreground">
-                          <span>Veredito do Doutor</span>
-                          <Trophy className="h-3 w-3 text-yellow-500" />
-                        </div>
-                        <p className="text-[10px] text-muted-foreground leading-tight italic">
-                          {targetExtraction > 0.75 
-                            ? "Você está priorizando o lucro bruto, o que sobrecarrega a sua banca. Considere reduzir a extração para 70% para aumentar o ROE (Retorno sobre Exposição)."
-                            : "Excelente design. Sua extração está equilibrada com as odds, permitindo uma cascata sustentável e menor volatilidade de banca."}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-               <div className="md:col-span-2 space-y-6">
-                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                   <Card className="border-l-4 border-l-red-500">
-                     <CardHeader className="pb-2">
-                       <CardTitle className="text-xs font-medium flex items-center gap-2 text-red-400">
-                         <ShieldAlert className="h-4 w-4" /> Risco de Ruína
-                       </CardTitle>
-                     </CardHeader>
-                     <CardContent>
-                       <div className="text-2xl font-bold font-mono">
-                         {fmtPct(riskOfRuin)}
-                       </div>
-                       <p className="text-[10px] text-muted-foreground mt-1">
-                         Probabilidade de quebrar a banca com esta configuração no longo prazo.
-                       </p>
-                       <div className="mt-3 w-full h-2 bg-muted rounded-full overflow-hidden">
-                         <div 
-                           className={`h-full transition-all duration-500 ${riskOfRuin > 10 ? 'bg-red-500' : 'bg-emerald-500'}`}
-                           style={{ width: `${riskOfRuin}%` }}
-                         />
-                       </div>
-                     </CardContent>
-                   </Card>
- 
-                   <Card className="border-l-4 border-l-emerald-500">
-                     <CardHeader className="pb-2">
-                       <CardTitle className="text-xs font-medium flex items-center gap-2 text-emerald-400">
-                         <BrainCircuit className="h-4 w-4" /> Eficiência de Capital
-                       </CardTitle>
-                     </CardHeader>
-                     <CardContent>
-                       <div className="text-2xl font-bold font-mono text-white">
-                         {fmtPct((metrics.maxResponsibility / bankroll) * 100)}
-                       </div>
-                       <p className="text-[10px] text-muted-foreground mt-1">
-                         Uso da banca disponível (R$ {fmt(metrics.maxResponsibility)} utilizados).
-                       </p>
-                     </CardContent>
-                   </Card>
-                 </div>
- 
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-sm font-medium flex items-center gap-2">
-                        <Dna className="h-4 w-4 text-primary" /> Laboratório de Simulação e Dados
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      {/* Math Section */}
-                      <div className="p-4 rounded-lg bg-muted/30 border border-border/50 space-y-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <History className="h-4 w-4 text-primary" />
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Como chegamos neste Risco?</h4>
-                        </div>
-                        <div className="text-xs space-y-2 leading-relaxed">
-                          <p>
-                            O Risco de Ruína ({fmtPct(riskOfRuin)}) é calculado via <strong>Simulação de Trajetória</strong> (Monte Carlo).
-                          </p>
-                           <div className="bg-background/50 p-3 rounded font-mono text-[9px] border border-border/40 leading-relaxed text-muted-foreground">
-                             Diferente de fórmulas estáticas, simulamos 5.000 jornadas reais. O risco aumenta drasticamente se a exposição (R$ {fmt(metrics.maxResponsibility)}) for alta em relação à banca (R$ {fmt(bankroll)}).
-                           </div>
-                           <div className="space-y-4">
-                             <p className="text-muted-foreground italic border-l-2 border-primary/30 pl-3">
-                               A ruína ocorre quando a banca cai para R$ 0 ou se torna insuficiente para cobrir a responsabilidade de R$ {fmt(metrics.maxResponsibility)}.
-                             </p>
-
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                               <div className="p-3 bg-muted/20 rounded-md border border-border/50">
-                                 <h5 className="text-[10px] font-bold uppercase mb-1 text-primary flex items-center gap-1">
-                                   <Zap className="h-3 w-3" /> Dinâmica de EV
-                                 </h5>
-                                 <p className="text-[9px] text-muted-foreground leading-tight">
-                                   {metrics.totalEV > 0 
-                                     ? "O lucro esperado é positivo, mas a exposição agressiva pode forçar a quebra antes da lei dos grandes números atuar." 
-                                     : "O lucro esperado é negativo. Mesmo com sorte no curto prazo, a quebra é matematicamente garantida no infinito."}
-                                 </p>
-                               </div>
-                               <div className="p-3 bg-muted/20 rounded-md border border-border/50">
-                                 <h5 className="text-[10px] font-bold uppercase mb-1 text-primary flex items-center gap-1">
-                                   <RefreshCcw className="h-3 w-3" /> Regra de Saques
-                                 </h5>
-                                 <p className="text-[9px] text-muted-foreground leading-tight">
-                                   {simMode === 'accumulative' 
-                                     ? "Baseada em Banca Fechada: todos os lucros retornam para o capital de giro (juros compostos)." 
-                                     : `Baseada em Banca Fixa: o crescimento é limitado a ${bankrollCeilingMultiplier}x o inicial, simulando saques regulares.`}
-                                 </p>
-                               </div>
+                           <CardContent className="pt-4 space-y-4">
+                             <div className="flex items-end gap-1 h-24 mb-6 items-baseline">
+                               {monteCarloSim.samples.map((s, i) => {
+                                 const height = Math.min(100, Math.max(20, (Math.abs(s) / Math.max(metrics.allWonProfit, Math.abs(metrics.maxDrawdown))) * 100));
+                                 return (
+                                   <div key={i} className={`flex-1 rounded-t-sm transition-all cursor-help relative group ${s >= 0 ? 'bg-emerald-500/40 hover:bg-emerald-400' : 'bg-red-500/40 hover:bg-red-400'}`} style={{ height: `${height}%` }} />
+                                 );
+                               })}
                              </div>
-                             
-                             <div className={`p-3 border rounded-md ${monteCarloSim.riskOfRuin10 > 5 ? 'bg-red-500/10 border-red-500/20' : 'bg-muted/30 border-border/50'}`}>
-                               <h5 className={`text-[10px] font-bold uppercase mb-2 flex items-center gap-2 ${monteCarloSim.riskOfRuin10 > 5 ? 'text-red-400' : 'text-muted-foreground'}`}>
-                                 <ShieldAlert className="h-3 w-3" /> Horizonte de Curto Prazo (10 Bilhetes)
-                               </h5>
-                               <div className="flex justify-between items-center">
-                                 <span className="text-[10px] text-muted-foreground">Prob. de Quebra (Próx. 10):</span>
-                                 <span className={`text-sm font-bold ${monteCarloSim.riskOfRuin10 > 5 ? 'text-red-400' : 'text-white'}`}>
-                                   {fmtPct(monteCarloSim.riskOfRuin10)}
-                                 </span>
-                               </div>
-                               {monteCarloSim.riskOfRuin10 > 5 && (
-                                 <p className="text-[9px] text-red-400/80 mt-1 leading-tight">
-                                   ⚠️ Perigo: Exposição de {((metrics.maxResponsibility / bankroll) * 100).toFixed(1)}% da banca é crítica para o curto prazo.
-                                 </p>
-                               )}
-                             </div>
-                           </div>
-                        </div>
-                      </div>
-
-                      {/* Monte Carlo Visual */}
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <LineChart className="h-4 w-4 text-emerald-400" />
-                             <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Simulação Real (100.000 Trajetórias)</h4>
-                          </div>
-                          <Badge variant="outline" className="text-[9px] text-emerald-400 border-emerald-500/30">
-                            Monte Carlo Run
-                          </Badge>
-                        </div>
-
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                          <div className="p-3 rounded-lg bg-muted/20 border border-border/50 text-center">
-                            <span className="text-[9px] text-muted-foreground block mb-1">Lucro Médio</span>
-                            <span className="text-sm font-bold text-emerald-400">R$ {fmt(monteCarloSim.avgResult)}</span>
-                          </div>
-                          <div className="p-3 rounded-lg bg-muted/20 border border-border/50 text-center">
-                            <span className="text-[9px] text-muted-foreground block mb-1">Taxa de Sucesso</span>
-                            <span className="text-sm font-bold text-blue-400">{fmtPct(monteCarloSim.winRate * 100)}</span>
-                          </div>
-                          <div className="p-3 rounded-lg bg-muted/20 border border-border/50 text-center">
-                            <span className="text-[9px] text-muted-foreground block mb-1">Quebras (Banca)</span>
-                            <span className="text-sm font-bold text-red-400">{monteCarloSim.bankruptcies}</span>
-                          </div>
-                           <div className="p-3 rounded-lg bg-muted/20 border border-border/50 text-center">
-                             <span className="text-[9px] text-muted-foreground block mb-1">Total Ciclos</span>
-                             <span className="text-sm font-bold text-white">100.000</span>
-                           </div>
-                        </div>
-
-                        <div className="space-y-3 bg-muted/20 p-3 rounded-lg border border-border/50">
-                          <div className="flex justify-between items-center">
-                            <p className="text-[10px] font-bold text-muted-foreground uppercase">
-                              Amostra Sequencial (10 Ciclos)
-                            </p>
-                            <div className="text-[10px] font-mono text-white">
-                              Total: <span className={monteCarloSim.samples.reduce((a, b) => a + b, 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-                                R$ {fmt(monteCarloSim.samples.reduce((a, b) => a + b, 0))}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-5 gap-1.5">
-                            {Array.from({ length: 10 }).map((_, i) => {
-                              const s = monteCarloSim.samples[i];
-                              const exists = s !== undefined;
-                              return (
-                                <div 
-                                  key={i} 
-                                  className={`text-[9px] py-1 rounded text-center font-mono border transition-all ${
-                                    !exists 
-                                      ? 'bg-muted/10 border-border/20 text-muted-foreground/30' 
-                                      : s >= 0 
-                                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_8px_rgba(16,185,129,0.05)]' 
-                                        : 'bg-red-500/10 text-red-400 border-red-500/20 shadow-[0_0_8px_rgba(239,68,68,0.05)]'
-                                  }`}
-                                >
-                                  {exists ? `R$ ${fmt(s)}` : '---'}
-                                </div>
-                              );
-                            })}
-                          </div>
-                          <p className="text-[8px] text-muted-foreground italic leading-tight text-center">
-                            Simulação de uma jornada real de 10 operações consecutivas.
-                          </p>
-                        </div>
-                      </div>
-
-                      <Card className="bg-muted/10 border-border/50 shadow-none overflow-hidden">
-                        <div className="p-4 border-b border-border/50 bg-muted/20 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <Sparkles className="h-4 w-4 text-primary" />
-                              <h3 className="text-xs font-bold text-white uppercase tracking-wider">Perfil Operacional Ativo</h3>
-                              <Badge variant="outline" className="text-[9px] h-4 text-primary border-primary/30">
-                                Meta: {Math.round(targetExtraction * 100)}%
-                              </Badge>
-                            </div>
-                            <p className="text-[10px] text-muted-foreground mt-1">
-                              Visão dos mil primeiros ciclos (Simulação de 100.000) operando com ROI de {fmtPct(metrics.totalROI)}.
-                            </p>
-                          </div>
-                          <div className="flex gap-4">
-                            <div className="text-right">
-                              <span className="text-[9px] text-muted-foreground uppercase block">ROE p/ Ciclo</span>
-                              <span className="text-xs font-bold text-emerald-400">+{((metrics.totalEV / metrics.maxResponsibility) * 100).toFixed(2)}%</span>
-                            </div>
-                            <div className="text-right border-l border-border/50 pl-4">
-                              <span className="text-[9px] text-muted-foreground uppercase block">Exposição</span>
-                              <span className="text-xs font-bold text-orange-400">{fmtPct((metrics.maxResponsibility / bankroll) * 100)}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <CardContent className="p-0 h-[220px] w-full relative">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={longTermSim} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                              <defs>
-                                <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                                  <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                                </linearGradient>
-                              </defs>
-                              <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" vertical={false} />
-                              <XAxis 
-                                dataKey="cycle" 
-                                hide={true} 
-                              />
-                              <YAxis 
-                                domain={["auto", "auto"]}
-                                tick={{ fontSize: 9, fill: "#666" }}
-                                tickFormatter={(value) => `R$ ${value >= 1000 ? (value/1000).toFixed(1) + "k" : value}`}
-                                axisLine={false}
-                                tickLine={false}
-                              />
-                              <RechartsTooltip 
-                                contentStyle={{ backgroundColor: "#1a1a1a", border: "1px solid #333", borderRadius: "4px", fontSize: "10px" }}
-                                labelStyle={{ color: "#666" }}
-                                itemStyle={{ color: "#10b981" }}
-                                formatter={(value: number) => [`R$ ${fmt(Number(value))}`, "Banca"]}
-                                labelFormatter={(label) => `Ciclo: ${label.toLocaleString()}`}
-                              />
-                              <Area 
-                                type="monotone" 
-                                dataKey="balance" 
-                                stroke="#10b981" 
-                                fillOpacity={1} 
-                                fill="url(#colorBalance)" 
-                                strokeWidth={2}
-                              />
-                            </AreaChart>
-                          </ResponsiveContainer>
-                          {longTermSim[longTermSim.length - 1].balance <= 0 && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-[1px]">
-                              <div className="bg-red-500/10 border border-red-500/20 p-2 rounded flex items-center gap-2">
-                                <AlertTriangle className="h-3 w-3 text-red-500" />
-                                <span className="text-[10px] font-bold text-red-500 uppercase tracking-tighter">Banca Insuficiente no Longo Prazo</span>
-                              </div>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-
-                       {/* Golden Combinations Section */}
-                       <div className="space-y-4 pt-4 border-t border-border/50">
-                         <div className="flex items-center justify-between">
+                             <p className="text-[10px] text-muted-foreground italic border-t border-border/40 pt-2">Amostra da variância em 10 ciclos.</p>
+                           </CardContent>
+                         </Card>
+                       </SortableCard>
+                     );
+                     if (layoutId === 'double-bankroll') return (
+                       <SortableCard key={layoutId} id={layoutId}>
+                         <div className="p-4 rounded-lg bg-orange-500/5 border border-orange-500/20 space-y-3 h-full flex flex-col justify-center">
                            <div className="flex items-center gap-2">
-                             <Trophy className="h-4 w-4 text-yellow-400" />
-                             <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Biblioteca de Ouro</h4>
+                             <TrendingUp className="h-4 w-4 text-orange-400" />
+                             <h4 className="text-xs font-bold uppercase tracking-wider text-orange-400">Projeção: Dobra</h4>
                            </div>
-                           <div className="flex gap-1">
-                             {[2.8, 3.0, 4.8, 6.0].map((c) => (
-                               <Button 
-                                 key={c}
-                                 variant={commission === c ? "default" : "outline"}
-                                 size="sm"
-                                 className="h-6 text-[9px] px-2"
-                                 onClick={() => setCommission(c)}
-                               >
-                                 {c}%
-                               </Button>
-                             ))}
+                           <div className="grid grid-cols-2 gap-4">
+                             <div className="space-y-1">
+                               <span className="text-[9px] text-muted-foreground uppercase">Eventos</span>
+                               <p className="text-lg font-bold text-white font-mono">{monteCarloSim.medianSteps}</p>
+                             </div>
+                             <div className="space-y-1 text-right">
+                               <span className="text-[9px] text-muted-foreground uppercase">Prob. Sucesso</span>
+                               <p className={`text-lg font-bold font-mono ${monteCarloSim.probDouble > 70 ? 'text-emerald-400' : 'text-orange-400'}`}>{fmtPct(monteCarloSim.probDouble)}</p>
+                             </div>
                            </div>
                          </div>
-
-                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                           {(goldenCombinationsByExtraction[targetExtraction.toFixed(2)] || goldenCombinationsByExtraction["0.70"] || []).map((combo, idx) => (
-                             <div 
-                               key={idx} 
-                               className="p-3 rounded-lg bg-muted/20 border border-border/50 hover:border-primary/50 transition-all cursor-pointer group flex flex-col justify-between"
-                               onClick={() => applyGoldenCombo(combo.legs)}
-                             >
-                               <div>
-                                 <div className="flex justify-between items-start mb-1">
-                                   <Badge variant="outline" className={`text-[8px] h-4 uppercase ${combo.type === 'Eficiência de Capital' ? 'text-blue-400 border-blue-400/30' : 'text-emerald-400 border-emerald-400/30'}`}>
-                                     {combo.type}
-                                   </Badge>
-                                   <div className="flex flex-col items-end">
-                                     <span className="text-[10px] font-bold text-white">{combo.roi} ROI</span>
-                                     <span className="text-[8px] text-muted-foreground">ROE: {combo.roe}</span>
-                                   </div>
-                                 </div>
-                                 <h5 className="text-xs font-bold flex items-center gap-2 group-hover:text-primary transition-colors mt-1">
-                                   {combo.name}
-                                   <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
-                                 </h5>
-                                 <p className="text-[9px] text-muted-foreground leading-tight mt-1 mb-2">
-                                   {combo.description}
-                                 </p>
-                               </div>
-                               <div className="flex flex-wrap gap-1 mt-auto pt-2 border-t border-border/20">
-                                 {combo.legs.map((odd: number, i: number) => (
-                                   <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-background/50 border border-border/30 font-mono">
-                                     {odd.toFixed(2)}
-                                   </span>
-                                 ))}
+                       </SortableCard>
+                     );
+                     if (layoutId === 'lab-params') return (
+                       <SortableCard key={layoutId} id={layoutId}>
+                         <Card className="h-full">
+                           <CardHeader>
+                             <CardTitle className="text-sm font-medium flex items-center gap-2">
+                               <Coins className="h-4 w-4 text-primary" /> Parâmetros do Laboratório
+                             </CardTitle>
+                           </CardHeader>
+                           <CardContent className="space-y-4">
+                             <div className="space-y-3">
+                               <Label className="text-[10px] uppercase font-bold text-muted-foreground">Benchmark</Label>
+                               <Tabs value={labBenchmark} onValueChange={(val) => { setLabBenchmark(val); if (val !== 'custom') setTargetExtraction(Number(val) / 100); }} className="w-full">
+                                 <TabsList className="grid grid-cols-4 h-9 w-full">
+                                   <TabsTrigger value="65" className="text-[10px]">65%</TabsTrigger>
+                                   <TabsTrigger value="70" className="text-[10px]">70%</TabsTrigger>
+                                   <TabsTrigger value="75" className="text-[10px]">75%</TabsTrigger>
+                                   <TabsTrigger value="custom" className="text-[10px]">Livre</TabsTrigger>
+                                 </TabsList>
+                               </Tabs>
+                             </div>
+                             <div className="space-y-2">
+                               <Label className="text-[10px] uppercase font-bold text-primary">Banca Exchange</Label>
+                               <div className="relative">
+                                 <Input type="number" value={bankroll} onChange={(e) => setBankroll(Number(e.target.value))} className="h-10 pl-8 font-mono text-sm" />
+                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">R$</span>
                                </div>
                              </div>
-                           ))}
-                         </div>
-                       </div>
-                    </CardContent>
-                  </Card>
-               </div>
-             </div>
+                           </CardContent>
+                         </Card>
+                       </SortableCard>
+                     );
+                     if (layoutId === 'advanced-stats') return (
+                       <SortableCard key={layoutId} id={layoutId}>
+                         <Card className="bg-primary/5 border-primary/20 h-full">
+                           <CardHeader className="pb-2">
+                             <CardTitle className="text-sm font-medium flex items-center gap-2">
+                               <Sparkles className="h-4 w-4 text-primary" /> Estatísticas Avançadas
+                             </CardTitle>
+                           </CardHeader>
+                           <CardContent className="space-y-3">
+                             <div className="p-2 rounded-lg bg-background/40 border border-border/40 flex justify-between items-center">
+                               <span className="text-[10px] uppercase font-bold text-muted-foreground">10 Greens</span>
+                               <span className="text-sm font-bold font-mono text-emerald-400">{fmtPct(advancedStats.prob10Greens * 100)}</span>
+                             </div>
+                             <div className="p-2 rounded-lg bg-background/40 border border-border/40 flex justify-between items-center">
+                               <span className="text-[10px] uppercase font-bold text-muted-foreground">10 Reds</span>
+                               <span className="text-sm font-bold font-mono text-red-400">{(advancedStats.prob10Reds * 100).toFixed(4)}%</span>
+                             </div>
+                           </CardContent>
+                         </Card>
+                       </SortableCard>
+                     );
+                     if (layoutId === 'efficiency-matrix') return (
+                       <SortableCard key={layoutId} id={layoutId}>
+                         <Card className="border-primary/20 bg-primary/5 h-full">
+                           <CardHeader className="pb-2 text-center">
+                             <CardTitle className="text-[10px] font-medium flex items-center justify-center gap-2">
+                               <BrainCircuit className="h-3 w-3 text-primary" /> Matriz de Eficiência
+                             </CardTitle>
+                           </CardHeader>
+                           <CardContent className="p-2">
+                             <div className="grid grid-cols-7 gap-1">
+                               <div className="text-[6px] text-muted-foreground font-bold flex items-center justify-center">O\E</div>
+                               {[0.60, 0.65, 0.70, 0.75, 0.80].map(t => <div key={t} className="text-[6px] text-muted-foreground font-mono text-center">{Math.round(t*100)}%</div>)}
+                               {[1.5, 2.0, 2.5, 3.0, 3.5, 4.0].map(odd => (
+                                 <React.Fragment key={odd}>
+                                   <div className="text-[6px] text-muted-foreground font-mono flex items-center justify-center bg-muted/20 rounded">{odd.toFixed(1)}</div>
+                                   {[0.60, 0.65, 0.70, 0.75, 0.80].map(target => {
+                                      const cell = heatmapData.find(d => d.target === target && d.odd === odd);
+                                      const score = cell?.score || 0;
+                                      const isValid = cell?.isValid;
+                                      return <div key={`${target}-${odd}`} className={`aspect-square rounded-[1px] flex items-center justify-center text-[5px] font-mono border border-white/5 ${isValid ? (score > 5 ? 'bg-emerald-500/30' : 'bg-blue-500/20') : 'bg-red-500/5'}`}>{isValid ? score.toFixed(0) : 'X'}</div>
+                                   })}
+                                 </React.Fragment>
+                               ))}
+                             </div>
+                           </CardContent>
+                         </Card>
+                       </SortableCard>
+                     );
+                     if (layoutId === 'risk-ruin') return (
+                       <SortableCard key={layoutId} id={layoutId}>
+                         <Card className="border-l-4 border-l-red-500 h-full">
+                           <CardHeader className="pb-1">
+                             <CardTitle className="text-xs font-medium flex items-center gap-2 text-red-400">
+                               <ShieldAlert className="h-4 w-4" /> Risco de Ruína
+                             </CardTitle>
+                           </CardHeader>
+                           <CardContent>
+                             <div className="text-xl font-bold font-mono">{fmtPct(riskOfRuin)}</div>
+                             <div className="mt-1 w-full h-1 bg-muted rounded-full overflow-hidden">
+                               <div className={`h-full ${riskOfRuin > 10 ? 'bg-red-500' : 'bg-emerald-500'}`} style={{ width: `${riskOfRuin}%` }} />
+                             </div>
+                           </CardContent>
+                         </Card>
+                       </SortableCard>
+                     );
+                     if (layoutId === 'capital-efficiency') return (
+                       <SortableCard key={layoutId} id={layoutId}>
+                         <Card className="border-l-4 border-l-emerald-500 h-full">
+                           <CardHeader className="pb-1">
+                             <CardTitle className="text-xs font-medium flex items-center gap-2 text-emerald-400">
+                               <BrainCircuit className="h-4 w-4" /> Eficiência
+                             </CardTitle>
+                           </CardHeader>
+                           <CardContent>
+                             <div className="text-xl font-bold font-mono">{fmtPct((metrics.maxResponsibility / bankroll) * 100)}</div>
+                             <p className="text-[8px] text-muted-foreground mt-1">Uso da banca (R$ {fmt(metrics.maxResponsibility)})</p>
+                           </CardContent>
+                         </Card>
+                       </SortableCard>
+                     );
+                     if (layoutId === 'lab-details') return (
+                       <SortableCard key={layoutId} id={layoutId}>
+                         <Card className="h-full">
+                           <CardHeader className="pb-1">
+                             <CardTitle className="text-xs font-medium flex items-center gap-2">
+                               <Dna className="h-4 w-4 text-primary" /> Dados do Lab
+                             </CardTitle>
+                           </CardHeader>
+                           <CardContent className="space-y-1">
+                              <div className="p-1 bg-muted/20 rounded border border-border/50 text-[9px]">
+                                 Lucro Médio: <span className="font-bold text-emerald-400">R$ {fmt(monteCarloSim.avgResult)}</span>
+                              </div>
+                              <div className="p-1 bg-muted/20 rounded border border-border/50 text-[9px]">
+                                 Win Rate: <span className="font-bold text-blue-400">{fmtPct(monteCarloSim.winRate * 100)}</span>
+                              </div>
+                           </CardContent>
+                         </Card>
+                       </SortableCard>
+                     );
+                     if (layoutId === 'golden-library') return (
+                       <SortableCard key={layoutId} id={layoutId}>
+                         <Card className="h-full border-dashed">
+                           <CardHeader className="pb-1">
+                             <CardTitle className="text-xs font-medium flex items-center gap-2">
+                               <Trophy className="h-4 w-4 text-yellow-400" /> Biblioteca
+                             </CardTitle>
+                           </CardHeader>
+                           <CardContent>
+                             <p className="text-[9px] text-muted-foreground leading-tight">Sugestões otimizadas para seu benchmark de {Math.round(targetExtraction * 100)}%.</p>
+                           </CardContent>
+                         </Card>
+                       </SortableCard>
+                     );
+                     return null;
+                   })}
+                 </div>
+               </SortableContext>
+             </DndContext>
             )}
          </div>
  
