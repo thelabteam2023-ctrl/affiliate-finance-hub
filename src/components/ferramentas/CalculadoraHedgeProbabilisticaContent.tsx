@@ -41,16 +41,16 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
        { name: "Full House", legs: [1.8, 1.8, 1.8, 1.8, 4.0], roi: "2.3%", type: "Segurança" }
      ],
      "4.8": [
-       { name: "Duo de Ataque", legs: [1.8, 4.0], roi: "38.0%", type: "Alta Eficiência" },
-       { name: "Triple Threat", legs: [1.8, 1.8, 4.0], roi: "18.1%", type: "Equilibrado" },
-       { name: "Quarteto Estratégico", legs: [1.8, 1.8, 1.8, 4.0], roi: "6.3%", type: "Estabilidade" },
-       { name: "Full House", legs: [1.8, 1.8, 1.8, 1.8, 4.0], roi: "-0.9%", type: "Risco Alto" }
+       { name: "Duo de Ataque", legs: [1.8, 4.0], roi: "35.2%", type: "Eficiência Média" },
+       { name: "Triple Threat", legs: [1.8, 1.8, 4.0], roi: "14.8%", type: "Risco Moderado" },
+       { name: "Quarteto Estratégico", legs: [1.8, 1.8, 1.8, 4.0], roi: "2.1%", type: "Margem Estreita" },
+       { name: "Full House", legs: [1.8, 1.8, 1.8, 1.8, 4.0], roi: "-5.4%", type: "Inviável" }
      ],
      "6.0": [
-       { name: "Duo de Ataque", legs: [1.8, 4.0], roi: "37.0%", type: "Alta Eficiência" },
-       { name: "Triple Threat", legs: [1.8, 1.8, 4.0], roi: "16.7%", type: "Equilibrado" },
-       { name: "Quarteto Estratégico", legs: [1.8, 1.8, 1.8, 4.0], roi: "4.5%", type: "Estabilidade" },
-       { name: "Full House", legs: [1.8, 1.8, 1.8, 1.8, 4.0], roi: "-3.2%", type: "Inviável" }
+       { name: "Duo de Ataque", legs: [1.8, 4.0], roi: "32.4%", type: "Baixa Eficiência" },
+       { name: "Triple Threat", legs: [1.8, 1.8, 4.0], roi: "11.2%", type: "Risco Alto" },
+       { name: "Quarteto Estratégico", legs: [1.8, 1.8, 1.8, 4.0], roi: "-1.8%", type: "Inviável" },
+       { name: "Full House", legs: [1.8, 1.8, 1.8, 1.8, 4.0], roi: "-9.7%", type: "Inviável" }
      ]
    };
 
