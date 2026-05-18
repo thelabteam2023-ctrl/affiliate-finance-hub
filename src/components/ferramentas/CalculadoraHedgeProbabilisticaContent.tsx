@@ -908,84 +908,55 @@ Para corrigir, reduza a Meta de Extração no slider.`}
         </div>
                </>
              ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="md:col-span-1 space-y-6">
-                     <div className="space-y-4">
-                       <Card className="bg-emerald-500/5 border-emerald-500/20 overflow-hidden">
-                         <div className="bg-emerald-500/10 px-4 py-2 border-b border-emerald-500/20">
-                           <h4 className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
-                             <CheckCircle2 className="h-3 w-3" /> Simulação Visual de 100 Mil Ciclos
-                           </h4>
-                         </div>
-                         <CardContent className="pt-4 space-y-4">
-                           <div className="flex items-end gap-1 h-24 mb-10 items-baseline">
-                             {monteCarloSim.samples.map((s, i) => {
-                               const height = Math.min(100, Math.max(20, (Math.abs(s) / Math.max(metrics.allWonProfit, Math.abs(metrics.maxDrawdown))) * 100));
-                               const isWin = s >= 0;
-                               return (
-                                 <div 
-                                   key={i} 
-                                   className={`flex-1 rounded-t-sm transition-all cursor-help relative group ${isWin ? 'bg-emerald-500/40 hover:bg-emerald-400' : 'bg-red-500/40 hover:bg-red-400'}`}
-                                   style={{ height: `${height}%` }}
-                                 >
-                                    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2 py-1 bg-popover text-[9px] text-popover-foreground rounded border border-border shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none z-[60] whitespace-nowrap">
-                                     <div className="font-bold">{isWin ? 'LUCRO' : 'PREJUÍZO'}</div>
-                                     <div>Resultado: R$ {fmt(s)}</div>
-                                      <div className="text-muted-foreground font-mono italic">Evento #{i + 1}</div>
-                                   </div>
-                                 </div>
-                               );
-                             })}
-                           </div>
-                           <div className="flex justify-between text-[9px] text-muted-foreground uppercase font-medium">
-                             <span>Início</span>
-                             <span>Amostra da Variância de Longo Prazo</span>
-                             <span>Fim</span>
-                           </div>
-                           <p className="text-[10px] text-muted-foreground leading-relaxed italic border-t border-border/40 pt-2">
-                             Passe o mouse sobre as barras para ver o resultado de cada ciclo individual.
-                           </p>
-                         </div>
-                       </CardContent>
-                     </Card>
-                     {/* Meta de Dobra da Banca */}
-                     <div className="p-4 rounded-lg bg-orange-500/5 border border-orange-500/20 space-y-3">
-                       <div className="flex items-center gap-2">
-                         <TrendingUp className="h-4 w-4 text-orange-400" />
-                         <h4 className="text-xs font-bold uppercase tracking-wider text-orange-400">Projeção: Dobrar a Banca</h4>
-                       </div>
-                       <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <span className="text-[9px] text-muted-foreground uppercase">Eventos Necessários</span>
-                            <p className="text-lg font-bold text-white font-mono">
-                              {monteCarloSim.medianSteps}
-                            </p>
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={labLayout} strategy={rectSortingStrategy}>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-min">
+                    {labLayout.map((layoutId) => {
+                      if (layoutId === 'visual-sim') return (
+                        <SortableCard key={layoutId} id={layoutId}>
+                          <Card className="bg-emerald-500/5 border-emerald-500/20 overflow-hidden h-full">
+                            <div className="bg-emerald-500/10 px-4 py-2 border-b border-emerald-500/20">
+                              <h4 className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+                                <CheckCircle2 className="h-3 w-3" /> Simulação Visual
+                              </h4>
+                            </div>
+                            <CardContent className="pt-4 space-y-4">
+                              <div className="flex items-end gap-1 h-24 mb-6 items-baseline">
+                                {monteCarloSim.samples.map((s, i) => {
+                                  const height = Math.min(100, Math.max(20, (Math.abs(s) / Math.max(metrics.allWonProfit, Math.abs(metrics.maxDrawdown))) * 100));
+                                  return (
+                                    <div key={i} className={`flex-1 rounded-t-sm transition-all cursor-help relative group ${s >= 0 ? 'bg-emerald-500/40 hover:bg-emerald-400' : 'bg-red-500/40 hover:bg-red-400'}`} style={{ height: `${height}%` }} />
+                                  );
+                                })}
+                              </div>
+                              <p className="text-[10px] text-muted-foreground italic border-t border-border/40 pt-2">Amostra da variância em 10 ciclos.</p>
+                            </CardContent>
+                          </Card>
+                        </SortableCard>
+                      );
+                      if (layoutId === 'double-bankroll') return (
+                        <SortableCard key={layoutId} id={layoutId}>
+                          <div className="p-4 rounded-lg bg-orange-500/5 border border-orange-500/20 space-y-3 h-full flex flex-col justify-center">
+                            <div className="flex items-center gap-2">
+                              <TrendingUp className="h-4 w-4 text-orange-400" />
+                              <h4 className="text-xs font-bold uppercase tracking-wider text-orange-400">Projeção: Dobra</h4>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-1">
+                                <span className="text-[9px] text-muted-foreground uppercase">Eventos</span>
+                                <p className="text-lg font-bold text-white font-mono">{monteCarloSim.medianSteps}</p>
+                              </div>
+                              <div className="space-y-1 text-right">
+                                <span className="text-[9px] text-muted-foreground uppercase">Prob. Sucesso</span>
+                                <p className={`text-lg font-bold font-mono ${monteCarloSim.probDouble > 70 ? 'text-emerald-400' : 'text-orange-400'}`}>{fmtPct(monteCarloSim.probDouble)}</p>
+                              </div>
+                            </div>
                           </div>
-                          <div className="space-y-1 text-right">
-                            <span className="text-[9px] text-muted-foreground uppercase">Prob. de Sucesso</span>
-                            <p className={`text-lg font-bold font-mono ${monteCarloSim.probDouble > 70 ? 'text-emerald-400' : 'text-orange-400'}`}>
-                              {fmtPct(monteCarloSim.probDouble)}
-                            </p>
-                          </div>
-                        </div>
-                         <div className="text-[10px] text-muted-foreground leading-relaxed italic border-t border-border/40 pt-2 space-y-3">
-                           <p>
-                             <strong>Hipótese de Reinvestimento:</strong> Esta simulação assume que você <strong>não realiza saques</strong>, reinvestindo 100% dos lucros para compor a banca (Juros Compostos).
-                           </p>
-                           <p>
-                             {metrics.totalEV > 0 
-                               ? "Em cenários de EV+, a banca tende ao infinito, mas a variância pode causar ruína se a exposição for alta." 
-                               : "Atenção: Em cenários de EV negativo, a quebra é estatisticamente inevitável no longo prazo."}
-                           </p>
-                           <p>
-                             Para dobrar a banca (ganhar R$ {fmt(bankroll)}), a mediana necessária é de <strong>{monteCarloSim.medianSteps} eventos</strong>, com <strong>{fmtPct(monteCarloSim.probDouble)}</strong> de chance de sucesso antes da quebra.
-                           </p>
-                         </div>
-                     </div>
-
-                  </div>
-
-                <Card>
+                        </SortableCard>
+                      );
+                      if (layoutId === 'lab-params') return (
+                        <SortableCard key={layoutId} id={layoutId}>
+                          <Card className="h-full">
                   <CardHeader>
                     <CardTitle className="text-sm font-medium flex items-center gap-2">
                       <Coins className="h-4 w-4 text-primary" /> Parâmetros do Laboratório
