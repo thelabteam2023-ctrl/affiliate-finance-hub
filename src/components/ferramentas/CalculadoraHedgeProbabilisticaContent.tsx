@@ -14,6 +14,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
     ShieldAlert, Coins, Sparkles, Wand2, Dna, LineChart, History,
     Trophy, Star, ArrowRight, RefreshCcw
  } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
  import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   HedgeProbabilisticoEngine, 
