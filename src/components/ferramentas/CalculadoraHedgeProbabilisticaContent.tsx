@@ -54,15 +54,31 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
   const goldenCombinationsByExtraction = useMemo(() => {
     const targets = [0.65, 0.70, 0.75];
     const result: Record<string, any[]> = {};
-    const baseCombos = [
-      { name: "Duo Otimizado", legs: [1.8, 4.0] },
-      { name: "Triple Otimizado", legs: [1.8, 1.8, 4.0] },
-      { name: "Quarteto Estável", legs: [1.8, 1.8, 1.8, 4.0] },
-      { name: "Full House", legs: [1.8, 1.8, 1.8, 1.8, 4.0] }
-    ];
 
     targets.forEach(t => {
-      result[t.toString()] = baseCombos.map(combo => {
+      // Para cada meta, definimos as melhores odds baseadas no equilíbrio matemático
+      // Meta menor (65%) permite odds menores e mais seguras.
+      // Meta maior (75%) exige odds maiores para não ficar inviável.
+      const targetCombos = [
+        { 
+          name: "Duo Otimizado", 
+          legs: t <= 0.65 ? [1.70, 3.50] : t >= 0.75 ? [2.10, 5.50] : [1.80, 4.00] 
+        },
+        { 
+          name: "Triple Otimizado", 
+          legs: t <= 0.65 ? [1.60, 1.60, 3.50] : t >= 0.75 ? [2.00, 2.00, 5.00] : [1.80, 1.80, 4.00] 
+        },
+        { 
+          name: "Quarteto Estável", 
+          legs: t <= 0.65 ? [1.55, 1.55, 1.55, 3.20] : t >= 0.75 ? [1.90, 1.90, 1.90, 4.50] : [1.80, 1.80, 1.80, 4.00] 
+        },
+        { 
+          name: "Full House", 
+          legs: t <= 0.65 ? [1.50, 1.50, 1.50, 1.50, 3.00] : t >= 0.75 ? [1.85, 1.85, 1.85, 1.85, 4.20] : [1.80, 1.80, 1.80, 1.80, 4.00] 
+        }
+      ];
+
+      result[t.toString()] = targetCombos.map(combo => {
         const m = HedgeProbabilisticoEngine.calculateMetrics(
           combo.legs.map(odd => ({ name: '', backOdd: odd, layOdd: odd })),
           100,
