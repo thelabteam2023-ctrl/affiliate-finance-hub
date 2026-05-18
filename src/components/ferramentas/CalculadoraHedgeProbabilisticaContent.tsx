@@ -1116,6 +1116,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                <ShieldAlert className="h-4 w-4" /> Risco de Ruína
                              </CardTitle>
                            </CardHeader>
+                            <CardContent>
                              <div className="text-xl font-bold font-mono">{fmtPct(riskOfRuin)}</div>
                              <div className="mt-1 w-full h-1 bg-muted rounded-full overflow-hidden">
                                <div className={`h-full ${riskOfRuin > 10 ? 'bg-red-500' : 'bg-emerald-500'}`} style={{ width: `${riskOfRuin}%` }} />
