@@ -601,36 +601,68 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                        </CardContent>
                      </Card>
 
-                     <Card className="bg-emerald-500/5 border-emerald-500/20 overflow-hidden">
-                       <div className="bg-emerald-500/10 px-4 py-2 border-b border-emerald-500/20">
-                         <h4 className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
-                           <CheckCircle2 className="h-3 w-3" /> Simulação Visual de 1.000 Eventos
-                         </h4>
-                       </div>
-                       <CardContent className="pt-4 space-y-4">
-                         <div className="flex items-end gap-1 h-20 items-baseline">
-                           {Array.from({ length: 40 }).map((_, i) => {
-                             const height = Math.random() * 80 + 20;
-                             const isWin = Math.random() > 0.3;
-                             return (
-                               <div 
-                                 key={i} 
-                                 className={`flex-1 rounded-t-sm transition-all duration-1000 ${isWin ? 'bg-emerald-500/40' : 'bg-red-500/40'}`}
-                                 style={{ height: `${height}%` }}
-                               />
-                             );
-                           })}
-                         </div>
-                         <div className="flex justify-between text-[9px] text-muted-foreground uppercase font-medium">
-                           <span>Início</span>
-                           <span>Série de 1.000 Ciclos Simulados</span>
-                           <span>Fim</span>
-                         </div>
-                         <p className="text-[10px] text-muted-foreground leading-relaxed italic border-t border-border/40 pt-2">
-                           Cada barra representa uma operação completa. O gráfico mostra a variância natural do modelo matemático.
-                         </p>
-                       </CardContent>
-                     </Card>
+                      <Card className="bg-emerald-500/5 border-emerald-500/20 overflow-hidden">
+                        <div className="bg-emerald-500/10 px-4 py-2 border-b border-emerald-500/20">
+                          <h4 className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+                            <CheckCircle2 className="h-3 w-3" /> Simulação Visual de 100 Mil Ciclos
+                          </h4>
+                        </div>
+                        <CardContent className="pt-4 space-y-4">
+                          <div className="flex items-end gap-1 h-20 items-baseline">
+                            {monteCarloSim.samples.map((s, i) => {
+                              const height = Math.min(100, Math.max(20, (Math.abs(s) / Math.max(metrics.allWonProfit, Math.abs(metrics.maxDrawdown))) * 100));
+                              const isWin = s >= 0;
+                              return (
+                                <div 
+                                  key={i} 
+                                  className={`flex-1 rounded-t-sm transition-all cursor-help relative group ${isWin ? 'bg-emerald-500/40 hover:bg-emerald-400' : 'bg-red-500/40 hover:bg-red-400'}`}
+                                  style={{ height: `${height}%` }}
+                                >
+                                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-popover text-[9px] text-popover-foreground rounded border border-border shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none z-50 whitespace-nowrap">
+                                    <div className="font-bold">{isWin ? 'LUCRO' : 'PREJUÍZO'}</div>
+                                    <div>Resultado: R$ {fmt(s)}</div>
+                                    <div className="text-muted-foreground">Ciclo #{i + 1}</div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="flex justify-between text-[9px] text-muted-foreground uppercase font-medium">
+                            <span>Início</span>
+                            <span>Amostra da Variância de Longo Prazo</span>
+                            <span>Fim</span>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground leading-relaxed italic border-t border-border/40 pt-2">
+                            Passe o mouse sobre as barras para ver o resultado de cada ciclo individual.
+                          </p>
+                        </CardContent>
+                      </Card>
+                      {/* Meta de Dobra da Banca */}
+                      <div className="p-4 rounded-lg bg-orange-500/5 border border-orange-500/20 space-y-3">
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4 text-orange-400" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-orange-400">Projeção: Dobrar a Banca</h4>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <span className="text-[9px] text-muted-foreground uppercase">Eventos Necessários</span>
+                            <p className="text-lg font-bold text-white font-mono">
+                              {metrics.totalEV > 0 ? Math.ceil(bankroll / metrics.totalEV) : '∞'}
+                            </p>
+                          </div>
+                          <div className="space-y-1 text-right">
+                            <span className="text-[9px] text-muted-foreground uppercase">Prob. de Sucesso</span>
+                            <p className="text-lg font-bold text-emerald-400 font-mono">
+                              {metrics.totalEV > 0 ? fmtPct((1 - (riskOfRuin / 100)) * 100) : '0%'}
+                            </p>
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground leading-relaxed italic border-t border-border/40 pt-2">
+                          Para dobrar sua banca de R$ {fmt(bankroll)}, você precisaria realizar aproximadamente <strong>{Math.ceil(bankroll / metrics.totalEV)} operações</strong> bem-sucedidas. 
+                          A chance matemática de atingir esse objetivo antes da ruína é de <strong>{fmtPct((1 - (riskOfRuin / 100)) * 100)}</strong>.
+                        </p>
+                      </div>
+
                    </div>
 
                  <Card>
