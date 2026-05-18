@@ -522,9 +522,8 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
     }[finalScore.score];
  
    return (
-     <>
-       <ScrollArea className="h-full">
-         <div className="p-4 space-y-6 max-w-6xl mx-auto">
+     <ScrollArea className="h-full">
+       <div className="p-4 space-y-6 max-w-6xl mx-auto">
          <div className="flex flex-col md:flex-row gap-4 items-start justify-between">
            <div className="flex-1">
              <div className="flex items-center gap-3">
@@ -1656,12 +1655,11 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                   </div>
                 </div>
               )
-            }
-           </div>
-         </ScrollArea>
-       </div>
+             )
+           }
+         </div>
  
-       <Dialog open={!!expanded} onOpenChange={(o) => !o && setExpanded(null)}>
+         <Dialog open={!!expanded} onOpenChange={(o) => !o && setExpanded(null)}>
           <DialogContent className="max-w-2xl">
             <DialogHeader className="mb-4">
               <DialogTitle className="flex items-center gap-2">
@@ -1859,11 +1857,13 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                   <p className="text-xs text-primary leading-relaxed">
                     <strong>Dica de Ouro:</strong> Uma boa extração de FreeBet gira entre 70% e 90% do seu valor nominal. Se o Score estiver "Crítico", considere aumentar as odds ou diminuir a Meta de Extração.
                   </p>
-                </div>
-              </div>
-            </ScrollArea>
-          </DialogContent>
-         </Dialog>
-       </>
-    );
+                   </div>
+                 </div>
+               </ScrollArea>
+             </DialogContent>
+           </Dialog>
+         </div>
+       </div>
+     </ScrollArea>
+   );
 };
