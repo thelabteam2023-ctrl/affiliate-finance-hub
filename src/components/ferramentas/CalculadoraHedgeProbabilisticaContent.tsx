@@ -1429,8 +1429,8 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                       </div>
 
                       {/* Monte Carlo Visual */}
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
+                         <div className="space-y-4">
+                           <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <LineChart className="h-4 w-4 text-emerald-400" />
                              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Simulação Real (100.000 Trajetórias)</h4>
