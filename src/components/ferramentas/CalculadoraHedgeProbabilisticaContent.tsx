@@ -2242,7 +2242,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                 </div>
               
 )}
-            }
+          
           </div>
          <Dialog open={!!expanded} onOpenChange={(o) => !o && setExpanded(null)}>
           <DialogContent className="max-w-2xl">
