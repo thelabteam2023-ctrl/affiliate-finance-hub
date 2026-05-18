@@ -1,3 +1,59 @@
+   const restrictedGoldenCombinations = useMemo(() => {
+     const targets = [0.65, 0.70, 0.75];
+     const result: any[] = [];
+     const commDec = commission / 100;
+     const commonOdds = [1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0];
+
+     targets.forEach(target => {
+       [2, 3, 4, 5].forEach(numLegs => {
+         let bestROE = -Infinity;
+         let bestROECombo: number[] = [];
+
+         commonOdds.forEach(baseOdd => {
+           commonOdds.forEach(anchorOdd => {
+             const candidateLegs = Array(numLegs - 1).fill(baseOdd).concat(anchorOdd);
+             const totalOdd = candidateLegs.reduce((a, b) => a * b, 1);
+
+             if (totalOdd <= maxLabTotalOdd) {
+               const m = HedgeProbabilisticoEngine.calculateMetrics(
+                 candidateLegs.map(o => ({ name: '', backOdd: o, layOdd: o })),
+                 100,
+                 commDec,
+                 target
+               );
+
+               if (m.allWonProfit > 0 && m.maxResponsibility > 0) {
+                 const roe = m.totalEV / m.maxResponsibility;
+                 if (roe > bestROE) {
+                   bestROE = roe;
+                   bestROECombo = candidateLegs;
+                 }
+               }
+             }
+           });
+         });
+
+         if (bestROECombo.length > 0) {
+           const m = HedgeProbabilisticoEngine.calculateMetrics(
+             bestROECombo.map(o => ({ name: '', backOdd: o, layOdd: o })),
+             100,
+             commDec,
+             target
+           );
+           result.push({
+             numLegs,
+             target: (target * 100).toFixed(0) + '%',
+             legs: bestROECombo,
+             roi: fmtPct(m.totalROI),
+             roe: (m.totalEV / m.maxResponsibility * 100).toFixed(1) + '%',
+             totalOdd: bestROECombo.reduce((a, b) => a * b, 1).toFixed(2)
+           });
+         }
+       });
+     });
+     return result;
+   }, [commission, maxLabTotalOdd]);
+
  import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
