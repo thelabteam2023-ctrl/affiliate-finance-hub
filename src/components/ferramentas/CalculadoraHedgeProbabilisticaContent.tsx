@@ -738,7 +738,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
               </div>
               <div className={`text-xl font-bold ${metrics.totalEV >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                 R$ {fmt(metrics.totalEV)}
-                <span className="text-sm font-normal ml-1 opacity-80">({fmtPct(metrics.totalROI)})</span>
+                <span className="text-sm font-normal ml-1 opacity-80">({fmtPct(metrics.totalROI)}</span>
               </div>
               {metrics.totalEV < 0 && (
                 <div className="text-[10px] text-red-400 font-medium flex items-center justify-center gap-1 mt-1">
@@ -856,9 +856,9 @@ A Taxa de Extração é o ROI (Retorno sobre Investimento) calculado especificam
                   {metrics.allWonProfit < 0 && (
                     <CardInfoTooltip 
                       title="Alerta de Inviabilidade"
-                      description={`O cenário "Todas Ganham" está gerando prejuízo (R$ ${fmt(metrics.allWonProfit)}). 
+                      description={`O cenário "Todas Ganham" está gerando prejuízo (R$ ${fmt(metrics.allWonProfit)}. 
                       
-Isso ocorre porque o lucro da FreeBet na casa (R$ ${fmt(freebet * (metrics.totalBackOdd - 1))}) é menor do que a soma das responsabilidades dos Lays na Exchange (R$ ${fmt(metrics.cumulativeCascadeCost)}).
+Isso ocorre porque o lucro da FreeBet na casa (R$ ${fmt(freebet * (metrics.totalBackOdd - 1))} é menor do que a soma das responsabilidades dos Lays na Exchange (R$ ${fmt(metrics.cumulativeCascadeCost)}.
 
 Para corrigir, reduza a Meta de Extração no slider.`}
                     />
@@ -1154,7 +1154,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                         : "Atenção: Em cenários de EV negativo, a quebra é estatisticamente inevitável no longo prazo."}
                                     </p>
                                     <p>
-                                      Para dobrar a banca (ganhar R$ {fmt(bankroll)}), a mediana necessária é de <strong>{monteCarloSim.medianSteps} eventos</strong>, com <strong>{fmtPct(monteCarloSim.probDouble)}</strong> de chance de sucesso antes da quebra.
+                                      Para dobrar a banca (ganhar R$ {fmt(bankroll)}, a mediana necessária é de <strong>{monteCarloSim.medianSteps} eventos</strong>, com <strong>{fmtPct(monteCarloSim.probDouble)}</strong> de chance de sucesso antes da quebra.
                                     </p>
                                   </div>
                               </div>
@@ -1507,10 +1507,10 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                       </div>
                                       <div className="text-xs space-y-2 leading-relaxed">
                                         <p>
-                                          O Risco de Ruína ({fmtPct(riskOfRuin)}) é calculado via <strong>Simulação de Trajetória</strong> (Monte Carlo).
+                                          O Risco de Ruína ({fmtPct(riskOfRuin)} é calculado via <strong>Simulação de Trajetória</strong> (Monte Carlo).
                                         </p>
                                         <div className="bg-background/50 p-3 rounded font-mono text-[9px] border border-border/40 leading-relaxed text-muted-foreground">
-                                          Diferente de fórmulas estáticas, simulamos 5.000 jornadas reais. O risco aumenta drasticamente se a exposição (R$ {fmt(metrics.maxResponsibility)}) for alta em relação à banca (R$ {fmt(bankroll)}).
+                                          Diferente de fórmulas estáticas, simulamos 5.000 jornadas reais. O risco aumenta drasticamente se a exposição (R$ {fmt(metrics.maxResponsibility)} for alta em relação à banca (R$ {fmt(bankroll)}.
                                         </div>
                                         <div className="space-y-4">
                                           <p className="text-muted-foreground italic border-l-2 border-primary/30 pl-3">
@@ -1763,7 +1763,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                    <Input 
                                                      type="number" 
                                                      value={customRules.minOdd} 
-                                                     onChange={(e) => setCustomRules({...customRules, minOdd: Number(e.target.value)})}
+                                                     onChange={(e) => setCustomRules({...customRules, minOdd: Number(e.target.value)}}
                                                      className="h-8 text-xs font-mono"
                                                    />
                                                    <Slider 
@@ -1779,7 +1779,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                    <Input 
                                                      type="number" 
                                                      value={customRules.maxOdd} 
-                                                     onChange={(e) => setCustomRules({...customRules, maxOdd: Number(e.target.value)})}
+                                                     onChange={(e) => setCustomRules({...customRules, maxOdd: Number(e.target.value)}}
                                                      className="h-8 text-xs font-mono"
                                                    />
                                                    <Slider 
@@ -1795,7 +1795,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                    <Input 
                                                      type="number" 
                                                      value={customRules.maxLegs} 
-                                                     onChange={(e) => setCustomRules({...customRules, maxLegs: Math.min(6, Math.max(2, Number(e.target.value)))})}
+                                                     onChange={(e) => setCustomRules({...customRules, maxLegs: Math.min(6, Math.max(2, Number(e.target.value)))}}
                                                      className="h-8 text-xs font-mono"
                                                    />
                                                    <Slider 
@@ -1997,7 +1997,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                 <Input 
                                   type="number"
                                   value={liveInput.backStake}
-                                  onChange={(e) => setLiveInput({...liveInput, backStake: Number(e.target.value)})}
+                                  onChange={(e) => setLiveInput({...liveInput, backStake: Number(e.target.value)}}
                                   className="h-10 pl-8 font-mono text-lg border-primary/30 focus:border-primary"
                                 />
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-mono">R$</span>
@@ -2011,7 +2011,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                               <Input 
                                 type="number"
                                 value={liveInput.backOddProjected}
-                                onChange={(e) => setLiveInput({...liveInput, backOddProjected: Number(e.target.value)})}
+                                onChange={(e) => setLiveInput({...liveInput, backOddProjected: Number(e.target.value)}}
                                 className="h-10 font-mono text-lg border-emerald-500/30 focus:border-emerald-500"
                                 step="0.01"
                               />
@@ -2027,7 +2027,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                               <Input 
                                 type="number"
                                 value={liveInput.layOdd}
-                                onChange={(e) => setLiveInput({...liveInput, layOdd: Number(e.target.value)})}
+                                onChange={(e) => setLiveInput({...liveInput, layOdd: Number(e.target.value)}}
                                 className="h-9 font-mono text-sm"
                                 step="0.01"
                               />
@@ -2037,7 +2037,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                               <Input 
                                 type="number"
                                 value={liveInput.backOddActual}
-                                onChange={(e) => setLiveInput({...liveInput, backOddActual: Number(e.target.value)})}
+                                onChange={(e) => setLiveInput({...liveInput, backOddActual: Number(e.target.value)}}
                                 className="h-9 font-mono text-sm opacity-60"
                                 step="0.01"
                               />
@@ -2217,7 +2217,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                     </Badge>
                                   </div>
                                   <p className="text-[10px] text-muted-foreground leading-relaxed italic">
-                                    Se o Back não atingir {liveInput.backOddProjected.toFixed(2)} e você precisar fechar o hedge no spread atual ({liveInput.backOddActual.toFixed(2)}), 
+                                    Se o Back não atingir {liveInput.backOddProjected.toFixed(2)} e você precisar fechar o hedge no spread atual ({liveInput.backOddActual.toFixed(2)}, 
                                     seu lucro será reduzido em <strong>R$ {fmt(liveResults.expectedProfit - liveResults.sensitivity[0].profit)}</strong>.
                                   </p>
                                 </div>
@@ -2241,7 +2241,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                   </div>
                 </div>
               
-)})
+)}
             }
           </div>
          <Dialog open={!!expanded} onOpenChange={(o) => !o && setExpanded(null)}>
