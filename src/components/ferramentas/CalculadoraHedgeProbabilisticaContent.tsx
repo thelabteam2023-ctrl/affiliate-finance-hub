@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
  import {
    Target, Activity, TrendingUp, AlertTriangle, Shield,
-   Plus, Trash2, Info, ChevronRight, Zap, BarChart3, HelpCircle,
+    Plus, Trash2, Info, ChevronRight, Zap, BarChart3, HelpCircle, Link2,
     CheckCircle2, Lightbulb, BookOpen, FlaskConical, BrainCircuit,
     ShieldAlert, Coins, Sparkles, Wand2, Dna, LineChart, History,
     Trophy, Star, ArrowRight, RefreshCcw
@@ -934,12 +934,21 @@ Para corrigir, reduza a Meta de Extração no slider.`}
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label className="text-[10px] uppercase font-bold text-muted-foreground">Valor da Freebet (Base)</Label>
-                          <div className="h-10 px-3 flex items-center bg-muted/50 border border-border rounded-md font-mono text-sm text-white">
-                            R$ {fmt(freebet)}
+                          <div className="flex items-center gap-1.5">
+                            <Label className="text-[10px] uppercase font-bold text-muted-foreground">Valor da Freebet (Base)</Label>
+                            <Link2 className="h-2.5 w-2.5 text-muted-foreground/50" />
+                          </div>
+                          <div className="relative">
+                            <Input 
+                              type="number" 
+                              value={freebet} 
+                              onChange={(e) => setFreebet(Number(e.target.value))}
+                              className="h-10 pl-8 font-mono text-sm"
+                            />
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">R$</span>
                           </div>
                           <p className="text-[9px] text-muted-foreground italic leading-tight">
-                            Definido na aba principal.
+                            Sincronizado com a aba Calculadora.
                           </p>
                         </div>
 
@@ -1345,12 +1354,18 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                               Visão dos mil primeiros ciclos (Simulação de 100.000) operando com ROI de {fmtPct(metrics.totalROI)}.
                             </p>
                           </div>
-                          <div className="flex gap-4">
-                            <div className="text-right">
-                              <span className="text-[9px] text-muted-foreground uppercase block">ROE p/ Ciclo</span>
-                              <span className="text-xs font-bold text-emerald-400">+{((metrics.totalEV / metrics.maxResponsibility) * 100).toFixed(2)}%</span>
-                            </div>
-                            <div className="text-right border-l border-border/50 pl-4">
+                           <div className="flex gap-4">
+                             <div className="text-right">
+                               <div className="flex items-center justify-end gap-1">
+                                 <span className="text-[9px] text-muted-foreground uppercase block">ROE p/ Ciclo</span>
+                                 <CardInfoTooltip 
+                                   title="ROE — Return on Exposure" 
+                                   description="Retorno esperado por ciclo sobre o capital máximo travado em Lays na Exchange. Diferença vs ROI: o ROI mede o lucro sobre o valor da freebet; o ROE mede o lucro sobre o dinheiro real que fica preso na Exchange."
+                                 />
+                               </div>
+                               <span className="text-xs font-bold text-emerald-400">+{((metrics.totalEV / metrics.maxResponsibility) * 100).toFixed(2)}%</span>
+                             </div>
+                             <div className="text-right border-l border-border/50 pl-4">
                               <span className="text-[9px] text-muted-foreground uppercase block">Exposição</span>
                               <span className="text-xs font-bold text-orange-400">{fmtPct((metrics.maxResponsibility / bankroll) * 100)}</span>
                             </div>
@@ -1441,7 +1456,13 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                    </Badge>
                                    <div className="flex flex-col items-end">
                                      <span className="text-[10px] font-bold text-white">{combo.roi} ROI</span>
-                                     <span className="text-[8px] text-muted-foreground">ROE: {combo.roe}</span>
+                                     <div className="flex items-center gap-1">
+                                       <span className="text-[8px] text-muted-foreground">ROE: {combo.roe}</span>
+                                       <CardInfoTooltip 
+                                         title="ROE (Return on Exposure)" 
+                                         description="Métrica de eficiência de capital: Lucro Esperado / Responsabilidade Máxima. Indica quanto seu dinheiro na Exchange rende por ciclo."
+                                       />
+                                     </div>
                                    </div>
                                  </div>
                                  <h5 className="text-xs font-bold flex items-center gap-2 group-hover:text-primary transition-colors mt-1">
