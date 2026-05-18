@@ -53,11 +53,11 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
   const [showHelp, setShowHelp] = useState(false);
 
   const goldenCombinationsByExtraction = useMemo(() => {
-    const targets = [0.65, 0.70, 0.75];
+    const targets = Array.from(new Set([0.65, 0.70, 0.75, Number(targetExtraction.toFixed(2))])).sort();
     const result: Record<string, any[]> = {};
     
     // Amostra de odds comuns no mercado para teste
-    const commonOdds = [1.5, 1.7, 1.8, 2.0, 2.2, 2.5, 3.0, 4.0, 5.0, 6.0];
+    const commonOdds = [1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.4, 2.6, 2.8, 3.0, 3.5, 4.0, 5.0, 6.0];
     const commDec = commission / 100;
 
     targets.forEach(target => {
@@ -128,7 +128,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
     });
 
     return result;
-  }, [commission]);
+  }, [commission, targetExtraction]);
 
   const metrics: HedgeResult = useMemo(() => {
     return HedgeProbabilisticoEngine.calculateMetrics(
