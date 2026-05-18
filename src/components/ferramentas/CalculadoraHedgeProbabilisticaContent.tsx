@@ -131,9 +131,10 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
     const optimalConfig = useMemo(() => {
       let bestEV = -Infinity;
       let bestTarget = 0.7;
-      for (let t = 0.1; t <= 1.0; t += 0.05) {
+      // Otimização agora filtrada para metas viáveis (mínimo 60% de extração)
+      for (let t = 0.6; t <= 0.85; t += 0.05) {
         const m = HedgeProbabilisticoEngine.calculateMetrics(legs, freebet, commission / 100, t);
-        if (m.allWonProfit >= 0 && m.maxResponsibility <= bankroll) {
+        if (m.allWonProfit > 0 && m.maxResponsibility <= bankroll) {
           if (m.totalEV > bestEV) {
             bestEV = m.totalEV;
             bestTarget = t;
@@ -684,17 +685,32 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                        <p className="text-[10px] leading-relaxed">
                          Nossa "IA" analisou {legs.length} eventos e sugere a meta de extração ideal baseada na sua banca.
                        </p>
-                       <div className="flex justify-between items-center bg-background/50 p-2 rounded border border-border/50">
-                         <span className="text-[10px]">Meta Recomendada:</span>
-                         <span className="text-xs font-bold text-emerald-400">{(optimalConfig.target * 100).toFixed(0)}%</span>
-                       </div>
-                       <Button 
-                         className="w-full h-8 text-xs gap-2" 
-                         variant="outline"
-                         onClick={() => setTargetExtraction(optimalConfig.target)}
-                       >
-                         <Wand2 className="h-3 w-3" /> Aplicar Recomendação
-                       </Button>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="flex flex-col bg-background/50 p-2 rounded border border-border/50">
+                            <span className="text-[8px] text-muted-foreground uppercase">Meta Atual</span>
+                            <span className="text-xs font-bold text-white">{(targetExtraction * 100).toFixed(0)}%</span>
+                          </div>
+                          <div className="flex flex-col bg-background/50 p-2 rounded border border-border/50">
+                            <span className="text-[8px] text-muted-foreground uppercase">Meta Sugerida</span>
+                            <span className="text-xs font-bold text-emerald-400">{(optimalConfig.target * 100).toFixed(0)}%</span>
+                          </div>
+                        </div>
+                        
+                        <Button 
+                          className="w-full h-8 text-xs gap-2" 
+                          variant="outline"
+                          onClick={() => setTargetExtraction(optimalConfig.target)}
+                          disabled={targetExtraction === optimalConfig.target}
+                        >
+                          <Wand2 className="h-3 w-3" /> Otimizar para {(optimalConfig.target * 100).toFixed(0)}%
+                        </Button>
+
+                        <div className="p-2 bg-yellow-500/5 border border-yellow-500/20 rounded flex gap-2">
+                          <AlertTriangle className="h-3 w-3 text-yellow-500 shrink-0" />
+                          <p className="text-[8px] text-muted-foreground leading-tight">
+                            <strong>Filtro de Viabilidade:</strong> Otimização restrita entre 60% e 85% para preservar o tempo de vida das suas contas.
+                          </p>
+                        </div>
                      </div>
                    </CardContent>
                  </Card>
