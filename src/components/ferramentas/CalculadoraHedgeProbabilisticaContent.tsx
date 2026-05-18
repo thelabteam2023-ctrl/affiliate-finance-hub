@@ -97,6 +97,65 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
     'golden-library',
     'restricted-golden-library'
   ];
+  export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
+   const [labLayout, setLabLayout] = useState<string[]>(() => {
+     const saved = localStorage.getItem('hedge-calc-lab-layout');
+     return saved ? JSON.parse(saved) : LAB_DEFAULT_LAYOUT;
+   });
+
+   useEffect(() => {
+     localStorage.setItem('hedge-calc-lab-layout', JSON.stringify(labLayout));
+   }, [labLayout]);
+
+   const [maxLabTotalOdd, setMaxLabTotalOdd] = useState<number>(() => {
+     const saved = localStorage.getItem('hedge-calc-lab-max-odd');
+     return saved ? Number(saved) : 8.0;
+   });
+
+   useEffect(() => {
+     localStorage.setItem('hedge-calc-lab-max-odd', maxLabTotalOdd.toString());
+   }, [maxLabTotalOdd]);
+
+   const sensors = useSensors(
+     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+   );
+
+   const handleDragEnd = (event: DragEndEvent) => {
+     const { active, over } = event;
+     if (over && active.id !== over.id) {
+       setLabLayout((items) => {
+         const oldIndex = items.indexOf(active.id as string);
+         const newIndex = items.indexOf(over.id as string);
+         return arrayMove(items, oldIndex, newIndex);
+       });
+     }
+   };
+
+   const applyGoldenCombo = (comboLegs: number[]) => {
+     const newLegs = comboLegs.map((odd, i) => ({
+       name: `Evento ${i + 1}`,
+       backOdd: odd,
+       layOdd: odd
+     }));
+     setLegs(newLegs);
+   };
+
+  const [freebet, setFreebet] = useState(100);
+  const [commission, setCommission] = useState(2.8);
+  const [targetExtraction, setTargetExtraction] = useState(0.7);
+  const [labBenchmark, setLabBenchmark] = useState<string>('70');
+  const [bankroll, setBankroll] = useState(5000);
+  const [simMode, setSimMode] = useState<'accumulative' | 'capped'>('accumulative');
+  const [bankrollCeilingMultiplier, setBankrollCeilingMultiplier] = useState(5);
+  const [activeTab, setActiveTab] = useState('calculadora');
+  const [legs, setLegs] = useState<LegInput[]>([
+    { name: 'Evento 1', backOdd: 2.0, layOdd: 2.0 },
+    { name: 'Evento 2', backOdd: 2.0, layOdd: 2.0 }
+  ]);
+  const [expanded, setExpanded] = useState<AggregatedScenario | null>(null);
+  const [showHelp, setShowHelp] = useState(false);
+
   const restrictedGoldenCombinations = useMemo(() => {
     const targets = [0.65, 0.70, 0.75];
     const result: any[] = [];
@@ -152,11 +211,6 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
     });
     return result;
   }, [commission, maxLabTotalOdd]);
-
-  const [freebet, setFreebet] = useState(100);
-  const [commission, setCommission] = useState(2.8);
-   const [targetExtraction, setTargetExtraction] = useState(0.7);
-  const [showHelp, setShowHelp] = useState(false);
 
   const goldenCombinationsByExtraction = useMemo(() => {
     const targets = Array.from(new Set([0.65, 0.70, 0.75, Number(targetExtraction.toFixed(2))])).sort();
@@ -1062,6 +1116,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                <ShieldAlert className="h-4 w-4" /> Risco de Ruína
                              </CardTitle>
                            </CardHeader>
+                            <CardContent>
                              <div className="text-xl font-bold font-mono">{fmtPct(riskOfRuin)}</div>
                              <div className="mt-1 w-full h-1 bg-muted rounded-full overflow-hidden">
                                <div className={`h-full ${riskOfRuin > 10 ? 'bg-red-500' : 'bg-emerald-500'}`} style={{ width: `${riskOfRuin}%` }} />
