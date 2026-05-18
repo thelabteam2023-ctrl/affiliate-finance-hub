@@ -116,18 +116,6 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
     critical: 'Crítica'
    }[metrics.score];
  
-   const riskOfRuin = useMemo(() => {
-     if (metrics.totalEV <= 0) return 100;
-     // Variance: Σ p * (x - μ)²
-     const variance = metrics.scenarios.reduce((acc, s) => {
-       return acc + s.probability * Math.pow(s.result - metrics.totalEV, 2);
-     }, 0);
-     if (variance === 0) return 0;
-     // RoR = exp(-2 * EV * Bank / Var)
-     const ror = Math.exp((-2 * metrics.totalEV * bankroll) / variance);
-     return Math.min(100, ror * 100);
-   }, [metrics, bankroll]);
- 
     const optimalConfig = useMemo(() => {
       let bestEV = -Infinity;
       let bestTarget = 0.7;
@@ -151,41 +139,86 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
     }, [legs, freebet, commission, bankroll]);
 
     const monteCarloSim = useMemo(() => {
-      const trials = 100000; // 100 mil ciclos para precisão máxima
-      let totalProfit = 0;
-      let bankruptcies = 0;
+      const numTraj = 5000; // Número de trajetórias
+      const maxSteps = 500; // Máximo de bilhetes por trajetória
+      
+      let totalBankruptcies = 0;
+      let bankruptciesIn10 = 0;
+      let totalDoubleups = 0;
+      let doubleupSteps: number[] = [];
+      let cumulativeOutcome = 0;
       const samples: number[] = [];
+      
+      // Pré-calcula a CDF dos cenários para performance
+      const cdf = metrics.aggregatedScenarios.map((s, i, arr) => ({
+        ...s,
+        upper: arr.slice(0, i + 1).reduce((sum, current) => sum + current.probability, 0)
+      }));
 
-      for (let i = 0; i < trials; i++) {
-        const rand = Math.random();
-        let cumulativeProb = 0;
-        let outcome = 0;
+      for (let t = 0; t < numTraj; t++) {
+        let currentBank = bankroll;
+        let broken = false;
         
-        for (const scenario of metrics.aggregatedScenarios) {
-          cumulativeProb += scenario.probability;
-          if (rand <= cumulativeProb) {
-            outcome = scenario.result;
+        for (let step = 0; step < maxSteps; step++) {
+          // Sorteia cenário
+          const rand = Math.random();
+          const scenario = cdf.find(s => rand <= s.upper) || cdf[cdf.length - 1];
+          const outcome = scenario.result;
+          
+          // Verifica se pode pagar a exposição do próximo bilhete
+          // A exposição máxima é necessária ANTES de saber o resultado do bilhete
+          if (currentBank < metrics.maxResponsibility) {
+            totalBankruptcies++;
+            if (step < 10) bankruptciesIn10++;
+            broken = true;
+            break;
+          }
+
+          currentBank += outcome;
+          
+          // Coleta amostra do primeiro bilhete da primeira trajetória para o UI
+          if (t === 0 && step < 10) samples.push(outcome);
+          if (t === 0) cumulativeOutcome += outcome;
+
+          if (currentBank >= bankroll * 2) {
+            totalDoubleups++;
+            doubleupSteps.push(step + 1);
+            break;
+          }
+          
+          if (currentBank <= 0) {
+            totalBankruptcies++;
+            if (step < 10) bankruptciesIn10++;
+            broken = true;
             break;
           }
         }
-        
-        if (i < 10) samples.push(outcome);
-        totalProfit += outcome;
-        if (bankroll + outcome <= 0) bankruptcies++;
       }
 
       const winRate = metrics.aggregatedScenarios
         .filter(s => s.result > 0)
         .reduce((acc, s) => acc + s.probability, 0);
       
+      // Mediana de passos para dobrar
+      const sortedSteps = [...doubleupSteps].sort((a, b) => a - b);
+      const medianSteps = sortedSteps.length > 0 
+        ? sortedSteps[Math.floor(sortedSteps.length / 2)] 
+        : Math.ceil(bankroll / Math.max(0.01, metrics.totalEV));
+
       return {
-        trials,
-        avgResult: totalProfit / trials,
+        trials: numTraj,
+        avgResult: metrics.totalEV,
         winRate,
-        bankruptcies,
+        bankruptcies: totalBankruptcies,
+        riskOfRuin: (totalBankruptcies / numTraj) * 100,
+        riskOfRuin10: (bankruptciesIn10 / numTraj) * 100,
+        probDouble: (totalDoubleups / numTraj) * 100,
+        medianSteps,
         samples
       };
     }, [metrics, bankroll]);
+
+    const riskOfRuin = monteCarloSim.riskOfRuin;
  
    return (
      <ScrollArea className="h-full">
@@ -630,30 +663,30 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                           <h4 className="text-xs font-bold uppercase tracking-wider text-orange-400">Projeção: Dobrar a Banca</h4>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <span className="text-[9px] text-muted-foreground uppercase">Eventos Necessários</span>
-                            <p className="text-lg font-bold text-white font-mono">
-                              {metrics.totalEV > 0 ? Math.ceil(bankroll / metrics.totalEV) : '∞'}
-                            </p>
-                          </div>
-                          <div className="space-y-1 text-right">
-                            <span className="text-[9px] text-muted-foreground uppercase">Prob. de Sucesso</span>
-                            <p className="text-lg font-bold text-emerald-400 font-mono">
-                              {metrics.totalEV > 0 ? fmtPct((1 - (riskOfRuin / 100)) * 100) : '0%'}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-[10px] text-muted-foreground leading-relaxed italic border-t border-border/40 pt-2 space-y-2">
-                          <p>
-                            <strong>Explicação da Projeção:</strong> Com uma Freebet de R$ {fmt(freebet)}, seu lucro médio esperado por operação (EV) é de R$ {fmt(metrics.totalEV)}.
-                          </p>
-                          <p>
-                            Para ganhar R$ {fmt(bankroll)} extras e dobrar sua banca atual, são necessários <strong>{Math.ceil(bankroll / metrics.totalEV)} bilhetes</strong> no longo prazo.
-                          </p>
-                          <p>
-                            A chance de completar essa jornada antes de sofrer uma quebra é de <strong>{fmtPct((1 - (riskOfRuin / 100)) * 100)}</strong>.
-                          </p>
-                        </div>
+                           <div className="space-y-1">
+                             <span className="text-[9px] text-muted-foreground uppercase">Eventos Necessários</span>
+                             <p className="text-lg font-bold text-white font-mono">
+                               {monteCarloSim.medianSteps}
+                             </p>
+                           </div>
+                           <div className="space-y-1 text-right">
+                             <span className="text-[9px] text-muted-foreground uppercase">Prob. de Sucesso</span>
+                             <p className={`text-lg font-bold font-mono ${monteCarloSim.probDouble > 70 ? 'text-emerald-400' : 'text-orange-400'}`}>
+                               {fmtPct(monteCarloSim.probDouble)}
+                             </p>
+                           </div>
+                         </div>
+                         <div className="text-[10px] text-muted-foreground leading-relaxed italic border-t border-border/40 pt-2 space-y-2">
+                           <p>
+                             <strong>Explicação da Projeção:</strong> Simulamos milhares de trajetórias sequenciais considerando sua banca atual e variância real.
+                           </p>
+                           <p>
+                             Para dobrar sua banca (ganhar R$ {fmt(bankroll)} extras), a mediana de eventos necessária é de <strong>{monteCarloSim.medianSteps} bilhetes</strong>.
+                           </p>
+                           <p>
+                             A probabilidade real de você completar essa meta antes de quebrar a banca é de <strong>{fmtPct(monteCarloSim.probDouble)}</strong>.
+                           </p>
+                         </div>
                       </div>
 
                    </div>
@@ -805,29 +838,31 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                         </div>
                         <div className="text-xs space-y-2 leading-relaxed">
                           <p>
-                            O Risco de Ruína ({fmtPct(riskOfRuin)}) é calculado usando o modelo de <strong>Variância Probabilística</strong>.
+                            O Risco de Ruína ({fmtPct(riskOfRuin)}) é calculado via <strong>Simulação de Trajetória</strong> (Monte Carlo).
                           </p>
-                           <div className="bg-background/50 p-3 rounded font-mono text-[10px] border border-border/40">
-                             RoR = exp(-2 * EV * Banca / Variância)
+                           <div className="bg-background/50 p-3 rounded font-mono text-[9px] border border-border/40 leading-relaxed text-muted-foreground">
+                             Diferente de fórmulas estáticas, simulamos 5.000 jornadas reais. O risco aumenta drasticamente se a exposição (R$ {fmt(metrics.maxResponsibility)}) for alta em relação à banca (R$ {fmt(bankroll)}).
                            </div>
                            <div className="space-y-3">
                              <p className="text-muted-foreground italic">
-                               Isso significa que em uma série infinita de operações idênticas, a probabilidade de sua banca de R$ {fmt(bankroll)} chegar a zero antes de atingir o lucro esperado é de {fmtPct(riskOfRuin)}.
+                               Neste cenário, a probabilidade de sua banca ser consumida pela variância antes de atingir o lucro de longo prazo é de {fmtPct(riskOfRuin)}.
                              </p>
                              
-                             <div className="p-3 bg-red-500/5 border border-red-500/20 rounded-md">
-                               <h5 className="text-[10px] font-bold text-red-400 uppercase mb-2 flex items-center gap-2">
+                             <div className={`p-3 border rounded-md ${monteCarloSim.riskOfRuin10 > 5 ? 'bg-red-500/10 border-red-500/20' : 'bg-muted/30 border-border/50'}`}>
+                               <h5 className={`text-[10px] font-bold uppercase mb-2 flex items-center gap-2 ${monteCarloSim.riskOfRuin10 > 5 ? 'text-red-400' : 'text-muted-foreground'}`}>
                                  <ShieldAlert className="h-3 w-3" /> Horizonte de Curto Prazo (10 Bilhetes)
                                </h5>
                                <div className="flex justify-between items-center">
                                  <span className="text-[10px] text-muted-foreground">Prob. de Quebra (Próx. 10):</span>
-                                 <span className="text-sm font-bold text-red-400">
-                                   {fmtPct((1 - Math.pow(1 - (riskOfRuin / 100), 10/1000)) * 100)}
+                                 <span className={`text-sm font-bold ${monteCarloSim.riskOfRuin10 > 5 ? 'text-red-400' : 'text-white'}`}>
+                                   {fmtPct(monteCarloSim.riskOfRuin10)}
                                  </span>
                                </div>
-                               <p className="text-[9px] text-muted-foreground mt-1 leading-tight">
-                                 *Estimativa baseada na variância acumulada para uma sequência imediata de 10 operações.
-                               </p>
+                               {monteCarloSim.riskOfRuin10 > 5 && (
+                                 <p className="text-[9px] text-red-400/80 mt-1 leading-tight">
+                                   ⚠️ Perigo: Exposição de {((metrics.maxResponsibility / bankroll) * 100).toFixed(1)}% da banca é crítica para o curto prazo.
+                                 </p>
+                               )}
                              </div>
                            </div>
                         </div>
@@ -838,7 +873,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <LineChart className="h-4 w-4 text-emerald-400" />
-                             <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Simulação Real (100.000 Eventos)</h4>
+                             <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Simulação Real (5.000 Trajetórias)</h4>
                           </div>
                           <Badge variant="outline" className="text-[9px] text-emerald-400 border-emerald-500/30">
                             Monte Carlo Run
@@ -860,7 +895,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                           </div>
                            <div className="p-3 rounded-lg bg-muted/20 border border-border/50 text-center">
                              <span className="text-[9px] text-muted-foreground block mb-1">Total Ciclos</span>
-                             <span className="text-sm font-bold text-white">100 Mil</span>
+                             <span className="text-sm font-bold text-white">5.000</span>
                            </div>
                         </div>
 
