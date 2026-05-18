@@ -1367,6 +1367,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                    </CardTitle>
                                  </CardHeader>
                                  <CardContent className="space-y-6">
+                                   {/* Math Section */}
                       {/* Math Section */}
                       <div className="p-4 rounded-lg bg-muted/30 border border-border/50 space-y-4">
                         <div className="flex items-center gap-2 mb-2">
