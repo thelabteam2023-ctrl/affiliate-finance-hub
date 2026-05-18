@@ -30,9 +30,21 @@ export interface Scenario {
   description: string;
 }
 
+export interface AggregatedScenario {
+  /** Canonical path truncated at the first 'lost' (since the cascade stops there). */
+  canonicalPath: ('won' | 'lost')[];
+  description: string;
+  probability: number;
+  result: number;
+  maxExposure: number;
+  /** Raw scenarios that collapse into this aggregate (path length = numLegs). */
+  subScenarios: Scenario[];
+}
+
  export interface HedgeResult {
    legs: CalculatedLeg[];
    scenarios: Scenario[];
+    aggregatedScenarios: AggregatedScenario[];
    totalEV: number;
    totalROI: number;
    maxResponsibility: number;
@@ -167,6 +179,39 @@ export class HedgeProbabilisticoEngine {
      return scenarios;
    }
 
+   /**
+    * Aggregate scenarios that share the same canonical outcome.
+    * After the first 'lost' the cascade stops, so e.g. lost→lost→lost,
+    * lost→won→lost, lost→lost→won and lost→won→won all collapse into "lost".
+    */
+   static aggregateScenarios(scenarios: Scenario[]): AggregatedScenario[] {
+     const map = new Map<string, AggregatedScenario>();
+
+     for (const s of scenarios) {
+       const firstLost = s.path.indexOf('lost');
+       const canonical = firstLost === -1 ? s.path.slice() : s.path.slice(0, firstLost + 1);
+       const key = canonical.join('>');
+
+       const existing = map.get(key);
+       if (existing) {
+         existing.probability += s.probability;
+         existing.maxExposure = Math.max(existing.maxExposure, s.maxExposure);
+         existing.subScenarios.push(s);
+       } else {
+         map.set(key, {
+           canonicalPath: canonical,
+           description: canonical.join(' → '),
+           probability: s.probability,
+           result: s.result,
+           maxExposure: s.maxExposure,
+           subScenarios: [s],
+         });
+       }
+     }
+
+     return Array.from(map.values()).sort((a, b) => b.probability - a.probability);
+   }
+
    static calculateMetrics(
      legs: LegInput[],
      freebet: number,
@@ -176,6 +221,7 @@ export class HedgeProbabilisticoEngine {
    ): HedgeResult {
      const calculatedLegs = this.calculateCalculatedLegs(legs, freebet, commission, efficiency, metaPct);
      const scenarios = this.generateScenarios(calculatedLegs, freebet, commission);
+      const aggregatedScenarios = this.aggregateScenarios(scenarios);
      
      let totalEV = 0;
      let maxResponsibility = 0;
@@ -205,6 +251,7 @@ export class HedgeProbabilisticoEngine {
      return {
        legs: calculatedLegs,
        scenarios,
+        aggregatedScenarios,
        totalEV,
        totalROI,
        maxResponsibility,
