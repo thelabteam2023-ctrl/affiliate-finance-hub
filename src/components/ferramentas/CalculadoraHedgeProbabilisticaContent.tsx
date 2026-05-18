@@ -125,7 +125,10 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
                   description={`O EV (Valor Esperado) de R$ ${fmt(metrics.totalEV)} é a média matemática do que você ganhará por operação no longo prazo. Por exemplo: após 1.000 operações idênticas a esta, seu lucro total acumulado seria de aproximadamente R$ ${fmt(metrics.totalEV * 1000)}, mesmo que resultados individuais variem.`}
                 />
               </div>
-              <div className="text-xl font-bold text-emerald-400">R$ {fmt(metrics.totalEV)}</div>
+              <div className="text-xl font-bold text-emerald-400">
+                R$ {fmt(metrics.totalEV)} 
+                <span className="text-sm font-normal ml-1 opacity-80">({fmtPct(metrics.totalROI)})</span>
+              </div>
               <div className="text-[10px] text-muted-foreground mt-1">Média (EV) por operação</div>
             </CardContent>
           </Card>
@@ -133,9 +136,13 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
             <CardContent className="pt-4 flex flex-col items-center text-center">
               <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
                 <TrendingUp className="h-3 w-3" /> Taxa de Extração
+                <CardInfoTooltip 
+                  title="Taxa de Extração" 
+                  description={`Representa a eficiência da conversão da sua FreeBet. Se você tem uma FreeBet de R$ ${freebet} e a taxa é de ${fmtPct(metrics.totalROI)}, significa que você está conseguindo transformar cada R$ 1,00 de bônus em R$ ${(metrics.totalROI / 100).toFixed(2)} de dinheiro real na média.`} 
+                />
               </div>
               <div className="text-xl font-bold text-blue-400">{fmtPct(metrics.totalROI)}</div>
-              <div className="text-[10px] text-muted-foreground mt-1">Rendimento sobre a FreeBet</div>
+              <div className="text-[10px] text-muted-foreground mt-1">Eficiência da conversão</div>
             </CardContent>
           </Card>
           <Card className="bg-muted/30">
@@ -571,10 +578,12 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
                         É a métrica mais importante para saber se uma operação de FreeBet vale a pena.
                       </p>
                     </div>
-                    <div className="p-3 bg-muted/20 border border-border/50 rounded-md">
-                      <p className="text-xs font-semibold mb-1">Meta de Extração vs. Taxa de Extração</p>
+                    <div className="p-3 bg-blue-500/5 border border-blue-500/20 rounded-md">
+                      <p className="text-xs font-semibold mb-1 text-blue-400">Taxa de Extração (ROI da FreeBet)</p>
                       <p className="text-[11px] text-muted-foreground leading-relaxed">
-                        A <strong>Meta</strong> é quanto você <i>tenta</i> tirar da FreeBet (ex: 80%). A <strong>Taxa Real</strong> é quanto o mercado permite tirar após as comissões e odds reais. Se a Taxa for próxima da Meta, sua operação está otimizada.
+                        É a porcentagem da FreeBet que vira dinheiro real. 
+                        <br /><br />
+                        <strong>Exemplo:</strong> Com uma FreeBet de R$ 100 e uma taxa de 75%, sua média de ganho real é R$ 75. A <strong>Meta</strong> (ajustada no slider) define seu alvo, enquanto a <strong>Taxa</strong> mostra o que as odds atuais entregam de fato.
                       </p>
                     </div>
                     <div className="p-3 bg-muted/20 border border-border/50 rounded-md">
