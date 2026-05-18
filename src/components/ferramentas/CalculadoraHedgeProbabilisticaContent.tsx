@@ -225,19 +225,70 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
     const maxOdd = activeRulesetId === 'custom' ? customRules.maxOdd : (activeRuleset.maxOdd || 30);
     const maxLegs = activeRulesetId === 'custom' ? customRules.maxLegs : 5;
 
-    const generateCommonOdds = (min: number, max: number) => {
-      const steps = [1.5, 1.8, 2.0, 2.5, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0, 12.0, 15.0];
-      return steps.filter(o => o >= min && o <= max);
+    /**
+     * Constrói um grid denso de odds dentro da faixa permitida.
+     * Usa passos não-lineares: mais resolução nas odds baixas (onde 0.05 importa)
+     * e passos maiores nas odds altas (onde 0.05 é irrelevante).
+     * Densidade controlada por `density`: 'fine' | 'medium' | 'coarse'.
+     */
+    const buildOddGrid = (min: number, max: number, density: 'fine' | 'medium' | 'coarse'): number[] => {
+      const cap = Math.min(max, 30);
+      const lo = Math.max(1.01, min);
+      const out = new Set<number>();
+      const push = (o: number) => {
+        const rounded = Math.round(o * 100) / 100;
+        if (rounded >= lo - 1e-9 && rounded <= cap + 1e-9) out.add(rounded);
+      };
+      const step = (from: number, to: number, s: number) => {
+        for (let o = from; o <= to + 1e-9; o = Math.round((o + s) * 100) / 100) push(o);
+      };
+      if (density === 'fine') {
+        step(1.50, 2.50, 0.05);
+        step(2.60, 4.00, 0.10);
+        step(4.25, 6.00, 0.25);
+        step(6.50, 10.0, 0.50);
+        step(11.0, 15.0, 1.00);
+        step(17.5, cap,  2.50);
+      } else if (density === 'medium') {
+        step(1.50, 2.50, 0.10);
+        step(2.75, 4.00, 0.25);
+        step(4.50, 6.00, 0.50);
+        step(7.00, 10.0, 1.00);
+        step(12.0, cap,  2.00);
+      } else {
+        [1.50,1.65,1.80,2.00,2.25,2.50,3.00,3.50,4.00,5.00,6.50,8.00,10.0,12.0,15.0,20.0,30.0]
+          .forEach(push);
+      }
+      // Garante âncoras da faixa
+      push(lo); push(cap); push((lo + cap) / 2);
+      return Array.from(out).sort((a, b) => a - b);
     };
 
-    const dynamicOdds = generateCommonOdds(minOdd, maxOdd);
-    if (dynamicOdds.length < 3) {
-      dynamicOdds.push(minOdd, (minOdd + maxOdd) / 2, maxOdd);
-    }
+    // Densidade decai conforme o número de pernas cresce (combinatória explode)
+    const gridForLegs = (n: number) => {
+      if (n <= 2) return buildOddGrid(minOdd, maxOdd, 'fine');
+      if (n === 3) return buildOddGrid(minOdd, maxOdd, 'medium');
+      return buildOddGrid(minOdd, maxOdd, 'coarse');
+    };
+
+    /** Avalia uma combinação (ordem importa: cascata acumula responsabilidade). */
+    const evaluate = (combo: number[], target: number) => {
+      const m = HedgeProbabilisticoEngine.calculateMetrics(
+        combo.map(o => ({ name: '', backOdd: o, layOdd: o })),
+        100,
+        commDec,
+        target,
+      );
+      if (!(m.allWonProfit > 0) || !(m.maxResponsibility > 0)) return null;
+      return { m, roe: m.totalEV / m.maxResponsibility, roi: m.totalROI };
+    };
 
     targets.forEach(target => {
       const optimizations: any[] = [];
      const legCounts = Array.from({ length: maxLegs }, (_, i) => i + 1);
+
+      // Cache do melhor combo (ROE/ROI) por nº de pernas, para uso na expansão gulosa
+      const bestByLegs: Record<number, { roe?: number[]; roi?: number[] }> = {};
 
       legCounts.forEach(numLegs => {
         let bestROE = -Infinity;
@@ -245,31 +296,55 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
         let roeCombo: number[] = [];
         let roiCombo: number[] = [];
 
-        dynamicOdds.forEach(baseOdd => {
-          dynamicOdds.forEach(anchorOdd => {
-            const candidateLegs = Array(numLegs - 1).fill(baseOdd).concat(anchorOdd);
-            const m = HedgeProbabilisticoEngine.calculateMetrics(
-              candidateLegs.map(o => ({ name: '', backOdd: o, layOdd: o })),
-              100,
-              commDec,
-              target
-            );
+        const consider = (combo: number[]) => {
+          const r = evaluate(combo, target);
+          if (!r) return;
+          if (r.roe > bestROE) { bestROE = r.roe; roeCombo = combo.slice(); }
+          if (r.roi > bestROI) { bestROI = r.roi; roiCombo = combo.slice(); }
+        };
 
-            if (m.allWonProfit > 0 && m.maxResponsibility > 0) {
-              const roe = m.totalEV / m.maxResponsibility;
-              const roi = m.totalROI;
+        const grid = gridForLegs(numLegs);
 
-              if (roe > bestROE) {
-                bestROE = roe;
-                roeCombo = candidateLegs;
+        if (numLegs === 1) {
+          grid.forEach(o => consider([o]));
+        } else if (numLegs <= 4) {
+          // Enumeração completa (ordem importa). 4 pernas com grid coarse (~17) = 83.5k combos
+          const rec = (depth: number, acc: number[]) => {
+            if (depth === numLegs) { consider(acc); return; }
+            for (const o of grid) { acc.push(o); rec(depth + 1, acc); acc.pop(); }
+          };
+          rec(0, []);
+        } else {
+          // Expansão gulosa a partir dos melhores combos de (numLegs - 1)
+          const seeds: number[][] = [];
+          const prev = bestByLegs[numLegs - 1];
+          if (prev?.roe) seeds.push(prev.roe);
+          if (prev?.roi && (!prev.roe || JSON.stringify(prev.roi) !== JSON.stringify(prev.roe))) seeds.push(prev.roi);
+          // Fallback se não houver semente
+          if (seeds.length === 0) seeds.push(Array(numLegs - 1).fill(grid[0]));
+
+          seeds.forEach(seed => {
+            // Tenta inserir cada odd em cada posição
+            for (let pos = 0; pos <= seed.length; pos++) {
+              for (const o of grid) {
+                const combo = [...seed.slice(0, pos), o, ...seed.slice(pos)];
+                consider(combo);
               }
-              if (roi > bestROI) {
-                bestROI = roi;
-                roiCombo = candidateLegs;
+            }
+            // Tenta também substituir 1 perna do seed (refinamento local)
+            for (let i = 0; i < seed.length; i++) {
+              for (const o of grid) {
+                const combo = seed.slice();
+                combo[i] = o;
+                // adiciona âncora para chegar em numLegs
+                combo.push(grid[grid.length - 1]);
+                consider(combo);
               }
             }
           });
-        });
+        }
+
+        bestByLegs[numLegs] = { roe: roeCombo, roi: roiCombo };
 
         if (roeCombo.length > 0) {
           const mROE = HedgeProbabilisticoEngine.calculateMetrics(roeCombo.map(o => ({ name: '', backOdd: o, layOdd: o })), 100, commDec, target);
