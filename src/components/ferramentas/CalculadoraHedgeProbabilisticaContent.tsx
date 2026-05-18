@@ -57,7 +57,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
     const result: Record<string, any[]> = {};
     
     // Amostra de odds comuns no mercado para teste
-    const commonOdds = [1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.4, 2.6, 2.8, 3.0, 3.5, 4.0, 5.0, 6.0];
+    const commonOdds = [1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.4, 2.6, 2.8, 3.0, 3.5, 4.0, 5.0, 6.0];
     const commDec = commission / 100;
 
     targets.forEach(target => {
@@ -124,7 +124,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
         }
       });
 
-      result[target.toString()] = optimizations;
+      result[target.toFixed(2)] = optimizations;
     });
 
     return result;
