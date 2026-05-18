@@ -19,7 +19,7 @@ import {
    totalExposure: number;
    probability: number;
    ev: number;
-   efficiency: number;
+    extractionRate: number;
  }
 
 export interface Scenario {
@@ -83,14 +83,13 @@ export class HedgeProbabilisticoEngine {
      return (metaLiquida + cumulativeCost) / (1 - commission);
    }
 
-   static calculateCalculatedLegs(
-     legs: LegInput[],
-     freebet: number,
-     commission: number,
-     efficiency: number,
-     metaPct?: number
-   ): CalculatedLeg[] {
-     const metaLiquida = metaPct !== undefined ? (freebet * metaPct) : (freebet * efficiency);
+    static calculateCalculatedLegs(
+      legs: LegInput[],
+      freebet: number,
+      commission: number,
+      targetExtraction: number
+    ): CalculatedLeg[] {
+      const metaLiquida = freebet * targetExtraction;
      let cumulativeResponsibility = 0;
      
      return legs.map((leg) => {
@@ -109,7 +108,7 @@ export class HedgeProbabilisticoEngine {
          totalExposure,
          probability: 1 / leg.backOdd,
          ev: 0, // Calculated later
-         efficiency: metaPct !== undefined ? metaPct : efficiency
+          extractionRate: targetExtraction
        };
        
        // Update cumulative for NEXT leg (assuming Back won this one)
@@ -201,14 +200,13 @@ export class HedgeProbabilisticoEngine {
      return aggregated.sort((a, b) => b.probability - a.probability);
    }
 
-   static calculateMetrics(
-     legs: LegInput[],
-     freebet: number,
-     commission: number,
-     efficiency: number,
-     metaPct?: number
-   ): HedgeResult {
-     const calculatedLegs = this.calculateCalculatedLegs(legs, freebet, commission, efficiency, metaPct);
+    static calculateMetrics(
+      legs: LegInput[],
+      freebet: number,
+      commission: number,
+      targetExtraction: number
+    ): HedgeResult {
+      const calculatedLegs = this.calculateCalculatedLegs(legs, freebet, commission, targetExtraction);
       const aggregatedScenarios = this.generateCanonicalScenarios(calculatedLegs, freebet, commission);
       
       // Flatten for legacy consumers if needed

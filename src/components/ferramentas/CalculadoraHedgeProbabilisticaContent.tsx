@@ -27,7 +27,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
 export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
   const [freebet, setFreebet] = useState(100);
   const [commission, setCommission] = useState(2.8);
-  const [efficiency, setEfficiency] = useState(0.8);
+   const [targetExtraction, setTargetExtraction] = useState(0.8);
   const [legs, setLegs] = useState<LegInput[]>([
     { name: 'Evento 1', backOdd: 2.0, layOdd: 2.0 },
     { name: 'Evento 2', backOdd: 2.0, layOdd: 2.0 }
@@ -40,9 +40,9 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
       legs, 
       freebet, 
       commission / 100, 
-      efficiency
-    );
-  }, [legs, freebet, commission, efficiency]);
+       targetExtraction
+     );
+   }, [legs, freebet, commission, targetExtraction]);
 
   const addLeg = () => {
     if (legs.length >= 5) return;
@@ -119,19 +119,23 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
           <Card className="bg-muted/30">
             <CardContent className="pt-4 flex flex-col items-center text-center">
               <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                <Target className="h-3 w-3" /> EV Esperado
+                <Target className="h-3 w-3" /> Extração Estimada
+                <CardInfoTooltip 
+                  title="Extração Estimada (EV)" 
+                  description="É a média matemática de quanto você vai extrair da FreeBet considerando todos os cenários e suas probabilidades. Não é o lucro fixo, mas o valor esperado no longo prazo." 
+                />
               </div>
               <div className="text-xl font-bold text-emerald-400">R$ {fmt(metrics.totalEV)}</div>
-              <div className="text-[10px] text-muted-foreground mt-1">Valor médio probabilístico</div>
+              <div className="text-[10px] text-muted-foreground mt-1">Valor médio da operação</div>
             </CardContent>
           </Card>
           <Card className="bg-muted/30">
             <CardContent className="pt-4 flex flex-col items-center text-center">
               <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                <TrendingUp className="h-3 w-3" /> ROI Final
+                <TrendingUp className="h-3 w-3" /> Taxa de Extração
               </div>
               <div className="text-xl font-bold text-blue-400">{fmtPct(metrics.totalROI)}</div>
-              <div className="text-[10px] text-muted-foreground mt-1">Eficiência real da operação</div>
+              <div className="text-[10px] text-muted-foreground mt-1">Rendimento sobre a FreeBet</div>
             </CardContent>
           </Card>
           <Card className="bg-muted/30">
@@ -189,25 +193,23 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
                     className="h-9 text-sm"
                   />
                 </div>
-                <div className="space-y-4 pt-2">
+                <div className="space-y-2 pt-2">
                   <div className="flex justify-between items-center">
                     <Label className="text-xs flex items-center gap-1">
-                      Eficiência Operacional
-                      <CardInfoTooltip title="Eficiência" description="Ajuste fino de quanto do lucro você quer extrair. 100% maximiza o EV mas pode aumentar a responsabilidade." />
+                      Meta de Extração (%)
+                      <CardInfoTooltip title="Meta de Extração" description="Define quanto você deseja extrair da FreeBet. Valores maiores aumentam o lucro mas exigem mais responsabilidade (banca) na Exchange." />
                     </Label>
-                    <span className="text-xs font-mono text-primary">{Math.round(efficiency * 100)}%</span>
+                    <span className="text-xs font-mono text-primary">{Math.round(targetExtraction * 100)}%</span>
                   </div>
-                  <Slider 
-                    value={[efficiency * 100]} 
-                    min={70} 
-                    max={100} 
-                    step={1} 
-                    onValueChange={(val) => setEfficiency(val[0] / 100)}
+                  <Input 
+                    type="number" 
+                    value={Math.round(targetExtraction * 100)} 
+                    onChange={(e) => setTargetExtraction(Number(e.target.value) / 100)}
+                    className="h-9 text-sm"
                   />
-                  <div className="flex justify-between text-[10px] text-muted-foreground">
-                    <span>Seguro (70%)</span>
-                    <span>Agressivo (100%)</span>
-                  </div>
+                  <p className="text-[10px] text-muted-foreground italic">
+                    Sugerido: 70% a 90% para operações equilibradas.
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -544,9 +546,35 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
                   </div>
                 </section>
 
+                <section className="space-y-3">
+                  <h3 className="text-sm font-semibold flex items-center gap-2 text-primary uppercase tracking-wider">
+                    <Info className="h-4 w-4" /> Glossário de Conceitos
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="p-3 bg-muted/20 border border-border/50 rounded-md">
+                      <p className="text-xs font-semibold mb-1">Extração Estimada (EV)</p>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        O "Expected Value" não é o seu lucro garantido hoje, mas a <strong>média matemática</strong> de retorno da operação. Como você está fazendo coberturas sequenciais, o EV mostra quanto você extrai da FreeBet (em média) considerando todos os caminhos possíveis.
+                      </p>
+                    </div>
+                    <div className="p-3 bg-muted/20 border border-border/50 rounded-md">
+                      <p className="text-xs font-semibold mb-1">Meta de Extração vs. Taxa de Extração</p>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        A <strong>Meta</strong> é quanto você <i>tenta</i> tirar da FreeBet (ex: 80%). A <strong>Taxa Real</strong> é quanto o mercado permite tirar após as comissões e odds reais. Se a Taxa for próxima da Meta, sua operação está otimizada.
+                      </p>
+                    </div>
+                    <div className="p-3 bg-muted/20 border border-border/50 rounded-md">
+                      <p className="text-xs font-semibold mb-1">Exposição vs. Responsabilidade</p>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        A <strong>Responsabilidade</strong> é o custo de um Lay individual. A <strong>Exposição Máxima</strong> é o saldo total que você precisa ter na Exchange para cobrir a cascata inteira até o fim.
+                      </p>
+                    </div>
+                  </div>
+                </section>
+
                 <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
                   <p className="text-xs text-primary leading-relaxed">
-                    <strong>Dica de Ouro:</strong> O "Score" da ferramenta analisa a relação entre o Lucro Potencial e o Risco de Drawdown. Tente manter a Eficiência Operacional acima de 80% para operações saudáveis.
+                    <strong>Dica de Ouro:</strong> Uma boa extração de FreeBet gira entre 70% e 90% do seu valor nominal. Se o Score estiver "Crítico", considere aumentar as odds ou diminuir a Meta de Extração.
                   </p>
                 </div>
               </div>
