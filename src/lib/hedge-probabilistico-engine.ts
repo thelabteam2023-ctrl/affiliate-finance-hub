@@ -30,9 +30,21 @@ export interface Scenario {
   description: string;
 }
 
+export interface AggregatedScenario {
+  /** Canonical path truncated at the first 'lost' (since the cascade stops there). */
+  canonicalPath: ('won' | 'lost')[];
+  description: string;
+  probability: number;
+  result: number;
+  maxExposure: number;
+  /** Raw scenarios that collapse into this aggregate (path length = numLegs). */
+  subScenarios: Scenario[];
+}
+
  export interface HedgeResult {
    legs: CalculatedLeg[];
    scenarios: Scenario[];
+    aggregatedScenarios: AggregatedScenario[];
    totalEV: number;
    totalROI: number;
    maxResponsibility: number;
