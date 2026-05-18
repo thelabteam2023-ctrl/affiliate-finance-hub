@@ -144,6 +144,14 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
    const [simMode, setSimMode] = useState<'accumulative' | 'capped'>('accumulative');
    const [bankrollCeilingMultiplier, setBankrollCeilingMultiplier] = useState(5);
    const [activeTab, setActiveTab] = useState('calculadora');
+ 
+   const [liveInput, setLiveInput] = useState<LiveHedgeInput>({
+     layOdd: 3.00,
+     backOddActual: 2.70,
+     backOddProjected: 3.00,
+     backStake: 100,
+     commission: 2.0
+   });
 
   const ODDS_RULESETS = useMemo(() => [
     {
