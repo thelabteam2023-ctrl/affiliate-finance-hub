@@ -1638,7 +1638,6 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                     R$ {fmt(expanded?.maxExposure || 0)}
                   </p>
                 </div>
-                </div>
               </div>
             </div>
 
