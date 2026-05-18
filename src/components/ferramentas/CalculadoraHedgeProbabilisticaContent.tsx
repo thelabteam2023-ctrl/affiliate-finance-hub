@@ -131,8 +131,14 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
     const optimalConfig = useMemo(() => {
       let bestEV = -Infinity;
       let bestTarget = 0.7;
-      // Otimização agora filtrada para metas viáveis (mínimo 60% de extração)
-      for (let t = 0.6; t <= 0.85; t += 0.05) {
+      // Análise Sólida de Background: 10.000 variações testadas
+      const minTarget = 0.60;
+      const maxTarget = 0.95;
+      const steps = 10000;
+      const stepSize = (maxTarget - minTarget) / steps;
+
+      for (let i = 0; i <= steps; i++) {
+        const t = minTarget + (i * stepSize);
         const m = HedgeProbabilisticoEngine.calculateMetrics(legs, freebet, commission / 100, t);
         if (m.allWonProfit > 0 && m.maxResponsibility <= bankroll) {
           if (m.totalEV > bestEV) {
@@ -854,7 +860,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                           <h4 className="text-xs font-bold uppercase tracking-wider text-primary">Por que a Meta de {(optimalConfig.target * 100).toFixed(0)}%?</h4>
                         </div>
                         <p className="text-xs text-muted-foreground leading-relaxed">
-                          Nossa simulação dinâmica testou 20 variações de meta (de 10% a 100%). A meta de <strong>{(optimalConfig.target * 100).toFixed(0)}%</strong> foi escolhida porque:
+                          Nossa análise de background testou <strong>10.000 variações</strong> de meta (60% a 95%). A meta de <strong>{(optimalConfig.target * 100).toFixed(0)}%</strong> foi identificada como o ponto de equilíbrio matemático ideal porque:
                         </p>
                         <ul className="text-[10px] space-y-1 text-muted-foreground">
                           <li className="flex items-center gap-2">
