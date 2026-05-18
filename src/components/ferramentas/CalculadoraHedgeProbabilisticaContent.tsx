@@ -12,7 +12,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
     Plus, Trash2, Info, ChevronRight, Zap, BarChart3, HelpCircle, Link2,
     CheckCircle2, Lightbulb, BookOpen, FlaskConical, BrainCircuit,
     ShieldAlert, Coins, Sparkles, Wand2, Dna, LineChart, History,
-      Trophy, Star, ArrowRight, RefreshCcw, GripVertical, GripHorizontal
+     Trophy, Star, ArrowRight, RefreshCcw, GripVertical, GripHorizontal,
+     Sliders, Settings2, ShieldCheck, ZapOff, Infinity as InfinityIcon
  } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
  import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -141,6 +142,72 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
    const [simMode, setSimMode] = useState<'accumulative' | 'capped'>('accumulative');
    const [bankrollCeilingMultiplier, setBankrollCeilingMultiplier] = useState(5);
    const [activeTab, setActiveTab] = useState('calculadora');
+
+  const ODDS_RULESETS = useMemo(() => [
+    {
+      id: "standard",
+      label: "1.50 → 10.00",
+      minOdd: 1.5,
+      maxOdd: 10,
+      description: "Alta flexibilidade, maior ROI potencial.",
+      variance: "Alta",
+      efficiency: "Média"
+    },
+    {
+      id: "restricted_medium",
+      label: "1.80 → 8.00",
+      minOdd: 1.8,
+      maxOdd: 8,
+      description: "Equilíbrio entre risco e retorno.",
+      variance: "Média",
+      efficiency: "Alta"
+    },
+    {
+      id: "restricted_high",
+      label: "2.00 → 5.00",
+      minOdd: 2,
+      maxOdd: 5,
+      description: "Restritivo, menor volatilidade.",
+      variance: "Baixa",
+      efficiency: "Máxima"
+    },
+    {
+      id: "unlimited",
+      label: "1.50 → Ilimitado",
+      minOdd: 1.5,
+      maxOdd: null,
+      description: "Exploração total de mercados.",
+      variance: "Extrema",
+      efficiency: "Variável"
+    },
+    {
+      id: "custom",
+      label: "Personalizado",
+      minOdd: 1.5,
+      maxOdd: 10,
+      description: "Defina suas próprias regras.",
+      variance: "-",
+      efficiency: "-"
+    }
+  ], []);
+
+  const [activeRulesetId, setActiveRulesetId] = useState<string>(() => {
+    return localStorage.getItem('hedge-calc-active-ruleset') || "standard";
+  });
+
+  const [customRules, setCustomRules] = useState(() => {
+    const saved = localStorage.getItem('hedge-calc-custom-rules');
+    return saved ? JSON.parse(saved) : { minOdd: 1.5, maxOdd: 15, maxLegs: 5 };
+  });
+
+  useEffect(() => {
+    localStorage.setItem('hedge-calc-active-ruleset', activeRulesetId);
+  }, [activeRulesetId]);
+
+  useEffect(() => {
+    localStorage.setItem('hedge-calc-custom-rules', JSON.stringify(customRules));
+  }, [customRules]);
+
   const [legs, setLegs] = useState<LegInput[]>([
     { name: 'Evento 1', backOdd: 2.0, layOdd: 2.0 },
     { name: 'Evento 2', backOdd: 2.0, layOdd: 2.0 }
@@ -151,25 +218,35 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
   const goldenCombinationsByExtraction = useMemo(() => {
     const targets = Array.from(new Set([0.65, 0.70, 0.75, Number(targetExtraction.toFixed(2))])).sort();
     const result: Record<string, any[]> = {};
-    
-    // Amostra de odds comuns no mercado para teste
-    const commonOdds = [1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.4, 2.6, 2.8, 3.0, 3.5, 4.0, 5.0, 6.0];
     const commDec = commission / 100;
+
+    const activeRuleset = ODDS_RULESETS.find(r => r.id === activeRulesetId) || ODDS_RULESETS[0];
+    const minOdd = activeRulesetId === 'custom' ? customRules.minOdd : activeRuleset.minOdd;
+    const maxOdd = activeRulesetId === 'custom' ? customRules.maxOdd : (activeRuleset.maxOdd || 30);
+    const maxLegs = activeRulesetId === 'custom' ? customRules.maxLegs : 5;
+
+    const generateCommonOdds = (min: number, max: number) => {
+      const steps = [1.5, 1.8, 2.0, 2.5, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0, 12.0, 15.0];
+      return steps.filter(o => o >= min && o <= max);
+    };
+
+    const dynamicOdds = generateCommonOdds(minOdd, maxOdd);
+    if (dynamicOdds.length < 3) {
+      dynamicOdds.push(minOdd, (minOdd + maxOdd) / 2, maxOdd);
+    }
 
     targets.forEach(target => {
       const optimizations: any[] = [];
-      
-      // Para cada número de pernas (2 a 5)
-      [2, 3, 4, 5].forEach(numLegs => {
+      const legCounts = Array.from({ length: maxLegs - 1 }, (_, i) => i + 2);
+
+      legCounts.forEach(numLegs => {
         let bestROE = -Infinity;
         let bestROI = -Infinity;
         let roeCombo: number[] = [];
         let roiCombo: number[] = [];
 
-        // Simplificação matemática: testamos pernas iguais + uma perna final variável (âncora)
-        // Isso cobre 90% dos cenários de eficiência prática
-        commonOdds.forEach(baseOdd => {
-          commonOdds.forEach(anchorOdd => {
+        dynamicOdds.forEach(baseOdd => {
+          dynamicOdds.forEach(anchorOdd => {
             const candidateLegs = Array(numLegs - 1).fill(baseOdd).concat(anchorOdd);
             const m = HedgeProbabilisticoEngine.calculateMetrics(
               candidateLegs.map(o => ({ name: '', backOdd: o, layOdd: o })),
@@ -194,7 +271,6 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
           });
         });
 
-        // Adiciona os dois vencedores matemáticos para esta quantidade de pernas
         if (roeCombo.length > 0) {
           const mROE = HedgeProbabilisticoEngine.calculateMetrics(roeCombo.map(o => ({ name: '', backOdd: o, layOdd: o })), 100, commDec, target);
           optimizations.push({
@@ -219,12 +295,10 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
           });
         }
       });
-
       result[target.toFixed(2)] = optimizations;
     });
-
     return result;
-  }, [commission, targetExtraction]);
+  }, [commission, targetExtraction, activeRulesetId, customRules, ODDS_RULESETS]);
 
   const metrics: HedgeResult = useMemo(() => {
     return HedgeProbabilisticoEngine.calculateMetrics(
