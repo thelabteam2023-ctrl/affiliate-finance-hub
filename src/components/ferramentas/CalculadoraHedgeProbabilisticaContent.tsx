@@ -1492,13 +1492,13 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                           <p className="text-[8px] text-muted-foreground italic leading-tight text-center">
                             Simulação de uma jornada real de 10 operações consecutivas.
                           </p>
-                         </div>
-                       </div>
-                      </CardContent>
-                    </Card>
-                  )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
-                  {id === 'operational-profile' && (
+                {id === 'operational-profile' && (
                     <Card className="bg-muted/10 border-border/50 shadow-none overflow-hidden">
                         <div className="p-4 border-b border-border/50 bg-muted/20 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                           <div>
