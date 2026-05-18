@@ -363,31 +363,60 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
 
         <Dialog open={!!expanded} onOpenChange={(o) => !o && setExpanded(null)}>
           <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Combinações agregadas — {expanded?.description}</DialogTitle>
-              <DialogDescription>
-                Após a primeira perda a cascata para, então estas combinações brutas convergem
-                para o mesmo resultado. Probabilidade somada: {fmtPct((expanded?.probability || 0) * 100)}.
+            <DialogHeader className="mb-4">
+              <DialogTitle className="flex items-center gap-2">
+                Detalhamento do Cenário: {expanded?.description}
+              </DialogTitle>
+              <DialogDescription className="text-sm">
+                Este cenário canônico representa todas as sequências de resultados que terminam nesta etapa da cascata.
+                A probabilidade real de este desfecho ocorrer é <strong className="text-primary">{fmtPct((expanded?.probability || 0) * 100)}</strong>.
               </DialogDescription>
             </DialogHeader>
-            <ScrollArea className="max-h-[60vh]">
-              <div className="space-y-2 pr-2">
-                {expanded?.subScenarios
-                  .slice()
-                  .sort((a, b) => b.probability - a.probability)
-                  .map((sub, i) => (
-                    <div key={i} className="flex items-center justify-between p-2 rounded-md bg-muted/30 border border-border/40">
-                      <span className="text-xs font-mono">{sub.path.join(' → ')}</span>
-                      <div className="flex gap-4 text-xs font-mono">
-                        <span className="text-primary">{fmtPct(sub.probability * 100)}</span>
-                        <span className={sub.result >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-                          R$ {fmt(sub.result)}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+            
+            <div className="bg-muted/30 rounded-lg p-4 border border-border/50 mb-6 space-y-3">
+              <div className="flex justify-between items-center border-b border-border/50 pb-2">
+                <span className="text-xs text-muted-foreground uppercase font-semibold">Resumo Financeiro</span>
               </div>
-            </ScrollArea>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <span className="text-[10px] text-muted-foreground uppercase">Resultado</span>
+                  <p className={`text-lg font-bold font-mono ${expanded && expanded.result >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    R$ {fmt(expanded?.result || 0)}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] text-muted-foreground uppercase">Exposição Máx.</span>
+                  <p className="text-lg font-bold font-mono text-orange-400">
+                    R$ {fmt(expanded?.maxExposure || 0)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {expanded && expanded.subScenarios.length > 1 && (
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-muted-foreground uppercase font-semibold">Caminhos Brutos ({expanded.subScenarios.length})</span>
+                </div>
+                <ScrollArea className="max-h-[300px] border rounded-md">
+                  <div className="p-1">
+                    {expanded.subScenarios
+                      .slice()
+                      .map((sub, i) => (
+                        <div key={i} className="flex items-center justify-between p-2 rounded-md hover:bg-muted/20 transition-colors border-b last:border-0 border-border/30">
+                          <span className="text-[11px] font-mono text-muted-foreground">{sub.path.join(' → ')}</span>
+                          <div className="flex gap-4 text-[10px] font-mono">
+                            <span className="text-muted-foreground/50">Peso: {fmtPct((1 / expanded.subScenarios.length) * 100)}</span>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </ScrollArea>
+                <p className="text-[10px] text-muted-foreground italic leading-tight">
+                  * Como a cascata para na primeira perda, todos os resultados acima são matematicamente idênticos em termos de P&L.
+                </p>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>

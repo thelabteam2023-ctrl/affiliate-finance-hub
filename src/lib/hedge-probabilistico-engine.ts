@@ -118,98 +118,86 @@ export class HedgeProbabilisticoEngine {
      });
    }
  
-   static generateScenarios(
+   /**
+    * Generates canonical scenarios directly.
+    * A canonical scenario stops at the first 'lost'.
+    */
+   static generateCanonicalScenarios(
      calculatedLegs: CalculatedLeg[],
      freebet: number,
      commission: number
-   ): Scenario[] {
-     const scenarios: Scenario[] = [];
+   ): AggregatedScenario[] {
+     const aggregated: AggregatedScenario[] = [];
      const numLegs = calculatedLegs.length;
-     const totalScenarios = Math.pow(2, numLegs);
-     
-     for (let i = 0; i < totalScenarios; i++) {
-       const path: ('won' | 'lost')[] = [];
-       let currentProb = 1;
-       let currentResult = 0;
-       let maxExposure = 0;
-       let stop = false;
-       let cumulativeCost = 0;
- 
-       for (let j = 0; j < numLegs; j++) {
-         const isWon = (i >> (numLegs - 1 - j)) & 1;
-         const leg = calculatedLegs[j];
-         const pWin = 1 / leg.backOdd;
-         const pLoss = 1 - pWin;
- 
-         if (stop) {
-           path.push('lost');
-           continue;
+     let currentProbOfSuccess = 1;
+     let cumulativeResponsibility = 0;
+     const pathSoFar: ('won' | 'lost')[] = [];
+
+     // 1. Generate scenarios where it fails at leg i (0 to numLegs-1)
+     for (let i = 0; i < numLegs; i++) {
+       const leg = calculatedLegs[i];
+       const pWin = 1 / leg.backOdd;
+       const pLoss = 1 - pWin;
+
+       // Scenario: Won first i-1 legs, Lost at leg i
+       const path: ('won' | 'lost')[] = [...pathSoFar, 'lost'];
+       const prob = currentProbOfSuccess * pLoss;
+       const result = (leg.layStake * (1 - commission)) - cumulativeResponsibility;
+       const maxExposure = cumulativeResponsibility + leg.responsibility;
+
+       // Generate virtual sub-scenarios for visualization in Modal
+       const subScenarios: Scenario[] = [];
+       const remainingLegs = numLegs - (i + 1);
+       const numSub = Math.pow(2, remainingLegs);
+       for (let k = 0; k < numSub; k++) {
+         const fullPath: ('won' | 'lost')[] = [...path];
+         for (let l = 0; l < remainingLegs; l++) {
+           fullPath.push(((k >> (remainingLegs - 1 - l)) & 1) ? 'won' : 'lost');
          }
- 
-         maxExposure = Math.max(maxExposure, cumulativeCost + leg.responsibility);
- 
-         if (isWon) {
-           path.push('won');
-           currentProb *= pWin;
-           cumulativeCost += leg.responsibility;
-         } else {
-           path.push('lost');
-           currentProb *= pLoss;
-           // Lay wins: profit = layStake * (1 - comm) - previous costs
-           currentResult = (leg.layStake * (1 - commission)) - cumulativeCost;
-           stop = true;
-         }
-       }
- 
-       if (!stop) {
-         // All legs won: Profit = Freebet * (LastOdd - 1) - All Responsibilities
-         const lastLeg = calculatedLegs[numLegs - 1];
-         currentResult = (freebet * (lastLeg.backOdd - 1)) - cumulativeCost;
-       }
- 
-       scenarios.push({
-         path,
-         probability: currentProb,
-         result: currentResult,
-         maxExposure,
-         description: path.join(' → ')
-       });
-     }
- 
-     return scenarios;
-   }
-
-   /**
-    * Aggregate scenarios that share the same canonical outcome.
-    * After the first 'lost' the cascade stops, so e.g. lost→lost→lost,
-    * lost→won→lost, lost→lost→won and lost→won→won all collapse into "lost".
-    */
-   static aggregateScenarios(scenarios: Scenario[]): AggregatedScenario[] {
-     const map = new Map<string, AggregatedScenario>();
-
-     for (const s of scenarios) {
-       const firstLost = s.path.indexOf('lost');
-       const canonical = firstLost === -1 ? s.path.slice() : s.path.slice(0, firstLost + 1);
-       const key = canonical.join('>');
-
-       const existing = map.get(key);
-       if (existing) {
-         existing.probability += s.probability;
-         existing.maxExposure = Math.max(existing.maxExposure, s.maxExposure);
-         existing.subScenarios.push(s);
-       } else {
-         map.set(key, {
-           canonicalPath: canonical,
-           description: canonical.join(' → '),
-           probability: s.probability,
-           result: s.result,
-           maxExposure: s.maxExposure,
-           subScenarios: [s],
+         subScenarios.push({
+           path: fullPath,
+           probability: prob / numSub, // Shared weight
+           result,
+           maxExposure,
+           description: fullPath.join(' → ')
          });
        }
+
+       aggregated.push({
+         canonicalPath: path,
+         description: path.join(' → '),
+         probability: prob,
+         result,
+         maxExposure,
+         subScenarios
+       });
+
+       // Prepare for next iteration (success at this leg)
+       currentProbOfSuccess *= pWin;
+       cumulativeResponsibility += leg.responsibility;
+       pathSoFar.push('won');
      }
 
-     return Array.from(map.values()).sort((a, b) => b.probability - a.probability);
+     // 2. Generate final scenario: All legs won
+     const lastLeg = calculatedLegs[numLegs - 1];
+     const resultAllWon = (freebet * (lastLeg.backOdd - 1)) - cumulativeResponsibility;
+     
+     aggregated.push({
+       canonicalPath: pathSoFar,
+       description: pathSoFar.join(' → '),
+       probability: currentProbOfSuccess,
+       result: resultAllWon,
+       maxExposure: cumulativeResponsibility,
+       subScenarios: [{
+         path: pathSoFar,
+         probability: currentProbOfSuccess,
+         result: resultAllWon,
+         maxExposure: cumulativeResponsibility,
+         description: pathSoFar.join(' → ')
+       }]
+     });
+
+     return aggregated.sort((a, b) => b.probability - a.probability);
    }
 
    static calculateMetrics(
@@ -220,8 +208,10 @@ export class HedgeProbabilisticoEngine {
      metaPct?: number
    ): HedgeResult {
      const calculatedLegs = this.calculateCalculatedLegs(legs, freebet, commission, efficiency, metaPct);
-     const scenarios = this.generateScenarios(calculatedLegs, freebet, commission);
-      const aggregatedScenarios = this.aggregateScenarios(scenarios);
+      const aggregatedScenarios = this.generateCanonicalScenarios(calculatedLegs, freebet, commission);
+      
+      // Flatten for legacy consumers if needed
+      const scenarios = aggregatedScenarios.flatMap(as => as.subScenarios);
      
      let totalEV = 0;
      let maxResponsibility = 0;
