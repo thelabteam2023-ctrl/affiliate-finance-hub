@@ -11,7 +11,49 @@ import { ScrollArea } from '@/components/ui/scroll-area';
     Target, Activity, TrendingUp, AlertTriangle, Shield,
     Plus, Trash2, Info, ChevronRight, Zap, BarChart3, HelpCircle,
     CheckCircle2, Lightbulb, BookOpen, FlaskConical, BrainCircuit,
-    ShieldAlert, Coins, Sparkles, Wand2, Dna, LineChart, History
+    ShieldAlert, Coins, Sparkles, Wand2, Dna, LineChart, History,
+    Trophy, Star, ArrowRight
+   const goldenCombinations = [
+     {
+       name: "Duo Conservador",
+       description: "Foco em saída rápida e baixo risco.",
+       legs: [2.0, 2.0],
+       expectedROI: "35%",
+       type: "Segurança"
+     },
+     {
+       name: "Triple Threat",
+       description: "O equilíbrio perfeito entre risco e retorno.",
+       legs: [2.0, 2.2, 2.5],
+       expectedROI: "52%",
+       type: "Equilibrado"
+     },
+     {
+       name: "Mestre da Extração",
+       description: "Maximiza o ROI em 3 eventos selecionados.",
+       legs: [2.5, 2.8, 3.2],
+       expectedROI: "68%",
+       type: "Alta Performance"
+     },
+     {
+       name: "Cascata Longa",
+       description: "Para extrações agressivas em 5 eventos.",
+       legs: [1.8, 1.8, 1.8, 1.8, 1.8],
+       expectedROI: "45%",
+       type: "Estratégico"
+     }
+   ];
+
+   const applyGoldenCombo = (comboLegs: number[]) => {
+     const newLegs = comboLegs.map((odd, i) => ({
+       name: `Evento ${i + 1}`,
+       backOdd: odd,
+       layOdd: odd
+     }));
+     setLegs(newLegs);
+     setActiveTab('calculadora');
+   };
+
   } from 'lucide-react';
  import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
