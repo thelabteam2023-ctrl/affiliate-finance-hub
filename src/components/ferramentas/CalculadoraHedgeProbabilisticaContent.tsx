@@ -641,44 +641,103 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                    </Card>
                  </div>
  
-                 <Card>
-                   <CardHeader>
-                     <CardTitle className="text-sm font-medium flex items-center gap-2">
-                       <Lightbulb className="h-4 w-4 text-primary" /> Análise do Especialista (Simulação)
-                     </CardTitle>
-                   </CardHeader>
-                   <CardContent className="space-y-4">
-                     <div className="p-4 rounded-lg bg-muted/30 border border-border/50 space-y-3">
-                       <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Diagnóstico</h4>
-                       <p className="text-sm leading-relaxed">
-                         {riskOfRuin > 10 ? (
-                           <span className="text-red-400 flex items-start gap-2">
-                             <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-                             Atenção: Seu Risco de Ruína está elevado ({fmtPct(riskOfRuin)}). Isso significa que, embora o EV possa ser positivo, a variância desta operação pode consumir sua banca de R$ {fmt(bankroll)} rapidamente. Sugerimos reduzir a Meta de Extração ou aumentar sua banca.
-                           </span>
-                         ) : (
-                           <span className="text-emerald-400 flex items-start gap-2">
-                             <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />
-                             Operação Segura: Seu perfil de risco está excelente. O uso de {fmtPct((metrics.maxResponsibility / bankroll) * 100)} da banca é saudável e o risco de ruína é quase nulo.
-                           </span>
-                         )}
-                       </p>
-                       <div className="pt-3 border-t border-border/50">
-                         <h4 className="text-[10px] font-bold uppercase text-muted-foreground mb-2">Simulação de 1.000 Operações</h4>
-                         <div className="grid grid-cols-2 gap-4">
-                           <div className="p-2 rounded bg-background/50 border border-border/50">
-                             <span className="text-[9px] text-muted-foreground block">Lucro Médio Esperado</span>
-                             <span className="text-sm font-bold text-emerald-400">R$ {fmt(metrics.totalEV * 1000)}</span>
-                           </div>
-                           <div className="p-2 rounded bg-background/50 border border-border/50">
-                             <span className="text-[9px] text-muted-foreground block">Pior Cenário Acumulado</span>
-                             <span className="text-sm font-bold text-red-400">-R$ {fmt(metrics.maxDrawdown)}</span>
-                           </div>
-                         </div>
-                       </div>
-                     </div>
-                   </CardContent>
-                 </Card>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-sm font-medium flex items-center gap-2">
+                        <Dna className="h-4 w-4 text-primary" /> Laboratório de Simulação e Dados
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      {/* Math Section */}
+                      <div className="p-4 rounded-lg bg-muted/30 border border-border/50 space-y-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <History className="h-4 w-4 text-primary" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Como chegamos neste Risco?</h4>
+                        </div>
+                        <div className="text-xs space-y-2 leading-relaxed">
+                          <p>
+                            O Risco de Ruína ({fmtPct(riskOfRuin)}) é calculado usando o modelo de <strong>Variância Probabilística</strong>.
+                          </p>
+                          <div className="bg-background/50 p-3 rounded font-mono text-[10px] border border-border/40">
+                            RoR = exp(-2 * EV * Banca / Variância)
+                          </div>
+                          <p className="text-muted-foreground italic">
+                            Isso significa que em uma série infinita de operações idênticas, a probabilidade de sua banca de R$ {fmt(bankroll)} chegar a zero antes de atingir o lucro esperado é de {fmtPct(riskOfRuin)}.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Monte Carlo Visual */}
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <LineChart className="h-4 w-4 text-emerald-400" />
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Simulação Real (1.000 Eventos)</h4>
+                          </div>
+                          <Badge variant="outline" className="text-[9px] text-emerald-400 border-emerald-500/30">
+                            Monte Carlo Run
+                          </Badge>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          <div className="p-3 rounded-lg bg-muted/20 border border-border/50 text-center">
+                            <span className="text-[9px] text-muted-foreground block mb-1">Lucro Médio</span>
+                            <span className="text-sm font-bold text-emerald-400">R$ {fmt(monteCarloSim.avgResult)}</span>
+                          </div>
+                          <div className="p-3 rounded-lg bg-muted/20 border border-border/50 text-center">
+                            <span className="text-[9px] text-muted-foreground block mb-1">Taxa de Sucesso</span>
+                            <span className="text-sm font-bold text-blue-400">{fmtPct(monteCarloSim.winRate * 100)}</span>
+                          </div>
+                          <div className="p-3 rounded-lg bg-muted/20 border border-border/50 text-center">
+                            <span className="text-[9px] text-muted-foreground block mb-1">Quebras (Banca)</span>
+                            <span className="text-sm font-bold text-red-400">{monteCarloSim.bankruptcies}</span>
+                          </div>
+                          <div className="p-3 rounded-lg bg-muted/20 border border-border/50 text-center">
+                            <span className="text-[9px] text-muted-foreground block mb-1">Total Ciclos</span>
+                            <span className="text-sm font-bold text-white">{monteCarloSim.trials}</span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
+                            Exemplos de resultados individuais:
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {monteCarloSim.samples.map((s, i) => (
+                              <span key={i} className={`text-[9px] px-2 py-0.5 rounded-full font-mono border ${s >= 0 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+                                R$ {fmt(s)}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Optimal Strategy Explanation */}
+                      <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="h-4 w-4 text-primary" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-primary">Por que a Meta de {(optimalConfig.target * 100).toFixed(0)}%?</h4>
+                        </div>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          Nossa simulação dinâmica testou 20 variações de meta (de 10% a 100%). A meta de <strong>{(optimalConfig.target * 100).toFixed(0)}%</strong> foi escolhida porque:
+                        </p>
+                        <ul className="text-[10px] space-y-1 text-muted-foreground">
+                          <li className="flex items-center gap-2">
+                            <div className="w-1 h-1 rounded-full bg-primary" />
+                            Maximiza o <strong>EV Matemático</strong> (R$ {fmt(optimalConfig.ev)}) sem quebrar a banca.
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <div className="w-1 h-1 rounded-full bg-primary" />
+                            Mantém a exposição máxima (R$ {fmt(metrics.maxResponsibility)}) dentro do seu limite de banca.
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <div className="w-1 h-1 rounded-full bg-primary" />
+                            Garante que o cenário "Tudo Ganha" ainda seja lucrativo na casa.
+                          </li>
+                        </ul>
+                      </div>
+                    </CardContent>
+                  </Card>
                </div>
              </div>
             )}
