@@ -1303,54 +1303,70 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                    </DndContext>
                  </div>
 
-                <div className="md:col-span-2 space-y-6">
-                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                   <Card className="border-l-4 border-l-red-500">
-                     <CardHeader className="pb-2">
-                       <CardTitle className="text-xs font-medium flex items-center gap-2 text-red-400">
-                         <ShieldAlert className="h-4 w-4" /> Risco de Ruína
-                       </CardTitle>
-                     </CardHeader>
-                     <CardContent>
-                       <div className="text-2xl font-bold font-mono">
-                         {fmtPct(riskOfRuin)}
-                       </div>
-                       <p className="text-[10px] text-muted-foreground mt-1">
-                         Probabilidade de quebrar a banca com esta configuração no longo prazo.
-                       </p>
-                       <div className="mt-3 w-full h-2 bg-muted rounded-full overflow-hidden">
-                         <div 
-                           className={`h-full transition-all duration-500 ${riskOfRuin > 10 ? 'bg-red-500' : 'bg-emerald-500'}`}
-                           style={{ width: `${riskOfRuin}%` }}
-                         />
-                       </div>
-                     </CardContent>
-                   </Card>
- 
-                   <Card className="border-l-4 border-l-emerald-500">
-                     <CardHeader className="pb-2">
-                       <CardTitle className="text-xs font-medium flex items-center gap-2 text-emerald-400">
-                         <BrainCircuit className="h-4 w-4" /> Eficiência de Capital
-                       </CardTitle>
-                     </CardHeader>
-                     <CardContent>
-                       <div className="text-2xl font-bold font-mono text-white">
-                         {fmtPct((metrics.maxResponsibility / bankroll) * 100)}
-                       </div>
-                       <p className="text-[10px] text-muted-foreground mt-1">
-                         Uso da banca disponível (R$ {fmt(metrics.maxResponsibility)} utilizados).
-                       </p>
-                     </CardContent>
-                   </Card>
-                 </div>
- 
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-sm font-medium flex items-center gap-2">
-                        <Dna className="h-4 w-4 text-primary" /> Laboratório de Simulação e Dados
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
+                 <div className="md:col-span-2 space-y-6">
+                   {/* Fixed Top Metrics */}
+                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                     <Card className="border-l-4 border-l-red-500">
+                       <CardHeader className="pb-2">
+                         <CardTitle className="text-xs font-medium flex items-center gap-2 text-red-400">
+                           <ShieldAlert className="h-4 w-4" /> Risco de Ruína
+                         </CardTitle>
+                       </CardHeader>
+                       <CardContent>
+                         <div className="text-2xl font-bold font-mono">
+                           {fmtPct(riskOfRuin)}
+                         </div>
+                         <p className="text-[10px] text-muted-foreground mt-1">
+                           Probabilidade de quebrar a banca com esta configuração no longo prazo.
+                         </p>
+                         <div className="mt-3 w-full h-2 bg-muted rounded-full overflow-hidden">
+                           <div 
+                             className={`h-full transition-all duration-500 ${riskOfRuin > 10 ? 'bg-red-500' : 'bg-emerald-500'}`}
+                             style={{ width: `${riskOfRuin}%` }}
+                           />
+                         </div>
+                       </CardContent>
+                     </Card>
+  
+                     <Card className="border-l-4 border-l-emerald-500">
+                       <CardHeader className="pb-2">
+                         <CardTitle className="text-xs font-medium flex items-center gap-2 text-emerald-400">
+                           <BrainCircuit className="h-4 w-4" /> Eficiência de Capital
+                         </CardTitle>
+                       </CardHeader>
+                       <CardContent>
+                         <div className="text-2xl font-bold font-mono text-white">
+                           {fmtPct((metrics.maxResponsibility / bankroll) * 100)}
+                         </div>
+                         <p className="text-[10px] text-muted-foreground mt-1">
+                           Uso da banca disponível (R$ {fmt(metrics.maxResponsibility)} utilizados).
+                         </p>
+                       </CardContent>
+                     </Card>
+                   </div>
+
+                   {/* Draggable Main Sections */}
+                   <DndContext 
+                     sensors={sensors}
+                     collisionDetection={closestCenter}
+                     onDragEnd={handleMainDragEnd}
+                     modifiers={[restrictToVerticalAxis]}
+                   >
+                     <SortableContext 
+                       items={mainLayout}
+                       strategy={verticalListSortingStrategy}
+                     >
+                       <div className="space-y-6">
+                         {mainLayout.map((id) => (
+                           <SortableLabCard key={id} id={id}>
+                             {id === 'simulation-lab' && (
+                               <Card>
+                                 <CardHeader>
+                                   <CardTitle className="text-sm font-medium flex items-center gap-2">
+                                     <Dna className="h-4 w-4 text-primary" /> Laboratório de Simulação e Dados
+                                   </CardTitle>
+                                 </CardHeader>
+                                 <CardContent className="space-y-6">
                       {/* Math Section */}
                       <div className="p-4 rounded-lg bg-muted/30 border border-border/50 space-y-4">
                         <div className="flex items-center gap-2 mb-2">
