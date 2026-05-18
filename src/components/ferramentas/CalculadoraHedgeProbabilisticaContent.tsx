@@ -14,25 +14,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
    ShieldAlert, Coins, Sparkles, Wand2, Dna, LineChart, History,
    Trophy, Star, ArrowRight, RefreshCcw
  } from 'lucide-react';
- import {
-   DndContext,
-   closestCenter,
-   KeyboardSensor,
-   PointerSensor,
-   useSensor,
-   useSensors,
-   DragEndEvent
- } from '@dnd-kit/core';
- import {
-   arrayMove,
-   SortableContext,
-   sortableKeyboardCoordinates,
-   verticalListSortingStrategy,
-   useSortable,
-   rectSortingStrategy
- } from '@dnd-kit/sortable';
- import { CSS } from '@dnd-kit/utilities';
- import { restrictToWindowEdges } from '@dnd-kit/modifiers';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
  import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
@@ -47,66 +28,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
 
-  interface SortableCardProps {
-    id: string;
-    children: React.ReactNode;
-  }
-
-  const SortableCard: React.FC<SortableCardProps> = ({ id, children }) => {
-    const {
-      attributes,
-      listeners,
-      setNodeRef,
-      transform,
-      transition,
-      isDragging
-    } = useSortable({ id });
-
-    const style = {
-      transform: CSS.Transform.toString(transform),
-      transition,
-      zIndex: isDragging ? 50 : 'auto',
-      opacity: isDragging ? 0.5 : 1,
-    };
-
-    return (
-      <div ref={setNodeRef} style={style} className="h-full">
-        <div className="relative h-full group">
-          <div 
-            {...attributes} 
-            {...listeners}
-            className="absolute top-3 right-3 p-1 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-muted rounded"
-          >
-            <GripVertical className="h-4 w-4 text-muted-foreground" />
-          </div>
-          {children}
-        </div>
-      </div>
-    );
-  };
-
-  const LAB_DEFAULT_LAYOUT = [
-    'visual-sim',
-    'double-bankroll',
-    'lab-params',
-    'advanced-stats',
-    'efficiency-matrix',
-    'risk-ruin',
-    'capital-efficiency',
-    'lab-details',
-    'golden-library',
-    'restricted-golden-library'
-  ];
   export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
-   const [labLayout, setLabLayout] = useState<string[]>(() => {
-     const saved = localStorage.getItem('hedge-calc-lab-layout');
-     return saved ? JSON.parse(saved) : LAB_DEFAULT_LAYOUT;
-   });
-
-   useEffect(() => {
-     localStorage.setItem('hedge-calc-lab-layout', JSON.stringify(labLayout));
-   }, [labLayout]);
-
    const [maxLabTotalOdd, setMaxLabTotalOdd] = useState<number>(() => {
      const saved = localStorage.getItem('hedge-calc-lab-max-odd');
      return saved ? Number(saved) : 8.0;
@@ -115,22 +37,6 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
    useEffect(() => {
      localStorage.setItem('hedge-calc-lab-max-odd', maxLabTotalOdd.toString());
    }, [maxLabTotalOdd]);
-
-   const sensors = useSensors(
-     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-   );
-
-   const handleDragEnd = (event: DragEndEvent) => {
-     const { active, over } = event;
-     if (over && active.id !== over.id) {
-       setLabLayout((items) => {
-         const oldIndex = items.indexOf(active.id as string);
-         const newIndex = items.indexOf(over.id as string);
-         return arrayMove(items, oldIndex, newIndex);
-       });
-     }
-   };
 
    const applyGoldenCombo = (comboLegs: number[]) => {
      const newLegs = comboLegs.map((odd, i) => ({
@@ -966,257 +872,201 @@ Para corrigir, reduza a Meta de Extração no slider.`}
         </div>
                </>
              ) : (
-             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-               <SortableContext items={labLayout} strategy={rectSortingStrategy}>
-                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-min">
-                   {labLayout.map((layoutId) => {
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  {/* Simulação Visual */}
+                  <Card className="bg-emerald-500/5 border-emerald-500/20 overflow-hidden h-full">
+                    <div className="bg-emerald-500/10 px-4 py-2 border-b border-emerald-500/20">
+                      <h4 className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+                        <CheckCircle2 className="h-3 w-3" /> Simulação Visual
+                      </h4>
+                    </div>
+                    <CardContent className="pt-4 space-y-4">
+                      <div className="flex items-end gap-1 h-16 mb-4 items-baseline">
+                        {monteCarloSim.samples.map((s, i) => {
+                          const height = Math.min(100, Math.max(20, (Math.abs(s) / Math.max(metrics.allWonProfit, Math.abs(metrics.maxDrawdown))) * 100));
+                          return (
+                            <div key={i} className={`flex-1 rounded-t-sm transition-all cursor-help relative group ${s >= 0 ? 'bg-emerald-500/40 hover:bg-emerald-400' : 'bg-red-500/40 hover:bg-red-400'}`} style={{ height: `${height}%` }} />
+                          );
+                        })}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground italic border-t border-border/40 pt-2">Amostra da variância em 10 ciclos.</p>
+                    </CardContent>
+                  </Card>
 
-                     if (layoutId === 'visual-sim') return (
-                       <SortableCard key={layoutId} id={layoutId}>
-                         <Card className="bg-emerald-500/5 border-emerald-500/20 overflow-hidden h-full">
-                           <div className="bg-emerald-500/10 px-4 py-2 border-b border-emerald-500/20">
-                             <h4 className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
-                               <CheckCircle2 className="h-3 w-3" /> Simulação Visual
-                             </h4>
-                           </div>
-                           <CardContent className="pt-4 space-y-4">
-                             <div className="flex items-end gap-1 h-24 mb-6 items-baseline">
-                               {monteCarloSim.samples.map((s, i) => {
-                                 const height = Math.min(100, Math.max(20, (Math.abs(s) / Math.max(metrics.allWonProfit, Math.abs(metrics.maxDrawdown))) * 100));
-                                 return (
-                                   <div key={i} className={`flex-1 rounded-t-sm transition-all cursor-help relative group ${s >= 0 ? 'bg-emerald-500/40 hover:bg-emerald-400' : 'bg-red-500/40 hover:bg-red-400'}`} style={{ height: `${height}%` }} />
-                                 );
-                               })}
-                             </div>
-                             <p className="text-[10px] text-muted-foreground italic border-t border-border/40 pt-2">Amostra da variância em 10 ciclos.</p>
-                           </CardContent>
-                         </Card>
-                       </SortableCard>
-                     );
-                     if (layoutId === 'double-bankroll') return (
-                       <SortableCard key={layoutId} id={layoutId}>
-                         <div className="p-4 rounded-lg bg-orange-500/5 border border-orange-500/20 space-y-3 h-full flex flex-col justify-center">
-                           <div className="flex items-center gap-2">
-                             <TrendingUp className="h-4 w-4 text-orange-400" />
-                             <h4 className="text-xs font-bold uppercase tracking-wider text-orange-400">Projeção: Dobra</h4>
-                           </div>
-                           <div className="grid grid-cols-2 gap-4">
-                             <div className="space-y-1">
-                               <span className="text-[9px] text-muted-foreground uppercase">Eventos</span>
-                               <p className="text-lg font-bold text-white font-mono">{monteCarloSim.medianSteps}</p>
-                             </div>
-                             <div className="space-y-1 text-right">
-                               <span className="text-[9px] text-muted-foreground uppercase">Prob. Sucesso</span>
-                               <p className={`text-lg font-bold font-mono ${monteCarloSim.probDouble > 70 ? 'text-emerald-400' : 'text-orange-400'}`}>{fmtPct(monteCarloSim.probDouble)}</p>
-                             </div>
-                           </div>
-                         </div>
-                       </SortableCard>
-                     );
-                     if (layoutId === 'lab-params') return (
-                       <SortableCard key={layoutId} id={layoutId}>
-                         <Card className="h-full">
-                           <CardHeader>
-                             <CardTitle className="text-sm font-medium flex items-center gap-2">
-                               <Coins className="h-4 w-4 text-primary" /> Parâmetros do Laboratório
-                             </CardTitle>
-                           </CardHeader>
-                           <CardContent className="space-y-4">
-                             <div className="space-y-3">
-                               <Label className="text-[10px] uppercase font-bold text-muted-foreground">Benchmark</Label>
-                               <Tabs value={labBenchmark} onValueChange={(val) => { setLabBenchmark(val); if (val !== 'custom') setTargetExtraction(Number(val) / 100); }} className="w-full">
-                                 <TabsList className="grid grid-cols-4 h-9 w-full">
-                                   <TabsTrigger value="65" className="text-[10px]">65%</TabsTrigger>
-                                   <TabsTrigger value="70" className="text-[10px]">70%</TabsTrigger>
-                                   <TabsTrigger value="75" className="text-[10px]">75%</TabsTrigger>
-                                   <TabsTrigger value="custom" className="text-[10px]">Livre</TabsTrigger>
-                                 </TabsList>
-                               </Tabs>
-                             </div>
-                             <div className="space-y-2">
-                               <Label className="text-[10px] uppercase font-bold text-primary">Banca Exchange</Label>
-                               <div className="relative">
-                                 <Input type="number" value={bankroll} onChange={(e) => setBankroll(Number(e.target.value))} className="h-10 pl-8 font-mono text-sm" />
-                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">R$</span>
-                               </div>
-                             </div>
+                  {/* Projeção Dobra */}
+                  <div className="p-4 rounded-lg bg-orange-500/5 border border-orange-500/20 space-y-3 h-full flex flex-col justify-center">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-orange-400" />
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-orange-400">Projeção: Dobra</h4>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <span className="text-[9px] text-muted-foreground uppercase">Eventos</span>
+                        <p className="text-lg font-bold text-white font-mono">{monteCarloSim.medianSteps}</p>
+                      </div>
+                      <div className="space-y-1 text-right">
+                        <span className="text-[9px] text-muted-foreground uppercase">Prob. Sucesso</span>
+                        <p className={`text-lg font-bold font-mono ${monteCarloSim.probDouble > 70 ? 'text-emerald-400' : 'text-orange-400'}`}>{fmtPct(monteCarloSim.probDouble)}</p>
+                      </div>
+                    </div>
+                  </div>
 
-                             <div className="space-y-2 pt-2 border-t border-border/30">
-                               <div className="flex justify-between items-center">
-                                 <Label className="text-[10px] uppercase font-bold text-orange-400">Limite de Odd (Múltipla)</Label>
-                                 <span className="text-xs font-mono font-bold text-white">{maxLabTotalOdd}x</span>
-                               </div>
-                               <Slider 
-                                 value={[maxLabTotalOdd]} 
-                                 min={2} max={30} step={0.5}
-                                 onValueChange={(vals) => setMaxLabTotalOdd(vals[0])}
-                               />
-                               <p className="text-[8px] text-muted-foreground italic leading-tight">
-                                 Filtra a Biblioteca de Ouro para respeitar o teto de odd da sua casa.
-                               </p>
-                             </div>
-                           </CardContent>
-                         </Card>
-                       </SortableCard>
-                     );
-                     if (layoutId === 'advanced-stats') return (
-                       <SortableCard key={layoutId} id={layoutId}>
-                         <Card className="bg-primary/5 border-primary/20 h-full">
-                           <CardHeader className="pb-2">
-                             <CardTitle className="text-sm font-medium flex items-center gap-2">
-                               <Sparkles className="h-4 w-4 text-primary" /> Estatísticas Avançadas
-                             </CardTitle>
-                           </CardHeader>
-                           <CardContent className="space-y-3">
-                             <div className="p-2 rounded-lg bg-background/40 border border-border/40 flex justify-between items-center">
-                               <span className="text-[10px] uppercase font-bold text-muted-foreground">10 Greens</span>
-                               <span className="text-sm font-bold font-mono text-emerald-400">{fmtPct(advancedStats.prob10Greens * 100)}</span>
-                             </div>
-                             <div className="p-2 rounded-lg bg-background/40 border border-border/40 flex justify-between items-center">
-                               <span className="text-[10px] uppercase font-bold text-muted-foreground">10 Reds</span>
-                               <span className="text-sm font-bold font-mono text-red-400">{(advancedStats.prob10Reds * 100).toFixed(4)}%</span>
-                             </div>
-                           </CardContent>
-                         </Card>
-                       </SortableCard>
-                     );
-                     if (layoutId === 'efficiency-matrix') return (
-                       <SortableCard key={layoutId} id={layoutId}>
-                         <Card className="border-primary/20 bg-primary/5 h-full">
-                           <CardHeader className="pb-2 text-center">
-                             <CardTitle className="text-[10px] font-medium flex items-center justify-center gap-2">
-                               <BrainCircuit className="h-3 w-3 text-primary" /> Matriz de Eficiência
-                             </CardTitle>
-                           </CardHeader>
-                           <CardContent className="p-2">
-                             <div className="grid grid-cols-7 gap-1">
-                               <div className="text-[6px] text-muted-foreground font-bold flex items-center justify-center">O\E</div>
-                               {[0.60, 0.65, 0.70, 0.75, 0.80].map(t => <div key={t} className="text-[6px] text-muted-foreground font-mono text-center">{Math.round(t*100)}%</div>)}
-                               {[1.5, 2.0, 2.5, 3.0, 3.5, 4.0].map(odd => (
-                                 <React.Fragment key={odd}>
-                                   <div className="text-[6px] text-muted-foreground font-mono flex items-center justify-center bg-muted/20 rounded">{odd.toFixed(1)}</div>
-                                   {[0.60, 0.65, 0.70, 0.75, 0.80].map(target => {
-                                      const cell = heatmapData.find(d => d.target === target && d.odd === odd);
-                                      const score = cell?.score || 0;
-                                      const isValid = cell?.isValid;
-                                      return <div key={`${target}-${odd}`} className={`aspect-square rounded-[1px] flex items-center justify-center text-[5px] font-mono border border-white/5 ${isValid ? (score > 5 ? 'bg-emerald-500/30' : 'bg-blue-500/20') : 'bg-red-500/5'}`}>{isValid ? score.toFixed(0) : 'X'}</div>
-                                   })}
-                                 </React.Fragment>
-                               ))}
-                             </div>
-                           </CardContent>
-                         </Card>
-                       </SortableCard>
-                     );
-                     if (layoutId === 'risk-ruin') return (
-                       <SortableCard key={layoutId} id={layoutId}>
-                         <Card className="border-l-4 border-l-red-500 h-full">
-                           <CardHeader className="pb-1">
-                             <CardTitle className="text-xs font-medium flex items-center gap-2 text-red-400">
-                               <ShieldAlert className="h-4 w-4" /> Risco de Ruína
-                             </CardTitle>
-                           </CardHeader>
-                            <CardContent>
-                             <div className="text-xl font-bold font-mono">{fmtPct(riskOfRuin)}</div>
-                             <div className="mt-1 w-full h-1 bg-muted rounded-full overflow-hidden">
-                               <div className={`h-full ${riskOfRuin > 10 ? 'bg-red-500' : 'bg-emerald-500'}`} style={{ width: `${riskOfRuin}%` }} />
-                             </div>
-                           </CardContent>
-                         </Card>
-                       </SortableCard>
-                     );
-                     if (layoutId === 'capital-efficiency') return (
-                       <SortableCard key={layoutId} id={layoutId}>
-                         <Card className="border-l-4 border-l-emerald-500 h-full">
-                           <CardHeader className="pb-1">
-                             <CardTitle className="text-xs font-medium flex items-center gap-2 text-emerald-400">
-                               <BrainCircuit className="h-4 w-4" /> Eficiência
-                             </CardTitle>
-                           </CardHeader>
-                           <CardContent>
-                             <div className="text-xl font-bold font-mono">{fmtPct((metrics.maxResponsibility / bankroll) * 100)}</div>
-                             <p className="text-[8px] text-muted-foreground mt-1">Uso da banca (R$ {fmt(metrics.maxResponsibility)})</p>
-                           </CardContent>
-                         </Card>
-                       </SortableCard>
-                     );
-                     if (layoutId === 'lab-details') return (
-                       <SortableCard key={layoutId} id={layoutId}>
-                         <Card className="h-full">
-                           <CardHeader className="pb-1">
-                             <CardTitle className="text-xs font-medium flex items-center gap-2">
-                               <Dna className="h-4 w-4 text-primary" /> Dados do Lab
-                             </CardTitle>
-                           </CardHeader>
-                           <CardContent className="space-y-1">
-                              <div className="p-1 bg-muted/20 rounded border border-border/50 text-[9px]">
-                                 Lucro Médio: <span className="font-bold text-emerald-400">R$ {fmt(monteCarloSim.avgResult)}</span>
+                  {/* Risco de Ruína */}
+                  <Card className="border-l-4 border-l-red-500 h-full">
+                    <CardHeader className="pb-1">
+                      <CardTitle className="text-xs font-medium flex items-center gap-2 text-red-400">
+                        <ShieldAlert className="h-4 w-4" /> Risco de Ruína
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-xl font-bold font-mono">{fmtPct(riskOfRuin)}</div>
+                      <div className="mt-1 w-full h-1 bg-muted rounded-full overflow-hidden">
+                        <div className={`h-full ${riskOfRuin > 10 ? 'bg-red-500' : 'bg-emerald-500'}`} style={{ width: `${riskOfRuin}%` }} />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Eficiência */}
+                  <Card className="border-l-4 border-l-emerald-500 h-full">
+                    <CardHeader className="pb-1">
+                      <CardTitle className="text-xs font-medium flex items-center gap-2 text-emerald-400">
+                        <BrainCircuit className="h-4 w-4" /> Eficiência
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-xl font-bold font-mono">{fmtPct((metrics.maxResponsibility / bankroll) * 100)}</div>
+                      <p className="text-[8px] text-muted-foreground mt-1">Uso da banca (R$ {fmt(metrics.maxResponsibility)})</p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                  {/* Parâmetros */}
+                  <div className="md:col-span-4 space-y-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-sm font-medium flex items-center gap-2">
+                          <Coins className="h-4 w-4 text-primary" /> Parâmetros do Lab
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="space-y-3">
+                          <Label className="text-[10px] uppercase font-bold text-muted-foreground">Benchmark</Label>
+                          <Tabs value={labBenchmark} onValueChange={(val) => { setLabBenchmark(val); if (val !== 'custom') setTargetExtraction(Number(val) / 100); }} className="w-full">
+                            <TabsList className="grid grid-cols-4 h-9 w-full">
+                              <TabsTrigger value="65" className="text-[10px]">65%</TabsTrigger>
+                              <TabsTrigger value="70" className="text-[10px]">70%</TabsTrigger>
+                              <TabsTrigger value="75" className="text-[10px]">75%</TabsTrigger>
+                              <TabsTrigger value="custom" className="text-[10px]">Livre</TabsTrigger>
+                            </TabsList>
+                          </Tabs>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-[10px] uppercase font-bold text-primary">Banca Exchange</Label>
+                          <div className="relative">
+                            <Input type="number" value={bankroll} onChange={(e) => setBankroll(Number(e.target.value))} className="h-10 pl-8 font-mono text-sm" />
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">R$</span>
+                          </div>
+                        </div>
+                        <div className="space-y-2 pt-2 border-t border-border/30">
+                          <div className="flex justify-between items-center">
+                            <Label className="text-[10px] uppercase font-bold text-orange-400">Limite de Odd (Múltipla)</Label>
+                            <span className="text-xs font-mono font-bold text-white">{maxLabTotalOdd}x</span>
+                          </div>
+                          <Slider 
+                            value={[maxLabTotalOdd]} 
+                            min={2} max={30} step={0.5}
+                            onValueChange={(vals) => setMaxLabTotalOdd(vals[0])}
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="bg-primary/5 border-primary/20">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium flex items-center gap-2">
+                          <Sparkles className="h-4 w-4 text-primary" /> Estatísticas Avançadas
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="p-2 rounded-lg bg-background/40 border border-border/40 flex justify-between items-center">
+                          <span className="text-[10px] uppercase font-bold text-muted-foreground">10 Greens</span>
+                          <span className="text-sm font-bold font-mono text-emerald-400">{fmtPct(advancedStats.prob10Greens * 100)}</span>
+                        </div>
+                        <div className="p-2 rounded-lg bg-background/40 border border-border/40 flex justify-between items-center">
+                          <span className="text-[10px] uppercase font-bold text-muted-foreground">10 Reds</span>
+                          <span className="text-sm font-bold font-mono text-red-400">{(advancedStats.prob10Reds * 100).toFixed(4)}%</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Matriz e Bibliotecas */}
+                  <div className="md:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Card className="border-primary/20 bg-primary/5">
+                      <CardHeader className="pb-2 text-center">
+                        <CardTitle className="text-[10px] font-medium flex items-center justify-center gap-2">
+                          <BrainCircuit className="h-3 w-3 text-primary" /> Matriz de Eficiência
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-2">
+                        <div className="grid grid-cols-7 gap-1">
+                          <div className="text-[6px] text-muted-foreground font-bold flex items-center justify-center">O\E</div>
+                          {[0.60, 0.65, 0.70, 0.75, 0.80].map(t => <div key={t} className="text-[6px] text-muted-foreground font-mono text-center">{Math.round(t*100)}%</div>)}
+                          {[1.5, 2.0, 2.5, 3.0, 3.5, 4.0].map(odd => (
+                            <React.Fragment key={odd}>
+                              <div className="text-[6px] text-muted-foreground font-mono flex items-center justify-center bg-muted/20 rounded">{odd.toFixed(1)}</div>
+                              {[0.60, 0.65, 0.70, 0.75, 0.80].map(target => {
+                                 const cell = heatmapData.find(d => d.target === target && d.odd === odd);
+                                 const score = cell?.score || 0;
+                                 const isValid = cell?.isValid;
+                                 return <div key={`${target}-${odd}`} className={`aspect-square rounded-[1px] flex items-center justify-center text-[5px] font-mono border border-white/5 ${isValid ? (score > 5 ? 'bg-emerald-500/30' : 'bg-blue-500/20') : 'bg-red-500/5'}`}>{isValid ? score.toFixed(0) : 'X'}</div>
+                              })}
+                            </React.Fragment>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-dashed border-orange-500/50 bg-orange-500/5">
+                      <CardHeader className="pb-1">
+                        <CardTitle className="text-xs font-medium flex items-center gap-2 text-orange-400">
+                          <ShieldAlert className="h-4 w-4" /> Lab: Limite de Odd ({maxLabTotalOdd}x)
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        <div className="text-[9px] text-muted-foreground leading-tight mb-2">
+                          Sugestões otimizadas para casas com limite de odd total.
+                        </div>
+                        <div className="space-y-1 max-h-[150px] overflow-y-auto pr-1">
+                          {restrictedGoldenCombinations.filter(c => c.target === (Number(targetExtraction) * 100).toFixed(0) + '%').map((combo, idx) => (
+                            <div 
+                              key={idx} 
+                              className="p-1.5 rounded bg-background/40 border border-orange-500/20 cursor-pointer hover:border-orange-500/50 transition-colors"
+                              onClick={() => applyGoldenCombo(combo.legs)}
+                            >
+                              <div className="flex justify-between items-center mb-1">
+                                 <span className="text-[8px] font-bold text-orange-400">{combo.numLegs} Pernas</span>
+                                 <span className="text-[8px] font-mono text-white">Odd: {combo.totalOdd}</span>
                               </div>
-                              <div className="p-1 bg-muted/20 rounded border border-border/50 text-[9px]">
-                                 Win Rate: <span className="font-bold text-blue-400">{fmtPct(monteCarloSim.winRate * 100)}</span>
+                              <div className="flex flex-wrap gap-0.5">
+                                 {combo.legs.map((o, i) => (
+                                   <span key={i} className="text-[7px] px-1 bg-muted rounded border border-border/50">{o.toFixed(2)}</span>
+                                 ))}
                               </div>
-                           </CardContent>
-                         </Card>
-                       </SortableCard>
-                     );
-                     if (layoutId === 'golden-library') return (
-                       <SortableCard key={layoutId} id={layoutId}>
-                         <Card className="h-full border-dashed">
-                           <CardHeader className="pb-1">
-                             <CardTitle className="text-xs font-medium flex items-center gap-2">
-                               <Trophy className="h-4 w-4 text-yellow-400" /> Biblioteca
-                             </CardTitle>
-                           </CardHeader>
-                           <CardContent>
-                             <p className="text-[9px] text-muted-foreground leading-tight">Sugestões otimizadas para seu benchmark de {Math.round(targetExtraction * 100)}%.</p>
-                           </CardContent>
-                         </Card>
-                       </SortableCard>
-                     );
-
-                     if (layoutId === 'restricted-golden-library') return (
-                       <SortableCard key={layoutId} id={layoutId}>
-                         <Card className="h-full border-dashed border-orange-500/50 bg-orange-500/5">
-                           <CardHeader className="pb-1">
-                             <CardTitle className="text-xs font-medium flex items-center gap-2 text-orange-400">
-                               <ShieldAlert className="h-4 w-4" /> Lab: Limite de Odd ({maxLabTotalOdd}x)
-                             </CardTitle>
-                           </CardHeader>
-                           <CardContent className="space-y-2">
-                             <div className="text-[9px] text-muted-foreground leading-tight mb-2">
-                               Sugestões otimizadas para casas com limite de odd total.
-                             </div>
-                             <div className="space-y-1 max-h-[150px] overflow-y-auto pr-1">
-                               {restrictedGoldenCombinations.filter(c => c.target === (Number(targetExtraction) * 100).toFixed(0) + '%').map((combo, idx) => (
-                                 <div 
-                                   key={idx} 
-                                   className="p-1.5 rounded bg-background/40 border border-orange-500/20 cursor-pointer hover:border-orange-500/50 transition-colors"
-                                   onClick={() => applyGoldenCombo(combo.legs)}
-                                 >
-                                   <div className="flex justify-between items-center mb-1">
-                                      <span className="text-[8px] font-bold text-orange-400">{combo.numLegs} Pernas</span>
-                                      <span className="text-[8px] font-mono text-white">Odd: {combo.totalOdd}</span>
-                                   </div>
-                                   <div className="flex flex-wrap gap-0.5">
-                                      {combo.legs.map((o, i) => (
-                                        <span key={i} className="text-[7px] px-1 bg-muted rounded border border-border/50">{o.toFixed(2)}</span>
-                                      ))}
-                                   </div>
-                                   <div className="flex justify-between mt-1 text-[7px] text-muted-foreground uppercase font-bold">
-                                      <span>ROI: {combo.roi}</span>
-                                      <span>ROE: {combo.roe}</span>
-                                   </div>
-                                 </div>
-                               ))}
-                             </div>
-                           </CardContent>
-                         </Card>
-                       </SortableCard>
-                     );
-                   })}
-                 </div>
-               </SortableContext>
-             </DndContext>
+                              <div className="flex justify-between mt-1 text-[7px] text-muted-foreground uppercase font-bold">
+                                 <span>ROI: {combo.roi}</span>
+                                 <span>ROE: {combo.roe}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+              </div>
             )}
          </div>
  
