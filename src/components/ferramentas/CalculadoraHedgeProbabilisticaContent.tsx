@@ -690,9 +690,9 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                          <Sparkles className="h-3.5 w-3.5" />
                          <span className="text-xs font-bold">Otimizador Inteligente</span>
                        </div>
-                       <p className="text-[10px] leading-relaxed">
-                         Nossa "IA" analisou {legs.length} eventos e sugere a meta de extração ideal baseada na sua banca.
-                       </p>
+                        <p className="text-[10px] leading-relaxed">
+                          Análise sólida de background: processamos <strong>10.000 variações</strong> para encontrar a meta ideal para sua banca atual.
+                        </p>
                         <div className="grid grid-cols-2 gap-2">
                           <div className="flex flex-col bg-background/50 p-2 rounded border border-border/50">
                             <span className="text-[8px] text-muted-foreground uppercase">Meta Atual</span>
