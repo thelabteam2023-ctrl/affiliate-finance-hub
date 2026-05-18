@@ -903,41 +903,6 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                         </p>
                       </div>
                      
-                     <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg space-y-2">
-                       <div className="flex items-center gap-2 text-primary">
-                         <Sparkles className="h-3.5 w-3.5" />
-                         <span className="text-xs font-bold">Otimizador Inteligente</span>
-                       </div>
-                        <p className="text-[10px] leading-relaxed">
-                          Análise sólida de background: processamos <strong>10.000 variações</strong> para encontrar a meta ideal para sua banca atual.
-                        </p>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="flex flex-col bg-background/50 p-2 rounded border border-border/50">
-                            <span className="text-[8px] text-muted-foreground uppercase">Meta Atual</span>
-                            <span className="text-xs font-bold text-white">{(targetExtraction * 100).toFixed(0)}%</span>
-                          </div>
-                          <div className="flex flex-col bg-background/50 p-2 rounded border border-border/50">
-                            <span className="text-[8px] text-muted-foreground uppercase">Meta Sugerida</span>
-                            <span className="text-xs font-bold text-emerald-400">{(optimalConfig.target * 100).toFixed(0)}%</span>
-                          </div>
-                        </div>
-                        
-                        <Button 
-                          className="w-full h-8 text-xs gap-2" 
-                          variant="outline"
-                          onClick={() => setTargetExtraction(optimalConfig.target)}
-                          disabled={targetExtraction === optimalConfig.target}
-                        >
-                          <Wand2 className="h-3 w-3" /> Otimizar para {(optimalConfig.target * 100).toFixed(0)}%
-                        </Button>
-
-                        <div className="p-2 bg-yellow-500/5 border border-yellow-500/20 rounded flex gap-2">
-                          <AlertTriangle className="h-3 w-3 text-yellow-500 shrink-0" />
-                          <p className="text-[8px] text-muted-foreground leading-tight">
-                            <strong>Filtro de Viabilidade:</strong> Otimização restrita entre 60% e 85% para preservar o tempo de vida das suas contas.
-                          </p>
-                        </div>
-                     </div>
                    </CardContent>
                  </Card>
                </div>
