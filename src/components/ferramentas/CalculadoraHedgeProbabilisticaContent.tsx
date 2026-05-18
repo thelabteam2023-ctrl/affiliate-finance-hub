@@ -146,9 +146,9 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
            </div>
          </div>
  
-         <div className="space-y-6">
+         <div>
            {activeTab === 'calculadora' ? (
-             <>
+             <div className="space-y-6">
 
         {/* KPIs Section */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
