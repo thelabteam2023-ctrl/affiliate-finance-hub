@@ -1106,24 +1106,34 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                            </div>
                          </div>
 
-                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                           {((targetExtraction === 0.65 || targetExtraction === 0.70 || targetExtraction === 0.75) ? goldenCombinationsByExtraction[targetExtraction.toString()] : goldenCombinationsByExtraction["0.7"]).map((combo, idx) => (
+                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                           {((targetExtraction === 0.65 || targetExtraction === 0.70 || targetExtraction === 0.75) 
+                             ? goldenCombinationsByExtraction[targetExtraction.toString()] 
+                             : goldenCombinationsByExtraction["0.7"]).map((combo, idx) => (
                              <div 
                                key={idx} 
-                               className="p-3 rounded-lg bg-muted/20 border border-border/50 hover:border-primary/50 transition-all cursor-pointer group"
+                               className="p-3 rounded-lg bg-muted/20 border border-border/50 hover:border-primary/50 transition-all cursor-pointer group flex flex-col justify-between"
                                onClick={() => applyGoldenCombo(combo.legs)}
                              >
-                               <div className="flex justify-between items-start mb-1">
-                                 <span className="text-[10px] font-bold text-primary uppercase">{combo.type}</span>
-                                 <Badge variant="secondary" className={`text-[9px] h-4 ${combo.roi.startsWith('-') ? 'bg-red-500/10 text-red-400' : ''}`}>
-                                   {combo.roi} ROI
-                                 </Badge>
+                               <div>
+                                 <div className="flex justify-between items-start mb-1">
+                                   <Badge variant="outline" className={`text-[8px] h-4 uppercase ${combo.type === 'Eficiência de Capital' ? 'text-blue-400 border-blue-400/30' : 'text-emerald-400 border-emerald-400/30'}`}>
+                                     {combo.type}
+                                   </Badge>
+                                   <div className="flex flex-col items-end">
+                                     <span className="text-[10px] font-bold text-white">{combo.roi} ROI</span>
+                                     <span className="text-[8px] text-muted-foreground">ROE: {combo.roe}</span>
+                                   </div>
+                                 </div>
+                                 <h5 className="text-xs font-bold flex items-center gap-2 group-hover:text-primary transition-colors mt-1">
+                                   {combo.name}
+                                   <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
+                                 </h5>
+                                 <p className="text-[9px] text-muted-foreground leading-tight mt-1 mb-2">
+                                   {combo.description}
+                                 </p>
                                </div>
-                               <h5 className="text-sm font-bold flex items-center gap-2 group-hover:text-primary transition-colors">
-                                 {combo.name} ({combo.legs.length} Pernas)
-                                 <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
-                               </h5>
-                               <div className="flex gap-1 mt-2">
+                               <div className="flex flex-wrap gap-1 mt-auto pt-2 border-t border-border/20">
                                  {combo.legs.map((odd: number, i: number) => (
                                    <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-background/50 border border-border/30 font-mono">
                                      {odd.toFixed(2)}
