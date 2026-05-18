@@ -827,10 +827,10 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                             <span className="text-[9px] text-muted-foreground block mb-1">Quebras (Banca)</span>
                             <span className="text-sm font-bold text-red-400">{monteCarloSim.bankruptcies}</span>
                           </div>
-                          <div className="p-3 rounded-lg bg-muted/20 border border-border/50 text-center">
-                            <span className="text-[9px] text-muted-foreground block mb-1">Total Ciclos</span>
-                            <span className="text-sm font-bold text-white">{monteCarloSim.trials}</span>
-                          </div>
+                           <div className="p-3 rounded-lg bg-muted/20 border border-border/50 text-center">
+                             <span className="text-[9px] text-muted-foreground block mb-1">Total Ciclos</span>
+                             <span className="text-sm font-bold text-white">100 Mil</span>
+                           </div>
                         </div>
 
                         <div className="space-y-2">
