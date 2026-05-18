@@ -1,22 +1,20 @@
-## Objetivo
-Melhorar a explicação do **EV (Expected Value)** na Calculadora de Hedge Probabilístico para que o usuário entenda claramente o conceito de retorno médio no longo prazo.
+I will update the mathematical explanations and UI to address your observations about the simulation's assumptions and the visual bugs.
 
-## Alterações Sugeridas
+### 1. Refine Mathematical Explanations
+*   **Withdrawal Assumption**: Clarify in the "Projeção: Dobrar a Banca" card that the simulation assumes **100% reinvestment** (compound interest). I will explain that this represents the "Risk of Ruin" for a dedicated bankroll where all profits fund future operations.
+*   **EV+ vs EV- Behavior**: Add a scientific note in the Laboratory explaining that:
+    *   **EV Positive**: The bankroll is mathematically expected to grow, but high variance (betting too much relative to bankroll) can still lead to ruin before growth takes over.
+    *   **EV Negative**: Ruin is a statistical certainty in the long term, and the probability of doubling the bankroll decreases as more events are played.
 
-### 1. Atualização do Tooltip de EV
-- Modificar o texto do `CardInfoTooltip` para o campo \\"Extração Estimada (EV)\\" para incluir um exemplo de longo prazo:
-  - *\\"O EV (Valor Esperado) é a média matemática do que você ganhará por operação se repeti-la muitas vezes. Por exemplo: se o seu EV é R$ 22,00, após 1.000 operações idênticas, seu retorno total acumulado será de aproximadamente R$ 22.000,00, independentemente do resultado individual de cada uma.\\"*
+### 2. UI and Visual Fixes
+*   **Tooltip Clipping**: Fix the tooltips in the "Simulação Visual de 1.000 Eventos" (currently 100 in the UI code, will ensure consistency). I will add bottom padding to the container and ensure the tooltips have a higher `z-index` and enough space to render below the bars as requested.
+*   **Laboratory Logic**: Ensure the "Meta de Dobra" and "Risco de Ruína" cards are highly visible and explain the "events needed" calculation based on the new sequential simulation data.
 
-### 2. Refinamento do Glossário no Guia de Ajuda
-- No modal \\"Como funciona?\\", aprimorar a seção de **Extração Estimada (EV)** para ser mais didática:
-  - Explicar que em algumas operações você ganhará mais, em outras ganhará menos (ou terá o drawdown), mas a média converge para esse valor.
-  - Adicionar explicitamente a frase: \\"Em mil operações com este EV, seu lucro total esperado seria de R$ [EV * 1000].\\"
+### 3. Polish
+*   Remove any remaining references to the "Dica de Execução" card.
+*   Update the "Como chegamos neste Risco?" section to be more educational about trajectories.
 
-### 3. Melhoria na UI do KPI de EV
-- Adicionar uma pequena etiqueta ou subtexto abaixo do valor do EV indicando \\"Média por operação no longo prazo\\" para reforçar o conceito sem poluir a interface.
-
-## Detalhes Técnicos
-- **Componente**: `src/components/ferramentas/CalculadoraHedgeProbabilisticaContent.tsx`
-  - Editar o `CardInfoTooltip` na linha 123.
-  - Editar a seção de glossário de EV (por volta da linha 565).
-  - Adicionar um subtexto opcional no Card de Extração Estimada.
+### Technical details:
+*   Modify `src/components/ferramentas/CalculadoraHedgeProbabilisticaContent.tsx`.
+*   Increase `pb-x` in the simulation container.
+*   Update strings in `monteCarloSim` UI sections.
