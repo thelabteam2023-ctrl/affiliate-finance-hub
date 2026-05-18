@@ -1654,11 +1654,11 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                     </DndContext>
                   </div>
                 </div>
-              )
-            }
-          </div>
-        </ScrollArea>
-    <Dialog open={!!expanded} onOpenChange={(o) => !o && setExpanded(null)}>
+             )
+           }
+         </div>
+ 
+         <Dialog open={!!expanded} onOpenChange={(o) => !o && setExpanded(null)}>
           <DialogContent className="max-w-2xl">
             <DialogHeader className="mb-4">
               <DialogTitle className="flex items-center gap-2">
@@ -1856,12 +1856,13 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                   <p className="text-xs text-primary leading-relaxed">
                     <strong>Dica de Ouro:</strong> Uma boa extração de FreeBet gira entre 70% e 90% do seu valor nominal. Se o Score estiver "Crítico", considere aumentar as odds ou diminuir a Meta de Extração.
                   </p>
-                </div>
-              </div>
-            </ScrollArea>
-          </DialogContent>
-        </Dialog>
-      </div>
-    </ScrollArea>
-  );
+                   </div>
+                 </div>
+               </ScrollArea>
+             </DialogContent>
+           </Dialog>
+         </div>
+       </div>
+     </ScrollArea>
+   );
 };
