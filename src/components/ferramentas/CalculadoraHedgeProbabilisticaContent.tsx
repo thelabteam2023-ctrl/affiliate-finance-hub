@@ -854,42 +854,56 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                         </ul>
                       </div>
 
-                      {/* Golden Combinations Section */}
-                      <div className="space-y-4 pt-4 border-t border-border/50">
-                        <div className="flex items-center gap-2">
-                          <Trophy className="h-4 w-4 text-yellow-400" />
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Biblioteca de Ouro (Benchmarks)</h4>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {goldenCombinations.map((combo, idx) => (
-                            <div 
-                              key={idx} 
-                              className="p-3 rounded-lg bg-muted/20 border border-border/50 hover:border-primary/50 transition-all cursor-pointer group"
-                              onClick={() => applyGoldenCombo(combo.legs)}
-                            >
+                       {/* Golden Combinations Section */}
+                       <div className="space-y-4 pt-4 border-t border-border/50">
+                         <div className="flex items-center justify-between">
+                           <div className="flex items-center gap-2">
+                             <Trophy className="h-4 w-4 text-yellow-400" />
+                             <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Biblioteca de Ouro</h4>
+                           </div>
+                           <div className="flex gap-1">
+                             {[2.8, 3.0, 4.8, 6.0].map((c) => (
+                               <Button 
+                                 key={c}
+                                 variant={commission === c ? "default" : "outline"}
+                                 size="sm"
+                                 className="h-6 text-[9px] px-2"
+                                 onClick={() => setCommission(c)}
+                               >
+                                 {c}%
+                               </Button>
+                             ))}
+                           </div>
+                         </div>
+                         
+                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                           {(goldenCombinationsByCommission[commission.toFixed(1)] || goldenCombinationsByCommission["2.8"]).map((combo, idx) => (
+                             <div 
+                               key={idx} 
+                               className="p-3 rounded-lg bg-muted/20 border border-border/50 hover:border-primary/50 transition-all cursor-pointer group"
+                               onClick={() => applyGoldenCombo(combo.legs)}
+                             >
                                <div className="flex justify-between items-start mb-1">
-                                 <div className="flex flex-col">
-                                   <span className="text-[10px] font-bold text-primary uppercase">{combo.type}</span>
-                                   <span className="text-[8px] text-muted-foreground">Comissão ref: {combo.commission}</span>
-                                 </div>
-                                 <Badge variant="secondary" className="text-[9px] h-4">{combo.expectedROI} ROI</Badge>
+                                 <span className="text-[10px] font-bold text-primary uppercase">{combo.type}</span>
+                                 <Badge variant="secondary" className={`text-[9px] h-4 ${combo.roi.startsWith('-') ? 'bg-red-500/10 text-red-400' : ''}`}>
+                                   {combo.roi} ROI
+                                 </Badge>
                                </div>
-                              <h5 className="text-sm font-bold flex items-center gap-2 group-hover:text-primary transition-colors">
-                                {combo.name}
-                                <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
-                              </h5>
-                              <p className="text-[10px] text-muted-foreground mb-2 leading-tight">{combo.description}</p>
-                              <div className="flex gap-1">
-                                {combo.legs.map((odd, i) => (
-                                  <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-background/50 border border-border/30 font-mono">
-                                    {odd.toFixed(2)}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+                               <h5 className="text-sm font-bold flex items-center gap-2 group-hover:text-primary transition-colors">
+                                 {combo.name} ({combo.legs.length} Pernas)
+                                 <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
+                               </h5>
+                               <div className="flex gap-1 mt-2">
+                                 {combo.legs.map((odd: number, i: number) => (
+                                   <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-background/50 border border-border/30 font-mono">
+                                     {odd.toFixed(2)}
+                                   </span>
+                                 ))}
+                               </div>
+                             </div>
+                           ))}
+                         </div>
+                       </div>
                     </CardContent>
                   </Card>
                </div>
