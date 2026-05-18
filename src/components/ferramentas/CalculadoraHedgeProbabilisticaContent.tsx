@@ -54,44 +54,78 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
   const goldenCombinationsByExtraction = useMemo(() => {
     const targets = [0.65, 0.70, 0.75];
     const result: Record<string, any[]> = {};
+    
+    // Amostra de odds comuns no mercado para teste
+    const commonOdds = [1.5, 1.7, 1.8, 2.0, 2.2, 2.5, 3.0, 4.0, 5.0, 6.0];
+    const commDec = commission / 100;
 
-    targets.forEach(t => {
-      // Para cada meta, definimos as melhores odds baseadas no equilíbrio matemático
-      // Meta menor (65%) permite odds menores e mais seguras.
-      // Meta maior (75%) exige odds maiores para não ficar inviável.
-      const targetCombos = [
-        { 
-          name: "Duo Otimizado", 
-          legs: t <= 0.65 ? [1.70, 3.50] : t >= 0.75 ? [2.10, 5.50] : [1.80, 4.00] 
-        },
-        { 
-          name: "Triple Otimizado", 
-          legs: t <= 0.65 ? [1.60, 1.60, 3.50] : t >= 0.75 ? [2.00, 2.00, 5.00] : [1.80, 1.80, 4.00] 
-        },
-        { 
-          name: "Quarteto Estável", 
-          legs: t <= 0.65 ? [1.55, 1.55, 1.55, 3.20] : t >= 0.75 ? [1.90, 1.90, 1.90, 4.50] : [1.80, 1.80, 1.80, 4.00] 
-        },
-        { 
-          name: "Full House", 
-          legs: t <= 0.65 ? [1.50, 1.50, 1.50, 1.50, 3.00] : t >= 0.75 ? [1.85, 1.85, 1.85, 1.85, 4.20] : [1.80, 1.80, 1.80, 1.80, 4.00] 
+    targets.forEach(target => {
+      const optimizations: any[] = [];
+      
+      // Para cada número de pernas (2 a 5)
+      [2, 3, 4, 5].forEach(numLegs => {
+        let bestROE = -Infinity;
+        let bestROI = -Infinity;
+        let roeCombo: number[] = [];
+        let roiCombo: number[] = [];
+
+        // Simplificação matemática: testamos pernas iguais + uma perna final variável (âncora)
+        // Isso cobre 90% dos cenários de eficiência prática
+        commonOdds.forEach(baseOdd => {
+          commonOdds.forEach(anchorOdd => {
+            const candidateLegs = Array(numLegs - 1).fill(baseOdd).concat(anchorOdd);
+            const m = HedgeProbabilisticoEngine.calculateMetrics(
+              candidateLegs.map(o => ({ name: '', backOdd: o, layOdd: o })),
+              100,
+              commDec,
+              target
+            );
+
+            if (m.allWonProfit > 0 && m.maxResponsibility > 0) {
+              const roe = m.totalEV / m.maxResponsibility;
+              const roi = m.totalROI;
+
+              if (roe > bestROE) {
+                bestROE = roe;
+                roeCombo = candidateLegs;
+              }
+              if (roi > bestROI) {
+                bestROI = roi;
+                roiCombo = candidateLegs;
+              }
+            }
+          });
+        });
+
+        // Adiciona os dois vencedores matemáticos para esta quantidade de pernas
+        if (roeCombo.length > 0) {
+          const mROE = HedgeProbabilisticoEngine.calculateMetrics(roeCombo.map(o => ({ name: '', backOdd: o, layOdd: o })), 100, commDec, target);
+          optimizations.push({
+            name: `${numLegs} Pernas (Eficiência)`,
+            legs: roeCombo,
+            roi: fmtPct(mROE.totalROI),
+            roe: (mROE.totalEV / mROE.maxResponsibility * 100).toFixed(1) + '%',
+            type: "Eficiência de Capital",
+            description: "Melhor retorno por real exposto na Exchange."
+          });
         }
-      ];
 
-      result[t.toString()] = targetCombos.map(combo => {
-        const m = HedgeProbabilisticoEngine.calculateMetrics(
-          combo.legs.map(odd => ({ name: '', backOdd: odd, layOdd: odd })),
-          100,
-          commission / 100,
-          t
-        );
-        let type = "Estável";
-        if (m.totalROI > 35) type = "Alta Performance";
-        if (m.totalROI < 10) type = "Risco Baixo";
-        if (m.allWonProfit < 0) type = "Inviável";
-        return { ...combo, roi: fmtPct(m.totalROI), type };
+        if (roiCombo.length > 0 && JSON.stringify(roiCombo) !== JSON.stringify(roeCombo)) {
+          const mROI = HedgeProbabilisticoEngine.calculateMetrics(roiCombo.map(o => ({ name: '', backOdd: o, layOdd: o })), 100, commDec, target);
+          optimizations.push({
+            name: `${numLegs} Pernas (ROI Max)`,
+            legs: roiCombo,
+            roi: fmtPct(mROI.totalROI),
+            roe: (mROI.totalEV / mROI.maxResponsibility * 100).toFixed(1) + '%',
+            type: "Alta Performance",
+            description: "Máxima extração bruta da Freebet."
+          });
+        }
       });
+
+      result[target.toString()] = optimizations;
     });
+
     return result;
   }, [commission]);
 
