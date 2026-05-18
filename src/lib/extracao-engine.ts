@@ -247,21 +247,10 @@ export function runMonteCarloSimulation(
   _hedgeEvents: HedgeEvent[],
   iterations = 10000,
 ): MonteCarloResult {
-  const { events, targetExtraction, exchangeCommission } = config;
+  const { events, targetExtraction, exchangeCommission, mode = 'proportional', targetPercent = 100 } = config;
   const backStake = targetExtraction;
   const commissionFactor = exchangeCommission > 0 ? (1 - exchangeCommission) : 1;
   const potentialReturn = backStake * events.reduce((a, e) => a * e.backOdd, 1);
-
-  // Precompute full precision lay data
-  const layStakes: number[] = [];
-  const liabilities: number[] = [];
-  for (let i = 0; i < events.length; i++) {
-    let oddAcum = 1;
-    for (let j = 0; j <= i; j++) oddAcum *= events[j].backOdd;
-    const ls = (backStake * oddAcum) / events[i].layOdd;
-    layStakes.push(ls);
-    liabilities.push(ls * (events[i].layOdd - 1));
-  }
 
   const results: number[] = [];
   const layUsage: number[] = new Array(events.length).fill(0);
@@ -269,14 +258,32 @@ export function runMonteCarloSimulation(
   for (let iter = 0; iter < iterations; iter++) {
     let result = 0;
     let allWon = true;
+    const currentLiabilities: number[] = [];
+    const currentLayStakes: number[] = [];
 
     for (let i = 0; i < events.length; i++) {
       layUsage[i]++;
+      
+      let currentLayStake = 0;
+      if (mode === 'target') {
+        const targetValue = backStake * (targetPercent / 100);
+        const paidLiabilities = currentLiabilities.reduce((s, l) => s + l, 0);
+        currentLayStake = (targetValue + paidLiabilities) / commissionFactor;
+      } else {
+        let oddAcum = 1;
+        for (let j = 0; j <= i; j++) oddAcum *= events[j].backOdd;
+        currentLayStake = (backStake * oddAcum) / events[i].layOdd;
+      }
+      
+      currentLayStakes.push(currentLayStake);
+      const currentLiability = currentLayStake * (events[i].layOdd - 1);
+      currentLiabilities.push(currentLiability);
+
       const probWin = 1 / events[i].backOdd;
       if (Math.random() > probWin) {
         // Back loses at event i → freebet model
-        const paidLiabilities = liabilities.slice(0, i).reduce((s, l) => s + l, 0);
-        result = layStakes[i] * commissionFactor - paidLiabilities;
+        const paidLiabilities = currentLiabilities.slice(0, i).reduce((s, l) => s + l, 0);
+        result = currentLayStakes[i] * commissionFactor - paidLiabilities;
         allWon = false;
         break;
       }
@@ -284,7 +291,7 @@ export function runMonteCarloSimulation(
 
     if (allWon) {
       // All events won → freebet pays, all lays lost
-      result = potentialReturn - liabilities.reduce((s, l) => s + l, 0);
+      result = potentialReturn - currentLiabilities.reduce((s, l) => s + l, 0);
     }
 
     results.push(Math.round(result * 100) / 100);
