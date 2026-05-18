@@ -124,7 +124,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
         }
       });
 
-      result[target.toString()] = optimizations;
+      result[target.toFixed(2)] = optimizations;
     });
 
     return result;
