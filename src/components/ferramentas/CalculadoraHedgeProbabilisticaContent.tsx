@@ -838,29 +838,31 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                         </div>
                         <div className="text-xs space-y-2 leading-relaxed">
                           <p>
-                            O Risco de Ruína ({fmtPct(riskOfRuin)}) é calculado usando o modelo de <strong>Variância Probabilística</strong>.
+                            O Risco de Ruína ({fmtPct(riskOfRuin)}) é calculado via <strong>Simulação de Trajetória</strong> (Monte Carlo).
                           </p>
-                           <div className="bg-background/50 p-3 rounded font-mono text-[10px] border border-border/40">
-                             RoR = exp(-2 * EV * Banca / Variância)
+                           <div className="bg-background/50 p-3 rounded font-mono text-[9px] border border-border/40 leading-relaxed text-muted-foreground">
+                             Diferente de fórmulas estáticas, simulamos 5.000 jornadas reais. O risco aumenta drasticamente se a exposição (R$ {fmt(metrics.maxResponsibility)}) for alta em relação à banca (R$ {fmt(bankroll)}).
                            </div>
                            <div className="space-y-3">
                              <p className="text-muted-foreground italic">
-                               Isso significa que em uma série infinita de operações idênticas, a probabilidade de sua banca de R$ {fmt(bankroll)} chegar a zero antes de atingir o lucro esperado é de {fmtPct(riskOfRuin)}.
+                               Neste cenário, a probabilidade de sua banca ser consumida pela variância antes de atingir o lucro de longo prazo é de {fmtPct(riskOfRuin)}.
                              </p>
                              
-                             <div className="p-3 bg-red-500/5 border border-red-500/20 rounded-md">
-                               <h5 className="text-[10px] font-bold text-red-400 uppercase mb-2 flex items-center gap-2">
+                             <div className={`p-3 border rounded-md ${monteCarloSim.riskOfRuin10 > 5 ? 'bg-red-500/10 border-red-500/20' : 'bg-muted/30 border-border/50'}`}>
+                               <h5 className={`text-[10px] font-bold uppercase mb-2 flex items-center gap-2 ${monteCarloSim.riskOfRuin10 > 5 ? 'text-red-400' : 'text-muted-foreground'}`}>
                                  <ShieldAlert className="h-3 w-3" /> Horizonte de Curto Prazo (10 Bilhetes)
                                </h5>
                                <div className="flex justify-between items-center">
                                  <span className="text-[10px] text-muted-foreground">Prob. de Quebra (Próx. 10):</span>
-                                 <span className="text-sm font-bold text-red-400">
-                                   {fmtPct((1 - Math.pow(1 - (riskOfRuin / 100), 10/1000)) * 100)}
+                                 <span className={`text-sm font-bold ${monteCarloSim.riskOfRuin10 > 5 ? 'text-red-400' : 'text-white'}`}>
+                                   {fmtPct(monteCarloSim.riskOfRuin10)}
                                  </span>
                                </div>
-                               <p className="text-[9px] text-muted-foreground mt-1 leading-tight">
-                                 *Estimativa baseada na variância acumulada para uma sequência imediata de 10 operações.
-                               </p>
+                               {monteCarloSim.riskOfRuin10 > 5 && (
+                                 <p className="text-[9px] text-red-400/80 mt-1 leading-tight">
+                                   ⚠️ Perigo: Exposição de {((metrics.maxResponsibility / bankroll) * 100).toFixed(1)}% da banca é crítica para o curto prazo.
+                                 </p>
+                               )}
                              </div>
                            </div>
                         </div>
