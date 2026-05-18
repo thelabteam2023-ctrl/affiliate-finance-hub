@@ -27,7 +27,48 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
 
-export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
+ const goldenCombinations = [
+   {
+     name: "Duo Conservador",
+     description: "Foco em saída rápida e baixo risco.",
+     legs: [2.0, 2.0],
+     expectedROI: "35%",
+     type: "Segurança"
+   },
+   {
+     name: "Triple Threat",
+     description: "O equilíbrio perfeito entre risco e retorno.",
+     legs: [2.0, 2.2, 2.5],
+     expectedROI: "52%",
+     type: "Equilibrado"
+   },
+   {
+     name: "Mestre da Extração",
+     description: "Maximiza o ROI em 3 eventos selecionados.",
+     legs: [2.5, 2.8, 3.2],
+     expectedROI: "68%",
+     type: "Alta Performance"
+   },
+   {
+     name: "Cascata Longa",
+     description: "Para extrações agressivas em 5 eventos.",
+     legs: [1.8, 1.8, 1.8, 1.8, 1.8],
+     expectedROI: "45%",
+     type: "Estratégico"
+   }
+ ];
+
+ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
+   const applyGoldenCombo = (comboLegs: number[]) => {
+     const newLegs = comboLegs.map((odd, i) => ({
+       name: `Evento ${i + 1}`,
+       backOdd: odd,
+       layOdd: odd
+     }));
+     setLegs(newLegs);
+     setActiveTab('calculadora');
+   };
+
   const [freebet, setFreebet] = useState(100);
   const [commission, setCommission] = useState(2.8);
    const [targetExtraction, setTargetExtraction] = useState(0.7);
