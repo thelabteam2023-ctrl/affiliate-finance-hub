@@ -14,8 +14,12 @@ export interface EventInput {
   layOdd: number;  // odd na exchange
 }
 
+ export type ExtractionMode = 'proportional' | 'target';
+ 
 export interface ExtractionConfig {
   targetExtraction: number;       // valor do bônus/freebet a converter
+  targetPercent?: number;          // para modo 'target', ex: 80 para 80%
+  mode?: ExtractionMode;
   bankrollAvailable: number;      // capital disponível para hedge
   exchangeCommission: number;     // ex: 0.028 = 2.8 %
   events: EventInput[];           // 2–5 eventos com odds reais
@@ -75,7 +79,7 @@ export interface MonteCarloResult {
  * Calcula o hedge sequencial determinístico a partir de odds reais.
  */
 export function calculateDeterministicHedge(config: ExtractionConfig): StrategyResults {
-  const { events, targetExtraction, exchangeCommission } = config;
+  const { events, targetExtraction, exchangeCommission, mode = 'proportional', targetPercent = 100 } = config;
   const backStake = targetExtraction; // freebet value
   const commissionFactor = exchangeCommission > 0 ? (1 - exchangeCommission) : 1;
 
@@ -87,12 +91,21 @@ export function calculateDeterministicHedge(config: ExtractionConfig): StrategyR
   const liabilities: number[] = [];
 
   for (let i = 0; i < events.length; i++) {
-    let oddAcumulada = 1;
-    for (let j = 0; j <= i; j++) oddAcumulada *= events[j].backOdd;
-    const retornoAcumulado = backStake * oddAcumulada;
-    const ls = retornoAcumulado / events[i].layOdd;
-    layStakes.push(ls);
-    liabilities.push(ls * (events[i].layOdd - 1));
+    if (mode === 'target') {
+      const targetValue = backStake * (targetPercent / 100);
+      const paidLiabilities = liabilities.reduce((s, l) => s + l, 0);
+      // ls * commissionFactor - paidLiabilities = targetValue
+      const ls = (targetValue + paidLiabilities) / commissionFactor;
+      layStakes.push(ls);
+      liabilities.push(ls * (events[i].layOdd - 1));
+    } else {
+      let oddAcumulada = 1;
+      for (let j = 0; j <= i; j++) oddAcumulada *= events[j].backOdd;
+      const retornoAcumulado = backStake * oddAcumulada;
+      const ls = retornoAcumulado / events[i].layOdd;
+      layStakes.push(ls);
+      liabilities.push(ls * (events[i].layOdd - 1));
+    }
   }
 
   // Net cash for each scenario (freebet model: back stake is free money)
