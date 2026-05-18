@@ -234,12 +234,13 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[180px]">Evento</TableHead>
-                      <TableHead>Odd Back</TableHead>
-                      <TableHead>Odd Lay</TableHead>
-                      <TableHead className="text-right">Lay Stake</TableHead>
-                      <TableHead className="text-right">Respons.</TableHead>
-                      <TableHead className="w-[50px]"></TableHead>
+                       <TableHead className="w-[140px]">Evento</TableHead>
+                       <TableHead>Odd B/L</TableHead>
+                       <TableHead className="text-right">Stake</TableHead>
+                       <TableHead className="text-right">Resp.</TableHead>
+                       <TableHead className="text-right">R. Acum</TableHead>
+                       <TableHead className="text-right font-bold">Exp. Tot</TableHead>
+                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -254,28 +255,36 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
                               className="h-8 text-xs"
                             />
                           </TableCell>
-                          <TableCell>
-                            <Input 
-                              type="number"
-                              value={leg.backOdd} 
-                              onChange={(e) => updateLeg(index, 'backOdd', Number(e.target.value))}
-                              className="h-8 text-xs font-mono w-20"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input 
-                              type="number"
-                              value={leg.layOdd} 
-                              onChange={(e) => updateLeg(index, 'layOdd', Number(e.target.value))}
-                              className="h-8 text-xs font-mono w-20"
-                            />
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-blue-400">
-                            R$ {fmt(calcLeg.layStake)}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-red-400">
-                            R$ {fmt(calcLeg.responsibility)}
-                          </TableCell>
+                           <TableCell>
+                             <div className="flex flex-col gap-1">
+                               <Input 
+                                 type="number"
+                                 value={leg.backOdd} 
+                                 onChange={(e) => updateLeg(index, 'backOdd', Number(e.target.value))}
+                                 className="h-7 text-[10px] font-mono w-16"
+                                 placeholder="Back"
+                               />
+                               <Input 
+                                 type="number"
+                                 value={leg.layOdd} 
+                                 onChange={(e) => updateLeg(index, 'layOdd', Number(e.target.value))}
+                                 className="h-7 text-[10px] font-mono w-16"
+                                 placeholder="Lay"
+                               />
+                             </div>
+                           </TableCell>
+                           <TableCell className="text-right font-mono text-blue-400 text-xs">
+                             R$ {fmt(calcLeg.layStake)}
+                           </TableCell>
+                           <TableCell className="text-right font-mono text-red-400 text-xs">
+                             R$ {fmt(calcLeg.responsibility)}
+                           </TableCell>
+                           <TableCell className="text-right font-mono text-muted-foreground text-[10px]">
+                             R$ {fmt(calcLeg.cumulativeResponsibility)}
+                           </TableCell>
+                           <TableCell className="text-right font-mono text-orange-400 font-bold text-xs">
+                             R$ {fmt(calcLeg.totalExposure)}
+                           </TableCell>
                           <TableCell>
                             <Button 
                               variant="ghost" 
