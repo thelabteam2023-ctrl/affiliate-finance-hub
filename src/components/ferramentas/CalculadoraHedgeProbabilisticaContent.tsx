@@ -146,9 +146,9 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
            </div>
          </div>
  
-         <div>
-           {activeTab === 'calculadora' ? (
-             <div className="space-y-6">
+         <div className="space-y-6">
+            {activeTab === 'calculadora' ? (
+              <>
 
         {/* KPIs Section */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -482,7 +482,6 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                 </div>
               </CardContent>
             </Card>
-          </div>
              </>
            ) : (
              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
