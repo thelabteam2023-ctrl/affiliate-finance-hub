@@ -873,7 +873,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <LineChart className="h-4 w-4 text-emerald-400" />
-                             <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Simulação Real (100.000 Eventos)</h4>
+                             <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Simulação Real (5.000 Trajetórias)</h4>
                           </div>
                           <Badge variant="outline" className="text-[9px] text-emerald-400 border-emerald-500/30">
                             Monte Carlo Run
@@ -895,7 +895,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                           </div>
                            <div className="p-3 rounded-lg bg-muted/20 border border-border/50 text-center">
                              <span className="text-[9px] text-muted-foreground block mb-1">Total Ciclos</span>
-                             <span className="text-sm font-bold text-white">100 Mil</span>
+                             <span className="text-sm font-bold text-white">5.000</span>
                            </div>
                         </div>
 
