@@ -1282,7 +1282,9 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                  </div>
 
                 </div>
+              </div>
             )}
+               <div className="md:col-span-2 space-y-6">
                <div className="md:col-span-2 space-y-6">
                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                    <Card className="border-l-4 border-l-red-500">
@@ -1630,9 +1632,9 @@ Para corrigir, reduza a Meta de Extração no slider.`}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <span className="text-[10px] text-muted-foreground uppercase">Resultado</span>
-                  <p className={`text-lg font-bold font-mono ${expanded && expanded.result >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                    R$ {fmt(expanded?.result || 0)}
-                  </p>
+               </div>
+             </div>
+            )}
                 </div>
                 <div className="space-y-1">
                   <span className="text-[10px] text-muted-foreground uppercase">Exposição Máx.</span>
