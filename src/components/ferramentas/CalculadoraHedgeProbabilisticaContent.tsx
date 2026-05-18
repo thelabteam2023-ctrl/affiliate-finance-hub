@@ -586,21 +586,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
             ) : (
              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                <div className="md:col-span-1 space-y-6">
-                   <div className="space-y-4">
-                     <Card className="bg-primary/5 border-primary/20">
-                       <CardContent className="pt-6">
-                         <div className="flex items-start gap-3">
-                           <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                           <div className="space-y-1">
-                             <p className="text-sm font-medium text-primary">Dica de Execução</p>
-                             <p className="text-xs text-muted-foreground leading-relaxed">
-                               Os valores na coluna <span className="text-blue-400 font-mono">Stake Lay</span> são os que você deve inserir diretamente na sua Exchange (ex: Betfair) ao fazer a contra-aposta.
-                             </p>
-                           </div>
-                         </div>
-                       </CardContent>
-                     </Card>
-
+                    <div className="space-y-4">
                       <Card className="bg-emerald-500/5 border-emerald-500/20 overflow-hidden">
                         <div className="bg-emerald-500/10 px-4 py-2 border-b border-emerald-500/20">
                           <h4 className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
@@ -618,7 +604,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                   className={`flex-1 rounded-t-sm transition-all cursor-help relative group ${isWin ? 'bg-emerald-500/40 hover:bg-emerald-400' : 'bg-red-500/40 hover:bg-red-400'}`}
                                   style={{ height: `${height}%` }}
                                 >
-                                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-popover text-[9px] text-popover-foreground rounded border border-border shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none z-50 whitespace-nowrap">
+                                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2 py-1 bg-popover text-[9px] text-popover-foreground rounded border border-border shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none z-[60] whitespace-nowrap">
                                     <div className="font-bold">{isWin ? 'LUCRO' : 'PREJUÍZO'}</div>
                                     <div>Resultado: R$ {fmt(s)}</div>
                                     <div className="text-muted-foreground">Ciclo #{i + 1}</div>
@@ -657,10 +643,17 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                             </p>
                           </div>
                         </div>
-                        <p className="text-[10px] text-muted-foreground leading-relaxed italic border-t border-border/40 pt-2">
-                          Para dobrar sua banca de R$ {fmt(bankroll)}, você precisaria realizar aproximadamente <strong>{Math.ceil(bankroll / metrics.totalEV)} operações</strong> bem-sucedidas. 
-                          A chance matemática de atingir esse objetivo antes da ruína é de <strong>{fmtPct((1 - (riskOfRuin / 100)) * 100)}</strong>.
-                        </p>
+                        <div className="text-[10px] text-muted-foreground leading-relaxed italic border-t border-border/40 pt-2 space-y-2">
+                          <p>
+                            <strong>Explicação da Projeção:</strong> Com uma Freebet de R$ {fmt(freebet)}, seu lucro médio esperado por operação (EV) é de R$ {fmt(metrics.totalEV)}.
+                          </p>
+                          <p>
+                            Para ganhar R$ {fmt(bankroll)} extras e dobrar sua banca atual, são necessários <strong>{Math.ceil(bankroll / metrics.totalEV)} bilhetes</strong> no longo prazo.
+                          </p>
+                          <p>
+                            A chance de completar essa jornada antes de sofrer uma quebra é de <strong>{fmtPct((1 - (riskOfRuin / 100)) * 100)}</strong>.
+                          </p>
+                        </div>
                       </div>
 
                    </div>
