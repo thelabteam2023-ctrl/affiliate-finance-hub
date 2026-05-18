@@ -27,7 +27,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
 export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
   const [freebet, setFreebet] = useState(100);
   const [commission, setCommission] = useState(2.8);
-   const [targetExtraction, setTargetExtraction] = useState(0.8);
+    const [targetExtraction, setTargetExtraction] = useState(1.0);
   const [legs, setLegs] = useState<LegInput[]>([
     { name: 'Evento 1', backOdd: 2.0, layOdd: 2.0 },
     { name: 'Evento 2', backOdd: 2.0, layOdd: 2.0 }
@@ -193,23 +193,29 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
                     className="h-9 text-sm"
                   />
                 </div>
-                <div className="space-y-2 pt-2">
+                <div className="space-y-4 pt-2">
                   <div className="flex justify-between items-center">
                     <Label className="text-xs flex items-center gap-1">
                       Meta de Extração (%)
-                      <CardInfoTooltip title="Meta de Extração" description="Define quanto você deseja extrair da FreeBet. Valores maiores aumentam o lucro mas exigem mais responsabilidade (banca) na Exchange." />
+                      <CardInfoTooltip 
+                        title="Meta de Extração" 
+                        description="Define quanto você deseja extrair da FreeBet. Em 100%, você busca o lucro máximo, o que exige mais banca na Exchange. Reduzir a meta diminui a responsabilidade necessária." 
+                      />
                     </Label>
-                    <span className="text-xs font-mono text-primary">{Math.round(targetExtraction * 100)}%</span>
+                    <span className="text-xs font-mono text-primary font-bold">{Math.round(targetExtraction * 100)}%</span>
                   </div>
-                  <Input 
-                    type="number" 
-                    value={Math.round(targetExtraction * 100)} 
-                    onChange={(e) => setTargetExtraction(Number(e.target.value) / 100)}
-                    className="h-9 text-sm"
+                  <Slider 
+                    value={[targetExtraction * 100]} 
+                    min={0} 
+                    max={100} 
+                    step={1}
+                    onValueChange={(vals) => setTargetExtraction(vals[0] / 100)}
+                    className="py-4"
                   />
-                  <p className="text-[10px] text-muted-foreground italic">
-                    Sugerido: 70% a 90% para operações equilibradas.
-                  </p>
+                  <div className="flex justify-between text-[10px] text-muted-foreground italic">
+                    <span>Menos Banca</span>
+                    <span>Extração Máxima</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -261,47 +267,51 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <Table>
-                  <TableHeader>
-                    <TableRow>
-                       <TableHead className="w-[140px]">Evento</TableHead>
-                       <TableHead>Odd B/L</TableHead>
-                       <TableHead className="text-right">Stake</TableHead>
-                       <TableHead className="text-right">Resp.</TableHead>
-                       <TableHead className="text-right">R. Acum</TableHead>
-                       <TableHead className="text-right font-bold">Exp. Tot</TableHead>
-                       <TableHead className="w-[50px]"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {legs.map((leg, index) => {
-                      const calcLeg = metrics.legs[index];
-                      return (
-                        <TableRow key={index}>
-                          <TableCell className="font-medium">
-                            <Input 
-                              value={leg.name} 
-                              onChange={(e) => updateLeg(index, 'name', e.target.value)}
-                              className="h-8 text-xs"
-                            />
-                          </TableCell>
-                           <TableCell>
-                             <div className="flex flex-col gap-1">
-                               <Input 
-                                 type="number"
-                                 value={leg.backOdd} 
-                                 onChange={(e) => updateLeg(index, 'backOdd', Number(e.target.value))}
-                                 className="h-7 text-[10px] font-mono w-16"
-                                 placeholder="Back"
-                               />
-                               <Input 
-                                 type="number"
-                                 value={leg.layOdd} 
-                                 onChange={(e) => updateLeg(index, 'layOdd', Number(e.target.value))}
-                                 className="h-7 text-[10px] font-mono w-16"
-                                 placeholder="Lay"
-                               />
-                             </div>
+                   <TableHeader>
+                     <TableRow>
+                        <TableHead className="w-[120px]">Evento</TableHead>
+                        <TableHead className="w-[180px]">Odds (Back / Lay)</TableHead>
+                        <TableHead className="text-right">Stake</TableHead>
+                        <TableHead className="text-right">Resp.</TableHead>
+                        <TableHead className="text-right">R. Acum</TableHead>
+                        <TableHead className="text-right font-bold">Exp. Tot</TableHead>
+                        <TableHead className="w-[50px]"></TableHead>
+                     </TableRow>
+                   </TableHeader>
+                   <TableBody>
+                     {legs.map((leg, index) => {
+                       const calcLeg = metrics.legs[index];
+                       return (
+                         <TableRow key={index}>
+                           <TableCell className="font-medium">
+                             <Input 
+                               value={leg.name} 
+                               onChange={(e) => updateLeg(index, 'name', e.target.value)}
+                               className="h-8 text-xs"
+                             />
                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div className="relative">
+                                  <span className="absolute -top-3 left-1 text-[8px] text-muted-foreground uppercase">Back</span>
+                                  <Input 
+                                    type="number"
+                                    value={leg.backOdd} 
+                                    onChange={(e) => updateLeg(index, 'backOdd', Number(e.target.value))}
+                                    className="h-8 text-[11px] font-mono w-16"
+                                  />
+                                </div>
+                                <div className="relative">
+                                  <span className="absolute -top-3 left-1 text-[8px] text-muted-foreground uppercase">Lay</span>
+                                  <Input 
+                                    type="number"
+                                    value={leg.layOdd} 
+                                    onChange={(e) => updateLeg(index, 'layOdd', Number(e.target.value))}
+                                    className="h-8 text-[11px] font-mono w-16"
+                                  />
+                                </div>
+                              </div>
+                            </TableCell>
                            <TableCell className="text-right font-mono text-blue-400 text-xs">
                              R$ {fmt(calcLeg.layStake)}
                            </TableCell>
