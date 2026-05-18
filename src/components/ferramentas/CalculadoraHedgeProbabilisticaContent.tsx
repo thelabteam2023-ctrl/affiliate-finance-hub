@@ -54,44 +54,78 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
   const goldenCombinationsByExtraction = useMemo(() => {
     const targets = [0.65, 0.70, 0.75];
     const result: Record<string, any[]> = {};
+    
+    // Amostra de odds comuns no mercado para teste
+    const commonOdds = [1.5, 1.7, 1.8, 2.0, 2.2, 2.5, 3.0, 4.0, 5.0, 6.0];
+    const commDec = commission / 100;
 
-    targets.forEach(t => {
-      // Para cada meta, definimos as melhores odds baseadas no equilíbrio matemático
-      // Meta menor (65%) permite odds menores e mais seguras.
-      // Meta maior (75%) exige odds maiores para não ficar inviável.
-      const targetCombos = [
-        { 
-          name: "Duo Otimizado", 
-          legs: t <= 0.65 ? [1.70, 3.50] : t >= 0.75 ? [2.10, 5.50] : [1.80, 4.00] 
-        },
-        { 
-          name: "Triple Otimizado", 
-          legs: t <= 0.65 ? [1.60, 1.60, 3.50] : t >= 0.75 ? [2.00, 2.00, 5.00] : [1.80, 1.80, 4.00] 
-        },
-        { 
-          name: "Quarteto Estável", 
-          legs: t <= 0.65 ? [1.55, 1.55, 1.55, 3.20] : t >= 0.75 ? [1.90, 1.90, 1.90, 4.50] : [1.80, 1.80, 1.80, 4.00] 
-        },
-        { 
-          name: "Full House", 
-          legs: t <= 0.65 ? [1.50, 1.50, 1.50, 1.50, 3.00] : t >= 0.75 ? [1.85, 1.85, 1.85, 1.85, 4.20] : [1.80, 1.80, 1.80, 1.80, 4.00] 
+    targets.forEach(target => {
+      const optimizations: any[] = [];
+      
+      // Para cada número de pernas (2 a 5)
+      [2, 3, 4, 5].forEach(numLegs => {
+        let bestROE = -Infinity;
+        let bestROI = -Infinity;
+        let roeCombo: number[] = [];
+        let roiCombo: number[] = [];
+
+        // Simplificação matemática: testamos pernas iguais + uma perna final variável (âncora)
+        // Isso cobre 90% dos cenários de eficiência prática
+        commonOdds.forEach(baseOdd => {
+          commonOdds.forEach(anchorOdd => {
+            const candidateLegs = Array(numLegs - 1).fill(baseOdd).concat(anchorOdd);
+            const m = HedgeProbabilisticoEngine.calculateMetrics(
+              candidateLegs.map(o => ({ name: '', backOdd: o, layOdd: o })),
+              100,
+              commDec,
+              target
+            );
+
+            if (m.allWonProfit > 0 && m.maxResponsibility > 0) {
+              const roe = m.totalEV / m.maxResponsibility;
+              const roi = m.totalROI;
+
+              if (roe > bestROE) {
+                bestROE = roe;
+                roeCombo = candidateLegs;
+              }
+              if (roi > bestROI) {
+                bestROI = roi;
+                roiCombo = candidateLegs;
+              }
+            }
+          });
+        });
+
+        // Adiciona os dois vencedores matemáticos para esta quantidade de pernas
+        if (roeCombo.length > 0) {
+          const mROE = HedgeProbabilisticoEngine.calculateMetrics(roeCombo.map(o => ({ name: '', backOdd: o, layOdd: o })), 100, commDec, target);
+          optimizations.push({
+            name: `${numLegs} Pernas (Eficiência)`,
+            legs: roeCombo,
+            roi: fmtPct(mROE.totalROI),
+            roe: (mROE.totalEV / mROE.maxResponsibility * 100).toFixed(1) + '%',
+            type: "Eficiência de Capital",
+            description: "Melhor retorno por real exposto na Exchange."
+          });
         }
-      ];
 
-      result[t.toString()] = targetCombos.map(combo => {
-        const m = HedgeProbabilisticoEngine.calculateMetrics(
-          combo.legs.map(odd => ({ name: '', backOdd: odd, layOdd: odd })),
-          100,
-          commission / 100,
-          t
-        );
-        let type = "Estável";
-        if (m.totalROI > 35) type = "Alta Performance";
-        if (m.totalROI < 10) type = "Risco Baixo";
-        if (m.allWonProfit < 0) type = "Inviável";
-        return { ...combo, roi: fmtPct(m.totalROI), type };
+        if (roiCombo.length > 0 && JSON.stringify(roiCombo) !== JSON.stringify(roeCombo)) {
+          const mROI = HedgeProbabilisticoEngine.calculateMetrics(roiCombo.map(o => ({ name: '', backOdd: o, layOdd: o })), 100, commDec, target);
+          optimizations.push({
+            name: `${numLegs} Pernas (ROI Max)`,
+            legs: roiCombo,
+            roi: fmtPct(mROI.totalROI),
+            roe: (mROI.totalEV / mROI.maxResponsibility * 100).toFixed(1) + '%',
+            type: "Alta Performance",
+            description: "Máxima extração bruta da Freebet."
+          });
+        }
       });
+
+      result[target.toString()] = optimizations;
     });
+
     return result;
   }, [commission]);
 
@@ -1072,24 +1106,34 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                            </div>
                          </div>
 
-                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                           {((targetExtraction === 0.65 || targetExtraction === 0.70 || targetExtraction === 0.75) ? goldenCombinationsByExtraction[targetExtraction.toString()] : goldenCombinationsByExtraction["0.7"]).map((combo, idx) => (
+                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                           {((targetExtraction === 0.65 || targetExtraction === 0.70 || targetExtraction === 0.75) 
+                             ? goldenCombinationsByExtraction[targetExtraction.toString()] 
+                             : goldenCombinationsByExtraction["0.7"]).map((combo, idx) => (
                              <div 
                                key={idx} 
-                               className="p-3 rounded-lg bg-muted/20 border border-border/50 hover:border-primary/50 transition-all cursor-pointer group"
+                               className="p-3 rounded-lg bg-muted/20 border border-border/50 hover:border-primary/50 transition-all cursor-pointer group flex flex-col justify-between"
                                onClick={() => applyGoldenCombo(combo.legs)}
                              >
-                               <div className="flex justify-between items-start mb-1">
-                                 <span className="text-[10px] font-bold text-primary uppercase">{combo.type}</span>
-                                 <Badge variant="secondary" className={`text-[9px] h-4 ${combo.roi.startsWith('-') ? 'bg-red-500/10 text-red-400' : ''}`}>
-                                   {combo.roi} ROI
-                                 </Badge>
+                               <div>
+                                 <div className="flex justify-between items-start mb-1">
+                                   <Badge variant="outline" className={`text-[8px] h-4 uppercase ${combo.type === 'Eficiência de Capital' ? 'text-blue-400 border-blue-400/30' : 'text-emerald-400 border-emerald-400/30'}`}>
+                                     {combo.type}
+                                   </Badge>
+                                   <div className="flex flex-col items-end">
+                                     <span className="text-[10px] font-bold text-white">{combo.roi} ROI</span>
+                                     <span className="text-[8px] text-muted-foreground">ROE: {combo.roe}</span>
+                                   </div>
+                                 </div>
+                                 <h5 className="text-xs font-bold flex items-center gap-2 group-hover:text-primary transition-colors mt-1">
+                                   {combo.name}
+                                   <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
+                                 </h5>
+                                 <p className="text-[9px] text-muted-foreground leading-tight mt-1 mb-2">
+                                   {combo.description}
+                                 </p>
                                </div>
-                               <h5 className="text-sm font-bold flex items-center gap-2 group-hover:text-primary transition-colors">
-                                 {combo.name} ({combo.legs.length} Pernas)
-                                 <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
-                               </h5>
-                               <div className="flex gap-1 mt-2">
+                               <div className="flex flex-wrap gap-1 mt-auto pt-2 border-t border-border/20">
                                  {combo.legs.map((odd: number, i: number) => (
                                    <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-background/50 border border-border/30 font-mono">
                                      {odd.toFixed(2)}
