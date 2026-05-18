@@ -565,8 +565,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
                  </TabsTrigger>
                </TabsList>
              </Tabs>
-           </div>
-         </div>
+                        </div>
  
          <div className="space-y-6">
             {activeTab === 'calculadora' ? (
