@@ -803,7 +803,7 @@ A Taxa de Extração é o ROI (Retorno sobre Investimento) calculado especificam
                   <Input 
                     type="number" 
                     value={freebet} 
-                    onChange={(e) => setFreebet(Number(e.target.value))}
+                    onChange={(e) => setFreebet(Number(e.target.value)})
                     className="h-9 text-sm"
                   />
                 </div>
@@ -816,7 +816,7 @@ A Taxa de Extração é o ROI (Retorno sobre Investimento) calculado especificam
                     type="number" 
                     step="0.1"
                     value={commission} 
-                    onChange={(e) => setCommission(Number(e.target.value))}
+                    onChange={(e) => setCommission(Number(e.target.value)})
                     className="h-9 text-sm"
                   />
                 </div>
@@ -967,7 +967,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                   <Input 
                                     type="number"
                                     value={leg.backOdd} 
-                                    onChange={(e) => updateLeg(index, 'backOdd', Number(e.target.value))}
+                                    onChange={(e) => updateLeg(index, 'backOdd', Number(e.target.value)})
                                     className="h-8 text-[11px] font-mono w-16"
                                   />
                                 </div>
@@ -976,7 +976,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                   <Input 
                                     type="number"
                                     value={leg.layOdd} 
-                                    onChange={(e) => updateLeg(index, 'layOdd', Number(e.target.value))}
+                                    onChange={(e) => updateLeg(index, 'layOdd', Number(e.target.value)})
                                     className="h-8 text-[11px] font-mono w-16"
                                   />
                                 </div>
@@ -1219,7 +1219,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                           <Input 
                                             type="number" 
                                             value={freebet} 
-                                            onChange={(e) => setFreebet(Number(e.target.value))}
+                                            onChange={(e) => setFreebet(Number(e.target.value)})
                                             className="h-10 pl-8 font-mono text-sm"
                                           />
                                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">R$</span>
@@ -1235,7 +1235,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                           <Input 
                                             type="number" 
                                             value={bankroll} 
-                                            onChange={(e) => setBankroll(Number(e.target.value))}
+                                            onChange={(e) => setBankroll(Number(e.target.value)})
                                             className="h-10 pl-8 font-mono text-sm"
                                           />
                                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">R$</span>
@@ -2217,7 +2217,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                     </Badge>
                                   </div>
                                   <p className="text-[10px] text-muted-foreground leading-relaxed italic">
-                                    Se o Back não atingir {liveInput.backOddProjected.toFixed(2)} e você precisar fechar o hedge no spread atual ({liveInput.backOddActual.toFixed(2)}, 
+                                    Se o Back não atingir {liveInput.backOddProjected.toFixed(2)} e você precisar fechar o hedge no spread atual ({liveInput.backOddActual.toFixed(2)}), 
                                     seu lucro será reduzido em <strong>R$ {fmt(liveResults.expectedProfit - liveResults.sensitivity[0].profit)}</strong>.
                                   </p>
                                 </div>
