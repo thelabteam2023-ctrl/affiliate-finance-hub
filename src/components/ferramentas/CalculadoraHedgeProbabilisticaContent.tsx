@@ -639,21 +639,50 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                      </CardTitle>
                    </CardHeader>
                    <CardContent className="space-y-4">
-                     <div className="space-y-2">
-                       <Label className="text-xs">Sua Banca Disponível (R$)</Label>
-                       <div className="relative">
-                         <Input 
-                           type="number" 
-                           value={bankroll} 
-                           onChange={(e) => setBankroll(Number(e.target.value))}
-                           className="pl-8"
-                         />
-                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">R$</span>
-                       </div>
-                       <p className="text-[10px] text-muted-foreground italic">
-                         Define o limite de exposição máxima e o cálculo do Risco de Ruína.
-                       </p>
-                     </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-[10px] uppercase font-bold text-muted-foreground">Valor da Freebet (Base)</Label>
+                          <div className="h-10 px-3 flex items-center bg-muted/50 border border-border rounded-md font-mono text-sm text-white">
+                            R$ {fmt(freebet)}
+                          </div>
+                          <p className="text-[9px] text-muted-foreground italic leading-tight">
+                            Definido na aba principal.
+                          </p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-[10px] uppercase font-bold text-primary">Sua Banca Exchange</Label>
+                          <div className="relative">
+                            <Input 
+                              type="number" 
+                              value={bankroll} 
+                              onChange={(e) => setBankroll(Number(e.target.value))}
+                              className="h-10 pl-8 font-mono text-sm"
+                            />
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">R$</span>
+                          </div>
+                          <p className="text-[9px] text-muted-foreground italic leading-tight">
+                            Saldo disponível para cobrir Lays.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/20 space-y-2">
+                        <div className="flex justify-between items-center text-[10px] uppercase font-bold text-blue-400">
+                          <span>Proporção Banca vs Freebet</span>
+                          <span>{Math.round(bankroll / freebet)}x</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-blue-500/10 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-blue-500 transition-all duration-500" 
+                            style={{ width: `${Math.min(100, (freebet / bankroll) * 100 * 10)}%` }}
+                          />
+                        </div>
+                        <p className="text-[9px] text-muted-foreground leading-relaxed">
+                          Sua banca é <strong>{Math.round(bankroll / freebet)} vezes maior</strong> que o valor da Freebet. 
+                          Uma banca saudável deve ser de no mínimo 15-20x o valor da Freebet para absorver variância em cascatas longas.
+                        </p>
+                      </div>
                      
                      <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg space-y-2">
                        <div className="flex items-center gap-2 text-primary">
