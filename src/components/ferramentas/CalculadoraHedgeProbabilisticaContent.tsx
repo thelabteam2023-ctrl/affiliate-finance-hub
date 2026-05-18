@@ -627,7 +627,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                           </h4>
                         </div>
                         <CardContent className="pt-4 space-y-4">
-                          <div className="flex items-end gap-1 h-20 items-baseline">
+                          <div className="flex items-end gap-1 h-24 mb-10 items-baseline">
                             {monteCarloSim.samples.map((s, i) => {
                               const height = Math.min(100, Math.max(20, (Math.abs(s) / Math.max(metrics.allWonProfit, Math.abs(metrics.maxDrawdown))) * 100));
                               const isWin = s >= 0;
@@ -637,10 +637,10 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                   className={`flex-1 rounded-t-sm transition-all cursor-help relative group ${isWin ? 'bg-emerald-500/40 hover:bg-emerald-400' : 'bg-red-500/40 hover:bg-red-400'}`}
                                   style={{ height: `${height}%` }}
                                 >
-                                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2 py-1 bg-popover text-[9px] text-popover-foreground rounded border border-border shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none z-[60] whitespace-nowrap">
+                                   <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2 py-1 bg-popover text-[9px] text-popover-foreground rounded border border-border shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none z-[60] whitespace-nowrap">
                                     <div className="font-bold">{isWin ? 'LUCRO' : 'PREJUÍZO'}</div>
                                     <div>Resultado: R$ {fmt(s)}</div>
-                                    <div className="text-muted-foreground">Ciclo #{i + 1}</div>
+                                     <div className="text-muted-foreground font-mono italic">Evento #{i + 1}</div>
                                   </div>
                                 </div>
                               );
@@ -676,17 +676,19 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                              </p>
                            </div>
                          </div>
-                         <div className="text-[10px] text-muted-foreground leading-relaxed italic border-t border-border/40 pt-2 space-y-2">
-                           <p>
-                             <strong>Explicação da Projeção:</strong> Simulamos milhares de trajetórias sequenciais considerando sua banca atual e variância real.
-                           </p>
-                           <p>
-                             Para dobrar sua banca (ganhar R$ {fmt(bankroll)} extras), a mediana de eventos necessária é de <strong>{monteCarloSim.medianSteps} bilhetes</strong>.
-                           </p>
-                           <p>
-                             A probabilidade real de você completar essa meta antes de quebrar a banca é de <strong>{fmtPct(monteCarloSim.probDouble)}</strong>.
-                           </p>
-                         </div>
+                          <div className="text-[10px] text-muted-foreground leading-relaxed italic border-t border-border/40 pt-2 space-y-3">
+                            <p>
+                              <strong>Hipótese de Reinvestimento:</strong> Esta simulação assume que você <strong>não realiza saques</strong>, reinvestindo 100% dos lucros para compor a banca (Juros Compostos).
+                            </p>
+                            <p>
+                              {metrics.totalEV > 0 
+                                ? "Em cenários de EV+, a banca tende ao infinito, mas a variância pode causar ruína se a exposição for alta." 
+                                : "Atenção: Em cenários de EV negativo, a quebra é estatisticamente inevitável no longo prazo."}
+                            </p>
+                            <p>
+                              Para dobrar a banca (ganhar R$ {fmt(bankroll)}), a mediana necessária é de <strong>{monteCarloSim.medianSteps} eventos</strong>, com <strong>{fmtPct(monteCarloSim.probDouble)}</strong> de chance de sucesso antes da quebra.
+                            </p>
+                          </div>
                       </div>
 
                    </div>
