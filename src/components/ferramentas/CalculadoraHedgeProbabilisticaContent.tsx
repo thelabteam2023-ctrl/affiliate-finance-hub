@@ -94,8 +94,18 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
     'risk-ruin',
     'capital-efficiency',
     'lab-details',
-    'golden-library'
+    'golden-library',
+    'restricted-golden-library'
   ];
+   const [maxLabTotalOdd, setMaxLabTotalOdd] = useState<number>(() => {
+     const saved = localStorage.getItem('hedge-calc-lab-max-odd');
+     return saved ? Number(saved) : 8.0;
+   });
+
+   useEffect(() => {
+     localStorage.setItem('hedge-calc-lab-max-odd', maxLabTotalOdd.toString());
+   }, [maxLabTotalOdd]);
+
 
   export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
    const [labLayout, setLabLayout] = useState<string[]>(() => {
