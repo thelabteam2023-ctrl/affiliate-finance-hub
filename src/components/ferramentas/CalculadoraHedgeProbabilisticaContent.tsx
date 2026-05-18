@@ -8,8 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  Target, Activity, TrendingUp, AlertTriangle, Shield, 
-  Plus, Trash2, Info, ChevronRight, Zap, BarChart3
+   Target, Activity, TrendingUp, AlertTriangle, Shield, 
+   Plus, Trash2, Info, ChevronRight, Zap, BarChart3, HelpCircle,
+   CheckCircle2, Lightbulb, BookOpen
 } from 'lucide-react';
 import { 
   HedgeProbabilisticoEngine, 
@@ -32,6 +33,7 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
     { name: 'Evento 2', backOdd: 2.0, layOdd: 2.0 }
   ]);
   const [expanded, setExpanded] = useState<AggregatedScenario | null>(null);
+  const [showHelp, setShowHelp] = useState(false);
 
   const metrics: HedgeResult = useMemo(() => {
     return HedgeProbabilisticoEngine.calculateMetrics(
@@ -76,18 +78,31 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
     <ScrollArea className="h-full">
       <div className="p-4 space-y-6 max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row gap-4 items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Zap className="h-6 w-6 text-primary" />
-              Calculadora de Hedge Probabilístico
-            </h1>
+          <div className="flex-1">
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold flex items-center gap-2">
+                <Zap className="h-6 w-6 text-primary" />
+                Calculadora de Hedge Probabilístico
+              </h1>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+                onClick={() => setShowHelp(true)}
+              >
+                <HelpCircle className="h-4 w-4" />
+                Como funciona?
+              </Button>
+            </div>
             <p className="text-sm text-muted-foreground mt-1">
               Motor quantitativo para extração de freebets com análise de risco e cascata.
             </p>
           </div>
-          <Badge className={`px-4 py-1 text-sm ${scoreColor}`}>
-            Score: {scoreLabel}
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Badge className={`px-4 py-1 text-sm ${scoreColor}`}>
+              Score: {scoreLabel}
+            </Badge>
+          </div>
         </div>
 
         {/* KPIs Section */}
@@ -426,6 +441,116 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
                 </p>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showHelp} onOpenChange={setShowHelp}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+            <DialogHeader className="p-6 pb-2">
+              <DialogTitle className="text-xl flex items-center gap-2">
+                <BookOpen className="h-5 w-5 text-primary" />
+                Guia do Hedge Probabilístico
+              </DialogTitle>
+              <DialogDescription>
+                Entenda como transformar sua múltipla de freebet em lucro garantido (ou alto valor esperado) de forma matemática.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <ScrollArea className="flex-1 p-6 pt-2">
+              <div className="space-y-6 pb-6">
+                <section className="space-y-3">
+                  <h3 className="text-sm font-semibold flex items-center gap-2 text-primary uppercase tracking-wider">
+                    <Target className="h-4 w-4" /> O Conceito
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    O <strong>Hedge Probabilístico</strong> (ou Cascata de Freebet) é uma técnica avançada de arbitragem. Em vez de cobrir uma múltipla inteira de uma só vez (o que geralmente dá um ROI baixo), você faz coberturas <strong>sequenciais</strong>.
+                  </p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    O objetivo é "parar a queda" em qualquer estágio da múltipla. Se um evento perde, você ganha na Exchange. Se ganha, você avança para o próximo evento e faz uma nova cobertura.
+                  </p>
+                </section>
+
+                <section className="space-y-3 p-4 bg-muted/30 rounded-lg border border-border/50">
+                  <h3 className="text-sm font-semibold flex items-center gap-2 text-emerald-400 uppercase tracking-wider">
+                    <CheckCircle2 className="h-4 w-4" /> Exemplo Prático (3 Eventos)
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex gap-3">
+                      <div className="flex flex-col items-center">
+                        <div className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold">1</div>
+                        <div className="w-0.5 flex-1 bg-border my-1"></div>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Evento A (Odd 2.0)</p>
+                        <p className="text-xs text-muted-foreground italic">Você faz um Lay no valor calculado pela ferramenta.</p>
+                        <ul className="text-xs text-muted-foreground mt-1 list-disc list-inside">
+                          <li>Se <span className="text-red-400">A perde</span>: Você ganha o Lay e termina com lucro. <span className="font-bold text-emerald-400">Fim!</span></li>
+                          <li>Se <span className="text-emerald-400">A ganha</span>: Você perde a responsabilidade do Lay, mas sua freebet continua viva.</li>
+                        </ul>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <div className="flex flex-col items-center">
+                        <div className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold">2</div>
+                        <div className="w-0.5 flex-1 bg-border my-1"></div>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Evento B (Odd 2.0)</p>
+                        <p className="text-xs text-muted-foreground italic">Agora você faz um Lay no Evento B.</p>
+                        <ul className="text-xs text-muted-foreground mt-1 list-disc list-inside">
+                          <li>Se <span className="text-red-400">B perde</span>: O ganho no Lay cobre a perda anterior e ainda gera lucro. <span className="font-bold text-emerald-400">Fim!</span></li>
+                          <li>Se <span className="text-emerald-400">B ganha</span>: Você continua para o próximo evento.</li>
+                        </ul>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <div className="flex flex-col items-center">
+                        <div className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold">3</div>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Evento C (Último)</p>
+                        <ul className="text-xs text-muted-foreground mt-1 list-disc list-inside">
+                          <li>Se <span className="text-red-400">C perde</span>: O Lay final te dá o lucro.</li>
+                          <li>Se <span className="text-emerald-400">C ganha</span>: Você ganha a múltipla na casa de apostas, que paga todo o custo da cascata e o lucro final.</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="space-y-3">
+                  <h3 className="text-sm font-semibold flex items-center gap-2 text-yellow-400 uppercase tracking-wider">
+                    <Lightbulb className="h-4 w-4" /> Quando utilizar?
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="p-3 bg-muted/20 border border-border/50 rounded-md">
+                      <p className="text-xs font-semibold mb-1">Odds Médias/Altas</p>
+                      <p className="text-[11px] text-muted-foreground">Melhor performance em múltiplas com odds individuais acima de 1.80.</p>
+                    </div>
+                    <div className="p-3 bg-muted/20 border border-border/50 rounded-md">
+                      <p className="text-xs font-semibold mb-1">Eventos não Simultâneos</p>
+                      <p className="text-[11px] text-muted-foreground">Fundamental: os eventos devem acontecer um após o outro para que você possa reagir.</p>
+                    </div>
+                    <div className="p-3 bg-muted/20 border border-border/50 rounded-md">
+                      <p className="text-xs font-semibold mb-1">Extração de Valor</p>
+                      <p className="text-[11px] text-muted-foreground">Ideal para "limpar" freebets de rollover difícil, garantindo uma porcentagem da banca.</p>
+                    </div>
+                    <div className="p-3 bg-muted/20 border border-border/50 rounded-md">
+                      <p className="text-xs font-semibold mb-1">Gestão de Banca</p>
+                      <p className="text-[11px] text-muted-foreground">Exige saldo na Exchange (Exposição Máxima) para cobrir a responsabilidade da cascata.</p>
+                    </div>
+                  </div>
+                </section>
+
+                <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
+                  <p className="text-xs text-primary leading-relaxed">
+                    <strong>Dica de Ouro:</strong> O "Score" da ferramenta analisa a relação entre o Lucro Potencial e o Risco de Drawdown. Tente manter a Eficiência Operacional acima de 80% para operações saudáveis.
+                  </p>
+                </div>
+              </div>
+            </ScrollArea>
           </DialogContent>
         </Dialog>
       </div>
