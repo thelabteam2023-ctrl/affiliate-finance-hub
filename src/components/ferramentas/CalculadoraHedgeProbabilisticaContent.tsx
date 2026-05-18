@@ -1654,7 +1654,6 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                     </DndContext>
                   </div>
                 </div>
-              )
              )
            }
          </div>
