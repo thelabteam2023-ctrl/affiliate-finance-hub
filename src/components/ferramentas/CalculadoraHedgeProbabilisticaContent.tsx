@@ -86,6 +86,8 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
   };
 
   const LAB_DEFAULT_LAYOUT = [
+    'visual-sim',
+    'double-bankroll',
     'lab-params',
     'advanced-stats',
     'efficiency-matrix',
