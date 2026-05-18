@@ -543,7 +543,8 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
                  </TabsTrigger>
                </TabsList>
              </Tabs>
-                        </div>
+            </div>
+          </div>
  
          <div className="space-y-6">
             {activeTab === 'calculadora' ? (
@@ -1818,7 +1819,6 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                </ScrollArea>
              </DialogContent>
            </Dialog>
-         </div>
        </div>
      </ScrollArea>
    );
