@@ -1082,25 +1082,77 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                         </div>
                       </div>
 
-                      <Card className="bg-primary/5 border-primary/20 shadow-none border-dashed">
-                        <CardContent className="pt-6 text-center space-y-4">
-                          <div className="inline-flex p-3 rounded-full bg-primary/10 text-primary mb-2">
-                            <Sparkles className="h-6 w-6" />
-                          </div>
-                          <h3 className="text-sm font-bold text-white uppercase tracking-wider">Perfil Operacional Ativo</h3>
-                          <p className="text-[10px] text-muted-foreground leading-relaxed max-w-[280px] mx-auto">
-                            Configurado para extrair <strong>{Math.round(targetExtraction * 100)}%</strong> da FreeBet. Otimizado matematicamente para gerar um retorno médio de <strong>R$ {fmt(metrics.totalEV)}</strong> por ciclo.
-                          </p>
-                          <div className="flex flex-col gap-2 pt-2">
-                            <div className="flex justify-between text-[10px] border-b border-border/40 pb-2">
-                              <span className="text-muted-foreground">Crescimento Estimado (ROE)</span>
-                              <span className="font-bold text-emerald-400">+{((metrics.totalEV / metrics.maxResponsibility) * 100).toFixed(2)}%</span>
+                      <Card className="bg-muted/10 border-border/50 shadow-none overflow-hidden">
+                        <div className="p-4 border-b border-border/50 bg-muted/20 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="h-4 w-4 text-primary" />
+                              <h3 className="text-xs font-bold text-white uppercase tracking-wider">Perfil Operacional Ativo</h3>
+                              <Badge variant="outline" className="text-[9px] h-4 text-primary border-primary/30">
+                                Meta: {Math.round(targetExtraction * 100)}%
+                              </Badge>
                             </div>
-                            <div className="flex justify-between text-[10px] pt-1">
-                              <span className="text-muted-foreground">Exposição na Banca</span>
-                              <span className="font-bold text-orange-400">{fmtPct((metrics.maxResponsibility / bankroll) * 100)}</span>
+                            <p className="text-[10px] text-muted-foreground mt-1">
+                              Simulação visual de 100.000 ciclos operando com ROI de {fmtPct(metrics.totalROI)}.
+                            </p>
+                          </div>
+                          <div className="flex gap-4">
+                            <div className="text-right">
+                              <span className="text-[9px] text-muted-foreground uppercase block">ROE p/ Ciclo</span>
+                              <span className="text-xs font-bold text-emerald-400">+{((metrics.totalEV / metrics.maxResponsibility) * 100).toFixed(2)}%</span>
+                            </div>
+                            <div className="text-right border-l border-border/50 pl-4">
+                              <span className="text-[9px] text-muted-foreground uppercase block">Exposição</span>
+                              <span className="text-xs font-bold text-orange-400">{fmtPct((metrics.maxResponsibility / bankroll) * 100)}</span>
                             </div>
                           </div>
+                        </div>
+                        <CardContent className="p-0 h-[220px] w-full relative">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={longTermSim} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                              <defs>
+                                <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                                  <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                                </linearGradient>
+                              </defs>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" vertical={false} />
+                              <XAxis 
+                                dataKey="cycle" 
+                                hide={true} 
+                              />
+                              <YAxis 
+                                domain={["auto", "auto"]}
+                                tick={{ fontSize: 9, fill: "#666" }}
+                                tickFormatter={(value) => `R$ ${value >= 1000 ? (value/1000).toFixed(1) + "k" : value}`}
+                                axisLine={false}
+                                tickLine={false}
+                              />
+                              <RechartsTooltip 
+                                contentStyle={{ backgroundColor: "#1a1a1a", border: "1px solid #333", borderRadius: "4px", fontSize: "10px" }}
+                                labelStyle={{ color: "#666" }}
+                                itemStyle={{ color: "#10b981" }}
+                                formatter={(value) => [`R$ ${fmt(value)}`, "Banca"]}
+                                labelFormatter={(label) => `Ciclo: ${label.toLocaleString()}`}
+                              />
+                              <Area 
+                                type="monotone" 
+                                dataKey="balance" 
+                                stroke="#10b981" 
+                                fillOpacity={1} 
+                                fill="url(#colorBalance)" 
+                                strokeWidth={2}
+                              />
+                            </AreaChart>
+                          </ResponsiveContainer>
+                          {longTermSim[longTermSim.length - 1].balance <= 0 && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-[1px]">
+                              <div className="bg-red-500/10 border border-red-500/20 p-2 rounded flex items-center gap-2">
+                                <AlertTriangle className="h-3 w-3 text-red-500" />
+                                <span className="text-[10px] font-bold text-red-500 uppercase tracking-tighter">Banca Insuficiente no Longo Prazo</span>
+                              </div>
+                            </div>
+                          )}
                         </CardContent>
                       </Card>
 
