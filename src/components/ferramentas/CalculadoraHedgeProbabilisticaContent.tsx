@@ -1179,9 +1179,9 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                          </div>
 
                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                           {((targetExtraction === 0.65 || targetExtraction === 0.70 || targetExtraction === 0.75) 
-                             ? goldenCombinationsByExtraction[targetExtraction.toString()] 
-                             : goldenCombinationsByExtraction["0.7"]).map((combo, idx) => (
+                           {(goldenCombinationsByExtraction[targetExtraction.toFixed(2)] 
+                             : goldenCombinationsByExtraction[targetExtraction.toFixed(2)] 
+                             : (goldenCombinationsByExtraction["0.70"] || goldenCombinationsByExtraction["0.7"])).map((combo, idx) => (
                              <div 
                                key={idx} 
                                className="p-3 rounded-lg bg-muted/20 border border-border/50 hover:border-primary/50 transition-all cursor-pointer group flex flex-col justify-between"
