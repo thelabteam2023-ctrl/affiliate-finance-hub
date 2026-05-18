@@ -24,36 +24,6 @@ import {
 import { CardInfoTooltip } from '@/components/ui/card-info-tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
-const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
-
-   const goldenCombinationsByCommission: Record<string, any[]> = {
-     "2.8": [
-       { name: "Duo Otimizado", legs: [1.8, 4.0], roi: "39.4%", type: "Alta Performance" },
-       { name: "Triple Otimizado", legs: [1.8, 1.8, 4.0], roi: "20.4%", type: "Alta Performance" },
-       { name: "Quarteto Estável", legs: [1.8, 1.8, 1.8, 4.0], roi: "8.6%", type: "Estável" },
-       { name: "Full House", legs: [1.8, 1.8, 1.8, 1.8, 4.0], roi: "2.7%", type: "Risco Baixo" }
-     ],
-     "3.0": [
-       { name: "Duo Otimizado", legs: [1.8, 4.0], roi: "39.2%", type: "Alta Performance" },
-       { name: "Triple Otimizado", legs: [1.8, 1.8, 4.0], roi: "19.6%", type: "Estável" },
-       { name: "Quarteto Estável", legs: [1.8, 1.8, 1.8, 4.0], roi: "7.7%", type: "Estável" },
-       { name: "Full House", legs: [1.8, 1.8, 1.8, 1.8, 4.0], roi: "0.5%", type: "Risco Baixo" }
-     ],
-     "4.8": [
-       { name: "Duo Otimizado", legs: [1.8, 4.0], roi: "37.7%", type: "Alta Performance" },
-       { name: "Triple Otimizado", legs: [1.8, 1.8, 4.0], roi: "17.2%", type: "Estável" },
-       { name: "Quarteto Estável", legs: [1.8, 1.8, 1.8, 4.0], roi: "5.4%", type: "Estável" },
-       { name: "Full House", legs: [1.8, 1.8, 1.8, 1.8, 4.0], roi: "-2.1%", type: "Risco Alto" }
-     ],
-     "6.0": [
-       { name: "Duo Otimizado", legs: [1.8, 4.0], roi: "36.8%", type: "Alta Performance" },
-       { name: "Triple Otimizado", legs: [1.8, 1.8, 4.0], roi: "16.9%", type: "Estável" },
-       { name: "Quarteto Estável", legs: [1.8, 1.8, 1.8, 4.0], roi: "4.3%", type: "Risco Alto" },
-       { name: "Full House", legs: [1.8, 1.8, 1.8, 1.8, 4.0], roi: "-1.2%", type: "Inviável" }
-     ]
-   };
-
  export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
    const applyGoldenCombo = (comboLegs: number[]) => {
      const newLegs = comboLegs.map((odd, i) => ({
@@ -68,6 +38,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
   const [freebet, setFreebet] = useState(100);
   const [commission, setCommission] = useState(2.8);
    const [targetExtraction, setTargetExtraction] = useState(0.7);
+  const [labBenchmark, setLabBenchmark] = useState<string>('70');
    const [bankroll, setBankroll] = useState(5000);
    const [activeTab, setActiveTab] = useState('calculadora');
   const [legs, setLegs] = useState<LegInput[]>([
@@ -76,6 +47,34 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
   ]);
   const [expanded, setExpanded] = useState<AggregatedScenario | null>(null);
   const [showHelp, setShowHelp] = useState(false);
+
+  const goldenCombinationsByExtraction = useMemo(() => {
+    const targets = [0.65, 0.70, 0.75];
+    const result: Record<string, any[]> = {};
+    const baseCombos = [
+      { name: "Duo Otimizado", legs: [1.8, 4.0] },
+      { name: "Triple Otimizado", legs: [1.8, 1.8, 4.0] },
+      { name: "Quarteto Estável", legs: [1.8, 1.8, 1.8, 4.0] },
+      { name: "Full House", legs: [1.8, 1.8, 1.8, 1.8, 4.0] }
+    ];
+
+    targets.forEach(t => {
+      result[t.toString()] = baseCombos.map(combo => {
+        const m = HedgeProbabilisticoEngine.calculateMetrics(
+          combo.legs.map(odd => ({ name: '', backOdd: odd, layOdd: odd })),
+          100,
+          commission / 100,
+          t
+        );
+        let type = "Estável";
+        if (m.totalROI > 35) type = "Alta Performance";
+        if (m.totalROI < 10) type = "Risco Baixo";
+        if (m.allWonProfit < 0) type = "Inviável";
+        return { ...combo, roi: fmtPct(m.totalROI), type };
+      });
+    });
+    return result;
+  }, [commission]);
 
   const metrics: HedgeResult = useMemo(() => {
     return HedgeProbabilisticoEngine.calculateMetrics(
@@ -730,6 +729,47 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                      </CardTitle>
                    </CardHeader>
                    <CardContent className="space-y-4">
+                      <div className="space-y-3">
+                        <Label className="text-[10px] uppercase font-bold text-muted-foreground">Referência de Extração (Benchmark)</Label>
+                        <Tabs 
+                          value={labBenchmark} 
+                          onValueChange={(val) => {
+                            setLabBenchmark(val);
+                            if (val !== 'custom') setTargetExtraction(Number(val) / 100);
+                          }} 
+                          className="w-full"
+                        >
+                          <TabsList className="grid grid-cols-4 h-9 w-full">
+                            <TabsTrigger value="65" className="text-[10px]">65%</TabsTrigger>
+                            <TabsTrigger value="70" className="text-[10px]">70%</TabsTrigger>
+                            <TabsTrigger value="75" className="text-[10px]">75%</TabsTrigger>
+                            <TabsTrigger value="custom" className="text-[10px]">Livre</TabsTrigger>
+                          </TabsList>
+                        </Tabs>
+                        <div className="p-2 rounded bg-muted/30 border border-border/50">
+                          <p className="text-[9px] text-muted-foreground leading-tight italic">
+                            {labBenchmark === '65' && "Conservador: Menor exposição na Exchange, maior segurança para bancas pequenas."}
+                            {labBenchmark === '70' && "Equilibrado: O padrão ouro da indústria para extração sustentável."}
+                            {labBenchmark === '75' && "Agressivo: Maior lucro por freebet, exige banca robusta para suportar a variância."}
+                            {labBenchmark === 'custom' && "Manual: Ajuste livre conforme sua estratégia específica."}
+                          </p>
+                        </div>
+                      </div>
+
+                      {labBenchmark === 'custom' && (
+                        <div className="space-y-3 p-3 bg-muted/20 border border-border rounded-lg">
+                          <div className="flex justify-between items-center">
+                            <Label className="text-[10px] uppercase font-bold text-primary">Ajuste Manual</Label>
+                            <span className="text-xs font-mono font-bold text-white">{Math.round(targetExtraction * 100)}%</span>
+                          </div>
+                          <Slider 
+                            value={[targetExtraction * 100]} 
+                            min={50} max={95} step={1}
+                            onValueChange={(vals) => setTargetExtraction(vals[0] / 100)}
+                          />
+                        </div>
+                      )}
+
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label className="text-[10px] uppercase font-bold text-muted-foreground">Valor da Freebet (Base)</Label>
@@ -1012,9 +1052,9 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                              ))}
                            </div>
                          </div>
-                         
+
                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                           {(goldenCombinationsByCommission[commission.toFixed(1)] || goldenCombinationsByCommission["2.8"]).map((combo, idx) => (
+                           {((targetExtraction === 0.65 || targetExtraction === 0.70 || targetExtraction === 0.75) ? goldenCombinationsByExtraction[targetExtraction.toString()] : goldenCombinationsByExtraction["0.7"]).map((combo, idx) => (
                              <div 
                                key={idx} 
                                className="p-3 rounded-lg bg-muted/20 border border-border/50 hover:border-primary/50 transition-all cursor-pointer group"
