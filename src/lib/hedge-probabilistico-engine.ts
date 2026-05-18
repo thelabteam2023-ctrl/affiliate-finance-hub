@@ -53,6 +53,7 @@ export interface AggregatedScenario {
    score: 'excellent' | 'good' | 'risky' | 'critical';
    cumulativeCascadeCost: number;
    allWonProfit: number;
+  totalBackOdd: number;
  }
 
 /**
@@ -236,7 +237,9 @@ export class HedgeProbabilisticoEngine {
      // All won profit calculation
      let totalResponsibilities = 0;
      calculatedLegs.forEach(l => totalResponsibilities += l.responsibility);
-     const allWonProfit = (freebet * (legs[legs.length - 1].backOdd - 1)) - totalResponsibilities;
+    
+    const totalBackOdd = legs.reduce((acc, l) => acc * l.backOdd, 1);
+    const allWonProfit = (freebet * (totalBackOdd - 1)) - totalResponsibilities;
  
      return {
        legs: calculatedLegs,
@@ -249,7 +252,8 @@ export class HedgeProbabilisticoEngine {
        capitalRequired: maxResponsibility,
        score,
        cumulativeCascadeCost: totalResponsibilities,
-       allWonProfit
+      allWonProfit,
+      totalBackOdd
      };
    }
 }
