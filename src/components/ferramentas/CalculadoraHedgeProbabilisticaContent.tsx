@@ -663,30 +663,30 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                           <h4 className="text-xs font-bold uppercase tracking-wider text-orange-400">Projeção: Dobrar a Banca</h4>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <span className="text-[9px] text-muted-foreground uppercase">Eventos Necessários</span>
-                            <p className="text-lg font-bold text-white font-mono">
-                              {metrics.totalEV > 0 ? Math.ceil(bankroll / metrics.totalEV) : '∞'}
-                            </p>
-                          </div>
-                          <div className="space-y-1 text-right">
-                            <span className="text-[9px] text-muted-foreground uppercase">Prob. de Sucesso</span>
-                            <p className="text-lg font-bold text-emerald-400 font-mono">
-                              {metrics.totalEV > 0 ? fmtPct((1 - (riskOfRuin / 100)) * 100) : '0%'}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-[10px] text-muted-foreground leading-relaxed italic border-t border-border/40 pt-2 space-y-2">
-                          <p>
-                            <strong>Explicação da Projeção:</strong> Com uma Freebet de R$ {fmt(freebet)}, seu lucro médio esperado por operação (EV) é de R$ {fmt(metrics.totalEV)}.
-                          </p>
-                          <p>
-                            Para ganhar R$ {fmt(bankroll)} extras e dobrar sua banca atual, são necessários <strong>{Math.ceil(bankroll / metrics.totalEV)} bilhetes</strong> no longo prazo.
-                          </p>
-                          <p>
-                            A chance de completar essa jornada antes de sofrer uma quebra é de <strong>{fmtPct((1 - (riskOfRuin / 100)) * 100)}</strong>.
-                          </p>
-                        </div>
+                           <div className="space-y-1">
+                             <span className="text-[9px] text-muted-foreground uppercase">Eventos Necessários</span>
+                             <p className="text-lg font-bold text-white font-mono">
+                               {monteCarloSim.medianSteps}
+                             </p>
+                           </div>
+                           <div className="space-y-1 text-right">
+                             <span className="text-[9px] text-muted-foreground uppercase">Prob. de Sucesso</span>
+                             <p className={`text-lg font-bold font-mono ${monteCarloSim.probDouble > 70 ? 'text-emerald-400' : 'text-orange-400'}`}>
+                               {fmtPct(monteCarloSim.probDouble)}
+                             </p>
+                           </div>
+                         </div>
+                         <div className="text-[10px] text-muted-foreground leading-relaxed italic border-t border-border/40 pt-2 space-y-2">
+                           <p>
+                             <strong>Explicação da Projeção:</strong> Simulamos milhares de trajetórias sequenciais considerando sua banca atual e variância real.
+                           </p>
+                           <p>
+                             Para dobrar sua banca (ganhar R$ {fmt(bankroll)} extras), a mediana de eventos necessária é de <strong>{monteCarloSim.medianSteps} bilhetes</strong>.
+                           </p>
+                           <p>
+                             A probabilidade real de você completar essa meta antes de quebrar a banca é de <strong>{fmtPct(monteCarloSim.probDouble)}</strong>.
+                           </p>
+                         </div>
                       </div>
 
                    </div>
