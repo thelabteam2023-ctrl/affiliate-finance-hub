@@ -3,12 +3,24 @@ import {
   type EventInput 
 } from './extracao-engine';
 
-export interface LegInput extends EventInput {
-  name: string;
-  bookmaker?: string;
-  exchange?: string;
-  status?: 'pending' | 'won' | 'lost';
-}
+ export interface LegInput extends EventInput {
+   name: string;
+   bookmaker?: string;
+   exchange?: string;
+   status?: 'pending' | 'won' | 'lost';
+ }
+ 
+ export interface CalculatedLeg {
+   backOdd: number;
+   layOdd: number;
+   layStake: number;
+   responsibility: number;
+   cumulativeResponsibility: number;
+   totalExposure: number;
+   probability: number;
+   ev: number;
+   efficiency: number;
+ }
 
 export interface Scenario {
   path: ('won' | 'lost')[];
@@ -18,155 +30,189 @@ export interface Scenario {
   description: string;
 }
 
-export interface HedgeResult {
-  legs: {
-    backOdd: number;
-    layOdd: number;
-    layStake: number;
-    responsibility: number;
-    probability: number;
-    ev: number;
-    efficiency: number;
-  }[];
-  scenarios: Scenario[];
-  totalEV: number;
-  totalROI: number;
-  maxResponsibility: number;
-  maxDrawdown: number;
-  capitalRequired: number;
-  score: 'excellent' | 'good' | 'risky' | 'critical';
-}
+ export interface HedgeResult {
+   legs: CalculatedLeg[];
+   scenarios: Scenario[];
+   totalEV: number;
+   totalROI: number;
+   maxResponsibility: number;
+   maxDrawdown: number;
+   capitalRequired: number;
+   score: 'excellent' | 'good' | 'risky' | 'critical';
+   cumulativeCascadeCost: number;
+   allWonProfit: number;
+ }
 
 /**
  * Advanced Engine for Probabilistic Hedge Calculations
  */
 export class HedgeProbabilisticoEngine {
-  /**
-   * Calculates the lay stake for a freebet with given efficiency
-   */
-  static calculateLayStake(
-    freebet: number,
-    backOdd: number,
-    layOdd: number,
-    commission: number,
-    efficiency: number
-  ): number {
-    // Formula: (Freebet * (BackOdd - 1) * Efficiency) / (LayOdd - Commission)
-    return (freebet * (backOdd - 1) * efficiency) / (layOdd - commission);
-  }
+   /**
+    * Calculates the lay stake for a leg considering cumulative costs
+    * Formula ensures that if Lay wins, it covers (meta + previous costs)
+    */
+   static calculateLayStakeCascade(
+     metaLiquida: number,
+     layOdd: number,
+     commission: number,
+     cumulativeCost: number
+   ): number {
+     // (LayStake * (1 - Commission)) - CumulativeCost = MetaLiquida
+     // LayStake * (1 - Commission) = MetaLiquida + CumulativeCost
+     // LayStake = (MetaLiquida + CumulativeCost) / (1 - Commission)
+     
+     // Wait, the user mentioned: "Stake Próxima Perna = (meta de lucro desejado + responsabilidades acumuladas + prejuízos acumulados) ÷ eficiência operacional"
+     // But efficiency is usually part of meta.
+     // Standard hedge: LayStake = (TargetProfit + Cost) / (LayOdd - Commission) ? 
+     // No, if Lay wins, you get LayStake. Profit = LayStake * (1 - Comm). 
+     // We want Profit - Costs = Meta.
+     
+     return (metaLiquida + cumulativeCost) / (1 - commission);
+   }
 
-  /**
-   * Generates all possible scenarios for a multi-leg operation
-   */
-  static generateScenarios(legs: LegInput[], freebet: number, commission: number, efficiency: number): Scenario[] {
-    const scenarios: Scenario[] = [];
-    const numLegs = legs.length;
-    
-    // Total scenarios = 2^numLegs
-    const totalScenarios = Math.pow(2, numLegs);
-    
-    for (let i = 0; i < totalScenarios; i++) {
-      const path: ('won' | 'lost')[] = [];
-      let currentProb = 1;
-      let currentResult = 0;
-      let maxExposure = 0;
-      let stop = false;
-
-      for (let j = 0; j < numLegs; j++) {
-        const isWon = (i >> (numLegs - 1 - j)) & 1;
-        const leg = legs[j];
-        const pWin = 1 / leg.backOdd;
-        const pLoss = 1 - pWin;
-
-        if (stop) {
-           path.push('lost'); // Dummy, won't affect probability or result
+   static calculateCalculatedLegs(
+     legs: LegInput[],
+     freebet: number,
+     commission: number,
+     efficiency: number,
+     metaPct?: number
+   ): CalculatedLeg[] {
+     const metaLiquida = metaPct !== undefined ? (freebet * metaPct) : (freebet * efficiency);
+     let cumulativeResponsibility = 0;
+     
+     return legs.map((leg) => {
+       // LayStake calculation: if Lay wins, we recover everything + meta
+       const layStake = this.calculateLayStakeCascade(metaLiquida, leg.layOdd, commission, cumulativeResponsibility);
+       const responsibility = layStake * (leg.layOdd - 1);
+       const currentCumulative = cumulativeResponsibility;
+       const totalExposure = currentCumulative + responsibility;
+       
+       const calculatedLeg: CalculatedLeg = {
+         backOdd: leg.backOdd,
+         layOdd: leg.layOdd,
+         layStake,
+         responsibility,
+         cumulativeResponsibility: currentCumulative,
+         totalExposure,
+         probability: 1 / leg.backOdd,
+         ev: 0, // Calculated later
+         efficiency: metaPct !== undefined ? metaPct : efficiency
+       };
+       
+       // Update cumulative for NEXT leg (assuming Back won this one)
+       cumulativeResponsibility += responsibility;
+       
+       return calculatedLeg;
+     });
+   }
+ 
+   static generateScenarios(
+     calculatedLegs: CalculatedLeg[],
+     freebet: number,
+     commission: number
+   ): Scenario[] {
+     const scenarios: Scenario[] = [];
+     const numLegs = calculatedLegs.length;
+     const totalScenarios = Math.pow(2, numLegs);
+     
+     for (let i = 0; i < totalScenarios; i++) {
+       const path: ('won' | 'lost')[] = [];
+       let currentProb = 1;
+       let currentResult = 0;
+       let maxExposure = 0;
+       let stop = false;
+       let cumulativeCost = 0;
+ 
+       for (let j = 0; j < numLegs; j++) {
+         const isWon = (i >> (numLegs - 1 - j)) & 1;
+         const leg = calculatedLegs[j];
+         const pWin = 1 / leg.backOdd;
+         const pLoss = 1 - pWin;
+ 
+         if (stop) {
+           path.push('lost');
            continue;
-        }
+         }
+ 
+         maxExposure = Math.max(maxExposure, cumulativeCost + leg.responsibility);
+ 
+         if (isWon) {
+           path.push('won');
+           currentProb *= pWin;
+           cumulativeCost += leg.responsibility;
+         } else {
+           path.push('lost');
+           currentProb *= pLoss;
+           // Lay wins: profit = layStake * (1 - comm) - previous costs
+           currentResult = (leg.layStake * (1 - commission)) - cumulativeCost;
+           stop = true;
+         }
+       }
+ 
+       if (!stop) {
+         // All legs won: Profit = Freebet * (LastOdd - 1) - All Responsibilities
+         const lastLeg = calculatedLegs[numLegs - 1];
+         currentResult = (freebet * (lastLeg.backOdd - 1)) - cumulativeCost;
+       }
+ 
+       scenarios.push({
+         path,
+         probability: currentProb,
+         result: currentResult,
+         maxExposure,
+         description: path.join(' → ')
+       });
+     }
+ 
+     return scenarios;
+   }
 
-        const layStake = this.calculateLayStake(freebet, leg.backOdd, leg.layOdd, commission, efficiency);
-        const responsibility = layStake * (leg.layOdd - 1);
-        maxExposure = Math.max(maxExposure, responsibility);
-
-        if (isWon) {
-          path.push('won');
-          currentProb *= pWin;
-          // If back wins, we lose the responsibility at the exchange
-          currentResult -= responsibility;
-          // But the freebet continues to the next leg
-        } else {
-          path.push('lost');
-          currentProb *= pLoss;
-          // If back loses, we win the layStake (minus commission) at the exchange
-          currentResult += layStake * (1 - commission);
-          stop = true; // Operation ends if a leg is lost
-        }
-      }
-
-      // Final result if all legs won
-      if (!stop) {
-        // Last leg profit: Freebet * (LastBackOdd - 1)
-        const lastLeg = legs[numLegs - 1];
-        currentResult += freebet * (lastLeg.backOdd - 1);
-      }
-
-      scenarios.push({
-        path,
-        probability: currentProb,
-        result: currentResult,
-        maxExposure,
-        description: path.join(' → ')
-      });
-    }
-
-    // Deduplicate and group scenarios by final state for clarity
-    return scenarios;
-  }
-
-  static calculateMetrics(legs: LegInput[], freebet: number, commission: number, efficiency: number): HedgeResult {
-    const scenarios = this.generateScenarios(legs, freebet, commission, efficiency);
-    
-    let totalEV = 0;
-    let maxResponsibility = 0;
-    let maxDrawdown = 0;
-    
-    scenarios.forEach(s => {
-      totalEV += s.result * s.probability;
-      maxResponsibility = Math.max(maxResponsibility, s.maxExposure);
-      if (s.result < 0) {
-        maxDrawdown = Math.max(maxDrawdown, Math.abs(s.result));
-      }
-    });
-
-    const totalROI = (totalEV / freebet) * 100;
-    
-    let score: 'excellent' | 'good' | 'risky' | 'critical' = 'good';
-    if (totalROI > 85) score = 'excellent';
-    else if (totalROI > 70) score = 'good';
-    else if (totalROI > 50) score = 'risky';
-    else score = 'critical';
-
-    const calculatedLegs = legs.map(leg => {
-      const layStake = this.calculateLayStake(freebet, leg.backOdd, leg.layOdd, commission, efficiency);
-      return {
-        backOdd: leg.backOdd,
-        layOdd: leg.layOdd,
-        layStake,
-        responsibility: layStake * (leg.layOdd - 1),
-        probability: 1 / leg.backOdd,
-        ev: (1 / leg.backOdd) * (freebet * (leg.backOdd - 1) - (layStake * (leg.layOdd - 1))) + (1 - 1 / leg.backOdd) * (layStake * (1 - commission)),
-        efficiency
-      };
-    });
-
-    return {
-      legs: calculatedLegs,
-      scenarios,
-      totalEV,
-      totalROI,
-      maxResponsibility,
-      maxDrawdown,
-      capitalRequired: maxResponsibility,
-      score
-    };
-  }
+   static calculateMetrics(
+     legs: LegInput[],
+     freebet: number,
+     commission: number,
+     efficiency: number,
+     metaPct?: number
+   ): HedgeResult {
+     const calculatedLegs = this.calculateCalculatedLegs(legs, freebet, commission, efficiency, metaPct);
+     const scenarios = this.generateScenarios(calculatedLegs, freebet, commission);
+     
+     let totalEV = 0;
+     let maxResponsibility = 0;
+     let maxDrawdown = 0;
+     
+     scenarios.forEach(s => {
+       totalEV += s.result * s.probability;
+       maxResponsibility = Math.max(maxResponsibility, s.maxExposure);
+       if (s.result < 0) {
+         maxDrawdown = Math.max(maxDrawdown, Math.abs(s.result));
+       }
+     });
+ 
+     const totalROI = (totalEV / freebet) * 100;
+     
+     let score: 'excellent' | 'good' | 'risky' | 'critical' = 'good';
+     if (totalROI > 80) score = 'excellent';
+     else if (totalROI > 60) score = 'good';
+     else if (totalROI > 40) score = 'risky';
+     else score = 'critical';
+ 
+     // All won profit calculation
+     let totalResponsibilities = 0;
+     calculatedLegs.forEach(l => totalResponsibilities += l.responsibility);
+     const allWonProfit = (freebet * (legs[legs.length - 1].backOdd - 1)) - totalResponsibilities;
+ 
+     return {
+       legs: calculatedLegs,
+       scenarios,
+       totalEV,
+       totalROI,
+       maxResponsibility,
+       maxDrawdown,
+       capitalRequired: maxResponsibility,
+       score,
+       cumulativeCascadeCost: totalResponsibilities,
+       allWonProfit
+     };
+   }
 }

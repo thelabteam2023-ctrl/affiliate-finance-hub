@@ -185,30 +185,40 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4" /> Resumo do Risco
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-muted-foreground">Drawdown Probabilístico</span>
-                  <span className="font-mono text-red-400">-R$ {fmt(metrics.maxDrawdown)}</span>
-                </div>
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-muted-foreground">Probabilidade de Sucesso Total</span>
-                  <span className="font-mono text-emerald-400">
-                    {fmtPct((metrics.scenarios.find(s => !s.path.includes('lost'))?.probability || 0) * 100)}
-                  </span>
-                </div>
-                <div className="pt-2 border-t border-border mt-2">
-                  <p className="text-[10px] text-muted-foreground leading-relaxed italic">
-                    * O capital mínimo necessário considera a maior responsabilidade individual exigida em qualquer perna da exchange.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+             <Card>
+               <CardHeader className="pb-3">
+                 <CardTitle className="text-sm font-medium flex items-center gap-2">
+                   <BarChart3 className="h-4 w-4" /> Resumo da Cascata
+                 </CardTitle>
+               </CardHeader>
+               <CardContent className="space-y-3">
+                 <div className="flex justify-between items-center text-xs">
+                   <span className="text-muted-foreground">Custo Acumulado Total</span>
+                   <span className="font-mono text-red-400">R$ {fmt(metrics.cumulativeCascadeCost)}</span>
+                 </div>
+                 <div className="flex justify-between items-center text-xs">
+                   <span className="text-muted-foreground">Lucro "Todas Ganham"</span>
+                   <span className={`font-mono ${metrics.allWonProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                     R$ {fmt(metrics.allWonProfit)}
+                   </span>
+                 </div>
+                 <div className="flex justify-between items-center text-xs">
+                   <span className="text-muted-foreground">Probabilidade de Sucesso</span>
+                   <span className="font-mono text-emerald-400">
+                     {fmtPct((metrics.scenarios.find(s => !s.path.includes('lost'))?.probability || 0) * 100)}
+                   </span>
+                 </div>
+                 <div className="flex justify-between items-center text-xs">
+                   <span className="text-muted-foreground">Drawdown Máximo</span>
+                   <span className="font-mono text-red-400">-R$ {fmt(metrics.maxDrawdown)}</span>
+                 </div>
+                 <div className="pt-2 border-t border-border mt-2">
+                   <p className="text-[10px] text-muted-foreground leading-relaxed italic">
+                     * O capital necessário é acumulativo: se a operação avança, as responsabilidades das pernas anteriores já foram consumidas.
+                   </p>
+                 </div>
+               </CardContent>
+             </Card>
           </div>
 
           {/* Legs Panel */}
@@ -224,12 +234,13 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[180px]">Evento</TableHead>
-                      <TableHead>Odd Back</TableHead>
-                      <TableHead>Odd Lay</TableHead>
-                      <TableHead className="text-right">Lay Stake</TableHead>
-                      <TableHead className="text-right">Respons.</TableHead>
-                      <TableHead className="w-[50px]"></TableHead>
+                       <TableHead className="w-[140px]">Evento</TableHead>
+                       <TableHead>Odd B/L</TableHead>
+                       <TableHead className="text-right">Stake</TableHead>
+                       <TableHead className="text-right">Resp.</TableHead>
+                       <TableHead className="text-right">R. Acum</TableHead>
+                       <TableHead className="text-right font-bold">Exp. Tot</TableHead>
+                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -244,28 +255,36 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
                               className="h-8 text-xs"
                             />
                           </TableCell>
-                          <TableCell>
-                            <Input 
-                              type="number"
-                              value={leg.backOdd} 
-                              onChange={(e) => updateLeg(index, 'backOdd', Number(e.target.value))}
-                              className="h-8 text-xs font-mono w-20"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input 
-                              type="number"
-                              value={leg.layOdd} 
-                              onChange={(e) => updateLeg(index, 'layOdd', Number(e.target.value))}
-                              className="h-8 text-xs font-mono w-20"
-                            />
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-blue-400">
-                            R$ {fmt(calcLeg.layStake)}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-red-400">
-                            R$ {fmt(calcLeg.responsibility)}
-                          </TableCell>
+                           <TableCell>
+                             <div className="flex flex-col gap-1">
+                               <Input 
+                                 type="number"
+                                 value={leg.backOdd} 
+                                 onChange={(e) => updateLeg(index, 'backOdd', Number(e.target.value))}
+                                 className="h-7 text-[10px] font-mono w-16"
+                                 placeholder="Back"
+                               />
+                               <Input 
+                                 type="number"
+                                 value={leg.layOdd} 
+                                 onChange={(e) => updateLeg(index, 'layOdd', Number(e.target.value))}
+                                 className="h-7 text-[10px] font-mono w-16"
+                                 placeholder="Lay"
+                               />
+                             </div>
+                           </TableCell>
+                           <TableCell className="text-right font-mono text-blue-400 text-xs">
+                             R$ {fmt(calcLeg.layStake)}
+                           </TableCell>
+                           <TableCell className="text-right font-mono text-red-400 text-xs">
+                             R$ {fmt(calcLeg.responsibility)}
+                           </TableCell>
+                           <TableCell className="text-right font-mono text-muted-foreground text-[10px]">
+                             R$ {fmt(calcLeg.cumulativeResponsibility)}
+                           </TableCell>
+                           <TableCell className="text-right font-mono text-orange-400 font-bold text-xs">
+                             R$ {fmt(calcLeg.totalExposure)}
+                           </TableCell>
                           <TableCell>
                             <Button 
                               variant="ghost" 
