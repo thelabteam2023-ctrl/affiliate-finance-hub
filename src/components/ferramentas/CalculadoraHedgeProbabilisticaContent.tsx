@@ -1516,7 +1516,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                           </div>
                              <div className="flex gap-4">
                                <div className="text-right">
-                               <div className="flex items-center justify-end gap-1">
+                                 <div className="flex items-center justify-end gap-1">
                                  <span className="text-[9px] text-muted-foreground uppercase block">ROE p/ Ciclo</span>
                                  <CardInfoTooltip 
                                    title="ROE — Return on Exposure" 
