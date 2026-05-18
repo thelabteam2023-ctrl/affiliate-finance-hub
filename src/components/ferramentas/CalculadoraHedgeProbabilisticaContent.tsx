@@ -109,7 +109,6 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
       const trials = 1000;
       let totalProfit = 0;
       let bankruptcies = 0;
-      let currentBank = bankroll;
       const results = [];
 
       for (let i = 0; i < trials; i++) {
@@ -127,7 +126,7 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
         
         results.push(outcome);
         totalProfit += outcome;
-        if (currentBank + outcome <= 0) bankruptcies++;
+        if (bankroll + outcome <= 0) bankruptcies++;
       }
 
       const winRate = results.filter(r => r > 0).length / trials;
@@ -137,23 +136,9 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
         avgResult: totalProfit / trials,
         winRate,
         bankruptcies,
-        samples: results.slice(0, 10) // Show a few examples
+        samples: results.slice(0, 10)
       };
     }, [metrics, bankroll]);
-
-     let bestEV = -Infinity;
-     let bestTarget = 0.7;
-     for (let t = 0.1; t <= 1.0; t += 0.05) {
-       const m = HedgeProbabilisticoEngine.calculateMetrics(legs, freebet, commission / 100, t);
-       if (m.allWonProfit >= 0 && m.maxResponsibility <= bankroll) {
-         if (m.totalEV > bestEV) {
-           bestEV = m.totalEV;
-           bestTarget = t;
-         }
-       }
-     }
-     return { target: bestTarget, ev: bestEV };
-   }, [legs, freebet, commission, bankroll]);
  
    return (
      <ScrollArea className="h-full">
