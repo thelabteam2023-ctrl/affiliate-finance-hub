@@ -237,7 +237,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
 
     targets.forEach(target => {
       const optimizations: any[] = [];
-      const legCounts = Array.from({ length: maxLegs - 1 }, (_, i) => i + 2);
+     const legCounts = Array.from({ length: maxLegs }, (_, i) => i + 1);
 
       legCounts.forEach(numLegs => {
         let bestROE = -Infinity;
@@ -309,15 +309,16 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
      );
    }, [legs, freebet, commission, targetExtraction]);
 
-  const addLeg = () => {
-    if (legs.length >= 5) return;
-    setLegs([...legs, { name: `Evento ${legs.length + 1}`, backOdd: 2.0, layOdd: 2.0 }]);
-  };
+   const addLeg = () => {
+     const maxLegs = activeRulesetId === 'custom' ? customRules.maxLegs : 6;
+     if (legs.length >= maxLegs) return;
+     setLegs([...legs, { name: `Evento ${legs.length + 1}`, backOdd: 2.0, layOdd: 2.0 }]);
+   };
 
-  const removeLeg = (index: number) => {
-    if (legs.length <= 1) return;
-    setLegs(legs.filter((_, i) => i !== index));
-  };
+   const removeLeg = (index: number) => {
+     if (legs.length <= 1) return;
+     setLegs(legs.filter((_, i) => i !== index));
+   };
 
   const updateLeg = (index: number, field: keyof LegInput, value: any) => {
     const newLegs = [...legs];
@@ -1706,7 +1707,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                    />
                                                    <Slider 
                                                      value={[customRules.maxLegs]} 
-                                                     min={2} max={6} step={1}
+                                                     min={1} max={6} step={1}
                                                      onValueChange={(v) => setCustomRules({...customRules, maxLegs: v[0]})}
                                                    />
                                                  </div>
@@ -1752,10 +1753,45 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                          </div>
                                        </div>
 
-                                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                        {(goldenCombinationsByExtraction[targetExtraction.toFixed(2)] || goldenCombinationsByExtraction["0.70"] || []).map((combo, idx) => (
-                                          <div 
-                                            key={idx} 
+                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                           {/* Estratégia de 1 Perna (Hedge Simples) */}
+                                           <div 
+                                             className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/20 hover:border-primary/50 transition-all cursor-pointer group flex flex-col justify-between"
+                                             onClick={() => {
+                                               // Calcula odd ideal para a extração alvo: Odd = 1 / (1 - extração)
+                                               // Para 70% de extração, odd ~ 3.33
+                                               const idealOdd = Number((1 / (1 - targetExtraction)).toFixed(2));
+                                               applyGoldenCombo([idealOdd]);
+                                             }}
+                                           >
+                                             <div>
+                                               <div className="flex justify-between items-start mb-1">
+                                                 <Badge variant="outline" className="text-[8px] h-4 uppercase text-blue-400 border-blue-400/30">
+                                                   Hedge Simples
+                                                 </Badge>
+                                                 <div className="flex flex-col items-end">
+                                                   <span className="text-[10px] font-bold text-white">{fmtPct(targetExtraction * 100)} ROI</span>
+                                                   <span className="text-[8px] text-muted-foreground">Extração Direta</span>
+                                                 </div>
+                                               </div>
+                                               <h5 className="text-xs font-bold flex items-center gap-2 group-hover:text-primary transition-colors mt-1">
+                                                 1 Perna (Padrão)
+                                                 <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
+                                               </h5>
+                                               <p className="text-[9px] text-muted-foreground leading-tight mt-1 mb-2">
+                                                 Hedge clássico de perna única para extração imediata.
+                                               </p>
+                                             </div>
+                                             <div className="flex flex-wrap gap-1 mt-auto pt-2 border-t border-border/20">
+                                               <span className="text-[9px] px-1.5 py-0.5 rounded bg-background/50 border border-border/30 font-mono">
+                                                 {(1 / (1 - targetExtraction)).toFixed(2)}
+                                               </span>
+                                             </div>
+                                           </div>
+
+                                           {(goldenCombinationsByExtraction[targetExtraction.toFixed(2)] || goldenCombinationsByExtraction["0.70"] || []).map((combo, idx) => (
+                                             <div 
+                                               key={idx} 
                                             className="p-3 rounded-lg bg-muted/20 border border-border/50 hover:border-primary/50 transition-all cursor-pointer group flex flex-col justify-between"
                                             onClick={() => applyGoldenCombo(combo.legs)}
                                           >
