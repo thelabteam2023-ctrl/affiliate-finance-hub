@@ -8,11 +8,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
  import {
-   Target, Activity, TrendingUp, AlertTriangle, Shield,
-   Plus, Trash2, Info, ChevronRight, Zap, BarChart3, HelpCircle,
-   CheckCircle2, Lightbulb, BookOpen, FlaskConical, BrainCircuit,
-   ShieldAlert, Coins, Sparkles, Wand2
- } from 'lucide-react';
+    Target, Activity, TrendingUp, AlertTriangle, Shield,
+    Plus, Trash2, Info, ChevronRight, Zap, BarChart3, HelpCircle,
+    CheckCircle2, Lightbulb, BookOpen, FlaskConical, BrainCircuit,
+    ShieldAlert, Coins, Sparkles, Wand2, Dna, LineChart, History
+  } from 'lucide-react';
  import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   HedgeProbabilisticoEngine, 
@@ -90,7 +90,57 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
      return Math.min(100, ror * 100);
    }, [metrics, bankroll]);
  
-   const optimalConfig = useMemo(() => {
+    const optimalConfig = useMemo(() => {
+      let bestEV = -Infinity;
+      let bestTarget = 0.7;
+      for (let t = 0.1; t <= 1.0; t += 0.05) {
+        const m = HedgeProbabilisticoEngine.calculateMetrics(legs, freebet, commission / 100, t);
+        if (m.allWonProfit >= 0 && m.maxResponsibility <= bankroll) {
+          if (m.totalEV > bestEV) {
+            bestEV = m.totalEV;
+            bestTarget = t;
+          }
+        }
+      }
+      return { target: bestTarget, ev: bestEV };
+    }, [legs, freebet, commission, bankroll]);
+
+    const monteCarloSim = useMemo(() => {
+      const trials = 1000;
+      let totalProfit = 0;
+      let bankruptcies = 0;
+      let currentBank = bankroll;
+      const results = [];
+
+      for (let i = 0; i < trials; i++) {
+        const rand = Math.random();
+        let cumulativeProb = 0;
+        let outcome = 0;
+        
+        for (const scenario of metrics.aggregatedScenarios) {
+          cumulativeProb += scenario.probability;
+          if (rand <= cumulativeProb) {
+            outcome = scenario.result;
+            break;
+          }
+        }
+        
+        results.push(outcome);
+        totalProfit += outcome;
+        if (currentBank + outcome <= 0) bankruptcies++;
+      }
+
+      const winRate = results.filter(r => r > 0).length / trials;
+      
+      return {
+        trials,
+        avgResult: totalProfit / trials,
+        winRate,
+        bankruptcies,
+        samples: results.slice(0, 10) // Show a few examples
+      };
+    }, [metrics, bankroll]);
+
      let bestEV = -Infinity;
      let bestTarget = 0.7;
      for (let t = 0.1; t <= 1.0; t += 0.05) {
