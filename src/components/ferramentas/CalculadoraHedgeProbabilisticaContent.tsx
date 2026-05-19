@@ -711,10 +711,9 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
             </div>
           </div>
  
-         <div className="space-y-6">
+          <div className="space-y-6">
             {activeTab === "calculadora" ? (
-{activeTab === 'calculadora' ? (
-               <>
+              <>
 
         {/* KPIs Section */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -800,25 +799,25 @@ A Taxa de Extração é o ROI (Retorno sobre Investimento) calculado especificam
                     <Label className="text-xs">Valor da Freebet (R$)</Label>
                     <span className="text-xs font-mono text-primary">R$ {freebet}</span>
                   </div>
-                  <Input 
-                    type="number" 
-                    value={freebet} 
-                    onChange={(e) => setFreebet(Number(e.target.value)})
-                    className="h-9 text-sm"
-                  />
+                   <Input 
+                     type="number" 
+                     value={freebet} 
+                     onChange={(e) => setFreebet(Number(e.target.value))}
+                     className="h-9 text-sm"
+                   />
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <Label className="text-xs">Comissão Exchange (%)</Label>
                     <span className="text-xs font-mono text-primary">{commission}%</span>
                   </div>
-                  <Input 
-                    type="number" 
-                    step="0.1"
-                    value={commission} 
-                    onChange={(e) => setCommission(Number(e.target.value)})
-                    className="h-9 text-sm"
-                  />
+                   <Input 
+                     type="number" 
+                     step="0.1"
+                     value={commission} 
+                     onChange={(e) => setCommission(Number(e.target.value))}
+                     className="h-9 text-sm"
+                   />
                 </div>
                 <div className="space-y-4 pt-2">
                   <div className="flex justify-between items-center">
@@ -967,7 +966,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                   <Input 
                                     type="number"
                                     value={leg.backOdd} 
-                                    onChange={(e) => updateLeg(index, 'backOdd', Number(e.target.value)})
+                                    onChange={(e) => updateLeg(index, 'backOdd', Number(e.target.value))}
                                     className="h-8 text-[11px] font-mono w-16"
                                   />
                                 </div>
@@ -976,7 +975,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                   <Input 
                                     type="number"
                                     value={leg.layOdd} 
-                                    onChange={(e) => updateLeg(index, 'layOdd', Number(e.target.value)})
+                                    onChange={(e) => updateLeg(index, 'layOdd', Number(e.target.value))}
                                     className="h-8 text-[11px] font-mono w-16"
                                   />
                                 </div>
@@ -1067,8 +1066,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
           </div>
         </div>
                </>
-
-) : activeTab === "laboratorio" ? (
+            ) : activeTab === "laboratorio" ? (
 
                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div className="lg:col-span-4 xl:col-span-3 space-y-6">
@@ -1219,7 +1217,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                           <Input 
                                             type="number" 
                                             value={freebet} 
-                                            onChange={(e) => setFreebet(Number(e.target.value)})
+                                            onChange={(e) => setFreebet(Number(e.target.value))}
                                             className="h-10 pl-8 font-mono text-sm"
                                           />
                                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">R$</span>
@@ -1235,7 +1233,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                           <Input 
                                             type="number" 
                                             value={bankroll} 
-                                            onChange={(e) => setBankroll(Number(e.target.value)})
+                                            onChange={(e) => setBankroll(Number(e.target.value))}
                                             className="h-10 pl-8 font-mono text-sm"
                                           />
                                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">R$</span>
@@ -1713,8 +1711,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                       {/* Biblioteca de Ouro */}
                       <Card>
                                   <CardContent className="pt-6">
-                                    <div className="space-y-4">
-                                       <div className="space-y-6">
+                                    <div className="space-y-6">
                                          <div className="flex items-center justify-between">
                                            <div className="flex items-center gap-2">
                                              <Trophy className="h-4 w-4 text-yellow-400" />
@@ -1763,7 +1760,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                    <Input 
                                                      type="number" 
                                                      value={customRules.minOdd} 
-                                                     onChange={(e) => setCustomRules({...customRules, minOdd: Number(e.target.value)})
+                                                     onChange={(e) => setCustomRules({...customRules, minOdd: Number(e.target.value))}
                                                      className="h-8 text-xs font-mono"
                                                    />
                                                    <Slider 
@@ -1779,7 +1776,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                    <Input 
                                                      type="number" 
                                                      value={customRules.maxOdd} 
-                                                     onChange={(e) => setCustomRules({...customRules, maxOdd: Number(e.target.value)})
+                                                     onChange={(e) => setCustomRules({...customRules, maxOdd: Number(e.target.value))}
                                                      className="h-8 text-xs font-mono"
                                                    />
                                                    <Slider 
@@ -1795,7 +1792,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                    <Input 
                                                      type="number" 
                                                      value={customRules.maxLegs} 
-                                                     onChange={(e) => setCustomRules({...customRules, maxLegs: Math.min(6, Math.max(2, Number(e.target.value)))}}
+                                                     onChange={(e) => setCustomRules({...customRules, maxLegs: Math.min(6, Math.max(2, Number(e.target.value)))})}
                                                      className="h-8 text-xs font-mono"
                                                    />
                                                    <Slider 
@@ -1842,9 +1839,12 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                      </span>
                                                    </div>
                                                  </>
-                                               )} </div> </div> </div>
+                                                )}
+                                              </div>
+                                            )}
+                                          </div>
 
-                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                            {/* Estratégia de 1 Perna (Hedge Simples) */}
                                            <div 
                                              className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/20 hover:border-primary/50 transition-all cursor-pointer group flex flex-col justify-between"
@@ -1923,14 +1923,11 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                     </div>
                                   </CardContent>
                                 </Card>
-                            </div>
-                          </div>
-                        </div>
-                    </div>
-                  </div>
-               </div>
-              ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                              </div>
+              </div>
+            ) : activeTab === "live" ? (
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <Card className="bg-primary/5 border-primary/20">
                       <CardContent className="pt-4 flex flex-col items-center text-center">
                         <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1 uppercase font-bold tracking-tighter">
@@ -1996,7 +1993,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                 <Input 
                                   type="number"
                                   value={liveInput.backStake}
-                                  onChange={(e) => setLiveInput({...liveInput, backStake: Number(e.target.value)})
+                                  onChange={(e) => setLiveInput({...liveInput, backStake: Number(e.target.value))}
                                   className="h-10 pl-8 font-mono text-lg border-primary/30 focus:border-primary"
                                 />
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-mono">R$</span>
@@ -2010,7 +2007,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                               <Input 
                                 type="number"
                                 value={liveInput.backOddProjected}
-                                onChange={(e) => setLiveInput({...liveInput, backOddProjected: Number(e.target.value)})
+                                onChange={(e) => setLiveInput({...liveInput, backOddProjected: Number(e.target.value))}
                                 className="h-10 font-mono text-lg border-emerald-500/30 focus:border-emerald-500"
                                 step="0.01"
                               />
@@ -2026,7 +2023,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                               <Input 
                                 type="number"
                                 value={liveInput.layOdd}
-                                onChange={(e) => setLiveInput({...liveInput, layOdd: Number(e.target.value)})
+                                onChange={(e) => setLiveInput({...liveInput, layOdd: Number(e.target.value))}
                                 className="h-9 font-mono text-sm"
                                 step="0.01"
                               />
@@ -2036,7 +2033,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                               <Input 
                                 type="number"
                                 value={liveInput.backOddActual}
-                                onChange={(e) => setLiveInput({...liveInput, backOddActual: Number(e.target.value)})
+                                onChange={(e) => setLiveInput({...liveInput, backOddActual: Number(e.target.value))}
                                 className="h-9 font-mono text-sm opacity-60"
                                 step="0.01"
                               />
@@ -2173,7 +2170,6 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                         </CardHeader>
                         <CardContent>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-4">
                               <Table>
                                 <TableHeader>
                                   <TableRow className="hover:bg-transparent border-border/40">
@@ -2231,19 +2227,14 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                   Entre o Lay e o Back, você estará exposto em <strong>R$ {fmt(liveResults.liability)}</strong> na Exchange. 
                                   Certifique-se de que sua banca suporta essa responsabilidade durante o tempo de espera da odd.
                                 </p>
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </div>
-                </div>
-              
-)}
-          
+                               </div>
+                             </div>
+                           </CardContent>
+                         </Card>
+                       </div>
+                     </div>            )}
           </div>
-         <Dialog open={!!expanded} onOpenChange={(o) => !o && setExpanded(null)}>
+          <Dialog open={!!expanded} onOpenChange={(o) => !o && setExpanded(null)}>
           <DialogContent className="max-w-2xl">
             <DialogHeader className="mb-4">
               <DialogTitle className="flex items-center gap-2">
@@ -2446,7 +2437,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                </ScrollArea>
              </DialogContent>
            </Dialog>
-       </div>
-     </ScrollArea>
-   );
+        </div>
+      </ScrollArea>
+    );
 };
