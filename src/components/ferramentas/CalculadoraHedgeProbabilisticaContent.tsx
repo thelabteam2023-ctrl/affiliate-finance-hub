@@ -1843,7 +1843,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                   </>
                                                 )}
                                               </div>
-                                            </div>
+                                              <div />
                                           </div>
                                           </div>
                                         </div>
@@ -1926,7 +1926,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                         ))}
                                       </div>
                                     </div>
-                                  </CardContent>
+                                  <Card />
                                   </Card>
                                 </div>
                               </div>
@@ -2239,7 +2239,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                               </div>
                             </div>
                           </div>
-                        </CardContent>
+                        <CardContent />
                         </CardContent>
                           </div>
                         </div>
