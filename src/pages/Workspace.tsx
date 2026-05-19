@@ -333,7 +333,7 @@ export default function Workspace() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 max-w-md">
+          <div className="grid gap-6 max-w-md">
             <div className="space-y-2">
               <Label htmlFor="workspaceName">Nome do Workspace</Label>
               <Input
@@ -344,35 +344,12 @@ export default function Workspace() {
                 disabled={!isOwner && !isSystemOwner}
               />
             </div>
-            {(isOwner || isSystemOwner) && (
-              <div className="flex gap-2">
-                <Button 
-                  onClick={handleSaveWorkspace} 
-                  disabled={saving || !workspaceName.trim()}
-                  className="w-fit"
-                >
-                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Salvar Alterações
-                </Button>
-              </div>
-            )}
-          </div>
 
-          {(isOwner || isSystemOwner) && (
-            <div className="pt-6 border-t space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <h4 className="text-sm font-medium leading-none">Controles Adicionais</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Configurações avançadas do seu workspace.
-                  </p>
-                </div>
-              </div>
-              
-              <div className="space-y-4 max-w-md">
+            {(isOwner || isSystemOwner) && (
+              <div className="space-y-4 pt-4 border-t">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="chatModLevel">Moderação do Chat</Label>
+                    <Label htmlFor="chatModLevel" className="text-sm font-medium">Moderação do Chat</Label>
                     <Badge variant={chatModLevel === 'strict' ? 'destructive' : chatModLevel === 'moderate' ? 'secondary' : 'outline'}>
                       {chatModLevel === 'strict' ? 'Rígido' : chatModLevel === 'moderate' ? 'Moderado' : 'Livre Interno'}
                     </Badge>
@@ -406,7 +383,33 @@ export default function Workspace() {
                   <p className="text-[12px] text-muted-foreground mt-1 italic">
                     {chatModLevel === 'strict' && "Bloqueio total de termos ofensivos e gírias pesadas."}
                     {chatModLevel === 'moderate' && "Permite linguagem informal leve, mas bloqueia ofensas diretas."}
-                    {chatModLevel === 'relaxed' && "Linguagem natural permitida entre a equipe. Bloqueia apenas ódio e spam."}
+                    {chatModLevel === 'relaxed' && "Linguagem natural permitida entre a equipe. Sem restrições de termos."}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {(isOwner || isSystemOwner) && (
+              <div className="flex gap-2 pt-2">
+                <Button 
+                  onClick={handleSaveWorkspace} 
+                  disabled={saving || !workspaceName.trim()}
+                  className="w-full sm:w-fit"
+                >
+                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Salvar Todas as Alterações
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {(isOwner || isSystemOwner) && (
+            <div className="pt-6 border-t space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <h4 className="text-sm font-medium leading-none">Controles de Sistema</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Outras configurações do seu workspace.
                   </p>
                 </div>
               </div>
