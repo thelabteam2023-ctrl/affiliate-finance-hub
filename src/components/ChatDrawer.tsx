@@ -11,7 +11,9 @@ import {
   MoreVertical,
   ChevronDown,
   CheckCircle2,
-  Circle
+  Circle,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, isToday, isYesterday, differenceInMinutes } from 'date-fns';
@@ -22,6 +24,8 @@ import { usePresence } from '@/contexts/PresenceContext';
 import { useImageUpload } from '@/hooks/useImageUpload';
 import { ScrollArea } from './ui/scroll-area';
 import { toast } from 'sonner';
+import { useChatNotifications } from '@/hooks/useChatNotifications';
+import { Button } from './ui/button';
 
 interface ChatDrawerProps {
   isOpen: boolean;
@@ -60,6 +64,9 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isDeletingBatch, setIsDeletingBatch] = useState(false);
+  const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(true);
+  
+  const { unreadCount, incrementUnread, resetUnread, playNotificationSound } = useChatNotifications();
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -77,6 +84,9 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
   }, [onlineUsers, user?.id]);
 
   useEffect(() => {
+    if (isOpen) {
+      resetUnread();
+    }
     if (!isOpen || !workspace?.id) return;
 
     const fetchMembers = async () => {
@@ -178,6 +188,16 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
           if (payload.eventType === 'INSERT') {
             const newMessage = payload.new as ChatMessage;
             
+            // Lógica de notificação
+            if (newMessage.user_id !== user?.id) {
+              if (isNotificationsEnabled) {
+                playNotificationSound();
+              }
+              if (!isOpen) {
+                incrementUnread();
+              }
+            }
+
             // Fetch profile for the new message
             const { data: profileData } = await supabase
               .from('profiles')
@@ -593,6 +613,15 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
             >
               <CheckCircle2 className="w-4 h-4" />
             </button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-gray-400 hover:text-white hover:bg-white/10"
+              onClick={() => setIsNotificationsEnabled(!isNotificationsEnabled)}
+              title={isNotificationsEnabled ? "Silenciar notificações" : "Ativar notificações"}
+            >
+              {isNotificationsEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+            </Button>
             <button 
               onClick={onClose}
               className="p-1.5 hover:bg-white/10 rounded-md transition-colors"

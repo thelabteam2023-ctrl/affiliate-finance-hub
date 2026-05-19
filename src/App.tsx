@@ -7,6 +7,7 @@ import { ChatDrawer } from "@/components/ChatDrawer";
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { useChatNotifications } from "@/hooks/useChatNotifications";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { CalculadoraProvider } from "@/contexts/CalculadoraContext";
 import { ApostaPopupProvider } from "@/contexts/ApostaPopupContext";
@@ -217,13 +218,13 @@ function FloatingNotesButton({ onClick, isOpen }: { onClick: () => void, isOpen:
 function FloatingChatButton({ onClick, isOpen }: { onClick: () => void, isOpen: boolean }) {
   const { user, workspace } = useAuth();
   const [hasMention, setHasMention] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const { unreadCount, incrementUnread, playNotificationSound } = useChatNotifications();
   
   useEffect(() => {
     if (!user || !workspace?.id) return;
 
     const channel = supabase
-      .channel('chat-mention-notifications')
+      .channel('chat-global-notifications')
       .on(
         'postgres_changes',
         {
@@ -234,10 +235,21 @@ function FloatingChatButton({ onClick, isOpen }: { onClick: () => void, isOpen: 
         },
         (payload) => {
           const content = payload.new.content as string;
-          if (content.includes(`@${(user as any).full_name || user.email?.split('@')[0]}`)) {
+          const isFromMe = payload.new.user_id === user.id;
+          
+          if (isFromMe) return;
+
+          // Se o chat estiver fechado, incrementamos o contador global
+          if (!isOpen) {
+            incrementUnread();
+            playNotificationSound();
+          }
+
+          // Verificação específica de menção para animação
+          const myName = (user as any).full_name || user.email?.split('@')[0];
+          if (content.includes(`@${myName}`)) {
             if (!isOpen) {
               setHasMention(true);
-              setUnreadCount(prev => prev + 1);
             }
           }
         }
@@ -247,12 +259,11 @@ function FloatingChatButton({ onClick, isOpen }: { onClick: () => void, isOpen: 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, workspace?.id, isOpen]);
+  }, [user, workspace?.id, isOpen, incrementUnread, playNotificationSound]);
 
   useEffect(() => {
     if (isOpen) {
       setHasMention(false);
-      setUnreadCount(0);
     }
   }, [isOpen]);
 
