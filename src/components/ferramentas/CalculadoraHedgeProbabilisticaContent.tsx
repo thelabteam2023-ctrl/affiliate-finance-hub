@@ -662,29 +662,30 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
      const liveResults = useMemo(() => LiveHedgeEngine.calculate(liveInput), [liveInput]);
  
    return (
-     <ScrollArea className="h-full">
+    return (
+      <ScrollArea className="h-full">
         <div className="p-4 space-y-6 max-w-7xl mx-auto">
-         <div className="flex flex-col md:flex-row gap-4 items-start justify-between">
-           <div className="flex-1">
-             <div className="flex items-center gap-3">
-               <h1 className="text-2xl font-bold flex items-center gap-2">
-                 <Zap className="h-6 w-6 text-primary" />
-                 Calculadora de Hedge Probabilístico
-               </h1>
-               <Button 
-                 variant="ghost" 
-                 size="sm" 
-                 className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
-                 onClick={() => setShowHelp(true)}
-               >
-                 <HelpCircle className="h-4 w-4" />
-                 Como funciona?
-               </Button>
-             </div>
-             <p className="text-sm text-muted-foreground mt-1">
-               Motor quantitativo para extração de freebets com análise de risco e cascata.
-             </p>
-           </div>
+          <div className="flex flex-col md:flex-row gap-4 items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-bold flex items-center gap-2">
+                  <Zap className="h-6 w-6 text-primary" />
+                  Calculadora de Hedge Probabilístico
+                </h1>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+                  onClick={() => setShowHelp(true)}
+                >
+                  <HelpCircle className="h-4 w-4" />
+                  Como funciona?
+                </Button>
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                Motor quantitativo para extração de freebets com análise de risco e cascata.
+              </p>
+            </div>
             <div className="flex flex-col items-end gap-2">
               <div className="flex items-center gap-2">
                 <CardInfoTooltip 
@@ -692,27 +693,26 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
                   description={finalScore.reason + " O score avalia ROI, Risco de Ruína e o Drawdown em relação à sua banca."}
                 />
                 <Badge className={`px-4 py-1 text-sm border ${scoreColor}`}>
-                  Score: {scoreLabel}
-                </Badge>
+Score: {scoreLabel}
+</Badge>
               </div>
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-auto">
                 <TabsList className="grid grid-cols-3 h-9 w-[420px]">
-                 <TabsTrigger value="calculadora" className="text-xs gap-2">
-                   <Activity className="h-3.5 w-3.5" /> Calculadora
-                 </TabsTrigger>
+                  <TabsTrigger value="calculadora" className="text-xs gap-2">
+                    <Activity className="h-3.5 w-3.5" /> Calculadora
+                  </TabsTrigger>
                   <TabsTrigger value="laboratorio" className="text-xs gap-2">
                     <FlaskConical className="h-3.5 w-3.5" /> Laboratório
                   </TabsTrigger>
                   <TabsTrigger value="live" className="text-xs gap-2">
                     <Clock className="h-3.5 w-3.5" /> Calculadora Live
                   </TabsTrigger>
-               </TabsList>
-             </Tabs>
+                </TabsList>
+              </Tabs>
             </div>
           </div>
- 
           <div className="space-y-6">
-            {activeTab === "calculadora" ? (
+            {activeTab === 'calculadora' ? (
               <>
 
         {/* KPIs Section */}
@@ -1066,8 +1066,8 @@ Para corrigir, reduza a Meta de Extração no slider.`}
             </Card>
           </div>
         </div>
-               </>
-          ) : activeTab === "laboratorio" ? (
+            ) : activeTab === 'laboratorio' ? (
+              <>
             <>
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div className="lg:col-span-4 xl:col-span-3 space-y-6">
@@ -1923,14 +1923,9 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                          </div>
                                        </div>
                                    </CardContent>
-                                 </Card>
-                               </div>
-                             </div>
-                          </>
-                        ) : (
-                          <div className="space-y-6 animate-in fade-in duration-500">
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                              <Card className="bg-muted/30">
+              </>
+            ) : (
+              <div className="space-y-6 animate-in fade-in duration-500">
                                 <CardContent className="pt-4 flex flex-col items-center text-center">
                         <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1 uppercase font-bold tracking-tighter">
                           <Target className="h-3 w-3 text-primary" /> Proteção Recomendada
@@ -2233,14 +2228,19 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                               </div>
                             </div>
                           </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </div>
-                </div>
-                  </div>
-                </div>
-              )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <Dialog open={!!expanded} onOpenChange={() => setExpanded(null)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                Detalhamento do Cenário
+              </DialogTitle>
+            </DialogHeader>
 
               <Dialog open={!!expanded} onOpenChange={() => setExpanded(null)}>
                 <DialogContent className="max-w-md">
@@ -2285,9 +2285,9 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                           <span className="text-[11px] font-mono text-muted-foreground">{sub.path.join(' → ')}</span>
                           <div className="flex gap-4 text-[10px] font-mono">
                             <span className="text-muted-foreground/50">Peso: {fmtPct((1 / expanded.subScenarios.length) * 100)}</span>
-                          </div>
-                        </div>
-                      ))}
+          </DialogContent>
+        </Dialog>
+
                   </div>
                 </ScrollArea>
                 <p className="text-[10px] text-muted-foreground italic leading-tight">
@@ -2442,7 +2442,6 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                </ScrollArea>
              </DialogContent>
            </Dialog>
-       </div>
-     </ScrollArea>
-   );
+      </ScrollArea>
+    );
 };
