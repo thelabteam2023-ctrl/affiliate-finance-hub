@@ -1843,7 +1843,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                   </>
                                                 )}
                                               </div>
-                                              <div />
+                                              <div className="hidden"></div>
                                             </div>
                                           </div>
                                         </div>
