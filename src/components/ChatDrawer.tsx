@@ -185,6 +185,16 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
           if (payload.eventType === 'INSERT') {
             const newMessage = payload.new as ChatMessage;
             
+            // Lógica de notificação
+            if (newMessage.user_id !== user?.id) {
+              if (isNotificationsEnabled) {
+                playNotificationSound();
+              }
+              if (!isOpen) {
+                incrementUnread();
+              }
+            }
+
             // Fetch profile for the new message
             const { data: profileData } = await supabase
               .from('profiles')
