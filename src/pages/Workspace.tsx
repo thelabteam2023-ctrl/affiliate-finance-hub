@@ -122,6 +122,7 @@ export default function Workspace() {
     if (workspace) {
       setWorkspaceName(workspace.name);
       setChatModLevel(workspace.chat_moderation_level || "strict");
+      setChatSound(workspace.chat_notification_sound || CHAT_SOUNDS.pop);
     }
   }, [workspace]);
 
