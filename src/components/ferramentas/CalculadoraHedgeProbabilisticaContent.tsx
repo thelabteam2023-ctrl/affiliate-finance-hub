@@ -2239,7 +2239,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                             </div>
                           </div>
                         </CardContent>
-                      </Card>
+                        </CardContent>
                           </div>
                         </div>
                       </div>
