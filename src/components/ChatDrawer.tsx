@@ -52,6 +52,7 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   const [mentionIndex, setMentionIndex] = useState(-1);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
   const [messageActionsId, setMessageActionsId] = useState<string | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -100,11 +101,17 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
 
     const checkAdminStatus = async () => {
       if (!user?.id || !workspace?.id) return;
-      const { data } = await supabase.rpc('user_is_owner_or_admin_in_workspace', {
-        check_user_id: user.id,
-        check_workspace_id: workspace.id
-      });
-      setIsAdmin(!!data);
+      
+      const { data: memberData } = await supabase
+        .from('workspace_members')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('workspace_id', workspace.id)
+        .eq('is_active', true)
+        .single();
+
+      setIsAdmin(memberData?.role === 'admin' || memberData?.role === 'owner');
+      setIsOwner(memberData?.role === 'owner');
     };
 
     fetchMembers();
@@ -508,10 +515,10 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
             </p>
           </div>
           <div className="flex items-center gap-1">
-            {isAdmin && (
+            {isOwner && (
               <button 
                 onClick={handleClearChat}
-                title="Limpar Histórico (Admin)"
+                title="Limpar Histórico (Proprietário)"
                 className="p-1.5 hover:bg-red-500/10 rounded-md transition-colors group"
               >
                 <Trash2 className="w-4 h-4 text-gray-400 group-hover:text-red-500" />
