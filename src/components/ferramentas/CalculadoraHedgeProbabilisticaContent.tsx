@@ -1841,7 +1841,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                      </span>
                                                    </div>
                                                  </>
-                                               )} </div> </div> </div>
+                                                )} </div>
 
                                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                            {/* Estratégia de 1 Perna (Hedge Simples) */}
@@ -1927,8 +1927,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                         </div>
                     </div>
                   </div>
-               </div>
-              ) : (
+               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                     <Card className="bg-primary/5 border-primary/20">
                       <CardContent className="pt-4 flex flex-col items-center text-center">
@@ -2237,8 +2236,6 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                       </Card>
                     </div>
                   </div>
-                </div>
-              
 )}
           
           </div>
