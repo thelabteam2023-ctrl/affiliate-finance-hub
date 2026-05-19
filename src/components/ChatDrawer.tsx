@@ -285,7 +285,11 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
   };
 
   const handleDeleteMessage = async (messageId: string) => {
-    if (!confirm("Deseja realmente apagar esta mensagem?")) return;
+    // Optimistic Update
+    const previousMessages = [...messages];
+    setMessages(prev => prev.filter(m => m.id !== messageId));
+    setMessageActionsId(null);
+    setShowDeleteConfirm(null);
 
     try {
       const { error } = await supabase
@@ -294,15 +298,56 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
         .eq('id', messageId);
 
       if (error) {
-        toast.error("Erro ao apagar mensagem. O prazo de 5 minutos pode ter expirado.");
+        setMessages(previousMessages); // Rollback
+        toast.error("Erro ao apagar: o prazo de 5 minutos pode ter expirado.");
       } else {
         toast.success("Mensagem apagada");
       }
     } catch (err) {
+      setMessages(previousMessages); // Rollback
       toast.error("Erro inesperado ao apagar");
-    } finally {
-      setMessageActionsId(null);
     }
+  };
+
+  const handleDeleteBatch = async () => {
+    if (selectedIds.size === 0) return;
+    
+    const idsToDelete = Array.from(selectedIds);
+    const previousMessages = [...messages];
+    
+    // Optimistic Update
+    setMessages(prev => prev.filter(m => !selectedIds.has(m.id)));
+    setIsDeletingBatch(true);
+
+    try {
+      const { error } = await supabase
+        .from('community_chat_messages')
+        .delete()
+        .in('id', idsToDelete);
+
+      if (error) {
+        setMessages(previousMessages);
+        toast.error("Algumas mensagens não puderam ser apagadas (prazo expirado)");
+      } else {
+        toast.success(`${idsToDelete.length} mensagens apagadas`);
+        setSelectionMode(false);
+        setSelectedIds(new Set());
+      }
+    } catch (err) {
+      setMessages(previousMessages);
+      toast.error("Erro ao apagar mensagens");
+    } finally {
+      setIsDeletingBatch(false);
+    }
+  };
+
+  const toggleSelectMessage = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
   const handleClearChat = async () => {
