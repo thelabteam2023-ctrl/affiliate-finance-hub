@@ -2913,6 +2913,7 @@ export type Database = {
           edited_at: string | null
           expires_at: string
           id: string
+          image_url: string | null
           message_type: string
           user_id: string
           workspace_id: string
@@ -2928,6 +2929,7 @@ export type Database = {
           edited_at?: string | null
           expires_at?: string
           id?: string
+          image_url?: string | null
           message_type?: string
           user_id: string
           workspace_id: string
@@ -2943,6 +2945,7 @@ export type Database = {
           edited_at?: string | null
           expires_at?: string
           id?: string
+          image_url?: string | null
           message_type?: string
           user_id?: string
           workspace_id?: string

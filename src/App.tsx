@@ -24,6 +24,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { InactivityWarningBanner } from "@/components/InactivityWarningBanner";
 import { useInactivityTimeout } from "@/hooks/useInactivityTimeout";
 import { Loader2, NotebookPen, MessageCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { installRpcInterceptor } from "@/lib/dev/rpcInterceptor";
 
 // Install RPC interceptor for the system-owner Ledger Monitor (no-op for everyone else)
@@ -151,7 +152,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
               setIsNotesOpen(!isNotesOpen);
               if (!isNotesOpen) setIsChatOpen(false);
             }} 
-            isOpen={isNotesOpen} 
+            isOpen={isNotesOpen || isChatOpen} 
           />
           
           <FloatingChatButton 
@@ -159,7 +160,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
               setIsChatOpen(!isChatOpen);
               if (!isChatOpen) setIsNotesOpen(false);
             }} 
-            isOpen={isChatOpen} 
+            isOpen={isChatOpen || isNotesOpen} 
           />
 
           {/* Side Drawers */}
@@ -214,9 +215,47 @@ function FloatingNotesButton({ onClick, isOpen }: { onClick: () => void, isOpen:
 
 /** Global floating button for Chat */
 function FloatingChatButton({ onClick, isOpen }: { onClick: () => void, isOpen: boolean }) {
-  const { user } = useAuth();
-  const [unreadCount, setUnreadCount] = useState(0); // For now, zero as asked in basic requirements
+  const { user, workspace } = useAuth();
+  const [hasMention, setHasMention] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   
+  useEffect(() => {
+    if (!user || !workspace?.id) return;
+
+    const channel = supabase
+      .channel('chat-mention-notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'community_chat_messages',
+          filter: `workspace_id=eq.${workspace.id}`,
+        },
+        (payload) => {
+          const content = payload.new.content as string;
+          if (content.includes(`@${(user as any).full_name || user.email?.split('@')[0]}`)) {
+            if (!isOpen) {
+              setHasMention(true);
+              setUnreadCount(prev => prev + 1);
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, workspace?.id, isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setHasMention(false);
+      setUnreadCount(0);
+    }
+  }, [isOpen]);
+
   if (!user || isOpen) return null;
 
   return (
@@ -224,7 +263,8 @@ function FloatingChatButton({ onClick, isOpen }: { onClick: () => void, isOpen: 
       onClick={onClick}
       title="Chat"
       className={cn(
-        "fixed bottom-[88px] right-6 z-[9999] flex items-center justify-center w-[52px] h-[52px] rounded-full transition-all duration-150 shadow-[0_4px_20px_rgba(0,0,0,0.4)] active:scale-95 bg-[#1e2128] border border-[#2a2d35] text-white hover:border-[#00c853] hover:text-[#00c853] hover:scale-[1.08]"
+        "fixed bottom-[88px] right-6 z-[9999] flex items-center justify-center w-[52px] h-[52px] rounded-full transition-all duration-150 shadow-[0_4px_20px_rgba(0,0,0,0.4)] active:scale-95 bg-[#1e2128] border border-[#2a2d35] text-white hover:border-[#00c853] hover:text-[#00c853] hover:scale-[1.08]",
+        hasMention && "animate-[mention-pulse_1.2s_ease-out_infinite] border-[#00c853] text-[#00c853]"
       )}
     >
       <MessageCircle className="w-[22px] h-[22px]" />
@@ -233,6 +273,13 @@ function FloatingChatButton({ onClick, isOpen }: { onClick: () => void, isOpen: 
           {unreadCount}
         </span>
       )}
+      <style>{`
+        @keyframes mention-pulse {
+          0%   { box-shadow: 0 0 0 0 rgba(0, 200, 83, 0.7); }
+          70%  { box-shadow: 0 0 0 12px rgba(0, 200, 83, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(0, 200, 83, 0); }
+        }
+      `}</style>
     </button>
   );
 }
