@@ -136,6 +136,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
 
   const [freebet, setFreebet] = useState(100);
   const [commission, setCommission] = useState(2.8);
+  const [oddSpread, setOddSpread] = useState(0);
    const [targetExtraction, setTargetExtraction] = useState(0.7);
   const [labBenchmark, setLabBenchmark] = useState<string>('70');
    const [bankroll, setBankroll] = useState(5000);
