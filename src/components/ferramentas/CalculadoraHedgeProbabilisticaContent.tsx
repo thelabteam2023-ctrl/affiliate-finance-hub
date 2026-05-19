@@ -966,7 +966,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                   <Input 
                                     type="number"
                                     value={leg.backOdd} 
-                                    onChange={(e) => updateLeg(index, 'backOdd', Number(e.target.value)})
+                                    onChange={(e) => updateLeg(index, 'backOdd', Number(e.target.value))}
                                     className="h-8 text-[11px] font-mono w-16"
                                   />
                                 </div>
@@ -975,7 +975,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                   <Input 
                                     type="number"
                                     value={leg.layOdd} 
-                                    onChange={(e) => updateLeg(index, 'layOdd', Number(e.target.value)})
+                                    onChange={(e) => updateLeg(index, 'layOdd', Number(e.target.value))}
                                     className="h-8 text-[11px] font-mono w-16"
                                   />
                                 </div>
@@ -1218,7 +1218,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                           <Input 
                                             type="number" 
                                             value={freebet} 
-                                            onChange={(e) => setFreebet(Number(e.target.value)})
+                                            onChange={(e) => setFreebet(Number(e.target.value))}
                                             className="h-10 pl-8 font-mono text-sm"
                                           />
                                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">R$</span>
@@ -1234,7 +1234,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                           <Input 
                                             type="number" 
                                             value={bankroll} 
-                                            onChange={(e) => setBankroll(Number(e.target.value)})
+                                            onChange={(e) => setBankroll(Number(e.target.value))}
                                             className="h-10 pl-8 font-mono text-sm"
                                           />
                                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">R$</span>
@@ -1762,7 +1762,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                    <Input 
                                                      type="number" 
                                                      value={customRules.minOdd} 
-                                                     onChange={(e) => setCustomRules({...customRules, minOdd: Number(e.target.value)})
+                                                     onChange={(e) => setCustomRules({...customRules, minOdd: Number(e.target.value)})}
                                                      className="h-8 text-xs font-mono"
                                                    />
                                                    <Slider 
@@ -1778,7 +1778,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                    <Input 
                                                      type="number" 
                                                      value={customRules.maxOdd} 
-                                                     onChange={(e) => setCustomRules({...customRules, maxOdd: Number(e.target.value)})
+                                                     onChange={(e) => setCustomRules({...customRules, maxOdd: Number(e.target.value)})}
                                                      className="h-8 text-xs font-mono"
                                                    />
                                                    <Slider 
@@ -1794,7 +1794,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                    <Input 
                                                      type="number" 
                                                      value={customRules.maxLegs} 
-                                                     onChange={(e) => setCustomRules({...customRules, maxLegs: Math.min(6, Math.max(2, Number(e.target.value)))}}
+                                                     onChange={(e) => setCustomRules({...customRules, maxLegs: Math.min(6, Math.max(2, Number(e.target.value)))})}
                                                      className="h-8 text-xs font-mono"
                                                    />
                                                    <Slider 
