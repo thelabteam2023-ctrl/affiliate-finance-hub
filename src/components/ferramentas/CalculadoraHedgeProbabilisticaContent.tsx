@@ -37,15 +37,12 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
   ]);
 
   const [liveInput, setLiveInput] = useState<LiveHedgeInput>({
-    layOdd: 3.00,
-    backOddActual: 2.70,
+    backStake: 100,
     backOddProjected: 3.00,
-     backStake: 100, // Valor da Freebet
-     backOddProjected: 3.00, // Odd do Back
-     layOdd: 2.80, // Odd do Lay
-     backOddActual: 2.70,
-     commission: 2.8,
-     alreadyLaidStake: 0
+    layOdd: 2.80,
+    backOddActual: 2.70,
+    commission: 2.8,
+    alreadyLaidStake: 0
   });
 
   const liveResults = useMemo(() => LiveHedgeEngine.calculate(liveInput), [liveInput]);
