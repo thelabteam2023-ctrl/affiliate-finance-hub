@@ -1754,7 +1754,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                              </Tabs>
                                            </div>
 
-                                           {activeRulesetId === 'custom' ? (
+                                            {activeRulesetId === "custom" && (
                                              <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 grid grid-cols-1 md:grid-cols-3 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
                                                <div className="space-y-2">
                                                  <Label className="text-[10px] uppercase font-bold text-muted-foreground">Odd Mínima</Label>
@@ -1841,9 +1841,9 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                      </span>
                                                    </div>
                                                   </>
-                                                )}
+                                                  
                                               </div>
-                                              <div className="hidden"></div>
+                                              )}
                                             </div>
                                           </div>
                                         </div>
