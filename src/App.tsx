@@ -187,7 +187,7 @@ function FloatingNotesButton({ onClick, isOpen }: { onClick: () => void, isOpen:
       onClick={onClick}
       title="Anotações"
       className={cn(
-        "fixed bottom-6 right-6 z-[9999] flex items-center justify-center w-[52px] h-[52px] rounded-full transition-all duration-150 shadow-[0_4px_20px_rgba(0,200,83,0.4)] active:scale-95 bg-[#00c853] text-black hover:brightness-110 hover:scale-[1.08]"
+        "fixed bottom-1/2 translate-y-1/2 right-6 z-[9999] flex items-center justify-center w-[52px] h-[52px] rounded-full transition-all duration-150 shadow-[0_4px_20px_rgba(0,0,0,0.2)] active:scale-95 bg-[#00c853]/40 backdrop-blur-sm text-white hover:bg-[#00c853]/60 hover:scale-[1.08]"
       )}
     >
       <NotebookPen className="w-[22px] h-[22px]" />
