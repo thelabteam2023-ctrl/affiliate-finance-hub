@@ -711,10 +711,9 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
             </div>
           </div>
  
-         <div className="space-y-6">
+          <div className="space-y-6">
             {activeTab === "calculadora" ? (
-{activeTab === 'calculadora' ? (
-               <>
+              <>
 
         {/* KPIs Section */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -800,25 +799,25 @@ A Taxa de Extração é o ROI (Retorno sobre Investimento) calculado especificam
                     <Label className="text-xs">Valor da Freebet (R$)</Label>
                     <span className="text-xs font-mono text-primary">R$ {freebet}</span>
                   </div>
-                  <Input 
-                    type="number" 
-                    value={freebet} 
-                    onChange={(e) => setFreebet(Number(e.target.value)})
-                    className="h-9 text-sm"
-                  />
+                   <Input 
+                     type="number" 
+                     value={freebet} 
+                     onChange={(e) => setFreebet(Number(e.target.value))}
+                     className="h-9 text-sm"
+                   />
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <Label className="text-xs">Comissão Exchange (%)</Label>
                     <span className="text-xs font-mono text-primary">{commission}%</span>
                   </div>
-                  <Input 
-                    type="number" 
-                    step="0.1"
-                    value={commission} 
-                    onChange={(e) => setCommission(Number(e.target.value)})
-                    className="h-9 text-sm"
-                  />
+                   <Input 
+                     type="number" 
+                     step="0.1"
+                     value={commission} 
+                     onChange={(e) => setCommission(Number(e.target.value))}
+                     className="h-9 text-sm"
+                   />
                 </div>
                 <div className="space-y-4 pt-2">
                   <div className="flex justify-between items-center">
