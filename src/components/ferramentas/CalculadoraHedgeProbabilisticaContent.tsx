@@ -1841,9 +1841,15 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                      </span>
                                                    </div>
                                                   </>
-                                                  
-                                              )}
-                                           {/* Estratégia de 1 Perna (Hedge Simples) */}
+                                                  </>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                            <div 
                                              className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/20 hover:border-primary/50 transition-all cursor-pointer group flex flex-col justify-between"
                                              onClick={() => {
@@ -1913,15 +1919,13 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                 <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-background/50 border border-border/30 font-mono">
                                                   {odd.toFixed(2)}
                                                 </span>
-                                              ))}
-                                            </div>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  </Card>
                                   </Card>
                                 </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                               </div>
                             </div>
                           </div>
@@ -2235,11 +2239,12 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                         </CardContent>
                         </CardContent>
                           </div>
-                        </div>
-                      </div>
-                    )}
-          </div>
-         <Dialog open={!!expanded} onOpenChange={(o) => !o && setExpanded(null)}>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </div>
+                </div>
+              )}
           <DialogContent className="max-w-2xl">
             <DialogHeader className="mb-4">
               <DialogTitle className="flex items-center gap-2">
