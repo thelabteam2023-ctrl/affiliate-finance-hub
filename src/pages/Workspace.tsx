@@ -359,7 +359,16 @@ export default function Workspace() {
           </div>
 
           {(isOwner || isSystemOwner) && (
-            <div className="pt-6 border-t">
+            <div className="pt-6 border-t space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <h4 className="text-sm font-medium leading-none">Controles Adicionais</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Configurações avançadas do seu workspace.
+                  </p>
+                </div>
+              </div>
+              
               <div className="space-y-4 max-w-md">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
