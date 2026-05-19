@@ -4417,6 +4417,7 @@ export type Database = {
       }
       fluxo_cards: {
         Row: {
+          categoria: string | null
           coluna_id: string
           conteudo: string
           created_at: string
@@ -4428,6 +4429,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          categoria?: string | null
           coluna_id: string
           conteudo?: string
           created_at?: string
@@ -4439,6 +4441,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          categoria?: string | null
           coluna_id?: string
           conteudo?: string
           created_at?: string
@@ -4469,6 +4472,7 @@ export type Database = {
       fluxo_cards_historico: {
         Row: {
           card_id: string
+          categoria: string | null
           coluna_id: string
           conteudo: string
           created_at: string
@@ -4480,6 +4484,7 @@ export type Database = {
         }
         Insert: {
           card_id: string
+          categoria?: string | null
           coluna_id: string
           conteudo: string
           created_at?: string
@@ -4491,6 +4496,7 @@ export type Database = {
         }
         Update: {
           card_id?: string
+          categoria?: string | null
           coluna_id?: string
           conteudo?: string
           created_at?: string
