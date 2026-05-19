@@ -215,10 +215,10 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
                   className={cn(
-                    "flex-none py-1 px-2.5 text-[11px] font-medium rounded-full transition-all whitespace-nowrap border",
+                    "flex-none py-0.5 px-2 text-[10px] font-medium rounded transition-all whitespace-nowrap border",
                     selectedCategory === cat
-                      ? "bg-[#00c853] text-white border-[#00c853]"
-                      : "bg-[#1a1e26] text-gray-400 border-[#2a2d35] hover:text-gray-200"
+                      ? "bg-[#00c853]/20 text-[#00c853] border-[#00c853]/30"
+                      : "bg-[#1a1e26] text-gray-400 border-[#2a2d35] hover:text-gray-200 hover:border-gray-700"
                   )}
                 >
                   {cat}
