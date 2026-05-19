@@ -2437,7 +2437,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                </ScrollArea>
              </DialogContent>
            </Dialog>
-       </div>
-     </ScrollArea>
-   );
+        </div>
+      </ScrollArea>
+    );
 };
