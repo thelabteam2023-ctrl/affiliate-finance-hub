@@ -144,32 +144,36 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*', // Listen to INSERT, UPDATE, and DELETE
           schema: 'public',
           table: 'community_chat_messages',
           filter: `workspace_id=eq.${workspace.id}`,
         },
         async (payload) => {
-          const newMessage = payload.new as ChatMessage;
-          
-          // Fetch profile for the new message
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('full_name')
-            .eq('id', newMessage.user_id)
-            .single();
-          
-          const messageWithProfile = {
-            ...newMessage,
-            profiles: profileData
-          };
+          if (payload.eventType === 'INSERT') {
+            const newMessage = payload.new as ChatMessage;
+            
+            // Fetch profile for the new message
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('full_name')
+              .eq('id', newMessage.user_id)
+              .single();
+            
+            const messageWithProfile = {
+              ...newMessage,
+              profiles: profileData
+            };
 
-          setMessages((prev) => {
-            // Avoid duplicates if the local insert.select() also triggers a realtime event
-            if (prev.some(m => m.id === newMessage.id)) return prev;
-            return [...prev, messageWithProfile];
-          });
-          scrollToBottom();
+            setMessages((prev) => {
+              if (prev.some(m => m.id === newMessage.id)) return prev;
+              return [...prev, messageWithProfile];
+            });
+            scrollToBottom();
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = payload.old.id;
+            setMessages((prev) => prev.filter(m => m.id !== deletedId));
+          }
         }
       )
       .subscribe();
