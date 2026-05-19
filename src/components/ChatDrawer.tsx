@@ -52,6 +52,7 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   const [mentionIndex, setMentionIndex] = useState(-1);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
   const [messageActionsId, setMessageActionsId] = useState<string | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
