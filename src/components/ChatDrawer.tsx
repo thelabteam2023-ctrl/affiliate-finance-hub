@@ -29,7 +29,7 @@ interface ChatMessage {
   };
 }
 
-export const ChatDrawer: React.FC<ChatDrawerProps> = ({ isOpen, onClose }) => {
+export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
   const { user, workspace } = useAuth();
   const { onlineUsers } = usePresence();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
