@@ -68,17 +68,17 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
   };
 
   const getNextColumnId = (currentId: string) => {
-    const currentIndex = colunas.findIndex(c => c.id === currentId);
-    if (currentIndex !== -1 && currentIndex < colunas.length - 1) {
-      return colunas[currentIndex + 1].id;
+    const currentIndex = colunasFluxo.findIndex(c => c.id === currentId);
+    if (currentIndex !== -1 && currentIndex < colunasFluxo.length - 1) {
+      return colunasFluxo[currentIndex + 1].id;
     }
     return null;
   };
 
   const getPrevColumnId = (currentId: string) => {
-    const currentIndex = colunas.findIndex(c => c.id === currentId);
+    const currentIndex = colunasFluxo.findIndex(c => c.id === currentId);
     if (currentIndex > 0) {
-      return colunas[currentIndex - 1].id;
+      return colunasFluxo[currentIndex - 1].id;
     }
     return null;
   };
