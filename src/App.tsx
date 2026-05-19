@@ -1,7 +1,8 @@
-import { Suspense, lazy, useEffect, useRef } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import type { ComponentType } from "react";
 import { ThemeProvider } from "next-themes";
 import { TopBarProvider, useTopBar } from "@/contexts/TopBarContext";
+import { NotesDrawer } from "@/components/NotesDrawer";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { CalculadoraProvider } from "@/contexts/CalculadoraContext";
@@ -19,7 +20,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppSidebar } from "@/components/AppSidebar";
 import { InactivityWarningBanner } from "@/components/InactivityWarningBanner";
 import { useInactivityTimeout } from "@/hooks/useInactivityTimeout";
-import { Loader2 } from "lucide-react";
+import { Loader2, NotebookPen } from "lucide-react";
 import { installRpcInterceptor } from "@/lib/dev/rpcInterceptor";
 
 // Install RPC interceptor for the system-owner Ledger Monitor (no-op for everyone else)
@@ -114,6 +115,7 @@ function PageLoader() {
 // Layout component for authenticated routes with inactivity monitoring
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const { minutesUntilTimeout, showingWarning, resetActivity } = useInactivityTimeout();
+  const [isNotesOpen, setIsNotesOpen] = useState(false);
   const location = useLocation();
   const mainRef = useRef<HTMLElement>(null);
 
@@ -137,7 +139,10 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
         
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Header com trigger da sidebar + conteúdo contextual */}
-          <TopBarHeader />
+          <TopBarHeader onOpenNotes={() => setIsNotesOpen(true)} />
+
+          {/* Side Drawer for Notes */}
+          <NotesDrawer isOpen={isNotesOpen} onClose={() => setIsNotesOpen(false)} />
 
           {/* Main content: scroll local do viewport autenticado, sem depender do body */}
           <main ref={mainRef} className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
@@ -153,7 +158,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
 }
 
 /** TopBar renderiza trigger + conteúdo contextual injetado pela página */
-function TopBarHeader() {
+function TopBarHeader({ onOpenNotes }: { onOpenNotes: () => void }) {
   const { content } = useTopBar();
   return (
     <header className="shrink-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -161,6 +166,17 @@ function TopBarHeader() {
         <SidebarTrigger className="text-muted-foreground/70 hover:text-muted-foreground hover:bg-accent/50 flex-shrink-0 z-10" />
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="pointer-events-auto [&_span.font-semibold]:text-base">{content}</div>
+        </div>
+
+        {/* Global Tools (Notes) */}
+        <div className="flex items-center gap-2 ml-auto">
+          <button
+            onClick={onOpenNotes}
+            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent/50 rounded-md transition-all"
+          >
+            <NotebookPen className="w-4 h-4" />
+            <span className="hidden sm:inline">Anotações</span>
+          </button>
         </div>
       </div>
     </header>
