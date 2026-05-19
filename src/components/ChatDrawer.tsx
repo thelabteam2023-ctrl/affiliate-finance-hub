@@ -515,10 +515,10 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
             </p>
           </div>
           <div className="flex items-center gap-1">
-            {isAdmin && (
+            {isOwner && (
               <button 
                 onClick={handleClearChat}
-                title="Limpar Histórico (Admin)"
+                title="Limpar Histórico (Proprietário)"
                 className="p-1.5 hover:bg-red-500/10 rounded-md transition-colors group"
               >
                 <Trash2 className="w-4 h-4 text-gray-400 group-hover:text-red-500" />
