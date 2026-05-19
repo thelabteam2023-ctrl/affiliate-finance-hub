@@ -41,7 +41,22 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionFilter, setMentionFilter] = useState('');
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
+  const [mentionIndex, setMentionIndex] = useState(-1);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const { uploadImage, isUploading } = useImageUpload({
+    userId: user?.id || '',
+    bucket: 'chat-images',
+    onImageUploaded: () => {}, // Handled manually in handleSendMessage
+  });
 
   // Memoize workspace members (online only for now as requested)
   const workspaceOnlineMembers = useMemo(() => {
