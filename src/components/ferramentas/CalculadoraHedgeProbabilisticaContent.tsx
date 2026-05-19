@@ -10,7 +10,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
    Target, Activity, TrendingUp, AlertTriangle, Shield, 
    Plus, Trash2, Info, ChevronRight, Zap, BarChart3,
-   Clock, Gauge, ArrowUpRight, Timer, MousePointer2, Settings2
+   Clock, Gauge, ArrowUpRight, Timer, MousePointer2, Settings2,
+   FlaskConical, HelpCircle
 } from 'lucide-react';
 import { 
    HedgeProbabilisticoEngine,
@@ -26,6 +27,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
 
 export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState('calculadora');
+  const [showHelp, setShowHelp] = useState(false);
   const [freebet, setFreebet] = useState(100);
   const [commission, setCommission] = useState(2.8);
   const [efficiency, setEfficiency] = useState(0.8);
@@ -103,9 +105,12 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
               Score: {scoreLabel}
             </Badge>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-auto">
-              <TabsList className="grid grid-cols-2 h-9 w-[300px]">
+              <TabsList className="grid grid-cols-3 h-9 w-[420px]">
                 <TabsTrigger value="calculadora" className="text-xs gap-2">
                   <Activity className="h-3.5 w-3.5" /> Calculadora
+                </TabsTrigger>
+                <TabsTrigger value="laboratorio" className="text-xs gap-2">
+                  <FlaskConical className="h-3.5 w-3.5" /> Laboratório
                 </TabsTrigger>
                 <TabsTrigger value="live" className="text-xs gap-2">
                   <Clock className="h-3.5 w-3.5" /> Calculadora Live
@@ -358,6 +363,34 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
             </div>
           </div>
             </>
+          ) : activeTab === 'laboratorio' ? (
+            <div className="space-y-6 animate-in fade-in duration-500">
+              <Card className="border-primary/20 bg-primary/5">
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <FlaskConical className="h-4 w-4 text-primary" /> 
+                    Módulo Laboratório (Em Desenvolvimento)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="p-12 text-center space-y-4">
+                    <div className="bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
+                      <Settings2 className="h-8 w-8 text-primary animate-pulse" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold">Refatoração em Andamento</h3>
+                      <p className="text-sm text-muted-foreground max-w-md mx-auto mt-2">
+                        Estamos reconstruindo o Laboratório para integrar o novo motor de análise probabilística 
+                        e a Biblioteca de Ouro dinâmica.
+                      </p>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => setActiveTab('calculadora')}>
+                      Voltar para Calculadora
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           ) : (
             <div className="space-y-6 animate-in fade-in duration-500">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
