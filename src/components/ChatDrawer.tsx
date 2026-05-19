@@ -303,10 +303,10 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
   };
 
   const filteredMembers = useMemo(() => {
-    return onlineUsers.filter(u => 
+    return allMembers.filter(u => 
       u.name?.toLowerCase().includes(mentionFilter)
     );
-  }, [onlineUsers, mentionFilter]);
+  }, [allMembers, mentionFilter]);
 
   const insertMention = (member: any) => {
     const pos = textareaRef.current?.selectionStart || 0;
