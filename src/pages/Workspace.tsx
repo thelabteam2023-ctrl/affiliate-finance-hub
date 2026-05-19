@@ -167,7 +167,8 @@ export default function Workspace() {
         .from('workspaces')
         .update({ 
           name: workspaceName.trim(),
-          chat_moderation_level: chatModLevel
+          chat_moderation_level: chatModLevel,
+          chat_notification_sound: chatSound
         })
         .eq('id', workspaceId);
 
