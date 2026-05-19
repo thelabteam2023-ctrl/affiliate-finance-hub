@@ -1917,15 +1917,14 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                 <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-background/50 border border-border/30 font-mono">
                                                   {odd.toFixed(2)}
                                                 </span>
-                                  </Card>
-                                </div>
-                                  </Card>
-                                </div>
+                                  </CardContent>
+                                </Card>
                               </div>
                             </div>
                           </div>
                         </div>
                       </div>
+                    </div>
                       <CardContent className="pt-4 flex flex-col items-center text-center">
                         <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1 uppercase font-bold tracking-tighter">
                           <Target className="h-3 w-3 text-primary" /> Proteção Recomendada
@@ -2238,10 +2237,10 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                           </div>
                         </div>
                           </div>
+                          </div>
                         </div>
                       </div>
                     )}
-              </DialogDescription>
             </DialogHeader>
             
             <div className="bg-muted/30 rounded-lg p-4 border border-border/50 mb-6 space-y-3">
