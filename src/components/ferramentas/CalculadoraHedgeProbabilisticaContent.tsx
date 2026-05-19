@@ -1920,12 +1920,16 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                           ))}
                                         </div>
                                       </div>
-                                    </div>
-                                  </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
                                 </div>
                               </div>
                             </div>
-                          </>
+                          </div>
+                        </>
                         ) : (
                           <div className="space-y-6 animate-in fade-in duration-500">
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
