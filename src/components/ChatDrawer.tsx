@@ -132,14 +132,14 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
     if (!newMessage.trim() || !user?.id || !workspace?.id || sending) return;
 
     setSending(true);
-    const { error } = await supabase.from('community_chat_messages').insert({
+    const { error } = await supabase.from('community_chat_messages').insert([{
       content: newMessage.trim(),
       user_id: user.id,
       workspace_id: workspace.id,
       context_type: 'workspace',
       message_type: 'text',
-      expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(), // 7 days as requested in schema
-    });
+      expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
+    } as any]);
 
     if (!error) {
       setNewMessage('');
