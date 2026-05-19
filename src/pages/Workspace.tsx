@@ -345,14 +345,16 @@ export default function Workspace() {
               />
             </div>
             {(isOwner || isSystemOwner) && (
-              <Button 
-                onClick={handleSaveWorkspace} 
-                disabled={saving || !workspaceName.trim()}
-                className="w-fit"
-              >
-                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Salvar Alterações
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleSaveWorkspace} 
+                  disabled={saving || !workspaceName.trim()}
+                  className="w-fit"
+                >
+                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Salvar Alterações
+                </Button>
+              </div>
             )}
           </div>
 
