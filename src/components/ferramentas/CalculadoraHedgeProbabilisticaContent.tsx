@@ -243,7 +243,11 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
     /** Avalia uma combinação (ordem importa: cascata acumula responsabilidade). */
     const evaluate = (combo: number[], target: number) => {
       const m = HedgeProbabilisticoEngine.calculateMetrics(
-        combo.map(o => ({ name: '', backOdd: o, layOdd: o })),
+        combo.map(o => ({ 
+          name: '', 
+          backOdd: o, 
+          layOdd: Number((o * (1 + oddSpread / 100)).toFixed(2)) 
+        })),
         100,
         commDec,
         target,
