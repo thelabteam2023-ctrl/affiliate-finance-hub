@@ -540,9 +540,15 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
       const winRate = monteCarloSim.winRate;
       const lossRate = 1 - winRate;
       
-      // 1. Sequências (Greens e Reds)
-      const prob10Greens = Math.pow(winRate, 10);
-      const prob10Reds = Math.pow(lossRate, 10);
+      // 1. Sequências (Perspectiva Bolsa/Lay conforme solicitado)
+      // Green na Bolsa = Bater no Lay em qualquer perna (Ciclo interrompido com lucro via Lay)
+      // Red na Bolsa = Não bater no Lay (Bater todas as pernas no Back)
+      const probAllWonBack = metrics.aggregatedScenarios.find(
+        s => !s.canonicalPath.includes('lost')
+      )?.probability ?? 0;
+      const probLayWinCycle = 1 - probAllWonBack;
+      const prob10Greens = Math.pow(probLayWinCycle, 10);
+      const prob10Reds = Math.pow(probAllWonBack, 10);
 
       // 2. Desvio Padrão da Operação (Variação de lucro/prejuízo)
       const mean = metrics.totalEV;
