@@ -144,20 +144,20 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
    const [activeTab, setActiveTab] = useState('calculadora');
 
    const ODDS_RULESETS = useMemo(() => [
-     { id: "150_05", label: "1.50 → 5", minOdd: 1.5, maxOdd: 5, description: "Curto alcance, alta densidade." },
-     { id: "150_06", label: "1.50 → 6", minOdd: 1.5, maxOdd: 6, description: "Equilíbrio em odds baixas." },
-     { id: "150_08", label: "1.50 → 8", minOdd: 1.5, maxOdd: 8, description: "Alcance médio padrão." },
-     { id: "150_10", label: "1.50 → 10", minOdd: 1.5, maxOdd: 10, description: "Flexibilidade total de entrada." },
-     { id: "160_05", label: "1.60 → 5", minOdd: 1.6, maxOdd: 5, description: "Filtro conservador inicial." },
-     { id: "160_06", label: "1.60 → 6", minOdd: 1.6, maxOdd: 6, description: "Filtro moderado." },
-     { id: "170_05", label: "1.70 → 5", minOdd: 1.7, maxOdd: 5, description: "Filtro seletivo curto." },
-     { id: "170_06", label: "1.70 → 6", minOdd: 1.7, maxOdd: 6, description: "Filtro seletivo médio." },
-     { id: "180_06", label: "1.80 → 6", minOdd: 1.8, maxOdd: 6, description: "Alta seletividade." },
-     { id: "180_08", label: "1.80 → 8", minOdd: 1.8, maxOdd: 8, description: "Equilíbrio profissional." },
-     { id: "200_05", label: "2.00 → 5", minOdd: 2, maxOdd: 5, description: "Filtro restritivo máximo." },
-     { id: "200_06", label: "2.00 → 6", minOdd: 2, maxOdd: 6, description: "Risco controlado." },
-     { id: "unlimited", label: "1.50 → ∞", minOdd: 1.5, maxOdd: null, description: "Exploração total." },
-     { id: "custom", label: "Custom", minOdd: 1.5, maxOdd: 10, description: "Manual." }
+     { id: "150_05", label: "1.50 → 5", minOdd: 1.5, maxOdd: 5, description: "Curto alcance, alta densidade.", variance: "Baixa", efficiency: "Máxima" },
+     { id: "150_06", label: "1.50 → 6", minOdd: 1.5, maxOdd: 6, description: "Equilíbrio em odds baixas.", variance: "Baixa", efficiency: "Alta" },
+     { id: "150_08", label: "1.50 → 8", minOdd: 1.5, maxOdd: 8, description: "Alcance médio padrão.", variance: "Média", efficiency: "Média" },
+     { id: "150_10", label: "1.50 → 10", minOdd: 1.5, maxOdd: 10, description: "Flexibilidade total de entrada.", variance: "Alta", efficiency: "Média" },
+     { id: "160_05", label: "1.60 → 5", minOdd: 1.6, maxOdd: 5, description: "Filtro conservador inicial.", variance: "Baixa", efficiency: "Máxima" },
+     { id: "160_06", label: "1.60 → 6", minOdd: 1.6, maxOdd: 6, description: "Filtro moderado.", variance: "Baixa", efficiency: "Alta" },
+     { id: "170_05", label: "1.70 → 5", minOdd: 1.7, maxOdd: 5, description: "Filtro seletivo curto.", variance: "Baixa", efficiency: "Máxima" },
+     { id: "170_06", label: "1.70 → 6", minOdd: 1.7, maxOdd: 6, description: "Filtro seletivo médio.", variance: "Média", efficiency: "Alta" },
+     { id: "180_06", label: "1.80 → 6", minOdd: 1.8, maxOdd: 6, description: "Alta seletividade.", variance: "Média", efficiency: "Máxima" },
+     { id: "180_08", label: "1.80 → 8", minOdd: 1.8, maxOdd: 8, description: "Equilíbrio profissional.", variance: "Média", efficiency: "Alta" },
+     { id: "200_05", label: "2.00 → 5", minOdd: 2, maxOdd: 5, description: "Filtro restritivo máximo.", variance: "Mínima", efficiency: "Máxima" },
+     { id: "200_06", label: "2.00 → 6", minOdd: 2, maxOdd: 6, description: "Risco controlado.", variance: "Mínima", efficiency: "Alta" },
+     { id: "unlimited", label: "1.50 → ∞", minOdd: 1.5, maxOdd: null, description: "Exploração total.", variance: "Extrema", efficiency: "Variável" },
+     { id: "custom", label: "Custom", minOdd: 1.5, maxOdd: 10, description: "Manual.", variance: "-", efficiency: "-" }
    ], []);
 
   const [activeRulesetId, setActiveRulesetId] = useState<string>(() => {
