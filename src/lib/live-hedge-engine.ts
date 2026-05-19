@@ -1,9 +1,10 @@
 export interface LiveHedgeInput {
-  layOdd: number;
-  backOddActual: number;
-  backOddProjected: number;
-  backStake: number;
-  commission: number;
+   layOdd: number;           // Odd atual do Lay na Exchange
+   backOddActual: number;    // Odd atual do Back (informativo)
+   backOddProjected: number; // Odd que você pegou/pretende no Back
+   backStake: number;        // Valor da Freebet ou Stake Back
+   commission: number;       // Comissão da Exchange em %
+   alreadyLaidStake?: number; // Valor que já foi coberto em Lay anteriormente
 }
 
 export interface LiveHedgeResult {
@@ -31,15 +32,19 @@ export class LiveHedgeEngine {
   static calculate(input: LiveHedgeInput): LiveHedgeResult {
     const { layOdd, backOddActual, backOddProjected, backStake, commission } = input;
     const commDec = commission / 100;
+    const alreadyLaid = input.alreadyLaidStake || 0;
 
-    // FÓRMULA PRINCIPAL sugerida pelo usuário:
-    // LayStakeProjetado = (StakeBack × (OddBackProjetada - 1)) ÷ (OddLayAtual - Comissão)
-    const recommendedLayStake = (backStake * (backOddProjected - 1)) / (layOdd - commDec);
-    const liability = recommendedLayStake * (layOdd - 1);
+    // FÓRMULA HEDGE (Equalização de Lucro):
+    // LucroBack = StakeBack * (OddBack - 1)
+    // LucroLay = LayStake * (1 - Comissão)
+    // Para igualar: LayStake = (StakeBack * (OddBack - 1)) / (1 - Comissão) -- Se for FREEBET
+    // Mas aqui usamos a fórmula de proteção sobre a responsabilidade ou lucro esperado.
+    const totalRequiredLayStake = (backStake * (backOddProjected - 1)) / (layOdd - commDec);
+    const recommendedLayStake = Math.max(0, totalRequiredLayStake - alreadyLaid);
+    const liability = totalRequiredLayStake * (layOdd - 1);
     
-    // Resultados esperados
     const profitIfBackWins = (backStake * (backOddProjected - 1)) - liability;
-    const profitIfLayWins = (recommendedLayStake * (1 - commDec)) - backStake;
+    const profitIfLayWins = (totalRequiredLayStake * (1 - commDec)) - 0; // Se for freebet, não subtrai backStake original
     
     const expectedProfit = (profitIfBackWins + profitIfLayWins) / 2;
     

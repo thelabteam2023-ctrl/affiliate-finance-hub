@@ -37,11 +37,12 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
   ]);
 
   const [liveInput, setLiveInput] = useState<LiveHedgeInput>({
-    layOdd: 3.00,
-    backOddActual: 2.70,
-    backOddProjected: 3.00,
     backStake: 100,
-    commission: 2.0
+    backOddProjected: 3.00,
+    layOdd: 2.80,
+    backOddActual: 2.70,
+    commission: 2.8,
+    alreadyLaidStake: 0
   });
 
   const liveResults = useMemo(() => LiveHedgeEngine.calculate(liveInput), [liveInput]);
@@ -393,49 +394,49 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-6 animate-in fade-in duration-500">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Card className="bg-muted/30">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Card className="bg-primary/10 border-primary/20">
                   <CardContent className="pt-4 flex flex-col items-center text-center">
-                    <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1 uppercase font-bold tracking-tighter">
-                      <Target className="h-3 w-3 text-primary" /> Proteção Recomendada
+                    <div className="text-xs text-primary mb-1 flex items-center gap-1 uppercase font-bold tracking-tighter">
+                      <Target className="h-4 w-4" /> Proteção Recomendada
                     </div>
-                    <div className="text-2xl font-bold text-primary font-mono">
+                    <div className="text-3xl font-black text-primary font-mono">
                       R$ {fmt(liveResults.recommendedLayStake)}
                     </div>
-                    <div className="text-[10px] text-muted-foreground mt-1">Stake no Lay (Exchange)</div>
+                    <div className="text-[10px] text-muted-foreground mt-1">Apostar este valor no LAY agora</div>
                   </CardContent>
                 </Card>
                 <Card className="bg-muted/30">
                   <CardContent className="pt-4 flex flex-col items-center text-center">
-                    <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1 uppercase font-bold tracking-tighter text-red-400">
+                    <div className="text-xs text-red-400 mb-1 flex items-center gap-1 uppercase font-bold tracking-tighter">
                       <AlertTriangle className="h-3 w-3" /> Responsabilidade
                     </div>
                     <div className="text-2xl font-bold text-red-400 font-mono">
                       R$ {fmt(liveResults.liability)}
                     </div>
-                    <div className="text-[10px] text-muted-foreground mt-1">Exposição na Bolsa</div>
+                    <div className="text-[10px] text-muted-foreground mt-1">Exposição total na Exchange</div>
                   </CardContent>
                 </Card>
                 <Card className="bg-muted/30">
                   <CardContent className="pt-4 flex flex-col items-center text-center">
-                    <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1 uppercase font-bold tracking-tighter text-emerald-400">
-                      <TrendingUp className="h-3 w-3" /> Lucro Projetado
+                    <div className="text-xs text-emerald-400 mb-1 flex items-center gap-1 uppercase font-bold tracking-tighter">
+                      <TrendingUp className="h-3 w-3" /> Lucro Garantido
                     </div>
                     <div className="text-2xl font-bold text-emerald-400 font-mono">
                       R$ {fmt(liveResults.expectedProfit)}
                     </div>
-                    <div className="text-[10px] text-muted-foreground mt-1">ROI: {fmtPct(liveResults.roi)}</div>
+                    <div className="text-[10px] text-muted-foreground mt-1">Extração: {fmtPct(liveResults.roi)}</div>
                   </CardContent>
                 </Card>
                 <Card className="bg-muted/30">
                   <CardContent className="pt-4 flex flex-col items-center text-center">
-                    <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1 uppercase font-bold tracking-tighter text-blue-400">
-                      <Gauge className="h-3 w-3" /> Ganho de Spread
+                    <div className="text-xs text-blue-400 mb-1 flex items-center gap-1 uppercase font-bold tracking-tighter">
+                      <Info className="h-3 w-3" /> Spread Atual
                     </div>
                     <div className="text-2xl font-bold text-blue-400 font-mono">
-                      +{liveResults.spreadReduction.toFixed(2)}%
+                      {liveResults.currentSpread.toFixed(2)}%
                     </div>
-                    <div className="text-[10px] text-muted-foreground mt-1">Redução de Custo</div>
+                    <div className="text-[10px] text-muted-foreground mt-1">Gap entre Back e Lay</div>
                   </CardContent>
                 </Card>
               </div>
@@ -451,7 +452,7 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
                     <CardContent className="space-y-5 pt-5">
                       <div className="space-y-4">
                         <div className="space-y-2">
-                          <Label className="text-[10px] uppercase font-bold text-primary">Stake Desejada (Back)</Label>
+                          <Label className="text-[10px] uppercase font-bold text-primary">Valor da Freebet (R$)</Label>
                           <Input 
                             type="number" 
                             value={liveInput.backStake} 
@@ -459,35 +460,47 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
                             className="h-10 font-mono"
                           />
                         </div>
-                        <div className="space-y-2">
-                          <Label className="text-[10px] uppercase font-bold text-emerald-400">Odd Futura Projetada</Label>
-                          <Input 
-                            type="number" 
-                            value={liveInput.backOddProjected} 
-                            onChange={(e) => setLiveInput({...liveInput, backOddProjected: Number(e.target.value)})}
-                            className="h-10 font-mono"
-                            step="0.01"
-                          />
-                        </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label className="text-[10px] uppercase font-bold text-muted-foreground">Odd Lay Atual</Label>
+                            <Label className="text-[10px] uppercase font-bold text-emerald-400">Odd que Você Pegou (Back)</Label>
                             <Input 
                               type="number" 
-                              value={liveInput.layOdd} 
-                              onChange={(e) => setLiveInput({...liveInput, layOdd: Number(e.target.value)})}
-                              className="h-8 font-mono"
+                              value={liveInput.backOddProjected} 
+                              onChange={(e) => setLiveInput({...liveInput, backOddProjected: Number(e.target.value)})}
+                              className="h-10 font-mono border-emerald-500/20"
                               step="0.01"
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-[10px] uppercase font-bold text-muted-foreground">Odd Back Atual</Label>
+                            <Label className="text-[10px] uppercase font-bold text-red-400">Odd Atual da Exchange (Lay)</Label>
                             <Input 
                               type="number" 
-                              value={liveInput.backOddActual} 
-                              onChange={(e) => setLiveInput({...liveInput, backOddActual: Number(e.target.value)})}
-                              className="h-8 font-mono opacity-60"
+                              value={liveInput.layOdd} 
+                              onChange={(e) => setLiveInput({...liveInput, layOdd: Number(e.target.value)})}
+                              className="h-10 font-mono border-red-500/20"
                               step="0.01"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-[10px] uppercase font-bold text-muted-foreground">Comissão Exchange (%)</Label>
+                            <Input 
+                              type="number" 
+                              value={liveInput.commission} 
+                              onChange={(e) => setLiveInput({...liveInput, commission: Number(e.target.value)})}
+                              className="h-8 font-mono"
+                              step="0.1"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] uppercase font-bold text-muted-foreground">Já Coberto em Lay (R$)</Label>
+                            <Input 
+                              type="number" 
+                              value={liveInput.alreadyLaidStake || 0} 
+                              onChange={(e) => setLiveInput({...liveInput, alreadyLaidStake: Number(e.target.value)})}
+                              className="h-8 font-mono opacity-80"
+                              step="1"
                             />
                           </div>
                         </div>
@@ -497,18 +510,40 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
                 </div>
 
                 <div className="lg:col-span-2 space-y-6">
-                  <Card className="bg-muted/10">
-                    <CardContent className="pt-6">
-                      <div className="p-4 rounded-lg bg-emerald-500/5 border border-emerald-500/20 flex items-center justify-between">
-                        <div>
-                          <p className="text-xs font-bold text-emerald-400 uppercase tracking-tight">Vantagem Operacional</p>
-                          <p className="text-[10px] text-muted-foreground">
-                            Você extrai <strong>{liveResults.efficiencyGain.toFixed(2)}%</strong> mais valor via Hedge Antecipado.
+                  <Card className="bg-primary/5 border-primary/10">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-bold flex items-center gap-2">
+                        <HelpCircle className="h-4 w-4 text-primary" /> Como usar este exemplo (Freebet de R$ 100)
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                        <div className="p-3 rounded-md bg-background/50 border border-border">
+                          <p className="font-bold text-primary mb-1">Passo 1: Entrada</p>
+                          <p className="text-muted-foreground leading-relaxed">
+                            Você recebeu uma <strong>Freebet de R$ 100</strong>. Escolha um evento com Odd Back alta (ex: 3.00) e faça a aposta.
                           </p>
                         </div>
-                        <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
-                          ROI: {liveResults.roi.toFixed(2)}%
-                        </Badge>
+                        <div className="p-3 rounded-md bg-background/50 border border-border">
+                          <p className="font-bold text-primary mb-1">Passo 2: Proteção</p>
+                          <p className="text-muted-foreground leading-relaxed">
+                            Vá na Exchange e veja a <strong>Odd Lay</strong>. Se estiver 2.80, insira aqui. A calculadora dirá para você fazer um Lay de <strong>R$ {fmt(liveResults.recommendedLayStake)}</strong>.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                        <p className="text-sm font-bold text-emerald-400 mb-2">Resultado da Operação:</p>
+                        <div className="flex justify-between items-center text-xs">
+                          <span>Se o seu time <strong>Ganhar</strong> (Back):</span>
+                          <span className="font-mono font-bold text-emerald-400">R$ {fmt(liveResults.expectedProfit)} líquido</span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs mt-1">
+                          <span>Se o seu time <strong>Perder/Empatar</strong> (Lay):</span>
+                          <span className="font-mono font-bold text-emerald-400">R$ {fmt(liveResults.expectedProfit)} líquido</span>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-3 italic">
+                          * O lucro é garantido e "travado" no momento que você executa o Lay recomendado, independente do que aconteça no jogo.
+                        </p>
                       </div>
                     </CardContent>
                   </Card>
