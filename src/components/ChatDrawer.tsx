@@ -161,7 +161,11 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
             profiles: profileData
           };
 
-          setMessages((prev) => [...prev, messageWithProfile]);
+          setMessages((prev) => {
+            // Avoid duplicates if the local insert.select() also triggers a realtime event
+            if (prev.some(m => m.id === newMessage.id)) return prev;
+            return [...prev, messageWithProfile];
+          });
           scrollToBottom();
         }
       )
