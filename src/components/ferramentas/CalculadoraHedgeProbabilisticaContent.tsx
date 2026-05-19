@@ -1909,20 +1909,28 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                 {combo.description}
                                               </p>
                                             </div>
-                                            <div className="flex flex-wrap gap-1 mt-auto pt-2 border-t border-border/20">
-                                              {combo.legs.map((odd, i) => (
-                                                <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-background/50 border border-border/30 font-mono">
-                                                  {odd.toFixed(2)}
-                                                </span>
-                                  </CardContent>
-                                </Card>
+                                              <div className="flex flex-wrap gap-1 mt-auto pt-2 border-t border-border/20">
+                                                {combo.legs.map((odd, i) => (
+                                                  <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-background/50 border border-border/30 font-mono">
+                                                    {odd.toFixed(2)}
+                                                  </span>
+                                                ))}
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                      <CardContent className="pt-4 flex flex-col items-center text-center">
+                          </>
+                        ) : (
+                          <div className="space-y-6 animate-in fade-in duration-500">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                              <Card className="bg-muted/30">
+                                <CardContent className="pt-4 flex flex-col items-center text-center">
                         <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1 uppercase font-bold tracking-tighter">
                           <Target className="h-3 w-3 text-primary" /> Proteção Recomendada
                         </div>
