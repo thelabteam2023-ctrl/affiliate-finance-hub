@@ -1840,8 +1840,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                      </span>
                                                    </div>
                                                  </>
-                                               )}
-                                             </div>
+                                                 </> ) : ( </div>
                                            </div>
                                          </div>
                                        </div>
