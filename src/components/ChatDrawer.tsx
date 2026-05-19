@@ -70,7 +70,7 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
       setLoading(true);
       const { data, error } = await supabase
         .from('community_chat_messages')
-        .select('id, content, user_id, created_at')
+        .select('id, content, user_id, image_url, created_at')
         .eq('workspace_id', workspace.id)
         .eq('context_type', 'workspace')
         .order('created_at', { ascending: true })
