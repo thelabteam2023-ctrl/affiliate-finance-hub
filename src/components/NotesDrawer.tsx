@@ -6,7 +6,9 @@ import {
   Trash2, 
   ChevronRight,
   ChevronLeft,
-  Loader2
+  Loader2,
+  Tag,
+  Filter
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
