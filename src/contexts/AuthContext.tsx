@@ -19,6 +19,7 @@ interface Workspace {
   name: string;
   slug: string;
   plan: string;
+  chat_moderation_level?: string;
 }
 
 // ── State Machine ──────────────────────────────────────────────
