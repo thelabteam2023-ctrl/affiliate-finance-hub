@@ -36,6 +36,9 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
   const [activeTabId, setActiveTabId] = useState<string>('');
   const [isAdding, setIsAdding] = useState(false);
   const [newNoteText, setNewNoteText] = useState('');
+  const [newNoteCategory, setNewNoteCategory] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('Todas');
+  const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const colunasFluxo = colunas.filter(c => c.nome !== 'Geral');
@@ -64,9 +67,23 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
       return;
     }
 
-    await handleCreateCard(currentActiveColumnId, newNoteText);
+    if (editingCardId) {
+      await handleUpdateCard(editingCardId, newNoteText, view === 'geral' ? newNoteCategory : undefined);
+    } else {
+      await handleCreateCard(currentActiveColumnId, newNoteText, view === 'geral' ? newNoteCategory : undefined);
+    }
+    
     setNewNoteText('');
+    setNewNoteCategory('');
+    setEditingCardId(null);
     setIsAdding(false);
+  };
+
+  const startEditing = (note: any) => {
+    setNewNoteText(note.conteudo);
+    setNewNoteCategory(note.categoria || '');
+    setEditingCardId(note.id);
+    setIsAdding(true);
   };
 
   const getNextColumnId = (currentId: string) => {
@@ -86,7 +103,22 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
   };
 
   const activeColumn = view === 'geral' ? colunaGeral : colunasFluxo.find(c => c.id === activeTabId);
-  const columnCards = cards.filter(c => c.coluna_id === currentActiveColumnId).sort((a, b) => a.ordem - b.ordem);
+  
+  // Get all unique categories for the general view
+  const allCategories = Array.from(new Set(
+    cards
+      .filter(c => c.coluna_id === colunaGeral?.id && c.categoria)
+      .map(c => c.categoria!)
+  )).sort();
+
+  const columnCards = cards
+    .filter(c => c.coluna_id === currentActiveColumnId)
+    .filter(c => {
+      if (view !== 'geral' || selectedCategory === 'Todas') return true;
+      if (selectedCategory === 'Sem tópico') return !c.categoria;
+      return c.categoria === selectedCategory;
+    })
+    .sort((a, b) => a.ordem - b.ordem);
 
   return (
     <>
