@@ -119,6 +119,7 @@ function PageLoader() {
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const { minutesUntilTimeout, showingWarning, resetActivity } = useInactivityTimeout();
   const [isNotesOpen, setIsNotesOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const location = useLocation();
   const mainRef = useRef<HTMLElement>(null);
 
