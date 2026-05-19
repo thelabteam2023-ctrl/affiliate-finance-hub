@@ -661,7 +661,6 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
  
      const liveResults = useMemo(() => LiveHedgeEngine.calculate(liveInput), [liveInput]);
  
-   return (
     return (
       <ScrollArea className="h-full">
         <div className="p-4 space-y-6 max-w-7xl mx-auto">
