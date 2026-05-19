@@ -1066,8 +1066,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
           </div>
         </div>
                </>
-
-) : activeTab === "laboratorio" ? (
+          ) : activeTab === "laboratorio" ? (
 
                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div className="lg:col-span-4 xl:col-span-3 space-y-6">
@@ -1839,16 +1838,15 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                      <span className="text-[9px] text-muted-foreground leading-tight block">
                                                        {activeRulesetId === 'restricted_high' ? 'Ideal para bancas conservadoras.' : 'Foco em maximização de extração.'}
                                                      </span>
-                                                    </div>
-                                                )}
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
+                                                   </div>
+                                                 </>
+                                               </>
+          ) : (
+                                               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-in fade-in duration-300">
+                                     </div>
 
                                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                           <div 
+                                           <div
                                              className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/20 hover:border-primary/50 transition-all cursor-pointer group flex flex-col justify-between"
                                              onClick={() => {
                                                // Calcula odd ideal para a extração alvo: Odd = 1 / (1 - extração)
@@ -1989,7 +1987,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                 <Input 
                                   type="number"
                                   value={liveInput.backStake}
-                                  onChange={(e) => setLiveInput({...liveInput, backStake: Number(e.target.value)})}
+                                  onChange={(e) => setLiveInput({...liveInput, backStake: Number(e.target.value)})}}
                                   className="h-10 pl-8 font-mono text-lg border-primary/30 focus:border-primary"
                                 />
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-mono">R$</span>
@@ -2003,7 +2001,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                 <Input 
                                   type="number"
                                   value={liveInput.backOddProjected}
-                                  onChange={(e) => setLiveInput({...liveInput, backOddProjected: Number(e.target.value)})}
+                                  onChange={(e) => setLiveInput({...liveInput, backOddProjected: Number(e.target.value)})}}
                                   className="h-10 font-mono text-lg border-emerald-500/30 focus:border-emerald-500"
                                   step="0.01"
                                 />
@@ -2019,7 +2017,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                 <Input 
                                   type="number"
                                   value={liveInput.layOdd}
-                                  onChange={(e) => setLiveInput({...liveInput, layOdd: Number(e.target.value)})}
+                                  onChange={(e) => setLiveInput({...liveInput, layOdd: Number(e.target.value)})}}
                                   className="h-9 font-mono text-sm"
                                   step="0.01"
                                 />
@@ -2029,7 +2027,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                 <Input 
                                   type="number"
                                   value={liveInput.backOddActual}
-                                  onChange={(e) => setLiveInput({...liveInput, backOddActual: Number(e.target.value)})}
+                                  onChange={(e) => setLiveInput({...liveInput, backOddActual: Number(e.target.value)})}}
                                   className="h-9 font-mono text-sm opacity-60"
                                   step="0.01"
                                 />
