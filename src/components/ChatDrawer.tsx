@@ -67,6 +67,33 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
   useEffect(() => {
     if (!isOpen || !workspace?.id) return;
 
+    const fetchMembers = async () => {
+      const { data, error } = await supabase
+        .from('workspace_members')
+        .select(`
+          user_id,
+          profiles:profiles (
+            full_name,
+            email
+          )
+        `)
+        .eq('workspace_id', workspace.id);
+
+      if (!error && data) {
+        const members = data.map((m: any) => ({
+          user_id: m.user_id,
+          name: m.profiles?.full_name || m.profiles?.email?.split('@')[0] || 'Usuário',
+        }));
+        setAllMembers(members);
+      }
+    };
+
+    fetchMembers();
+  }, [isOpen, workspace?.id]);
+
+  useEffect(() => {
+    if (!isOpen || !workspace?.id) return;
+
     const fetchMessages = async () => {
       setLoading(true);
       const { data, error } = await supabase
