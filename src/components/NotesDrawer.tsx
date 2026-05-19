@@ -30,17 +30,24 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
     canOperate 
   } = useNotesData();
 
+  const [view, setView] = useState<'geral' | 'fluxo'>('geral');
   const [activeTabId, setActiveTabId] = useState<string>('');
   const [isAdding, setIsAdding] = useState(false);
   const [newNoteText, setNewNoteText] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const colunasFluxo = colunas.filter(c => c.nome !== 'Geral');
+  const colunaGeral = colunas.find(c => c.nome === 'Geral');
+
   // Define active tab when columns are loaded
   useEffect(() => {
-    if (colunas.length > 0 && !activeTabId) {
-      setActiveTabId(colunas[0].id);
+    if (colunasFluxo.length > 0 && !activeTabId) {
+      setActiveTabId(colunasFluxo[0].id);
     }
-  }, [colunas, activeTabId]);
+  }, [colunasFluxo, activeTabId]);
+
+  // If view is general, we use the general column ID for adding notes
+  const currentActiveColumnId = view === 'geral' ? colunaGeral?.id : activeTabId;
 
   // Focus textarea when adding
   useEffect(() => {
