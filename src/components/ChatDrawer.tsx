@@ -274,7 +274,11 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
         setImagePreview(null);
       } else {
         console.error("Supabase insert error:", error);
-        toast.error(`Erro ao enviar: ${error.message || "Erro desconhecido"}`);
+        if (error.message?.includes('termos não permitidos')) {
+          toast.error("Sua mensagem contém termos bloqueados pela moderação.");
+        } else {
+          toast.error(`Erro ao enviar: ${error.message || "Erro desconhecido"}`);
+        }
       }
     } catch (err: any) {
       console.error("Unexpected error in handleSendMessage:", err);

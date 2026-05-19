@@ -110,6 +110,7 @@ export default function Workspace() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [chatModLevel, setChatModLevel] = useState<string>("strict");
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [workspaceName, setWorkspaceName] = useState("");
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
@@ -118,6 +119,7 @@ export default function Workspace() {
   useEffect(() => {
     if (workspace) {
       setWorkspaceName(workspace.name);
+      setChatModLevel(workspace.chat_moderation_level || "strict");
     }
   }, [workspace]);
 
@@ -160,7 +162,10 @@ export default function Workspace() {
 
       const { error } = await supabase
         .from('workspaces')
-        .update({ name: workspaceName.trim() })
+        .update({ 
+          name: workspaceName.trim(),
+          chat_moderation_level: chatModLevel
+        })
         .eq('id', workspaceId);
 
       if (error) throw error;
@@ -350,6 +355,52 @@ export default function Workspace() {
               </Button>
             )}
           </div>
+
+          {(isOwner || isSystemOwner) && (
+            <div className="pt-6 border-t">
+              <div className="space-y-4 max-w-md">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="chatModLevel">Moderação do Chat</Label>
+                    <Badge variant={chatModLevel === 'strict' ? 'destructive' : chatModLevel === 'moderate' ? 'secondary' : 'outline'}>
+                      {chatModLevel === 'strict' ? 'Rígido' : chatModLevel === 'moderate' ? 'Moderado' : 'Livre Interno'}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Button
+                      variant={chatModLevel === 'strict' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setChatModLevel('strict')}
+                      className="text-xs"
+                    >
+                      Rígido
+                    </Button>
+                    <Button
+                      variant={chatModLevel === 'moderate' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setChatModLevel('moderate')}
+                      className="text-xs"
+                    >
+                      Moderado
+                    </Button>
+                    <Button
+                      variant={chatModLevel === 'relaxed' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setChatModLevel('relaxed')}
+                      className="text-xs"
+                    >
+                      Livre
+                    </Button>
+                  </div>
+                  <p className="text-[12px] text-muted-foreground mt-1 italic">
+                    {chatModLevel === 'strict' && "Bloqueio total de termos ofensivos e gírias pesadas."}
+                    {chatModLevel === 'moderate' && "Permite linguagem informal leve, mas bloqueia ofensas diretas."}
+                    {chatModLevel === 'relaxed' && "Linguagem natural permitida entre a equipe. Bloqueia apenas ódio e spam."}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
