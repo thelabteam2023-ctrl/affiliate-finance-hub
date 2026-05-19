@@ -560,8 +560,13 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
                     i === mentionIndex ? "bg-[#00c853]/10 text-[#00c853]" : "text-gray-300 hover:bg-[#2a2d35]"
                   )}
                 >
-                  <div className="w-6 h-6 rounded-full bg-[#2a2d35] flex items-center justify-center border border-[#3a3d45] shrink-0">
-                    <span className="text-[10px] font-bold uppercase">{member.name?.charAt(0) || '?'}</span>
+                  <div className="relative shrink-0">
+                    <div className="w-6 h-6 rounded-full bg-[#2a2d35] flex items-center justify-center border border-[#3a3d45]">
+                      <span className="text-[10px] font-bold uppercase">{member.name?.charAt(0) || '?'}</span>
+                    </div>
+                    {onlineUserIds.has(member.user_id) && (
+                      <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 border border-[#1e2128] rounded-full" />
+                    )}
                   </div>
                   <span className="truncate">{member.name}</span>
                   {member.user_id === user?.id && <span className="text-[10px] text-gray-500 ml-auto">(Você)</span>}
