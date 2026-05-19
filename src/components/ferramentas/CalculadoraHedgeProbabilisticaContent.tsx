@@ -1762,7 +1762,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                    <Input 
                                                      type="number" 
                                                      value={customRules.minOdd} 
-                                                      onChange={(e) => setCustomRules({...customRules, minOdd: Number(e.target.value)})}}
+                                                      onChange={(e) => setCustomRules({...customRules, minOdd: Number(e.target.value)})}
                                                      className="h-8 text-xs font-mono"
                                                    />
                                                    <Slider 
@@ -1778,7 +1778,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                    <Input 
                                                      type="number" 
                                                      value={customRules.maxOdd} 
-                                                      onChange={(e) => setCustomRules({...customRules, maxOdd: Number(e.target.value)})}}
+                                                      onChange={(e) => setCustomRules({...customRules, maxOdd: Number(e.target.value)})}
                                                      className="h-8 text-xs font-mono"
                                                    />
                                                    <Slider 
