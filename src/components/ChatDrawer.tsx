@@ -6,10 +6,13 @@ import {
   Loader2,
   User as UserIcon,
   ImagePlus,
-  Maximize2
+  Maximize2,
+  Trash2,
+  MoreVertical,
+  ChevronDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format, isToday, isYesterday } from 'date-fns';
+import { format, isToday, isYesterday, differenceInMinutes } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
