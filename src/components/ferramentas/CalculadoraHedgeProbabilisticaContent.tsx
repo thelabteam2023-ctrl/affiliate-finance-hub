@@ -355,7 +355,132 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
                 </div>
               </CardContent>
             </Card>
-          </div>
+            </>
+          ) : (
+            <div className="space-y-6 animate-in fade-in duration-500">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card className="bg-muted/30">
+                  <CardContent className="pt-4 flex flex-col items-center text-center">
+                    <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1 uppercase font-bold tracking-tighter">
+                      <Target className="h-3 w-3 text-primary" /> Proteção Recomendada
+                    </div>
+                    <div className="text-2xl font-bold text-primary font-mono">
+                      R$ {fmt(liveResults.recommendedLayStake)}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground mt-1">Stake no Lay (Exchange)</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/30">
+                  <CardContent className="pt-4 flex flex-col items-center text-center">
+                    <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1 uppercase font-bold tracking-tighter text-red-400">
+                      <AlertTriangle className="h-3 w-3" /> Responsabilidade
+                    </div>
+                    <div className="text-2xl font-bold text-red-400 font-mono">
+                      R$ {fmt(liveResults.liability)}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground mt-1">Exposição na Bolsa</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/30">
+                  <CardContent className="pt-4 flex flex-col items-center text-center">
+                    <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1 uppercase font-bold tracking-tighter text-emerald-400">
+                      <TrendingUp className="h-3 w-3" /> Lucro Projetado
+                    </div>
+                    <div className="text-2xl font-bold text-emerald-400 font-mono">
+                      R$ {fmt(liveResults.expectedProfit)}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground mt-1">ROI: {fmtPct(liveResults.roi)}</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/30">
+                  <CardContent className="pt-4 flex flex-col items-center text-center">
+                    <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1 uppercase font-bold tracking-tighter text-blue-400">
+                      <Gauge className="h-3 w-3" /> Ganho de Spread
+                    </div>
+                    <div className="text-2xl font-bold text-blue-400 font-mono">
+                      +{liveResults.spreadReduction.toFixed(2)}%
+                    </div>
+                    <div className="text-[10px] text-muted-foreground mt-1">Redução de Custo</div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-1 space-y-6">
+                  <Card className="border-primary/20">
+                    <CardHeader className="pb-3 bg-primary/5">
+                      <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-wider">
+                        <Settings2 className="h-4 w-4 text-primary" /> Parâmetros Operacionais
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-5 pt-5">
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label className="text-[10px] uppercase font-bold text-primary">Stake Desejada (Back)</Label>
+                          <Input 
+                            type="number" 
+                            value={liveInput.backStake} 
+                            onChange={(e) => setLiveInput({...liveInput, backStake: Number(e.target.value)})}
+                            className="h-10 font-mono"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-[10px] uppercase font-bold text-emerald-400">Odd Futura Projetada</Label>
+                          <Input 
+                            type="number" 
+                            value={liveInput.backOddProjected} 
+                            onChange={(e) => setLiveInput({...liveInput, backOddProjected: Number(e.target.value)})}
+                            className="h-10 font-mono"
+                            step="0.01"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-[10px] uppercase font-bold text-muted-foreground">Odd Lay Atual</Label>
+                            <Input 
+                              type="number" 
+                              value={liveInput.layOdd} 
+                              onChange={(e) => setLiveInput({...liveInput, layOdd: Number(e.target.value)})}
+                              className="h-8 font-mono"
+                              step="0.01"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] uppercase font-bold text-muted-foreground">Odd Back Atual</Label>
+                            <Input 
+                              type="number" 
+                              value={liveInput.backOddActual} 
+                              onChange={(e) => setLiveInput({...liveInput, backOddActual: Number(e.target.value)})}
+                              className="h-8 font-mono opacity-60"
+                              step="0.01"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className="lg:col-span-2 space-y-6">
+                  <Card className="bg-muted/10">
+                    <CardContent className="pt-6">
+                      <div className="p-4 rounded-lg bg-emerald-500/5 border border-emerald-500/20 flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-bold text-emerald-400 uppercase tracking-tight">Vantagem Operacional</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            Você extrai <strong>{liveResults.efficiencyGain.toFixed(2)}%</strong> mais valor via Hedge Antecipado.
+                          </p>
+                        </div>
+                        <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+                          ROI: {liveResults.roi.toFixed(2)}%
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </ScrollArea>
