@@ -234,7 +234,7 @@ function FloatingChatButton({ onClick, isOpen }: { onClick: () => void, isOpen: 
         },
         (payload) => {
           const content = payload.new.content as string;
-          if (content.includes(`@${user.full_name || user.email?.split('@')[0]}`)) {
+          if (content.includes(`@${(user as any).full_name || user.email?.split('@')[0]}`)) {
             if (!isOpen) {
               setHasMention(true);
               setUnreadCount(prev => prev + 1);
