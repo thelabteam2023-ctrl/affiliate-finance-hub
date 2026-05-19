@@ -1994,7 +1994,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                 <Input 
                                   type="number"
                                   value={liveInput.backStake}
-                                  onChange={(e) => setLiveInput({...liveInput, backStake: Number(e.target.value)})}}
+                                  onChange={(e) => setLiveInput({...liveInput, backStake: Number(e.target.value)})}
                                   className="h-10 pl-8 font-mono text-lg border-primary/30 focus:border-primary"
                                 />
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-mono">R$</span>
@@ -2008,7 +2008,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                 <Input 
                                   type="number"
                                   value={liveInput.backOddProjected}
-                                  onChange={(e) => setLiveInput({...liveInput, backOddProjected: Number(e.target.value)})}}
+                                  onChange={(e) => setLiveInput({...liveInput, backOddProjected: Number(e.target.value)})}
                                   className="h-10 font-mono text-lg border-emerald-500/30 focus:border-emerald-500"
                                   step="0.01"
                                 />
@@ -2024,7 +2024,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                 <Input 
                                   type="number"
                                   value={liveInput.layOdd}
-                                  onChange={(e) => setLiveInput({...liveInput, layOdd: Number(e.target.value)})}}
+                                  onChange={(e) => setLiveInput({...liveInput, layOdd: Number(e.target.value)})}
                                   className="h-9 font-mono text-sm"
                                   step="0.01"
                                 />
@@ -2034,7 +2034,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                 <Input 
                                   type="number"
                                   value={liveInput.backOddActual}
-                                  onChange={(e) => setLiveInput({...liveInput, backOddActual: Number(e.target.value)})}}
+                                  onChange={(e) => setLiveInput({...liveInput, backOddActual: Number(e.target.value)})}
                                   className="h-9 font-mono text-sm opacity-60"
                                   step="0.01"
                                 />
