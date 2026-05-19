@@ -36,8 +36,9 @@ interface ChatMessage {
 
 export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
   const { user, workspace } = useAuth();
-  const { onlineUsers } = usePresence();
+  const { onlineUsers, onlineUserIds } = usePresence();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [allMembers, setAllMembers] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -62,6 +63,38 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
   const workspaceOnlineMembers = useMemo(() => {
     return onlineUsers.filter(u => u.user_id !== user?.id);
   }, [onlineUsers, user?.id]);
+
+  useEffect(() => {
+    if (!isOpen || !workspace?.id) return;
+
+    const fetchMembers = async () => {
+      const { data, error } = await supabase
+        .from('workspace_members')
+        .select('user_id')
+        .eq('workspace_id', workspace.id);
+
+      if (!error && data) {
+        const userIds = data.map(m => m.user_id);
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, full_name, email')
+          .in('id', userIds);
+
+        const profileMap = (profiles || []).reduce((acc: any, p) => {
+          acc[p.id] = p;
+          return acc;
+        }, {});
+
+        const members = data.map(m => ({
+          user_id: m.user_id,
+          name: profileMap[m.user_id]?.full_name || profileMap[m.user_id]?.email?.split('@')[0] || 'Usuário',
+        }));
+        setAllMembers(members);
+      }
+    };
+
+    fetchMembers();
+  }, [isOpen, workspace?.id]);
 
   useEffect(() => {
     if (!isOpen || !workspace?.id) return;
@@ -270,10 +303,10 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
   };
 
   const filteredMembers = useMemo(() => {
-    return onlineUsers.filter(u => 
+    return allMembers.filter(u => 
       u.name?.toLowerCase().includes(mentionFilter)
     );
-  }, [onlineUsers, mentionFilter]);
+  }, [allMembers, mentionFilter]);
 
   const insertMention = (member: any) => {
     const pos = textareaRef.current?.selectionStart || 0;
@@ -527,8 +560,13 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
                     i === mentionIndex ? "bg-[#00c853]/10 text-[#00c853]" : "text-gray-300 hover:bg-[#2a2d35]"
                   )}
                 >
-                  <div className="w-6 h-6 rounded-full bg-[#2a2d35] flex items-center justify-center border border-[#3a3d45] shrink-0">
-                    <span className="text-[10px] font-bold uppercase">{member.name?.charAt(0) || '?'}</span>
+                  <div className="relative shrink-0">
+                    <div className="w-6 h-6 rounded-full bg-[#2a2d35] flex items-center justify-center border border-[#3a3d45]">
+                      <span className="text-[10px] font-bold uppercase">{member.name?.charAt(0) || '?'}</span>
+                    </div>
+                    {onlineUserIds.has(member.user_id) && (
+                      <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 border border-[#1e2128] rounded-full" />
+                    )}
                   </div>
                   <span className="truncate">{member.name}</span>
                   {member.user_id === user?.id && <span className="text-[10px] text-gray-500 ml-auto">(Você)</span>}
