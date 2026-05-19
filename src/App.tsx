@@ -163,7 +163,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
 }
 
 /** TopBar renderiza trigger + conteúdo contextual injetado pela página */
-function TopBarHeader({ onOpenNotes }: { onOpenNotes: () => void }) {
+function TopBarHeader() {
   const { content } = useTopBar();
   return (
     <header className="shrink-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
