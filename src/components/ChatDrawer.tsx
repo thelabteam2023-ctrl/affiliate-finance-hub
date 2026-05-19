@@ -654,11 +654,29 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
                 return (
                   <React.Fragment key={msg.id}>
                     {renderDateSeparator(msg, prevMsg)}
-                    <div className={cn(
-                      "flex flex-col max-w-[85%] group/msg",
-                      isMe ? "ml-auto items-end" : "mr-auto items-start",
-                      hasMentionMe && "border-l-4 border-[#00c853] bg-[#00c853]/5 -mx-4 px-4 py-1"
-                    )}>
+                    <div 
+                      className={cn(
+                        "flex items-start gap-2 group/msg w-full",
+                        isMe ? "flex-row-reverse" : "flex-row",
+                        selectionMode && isMe && "cursor-pointer"
+                      )}
+                      onClick={() => selectionMode && isMe && toggleSelectMessage(msg.id)}
+                    >
+                      {selectionMode && isMe && (
+                        <div className="pt-2 shrink-0">
+                          {selectedIds.has(msg.id) ? (
+                            <CheckCircle2 className="w-4 h-4 text-[#00c853]" />
+                          ) : (
+                            <Circle className="w-4 h-4 text-gray-600" />
+                          )}
+                        </div>
+                      )}
+                      
+                      <div className={cn(
+                        "flex flex-col max-w-[85%]",
+                        isMe ? "items-end" : "items-start",
+                        hasMentionMe && "border-l-4 border-[#00c853] bg-[#00c853]/5 -mx-4 px-4 py-1"
+                      )}>
                       {!isMe && !isSameAuthor && (
                         <span className="text-[10px] text-gray-500 mb-1 ml-1 flex items-center gap-1">
                           {msg.profiles?.full_name || 'Usuário'}
