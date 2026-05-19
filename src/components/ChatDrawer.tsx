@@ -806,8 +806,9 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
                         </div>
                       </div>
                     </div>
-                  </React.Fragment>
-                );
+                  </div>
+                </React.Fragment>
+              );
               })
             )}
             <div ref={messagesEndRef} />
