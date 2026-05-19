@@ -613,6 +613,15 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
             >
               <CheckCircle2 className="w-4 h-4" />
             </button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-gray-400 hover:text-white hover:bg-white/10"
+              onClick={() => setIsNotificationsEnabled(!isNotificationsEnabled)}
+              title={isNotificationsEnabled ? "Silenciar notificações" : "Ativar notificações"}
+            >
+              {isNotificationsEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+            </Button>
             <button 
               onClick={onClose}
               className="p-1.5 hover:bg-white/10 rounded-md transition-colors"
