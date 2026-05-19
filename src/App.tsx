@@ -4,6 +4,8 @@ import { ThemeProvider } from "next-themes";
 import { TopBarProvider, useTopBar } from "@/contexts/TopBarContext";
 import { NotesDrawer } from "@/components/NotesDrawer";
 import { Toaster } from "@/components/ui/toaster";
+import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { CalculadoraProvider } from "@/contexts/CalculadoraContext";
 import { ApostaPopupProvider } from "@/contexts/ApostaPopupContext";
@@ -139,7 +141,10 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
         
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Header com trigger da sidebar + conteúdo contextual */}
-          <TopBarHeader onOpenNotes={() => setIsNotesOpen(true)} />
+          <TopBarHeader />
+
+          {/* Floating Button for Notes */}
+          <FloatingNotesButton onClick={() => setIsNotesOpen(!isNotesOpen)} isOpen={isNotesOpen} />
 
           {/* Side Drawer for Notes */}
           <NotesDrawer isOpen={isNotesOpen} onClose={() => setIsNotesOpen(false)} />
@@ -158,7 +163,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
 }
 
 /** TopBar renderiza trigger + conteúdo contextual injetado pela página */
-function TopBarHeader({ onOpenNotes }: { onOpenNotes: () => void }) {
+function TopBarHeader() {
   const { content } = useTopBar();
   return (
     <header className="shrink-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -167,19 +172,29 @@ function TopBarHeader({ onOpenNotes }: { onOpenNotes: () => void }) {
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="pointer-events-auto [&_span.font-semibold]:text-base">{content}</div>
         </div>
-
-        {/* Global Tools (Notes) */}
-        <div className="flex items-center gap-2 ml-auto">
-          <button
-            onClick={onOpenNotes}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent/50 rounded-md transition-all"
-          >
-            <NotebookPen className="w-4 h-4" />
-            <span className="hidden sm:inline">Anotações</span>
-          </button>
-        </div>
       </div>
     </header>
+  );
+}
+
+/** Global floating button for Notes */
+function FloatingNotesButton({ onClick, isOpen }: { onClick: () => void, isOpen: boolean }) {
+  const { user } = useAuth();
+  if (!user) return null;
+
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "fixed bottom-6 right-6 z-[9999] flex items-center gap-2 px-4 py-2.5 rounded-full font-semibold text-sm transition-all duration-150 shadow-[0_4px_20px_rgba(0,200,83,0.35)] active:scale-95",
+        isOpen 
+          ? "bg-[#009e42] text-black" 
+          : "bg-[#00c853] text-black hover:brightness-110 hover:scale-[1.04]"
+      )}
+    >
+      <NotebookPen className="w-[18px] h-[18px]" />
+      <span>Anotações</span>
+    </button>
   );
 }
 
