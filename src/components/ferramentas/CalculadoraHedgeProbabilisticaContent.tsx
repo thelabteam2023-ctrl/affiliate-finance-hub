@@ -1772,7 +1772,8 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                     </div>
                   </div>
                 </div>
-              ) : activeTab === "live" ? (
+              </>
+            ) : activeTab === "live" ? (
                     <div className="space-y-6">
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <Card className="bg-primary/5 border-primary/20">
