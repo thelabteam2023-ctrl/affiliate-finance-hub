@@ -2234,14 +2234,13 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                   Entre o Lay e o Back, você estará exposto em <strong>R$ {fmt(liveResults.liability)}</strong> na Exchange. 
                                   Certifique-se de que sua banca suporta essa responsabilidade durante o tempo de espera da odd.
                                 </p>
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </div>
-)}
+                               </div>
+                             </div>
+                           </CardContent>
+                         </Card>
+                       </div>
+                     </div>
+                   )}
           
           </div>
          <Dialog open={!!expanded} onOpenChange={(o) => !o && setExpanded(null)}>
