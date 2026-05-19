@@ -84,6 +84,9 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
   }, [onlineUsers, user?.id]);
 
   useEffect(() => {
+    if (isOpen) {
+      resetUnread();
+    }
     if (!isOpen || !workspace?.id) return;
 
     const fetchMembers = async () => {
