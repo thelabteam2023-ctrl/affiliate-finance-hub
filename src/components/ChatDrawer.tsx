@@ -50,20 +50,31 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({ isOpen, onClose }) => {
       setLoading(true);
       const { data, error } = await supabase
         .from('community_chat_messages')
-        .select(`
-          id, 
-          content, 
-          user_id, 
-          created_at,
-          profiles:user_id (full_name)
-        `)
+        .select('id, content, user_id, created_at')
         .eq('workspace_id', workspace.id)
         .eq('context_type', 'workspace')
         .order('created_at', { ascending: true })
         .limit(50);
 
       if (!error && data) {
-        setMessages(data as any);
+        // Fetch profiles separately to avoid deep type instantiation issues
+        const userIds = Array.from(new Set(data.map(m => m.user_id)));
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', userIds);
+        
+        const profileMap = (profiles || []).reduce((acc: any, p) => {
+          acc[p.id] = p.full_name;
+          return acc;
+        }, {});
+
+        const messagesWithProfiles = data.map(m => ({
+          ...m,
+          profiles: { full_name: profileMap[m.user_id] || null }
+        }));
+
+        setMessages(messagesWithProfiles as any);
       }
       setLoading(false);
       scrollToBottom();
