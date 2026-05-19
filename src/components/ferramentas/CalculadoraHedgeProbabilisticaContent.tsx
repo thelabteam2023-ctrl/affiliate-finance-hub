@@ -1925,7 +1925,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                  </Card>
                                </div>
                              </div>
-                           </>
+                          </>
                         ) : (
                           <div className="space-y-6 animate-in fade-in duration-500">
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -2237,8 +2237,19 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                     </div>
                   </div>
                 </div>
+                </div>
               </div>
             )}
+          </div>
+        </div>
+
+        <Dialog open={!!expanded} onOpenChange={() => setExpanded(null)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                Detalhamento do Cenário
+              </DialogTitle>
             </DialogHeader>
             
             <div className="bg-muted/30 rounded-lg p-4 border border-border/50 mb-6 space-y-3">
