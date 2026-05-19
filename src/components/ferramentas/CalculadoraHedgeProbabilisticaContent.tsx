@@ -124,14 +124,13 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
      }
    };
 
-   const applyGoldenCombo = (comboLegs: number[]) => {
-     const newLegs = comboLegs.map((odd, i) => ({
-       name: `Evento ${i + 1}`,
-       backOdd: odd,
-       layOdd: odd
-     }));
+    const applyGoldenCombo = (comboLegs: number[]) => {
+      const newLegs = comboLegs.map((odd, i) => ({
+        name: `Evento ${i + 1}`,
+        backOdd: odd,
+        layOdd: Number((odd * (1 + oddSpread / 100)).toFixed(2))
+      }));
       setLegs(newLegs);
-      // Removido o redirecionamento para manter o usuário no Laboratório
     };
 
   const [freebet, setFreebet] = useState(100);
