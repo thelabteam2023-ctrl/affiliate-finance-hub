@@ -731,8 +731,9 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
                                   )}
                                 </div>
                               )}
-                            </div>
-                          </div>
+                        </div>
+                      </div>
+                    </div>
                         )}
 
                         {msg.image_url && (
