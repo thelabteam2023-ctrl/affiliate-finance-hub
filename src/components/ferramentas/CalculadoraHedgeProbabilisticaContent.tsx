@@ -887,9 +887,10 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                       <div className="flex justify-between">
                         <span>Custo Lays:</span>
                         <span className="text-red-400/80">−R$ {fmt(metrics.cumulativeCascadeCost)}</span>
-                      </div>
-                    </div>
-                  </div>
+                                           </div>
+                                         </div>
+                                       </div>
+                                     </div>
                  <div className="flex justify-between items-center text-xs">
                    <span className="text-muted-foreground">Probabilidade de Sucesso</span>
                    <span className="font-mono text-emerald-400">
