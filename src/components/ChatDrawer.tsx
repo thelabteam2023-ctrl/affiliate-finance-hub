@@ -185,6 +185,26 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
       setSending(false);
     }
   };
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    for (const item of items) {
+      if (item.type.indexOf('image') !== -1) {
+        const file = item.getAsFile();
+        if (file) {
+          if (file.size > 5 * 1024 * 1024) {
+            toast.error("A imagem deve ter no máximo 5MB");
+            return;
+          }
+          setSelectedImage(file);
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setImagePreview(reader.result as string);
+          };
+          reader.readAsDataURL(file);
+        }
+      }
+    }
+  };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -542,6 +562,7 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
                 ref={textareaRef}
                 value={newMessage}
                 onChange={handleTextChange}
+                onPaste={handlePaste}
                 onKeyDown={onKeyDown}
                 placeholder="Digite uma mensagem..."
                 rows={1}
