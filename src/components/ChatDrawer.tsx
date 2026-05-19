@@ -4,7 +4,9 @@ import {
   X, 
   SendHorizontal, 
   Loader2,
-  User as UserIcon
+  User as UserIcon,
+  ImagePlus,
+  Maximize2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, isToday, isYesterday } from 'date-fns';
