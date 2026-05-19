@@ -2,11 +2,11 @@ import { useCallback, useRef, useEffect, useState } from 'react';
 import { useChatBroadcast } from './useChatBroadcast';
 import { useWorkspace } from './useWorkspace';
 
-// URL para sons de notificação discretos e profissionais
+// Sons de notificação discretos e profissionais (armazenados localmente)
 export const CHAT_SOUNDS = {
-  pop: 'https://cdn.pixabay.com/audio/2022/03/15/audio_c8c8a73a5a.mp3',
-  ding: 'https://cdn.pixabay.com/audio/2021/08/04/audio_0625c1539c.mp3',
-  chime: 'https://cdn.pixabay.com/audio/2022/03/10/audio_c3508a2890.mp3',
+  pop: '/sounds/pop.mp3',
+  ding: '/sounds/ding.mp3',
+  chime: '/sounds/chime.mp3',
 };
 
 export function useChatNotifications() {
