@@ -1067,6 +1067,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
         </div>
                </>
               </>
+            </>
             ) : activeTab === "laboratorio" ? (
 
                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -1932,6 +1933,8 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                       </div>
                     </>
                 </div>
+              </div>
+                            </div>
               </div>
             ) : activeTab === "live" ? (
                     <div className="space-y-6">
