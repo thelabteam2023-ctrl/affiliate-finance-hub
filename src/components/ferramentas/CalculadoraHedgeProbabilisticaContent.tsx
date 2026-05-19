@@ -1067,8 +1067,8 @@ Para corrigir, reduza a Meta de Extração no slider.`}
         </div>
                </>
           ) : activeTab === "laboratorio" ? (
-
-               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <>
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div className="lg:col-span-4 xl:col-span-3 space-y-6">
                   <DndContext
                     sensors={sensors}
@@ -1839,11 +1839,10 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                        {activeRulesetId === 'restricted_high' ? 'Ideal para bancas conservadoras.' : 'Foco em maximização de extração.'}
                                                      </span>
                                                    </div>
-                                                 </>
-                                               </>
-          ) : (
-                                               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-in fade-in duration-300">
-                                     </div>
+                                                  </>
+                                                )}
+                                              </div>
+                                            )}
 
                                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                            <div
