@@ -180,20 +180,17 @@ function TopBarHeader() {
 /** Global floating button for Notes */
 function FloatingNotesButton({ onClick, isOpen }: { onClick: () => void, isOpen: boolean }) {
   const { user } = useAuth();
-  if (!user) return null;
+  if (!user || isOpen) return null;
 
   return (
     <button
       onClick={onClick}
+      title="Anotações"
       className={cn(
-        "fixed bottom-6 right-6 z-[9999] flex items-center gap-2 px-4 py-2.5 rounded-full font-semibold text-sm transition-all duration-150 shadow-[0_4px_20px_rgba(0,200,83,0.35)] active:scale-95",
-        isOpen 
-          ? "bg-[#009e42] text-black" 
-          : "bg-[#00c853] text-black hover:brightness-110 hover:scale-[1.04]"
+        "fixed bottom-6 right-6 z-[9999] flex items-center justify-center w-[52px] h-[52px] rounded-full transition-all duration-150 shadow-[0_4px_20px_rgba(0,200,83,0.4)] active:scale-95 bg-[#00c853] text-black hover:brightness-110 hover:scale-[1.08]"
       )}
     >
-      <NotebookPen className="w-[18px] h-[18px]" />
-      <span>Anotações</span>
+      <NotebookPen className="w-[22px] h-[22px]" />
     </button>
   );
 }
