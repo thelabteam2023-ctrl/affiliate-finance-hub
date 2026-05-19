@@ -1710,29 +1710,30 @@ Para corrigir, reduza a Meta de Extração no slider.`}
 
                       {/* Biblioteca de Ouro */}
                       <Card>
-                                  <CardContent className="pt-6">
-                                    <div className="space-y-6">
-                                         <div className="flex items-center justify-between">
-                                           <div className="flex items-center gap-2">
-                                             <Trophy className="h-4 w-4 text-yellow-400" />
-                                             <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Biblioteca de Ouro Dinâmica</h4>
-                                           </div>
-                                           <div className="flex gap-1">
-                                             {[2.8, 3.0, 4.8, 6.0].map((c) => (
-                                               <Button 
-                                                 key={c}
-                                                 variant={commission === c ? "default" : "outline"}
-                                                 size="sm"
-                                                 className="h-6 text-[9px] px-2"
-                                                 onClick={() => setCommission(c)}
-                                               >
-                                                 {c}%
-                                               </Button>
-                                             ))}
-                                      </div>
-                                    </div>
-                                  </CardContent>
-                                </Card>
+                        <CardContent className="pt-6">
+                          <div className="space-y-6">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Trophy className="h-4 w-4 text-yellow-400" />
+                                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Biblioteca de Ouro Dinâmica</h4>
+                              </div>
+                              <div className="flex gap-1">
+                                {[2.8, 3.0, 4.8, 6.0].map((c) => (
+                                  <Button 
+                                    key={c}
+                                    variant={commission === c ? "default" : "outline"}
+                                    size="sm"
+                                    className="h-6 text-[9px] px-2"
+                                    onClick={() => setCommission(c)}
+                                  >
+                                    {c}%
+                                  </Button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
                               )}
                             </SortableLabCard>
                           ))}
