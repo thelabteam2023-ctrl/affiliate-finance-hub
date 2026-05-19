@@ -15143,6 +15143,10 @@ export type Database = {
         Args: { p_hours_threshold?: number }
         Returns: number
       }
+      clear_workspace_chat: {
+        Args: { target_workspace_id: string }
+        Returns: undefined
+      }
       close_project_cycle:
         | { Args: { _ciclo_id: string; _workspace_id: string }; Returns: Json }
         | {
