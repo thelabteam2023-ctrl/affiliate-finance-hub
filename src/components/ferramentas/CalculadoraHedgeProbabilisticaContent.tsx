@@ -1729,203 +1729,49 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                  {c}%
                                                </Button>
                                              ))}
-                                           </div>
-                                         </div>
-
-                                         <div className="space-y-4">
-                                           <div className="flex flex-col gap-3">
-                                             <Label className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-2">
-                                               <Sliders className="h-3 w-3" /> Perfil Operacional de Odds
-                                             </Label>
-                                             <Tabs value={activeRulesetId} onValueChange={setActiveRulesetId} className="w-full">
-                                               <TabsList className="grid grid-cols-5 h-auto p-1 bg-background/50 border border-border/40">
-                                                 {ODDS_RULESETS.map((preset) => (
-                                                   <TabsTrigger 
-                                                     key={preset.id} 
-                                                     value={preset.id}
-                                                     className="text-[10px] py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                                                   >
-                                                     {preset.label}
-                                                   </TabsTrigger>
-                                                 ))}
-                                               </TabsList>
-                                             </Tabs>
-                                           </div>
-
-                                           {activeRulesetId === 'custom' ? (
-                                             <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 grid grid-cols-1 md:grid-cols-3 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                                               <div className="space-y-2">
-                                                 <Label className="text-[10px] uppercase font-bold text-muted-foreground">Odd Mínima</Label>
-                                                 <div className="flex items-center gap-3">
-                                                   <Input 
-                                                     type="number" 
-                                                     value={customRules.minOdd} 
-                                                     onChange={(e) => setCustomRules({...customRules, minOdd: Number(e.target.value))}
-                                                     className="h-8 text-xs font-mono"
-                                                   />
-                                                   <Slider 
-                                                     value={[customRules.minOdd]} 
-                                                     min={1.01} max={5} step={0.05}
-                                                     onValueChange={(v) => setCustomRules({...customRules, minOdd: v[0]})}
-                                                   />
-                                                 </div>
-                                               </div>
-                                               <div className="space-y-2">
-                                                 <Label className="text-[10px] uppercase font-bold text-muted-foreground">Odd Máxima</Label>
-                                                 <div className="flex items-center gap-3">
-                                                   <Input 
-                                                     type="number" 
-                                                     value={customRules.maxOdd} 
-                                                     onChange={(e) => setCustomRules({...customRules, maxOdd: Number(e.target.value))}
-                                                     className="h-8 text-xs font-mono"
-                                                   />
-                                                   <Slider 
-                                                     value={[customRules.maxOdd]} 
-                                                     min={2} max={50} step={0.5}
-                                                     onValueChange={(v) => setCustomRules({...customRules, maxOdd: v[0]})}
-                                                   />
-                                                 </div>
-                                               </div>
-                                               <div className="space-y-2">
-                                                 <Label className="text-[10px] uppercase font-bold text-muted-foreground">Máximo de Pernas</Label>
-                                                 <div className="flex items-center gap-3">
-                                                   <Input 
-                                                     type="number" 
-                                                     value={customRules.maxLegs} 
-                                                     onChange={(e) => setCustomRules({...customRules, maxLegs: Math.min(6, Math.max(2, Number(e.target.value)))})}
-                                                     className="h-8 text-xs font-mono"
-                                                   />
-                                                   <Slider 
-                                                     value={[customRules.maxLegs]} 
-                                                     min={1} max={6} step={1}
-                                                     onValueChange={(v) => setCustomRules({...customRules, maxLegs: v[0]})}
-                                                   />
-                                                 </div>
-                                               </div>
-               </div>
-             
-) : (
-
-                                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-in fade-in duration-300">
-                                               {ODDS_RULESETS.find(r => r.id === activeRulesetId) && (
-                                                 <>
-                                                   <div className="p-2.5 rounded-lg bg-background/40 border border-border/40 space-y-1">
-                                                     <span className="text-[8px] uppercase font-bold text-muted-foreground block">Variância</span>
-                                                     <div className="flex items-center gap-1.5">
-                                                       <ShieldCheck className={`h-3 w-3 ${activeRulesetId === 'restricted_high' ? 'text-emerald-400' : 'text-orange-400'}`} />
-                                                       <span className="text-xs font-bold text-white">{ODDS_RULESETS.find(r => r.id === activeRulesetId)?.variance}</span>
-                                                     </div>
-                                                   </div>
-                                                   <div className="p-2.5 rounded-lg bg-background/40 border border-border/40 space-y-1">
-                                                     <span className="text-[8px] uppercase font-bold text-muted-foreground block">Eficiência</span>
-                                                     <div className="flex items-center gap-1.5">
-                                                       <Zap className="h-3 w-3 text-blue-400" />
-                                                       <span className="text-xs font-bold text-white">{ODDS_RULESETS.find(r => r.id === activeRulesetId)?.efficiency}</span>
-                                                     </div>
-                                                   </div>
-                                                   <div className="p-2.5 rounded-lg bg-background/40 border border-border/40 space-y-1">
-                                                     <span className="text-[8px] uppercase font-bold text-muted-foreground block">Flexibilidade</span>
-                                                     <div className="flex items-center gap-1.5">
-                                                       {activeRulesetId === 'unlimited' ? <InfinityIcon className="h-3 w-3 text-primary" /> : <Settings2 className="h-3 w-3 text-primary" />}
-                                                       <span className="text-xs font-bold text-white">
-                                                         {activeRulesetId === 'standard' ? 'Alta' : activeRulesetId === 'unlimited' ? 'Total' : 'Moderada'}
-                                                       </span>
-                                                     </div>
-                                                   </div>
-                                                   <div className="p-2.5 rounded-lg bg-background/40 border border-border/40 space-y-1">
-                                                     <span className="text-[8px] uppercase font-bold text-muted-foreground block">Recomendação</span>
-                                                     <span className="text-[9px] text-muted-foreground leading-tight block">
-                                                       {activeRulesetId === 'restricted_high' ? 'Ideal para bancas conservadoras.' : 'Foco em maximização de extração.'}
-                                                     </span>
-                                                   </div>
-                                                 </>
-                                                )}
-                                              </div>
-                                            )}
-                                          </div>
-
-                                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                           {/* Estratégia de 1 Perna (Hedge Simples) */}
-                                           <div 
-                                             className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/20 hover:border-primary/50 transition-all cursor-pointer group flex flex-col justify-between"
-                                             onClick={() => {
-                                               // Calcula odd ideal para a extração alvo: Odd = 1 / (1 - extração)
-                                               // Para 70% de extração, odd ~ 3.33
-                                               const idealOdd = Number((1 / (1 - targetExtraction)).toFixed(2));
-                                               applyGoldenCombo([idealOdd]);
-                                             }}
-                                           >
-                                             <div>
-                                               <div className="flex justify-between items-start mb-1">
-                                                 <Badge variant="outline" className="text-[8px] h-4 uppercase text-blue-400 border-blue-400/30">
-                                                   Hedge Simples
-                                                 </Badge>
-                                                 <div className="flex flex-col items-end">
-                                                   <span className="text-[10px] font-bold text-white">{fmtPct(targetExtraction * 100)} ROI</span>
-                                                   <span className="text-[8px] text-muted-foreground">Extração Direta</span>
-                                                 </div>
-                                               </div>
-                                               <h5 className="text-xs font-bold flex items-center gap-2 group-hover:text-primary transition-colors mt-1">
-                                                 1 Perna (Padrão)
-                                                 <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
-                                               </h5>
-                                               <p className="text-[9px] text-muted-foreground leading-tight mt-1 mb-2">
-                                                 Hedge clássico de perna única para extração imediata.
-                                               </p>
-                                             </div>
-                                             <div className="flex flex-wrap gap-1 mt-auto pt-2 border-t border-border/20">
-                                               <span className="text-[9px] px-1.5 py-0.5 rounded bg-background/50 border border-border/30 font-mono">
-                                                 {(1 / (1 - targetExtraction)).toFixed(2)}
-                                               </span>
-                                             </div>
-                                           </div>
-
-                                           {(goldenCombinationsByExtraction[targetExtraction.toFixed(2)] || goldenCombinationsByExtraction["0.70"] || []).map((combo, idx) => (
-                                             <div 
-                                               key={idx} 
-                                            className="p-3 rounded-lg bg-muted/20 border border-border/50 hover:border-primary/50 transition-all cursor-pointer group flex flex-col justify-between"
-                                            onClick={() => applyGoldenCombo(combo.legs)}
-                                          >
-                                            <div>
-                                              <div className="flex justify-between items-start mb-1">
-                                                <Badge variant="outline" className={`text-[8px] h-4 uppercase ${combo.type === 'Eficiência de Capital' ? 'text-blue-400 border-blue-400/30' : 'text-emerald-400 border-emerald-400/30'}`}>
-                                                  {combo.type}
-                                                </Badge>
-                                                <div className="flex flex-col items-end">
-                                                  <span className="text-[10px] font-bold text-white">{combo.roi} ROI</span>
-                                                  <div className="flex items-center gap-1">
-                                                    <span className="text-[8px] text-muted-foreground">ROE: {combo.roe}</span>
-                                                    <CardInfoTooltip 
-                                                      title="ROE (Return on Exposure)" 
-                                                      description="Métrica de eficiência de capital: Lucro Esperado / Responsabilidade Máxima. Indica quanto seu dinheiro na Exchange rende por ciclo."
-                                                    />
-                                                  </div>
-                                                </div>
-                                              </div>
-                                              <h5 className="text-xs font-bold flex items-center gap-2 group-hover:text-primary transition-colors mt-1">
-                                                {combo.name}
-                                                <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
-                                              </h5>
-                                              <p className="text-[9px] text-muted-foreground leading-tight mt-1 mb-2">
-                                                {combo.description}
-                                              </p>
-                                            </div>
-                                            <div className="flex flex-wrap gap-1 mt-auto pt-2 border-t border-border/20">
-                                              {combo.legs.map((odd, i) => (
-                                                <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-background/50 border border-border/30 font-mono">
-                                                  {odd.toFixed(2)}
-                                                </span>
-                                              ))}
-                                            </div>
-                                          </div>
-                                        ))}
                                       </div>
                                     </div>
                                   </CardContent>
                                 </Card>
-                              </div>
-              </div>
-            ) : activeTab === "live" ? (
+                              )}
+                            </SortableLabCard>
+                          ))}
+                        </div>
+                      </SortableContext>
+                    </DndContext>
+                  </div>
+
+                  <div className="lg:col-span-8 xl:col-span-9 space-y-6">
+                    {/* Fixed Top Metrics */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <Card className="border-l-4 border-l-red-500">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-xs font-medium flex items-center gap-2 text-red-400">
+                            <ShieldAlert className="h-4 w-4" /> Risco de Ruína
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-2xl font-bold font-mono">
+                            {fmtPct(riskOfRuin)}
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="border-l-4 border-l-emerald-500">
+                         <CardHeader className="pb-2">
+                          <CardTitle className="text-xs font-medium flex items-center gap-2 text-emerald-400">
+                            <BrainCircuit className="h-4 w-4" /> Eficiência de Capital
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-2xl font-bold font-mono text-white">
+                            {fmtPct((metrics.maxResponsibility / bankroll) * 100)}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </div>
+                </div>
+              ) : activeTab === "live" ? (
                     <div className="space-y-6">
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <Card className="bg-primary/5 border-primary/20">
@@ -2232,7 +2078,8 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                            </CardContent>
                          </Card>
                        </div>
-                     </div>            )}
+                    </div>
+                  )}
           </div>
           <Dialog open={!!expanded} onOpenChange={(o) => !o && setExpanded(null)}>
           <DialogContent className="max-w-2xl">
