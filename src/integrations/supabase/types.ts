@@ -2883,6 +2883,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          severity: string | null
           word: string
         }
         Insert: {
@@ -2890,6 +2891,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          severity?: string | null
           word: string
         }
         Update: {
@@ -2897,6 +2899,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          severity?: string | null
           word?: string
         }
         Relationships: []
@@ -3115,6 +3118,44 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_community_bookmaker_stats"
             referencedColumns: ["bookmaker_catalogo_id"]
+          },
+        ]
+      }
+      community_moderation_logs: {
+        Row: {
+          blocked_word: string | null
+          content: string | null
+          context_type: string | null
+          created_at: string | null
+          id: string
+          user_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          blocked_word?: string | null
+          content?: string | null
+          context_type?: string | null
+          created_at?: string | null
+          id?: string
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          blocked_word?: string | null
+          content?: string | null
+          context_type?: string | null
+          created_at?: string | null
+          id?: string
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_moderation_logs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -11828,6 +11869,7 @@ export type Database = {
       }
       workspaces: {
         Row: {
+          chat_moderation_level: string | null
           created_at: string
           deactivated_at: string | null
           deactivation_reason: string | null
@@ -11844,6 +11886,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          chat_moderation_level?: string | null
           created_at?: string
           deactivated_at?: string | null
           deactivation_reason?: string | null
@@ -11860,6 +11903,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          chat_moderation_level?: string | null
           created_at?: string
           deactivated_at?: string | null
           deactivation_reason?: string | null
@@ -15101,7 +15145,15 @@ export type Database = {
         }
         Returns: Json
       }
-      check_blocked_words: { Args: { p_content: string }; Returns: string }
+      check_blocked_words:
+        | { Args: { p_content: string }; Returns: string }
+        | {
+            Args: { p_content: string; p_max_severity?: string }
+            Returns: {
+              severity: string
+              word: string
+            }[]
+          }
       check_custom_permissions_limit: {
         Args: { workspace_uuid: string }
         Returns: Json
