@@ -1839,9 +1839,9 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                      <span className="text-[9px] text-muted-foreground leading-tight block">
                                                        {activeRulesetId === 'restricted_high' ? 'Ideal para bancas conservadoras.' : 'Foco em maximização de extração.'}
                                                      </span>
-                                                   </div>
-                                                  </>
-                                                  </>
+                                                    </div>
+                                                  
+                                                  
                                                 )}
                                               </div>
                                             </div>
