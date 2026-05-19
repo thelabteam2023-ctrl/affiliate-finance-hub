@@ -1,19 +1,26 @@
 import { useCallback, useRef, useEffect, useState } from 'react';
 import { useChatBroadcast } from './useChatBroadcast';
+import { useWorkspace } from './useWorkspace';
 
-// URL para um som de notificação discreto e profissional
-const NOTIFICATION_SOUND_URL = 'https://cdn.pixabay.com/audio/2022/03/15/audio_c8c8a73a5a.mp3';
+// URL para sons de notificação discretos e profissionais
+export const CHAT_SOUNDS = {
+  pop: 'https://cdn.pixabay.com/audio/2022/03/15/audio_c8c8a73a5a.mp3',
+  ding: 'https://cdn.pixabay.com/audio/2021/08/04/audio_0625c1539c.mp3',
+  chime: 'https://cdn.pixabay.com/audio/2022/03/10/audio_c3508a2890.mp3',
+};
 
 export function useChatNotifications() {
   const [unreadCount, setUnreadCount] = useState(0);
+  const { workspace } = useWorkspace();
   const { broadcast, subscribe } = useChatBroadcast();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastPlayTimeRef = useRef<number>(0);
   const isTabActiveRef = useRef<boolean>(true);
 
-  // Inicializar o áudio
+  // Inicializar o áudio com base na configuração do workspace
   useEffect(() => {
-    audioRef.current = new Audio(NOTIFICATION_SOUND_URL);
+    const soundUrl = workspace?.chat_notification_sound || CHAT_SOUNDS.pop;
+    audioRef.current = new Audio(soundUrl);
     audioRef.current.volume = 0.4;
 
     const handleVisibilityChange = () => {
@@ -24,7 +31,7 @@ export function useChatNotifications() {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
+  }, [workspace?.chat_notification_sound]);
 
   const playNotificationSound = useCallback(() => {
     const now = Date.now();
