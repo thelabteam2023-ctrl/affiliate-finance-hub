@@ -6,10 +6,13 @@ import {
   Loader2,
   User as UserIcon,
   ImagePlus,
-  Maximize2
+  Maximize2,
+  Trash2,
+  MoreVertical,
+  ChevronDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format, isToday, isYesterday } from 'date-fns';
+import { format, isToday, isYesterday, differenceInMinutes } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -48,6 +51,8 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   const [mentionIndex, setMentionIndex] = useState(-1);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [messageActionsId, setMessageActionsId] = useState<string | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -93,7 +98,17 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
       }
     };
 
+    const checkAdminStatus = async () => {
+      if (!user?.id || !workspace?.id) return;
+      const { data } = await supabase.rpc('user_is_owner_or_admin_in_workspace', {
+        check_user_id: user.id,
+        check_workspace_id: workspace.id
+      });
+      setIsAdmin(!!data);
+    };
+
     fetchMembers();
+    checkAdminStatus();
   }, [isOpen, workspace?.id]);
 
   useEffect(() => {
@@ -141,32 +156,36 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*', // Listen to INSERT, UPDATE, and DELETE
           schema: 'public',
           table: 'community_chat_messages',
           filter: `workspace_id=eq.${workspace.id}`,
         },
         async (payload) => {
-          const newMessage = payload.new as ChatMessage;
-          
-          // Fetch profile for the new message
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('full_name')
-            .eq('id', newMessage.user_id)
-            .single();
-          
-          const messageWithProfile = {
-            ...newMessage,
-            profiles: profileData
-          };
+          if (payload.eventType === 'INSERT') {
+            const newMessage = payload.new as ChatMessage;
+            
+            // Fetch profile for the new message
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('full_name')
+              .eq('id', newMessage.user_id)
+              .single();
+            
+            const messageWithProfile = {
+              ...newMessage,
+              profiles: profileData
+            };
 
-          setMessages((prev) => {
-            // Avoid duplicates if the local insert.select() also triggers a realtime event
-            if (prev.some(m => m.id === newMessage.id)) return prev;
-            return [...prev, messageWithProfile];
-          });
-          scrollToBottom();
+            setMessages((prev) => {
+              if (prev.some(m => m.id === newMessage.id)) return prev;
+              return [...prev, messageWithProfile];
+            });
+            scrollToBottom();
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = payload.old.id;
+            setMessages((prev) => prev.filter(m => m.id !== deletedId));
+          }
         }
       )
       .subscribe();
@@ -249,6 +268,48 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
       toast.error(`Erro inesperado: ${err.message || "Erro de execução"}`);
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!confirm("Deseja realmente apagar esta mensagem?")) return;
+
+    try {
+      const { error } = await supabase
+        .from('community_chat_messages')
+        .delete()
+        .eq('id', messageId);
+
+      if (error) {
+        toast.error("Erro ao apagar mensagem. O prazo de 5 minutos pode ter expirado.");
+      } else {
+        toast.success("Mensagem apagada");
+      }
+    } catch (err) {
+      toast.error("Erro inesperado ao apagar");
+    } finally {
+      setMessageActionsId(null);
+    }
+  };
+
+  const handleClearChat = async () => {
+    if (!workspace?.id) return;
+    if (!confirm("ATENÇÃO: Isso apagará TODO o histórico do chat deste workspace para todos os membros. Deseja continuar?")) return;
+    if (!confirm("Confirme novamente para limpar o chat.")) return;
+
+    try {
+      const { error } = await supabase.rpc('clear_workspace_chat', {
+        target_workspace_id: workspace.id
+      });
+
+      if (error) {
+        toast.error("Erro ao limpar chat: " + error.message);
+      } else {
+        toast.success("Histórico do chat limpo com sucesso");
+        setMessages([]);
+      }
+    } catch (err) {
+      toast.error("Erro inesperado ao limpar chat");
     }
   };
   const handlePaste = (e: React.ClipboardEvent) => {
@@ -421,7 +482,10 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
           "fixed inset-0 bg-black/50 z-[60] transition-opacity duration-300",
           isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         )}
-        onClick={onClose}
+        onClick={() => {
+          onClose();
+          setMessageActionsId(null);
+        }}
       />
 
       {/* Drawer */}
@@ -443,12 +507,23 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
               {workspace?.name || 'Workspace'}
             </p>
           </div>
-          <button 
-            onClick={onClose}
-            className="p-1.5 hover:bg-white/10 rounded-md transition-colors"
-          >
-            <X className="w-4 h-4 text-gray-400" />
-          </button>
+          <div className="flex items-center gap-1">
+            {isAdmin && (
+              <button 
+                onClick={handleClearChat}
+                title="Limpar Histórico (Admin)"
+                className="p-1.5 hover:bg-red-500/10 rounded-md transition-colors group"
+              >
+                <Trash2 className="w-4 h-4 text-gray-400 group-hover:text-red-500" />
+              </button>
+            )}
+            <button 
+              onClick={onClose}
+              className="p-1.5 hover:bg-white/10 rounded-md transition-colors"
+            >
+              <X className="w-4 h-4 text-gray-400" />
+            </button>
+          </div>
         </div>
 
         {/* Online Members Bar */}
@@ -519,11 +594,57 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
                       )}
                       
                       <div className={cn(
-                        "px-3 py-2 text-sm relative break-words shadow-sm flex flex-col gap-2",
+                        "px-3 py-2 text-sm relative break-words shadow-sm flex flex-col gap-2 min-w-[60px]",
                         isMe 
                           ? "bg-[#00c853] text-black rounded-[12px_12px_2px_12px]" 
                           : "bg-[#1e2128] text-white border border-[#2a2d35] rounded-[12px_12px_12px_2px]"
                       )}>
+                        {/* Ações da Mensagem */}
+                        {(isMe || isAdmin) && (
+                          <div className="absolute -top-2 -right-2 opacity-0 group-hover/msg:opacity-100 transition-opacity z-10">
+                            <div className="relative">
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setMessageActionsId(messageActionsId === msg.id ? null : msg.id);
+                                }}
+                                className={cn(
+                                  "p-1 rounded-full shadow-lg border",
+                                  isMe ? "bg-black text-white border-white/10" : "bg-[#2a2d35] text-gray-400 border-[#3a3d45]"
+                                )}
+                              >
+                                <MoreVertical className="w-3 h-3" />
+                              </button>
+
+                              {messageActionsId === msg.id && (
+                                <div className={cn(
+                                  "absolute top-full mt-1 right-0 bg-[#1e2128] border border-[#2a2d35] rounded-md shadow-2xl py-1 z-20 min-w-[100px] animate-in fade-in zoom-in-95",
+                                  isMe ? "bg-black" : "bg-[#1e2128]"
+                                )}>
+                                  {isMe && differenceInMinutes(new Date(), new Date(msg.created_at)) < 5 && (
+                                    <button 
+                                      onClick={() => handleDeleteMessage(msg.id)}
+                                      className="w-full px-3 py-1.5 text-left text-[11px] text-red-500 hover:bg-red-500/10 flex items-center gap-2"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                      Apagar
+                                    </button>
+                                  )}
+                                  {isAdmin && !isMe && (
+                                    <button 
+                                      onClick={() => handleDeleteMessage(msg.id)}
+                                      className="w-full px-3 py-1.5 text-left text-[11px] text-red-500 hover:bg-red-500/10 flex items-center gap-2 font-medium"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                      Moderar
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
                         {msg.image_url && (
                           <div className="relative group/img max-w-full overflow-hidden rounded-md border border-black/10">
                             <img 
