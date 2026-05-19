@@ -112,6 +112,7 @@ export default function Workspace() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [chatModLevel, setChatModLevel] = useState<string>("strict");
+  const [chatSound, setChatSound] = useState<string>(CHAT_SOUNDS.pop);
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [workspaceName, setWorkspaceName] = useState("");
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
