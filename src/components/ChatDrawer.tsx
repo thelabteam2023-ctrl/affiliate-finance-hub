@@ -27,6 +27,7 @@ interface ChatMessage {
   id: string;
   content: string;
   user_id: string;
+  image_url?: string;
   created_at: string;
   profiles?: {
     full_name: string | null;
