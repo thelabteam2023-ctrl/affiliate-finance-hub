@@ -1806,8 +1806,8 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                </div>
                </div>
              
-) : (
-
+                                            )
+                                            }{activeRulesetId !== "custom" && (
                                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-in fade-in duration-300">
                                                {ODDS_RULESETS.find(r => r.id === activeRulesetId) && (
                                                  <>
