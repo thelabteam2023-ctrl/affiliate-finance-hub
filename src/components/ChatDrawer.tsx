@@ -9,7 +9,9 @@ import {
   Maximize2,
   Trash2,
   MoreVertical,
-  ChevronDown
+  ChevronDown,
+  CheckCircle2,
+  Circle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, isToday, isYesterday, differenceInMinutes } from 'date-fns';
@@ -54,6 +56,10 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [messageActionsId, setMessageActionsId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isDeletingBatch, setIsDeletingBatch] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -279,7 +285,11 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
   };
 
   const handleDeleteMessage = async (messageId: string) => {
-    if (!confirm("Deseja realmente apagar esta mensagem?")) return;
+    // Optimistic Update
+    const previousMessages = [...messages];
+    setMessages(prev => prev.filter(m => m.id !== messageId));
+    setMessageActionsId(null);
+    setShowDeleteConfirm(null);
 
     try {
       const { error } = await supabase
@@ -288,15 +298,56 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
         .eq('id', messageId);
 
       if (error) {
-        toast.error("Erro ao apagar mensagem. O prazo de 5 minutos pode ter expirado.");
+        setMessages(previousMessages); // Rollback
+        toast.error("Erro ao apagar: o prazo de 5 minutos pode ter expirado.");
       } else {
         toast.success("Mensagem apagada");
       }
     } catch (err) {
+      setMessages(previousMessages); // Rollback
       toast.error("Erro inesperado ao apagar");
-    } finally {
-      setMessageActionsId(null);
     }
+  };
+
+  const handleDeleteBatch = async () => {
+    if (selectedIds.size === 0) return;
+    
+    const idsToDelete = Array.from(selectedIds);
+    const previousMessages = [...messages];
+    
+    // Optimistic Update
+    setMessages(prev => prev.filter(m => !selectedIds.has(m.id)));
+    setIsDeletingBatch(true);
+
+    try {
+      const { error } = await supabase
+        .from('community_chat_messages')
+        .delete()
+        .in('id', idsToDelete);
+
+      if (error) {
+        setMessages(previousMessages);
+        toast.error("Algumas mensagens não puderam ser apagadas (prazo expirado)");
+      } else {
+        toast.success(`${idsToDelete.length} mensagens apagadas`);
+        setSelectionMode(false);
+        setSelectedIds(new Set());
+      }
+    } catch (err) {
+      setMessages(previousMessages);
+      toast.error("Erro ao apagar mensagens");
+    } finally {
+      setIsDeletingBatch(false);
+    }
+  };
+
+  const toggleSelectMessage = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
   const handleClearChat = async () => {
@@ -525,6 +576,20 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
               </button>
             )}
             <button 
+              onClick={() => {
+                setSelectionMode(!selectionMode);
+                setSelectedIds(new Set());
+                setMessageActionsId(null);
+              }}
+              title={selectionMode ? "Cancelar Seleção" : "Selecionar Mensagens"}
+              className={cn(
+                "p-1.5 rounded-md transition-colors",
+                selectionMode ? "bg-[#00c853] text-black" : "hover:bg-white/10 text-gray-400"
+              )}
+            >
+              <CheckCircle2 className="w-4 h-4" />
+            </button>
+            <button 
               onClick={onClose}
               className="p-1.5 hover:bg-white/10 rounded-md transition-colors"
             >
@@ -589,11 +654,29 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
                 return (
                   <React.Fragment key={msg.id}>
                     {renderDateSeparator(msg, prevMsg)}
-                    <div className={cn(
-                      "flex flex-col max-w-[85%] group/msg",
-                      isMe ? "ml-auto items-end" : "mr-auto items-start",
-                      hasMentionMe && "border-l-4 border-[#00c853] bg-[#00c853]/5 -mx-4 px-4 py-1"
-                    )}>
+                    <div 
+                      className={cn(
+                        "flex items-start gap-2 group/msg w-full",
+                        isMe ? "flex-row-reverse" : "flex-row",
+                        selectionMode && isMe && "cursor-pointer"
+                      )}
+                      onClick={() => selectionMode && isMe && toggleSelectMessage(msg.id)}
+                    >
+                      {selectionMode && isMe && (
+                        <div className="pt-2 shrink-0">
+                          {selectedIds.has(msg.id) ? (
+                            <CheckCircle2 className="w-4 h-4 text-[#00c853]" />
+                          ) : (
+                            <Circle className="w-4 h-4 text-gray-600" />
+                          )}
+                        </div>
+                      )}
+                      
+                      <div className={cn(
+                        "flex flex-col max-w-[85%]",
+                        isMe ? "items-end" : "items-start",
+                        hasMentionMe && "border-l-4 border-[#00c853] bg-[#00c853]/5 -mx-4 px-4 py-1"
+                      )}>
                       {!isMe && !isSameAuthor && (
                         <span className="text-[10px] text-gray-500 mb-1 ml-1 flex items-center gap-1">
                           {msg.profiles?.full_name || 'Usuário'}
@@ -629,22 +712,66 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
                                   isMe ? "bg-black" : "bg-[#1e2128]"
                                 )}>
                                   {isMe && differenceInMinutes(new Date(), new Date(msg.created_at)) < 5 && (
-                                    <button 
-                                      onClick={() => handleDeleteMessage(msg.id)}
-                                      className="w-full px-3 py-1.5 text-left text-[11px] text-red-500 hover:bg-red-500/10 flex items-center gap-2"
-                                    >
-                                      <Trash2 className="w-3 h-3" />
-                                      Apagar
-                                    </button>
+                                    <div className="relative">
+                                      {showDeleteConfirm === msg.id ? (
+                                        <div className="px-2 py-1">
+                                          <p className="text-[9px] text-gray-400 mb-1 text-center font-medium">Tem certeza?</p>
+                                          <div className="flex gap-1">
+                                            <button 
+                                              onClick={(e) => { e.stopPropagation(); handleDeleteMessage(msg.id); }}
+                                              className="flex-1 bg-red-500 hover:bg-red-600 text-white text-[9px] py-1 rounded font-bold transition-colors"
+                                            >
+                                              Sim
+                                            </button>
+                                            <button 
+                                              onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(null); }}
+                                              className="flex-1 bg-gray-700 hover:bg-gray-600 text-white text-[9px] py-1 rounded transition-colors"
+                                            >
+                                              Não
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <button 
+                                          onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(msg.id); }}
+                                          className="w-full px-3 py-1.5 text-left text-[11px] text-red-500 hover:bg-red-500/10 flex items-center gap-2"
+                                        >
+                                          <Trash2 className="w-3 h-3" />
+                                          Apagar
+                                        </button>
+                                      )}
+                                    </div>
                                   )}
                                   {isAdmin && !isMe && (
-                                    <button 
-                                      onClick={() => handleDeleteMessage(msg.id)}
-                                      className="w-full px-3 py-1.5 text-left text-[11px] text-red-500 hover:bg-red-500/10 flex items-center gap-2 font-medium"
-                                    >
-                                      <Trash2 className="w-3 h-3" />
-                                      Moderar
-                                    </button>
+                                    <div className="relative">
+                                      {showDeleteConfirm === msg.id ? (
+                                        <div className="px-2 py-1">
+                                          <p className="text-[9px] text-gray-400 mb-1 text-center font-medium">Deseja moderar?</p>
+                                          <div className="flex gap-1">
+                                            <button 
+                                              onClick={(e) => { e.stopPropagation(); handleDeleteMessage(msg.id); }}
+                                              className="flex-1 bg-red-500 hover:bg-red-600 text-white text-[9px] py-1 rounded font-bold transition-colors"
+                                            >
+                                              Sim
+                                            </button>
+                                            <button 
+                                              onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(null); }}
+                                              className="flex-1 bg-gray-700 hover:bg-gray-600 text-white text-[9px] py-1 rounded transition-colors"
+                                            >
+                                              Não
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <button 
+                                          onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(msg.id); }}
+                                          className="w-full px-3 py-1.5 text-left text-[11px] text-red-500 hover:bg-red-500/10 flex items-center gap-2 font-medium"
+                                        >
+                                          <Trash2 className="w-3 h-3" />
+                                          Moderar
+                                        </button>
+                                      )}
+                                    </div>
                                   )}
                                 </div>
                               )}
@@ -679,8 +806,9 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
                         </div>
                       </div>
                     </div>
-                  </React.Fragment>
-                );
+                  </div>
+                </React.Fragment>
+              );
               })
             )}
             <div ref={messagesEndRef} />
@@ -706,6 +834,32 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
 
         {/* Input Area */}
         <div className="p-4 bg-[#13161c] border-t border-[#2a2d35] relative">
+          {/* Selection Mode Toolbar */}
+          {selectionMode && (
+            <div className="absolute bottom-[100%] left-0 right-0 bg-[#00c853] px-4 py-2 flex items-center justify-between z-[100] animate-in slide-in-from-bottom-2">
+              <div className="flex items-center gap-2 text-black font-bold text-xs">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>{selectedIds.size} selecionadas</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => { setSelectionMode(false); setSelectedIds(new Set()); }}
+                  className="px-3 py-1 text-[10px] font-bold text-black/60 hover:text-black transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  disabled={selectedIds.size === 0 || isDeletingBatch}
+                  onClick={handleDeleteBatch}
+                  className="bg-black text-white px-3 py-1 rounded text-[10px] font-bold hover:bg-black/80 disabled:opacity-50 transition-all flex items-center gap-1"
+                >
+                  {isDeletingBatch ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                  Apagar
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Mentions Popup */}
           {showMentions && filteredMembers.length > 0 && (
             <div className="absolute bottom-[100%] left-4 right-4 bg-[#1e2128] border border-[#2a2d35] rounded-lg shadow-2xl overflow-hidden mb-2 z-[100] max-h-[200px] overflow-y-auto">
