@@ -7,9 +7,10 @@ import { FluxoCard as FluxoCardType } from "@/components/anotacoes/types";
 
 // Colunas padrão criadas automaticamente
 const DEFAULT_COLUMNS = [
-  { nome: "Ideias", ordem: 0 },
-  { nome: "Em andamento", ordem: 1 },
-  { nome: "Finalizado", ordem: 2 },
+  { nome: "Geral", ordem: 0 },
+  { nome: "Ideias", ordem: 1 },
+  { nome: "Em andamento", ordem: 2 },
+  { nome: "Finalizado", ordem: 3 },
 ];
 
 export function useNotesData() {
