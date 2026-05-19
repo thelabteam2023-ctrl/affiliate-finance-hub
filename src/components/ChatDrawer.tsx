@@ -504,12 +504,23 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
               {workspace?.name || 'Workspace'}
             </p>
           </div>
-          <button 
-            onClick={onClose}
-            className="p-1.5 hover:bg-white/10 rounded-md transition-colors"
-          >
-            <X className="w-4 h-4 text-gray-400" />
-          </button>
+          <div className="flex items-center gap-1">
+            {isAdmin && (
+              <button 
+                onClick={handleClearChat}
+                title="Limpar Histórico (Admin)"
+                className="p-1.5 hover:bg-red-500/10 rounded-md transition-colors group"
+              >
+                <Trash2 className="w-4 h-4 text-gray-400 group-hover:text-red-500" />
+              </button>
+            )}
+            <button 
+              onClick={onClose}
+              className="p-1.5 hover:bg-white/10 rounded-md transition-colors"
+            >
+              <X className="w-4 h-4 text-gray-400" />
+            </button>
+          </div>
         </div>
 
         {/* Online Members Bar */}
