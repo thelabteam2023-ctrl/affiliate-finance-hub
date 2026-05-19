@@ -1055,9 +1055,10 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                 </div>
                                 <CardContent className="pt-4 space-y-4">
                                   <div className="flex items-end gap-1 h-24 mb-10 items-baseline">
-                                    {monteCarloSim.samples.map((s, i) => {
-                                      const height = Math.min(100, Math.max(20, (Math.abs(s) / Math.max(metrics.allWonProfit, Math.abs(metrics.maxDrawdown))) * 100));
-                                      const isWin = s >= 0;
+                                     {monteCarloSim.samples.map((s, i) => {
+                                       const val = s.outcome;
+                                       const height = Math.min(100, Math.max(20, (Math.abs(val) / Math.max(metrics.allWonProfit, Math.abs(metrics.maxDrawdown))) * 100));
+                                       const isWin = val >= 0;
                                       return (
                                         <div 
                                           key={i} 
@@ -1066,7 +1067,8 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                         >
                                            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2 py-1 bg-popover text-[9px] text-popover-foreground rounded border border-border shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none z-[60] whitespace-nowrap">
                                             <div className="font-bold">{isWin ? 'LUCRO' : 'PREJUÍZO'}</div>
-                                            <div>Resultado: R$ {fmt(s)}</div>
+                                             <div>Resultado: R$ {fmt(val)}</div>
+                                             <div className={`font-bold ${s.type === 'lay' ? 'text-blue-400' : 'text-orange-400'}`}>TIPO: {s.type.toUpperCase()}</div>
                                              <div className="text-muted-foreground font-mono italic">Evento #{i + 1}</div>
                                           </div>
                                         </div>
