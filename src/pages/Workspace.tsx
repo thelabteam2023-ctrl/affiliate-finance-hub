@@ -162,7 +162,10 @@ export default function Workspace() {
 
       const { error } = await supabase
         .from('workspaces')
-        .update({ name: workspaceName.trim() })
+        .update({ 
+          name: workspaceName.trim(),
+          chat_moderation_level: chatModLevel
+        })
         .eq('id', workspaceId);
 
       if (error) throw error;
