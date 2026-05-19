@@ -16,9 +16,9 @@ import {
    HedgeProbabilisticoEngine,
    type LegInput,
    type HedgeResult
- import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
- import { LiveHedgeEngine, type LiveHedgeInput, type LiveHedgeResult } from '@/lib/live-hedge-engine';
 } from '@/lib/hedge-probabilistico-engine';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { LiveHedgeEngine, type LiveHedgeInput, type LiveHedgeResult } from '@/lib/live-hedge-engine';
 import { CardInfoTooltip } from '@/components/ui/card-info-tooltip';
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
