@@ -7,9 +7,10 @@ import { FluxoCard as FluxoCardType } from "@/components/anotacoes/types";
 
 // Colunas padrão criadas automaticamente
 const DEFAULT_COLUMNS = [
-  { nome: "Ideias", ordem: 0 },
-  { nome: "Em andamento", ordem: 1 },
-  { nome: "Finalizado", ordem: 2 },
+  { nome: "Geral", ordem: 0 },
+  { nome: "Ideias", ordem: 1 },
+  { nome: "Em andamento", ordem: 2 },
+  { nome: "Finalizado", ordem: 3 },
 ];
 
 export function useNotesData() {
@@ -44,16 +45,38 @@ export function useNotesData() {
           ordem: col.ordem,
         }));
 
-        const { error } = await supabase
+        const { data: inserted, error } = await supabase
           .from("fluxo_colunas")
-          .insert(colunasToInsert);
+          .insert(colunasToInsert)
+          .select();
 
         if (error) throw error;
-        loadData();
-        return;
+        setColunas(inserted || []);
+      } else {
+        // Verificar se falta a coluna "Geral"
+        const hasGeral = colunasData.some(c => c.nome === "Geral");
+        if (!hasGeral) {
+          const { data: insertedGeral, error: errorGeral } = await supabase
+            .from("fluxo_colunas")
+            .insert({
+              user_id: user.id,
+              workspace_id: workspaceId,
+              nome: "Geral",
+              ordem: -1, // Coloca no início
+            })
+            .select()
+            .single();
+          
+          if (!errorGeral && insertedGeral) {
+            const finalColunas = [insertedGeral, ...colunasData].sort((a, b) => a.ordem - b.ordem);
+            setColunas(finalColunas);
+          } else {
+            setColunas(colunasData);
+          }
+        } else {
+          setColunas(colunasData);
+        }
       }
-
-      setColunas(colunasData);
 
       const { data: cardsData, error: cardsError } = await supabase
         .from("fluxo_cards")

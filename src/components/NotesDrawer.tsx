@@ -30,17 +30,24 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
     canOperate 
   } = useNotesData();
 
+  const [view, setView] = useState<'geral' | 'fluxo'>('geral');
   const [activeTabId, setActiveTabId] = useState<string>('');
   const [isAdding, setIsAdding] = useState(false);
   const [newNoteText, setNewNoteText] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const colunasFluxo = colunas.filter(c => c.nome !== 'Geral');
+  const colunaGeral = colunas.find(c => c.nome === 'Geral');
+
   // Define active tab when columns are loaded
   useEffect(() => {
-    if (colunas.length > 0 && !activeTabId) {
-      setActiveTabId(colunas[0].id);
+    if (colunasFluxo.length > 0 && !activeTabId) {
+      setActiveTabId(colunasFluxo[0].id);
     }
-  }, [colunas, activeTabId]);
+  }, [colunasFluxo, activeTabId]);
+
+  // If view is general, we use the general column ID for adding notes
+  const currentActiveColumnId = view === 'geral' ? colunaGeral?.id : activeTabId;
 
   // Focus textarea when adding
   useEffect(() => {
@@ -50,34 +57,34 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
   }, [isAdding]);
 
   const addNote = async () => {
-    if (!newNoteText.trim() || !activeTabId) {
+    if (!newNoteText.trim() || !currentActiveColumnId) {
       setIsAdding(false);
       return;
     }
 
-    await handleCreateCard(activeTabId, newNoteText);
+    await handleCreateCard(currentActiveColumnId, newNoteText);
     setNewNoteText('');
     setIsAdding(false);
   };
 
   const getNextColumnId = (currentId: string) => {
-    const currentIndex = colunas.findIndex(c => c.id === currentId);
-    if (currentIndex !== -1 && currentIndex < colunas.length - 1) {
-      return colunas[currentIndex + 1].id;
+    const currentIndex = colunasFluxo.findIndex(c => c.id === currentId);
+    if (currentIndex !== -1 && currentIndex < colunasFluxo.length - 1) {
+      return colunasFluxo[currentIndex + 1].id;
     }
     return null;
   };
 
   const getPrevColumnId = (currentId: string) => {
-    const currentIndex = colunas.findIndex(c => c.id === currentId);
+    const currentIndex = colunasFluxo.findIndex(c => c.id === currentId);
     if (currentIndex > 0) {
-      return colunas[currentIndex - 1].id;
+      return colunasFluxo[currentIndex - 1].id;
     }
     return null;
   };
 
-  const activeColumn = colunas.find(c => c.id === activeTabId);
-  const columnCards = cards.filter(c => c.coluna_id === activeTabId).sort((a, b) => a.ordem - b.ordem);
+  const activeColumn = view === 'geral' ? colunaGeral : colunasFluxo.find(c => c.id === activeTabId);
+  const columnCards = cards.filter(c => c.coluna_id === currentActiveColumnId).sort((a, b) => a.ordem - b.ordem);
 
   return (
     <>
@@ -112,29 +119,62 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex p-2 bg-[#1a1e26] gap-1 shrink-0">
-          {colunas.map((col) => (
+        {/* View Switcher */}
+        <div className="p-4 pb-0">
+          <div className="flex bg-[#1a1e26] p-1 rounded-lg border border-[#2a2d35]">
             <button
-              key={col.id}
-              onClick={() => setActiveTabId(col.id)}
+              onClick={() => setView('geral')}
               className={cn(
-                "flex-1 py-2 text-xs font-medium rounded-md transition-all relative truncate px-1",
-                activeTabId === col.id 
-                  ? "text-white" 
+                "flex-1 py-1.5 text-xs font-medium rounded-md transition-all",
+                view === 'geral' 
+                  ? "bg-[#00c853] text-white shadow-sm" 
                   : "text-gray-400 hover:text-gray-200"
               )}
             >
-              {col.nome}
-              {activeTabId === col.id && (
-                <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#00c853]" />
-              )}
+              Gerais
             </button>
-          ))}
+            <button
+              onClick={() => setView('fluxo')}
+              className={cn(
+                "flex-1 py-1.5 text-xs font-medium rounded-md transition-all",
+                view === 'fluxo' 
+                  ? "bg-[#00c853] text-white shadow-sm" 
+                  : "text-gray-400 hover:text-gray-200"
+              )}
+            >
+              Fluxo
+            </button>
+          </div>
         </div>
 
+        {/* Tabs (only for Fluxo) */}
+        {view === 'fluxo' && (
+          <div className="flex px-4 pt-4 gap-1 shrink-0 overflow-x-auto no-scrollbar">
+            {colunasFluxo.map((col) => (
+              <button
+                key={col.id}
+                onClick={() => setActiveTabId(col.id)}
+                className={cn(
+                  "flex-none py-2 px-3 text-xs font-medium rounded-t-md transition-all relative whitespace-nowrap",
+                  activeTabId === col.id 
+                    ? "text-white bg-[#1a1e26] border-x border-t border-[#2a2d35]" 
+                    : "text-gray-400 hover:text-gray-200"
+                )}
+              >
+                {col.nome}
+                {activeTabId === col.id && (
+                  <div className="absolute -bottom-[1px] left-0 w-full h-[1px] bg-[#1a1e26]" />
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className={cn(
+          "flex-1 overflow-y-auto p-4 space-y-4",
+          view === 'fluxo' ? "bg-[#1a1e26]/50" : ""
+        )}>
           {!canOperate ? (
             <div className="text-center py-10">
               <p className="text-gray-500 text-sm">Selecione um workspace para usar as anotações.</p>
@@ -149,13 +189,13 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
               {!isAdding ? (
                 <button 
                   onClick={() => setIsAdding(true)}
-                  className="w-full py-2 px-3 flex items-center gap-2 bg-[#00c853]/10 text-[#00c853] hover:bg-[#00c853]/20 rounded-lg transition-colors text-sm font-medium"
+                  className="w-full py-2.5 px-3 flex items-center gap-2 bg-[#00c853]/10 text-[#00c853] hover:bg-[#00c853]/20 rounded-lg transition-all text-sm font-medium border border-[#00c853]/20"
                 >
                   <Plus className="w-4 h-4" />
-                  Adicionar Nota
+                  Nova Anotação {view === 'geral' ? 'Geral' : `em ${activeColumn?.nome}`}
                 </button>
               ) : (
-                <div className="bg-[#1a1e26] border border-[#2a2d35] rounded-lg p-3 space-y-2">
+                <div className="bg-[#1a1e26] border border-[#2a2d35] rounded-lg p-3 shadow-lg ring-1 ring-white/5">
                   <textarea
                     ref={textareaRef}
                     value={newNoteText}
@@ -170,19 +210,19 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
                         setNewNoteText('');
                       }
                     }}
-                    placeholder="O que você está pensando?"
-                    className="w-full bg-transparent border-none focus:ring-0 text-sm text-gray-200 resize-none min-h-[80px]"
+                    placeholder={view === 'geral' ? "Escreva sua anotação livre..." : "O que você está pensando?"}
+                    className="w-full bg-transparent border-none focus:ring-0 text-sm text-gray-200 resize-none min-h-[100px]"
                   />
-                  <div className="flex justify-end gap-2">
+                  <div className="flex justify-end gap-2 pt-2 border-t border-[#2a2d35]">
                     <button 
                       onClick={() => { setIsAdding(false); setNewNoteText(''); }}
-                      className="text-xs text-gray-400 hover:text-white transition-colors"
+                      className="px-3 py-1.5 text-xs text-gray-400 hover:text-white transition-colors"
                     >
                       Cancelar
                     </button>
                     <button 
                       onClick={addNote}
-                      className="text-xs bg-[#00c853] text-white px-3 py-1 rounded hover:bg-[#00b24a] transition-colors"
+                      className="px-4 py-1.5 text-xs bg-[#00c853] text-white rounded font-medium hover:bg-[#00b24a] transition-colors shadow-sm"
                     >
                       Salvar
                     </button>
@@ -193,51 +233,59 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
               {/* List of Notes */}
               <div className="space-y-3">
                 {columnCards.length === 0 ? (
-                  <div className="text-center py-10">
-                    <p className="text-gray-500 text-sm italic">Nenhuma anotação nesta coluna.</p>
+                  <div className="text-center py-16 bg-[#1a1e26]/30 rounded-xl border border-dashed border-[#2a2d35]">
+                    <p className="text-gray-500 text-sm italic">Nenhuma anotação aqui ainda.</p>
                   </div>
                 ) : (
                   columnCards.map((note) => (
                     <div 
                       key={note.id}
-                      className="group bg-[#1a1e26] border border-[#2a2d35] rounded-lg p-3 space-y-3"
+                      className="group bg-[#1a1e26] border border-[#2a2d35] rounded-lg p-3 hover:border-white/10 transition-colors shadow-sm"
                     >
                       <p className="text-sm text-gray-200 whitespace-pre-wrap leading-relaxed">
                         {note.conteudo || <span className="italic text-gray-600">(Sem conteúdo)</span>}
                       </p>
                       
-                      <div className="flex items-center justify-between pt-2 border-t border-[#2a2d35]">
+                      <div className="flex items-center justify-between pt-3 mt-3 border-t border-[#2a2d35]">
                         <span className="text-[10px] text-gray-500">
                           {format(new Date(note.created_at), "dd MMM · HH:mm", { locale: ptBR })}
                         </span>
                         
-                        <div className="flex items-center gap-1">
-                          {getPrevColumnId(activeTabId) && (
-                            <button 
-                              onClick={() => handleMoveCard(note.id, getPrevColumnId(activeTabId)!)}
-                              title="Mover para coluna anterior"
-                              className="p-1 text-gray-500 hover:text-white hover:bg-white/5 rounded transition-colors"
-                            >
-                              <ChevronLeft className="w-4 h-4" />
-                            </button>
+                        <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                          {view === 'fluxo' && (
+                            <>
+                              {getPrevColumnId(activeTabId) && (
+                                <button 
+                                  onClick={() => handleMoveCard(note.id, getPrevColumnId(activeTabId)!)}
+                                  title="Mover para coluna anterior"
+                                  className="p-1.5 text-gray-400 hover:text-white hover:bg-white/5 rounded transition-colors"
+                                >
+                                  <ChevronLeft className="w-4 h-4" />
+                                </button>
+                              )}
+                            </>
                           )}
                           
                           <button 
                             onClick={() => handleDeleteCard(note.id)}
                             title="Deletar nota"
-                            className="p-1 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded transition-colors"
+                            className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-400/10 rounded transition-colors"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
                           
-                          {getNextColumnId(activeTabId) && (
-                            <button 
-                              onClick={() => handleMoveCard(note.id, getNextColumnId(activeTabId)!)}
-                              title="Mover para próxima coluna"
-                              className="p-1 text-gray-500 hover:text-white hover:bg-white/5 rounded transition-colors"
-                            >
-                              <ChevronRight className="w-4 h-4" />
-                            </button>
+                          {view === 'fluxo' && (
+                            <>
+                              {getNextColumnId(activeTabId) && (
+                                <button 
+                                  onClick={() => handleMoveCard(note.id, getNextColumnId(activeTabId)!)}
+                                  title="Mover para próxima coluna"
+                                  className="p-1.5 text-gray-400 hover:text-white hover:bg-white/5 rounded transition-colors"
+                                >
+                                  <ChevronRight className="w-4 h-4" />
+                                </button>
+                              )}
+                            </>
                           )}
                         </div>
                       </div>
