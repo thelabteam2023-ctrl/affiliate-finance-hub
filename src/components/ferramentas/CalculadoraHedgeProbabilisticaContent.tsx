@@ -124,18 +124,18 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
      }
    };
 
-   const applyGoldenCombo = (comboLegs: number[]) => {
-     const newLegs = comboLegs.map((odd, i) => ({
-       name: `Evento ${i + 1}`,
-       backOdd: odd,
-       layOdd: odd
-     }));
+    const applyGoldenCombo = (comboLegs: number[]) => {
+      const newLegs = comboLegs.map((odd, i) => ({
+        name: `Evento ${i + 1}`,
+        backOdd: odd,
+        layOdd: Number((odd * (1 + oddSpread / 100)).toFixed(2))
+      }));
       setLegs(newLegs);
-      // Removido o redirecionamento para manter o usuário no Laboratório
     };
 
   const [freebet, setFreebet] = useState(100);
   const [commission, setCommission] = useState(2.8);
+  const [oddSpread, setOddSpread] = useState(0);
    const [targetExtraction, setTargetExtraction] = useState(0.7);
   const [labBenchmark, setLabBenchmark] = useState<string>('70');
    const [bankroll, setBankroll] = useState(5000);
@@ -243,7 +243,11 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
     /** Avalia uma combinação (ordem importa: cascata acumula responsabilidade). */
     const evaluate = (combo: number[], target: number) => {
       const m = HedgeProbabilisticoEngine.calculateMetrics(
-        combo.map(o => ({ name: '', backOdd: o, layOdd: o })),
+        combo.map(o => ({ 
+          name: '', 
+          backOdd: o, 
+          layOdd: Number((o * (1 + oddSpread / 100)).toFixed(2)) 
+        })),
         100,
         commDec,
         target,
@@ -1717,18 +1721,38 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                              <Trophy className="h-4 w-4 text-yellow-400" />
                                              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Biblioteca de Ouro Dinâmica</h4>
                                            </div>
-                                           <div className="flex gap-1">
-                                             {[2.8, 3.0, 4.8, 6.0].map((c) => (
-                                               <Button 
-                                                 key={c}
-                                                 variant={commission === c ? "default" : "outline"}
-                                                 size="sm"
-                                                 className="h-6 text-[9px] px-2"
-                                                 onClick={() => setCommission(c)}
-                                               >
-                                                 {c}%
-                                               </Button>
-                                             ))}
+                                           <div className="flex flex-col gap-2">
+                                             <div className="flex items-center gap-2 justify-end">
+                                               <span className="text-[8px] uppercase font-bold text-muted-foreground">Comissão:</span>
+                                               <div className="flex gap-1">
+                                                 {[2.8, 3.0, 4.8, 6.0].map((c) => (
+                                                   <Button 
+                                                     key={c}
+                                                     variant={commission === c ? "default" : "outline"}
+                                                     size="sm"
+                                                     className="h-6 text-[8px] px-1.5"
+                                                     onClick={() => setCommission(c)}
+                                                   >
+                                                     {c}%
+                                                   </Button>
+                                                 ))}
+                                               </div>
+                                             </div>
+                                             <div className="flex items-center gap-3 justify-end">
+                                               <div className="flex flex-col items-end">
+                                                 <span className="text-[8px] uppercase font-bold text-muted-foreground leading-none">Ajuste de Spread:</span>
+                                                 <span className="text-[7px] text-muted-foreground italic text-right">(Diferença Back vs Lay)</span>
+                                               </div>
+                                               <div className="flex items-center gap-2 w-32">
+                                                 <Slider 
+                                                   value={[oddSpread]} 
+                                                   min={0} max={10} step={0.5}
+                                                   onValueChange={(v) => setOddSpread(v[0])}
+                                                   className="flex-1"
+                                                 />
+                                                 <span className="text-[9px] font-mono font-bold text-primary w-6 text-right">{oddSpread}%</span>
+                                               </div>
+                                             </div>
                                            </div>
                                          </div>
 
