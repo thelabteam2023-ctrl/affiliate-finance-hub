@@ -8,13 +8,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  Target, Activity, TrendingUp, AlertTriangle, Shield, 
-  Plus, Trash2, Info, ChevronRight, Zap, BarChart3
+   Target, Activity, TrendingUp, AlertTriangle, Shield, 
+   Plus, Trash2, Info, ChevronRight, Zap, BarChart3,
+   Clock, Gauge, ArrowUpRight, Timer, MousePointer2, Settings2
 } from 'lucide-react';
 import { 
-  HedgeProbabilisticoEngine, 
-  type LegInput,
-  type HedgeResult 
+   HedgeProbabilisticoEngine,
+   type LegInput,
+   type HedgeResult
+ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+ import { LiveHedgeEngine, type LiveHedgeInput, type LiveHedgeResult } from '@/lib/live-hedge-engine';
 } from '@/lib/hedge-probabilistico-engine';
 import { CardInfoTooltip } from '@/components/ui/card-info-tooltip';
 
@@ -22,6 +25,7 @@ const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2,
 const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
 
 export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
+  const [activeTab, setActiveTab] = useState('calculadora');
   const [freebet, setFreebet] = useState(100);
   const [commission, setCommission] = useState(2.8);
   const [efficiency, setEfficiency] = useState(0.8);
@@ -29,6 +33,16 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
     { name: 'Evento 1', backOdd: 2.0, layOdd: 2.0 },
     { name: 'Evento 2', backOdd: 2.0, layOdd: 2.0 }
   ]);
+
+  const [liveInput, setLiveInput] = useState<LiveHedgeInput>({
+    layOdd: 3.00,
+    backOddActual: 2.70,
+    backOddProjected: 3.00,
+    backStake: 100,
+    commission: 2.0
+  });
+
+  const liveResults = useMemo(() => LiveHedgeEngine.calculate(liveInput), [liveInput]);
 
   const metrics: HedgeResult = useMemo(() => {
     return HedgeProbabilisticoEngine.calculateMetrics(
