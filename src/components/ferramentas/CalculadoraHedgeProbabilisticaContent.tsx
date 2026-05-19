@@ -27,9 +27,56 @@ import {
 import { LiveHedgeEngine, type LiveHedgeInput, type LiveHedgeResult } from '@/lib/live-hedge-engine';
 import { CardInfoTooltip } from '@/components/ui/card-info-tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { restrictToVerticalAxis, restrictToWindowEdges } from '@dnd-kit/modifiers';
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
+
+interface SortableItemProps {
+  id: string;
+  children: React.ReactNode;
+}
+
+const SortableLabCard: React.FC<SortableItemProps> = ({ id, children }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : undefined,
+    opacity: isDragging ? 0.8 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
+      {children}
+    </div>
+  );
+};
 
 export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState('calculadora');
@@ -42,6 +89,7 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
   ]);
   const [expanded, setExpanded] = useState<AggregatedScenario | null>(null);
   const [showHelp, setShowHelp] = useState(false);
+  const [labCardsOrder, setLabCardsOrder] = useState(['info', 'library', 'monte-carlo']);
 
   // Live State
   const [liveInput, setLiveInput] = useState<LiveHedgeInput>({
@@ -60,15 +108,38 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
     return LiveHedgeEngine.calculate(liveInput);
   }, [liveInput]);
 
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setLabCardsOrder((items) => {
+        const oldIndex = items.indexOf(active.id as string);
+        const newIndex = items.indexOf(over.id as string);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
+
   return (
     <ScrollArea className="h-full">
       <div className="p-4 space-y-6 max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row gap-4 items-start justify-between">
           <div className="flex-1">
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Zap className="h-6 w-6 text-primary" />
-              Calculadora de Hedge Probabilístico
-            </h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold flex items-center gap-2">
+                <Zap className="h-6 w-6 text-primary" />
+                Calculadora de Hedge Probabilístico
+              </h1>
+              <Button variant="ghost" size="icon" className="text-muted-foreground" onClick={() => setShowHelp(true)}>
+                <HelpCircle className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-auto">
             <TabsList className="grid grid-cols-3 h-9 w-[420px]">
@@ -160,20 +231,45 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
           {activeTab === 'laboratorio' && (
              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                <div className="lg:col-span-4 xl:col-span-3 space-y-6">
-                  <Card><CardHeader><CardTitle className="text-sm">Biblioteca Dinâmica</CardTitle></CardHeader>
-                  <CardContent><p className="text-xs text-muted-foreground">Regras operacionais de odds dinâmicas configuradas.</p></CardContent></Card>
+                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
+                   <SortableContext items={labCardsOrder} strategy={verticalListSortingStrategy}>
+                     {labCardsOrder.map((id) => (
+                       <SortableLabCard key={id} id={id}>
+                         {id === 'info' && (
+                           <div className="p-4 rounded-lg bg-emerald-500/5 border border-emerald-500/20 mb-4">
+                             <p className="text-xs font-bold text-emerald-400">Análise Quantitativa Ativa</p>
+                           </div>
+                         )}
+                         {id === 'library' && (
+                           <Card className="mb-4">
+                             <CardHeader className="p-3"><CardTitle className="text-[10px] uppercase text-muted-foreground tracking-wider">Biblioteca Dinâmica</CardTitle></CardHeader>
+                             <CardContent className="p-3 pt-0"><p className="text-xs">Motor gerador de estratégias ativo.</p></CardContent>
+                           </Card>
+                         )}
+                         {id === 'monte-carlo' && (
+                           <Card className="mb-4">
+                             <CardHeader className="p-3"><CardTitle className="text-[10px] uppercase text-muted-foreground tracking-wider">Simulação Monte Carlo</CardTitle></CardHeader>
+                             <CardContent className="p-3 pt-0"><p className="text-xs">100.000 trajetórias processadas.</p></CardContent>
+                           </Card>
+                         )}
+                       </SortableLabCard>
+                     ))}
+                   </SortableContext>
+                 </DndContext>
                </div>
                <div className="lg:col-span-8 xl:col-span-9 space-y-6">
-                 <Card><CardHeader><CardTitle className="text-sm">Workspace de Análise</CardTitle></CardHeader>
+                 <Card><CardHeader><CardTitle className="text-sm">Cascata Probabilística</CardTitle></CardHeader>
                  <CardContent>
-                    <div className="h-[300px] w-full bg-muted/20 rounded-md flex items-center justify-center">
-                      <AreaChart width={600} height={250} data={metrics.aggregatedScenarios}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="description" />
-                        <YAxis />
-                        <RechartsTooltip />
-                        <Area type="monotone" dataKey="result" stroke="#8884d8" fill="#8884d8" />
-                      </AreaChart>
+                    <div className="h-[400px] w-full bg-muted/20 rounded-md p-4">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={metrics.aggregatedScenarios}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                          <XAxis dataKey="description" stroke="#666" fontSize={10} />
+                          <YAxis stroke="#666" fontSize={10} />
+                          <RechartsTooltip />
+                          <Area type="monotone" dataKey="result" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.2} />
+                        </AreaChart>
+                      </ResponsiveContainer>
                     </div>
                  </CardContent></Card>
                </div>
@@ -211,6 +307,54 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
             </div>
           )}
         </div>
+
+        <Dialog open={!!expanded} onOpenChange={(o) => !o && setExpanded(null)}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Detalhamento: {expanded?.description}</DialogTitle>
+              <DialogDescription>Probabilidade: {fmtPct((expanded?.probability || 0) * 100)}</DialogDescription>
+            </DialogHeader>
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <div className="p-4 bg-muted/30 rounded-lg">
+                <span className="text-[10px] uppercase text-muted-foreground">Resultado</span>
+                <p className="text-xl font-bold">R$ {fmt(expanded?.result || 0)}</p>
+              </div>
+              <div className="p-4 bg-muted/30 rounded-lg">
+                <span className="text-[10px] uppercase text-muted-foreground">Exposição</span>
+                <p className="text-xl font-bold">R$ {fmt(expanded?.maxExposure || 0)}</p>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showHelp} onOpenChange={setShowHelp}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+            <DialogHeader className="p-6 pb-2">
+              <DialogTitle className="text-xl flex items-center gap-2"><BookOpen className="h-5 w-5 text-primary" /> Guia do Hedge Probabilístico</DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="flex-1 p-6 pt-2">
+              <div className="space-y-6 pb-6">
+                <section className="space-y-3">
+                  <h3 className="text-sm font-semibold text-primary uppercase tracking-wider">O Conceito</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">O Hedge Probabilístico é uma técnica de arbitragem sequencial para maximizar o valor de freebets.</p>
+                </section>
+                <section className="space-y-3">
+                  <h3 className="text-sm font-semibold text-emerald-400 uppercase tracking-wider">Glossário</h3>
+                  <div className="space-y-2">
+                    <div className="p-3 bg-muted/30 rounded border border-border/50">
+                      <p className="text-xs font-bold">EV (Expected Value)</p>
+                      <p className="text-[11px] text-muted-foreground">O lucro médio esperado no longo prazo.</p>
+                    </div>
+                    <div className="p-3 bg-muted/30 rounded border border-border/50">
+                      <p className="text-xs font-bold">ROE (Return on Exposure)</p>
+                      <p className="text-[11px] text-muted-foreground">O retorno sobre o capital que você precisa ter na exchange.</p>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
       </div>
     </ScrollArea>
   );
