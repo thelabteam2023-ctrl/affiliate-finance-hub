@@ -834,6 +834,32 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
 
         {/* Input Area */}
         <div className="p-4 bg-[#13161c] border-t border-[#2a2d35] relative">
+          {/* Selection Mode Toolbar */}
+          {selectionMode && (
+            <div className="absolute bottom-[100%] left-0 right-0 bg-[#00c853] px-4 py-2 flex items-center justify-between z-[100] animate-in slide-in-from-bottom-2">
+              <div className="flex items-center gap-2 text-black font-bold text-xs">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>{selectedIds.size} selecionadas</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => { setSelectionMode(false); setSelectedIds(new Set()); }}
+                  className="px-3 py-1 text-[10px] font-bold text-black/60 hover:text-black transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  disabled={selectedIds.size === 0 || isDeletingBatch}
+                  onClick={handleDeleteBatch}
+                  className="bg-black text-white px-3 py-1 rounded text-[10px] font-bold hover:bg-black/80 disabled:opacity-50 transition-all flex items-center gap-1"
+                >
+                  {isDeletingBatch ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                  Apagar
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Mentions Popup */}
           {showMentions && filteredMembers.length > 0 && (
             <div className="absolute bottom-[100%] left-4 right-4 bg-[#1e2128] border border-[#2a2d35] rounded-lg shadow-2xl overflow-hidden mb-2 z-[100] max-h-[200px] overflow-y-auto">
