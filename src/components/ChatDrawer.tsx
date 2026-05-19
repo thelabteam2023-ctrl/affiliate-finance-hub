@@ -186,7 +186,6 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
     }
     return null;
   };
-  };
 
   return (
     <>
