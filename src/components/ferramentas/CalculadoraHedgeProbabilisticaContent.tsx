@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,23 +9,17 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Target, Activity, TrendingUp, AlertTriangle, Shield,
-  Plus, Trash2, Info, ChevronRight, Zap, BarChart3, HelpCircle, Link2,
-  CheckCircle2, Lightbulb, BookOpen, FlaskConical, BrainCircuit,
-  ShieldAlert, Coins, Sparkles, Wand2, Dna, LineChart, History,
-  Trophy, Star, ArrowRight, RefreshCcw, GripVertical, GripHorizontal,
-  Sliders, Settings2, ShieldCheck, ZapOff, Infinity as InfinityIcon,
-  Clock, Gauge, ArrowUpRight, Timer, MousePointer2
+  Plus, Trash2, Info, ChevronRight, Zap, BarChart3, HelpCircle,
+  FlaskConical, BookOpen, Clock
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   HedgeProbabilisticoEngine,
   type LegInput,
-  type HedgeResult,
   type AggregatedScenario
 } from '@/lib/hedge-probabilistico-engine';
-import { LiveHedgeEngine, type LiveHedgeInput, type LiveHedgeResult } from '@/lib/live-hedge-engine';
-import { CardInfoTooltip } from '@/components/ui/card-info-tooltip';
+import { LiveHedgeEngine, type LiveHedgeInput } from '@/lib/live-hedge-engine';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import {
   DndContext,
@@ -44,7 +38,8 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { restrictToVerticalAxis, restrictToWindowEdges } from '@dnd-kit/modifiers';
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
+import { BibliotecaOuroDinamica } from './BibliotecaOuroDinamica';
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
@@ -55,22 +50,13 @@ interface SortableItemProps {
 }
 
 const SortableLabCard: React.FC<SortableItemProps> = ({ id, children }) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id });
-
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     zIndex: isDragging ? 50 : undefined,
     opacity: isDragging ? 0.8 : 1,
   };
-
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
       {children}
@@ -91,7 +77,6 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
   const [showHelp, setShowHelp] = useState(false);
   const [labCardsOrder, setLabCardsOrder] = useState(['info', 'library', 'monte-carlo']);
 
-  // Live State
   const [liveInput, setLiveInput] = useState<LiveHedgeInput>({
     layOdd: 3.0,
     backOddActual: 2.7,
@@ -100,20 +85,10 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
     commission: 2
   });
 
-  const metrics = useMemo(() => {
-    return HedgeProbabilisticoEngine.calculateMetrics(legs, freebet, commission, targetExtraction);
-  }, [legs, freebet, commission, targetExtraction]);
+  const metrics = useMemo(() => HedgeProbabilisticoEngine.calculateMetrics(legs, freebet, commission, targetExtraction), [legs, freebet, commission, targetExtraction]);
+  const liveResults = useMemo(() => LiveHedgeEngine.calculate(liveInput), [liveInput]);
 
-  const liveResults = useMemo(() => {
-    return LiveHedgeEngine.calculate(liveInput);
-  }, [liveInput]);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -136,22 +111,14 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
                 <Zap className="h-6 w-6 text-primary" />
                 Calculadora de Hedge Probabilístico
               </h1>
-              <Button variant="ghost" size="icon" className="text-muted-foreground" onClick={() => setShowHelp(true)}>
-                <HelpCircle className="h-5 w-5" />
-              </Button>
+              <Button variant="ghost" size="icon" className="text-muted-foreground" onClick={() => setShowHelp(true)}><HelpCircle className="h-5 w-5" /></Button>
             </div>
           </div>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-auto">
             <TabsList className="grid grid-cols-3 h-9 w-[420px]">
-              <TabsTrigger value="calculadora" className="text-xs gap-2">
-                <Activity className="h-3.5 w-3.5" /> Calculadora
-              </TabsTrigger>
-              <TabsTrigger value="laboratorio" className="text-xs gap-2">
-                <FlaskConical className="h-3.5 w-3.5" /> Laboratório
-              </TabsTrigger>
-              <TabsTrigger value="live" className="text-xs gap-2">
-                <Clock className="h-3.5 w-3.5" /> Calculadora Live
-              </TabsTrigger>
+              <TabsTrigger value="calculadora" className="text-xs gap-2"><Activity className="h-3.5 w-3.5" /> Calculadora</TabsTrigger>
+              <TabsTrigger value="laboratorio" className="text-xs gap-2"><FlaskConical className="h-3.5 w-3.5" /> Laboratório</TabsTrigger>
+              <TabsTrigger value="live" className="text-xs gap-2"><Clock className="h-3.5 w-3.5" /> Calculadora Live</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -243,13 +210,20 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
                          {id === 'library' && (
                            <Card className="mb-4">
                              <CardHeader className="p-3"><CardTitle className="text-[10px] uppercase text-muted-foreground tracking-wider">Biblioteca Dinâmica</CardTitle></CardHeader>
-                             <CardContent className="p-3 pt-0"><p className="text-xs">Motor gerador de estratégias ativo.</p></CardContent>
+                             <CardContent className="p-3 pt-0">
+                                <BibliotecaOuroDinamica freebet={freebet} target={targetExtraction} commission={commission} />
+                             </CardContent>
                            </Card>
                          )}
                          {id === 'monte-carlo' && (
                            <Card className="mb-4">
-                             <CardHeader className="p-3"><CardTitle className="text-[10px] uppercase text-muted-foreground tracking-wider">Simulação Monte Carlo</CardTitle></CardHeader>
-                             <CardContent className="p-3 pt-0"><p className="text-xs">100.000 trajetórias processadas.</p></CardContent>
+                             <CardHeader className="p-3"><CardTitle className="text-[10px] uppercase text-muted-foreground tracking-wider">Métricas de Risco</CardTitle></CardHeader>
+                             <CardContent className="p-3 pt-0">
+                               <div className="space-y-2">
+                                  <div className="flex justify-between text-[10px]"><span>Exposição Máxima:</span><span className="text-orange-400">R$ {fmt(metrics.maxResponsibility)}</span></div>
+                                  <div className="flex justify-between text-[10px]"><span>Capital Necessário:</span><span className="text-blue-400">R$ {fmt(metrics.capitalRequired)}</span></div>
+                               </div>
+                             </CardContent>
                            </Card>
                          )}
                        </SortableLabCard>
@@ -262,7 +236,7 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
                  <CardContent>
                     <div className="h-[400px] w-full bg-muted/20 rounded-md p-4">
                       <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={metrics.aggregatedScenarios}>
+                        <AreaChart data={metrics.aggregatedScenarios} onClick={(data) => data && data.activePayload && setExpanded(data.activePayload[0].payload)}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#333" />
                           <XAxis dataKey="description" stroke="#666" fontSize={10} />
                           <YAxis stroke="#666" fontSize={10} />
@@ -270,6 +244,15 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
                           <Area type="monotone" dataKey="result" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.2} />
                         </AreaChart>
                       </ResponsiveContainer>
+                    </div>
+                    <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2">
+                       {metrics.aggregatedScenarios.map((s, i) => (
+                         <div key={i} className="p-2 border border-border/40 rounded bg-muted/10 cursor-pointer hover:bg-muted/20 transition-colors" onClick={() => setExpanded(s)}>
+                           <div className="text-[8px] uppercase text-muted-foreground">{s.description}</div>
+                           <div className="text-xs font-bold text-primary">{fmtPct(s.probability * 100)}</div>
+                           <div className={`text-[10px] font-mono ${s.result >= 0 ? "text-emerald-400" : "text-red-400"}`}>R$ {fmt(s.result)}</div>
+                         </div>
+                       ))}
                     </div>
                  </CardContent></Card>
                </div>
