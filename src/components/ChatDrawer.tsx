@@ -182,20 +182,37 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if ((!newMessage.trim() && !selectedImage) || !user?.id || !workspace?.id || sending || isUploading) return;
+    
+    // Detailed validation logging
+    console.log("Chat message attempt:", { 
+      contentLength: newMessage.trim().length, 
+      hasImage: !!selectedImage,
+      userId: user?.id,
+      workspaceId: workspace?.id,
+      sending,
+      isUploading
+    });
+
+    if ((!newMessage.trim() && !selectedImage) || !user?.id || !workspace?.id || sending || isUploading) {
+      console.warn("Chat message validation failed - sending blocked");
+      return;
+    }
 
     setSending(true);
     try {
       let imageUrl = null;
       if (selectedImage) {
+        console.log("Uploading image for chat message...");
         imageUrl = await uploadImage(selectedImage);
+        console.log("Image upload result:", imageUrl);
         if (!imageUrl) {
+          console.error("Image upload failed - message sending aborted");
           setSending(false);
           return;
         }
       }
 
-      const { error } = await supabase.from('community_chat_messages').insert([{
+      const payload = {
         content: newMessage.trim(),
         user_id: user.id,
         workspace_id: workspace.id,
@@ -203,17 +220,27 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
         message_type: imageUrl ? 'image' : 'text',
         image_url: imageUrl,
         expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
-      } as any]);
+      };
+
+      console.log("Inserting chat message with payload:", payload);
+
+      const { error, data } = await supabase
+        .from('community_chat_messages')
+        .insert([payload])
+        .select();
 
       if (!error) {
+        console.log("Message sent successfully:", data);
         setNewMessage('');
         setSelectedImage(null);
         setImagePreview(null);
       } else {
-        toast.error("Erro ao enviar mensagem");
+        console.error("Supabase insert error:", error);
+        toast.error(`Erro ao enviar: ${error.message || "Erro desconhecido"}`);
       }
-    } catch (error) {
-      toast.error("Erro inesperado");
+    } catch (err: any) {
+      console.error("Unexpected error in handleSendMessage:", err);
+      toast.error(`Erro inesperado: ${err.message || "Erro de execução"}`);
     } finally {
       setSending(false);
     }
