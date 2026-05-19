@@ -324,6 +324,15 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
                       key={note.id}
                       className="group bg-[#1a1e26] border border-[#2a2d35] rounded-lg p-3 hover:border-white/10 transition-colors shadow-sm"
                     >
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {note.categoria && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-[#00c853]/10 text-[#00c853] border border-[#00c853]/20">
+                            <Tag className="w-2.5 h-2.5 mr-1" />
+                            {note.categoria}
+                          </span>
+                        )}
+                      </div>
+
                       <p className="text-sm text-gray-200 whitespace-pre-wrap leading-relaxed">
                         {note.conteudo || <span className="italic text-gray-600">(Sem conteúdo)</span>}
                       </p>
@@ -348,6 +357,14 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
                             </>
                           )}
                           
+                          <button 
+                            onClick={() => startEditing(note)}
+                            title="Editar"
+                            className="p-1.5 text-gray-400 hover:text-white hover:bg-white/5 rounded transition-colors"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+
                           <button 
                             onClick={() => handleDeleteCard(note.id)}
                             title="Deletar nota"
