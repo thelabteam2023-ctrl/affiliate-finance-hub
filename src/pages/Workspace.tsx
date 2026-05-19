@@ -391,7 +391,73 @@ export default function Workspace() {
                   </p>
                 </div>
               </div>
-            )}
+                <div className="space-y-4 pt-4 border-t">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Som de Notificação</Label>
+                    <div className="grid grid-cols-1 gap-2">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant={chatSound === CHAT_SOUNDS.pop ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setChatSound(CHAT_SOUNDS.pop)}
+                          className="flex-1 text-xs justify-start"
+                        >
+                          <Volume2 className="h-3.5 w-3.5 mr-2" />
+                          Padrão (Pop)
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => new Audio(CHAT_SOUNDS.pop).play()}
+                        >
+                          <Play className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant={chatSound === CHAT_SOUNDS.ding ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setChatSound(CHAT_SOUNDS.ding)}
+                          className="flex-1 text-xs justify-start"
+                        >
+                          <Volume2 className="h-3.5 w-3.5 mr-2" />
+                          Discreto (Ding)
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => new Audio(CHAT_SOUNDS.ding).play()}
+                        >
+                          <Play className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant={chatSound === CHAT_SOUNDS.chime ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setChatSound(CHAT_SOUNDS.chime)}
+                          className="flex-1 text-xs justify-start"
+                        >
+                          <Volume2 className="h-3.5 w-3.5 mr-2" />
+                          Moderno (Chime)
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => new Audio(CHAT_SOUNDS.chime).play()}
+                        >
+                          <Play className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-1 italic">
+                      Escolha o som que tocará ao receber novas mensagens no chat.
+                    </p>
+                  </div>
+                </div>
 
             {(isOwner || isSystemOwner) && (
               <div className="flex gap-2 pt-2">
