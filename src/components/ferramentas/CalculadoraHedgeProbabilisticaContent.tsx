@@ -1767,7 +1767,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                    <div className="p-2.5 rounded-lg bg-background/40 border border-border/40 space-y-1">
                                                      <span className="text-[8px] uppercase font-bold text-muted-foreground block">Variância</span>
                                                      <div className="flex items-center gap-1.5">
-                                                       <ShieldCheck className={`h-3 w-3 ${activeRulesetId === 'restricted_high' ? 'text-emerald-400' : 'text-orange-400'}`} />
+                                                        <ShieldCheck className={`h-3 w-3 ${['200_05', '200_06'].includes(activeRulesetId) ? 'text-emerald-400' : 'text-orange-400'}`} />
                                                        <span className="text-xs font-bold text-white">{ODDS_RULESETS.find(r => r.id === activeRulesetId)?.variance}</span>
                                                      </div>
                                                    </div>
@@ -1783,7 +1783,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                      <div className="flex items-center gap-1.5">
                                                        {activeRulesetId === 'unlimited' ? <InfinityIcon className="h-3 w-3 text-primary" /> : <Settings2 className="h-3 w-3 text-primary" />}
                                                        <span className="text-xs font-bold text-white">
-                                                         {activeRulesetId === 'standard' ? 'Alta' : activeRulesetId === 'unlimited' ? 'Total' : 'Moderada'}
+                                                          {['150_10', '150_08'].includes(activeRulesetId) ? 'Alta' : activeRulesetId === 'unlimited' ? 'Total' : 'Moderada'}
                                                        </span>
                                                      </div>
                                                    </div>
