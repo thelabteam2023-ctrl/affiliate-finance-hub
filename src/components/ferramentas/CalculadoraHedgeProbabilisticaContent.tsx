@@ -711,10 +711,9 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
             </div>
           </div>
  
-         <div className="space-y-6">
+          <div className="space-y-6">
             {activeTab === "calculadora" ? (
-{activeTab === 'calculadora' ? (
-               <>
+              <>
 
         {/* KPIs Section */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -803,7 +802,7 @@ A Taxa de Extração é o ROI (Retorno sobre Investimento) calculado especificam
                   <Input 
                     type="number" 
                     value={freebet} 
-                    onChange={(e) => setFreebet(Number(e.target.value)})
+                     onChange={(e) => setFreebet(Number(e.target.value))}
                     className="h-9 text-sm"
                   />
                 </div>
@@ -816,7 +815,7 @@ A Taxa de Extração é o ROI (Retorno sobre Investimento) calculado especificam
                     type="number" 
                     step="0.1"
                     value={commission} 
-                    onChange={(e) => setCommission(Number(e.target.value)})
+                     onChange={(e) => setCommission(Number(e.target.value))}
                     className="h-9 text-sm"
                   />
                 </div>
@@ -967,7 +966,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                   <Input 
                                     type="number"
                                     value={leg.backOdd} 
-                                    onChange={(e) => updateLeg(index, 'backOdd', Number(e.target.value)})
+                                     onChange={(e) => updateLeg(index, 'backOdd', Number(e.target.value))}
                                     className="h-8 text-[11px] font-mono w-16"
                                   />
                                 </div>
@@ -976,7 +975,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                   <Input 
                                     type="number"
                                     value={leg.layOdd} 
-                                    onChange={(e) => updateLeg(index, 'layOdd', Number(e.target.value)})
+                                     onChange={(e) => updateLeg(index, 'layOdd', Number(e.target.value))}
                                     className="h-8 text-[11px] font-mono w-16"
                                   />
                                 </div>
@@ -1219,7 +1218,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                           <Input 
                                             type="number" 
                                             value={freebet} 
-                                            onChange={(e) => setFreebet(Number(e.target.value)})
+                                             onChange={(e) => setFreebet(Number(e.target.value))}
                                             className="h-10 pl-8 font-mono text-sm"
                                           />
                                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">R$</span>
@@ -1235,7 +1234,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                           <Input 
                                             type="number" 
                                             value={bankroll} 
-                                            onChange={(e) => setBankroll(Number(e.target.value)})
+                                             onChange={(e) => setBankroll(Number(e.target.value))}
                                             className="h-10 pl-8 font-mono text-sm"
                                           />
                                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">R$</span>
@@ -1755,7 +1754,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                              </Tabs>
                                            </div>
 
-                                           {activeRulesetId === 'custom' ? (
+                                            {activeRulesetId === "custom" && (
                                              <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 grid grid-cols-1 md:grid-cols-3 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
                                                <div className="space-y-2">
                                                  <Label className="text-[10px] uppercase font-bold text-muted-foreground">Odd Mínima</Label>
@@ -1763,7 +1762,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                    <Input 
                                                      type="number" 
                                                      value={customRules.minOdd} 
-                                                     onChange={(e) => setCustomRules({...customRules, minOdd: Number(e.target.value)})
+                                                      onChange={(e) => setCustomRules({...customRules, minOdd: Number(e.target.value)})}
                                                      className="h-8 text-xs font-mono"
                                                    />
                                                    <Slider 
@@ -1779,7 +1778,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                    <Input 
                                                      type="number" 
                                                      value={customRules.maxOdd} 
-                                                     onChange={(e) => setCustomRules({...customRules, maxOdd: Number(e.target.value)})
+                                                      onChange={(e) => setCustomRules({...customRules, maxOdd: Number(e.target.value)})}
                                                      className="h-8 text-xs font-mono"
                                                    />
                                                    <Slider 
@@ -1795,7 +1794,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                    <Input 
                                                      type="number" 
                                                      value={customRules.maxLegs} 
-                                                     onChange={(e) => setCustomRules({...customRules, maxLegs: Math.min(6, Math.max(2, Number(e.target.value)))}}
+                                                      onChange={(e) => setCustomRules({...customRules, maxLegs: Math.min(6, Math.max(2, Number(e.target.value)))})}
                                                      className="h-8 text-xs font-mono"
                                                    />
                                                    <Slider 
@@ -1807,8 +1806,8 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                </div>
                </div>
              
-) : (
-
+                                            )
+                                            }{activeRulesetId !== "custom" && (
                                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-in fade-in duration-300">
                                                {ODDS_RULESETS.find(r => r.id === activeRulesetId) && (
                                                  <>
@@ -1840,12 +1839,15 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                      <span className="text-[9px] text-muted-foreground leading-tight block">
                                                        {activeRulesetId === 'restricted_high' ? 'Ideal para bancas conservadoras.' : 'Foco em maximização de extração.'}
                                                      </span>
-                                                   </div>
-                                                 </>
-                                               )} </div> </div> </div>
+                                                    </div>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
 
-                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                           {/* Estratégia de 1 Perna (Hedge Simples) */}
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                            <div 
                                              className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/20 hover:border-primary/50 transition-all cursor-pointer group flex flex-col justify-between"
                                              onClick={() => {
@@ -1915,23 +1917,14 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                 <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-background/50 border border-border/30 font-mono">
                                                   {odd.toFixed(2)}
                                                 </span>
-                                              ))}
-                                            </div>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
                                   </CardContent>
                                 </Card>
+                              </div>
                             </div>
                           </div>
                         </div>
+                      </div>
                     </div>
-                  </div>
-               </div>
-              ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                    <Card className="bg-primary/5 border-primary/20">
                       <CardContent className="pt-4 flex flex-col items-center text-center">
                         <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1 uppercase font-bold tracking-tighter">
                           <Target className="h-3 w-3 text-primary" /> Proteção Recomendada
@@ -1996,7 +1989,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                 <Input 
                                   type="number"
                                   value={liveInput.backStake}
-                                  onChange={(e) => setLiveInput({...liveInput, backStake: Number(e.target.value)})
+                                  onChange={(e) => setLiveInput({...liveInput, backStake: Number(e.target.value)})}
                                   className="h-10 pl-8 font-mono text-lg border-primary/30 focus:border-primary"
                                 />
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-mono">R$</span>
@@ -2007,13 +2000,13 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                               <Label className="text-[10px] uppercase font-bold text-emerald-400 flex items-center gap-1">
                                 <TrendingUp className="h-3 w-3" /> Odd Futura Projetada (Back)
                               </Label>
-                              <Input 
-                                type="number"
-                                value={liveInput.backOddProjected}
-                                onChange={(e) => setLiveInput({...liveInput, backOddProjected: Number(e.target.value)})
-                                className="h-10 font-mono text-lg border-emerald-500/30 focus:border-emerald-500"
-                                step="0.01"
-                              />
+                                <Input 
+                                  type="number"
+                                  value={liveInput.backOddProjected}
+                                  onChange={(e) => setLiveInput({...liveInput, backOddProjected: Number(e.target.value)})}
+                                  className="h-10 font-mono text-lg border-emerald-500/30 focus:border-emerald-500"
+                                  step="0.01"
+                                />
                               <p className="text-[9px] text-muted-foreground italic leading-tight">
                                 Odd que você espera pegar na Sportsbook após a convergência.
                               </p>
@@ -2023,23 +2016,23 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                               <Label className="text-[10px] uppercase font-bold text-muted-foreground">Odd Atual Lay</Label>
-                              <Input 
-                                type="number"
-                                value={liveInput.layOdd}
-                                onChange={(e) => setLiveInput({...liveInput, layOdd: Number(e.target.value)})
-                                className="h-9 font-mono text-sm"
-                                step="0.01"
-                              />
+                                <Input 
+                                  type="number"
+                                  value={liveInput.layOdd}
+                                  onChange={(e) => setLiveInput({...liveInput, layOdd: Number(e.target.value)})}
+                                  className="h-9 font-mono text-sm"
+                                  step="0.01"
+                                />
                             </div>
                             <div className="space-y-2">
                               <Label className="text-[10px] uppercase font-bold text-muted-foreground">Odd Atual Back</Label>
-                              <Input 
-                                type="number"
-                                value={liveInput.backOddActual}
-                                onChange={(e) => setLiveInput({...liveInput, backOddActual: Number(e.target.value)})
-                                className="h-9 font-mono text-sm opacity-60"
-                                step="0.01"
-                              />
+                                <Input 
+                                  type="number"
+                                  value={liveInput.backOddActual}
+                                  onChange={(e) => setLiveInput({...liveInput, backOddActual: Number(e.target.value)})}
+                                  className="h-9 font-mono text-sm opacity-60"
+                                  step="0.01"
+                                />
                             </div>
                           </div>
 
@@ -2235,24 +2228,19 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                             </div>
                           </div>
                         </CardContent>
+                        </CardContent>
+                          </div>
+                        {/* CardContent closed */}
                       </Card>
                     </div>
                   </div>
-                </div>
-              
-)}
-          
-          </div>
-         <Dialog open={!!expanded} onOpenChange={(o) => !o && setExpanded(null)}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader className="mb-4">
-              <DialogTitle className="flex items-center gap-2">
-                Detalhamento do Cenário: {expanded?.description}
-              </DialogTitle>
-              <DialogDescription className="text-sm">
-                Este cenário canônico representa todas as sequências de resultados que terminam nesta etapa da cascata.
-                A probabilidade real de este desfecho ocorrer é <strong className="text-primary">{fmtPct((expanded?.probability || 0) * 100)}</strong>.
-              </DialogDescription>
+                          </div>
+                        </div>
+                          </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
             </DialogHeader>
             
             <div className="bg-muted/30 rounded-lg p-4 border border-border/50 mb-6 space-y-3">
