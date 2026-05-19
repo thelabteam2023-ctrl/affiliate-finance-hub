@@ -3,6 +3,7 @@ import type { ComponentType } from "react";
 import { ThemeProvider } from "next-themes";
 import { TopBarProvider, useTopBar } from "@/contexts/TopBarContext";
 import { NotesDrawer } from "@/components/NotesDrawer";
+import { ChatDrawer } from "@/components/ChatDrawer";
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,7 +23,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppSidebar } from "@/components/AppSidebar";
 import { InactivityWarningBanner } from "@/components/InactivityWarningBanner";
 import { useInactivityTimeout } from "@/hooks/useInactivityTimeout";
-import { Loader2, NotebookPen } from "lucide-react";
+import { Loader2, NotebookPen, MessageCircle } from "lucide-react";
 import { installRpcInterceptor } from "@/lib/dev/rpcInterceptor";
 
 // Install RPC interceptor for the system-owner Ledger Monitor (no-op for everyone else)
@@ -118,6 +119,7 @@ function PageLoader() {
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const { minutesUntilTimeout, showingWarning, resetActivity } = useInactivityTimeout();
   const [isNotesOpen, setIsNotesOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const location = useLocation();
   const mainRef = useRef<HTMLElement>(null);
 
@@ -143,11 +145,26 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
           {/* Header com trigger da sidebar + conteúdo contextual */}
           <TopBarHeader />
 
-          {/* Floating Button for Notes */}
-          <FloatingNotesButton onClick={() => setIsNotesOpen(!isNotesOpen)} isOpen={isNotesOpen} />
+          {/* Floating Buttons */}
+          <FloatingNotesButton 
+            onClick={() => {
+              setIsNotesOpen(!isNotesOpen);
+              if (!isNotesOpen) setIsChatOpen(false);
+            }} 
+            isOpen={isNotesOpen} 
+          />
+          
+          <FloatingChatButton 
+            onClick={() => {
+              setIsChatOpen(!isChatOpen);
+              if (!isChatOpen) setIsNotesOpen(false);
+            }} 
+            isOpen={isChatOpen} 
+          />
 
-          {/* Side Drawer for Notes */}
+          {/* Side Drawers */}
           <NotesDrawer isOpen={isNotesOpen} onClose={() => setIsNotesOpen(false)} />
+          <ChatDrawer isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
 
           {/* Main content: scroll local do viewport autenticado, sem depender do body */}
           <main ref={mainRef} className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
@@ -191,6 +208,31 @@ function FloatingNotesButton({ onClick, isOpen }: { onClick: () => void, isOpen:
       )}
     >
       <NotebookPen className="w-[22px] h-[22px]" />
+    </button>
+  );
+}
+
+/** Global floating button for Chat */
+function FloatingChatButton({ onClick, isOpen }: { onClick: () => void, isOpen: boolean }) {
+  const { user } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0); // For now, zero as asked in basic requirements
+  
+  if (!user || isOpen) return null;
+
+  return (
+    <button
+      onClick={onClick}
+      title="Chat"
+      className={cn(
+        "fixed bottom-[88px] right-6 z-[9999] flex items-center justify-center w-[52px] h-[52px] rounded-full transition-all duration-150 shadow-[0_4px_20px_rgba(0,0,0,0.4)] active:scale-95 bg-[#1e2128] border border-[#2a2d35] text-white hover:border-[#00c853] hover:text-[#00c853] hover:scale-[1.08]"
+      )}
+    >
+      <MessageCircle className="w-[22px] h-[22px]" />
+      {unreadCount > 0 && (
+        <span className="absolute -top-1 -right-1 flex h-[18px] min-w-[18px] px-1 items-center justify-center rounded-full bg-[#ef4444] text-[10px] font-bold text-white shadow-sm border border-[#1e2128]">
+          {unreadCount}
+        </span>
+      )}
     </button>
   );
 }
