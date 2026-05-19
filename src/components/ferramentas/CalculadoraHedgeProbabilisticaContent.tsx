@@ -1841,7 +1841,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                      </span>
                                                    </div>
                                                   </>
-                                                  {/* Fragment closed */}
+                                                  </>
                                                 )}
                                               </div>
                                             </div>
@@ -1926,12 +1926,6 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                           </div>
                         </div>
                       </div>
-                                  {/* Card closed */}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                   ) : (
                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                     <Card className="bg-primary/5 border-primary/20">
                       <CardContent className="pt-4 flex flex-col items-center text-center">
@@ -2243,14 +2237,10 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                       </Card>
                     </div>
                   </div>
-                </div>
-              )}
-          <DialogContent className="max-w-2xl">
-            <DialogHeader className="mb-4">
-              <DialogTitle className="flex items-center gap-2">
-                Detalhamento do Cenário: {expanded?.description}
-              </DialogTitle>
-              <DialogDescription className="text-sm">
+                          </div>
+                        </div>
+                      </div>
+                    )}
                 Este cenário canônico representa todas as sequências de resultados que terminam nesta etapa da cascata.
                 A probabilidade real de este desfecho ocorrer é <strong className="text-primary">{fmtPct((expanded?.probability || 0) * 100)}</strong>.
               </DialogDescription>
