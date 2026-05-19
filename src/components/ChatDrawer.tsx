@@ -270,6 +270,48 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
       setSending(false);
     }
   };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!confirm("Deseja realmente apagar esta mensagem?")) return;
+
+    try {
+      const { error } = await supabase
+        .from('community_chat_messages')
+        .delete()
+        .eq('id', messageId);
+
+      if (error) {
+        toast.error("Erro ao apagar mensagem. O prazo de 5 minutos pode ter expirado.");
+      } else {
+        toast.success("Mensagem apagada");
+      }
+    } catch (err) {
+      toast.error("Erro inesperado ao apagar");
+    } finally {
+      setMessageActionsId(null);
+    }
+  };
+
+  const handleClearChat = async () => {
+    if (!workspace?.id) return;
+    if (!confirm("ATENÇÃO: Isso apagará TODO o histórico do chat deste workspace para todos os membros. Deseja continuar?")) return;
+    if (!confirm("Confirme novamente para limpar o chat.")) return;
+
+    try {
+      const { error } = await supabase.rpc('clear_workspace_chat', {
+        target_workspace_id: workspace.id
+      });
+
+      if (error) {
+        toast.error("Erro ao limpar chat: " + error.message);
+      } else {
+        toast.success("Histórico do chat limpo com sucesso");
+        setMessages([]);
+      }
+    } catch (err) {
+      toast.error("Erro inesperado ao limpar chat");
+    }
+  };
   const handlePaste = (e: React.ClipboardEvent) => {
     const items = e.clipboardData.items;
     for (const item of items) {
