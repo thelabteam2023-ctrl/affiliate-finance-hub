@@ -407,51 +407,9 @@ export default function Workspace() {
             <div className="pt-6 border-t space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <h4 className="text-sm font-medium leading-none">Controles Adicionais</h4>
+                  <h4 className="text-sm font-medium leading-none">Controles de Sistema</h4>
                   <p className="text-sm text-muted-foreground">
-                    Configurações avançadas do seu workspace.
-                  </p>
-                </div>
-              </div>
-              
-              <div className="space-y-4 max-w-md">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="chatModLevel">Moderação do Chat</Label>
-                    <Badge variant={chatModLevel === 'strict' ? 'destructive' : chatModLevel === 'moderate' ? 'secondary' : 'outline'}>
-                      {chatModLevel === 'strict' ? 'Rígido' : chatModLevel === 'moderate' ? 'Moderado' : 'Livre Interno'}
-                    </Badge>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <Button
-                      variant={chatModLevel === 'strict' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setChatModLevel('strict')}
-                      className="text-xs"
-                    >
-                      Rígido
-                    </Button>
-                    <Button
-                      variant={chatModLevel === 'moderate' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setChatModLevel('moderate')}
-                      className="text-xs"
-                    >
-                      Moderado
-                    </Button>
-                    <Button
-                      variant={chatModLevel === 'relaxed' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setChatModLevel('relaxed')}
-                      className="text-xs"
-                    >
-                      Livre
-                    </Button>
-                  </div>
-                  <p className="text-[12px] text-muted-foreground mt-1 italic">
-                    {chatModLevel === 'strict' && "Bloqueio total de termos ofensivos e gírias pesadas."}
-                    {chatModLevel === 'moderate' && "Permite linguagem informal leve, mas bloqueia ofensas diretas."}
-                    {chatModLevel === 'relaxed' && "Linguagem natural permitida entre a equipe. Bloqueia apenas ódio e spam."}
+                    Outras configurações do seu workspace.
                   </p>
                 </div>
               </div>
