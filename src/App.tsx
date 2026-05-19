@@ -7,6 +7,7 @@ import { ChatDrawer } from "@/components/ChatDrawer";
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { useChatNotifications } from "@/hooks/useChatNotifications";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { CalculadoraProvider } from "@/contexts/CalculadoraContext";
 import { ApostaPopupProvider } from "@/contexts/ApostaPopupContext";
