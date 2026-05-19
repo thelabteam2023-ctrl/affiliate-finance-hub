@@ -591,11 +591,57 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
                       )}
                       
                       <div className={cn(
-                        "px-3 py-2 text-sm relative break-words shadow-sm flex flex-col gap-2",
+                        "px-3 py-2 text-sm relative break-words shadow-sm flex flex-col gap-2 min-w-[60px]",
                         isMe 
                           ? "bg-[#00c853] text-black rounded-[12px_12px_2px_12px]" 
                           : "bg-[#1e2128] text-white border border-[#2a2d35] rounded-[12px_12px_12px_2px]"
                       )}>
+                        {/* Ações da Mensagem */}
+                        {(isMe || isAdmin) && (
+                          <div className="absolute -top-2 -right-2 opacity-0 group-hover/msg:opacity-100 transition-opacity z-10">
+                            <div className="relative">
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setMessageActionsId(messageActionsId === msg.id ? null : msg.id);
+                                }}
+                                className={cn(
+                                  "p-1 rounded-full shadow-lg border",
+                                  isMe ? "bg-black text-white border-white/10" : "bg-[#2a2d35] text-gray-400 border-[#3a3d45]"
+                                )}
+                              >
+                                <MoreVertical className="w-3 h-3" />
+                              </button>
+
+                              {messageActionsId === msg.id && (
+                                <div className={cn(
+                                  "absolute top-full mt-1 right-0 bg-[#1e2128] border border-[#2a2d35] rounded-md shadow-2xl py-1 z-20 min-w-[100px] animate-in fade-in zoom-in-95",
+                                  isMe ? "bg-black" : "bg-[#1e2128]"
+                                )}>
+                                  {isMe && differenceInMinutes(new Date(), new Date(msg.created_at)) < 5 && (
+                                    <button 
+                                      onClick={() => handleDeleteMessage(msg.id)}
+                                      className="w-full px-3 py-1.5 text-left text-[11px] text-red-500 hover:bg-red-500/10 flex items-center gap-2"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                      Apagar
+                                    </button>
+                                  )}
+                                  {isAdmin && !isMe && (
+                                    <button 
+                                      onClick={() => handleDeleteMessage(msg.id)}
+                                      className="w-full px-3 py-1.5 text-left text-[11px] text-red-500 hover:bg-red-500/10 flex items-center gap-2 font-medium"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                      Moderar
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
                         {msg.image_url && (
                           <div className="relative group/img max-w-full overflow-hidden rounded-md border border-black/10">
                             <img 
