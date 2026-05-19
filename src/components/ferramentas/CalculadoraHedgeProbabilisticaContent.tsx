@@ -1257,37 +1257,65 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                             {id === 'doctor-insights' && (
                               <Card className="bg-primary/5 border-primary/20">
                                 <CardHeader className="pb-2">
-                                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                                    <Sparkles className="h-4 w-4 text-primary" /> Estatística
-                                  </CardTitle>
+                                   <CardTitle className="text-sm font-medium flex items-center gap-2">
+                                     <LineChart className="h-4 w-4 text-primary" /> Estatística de Operação
+                                   </CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                   <div className="grid grid-cols-1 gap-3">
-                                    <div className="p-3 rounded-lg bg-background/40 border border-border/40 space-y-1">
-                                      <div className="flex justify-between items-center text-[10px] uppercase font-bold text-muted-foreground">
-                                        <span>Sequência de 10 Greens</span>
-                                        <CardInfoTooltip
-                                          title="Probabilidade de 10 Greens (Bolsa)"
-                                          description="Probabilidade de 10 apostas seguidas vencerem na Bolsa (Lay). Representa a extração bem-sucedida do valor da casa para a bolsa."
-                                        />
-                                      </div>
-                                      <p className="text-lg font-bold font-mono text-emerald-400">
-                                        {fmtPct(advancedStats.prob10Greens * 100)}
-                                      </p>
-                                    </div>
-              
-                                    <div className="p-3 rounded-lg bg-background/40 border border-border/40 space-y-1">
-                                      <div className="flex justify-between items-center text-[10px] uppercase font-bold text-muted-foreground">
-                                        <span>Sequência de 10 Reds</span>
-                                        <CardInfoTooltip
-                                          title="Probabilidade de 10 Reds (Bolsa)"
-                                          description="Probabilidade de 10 apostas seguidas não baterem no Lay (vencerem na Casa). Indica a frequência de ciclos que terminam no cenário de Back total."
-                                         />
-                                      </div>
-                                      <p className="text-lg font-bold font-mono text-red-400">
-                                        {(advancedStats.prob10Reds * 100).toFixed(6)}%
-                                      </p>
-                                    </div>
+                                     <div className="grid grid-cols-2 gap-2">
+                                       <div className="p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/10 space-y-1">
+                                         <div className="flex justify-between items-center text-[9px] uppercase font-bold text-emerald-400/70">
+                                           <span>Sucesso Financeiro</span>
+                                           <CardInfoTooltip
+                                             title="Sucesso Financeiro"
+                                             description="Probabilidade de o ciclo terminar em lucro (independente de onde bater). No hedge perfeito, este valor é próximo de 100%."
+                                           />
+                                         </div>
+                                         <p className="text-base font-bold font-mono text-emerald-400">
+                                           {fmtPct(monteCarloSim.winRate * 100)}
+                                         </p>
+                                       </div>
+                                       <div className="p-2.5 rounded-lg bg-blue-500/5 border border-blue-500/10 space-y-1">
+                                         <div className="flex justify-between items-center text-[9px] uppercase font-bold text-blue-400/70">
+                                           <span>Extração Bolsa</span>
+                                           <CardInfoTooltip
+                                             title="Extração na Bolsa (Lay)"
+                                             description="Probabilidade de o valor ser transferido da casa para a bolsa neste ciclo (Lay vencedor)."
+                                           />
+                                         </div>
+                                         <p className="text-base font-bold font-mono text-blue-400">
+                                           {fmtPct((1 - (metrics.aggregatedScenarios.find(s => !s.canonicalPath.includes('lost'))?.probability ?? 0)) * 100)}
+                                         </p>
+                                       </div>
+                                     </div>
+
+                                     <div className="grid grid-cols-2 gap-2">
+                                       <div className="p-2.5 rounded-lg bg-background/40 border border-border/40 space-y-1">
+                                         <div className="flex justify-between items-center text-[9px] uppercase font-bold text-muted-foreground">
+                                           <span>Seq. 10 Bolsa</span>
+                                           <CardInfoTooltip
+                                             title="Sequência 10 Greens (Bolsa)"
+                                             description="Probabilidade de 10 ciclos seguidos vencerem na Bolsa (Lay). Mede a fluidez da transferência casa-bolsa."
+                                           />
+                                         </div>
+                                         <p className="text-base font-bold font-mono text-emerald-400">
+                                           {fmtPct(advancedStats.prob10Greens * 100)}
+                                         </p>
+                                       </div>
+                                       <div className="p-2.5 rounded-lg bg-background/40 border border-border/40 space-y-1">
+                                         <div className="flex justify-between items-center text-[9px] uppercase font-bold text-muted-foreground">
+                                           <span>Seq. 10 Casa</span>
+                                           <CardInfoTooltip
+                                             title="Sequência 10 Casa (Back)"
+                                             description="Probabilidade de 10 ciclos seguidos baterem integralmente na Casa (Back). Cenário raro em odds de extração."
+                                           />
+                                         </div>
+                                         <p className="text-base font-bold font-mono text-orange-400">
+                                           {(advancedStats.prob10Reds * 100).toFixed(6)}%
+                                         </p>
+                                       </div>
+                                     </div>
               
                                     <div className="p-3 rounded-lg bg-background/40 border border-border/40 space-y-1">
                                       <div className="flex justify-between items-center text-[10px] uppercase font-bold text-muted-foreground">
