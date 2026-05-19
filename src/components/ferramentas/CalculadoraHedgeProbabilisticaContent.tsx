@@ -1841,7 +1841,10 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                      </span>
                                                    </div>
                                                  </>
-                                               )} </div> </div> </div>
+                                               )}
+                                             </div>
+                                           </div>
+                                         </div>
 
                                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                            {/* Estratégia de 1 Perna (Hedge Simples) */}
@@ -1922,14 +1925,14 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                     </div>
                                   </CardContent>
                                 </Card>
+                              </div>
                             </div>
                           </div>
                         </div>
+                      </div>
                     </div>
-                  </div>
-               </div>
-              ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                  ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                     <Card className="bg-primary/5 border-primary/20">
                       <CardContent className="pt-4 flex flex-col items-center text-center">
                         <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1 uppercase font-bold tracking-tighter">
@@ -2235,12 +2238,10 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                           </div>
                         </CardContent>
                       </Card>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              
-)}
-          
+                  )}
           </div>
          <Dialog open={!!expanded} onOpenChange={(o) => !o && setExpanded(null)}>
           <DialogContent className="max-w-2xl">
