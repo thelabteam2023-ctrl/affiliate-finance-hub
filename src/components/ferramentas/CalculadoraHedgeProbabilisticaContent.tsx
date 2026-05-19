@@ -402,7 +402,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
       let totalDoubleups = 0;
       let doubleupSteps: number[] = [];
       let cumulativeOutcome = 0;
-      const samples: number[] = [];
+       const samples: { outcome: number; type: 'lay' | 'back' }[] = [];
       
       // Pré-calcula a CDF dos cenários para performance
       const cdf = metrics.aggregatedScenarios.map((s, i, arr) => ({
@@ -432,10 +432,14 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
           currentBank += outcome;
           if (currentBank > ceiling) currentBank = ceiling;
 
-          // Coleta amostra dos primeiros 10 eventos da primeira trajetória para o UI
-          if (t === 0 && samples.length < 10) {
-            samples.push(outcome);
-          }
+           // Coleta amostra dos primeiros 10 eventos da primeira trajetória para o UI
+           if (t === 0 && samples.length < 10) {
+             const isBackWin = !scenario.canonicalPath.includes('lost');
+             samples.push({ 
+               outcome, 
+               type: isBackWin ? 'back' : 'lay' 
+             });
+           }
           if (t === 0) cumulativeOutcome += outcome;
 
           if (currentBank >= bankroll * 2) {
@@ -1051,9 +1055,10 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                 </div>
                                 <CardContent className="pt-4 space-y-4">
                                   <div className="flex items-end gap-1 h-24 mb-10 items-baseline">
-                                    {monteCarloSim.samples.map((s, i) => {
-                                      const height = Math.min(100, Math.max(20, (Math.abs(s) / Math.max(metrics.allWonProfit, Math.abs(metrics.maxDrawdown))) * 100));
-                                      const isWin = s >= 0;
+                                     {monteCarloSim.samples.map((s, i) => {
+                                       const val = s.outcome;
+                                       const height = Math.min(100, Math.max(20, (Math.abs(val) / Math.max(metrics.allWonProfit, Math.abs(metrics.maxDrawdown))) * 100));
+                                       const isWin = val >= 0;
                                       return (
                                         <div 
                                           key={i} 
@@ -1062,7 +1067,8 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                         >
                                            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2 py-1 bg-popover text-[9px] text-popover-foreground rounded border border-border shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none z-[60] whitespace-nowrap">
                                             <div className="font-bold">{isWin ? 'LUCRO' : 'PREJUÍZO'}</div>
-                                            <div>Resultado: R$ {fmt(s)}</div>
+                                             <div>Resultado: R$ {fmt(val)}</div>
+                                             <div className={`font-bold ${s.type === 'lay' ? 'text-blue-400' : 'text-orange-400'}`}>TIPO: {s.type.toUpperCase()}</div>
                                              <div className="text-muted-foreground font-mono italic">Evento #{i + 1}</div>
                                           </div>
                                         </div>
@@ -1257,37 +1263,65 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                             {id === 'doctor-insights' && (
                               <Card className="bg-primary/5 border-primary/20">
                                 <CardHeader className="pb-2">
-                                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                                    <Sparkles className="h-4 w-4 text-primary" /> Estatística
-                                  </CardTitle>
+                                   <CardTitle className="text-sm font-medium flex items-center gap-2">
+                                     <LineChart className="h-4 w-4 text-primary" /> Estatística de Operação
+                                   </CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                   <div className="grid grid-cols-1 gap-3">
-                                    <div className="p-3 rounded-lg bg-background/40 border border-border/40 space-y-1">
-                                      <div className="flex justify-between items-center text-[10px] uppercase font-bold text-muted-foreground">
-                                        <span>Sequência de 10 Greens</span>
-                                        <CardInfoTooltip
-                                          title="Probabilidade de 10 Greens (Bolsa)"
-                                          description="Probabilidade de 10 apostas seguidas vencerem na Bolsa (Lay). Representa a extração bem-sucedida do valor da casa para a bolsa."
-                                        />
-                                      </div>
-                                      <p className="text-lg font-bold font-mono text-emerald-400">
-                                        {fmtPct(advancedStats.prob10Greens * 100)}
-                                      </p>
-                                    </div>
-              
-                                    <div className="p-3 rounded-lg bg-background/40 border border-border/40 space-y-1">
-                                      <div className="flex justify-between items-center text-[10px] uppercase font-bold text-muted-foreground">
-                                        <span>Sequência de 10 Reds</span>
-                                        <CardInfoTooltip
-                                          title="Probabilidade de 10 Reds (Bolsa)"
-                                          description="Probabilidade de 10 apostas seguidas não baterem no Lay (vencerem na Casa). Indica a frequência de ciclos que terminam no cenário de Back total."
-                                         />
-                                      </div>
-                                      <p className="text-lg font-bold font-mono text-red-400">
-                                        {(advancedStats.prob10Reds * 100).toFixed(6)}%
-                                      </p>
-                                    </div>
+                                     <div className="grid grid-cols-2 gap-2">
+                                       <div className="p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/10 space-y-1">
+                                         <div className="flex justify-between items-center text-[9px] uppercase font-bold text-emerald-400/70">
+                                           <span>Sucesso Financeiro</span>
+                                           <CardInfoTooltip
+                                             title="Sucesso Financeiro"
+                                             description="Probabilidade de o ciclo terminar em lucro (independente de onde bater). No hedge perfeito, este valor é próximo de 100%."
+                                           />
+                                         </div>
+                                         <p className="text-base font-bold font-mono text-emerald-400">
+                                           {fmtPct(monteCarloSim.winRate * 100)}
+                                         </p>
+                                       </div>
+                                       <div className="p-2.5 rounded-lg bg-blue-500/5 border border-blue-500/10 space-y-1">
+                                         <div className="flex justify-between items-center text-[9px] uppercase font-bold text-blue-400/70">
+                                           <span>Extração Bolsa</span>
+                                           <CardInfoTooltip
+                                             title="Extração na Bolsa (Lay)"
+                                             description="Probabilidade de o valor ser transferido da casa para a bolsa neste ciclo (Lay vencedor)."
+                                           />
+                                         </div>
+                                         <p className="text-base font-bold font-mono text-blue-400">
+                                           {fmtPct((1 - (metrics.aggregatedScenarios.find(s => !s.canonicalPath.includes('lost'))?.probability ?? 0)) * 100)}
+                                         </p>
+                                       </div>
+                                     </div>
+
+                                     <div className="grid grid-cols-2 gap-2">
+                                       <div className="p-2.5 rounded-lg bg-background/40 border border-border/40 space-y-1">
+                                         <div className="flex justify-between items-center text-[9px] uppercase font-bold text-muted-foreground">
+                                           <span>Seq. 10 Bolsa</span>
+                                           <CardInfoTooltip
+                                             title="Sequência 10 Greens (Bolsa)"
+                                             description="Probabilidade de 10 ciclos seguidos vencerem na Bolsa (Lay). Mede a fluidez da transferência casa-bolsa."
+                                           />
+                                         </div>
+                                         <p className="text-base font-bold font-mono text-emerald-400">
+                                           {fmtPct(advancedStats.prob10Greens * 100)}
+                                         </p>
+                                       </div>
+                                       <div className="p-2.5 rounded-lg bg-background/40 border border-border/40 space-y-1">
+                                         <div className="flex justify-between items-center text-[9px] uppercase font-bold text-muted-foreground">
+                                           <span>Seq. 10 Casa</span>
+                                           <CardInfoTooltip
+                                             title="Sequência 10 Casa (Back)"
+                                             description="Probabilidade de 10 ciclos seguidos baterem integralmente na Casa (Back). Cenário raro em odds de extração."
+                                           />
+                                         </div>
+                                         <p className="text-base font-bold font-mono text-orange-400">
+                                           {(advancedStats.prob10Reds * 100).toFixed(6)}%
+                                         </p>
+                                       </div>
+                                     </div>
               
                                     <div className="p-3 rounded-lg bg-background/40 border border-border/40 space-y-1">
                                       <div className="flex justify-between items-center text-[10px] uppercase font-bold text-muted-foreground">
@@ -1553,31 +1587,37 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                             Amostra Sequencial (10 Ciclos)
                                           </p>
                                           <div className="text-[10px] font-mono text-white">
-                                            Total: <span className={monteCarloSim.samples.reduce((a, b) => a + b, 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-                                              R$ {fmt(monteCarloSim.samples.reduce((a, b) => a + b, 0))}
+                                             Total: <span className={monteCarloSim.samples.reduce((a, b) => a + b.outcome, 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+                                               R$ {fmt(monteCarloSim.samples.reduce((a, b) => a + b.outcome, 0))}
                                             </span>
                                           </div>
                                         </div>
-                                        <div className="grid grid-cols-5 gap-1.5">
-                                          {Array.from({ length: 10 }).map((_, i) => {
-                                            const s = monteCarloSim.samples[i];
-                                            const exists = s !== undefined;
-                                            return (
-                                              <div 
-                                                key={i} 
-                                                className={`text-[9px] py-1 rounded text-center font-mono border transition-all ${
-                                                  !exists 
-                                                    ? 'bg-muted/10 border-border/20 text-muted-foreground/30' 
-                                                    : s >= 0 
-                                                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_8px_rgba(16,185,129,0.05)]' 
-                                                      : 'bg-red-500/10 text-red-400 border-red-500/20 shadow-[0_0_8px_rgba(239,68,68,0.05)]'
-                                                }`}
-                                              >
-                                                {exists ? `R$ ${fmt(s)}` : '---'}
-                                              </div>
-                                            );
-                                          })}
-                                        </div>
+                                         <div className="grid grid-cols-5 gap-1.5">
+                                           {Array.from({ length: 10 }).map((_, i) => {
+                                             const s = monteCarloSim.samples[i];
+                                             const exists = s !== undefined;
+                                             return (
+                                               <div key={i} className="space-y-1">
+                                                 <div 
+                                                   className={`text-[9px] py-1 rounded text-center font-mono border transition-all ${
+                                                     !exists 
+                                                       ? 'bg-muted/10 border-border/20 text-muted-foreground/30' 
+                                                       : s.outcome >= 0 
+                                                         ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_8px_rgba(16,185,129,0.05)]' 
+                                                         : 'bg-red-500/10 text-red-400 border-red-500/20 shadow-[0_0_8px_rgba(239,68,68,0.05)]'
+                                                   }`}
+                                                 >
+                                                   {exists ? `R$ ${fmt(s.outcome)}` : '---'}
+                                                 </div>
+                                                 {exists && (
+                                                   <div className={`text-[7px] text-center font-bold uppercase ${s.type === 'lay' ? 'text-blue-400' : 'text-orange-400'}`}>
+                                                     {s.type}
+                                                   </div>
+                                                 )}
+                                               </div>
+                                             );
+                                           })}
+                                         </div>
                                         <p className="text-[8px] text-muted-foreground italic leading-tight text-center">
                                           Simulação de uma jornada real de 10 operações consecutivas.
                                         </p>
