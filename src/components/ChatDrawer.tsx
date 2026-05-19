@@ -9,7 +9,9 @@ import {
   Maximize2,
   Trash2,
   MoreVertical,
-  ChevronDown
+  ChevronDown,
+  CheckCircle2,
+  Circle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, isToday, isYesterday, differenceInMinutes } from 'date-fns';
