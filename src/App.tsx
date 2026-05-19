@@ -151,7 +151,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
               setIsNotesOpen(!isNotesOpen);
               if (!isNotesOpen) setIsChatOpen(false);
             }} 
-            isOpen={isNotesOpen} 
+            isOpen={isNotesOpen || isChatOpen} 
           />
           
           <FloatingChatButton 
@@ -159,7 +159,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
               setIsChatOpen(!isChatOpen);
               if (!isChatOpen) setIsNotesOpen(false);
             }} 
-            isOpen={isChatOpen} 
+            isOpen={isChatOpen || isNotesOpen} 
           />
 
           {/* Side Drawers */}
