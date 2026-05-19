@@ -1840,8 +1840,8 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                      </span>
                                                    </div>
                                                  </>
-                                               
-                                               ) : (
+                                               } ) : ( 
+                                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-in fade-in duration-300">
                                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-in fade-in duration-300">
                                        </div>
                                      </div>
