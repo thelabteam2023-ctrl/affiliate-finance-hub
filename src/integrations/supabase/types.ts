@@ -11870,6 +11870,7 @@ export type Database = {
       workspaces: {
         Row: {
           chat_moderation_level: string | null
+          chat_notification_sound: string | null
           created_at: string
           deactivated_at: string | null
           deactivation_reason: string | null
@@ -11887,6 +11888,7 @@ export type Database = {
         }
         Insert: {
           chat_moderation_level?: string | null
+          chat_notification_sound?: string | null
           created_at?: string
           deactivated_at?: string | null
           deactivation_reason?: string | null
@@ -11904,6 +11906,7 @@ export type Database = {
         }
         Update: {
           chat_moderation_level?: string | null
+          chat_notification_sound?: string | null
           created_at?: string
           deactivated_at?: string | null
           deactivation_reason?: string | null

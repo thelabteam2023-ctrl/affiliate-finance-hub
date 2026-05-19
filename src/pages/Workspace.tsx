@@ -11,8 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Users, Settings, UserPlus, Shield, DollarSign, Gamepad2, Eye, Check, X, Info, Mail, Inbox } from "lucide-react";
+import { Loader2, Users, Settings, UserPlus, Shield, DollarSign, Gamepad2, Eye, Check, X, Info, Mail, Inbox, Play, Volume2 } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { CHAT_SOUNDS } from "@/hooks/useChatNotifications";
 import { MemberList } from "@/components/workspace/MemberList";
 import { InviteMemberDialog } from "@/components/workspace/InviteMemberDialog";
 import { PendingInvitesList } from "@/components/workspace/PendingInvitesList";
@@ -111,6 +112,7 @@ export default function Workspace() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [chatModLevel, setChatModLevel] = useState<string>("strict");
+  const [chatSound, setChatSound] = useState<string>(CHAT_SOUNDS.pop);
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [workspaceName, setWorkspaceName] = useState("");
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
@@ -120,6 +122,7 @@ export default function Workspace() {
     if (workspace) {
       setWorkspaceName(workspace.name);
       setChatModLevel(workspace.chat_moderation_level || "strict");
+      setChatSound(workspace.chat_notification_sound || CHAT_SOUNDS.pop);
     }
   }, [workspace]);
 
@@ -164,7 +167,8 @@ export default function Workspace() {
         .from('workspaces')
         .update({ 
           name: workspaceName.trim(),
-          chat_moderation_level: chatModLevel
+          chat_moderation_level: chatModLevel,
+          chat_notification_sound: chatSound
         })
         .eq('id', workspaceId);
 
@@ -346,47 +350,117 @@ export default function Workspace() {
             </div>
 
             {(isOwner || isSystemOwner) && (
-              <div className="space-y-4 pt-4 border-t">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="chatModLevel" className="text-sm font-medium">Moderação do Chat</Label>
-                    <Badge variant={chatModLevel === 'strict' ? 'destructive' : chatModLevel === 'moderate' ? 'secondary' : 'outline'}>
-                      {chatModLevel === 'strict' ? 'Rígido' : chatModLevel === 'moderate' ? 'Moderado' : 'Livre Interno'}
-                    </Badge>
+              <>
+                <div className="space-y-4 pt-4 border-t">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="chatModLevel" className="text-sm font-medium">Moderação do Chat</Label>
+                      <Badge variant={chatModLevel === 'strict' ? 'destructive' : chatModLevel === 'moderate' ? 'secondary' : 'outline'}>
+                        {chatModLevel === 'strict' ? 'Rígido' : chatModLevel === 'moderate' ? 'Moderado' : 'Livre Interno'}
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <Button
+                        variant={chatModLevel === 'strict' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setChatModLevel('strict')}
+                        className="text-xs"
+                      >
+                        Rígido
+                      </Button>
+                      <Button
+                        variant={chatModLevel === 'moderate' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setChatModLevel('moderate')}
+                        className="text-xs"
+                      >
+                        Moderado
+                      </Button>
+                      <Button
+                        variant={chatModLevel === 'relaxed' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setChatModLevel('relaxed')}
+                        className="text-xs"
+                      >
+                        Livre
+                      </Button>
+                    </div>
+                    <p className="text-[12px] text-muted-foreground mt-1 italic">
+                      {chatModLevel === 'strict' && "Bloqueio total de termos ofensivos e gírias pesadas."}
+                      {chatModLevel === 'moderate' && "Permite linguagem informal leve, mas bloqueia ofensas diretas."}
+                      {chatModLevel === 'relaxed' && "Linguagem natural permitida entre a equipe. Sem restrições de termos."}
+                    </p>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <Button
-                      variant={chatModLevel === 'strict' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setChatModLevel('strict')}
-                      className="text-xs"
-                    >
-                      Rígido
-                    </Button>
-                    <Button
-                      variant={chatModLevel === 'moderate' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setChatModLevel('moderate')}
-                      className="text-xs"
-                    >
-                      Moderado
-                    </Button>
-                    <Button
-                      variant={chatModLevel === 'relaxed' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setChatModLevel('relaxed')}
-                      className="text-xs"
-                    >
-                      Livre
-                    </Button>
-                  </div>
-                  <p className="text-[12px] text-muted-foreground mt-1 italic">
-                    {chatModLevel === 'strict' && "Bloqueio total de termos ofensivos e gírias pesadas."}
-                    {chatModLevel === 'moderate' && "Permite linguagem informal leve, mas bloqueia ofensas diretas."}
-                    {chatModLevel === 'relaxed' && "Linguagem natural permitida entre a equipe. Sem restrições de termos."}
-                  </p>
                 </div>
-              </div>
+
+                <div className="space-y-4 pt-4 border-t">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Som de Notificação</Label>
+                    <div className="grid grid-cols-1 gap-2">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant={chatSound === CHAT_SOUNDS.pop ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setChatSound(CHAT_SOUNDS.pop)}
+                          className="flex-1 text-xs justify-start"
+                        >
+                          <Volume2 className="h-3.5 w-3.5 mr-2" />
+                          Padrão (Pop)
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => new Audio(CHAT_SOUNDS.pop).play()}
+                        >
+                          <Play className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant={chatSound === CHAT_SOUNDS.ding ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setChatSound(CHAT_SOUNDS.ding)}
+                          className="flex-1 text-xs justify-start"
+                        >
+                          <Volume2 className="h-3.5 w-3.5 mr-2" />
+                          Discreto (Ding)
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => new Audio(CHAT_SOUNDS.ding).play()}
+                        >
+                          <Play className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant={chatSound === CHAT_SOUNDS.chime ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setChatSound(CHAT_SOUNDS.chime)}
+                          className="flex-1 text-xs justify-start"
+                        >
+                          <Volume2 className="h-3.5 w-3.5 mr-2" />
+                          Moderno (Chime)
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => new Audio(CHAT_SOUNDS.chime).play()}
+                        >
+                          <Play className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-1 italic">
+                      Escolha o som que tocará ao receber novas mensagens no chat.
+                    </p>
+                  </div>
+                </div>
+              </>
             )}
 
             {(isOwner || isSystemOwner) && (
