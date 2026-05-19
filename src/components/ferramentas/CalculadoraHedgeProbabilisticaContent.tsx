@@ -1841,12 +1841,14 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                      </span>
                                                    </div>
                                                  </>
-                                               )}
-                                             </div>
-                                           </div>
-                                         </div>
-
-                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                )}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+ 
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                            {/* Estratégia de 1 Perna (Hedge Simples) */}
                                            <div 
                                              className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/20 hover:border-primary/50 transition-all cursor-pointer group flex flex-col justify-between"
@@ -1924,7 +1926,8 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                       </div>
                                     </div>
                                   </CardContent>
-                                </Card>
+                                  </Card>
+                                </div>
                               </div>
                             </div>
                           </div>
