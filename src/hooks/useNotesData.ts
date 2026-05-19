@@ -95,7 +95,7 @@ export function useNotesData() {
     }
   }, [user?.id, workspaceId]);
 
-  const handleCreateCard = async (colunaId: string, conteudo: string) => {
+  const handleCreateCard = async (colunaId: string, conteudo: string, categoria?: string) => {
     if (!user?.id || !workspaceId) return null;
 
     try {
@@ -107,6 +107,7 @@ export function useNotesData() {
         workspace_id: workspaceId,
         coluna_id: colunaId,
         conteudo: conteudo,
+        categoria: categoria || null,
         ordem: maxOrdem + 1,
         versao: 1,
       };
@@ -124,6 +125,7 @@ export function useNotesData() {
         user_id: user.id,
         workspace_id: workspaceId,
         conteudo: conteudo,
+        categoria: categoria || null,
         coluna_id: colunaId,
         versao: 1,
         tipo_mudanca: "criacao",
@@ -139,7 +141,7 @@ export function useNotesData() {
     }
   };
 
-  const handleUpdateCard = async (cardId: string, conteudo: string) => {
+  const handleUpdateCard = async (cardId: string, conteudo: string, categoria?: string) => {
     if (!user?.id || !workspaceId) return;
 
     try {
@@ -147,14 +149,19 @@ export function useNotesData() {
       if (!card) return;
 
       const novaVersao = card.versao + 1;
+      const updateData: any = { 
+        conteudo, 
+        versao: novaVersao,
+        updated_at: new Date().toISOString()
+      };
+
+      if (categoria !== undefined) {
+        updateData.categoria = categoria || null;
+      }
 
       const { error } = await supabase
         .from("fluxo_cards")
-        .update({ 
-          conteudo, 
-          versao: novaVersao,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq("id", cardId)
         .eq("user_id", user.id);
 
@@ -165,6 +172,7 @@ export function useNotesData() {
         user_id: user.id,
         workspace_id: workspaceId,
         conteudo,
+        categoria: categoria !== undefined ? (categoria || null) : card.categoria,
         coluna_id: card.coluna_id,
         versao: novaVersao,
         tipo_mudanca: "edicao",
@@ -172,7 +180,13 @@ export function useNotesData() {
 
       setCards(prev => prev.map(c => 
         c.id === cardId 
-          ? { ...c, conteudo, versao: novaVersao, updated_at: new Date().toISOString() }
+          ? { 
+              ...c, 
+              conteudo, 
+              categoria: categoria !== undefined ? (categoria || null) : c.categoria, 
+              versao: novaVersao, 
+              updated_at: new Date().toISOString() 
+            }
           : c
       ));
 
