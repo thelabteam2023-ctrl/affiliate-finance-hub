@@ -141,7 +141,10 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
         
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Header com trigger da sidebar + conteúdo contextual */}
-          <TopBarHeader onOpenNotes={() => setIsNotesOpen(true)} />
+          <TopBarHeader />
+
+          {/* Floating Button for Notes */}
+          <FloatingNotesButton onClick={() => setIsNotesOpen(!isNotesOpen)} isOpen={isNotesOpen} />
 
           {/* Side Drawer for Notes */}
           <NotesDrawer isOpen={isNotesOpen} onClose={() => setIsNotesOpen(false)} />
