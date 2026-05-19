@@ -119,6 +119,7 @@ export default function Workspace() {
   useEffect(() => {
     if (workspace) {
       setWorkspaceName(workspace.name);
+      setChatModLevel(workspace.settings?.chat_moderation_level || "strict");
     }
   }, [workspace]);
 
