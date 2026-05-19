@@ -14,7 +14,9 @@ import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { usePresence } from '@/contexts/PresenceContext';
+import { useImageUpload } from '@/hooks/useImageUpload';
 import { ScrollArea } from './ui/scroll-area';
+import { toast } from 'sonner';
 
 interface ChatDrawerProps {
   isOpen: boolean;
