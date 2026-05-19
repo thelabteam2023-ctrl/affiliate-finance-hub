@@ -2237,19 +2237,12 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                             </div>
                           </div>
                         </CardContent>
-                        </CardContent>
-                          </div>
-                        {/* CardContent closed */}
                       </Card>
                     </div>
                   </div>
-                          </div>
-                        </div>
-                          </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                </div>
+              </div>
+            )}
             </DialogHeader>
             
             <div className="bg-muted/30 rounded-lg p-4 border border-border/50 mb-6 space-y-3">
