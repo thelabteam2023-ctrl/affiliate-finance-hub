@@ -4,6 +4,8 @@ import { ThemeProvider } from "next-themes";
 import { TopBarProvider, useTopBar } from "@/contexts/TopBarContext";
 import { NotesDrawer } from "@/components/NotesDrawer";
 import { Toaster } from "@/components/ui/toaster";
+import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { CalculadoraProvider } from "@/contexts/CalculadoraContext";
 import { ApostaPopupProvider } from "@/contexts/ApostaPopupContext";
