@@ -57,12 +57,12 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
   }, [isAdding]);
 
   const addNote = async () => {
-    if (!newNoteText.trim() || !activeTabId) {
+    if (!newNoteText.trim() || !currentActiveColumnId) {
       setIsAdding(false);
       return;
     }
 
-    await handleCreateCard(activeTabId, newNoteText);
+    await handleCreateCard(currentActiveColumnId, newNoteText);
     setNewNoteText('');
     setIsAdding(false);
   };
