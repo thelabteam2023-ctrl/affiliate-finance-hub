@@ -637,7 +637,8 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
                 onKeyDown={onKeyDown}
                 placeholder="Digite uma mensagem..."
                 rows={1}
-                className="w-full bg-[#1e2128] text-white border border-[#2a2d35] rounded-lg pl-3 pr-10 py-2.5 text-sm resize-none focus:outline-none focus:border-[#00c853] transition-colors max-h-[150px] min-h-[42px]"
+                className="w-full bg-[#1e2128] text-white border border-[#2a2d35] rounded-lg pl-3 pr-10 py-2.5 text-sm resize-none focus:outline-none focus:border-[#00c853] transition-colors max-h-[150px] min-h-[42px] disabled:opacity-50"
+                disabled={sending || isUploading}
               />
               <button
                 type="submit"
