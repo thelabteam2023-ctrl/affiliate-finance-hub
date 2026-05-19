@@ -143,53 +143,22 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
    const [bankrollCeilingMultiplier, setBankrollCeilingMultiplier] = useState(5);
    const [activeTab, setActiveTab] = useState('calculadora');
 
-  const ODDS_RULESETS = useMemo(() => [
-    {
-      id: "standard",
-      label: "1.50 → 10.00",
-      minOdd: 1.5,
-      maxOdd: 10,
-      description: "Alta flexibilidade, maior ROI potencial.",
-      variance: "Alta",
-      efficiency: "Média"
-    },
-    {
-      id: "restricted_medium",
-      label: "1.80 → 8.00",
-      minOdd: 1.8,
-      maxOdd: 8,
-      description: "Equilíbrio entre risco e retorno.",
-      variance: "Média",
-      efficiency: "Alta"
-    },
-    {
-      id: "restricted_high",
-      label: "2.00 → 5.00",
-      minOdd: 2,
-      maxOdd: 5,
-      description: "Restritivo, menor volatilidade.",
-      variance: "Baixa",
-      efficiency: "Máxima"
-    },
-    {
-      id: "unlimited",
-      label: "1.50 → Ilimitado",
-      minOdd: 1.5,
-      maxOdd: null,
-      description: "Exploração total de mercados.",
-      variance: "Extrema",
-      efficiency: "Variável"
-    },
-    {
-      id: "custom",
-      label: "Personalizado",
-      minOdd: 1.5,
-      maxOdd: 10,
-      description: "Defina suas próprias regras.",
-      variance: "-",
-      efficiency: "-"
-    }
-  ], []);
+   const ODDS_RULESETS = useMemo(() => [
+     { id: "150_05", label: "1.50 → 5", minOdd: 1.5, maxOdd: 5, description: "Curto alcance, alta densidade.", variance: "Baixa", efficiency: "Máxima" },
+     { id: "150_06", label: "1.50 → 6", minOdd: 1.5, maxOdd: 6, description: "Equilíbrio em odds baixas.", variance: "Baixa", efficiency: "Alta" },
+     { id: "150_08", label: "1.50 → 8", minOdd: 1.5, maxOdd: 8, description: "Alcance médio padrão.", variance: "Média", efficiency: "Média" },
+     { id: "150_10", label: "1.50 → 10", minOdd: 1.5, maxOdd: 10, description: "Flexibilidade total de entrada.", variance: "Alta", efficiency: "Média" },
+     { id: "160_05", label: "1.60 → 5", minOdd: 1.6, maxOdd: 5, description: "Filtro conservador inicial.", variance: "Baixa", efficiency: "Máxima" },
+     { id: "160_06", label: "1.60 → 6", minOdd: 1.6, maxOdd: 6, description: "Filtro moderado.", variance: "Baixa", efficiency: "Alta" },
+     { id: "170_05", label: "1.70 → 5", minOdd: 1.7, maxOdd: 5, description: "Filtro seletivo curto.", variance: "Baixa", efficiency: "Máxima" },
+     { id: "170_06", label: "1.70 → 6", minOdd: 1.7, maxOdd: 6, description: "Filtro seletivo médio.", variance: "Média", efficiency: "Alta" },
+     { id: "180_06", label: "1.80 → 6", minOdd: 1.8, maxOdd: 6, description: "Alta seletividade.", variance: "Média", efficiency: "Máxima" },
+     { id: "180_08", label: "1.80 → 8", minOdd: 1.8, maxOdd: 8, description: "Equilíbrio profissional.", variance: "Média", efficiency: "Alta" },
+     { id: "200_05", label: "2.00 → 5", minOdd: 2, maxOdd: 5, description: "Filtro restritivo máximo.", variance: "Mínima", efficiency: "Máxima" },
+     { id: "200_06", label: "2.00 → 6", minOdd: 2, maxOdd: 6, description: "Risco controlado.", variance: "Mínima", efficiency: "Alta" },
+     { id: "unlimited", label: "1.50 → ∞", minOdd: 1.5, maxOdd: null, description: "Exploração total.", variance: "Extrema", efficiency: "Variável" },
+     { id: "custom", label: "Custom", minOdd: 1.5, maxOdd: 10, description: "Manual.", variance: "-", efficiency: "-" }
+   ], []);
 
   const [activeRulesetId, setActiveRulesetId] = useState<string>(() => {
     return localStorage.getItem('hedge-calc-active-ruleset') || "standard";
@@ -1722,19 +1691,22 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                              <Label className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-2">
                                                <Sliders className="h-3 w-3" /> Perfil Operacional de Odds
                                              </Label>
-                                             <Tabs value={activeRulesetId} onValueChange={setActiveRulesetId} className="w-full">
-                                               <TabsList className="grid grid-cols-5 h-auto p-1 bg-background/50 border border-border/40">
-                                                 {ODDS_RULESETS.map((preset) => (
-                                                   <TabsTrigger 
-                                                     key={preset.id} 
-                                                     value={preset.id}
-                                                     className="text-[10px] py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                                                   >
-                                                     {preset.label}
-                                                   </TabsTrigger>
-                                                 ))}
-                                               </TabsList>
-                                             </Tabs>
+                                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-1.5 p-1 bg-background/30 rounded-lg border border-border/20">
+                                               {ODDS_RULESETS.map((preset) => (
+                                                 <Button
+                                                   key={preset.id}
+                                                   variant={activeRulesetId === preset.id ? "default" : "ghost"}
+                                                   className={`h-8 text-[9px] uppercase font-bold tracking-tighter px-1 transition-all duration-200 ${
+                                                     activeRulesetId === preset.id 
+                                                       ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-[1.02]" 
+                                                       : "hover:bg-primary/10 text-muted-foreground"
+                                                   }`}
+                                                   onClick={() => setActiveRulesetId(preset.id)}
+                                                 >
+                                                   {preset.label}
+                                                 </Button>
+                                               ))}
+                                             </div>
                                            </div>
 
                                            {activeRulesetId === 'custom' ? (
@@ -1795,7 +1767,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                    <div className="p-2.5 rounded-lg bg-background/40 border border-border/40 space-y-1">
                                                      <span className="text-[8px] uppercase font-bold text-muted-foreground block">Variância</span>
                                                      <div className="flex items-center gap-1.5">
-                                                       <ShieldCheck className={`h-3 w-3 ${activeRulesetId === 'restricted_high' ? 'text-emerald-400' : 'text-orange-400'}`} />
+                                                        <ShieldCheck className={`h-3 w-3 ${['200_05', '200_06'].includes(activeRulesetId) ? 'text-emerald-400' : 'text-orange-400'}`} />
                                                        <span className="text-xs font-bold text-white">{ODDS_RULESETS.find(r => r.id === activeRulesetId)?.variance}</span>
                                                      </div>
                                                    </div>
@@ -1811,7 +1783,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                      <div className="flex items-center gap-1.5">
                                                        {activeRulesetId === 'unlimited' ? <InfinityIcon className="h-3 w-3 text-primary" /> : <Settings2 className="h-3 w-3 text-primary" />}
                                                        <span className="text-xs font-bold text-white">
-                                                         {activeRulesetId === 'standard' ? 'Alta' : activeRulesetId === 'unlimited' ? 'Total' : 'Moderada'}
+                                                          {['150_10', '150_08'].includes(activeRulesetId) ? 'Alta' : activeRulesetId === 'unlimited' ? 'Total' : 'Moderada'}
                                                        </span>
                                                      </div>
                                                    </div>
