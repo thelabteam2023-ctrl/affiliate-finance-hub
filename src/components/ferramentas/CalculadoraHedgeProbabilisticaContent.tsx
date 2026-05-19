@@ -402,7 +402,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
       let totalDoubleups = 0;
       let doubleupSteps: number[] = [];
       let cumulativeOutcome = 0;
-      const samples: number[] = [];
+       const samples: { outcome: number; type: 'lay' | 'back' }[] = [];
       
       // Pré-calcula a CDF dos cenários para performance
       const cdf = metrics.aggregatedScenarios.map((s, i, arr) => ({
@@ -432,10 +432,14 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
           currentBank += outcome;
           if (currentBank > ceiling) currentBank = ceiling;
 
-          // Coleta amostra dos primeiros 10 eventos da primeira trajetória para o UI
-          if (t === 0 && samples.length < 10) {
-            samples.push(outcome);
-          }
+           // Coleta amostra dos primeiros 10 eventos da primeira trajetória para o UI
+           if (t === 0 && samples.length < 10) {
+             const isBackWin = !scenario.canonicalPath.includes('lost');
+             samples.push({ 
+               outcome, 
+               type: isBackWin ? 'back' : 'lay' 
+             });
+           }
           if (t === 0) cumulativeOutcome += outcome;
 
           if (currentBank >= bankroll * 2) {
@@ -1581,31 +1585,37 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                             Amostra Sequencial (10 Ciclos)
                                           </p>
                                           <div className="text-[10px] font-mono text-white">
-                                            Total: <span className={monteCarloSim.samples.reduce((a, b) => a + b, 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-                                              R$ {fmt(monteCarloSim.samples.reduce((a, b) => a + b, 0))}
+                                             Total: <span className={monteCarloSim.samples.reduce((a, b) => a + b.outcome, 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+                                               R$ {fmt(monteCarloSim.samples.reduce((a, b) => a + b.outcome, 0))}
                                             </span>
                                           </div>
                                         </div>
-                                        <div className="grid grid-cols-5 gap-1.5">
-                                          {Array.from({ length: 10 }).map((_, i) => {
-                                            const s = monteCarloSim.samples[i];
-                                            const exists = s !== undefined;
-                                            return (
-                                              <div 
-                                                key={i} 
-                                                className={`text-[9px] py-1 rounded text-center font-mono border transition-all ${
-                                                  !exists 
-                                                    ? 'bg-muted/10 border-border/20 text-muted-foreground/30' 
-                                                    : s >= 0 
-                                                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_8px_rgba(16,185,129,0.05)]' 
-                                                      : 'bg-red-500/10 text-red-400 border-red-500/20 shadow-[0_0_8px_rgba(239,68,68,0.05)]'
-                                                }`}
-                                              >
-                                                {exists ? `R$ ${fmt(s)}` : '---'}
-                                              </div>
-                                            );
-                                          })}
-                                        </div>
+                                         <div className="grid grid-cols-5 gap-1.5">
+                                           {Array.from({ length: 10 }).map((_, i) => {
+                                             const s = monteCarloSim.samples[i];
+                                             const exists = s !== undefined;
+                                             return (
+                                               <div key={i} className="space-y-1">
+                                                 <div 
+                                                   className={`text-[9px] py-1 rounded text-center font-mono border transition-all ${
+                                                     !exists 
+                                                       ? 'bg-muted/10 border-border/20 text-muted-foreground/30' 
+                                                       : s.outcome >= 0 
+                                                         ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_8px_rgba(16,185,129,0.05)]' 
+                                                         : 'bg-red-500/10 text-red-400 border-red-500/20 shadow-[0_0_8px_rgba(239,68,68,0.05)]'
+                                                   }`}
+                                                 >
+                                                   {exists ? `R$ ${fmt(s.outcome)}` : '---'}
+                                                 </div>
+                                                 {exists && (
+                                                   <div className={`text-[7px] text-center font-bold uppercase ${s.type === 'lay' ? 'text-blue-400' : 'text-orange-400'}`}>
+                                                     {s.type}
+                                                   </div>
+                                                 )}
+                                               </div>
+                                             );
+                                           })}
+                                         </div>
                                         <p className="text-[8px] text-muted-foreground italic leading-tight text-center">
                                           Simulação de uma jornada real de 10 operações consecutivas.
                                         </p>
