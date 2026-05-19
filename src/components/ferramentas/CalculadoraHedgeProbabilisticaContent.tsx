@@ -711,10 +711,9 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
             </div>
           </div>
  
-         <div className="space-y-6">
+          <div className="space-y-6">
             {activeTab === "calculadora" ? (
-{activeTab === 'calculadora' ? (
-               <>
+              <>
 
         {/* KPIs Section */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -1996,7 +1995,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                 <Input 
                                   type="number"
                                   value={liveInput.backStake}
-                                  onChange={(e) => setLiveInput({...liveInput, backStake: Number(e.target.value)})
+                                  onChange={(e) => setLiveInput({...liveInput, backStake: Number(e.target.value)})}
                                   className="h-10 pl-8 font-mono text-lg border-primary/30 focus:border-primary"
                                 />
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-mono">R$</span>
@@ -2007,13 +2006,13 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                               <Label className="text-[10px] uppercase font-bold text-emerald-400 flex items-center gap-1">
                                 <TrendingUp className="h-3 w-3" /> Odd Futura Projetada (Back)
                               </Label>
-                              <Input 
-                                type="number"
-                                value={liveInput.backOddProjected}
-                                onChange={(e) => setLiveInput({...liveInput, backOddProjected: Number(e.target.value)})
-                                className="h-10 font-mono text-lg border-emerald-500/30 focus:border-emerald-500"
-                                step="0.01"
-                              />
+                                <Input 
+                                  type="number"
+                                  value={liveInput.backOddProjected}
+                                  onChange={(e) => setLiveInput({...liveInput, backOddProjected: Number(e.target.value)})}
+                                  className="h-10 font-mono text-lg border-emerald-500/30 focus:border-emerald-500"
+                                  step="0.01"
+                                />
                               <p className="text-[9px] text-muted-foreground italic leading-tight">
                                 Odd que você espera pegar na Sportsbook após a convergência.
                               </p>
@@ -2023,23 +2022,23 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                               <Label className="text-[10px] uppercase font-bold text-muted-foreground">Odd Atual Lay</Label>
-                              <Input 
-                                type="number"
-                                value={liveInput.layOdd}
-                                onChange={(e) => setLiveInput({...liveInput, layOdd: Number(e.target.value)})
-                                className="h-9 font-mono text-sm"
-                                step="0.01"
-                              />
+                                <Input 
+                                  type="number"
+                                  value={liveInput.layOdd}
+                                  onChange={(e) => setLiveInput({...liveInput, layOdd: Number(e.target.value)})}
+                                  className="h-9 font-mono text-sm"
+                                  step="0.01"
+                                />
                             </div>
                             <div className="space-y-2">
                               <Label className="text-[10px] uppercase font-bold text-muted-foreground">Odd Atual Back</Label>
-                              <Input 
-                                type="number"
-                                value={liveInput.backOddActual}
-                                onChange={(e) => setLiveInput({...liveInput, backOddActual: Number(e.target.value)})
-                                className="h-9 font-mono text-sm opacity-60"
-                                step="0.01"
-                              />
+                                <Input 
+                                  type="number"
+                                  value={liveInput.backOddActual}
+                                  onChange={(e) => setLiveInput({...liveInput, backOddActual: Number(e.target.value)})}
+                                  className="h-9 font-mono text-sm opacity-60"
+                                  step="0.01"
+                                />
                             </div>
                           </div>
 
