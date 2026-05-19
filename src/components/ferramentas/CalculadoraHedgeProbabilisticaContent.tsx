@@ -1258,7 +1258,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                               <Card className="bg-primary/5 border-primary/20">
                                 <CardHeader className="pb-2">
                                   <CardTitle className="text-sm font-medium flex items-center gap-2">
-                                    <Sparkles className="h-4 w-4 text-primary" /> Insights do Doutor em Estatística
+                                    <Sparkles className="h-4 w-4 text-primary" /> Estatística
                                   </CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
@@ -1266,9 +1266,9 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                     <div className="p-3 rounded-lg bg-background/40 border border-border/40 space-y-1">
                                       <div className="flex justify-between items-center text-[10px] uppercase font-bold text-muted-foreground">
                                         <span>Sequência de 10 Greens</span>
-                                        <CardInfoTooltip 
-                                          title="Probabilidade de 10 Greens" 
-                                          description="A chance matemática de você realizar 10 operações seguidas sem nenhum red. Baseado na taxa de sucesso atual."
+                                        <CardInfoTooltip
+                                          title="Probabilidade de 10 Greens (Bolsa)"
+                                          description="Probabilidade de 10 apostas seguidas vencerem na Bolsa (Lay). Representa a extração bem-sucedida do valor da casa para a bolsa."
                                         />
                                       </div>
                                       <p className="text-lg font-bold font-mono text-emerald-400">
@@ -1279,10 +1279,10 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                     <div className="p-3 rounded-lg bg-background/40 border border-border/40 space-y-1">
                                       <div className="flex justify-between items-center text-[10px] uppercase font-bold text-muted-foreground">
                                         <span>Sequência de 10 Reds</span>
-                                        <CardInfoTooltip 
-                                          title="Probabilidade de 10 Reds" 
-                                          description="Raridade estatística de enfrentar 10 derrotas consecutivas. Se este valor for maior que 1%, seu risco de ruína é preocupante."
-                                        />
+                                        <CardInfoTooltip
+                                          title="Probabilidade de 10 Reds (Bolsa)"
+                                          description="Probabilidade de 10 apostas seguidas não baterem no Lay (vencerem na Casa). Indica a frequência de ciclos que terminam no cenário de Back total."
+                                         />
                                       </div>
                                       <p className="text-lg font-bold font-mono text-red-400">
                                         {(advancedStats.prob10Reds * 100).toFixed(6)}%
