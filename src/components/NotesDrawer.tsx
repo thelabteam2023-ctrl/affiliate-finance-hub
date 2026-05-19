@@ -4,67 +4,43 @@ import {
   X, 
   Plus, 
   Trash2, 
-  ArrowRight, 
-  ArrowLeft,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-
-interface Note {
-  id: string;
-  text: string;
-  createdAt: string;
-}
-
-interface KanbanData {
-  ideias: Note[];
-  emAndamento: Note[];
-  finalizado: Note[];
-}
+import { useNotesData } from '@/hooks/useNotesData';
 
 interface NotesDrawerProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-type ColumnId = keyof KanbanData;
-
-const COLUMNS: { id: ColumnId; label: string }[] = [
-  { id: 'ideias', label: 'Ideias' },
-  { id: 'emAndamento', label: 'Em Andamento' },
-  { id: 'finalizado', label: 'Finalizado' },
-];
-
 export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => {
-  const [data, setData] = useState<KanbanData>({
-    ideias: [],
-    emAndamento: [],
-    finalizado: [],
-  });
-  const [activeTab, setActiveTab] = useState<ColumnId>('ideias');
+  const { 
+    colunas, 
+    cards, 
+    loading, 
+    handleCreateCard, 
+    handleUpdateCard, 
+    handleMoveCard, 
+    handleDeleteCard,
+    canOperate 
+  } = useNotesData();
+
+  const [activeTabId, setActiveTabId] = useState<string>('');
   const [isAdding, setIsAdding] = useState(false);
   const [newNoteText, setNewNoteText] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Load from localStorage
+  // Define active tab when columns are loaded
   useEffect(() => {
-    const saved = localStorage.getItem('kanban_notes');
-    if (saved) {
-      try {
-        setData(JSON.parse(saved));
-      } catch (e) {
-        console.error('Error parsing kanban_notes', e);
-      }
+    if (colunas.length > 0 && !activeTabId) {
+      setActiveTabId(colunas[0].id);
     }
-  }, []);
-
-  // Save to localStorage
-  useEffect(() => {
-    localStorage.setItem('kanban_notes', JSON.stringify(data));
-  }, [data]);
+  }, [colunas, activeTabId]);
 
   // Focus textarea when adding
   useEffect(() => {
@@ -73,53 +49,35 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
     }
   }, [isAdding]);
 
-  const addNote = () => {
-    if (!newNoteText.trim()) {
+  const addNote = async () => {
+    if (!newNoteText.trim() || !activeTabId) {
       setIsAdding(false);
       return;
     }
 
-    const newNote: Note = {
-      id: crypto.randomUUID(),
-      text: newNoteText,
-      createdAt: new Date().toISOString(),
-    };
-
-    setData(prev => ({
-      ...prev,
-      [activeTab]: [newNote, ...prev[activeTab]],
-    }));
+    await handleCreateCard(activeTabId, newNoteText);
     setNewNoteText('');
     setIsAdding(false);
   };
 
-  const deleteNote = (column: ColumnId, id: string) => {
-    setData(prev => ({
-      ...prev,
-      [column]: prev[column].filter(n => n.id !== id),
-    }));
-  };
-
-  const moveNote = (from: ColumnId, to: ColumnId, note: Note) => {
-    setData(prev => {
-      const newData = { ...prev };
-      newData[from] = newData[from].filter(n => n.id !== note.id);
-      newData[to] = [note, ...newData[to]];
-      return newData;
-    });
-  };
-
-  const getNextColumn = (current: ColumnId): ColumnId | null => {
-    if (current === 'ideias') return 'emAndamento';
-    if (current === 'emAndamento') return 'finalizado';
+  const getNextColumnId = (currentId: string) => {
+    const currentIndex = colunas.findIndex(c => c.id === currentId);
+    if (currentIndex !== -1 && currentIndex < colunas.length - 1) {
+      return colunas[currentIndex + 1].id;
+    }
     return null;
   };
 
-  const getPrevColumn = (current: ColumnId): ColumnId | null => {
-    if (current === 'finalizado') return 'emAndamento';
-    if (current === 'emAndamento') return 'ideias';
+  const getPrevColumnId = (currentId: string) => {
+    const currentIndex = colunas.findIndex(c => c.id === currentId);
+    if (currentIndex > 0) {
+      return colunas[currentIndex - 1].id;
+    }
     return null;
   };
+
+  const activeColumn = colunas.find(c => c.id === activeTabId);
+  const columnCards = cards.filter(c => c.coluna_id === activeTabId).sort((a, b) => a.ordem - b.ordem);
 
   return (
     <>
@@ -155,20 +113,20 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
         </div>
 
         {/* Tabs */}
-        <div className="flex p-2 bg-[#1a1e26] gap-1">
-          {COLUMNS.map((col) => (
+        <div className="flex p-2 bg-[#1a1e26] gap-1 shrink-0">
+          {colunas.map((col) => (
             <button
               key={col.id}
-              onClick={() => setActiveTab(col.id)}
+              onClick={() => setActiveTabId(col.id)}
               className={cn(
-                "flex-1 py-2 text-xs font-medium rounded-md transition-all relative",
-                activeTab === col.id 
+                "flex-1 py-2 text-xs font-medium rounded-md transition-all relative truncate px-1",
+                activeTabId === col.id 
                   ? "text-white" 
                   : "text-gray-400 hover:text-gray-200"
               )}
             >
-              {col.label}
-              {activeTab === col.id && (
+              {col.nome}
+              {activeTabId === col.id && (
                 <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#00c853]" />
               )}
             </button>
@@ -177,106 +135,118 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Add Button/Textarea */}
-          {!isAdding ? (
-            <button 
-              onClick={() => setIsAdding(true)}
-              className="w-full py-2 px-3 flex items-center gap-2 bg-[#00c853]/10 text-[#00c853] hover:bg-[#00c853]/20 rounded-lg transition-colors text-sm font-medium"
-            >
-              <Plus className="w-4 h-4" />
-              Adicionar Nota
-            </button>
-          ) : (
-            <div className="bg-[#1a1e26] border border-[#2a2d35] rounded-lg p-3 space-y-2">
-              <textarea
-                ref={textareaRef}
-                value={newNoteText}
-                onChange={(e) => setNewNoteText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    addNote();
-                  }
-                  if (e.key === 'Escape') {
-                    setIsAdding(false);
-                    setNewNoteText('');
-                  }
-                }}
-                placeholder="O que você está pensando?"
-                className="w-full bg-transparent border-none focus:ring-0 text-sm text-gray-200 resize-none min-h-[80px]"
-              />
-              <div className="flex justify-end gap-2">
-                <button 
-                  onClick={() => { setIsAdding(false); setNewNoteText(''); }}
-                  className="text-xs text-gray-400 hover:text-white transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button 
-                  onClick={addNote}
-                  className="text-xs bg-[#00c853] text-white px-3 py-1 rounded hover:bg-[#00b24a] transition-colors"
-                >
-                  Salvar
-                </button>
-              </div>
+          {!canOperate ? (
+            <div className="text-center py-10">
+              <p className="text-gray-500 text-sm">Selecione um workspace para usar as anotações.</p>
             </div>
-          )}
-
-          {/* List of Notes */}
-          <div className="space-y-3">
-            {data[activeTab].length === 0 ? (
-              <div className="text-center py-10">
-                <p className="text-gray-500 text-sm italic">Nenhuma anotação nesta coluna.</p>
-              </div>
-            ) : (
-              data[activeTab].map((note) => (
-                <div 
-                  key={note.id}
-                  className="group bg-[#1a1e26] border border-[#2a2d35] rounded-lg p-3 space-y-3"
+          ) : loading ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <>
+              {/* Add Button/Textarea */}
+              {!isAdding ? (
+                <button 
+                  onClick={() => setIsAdding(true)}
+                  className="w-full py-2 px-3 flex items-center gap-2 bg-[#00c853]/10 text-[#00c853] hover:bg-[#00c853]/20 rounded-lg transition-colors text-sm font-medium"
                 >
-                  <p className="text-sm text-gray-200 whitespace-pre-wrap leading-relaxed">
-                    {note.text}
-                  </p>
-                  
-                  <div className="flex items-center justify-between pt-2 border-t border-[#2a2d35]">
-                    <span className="text-[10px] text-gray-500">
-                      {format(new Date(note.createdAt), "dd MMM · HH:mm", { locale: ptBR })}
-                    </span>
-                    
-                    <div className="flex items-center gap-1">
-                      {getPrevColumn(activeTab) && (
-                        <button 
-                          onClick={() => moveNote(activeTab, getPrevColumn(activeTab)!, note)}
-                          title="Mover para coluna anterior"
-                          className="p-1 text-gray-500 hover:text-white hover:bg-white/5 rounded transition-colors"
-                        >
-                          <ChevronLeft className="w-4 h-4" />
-                        </button>
-                      )}
-                      
-                      <button 
-                        onClick={() => deleteNote(activeTab, note.id)}
-                        title="Deletar nota"
-                        className="p-1 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                      
-                      {getNextColumn(activeTab) && (
-                        <button 
-                          onClick={() => moveNote(activeTab, getNextColumn(activeTab)!, note)}
-                          title="Mover para próxima coluna"
-                          className="p-1 text-gray-500 hover:text-white hover:bg-white/5 rounded transition-colors"
-                        >
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
+                  <Plus className="w-4 h-4" />
+                  Adicionar Nota
+                </button>
+              ) : (
+                <div className="bg-[#1a1e26] border border-[#2a2d35] rounded-lg p-3 space-y-2">
+                  <textarea
+                    ref={textareaRef}
+                    value={newNoteText}
+                    onChange={(e) => setNewNoteText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        addNote();
+                      }
+                      if (e.key === 'Escape') {
+                        setIsAdding(false);
+                        setNewNoteText('');
+                      }
+                    }}
+                    placeholder="O que você está pensando?"
+                    className="w-full bg-transparent border-none focus:ring-0 text-sm text-gray-200 resize-none min-h-[80px]"
+                  />
+                  <div className="flex justify-end gap-2">
+                    <button 
+                      onClick={() => { setIsAdding(false); setNewNoteText(''); }}
+                      className="text-xs text-gray-400 hover:text-white transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button 
+                      onClick={addNote}
+                      className="text-xs bg-[#00c853] text-white px-3 py-1 rounded hover:bg-[#00b24a] transition-colors"
+                    >
+                      Salvar
+                    </button>
                   </div>
                 </div>
-              ))
-            )}
-          </div>
+              )}
+
+              {/* List of Notes */}
+              <div className="space-y-3">
+                {columnCards.length === 0 ? (
+                  <div className="text-center py-10">
+                    <p className="text-gray-500 text-sm italic">Nenhuma anotação nesta coluna.</p>
+                  </div>
+                ) : (
+                  columnCards.map((note) => (
+                    <div 
+                      key={note.id}
+                      className="group bg-[#1a1e26] border border-[#2a2d35] rounded-lg p-3 space-y-3"
+                    >
+                      <p className="text-sm text-gray-200 whitespace-pre-wrap leading-relaxed">
+                        {note.conteudo || <span className="italic text-gray-600">(Sem conteúdo)</span>}
+                      </p>
+                      
+                      <div className="flex items-center justify-between pt-2 border-t border-[#2a2d35]">
+                        <span className="text-[10px] text-gray-500">
+                          {format(new Date(note.created_at), "dd MMM · HH:mm", { locale: ptBR })}
+                        </span>
+                        
+                        <div className="flex items-center gap-1">
+                          {getPrevColumnId(activeTabId) && (
+                            <button 
+                              onClick={() => handleMoveCard(note.id, getPrevColumnId(activeTabId)!)}
+                              title="Mover para coluna anterior"
+                              className="p-1 text-gray-500 hover:text-white hover:bg-white/5 rounded transition-colors"
+                            >
+                              <ChevronLeft className="w-4 h-4" />
+                            </button>
+                          )}
+                          
+                          <button 
+                            onClick={() => handleDeleteCard(note.id)}
+                            title="Deletar nota"
+                            className="p-1 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                          
+                          {getNextColumnId(activeTabId) && (
+                            <button 
+                              onClick={() => handleMoveCard(note.id, getNextColumnId(activeTabId)!)}
+                              title="Mover para próxima coluna"
+                              className="p-1 text-gray-500 hover:text-white hover:bg-white/5 rounded transition-colors"
+                            >
+                              <ChevronRight className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </>
