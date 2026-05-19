@@ -204,6 +204,29 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
           </div>
         )}
 
+        {/* Categories Filter (only for Geral) */}
+        {view === 'geral' && allCategories.length > 0 && (
+          <div className="px-4 pt-4 shrink-0 overflow-x-auto no-scrollbar flex items-center gap-2">
+            <Filter className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+            <div className="flex gap-2">
+              {['Todas', ...allCategories, 'Sem tópico'].map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={cn(
+                    "flex-none py-1 px-2.5 text-[11px] font-medium rounded-full transition-all whitespace-nowrap border",
+                    selectedCategory === cat
+                      ? "bg-[#00c853] text-white border-[#00c853]"
+                      : "bg-[#1a1e26] text-gray-400 border-[#2a2d35] hover:text-gray-200"
+                  )}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Content */}
         <div className={cn(
           "flex-1 overflow-y-auto p-4 space-y-4",
@@ -222,7 +245,12 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
               {/* Add Button/Textarea */}
               {!isAdding ? (
                 <button 
-                  onClick={() => setIsAdding(true)}
+                  onClick={() => {
+                    setIsAdding(true);
+                    setEditingCardId(null);
+                    setNewNoteText('');
+                    setNewNoteCategory('');
+                  }}
                   className="w-full py-2.5 px-3 flex items-center gap-2 bg-[#00c853]/10 text-[#00c853] hover:bg-[#00c853]/20 rounded-lg transition-all text-sm font-medium border border-[#00c853]/20"
                 >
                   <Plus className="w-4 h-4" />
@@ -230,6 +258,18 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
                 </button>
               ) : (
                 <div className="bg-[#1a1e26] border border-[#2a2d35] rounded-lg p-3 shadow-lg ring-1 ring-white/5">
+                  {view === 'geral' && (
+                    <div className="flex items-center gap-2 mb-2 pb-2 border-b border-[#2a2d35]">
+                      <Tag className="w-3.5 h-3.5 text-gray-500" />
+                      <input 
+                        type="text"
+                        value={newNoteCategory}
+                        onChange={(e) => setNewNoteCategory(e.target.value)}
+                        placeholder="Tópico (ex: Segurança)"
+                        className="bg-transparent border-none focus:ring-0 text-xs text-gray-300 w-full p-0"
+                      />
+                    </div>
+                  )}
                   <textarea
                     ref={textareaRef}
                     value={newNoteText}
@@ -242,6 +282,8 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
                       if (e.key === 'Escape') {
                         setIsAdding(false);
                         setNewNoteText('');
+                        setNewNoteCategory('');
+                        setEditingCardId(null);
                       }
                     }}
                     placeholder={view === 'geral' ? "Escreva sua anotação livre..." : "O que você está pensando?"}
@@ -249,7 +291,12 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
                   />
                   <div className="flex justify-end gap-2 pt-2 border-t border-[#2a2d35]">
                     <button 
-                      onClick={() => { setIsAdding(false); setNewNoteText(''); }}
+                      onClick={() => { 
+                        setIsAdding(false); 
+                        setNewNoteText(''); 
+                        setNewNoteCategory('');
+                        setEditingCardId(null);
+                      }}
                       className="px-3 py-1.5 text-xs text-gray-400 hover:text-white transition-colors"
                     >
                       Cancelar
@@ -258,7 +305,7 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
                       onClick={addNote}
                       className="px-4 py-1.5 text-xs bg-[#00c853] text-white rounded font-medium hover:bg-[#00b24a] transition-colors shadow-sm"
                     >
-                      Salvar
+                      {editingCardId ? 'Atualizar' : 'Salvar'}
                     </button>
                   </div>
                 </div>
