@@ -70,19 +70,24 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
     const fetchMembers = async () => {
       const { data, error } = await supabase
         .from('workspace_members')
-        .select(`
-          user_id,
-          profiles:profiles (
-            full_name,
-            email
-          )
-        `)
+        .select('user_id')
         .eq('workspace_id', workspace.id);
 
       if (!error && data) {
-        const members = data.map((m: any) => ({
+        const userIds = data.map(m => m.user_id);
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, full_name, email')
+          .in('id', userIds);
+
+        const profileMap = (profiles || []).reduce((acc: any, p) => {
+          acc[p.id] = p;
+          return acc;
+        }, {});
+
+        const members = data.map(m => ({
           user_id: m.user_id,
-          name: m.profiles?.full_name || m.profiles?.email?.split('@')[0] || 'Usuário',
+          name: profileMap[m.user_id]?.full_name || profileMap[m.user_id]?.email?.split('@')[0] || 'Usuário',
         }));
         setAllMembers(members);
       }
