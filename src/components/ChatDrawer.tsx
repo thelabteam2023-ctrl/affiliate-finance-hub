@@ -576,6 +576,20 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
               </button>
             )}
             <button 
+              onClick={() => {
+                setSelectionMode(!selectionMode);
+                setSelectedIds(new Set());
+                setMessageActionsId(null);
+              }}
+              title={selectionMode ? "Cancelar Seleção" : "Selecionar Mensagens"}
+              className={cn(
+                "p-1.5 rounded-md transition-colors",
+                selectionMode ? "bg-[#00c853] text-black" : "hover:bg-white/10 text-gray-400"
+              )}
+            >
+              <CheckCircle2 className="w-4 h-4" />
+            </button>
+            <button 
               onClick={onClose}
               className="p-1.5 hover:bg-white/10 rounded-md transition-colors"
             >
