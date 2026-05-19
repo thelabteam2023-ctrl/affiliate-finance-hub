@@ -712,28 +712,71 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
                                   isMe ? "bg-black" : "bg-[#1e2128]"
                                 )}>
                                   {isMe && differenceInMinutes(new Date(), new Date(msg.created_at)) < 5 && (
-                                    <button 
-                                      onClick={() => handleDeleteMessage(msg.id)}
-                                      className="w-full px-3 py-1.5 text-left text-[11px] text-red-500 hover:bg-red-500/10 flex items-center gap-2"
-                                    >
-                                      <Trash2 className="w-3 h-3" />
-                                      Apagar
-                                    </button>
+                                    <div className="relative">
+                                      {showDeleteConfirm === msg.id ? (
+                                        <div className="px-2 py-1">
+                                          <p className="text-[9px] text-gray-400 mb-1 text-center font-medium">Tem certeza?</p>
+                                          <div className="flex gap-1">
+                                            <button 
+                                              onClick={(e) => { e.stopPropagation(); handleDeleteMessage(msg.id); }}
+                                              className="flex-1 bg-red-500 hover:bg-red-600 text-white text-[9px] py-1 rounded font-bold transition-colors"
+                                            >
+                                              Sim
+                                            </button>
+                                            <button 
+                                              onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(null); }}
+                                              className="flex-1 bg-gray-700 hover:bg-gray-600 text-white text-[9px] py-1 rounded transition-colors"
+                                            >
+                                              Não
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <button 
+                                          onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(msg.id); }}
+                                          className="w-full px-3 py-1.5 text-left text-[11px] text-red-500 hover:bg-red-500/10 flex items-center gap-2"
+                                        >
+                                          <Trash2 className="w-3 h-3" />
+                                          Apagar
+                                        </button>
+                                      )}
+                                    </div>
                                   )}
                                   {isAdmin && !isMe && (
-                                    <button 
-                                      onClick={() => handleDeleteMessage(msg.id)}
-                                      className="w-full px-3 py-1.5 text-left text-[11px] text-red-500 hover:bg-red-500/10 flex items-center gap-2 font-medium"
-                                    >
-                                      <Trash2 className="w-3 h-3" />
-                                      Moderar
-                                    </button>
+                                    <div className="relative">
+                                      {showDeleteConfirm === msg.id ? (
+                                        <div className="px-2 py-1">
+                                          <p className="text-[9px] text-gray-400 mb-1 text-center font-medium">Deseja moderar?</p>
+                                          <div className="flex gap-1">
+                                            <button 
+                                              onClick={(e) => { e.stopPropagation(); handleDeleteMessage(msg.id); }}
+                                              className="flex-1 bg-red-500 hover:bg-red-600 text-white text-[9px] py-1 rounded font-bold transition-colors"
+                                            >
+                                              Sim
+                                            </button>
+                                            <button 
+                                              onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(null); }}
+                                              className="flex-1 bg-gray-700 hover:bg-gray-600 text-white text-[9px] py-1 rounded transition-colors"
+                                            >
+                                              Não
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <button 
+                                          onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(msg.id); }}
+                                          className="w-full px-3 py-1.5 text-left text-[11px] text-red-500 hover:bg-red-500/10 flex items-center gap-2 font-medium"
+                                        >
+                                          <Trash2 className="w-3 h-3" />
+                                          Moderar
+                                        </button>
+                                      )}
+                                    </div>
                                   )}
                                 </div>
                               )}
-                        </div>
-                      </div>
-                    </div>
+                            </div>
+                          </div>
                         )}
 
                         {msg.image_url && (
