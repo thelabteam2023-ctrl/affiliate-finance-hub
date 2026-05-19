@@ -85,21 +85,39 @@ export const CalculadoraHedgeProbabilisticaContent: React.FC = () => {
 
   return (
     <ScrollArea className="h-full">
-      <div className="p-4 space-y-6 max-w-6xl mx-auto">
+      <div className="p-4 space-y-6 max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row gap-4 items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Zap className="h-6 w-6 text-primary" />
-              Calculadora de Hedge Probabilístico
-            </h1>
+          <div className="flex-1">
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold flex items-center gap-2">
+                <Zap className="h-6 w-6 text-primary" />
+                Calculadora de Hedge Probabilístico
+              </h1>
+            </div>
             <p className="text-sm text-muted-foreground mt-1">
               Motor quantitativo para extração de freebets com análise de risco e cascata.
             </p>
           </div>
-          <Badge className={`px-4 py-1 text-sm ${scoreColor}`}>
-            Score: {scoreLabel}
-          </Badge>
+          <div className="flex flex-col items-end gap-2">
+            <Badge className={`px-4 py-1 text-sm border ${scoreColor}`}>
+              Score: {scoreLabel}
+            </Badge>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-auto">
+              <TabsList className="grid grid-cols-2 h-9 w-[300px]">
+                <TabsTrigger value="calculadora" className="text-xs gap-2">
+                  <Activity className="h-3.5 w-3.5" /> Calculadora
+                </TabsTrigger>
+                <TabsTrigger value="live" className="text-xs gap-2">
+                  <Clock className="h-3.5 w-3.5" /> Calculadora Live
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </div>
+
+        <div className="space-y-6">
+          {activeTab === 'calculadora' ? (
+            <>
 
         {/* KPIs Section */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
