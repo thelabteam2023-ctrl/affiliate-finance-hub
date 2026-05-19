@@ -24,6 +24,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { InactivityWarningBanner } from "@/components/InactivityWarningBanner";
 import { useInactivityTimeout } from "@/hooks/useInactivityTimeout";
 import { Loader2, NotebookPen, MessageCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { installRpcInterceptor } from "@/lib/dev/rpcInterceptor";
 
 // Install RPC interceptor for the system-owner Ledger Monitor (no-op for everyone else)
