@@ -149,29 +149,149 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!newMessage.trim() || !user?.id || !workspace?.id || sending) return;
+    if ((!newMessage.trim() && !selectedImage) || !user?.id || !workspace?.id || sending || isUploading) return;
 
     setSending(true);
-    const { error } = await supabase.from('community_chat_messages').insert([{
-      content: newMessage.trim(),
-      user_id: user.id,
-      workspace_id: workspace.id,
-      context_type: 'workspace',
-      message_type: 'text',
-      expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
-    } as any]);
+    try {
+      let imageUrl = null;
+      if (selectedImage) {
+        imageUrl = await uploadImage(selectedImage);
+        if (!imageUrl) {
+          setSending(false);
+          return;
+        }
+      }
 
-    if (!error) {
-      setNewMessage('');
+      const { error } = await supabase.from('community_chat_messages').insert([{
+        content: newMessage.trim(),
+        user_id: user.id,
+        workspace_id: workspace.id,
+        context_type: 'workspace',
+        message_type: imageUrl ? 'image' : 'text',
+        image_url: imageUrl,
+        expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
+      } as any]);
+
+      if (!error) {
+        setNewMessage('');
+        setSelectedImage(null);
+        setImagePreview(null);
+      } else {
+        toast.error("Erro ao enviar mensagem");
+      }
+    } catch (error) {
+      toast.error("Erro inesperado");
+    } finally {
+      setSending(false);
     }
-    setSending(false);
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("A imagem deve ter no máximo 5MB");
+        return;
+      }
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
+    if (showMentions) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setMentionIndex(prev => (prev + 1) % filteredMembers.length);
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setMentionIndex(prev => (prev - 1 + filteredMembers.length) % filteredMembers.length);
+        return;
+      }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        const member = filteredMembers[mentionIndex >= 0 ? mentionIndex : 0];
+        if (member) insertMention(member);
+        return;
+      }
+      if (e.key === 'Escape') {
+        setShowMentions(false);
+        return;
+      }
+    }
+
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
+  };
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setNewMessage(value);
+
+    const lastAtPos = value.lastIndexOf('@', textareaRef.current?.selectionStart || 0);
+    if (lastAtPos !== -1) {
+      const textAfterAt = value.substring(lastAtPos + 1, textareaRef.current?.selectionStart || 0);
+      if (!textAfterAt.includes(' ')) {
+        setShowMentions(true);
+        setMentionFilter(textAfterAt.toLowerCase());
+        setMentionIndex(0);
+        return;
+      }
+    }
+    setShowMentions(false);
+  };
+
+  const filteredMembers = useMemo(() => {
+    return onlineUsers.filter(u => 
+      u.name?.toLowerCase().includes(mentionFilter)
+    );
+  }, [onlineUsers, mentionFilter]);
+
+  const insertMention = (member: any) => {
+    const pos = textareaRef.current?.selectionStart || 0;
+    const lastAtPos = newMessage.lastIndexOf('@', pos);
+    const before = newMessage.substring(0, lastAtPos);
+    const after = newMessage.substring(pos);
+    const name = member.name || member.email?.split('@')[0] || 'Usuário';
+    setNewMessage(`${before}@${name} ${after}`);
+    setShowMentions(false);
+    textareaRef.current?.focus();
+  };
+
+  const renderContent = (content: string) => {
+    const parts = content.split(/(@[\wÀ-ú]+)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('@')) {
+        return (
+          <span key={i} className="text-black font-semibold bg-black/10 px-1 rounded mx-0.5">
+            {part}
+          </span>
+        );
+      }
+      return part;
+    });
+  };
+
+  const renderContentOther = (content: string) => {
+    const parts = content.split(/(@[\wÀ-ú]+)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('@')) {
+        return (
+          <span key={i} className="text-[#00c853] font-semibold bg-[#00c853]/10 px-1 rounded mx-0.5 border border-[#00c853]/20">
+            {part}
+          </span>
+        );
+      }
+      return part;
+    });
   };
 
   const formatMessageDate = (dateStr: string) => {
