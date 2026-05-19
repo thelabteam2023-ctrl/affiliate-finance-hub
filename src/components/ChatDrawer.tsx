@@ -63,6 +63,7 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isDeletingBatch, setIsDeletingBatch] = useState(false);
   const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(true);
   
   const { unreadCount, incrementUnread, resetUnread, playNotificationSound } = useChatNotifications();
