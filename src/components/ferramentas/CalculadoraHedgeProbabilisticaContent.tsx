@@ -1841,7 +1841,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                      </span>
                                                    </div>
                                                   </>
-                                                  </>
+                                                  <React.Fragment />
                                                 )}
                                               </div>
                                             </div>
@@ -1926,7 +1926,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                           </div>
                         </div>
                       </div>
-                              </div>
+                                  <Card />
                             </div>
                           </div>
                         </div>
@@ -2239,7 +2239,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                         </CardContent>
                         </CardContent>
                           </div>
-                        </CardContent>
+                        <CardContent />
                       </Card>
                     </div>
                   </div>
