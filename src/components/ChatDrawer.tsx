@@ -36,8 +36,9 @@ interface ChatMessage {
 
 export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
   const { user, workspace } = useAuth();
-  const { onlineUsers } = usePresence();
+  const { onlineUsers, onlineUserIds } = usePresence();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [allMembers, setAllMembers] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
