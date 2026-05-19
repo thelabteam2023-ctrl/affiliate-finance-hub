@@ -11,7 +11,9 @@ import {
   MoreVertical,
   ChevronDown,
   CheckCircle2,
-  Circle
+  Circle,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, isToday, isYesterday, differenceInMinutes } from 'date-fns';
@@ -22,6 +24,8 @@ import { usePresence } from '@/contexts/PresenceContext';
 import { useImageUpload } from '@/hooks/useImageUpload';
 import { ScrollArea } from './ui/scroll-area';
 import { toast } from 'sonner';
+import { useChatNotifications } from '@/hooks/useChatNotifications';
+import { Button } from './ui/button';
 
 interface ChatDrawerProps {
   isOpen: boolean;
