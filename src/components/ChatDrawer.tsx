@@ -162,18 +162,20 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
   };
 
   const renderDateSeparator = (currentMsg: ChatMessage, prevMsg: ChatMessage | null) => {
-    if (!prevMsg) return (
-      <div className="flex justify-center my-4">
-        <span className="text-[10px] px-2 py-0.5 bg-[#1a1e26] text-gray-500 rounded-full border border-[#2a2d35]">
-          {formatMessageDate(currentMsg.created_at)}
-        </span>
-      </div>
-    );
+    if (!prevMsg) {
+      return (
+        <div className="flex justify-center my-4">
+          <span className="text-[10px] px-2 py-0.5 bg-[#1a1e26] text-gray-500 rounded-full border border-[#2a2d35]">
+            {formatMessageDate(currentMsg.created_at)}
+          </span>
+        </div>
+      );
+    }
 
-    const currentDate = format(new Date(currentMsg.created_at), 'yyyy-MM-dd');
-    const prevDate = format(new Date(prevMsg.created_at), 'yyyy-MM-dd');
+    const currentDateStr = format(new Date(currentMsg.created_at), 'yyyy-MM-dd');
+    const prevDateStr = format(new Date(prevMsg.created_at), 'yyyy-MM-dd');
 
-    if (currentDate !== prevDate) {
+    if (currentDateStr !== prevDateStr) {
       return (
         <div className="flex justify-center my-4">
           <span className="text-[10px] px-2 py-0.5 bg-[#1a1e26] text-gray-500 rounded-full border border-[#2a2d35]">
@@ -183,6 +185,7 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
       );
     }
     return null;
+  };
   };
 
   return (
