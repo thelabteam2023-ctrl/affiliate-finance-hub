@@ -4,6 +4,7 @@ export interface FluxoCard {
   workspace_id: string;
   coluna_id: string;
   conteudo: string;
+  categoria?: string;
   ordem: number;
   versao: number;
   created_at: string;
@@ -26,6 +27,7 @@ export interface FluxoCardHistorico {
   user_id: string;
   workspace_id: string;
   conteudo: string;
+  categoria?: string;
   coluna_id: string;
   versao: number;
   tipo_mudanca: 'criacao' | 'edicao' | 'movimentacao';
