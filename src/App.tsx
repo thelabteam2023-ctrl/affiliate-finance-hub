@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useRef } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import type { ComponentType } from "react";
 import { ThemeProvider } from "next-themes";
 import { TopBarProvider, useTopBar } from "@/contexts/TopBarContext";
@@ -20,7 +20,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppSidebar } from "@/components/AppSidebar";
 import { InactivityWarningBanner } from "@/components/InactivityWarningBanner";
 import { useInactivityTimeout } from "@/hooks/useInactivityTimeout";
-import { Loader2 } from "lucide-react";
+import { Loader2, NotebookPen } from "lucide-react";
 import { installRpcInterceptor } from "@/lib/dev/rpcInterceptor";
 
 // Install RPC interceptor for the system-owner Ledger Monitor (no-op for everyone else)
