@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCotacoes } from "@/hooks/useCotacoes";
+import { getSafeWorkingRate } from "@/utils/exchangeRateGuard";
 
 type WorkingRatesRow = {
   fonte_cotacao: string | null;
@@ -19,6 +20,7 @@ export type EffectiveRateSource = "TRABALHO" | "OFICIAL";
 export interface EffectiveRateInfo {
   rate: number;
   source: EffectiveRateSource;
+  warning?: string;
 }
 
 export function resolveEffectiveProjectRate(
@@ -41,11 +43,20 @@ export function resolveEffectiveProjectRate(
   };
 
   const workRate = workRateMap[workKey];
-  if (workingRates?.fonte_cotacao === "TRABALHO" && workRate && workRate > 0) {
-    return { rate: workRate, source: "TRABALHO" };
+  const offRate = officialRate(normalized);
+  
+  // Usar o guard para validar a taxa de trabalho
+  const safeResult = getSafeWorkingRate(normalized, workRate, offRate);
+
+  if (workingRates?.fonte_cotacao === "TRABALHO" && safeResult.source === 'working') {
+    return { rate: safeResult.rate, source: "TRABALHO" };
   }
 
-  return { rate: officialRate(normalized) || 1, source: "OFICIAL" };
+  return { 
+    rate: safeResult.rate, 
+    source: "OFICIAL",
+    warning: safeResult.source === 'official_fallback' ? safeResult.warning : undefined
+  };
 }
 
 export function useProjetoWorkingRates(projetoId: string | undefined) {
