@@ -954,7 +954,7 @@ export function SurebetCard({
         <div 
           data-testid="invalid-rates-banner"
           className={cn(
-            "border-b px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-300",
+            "border-b px-4 py-3 flex flex-col lg:flex-row lg:items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-300",
             invalidRates.some(r => r.source === 'error') 
               ? "bg-destructive/10 border-destructive/30" 
               : "bg-amber-500/10 border-amber-500/30"
@@ -965,19 +965,30 @@ export function SurebetCard({
             invalidRates.some(r => r.source === 'error') ? "text-destructive" : "text-amber-500"
           )}>
             <AlertTriangle className="h-4 w-4 shrink-0" />
-            <span>
-              {invalidRates.some(r => r.source === 'error') 
-                ? "⛔ Cálculo bloqueado — taxas ausentes: " 
-                : "⚠️ Usando cotação oficial — configure a cotação de trabalho: "}
-              {invalidRates.map(r => (
-                <span key={r.currency} className="ml-1 opacity-90 font-bold" data-testid={`invalid-rate-${r.currency.toLowerCase()}`}>
-                   {r.currency} ({r.rate.toFixed(4)})
-                </span>
-              ))}
-            </span>
+            <div className="flex flex-col">
+              <span>
+                {invalidRates.some(r => r.source === 'error') 
+                  ? "⛔ Cálculo bloqueado — taxas ausentes: " 
+                  : "⚠️ Usando cotação oficial — configure a cotação de trabalho: "}
+                {invalidRates.map(r => (
+                  <span key={r.currency} className="ml-1 opacity-90 font-bold" data-testid={`invalid-rate-${r.currency.toLowerCase()}`}>
+                     {r.currency} ({r.rate.toFixed(4)})
+                  </span>
+                ))}
+              </span>
+              <span className="text-[10px] opacity-70 italic">
+                {invalidRates.some(r => r.source === 'official_fallback') && "O banco retornou NULL/1.0 para estas moedas. Fallback PTAX aplicado."}
+              </span>
+            </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-[10px] text-muted-foreground hidden lg:inline italic">Valores sugeridos baseados na PTAX oficial</span>
+            <button
+              onClick={() => refetchProjectRates()}
+              className="px-2 py-1 text-[10px] font-bold rounded bg-zinc-800 text-zinc-100 hover:bg-zinc-700 transition-colors uppercase border border-zinc-700"
+              title="Recarregar dados do banco"
+            >
+              Recarregar
+            </button>
             <button
               onClick={async () => {
                 const { toast } = await import("sonner");
@@ -997,6 +1008,7 @@ export function SurebetCard({
                     
                   if (error) throw error;
                   toast.success("Cotações de trabalho sincronizadas com o projeto!");
+                  refetchProjectRates(); // Forçar atualização do UI
                 } catch (err) {
                   console.error(err);
                   toast.error("Erro ao atualizar cotações.");
@@ -1014,6 +1026,7 @@ export function SurebetCard({
           </div>
         </div>
       )}
+
 
 
 
