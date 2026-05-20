@@ -1444,6 +1444,7 @@ export function SurebetCard({
             return steps;
           })()}
         />
+        )}
       </CardContent>
     </Card>
 
