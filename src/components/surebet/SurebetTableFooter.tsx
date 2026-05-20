@@ -35,10 +35,15 @@ export function SurebetTableFooter({
   const roiColor = analysis.minRoi >= 0 ? "text-emerald-500" : "text-red-500";
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border/50">
+    <div 
+      className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border/50"
+      data-testid="surebet-footer"
+      data-currency={analysis.moedaDominante}
+      data-normalized-value={analysis.stakeTotal}
+    >
       {/* Totais */}
-      <div className="flex items-center gap-3 md:gap-6">
-        <div className="text-center">
+      <div className="flex items-center gap-3 md:gap-6" data-testid="surebet-totals">
+        <div className="text-center" data-testid="surebet-footer-profit">
           <div className="text-[10px] text-muted-foreground uppercase">Lucro Garantido</div>
           <div className={`font-bold leading-tight whitespace-nowrap ${lucroColor} ${hasRange ? "text-xs md:text-sm" : "text-base md:text-lg"}`}>
             {analysis.stakeTotal > 0 ? (
