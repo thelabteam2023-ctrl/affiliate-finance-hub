@@ -592,6 +592,8 @@ export function SurebetModalRoot({
           stakeOrigem: undefined,
           additionalEntries: []
         }));
+        
+        rascunhoOdds.forEach(o => HydrationAudit.mark(o, "draft", { originalValue: parseFloat(o.stake) || 0 }));
         setOdds(rascunhoOdds);
         setDirectedProfitLegs(Array.from({ length: numPernasRascunho }, (_, i) => i));
       } else {
