@@ -4,6 +4,7 @@ import { ThemeProvider } from "next-themes";
 import { TopBarProvider, useTopBar } from "@/contexts/TopBarContext";
 import { NotesDrawer } from "@/components/NotesDrawer";
 import { ChatDrawer } from "@/components/ChatDrawer";
+import { ChatNotificationManager } from "@/components/chat/ChatNotificationManager";
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
