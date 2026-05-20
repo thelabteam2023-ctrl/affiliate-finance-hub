@@ -902,9 +902,10 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
           <div className="space-y-3 mb-3">
             {surebet.pernas
               .filter(perna => perna.bookmaker_id && perna.odd && perna.odd > 0)
-              .map((perna) => (
+              .map((perna, legIndex) => (
+                <div key={perna.id} data-testid="surebet-leg-wrapper" data-leg-index={legIndex} data-currency={perna.moeda} data-sub-entries-count={perna.entries?.length ?? 0}>
                 <PernaItem 
-                  key={perna.id} 
+
                   perna={perna} 
                   formatValue={formatValue}
                   getLogoUrl={getLogoUrl}
