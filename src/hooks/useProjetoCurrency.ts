@@ -107,11 +107,13 @@ export function useProjetoCurrency(projetoId: string | undefined): ProjectCurren
 
 
   const cotacaoAtual = useMemo(() => {
-    if (fonteCotacao === "TRABALHO" && cotacaoTrabalho) {
-      return cotacaoTrabalho;
+    // Se a fonte for TRABALHO, usamos a taxa de USD protegida do workRates
+    if (fonteCotacao === "TRABALHO") {
+      return workRates.USD;
     }
     return cotacaoUSD;
-  }, [fonteCotacao, cotacaoTrabalho, cotacaoUSD]);
+  }, [fonteCotacao, workRates.USD, cotacaoUSD]);
+
 
   // Símbolo da moeda do projeto
   const getSymbol = useCallback((): string => {
