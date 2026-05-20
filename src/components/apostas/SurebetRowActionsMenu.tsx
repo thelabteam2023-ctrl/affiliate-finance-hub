@@ -163,17 +163,24 @@ export function SurebetRowActionsMenu({
             <DropdownMenuGroup data-testid="liquidation-section-single">
               {liquidationOptions.singleWin.map((option) => (
                 <DropdownMenuItem
-                  key={option.entryId}
+                  key={option.legId}
                   onSelect={(e) => { e.preventDefault(); handleQuickResolve('single_win', option); }}
                   className="text-emerald-400 focus:text-emerald-400 focus:bg-emerald-500/10"
-                  data-testid={`liquidate-single-${option.casa.toLowerCase().replace(/\s/g, '-')}`}
-                  data-entry-id={option.entryId}
-                  data-is-sub-entry={option.isSubEntry ? 'true' : 'false'}
-                  data-parent-leg={option.parentLegId ?? 'none'}
+                  data-testid={`liquidate-leg-${option.legIndex}`}
+                  data-leg-id={option.legId}
+                  data-has-multiple-houses={option.hasMultipleHouses ? 'true' : 'false'}
+                  data-house-count={option.houseCount}
                   data-pnl-projection={option.pnl?.toFixed(2)}
+                  data-houses={option.houses.map(h => h.casa).join(',')}
+                  title={option.hasMultipleHouses ? option.houses.map(h => `${h.casa}: ${h.stake} ${h.currency}`).join('\n') : undefined}
                 >
                   <CheckCircle2 className="h-4 w-4 mr-2" />
                   {option.label}
+                  {option.hasMultipleHouses && (
+                    <span style={{ opacity: 0.6, fontSize: '0.75em', marginLeft: '4px' }}>
+                      ({option.houseCount} casas)
+                    </span>
+                  )}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuGroup>
@@ -188,11 +195,11 @@ export function SurebetRowActionsMenu({
                 <DropdownMenuGroup data-testid="liquidation-section-double">
                   {liquidationOptions.doubleGreen.map((option) => (
                     <DropdownMenuItem
-                      key={option.entryIds.join('+')}
+                      key={option.legIds.join('+')}
                       onSelect={(e) => { e.preventDefault(); handleQuickResolve('double_green', option); }}
                       className="text-teal-400 focus:text-teal-400 focus:bg-teal-500/10"
-                      data-testid={`liquidate-double-${option.label.toLowerCase().replace(/\s|\+/g, '-')}`}
-                      data-entry-ids={option.entryIds.join(',')}
+                      data-testid={`liquidate-double-${option.legIds.join('-')}`}
+                      data-leg-ids={option.legIds.join(',')}
                       data-pnl-projection={option.pnl?.toFixed(2)}
                     >
                       <Layers className="h-4 w-4 mr-2" />
