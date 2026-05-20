@@ -439,7 +439,14 @@ export function SurebetExecutionTable({
       </div>
 
       {/* Rodapé: Totais */}
-      <div className="flex items-center justify-between pt-3 border-t border-border/40">
+      <div 
+        className="flex items-center justify-between pt-3 border-t border-border/40"
+        data-testid="surebet-footer"
+        data-calc-state={stakeTotal > 0 ? "valid" : "invalid"}
+        data-hydration-state="user"
+        data-edit-state="dirty"
+        data-normalized-value={stakeTotal}
+      >
         {/* Lado esquerdo: Controles */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
