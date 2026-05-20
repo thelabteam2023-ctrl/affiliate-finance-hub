@@ -169,17 +169,29 @@ export function SurebetTracePanel({
           
           <div className="flex flex-wrap gap-2 text-[10px] text-muted-foreground" data-testid="trace-rates-snapshot">
             <span className="font-semibold">Snapshot taxas:</span>
-            {Object.entries(workingRates).map(([currency, rate]) => (
-              <span 
-                key={currency} 
-                data-testid={`trace-rate-${currency.toLowerCase()}`} 
-                data-rate={rate}
-                className="border-r border-muted-foreground/30 pr-2 last:border-0"
-              >
-                {currency}: {rate.toFixed(4)}
-              </span>
-            ))}
+            {Object.entries(workingRates).map(([currency, rate]) => {
+              const isInvalid = CURRENCIES_THAT_CANNOT_BE_1.includes(currency) &&
+                Math.abs(rate - 1.0) < 0.001;
+
+              return (
+                <span 
+                  key={currency} 
+                  data-testid={`trace-rate-${currency.toLowerCase()}`} 
+                  data-rate={rate}
+                  data-is-invalid={isInvalid ? 'true' : 'false'}
+                  className={cn(
+                    "border-r border-muted-foreground/30 pr-2 last:border-0 flex items-center gap-1",
+                    isInvalid && "text-red-400 font-bold"
+                  )}
+                >
+                  {currency}: {rate.toFixed(4)}
+                  {isInvalid && <AlertTriangle className="h-2 w-2" />}
+                  {isInvalid && <span className="text-[8px] uppercase">Inválida</span>}
+                </span>
+              );
+            })}
           </div>
+
         </div>
       </CardContent>
     </Card>
