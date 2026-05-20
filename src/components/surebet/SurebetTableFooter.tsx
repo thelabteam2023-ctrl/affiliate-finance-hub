@@ -7,7 +7,11 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatCurrency } from '@/components/bookmakers/BookmakerSelectOption';
-import { type SurebetAnalysis } from '@/hooks/useSurebetCalculator';
+import { type SurebetAnalysis as SurebetAnalysisBase } from '@/hooks/useSurebetCalculator';
+
+interface SurebetAnalysis extends SurebetAnalysisBase {
+  traceId?: string;
+}
 import { type SupportedCurrency } from '@/hooks/useCurrencySnapshot';
 
 interface SurebetTableFooterProps {
