@@ -44,11 +44,24 @@ class NotificationAudioManager {
       this.statuses.set(url, { state: 'idle', currentTime: 0, duration: 0 });
       this.listeners.set(url, new Set());
 
-      audio.addEventListener('loadstart', () => this.updateStatus(url, { state: 'loading' }));
+      audio.addEventListener('loadstart', () => {
+        if (audio!.readyState < 3) {
+          this.updateStatus(url, { state: 'loading' });
+        }
+      });
+      audio.addEventListener('canplaythrough', () => {
+        const current = this.statuses.get(url);
+        if (current?.state === 'loading') {
+          this.updateStatus(url, { state: 'idle' });
+        }
+      });
       audio.addEventListener('playing', () => this.updateStatus(url, { state: 'playing' }));
       audio.addEventListener('pause', () => this.updateStatus(url, { state: 'idle' }));
       audio.addEventListener('ended', () => this.updateStatus(url, { state: 'idle', currentTime: 0 }));
-      audio.addEventListener('error', () => this.updateStatus(url, { state: 'error' }));
+      audio.addEventListener('error', () => {
+        console.error(`[AudioError] Failed to load sound: ${url}`, audio!.error);
+        this.updateStatus(url, { state: 'error' });
+      });
       audio.addEventListener('timeupdate', () => {
         this.updateStatus(url, { 
           currentTime: audio!.currentTime, 
@@ -61,6 +74,11 @@ class NotificationAudioManager {
 
       this.sounds.set(url, audio);
       audio.load();
+
+      // Check if already loaded from cache
+      if (audio.readyState >= 3) {
+        this.updateStatus(url, { state: 'idle' });
+      }
     }
     return audio;
   }
