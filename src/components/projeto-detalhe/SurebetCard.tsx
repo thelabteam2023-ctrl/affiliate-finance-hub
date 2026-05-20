@@ -21,6 +21,7 @@ import { calculatePnlProjections } from "@/utils/surebetPnlProjection";
 import { useProjetoWorkingRates } from "@/hooks/useProjetoWorkingRates";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { getSafeWorkingRate } from "@/utils/exchangeRateGuard";
+import { useAuth } from "@/hooks/useAuth";
 
 
 import { validateBalanceForOperation } from "@/utils/surebetBalanceValidator";
