@@ -6,27 +6,46 @@ import { SurebetPerna } from "@/components/projeto-detalhe/SurebetCard";
 
 export interface LiquidationEntry {
   id: string;
-  bookmaker_id: string; // CRÍTICO: necessário para validar saldo
+  bookmaker_id: string;
   casa: string;
   currency: string;
   stake: number;
-  normalizedStake: number; // em BRL (valor de referência)
+  normalizedStake: number; // em BRL
   odd: number;
   legIndex: number;
-  subEntryIndex: number | null; // null = perna principal sem sub-entradas extras
+  subEntryIndex: number | null;
   isSubEntry: boolean;
   parentLegId: string | null;
 }
 
+export interface LiquidationLeg {
+  legId: string;
+  legIndex: number;
+  legLabel: string;
+  houses: Array<{
+    entryId: string;
+    casa: string;
+    stake: number;
+    currency: string;
+    normalizedStake: number;
+    odd: number;
+    bookmakerId: string;
+  }>;
+  totalNormalizedStake: number;
+  odd: number;
+  hasMultipleHouses: boolean;
+  houseCount: number;
+}
+
 /**
- * Expande a estrutura de pernas (com possíveis sub-entradas) em uma lista flat de entradas liquidáveis.
+ * Expande a estrutura de pernas em uma lista flat de entradas.
+ * Mantida para compatibilidade com o validador de saldo.
  */
 export function expandLegsWithSubEntries(legs: SurebetPerna[]): LiquidationEntry[] {
   const entries: LiquidationEntry[] = [];
 
   legs.forEach((leg, legIndex) => {
     if (leg.entries && leg.entries.length > 0) {
-      // Perna com múltiplas entradas: expandir cada uma
       leg.entries.forEach((sub, subIndex) => {
         entries.push({
           id: sub.id || `${leg.id}_sub_${subIndex}`,
@@ -43,7 +62,6 @@ export function expandLegsWithSubEntries(legs: SurebetPerna[]): LiquidationEntry
         });
       });
     } else {
-      // Perna simples
       entries.push({
         id: leg.id,
         bookmaker_id: leg.bookmaker_id || '',
@@ -63,66 +81,124 @@ export function expandLegsWithSubEntries(legs: SurebetPerna[]): LiquidationEntry
   return entries;
 }
 
-/**
- * Calcula o P&L projetado para quando uma única entrada ganha (as outras perdem).
- */
-function calculateSingleWinPnl(
-  winner: LiquidationEntry,
-  allEntries: LiquidationEntry[]
-): number {
-  const totalStake = allEntries.reduce((sum, e) => sum + e.normalizedStake, 0);
-  const winReturn = winner.normalizedStake * winner.odd;
-  return winReturn - totalStake;
+export function buildLiquidationLegs(legs: SurebetPerna[]): LiquidationLeg[] {
+  return legs.map((leg, legIndex) => {
+    const hasSubEntries = leg.entries && leg.entries.length > 0;
+
+    if (hasSubEntries) {
+      const houses = leg.entries!.map((sub, subIndex) => ({
+        entryId: sub.id || `${leg.id}_sub_${subIndex}`,
+        casa: sub.bookmaker_nome,
+        stake: sub.stake,
+        currency: sub.moeda || 'BRL',
+        normalizedStake: sub.stake_brl_referencia || sub.stake,
+        odd: sub.odd || leg.odd,
+        bookmakerId: sub.bookmaker_id,
+      }));
+
+      const totalNormalized = houses.reduce((sum, h) => sum + h.normalizedStake, 0);
+
+      return {
+        legId: leg.id,
+        legIndex,
+        legLabel: buildLegLabel(houses),
+        houses,
+        totalNormalizedStake: totalNormalized,
+        odd: leg.odd || (houses.length > 0 ? houses[0].odd : 0),
+        hasMultipleHouses: true,
+        houseCount: houses.length,
+      };
+    } else {
+      const normalizedStake = leg.stake_brl_referencia || leg.stake;
+      return {
+        legId: leg.id,
+        legIndex,
+        legLabel: leg.bookmaker_nome,
+        houses: [{
+          entryId: leg.id,
+          casa: leg.bookmaker_nome,
+          stake: leg.stake,
+          currency: leg.moeda || 'BRL',
+          normalizedStake: normalizedStake,
+          odd: leg.odd,
+          bookmakerId: leg.bookmaker_id || '',
+        }],
+        totalNormalizedStake: normalizedStake,
+        odd: leg.odd,
+        hasMultipleHouses: false,
+        houseCount: 1,
+      };
+    }
+  });
 }
 
-/**
- * Calcula o P&L projetado para quando duas entradas ganham (hedge parcial / duplo green).
- */
-function calculateDoubleGreenPnl(
-  winner1: LiquidationEntry,
-  winner2: LiquidationEntry,
-  allEntries: LiquidationEntry[]
-): number {
-  const totalStake = allEntries.reduce((sum, e) => sum + e.normalizedStake, 0);
-  const return1 = winner1.normalizedStake * winner1.odd;
-  const return2 = winner2.normalizedStake * winner2.odd;
-  // No duplo green as duas pernas ganham.
-  return ((return1 + return2) / 2) - totalStake;
+function buildLegLabel(houses: Array<{ casa: string }>): string {
+  if (houses.length === 1) return houses[0].casa;
+  if (houses.length === 2) return `${houses[0].casa} + ${houses[1].casa}`;
+  return `${houses[0].casa} +${houses.length - 1}`;
 }
 
 export function generateLiquidationOptions(legs: SurebetPerna[]) {
-  const entries = expandLegsWithSubEntries(legs);
+  const liquidationLegs = buildLiquidationLegs(legs);
+  const totalNormalized = liquidationLegs.reduce(
+    (sum, l) => sum + l.totalNormalizedStake, 0
+  );
 
-  // "Uma perna ganha"
-  const singleWin = entries.map(entry => ({
+  const singleWin = liquidationLegs.map(leg => ({
     type: 'single_win' as const,
-    label: `${entry.casa} Win`,
-    entryId: entry.id,
-    bookmakerId: entry.bookmaker_id,
-    casa: entry.casa,
-    isSubEntry: entry.isSubEntry,
-    parentLegId: entry.parentLegId,
-    pnl: calculateSingleWinPnl(entry, entries),
+    legId: leg.legId,
+    legIndex: leg.legIndex,
+    label: leg.legLabel,
+    houses: leg.houses,
+    hasMultipleHouses: leg.hasMultipleHouses,
+    houseCount: leg.houseCount,
+    pnl: calculateSingleWinPnl(leg, totalNormalized),
   }));
 
-  // "Duplo Green" (combinações de 2)
   const doubleGreen = [];
-  for (let i = 0; i < entries.length; i++) {
-    for (let j = i + 1; j < entries.length; j++) {
+  for (let i = 0; i < liquidationLegs.length; i++) {
+    for (let j = i + 1; j < liquidationLegs.length; j++) {
+      const leg1 = liquidationLegs[i];
+      const leg2 = liquidationLegs[j];
       doubleGreen.push({
         type: 'double_green' as const,
-        label: `${entries[i].casa} + ${entries[j].casa}`,
-        entryIds: [entries[i].id, entries[j].id],
-        pnl: calculateDoubleGreenPnl(entries[i], entries[j], entries),
+        legIds: [leg1.legId, leg2.legId],
+        label: `${leg1.legLabel} + ${leg2.legLabel}`,
+        leg1,
+        leg2,
+        pnl: calculateDoubleGreenPnl(leg1, leg2, totalNormalized),
       });
     }
   }
 
-  const voidTotal = [{ 
-    type: 'void_total' as const, 
-    label: 'Void Total', 
-    pnl: 0 
+  const voidTotal = [{
+    type: 'void_total' as const,
+    label: 'Void Total',
+    pnl: 0,
   }];
 
-  return { singleWin, doubleGreen, voidTotal, allEntries: entries };
+  return { 
+    singleWin, 
+    doubleGreen, 
+    voidTotal, 
+    liquidationLegs,
+    totalNormalized 
+  };
+}
+
+function calculateSingleWinPnl(
+  winner: LiquidationLeg,
+  totalNormalized: number
+): number {
+  return (winner.totalNormalizedStake * winner.odd) - totalNormalized;
+}
+
+function calculateDoubleGreenPnl(
+  leg1: LiquidationLeg,
+  leg2: LiquidationLeg,
+  totalNormalized: number
+): number {
+  const return1 = leg1.totalNormalizedStake * leg1.odd;
+  const return2 = leg2.totalNormalizedStake * leg2.odd;
+  return ((return1 + return2) / 2) - totalNormalized;
 }

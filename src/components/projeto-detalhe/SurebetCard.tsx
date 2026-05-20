@@ -944,7 +944,7 @@ export function SurebetCard({
 
                 onEdit={() => onEdit?.(surebet)}
                 onDuplicate={onDuplicate ? () => onDuplicate(surebet.id) : undefined}
-                onQuickResolve={(result) => {
+                onQuickResolve={async (result) => {
                   if (isSimplesMultiEntry && (onSimpleMenuQuickResolve || onSimpleQuickResolve)) {
                     const resultadoFinal = result.type === 'all_void'
                       ? 'VOID'
@@ -955,7 +955,70 @@ export function SurebetCard({
                     return;
                   }
 
-                  onQuickResolve?.(surebet.id, result);
+                  if (!onQuickResolve && !onPernaResultChange) return;
+
+                  // Se o pai tem onQuickResolve, delegar para ele
+                  if (onQuickResolve) {
+                    onQuickResolve(surebet.id, result);
+                    return;
+                  }
+
+                  // Fallback: se não tiver onQuickResolve mas tiver onPernaResultChange, usar a fila local
+                  const entriesToLiquidate = result.entryIds && result.entryIds.length > 0 
+                    ? result.entryIds 
+                    : [];
+
+                  for (const perna of (surebet.pernas || [])) {
+                    const isPernaWinner = result.winners.includes(surebet.pernas!.indexOf(perna));
+                    const resultado = result.type === 'all_void' ? 'VOID' : (isPernaWinner ? 'GREEN' : 'RED');
+
+                    if (perna.entries && perna.entries.length > 0) {
+                      for (const entry of perna.entries) {
+                        if (!entry.id || !entry.bookmaker_id) continue;
+                        
+                        const entryResult = result.type === 'all_void' 
+                          ? 'VOID' 
+                          : (entriesToLiquidate.includes(entry.id) ? 'GREEN' : 'RED');
+
+                        liquidationQueue.enqueue({
+                          operationId: surebet.id,
+                          entryId: entry.id,
+                          result: entryResult,
+                        });
+                      }
+                    } else {
+                      liquidationQueue.enqueue({
+                        operationId: surebet.id,
+                        entryId: perna.id,
+                        result: resultado,
+                      });
+                    }
+                  }
+
+                  await liquidationQueue.flush(async (action) => {
+                    const perna = surebet.pernas?.find(p => p.id === action.entryId || p.entries?.some(e => e.id === action.entryId));
+                    if (!perna) return;
+
+                    let entryData: any = perna;
+                    if (perna.entries) {
+                      const sub = perna.entries.find(e => e.id === action.entryId);
+                      if (sub) entryData = sub;
+                    }
+
+                    await onPernaResultChange!({
+                      pernaId: action.entryId,
+                      surebetId: surebet.id,
+                      bookmarkerId: entryData.bookmaker_id!,
+                      resultado: action.result,
+                      stake: entryData.stake || entryData.stake_total || 0,
+                      odd: entryData.odd || entryData.odd_media || 0,
+                      moeda: entryData.moeda || 'BRL',
+                      resultadoAnterior: perna.resultado,
+                      workspaceId: surebet.workspace_id || '',
+                      bookmakerNome: entryData.bookmaker_nome,
+                      silent: perna.entries && perna.entries.length > 1,
+                    });
+                  });
                 }}
                 onDelete={() => onDelete?.(surebet.id)}
               />
@@ -994,16 +1057,24 @@ export function SurebetCard({
                       }
                       // CASO 2: Surebet/Múltipla real → liquidação por perna individual
                       : !isSimplesMultiEntry && onPernaResultChange && perna.bookmaker_id ? async (resultado: string) => {
-                      // CORREÇÃO: Para pernas agrupadas (múltiplas entradas/casas),
-                      // liquidar TODAS as sub-entradas, não apenas a primeira.
+                      const resFinal = resultado.toUpperCase() as any;
                       if (perna.entries && perna.entries.length > 1) {
                         for (const entry of perna.entries) {
                           if (!entry.id || !entry.bookmaker_id) continue;
+                          liquidationQueue.enqueue({
+                            operationId: surebet.id,
+                            entryId: entry.id,
+                            result: resFinal
+                          });
+                        }
+                        await liquidationQueue.flush(async (action) => {
+                          const entry = perna.entries!.find(e => e.id === action.entryId);
+                          if (!entry) return;
                           await onPernaResultChange({
-                            pernaId: entry.id,
+                            pernaId: entry.id!,
                             surebetId: surebet.id,
                             bookmarkerId: entry.bookmaker_id,
-                            resultado,
+                            resultado: action.result,
                             stake: entry.stake,
                             odd: entry.odd,
                             moeda: entry.moeda || 'BRL',
@@ -1012,13 +1083,13 @@ export function SurebetCard({
                             bookmakerNome: entry.bookmaker_nome,
                             silent: true,
                           });
-                        }
+                        });
                       } else {
                         await onPernaResultChange({
                           pernaId: perna.id,
                           surebetId: surebet.id,
                           bookmarkerId: perna.bookmaker_id!,
-                          resultado,
+                          resultado: resFinal,
                           stake: perna.stake,
                           odd: perna.odd,
                           moeda: perna.moeda || 'BRL',
@@ -1147,10 +1218,11 @@ export function SurebetCard({
             const steps: any[] = [];
             (surebet.pernas || []).forEach((p, idx) => {
               if (p.entries && p.entries.length > 0) {
+                // Agregar conversões de sub-entradas
                 p.entries.forEach((e, sIdx) => {
                   if (e.moeda && e.moeda !== moedaConsolidacao) {
                     steps.push({
-                      label: `P${idx+1} Entrada ${sIdx+1} (${e.bookmaker_nome})`,
+                      label: `P${idx+1} Casa ${sIdx+1}: ${e.bookmaker_nome}`,
                       original: `${e.moeda} ${e.stake}`,
                       rate: convertToConsolidation ? convertToConsolidation(1, e.moeda) : 1,
                       result: convertToConsolidation ? convertToConsolidation(e.stake, e.moeda).toFixed(2) : e.stake.toFixed(2),
@@ -1158,16 +1230,42 @@ export function SurebetCard({
                     });
                   }
                 });
+                
+                if (p.entries.length > 1) {
+                  const totalLegConsolidated = p.entries.reduce((sum, e) => 
+                    sum + (convertToConsolidation ? convertToConsolidation(e.stake, e.moeda || "BRL") : e.stake), 0
+                  );
+                  steps.push({
+                    label: `Agregação P${idx+1} (${p.entries.length} casas)`,
+                    original: p.entries.map(e => `${e.moeda || 'BRL'} ${e.stake}`).join(' + '),
+                    result: totalLegConsolidated.toFixed(2),
+                    type: 'aggregation'
+                  });
+                }
               } else if (p.moeda && p.moeda !== moedaConsolidacao) {
                 steps.push({
                   label: `P${idx+1} (${p.bookmaker_nome})`,
                   original: `${p.moeda} ${p.stake_total || p.stake}`,
                   rate: convertToConsolidation ? convertToConsolidation(1, p.moeda || "BRL") : 1,
-                  result: convertToConsolidation ? convertToConsolidation(p.stake_total || p.stake, p.moeda || "BRL").toFixed(2) : (p.stake_total || p.stake).toFixed(2),
+                  result: convertToConsolidation ? convertToConsolidation(p.stake_total || p.stake, p.moeda || "BRL").toFixed(2) : (p.stake_total || (p.stake as any)).toFixed(2),
                   type: 'conversion'
                 });
               }
             });
+
+            // Se for Surebet, mostrar o P&L total projetado no trace
+            if (!isSimplesMultiEntry && !isLiquidada) {
+              const options = generateLiquidationOptions(surebet.pernas || []);
+              options.singleWin.forEach(opt => {
+                steps.push({
+                  label: `P&L Projetado: ${opt.label} Ganha`,
+                  original: `Odd ${opt.houses[0].odd.toFixed(2)}`,
+                  result: opt.pnl.toFixed(2),
+                  type: 'adjustment'
+                });
+              });
+            }
+
             return steps;
           })()}
         />
