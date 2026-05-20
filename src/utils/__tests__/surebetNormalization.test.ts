@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeOperation } from './surebetNormalization';
-import { calculatePnlProjections } from './surebetPnlProjection';
+import { normalizeOperation } from '../surebetNormalization';
+import { calculatePnlProjections } from '../surebetPnlProjection';
 
 describe('Surebet Normalization & P&L (Audit Correctness)', () => {
   const workingRates = { USD: 5.0556, MXN: 0.2901, BRL: 1.0 };
