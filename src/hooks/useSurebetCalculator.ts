@@ -27,6 +27,9 @@ declare global {
       hydrationState: Record<string, any>;
       dependencyGraph: Record<string, any>;
       exportSnapshot: () => string;
+      reproduce: (snapshot: string | any) => void;
+      reproduceAndRender: (snapshot: string | any) => void;
+      overrideExchangeRate: (from: string, to: string, rate: number) => void;
     };
   }
 }
