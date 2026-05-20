@@ -62,7 +62,22 @@ export function expandLegsWithSubEntries(legs: SurebetPerna[]): LiquidationEntry
 
   return entries;
 }
-...
+
+/**
+ * Calcula o P&L projetado para quando uma única entrada ganha (as outras perdem).
+ */
+function calculateSingleWinPnl(
+  winner: LiquidationEntry,
+  allEntries: LiquidationEntry[]
+): number {
+  const totalStake = allEntries.reduce((sum, e) => sum + e.normalizedStake, 0);
+  const winReturn = winner.normalizedStake * winner.odd;
+  return winReturn - totalStake;
+}
+
+/**
+ * Calcula o P&L projetado para quando duas entradas ganham (hedge parcial / duplo green).
+ */
 function calculateDoubleGreenPnl(
   winner1: LiquidationEntry,
   winner2: LiquidationEntry,
@@ -111,4 +126,3 @@ export function generateLiquidationOptions(legs: SurebetPerna[]) {
 
   return { singleWin, doubleGreen, voidTotal, allEntries: entries };
 }
-
