@@ -354,12 +354,13 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                 data-testid="patrimonio-casa"
                 data-casa={casa.nome}
                 data-currency={casa.moedaOriginal}
-                data-total={casa.saldoOperavelNativo?.toFixed(2)}
+                data-total={casa.saldoOperavel?.toFixed(2)}
                 data-em-jogo={casa.saldoEmApostaNativo?.toFixed(2)}
                 data-disponivel={casa.saldoDisponivelNativo?.toFixed(2)}
                 data-saldo-negativo={(casa.saldoDisponivelNativo ?? 0) < 0 ? 'true' : 'false'}
                 data-deficit={(casa.saldoDisponivelNativo ?? 0) < 0 ? Math.abs(casa.saldoDisponivelNativo!).toFixed(2) : '0'}
               >
+
 
                 {/* Row 1: Casa name + Balance + Currency */}
                 <div className="flex items-start justify-between gap-2">
