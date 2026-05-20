@@ -216,15 +216,17 @@ function FloatingNotesButton({ onClick, isOpen }: { onClick: () => void, isOpen:
 
 /** Global floating button for Chat */
 function FloatingChatButton({ onClick, isOpen }: { onClick: () => void, isOpen: boolean }) {
-  const { user, workspace } = useAuth();
+  const { user, workspace, loading, initialized } = useAuth();
   const [hasMention, setHasMention] = useState(false);
   const { unreadCount, incrementUnread, playNotificationSound } = useChatNotifications();
   
   useEffect(() => {
-    if (!user || !workspace?.id) return;
+    if (!user?.id || !workspace?.id) return;
+
+    console.log(`[ChatButton] Subscribing to workspace: ${workspace.id} for user: ${user.id}`);
 
     const channel = supabase
-      .channel('chat-global-notifications')
+      .channel(`chat-global-notifications-${workspace.id}`)
       .on(
         'postgres_changes',
         {
@@ -254,12 +256,15 @@ function FloatingChatButton({ onClick, isOpen }: { onClick: () => void, isOpen: 
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`[ChatButton] Subscription status for ${workspace.id}:`, status);
+      });
 
     return () => {
+      console.log(`[ChatButton] Unsubscribing from ${workspace.id}`);
       supabase.removeChannel(channel);
     };
-  }, [user, workspace?.id, isOpen, incrementUnread, playNotificationSound]);
+  }, [user?.id, workspace?.id, isOpen, incrementUnread, playNotificationSound]);
 
   useEffect(() => {
     if (isOpen) {
@@ -267,7 +272,8 @@ function FloatingChatButton({ onClick, isOpen }: { onClick: () => void, isOpen: 
     }
   }, [isOpen]);
 
-  if (!user || isOpen) return null;
+  // Don't show while loading, if chat is already open, or if no workspace is resolved yet
+  if (loading || !initialized || !user || isOpen || !workspace?.id) return null;
 
   return (
     <button
