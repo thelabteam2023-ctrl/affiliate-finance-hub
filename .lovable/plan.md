@@ -1,20 +1,33 @@
-I will update the mathematical explanations and UI to address your observations about the simulation's assumptions and the visual bugs.
+## Problema
 
-### 1. Refine Mathematical Explanations
-*   **Withdrawal Assumption**: Clarify in the "Projeção: Dobrar a Banca" card that the simulation assumes **100% reinvestment** (compound interest). I will explain that this represents the "Risk of Ruin" for a dedicated bankroll where all profits fund future operations.
-*   **EV+ vs EV- Behavior**: Add a scientific note in the Laboratory explaining that:
-    *   **EV Positive**: The bankroll is mathematically expected to grow, but high variance (betting too much relative to bankroll) can still lead to ruin before growth takes over.
-    *   **EV Negative**: Ruin is a statistical certainty in the long term, and the probability of doubling the bankroll decreases as more events are played.
+Elementos de debug (banner de cotações, ícone de bug, painel de Audit Trace, console.logs) estão visíveis para qualquer usuário autenticado. Isso deve ser restrito apenas ao **proprietário do sistema** (`isSystemOwner`), nunca para admins de workspace ou usuários comuns.
 
-### 2. UI and Visual Fixes
-*   **Tooltip Clipping**: Fix the tooltips in the "Simulação Visual de 1.000 Eventos" (currently 100 in the UI code, will ensure consistency). I will add bottom padding to the container and ensure the tooltips have a higher `z-index` and enough space to render below the bars as requested.
-*   **Laboratory Logic**: Ensure the "Meta de Dobra" and "Risco de Ruína" cards are highly visible and explain the "events needed" calculation based on the new sequential simulation data.
+## Solução
 
-### 3. Polish
-*   Remove any remaining references to the "Dica de Execução" card.
-*   Update the "Como chegamos neste Risco?" section to be more educational about trajectories.
+O projeto já possui `isSystemOwner` exposto em `useAuth()`. Vou gateá-lo nos pontos críticos:
 
-### Technical details:
-*   Modify `src/components/ferramentas/CalculadoraHedgeProbabilisticaContent.tsx`.
-*   Increase `pb-x` in the simulation container.
-*   Update strings in `monteCarloSim` UI sections.
+### 1. `SurebetCard.tsx`
+- Importar `useAuth` e obter `isSystemOwner`.
+- **Banner amarelo "Usando cotação oficial / Confirmar Taxas"**: só renderiza se `isSystemOwner`.
+- **Botão Bug (ícone de inseto)**: só aparece se `isSystemOwner`.
+- **Painel `SurebetTracePanel`**: só renderiza se `isSystemOwner`.
+- **`console.log` de debug**: envolto em `if (isSystemOwner)`.
+- **Lógica de cálculo permanece intacta** — apenas a UI é escondida. O fallback automático para taxa oficial continua funcionando silenciosamente para todos.
+
+### 2. Comportamento para usuários comuns
+- O P&L continua sendo calculado corretamente (já que o fallback `getSafeWorkingRate` opera no nível de hook/dados).
+- Nenhuma mensagem de "Cotação inválida", "Snapshot taxas", "Contaminação de moeda", etc., será exibida.
+- O card aparece limpo, exatamente como um card normal.
+
+### 3. Salvaguarda silenciosa
+Quando um admin/usuário comum visualizar uma operação com cotação inválida no banco, o sistema:
+- Aplica fallback PTAX automaticamente (sem banner).
+- Loga o evento apenas no console se `isSystemOwner` ativo.
+- Não bloqueia nenhum fluxo de UX.
+
+### Arquivos afetados
+- `src/components/projeto-detalhe/SurebetCard.tsx` (gates condicionais)
+
+### Não afetados (continuam universais)
+- `useProjetoCurrency.ts`, `useProjetoWorkingRates.ts`, `exchangeRateGuard.ts` — protegem cálculos para todos.
+- `SurebetTracePanel.tsx` — componente continua existindo, apenas não é renderizado para não-owners.
