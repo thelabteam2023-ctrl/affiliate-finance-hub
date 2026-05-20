@@ -1305,8 +1305,9 @@ export function SurebetModalRoot({
           const s = parseFloat(ae.stake) || 0;
           const aeOdd = parseFloat(ae.odd) || 0;
           if (s <= 0 || aeOdd <= 0) return sum;
-          const payoutInAeMoeda = s * aeOdd;
           const aeMoeda = (ae.moeda as string) || legMoeda;
+          // Corrigindo: primeiro calcula o payout na moeda da sub-entrada, DEPOIS converte para a moeda da perna
+          const payoutInAeMoeda = s * aeOdd;
           return sum + convertViaBRL(payoutInAeMoeda, aeMoeda, legMoeda, brlRates);
         }, 0);
         
@@ -1314,6 +1315,7 @@ export function SurebetModalRoot({
       } else {
         calculatedStake = arredondarStake(targetReturnInLegCurrency / oddMedia);
       }
+
       const currentStake = parseFloat(o.stake) || 0;
       
       if (Math.abs(calculatedStake - currentStake) > 0.01) {
