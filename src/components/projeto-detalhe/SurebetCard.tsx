@@ -847,7 +847,22 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
     >
 
       <CardContent className="p-5 sm:p-6">
+        {/* Botão de Debug - Apenas visível quando há multicurrency ou anomalias */}
+        {(isMulticurrency || (roiExibir && (roiExibir > 50 || roiExibir < -10))) && (
+          <button 
+            onClick={() => setShowDebug(!showDebug)}
+            className={cn(
+              "absolute top-2 right-12 p-1.5 rounded-full transition-colors",
+              showDebug ? "bg-primary/20 text-primary" : "text-muted-foreground/30 hover:bg-muted"
+            )}
+            title="Abrir Auditoria Matemática"
+          >
+            <Bug className="h-4 w-4" />
+          </button>
+        )}
+
         {/* LINHA 1: Evento (título destacado) - com tooltip */}
+
         <TooltipProvider delayDuration={300}>
           <Tooltip>
             <TooltipTrigger asChild>
