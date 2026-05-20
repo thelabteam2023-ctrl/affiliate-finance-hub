@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge, SelectionBadge } from "@/components/ui/badge";
 import { format as formatDate } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeftRight, Zap, CheckCircle2, Clock, Coins, ChevronDown, ChevronUp, Layers, Building2, TrendingUp, Target, Gift, Bug } from "lucide-react";
+import { ArrowLeftRight, Zap, CheckCircle2, Clock, Coins, ChevronDown, ChevronUp, Layers, Building2, TrendingUp, Target, Gift, Bug, AlertTriangle } from "lucide-react";
 import { cn, getFirstLastName } from "@/lib/utils";
 import { formatBookmakerDisplay } from "@/lib/bookmaker-display";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -588,6 +588,18 @@ export function SurebetCard({
     };
   })();
 
+  const invalidRates = Object.entries(workingRatesMap)
+    .filter(([currency, rate]) => {
+      const isSuspect = ['USD', 'EUR', 'GBP', 'MXN', 'ARS', 'COP', 'MYR'].includes(currency);
+      return rate <= 0 || (isSuspect && Math.abs(rate - 1.0) < 0.001);
+    })
+    .map(([currency, rate]) => ({
+      currency,
+      rate,
+      officialRate: getOfficialRate(currency)
+    }));
+
+
   // Mapa de taxas oficiais para o alerta de drift
   const officialRatesMap = (() => {
     return {
@@ -921,7 +933,31 @@ export function SurebetCard({
       data-testid="surebet-card"
       data-operation-id={surebet.id}
       data-status={surebet.status}
+      data-has-invalid-rates={invalidRates.length > 0 ? 'true' : 'false'}
     >
+      {/* Banner de bloqueio por taxas inválidas */}
+      {invalidRates.length > 0 && (
+        <div 
+          data-testid="invalid-rates-banner"
+          className="bg-destructive/10 border-b border-destructive/30 px-4 py-2 flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-300"
+        >
+          <div className="flex items-center gap-2 text-destructive text-xs sm:text-sm font-medium">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span>
+              ⛔ Cálculo bloqueado — cotações de trabalho inválidas:
+              {invalidRates.map(r => (
+                <span key={r.currency} className="ml-1 opacity-90" data-testid={`invalid-rate-${r.currency.toLowerCase()}`}>
+                   {r.currency} ({r.rate.toFixed(4)})
+                </span>
+              ))}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-muted-foreground hidden sm:inline italic">Moedas estrangeiras não podem valer 1.0 BRL</span>
+          </div>
+        </div>
+      )}
+
 
       <CardContent className="p-5 sm:p-6">
         {/* Botão de Debug - Apenas visível quando há multicurrency ou anomalias */}

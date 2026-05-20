@@ -7,8 +7,10 @@ import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Info, Calculator, ArrowRight, Currency } from "lucide-react";
+import { Info, Calculator, ArrowRight, DollarSign, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CURRENCIES_THAT_CANNOT_BE_1 } from "@/utils/exchangeRateGuard";
+
 
 interface RateUsed {
   currency: string;
@@ -76,7 +78,7 @@ export function SurebetTracePanel({
                   isPnl ? "bg-emerald-500/10 text-emerald-500" :
                   "bg-amber-500/10 text-amber-500"
                 )}>
-                  {step.type === 'conversion' ? <Currency className="h-3 w-3" /> : <Calculator className="h-3 w-3" />}
+                  {step.type === 'conversion' ? <DollarSign className="h-3 w-3" /> : <Calculator className="h-3 w-3" />}
                 </div>
                 
                 <div className="flex-1">
@@ -167,17 +169,29 @@ export function SurebetTracePanel({
           
           <div className="flex flex-wrap gap-2 text-[10px] text-muted-foreground" data-testid="trace-rates-snapshot">
             <span className="font-semibold">Snapshot taxas:</span>
-            {Object.entries(workingRates).map(([currency, rate]) => (
-              <span 
-                key={currency} 
-                data-testid={`trace-rate-${currency.toLowerCase()}`} 
-                data-rate={rate}
-                className="border-r border-muted-foreground/30 pr-2 last:border-0"
-              >
-                {currency}: {rate.toFixed(4)}
-              </span>
-            ))}
+            {Object.entries(workingRates).map(([currency, rate]) => {
+              const isInvalid = CURRENCIES_THAT_CANNOT_BE_1.includes(currency) &&
+                Math.abs(rate - 1.0) < 0.001;
+
+              return (
+                <span 
+                  key={currency} 
+                  data-testid={`trace-rate-${currency.toLowerCase()}`} 
+                  data-rate={rate}
+                  data-is-invalid={isInvalid ? 'true' : 'false'}
+                  className={cn(
+                    "border-r border-muted-foreground/30 pr-2 last:border-0 flex items-center gap-1",
+                    isInvalid && "text-red-400 font-bold"
+                  )}
+                >
+                  {currency}: {rate.toFixed(4)}
+                  {isInvalid && <AlertTriangle className="h-2 w-2" />}
+                  {isInvalid && <span className="text-[8px] uppercase">Inválida</span>}
+                </span>
+              );
+            })}
           </div>
+
         </div>
       </CardContent>
     </Card>

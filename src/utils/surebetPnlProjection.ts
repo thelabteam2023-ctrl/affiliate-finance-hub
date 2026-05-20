@@ -4,6 +4,7 @@
  */
 
 import { LiquidationLeg } from "./surebetLiquidationUtils";
+import { validateExchangeRates } from "./exchangeRateGuard";
 
 export interface WorkingRates {
   [currency: string]: number;
@@ -15,6 +16,7 @@ export interface RateUsed {
   officialRate: number;
   source: 'working' | 'official' | 'fallback';
   usdRate: number; // Taxa final para converter da moeda original para USD
+  isInvalid?: boolean;
 }
 
 export interface PnlProjectionResult {
@@ -36,6 +38,7 @@ export interface PnlProjectionResult {
   isValid: boolean;
   currencyContamination: boolean;
   warningMessage?: string;
+  errorMessages?: string[];
 }
 
 /**
@@ -47,52 +50,61 @@ export function calculatePnlProjections(
   officialRates: Record<string, number> = {},
   displayCurrency: string = 'USD'
 ): PnlProjectionResult[] {
-  // 1. Calcular total investido em BRL (moeda base interna)
-  // totalNormalizedStake em LiquidationLeg já deve estar em BRL
+  // 1. Validar taxas antes de qualquer cálculo
+  const usedCurrencies: string[] = [];
+  liquidationLegs.forEach(leg => {
+    leg.houses.forEach(h => usedCurrencies.push(h.currency));
+  });
+
+  const validation = validateExchangeRates(workingRates, usedCurrencies);
+  
+  // 2. Calcular total investido em BRL (moeda base interna)
   const totalInvestedBRL = liquidationLegs.reduce(
     (sum, leg) => sum + leg.totalNormalizedStake,
     0
   );
 
-  // 2. Obter taxa BRL -> USD (display)
+  // 3. Obter taxa BRL -> USD (display)
   const brlToUSD = workingRates['USD'] || 1;
   const totalInvestedUSD = totalInvestedBRL / brlToUSD;
 
   const results: PnlProjectionResult[] = [];
 
   for (const leg of liquidationLegs) {
-    // 3. Calcular retorno da perna vencedora em BRL
+    // 4. Calcular retorno da perna vencedora em BRL
     const winnerReturnBRL = leg.totalNormalizedStake * leg.odd;
 
-    // 4. Converter retorno para USD
+    // 5. Converter retorno para USD
     const winnerReturnUSD = winnerReturnBRL / brlToUSD;
 
-    // 5. P&L em ambas as moedas
+    // 6. P&L em ambas as moedas
     const pnlBRL = winnerReturnBRL - totalInvestedBRL;
     const pnlUSD = winnerReturnUSD - totalInvestedUSD;
 
-    // 6. Registrar taxas usadas
+    // 7. Registrar taxas usadas
     const ratesUsed: RateUsed[] = leg.houses.map(house => {
       const workRate = workingRates[house.currency] || workingRates['USD'] || 1;
       const offRate = officialRates[house.currency] || 0;
       
-      // Se a moeda já é USD, a taxa para USD é 1
-      // Se é outra moeda (ex: MXN), convertemos MXN -> BRL (workRate) e BRL -> USD (1/brlToUSD)
       const usdRate = house.currency === 'USD' 
         ? 1 
         : workRate / brlToUSD;
+
+      const isInvalid = validation.errors.some(err => err.includes(house.currency));
 
       return {
         currency: house.currency,
         workingRate: workRate,
         officialRate: offRate,
-        source: 'working',
-        usdRate
+        source: isInvalid ? 'fallback' : 'working',
+        usdRate,
+        isInvalid
       };
     });
 
-    // 7. Validação
-    const isInvalid = isNaN(pnlUSD) || !isFinite(pnlUSD);
+    // 8. Validação final
+    const calculationInvalid = isNaN(pnlUSD) || !isFinite(pnlUSD);
+    const overallInvalid = !validation.valid || calculationInvalid;
     
     results.push({
       scenario: `${leg.legLabel} ganha`,
@@ -105,9 +117,10 @@ export function calculatePnlProjections(
       totalInvestedUSD,
       pnlUSD,
       ratesUsed,
-      isValid: !isInvalid,
-      currencyContamination: isInvalid,
-      warningMessage: isInvalid ? `Cálculo de P&L inválido para ${leg.legLabel}` : undefined
+      isValid: !overallInvalid,
+      currencyContamination: overallInvalid,
+      warningMessage: !validation.valid ? 'Cotações de trabalho inválidas detectadas' : (calculationInvalid ? `Cálculo de P&L inválido para ${leg.legLabel}` : undefined),
+      errorMessages: validation.errors
     });
   }
 
