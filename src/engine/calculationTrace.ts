@@ -30,15 +30,15 @@ export class CalculationTrace {
     this.parentId = parentId;
   }
 
-  step(name: string, data: Omit<TraceStep, 'id' | 'step' | 'timestamp' | 'parentId'>) {
+  step(name: string, data: Omit<TraceStep, "id" | "step" | "timestamp" | "parentId">) {
     if (!this.enabled) return;
-    
+
     this.steps.push({
       id: this.id,
       parentId: this.parentId,
       step: name,
       timestamp: Date.now(),
-      ...data
+      ...data,
     });
   }
 
@@ -52,7 +52,7 @@ export class CalculationTrace {
 
   finalize(outputs: any) {
     if (!this.enabled) return;
-    this.step('finalize', { inputs: null, outputs });
+    this.step("finalize", { inputs: null, outputs });
   }
 
   getSteps(): TraceStep[] {
@@ -61,5 +61,23 @@ export class CalculationTrace {
 
   getId(): string {
     return this.id;
+  }
+
+  /**
+   * Realiza a auditoria de hidratação e drift matemático.
+   * Útil para detectar quando dados salvos divergem do recálculo.
+   */
+  auditHydration(savedValue: number, currentValue: number, threshold = 0.005) {
+    if (!this.enabled) return;
+    const drift = Math.abs(currentValue - savedValue);
+    const driftPct = savedValue !== 0 ? (drift / savedValue) * 100 : 0;
+
+    if (driftPct > threshold) {
+      this.step("hydration_drift_detected", {
+        inputs: { saved: savedValue, current: currentValue },
+        outputs: { driftPct, threshold },
+        formula: "abs(current - saved) / saved * 100",
+      });
+    }
   }
 }
