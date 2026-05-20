@@ -81,9 +81,6 @@ export function SurebetRowActionsMenu({
   const handleQuickResolve = (type: "single_win" | "double_green" | "all_void", option: any) => {
     setIsOpen(false);
     
-    // Converter opção canônica para formato esperado pelo callback legado do SurebetCard
-    // O SurebetCard.onQuickResolve espera winners: number[] (índices das pernas originais)
-    
     const result: SurebetQuickResult = {
       type,
       label: option.label,
@@ -92,12 +89,14 @@ export function SurebetRowActionsMenu({
     };
 
     if (type === 'single_win') {
-      result.winners = [option.legIndex ?? 0];
-      result.entryIds = [option.entryId];
+      result.winners = [option.legIndex];
+      result.entryIds = option.houses.map((h: any) => h.entryId);
     } else if (type === 'double_green') {
-      result.entryIds = option.entryIds;
-      // Heurística para winners: se as entradas pertencem a pernas diferentes, adicionamos os índices
-      // Se for intra-leg, pode precisar de ajuste no handler pai
+      result.winners = [option.leg1.legIndex, option.leg2.legIndex];
+      result.entryIds = [
+        ...option.leg1.houses.map((h: any) => h.entryId),
+        ...option.leg2.houses.map((h: any) => h.entryId)
+      ];
     }
 
     setTimeout(() => {
