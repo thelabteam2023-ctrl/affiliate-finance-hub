@@ -10,18 +10,34 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Info, Calculator, ArrowRight, Currency } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface TraceStep {
+interface RateUsed {
+  currency: string;
+  workingRate: number;
+  officialRate?: number;
+  source: string;
+}
+
+export interface TraceStep {
   label: string;
   original: string;
   rate?: number;
   result: string;
-  type: 'conversion' | 'aggregation' | 'adjustment';
+  type: 'conversion' | 'aggregation' | 'adjustment' | 'pnl_projection';
+  // Novos campos para P&L
+  pnlUSD?: number;
+  winnerReturnUSD?: number;
+  totalInvestedUSD?: number;
+  ratesUsed?: RateUsed[];
+  legId?: string;
+  isContaminated?: boolean;
 }
 
 interface SurebetTracePanelProps {
   steps: TraceStep[];
   baseCurrency: string;
   isOpen?: boolean;
+  workingRates?: Record<string, number>;
+  officialRates?: Record<string, number>;
 }
 
 export function SurebetTracePanel({ steps, baseCurrency, isOpen = false }: SurebetTracePanelProps) {
