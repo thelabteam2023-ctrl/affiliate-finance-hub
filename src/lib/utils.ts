@@ -15,3 +15,16 @@ export function getFirstLastName(fullName: string): string {
   if (parts.length <= 2) return fullName;
   return `${parts[0]} ${parts[parts.length - 1]}`;
 }
+
+/**
+ * Extrai apenas o primeiro nome de um nome completo para uso em menções.
+ * Exemplo: "LABBET CONSULTORIA" => "LABBET"
+ */
+export function getDisplayFirstName(name?: string | null): string {
+  if (!name) return 'Usuário';
+  const cleaned = name.trim().replace(/\s+/g, ' ');
+  if (!cleaned) return 'Usuário';
+  const first = cleaned.split(' ')[0];
+  return first || 'Usuário';
+}
+
