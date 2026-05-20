@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge, SelectionBadge } from "@/components/ui/badge";
 import { format as formatDate } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeftRight, Zap, CheckCircle2, Clock, Coins, ChevronDown, ChevronUp, Layers, Building2, TrendingUp, Target, Gift } from "lucide-react";
+import { ArrowLeftRight, Zap, CheckCircle2, Clock, Coins, ChevronDown, ChevronUp, Layers, Building2, TrendingUp, Target, Gift, Bug } from "lucide-react";
 import { cn, getFirstLastName } from "@/lib/utils";
 import { formatBookmakerDisplay } from "@/lib/bookmaker-display";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -14,9 +14,11 @@ import { SurebetRowActionsMenu, type SurebetQuickResult } from "@/components/apo
 import { SurebetPernaResultPill } from "@/components/apostas/SurebetPernaResultPill";
 import { formatCurrency as formatCurrencyUtil } from "@/utils/formatCurrency";
 import { CurrencyBadge } from "@/components/ui/currency-display";
-import type { SupportedCurrency } from "@/hooks/useCurrencySnapshot";
 import { SurebetTracePanel } from "./SurebetTracePanel";
-import { Bug } from "lucide-react";
+import { liquidationQueue } from "@/utils/surebetLiquidationQueue";
+import { expandLegsWithSubEntries, generateLiquidationOptions } from "@/utils/surebetLiquidationUtils";
+import { validateBalanceForOperation } from "@/utils/surebetBalanceValidator";
+
 
 // Estrutura de entrada individual (para múltiplas entradas)
 export interface SurebetPernaEntry {
@@ -545,12 +547,53 @@ function PernaItem({
   );
 }
 
-export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuickResolve, onPernaResultChange, onSimpleQuickResolve, onDelete, onDuplicate, className, formatCurrency, convertToConsolidation, moedaConsolidacao, isBonusContext, bookmakerNomeMap }: SurebetCardProps) {
+export function SurebetCard({ 
+  surebet, 
+  onEdit, 
+  onQuickResolve, 
+  onSimpleMenuQuickResolve, 
+  onPernaResultChange, 
+  onSimpleQuickResolve, 
+  onDelete, 
+  onDuplicate, 
+  className, 
+  formatCurrency, 
+  convertToConsolidation, 
+  moedaConsolidacao, 
+  isBonusContext, 
+  bookmakerNomeMap 
+}: SurebetCardProps) {
   const [showDebug, setShowDebug] = useState(false);
-
-  // Hook para buscar logos das casas
   const { getLogoUrl } = useBookmakerLogoMap();
-  
+
+  // Expôr para debug e automação
+  useEffect(() => {
+    if (typeof window !== 'undefined' && (window as any).__CALC_DEBUG__) {
+      const debug = (window as any).__CALC_DEBUG__;
+      if (!debug.liquidationState) debug.liquidationState = {};
+
+      debug.liquidationState = {
+        ...debug.liquidationState,
+        sessionId: liquidationQueue.sessionId,
+        pendingActions: liquidationQueue.pendingCount,
+        isProcessing: liquidationQueue.isProcessing,
+        allEntries: expandLegsWithSubEntries(surebet.pernas || []),
+        liquidationOptions: generateLiquidationOptions(surebet.pernas || []),
+      };
+
+      debug.auditLiquidation = () => {
+        const state = debug.liquidationState;
+        console.group(`Auditoria de Liquidação — Operação ${surebet.id.slice(0, 8)}`);
+        console.log('Entradas expandidas:', state.allEntries.length);
+        console.log('Sub-entradas incluídas:', state.allEntries.filter((e: any) => e.isSubEntry).length);
+        console.log('Opções "Uma perna ganha":', state.liquidationOptions.singleWin.length);
+        console.log('Opções "Duplo Green":', state.liquidationOptions.doubleGreen.length);
+        console.log('Ações pendentes na fila:', state.pendingActions);
+        console.groupEnd();
+      };
+    }
+  }, [surebet, liquidationQueue.pendingCount, liquidationQueue.isProcessing]);
+
   // Usa formatCurrency do projeto ou fallback para BRL
   const formatValue = formatCurrency || defaultFormatCurrency;
   const isDuploGreen = surebet.estrategia === "DUPLO_GREEN";
@@ -837,13 +880,13 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
 
   return (
     <Card 
-      className={cn("transition-colors overflow-hidden", className)}
+      className={cn(
+        "overflow-hidden border-border/40 hover:border-primary/30 transition-all duration-300 group/card bg-card/40 backdrop-blur-sm",
+        className
+      )}
       data-testid="surebet-card"
-      data-calc-state={isLiquidada ? 'liquidated' : 'pending'}
-      data-is-multicurrency={isMulticurrency ? 'true' : 'false'}
-      data-base-currency={moedaConsolidacao}
-      data-total-normalized={stakeRealTotal}
-      data-roi={roiExibir}
+      data-operation-id={surebet.id}
+      data-status={surebet.status}
     >
 
       <CardContent className="p-5 sm:p-6">
@@ -897,14 +940,8 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
                 surebetId={surebet.id}
                 status={surebet.status || "PENDENTE"}
                 resultado={surebet.resultado || null}
-                pernas={(surebet.pernas || [])
-                  .filter(p => p.bookmaker_id && p.odd && p.odd > 0)
-                  .map((p, idx) => ({
-                    id: p.id,
-                    ordem: idx,
-                    selecao: p.selecao_livre || p.selecao || `Perna ${idx + 1}`,
-                    bookmaker_nome: p.bookmaker_nome,
-                  }))}
+                pernas={surebet.pernas || []}
+
                 onEdit={() => onEdit?.(surebet)}
                 onDuplicate={onDuplicate ? () => onDuplicate(surebet.id) : undefined}
                 onQuickResolve={(result) => {

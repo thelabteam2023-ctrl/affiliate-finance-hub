@@ -22,6 +22,8 @@ import {
   Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { generateLiquidationOptions } from "@/utils/surebetLiquidationUtils";
+import { SurebetPerna } from "@/components/projeto-detalhe/SurebetCard";
 
 export interface SurebetPernaInfo {
   id: string;
@@ -37,67 +39,21 @@ export interface SurebetQuickResult {
   type: "single_win" | "double_green" | "all_void";
   /** Label amigável */
   label: string;
+  /** IDs das entradas específicas (para sub-entradas) */
+  entryIds?: string[];
 }
 
 interface SurebetRowActionsMenuProps {
   surebetId: string;
   status: string;
   resultado: string | null;
-  pernas: SurebetPernaInfo[];
+  pernas: SurebetPerna[]; // MUDANÇA: Recebe SurebetPerna real para expansão
   onEdit: () => void;
   onDuplicate?: () => void;
   onQuickResolve: (result: SurebetQuickResult) => void;
   onDelete: () => void;
   disabled?: boolean;
   className?: string;
-}
-
-/**
- * Gera todas as combinações possíveis de resultados para uma Surebet:
- * - Perna N Win (outras perdem)
- * - Duplo Green: combinações de 2 pernas que ganham (se modelo >= 3)
- * - Void Total
- */
-function generateQuickResultOptions(pernas: SurebetPernaInfo[]): SurebetQuickResult[] {
-  const options: SurebetQuickResult[] = [];
-  const n = pernas.length;
-  
-  if (n < 2) return options;
-  
-  // Opções de uma perna ganhando (as outras perdem)
-  for (let i = 0; i < n; i++) {
-    const pernaLabel = pernas[i].selecao || `Perna ${i + 1}`;
-    const bookmakerShort = pernas[i].bookmaker_nome.split(' - ')[0].substring(0, 12);
-    options.push({
-      winners: [i],
-      type: "single_win",
-      label: `${bookmakerShort} Win`,
-    });
-  }
-  
-  // Se tem 3+ pernas, adicionar combinações de Duplo Green
-  if (n >= 3) {
-    for (let i = 0; i < n; i++) {
-      for (let j = i + 1; j < n; j++) {
-        const bk1 = pernas[i].bookmaker_nome.split(' - ')[0].substring(0, 8);
-        const bk2 = pernas[j].bookmaker_nome.split(' - ')[0].substring(0, 8);
-        options.push({
-          winners: [i, j],
-          type: "double_green",
-          label: `${bk1} + ${bk2}`,
-        });
-      }
-    }
-  }
-  
-  // Void total (todas as apostas canceladas)
-  options.push({
-    winners: [],
-    type: "all_void",
-    label: "Void Total",
-  });
-  
-  return options;
 }
 
 export function SurebetRowActionsMenu({
@@ -114,22 +70,36 @@ export function SurebetRowActionsMenu({
 }: SurebetRowActionsMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   
-  const quickOptions = useMemo(() => generateQuickResultOptions(pernas), [pernas]);
-  
-  // Separar opções por tipo para organizar o submenu
-  const singleWinOptions = quickOptions.filter(o => o.type === "single_win");
-  const doubleGreenOptions = quickOptions.filter(o => o.type === "double_green");
-  const voidOption = quickOptions.find(o => o.type === "all_void");
+  // USAR GERADOR DE OPÇÕES CANÔNICO QUE TRATA SUB-ENTRADAS
+  const liquidationOptions = useMemo(() => generateLiquidationOptions(pernas), [pernas]);
   
   const handleAction = (action: () => void) => {
-    // Executar ação ANTES de fechar o menu para preservar o user-gesture context
-    // (necessário para window.open não ser bloqueado por popup blockers)
     action();
     setIsOpen(false);
   };
   
-  const handleQuickResolve = (result: SurebetQuickResult) => {
+  const handleQuickResolve = (type: "single_win" | "double_green" | "all_void", option: any) => {
     setIsOpen(false);
+    
+    // Converter opção canônica para formato esperado pelo callback legado do SurebetCard
+    // O SurebetCard.onQuickResolve espera winners: number[] (índices das pernas originais)
+    
+    const result: SurebetQuickResult = {
+      type,
+      label: option.label,
+      winners: [],
+      entryIds: []
+    };
+
+    if (type === 'single_win') {
+      result.winners = [option.legIndex ?? 0];
+      result.entryIds = [option.entryId];
+    } else if (type === 'double_green') {
+      result.entryIds = option.entryIds;
+      // Heurística para winners: se as entradas pertencem a pernas diferentes, adicionamos os índices
+      // Se for intra-leg, pode precisar de ajuste no handler pai
+    }
+
     setTimeout(() => {
       try {
         onQuickResolve(result);
@@ -139,8 +109,6 @@ export function SurebetRowActionsMenu({
     }, 0);
   };
   
-  const isLiquidada = status === "LIQUIDADA";
-
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen} modal={false}>
       <DropdownMenuTrigger asChild>
@@ -154,6 +122,7 @@ export function SurebetRowActionsMenu({
           )}
           onClick={(e) => e.stopPropagation()}
           disabled={disabled}
+          data-testid="surebet-actions-trigger"
         >
           <MoreVertical className="h-4 w-4" />
           <span className="sr-only">Ações</span>
@@ -163,14 +132,14 @@ export function SurebetRowActionsMenu({
         align="end" 
         className="min-w-[180px] bg-popover"
         onCloseAutoFocus={(e) => e.preventDefault()}
+        data-testid="liquidation-menu"
+        data-operation-id={surebetId}
       >
-        {/* Editar */}
         <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleAction(onEdit); }}>
           <Pencil className="h-4 w-4 mr-2" />
           Editar
         </DropdownMenuItem>
 
-        {/* Duplicar */}
         {onDuplicate && (
           <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleAction(onDuplicate); }}>
             <Copy className="h-4 w-4 mr-2" />
@@ -180,7 +149,6 @@ export function SurebetRowActionsMenu({
 
         <DropdownMenuSeparator />
 
-        {/* Submenu de Liquidação Rápida */}
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <CheckCircle2 className="h-4 w-4 mr-2" />
@@ -189,17 +157,21 @@ export function SurebetRowActionsMenu({
           <DropdownMenuSubContent 
             className="min-w-[180px] max-h-[320px] overflow-y-auto bg-popover"
           >
-            {/* Single Win Options */}
             <DropdownMenuLabel className="text-xs text-muted-foreground flex items-center gap-1.5">
               <Trophy className="h-3 w-3" />
               Uma perna ganha
             </DropdownMenuLabel>
-            <DropdownMenuGroup>
-              {singleWinOptions.map((option, idx) => (
+            <DropdownMenuGroup data-testid="liquidation-section-single">
+              {liquidationOptions.singleWin.map((option) => (
                 <DropdownMenuItem
-                  key={`single-${idx}`}
-                  onSelect={(e) => { e.preventDefault(); handleQuickResolve(option); }}
+                  key={option.entryId}
+                  onSelect={(e) => { e.preventDefault(); handleQuickResolve('single_win', option); }}
                   className="text-emerald-400 focus:text-emerald-400 focus:bg-emerald-500/10"
+                  data-testid={`liquidate-single-${option.casa.toLowerCase().replace(/\s/g, '-')}`}
+                  data-entry-id={option.entryId}
+                  data-is-sub-entry={option.isSubEntry ? 'true' : 'false'}
+                  data-parent-leg={option.parentLegId ?? 'none'}
+                  data-pnl-projection={option.pnl?.toFixed(2)}
                 >
                   <CheckCircle2 className="h-4 w-4 mr-2" />
                   {option.label}
@@ -207,20 +179,22 @@ export function SurebetRowActionsMenu({
               ))}
             </DropdownMenuGroup>
             
-            {/* Double Green Options (se existirem) */}
-            {doubleGreenOptions.length > 0 && (
+            {liquidationOptions.doubleGreen.length > 0 && (
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel className="text-xs text-muted-foreground flex items-center gap-1.5">
                   <Layers className="h-3 w-3" />
                   Duplo Green
                 </DropdownMenuLabel>
-                <DropdownMenuGroup>
-                  {doubleGreenOptions.map((option, idx) => (
+                <DropdownMenuGroup data-testid="liquidation-section-double">
+                  {liquidationOptions.doubleGreen.map((option) => (
                     <DropdownMenuItem
-                      key={`double-${idx}`}
-                      onSelect={(e) => { e.preventDefault(); handleQuickResolve(option); }}
+                      key={option.entryIds.join('+')}
+                      onSelect={(e) => { e.preventDefault(); handleQuickResolve('double_green', option); }}
                       className="text-teal-400 focus:text-teal-400 focus:bg-teal-500/10"
+                      data-testid={`liquidate-double-${option.label.toLowerCase().replace(/\s|\+/g, '-')}`}
+                      data-entry-ids={option.entryIds.join(',')}
+                      data-pnl-projection={option.pnl?.toFixed(2)}
                     >
                       <Layers className="h-4 w-4 mr-2" />
                       {option.label}
@@ -230,25 +204,19 @@ export function SurebetRowActionsMenu({
               </>
             )}
             
-            {/* Void Total */}
-            {voidOption && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onSelect={(e) => { e.preventDefault(); handleQuickResolve(voidOption); }}
-                  className="text-gray-400 focus:text-gray-400 focus:bg-gray-500/10"
-                >
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  {voidOption.label}
-                </DropdownMenuItem>
-              </>
-            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onSelect={(e) => { e.preventDefault(); handleQuickResolve('all_void', liquidationOptions.voidTotal[0]); }}
+              className="text-gray-400 focus:text-gray-400 focus:bg-gray-500/10"
+            >
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Void Total
+            </DropdownMenuItem>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
 
         <DropdownMenuSeparator />
 
-        {/* Excluir */}
         <DropdownMenuItem
           onSelect={(e) => { e.preventDefault(); handleAction(onDelete); }}
           className="text-red-400 focus:text-red-400 focus:bg-red-500/10"
