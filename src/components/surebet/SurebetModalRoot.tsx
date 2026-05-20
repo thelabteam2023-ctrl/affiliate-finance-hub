@@ -261,18 +261,22 @@ export function SurebetModalRoot({
     }
   }, [numPernas, embedded, open]);
   const [odds, setOdds] = useState<OddEntry[]>(() => 
-    getDefaultSelecoes(2).map((sel, i) => ({
-      bookmaker_id: "",
-      moeda: "BRL" as SupportedCurrency,
-      odd: "",
-      stake: "",
-      selecao: sel,
-      selecaoLivre: "",
-      isReference: i === 0,
-      isManuallyEdited: false,
-      stakeOrigem: undefined,
-      additionalEntries: []
-    }))
+    getDefaultSelecoes(2).map((sel, i) => {
+      const entry = {
+        bookmaker_id: "",
+        moeda: "BRL" as SupportedCurrency,
+        odd: "",
+        stake: "",
+        selecao: sel,
+        selecaoLivre: "",
+        isReference: i === 0,
+        isManuallyEdited: false,
+        stakeOrigem: undefined,
+        additionalEntries: [],
+      };
+      HydrationAudit.mark(entry, "initial", { originalValue: 0 });
+      return entry;
+    })
   );
   
   const [directedProfitLegs, setDirectedProfitLegs] = useState<number[]>([0, 1]);
