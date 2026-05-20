@@ -275,13 +275,22 @@ export function useSurebetCalculator({
           hydrationState: {},
           dependencyGraph: {},
           exportSnapshot: () => JSON.stringify(window.__CALC_DEBUG__),
+          reproduce: (snapshot) => {
+            console.log("Reproducing from snapshot:", snapshot);
+          },
+          reproduceAndRender: (snapshot) => {
+            console.log("Reproducing and rendering from snapshot:", snapshot);
+          },
+          overrideExchangeRate: (from, to, rate) => {
+            console.log(`Overriding rate ${from} -> ${to} with ${rate}`);
+          },
         };
       }
       window.__CALC_DEBUG__.lastCalculation = finalResult;
       window.__CALC_DEBUG__.traces.push({
         id: trace.getId(),
         steps: trace.getSteps(),
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
       if (window.__CALC_DEBUG__.traces.length > 50) window.__CALC_DEBUG__.traces.shift();
     }
