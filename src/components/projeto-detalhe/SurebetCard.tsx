@@ -900,14 +900,8 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
                 surebetId={surebet.id}
                 status={surebet.status || "PENDENTE"}
                 resultado={surebet.resultado || null}
-                pernas={(surebet.pernas || [])
-                  .filter(p => p.bookmaker_id && p.odd && p.odd > 0)
-                  .map((p, idx) => ({
-                    id: p.id,
-                    ordem: idx,
-                    selecao: p.selecao_livre || p.selecao || `Perna ${idx + 1}`,
-                    bookmaker_nome: p.bookmaker_nome,
-                  }))}
+                pernas={surebet.pernas || []}
+
                 onEdit={() => onEdit?.(surebet)}
                 onDuplicate={onDuplicate ? () => onDuplicate(surebet.id) : undefined}
                 onQuickResolve={(result) => {
