@@ -94,16 +94,17 @@ export function useProjetoCurrency(projetoId: string | undefined): ProjectCurren
   const fonteCotacao = (projetoConfig?.fonte_cotacao as FonteCotacao) ?? "TRABALHO";
   const cotacaoTrabalho = projetoConfig?.cotacao_trabalho || null;
 
-  // Cotações de trabalho multi-moeda do projeto
+  // Cotações de trabalho multi-moeda do projeto com proteção de guardrail
   const workRates = useMemo(() => ({
-    USD: cotacaoTrabalho || cotacaoUSD,
-    EUR: (projetoConfig as any)?.cotacao_trabalho_eur || cotacaoEUR,
-    GBP: (projetoConfig as any)?.cotacao_trabalho_gbp || cotacaoGBP,
-    MYR: (projetoConfig as any)?.cotacao_trabalho_myr || cotacaoMYR,
-    MXN: (projetoConfig as any)?.cotacao_trabalho_mxn || cotacaoMXN,
-    ARS: (projetoConfig as any)?.cotacao_trabalho_ars || cotacaoARS,
-    COP: (projetoConfig as any)?.cotacao_trabalho_cop || cotacaoCOP,
+    USD: getSafeWorkingRate('USD', cotacaoTrabalho, cotacaoUSD).rate,
+    EUR: getSafeWorkingRate('EUR', (projetoConfig as any)?.cotacao_trabalho_eur, cotacaoEUR).rate,
+    GBP: getSafeWorkingRate('GBP', (projetoConfig as any)?.cotacao_trabalho_gbp, cotacaoGBP).rate,
+    MYR: getSafeWorkingRate('MYR', (projetoConfig as any)?.cotacao_trabalho_myr, cotacaoMYR).rate,
+    MXN: getSafeWorkingRate('MXN', (projetoConfig as any)?.cotacao_trabalho_mxn, cotacaoMXN).rate,
+    ARS: getSafeWorkingRate('ARS', (projetoConfig as any)?.cotacao_trabalho_ars, cotacaoARS).rate,
+    COP: getSafeWorkingRate('COP', (projetoConfig as any)?.cotacao_trabalho_cop, cotacaoCOP).rate,
   }), [projetoConfig, cotacaoTrabalho, cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP]);
+
 
   const cotacaoAtual = useMemo(() => {
     if (fonteCotacao === "TRABALHO" && cotacaoTrabalho) {
