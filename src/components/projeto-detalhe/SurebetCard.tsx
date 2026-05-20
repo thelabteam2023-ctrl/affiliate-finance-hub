@@ -905,7 +905,6 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
               .map((perna, legIndex) => (
                 <div key={perna.id} data-testid="surebet-leg-wrapper" data-leg-index={legIndex} data-currency={perna.moeda} data-sub-entries-count={perna.entries?.length ?? 0}>
                 <PernaItem 
-
                   perna={perna} 
                   formatValue={formatValue}
                   getLogoUrl={getLogoUrl}
@@ -955,6 +954,8 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
                     }
                   } : undefined}
                 />
+                </div>
+
               ))}
           </div>
         )}
