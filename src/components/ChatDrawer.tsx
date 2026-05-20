@@ -118,14 +118,22 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
     const checkAdminStatus = async () => {
       if (!user?.id || !workspace?.id) return;
       
-      const { data: memberData } = await supabase
+      console.log(`[ChatDrawer] Checking admin status for user ${user.id} in workspace ${workspace.id}`);
+      
+      const { data: memberData, error } = await supabase
         .from('workspace_members')
         .select('role')
         .eq('user_id', user.id)
         .eq('workspace_id', workspace.id)
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
 
+      if (error) {
+        console.error("[ChatDrawer] Error checking admin status:", error);
+        return;
+      }
+
+      console.log(`[ChatDrawer] User role found:`, memberData?.role);
       setIsAdmin(memberData?.role === 'admin' || memberData?.role === 'owner');
       setIsOwner(memberData?.role === 'owner');
     };
