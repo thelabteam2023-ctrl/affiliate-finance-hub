@@ -30,9 +30,11 @@ declare global {
       reproduce: (snapshot: string | any) => void;
       reproduceAndRender: (snapshot: string | any) => void;
       overrideExchangeRate: (from: string, to: string, rate: number) => void;
+      audit: () => void;
     };
   }
 }
+
 
 // ─── Re-exports para compatibilidade ──────────────────────────
 export type { SurebetEngineAnalysis as SurebetAnalysis, LegScenarioResult as LegScenario };
@@ -284,8 +286,24 @@ export function useSurebetCalculator({
           overrideExchangeRate: (from, to, rate) => {
             console.log(`Overriding rate ${from} -> ${to} with ${rate}`);
           },
+          audit: () => {
+            const last = window.__CALC_DEBUG__?.lastCalculation;
+            if (!last) return console.warn("Nenhum cálculo pendente para auditoria.");
+            
+            console.table(last.scenarios.map(s => ({
+              Perna: s.legIndex + 1,
+              Moeda: s.moeda,
+              Stake: s.stakeLocal,
+              "Stake (Base)": s.stakeConsolidado,
+              "Payout (Base)": s.payoutConsolidado,
+              Lucro: s.lucro,
+              ROI: `${s.roi.toFixed(2)}%`,
+              Válida: s.lucro >= 0 ? "✅" : "❌"
+            })));
+          }
         };
       }
+
       window.__CALC_DEBUG__.lastCalculation = finalResult;
       window.__CALC_DEBUG__.traces.push({
         id: trace.getId(),
