@@ -6,6 +6,7 @@ export type ChatBroadcastMessage =
   | { type: 'MESSAGE_SENT'; messageId: string }
   | { type: 'MESSAGE_UPDATED'; messageId: string }
   | { type: 'NEW_MESSAGE_COUNT'; count: number }
+  | { type: 'SOUND_PLAYED'; timestamp: number; messageId: string }
   | { type: 'PING' }
   | { type: 'PONG'; windowId: string };
 

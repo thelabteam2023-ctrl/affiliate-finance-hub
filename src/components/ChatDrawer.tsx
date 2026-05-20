@@ -196,11 +196,9 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
           if (payload.eventType === 'INSERT') {
             const newMessage = payload.new as ChatMessage;
             
-            // Lógica de notificação
+            // Notificação agora centralizada no ChatNotificationManager
+            // Apenas atualizamos a UI se o chat estiver aberto
             if (newMessage.user_id !== user?.id) {
-              if (isNotificationsEnabled) {
-                playNotificationSound();
-              }
               if (!isOpen) {
                 incrementUnread();
               }
