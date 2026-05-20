@@ -19,17 +19,25 @@ interface RateUsed {
   source: string;
 }
 
+export interface EntryBreakdown {
+  casa: string;
+  stakeOriginal: string;
+  stakeBRL: number;
+  stakeUSD: number;
+  conversionPath: string;
+}
+
 export interface TraceStep {
   label: string;
   original: string;
   rate?: number;
   result: string;
   type: 'conversion' | 'aggregation' | 'adjustment' | 'pnl_projection';
-  // Novos campos para P&L
   pnlUSD?: number;
   winnerReturnUSD?: number;
   totalInvestedUSD?: number;
   ratesUsed?: RateUsed[];
+  entriesBreakdown?: EntryBreakdown[];
   legId?: string;
   isContaminated?: boolean;
 }
@@ -96,10 +104,28 @@ export function SurebetTracePanel({
                           BRL→USD: {(1 / (workingRates['USD'] || 1)).toFixed(4)}
                         </Badge>
                       </div>
+
+                      {/* Breakdown detalhado das entradas se disponível */}
+                      {step.entriesBreakdown && step.entriesBreakdown.length > 0 && (
+                        <div className="pl-2 border-l-2 border-primary/20 space-y-0.5 my-1.5 bg-background/30 p-1.5 rounded-r">
+                          {step.entriesBreakdown.map((entry, eIdx) => (
+                            <div key={eIdx} className="text-[10px] text-muted-foreground flex flex-wrap items-center gap-x-1.5">
+                              <span className="font-bold text-primary/70">{entry.casa}:</span>
+                              <span>{entry.stakeOriginal}</span>
+                              <ArrowRight className="h-2 w-2 opacity-50" />
+                              <span className="italic">{entry.conversionPath}</span>
+                              <ArrowRight className="h-2 w-2 opacity-50" />
+                              <span className="font-mono text-[9px]">R${entry.stakeBRL.toFixed(2)}</span>
+                              <ArrowRight className="h-2 w-2 opacity-50" />
+                              <span className="font-bold text-emerald-500/80">${entry.stakeUSD.toFixed(2)} USD</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       
                       <div className="flex items-center gap-2 text-muted-foreground">
-                        <span>Retorno: ${step.winnerReturnUSD?.toFixed(2)}</span>
-                        <span>Total: ${step.totalInvestedUSD?.toFixed(2)}</span>
+                        <span data-testid={`return-usd-${step.legId}`}>Retorno: ${step.winnerReturnUSD?.toFixed(2)}</span>
+                        <span data-testid={`total-usd-${step.legId}`}>Total: ${step.totalInvestedUSD?.toFixed(2)}</span>
                         <ArrowRight className="h-3 w-3 text-primary" />
                         <Badge variant="secondary" className={cn(
                           "text-[10px] h-5 font-bold px-1.5",

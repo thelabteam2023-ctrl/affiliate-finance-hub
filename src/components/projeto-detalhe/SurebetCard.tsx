@@ -1434,6 +1434,7 @@ export function SurebetCard({
                   winnerReturnUSD: proj.winnerReturnUSD,
                   totalInvestedUSD: proj.totalInvestedUSD,
                   ratesUsed: proj.ratesUsed,
+                  entriesBreakdown: proj.entriesBreakdown,
                   legId: proj.legId,
                   isContaminated: proj.currencyContamination
                 });
