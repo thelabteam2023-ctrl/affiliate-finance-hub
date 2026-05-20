@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useChatNotifications } from '@/hooks/useChatNotifications';
+import { getDisplayFirstName } from '@/lib/utils';
+
 
 interface ChatNotificationManagerProps {
   isChatOpen: boolean;
@@ -52,10 +54,13 @@ export const ChatNotificationManager = ({ isChatOpen }: ChatNotificationManagerP
           // 5. Check for mentions to trigger global state/animation if needed
           const content = newMessage.content as string;
           const myName = (user as any).full_name || user.email?.split('@')[0];
-          if (content.includes(`@${myName}`)) {
+          const myFirst = getDisplayFirstName(myName);
+          
+          if (new RegExp(`@${myFirst}\\b`, 'i').test(content)) {
              // In the future, we could broadcast a 'MENTION_RECEIVED' event here
-             console.log('[ChatNotifications] Mention detected for user');
+             console.log('[ChatNotifications] Mention detected for user:', myFirst);
           }
+
         }
       )
       .subscribe((status) => {

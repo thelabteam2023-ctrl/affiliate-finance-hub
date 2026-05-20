@@ -15,7 +15,7 @@ import {
   Volume2,
   VolumeX
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, getDisplayFirstName } from '@/lib/utils';
 import { format, isToday, isYesterday, differenceInMinutes } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
@@ -495,8 +495,9 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
     const lastAtPos = newMessage.lastIndexOf('@', pos);
     const before = newMessage.substring(0, lastAtPos);
     const after = newMessage.substring(pos);
-    const name = member.name || member.email?.split('@')[0] || 'Usuário';
+    const name = getDisplayFirstName(member.name || member.email?.split('@')[0]);
     setNewMessage(`${before}@${name} ${after}`);
+
     setShowMentions(false);
     textareaRef.current?.focus();
   };
@@ -688,7 +689,9 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
                                    format(new Date(prevMsg.created_at), 'HH:mm') === format(new Date(msg.created_at), 'HH:mm');
                 
                 const myName = (user as any).full_name || user?.email?.split('@')[0];
-                const hasMentionMe = msg.content.includes(`@${myName}`);
+                const myFirst = getDisplayFirstName(myName);
+                const hasMentionMe = new RegExp(`@${myFirst}\\b`, 'i').test(msg.content);
+
 
                 return (
                   <React.Fragment key={msg.id}>
@@ -922,7 +925,7 @@ export const ChatDrawer = ({ isOpen, onClose }: ChatDrawerProps) => {
                       <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 border border-[#1e2128] rounded-full" />
                     )}
                   </div>
-                  <span className="truncate">{member.name}</span>
+                  <span className="truncate">{getDisplayFirstName(member.name)}</span>
                   {member.user_id === user?.id && <span className="text-[10px] text-gray-500 ml-auto">(Você)</span>}
                 </button>
               ))}
