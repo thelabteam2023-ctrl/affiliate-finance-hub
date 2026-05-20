@@ -638,6 +638,7 @@ export function SurebetCard({
   })();
 
   useEffect(() => {
+    if (!isSystemOwner) return;
     console.log("[SurebetCard] Audit Rates:", ratesAudit);
     console.log("[SurebetCard] Project Raw:", projectRatesRaw);
     console.log("[SurebetCard] Official Rate USD:", getOfficialRate("USD"));
@@ -667,7 +668,7 @@ export function SurebetCard({
         console.groupEnd();
       };
     }
-  }, [surebet, liquidationQueue.pendingCount, liquidationQueue.isProcessing]);
+  }, [surebet, liquidationQueue.pendingCount, liquidationQueue.isProcessing, isSystemOwner]);
 
   // Usa formatCurrency do projeto ou fallback para BRL
   const formatValue = formatCurrency || defaultFormatCurrency;
@@ -964,8 +965,8 @@ export function SurebetCard({
       data-status={surebet.status}
       data-has-invalid-rates={invalidRates.length > 0 ? 'true' : 'false'}
     >
-      {/* Banner de Alerta/Bloqueio por taxas inválidas */}
-      {invalidRates.length > 0 && (
+      {/* Banner de Alerta/Bloqueio por taxas inválidas — só para proprietários do sistema */}
+      {isSystemOwner && invalidRates.length > 0 && (
         <div 
           data-testid="invalid-rates-banner"
           className={cn(
@@ -1047,8 +1048,8 @@ export function SurebetCard({
 
 
       <CardContent className="p-5 sm:p-6">
-        {/* Botão de Debug - Apenas visível quando há multicurrency ou anomalias */}
-        {(isMulticurrency || (roiExibir && (roiExibir > 50 || roiExibir < -10))) && (
+        {/* Botão de Debug — restrito ao proprietário do sistema */}
+        {isSystemOwner && (isMulticurrency || (roiExibir && (roiExibir > 50 || roiExibir < -10))) && (
           <button 
             onClick={() => setShowDebug(!showDebug)}
             className={cn(
@@ -1367,7 +1368,8 @@ export function SurebetCard({
           </div>
         </div>
 
-        {/* Auditoria Visual */}
+        {/* Auditoria Visual — restrita ao proprietário do sistema */}
+        {isSystemOwner && (
         <SurebetTracePanel 
           isOpen={showDebug} 
           baseCurrency={moedaConsolidacao || "BRL"}
