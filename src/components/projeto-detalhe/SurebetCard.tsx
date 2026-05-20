@@ -17,6 +17,10 @@ import { CurrencyBadge } from "@/components/ui/currency-display";
 import { SurebetTracePanel } from "./SurebetTracePanel";
 import { liquidationQueue } from "@/utils/surebetLiquidationQueue";
 import { expandLegsWithSubEntries, generateLiquidationOptions } from "@/utils/surebetLiquidationUtils";
+import { calculatePnlProjections } from "@/utils/surebetPnlProjection";
+import { useProjetoWorkingRates } from "@/hooks/useProjetoWorkingRates";
+import { useCotacoes } from "@/hooks/useCotacoes";
+
 import { validateBalanceForOperation } from "@/utils/surebetBalanceValidator";
 
 
@@ -567,7 +571,37 @@ export function SurebetCard({
   const { getLogoUrl } = useBookmakerLogoMap();
 
   // Expôr para debug e automação
+  const { workingRates: projectRatesRaw } = useProjetoWorkingRates(surebet.workspace_id);
+  const { getRate: getOfficialRate } = useCotacoes();
+
+  // Mapear as taxas de trabalho do projeto para o formato simples [currency: string]: number
+  const workingRatesMap = (() => {
+    if (!projectRatesRaw) return { USD: 1 };
+    return {
+      USD: projectRatesRaw.cotacao_trabalho || 1,
+      EUR: projectRatesRaw.cotacao_trabalho_eur || 1,
+      GBP: projectRatesRaw.cotacao_trabalho_gbp || 1,
+      MYR: projectRatesRaw.cotacao_trabalho_myr || 1,
+      MXN: projectRatesRaw.cotacao_trabalho_mxn || 1,
+      ARS: projectRatesRaw.cotacao_trabalho_ars || 1,
+      COP: projectRatesRaw.cotacao_trabalho_cop || 1,
+    };
+  })();
+
+  // Mapa de taxas oficiais para o alerta de drift
+  const officialRatesMap = (() => {
+    return {
+      USD: getOfficialRate("USD") || 1,
+      EUR: getOfficialRate("EUR") || 1,
+      GBP: getOfficialRate("GBP") || 1,
+      MXN: getOfficialRate("MXN") || 1,
+      ARS: getOfficialRate("ARS") || 1,
+      COP: getOfficialRate("COP") || 1,
+    };
+  })();
+
   useEffect(() => {
+
     if (typeof window !== 'undefined' && (window as any).__CALC_DEBUG__) {
       const debug = (window as any).__CALC_DEBUG__;
       if (!debug.liquidationState) debug.liquidationState = {};
@@ -1214,6 +1248,9 @@ export function SurebetCard({
         <SurebetTracePanel 
           isOpen={showDebug} 
           baseCurrency={moedaConsolidacao || "BRL"}
+          workingRates={workingRatesMap}
+          officialRates={officialRatesMap}
+
           steps={(() => {
             const steps: any[] = [];
             (surebet.pernas || []).forEach((p, idx) => {
@@ -1255,16 +1292,29 @@ export function SurebetCard({
 
             // Se for Surebet, mostrar o P&L total projetado no trace
             if (!isSimplesMultiEntry && !isLiquidada) {
-              const options = generateLiquidationOptions(surebet.pernas || []);
-              options.singleWin.forEach(opt => {
+              const projections = calculatePnlProjections(
+                generateLiquidationOptions(surebet.pernas || []).liquidationLegs,
+                workingRatesMap,
+                officialRatesMap,
+                moedaConsolidacao || 'USD'
+              );
+
+              projections.forEach(proj => {
                 steps.push({
-                  label: `P&L Projetado: ${opt.label} Ganha`,
-                  original: `Odd ${opt.houses[0].odd.toFixed(2)}`,
-                  result: opt.pnl.toFixed(2),
-                  type: 'adjustment'
+                  label: `P&L Projetado: ${proj.legLabel} Ganha`,
+                  original: `Retorno BRL: ${proj.winnerReturnBRL.toFixed(2)}`,
+                  result: proj.pnlUSD.toFixed(2),
+                  type: 'pnl_projection',
+                  pnlUSD: proj.pnlUSD,
+                  winnerReturnUSD: proj.winnerReturnUSD,
+                  totalInvestedUSD: proj.totalInvestedUSD,
+                  ratesUsed: proj.ratesUsed,
+                  legId: proj.legId,
+                  isContaminated: proj.currencyContamination
                 });
               });
             }
+
 
             return steps;
           })()}
