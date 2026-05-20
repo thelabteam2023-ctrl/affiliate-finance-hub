@@ -501,7 +501,16 @@ function PernaItem({
       <CollapsibleContent className="animate-in slide-in-from-top-1 duration-200">
         <div className="mt-2 space-y-2 ml-[4.75rem] pl-4 border-l-2 border-primary/20">
           {perna.entries?.map((entry, idx) => (
-            <div key={idx} className="flex items-center gap-3 text-xs">
+            <div 
+              key={idx} 
+              className="flex items-center gap-3 text-xs"
+              data-testid="surebet-sub-entry"
+              data-moeda={entry.moeda}
+              data-stake={entry.stake}
+              data-odd={entry.odd}
+              data-bookmaker={entry.bookmaker_nome}
+            >
+
               {/* Logo menor */}
               <div className="h-8 w-8 shrink-0">
                 <SurebetBookmakerLogo nome={entry.bookmaker_nome} getLogoUrl={getLogoUrl} />
