@@ -1218,10 +1218,11 @@ export function SurebetCard({
             const steps: any[] = [];
             (surebet.pernas || []).forEach((p, idx) => {
               if (p.entries && p.entries.length > 0) {
+                // Agregar conversões de sub-entradas
                 p.entries.forEach((e, sIdx) => {
                   if (e.moeda && e.moeda !== moedaConsolidacao) {
                     steps.push({
-                      label: `P${idx+1} Entrada ${sIdx+1} (${e.bookmaker_nome})`,
+                      label: `P${idx+1} Casa ${sIdx+1}: ${e.bookmaker_nome}`,
                       original: `${e.moeda} ${e.stake}`,
                       rate: convertToConsolidation ? convertToConsolidation(1, e.moeda) : 1,
                       result: convertToConsolidation ? convertToConsolidation(e.stake, e.moeda).toFixed(2) : e.stake.toFixed(2),
@@ -1229,6 +1230,18 @@ export function SurebetCard({
                     });
                   }
                 });
+                
+                if (p.entries.length > 1) {
+                  const totalLegConsolidated = p.entries.reduce((sum, e) => 
+                    sum + (convertToConsolidation ? convertToConsolidation(e.stake, e.moeda || "BRL") : e.stake), 0
+                  );
+                  steps.push({
+                    label: `Agregação P${idx+1} (${p.entries.length} casas)`,
+                    original: p.entries.map(e => `${e.moeda || 'BRL'} ${e.stake}`).join(' + '),
+                    result: totalLegConsolidated.toFixed(2),
+                    type: 'aggregation'
+                  });
+                }
               } else if (p.moeda && p.moeda !== moedaConsolidacao) {
                 steps.push({
                   label: `P${idx+1} (${p.bookmaker_nome})`,
