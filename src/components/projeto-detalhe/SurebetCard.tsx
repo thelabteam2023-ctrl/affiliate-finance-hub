@@ -15,6 +15,9 @@ import { SurebetPernaResultPill } from "@/components/apostas/SurebetPernaResultP
 import { formatCurrency as formatCurrencyUtil } from "@/utils/formatCurrency";
 import { CurrencyBadge } from "@/components/ui/currency-display";
 import type { SupportedCurrency } from "@/hooks/useCurrencySnapshot";
+import { SurebetTracePanel } from "./SurebetTracePanel";
+import { Bug } from "lucide-react";
+
 // Estrutura de entrada individual (para múltiplas entradas)
 export interface SurebetPernaEntry {
   /** ID da perna no banco (apostas_pernas.id) — necessário para liquidação individual */
