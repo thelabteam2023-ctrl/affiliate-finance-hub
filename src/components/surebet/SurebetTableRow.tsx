@@ -193,6 +193,8 @@ export function SurebetTableRow({
         data-testid={`surebet-leg-${pernaIndex}`}
         data-currency={entry.moeda}
         data-calc-state={isProcessing ? "recomputing" : "idle"}
+        data-leg-index={pernaIndex}
+        data-calc-step="leg_row"
       >
         {/* Loading OCR */}
         {isProcessing && (

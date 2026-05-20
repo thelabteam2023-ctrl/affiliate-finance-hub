@@ -4,7 +4,7 @@
 
 import { useMemo, useCallback } from "react";
 import { type SupportedCurrency } from "@/hooks/useCurrencySnapshot";
-import { CalculationTrace } from "@/engine/calculationTrace";
+import { CalculationTrace, type TraceStep } from "@/engine/calculationTrace";
 import { runSurebetPipeline } from "@/engine/surebetPipeline";
 import {
   convertViaBRL,
@@ -14,6 +14,22 @@ import {
   type SurebetEngineAnalysis,
   type LegScenarioResult,
 } from "@/utils/surebetCurrencyEngine";
+
+declare global {
+  interface Window {
+    __CALC_DEBUG__?: {
+      lastCalculation: (SurebetEngineAnalysis & { traceId?: string }) | null;
+      traces: Array<{
+        id: string;
+        steps: TraceStep[];
+        timestamp: number;
+      }>;
+      hydrationState: Record<string, any>;
+      dependencyGraph: Record<string, any>;
+      exportSnapshot: () => string;
+    };
+  }
+}
 
 // ─── Re-exports para compatibilidade ──────────────────────────
 export type { SurebetEngineAnalysis as SurebetAnalysis, LegScenarioResult as LegScenario };
