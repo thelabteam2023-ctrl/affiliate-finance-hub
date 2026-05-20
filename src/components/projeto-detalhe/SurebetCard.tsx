@@ -627,6 +627,10 @@ export function SurebetCard({
   })();
 
   useEffect(() => {
+    console.log("[SurebetCard] Audit Rates:", ratesAudit);
+    console.log("[SurebetCard] Project Raw:", projectRatesRaw);
+    console.log("[SurebetCard] Official Rate USD:", getOfficialRate("USD"));
+
 
     if (typeof window !== 'undefined' && (window as any).__CALC_DEBUG__) {
       const debug = (window as any).__CALC_DEBUG__;
