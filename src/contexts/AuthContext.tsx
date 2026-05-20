@@ -11,6 +11,7 @@ import {
   markTabAsInitialized,
   getTabId
 } from "@/lib/tabWorkspace";
+import { notificationAudioManager } from "@/services/audio/notificationAudioManager";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -316,6 +317,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [tabId, secureLoginRecord]);
 
   // ── Bootstrap + listener ───────────────────────────────────
+
+  useEffect(() => {
+    const handleGlobalUnlock = () => {
+      notificationAudioManager.unlock();
+    };
+
+    document.addEventListener('click', handleGlobalUnlock, { once: true });
+    document.addEventListener('keydown', handleGlobalUnlock, { once: true });
+    document.addEventListener('touchstart', handleGlobalUnlock, { once: true });
+
+    return () => {
+      document.removeEventListener('click', handleGlobalUnlock);
+      document.removeEventListener('keydown', handleGlobalUnlock);
+      document.removeEventListener('touchstart', handleGlobalUnlock);
+    };
+  }, []);
 
   useEffect(() => {
     let mounted = true;
