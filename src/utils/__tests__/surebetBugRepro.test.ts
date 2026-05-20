@@ -3,6 +3,7 @@ import {
   analisarArbitragem,
   calcularStakesEqualizadasMultiCurrency,
   adjustStakeForSubEntries,
+  aggregateSubEntries,
   type EngineLeg,
   type SurebetEngineConfig,
   type BRLRates,
@@ -88,31 +89,23 @@ describe("BUG REPRO: Multi-Currency Surebet with Sub-Entries", () => {
     expect(analysis.minLucro).toBeCloseTo(Math.min(300 - expectedTotalUSD, 888.24 - expectedTotalUSD, 277.03 - expectedTotalUSD), 1);
   });
 
-  it("Testar adjustStakeForSubEntries com multi-moeda", () => {
-    // Este teste foca na função que parece ser o ponto cego
+  it("Testar aggregateSubEntries com multi-moeda", () => {
     const subEntries = [
         { odd: "3.00", stake: "100.00", moeda: "USD" },
         { odd: "3.00", stake: "1000.00", moeda: "BRL" }
     ];
     
-    const totalStakeNeededUSD = 300.00; // Queremos que a perna 2 tenha 300 USD no total
-    
-    const result = adjustStakeForSubEntries(
-        totalStakeNeededUSD,
-        3.00, // mainOdd
-        3.00, // oddMedia
+    const result = aggregateSubEntries(
         subEntries,
-        noRound,
-        EXCHANGE_RATES,
-        "USD" // legMoeda
+        "USD", // targetCurrency
+        EXCHANGE_RATES
     );
 
-    // Cálculo esperado:
-    // targetReturn = 300 * 3 = 900 USD
-    // subPayout = (100 * 3) [USD] + (1000 * 3) [BRL -> USD]
-    // subPayout = 300 USD + (3000 / 5.10) USD = 300 + 588.235 = 888.235 USD
-    // adjustedMainStake = (900 - 888.235) / 3 = 11.765 / 3 = 3.92 USD
+    // Cálculo esperado (USD):
+    // totalStake = 100 + (1000 / 5.10) = 100 + 196.078 = 296.08
+    // totalPayout = (100 * 3) + (1000 * 3 / 5.10) = 300 + 588.235 = 888.24
     
-    expect(result).toBeCloseTo(3.92, 2);
+    expect(result.totalStake).toBeCloseTo(296.08, 2);
+    expect(result.totalPayout).toBeCloseTo(888.24, 2);
   });
 });
