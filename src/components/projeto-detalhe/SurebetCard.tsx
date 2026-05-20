@@ -1289,16 +1289,29 @@ export function SurebetCard({
 
             // Se for Surebet, mostrar o P&L total projetado no trace
             if (!isSimplesMultiEntry && !isLiquidada) {
-              const options = generateLiquidationOptions(surebet.pernas || []);
-              options.singleWin.forEach(opt => {
+              const projections = calculatePnlProjections(
+                generateLiquidationOptions(surebet.pernas || []).liquidationLegs,
+                workingRatesMap,
+                officialRatesMap,
+                moedaConsolidacao || 'USD'
+              );
+
+              projections.forEach(proj => {
                 steps.push({
-                  label: `P&L Projetado: ${opt.label} Ganha`,
-                  original: `Odd ${opt.houses[0].odd.toFixed(2)}`,
-                  result: opt.pnl.toFixed(2),
-                  type: 'adjustment'
+                  label: `P&L Projetado: ${proj.legLabel} Ganha`,
+                  original: `Retorno BRL: ${proj.winnerReturnBRL.toFixed(2)}`,
+                  result: proj.pnlUSD.toFixed(2),
+                  type: 'pnl_projection',
+                  pnlUSD: proj.pnlUSD,
+                  winnerReturnUSD: proj.winnerReturnUSD,
+                  totalInvestedUSD: proj.totalInvestedUSD,
+                  ratesUsed: proj.ratesUsed,
+                  legId: proj.legId,
+                  isContaminated: proj.currencyContamination
                 });
               });
             }
+
 
             return steps;
           })()}
