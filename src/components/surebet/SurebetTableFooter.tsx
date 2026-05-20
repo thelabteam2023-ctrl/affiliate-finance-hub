@@ -7,7 +7,11 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatCurrency } from '@/components/bookmakers/BookmakerSelectOption';
-import { type SurebetAnalysis } from '@/hooks/useSurebetCalculator';
+import { type SurebetAnalysis as SurebetAnalysisBase } from '@/hooks/useSurebetCalculator';
+
+interface SurebetAnalysis extends SurebetAnalysisBase {
+  traceId?: string;
+}
 import { type SupportedCurrency } from '@/hooks/useCurrencySnapshot';
 
 interface SurebetTableFooterProps {
@@ -38,6 +42,10 @@ export function SurebetTableFooter({
     <div 
       className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border/50"
       data-testid="surebet-footer"
+      data-trace-id={analysis.traceId}
+      data-calc-state={analysis.stakeTotal > 0 ? "valid" : "invalid"}
+      data-hydration-state={isEditing ? "user" : "db"}
+      data-edit-state={isEditing ? "dirty" : "pristine"}
       data-currency={analysis.moedaDominante}
       data-normalized-value={analysis.stakeTotal}
     >

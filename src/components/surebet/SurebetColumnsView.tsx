@@ -143,6 +143,11 @@ export function SurebetColumnsView({
               className="flex flex-col rounded-lg border border-border/40 bg-card/50 overflow-hidden"
               onMouseEnter={() => !isEditing && onFocus(pernaIndex)}
               onMouseLeave={() => !isEditing && onBlur()}
+              data-testid="surebet-leg"
+              data-currency={entry.moeda}
+              data-normalized-value={scenario?.stakeConsolidado || 0}
+              data-calc-state="valid"
+              data-hydration-state={isEditing ? "user" : "db"}
             >
               {/* Header da coluna */}
               <div className="flex items-center justify-between px-3 py-2 bg-muted/30 border-b border-border/30">
