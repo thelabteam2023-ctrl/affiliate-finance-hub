@@ -19,17 +19,25 @@ interface RateUsed {
   source: string;
 }
 
+export interface EntryBreakdown {
+  casa: string;
+  stakeOriginal: string;
+  stakeBRL: number;
+  stakeUSD: number;
+  conversionPath: string;
+}
+
 export interface TraceStep {
   label: string;
   original: string;
   rate?: number;
   result: string;
   type: 'conversion' | 'aggregation' | 'adjustment' | 'pnl_projection';
-  // Novos campos para P&L
   pnlUSD?: number;
   winnerReturnUSD?: number;
   totalInvestedUSD?: number;
   ratesUsed?: RateUsed[];
+  entriesBreakdown?: EntryBreakdown[];
   legId?: string;
   isContaminated?: boolean;
 }
