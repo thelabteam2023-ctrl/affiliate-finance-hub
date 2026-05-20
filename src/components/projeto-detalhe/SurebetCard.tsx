@@ -588,6 +588,18 @@ export function SurebetCard({
     };
   })();
 
+  const invalidRates = Object.entries(workingRatesMap)
+    .filter(([currency, rate]) => {
+      const isSuspect = ['USD', 'EUR', 'GBP', 'MXN', 'ARS', 'COP', 'MYR'].includes(currency);
+      return rate <= 0 || (isSuspect && Math.abs(rate - 1.0) < 0.001);
+    })
+    .map(([currency, rate]) => ({
+      currency,
+      rate,
+      officialRate: getOfficialRate(currency)
+    }));
+
+
   // Mapa de taxas oficiais para o alerta de drift
   const officialRatesMap = (() => {
     return {
