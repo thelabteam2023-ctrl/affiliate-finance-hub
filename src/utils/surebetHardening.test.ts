@@ -93,4 +93,29 @@ describe("Surebet Liquidation Correction - Aggregated Legs", () => {
     // P&L Perna 1: 510.00 * 3 - 1530.15 = 1530.00 - 1530.15 = -0.15
     expect(perna1Option.pnl).toBeCloseTo(-0.15, 2);
   });
+
+  it("L4: Ao liquidar perna 2, AMBAS as casas são liquidadas", async () => {
+    const mockExecute = vi.fn().mockResolvedValue(undefined);
+    
+    // Simular clique na opção Perna 2
+    const options = generateLiquidationOptions(mockPernas);
+    const perna2Option = options.singleWin[1];
+    
+    // Enfileirar ações conforme lógica do componente
+    for (const house of perna2Option.houses) {
+      liquidationQueue.enqueue({
+        operationId: 'op1',
+        entryId: house.entryId,
+        result: 'GREEN'
+      });
+    }
+
+    expect(liquidationQueue.pendingCount).toBe(2);
+    
+    await liquidationQueue.flush(mockExecute);
+    
+    expect(mockExecute).toHaveBeenCalledTimes(2);
+    expect(mockExecute).toHaveBeenNthCalledWith(1, expect.objectContaining({ entryId: 'l2_sub_0' }));
+    expect(mockExecute).toHaveBeenNthCalledWith(2, expect.objectContaining({ entryId: 'l2_sub_1' }));
+  });
 });
