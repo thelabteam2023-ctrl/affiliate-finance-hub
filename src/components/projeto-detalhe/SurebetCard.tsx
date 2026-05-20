@@ -943,59 +943,59 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
                     data-sub-entries-currencies={subCurrencies}
                   >
                   <PernaItem 
-
-                  perna={perna} 
-                  formatValue={formatValue}
-                  getLogoUrl={getLogoUrl}
-                  bookmakerNomeMap={bookmakerNomeMap}
-                  convertToConsolidation={convertToConsolidation}
-                  parentResultado={isSimplesMultiEntry ? surebet.resultado : undefined}
-                  onResultChange={
-                    // CASO 1: Aposta simples multi-entry (PUNTER, VALUEBET, DUPLO_GREEN, EXTRACAO_BONUS, FREEBET, SIMPLES)
-                    // → resultado é único para toda a aposta. O badge dispara reliquidação global via reliquidar_aposta_v6.
-                    isSimplesMultiEntry && onSimpleQuickResolve ? async (resultado: string) => {
-                      await onSimpleQuickResolve(surebet.id, resultado);
-                    }
-                    // CASO 2: Surebet/Múltipla real → liquidação por perna individual
-                    : !isSimplesMultiEntry && onPernaResultChange && perna.bookmaker_id ? async (resultado: string) => {
-                    // CORREÇÃO: Para pernas agrupadas (múltiplas entradas/casas),
-                    // liquidar TODAS as sub-entradas, não apenas a primeira.
-                    if (perna.entries && perna.entries.length > 1) {
-                      for (const entry of perna.entries) {
-                        if (!entry.id || !entry.bookmaker_id) continue;
+                    perna={perna} 
+                    formatValue={formatValue}
+                    getLogoUrl={getLogoUrl}
+                    bookmakerNomeMap={bookmakerNomeMap}
+                    convertToConsolidation={convertToConsolidation}
+                    parentResultado={isSimplesMultiEntry ? surebet.resultado : undefined}
+                    onResultChange={
+                      // CASO 1: Aposta simples multi-entry (PUNTER, VALUEBET, DUPLO_GREEN, EXTRACAO_BONUS, FREEBET, SIMPLES)
+                      // → resultado é único para toda a aposta. O badge dispara reliquidação global via reliquidar_aposta_v6.
+                      isSimplesMultiEntry && onSimpleQuickResolve ? async (resultado: string) => {
+                        await onSimpleQuickResolve(surebet.id, resultado);
+                      }
+                      // CASO 2: Surebet/Múltipla real → liquidação por perna individual
+                      : !isSimplesMultiEntry && onPernaResultChange && perna.bookmaker_id ? async (resultado: string) => {
+                      // CORREÇÃO: Para pernas agrupadas (múltiplas entradas/casas),
+                      // liquidar TODAS as sub-entradas, não apenas a primeira.
+                      if (perna.entries && perna.entries.length > 1) {
+                        for (const entry of perna.entries) {
+                          if (!entry.id || !entry.bookmaker_id) continue;
+                          await onPernaResultChange({
+                            pernaId: entry.id,
+                            surebetId: surebet.id,
+                            bookmarkerId: entry.bookmaker_id,
+                            resultado,
+                            stake: entry.stake,
+                            odd: entry.odd,
+                            moeda: entry.moeda || 'BRL',
+                            resultadoAnterior: perna.resultado,
+                            workspaceId: surebet.workspace_id || '',
+                            bookmakerNome: entry.bookmaker_nome,
+                            silent: true,
+                          });
+                        }
+                      } else {
                         await onPernaResultChange({
-                          pernaId: entry.id,
+                          pernaId: perna.id,
                           surebetId: surebet.id,
-                          bookmarkerId: entry.bookmaker_id,
+                          bookmarkerId: perna.bookmaker_id!,
                           resultado,
-                          stake: entry.stake,
-                          odd: entry.odd,
-                          moeda: entry.moeda || 'BRL',
+                          stake: perna.stake,
+                          odd: perna.odd,
+                          moeda: perna.moeda || 'BRL',
                           resultadoAnterior: perna.resultado,
                           workspaceId: surebet.workspace_id || '',
-                          bookmakerNome: entry.bookmaker_nome,
-                          silent: true,
+                          bookmakerNome: perna.bookmaker_nome,
                         });
                       }
-                    } else {
-                      await onPernaResultChange({
-                        pernaId: perna.id,
-                        surebetId: surebet.id,
-                        bookmarkerId: perna.bookmaker_id!,
-                        resultado,
-                        stake: perna.stake,
-                        odd: perna.odd,
-                        moeda: perna.moeda || 'BRL',
-                        resultadoAnterior: perna.resultado,
-                        workspaceId: surebet.workspace_id || '',
-                        bookmakerNome: perna.bookmaker_nome,
-                      });
-                    }
-                  } : undefined}
-                />
-                </div>
+                    } : undefined}
+                  />
+                  </div>
+                );
+              })}
 
-              ))}
           </div>
         )}
         
