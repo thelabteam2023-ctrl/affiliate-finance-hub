@@ -34,7 +34,7 @@ describe('Surebet Math Determinism & Trace', () => {
 
     const steps = trace.getSteps();
     
-    expect(steps.some(s => s.step === 'currency_normalization')).toBe(true);
+    expect(steps.some(s => s.step === 'currency_conversion')).toBe(true);
     expect(steps.some(s => s.step === 'stake_distribution')).toBe(true);
     expect(steps.some(s => s.step === 'payout_projection')).toBe(true);
 
