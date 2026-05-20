@@ -119,24 +119,35 @@ export function convertViaBRL(
   brlRates: BRLRates,
   trace?: CalculationTrace
 ): number {
-  if (from.toUpperCase() === to.toUpperCase()) return valor;
+  if (!from || !to) return valor;
+  const fromUpper = from.toUpperCase();
+  const toUpper = to.toUpperCase();
+  
+  if (fromUpper === toUpper) return valor;
   if (valor === 0) return 0;
 
-  const fromRate = getBRLRate(from, brlRates);
-  const toRate = getBRLRate(to, brlRates);
+  const fromRate = getBRLRate(fromUpper, brlRates);
+  const toRate = getBRLRate(toUpper, brlRates);
 
   if (toRate === 0) return 0;
 
   const result = (valor * fromRate) / toRate;
 
-  trace?.step("currency_normalization", {
-    inputs: { valor, from, to },
-    outputs: { result },
-    currencyIn: from,
-    currencyOut: to,
-    rate: fromRate / toRate,
-    formula: `(${valor} * ${fromRate}) / ${toRate}`
-  });
+  if (trace) {
+    trace.step("currency_conversion", {
+      inputs: { valor, from: fromUpper, to: toUpper },
+      outputs: { result },
+      currencyIn: fromUpper,
+      currencyOut: toUpper,
+      rate: fromRate / toRate,
+      formula: `(${valor} * ${fromRate}) / ${toRate}`
+    });
+    
+    // Detectar contaminação (BRL como pivô mas verificando se há taxas nulas)
+    if (fromRate === 1 && fromUpper !== "BRL") {
+      trace.step("currency_warning", { inputs: { fromUpper }, outputs: { warning: "Rate not found, using 1.0" } });
+    }
+  }
 
   return result;
 }
@@ -159,7 +170,7 @@ export function adjustStakeForSubEntries(
     const aeOdd = parseFloat(ae.odd) || 0;
     if (s <= 0 || aeOdd <= 0) return sum;
     const payoutLocal = s * aeOdd;
-    if (brlRates && legMoeda && ae.moeda && ae.moeda !== legMoeda) {
+    if (brlRates && legMoeda && ae.moeda && ae.moeda.toUpperCase() !== legMoeda.toUpperCase()) {
       return sum + convertViaBRL(payoutLocal, ae.moeda, legMoeda, brlRates, trace);
     }
     return sum + payoutLocal;

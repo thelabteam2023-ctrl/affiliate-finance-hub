@@ -4,7 +4,7 @@
 
 import { useMemo, useCallback } from "react";
 import { type SupportedCurrency } from "@/hooks/useCurrencySnapshot";
-import { CalculationTrace } from "@/engine/calculationTrace";
+import { CalculationTrace, type TraceStep } from "@/engine/calculationTrace";
 import { runSurebetPipeline } from "@/engine/surebetPipeline";
 import {
   convertViaBRL,
@@ -14,6 +14,22 @@ import {
   type SurebetEngineAnalysis,
   type LegScenarioResult,
 } from "@/utils/surebetCurrencyEngine";
+
+declare global {
+  interface Window {
+    __CALC_DEBUG__?: {
+      lastCalculation: (SurebetEngineAnalysis & { traceId?: string }) | null;
+      traces: Array<{
+        id: string;
+        steps: TraceStep[];
+        timestamp: number;
+      }>;
+      hydrationState: Record<string, any>;
+      dependencyGraph: Record<string, any>;
+      exportSnapshot: () => string;
+    };
+  }
+}
 
 // ─── Re-exports para compatibilidade ──────────────────────────
 export type { SurebetEngineAnalysis as SurebetAnalysis, LegScenarioResult as LegScenario };
@@ -210,7 +226,7 @@ export function useSurebetCalculator({
   }, [safeConfig.brlRates, getMoedaPerna]);
 
   // CALCULATION PIPELINE WITH TRACE
-  const analysis = useMemo((): SurebetEngineAnalysis => {
+  const analysis = useMemo((): SurebetEngineAnalysis & { traceId?: string } => {
     const trace = new CalculationTrace(true);
     
     const engineLegs: EngineLeg[] = odds.map((o) => {
@@ -242,14 +258,32 @@ export function useSurebetCalculator({
       equalizedStakesSnapshot
     }, trace);
 
-    // Global bridge update
-    if (typeof window !== 'undefined' && window.__CALC_DEBUG__) {
-      window.__CALC_DEBUG__.lastCalculation = result;
-      window.__CALC_DEBUG__.traces.push(trace.getSteps());
+    const finalResult = {
+      ...result,
+      traceId: trace.getId()
+    };
+
+    // Global bridge update for AI-debuggable engine
+    if (typeof window !== 'undefined') {
+      if (!window.__CALC_DEBUG__) {
+        window.__CALC_DEBUG__ = {
+          lastCalculation: null,
+          traces: [],
+          hydrationState: {},
+          dependencyGraph: {},
+          exportSnapshot: () => JSON.stringify(window.__CALC_DEBUG__),
+        };
+      }
+      window.__CALC_DEBUG__.lastCalculation = finalResult;
+      window.__CALC_DEBUG__.traces.push({
+        id: trace.getId(),
+        steps: trace.getSteps(),
+        timestamp: Date.now()
+      });
       if (window.__CALC_DEBUG__.traces.length > 50) window.__CALC_DEBUG__.traces.shift();
     }
 
-    return result;
+    return finalResult;
   }, [odds, directedProfitLegs, numPernas, arredondarStake, safeConfig, getMoedaPerna, getOddMediaPerna, getStakeTotalPerna, equalizedStakesSnapshot]);
 
   return {
