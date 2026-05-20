@@ -184,15 +184,19 @@ export function SurebetTableRow({
   return (
     <>
       <tr 
-        className={`border-b border-border/30 relative ${
+        className={cn(
+          "border-b border-border/30 relative",
           isFocused ? "bg-muted/30" : "hover:bg-muted/20"
-        }`}
-        style={{ height: '78px' }}
+        )}
+        style={{ height: "78px" }}
         onMouseEnter={() => !isEditing && onFocus(pernaIndex)}
         onMouseLeave={() => !isEditing && onBlur()}
-        data-testid={`surebet-leg-${pernaIndex}`}
+        data-testid="surebet-leg"
         data-currency={entry.moeda}
-        data-calc-state={isProcessing ? "recomputing" : "idle"}
+        data-normalized-value={scenario?.stakeConsolidado || 0}
+        data-calc-state={isProcessing ? "recomputing" : "valid"}
+        data-hydration-state={isEditing ? "user" : "db"}
+        data-edit-state={isEditing ? "dirty" : "pristine"}
         data-leg-index={pernaIndex}
         data-calc-step="leg_row"
       >
