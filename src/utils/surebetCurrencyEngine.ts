@@ -193,6 +193,35 @@ export function adjustStakeForSubEntries(
   return result;
 }
 
+/**
+ * Agrega sub-entradas normalizando para uma moeda comum
+ */
+export function aggregateSubEntries(
+  subEntries: Array<{ odd: string; stake: string; moeda?: string }>,
+  targetCurrency: string,
+  brlRates: BRLRates,
+  trace?: CalculationTrace
+): {
+  totalStake: number;
+  totalPayout: number;
+} {
+  return subEntries.reduce((acc, ae) => {
+    const s = parseFloat(ae.stake) || 0;
+    const odd = parseFloat(ae.odd) || 0;
+    if (s <= 0 || odd <= 0) return acc;
+    
+    const moeda = (ae.moeda || targetCurrency).toUpperCase();
+    const normalizedStake = convertViaBRL(s, moeda, targetCurrency, brlRates, trace);
+    const normalizedPayout = convertViaBRL(s * odd, moeda, targetCurrency, brlRates, trace);
+    
+    return {
+      totalStake: acc.totalStake + normalizedStake,
+      totalPayout: acc.totalPayout + normalizedPayout,
+    };
+  }, { totalStake: 0, totalPayout: 0 });
+}
+
+
 export function calcularStakesEqualizadasMultiCurrency(
   legs: EngineLeg[],
   config: SurebetEngineConfig,
