@@ -1300,6 +1300,33 @@ export function SurebetCard({
           baseCurrency={moedaConsolidacao || "BRL"}
           workingRates={workingRatesMap}
           officialRates={officialRatesMap}
+          invalidRates={invalidRates}
+          onReloadRates={refetchProjectRates}
+          onConfirmRates={async () => {
+            const { toast } = await import("sonner");
+            const { supabase } = await import("@/integrations/supabase/client");
+            
+            try {
+              const updates: any = {};
+              invalidRates.forEach(r => {
+                const field = r.currency === 'USD' ? 'cotacao_trabalho' : `cotacao_trabalho_${r.currency.toLowerCase()}`;
+                updates[field] = r.officialRate;
+              });
+              
+              const { error } = await supabase
+                .from('projetos')
+                .update(updates)
+                .eq('id', surebet.workspace_id);
+                
+              if (error) throw error;
+              toast.success("Cotações de trabalho sincronizadas com o projeto!");
+              refetchProjectRates(); // Forçar atualização do UI
+            } catch (err) {
+              console.error(err);
+              toast.error("Erro ao atualizar cotações.");
+            }
+          }}
+
 
           steps={(() => {
             const steps: any[] = [];
