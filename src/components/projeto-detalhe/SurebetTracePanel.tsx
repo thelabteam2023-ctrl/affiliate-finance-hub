@@ -78,7 +78,7 @@ export function SurebetTracePanel({
                   isPnl ? "bg-emerald-500/10 text-emerald-500" :
                   "bg-amber-500/10 text-amber-500"
                 )}>
-                  {step.type === 'conversion' ? <Currency className="h-3 w-3" /> : <Calculator className="h-3 w-3" />}
+                  {step.type === 'conversion' ? <DollarSign className="h-3 w-3" /> : <Calculator className="h-3 w-3" />}
                 </div>
                 
                 <div className="flex-1">
