@@ -27,6 +27,8 @@ import { useSurebetPrintImport } from "@/hooks/useSurebetPrintImport";
 import { useSurebetCalculator, type OddEntry, type OddFormEntry } from "@/hooks/useSurebetCalculator";
 import { pernasToInserts } from "@/types/apostasPernas";
 import { type SurebetEngineConfig, convertViaBRL } from "@/utils/surebetCurrencyEngine";
+import { HydrationAudit } from "@/engine/hydrationAudit";
+
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -590,6 +592,8 @@ export function SurebetModalRoot({
           stakeOrigem: undefined,
           additionalEntries: []
         }));
+        
+        rascunhoOdds.forEach(o => HydrationAudit.mark(o, "draft", { originalValue: parseFloat(o.stake) || 0 }));
         setOdds(rascunhoOdds);
         setDirectedProfitLegs(Array.from({ length: numPernasRascunho }, (_, i) => i));
       } else {
@@ -723,11 +727,14 @@ export function SurebetModalRoot({
       groups.get(key)!.push(perna);
     }
 
+    const source: any = surebet?.id ? "db" : "print";
+
     const pernasOdds: OddEntry[] = groupOrder.map((key, groupIdx) => {
       const groupPernas = groups.get(key)!;
       const mainPerna = groupPernas[0];
       const additionalPernas = groupPernas.slice(1);
-      return {
+      
+      const entry: OddEntry = {
         bookmaker_id: mainPerna.bookmaker_id || "",
         moeda: (mainPerna.moeda || "BRL") as SupportedCurrency,
         odd: mainPerna.odd?.toString() || "",
@@ -752,6 +759,9 @@ export function SurebetModalRoot({
           pernaId: preserveIds ? sub.id : undefined,
         })),
       };
+
+      HydrationAudit.mark(entry, source, { originalValue: parseFloat(mainPerna.stake?.toString() || "0") });
+      return entry;
     });
 
     setOdds(pernasOdds);
