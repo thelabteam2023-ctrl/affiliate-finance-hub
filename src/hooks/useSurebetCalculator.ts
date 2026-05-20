@@ -252,5 +252,15 @@ export function useSurebetCalculator({
     return result;
   }, [odds, directedProfitLegs, numPernas, arredondarStake, safeConfig, getMoedaPerna, getOddMediaPerna, getStakeTotalPerna, equalizedStakesSnapshot]);
 
-  return analysis;
+  return {
+    analysis,
+    calculatedStakes: analysis.calculatedStakesLocal,
+    equalizedTargetStakes: analysis.calculatedStakesLocal, // Simplificado para compatibilidade
+    targetPayoutsLocal: analysis.scenarios.map(s => s.payoutLocal),
+    pernasValidas: odds.filter((_, i) => analysis.scenarios[i].payoutLocal > 0),
+    arredondarStake,
+    getOddMediaPerna,
+    getStakeTotalPerna,
+    directedStakes: analysis.calculatedStakesLocal
+  };
 }
