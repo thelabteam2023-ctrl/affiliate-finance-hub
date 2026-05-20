@@ -573,7 +573,8 @@ export function SurebetCard({
   const { getLogoUrl } = useBookmakerLogoMap();
 
   // Expôr para debug e automação
-  const { workingRates: projectRatesRaw } = useProjetoWorkingRates(surebet.workspace_id);
+  const { workingRates: projectRatesRaw, refetch: refetchProjectRates } = useProjetoWorkingRates(surebet.workspace_id);
+
   const { getRate: getOfficialRate } = useCotacoes();
 
   // Mapear as taxas de trabalho do projeto com proteção contra valores inválidos
