@@ -73,9 +73,10 @@ describe("SUREBET ENGINE Hardening - Comprehensive Tests", () => {
     
     analisarArbitragem(legs, [100, 100], config, 2, trace);
     
-    const conversions = trace.getSteps().filter(s => s.type === 'currency_conversion');
+    const conversions = trace.getSteps().filter(s => s.step === 'currency_conversion');
     expect(conversions.length).toBeGreaterThanOrEqual(2);
   });
+
 
   it("5.4 - Invariantes matemáticos (Coverage vs Profit)", () => {
     const config = makeConfig("BRL", EXCHANGE_RATES);
