@@ -824,7 +824,14 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
   return (
     <Card 
       className={cn("transition-colors overflow-hidden", className)}
+      data-testid="surebet-card"
+      data-calc-state={isLiquidada ? 'liquidated' : 'pending'}
+      data-is-multicurrency={isMulticurrency ? 'true' : 'false'}
+      data-base-currency={moedaConsolidacao}
+      data-total-normalized={stakeRealTotal}
+      data-roi={roiExibir}
     >
+
       <CardContent className="p-5 sm:p-6">
         {/* LINHA 1: Evento (título destacado) - com tooltip */}
         <TooltipProvider delayDuration={300}>
