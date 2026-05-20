@@ -53,7 +53,6 @@ export function calculatePnlProjections(
   // 1. Validar taxas antes de qualquer cálculo
   const usedCurrencies: string[] = [];
   liquidationLegs.forEach(leg => {
-    usedCurrencies.push(leg.currency);
     leg.houses.forEach(h => usedCurrencies.push(h.currency));
   });
 
