@@ -287,6 +287,11 @@ export function SurebetExecutionTable({
                     "border-b border-border/20 hover:bg-muted/20 transition-colors",
                     isFirstInLeg && "border-t border-border/40"
                   )}
+                  data-testid="surebet-leg"
+                  data-currency={entry.moeda}
+                  data-normalized-value={parseFloat(entry.stake) || 0}
+                  data-calc-state="valid"
+                  data-hydration-state="user"
                 >
                   {/* Perna (com rowspan) */}
                   {isFirstInLeg && (
