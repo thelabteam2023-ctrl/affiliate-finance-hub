@@ -8,6 +8,7 @@ import { expandLegsWithSubEntries } from "./surebetLiquidationUtils";
 export interface BalanceValidationResult {
   valid: boolean;
   errors: Array<{
+    bookmakerId: string;
     casa: string;
     currency: string;
     required: number;
@@ -19,11 +20,6 @@ export interface BalanceValidationResult {
 
 /**
  * Valida se há saldo suficiente para registrar ou editar a operação.
- * 
- * @param legs Pernas da operação
- * @param balances Record de bookmakerId -> saldo (valor nativo)
- * @param isEditMode Se está em modo edição
- * @param originalStakes Record de entryId -> stake original (para liberar virtualmente)
  */
 export function validateBalanceForOperation(
   legs: SurebetPerna[],
@@ -32,22 +28,54 @@ export function validateBalanceForOperation(
   originalStakes?: Record<string, number>
 ): BalanceValidationResult {
   const entries = expandLegsWithSubEntries(legs);
-  const errors = [];
+  const errors: BalanceValidationResult['errors'] = [];
 
-  // Agrupar stakes por bookmaker_id (caso uma casa apareça em múltiplas entradas/pernas)
-  const requiredByBookmaker: Record<string, { total: number; currency: string; isSub: boolean }> = {};
+  // Agrupar stakes por bookmaker_id
+  const requiredByBookmaker: Record<string, { 
+    total: number; 
+    currency: string; 
+    casa: string;
+    isSub: boolean 
+  }> = {};
   
   entries.forEach(entry => {
-    // Nota: entry.id na expansão para sub-entradas pode ser o ID do banco ou gerado.
-    // Usamos o bookmaker_id da bookmaker real para validar saldo.
-    // Precisamos saber o bookmaker_id... expandLegsWithSubEntries precisa retornar bookmaker_id.
+    if (!entry.bookmaker_id) return;
+    
+    if (!requiredByBookmaker[entry.bookmaker_id]) {
+      requiredByBookmaker[entry.bookmaker_id] = { 
+        total: 0, 
+        currency: entry.currency, 
+        casa: entry.casa,
+        isSub: entry.isSubEntry
+      };
+    }
+    requiredByBookmaker[entry.bookmaker_id].total += entry.stake;
   });
 
-  // REVISÃO: A expansão precisa do bookmaker_id para validar saldo.
-  // Vou ajustar expandLegsWithSubEntries no próximo passo se necessário, 
-  // mas aqui vou assumir que temos acesso ao bookmaker_id através de uma versão estendida de LiquidationEntry.
-  
-  return { valid: true, errors: [] }; // Placeholder para não quebrar build enquanto refino
+  // Validar cada casa
+  Object.keys(requiredByBookmaker).forEach(bookmakerId => {
+    const req = requiredByBookmaker[bookmakerId];
+    const balance = balances[bookmakerId];
+    
+    if (!balance) return; // Se não tem saldo mapeado, assume-se OK ou ignorado
+
+    // Em modo edição: saldo disponível = saldo atual + stake original dessa entrada (crédito virtual)
+    const originalStake = isEditMode ? (originalStakes?.[bookmakerId] ?? 0) : 0;
+    const effectiveAvailable = balance.amount + originalStake;
+    
+    if (req.total > effectiveAvailable) {
+      errors.push({
+        bookmakerId,
+        casa: req.casa,
+        currency: req.currency,
+        required: req.total,
+        available: effectiveAvailable,
+        deficit: req.total - effectiveAvailable,
+        isSubEntry: req.isSub,
+      });
+    }
+  });
+
+  return { valid: errors.length === 0, errors };
 }
 
-// Versão corrigida que será escrita após o ajuste da interface

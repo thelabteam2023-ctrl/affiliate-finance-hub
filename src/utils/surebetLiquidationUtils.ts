@@ -6,6 +6,7 @@ import { SurebetPerna } from "@/components/projeto-detalhe/SurebetCard";
 
 export interface LiquidationEntry {
   id: string;
+  bookmaker_id: string; // CRÍTICO: necessário para validar saldo
   casa: string;
   currency: string;
   stake: number;
@@ -29,6 +30,7 @@ export function expandLegsWithSubEntries(legs: SurebetPerna[]): LiquidationEntry
       leg.entries.forEach((sub, subIndex) => {
         entries.push({
           id: sub.id || `${leg.id}_sub_${subIndex}`,
+          bookmaker_id: sub.bookmaker_id,
           casa: sub.bookmaker_nome,
           currency: sub.moeda || 'BRL',
           stake: sub.stake,
@@ -44,6 +46,7 @@ export function expandLegsWithSubEntries(legs: SurebetPerna[]): LiquidationEntry
       // Perna simples
       entries.push({
         id: leg.id,
+        bookmaker_id: leg.bookmaker_id || '',
         casa: leg.bookmaker_nome,
         currency: leg.moeda || 'BRL',
         stake: leg.stake,
@@ -59,22 +62,7 @@ export function expandLegsWithSubEntries(legs: SurebetPerna[]): LiquidationEntry
 
   return entries;
 }
-
-/**
- * Calcula o P&L projetado para quando uma única entrada ganha (as outras perdem).
- */
-function calculateSingleWinPnl(
-  winner: LiquidationEntry,
-  allEntries: LiquidationEntry[]
-): number {
-  const totalStake = allEntries.reduce((sum, e) => sum + e.normalizedStake, 0);
-  const winReturn = winner.normalizedStake * winner.odd;
-  return winReturn - totalStake;
-}
-
-/**
- * Calcula o P&L projetado para quando duas entradas ganham (hedge parcial / duplo green).
- */
+...
 function calculateDoubleGreenPnl(
   winner1: LiquidationEntry,
   winner2: LiquidationEntry,
@@ -83,9 +71,7 @@ function calculateDoubleGreenPnl(
   const totalStake = allEntries.reduce((sum, e) => sum + e.normalizedStake, 0);
   const return1 = winner1.normalizedStake * winner1.odd;
   const return2 = winner2.normalizedStake * winner2.odd;
-  // Simplificação: no duplo green ambas ganham. 
-  // Em arbitragem real, isso geralmente significa um spread entre elas ou empate anula.
-  // Seguindo a lógica do prompt: ((return1 + return2) / 2) - totalStake
+  // No duplo green as duas pernas ganham.
   return ((return1 + return2) / 2) - totalStake;
 }
 
@@ -97,6 +83,7 @@ export function generateLiquidationOptions(legs: SurebetPerna[]) {
     type: 'single_win' as const,
     label: `${entry.casa} Win`,
     entryId: entry.id,
+    bookmakerId: entry.bookmaker_id,
     casa: entry.casa,
     isSubEntry: entry.isSubEntry,
     parentLegId: entry.parentLegId,
@@ -124,3 +111,4 @@ export function generateLiquidationOptions(legs: SurebetPerna[]) {
 
   return { singleWin, doubleGreen, voidTotal, allEntries: entries };
 }
+
