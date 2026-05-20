@@ -134,7 +134,15 @@ export function SurebetColumnsLayout({
           const canAddMore = leg.entries.length < MAX_ENTRIES_PER_LEG;
 
           return (
-            <div key={legIndex} className="flex flex-col rounded-lg border border-border/40 bg-card/50 overflow-hidden">
+            <div 
+              key={legIndex} 
+              className="flex flex-col rounded-lg border border-border/40 bg-card/50 overflow-hidden"
+              data-testid="surebet-leg"
+              data-currency={leg.entries[0]?.moeda}
+              data-normalized-value={legStake}
+              data-calc-state="valid"
+              data-hydration-state="user"
+            >
               {/* Header da coluna */}
               <div className="flex items-center justify-between px-3 py-2 bg-muted/30 border-b border-border/30">
                 <div className="flex items-center gap-2">
