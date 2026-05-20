@@ -1091,7 +1091,41 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
             })()}
           </div>
         </div>
+
+        {/* Auditoria Visual */}
+        <SurebetTracePanel 
+          isOpen={showDebug} 
+          baseCurrency={moedaConsolidacao || "BRL"}
+          steps={(() => {
+            const steps: any[] = [];
+            (surebet.pernas || []).forEach((p, idx) => {
+              if (p.entries && p.entries.length > 0) {
+                p.entries.forEach((e, sIdx) => {
+                  if (e.moeda && e.moeda !== moedaConsolidacao) {
+                    steps.push({
+                      label: `P${idx+1} Entrada ${sIdx+1} (${e.bookmaker_nome})`,
+                      original: `${e.moeda} ${e.stake}`,
+                      rate: convertToConsolidation ? convertToConsolidation(1, e.moeda) : 1,
+                      result: convertToConsolidation ? convertToConsolidation(e.stake, e.moeda).toFixed(2) : e.stake.toFixed(2),
+                      type: 'conversion'
+                    });
+                  }
+                });
+              } else if (p.moeda && p.moeda !== moedaConsolidacao) {
+                steps.push({
+                  label: `P${idx+1} (${p.bookmaker_nome})`,
+                  original: `${p.moeda} ${p.stake_total || p.stake}`,
+                  rate: convertToConsolidation ? convertToConsolidation(1, p.moeda || "BRL") : 1,
+                  result: convertToConsolidation ? convertToConsolidation(p.stake_total || p.stake, p.moeda || "BRL").toFixed(2) : (p.stake_total || p.stake).toFixed(2),
+                  type: 'conversion'
+                });
+              }
+            });
+            return steps;
+          })()}
+        />
       </CardContent>
     </Card>
+
   );
 }
