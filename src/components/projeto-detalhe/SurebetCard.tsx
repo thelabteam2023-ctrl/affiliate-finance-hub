@@ -576,30 +576,41 @@ export function SurebetCard({
   const { workingRates: projectRatesRaw } = useProjetoWorkingRates(surebet.workspace_id);
   const { getRate: getOfficialRate } = useCotacoes();
 
-  // Mapear as taxas de trabalho do projeto para o formato simples [currency: string]: number
-  const workingRatesMap = (() => {
-    if (!projectRatesRaw) return { USD: 1 };
-    return {
-      USD: projectRatesRaw.cotacao_trabalho || 1,
-      EUR: projectRatesRaw.cotacao_trabalho_eur || 1,
-      GBP: projectRatesRaw.cotacao_trabalho_gbp || 1,
-      MYR: projectRatesRaw.cotacao_trabalho_myr || 1,
-      MXN: projectRatesRaw.cotacao_trabalho_mxn || 1,
-      ARS: projectRatesRaw.cotacao_trabalho_ars || 1,
-      COP: projectRatesRaw.cotacao_trabalho_cop || 1,
-    };
+  // Mapear as taxas de trabalho do projeto com proteção contra valores inválidos
+  const ratesAudit = (() => {
+    if (!projectRatesRaw) return { USD: { rate: 1, source: 'working' as const } };
+    
+    const currencies = ['USD', 'EUR', 'GBP', 'MYR', 'MXN', 'ARS', 'COP'];
+    const result: Record<string, { rate: number; source: 'working' | 'official_fallback' | 'error'; warning?: string }> = {};
+    
+    currencies.forEach(curr => {
+      const field = curr === 'USD' ? 'cotacao_trabalho' : `cotacao_trabalho_${curr.toLowerCase()}`;
+      const rawValue = (projectRatesRaw as any)[field];
+      result[curr] = getSafeWorkingRate(curr, rawValue, getOfficialRate(curr));
+    });
+    
+    result['BRL'] = { rate: 1, source: 'working' };
+    return result;
   })();
 
-  const invalidRates = Object.entries(workingRatesMap)
-    .filter(([currency, rate]) => {
-      const isSuspect = ['USD', 'EUR', 'GBP', 'MXN', 'ARS', 'COP', 'MYR'].includes(currency);
-      return rate <= 0 || (isSuspect && Math.abs(rate - 1.0) < 0.001);
+  const workingRatesMap = Object.fromEntries(
+    Object.entries(ratesAudit).map(([k, v]) => [k, v.rate])
+  );
+
+  const invalidRates = Object.entries(ratesAudit)
+    .filter(([currency, audit]) => {
+      // BRL nunca é inválida
+      if (currency === 'BRL') return false;
+      // Consideramos "inválida" se for erro ou se precisou de fallback (para mostrar o banner)
+      return audit.source === 'error' || audit.source === 'official_fallback';
     })
-    .map(([currency, rate]) => ({
+    .map(([currency, audit]) => ({
       currency,
-      rate,
+      rate: audit.rate,
+      source: audit.source,
       officialRate: getOfficialRate(currency)
     }));
+
 
 
   // Mapa de taxas oficiais para o alerta de drift
