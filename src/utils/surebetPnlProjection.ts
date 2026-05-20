@@ -1,14 +1,10 @@
 /**
  * SurebetPnlProjection — Utilitários para cálculo canônico de P&L projetado.
- * Garante consistência de moeda e rastreabilidade total de taxas.
+ * Garante consistência de moeda e rastreabilidade total de taxas via motor de normalização.
  */
 
 import { LiquidationLeg } from "./surebetLiquidationUtils";
-import { validateExchangeRates } from "./exchangeRateGuard";
-
-export interface WorkingRates {
-  [currency: string]: number;
-}
+import { normalizeOperation, WorkingRates, NormalizedEntry } from "./surebetNormalization";
 
 export interface RateUsed {
   currency: string;
@@ -17,6 +13,14 @@ export interface RateUsed {
   source: 'working' | 'official' | 'fallback';
   usdRate: number; // Taxa final para converter da moeda original para USD
   isInvalid?: boolean;
+}
+
+export interface EntryBreakdown {
+  casa: string;
+  stakeOriginal: string;
+  stakeBRL: number;
+  stakeUSD: number;
+  conversionPath: string;
 }
 
 export interface PnlProjectionResult {
@@ -35,14 +39,17 @@ export interface PnlProjectionResult {
   pnlUSD: number;
 
   ratesUsed: RateUsed[];
+  entriesBreakdown: EntryBreakdown[];
   isValid: boolean;
   currencyContamination: boolean;
   warningMessage?: string;
   errorMessages?: string[];
+  workingRatesSnapshot: Record<string, number>;
+  calculatedAt: string;
 }
 
 /**
- * Calcula as projeções de P&L para cada cenário de liquidação.
+ * Calcula as projeções de P&L para cada cenário de liquidação usando o motor de normalização.
  */
 export function calculatePnlProjections(
   liquidationLegs: LiquidationLeg[],
@@ -50,79 +57,48 @@ export function calculatePnlProjections(
   officialRates: Record<string, number> = {},
   displayCurrency: string = 'USD'
 ): PnlProjectionResult[] {
-  // 1. Validar taxas antes de qualquer cálculo
-  const usedCurrencies: string[] = [];
-  liquidationLegs.forEach(leg => {
-    leg.houses.forEach(h => usedCurrencies.push(h.currency));
-  });
+  // 1. Normalizar a operação inteira (Caminho Único)
+  const normalized = normalizeOperation(liquidationLegs, workingRates);
 
-  const validation = validateExchangeRates(workingRates, usedCurrencies);
-  
-  // 2. Calcular total investido em BRL (moeda base interna)
-  const totalInvestedBRL = liquidationLegs.reduce(
-    (sum, leg) => sum + leg.totalNormalizedStake,
-    0
-  );
+  // 2. Transformar para o formato de resultado esperado pelos componentes
+  return normalized.legs.map(leg => {
+    // Rastreabilidade de taxas para manter compatibilidade com a UI antiga
+    const ratesUsed: RateUsed[] = leg.entries.map(e => ({
+      currency: e.currencyOriginal,
+      workingRate: e.exchangeRateToBRL,
+      officialRate: officialRates[e.currencyOriginal] || 0,
+      source: 'working',
+      usdRate: e.exchangeRateToUSD,
+      isInvalid: false
+    }));
 
-  // 3. Obter taxa BRL -> USD (display)
-  const brlToUSD = workingRates['USD'] || 1;
-  const totalInvestedUSD = totalInvestedBRL / brlToUSD;
+    const entriesBreakdown: EntryBreakdown[] = leg.entries.map(e => ({
+      casa: e.casa,
+      stakeOriginal: `${e.stakeOriginal} ${e.currencyOriginal}`,
+      stakeBRL: e.stakeBRL,
+      stakeUSD: e.stakeUSD,
+      conversionPath: e.conversionPath
+    }));
 
-  const results: PnlProjectionResult[] = [];
-
-  for (const leg of liquidationLegs) {
-    // 4. Calcular retorno da perna vencedora em BRL
-    const winnerReturnBRL = leg.totalNormalizedStake * leg.odd;
-
-    // 5. Converter retorno para USD
-    const winnerReturnUSD = winnerReturnBRL / brlToUSD;
-
-    // 6. P&L em ambas as moedas
-    const pnlBRL = winnerReturnBRL - totalInvestedBRL;
-    const pnlUSD = winnerReturnUSD - totalInvestedUSD;
-
-    // 7. Registrar taxas usadas
-    const ratesUsed: RateUsed[] = leg.houses.map(house => {
-      const workRate = workingRates[house.currency] || workingRates['USD'] || 1;
-      const offRate = officialRates[house.currency] || 0;
-      
-      const usdRate = house.currency === 'USD' 
-        ? 1 
-        : workRate / brlToUSD;
-
-      const isInvalid = validation.errors.some(err => err.includes(house.currency));
-
-      return {
-        currency: house.currency,
-        workingRate: workRate,
-        officialRate: offRate,
-        source: isInvalid ? 'fallback' : 'working',
-        usdRate,
-        isInvalid
-      };
-    });
-
-    // 8. Validação final
-    const calculationInvalid = isNaN(pnlUSD) || !isFinite(pnlUSD);
-    const overallInvalid = !validation.valid || calculationInvalid;
-    
-    results.push({
+    return {
       scenario: `${leg.legLabel} ganha`,
       legId: leg.legId,
       legLabel: leg.legLabel,
-      winnerReturnBRL,
-      totalInvestedBRL,
-      pnlBRL,
-      winnerReturnUSD,
-      totalInvestedUSD,
-      pnlUSD,
-      ratesUsed,
-      isValid: !overallInvalid,
-      currencyContamination: overallInvalid,
-      warningMessage: !validation.valid ? 'Cotações de trabalho inválidas detectadas' : (calculationInvalid ? `Cálculo de P&L inválido para ${leg.legLabel}` : undefined),
-      errorMessages: validation.errors
-    });
-  }
+      
+      winnerReturnBRL: leg.returnIfWinBRL,
+      totalInvestedBRL: normalized.totalInvestedBRL,
+      pnlBRL: leg.returnIfWinBRL - normalized.totalInvestedBRL,
 
-  return results;
+      winnerReturnUSD: leg.returnIfWinUSD,
+      totalInvestedUSD: normalized.totalInvestedUSD,
+      pnlUSD: leg.returnIfWinUSD - normalized.totalInvestedUSD,
+
+      ratesUsed,
+      entriesBreakdown,
+      isValid: true,
+      currencyContamination: false,
+      workingRatesSnapshot: normalized.workingRatesUsed,
+      calculatedAt: normalized.calculatedAt
+    };
+  });
 }
