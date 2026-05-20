@@ -224,58 +224,8 @@ function FloatingChatButton({ onClick, isOpen }: { onClick: () => void, isOpen: 
   const [hasMention, setHasMention] = useState(false);
   const { unreadCount, incrementUnread, playNotificationSound } = useChatNotifications();
   
-  useEffect(() => {
-    if (!user?.id || !workspace?.id) return;
-
-    console.log(`[ChatButton] Subscribing to workspace: ${workspace.id} for user: ${user.id}`);
-
-    const channel = supabase
-      .channel(`chat-global-notifications-${workspace.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'community_chat_messages',
-          filter: `workspace_id=eq.${workspace.id}`,
-        },
-        (payload) => {
-          const content = payload.new.content as string;
-          const isFromMe = payload.new.user_id === user.id;
-          
-          if (isFromMe) return;
-
-          // Se o chat estiver fechado, incrementamos o contador global
-          if (!isOpen) {
-            incrementUnread();
-            playNotificationSound();
-          }
-
-          // Verificação específica de menção para animação
-          const myName = (user as any).full_name || user.email?.split('@')[0];
-          if (content.includes(`@${myName}`)) {
-            if (!isOpen) {
-              setHasMention(true);
-            }
-          }
-        }
-      )
-      .subscribe((status) => {
-        console.log(`[ChatButton] Subscription status for ${workspace.id}:`, status);
-      });
-
-    return () => {
-      console.log(`[ChatButton] Unsubscribing from ${workspace.id}`);
-      supabase.removeChannel(channel);
-    };
-  }, [user?.id, workspace?.id, isOpen, incrementUnread, playNotificationSound]);
-
-  useEffect(() => {
-    if (isOpen) {
-      setHasMention(false);
-    }
-  }, [isOpen]);
-
+  // Notification logic moved to ChatNotificationManager for robustness
+  
   // Don't show while loading, if chat is already open, or if no workspace is resolved yet
   if (loading || !initialized || !user || isOpen || !workspace?.id) return null;
 
