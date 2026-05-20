@@ -965,83 +965,8 @@ export function SurebetCard({
       data-status={surebet.status}
       data-has-invalid-rates={invalidRates.length > 0 ? 'true' : 'false'}
     >
-      {/* Banner de Alerta/Bloqueio por taxas inválidas — só para proprietários do sistema */}
-      {isSystemOwner && invalidRates.length > 0 && (
-        <div 
-          data-testid="invalid-rates-banner"
-          className={cn(
-            "border-b px-4 py-3 flex flex-col lg:flex-row lg:items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-300",
-            invalidRates.some(r => r.source === 'error') 
-              ? "bg-destructive/10 border-destructive/30" 
-              : "bg-amber-500/10 border-amber-500/30"
-          )}
-        >
-          <div className={cn(
-            "flex items-center gap-2 text-xs sm:text-sm font-medium",
-            invalidRates.some(r => r.source === 'error') ? "text-destructive" : "text-amber-500"
-          )}>
-            <AlertTriangle className="h-4 w-4 shrink-0" />
-            <div className="flex flex-col">
-              <span>
-                {invalidRates.some(r => r.source === 'error') 
-                  ? "⛔ Cálculo bloqueado — taxas ausentes: " 
-                  : "⚠️ Usando cotação oficial — configure a cotação de trabalho: "}
-                {invalidRates.map(r => (
-                  <span key={r.currency} className="ml-1 opacity-90 font-bold" data-testid={`invalid-rate-${r.currency.toLowerCase()}`}>
-                     {r.currency} ({r.rate.toFixed(4)})
-                  </span>
-                ))}
-              </span>
-              <span className="text-[10px] opacity-70 italic">
-                {invalidRates.some(r => r.source === 'official_fallback') && "O banco retornou NULL/1.0 para estas moedas. Fallback PTAX aplicado."}
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => refetchProjectRates()}
-              className="px-2 py-1 text-[10px] font-bold rounded bg-zinc-800 text-zinc-100 hover:bg-zinc-700 transition-colors uppercase border border-zinc-700"
-              title="Recarregar dados do banco"
-            >
-              Recarregar
-            </button>
-            <button
-              onClick={async () => {
-                const { toast } = await import("sonner");
-                const { supabase } = await import("@/integrations/supabase/client");
-                
-                try {
-                  const updates: any = {};
-                  invalidRates.forEach(r => {
-                    const field = r.currency === 'USD' ? 'cotacao_trabalho' : `cotacao_trabalho_${r.currency.toLowerCase()}`;
-                    updates[field] = r.officialRate;
-                  });
-                  
-                  const { error } = await supabase
-                    .from('projetos')
-                    .update(updates)
-                    .eq('id', surebet.workspace_id);
-                    
-                  if (error) throw error;
-                  toast.success("Cotações de trabalho sincronizadas com o projeto!");
-                  refetchProjectRates(); // Forçar atualização do UI
-                } catch (err) {
-                  console.error(err);
-                  toast.error("Erro ao atualizar cotações.");
-                }
-              }}
-              className={cn(
-                "px-2 py-1 text-[10px] font-bold rounded transition-colors uppercase",
-                invalidRates.some(r => r.source === 'error')
-                  ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  : "bg-amber-500 text-amber-950 hover:bg-amber-600"
-              )}
-            >
-              Confirmar Taxas
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Banner de Alerta/Bloqueio por taxas inválidas — removido daqui e movido para SurebetTracePanel */}
+
 
 
 
@@ -1375,6 +1300,33 @@ export function SurebetCard({
           baseCurrency={moedaConsolidacao || "BRL"}
           workingRates={workingRatesMap}
           officialRates={officialRatesMap}
+          invalidRates={invalidRates}
+          onReloadRates={refetchProjectRates}
+          onConfirmRates={async () => {
+            const { toast } = await import("sonner");
+            const { supabase } = await import("@/integrations/supabase/client");
+            
+            try {
+              const updates: any = {};
+              invalidRates.forEach(r => {
+                const field = r.currency === 'USD' ? 'cotacao_trabalho' : `cotacao_trabalho_${r.currency.toLowerCase()}`;
+                updates[field] = r.officialRate;
+              });
+              
+              const { error } = await supabase
+                .from('projetos')
+                .update(updates)
+                .eq('id', surebet.workspace_id);
+                
+              if (error) throw error;
+              toast.success("Cotações de trabalho sincronizadas com o projeto!");
+              refetchProjectRates(); // Forçar atualização do UI
+            } catch (err) {
+              console.error(err);
+              toast.error("Erro ao atualizar cotações.");
+            }
+          }}
+
 
           steps={(() => {
             const steps: any[] = [];

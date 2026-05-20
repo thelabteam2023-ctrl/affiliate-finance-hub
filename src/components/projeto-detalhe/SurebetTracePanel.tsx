@@ -48,6 +48,14 @@ interface SurebetTracePanelProps {
   isOpen?: boolean;
   workingRates?: Record<string, number>;
   officialRates?: Record<string, number>;
+  invalidRates?: Array<{ 
+    currency: string; 
+    rate: number; 
+    officialRate: number; 
+    source: string 
+  }>;
+  onReloadRates?: () => void;
+  onConfirmRates?: () => void;
 }
 
 export function SurebetTracePanel({ 
@@ -55,13 +63,75 @@ export function SurebetTracePanel({
   baseCurrency, 
   isOpen = false,
   workingRates = {},
-  officialRates = {}
+  officialRates = {},
+  invalidRates = [],
+  onReloadRates,
+  onConfirmRates
 }: SurebetTracePanelProps) {
   if (!isOpen || steps.length === 0) return null;
 
   return (
     <Card className="mt-4 border-dashed border-primary/30 bg-primary/5 animate-in slide-in-from-top-2 duration-300">
       <CardContent className="p-4">
+        {/* Alerta de Taxas Inválidas acoplado ao painel de auditoria */}
+        {invalidRates.length > 0 && (
+          <div 
+            data-testid="invalid-rates-banner"
+            className={cn(
+              "mb-4 border rounded-lg px-4 py-3 flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-background/50 backdrop-blur-sm",
+              invalidRates.some(r => r.source === 'error') 
+                ? "border-destructive/30" 
+                : "border-amber-500/30"
+            )}
+          >
+            <div className={cn(
+              "flex items-center gap-2 text-xs sm:text-sm font-medium",
+              invalidRates.some(r => r.source === 'error') ? "text-destructive" : "text-amber-500"
+            )}>
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <div className="flex flex-col">
+                <span>
+                  {invalidRates.some(r => r.source === 'error') 
+                    ? "⛔ Cálculo bloqueado — taxas ausentes: " 
+                    : "⚠️ Usando cotação oficial — configure a cotação de trabalho: "}
+                  {invalidRates.map(r => (
+                    <span key={r.currency} className="ml-1 opacity-90 font-bold" data-testid={`invalid-rate-${r.currency.toLowerCase()}`}>
+                       {r.currency} ({r.rate.toFixed(4)})
+                    </span>
+                  ))}
+                </span>
+                <span className="text-[10px] opacity-70 italic">
+                  {invalidRates.some(r => r.source === 'official_fallback') && "O banco retornou NULL/1.0 para estas moedas. Fallback PTAX aplicado."}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {onReloadRates && (
+                <button
+                  onClick={onReloadRates}
+                  className="px-2 py-1 text-[10px] font-bold rounded bg-zinc-800 text-zinc-100 hover:bg-zinc-700 transition-colors uppercase border border-zinc-700"
+                  title="Recarregar dados do banco"
+                >
+                  Recarregar
+                </button>
+              )}
+              {onConfirmRates && (
+                <button
+                  onClick={onConfirmRates}
+                  className={cn(
+                    "px-2 py-1 text-[10px] font-bold rounded transition-colors uppercase",
+                    invalidRates.some(r => r.source === 'error')
+                      ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      : "bg-amber-500 text-amber-950 hover:bg-amber-600"
+                  )}
+                >
+                  Confirmar Taxas
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center gap-2 mb-3 text-primary">
           <Calculator className="h-4 w-4" />
           <span className="text-xs font-bold uppercase tracking-wider">Rastreabilidade Matemática (Audit Trace)</span>
