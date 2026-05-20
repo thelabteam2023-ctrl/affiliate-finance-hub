@@ -48,6 +48,14 @@ interface SurebetTracePanelProps {
   isOpen?: boolean;
   workingRates?: Record<string, number>;
   officialRates?: Record<string, number>;
+  invalidRates?: Array<{ 
+    currency: string; 
+    rate: number; 
+    officialRate: number; 
+    source: string 
+  }>;
+  onReloadRates?: () => void;
+  onConfirmRates?: () => void;
 }
 
 export function SurebetTracePanel({ 
@@ -55,7 +63,10 @@ export function SurebetTracePanel({
   baseCurrency, 
   isOpen = false,
   workingRates = {},
-  officialRates = {}
+  officialRates = {},
+  invalidRates = [],
+  onReloadRates,
+  onConfirmRates
 }: SurebetTracePanelProps) {
   if (!isOpen || steps.length === 0) return null;
 
