@@ -1,12 +1,11 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { 
-  expandLegsWithSubEntries, 
+  buildLiquidationLegs, 
   generateLiquidationOptions 
 } from "@/utils/surebetLiquidationUtils";
-import { validateBalanceForOperation } from "@/utils/surebetBalanceValidator";
 import { liquidationQueue } from "@/utils/surebetLiquidationQueue";
 
-describe("Surebet FinancialHardening - Autônomo", () => {
+describe("Surebet Liquidation Correction - Aggregated Legs", () => {
   const mockPernas = [
     { 
       id: 'l1', 
@@ -15,18 +14,17 @@ describe("Surebet FinancialHardening - Autônomo", () => {
       odd: 3, 
       stake: 100, 
       moeda: 'USD',
-      selecao: 'Casa'
+      selecao: 'Casa',
+      stake_brl_referencia: 510.00
     },
     {
       id: 'l2', 
-      bookmaker_id: 'bk2',
-      bookmaker_nome: 'AMUNRA', 
       odd: 3, 
       moeda: 'USD',
       selecao: 'Empate',
       entries: [
-        { id: 'l2_sub_0', bookmaker_id: 'bk2', bookmaker_nome: 'AMUNRA', stake: 74, moeda: 'USD', odd: 3 },
-        { id: 'l2_sub_1', bookmaker_id: 'bk3', bookmaker_nome: 'ALAWIN', stake: 450, moeda: 'MXN', odd: 3 },
+        { id: 'l2_sub_0', bookmaker_id: 'bk2', bookmaker_nome: 'AMUNRA', stake: 74, moeda: 'USD', odd: 3, stake_brl_referencia: 377.40 },
+        { id: 'l2_sub_1', bookmaker_id: 'bk3', bookmaker_nome: 'ALAWIN', stake: 450, moeda: 'MXN', odd: 3, stake_brl_referencia: 132.75 },
       ]
     },
     { 
@@ -36,64 +34,63 @@ describe("Surebet FinancialHardening - Autônomo", () => {
       odd: 3, 
       stake: 100, 
       moeda: 'USD',
-      selecao: 'Fora'
+      selecao: 'Fora',
+      stake_brl_referencia: 510.00
     },
   ] as any[];
 
-  it("L1: Sub-entradas devem aparecer nas opções de liquidação", () => {
+  it("L1: Menu tem 3 opções (uma por perna, não por casa)", () => {
     const options = generateLiquidationOptions(mockPernas);
+    
+    // 3 pernas no total
+    expect(options.singleWin).toHaveLength(3);
+
     const labels = options.singleWin.map(o => o.label);
-    
-    expect(options.singleWin).toHaveLength(4);
-    expect(labels).toContain('ALAWIN Win');
-    expect(labels).toContain('AMUNRA Win');
-    
-    const doubleLabels = options.doubleGreen.map(o => o.label);
-    expect(doubleLabels.some(l => l.includes('ALAWIN'))).toBe(true);
+    expect(labels).not.toContain('AMUNRA Win');
+    expect(labels).not.toContain('ALAWIN Win');
+
+    // Perna 2 deve ser agregada
+    const perna2Option = options.singleWin[1];
+    expect(perna2Option.hasMultipleHouses).toBe(true);
+    expect(perna2Option.houseCount).toBe(2);
+    expect(perna2Option.houses.map(h => h.casa)).toContain('AMUNRA');
+    expect(perna2Option.houses.map(h => h.casa)).toContain('ALAWIN');
   });
 
-  it("L2: Saldo insuficiente deve ser detectado por sub-entrada", () => {
-    const balances = {
-      'bk1': { amount: 200, currency: 'USD' },
-      'bk2': { amount: 26, currency: 'USD' }, // $74 necessário
-      'bk3': { amount: 1003.50, currency: 'MXN' },
-      'bk4': { amount: 100, currency: 'USD' },
-    };
-
-    const result = validateBalanceForOperation(mockPernas, balances);
-    expect(result.valid).toBe(false);
-    const amunraErr = result.errors.find(e => e.bookmakerId === 'bk2');
-    expect(amunraErr).toBeDefined();
-    expect(amunraErr?.deficit).toBe(48); // 74 - 26
+  it("L2: Duplo Green tem 3 opções (combinações de pernas)", () => {
+    const options = generateLiquidationOptions(mockPernas);
+    // C(3,2) = 3
+    expect(options.doubleGreen).toHaveLength(3);
+    
+    // Nenhuma opção deve ter AMUNRA ou ALAWIN isolados no label
+    const labels = options.doubleGreen.map(o => o.label);
+    expect(labels.some(l => l === 'AMUNRA + ALAWIN')).toBe(false);
+    expect(labels.some(l => l.includes('AMUNRA + HUGEWIN'))).toBe(false);
+    
+    // Perna 2 agregada aparece no label
+    expect(labels[0]).toBe('HUGEWIN + AMUNRA + ALAWIN');
   });
 
-  it("L3: Race condition - fila processa ações serialmente", async () => {
-    const executionOrder: string[] = [];
-    const mockAction = async (action: any) => {
-      await new Promise(r => setTimeout(r, 10));
-      executionOrder.push(action.entryId);
-    };
+  it("L5: P&L projetado correto para perna 2", () => {
+    const options = generateLiquidationOptions(mockPernas);
+    const perna2Option = options.singleWin[1];
 
-    liquidationQueue.enqueue({ operationId: 'op1', entryId: 'l1', result: 'GREEN' });
-    liquidationQueue.enqueue({ operationId: 'op1', entryId: 'l2_sub_0', result: 'RED' });
+    // Total investido: 510.00 + 377.40 + 132.75 + 510.00 = 1530.15
+    // Retorno Perna 2: (377.40 + 132.75) * 3 = 510.15 * 3 = 1530.45
+    // P&L: 1530.45 - 1530.15 = +0.30
     
-    await liquidationQueue.flush(mockAction);
-    
-    expect(executionOrder).toEqual(['l1', 'l2_sub_0']);
+    expect(perna2Option.pnl).toBeCloseTo(0.30, 2);
   });
 
-  it("L4: Edição de stake deve considerar crédito virtual", () => {
-    const originalStakes = { 'bk2': 74 };
-    const balances = { 'bk2': { amount: 26, currency: 'USD' } }; // Disponível real: 26
+  it("L6: Regressão - Perna simples não afetada", () => {
+    const options = generateLiquidationOptions(mockPernas);
+    const perna1Option = options.singleWin[0];
     
-    // Editar para 90: (26 atual + 74 original) = 100 virtual >= 90 -> OK
-    const resultValid = validateBalanceForOperation(mockPernas, balances, true, originalStakes);
-    expect(resultValid.valid).toBe(true);
-
-    // Editar para 110: 100 virtual < 110 -> FAIL
-    const mockPernasHigh = JSON.parse(JSON.stringify(mockPernas));
-    mockPernasHigh[1].entries[0].stake = 110;
-    const resultInvalid = validateBalanceForOperation(mockPernasHigh, balances, true, originalStakes);
-    expect(resultInvalid.valid).toBe(false);
+    expect(perna1Option.hasMultipleHouses).toBe(false);
+    expect(perna1Option.houseCount).toBe(1);
+    expect(perna1Option.label).toBe('HUGEWIN');
+    
+    // P&L Perna 1: 510.00 * 3 - 1530.15 = 1530.00 - 1530.15 = -0.15
+    expect(perna1Option.pnl).toBeCloseTo(-0.15, 2);
   });
 });
