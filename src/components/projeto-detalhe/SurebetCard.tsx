@@ -944,7 +944,7 @@ export function SurebetCard({
 
                 onEdit={() => onEdit?.(surebet)}
                 onDuplicate={onDuplicate ? () => onDuplicate(surebet.id) : undefined}
-                onQuickResolve={(result) => {
+                onQuickResolve={async (result) => {
                   if (isSimplesMultiEntry && (onSimpleMenuQuickResolve || onSimpleQuickResolve)) {
                     const resultadoFinal = result.type === 'all_void'
                       ? 'VOID'
@@ -955,7 +955,79 @@ export function SurebetCard({
                     return;
                   }
 
-                  onQuickResolve?.(surebet.id, result);
+                  if (!onQuickResolve && !onPernaResultChange) return;
+
+                  // Se o pai tem onQuickResolve, delegar para ele
+                  if (onQuickResolve) {
+                    onQuickResolve(surebet.id, result);
+                    return;
+                  }
+
+                  // Fallback: se não tiver onQuickResolve mas tiver onPernaResultChange, usar a fila local
+                  const entriesToLiquidate = result.entryIds && result.entryIds.length > 0 
+                    ? result.entryIds 
+                    : [];
+
+                  for (const perna of (surebet.pernas || [])) {
+                    const isPernaWinner = result.winners.includes(surebet.pernas!.indexOf(perna));
+                    const resultado = result.type === 'all_void' ? 'void' : (isPernaWinner ? 'green' : 'red');
+
+                    if (perna.entries && perna.entries.length > 0) {
+                      for (const entry of perna.entries) {
+                        if (!entry.id || !entry.bookmaker_id) continue;
+                        
+                        const entryResult = result.type === 'all_void' 
+                          ? 'void' 
+                          : (entriesToLiquidate.includes(entry.id) ? 'green' : 'red');
+
+                        liquidationQueue.enqueue({
+                          operationId: surebet.id,
+                          entryId: entry.id,
+                          casa: entry.bookmaker_nome,
+                          result: entryResult,
+                          workspaceId: surebet.workspace_id || '',
+                          onExecute: async () => {
+                            await onPernaResultChange!({
+                              pernaId: entry.id!,
+                              surebetId: surebet.id,
+                              bookmarkerId: entry.bookmaker_id,
+                              resultado: entryResult,
+                              stake: entry.stake,
+                              odd: entry.odd,
+                              moeda: entry.moeda || 'BRL',
+                              resultadoAnterior: perna.resultado,
+                              workspaceId: surebet.workspace_id || '',
+                              bookmakerNome: entry.bookmaker_nome,
+                              silent: true,
+                            });
+                          }
+                        });
+                      }
+                    } else {
+                      liquidationQueue.enqueue({
+                        operationId: surebet.id,
+                        entryId: perna.id,
+                        casa: perna.bookmaker_nome,
+                        result: resultado,
+                        workspaceId: surebet.workspace_id || '',
+                        onExecute: async () => {
+                          await onPernaResultChange!({
+                            pernaId: perna.id,
+                            surebetId: surebet.id,
+                            bookmarkerId: perna.bookmaker_id!,
+                            resultado,
+                            stake: perna.stake,
+                            odd: perna.odd,
+                            moeda: perna.moeda || 'BRL',
+                            resultadoAnterior: perna.resultado,
+                            workspaceId: surebet.workspace_id || '',
+                            bookmakerNome: perna.bookmaker_nome,
+                          });
+                        }
+                      });
+                    }
+                  }
+                  await liquidationQueue.flush();
                 }}
                 onDelete={() => onDelete?.(surebet.id)}
               />
