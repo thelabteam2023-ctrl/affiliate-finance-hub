@@ -13,7 +13,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Users, Settings, UserPlus, Shield, DollarSign, Gamepad2, Eye, Check, X, Info, Mail, Inbox, Play, Volume2 } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { CHAT_SOUNDS } from "@/hooks/useChatNotifications";
+import { CHAT_SOUNDS, useChatNotifications } from "@/hooks/useChatNotifications";
+import { notificationAudioManager } from "@/services/audio/notificationAudioManager";
 import { MemberList } from "@/components/workspace/MemberList";
 import { InviteMemberDialog } from "@/components/workspace/InviteMemberDialog";
 import { PendingInvitesList } from "@/components/workspace/PendingInvitesList";
@@ -412,9 +413,7 @@ export default function Workspace() {
                           size="icon"
                           className="h-8 w-8"
                           onClick={() => {
-                            const audio = new Audio(CHAT_SOUNDS.pop);
-                            audio.currentTime = 0;
-                            audio.play().catch(console.error);
+                            notificationAudioManager.play(CHAT_SOUNDS.pop).catch(console.error);
                           }}
                         >
                           <Play className="h-3.5 w-3.5" />
@@ -435,9 +434,7 @@ export default function Workspace() {
                           size="icon"
                           className="h-8 w-8"
                           onClick={() => {
-                            const audio = new Audio(CHAT_SOUNDS.ding);
-                            audio.currentTime = 0;
-                            audio.play().catch(console.error);
+                            notificationAudioManager.play(CHAT_SOUNDS.ding).catch(console.error);
                           }}
                         >
                           <Play className="h-3.5 w-3.5" />
@@ -458,9 +455,7 @@ export default function Workspace() {
                           size="icon"
                           className="h-8 w-8"
                           onClick={() => {
-                            const audio = new Audio(CHAT_SOUNDS.chime);
-                            audio.currentTime = 0;
-                            audio.play().catch(console.error);
+                            notificationAudioManager.play(CHAT_SOUNDS.chime).catch(console.error);
                           }}
                         >
                           <Play className="h-3.5 w-3.5" />
