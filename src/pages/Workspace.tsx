@@ -15,6 +15,7 @@ import { Loader2, Users, Settings, UserPlus, Shield, DollarSign, Gamepad2, Eye, 
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { CHAT_SOUNDS, useChatNotifications } from "@/hooks/useChatNotifications";
 import { notificationAudioManager } from "@/services/audio/notificationAudioManager";
+import { AudioPreviewButton } from "@/components/chat/AudioPreviewButton";
 import { MemberList } from "@/components/workspace/MemberList";
 import { InviteMemberDialog } from "@/components/workspace/InviteMemberDialog";
 import { PendingInvitesList } from "@/components/workspace/PendingInvitesList";
@@ -408,16 +409,7 @@ export default function Workspace() {
                           <Volume2 className="h-3.5 w-3.5 mr-2" />
                           Padrão (Pop)
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => {
-                            notificationAudioManager.play(CHAT_SOUNDS.pop).catch(console.error);
-                          }}
-                        >
-                          <Play className="h-3.5 w-3.5" />
-                        </Button>
+                        <AudioPreviewButton soundUrl={CHAT_SOUNDS.pop} />
                       </div>
                       <div className="flex items-center gap-2">
                         <Button
@@ -429,16 +421,7 @@ export default function Workspace() {
                           <Volume2 className="h-3.5 w-3.5 mr-2" />
                           Discreto (Ding)
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => {
-                            notificationAudioManager.play(CHAT_SOUNDS.ding).catch(console.error);
-                          }}
-                        >
-                          <Play className="h-3.5 w-3.5" />
-                        </Button>
+                        <AudioPreviewButton soundUrl={CHAT_SOUNDS.ding} />
                       </div>
                       <div className="flex items-center gap-2">
                         <Button
@@ -450,16 +433,7 @@ export default function Workspace() {
                           <Volume2 className="h-3.5 w-3.5 mr-2" />
                           Moderno (Chime)
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => {
-                            notificationAudioManager.play(CHAT_SOUNDS.chime).catch(console.error);
-                          }}
-                        >
-                          <Play className="h-3.5 w-3.5" />
-                        </Button>
+                        <AudioPreviewButton soundUrl={CHAT_SOUNDS.chime} />
                       </div>
                     </div>
                     <p className="text-[11px] text-muted-foreground mt-1 italic">
