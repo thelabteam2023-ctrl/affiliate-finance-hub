@@ -48,6 +48,14 @@ export const ChatNotificationManager = ({ isChatOpen }: ChatNotificationManagerP
 
           // 4. Play sound notification (hook handles cross-tab coordination)
           playNotificationSound(messageId);
+
+          // 5. Check for mentions to trigger global state/animation if needed
+          const content = newMessage.content as string;
+          const myName = (user as any).full_name || user.email?.split('@')[0];
+          if (content.includes(`@${myName}`)) {
+             // In the future, we could broadcast a 'MENTION_RECEIVED' event here
+             console.log('[ChatNotifications] Mention detected for user');
+          }
         }
       )
       .subscribe((status) => {
