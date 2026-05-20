@@ -69,6 +69,7 @@ describe("Surebet Stress Tests - Edge Cases & Extremes", () => {
       
       const analysis = analisarArbitragem(legs, [100, 100], config, 2);
       expect(Number.isFinite(analysis.minRoi)).toBe(true);
+      // Perna 1 ganhou: Retorno = 100 * 1.0 = 100. Stake total = 200. Lucro = 100 - 200 = -100.
       expect(analysis.scenarios[0].lucro).toBe(-100);
     });
   });
