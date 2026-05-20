@@ -7,8 +7,10 @@ import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Info, Calculator, ArrowRight, Currency } from "lucide-react";
+import { Info, Calculator, ArrowRight, DollarSign, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CURRENCIES_THAT_CANNOT_BE_1 } from "@/utils/exchangeRateGuard";
+
 
 interface RateUsed {
   currency: string;
