@@ -1248,6 +1248,9 @@ export function SurebetCard({
         <SurebetTracePanel 
           isOpen={showDebug} 
           baseCurrency={moedaConsolidacao || "BRL"}
+          workingRates={workingRatesMap}
+          officialRates={officialRatesMap}
+
           steps={(() => {
             const steps: any[] = [];
             (surebet.pernas || []).forEach((p, idx) => {
