@@ -190,6 +190,9 @@ export function SurebetTableRow({
         style={{ height: '78px' }}
         onMouseEnter={() => !isEditing && onFocus(pernaIndex)}
         onMouseLeave={() => !isEditing && onBlur()}
+        data-testid={`surebet-leg-${pernaIndex}`}
+        data-currency={entry.moeda}
+        data-calc-state={isProcessing ? "recomputing" : "idle"}
       >
         {/* Loading OCR */}
         {isProcessing && (
