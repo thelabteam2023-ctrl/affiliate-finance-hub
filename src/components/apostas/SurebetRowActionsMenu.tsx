@@ -22,6 +22,9 @@ import {
   Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { generateLiquidationOptions } from "@/utils/surebetLiquidationUtils";
+import { SurebetPerna } from "@/components/projeto-detalhe/SurebetCard";
+
 
 export interface SurebetPernaInfo {
   id: string;
