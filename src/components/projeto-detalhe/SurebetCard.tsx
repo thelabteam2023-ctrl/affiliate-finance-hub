@@ -1242,16 +1242,31 @@ export function SurebetCard({
                     type: 'aggregation'
                   });
                 }
+                }
               } else if (p.moeda && p.moeda !== moedaConsolidacao) {
                 steps.push({
                   label: `P${idx+1} (${p.bookmaker_nome})`,
                   original: `${p.moeda} ${p.stake_total || p.stake}`,
                   rate: convertToConsolidation ? convertToConsolidation(1, p.moeda || "BRL") : 1,
-                  result: convertToConsolidation ? convertToConsolidation(p.stake_total || p.stake, p.moeda || "BRL").toFixed(2) : (p.stake_total || p.stake).toFixed(2),
+                  result: convertToConsolidation ? convertToConsolidation(p.stake_total || p.stake, p.moeda || "BRL").toFixed(2) : (p.stake_total || (p.stake as any)).toFixed(2),
                   type: 'conversion'
                 });
               }
             });
+
+            // Se for Surebet, mostrar o P&L total projetado no trace
+            if (!isSimplesMultiEntry && !isLiquidada) {
+              const options = generateLiquidationOptions(surebet.pernas || []);
+              options.singleWin.forEach(opt => {
+                steps.push({
+                  label: `P&L Projetado: ${opt.label} Ganha`,
+                  original: `Odd ${opt.houses[0].odd.toFixed(2)}`,
+                  result: opt.pnl.toFixed(2),
+                  type: 'adjustment'
+                });
+              });
+            }
+
             return steps;
           })()}
         />
