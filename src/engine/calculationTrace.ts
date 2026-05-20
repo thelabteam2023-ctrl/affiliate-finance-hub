@@ -1,98 +1,65 @@
 /**
- * Calculation Trace Engine — Rastreamento determinístico de operações matemáticas.
+ * CalculationTrace — Motor de rastreabilidade matemática
+ * Permite auditar cada passo de um cálculo financeiro complexo.
  */
 
 export interface TraceStep {
   id: string;
   parentId?: string;
   step: string;
-  inputs: Record<string, any>;
-  outputs: Record<string, any>;
+  inputs: any;
+  outputs: any;
+  formula?: string;
   currencyIn?: string;
   currencyOut?: string;
   rate?: number;
-  formula?: string;
   rounded?: boolean;
   precisionLoss?: number;
-  deps?: string[];
   timestamp: number;
 }
 
 export class CalculationTrace {
   private steps: TraceStep[] = [];
-  private currentParentId?: string;
+  private id: string;
+  private parentId?: string;
   private enabled: boolean;
 
-  constructor(enabled = true) {
+  constructor(enabled = true, id = Math.random().toString(36).substring(7), parentId?: string) {
     this.enabled = enabled;
+    this.id = id;
+    this.parentId = parentId;
   }
 
-  step(name: string, data: Partial<Omit<TraceStep, 'id' | 'step' | 'timestamp'>>): string {
-    if (!this.enabled) return '';
-
-    const id = crypto.randomUUID();
+  step(name: string, data: Omit<TraceStep, 'id' | 'step' | 'timestamp' | 'parentId'>) {
+    if (!this.enabled) return;
+    
     this.steps.push({
-      id,
-      parentId: data.parentId || this.currentParentId,
+      id: this.id,
+      parentId: this.parentId,
       step: name,
-      inputs: data.inputs || {},
-      outputs: data.outputs || {},
-      ...data,
-      timestamp: performance.now(),
-    } as TraceStep);
-    return id;
+      timestamp: Date.now(),
+      ...data
+    });
   }
 
-  child(name: string, data: Partial<Omit<TraceStep, 'id' | 'step' | 'timestamp'>> = {}): CalculationTrace {
-    const childTrace = new CalculationTrace(this.enabled);
-    const parentId = this.step(name, { ...data, outputs: { status: 'started' } });
-    childTrace.currentParentId = parentId;
-    childTrace.steps = this.steps; // Shared reference for flat collection
-    return childTrace;
-  }
-
-  finalize(outputs: Record<string, any> = { status: 'completed' }) {
-    if (this.currentParentId) {
-      const parentStep = this.steps.find(s => s.id === this.currentParentId);
-      if (parentStep) {
-        parentStep.outputs = { ...parentStep.outputs, ...outputs };
-      }
+  child(name: string, data?: any): CalculationTrace {
+    const childId = `${this.id}-${name}-${Math.random().toString(36).substring(7)}`;
+    if (this.enabled) {
+      this.step(`child_start:${name}`, { inputs: data, outputs: { childId } });
     }
+    return new CalculationTrace(this.enabled, childId, this.id);
+  }
+
+  finalize(outputs: any) {
+    if (!this.enabled) return;
+    this.step('finalize', { inputs: null, outputs });
   }
 
   getSteps(): TraceStep[] {
-    return [...this.steps];
+    return this.steps;
   }
 
-  exportSnapshot() {
-    return JSON.stringify(this.steps, null, 2);
+  getId(): string {
+    return this.id;
   }
-}
-
-// Global bridge for IA and debugging
-declare global {
-  interface Window {
-    __CALC_DEBUG__?: {
-      enabled: boolean;
-      lastCalculation?: any;
-      hydrationState?: any;
-      currencyPipeline?: any;
-      dependencyGraph?: any;
-      traces: TraceStep[][];
-      getTrace: (index: number) => TraceStep[];
-      exportLastTrace: () => string;
-    };
-  }
-}
-
-if (typeof window !== 'undefined') {
-  window.__CALC_DEBUG__ = {
-    enabled: true,
-    traces: [],
-    getTrace: (idx) => window.__CALC_DEBUG__?.traces[idx] || [],
-    exportLastTrace: () => {
-      const last = window.__CALC_DEBUG__?.traces[window.__CALC_DEBUG__?.traces.length - 1];
-      return JSON.stringify(last, null, 2);
-    }
-  };
 }

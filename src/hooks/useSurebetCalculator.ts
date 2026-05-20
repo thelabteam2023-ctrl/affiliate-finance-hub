@@ -210,7 +210,7 @@ export function useSurebetCalculator({
   }, [safeConfig.brlRates, getMoedaPerna]);
 
   // CALCULATION PIPELINE WITH TRACE
-  const analysis = useMemo((): SurebetEngineAnalysis => {
+  const analysis = useMemo((): SurebetEngineAnalysis & { traceId?: string } => {
     const trace = new CalculationTrace(true);
     
     const engineLegs: EngineLeg[] = odds.map((o) => {
@@ -242,14 +242,32 @@ export function useSurebetCalculator({
       equalizedStakesSnapshot
     }, trace);
 
-    // Global bridge update
-    if (typeof window !== 'undefined' && window.__CALC_DEBUG__) {
-      window.__CALC_DEBUG__.lastCalculation = result;
-      window.__CALC_DEBUG__.traces.push(trace.getSteps());
+    const finalResult = {
+      ...result,
+      traceId: trace.getId()
+    };
+
+    // Global bridge update for AI-debuggable engine
+    if (typeof window !== 'undefined') {
+      if (!window.__CALC_DEBUG__) {
+        window.__CALC_DEBUG__ = {
+          lastCalculation: null,
+          traces: [],
+          hydrationState: {},
+          dependencyGraph: {},
+          exportSnapshot: () => JSON.stringify(window.__CALC_DEBUG__),
+        };
+      }
+      window.__CALC_DEBUG__.lastCalculation = finalResult;
+      window.__CALC_DEBUG__.traces.push({
+        id: trace.getId(),
+        steps: trace.getSteps(),
+        timestamp: Date.now()
+      });
       if (window.__CALC_DEBUG__.traces.length > 50) window.__CALC_DEBUG__.traces.shift();
     }
 
-    return result;
+    return finalResult;
   }, [odds, directedProfitLegs, numPernas, arredondarStake, safeConfig, getMoedaPerna, getOddMediaPerna, getStakeTotalPerna, equalizedStakesSnapshot]);
 
   return {
