@@ -939,24 +939,53 @@ export function SurebetCard({
       {invalidRates.length > 0 && (
         <div 
           data-testid="invalid-rates-banner"
-          className="bg-destructive/10 border-b border-destructive/30 px-4 py-2 flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-300"
+          className="bg-destructive/10 border-b border-destructive/30 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-300"
         >
           <div className="flex items-center gap-2 text-destructive text-xs sm:text-sm font-medium">
             <AlertTriangle className="h-4 w-4 shrink-0" />
             <span>
               ⛔ Cálculo bloqueado — cotações de trabalho inválidas:
               {invalidRates.map(r => (
-                <span key={r.currency} className="ml-1 opacity-90" data-testid={`invalid-rate-${r.currency.toLowerCase()}`}>
+                <span key={r.currency} className="ml-1 opacity-90 font-bold" data-testid={`invalid-rate-${r.currency.toLowerCase()}`}>
                    {r.currency} ({r.rate.toFixed(4)})
                 </span>
               ))}
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-muted-foreground hidden sm:inline italic">Moedas estrangeiras não podem valer 1.0 BRL</span>
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] text-muted-foreground hidden lg:inline italic">Moedas estrangeiras não podem valer 1.0 BRL</span>
+            <button
+              onClick={async () => {
+                const { toast } = await import("sonner");
+                const { supabase } = await import("@/integrations/supabase/client");
+                
+                try {
+                  const updates: any = {};
+                  invalidRates.forEach(r => {
+                    const field = r.currency === 'USD' ? 'cotacao_trabalho' : `cotacao_trabalho_${r.currency.toLowerCase()}`;
+                    updates[field] = r.officialRate;
+                  });
+                  
+                  const { error } = await supabase
+                    .from('projetos')
+                    .update(updates)
+                    .eq('id', surebet.workspace_id);
+                    
+                  if (error) throw error;
+                  toast.success("Cotações de trabalho atualizadas com sucesso!");
+                } catch (err) {
+                  console.error(err);
+                  toast.error("Erro ao atualizar cotações.");
+                }
+              }}
+              className="px-2 py-1 bg-destructive text-destructive-foreground text-[10px] font-bold rounded hover:bg-destructive/90 transition-colors uppercase"
+            >
+              Usar Oficial
+            </button>
           </div>
         </div>
       )}
+
 
 
       <CardContent className="p-5 sm:p-6">
