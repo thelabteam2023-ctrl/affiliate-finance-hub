@@ -2188,7 +2188,13 @@ export function SurebetModalRoot({
   return (
     <>
       {/* Painel Fullscreen - Ocupa 100% da janela */}
-      <div className="z-50 bg-background flex flex-col animate-in fade-in-0 duration-200">
+      <div 
+        className="z-50 bg-background flex flex-col animate-in fade-in-0 duration-200"
+        data-testid="surebet-modal-root"
+        data-trace-id={(analysis as any).traceId}
+        data-calc-state={analysis.isValidArbitrage ? "valid" : "invalid"}
+        data-edit-state={isEditing ? "editing" : "creating"}
+      >
         <div className="relative w-full flex flex-col overflow-hidden">
           {/* Hidden file input */}
           <input
