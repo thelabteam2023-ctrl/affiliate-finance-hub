@@ -571,7 +571,37 @@ export function SurebetCard({
   const { getLogoUrl } = useBookmakerLogoMap();
 
   // Expôr para debug e automação
+  const { workingRates: projectRatesRaw } = useProjetoWorkingRates(surebet.workspace_id);
+  const { getRate: getOfficialRate } = useCotacoes();
+
+  // Mapear as taxas de trabalho do projeto para o formato simples [currency: string]: number
+  const workingRatesMap = (() => {
+    if (!projectRatesRaw) return { USD: 1 };
+    return {
+      USD: projectRatesRaw.cotacao_trabalho || 1,
+      EUR: projectRatesRaw.cotacao_trabalho_eur || 1,
+      GBP: projectRatesRaw.cotacao_trabalho_gbp || 1,
+      MYR: projectRatesRaw.cotacao_trabalho_myr || 1,
+      MXN: projectRatesRaw.cotacao_trabalho_mxn || 1,
+      ARS: projectRatesRaw.cotacao_trabalho_ars || 1,
+      COP: projectRatesRaw.cotacao_trabalho_cop || 1,
+    };
+  })();
+
+  // Mapa de taxas oficiais para o alerta de drift
+  const officialRatesMap = (() => {
+    return {
+      USD: getOfficialRate("USD") || 1,
+      EUR: getOfficialRate("EUR") || 1,
+      GBP: getOfficialRate("GBP") || 1,
+      MXN: getOfficialRate("MXN") || 1,
+      ARS: getOfficialRate("ARS") || 1,
+      COP: getOfficialRate("COP") || 1,
+    };
+  })();
+
   useEffect(() => {
+
     if (typeof window !== 'undefined' && (window as any).__CALC_DEBUG__) {
       const debug = (window as any).__CALC_DEBUG__;
       if (!debug.liquidationState) debug.liquidationState = {};
