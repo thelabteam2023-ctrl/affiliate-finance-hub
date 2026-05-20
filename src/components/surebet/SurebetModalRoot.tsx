@@ -2392,7 +2392,13 @@ export function SurebetModalRoot({
               <div className="overflow-x-auto" ref={tableContainerRef}>
                 <table className="w-full text-xs border-collapse">
                   <thead>
-                    <tr className="border-b border-border/50">
+                    <tr 
+                      className="border-b border-border/50"
+                      data-trace-id={analysis.traceId}
+                      data-calc-state={analysis.stakeTotal > 0 ? "valid" : "invalid"}
+                      data-hydration-state={isEditing ? "user" : "db"}
+                      data-edit-state={isEditing ? "dirty" : "pristine"}
+                    >
                       <th className="py-2 px-2 text-left font-medium text-muted-foreground w-16">Perna</th>
                       <th className="py-2 px-2 text-left font-medium text-muted-foreground min-w-[160px]">Casa</th>
                       <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20">Odd</th>
