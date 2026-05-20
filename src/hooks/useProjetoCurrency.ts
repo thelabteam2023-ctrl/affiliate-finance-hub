@@ -13,6 +13,8 @@ import { useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCotacoes } from "./useCotacoes";
+import { getSafeWorkingRate } from "@/utils/exchangeRateGuard";
+
 import { CURRENCY_SYMBOLS, type SupportedCurrency } from "@/types/currency";
 import type { MoedaConsolidacao, FonteCotacao } from "@/types/projeto";
 
