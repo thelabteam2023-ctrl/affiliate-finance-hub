@@ -571,6 +571,7 @@ export function SurebetCard({
 }: SurebetCardProps) {
   const [showDebug, setShowDebug] = useState(false);
   const { getLogoUrl } = useBookmakerLogoMap();
+  const { isSystemOwner } = useAuth();
 
   // Expôr para debug e automação
   const { workingRates: projectRatesRaw, refetch: refetchProjectRates } = useProjetoWorkingRates(surebet.workspace_id);
