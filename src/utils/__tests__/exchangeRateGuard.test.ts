@@ -24,7 +24,7 @@ describe('ExchangeRateGuard', () => {
     
     const validation = validateExchangeRates(workingRatesInvalidas, usedCurrencies);
     expect(validation.valid).toBe(false);
-    expect(validation.errors).toContain(expect.stringContaining('USD = 1.0 (inválida)'));
+    expect(validation.errors[0]).toContain('USD = 1.0 (inválida)');
   });
 
   it('G6 — P&L exibe centavos, não centenas, após corrigir taxa', () => {
