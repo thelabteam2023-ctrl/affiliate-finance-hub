@@ -4,9 +4,9 @@ import { useWorkspace } from './useWorkspace';
 
 // Sons de notificação discretos e profissionais (armazenados localmente)
 export const CHAT_SOUNDS = {
-  pop: '/sounds/pop.mp3',
-  ding: '/sounds/ding.mp3',
-  chime: '/sounds/chime.mp3',
+  pop: '/sounds/pop.mp3?v=1',
+  ding: '/sounds/ding.mp3?v=1',
+  chime: '/sounds/chime.mp3?v=1',
 };
 
 export function useChatNotifications() {
