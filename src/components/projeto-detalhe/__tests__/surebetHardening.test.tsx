@@ -2,9 +2,19 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { SurebetCard } from "@/components/projeto-detalhe/SurebetCard";
 import React from 'react';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // Mock simple currency formatter
 const mockFormat = (v: number) => `R$ ${v.toFixed(2)}`;
+
+// Create a new QueryClient for each test
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+    },
+  },
+});
 
 describe("Surebet Hardening - DOM & Observability", () => {
   const mockSurebet = {
@@ -45,11 +55,13 @@ describe("Surebet Hardening - DOM & Observability", () => {
 
   it("deve conter atributos de data-* para automação de testes", () => {
     const { container } = render(
-      <SurebetCard 
-        surebet={mockSurebet as any} 
-        formatCurrency={mockFormat}
-        moedaConsolidacao="BRL"
-      />
+      <QueryClientProvider client={queryClient}>
+        <SurebetCard 
+            surebet={mockSurebet as any} 
+            formatCurrency={mockFormat}
+            moedaConsolidacao="BRL"
+        />
+      </QueryClientProvider>
     );
 
     const card = container.querySelector('[data-testid="surebet-card"]');
@@ -77,11 +89,13 @@ describe("Surebet Hardening - DOM & Observability", () => {
     };
     
     render(
-      <SurebetCard 
-        surebet={simpleSurebet as any} 
-        formatCurrency={mockFormat}
-        moedaConsolidacao="BRL"
-      />
+      <QueryClientProvider client={queryClient}>
+        <SurebetCard 
+            surebet={simpleSurebet as any} 
+            formatCurrency={mockFormat}
+            moedaConsolidacao="BRL"
+        />
+      </QueryClientProvider>
     );
 
     const debugBtn = screen.queryByTitle("Abrir Auditoria Matemática");
