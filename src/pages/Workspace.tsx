@@ -411,7 +411,11 @@ export default function Workspace() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
-                          onClick={() => new Audio(CHAT_SOUNDS.pop).play()}
+                          onClick={() => {
+                            const audio = new Audio(CHAT_SOUNDS.pop);
+                            audio.currentTime = 0;
+                            audio.play().catch(console.error);
+                          }}
                         >
                           <Play className="h-3.5 w-3.5" />
                         </Button>
@@ -430,7 +434,11 @@ export default function Workspace() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
-                          onClick={() => new Audio(CHAT_SOUNDS.ding).play()}
+                          onClick={() => {
+                            const audio = new Audio(CHAT_SOUNDS.ding);
+                            audio.currentTime = 0;
+                            audio.play().catch(console.error);
+                          }}
                         >
                           <Play className="h-3.5 w-3.5" />
                         </Button>
@@ -449,7 +457,11 @@ export default function Workspace() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
-                          onClick={() => new Audio(CHAT_SOUNDS.chime).play()}
+                          onClick={() => {
+                            const audio = new Audio(CHAT_SOUNDS.chime);
+                            audio.currentTime = 0;
+                            audio.play().catch(console.error);
+                          }}
                         >
                           <Play className="h-3.5 w-3.5" />
                         </Button>
