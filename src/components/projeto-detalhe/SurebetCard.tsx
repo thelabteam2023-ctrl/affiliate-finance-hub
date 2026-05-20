@@ -1242,7 +1242,7 @@ export function SurebetCard({
                     type: 'aggregation'
                   });
                 }
-              }
+                }
               } else if (p.moeda && p.moeda !== moedaConsolidacao) {
                 steps.push({
                   label: `P${idx+1} (${p.bookmaker_nome})`,
