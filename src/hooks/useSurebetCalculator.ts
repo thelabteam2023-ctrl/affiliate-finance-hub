@@ -30,9 +30,11 @@ declare global {
       reproduce: (snapshot: string | any) => void;
       reproduceAndRender: (snapshot: string | any) => void;
       overrideExchangeRate: (from: string, to: string, rate: number) => void;
+      audit: () => void;
     };
   }
 }
+
 
 // ─── Re-exports para compatibilidade ──────────────────────────
 export type { SurebetEngineAnalysis as SurebetAnalysis, LegScenarioResult as LegScenario };
