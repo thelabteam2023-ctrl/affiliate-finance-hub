@@ -17,6 +17,10 @@ import { CurrencyBadge } from "@/components/ui/currency-display";
 import { SurebetTracePanel } from "./SurebetTracePanel";
 import { liquidationQueue } from "@/utils/surebetLiquidationQueue";
 import { expandLegsWithSubEntries, generateLiquidationOptions } from "@/utils/surebetLiquidationUtils";
+import { calculatePnlProjections } from "@/utils/surebetPnlProjection";
+import { useProjetoWorkingRates } from "@/hooks/useProjetoWorkingRates";
+import { useCotacoes } from "@/hooks/useCotacoes";
+
 import { validateBalanceForOperation } from "@/utils/surebetBalanceValidator";
 
 
