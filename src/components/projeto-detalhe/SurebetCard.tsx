@@ -657,11 +657,19 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
     let stakeRealTotal: number = 0;
 
     surebet.pernas.forEach(p => {
-      const s = p.stake_total || p.stake || 0;
       const isFB = isPernaFreebet(p);
-      const sConv = (isMulticurrency && convertToConsolidation)
-        ? convertToConsolidation(s, p.moeda || "BRL")
-        : s;
+      let sConv = 0;
+      
+      if (p.entries && p.entries.length > 0 && convertToConsolidation) {
+        // CORREÇÃO: Somar cada sub-entrada convertida individualmente
+        sConv = p.entries.reduce((sum, e) => sum + convertToConsolidation(e.stake || 0, e.moeda || "BRL"), 0);
+      } else {
+        const s = p.stake_total || p.stake || 0;
+        sConv = (isMulticurrency && convertToConsolidation)
+          ? convertToConsolidation(s, p.moeda || "BRL")
+          : s;
+      }
+      
       stakeTotal += sConv;
       if (!isFB) stakeRealTotal += sConv;
     });
@@ -670,17 +678,23 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
 
     // Para cada cenário (cada perna ganhando), calcular o lucro
     const cenarios = surebet.pernas.map(perna => {
-      const oddEfetiva = perna.odd_media || perna.odd || 0;
-      const stakeNessaPerna = perna.stake_total || perna.stake || 0;
       const isFB = isPernaFreebet(perna);
+      let retorno = 0;
 
-      // SNR: Freebet payout líquido = stake*(odd-1); aposta real payout = stake*odd
-      const retornoLocal = isFB ? stakeNessaPerna * (oddEfetiva - 1) : stakeNessaPerna * oddEfetiva;
-
-      // Converter retorno para moeda de consolidação se multicurrency
-      const retorno = (isMulticurrency && convertToConsolidation)
-        ? convertToConsolidation(retornoLocal, perna.moeda || "BRL")
-        : retornoLocal;
+      if (perna.entries && perna.entries.length > 0 && convertToConsolidation) {
+        // CORREÇÃO: Calcular payout consolidado somando cada sub-entrada convertida
+        retorno = perna.entries.reduce((sum, e) => {
+          const payoutLocal = isFB ? (e.stake * (e.odd - 1)) : (e.stake * e.odd);
+          return sum + convertToConsolidation(payoutLocal, e.moeda || "BRL");
+        }, 0);
+      } else {
+        const oddEfetiva = perna.odd_media || perna.odd || 0;
+        const stakeNessaPerna = perna.stake_total || perna.stake || 0;
+        const retornoLocal = isFB ? stakeNessaPerna * (oddEfetiva - 1) : stakeNessaPerna * oddEfetiva;
+        retorno = (isMulticurrency && convertToConsolidation)
+          ? convertToConsolidation(retornoLocal, perna.moeda || "BRL")
+          : retornoLocal;
+      }
 
       // Lucro = retorno da perna ganhadora - custo real (somente stakes não-freebet)
       return retorno - stakeRealTotal;
@@ -693,6 +707,7 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
 
     return { piorLucro, melhorLucro, piorRoi, melhorRoi };
   };
+
 
   // Manter assinatura antiga para uso interno (apenas pior)
   const calcularPiorCenario = (): { lucro: number; roi: number } | null => {
@@ -809,7 +824,14 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
   return (
     <Card 
       className={cn("transition-colors overflow-hidden", className)}
+      data-testid="surebet-card"
+      data-calc-state={isLiquidada ? 'liquidated' : 'pending'}
+      data-is-multicurrency={isMulticurrency ? 'true' : 'false'}
+      data-base-currency={moedaConsolidacao}
+      data-total-normalized={stakeRealTotal}
+      data-roi={roiExibir}
     >
+
       <CardContent className="p-5 sm:p-6">
         {/* LINHA 1: Evento (título destacado) - com tooltip */}
         <TooltipProvider delayDuration={300}>
@@ -880,9 +902,9 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
           <div className="space-y-3 mb-3">
             {surebet.pernas
               .filter(perna => perna.bookmaker_id && perna.odd && perna.odd > 0)
-              .map((perna) => (
+              .map((perna, legIndex) => (
+                <div key={perna.id} data-testid="surebet-leg-wrapper" data-leg-index={legIndex} data-currency={perna.moeda} data-sub-entries-count={perna.entries?.length ?? 0}>
                 <PernaItem 
-                  key={perna.id} 
                   perna={perna} 
                   formatValue={formatValue}
                   getLogoUrl={getLogoUrl}
@@ -932,6 +954,8 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
                     }
                   } : undefined}
                 />
+                </div>
+
               ))}
           </div>
         )}
