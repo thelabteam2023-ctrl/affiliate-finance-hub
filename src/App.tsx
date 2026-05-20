@@ -133,6 +133,9 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   return (
     <TopBarProvider>
     <SidebarProvider defaultOpen={false}>
+      {/* Global Chat Notification Manager */}
+      <ChatNotificationManager isChatOpen={isChatOpen} />
+
       {/* Banner de aviso de inatividade */}
       {showingWarning && minutesUntilTimeout !== null && minutesUntilTimeout <= 5 && (
         <InactivityWarningBanner 
