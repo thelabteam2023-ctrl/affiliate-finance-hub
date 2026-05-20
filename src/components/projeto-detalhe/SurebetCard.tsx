@@ -931,9 +931,19 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
           <div className="space-y-3 mb-3">
             {surebet.pernas
               .filter(perna => perna.bookmaker_id && perna.odd && perna.odd > 0)
-              .map((perna, legIndex) => (
-                <div key={perna.id} data-testid="surebet-leg-wrapper" data-leg-index={legIndex} data-currency={perna.moeda} data-sub-entries-count={perna.entries?.length ?? 0}>
-                <PernaItem 
+              .map((perna, legIndex) => {
+                const subCurrencies = perna.entries?.map(e => e.moeda).join(',') || '';
+                return (
+                  <div 
+                    key={perna.id} 
+                    data-testid="surebet-leg-wrapper" 
+                    data-leg-index={legIndex} 
+                    data-currency={perna.moeda} 
+                    data-sub-entries-count={perna.entries?.length ?? 0}
+                    data-sub-entries-currencies={subCurrencies}
+                  >
+                  <PernaItem 
+
                   perna={perna} 
                   formatValue={formatValue}
                   getLogoUrl={getLogoUrl}
