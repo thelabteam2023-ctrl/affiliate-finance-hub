@@ -62,7 +62,7 @@ export function resolveEffectiveProjectRate(
 export function useProjetoWorkingRates(projetoId: string | undefined) {
   const { getRate } = useCotacoes();
 
-  const { data: workingRates } = useQuery({
+  const { data: workingRates, refetch, isLoading } = useQuery({
     queryKey: ["projeto-working-rates", projetoId],
     queryFn: async (): Promise<WorkingRatesRow | null> => {
       if (!projetoId) return null;
@@ -84,5 +84,6 @@ export function useProjetoWorkingRates(projetoId: string | undefined) {
     [workingRates, getRate],
   );
 
-  return { workingRates, getEffectiveRate };
+  return { workingRates, getEffectiveRate, refetch, isLoading };
 }
+

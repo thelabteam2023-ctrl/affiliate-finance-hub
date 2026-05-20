@@ -20,6 +20,8 @@ import { expandLegsWithSubEntries, generateLiquidationOptions } from "@/utils/su
 import { calculatePnlProjections } from "@/utils/surebetPnlProjection";
 import { useProjetoWorkingRates } from "@/hooks/useProjetoWorkingRates";
 import { useCotacoes } from "@/hooks/useCotacoes";
+import { getSafeWorkingRate } from "@/utils/exchangeRateGuard";
+
 
 import { validateBalanceForOperation } from "@/utils/surebetBalanceValidator";
 
@@ -571,33 +573,54 @@ export function SurebetCard({
   const { getLogoUrl } = useBookmakerLogoMap();
 
   // Expôr para debug e automação
-  const { workingRates: projectRatesRaw } = useProjetoWorkingRates(surebet.workspace_id);
+  const { workingRates: projectRatesRaw, refetch: refetchProjectRates } = useProjetoWorkingRates(surebet.workspace_id);
+
   const { getRate: getOfficialRate } = useCotacoes();
 
-  // Mapear as taxas de trabalho do projeto para o formato simples [currency: string]: number
-  const workingRatesMap = (() => {
-    if (!projectRatesRaw) return { USD: 1 };
-    return {
-      USD: projectRatesRaw.cotacao_trabalho || 1,
-      EUR: projectRatesRaw.cotacao_trabalho_eur || 1,
-      GBP: projectRatesRaw.cotacao_trabalho_gbp || 1,
-      MYR: projectRatesRaw.cotacao_trabalho_myr || 1,
-      MXN: projectRatesRaw.cotacao_trabalho_mxn || 1,
-      ARS: projectRatesRaw.cotacao_trabalho_ars || 1,
-      COP: projectRatesRaw.cotacao_trabalho_cop || 1,
-    };
+  // Mapear as taxas de trabalho do projeto com proteção contra valores inválidos
+  const ratesAudit = (() => {
+    if (!projectRatesRaw) {
+      return {
+        USD: { rate: getOfficialRate("USD") || 5.06, source: 'official_fallback' as const },
+        EUR: { rate: getOfficialRate("EUR") || 6.00, source: 'official_fallback' as const },
+        GBP: { rate: getOfficialRate("GBP") || 7.00, source: 'official_fallback' as const },
+        MXN: { rate: getOfficialRate("MXN") || 0.29, source: 'official_fallback' as const },
+        BRL: { rate: 1, source: 'working' as const },
+      };
+    }
+
+    
+    const currencies = ['USD', 'EUR', 'GBP', 'MYR', 'MXN', 'ARS', 'COP'];
+    const result: Record<string, { rate: number; source: 'working' | 'official_fallback' | 'error'; warning?: string }> = {};
+    
+    currencies.forEach(curr => {
+      const field = curr === 'USD' ? 'cotacao_trabalho' : `cotacao_trabalho_${curr.toLowerCase()}`;
+      const rawValue = (projectRatesRaw as any)[field];
+      result[curr] = getSafeWorkingRate(curr, rawValue, getOfficialRate(curr));
+    });
+    
+    result['BRL'] = { rate: 1, source: 'working' };
+    return result;
   })();
 
-  const invalidRates = Object.entries(workingRatesMap)
-    .filter(([currency, rate]) => {
-      const isSuspect = ['USD', 'EUR', 'GBP', 'MXN', 'ARS', 'COP', 'MYR'].includes(currency);
-      return rate <= 0 || (isSuspect && Math.abs(rate - 1.0) < 0.001);
+  const workingRatesMap = Object.fromEntries(
+    Object.entries(ratesAudit).map(([k, v]) => [k, v.rate])
+  );
+
+  const invalidRates = Object.entries(ratesAudit)
+    .filter(([currency, audit]) => {
+      // BRL nunca é inválida
+      if (currency === 'BRL') return false;
+      // Consideramos "inválida" se for erro ou se precisou de fallback (para mostrar o banner)
+      return audit.source === 'error' || audit.source === 'official_fallback';
     })
-    .map(([currency, rate]) => ({
+    .map(([currency, audit]) => ({
       currency,
-      rate,
+      rate: audit.rate,
+      source: audit.source,
       officialRate: getOfficialRate(currency)
     }));
+
 
 
   // Mapa de taxas oficiais para o alerta de drift
@@ -613,6 +636,10 @@ export function SurebetCard({
   })();
 
   useEffect(() => {
+    console.log("[SurebetCard] Audit Rates:", ratesAudit);
+    console.log("[SurebetCard] Project Raw:", projectRatesRaw);
+    console.log("[SurebetCard] Official Rate USD:", getOfficialRate("USD"));
+
 
     if (typeof window !== 'undefined' && (window as any).__CALC_DEBUG__) {
       const debug = (window as any).__CALC_DEBUG__;
@@ -935,25 +962,46 @@ export function SurebetCard({
       data-status={surebet.status}
       data-has-invalid-rates={invalidRates.length > 0 ? 'true' : 'false'}
     >
-      {/* Banner de bloqueio por taxas inválidas */}
+      {/* Banner de Alerta/Bloqueio por taxas inválidas */}
       {invalidRates.length > 0 && (
         <div 
           data-testid="invalid-rates-banner"
-          className="bg-destructive/10 border-b border-destructive/30 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-300"
+          className={cn(
+            "border-b px-4 py-3 flex flex-col lg:flex-row lg:items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-300",
+            invalidRates.some(r => r.source === 'error') 
+              ? "bg-destructive/10 border-destructive/30" 
+              : "bg-amber-500/10 border-amber-500/30"
+          )}
         >
-          <div className="flex items-center gap-2 text-destructive text-xs sm:text-sm font-medium">
+          <div className={cn(
+            "flex items-center gap-2 text-xs sm:text-sm font-medium",
+            invalidRates.some(r => r.source === 'error') ? "text-destructive" : "text-amber-500"
+          )}>
             <AlertTriangle className="h-4 w-4 shrink-0" />
-            <span>
-              ⛔ Cálculo bloqueado — cotações de trabalho inválidas:
-              {invalidRates.map(r => (
-                <span key={r.currency} className="ml-1 opacity-90 font-bold" data-testid={`invalid-rate-${r.currency.toLowerCase()}`}>
-                   {r.currency} ({r.rate.toFixed(4)})
-                </span>
-              ))}
-            </span>
+            <div className="flex flex-col">
+              <span>
+                {invalidRates.some(r => r.source === 'error') 
+                  ? "⛔ Cálculo bloqueado — taxas ausentes: " 
+                  : "⚠️ Usando cotação oficial — configure a cotação de trabalho: "}
+                {invalidRates.map(r => (
+                  <span key={r.currency} className="ml-1 opacity-90 font-bold" data-testid={`invalid-rate-${r.currency.toLowerCase()}`}>
+                     {r.currency} ({r.rate.toFixed(4)})
+                  </span>
+                ))}
+              </span>
+              <span className="text-[10px] opacity-70 italic">
+                {invalidRates.some(r => r.source === 'official_fallback') && "O banco retornou NULL/1.0 para estas moedas. Fallback PTAX aplicado."}
+              </span>
+            </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-[10px] text-muted-foreground hidden lg:inline italic">Moedas estrangeiras não podem valer 1.0 BRL</span>
+            <button
+              onClick={() => refetchProjectRates()}
+              className="px-2 py-1 text-[10px] font-bold rounded bg-zinc-800 text-zinc-100 hover:bg-zinc-700 transition-colors uppercase border border-zinc-700"
+              title="Recarregar dados do banco"
+            >
+              Recarregar
+            </button>
             <button
               onClick={async () => {
                 const { toast } = await import("sonner");
@@ -972,19 +1020,27 @@ export function SurebetCard({
                     .eq('id', surebet.workspace_id);
                     
                   if (error) throw error;
-                  toast.success("Cotações de trabalho atualizadas com sucesso!");
+                  toast.success("Cotações de trabalho sincronizadas com o projeto!");
+                  refetchProjectRates(); // Forçar atualização do UI
                 } catch (err) {
                   console.error(err);
                   toast.error("Erro ao atualizar cotações.");
                 }
               }}
-              className="px-2 py-1 bg-destructive text-destructive-foreground text-[10px] font-bold rounded hover:bg-destructive/90 transition-colors uppercase"
+              className={cn(
+                "px-2 py-1 text-[10px] font-bold rounded transition-colors uppercase",
+                invalidRates.some(r => r.source === 'error')
+                  ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  : "bg-amber-500 text-amber-950 hover:bg-amber-600"
+              )}
             >
-              Usar Oficial
+              Confirmar Taxas
             </button>
           </div>
         </div>
       )}
+
+
 
 
 
