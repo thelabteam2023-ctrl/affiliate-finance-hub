@@ -579,7 +579,7 @@ export function SurebetCard({
 
   // Mapear as taxas de trabalho do projeto com proteção contra valores inválidos
   const ratesAudit = (() => {
-    if (!projectRatesRaw) return { USD: { rate: 1, source: 'working' as const } };
+    if (!projectRatesRaw) return { USD: { rate: getOfficialRate("USD") || 5.06, source: 'official_fallback' as const } };
     
     const currencies = ['USD', 'EUR', 'GBP', 'MYR', 'MXN', 'ARS', 'COP'];
     const result: Record<string, { rate: number; source: 'working' | 'official_fallback' | 'error'; warning?: string }> = {};
