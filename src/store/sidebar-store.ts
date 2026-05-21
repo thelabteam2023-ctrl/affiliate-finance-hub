@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type FlyoutState = 'closed' | 'hover-preview' | 'pinned-open' | 'closing-delay';
+export type FlyoutState = 'closed' | 'opening' | 'hover-preview' | 'pinned-open' | 'closing-delay';
 
 interface SidebarNavigationState {
   activeFlyoutId: string | null;
@@ -8,7 +8,8 @@ interface SidebarNavigationState {
   state: FlyoutState;
   
   // Actions
-  openHover: (id: string) => void;
+  setOpening: (id: string) => void;
+  setHoverPreview: (id: string) => void;
   pin: (id: string) => void;
   close: () => void;
   startClosing: () => void;
@@ -20,13 +21,17 @@ export const useSidebarStore = create<SidebarNavigationState>((set, get) => ({
   pinnedFlyoutId: null,
   state: 'closed',
 
-  openHover: (id: string) => {
-    // If it's pinned and we hover another one, we might want to unpin or just show hover
-    // Usually, hovering another menu should probably unpin the current one for better UX
+  setOpening: (id: string) => {
     set({ 
       activeFlyoutId: id, 
-      state: 'hover-preview',
-      pinnedFlyoutId: get().pinnedFlyoutId === id ? get().pinnedFlyoutId : null 
+      state: 'opening'
+    });
+  },
+
+  setHoverPreview: (id: string) => {
+    set({ 
+      activeFlyoutId: id, 
+      state: 'hover-preview'
     });
   },
 
@@ -47,14 +52,14 @@ export const useSidebarStore = create<SidebarNavigationState>((set, get) => ({
   },
 
   startClosing: () => {
-    // Only transition to closing-delay if not pinned
     if (get().state !== 'pinned-open') {
       set({ state: 'closing-delay' });
     }
   },
 
   clearActive: () => {
-    if (get().state !== 'pinned-open') {
+    const currentState = get().state;
+    if (currentState !== 'pinned-open') {
       set({ activeFlyoutId: null, state: 'closed' });
     }
   }
