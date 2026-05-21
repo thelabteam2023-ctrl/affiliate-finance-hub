@@ -1818,11 +1818,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       if (process.env.NODE_ENV === 'development') {
         console.log('[MULTIPLA_EDICAO]', {
           id: aposta?.id,
-          stake: stakeValue,
-          odd_final: oddFinalValue,
-          resultado: resultValue
+          stake,
+          odd_final: odd,
+          resultado: resultado
         });
       }
+
 
       setLoading(true);
 

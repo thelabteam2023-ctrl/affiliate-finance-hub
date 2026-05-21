@@ -547,6 +547,7 @@ export type Database = {
           modelo: string | null
           modo_entrada: string | null
           moeda_operacao: string | null
+          moeda_original: string | null
           observacoes: string | null
           odd: number | null
           odd_final: number | null
@@ -562,6 +563,7 @@ export type Database = {
           selecoes: Json | null
           spread_calculado: number | null
           stake: number | null
+          stake_base_audit: number | null
           stake_bonus: number | null
           stake_consolidado: number | null
           stake_freebet: number
@@ -569,6 +571,7 @@ export type Database = {
           stake_total: number | null
           status: string
           surebet_legado_id: string | null
+          taxa_conversao_audit: number | null
           tipo_freebet: string | null
           tipo_multipla: string | null
           updated_at: string
@@ -626,6 +629,7 @@ export type Database = {
           modelo?: string | null
           modo_entrada?: string | null
           moeda_operacao?: string | null
+          moeda_original?: string | null
           observacoes?: string | null
           odd?: number | null
           odd_final?: number | null
@@ -641,6 +645,7 @@ export type Database = {
           selecoes?: Json | null
           spread_calculado?: number | null
           stake?: number | null
+          stake_base_audit?: number | null
           stake_bonus?: number | null
           stake_consolidado?: number | null
           stake_freebet?: number
@@ -648,6 +653,7 @@ export type Database = {
           stake_total?: number | null
           status?: string
           surebet_legado_id?: string | null
+          taxa_conversao_audit?: number | null
           tipo_freebet?: string | null
           tipo_multipla?: string | null
           updated_at?: string
@@ -705,6 +711,7 @@ export type Database = {
           modelo?: string | null
           modo_entrada?: string | null
           moeda_operacao?: string | null
+          moeda_original?: string | null
           observacoes?: string | null
           odd?: number | null
           odd_final?: number | null
@@ -720,6 +727,7 @@ export type Database = {
           selecoes?: Json | null
           spread_calculado?: number | null
           stake?: number | null
+          stake_base_audit?: number | null
           stake_bonus?: number | null
           stake_consolidado?: number | null
           stake_freebet?: number
@@ -727,6 +735,7 @@ export type Database = {
           stake_total?: number | null
           status?: string
           surebet_legado_id?: string | null
+          taxa_conversao_audit?: number | null
           tipo_freebet?: string | null
           tipo_multipla?: string | null
           updated_at?: string
@@ -841,6 +850,54 @@ export type Database = {
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_anomalias: {
+        Row: {
+          aposta_id: string | null
+          corrigido: boolean | null
+          created_at: string | null
+          detalhes: Json | null
+          event_id: string | null
+          id: string
+          tentativas: number | null
+          tipo_anomalia: string
+        }
+        Insert: {
+          aposta_id?: string | null
+          corrigido?: boolean | null
+          created_at?: string | null
+          detalhes?: Json | null
+          event_id?: string | null
+          id?: string
+          tentativas?: number | null
+          tipo_anomalia: string
+        }
+        Update: {
+          aposta_id?: string | null
+          corrigido?: boolean | null
+          created_at?: string | null
+          detalhes?: Json | null
+          event_id?: string | null
+          id?: string
+          tentativas?: number | null
+          tipo_anomalia?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_anomalias_aposta_id_fkey"
+            columns: ["aposta_id"]
+            isOneToOne: false
+            referencedRelation: "apostas_unificada"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_anomalias_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "financial_events"
             referencedColumns: ["id"]
           },
         ]
@@ -14670,6 +14727,15 @@ export type Database = {
           },
         ]
       }
+      vw_saude_financeira: {
+        Row: {
+          anomalias_sinal: number | null
+          apostas_afetadas: number | null
+          dia: string | null
+          total_eventos: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       accept_workspace_invite: { Args: { _token: string }; Returns: Json }
@@ -15071,6 +15137,7 @@ export type Database = {
       }
       author_delete_comment: { Args: { p_comment_id: string }; Returns: Json }
       author_delete_topic: { Args: { p_topic_id: string }; Returns: Json }
+      autocorrigir_anomalias: { Args: never; Returns: number }
       bookmaker_pode_operar: {
         Args: { p_bookmaker_id: string }
         Returns: boolean
