@@ -178,7 +178,20 @@ const menuGroups: MenuGroup[] = [
   {
     label: "FINANCEIRO",
     items: [
-      { title: "Caixa", url: "/caixa", icon: Wallet, iconName: "Wallet", moduleKey: "caixa" },
+      {
+        title: "Caixa",
+        url: "#caixa-menu",
+        icon: Wallet,
+        iconName: "Wallet",
+        moduleKey: "caixa",
+        children: [
+          { title: "Abrir Caixa", url: "/caixa", icon: Wallet, iconName: "Wallet", moduleKey: "caixa" },
+          { title: "Transferência", url: "#caixa-transferencia", icon: ArrowLeftRight, iconName: "ArrowLeftRight", moduleKey: "caixa" },
+          { title: "Depósito", url: "#caixa-deposito", icon: ArrowDownToLine, iconName: "ArrowDownToLine", moduleKey: "caixa" },
+          { title: "Saque", url: "#caixa-saque", icon: ArrowUpFromLine, iconName: "ArrowUpFromLine", moduleKey: "caixa" },
+          { title: "Aporte / Liquidação", url: "#caixa-aporte", icon: HandCoins, iconName: "HandCoins", moduleKey: "caixa" },
+        ],
+      },
       { title: "Financeiro", url: "/financeiro", icon: PieChart, iconName: "PieChart", moduleKey: "financeiro" },
       { title: "Captação", url: "/programa-indicacao", icon: UserPlus, iconName: "UserPlus", moduleKey: "captacao" },
       { title: "Fornecedores", url: "/fornecedores-portal", icon: Truck, iconName: "Truck", moduleKey: "captacao" },
