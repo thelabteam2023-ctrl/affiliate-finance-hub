@@ -164,6 +164,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { title: "Central", url: "/", icon: Bell, iconName: "Bell", moduleKey: "central" },
       { title: "Solicitações", url: "/solicitacoes", icon: ClipboardList, iconName: "ClipboardList", moduleKey: "central" },
+      { title: "Comunidade", url: "/comunidade", icon: Users2, iconName: "Users2", moduleKey: "comunidade" },
     ],
   },
   {
@@ -213,12 +214,6 @@ const menuGroups: MenuGroup[] = [
         ]
       },
       { title: "Planejamento", url: "/ferramentas/planejamento", icon: CalendarDays, iconName: "CalendarDays", moduleKey: "ferramentas" },
-    ],
-  },
-  {
-    label: "COMUNIDADE",
-    items: [
-      { title: "Comunidade", url: "/comunidade", icon: Users2, iconName: "Users2", moduleKey: "comunidade" },
     ],
   },
   {
