@@ -1819,10 +1819,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         console.log('[MULTIPLA_EDICAO]', {
           id: aposta?.id,
           stake,
-          odd_final: odd,
-          status: statusValue
+          odd_final: odd
         });
       }
+
 
 
 
