@@ -153,7 +153,65 @@ function cleanHouseName(name: string): string {
 }
 
 export function generateLiquidationOptions(legs: SurebetPerna[]) {
-...
+  const liquidationLegs = buildLiquidationLegs(legs);
+  const totalNormalized = liquidationLegs.reduce(
+    (sum, l) => sum + l.totalNormalizedStake, 0
+  );
+
+  const singleWin = liquidationLegs.map(leg => ({
+    type: 'single_win' as const,
+    legId: leg.legId,
+    legIndex: leg.legIndex,
+    label: leg.legLabel,
+    houses: leg.houses,
+    hasMultipleHouses: leg.hasMultipleHouses,
+    houseCount: leg.houseCount,
+    pnl: calculateSingleWinPnl(leg, totalNormalized),
+  }));
+
+  const doubleGreen = [];
+  for (let i = 0; i < liquidationLegs.length; i++) {
+    for (let j = i + 1; j < liquidationLegs.length; j++) {
+      const leg1 = liquidationLegs[i];
+      const leg2 = liquidationLegs[j];
+      doubleGreen.push({
+        type: 'double_green' as const,
+        legIds: [leg1.legId, leg2.legId],
+        label: `${leg1.legLabel} + ${leg2.legLabel}`,
+        leg1,
+        leg2,
+        pnl: calculateDoubleGreenPnl(leg1, leg2, totalNormalized),
+      });
+    }
+  }
+
+  const voidTotal = [{
+    type: 'void_total' as const,
+    label: 'Void Total',
+    pnl: 0,
+  }];
+
+  return { 
+    singleWin, 
+    doubleGreen, 
+    voidTotal, 
+    liquidationLegs,
+    totalNormalized 
+  };
+}
+
+function calculateSingleWinPnl(
+  winner: LiquidationLeg,
+  totalNormalized: number
+): number {
+  return (winner.totalNormalizedStake * winner.odd) - totalNormalized;
+}
+
+function calculateDoubleGreenPnl(
+  leg1: LiquidationLeg,
+  leg2: LiquidationLeg,
+  totalNormalized: number
+): number {
   const return1 = leg1.totalNormalizedStake * leg1.odd;
   const return2 = leg2.totalNormalizedStake * leg2.odd;
   return ((return1 + return2) / 2) - totalNormalized;
