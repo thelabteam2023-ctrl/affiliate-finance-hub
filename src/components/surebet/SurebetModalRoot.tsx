@@ -1606,11 +1606,6 @@ export function SurebetModalRoot({
       }
 
 
-        // 4. Liquidar pernas que já possuem resultado definido (se necessário)
-        // Como o fluxo agora é 1:N, a liquidação pode ser delegada ou feita aqui.
-        // Se a RPC v3 já não tratar, mantemos o loop de liquidação pós-criação.
-      }
-
 
       // Invalidar TODOS os caches (saldos + KPIs + calendário + dashboard)
       invalidateSaldos(projetoId);
