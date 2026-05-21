@@ -111,9 +111,13 @@ export default function SurebetWindowPage() {
         if (isDuplicating) {
           const { data: pernas } = await supabase
             .from("apostas_pernas")
-            .select("*")
+            .select(`
+              *,
+              apostas_perna_entradas (*)
+            `)
             .eq("aposta_id", fetchId)
             .order("ordem", { ascending: true });
+
 
           // Strip identity/result for duplication — preservar data_aposta original
           // IMPORTANTE: Incluir selecao_livre explicitamente para garantir hidratação no clone
