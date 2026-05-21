@@ -633,29 +633,39 @@ export function AppSidebar() {
             className="h-full overflow-y-auto overflow-x-hidden scrollbar-none"
             style={{ scrollbarWidth: 'none' }}
           >
-            {/* Favorites Section */}
+            {/* ATALHOS / Favoritos Section */}
             {hasAnyFavorites && (
-              <SidebarGroup>
-                <SidebarGroupLabel 
-                  className={`
-                    text-[10px] font-semibold tracking-widest text-muted-foreground/70 
-                    uppercase mb-2 px-3
-                    ${isCollapsed ? 'sr-only' : ''}
-                  `}
-                >
-                  ATALHOS
-                </SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <SidebarMenu className="space-y-0.5">
-                    {visibleFavorites.map(renderFavoriteItem)}
-                    {hasProjectAccess && projectFavorites.map(renderProjectFavoriteItem)}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
+              <SidebarDynamicGroup 
+                id="atalhos"
+                label="ATALHOS"
+                items={[
+                  {
+                    id: "projetos-favoritos",
+                    label: "Projetos Favoritos",
+                    icon: Star,
+                    children: hasProjectAccess && projectFavorites.length > 0 
+                      ? projectFavorites.map(pf => ({
+                          id: pf.project_id,
+                          label: projectNames[pf.project_id] || "Carregando...",
+                          href: `/projeto/${pf.project_id}`,
+                          icon: FolderKanban
+                        }))
+                      : []
+                  },
+                  ...visibleFavorites.map(fav => ({
+                    id: fav.page_path,
+                    label: fav.page_title,
+                    href: fav.page_path,
+                    icon: iconMap[fav.page_icon] || Star
+                  }))
+                ]}
+                onItemClick={handleMenuItemClick}
+                emptyLabel="Nenhum favorito"
+              />
             )}
 
             {hasAnyFavorites && (
-              <div className="my-4 mx-3 border-t border-border/50" />
+              <div className="my-2 mx-3 border-t border-border/30" />
             )}
 
             {/* Menu Groups */}
