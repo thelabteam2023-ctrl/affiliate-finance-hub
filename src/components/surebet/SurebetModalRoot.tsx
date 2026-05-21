@@ -1734,6 +1734,7 @@ export function SurebetModalRoot({
       toast.success("Sub-entrada removida");
       return;
     }
+
     
     const originalPerna = originalPernasSnapshot.find(op => op.id === pernaId);
     if (!originalPerna) {
