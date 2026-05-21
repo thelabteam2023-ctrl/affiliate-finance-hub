@@ -18,6 +18,7 @@ import { invalidateCanonicalCaches } from "@/lib/invalidateCanonicalCaches";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
+import { logDebug } from "@/lib/debugLogger";
 import { deletarAposta, liquidarPernaSurebet } from "@/services/aposta";
 import { useCurrencySnapshot, type SupportedCurrency } from "@/hooks/useCurrencySnapshot";
 import { useProjetoConsolidacao } from "@/hooks/useProjetoConsolidacao";
@@ -1561,16 +1562,7 @@ export function SurebetModalRoot({
       const modelo = numPernas === 2 ? "1-2" : numPernas === 3 ? "1-X-2" : `${numPernas}-way`;
 
       if (isEditing && surebet) {
-        // 🔍 DEBUG: Log do payload que será enviado
-        console.log('[SurebetModalRoot] 🔍 EDIT PAYLOAD', {
-          aposta_id: surebet.id,
-          pernas: pernasRPC,
-          entradas: entradasRPC,
-          oddsState: odds.map(o => ({ odd: o.odd, stake: o.stake, bk: o.bookmaker_id, pernaId: o.pernaId, subs: o.additionalEntries?.length || 0 }))
-        });
-
-        // MODO EDIÇÃO: RPC v3 (Estrutura 1:N)
-        const { data: rpcResult, error: rpcError } = await supabase.rpc('editar_surebet_completa_v3' as any, {
+        const payloadEdit = {
           p_aposta_id: surebet.id,
           p_pernas: pernasRPC,
           p_entradas: entradasRPC,
@@ -1582,17 +1574,36 @@ export function SurebetModalRoot({
           p_contexto: contexto,
           p_data_aposta: toLocalTimestamp(dataAposta),
           p_status_manual: null
+        };
+
+        await logDebug({
+          modulo: 'Surebet',
+          evento: 'UPDATE_START',
+          payload: { ...payloadEdit, oddsState: odds.map(o => ({ odd: o.odd, stake: o.stake, bk: o.bookmaker_id, pernaId: o.pernaId })) }
         });
 
+        const { data: rpcResult, error: rpcError } = await supabase.rpc('editar_surebet_completa_v3' as any, payloadEdit);
+
         if (rpcError) {
+          await logDebug({
+            modulo: 'Surebet',
+            evento: 'UPDATE_ERROR',
+            payload: payloadEdit,
+            erro: rpcError
+          });
           console.error('[SurebetModalRoot] ❌ Erro na RPC v3:', rpcError);
           throw new Error(`Erro ao salvar: ${rpcError.message}`);
         }
 
+        await logDebug({
+          modulo: 'Surebet',
+          evento: 'UPDATE_SUCCESS',
+          payload: { aposta_id: surebet.id },
+          resposta: rpcResult
+        });
         console.log('[SurebetModalRoot] ✅ Edição 1:N concluída', rpcResult);
       } else {
-        // MODO CRIAÇÃO: RPC v3 (Estrutura 1:N)
-        const { data: rpcResult, error: rpcError } = await supabase.rpc('criar_surebet_atomica_v3' as any, {
+        const payloadCreate = {
           p_workspace_id: workspaceId,
           p_user_id: user.id,
           p_projeto_id: projetoId,
@@ -1605,24 +1616,48 @@ export function SurebetModalRoot({
           p_data_aposta: toLocalTimestamp(dataAposta),
           p_pernas: pernasRPC,
           p_entradas: entradasRPC
+        };
+
+        await logDebug({
+          modulo: 'Surebet',
+          evento: 'CREATE_START',
+          payload: payloadCreate
         });
 
+        const { data: rpcResult, error: rpcError } = await supabase.rpc('criar_surebet_atomica_v3' as any, payloadCreate);
+
         if (rpcError) {
+          await logDebug({
+            modulo: 'Surebet',
+            evento: 'CREATE_ERROR',
+            payload: payloadCreate,
+            erro: rpcError
+          });
           console.error("[SurebetModalRoot] Erro RPC criar_surebet_atomica_v3:", rpcError);
           throw new Error(rpcError.message);
         }
         
         const result = rpcResult?.[0];
         if (!result?.success) {
+          await logDebug({
+            modulo: 'Surebet',
+            evento: 'CREATE_FAIL_RESULT',
+            payload: payloadCreate,
+            resposta: result
+          });
           throw new Error(result?.message || 'Falha ao criar surebet');
         }
         
+        await logDebug({
+          modulo: 'Surebet',
+          evento: 'CREATE_SUCCESS',
+          payload: { aposta_id: result.o_aposta_id },
+          resposta: result
+        });
         console.log("[SurebetModalRoot] ✅ Surebet criada via RPC v3:", {
           aposta_id: result.o_aposta_id,
         });
       }
-
-
 
       // Invalidar TODOS os caches (saldos + KPIs + calendário + dashboard)
       invalidateSaldos(projetoId);
@@ -1636,6 +1671,12 @@ export function SurebetModalRoot({
       onSuccess('save');
       if (!embedded) onOpenChange(false);
     } catch (error: any) {
+      await logDebug({
+        modulo: 'Surebet',
+        evento: 'SAVE_CATCH_ERROR',
+        payload: { isEditing, surebetId: surebet?.id, oddsState: odds.map(o => ({ odd: o.odd, stake: o.stake })) },
+        erro: error
+      });
       toast.error("Erro ao salvar: " + error.message);
     } finally {
       setSaving(false);
