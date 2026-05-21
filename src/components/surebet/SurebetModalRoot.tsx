@@ -1773,7 +1773,7 @@ export function SurebetModalRoot({
         prev.filter(i => i !== pernaIndex).map(i => i > pernaIndex ? i - 1 : i)
       );
       
-      const newSnapshot = originalPernasSnapshot.filter(p => p.id !== pernaId);
+      const newSnapshot = originalPernasSnapshot.filter(p => p.perna_id !== pernaId);
       setOriginalPernasSnapshot(newSnapshot);
       setOriginalPernaIds(originalPernaIds.filter(id => id !== pernaId));
 
@@ -1784,6 +1784,7 @@ export function SurebetModalRoot({
         stakeMap.set(p.bookmaker_id, cur);
       });
       setOriginalStakesByBookmaker(stakeMap);
+
       
       // Atualizar modelo visual
       const newCount = odds.length - 1;
