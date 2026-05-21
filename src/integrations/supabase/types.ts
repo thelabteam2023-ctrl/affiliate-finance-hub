@@ -3461,6 +3461,39 @@ export type Database = {
           },
         ]
       }
+      debug_logs: {
+        Row: {
+          created_at: string | null
+          erro: string | null
+          evento: string
+          id: string
+          modulo: string
+          payload: Json | null
+          resposta: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          erro?: string | null
+          evento: string
+          id?: string
+          modulo: string
+          payload?: Json | null
+          resposta?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          erro?: string | null
+          evento?: string
+          id?: string
+          modulo?: string
+          payload?: Json | null
+          resposta?: Json | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       despesas_administrativas: {
         Row: {
           categoria: string
