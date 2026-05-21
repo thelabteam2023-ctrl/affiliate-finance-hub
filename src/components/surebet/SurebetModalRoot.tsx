@@ -1072,9 +1072,16 @@ export function SurebetModalRoot({
         ...newOdds[pernaIndex],
         additionalEntries: [
           ...currentEntries,
-          { bookmaker_id: "", moeda: "BRL" as SupportedCurrency, odd: "", stake: prefilledStake, selecaoLivre: "" }
+          { 
+            bookmaker_id: "", 
+            moeda: "BRL" as SupportedCurrency, 
+            odd: "", 
+            stake: prefilledStake, 
+            selecaoLivre: newOdds[pernaIndex].selecaoLivre // Herdar a "linha" da perna principal
+          }
         ]
       };
+
       return newOdds;
     });
   }, [targetPayoutsLocal, arredondarStake]);
