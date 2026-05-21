@@ -1,4 +1,4 @@
-import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, Settings, LogOut, Star, Shield, Calculator, StickyNote, ShieldCheck, ChevronUp, ChevronDown, Sun, Moon, Target, Layers, ArrowLeftRight, Zap, Truck, ClipboardList, CalendarDays, Activity } from "lucide-react";
+import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, Settings, LogOut, Star, Shield, Calculator, StickyNote, ShieldCheck, ChevronUp, ChevronDown, Sun, Moon, Target, Layers, ArrowLeftRight, Zap, Truck, ClipboardList, CalendarDays, Activity, X } from "lucide-react";
 import { useSolicitacoesKpis } from "@/hooks/useSolicitacoes";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -149,8 +149,8 @@ export function AppSidebar() {
   const navigate = useNavigate();
    const { user, signOut, role, isSystemOwner, publicId, workspaceId } = useAuth();
   const { canManageWorkspace } = useRole();
-  const { favorites } = useFavorites();
-  const { favorites: projectFavorites } = useProjectFavorites();
+  const { favorites, removeFavorite } = useFavorites();
+  const { favorites: projectFavorites, removeFavorite: removeProjectFavorite } = useProjectFavorites();
    const { workspace } = useWorkspace();
   const { canAccess } = useModuleAccess();
   const { count: alertsCount } = useCentralAlertsCount();
@@ -473,30 +473,44 @@ export function AppSidebar() {
                 <SidebarMenu className="px-2 space-y-0.5">
                   {/* Projetos Favoritos as Flyout */}
                   {hasProjectAccess && projectFavorites.length > 0 && (
-                    <SidebarFlyoutMenu 
-                      item={{
-                        id: "projetos-favoritos",
-                        label: "Projetos Favoritos",
-                        icon: Star,
-                        children: projectFavorites.map(pf => ({
-                          id: pf.project_id,
-                          label: projectNames[pf.project_id] || "Carregando...",
-                          href: `/projeto/${pf.project_id}`,
-                          icon: FolderKanban
-                        }))
-                      }}
-                      onItemClick={handleMenuItemClick}
-                    />
+                    <div
+                      data-sidebar-origin="favorite"
+                      data-favorite-type="project"
+                      data-favorites-count={projectFavorites.length}
+                    >
+                      <SidebarFlyoutMenu
+                        item={{
+                          id: "projetos-favoritos",
+                          label: "Projetos Favoritos",
+                          icon: Star,
+                          children: projectFavorites.map(pf => ({
+                            id: pf.project_id,
+                            label: projectNames[pf.project_id] || "Carregando...",
+                            href: `/projeto/${pf.project_id}`,
+                            icon: FolderKanban,
+                            metadata: { favoriteType: "project", projectId: pf.project_id },
+                          }))
+                        }}
+                        onItemClick={handleMenuItemClick}
+                        onItemRemove={(child) => {
+                          const pid = child.metadata?.projectId as string | undefined;
+                          if (pid) removeProjectFavorite(pid);
+                        }}
+                      />
+                    </div>
                   )}
 
                   {/* Other common favorites as flat items */}
-                  {visibleFavorites.map(fav => renderMenuItem({
-                    title: fav.page_title,
-                    url: fav.page_path,
-                    icon: iconMap[fav.page_icon] || Star,
-                    iconName: fav.page_icon,
-                    moduleKey: "central" // Default to central if not found
-                  }))}
+                  {visibleFavorites.map(fav => (
+                    <FavoriteShortcutItem
+                      key={fav.id}
+                      fav={fav}
+                      icon={iconMap[fav.page_icon] || Star}
+                      isCollapsed={isCollapsed}
+                      isActive={isActive(fav.page_path)}
+                      onRemove={() => removeFavorite(fav.page_path)}
+                    />
+                  ))}
                 </SidebarMenu>
               </div>
             )}
