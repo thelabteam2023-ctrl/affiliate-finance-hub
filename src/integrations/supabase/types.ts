@@ -344,6 +344,13 @@ export type Database = {
             referencedRelation: "apostas_pernas"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "apostas_perna_entradas_perna_id_fkey"
+            columns: ["perna_id"]
+            isOneToOne: false
+            referencedRelation: "view_monitoramento_liquidação_pernas"
+            referencedColumns: ["perna_id"]
+          },
         ]
       }
       apostas_pernas: {
@@ -14727,6 +14734,26 @@ export type Database = {
           },
         ]
       }
+      view_monitoramento_liquidação_pernas: {
+        Row: {
+          aposta_id: string | null
+          num_entradas: number | null
+          num_eventos: number | null
+          ordem: number | null
+          perna_id: string | null
+          resultado: string | null
+          status_integridade: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "apostas_pernas_aposta_id_fkey"
+            columns: ["aposta_id"]
+            isOneToOne: false
+            referencedRelation: "apostas_unificada"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vw_saude_financeira: {
         Row: {
           anomalias_sinal: number | null
@@ -15138,6 +15165,10 @@ export type Database = {
       author_delete_comment: { Args: { p_comment_id: string }; Returns: Json }
       author_delete_topic: { Args: { p_topic_id: string }; Returns: Json }
       autocorrigir_anomalias: { Args: never; Returns: number }
+      autocorrigir_perna_incompleta: {
+        Args: { p_perna_id: string }
+        Returns: Json
+      }
       bookmaker_pode_operar: {
         Args: { p_bookmaker_id: string }
         Returns: boolean

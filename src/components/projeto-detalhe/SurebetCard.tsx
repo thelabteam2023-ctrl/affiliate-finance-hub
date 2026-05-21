@@ -1055,27 +1055,13 @@ export function SurebetCard({
                     const isPernaWinner = result.winners.includes(surebet.pernas!.indexOf(perna));
                     const resultado = result.type === 'all_void' ? 'VOID' : (isPernaWinner ? 'GREEN' : 'RED');
 
-                    if (perna.entries && perna.entries.length > 0) {
-                      for (const entry of perna.entries) {
-                        if (!entry.id || !entry.bookmaker_id) continue;
-                        
-                        const entryResult = result.type === 'all_void' 
-                          ? 'VOID' 
-                          : (entriesToLiquidate.includes(entry.id) ? 'GREEN' : 'RED');
-
-                        liquidationQueue.enqueue({
-                          operationId: surebet.id,
-                          entryId: entry.id,
-                          result: entryResult,
-                        });
-                      }
-                    } else {
-                      liquidationQueue.enqueue({
-                        operationId: surebet.id,
-                        entryId: perna.id,
-                        result: resultado,
-                      });
-                    }
+                    // REFACTOR Modo A (v10): Liquidação agora é leg-level. 
+                    // O motor do banco (liquidar_perna_surebet_v1) expande as entradas automaticamente.
+                    liquidationQueue.enqueue({
+                      operationId: surebet.id,
+                      entryId: perna.id,
+                      result: resultado,
+                    });
                   }
 
                   await liquidationQueue.flush(async (action) => {
@@ -1138,50 +1124,27 @@ export function SurebetCard({
                       isSimplesMultiEntry && onSimpleQuickResolve ? async (resultado: string) => {
                         await onSimpleQuickResolve(surebet.id, resultado);
                       }
-                      // CASO 2: Surebet/Múltipla real → liquidação por perna individual
+                      // CASO 2: Surebet/Múltipla real → liquidação por perna individual (MODO B)
                       : !isSimplesMultiEntry && onPernaResultChange && perna.bookmaker_id ? async (resultado: string) => {
                       const resFinal = resultado.toUpperCase() as any;
-                      if (perna.entries && perna.entries.length > 1) {
-                        for (const entry of perna.entries) {
-                          if (!entry.id || !entry.bookmaker_id) continue;
-                          liquidationQueue.enqueue({
-                            operationId: surebet.id,
-                            entryId: entry.id,
-                            result: resFinal
-                          });
-                        }
-                        await liquidationQueue.flush(async (action) => {
-                          const entry = perna.entries!.find(e => e.id === action.entryId);
-                          if (!entry) return;
-                          await onPernaResultChange({
-                            pernaId: entry.id!,
-                            surebetId: surebet.id,
-                            bookmarkerId: entry.bookmaker_id,
-                            resultado: action.result,
-                            stake: entry.stake,
-                            odd: entry.odd,
-                            moeda: entry.moeda || 'BRL',
-                            resultadoAnterior: perna.resultado,
-                            workspaceId: surebet.workspace_id || '',
-                            bookmakerNome: entry.bookmaker_nome,
-                            silent: true,
-                          });
-                        });
-                      } else {
-                        await onPernaResultChange({
-                          pernaId: perna.id,
-                          surebetId: surebet.id,
-                          bookmarkerId: perna.bookmaker_id!,
-                          resultado: resFinal,
-                          stake: perna.stake,
-                          odd: perna.odd,
-                          moeda: perna.moeda || 'BRL',
-                          resultadoAnterior: perna.resultado,
-                          workspaceId: surebet.workspace_id || '',
-                          bookmakerNome: perna.bookmaker_nome,
-                        });
-                      }
-
+                      
+                      // REFACTOR Modo B (v10): Liquidação agora é leg-level. 
+                      // O motor do banco (liquidar_perna_surebet_v1) aplica o resultado a TODAS 
+                      // as sub-entradas da perna automaticamente.
+                      console.log(`[Modo B] Liquidando perna ${perna.id} como ${resFinal}. Entradas: ${perna.entries?.length || 1}`);
+                      
+                      await onPernaResultChange({
+                        pernaId: perna.id,
+                        surebetId: surebet.id,
+                        bookmarkerId: perna.bookmaker_id!,
+                        resultado: resFinal,
+                        stake: perna.stake_total || perna.stake,
+                        odd: perna.odd_media || perna.odd,
+                        moeda: perna.moeda || 'BRL',
+                        resultadoAnterior: perna.resultado,
+                        workspaceId: surebet.workspace_id || '',
+                        bookmakerNome: perna.bookmaker_nome,
+                      });
                     } : undefined}
                   />
                   </div>
