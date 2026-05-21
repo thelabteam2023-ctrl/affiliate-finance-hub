@@ -463,33 +463,42 @@ export function AppSidebar() {
           >
             {/* ATALHOS / Favoritos Section */}
             {hasAnyFavorites && (
-              <SidebarDynamicGroup 
-                id="atalhos"
-                label="ATALHOS"
-                items={[
-                  {
-                    id: "projetos-favoritos",
-                    label: "Projetos Favoritos",
-                    icon: Star,
-                    children: hasProjectAccess && projectFavorites.length > 0 
-                      ? projectFavorites.map(pf => ({
+              <div className="space-y-1 py-1" data-sidebar-group="atalhos">
+                {!isCollapsed && (
+                  <SidebarGroupLabel className="px-4 text-[10px] uppercase tracking-widest text-muted-foreground/40 font-black mb-1">
+                    ATALHOS
+                  </SidebarGroupLabel>
+                )}
+                
+                <SidebarMenu className="px-2 space-y-0.5">
+                  {/* Projetos Favoritos as Flyout */}
+                  {hasProjectAccess && projectFavorites.length > 0 && (
+                    <SidebarFlyoutMenu 
+                      item={{
+                        id: "projetos-favoritos",
+                        label: "Projetos Favoritos",
+                        icon: Star,
+                        children: projectFavorites.map(pf => ({
                           id: pf.project_id,
                           label: projectNames[pf.project_id] || "Carregando...",
                           href: `/projeto/${pf.project_id}`,
                           icon: FolderKanban
                         }))
-                      : []
-                  },
-                  ...visibleFavorites.map(fav => ({
-                    id: fav.page_path,
-                    label: fav.page_title,
-                    href: fav.page_path,
-                    icon: iconMap[fav.page_icon] || Star
-                  }))
-                ]}
-                onItemClick={handleMenuItemClick}
-                emptyLabel="Nenhum favorito"
-              />
+                      }}
+                      onItemClick={handleMenuItemClick}
+                    />
+                  )}
+
+                  {/* Other common favorites as flat items */}
+                  {visibleFavorites.map(fav => renderMenuItem({
+                    title: fav.page_title,
+                    url: fav.page_path,
+                    icon: iconMap[fav.page_icon] || Star,
+                    iconName: fav.page_icon,
+                    moduleKey: "central" // Default to central if not found
+                  }))}
+                </SidebarMenu>
+              </div>
             )}
 
             {hasAnyFavorites && (

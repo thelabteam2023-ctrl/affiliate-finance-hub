@@ -4,6 +4,8 @@ import { cn } from "@/lib/utils";
 import {
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarGroupLabel,
+  SidebarMenu,
   useSidebar,
 } from "@/components/ui/sidebar";
 import {
