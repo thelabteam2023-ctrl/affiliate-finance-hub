@@ -1,4 +1,4 @@
-import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, Settings, LogOut, Star, Shield, Calculator, StickyNote, ShieldCheck, ChevronUp, ChevronDown, Sun, Moon, Target, Layers, ArrowLeftRight, Zap, Truck, ClipboardList, CalendarDays, Activity } from "lucide-react";
+import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, Settings, LogOut, Star, Shield, Calculator, StickyNote, ShieldCheck, ChevronUp, ChevronDown, Sun, Moon, Target, Layers, ArrowLeftRight, Zap, Truck, ClipboardList, CalendarDays, Activity, X } from "lucide-react";
 import { useSolicitacoesKpis } from "@/hooks/useSolicitacoes";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -34,6 +34,84 @@ import { SidebarItem as SidebarItemType } from "./sidebar/types";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useTheme } from "next-themes";
+import { ContextMenu as RadixCtxMenu, ContextMenuContent as RadixCtxContent, ContextMenuItem as RadixCtxItem, ContextMenuTrigger as RadixCtxTrigger } from "@/components/ui/context-menu";
+
+/** Single favorite shortcut row in the sidebar (ATALHOS) */
+function FavoriteShortcutItem({
+  fav,
+  icon: Icon,
+  isCollapsed,
+  isActive,
+  onRemove,
+}: {
+  fav: { id: string; page_path: string; page_title: string; page_icon: string };
+  icon: any;
+  isCollapsed: boolean;
+  isActive: boolean;
+  onRemove: () => void;
+}) {
+  const button = isCollapsed ? (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <SidebarMenuButton asChild isActive={isActive}>
+          <NavLink
+            to={fav.page_path}
+            end
+            className="flex items-center justify-center h-9 w-9 rounded-md transition-colors hover:bg-primary/10"
+            activeClassName="bg-primary/10 text-primary"
+          >
+            <Icon className="h-4 w-4" />
+          </NavLink>
+        </SidebarMenuButton>
+      </TooltipTrigger>
+      <TooltipContent side="right" className="font-medium">
+        {fav.page_title}
+      </TooltipContent>
+    </Tooltip>
+  ) : (
+    <SidebarMenuButton asChild isActive={isActive}>
+      <NavLink
+        to={fav.page_path}
+        end
+        className="group/fav flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-primary/10"
+        activeClassName="bg-primary/10 text-primary font-medium"
+      >
+        <Icon className="h-4 w-4 shrink-0" />
+        <span className="text-sm flex-1 truncate">{fav.page_title}</span>
+        <button
+          type="button"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRemove(); }}
+          className="opacity-0 group-hover/fav:opacity-100 transition-opacity p-0.5 rounded hover:bg-destructive/20 hover:text-destructive"
+          aria-label="Remover dos atalhos"
+          title="Remover dos atalhos"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      </NavLink>
+    </SidebarMenuButton>
+  );
+
+  return (
+    <SidebarMenuItem
+      data-sidebar-item={fav.page_path}
+      data-sidebar-origin="favorite"
+      data-favorite-type="page"
+      data-sidebar-active={isActive ? "true" : "false"}
+    >
+      <RadixCtxMenu>
+        <RadixCtxTrigger asChild>
+          <div className="w-full">{button}</div>
+        </RadixCtxTrigger>
+        <RadixCtxContent>
+          <RadixCtxItem onClick={onRemove} className="text-destructive focus:text-destructive">
+            <X className="mr-2 h-4 w-4" />
+            Remover dos atalhos
+          </RadixCtxItem>
+        </RadixCtxContent>
+      </RadixCtxMenu>
+    </SidebarMenuItem>
+  );
+}
 
 /** Menu item for theme toggle inside the profile dropdown */
 function ThemeMenuItem() {
@@ -149,8 +227,8 @@ export function AppSidebar() {
   const navigate = useNavigate();
    const { user, signOut, role, isSystemOwner, publicId, workspaceId } = useAuth();
   const { canManageWorkspace } = useRole();
-  const { favorites } = useFavorites();
-  const { favorites: projectFavorites } = useProjectFavorites();
+  const { favorites, removeFavorite } = useFavorites();
+  const { favorites: projectFavorites, removeFavorite: removeProjectFavorite } = useProjectFavorites();
    const { workspace } = useWorkspace();
   const { canAccess } = useModuleAccess();
   const { count: alertsCount } = useCentralAlertsCount();
@@ -473,30 +551,44 @@ export function AppSidebar() {
                 <SidebarMenu className="px-2 space-y-0.5">
                   {/* Projetos Favoritos as Flyout */}
                   {hasProjectAccess && projectFavorites.length > 0 && (
-                    <SidebarFlyoutMenu 
-                      item={{
-                        id: "projetos-favoritos",
-                        label: "Projetos Favoritos",
-                        icon: Star,
-                        children: projectFavorites.map(pf => ({
-                          id: pf.project_id,
-                          label: projectNames[pf.project_id] || "Carregando...",
-                          href: `/projeto/${pf.project_id}`,
-                          icon: FolderKanban
-                        }))
-                      }}
-                      onItemClick={handleMenuItemClick}
-                    />
+                    <div
+                      data-sidebar-origin="favorite"
+                      data-favorite-type="project"
+                      data-favorites-count={projectFavorites.length}
+                    >
+                      <SidebarFlyoutMenu
+                        item={{
+                          id: "projetos-favoritos",
+                          label: "Projetos Favoritos",
+                          icon: Star,
+                          children: projectFavorites.map(pf => ({
+                            id: pf.project_id,
+                            label: projectNames[pf.project_id] || "Carregando...",
+                            href: `/projeto/${pf.project_id}`,
+                            icon: FolderKanban,
+                            metadata: { favoriteType: "project", projectId: pf.project_id },
+                          }))
+                        }}
+                        onItemClick={handleMenuItemClick}
+                        onItemRemove={(child) => {
+                          const pid = child.metadata?.projectId as string | undefined;
+                          if (pid) removeProjectFavorite(pid);
+                        }}
+                      />
+                    </div>
                   )}
 
                   {/* Other common favorites as flat items */}
-                  {visibleFavorites.map(fav => renderMenuItem({
-                    title: fav.page_title,
-                    url: fav.page_path,
-                    icon: iconMap[fav.page_icon] || Star,
-                    iconName: fav.page_icon,
-                    moduleKey: "central" // Default to central if not found
-                  }))}
+                  {visibleFavorites.map(fav => (
+                    <FavoriteShortcutItem
+                      key={fav.id}
+                      fav={fav}
+                      icon={iconMap[fav.page_icon] || Star}
+                      isCollapsed={isCollapsed}
+                      isActive={isActive(fav.page_path)}
+                      onRemove={() => removeFavorite(fav.page_path)}
+                    />
+                  ))}
                 </SidebarMenu>
               </div>
             )}

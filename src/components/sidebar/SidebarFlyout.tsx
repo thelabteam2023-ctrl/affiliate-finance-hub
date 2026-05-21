@@ -1,5 +1,5 @@
 import * as React from "react";
-import { ChevronRight, LucideIcon } from "lucide-react";
+import { ChevronRight, LucideIcon, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   SidebarMenuItem,
@@ -29,6 +29,7 @@ interface SidebarFlyoutMenuProps {
   item: SidebarItemType;
   isActive?: boolean;
   onItemClick?: (item: SidebarItemType, e: React.MouseEvent) => void;
+  onItemRemove?: (item: SidebarItemType) => void;
   level?: number;
 }
 
@@ -36,6 +37,7 @@ export const SidebarFlyoutMenu: React.FC<SidebarFlyoutMenuProps> = ({
   item, 
   isActive: propActive,
   onItemClick,
+  onItemRemove,
   level = 1
 }) => {
   const { isMobile, state: sidebarState } = useSidebar();
@@ -249,6 +251,7 @@ export const SidebarFlyoutMenu: React.FC<SidebarFlyoutMenuProps> = ({
                       key={child.id} 
                       item={child} 
                       onItemClick={onItemClick}
+                      onRemove={onItemRemove ? () => onItemRemove(child) : undefined}
                     />
                   )
                 ))}
@@ -309,15 +312,16 @@ export const SidebarFlyoutMenu: React.FC<SidebarFlyoutMenuProps> = ({
 interface SidebarFlyoutItemProps {
   item: SidebarItemType;
   onItemClick?: (item: SidebarItemType, e: React.MouseEvent) => void;
+  onRemove?: () => void;
 }
 
-export const SidebarFlyoutItem: React.FC<SidebarFlyoutItemProps> = ({ item, onItemClick }) => {
+export const SidebarFlyoutItem: React.FC<SidebarFlyoutItemProps> = ({ item, onItemClick, onRemove }) => {
   const { isMobile } = useSidebar();
   const location = useLocation();
   const isActive = item.href ? location.pathname === item.href : false;
   
   const content = (
-    <div className="flex items-center gap-2 w-full">
+    <div className="flex items-center gap-2 w-full group/favitem">
       {item.icon && <item.icon className={cn("h-4 w-4 shrink-0 opacity-60", isActive && "opacity-100 text-primary")} />}
       <span className={cn("truncate", isActive && "font-semibold text-primary")}>{item.label}</span>
       {item.badgeCount ? (
@@ -325,6 +329,17 @@ export const SidebarFlyoutItem: React.FC<SidebarFlyoutItemProps> = ({ item, onIt
           {item.badgeCount}
         </span>
       ) : null}
+      {onRemove && (
+        <button
+          type="button"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRemove(); }}
+          className="ml-auto opacity-0 group-hover/favitem:opacity-100 transition-opacity p-0.5 rounded hover:bg-destructive/20 hover:text-destructive"
+          aria-label="Remover dos atalhos"
+          title="Remover dos atalhos"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      )}
     </div>
   );
 
