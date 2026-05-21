@@ -352,10 +352,13 @@ export function SurebetTableRow({
         {/* Linha */}
         <td className="px-2" style={{ height: '78px' }}>
           <Input
-            placeholder="Linha"
+            placeholder={entry.selecao || "Linha"}
             value={entry.selecaoLivre}
             onChange={(e) => onUpdateOdd(pernaIndex, "selecaoLivre", e.target.value)}
-            className="h-8 text-xs px-1 border-dashed w-20"
+            className={cn(
+              "h-8 text-xs px-1 border-dashed w-20",
+              !entry.selecaoLivre && "opacity-60"
+            )}
           />
         </td>
         
