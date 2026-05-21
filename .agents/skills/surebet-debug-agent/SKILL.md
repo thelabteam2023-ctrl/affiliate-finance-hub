@@ -1,3 +1,8 @@
+---
+name: surebet-debug-agent
+description: Agente especializado no módulo de Surebet e Calculadoras para diagnóstico e correção de erros seguindo um protocolo de 5 fases.
+---
+
 # Surebet Debug Agent Skill
 
 Este agente é especializado no módulo de Surebet e Calculadoras. Ele segue um protocolo rigoroso de 5 fases para diagnosticar e corrigir erros de banco de dados e lógica.
