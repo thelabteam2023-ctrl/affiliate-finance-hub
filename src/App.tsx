@@ -466,14 +466,6 @@ const App = () => (
               </ProtectedRoute>
             } />
             
-            {/* Proteção Progressiva - standalone, sem layout */}
-            <Route path="/ferramentas/protecao-progressiva" element={
-              <ProtectedRoute>
-                <Suspense fallback={<PageLoader />}>
-                  <ProtecaoProgressiva />
-                </Suspense>
-              </ProtectedRoute>
-            } />
             
             {/* Calculadora EV - standalone */}
             <Route path="/ferramentas/calculadora-ev" element={
