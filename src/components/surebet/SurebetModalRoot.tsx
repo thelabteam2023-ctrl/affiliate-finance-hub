@@ -776,108 +776,103 @@ export function SurebetModalRoot({
   const fetchLinkedPernas = async (surebetId: string, retryCount = 0) => {
     setPernasLoading(true);
     try {
+      // Passo 1: Carregar pernas E suas entradas de forma estruturada (1:N)
       const { data: pernasData, error: pernasError } = await supabase
         .from("apostas_pernas")
-        .select(`*, bookmakers (nome)`)
+        .select(`
+          *,
+          bookmakers (nome),
+          apostas_perna_entradas (
+            *
+          )
+        `)
         .eq("aposta_id", surebetId)
         .order("ordem", { ascending: true });
 
       if (pernasError) {
         console.error("[SurebetModalRoot] Erro ao buscar pernas:", pernasError);
-        
-        // Retry up to 2 times (auth session might not be ready in new window)
         if (retryCount < 2) {
-          console.log(`[SurebetModalRoot] Retry ${retryCount + 1}/2 em 500ms...`);
           await new Promise(resolve => setTimeout(resolve, 500));
           return fetchLinkedPernas(surebetId, retryCount + 1);
         }
-        
         toast.error("Erro ao carregar entradas da operação. Recarregue a página.");
         return;
       }
 
       if (!pernasData || pernasData.length === 0) {
-        console.warn("[SurebetModalRoot] Nenhuma perna encontrada para aposta:", surebetId);
-        
-        // Retry once - data might not be immediately available
         if (retryCount < 1) {
-          console.log("[SurebetModalRoot] Retry em 300ms...");
           await new Promise(resolve => setTimeout(resolve, 300));
           return fetchLinkedPernas(surebetId, retryCount + 1);
         }
         return;
       }
 
-      // Armazenar stakes originais por bookmaker para crédito virtual em modo edição
-      // Separado por tipo (real vs freebet) para validação correta
+      // Crédito virtual para edição
       const stakeMap = new Map<string, { real: number; freebet: number }>();
+      const flatSnapshot: any[] = [];
+      
       pernasData.forEach((perna: any) => {
-        if (perna.bookmaker_id && perna.stake) {
-          const cur = stakeMap.get(perna.bookmaker_id) || { real: 0, freebet: 0 };
-          const val = parseFloat(perna.stake) || 0;
-          if (perna.fonte_saldo === 'FREEBET') cur.freebet += val; else cur.real += val;
-          stakeMap.set(perna.bookmaker_id, cur);
-        }
+        const entradas = perna.apostas_perna_entradas || [];
+        entradas.forEach((entrada: any) => {
+          if (entrada.bookmaker_id && entrada.stake) {
+            const cur = stakeMap.get(entrada.bookmaker_id) || { real: 0, freebet: 0 };
+            const val = parseFloat(entrada.stake) || 0;
+            if (entrada.fonte_saldo === 'FREEBET') cur.freebet += val; else cur.real += val;
+            stakeMap.set(entrada.bookmaker_id, cur);
+            
+            flatSnapshot.push({
+              id: entrada.id,
+              perna_id: perna.id,
+              bookmaker_id: entrada.bookmaker_id,
+              stake: val,
+              odd: parseFloat(entrada.odd) || 0,
+              selecao: perna.selecao,
+              selecao_livre: entrada.selecao_livre || perna.selecao_livre || "",
+              resultado: entrada.resultado || perna.resultado,
+              fonte_saldo: entrada.fonte_saldo || "REAL"
+            });
+          }
+        });
       });
+
       setOriginalStakesByBookmaker(stakeMap);
       setOriginalPernaIds(pernasData.map((p: any) => p.id));
-      setOriginalPernasSnapshot(pernasData.map((p: any) => ({
-        id: p.id,
-        bookmaker_id: p.bookmaker_id || "",
-        stake: parseFloat(p.stake) || 0,
-        odd: parseFloat(p.odd) || 0,
-        selecao: p.selecao || "",
-        selecao_livre: p.selecao_livre || "",
-        resultado: p.resultado || null,
-        fonte_saldo: p.fonte_saldo || null,
-      })));
+      setOriginalPernasSnapshot(flatSnapshot);
       
-      // ================================================================
-      // AGRUPAR pernas por selecao para reconstruir additionalEntries
-      // A primeira perna de cada grupo vira a entrada principal,
-      // as demais viram additionalEntries
-      // ================================================================
-      const groups = new Map<string, any[]>();
-      const groupOrder: string[] = [];
-      
-      for (const perna of pernasData) {
-        const key = perna.selecao || `__unnamed_${perna.id}`;
-        if (!groups.has(key)) {
-          groups.set(key, []);
-          groupOrder.push(key);
-        }
-        groups.get(key)!.push(perna);
-      }
-      
-      const pernasOdds: OddEntry[] = groupOrder.map((key, groupIdx) => {
-        const groupPernas = groups.get(key)!;
-        const mainPerna = groupPernas[0];
-        const additionalPernas = groupPernas.slice(1);
+      // Mapear para o estado 'odds' do formulário mantendo a estrutura 1:N
+      const pernasOdds: OddEntry[] = pernasData.map((perna: any, groupIdx) => {
+        const entradas = perna.apostas_perna_entradas || [];
+        // Se não houver entradas, criamos uma vazia para manter a linha na UI
+        const mainEntry = entradas[0] || {
+          bookmaker_id: perna.bookmaker_id || "",
+          moeda: perna.moeda || "BRL",
+          odd: perna.odd || "",
+          stake: perna.stake || "",
+          fonte_saldo: perna.fonte_saldo || "REAL"
+        };
+        const additionalEntries = entradas.slice(1);
         
         return {
-          bookmaker_id: mainPerna.bookmaker_id || "",
-          moeda: (mainPerna.moeda || "BRL") as SupportedCurrency,
-          odd: mainPerna.odd?.toString() || "",
-          stake: mainPerna.stake?.toString() || "",
-          selecao: mainPerna.selecao,
-          // FIX: Garantir que selecaoLivre receba o valor de selecao_livre vindo do banco
-          selecaoLivre: mainPerna.selecao_livre || "", 
+          pernaId: perna.id,
+          bookmaker_id: mainEntry.bookmaker_id,
+          moeda: (mainEntry.moeda || "BRL") as SupportedCurrency,
+          odd: mainEntry.odd?.toString() || "",
+          stake: mainEntry.stake?.toString() || "",
+          selecao: perna.selecao,
+          selecaoLivre: perna.selecao_livre || "",
           isReference: groupIdx === 0,
           isManuallyEdited: true,
-          resultado: mainPerna.resultado,
-          lucro_prejuizo: mainPerna.lucro_prejuizo,
-          gerouFreebet: mainPerna.gerou_freebet || false,
-          valorFreebetGerada: mainPerna.valor_freebet_gerada?.toString() || "",
-          fonteSaldo: (mainPerna.fonte_saldo as 'REAL' | 'FREEBET') || 'REAL',
-          pernaId: mainPerna.id, // UUID da perna no banco
-          additionalEntries: additionalPernas.map((sub: any) => ({
+          resultado: mainEntry.resultado || perna.resultado,
+          fonteSaldo: (mainEntry.fonte_saldo as 'REAL' | 'FREEBET') || 'REAL',
+          additionalEntries: additionalEntries.map((sub: any) => ({
+            id: sub.id,
             bookmaker_id: sub.bookmaker_id || "",
             moeda: (sub.moeda || "BRL") as SupportedCurrency,
             odd: sub.odd?.toString() || "",
             stake: sub.stake?.toString() || "",
             selecaoLivre: sub.selecao_livre || "",
             fonteSaldo: (sub.fonte_saldo as 'REAL' | 'FREEBET') || 'REAL',
-            pernaId: sub.id, // UUID da sub-entrada no banco
+            pernaId: perna.id, // Referência à perna pai
           })),
         };
       });
@@ -885,9 +880,8 @@ export function SurebetModalRoot({
       setOdds(pernasOdds);
       setDirectedProfitLegs(Array.from({ length: pernasOdds.length }, (_, i) => i));
       
-      console.log("[SurebetModalRoot] ✅ Pernas carregadas com agrupamento:", {
+      console.log("[SurebetModalRoot] ✅ Pernas carregadas (1:N):", {
         total_pernas: pernasData.length,
-        grupos: pernasOdds.length,
         com_sub_entradas: pernasOdds.filter(o => (o.additionalEntries?.length || 0) > 0).length,
       });
     } catch (err) {
