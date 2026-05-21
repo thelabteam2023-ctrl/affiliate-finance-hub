@@ -289,7 +289,7 @@ export function AppSidebar() {
 
   const renderMenuItem = (item: MenuItem) => {
     if (!canSeeItem(item)) return null;
-    // Badge de alertas só aparece na Central (URL "/"), não em outros itens com moduleKey "central"
+
     const isCentralPage = item.url === "/";
     const isSolicitacoesPage = item.url === "/solicitacoes";
     const solicitacoesPendentes = kpisSolicitacoes?.pendentes ?? 0;
@@ -297,10 +297,35 @@ export function AppSidebar() {
     const badgeCount = isSolicitacoesPage ? solicitacoesPendentes : alertsCount;
     const isToolLink = item.url.startsWith('#');
 
-    // Para links de ferramentas (que abrem popups), usamos button ao invés de NavLink
+    const sidebarItem: SidebarItemType = {
+      id: item.url,
+      label: item.title,
+      href: item.url,
+      icon: item.icon,
+      isTool: isToolLink,
+      badgeCount: showBadge ? badgeCount : undefined,
+      children: item.children?.filter(canSeeItem).map(child => ({
+        id: child.url,
+        label: child.title,
+        href: child.url,
+        icon: child.icon,
+        isTool: child.url.startsWith('#'),
+      }))
+    };
+
+    if (item.children && item.children.length > 0) {
+      return (
+        <SidebarFlyoutMenu 
+          key={item.title} 
+          item={sidebarItem} 
+          onItemClick={handleMenuItemClick}
+        />
+      );
+    }
+
     if (isToolLink) {
       return (
-        <SidebarMenuItem key={item.title}>
+        <SidebarMenuItem key={item.title} data-sidebar-item={item.url}>
           {isCollapsed ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -333,7 +358,7 @@ export function AppSidebar() {
     }
 
     return (
-      <SidebarMenuItem key={item.title}>
+      <SidebarMenuItem key={item.title} data-sidebar-item={item.url} data-sidebar-active={isActive(item.url) ? "true" : "false"}>
         {isCollapsed ? (
           <Tooltip>
             <TooltipTrigger asChild>
