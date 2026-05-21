@@ -62,6 +62,7 @@ export interface OddEntry {
 }
 
 export interface OddFormEntry {
+  id?: string; // UUID da entrada no banco (apostas_perna_entradas.id)
   bookmaker_id: string;
   moeda: SupportedCurrency;
   odd: string;
