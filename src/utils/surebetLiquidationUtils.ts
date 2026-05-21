@@ -88,7 +88,7 @@ export function buildLiquidationLegs(legs: SurebetPerna[]): LiquidationLeg[] {
     if (hasSubEntries) {
       const houses = leg.entries!.map((sub, subIndex) => ({
         entryId: sub.id || `${leg.id}_sub_${subIndex}`,
-        casa: sub.bookmaker_nome,
+        casa: cleanHouseName(sub.bookmaker_nome),
         stake: sub.stake,
         currency: sub.moeda || 'BRL',
         normalizedStake: sub.stake_brl_referencia || sub.stake,
@@ -110,13 +110,14 @@ export function buildLiquidationLegs(legs: SurebetPerna[]): LiquidationLeg[] {
       };
     } else {
       const normalizedStake = leg.stake_brl_referencia || leg.stake;
+      const cleanedCasa = cleanHouseName(leg.bookmaker_nome);
       return {
         legId: leg.id,
         legIndex,
-        legLabel: leg.bookmaker_nome,
+        legLabel: cleanedCasa,
         houses: [{
           entryId: leg.id,
-          casa: leg.bookmaker_nome,
+          casa: cleanedCasa,
           stake: leg.stake,
           currency: leg.moeda || 'BRL',
           normalizedStake: normalizedStake,
