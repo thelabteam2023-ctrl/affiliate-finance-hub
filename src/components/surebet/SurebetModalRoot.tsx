@@ -1553,7 +1553,7 @@ export function SurebetModalRoot({
 
       if (isEditing && surebet) {
         // MODO EDIÇÃO: RPC v3 (Estrutura 1:N)
-        const { data: rpcResult, error: rpcError } = await supabase.rpc('editar_surebet_completa_v3', {
+        const { data: rpcResult, error: rpcError } = await supabase.rpc('editar_surebet_completa_v3' as any, {
           p_aposta_id: surebet.id,
           p_pernas: pernasRPC,
           p_entradas: entradasRPC,
@@ -1575,11 +1575,7 @@ export function SurebetModalRoot({
         console.log('[SurebetModalRoot] ✅ Edição 1:N concluída');
       } else {
         // MODO CRIAÇÃO: RPC v3 (Estrutura 1:N)
-        // Nota: Atualmente existe 'criar_surebet_atomica', mas para uniformizar 1:N 
-        // e garantir suporte a múltiplas entradas por perna no registro inicial,
-        // o ideal é uma RPC que aceite pernas e entradas separadas.
-        // Se 'criar_surebet_atomica' já suportar ou se precisarmos de uma v3 de criação:
-        const { data: rpcResult, error: rpcError } = await supabase.rpc('criar_surebet_atomica_v3', {
+        const { data: rpcResult, error: rpcError } = await supabase.rpc('criar_surebet_atomica_v3' as any, {
           p_workspace_id: workspaceId,
           p_user_id: user.id,
           p_projeto_id: projetoId,
@@ -1607,6 +1603,8 @@ export function SurebetModalRoot({
         console.log("[SurebetModalRoot] ✅ Surebet criada via RPC v3:", {
           aposta_id: result.o_aposta_id,
         });
+      }
+
 
         // 4. Liquidar pernas que já possuem resultado definido (se necessário)
         // Como o fluxo agora é 1:N, a liquidação pode ser delegada ou feita aqui.
