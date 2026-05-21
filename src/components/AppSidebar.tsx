@@ -416,6 +416,7 @@ export function AppSidebar() {
     <Sidebar
       className={isCollapsed ? "w-[72px]" : "w-56"}
       collapsible="icon"
+      data-sidebar-expanded={!isCollapsed ? "true" : "false"}
     >
       <SidebarContent className="relative py-4 flex flex-col overflow-hidden">
         {/* Logo/Brand Section */}
