@@ -52,6 +52,7 @@ interface LocationState {
   tipoMoeda?: "FIAT" | "CRYPTO";
   moeda?: string;
   coin?: string;
+  tipoTransacao?: string;
 }
 
 interface Transacao {
