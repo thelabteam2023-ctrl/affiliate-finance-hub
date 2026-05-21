@@ -56,7 +56,8 @@ interface MenuItem {
   url: string;
   icon: any;
   iconName: string;
-  moduleKey: string; // Key for module access check
+  moduleKey: string;
+  children?: MenuItem[];
 }
 
 interface MenuGroup {
