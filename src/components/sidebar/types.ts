@@ -9,6 +9,8 @@ export type SidebarItem = {
   moduleKey?: string;
   children?: SidebarItem[];
   isTool?: boolean;
+  badgeCount?: number;
+  metadata?: Record<string, any>;
 };
 
 export type SidebarGroup = {
@@ -16,4 +18,10 @@ export type SidebarGroup = {
   label: string;
   icon?: LucideIcon;
   children: SidebarItem[];
+};
+
+export type SidebarNavigationState = {
+  activeFlyout?: string;
+  activeItem?: string;
+  isMobileOpen?: boolean;
 };

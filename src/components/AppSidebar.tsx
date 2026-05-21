@@ -29,8 +29,10 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { WorkspaceSwitcher } from "@/components/workspace/WorkspaceSwitcher";
+import { SidebarFlyoutMenu, SidebarFlyoutItem, SidebarDynamicGroup } from "./sidebar/SidebarFlyout";
+import { SidebarItem as SidebarItemType } from "./sidebar/types";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useTheme } from "next-themes";
 
 /** Menu item for theme toggle inside the profile dropdown */
@@ -56,7 +58,8 @@ interface MenuItem {
   url: string;
   icon: any;
   iconName: string;
-  moduleKey: string; // Key for module access check
+  moduleKey: string;
+  children?: MenuItem[];
 }
 
 interface MenuGroup {
@@ -106,11 +109,19 @@ const menuGroups: MenuGroup[] = [
   {
     label: "FERRAMENTAS",
     items: [
-      { title: "Prot. Progressiva", url: "#calculadora-lay", icon: Calculator, iconName: "Calculator", moduleKey: "ferramentas" },
-      { title: "Calculadora EV", url: "#calculadora-ev", icon: Calculator, iconName: "Calculator", moduleKey: "ferramentas" },
-      { title: "Calc. Extração", url: "#calculadora-extracao", icon: Calculator, iconName: "Calculator", moduleKey: "ferramentas" },
-      { title: "Hedge Probabilístico", url: "#calculadora-hedge-prob", icon: Target, iconName: "Target", moduleKey: "ferramentas" },
-      { title: "Planejamento Campanhas", url: "/ferramentas/planejamento", icon: CalendarDays, iconName: "CalendarDays", moduleKey: "ferramentas" },
+      { 
+        title: "Calculadoras", 
+        url: "#calculadoras", 
+        icon: Calculator, 
+        iconName: "Calculator", 
+        moduleKey: "ferramentas",
+        children: [
+          { title: "Calculadora EV", url: "#calculadora-ev", icon: Calculator, iconName: "Calculator", moduleKey: "ferramentas" },
+          { title: "Calc. Extração", url: "#calculadora-extracao", icon: Calculator, iconName: "Calculator", moduleKey: "ferramentas" },
+          { title: "Hedge Probabilístico", url: "#calculadora-hedge-prob", icon: Target, iconName: "Target", moduleKey: "ferramentas" },
+        ]
+      },
+      { title: "Planejamento", url: "/ferramentas/planejamento", icon: CalendarDays, iconName: "CalendarDays", moduleKey: "ferramentas" },
     ],
   },
   {
@@ -125,7 +136,6 @@ const menuGroups: MenuGroup[] = [
       { title: "Bancos", url: "/bancos", icon: Landmark, iconName: "Landmark", moduleKey: "bancos" },
       { title: "Investidores", url: "/investidores", icon: TrendingUp, iconName: "TrendingUp", moduleKey: "investidores" },
       { title: "Operadores", url: "/operadores", icon: Briefcase, iconName: "Briefcase", moduleKey: "operadores" },
-      
     ],
   },
 ];
@@ -227,18 +237,21 @@ export function AppSidebar() {
   };
 
   // Abre calculadora em janela externa
-  const handleMenuItemClick = (item: MenuItem, e: React.MouseEvent) => {
+  const handleMenuItemClick = (item: MenuItem | SidebarItemType, e: React.MouseEvent) => {
+    const url = 'url' in item ? item.url : item.href;
+    if (!url) return;
+
     const toolMap: Record<string, { url: string; name: string }> = {
-      '#calculadora-lay': { url: '/ferramentas/protecao-progressiva', name: 'calculadora-protecao' },
       '#calculadora-ev': { url: '/ferramentas/calculadora-ev', name: 'calculadora-ev' },
       '#calculadora-extracao': { url: '/ferramentas/calculadora-extracao', name: 'calculadora-extracao' },
       '#calculadora-hedge-prob': { url: '/ferramentas/calculadora-hedge-probabilistica', name: 'calculadora-hedge-probabilistica' },
     };
-    const tool = toolMap[item.url];
+    
+    const tool = toolMap[url];
     if (tool) {
       e.preventDefault();
-      const width = item.url === '#calculadora-ev' ? 420 : item.url === '#calculadora-extracao' ? 1000 : 900;
-      if (item.url === '#calculadora-hedge-prob') {
+      const width = url === '#calculadora-ev' ? 420 : url === '#calculadora-extracao' ? 1000 : 900;
+      if (url === '#calculadora-hedge-prob') {
         const w = 1100;
         const h = 850;
         const l = Math.max(0, (window.screen.width - w) / 2);
@@ -246,7 +259,7 @@ export function AppSidebar() {
         window.open(tool.url, tool.name, `width=${w},height=${h},left=${l},top=${t},resizable=yes,scrollbars=yes`);
         return;
       }
-      const height = item.url === '#calculadora-ev' ? 580 : item.url === '#calculadora-extracao' ? 800 : 750;
+      const height = url === '#calculadora-ev' ? 580 : url === '#calculadora-extracao' ? 800 : 750;
       const left = Math.max(0, (window.screen.width - width) / 2);
       const top = Math.max(0, (window.screen.height - height) / 2);
       window.open(
@@ -276,7 +289,7 @@ export function AppSidebar() {
 
   const renderMenuItem = (item: MenuItem) => {
     if (!canSeeItem(item)) return null;
-    // Badge de alertas só aparece na Central (URL "/"), não em outros itens com moduleKey "central"
+
     const isCentralPage = item.url === "/";
     const isSolicitacoesPage = item.url === "/solicitacoes";
     const solicitacoesPendentes = kpisSolicitacoes?.pendentes ?? 0;
@@ -284,10 +297,35 @@ export function AppSidebar() {
     const badgeCount = isSolicitacoesPage ? solicitacoesPendentes : alertsCount;
     const isToolLink = item.url.startsWith('#');
 
-    // Para links de ferramentas (que abrem popups), usamos button ao invés de NavLink
+    const sidebarItem: SidebarItemType = {
+      id: item.url,
+      label: item.title,
+      href: item.url,
+      icon: item.icon,
+      isTool: isToolLink,
+      badgeCount: showBadge ? badgeCount : undefined,
+      children: item.children?.filter(canSeeItem).map(child => ({
+        id: child.url,
+        label: child.title,
+        href: child.url,
+        icon: child.icon,
+        isTool: child.url.startsWith('#'),
+      }))
+    };
+
+    if (item.children && item.children.length > 0) {
+      return (
+        <SidebarFlyoutMenu 
+          key={item.title} 
+          item={sidebarItem} 
+          onItemClick={handleMenuItemClick}
+        />
+      );
+    }
+
     if (isToolLink) {
       return (
-        <SidebarMenuItem key={item.title}>
+        <SidebarMenuItem key={item.title} data-sidebar-item={item.url}>
           {isCollapsed ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -320,7 +358,7 @@ export function AppSidebar() {
     }
 
     return (
-      <SidebarMenuItem key={item.title}>
+      <SidebarMenuItem key={item.title} data-sidebar-item={item.url} data-sidebar-active={isActive(item.url) ? "true" : "false"}>
         {isCollapsed ? (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -373,184 +411,12 @@ export function AppSidebar() {
     );
   };
 
-  const renderFavoriteItem = (favorite: { page_path: string; page_title: string; page_icon: string }) => {
-    const IconComponent = iconMap[favorite.page_icon] || Star;
-
-    return (
-      <SidebarMenuItem key={favorite.page_path}>
-        {isCollapsed ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <SidebarMenuButton asChild isActive={isActive(favorite.page_path)}>
-                <NavLink 
-                  to={favorite.page_path} 
-                  end 
-                  className="flex items-center justify-center h-9 w-9 rounded-md transition-colors hover:bg-primary/10"
-                  activeClassName="bg-primary/10 text-primary"
-                >
-                  <IconComponent className="h-4 w-4" />
-                </NavLink>
-              </SidebarMenuButton>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="font-medium">
-              {favorite.page_title}
-            </TooltipContent>
-          </Tooltip>
-        ) : (
-          <SidebarMenuButton asChild isActive={isActive(favorite.page_path)}>
-            <NavLink 
-              to={favorite.page_path} 
-              end 
-              className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-primary/10"
-              activeClassName="bg-primary/10 text-primary font-medium"
-            >
-              <IconComponent className="h-4 w-4 shrink-0" />
-              <span className="text-sm">{favorite.page_title}</span>
-            </NavLink>
-          </SidebarMenuButton>
-        )}
-      </SidebarMenuItem>
-    );
-  };
-
-  const renderProjectFavoriteItem = (projectFavorite: { project_id: string }) => {
-    const projectPath = `/projeto/${projectFavorite.project_id}`;
-    const projectName = projectNames[projectFavorite.project_id] || "Projeto";
-    const projetoId = projectFavorite.project_id;
-    const defaultTab = projectDefaultTabs[projetoId];
-
-    const handleOpenSimples = () => {
-      openApostaWindow({ projetoId, activeTab: 'apostas' });
-    };
-    const handleOpenMultipla = () => {
-      openApostaMultiplaWindow({ projetoId, activeTab: 'apostas' });
-    };
-    const handleOpenSurebet = () => {
-      openSurebetWindow({ projetoId, activeTab: 'apostas' });
-    };
-    const handleOpenOperacoes = () => {
-      if (defaultTab) {
-        navigate(`${projectPath}?tab=${defaultTab}`);
-      }
-    };
-
-    const tabLabels: Record<string, string> = {
-      apostas: "Todas Apostas",
-      surebet: "Surebet",
-      bonus: "Bônus",
-      freebets: "Freebets",
-      valuebet: "ValueBet",
-      duplogreen: "Duplo Green",
-      promocoes: "Promoções",
-      cashback: "Cashback",
-      vinculos: "Vínculos",
-    };
-
-    const contextMenuItems = (
-      <ContextMenuContent className="w-52">
-        {defaultTab && (
-          <>
-            <ContextMenuItem onClick={handleOpenOperacoes} className="font-medium">
-              <Zap className="mr-2 h-4 w-4 text-primary" />
-              Operações · {tabLabels[defaultTab] || defaultTab}
-            </ContextMenuItem>
-            <ContextMenuSeparator />
-          </>
-        )}
-        <ContextMenuItem onClick={handleOpenSimples}>
-          <Target className="mr-2 h-4 w-4" />
-          Aposta Simples
-        </ContextMenuItem>
-        <ContextMenuItem onClick={handleOpenMultipla}>
-          <Layers className="mr-2 h-4 w-4" />
-          Aposta Múltipla
-        </ContextMenuItem>
-        <ContextMenuItem onClick={handleOpenSurebet}>
-          <ArrowLeftRight className="mr-2 h-4 w-4" />
-          Surebet
-        </ContextMenuItem>
-      </ContextMenuContent>
-    );
-
-    if (isCollapsed) {
-      return (
-        <SidebarMenuItem key={projectFavorite.project_id}>
-          <ContextMenu>
-            <ContextMenuTrigger asChild>
-              <div>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <SidebarMenuButton asChild isActive={currentPath === projectPath}>
-                      <NavLink 
-                        to={projectPath}
-                        className="flex items-center justify-center h-9 w-9 rounded-md transition-colors hover:bg-primary/10"
-                        activeClassName="bg-primary/10 text-primary"
-                      >
-                        <FolderKanban className="h-4 w-4" />
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="font-medium">
-                    {projectName}
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            </ContextMenuTrigger>
-            {contextMenuItems}
-          </ContextMenu>
-        </SidebarMenuItem>
-      );
-    }
-
-    return (
-      <SidebarMenuItem key={projectFavorite.project_id}>
-        <ContextMenu>
-          <ContextMenuTrigger asChild>
-            <SidebarMenuButton asChild isActive={currentPath === projectPath}>
-              <NavLink 
-                to={projectPath}
-                className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-primary/10"
-                activeClassName="bg-primary/10 text-primary font-medium"
-              >
-                <FolderKanban className="h-4 w-4 shrink-0" />
-                <span className="text-sm truncate">{projectName}</span>
-              </NavLink>
-            </SidebarMenuButton>
-          </ContextMenuTrigger>
-          {contextMenuItems}
-        </ContextMenu>
-      </SidebarMenuItem>
-    );
-  };
-
-  const renderMenuGroup = (group: MenuGroup, index: number) => {
-    const visibleItems = group.items.filter(canSeeItem);
-    if (visibleItems.length === 0) return null;
-
-    return (
-      <SidebarGroup key={group.label} className={index > 0 ? "mt-6" : ""}>
-        <SidebarGroupLabel 
-          className={`
-            text-[10px] font-semibold tracking-widest text-muted-foreground/70 
-            uppercase mb-2 px-3
-            ${isCollapsed ? 'sr-only' : ''}
-          `}
-        >
-          {group.label}
-        </SidebarGroupLabel>
-        <SidebarGroupContent>
-          <SidebarMenu className="space-y-0.5">
-            {visibleItems.map(item => renderMenuItem(item))}
-          </SidebarMenu>
-        </SidebarGroupContent>
-      </SidebarGroup>
-    );
-  };
 
   return (
     <Sidebar
       className={isCollapsed ? "w-[72px]" : "w-56"}
       collapsible="icon"
+      data-sidebar-expanded={!isCollapsed ? "true" : "false"}
     >
       <SidebarContent className="relative py-4 flex flex-col overflow-hidden">
         {/* Logo/Brand Section */}
@@ -595,34 +461,64 @@ export function AppSidebar() {
             className="h-full overflow-y-auto overflow-x-hidden scrollbar-none"
             style={{ scrollbarWidth: 'none' }}
           >
-            {/* Favorites Section */}
+            {/* ATALHOS / Favoritos Section */}
             {hasAnyFavorites && (
-              <SidebarGroup>
-                <SidebarGroupLabel 
-                  className={`
-                    text-[10px] font-semibold tracking-widest text-muted-foreground/70 
-                    uppercase mb-2 px-3
-                    ${isCollapsed ? 'sr-only' : ''}
-                  `}
-                >
-                  ATALHOS
-                </SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <SidebarMenu className="space-y-0.5">
-                    {visibleFavorites.map(renderFavoriteItem)}
-                    {hasProjectAccess && projectFavorites.map(renderProjectFavoriteItem)}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
+              <SidebarDynamicGroup 
+                id="atalhos"
+                label="ATALHOS"
+                items={[
+                  {
+                    id: "projetos-favoritos",
+                    label: "Projetos Favoritos",
+                    icon: Star,
+                    children: hasProjectAccess && projectFavorites.length > 0 
+                      ? projectFavorites.map(pf => ({
+                          id: pf.project_id,
+                          label: projectNames[pf.project_id] || "Carregando...",
+                          href: `/projeto/${pf.project_id}`,
+                          icon: FolderKanban
+                        }))
+                      : []
+                  },
+                  ...visibleFavorites.map(fav => ({
+                    id: fav.page_path,
+                    label: fav.page_title,
+                    href: fav.page_path,
+                    icon: iconMap[fav.page_icon] || Star
+                  }))
+                ]}
+                onItemClick={handleMenuItemClick}
+                emptyLabel="Nenhum favorito"
+              />
             )}
 
             {hasAnyFavorites && (
-              <div className="my-4 mx-3 border-t border-border/50" />
+              <div className="my-2 mx-3 border-t border-border/30" />
             )}
 
             {/* Menu Groups */}
             <div className="px-2">
-              {menuGroups.map((group, index) => renderMenuGroup(group, index))}
+              {menuGroups.map((group, index) => {
+                const visibleItems = group.items.filter(canSeeItem);
+                if (visibleItems.length === 0) return null;
+
+                return (
+                  <SidebarGroup key={group.label} className={index > 0 ? "mt-4" : ""}>
+                    {!isCollapsed && (
+                      <SidebarGroupLabel 
+                        className="text-[10px] font-semibold tracking-widest text-muted-foreground/40 uppercase mb-2 px-3"
+                      >
+                        {group.label}
+                      </SidebarGroupLabel>
+                    )}
+                    <SidebarGroupContent>
+                      <SidebarMenu className="space-y-0.5">
+                        {visibleItems.map(item => renderMenuItem(item))}
+                      </SidebarMenu>
+                    </SidebarGroupContent>
+                  </SidebarGroup>
+                );
+              })}
             </div>
           </div>
 
