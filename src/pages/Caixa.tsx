@@ -52,6 +52,7 @@ interface LocationState {
   tipoMoeda?: "FIAT" | "CRYPTO";
   moeda?: string;
   coin?: string;
+  tipoTransacao?: string;
 }
 
 interface Transacao {
@@ -562,6 +563,9 @@ export default function Caixa() {
           moeda: locationState.moeda,
           coin: locationState.coin,
         });
+      } else if (locationState.tipoTransacao) {
+        // Atalho do menu lateral: abrir dialog já no tipo selecionado
+        setDialogDefaultData({ tipoTransacao: locationState.tipoTransacao });
       }
       setDialogOpen(true);
       // Clear state to prevent reopening on refresh

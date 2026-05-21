@@ -1,4 +1,4 @@
-import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, Settings, LogOut, Star, Shield, Calculator, StickyNote, ShieldCheck, ChevronUp, ChevronDown, Sun, Moon, Target, Layers, ArrowLeftRight, Zap, Truck, ClipboardList, CalendarDays, Activity, X } from "lucide-react";
+import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, Settings, LogOut, Star, Shield, Calculator, StickyNote, ShieldCheck, ChevronUp, ChevronDown, Sun, Moon, Target, Layers, ArrowLeftRight, Zap, Truck, ClipboardList, CalendarDays, Activity, X, ArrowDownToLine, ArrowUpFromLine, HandCoins } from "lucide-react";
 import { useSolicitacoesKpis } from "@/hooks/useSolicitacoes";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -178,7 +178,20 @@ const menuGroups: MenuGroup[] = [
   {
     label: "FINANCEIRO",
     items: [
-      { title: "Caixa", url: "/caixa", icon: Wallet, iconName: "Wallet", moduleKey: "caixa" },
+      {
+        title: "Caixa",
+        url: "#caixa-menu",
+        icon: Wallet,
+        iconName: "Wallet",
+        moduleKey: "caixa",
+        children: [
+          { title: "Abrir Caixa", url: "/caixa", icon: Wallet, iconName: "Wallet", moduleKey: "caixa" },
+          { title: "Transferência", url: "#caixa-transferencia", icon: ArrowLeftRight, iconName: "ArrowLeftRight", moduleKey: "caixa" },
+          { title: "Depósito", url: "#caixa-deposito", icon: ArrowDownToLine, iconName: "ArrowDownToLine", moduleKey: "caixa" },
+          { title: "Saque", url: "#caixa-saque", icon: ArrowUpFromLine, iconName: "ArrowUpFromLine", moduleKey: "caixa" },
+          { title: "Aporte / Liquidação", url: "#caixa-aporte", icon: HandCoins, iconName: "HandCoins", moduleKey: "caixa" },
+        ],
+      },
       { title: "Financeiro", url: "/financeiro", icon: PieChart, iconName: "PieChart", moduleKey: "financeiro" },
       { title: "Captação", url: "/programa-indicacao", icon: UserPlus, iconName: "UserPlus", moduleKey: "captacao" },
       { title: "Fornecedores", url: "/fornecedores-portal", icon: Truck, iconName: "Truck", moduleKey: "captacao" },
@@ -324,7 +337,21 @@ export function AppSidebar() {
       '#calculadora-extracao': { url: '/ferramentas/calculadora-extracao', name: 'calculadora-extracao' },
       '#calculadora-hedge-prob': { url: '/ferramentas/calculadora-hedge-probabilistica', name: 'calculadora-hedge-probabilistica' },
     };
-    
+
+    // Caixa quick actions → navega para /caixa abrindo o dialog correto
+    const caixaActionMap: Record<string, string> = {
+      '#caixa-transferencia': 'TRANSFERENCIA',
+      '#caixa-deposito': 'DEPOSITO',
+      '#caixa-saque': 'SAQUE',
+      '#caixa-aporte': 'APORTE_FINANCEIRO',
+    };
+    const caixaAction = caixaActionMap[url];
+    if (caixaAction) {
+      e.preventDefault();
+      navigate('/caixa', { state: { openDialog: true, tipoTransacao: caixaAction } });
+      return;
+    }
+
     const tool = toolMap[url];
     if (tool) {
       e.preventDefault();
