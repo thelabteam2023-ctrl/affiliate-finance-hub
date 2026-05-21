@@ -1525,6 +1525,7 @@ export function SurebetModalRoot({
         const snapshotMain = getSnapshotFields(stakeMain, moedaMain, getEffectiveRate(moedaMain));
 
         entradasRPC.push({
+          id: perna.additionalEntries?.[0]?.id || null, // Se a perna já existe, tenta pegar o ID da entrada principal
           perna_ordem: ordem,
           bookmaker_id: perna.bookmaker_id,
           stake: stakeMain,
