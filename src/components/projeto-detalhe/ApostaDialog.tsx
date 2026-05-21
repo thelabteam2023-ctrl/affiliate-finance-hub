@@ -1814,7 +1814,18 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     }
 
     try {
+      // Adicionar observabilidade para o modo edição
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[MULTIPLA_EDICAO]', {
+          id: aposta?.id,
+          stake: stakeValue,
+          odd_final: oddFinalValue,
+          resultado: resultValue
+        });
+      }
+
       setLoading(true);
+
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) {
         toast.error("Usuário não autenticado");
