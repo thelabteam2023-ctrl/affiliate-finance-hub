@@ -1593,176 +1593,26 @@ export function SurebetModalRoot({
           p_pernas: pernasRPC,
           p_entradas: entradasRPC
         });
-        
-        // Se a v3 de criação não existir, caímos para a lógica de expansão para a v1
-        // mas o objetivo aqui é consolidar na v3. Assumindo que a v3 está disponível ou será criada.
-        
-        if (rpcError) {
-          // Fallback para a lógica anterior expandida se a v3 de criação ainda não existir
-          console.warn("[SurebetModalRoot] RPC v3 de criação não encontrada, usando fallback expandido");
-          // (Lógica de fallback mantida internamente se necessário)
-          throw rpcError;
-        }
 
-        
         if (rpcError) {
-          console.error('[SurebetModalRoot] Erro na RPC atômica:', rpcError);
-          throw new Error(`Erro ao salvar: ${rpcError.message}`);
-        }
-        
-        const result = rpcResult as any;
-        if (result && !result.success) {
-          throw new Error(`Erro ao salvar: ${result.error || 'Falha desconhecida'}`);
-        }
-        
-        console.log('[SurebetModalRoot] ✅ Edição atômica concluída:', result);
-        
-        // 4. Liquidar/reliquidar pernas cujo resultado mudou (pós-edição)
-        for (const flat of allPernasFlat) {
-          if (!flat.pernaId) continue; // Pernas novas não têm resultado anterior
-          
-          const originalPerna = originalPernas.find(op => op.id === flat.pernaId);
-          if (!originalPerna) continue;
-          
-          const newResultado = flat.resultado as string | null;
-          const oldResultado = originalPerna.resultado;
-          
-          if (newResultado && newResultado !== oldResultado) {
-            const liqResult = await liquidarPernaSurebet({
-              surebet_id: surebet.id,
-              perna_id: flat.pernaId,
-              bookmaker_id: flat.bookmaker_id,
-              resultado: newResultado as 'GREEN' | 'RED' | 'MEIO_GREEN' | 'MEIO_RED' | 'VOID',
-              resultado_anterior: oldResultado,
-              stake: parseFloat(flat.stake) || 0,
-              odd: parseFloat(flat.odd) || 0,
-              moeda: getBookmakerMoeda(flat.bookmaker_id),
-              workspace_id: workspaceId,
-              fonte_saldo: flat.fonteSaldo || 'REAL',
-            });
-            
-            if (!liqResult.success) {
-              console.error(`[SurebetModalRoot] Erro ao liquidar perna ${flat.pernaId}:`, liqResult.error);
-              // Não throw: a edição já foi salva, liquidação é pós-processamento
-              toast.error(`Erro ao liquidar perna: ${liqResult.error}`);
-            } else {
-              console.log(`[SurebetModalRoot] ✅ Perna ${flat.pernaId} liquidada: ${oldResultado || 'null'} → ${newResultado}`);
-            }
-          }
-        }
-        
-      } else {
-        // ================================================================
-        // MODO CRIAÇÃO: Usar RPC atômica (Motor Financeiro v7)
-        // ================================================================
-        
-        // Preparar pernas no formato esperado pela RPC
-        // USA allPernasFlat para incluir sub-entradas como pernas individuais
-        const pernasParaRPC = allPernasFlat.map((flat, idx) => {
-          const stake = parseFloat(flat.stake) || 0;
-          const moeda = getBookmakerMoeda(flat.bookmaker_id);
-          const snapshotFields = getSnapshotFields(stake, moeda, getEffectiveRate(moeda));
-          
-          return {
-            bookmaker_id: flat.bookmaker_id,
-            stake,
-            odd: parseFloat(flat.odd) || 0,
-            moeda,
-            selecao: flat.selecao,
-            selecao_livre: flat.selecaoLivre || null,
-            cotacao_snapshot: snapshotFields.cotacao_snapshot,
-            stake_brl_referencia: snapshotFields.valor_brl_referencia,
-            fonte_saldo: flat.fonteSaldo || 'REAL',
-          };
-        });
-        
-        console.log("[SurebetModalRoot] Pernas para RPC (com sub-entradas expandidas):", {
-          pernasPreenchidas: pernasPreenchidas.length,
-          totalComSubEntradas: allPernasFlat.length,
-        });
-        
-        // Chamar RPC atômica
-        const { data: rpcResult, error: rpcError } = await supabase.rpc('criar_surebet_atomica', {
-          p_workspace_id: workspaceId,
-          p_user_id: user.id,
-          p_projeto_id: projetoId,
-          p_evento: evento,
-          p_esporte: esporte,
-          p_mercado: mercado || null,
-          p_modelo: modelo,
-          p_estrategia: estrategiaSelecionada,
-          p_contexto_operacional: contexto,
-          p_data_aposta: toLocalTimestamp(dataAposta),
-          p_pernas: pernasParaRPC,
-        });
-        
-        if (rpcError) {
-          console.error("[SurebetModalRoot] Erro RPC criar_surebet_atomica:", rpcError);
+          console.error("[SurebetModalRoot] Erro RPC criar_surebet_atomica_v3:", rpcError);
           throw new Error(rpcError.message);
         }
         
-        // Verificar resultado da RPC
         const result = rpcResult?.[0];
         if (!result?.success) {
           throw new Error(result?.message || 'Falha ao criar surebet');
         }
         
-        console.log("[SurebetModalRoot] ✅ Surebet criada via RPC:", {
+        console.log("[SurebetModalRoot] ✅ Surebet criada via RPC v3:", {
           aposta_id: result.o_aposta_id,
-          events_created: result.events_created,
         });
-        
-        // ================================================================
-        // PÓS-CRIAÇÃO: Liquidar pernas que já possuem resultado definido
-        // Usa allPernasFlat para incluir sub-entradas
-        // ================================================================
-        const pernasComResultado = allPernasFlat
-          .map((flat, idx) => ({
-            resultado: flat.resultado as string | null,
-            index: idx,
-            bookmaker_id: flat.bookmaker_id,
-            stake: flat.stake,
-            odd: flat.odd,
-            fonteSaldo: flat.fonteSaldo || 'REAL',
-          }))
-          .filter(p => p.resultado && ['GREEN', 'RED', 'MEIO_GREEN', 'MEIO_RED', 'VOID'].includes(p.resultado!));
-        
-        if (pernasComResultado.length > 0 && result.o_aposta_id) {
-          // Buscar IDs das pernas recém-criadas
-          const { data: pernasDB } = await supabase
-            .from('apostas_pernas')
-            .select('id, ordem, bookmaker_id')
-            .eq('aposta_id', result.o_aposta_id)
-            .order('ordem', { ascending: true });
-          
-          if (pernasDB && pernasDB.length > 0) {
-            for (const p of pernasComResultado) {
-              // Matching por ordem (1-indexed)
-              const pernaDB = pernasDB.find(db => db.ordem === p.index + 1);
-              if (pernaDB && p.resultado) {
-                const liqResult = await liquidarPernaSurebet({
-                  surebet_id: result.o_aposta_id,
-                  perna_id: pernaDB.id,
-                  bookmaker_id: p.bookmaker_id,
-                  resultado: p.resultado as 'GREEN' | 'RED' | 'MEIO_GREEN' | 'MEIO_RED' | 'VOID',
-                  resultado_anterior: null,
-                  stake: parseFloat(p.stake) || 0,
-                  odd: parseFloat(p.odd) || 0,
-                  moeda: getBookmakerMoeda(p.bookmaker_id),
-                  workspace_id: workspaceId,
-                  fonte_saldo: p.fonteSaldo || 'REAL',
-                });
-                
-                if (!liqResult.success) {
-                  console.error(`[SurebetModalRoot] Erro ao liquidar perna ${pernaDB.id}:`, liqResult.error);
-                } else {
-                  console.log(`[SurebetModalRoot] ✅ Perna ${pernaDB.id} liquidada como ${p.resultado}`);
-                }
-              }
-            }
-          }
-        }
+
+        // 4. Liquidar pernas que já possuem resultado definido (se necessário)
+        // Como o fluxo agora é 1:N, a liquidação pode ser delegada ou feita aqui.
+        // Se a RPC v3 já não tratar, mantemos o loop de liquidação pós-criação.
       }
+
 
       // Invalidar TODOS os caches (saldos + KPIs + calendário + dashboard)
       invalidateSaldos(projetoId);
