@@ -1181,6 +1181,7 @@ export function SurebetCard({
                           bookmakerNome: perna.bookmaker_nome,
                         });
                       }
+
                     } : undefined}
                   />
                   </div>
