@@ -147,10 +147,12 @@ function cleanHouseName(name: string): string {
   if (!name) return "";
   const separatorIdx = name.indexOf(" - ");
   if (separatorIdx > 0) {
+    // Retorna apenas a parte da casa, removendo o titular
     return name.substring(0, separatorIdx).trim();
   }
   return name;
 }
+
 
 export function generateLiquidationOptions(legs: SurebetPerna[]) {
   const liquidationLegs = buildLiquidationLegs(legs);
