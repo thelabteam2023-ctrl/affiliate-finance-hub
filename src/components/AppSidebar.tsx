@@ -337,7 +337,21 @@ export function AppSidebar() {
       '#calculadora-extracao': { url: '/ferramentas/calculadora-extracao', name: 'calculadora-extracao' },
       '#calculadora-hedge-prob': { url: '/ferramentas/calculadora-hedge-probabilistica', name: 'calculadora-hedge-probabilistica' },
     };
-    
+
+    // Caixa quick actions → navega para /caixa abrindo o dialog correto
+    const caixaActionMap: Record<string, string> = {
+      '#caixa-transferencia': 'TRANSFERENCIA',
+      '#caixa-deposito': 'DEPOSITO',
+      '#caixa-saque': 'SAQUE',
+      '#caixa-aporte': 'APORTE_FINANCEIRO',
+    };
+    const caixaAction = caixaActionMap[url];
+    if (caixaAction) {
+      e.preventDefault();
+      navigate('/caixa', { state: { openDialog: true, tipoTransacao: caixaAction } });
+      return;
+    }
+
     const tool = toolMap[url];
     if (tool) {
       e.preventDefault();
