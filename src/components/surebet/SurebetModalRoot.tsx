@@ -860,7 +860,8 @@ export function SurebetModalRoot({
           odd: mainPerna.odd?.toString() || "",
           stake: mainPerna.stake?.toString() || "",
           selecao: mainPerna.selecao,
-          selecaoLivre: mainPerna.selecao_livre || "",
+          // FIX: Garantir que selecaoLivre receba o valor de selecao_livre vindo do banco
+          selecaoLivre: mainPerna.selecao_livre || "", 
           isReference: groupIdx === 0,
           isManuallyEdited: true,
           resultado: mainPerna.resultado,
@@ -1443,7 +1444,7 @@ export function SurebetModalRoot({
     const validation = validateSurebetCard({
       evento,
       stake_total: analysis.stakeTotal,
-      valor_brl_referencia: analysis.stakeConsolidada,
+      valor_brl_referencia: analysis.stakeTotal, // analysis.stakeTotal já é a stake consolidada na moeda base
       pernas: odds.map(o => ({
         odd: o.odd,
         stake: o.stake,
