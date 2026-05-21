@@ -497,7 +497,27 @@ export function AppSidebar() {
 
             {/* Menu Groups */}
             <div className="px-2">
-              {menuGroups.map((group, index) => renderMenuGroup(group, index))}
+              {menuGroups.map((group, index) => {
+                const visibleItems = group.items.filter(canSeeItem);
+                if (visibleItems.length === 0) return null;
+
+                return (
+                  <SidebarGroup key={group.label} className={index > 0 ? "mt-4" : ""}>
+                    {!isCollapsed && (
+                      <SidebarGroupLabel 
+                        className="text-[10px] font-semibold tracking-widest text-muted-foreground/40 uppercase mb-2 px-3"
+                      >
+                        {group.label}
+                      </SidebarGroupLabel>
+                    )}
+                    <SidebarGroupContent>
+                      <SidebarMenu className="space-y-0.5">
+                        {visibleItems.map(item => renderMenuItem(item))}
+                      </SidebarMenu>
+                    </SidebarGroupContent>
+                  </SidebarGroup>
+                );
+              })}
             </div>
           </div>
 
