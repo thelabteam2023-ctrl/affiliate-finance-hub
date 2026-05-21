@@ -28,6 +28,7 @@ import { useSurebetCalculator, type OddEntry, type OddFormEntry } from "@/hooks/
 import { pernasToInserts } from "@/types/apostasPernas";
 import { type SurebetEngineConfig, convertViaBRL } from "@/utils/surebetCurrencyEngine";
 import { HydrationAudit } from "@/engine/hydrationAudit";
+import { validateSurebetCard } from "@/utils/surebetValidator";
 
 
 import { Button } from "@/components/ui/button";
@@ -1435,6 +1436,27 @@ export function SurebetModalRoot({
     if (!evento.trim()) { toast.error("Informe o evento"); return; }
     if (odds.length < numPernas || analysis.pernasCompletasCount < numPernas) {
       toast.error(`Preencha todas as ${numPernas} pernas (${analysis.pernasCompletasCount} preenchidas)`);
+      return;
+    }
+    
+    // Validação de Integridade (Hydration Check)
+    const validation = validateSurebetCard({
+      evento,
+      stake_total: analysis.stakeTotal,
+      valor_brl_referencia: analysis.stakeConsolidada,
+      pernas: odds.map(o => ({
+        odd: o.odd,
+        stake: o.stake,
+        moeda: o.moeda,
+        selecao: o.selecao,
+        selecao_livre: o.selecaoLivre
+      }))
+    });
+
+    if (!validation.valido) {
+      toast.error("Dados incompletos", {
+        description: `Corrija: ${validation.erros[0].replace(/_/g, ' ')}`
+      });
       return;
     }
     

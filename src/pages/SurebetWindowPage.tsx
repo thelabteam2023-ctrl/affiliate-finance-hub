@@ -116,8 +116,9 @@ export default function SurebetWindowPage() {
             .order("ordem", { ascending: true });
 
           // Strip identity/result for duplication — preservar data_aposta original
+          // IMPORTANTE: Incluir selecao_livre explicitamente para garantir hidratação no clone
           setSurebet({
-            data_operacao: data.data_aposta, // Clone fiel da data original
+            data_operacao: data.data_aposta, 
             evento: data.evento || "",
             esporte: data.esporte || "Futebol",
             modelo: data.modelo || "1-2",
@@ -132,7 +133,11 @@ export default function SurebetWindowPage() {
             forma_registro: data.forma_registro,
             estrategia: data.estrategia,
             contexto_operacional: data.contexto_operacional,
-            __seedPernas: (pernas || []).map(({ id, aposta_id, created_at, updated_at, ...perna }) => perna),
+            __seedPernas: (pernas || []).map(({ id, aposta_id, created_at, updated_at, ...perna }) => ({
+              ...perna,
+              // Garantir que selecao_livre esteja presente no mapeamento
+              selecao_livre: perna.selecao_livre || "",
+            })),
           });
         } else {
           // Normal edit mapping
