@@ -1561,6 +1561,14 @@ export function SurebetModalRoot({
       const modelo = numPernas === 2 ? "1-2" : numPernas === 3 ? "1-X-2" : `${numPernas}-way`;
 
       if (isEditing && surebet) {
+        // 🔍 DEBUG: Log do payload que será enviado
+        console.log('[SurebetModalRoot] 🔍 EDIT PAYLOAD', {
+          aposta_id: surebet.id,
+          pernas: pernasRPC,
+          entradas: entradasRPC,
+          oddsState: odds.map(o => ({ odd: o.odd, stake: o.stake, bk: o.bookmaker_id, pernaId: o.pernaId, subs: o.additionalEntries?.length || 0 }))
+        });
+
         // MODO EDIÇÃO: RPC v3 (Estrutura 1:N)
         const { data: rpcResult, error: rpcError } = await supabase.rpc('editar_surebet_completa_v3' as any, {
           p_aposta_id: surebet.id,
@@ -1577,11 +1585,11 @@ export function SurebetModalRoot({
         });
 
         if (rpcError) {
-          console.error('[SurebetModalRoot] Erro na RPC v3:', rpcError);
+          console.error('[SurebetModalRoot] ❌ Erro na RPC v3:', rpcError);
           throw new Error(`Erro ao salvar: ${rpcError.message}`);
         }
 
-        console.log('[SurebetModalRoot] ✅ Edição 1:N concluída');
+        console.log('[SurebetModalRoot] ✅ Edição 1:N concluída', rpcResult);
       } else {
         // MODO CRIAÇÃO: RPC v3 (Estrutura 1:N)
         const { data: rpcResult, error: rpcError } = await supabase.rpc('criar_surebet_atomica_v3' as any, {
