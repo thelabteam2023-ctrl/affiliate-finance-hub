@@ -1820,9 +1820,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           id: aposta?.id,
           stake,
           odd_final: odd,
-          resultado: resultado
+          status: statusValue
         });
       }
+
 
 
       setLoading(true);
