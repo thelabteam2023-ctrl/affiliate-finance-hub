@@ -2,10 +2,8 @@ import * as React from "react";
 import { ChevronRight, LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarGroupLabel,
   useSidebar,
 } from "@/components/ui/sidebar";
 import {
@@ -23,6 +21,7 @@ import {
 import { NavLink } from "@/components/NavLink";
 import { SidebarItem as SidebarItemType } from "./types";
 import { useLocation } from "react-router-dom";
+import { useSidebarStore, FlyoutState } from "@/store/sidebar-store";
 
 interface SidebarFlyoutMenuProps {
   item: SidebarItemType;
@@ -39,8 +38,22 @@ export const SidebarFlyoutMenu: React.FC<SidebarFlyoutMenuProps> = ({
 }) => {
   const { isMobile, state: sidebarState } = useSidebar();
   const location = useLocation();
-  const [isOpen, setIsOpen] = React.useState(false);
   const isCollapsed = sidebarState === "collapsed";
+  
+  const { 
+    activeFlyoutId, 
+    pinnedFlyoutId, 
+    state: globalState,
+    openHover,
+    pin,
+    close,
+    startClosing,
+    clearActive
+  } = useSidebarStore();
+
+  const isOpen = activeFlyoutId === item.id;
+  const isPinned = pinnedFlyoutId === item.id;
+  
   const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   // Check if any child is active
@@ -60,16 +73,66 @@ export const SidebarFlyoutMenu: React.FC<SidebarFlyoutMenuProps> = ({
   const handleMouseEnter = () => {
     if (isMobile) return;
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    setIsOpen(true);
+    
+    // Open Delay: ~120ms
+    timeoutRef.current = setTimeout(() => {
+      openHover(item.id);
+    }, 120);
   };
 
   const handleMouseLeave = () => {
-    if (isMobile) return;
-    // Closing delay (180ms) for premium UX and "hover bridge" effect
+    if (isMobile || isPinned) return;
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    
+    startClosing();
+    
+    // Close Delay: ~400ms (within range 300-450ms)
     timeoutRef.current = setTimeout(() => {
-      setIsOpen(false);
-    }, 180);
+      clearActive();
+    }, 400);
   };
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (isMobile) return;
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (isPinned) {
+      close();
+    } else {
+      pin(item.id);
+    }
+  };
+
+  // Listen for clicks outside to close pinned flyout
+  React.useEffect(() => {
+    if (!isPinned) return;
+
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // If click is not inside a sidebar item or flyout content, close
+      if (!target.closest(`[data-sidebar-item="${item.id}"]`) && !target.closest('.sidebar-flyout-content')) {
+        close();
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [isPinned, item.id, close]);
+
+  // Handle ESC key
+  React.useEffect(() => {
+    if (!isOpen) return;
+    
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        close();
+      }
+    };
+    
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [isOpen, close]);
 
   // Cleanup timeout on unmount
   React.useEffect(() => {
@@ -78,37 +141,28 @@ export const SidebarFlyoutMenu: React.FC<SidebarFlyoutMenuProps> = ({
     };
   }, []);
 
-  // Keyboard navigation
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "ArrowRight") {
-      setIsOpen(true);
-    } else if (e.key === "ArrowLeft") {
-      setIsOpen(false);
-    } else if (e.key === "Escape") {
-      setIsOpen(false);
-    }
-  };
-
   // Desktop Flyout
   if (!isMobile) {
     return (
       <SidebarMenuItem 
         data-sidebar-item={item.id}
-        data-flyout-state={isOpen ? "open" : "closed"}
+        data-flyout-state={isOpen ? (isPinned ? "pinned" : "open") : "closed"}
+        data-flyout-mode={isPinned ? "pinned" : "hover"}
         data-sidebar-active={isActive ? "true" : "false"}
         data-sidebar-level={level}
         data-sidebar-type="flyout"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        onKeyDown={handleKeyDown}
       >
-        <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+        <DropdownMenu open={isOpen} onOpenChange={(open) => { if (!open) close(); }}>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton 
               isActive={isActive}
+              onClick={handleClick}
               className={cn(
                 "group/flyout w-full transition-all duration-200",
-                isActive && "bg-primary/5 text-primary font-semibold"
+                isActive && "bg-primary/5 text-primary font-semibold",
+                isPinned && "ring-2 ring-primary/20 bg-primary/10"
               )}
               aria-haspopup="true"
               aria-expanded={isOpen}
@@ -129,33 +183,37 @@ export const SidebarFlyoutMenu: React.FC<SidebarFlyoutMenuProps> = ({
             <DropdownMenuContent 
               side="right" 
               align="start" 
-              sideOffset={12}
+              sideOffset={8}
               className={cn(
-                "min-w-[200px] p-1 shadow-2xl bg-popover/95 backdrop-blur-sm border-border/50 animate-in slide-in-from-left-1 duration-200 z-[100]",
-                "before:absolute before:inset-y-0 before:-left-3 before:w-3 before:content-['']" // Hover Bridge Area
+                "min-w-[220px] p-1 shadow-2xl bg-popover/98 backdrop-blur-md border-border/50 animate-in slide-in-from-left-2 duration-300 z-[100] sidebar-flyout-content",
+                "before:absolute before:inset-y-0 before:-left-4 before:w-4 before:content-['']", // Hover Bridge Area expanded
+                isPinned && "border-primary/30 shadow-primary/10"
               )}
               onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
             >
-              <div className="px-2 py-1.5 text-[10px] uppercase tracking-widest font-bold text-muted-foreground/50 border-b border-border/30 mb-1">
-                {item.label}
+              <div className="px-3 py-2 text-[10px] uppercase tracking-widest font-black text-muted-foreground/40 border-b border-border/30 mb-1 flex justify-between items-center">
+                <span>{item.label}</span>
+                {isPinned && <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />}
               </div>
-              {item.children?.map((child) => (
-                child.children ? (
-                  <SidebarFlyoutMenu 
-                    key={child.id} 
-                    item={child} 
-                    onItemClick={onItemClick} 
-                    level={level + 1}
-                  />
-                ) : (
-                  <SidebarFlyoutItem 
-                    key={child.id} 
-                    item={child} 
-                    onItemClick={onItemClick}
-                  />
-                )
-              ))}
+              <div className="max-h-[70vh] overflow-y-auto custom-scrollbar pr-1">
+                {item.children?.map((child) => (
+                  child.children ? (
+                    <SidebarFlyoutMenu 
+                      key={child.id} 
+                      item={child} 
+                      onItemClick={onItemClick} 
+                      level={level + 1}
+                    />
+                  ) : (
+                    <SidebarFlyoutItem 
+                      key={child.id} 
+                      item={child} 
+                      onItemClick={onItemClick}
+                    />
+                  )
+                ))}
+              </div>
             </DropdownMenuContent>
           </DropdownMenuPortal>
         </DropdownMenu>
@@ -163,26 +221,26 @@ export const SidebarFlyoutMenu: React.FC<SidebarFlyoutMenuProps> = ({
     );
   }
 
-  // Mobile Accordion
+  // Mobile Accordion (stays mostly same but using local state for simplicity on mobile)
+  const [mobileOpen, setMobileOpen] = React.useState(false);
   return (
     <SidebarMenuItem 
       data-sidebar-item={item.id}
-      data-flyout-state={isOpen ? "open" : "closed"}
       data-sidebar-active={isActive ? "true" : "false"}
       data-sidebar-level={level}
       data-sidebar-type="accordion"
     >
-      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Collapsible open={mobileOpen} onOpenChange={setMobileOpen}>
         <CollapsibleTrigger asChild>
           <SidebarMenuButton 
             isActive={isActive}
-            aria-expanded={isOpen}
+            aria-expanded={mobileOpen}
           >
             {item.icon && <item.icon className="h-4 w-4 shrink-0" />}
             <span className="flex-1 text-sm text-left font-medium">{item.label}</span>
             <ChevronRight className={cn(
               "h-4 w-4 transition-transform duration-200",
-              isOpen && "rotate-90"
+              mobileOpen && "rotate-90"
             )} />
           </SidebarMenuButton>
         </CollapsibleTrigger>
