@@ -111,9 +111,13 @@ export default function SurebetWindowPage() {
         if (isDuplicating) {
           const { data: pernas } = await supabase
             .from("apostas_pernas")
-            .select("*")
+            .select(`
+              *,
+              apostas_perna_entradas (*)
+            `)
             .eq("aposta_id", fetchId)
             .order("ordem", { ascending: true });
+
 
           // Strip identity/result for duplication — preservar data_aposta original
           // IMPORTANTE: Incluir selecao_livre explicitamente para garantir hidratação no clone
@@ -135,9 +139,11 @@ export default function SurebetWindowPage() {
             contexto_operacional: data.contexto_operacional,
             __seedPernas: (pernas || []).map(({ id, aposta_id, created_at, updated_at, ...perna }) => ({
               ...perna,
-              // Garantir que selecao_livre esteja presente no mapeamento
+              // Mapear entradas para garantir que o clone preserve a estrutura 1:N
+              apostas_perna_entradas: (perna.apostas_perna_entradas || []).map(({ id, perna_id, created_at, updated_at, ...entrada }: any) => entrada),
               selecao_livre: perna.selecao_livre || "",
             })),
+
           });
         } else {
           // Normal edit mapping
