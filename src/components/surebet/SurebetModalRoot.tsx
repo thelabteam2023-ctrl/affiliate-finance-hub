@@ -1544,6 +1544,7 @@ export function SurebetModalRoot({
             const snapshotSub = getSnapshotFields(stakeSub, moedaSub, getEffectiveRate(moedaSub));
 
             entradasRPC.push({
+              id: sub.id || null,
               perna_ordem: ordem,
               bookmaker_id: sub.bookmaker_id,
               stake: stakeSub,
