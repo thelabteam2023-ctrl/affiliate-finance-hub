@@ -368,7 +368,7 @@ export function SurebetModalRoot({
   // Transformados em estado para garantir que memos dependentes (bookmakersDisponiveis, balanceValidation) recomputem
   const [originalStakesByBookmaker, setOriginalStakesByBookmaker] = useState<Map<string, { real: number; freebet: number }>>(new Map());
   const [originalPernaIds, setOriginalPernaIds] = useState<string[]>([]);
-  const [originalPernasSnapshot, setOriginalPernasSnapshot] = useState<Array<{ id: string; bookmaker_id: string; stake: number; odd: number; selecao: string; selecao_livre: string; resultado: string | null; fonte_saldo: string | null }>>([]);
+  const [originalPernasSnapshot, setOriginalPernasSnapshot] = useState<Array<{ id: string; perna_id: string; bookmaker_id: string; stake: number; odd: number; selecao: string; selecao_livre: string; resultado: string | null; fonte_saldo: string | null }>>([]);
 
   // Sincronizar erros por perna em tempo real com base no estado atual das odds e saldos
   useEffect(() => {
