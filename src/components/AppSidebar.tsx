@@ -29,8 +29,10 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { WorkspaceSwitcher } from "@/components/workspace/WorkspaceSwitcher";
+import { SidebarFlyoutMenu, SidebarFlyoutItem, SidebarDynamicGroup } from "./sidebar/SidebarFlyout";
+import { SidebarItem as SidebarItemType } from "./sidebar/types";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useTheme } from "next-themes";
 
 /** Menu item for theme toggle inside the profile dropdown */
