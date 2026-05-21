@@ -237,18 +237,21 @@ export function AppSidebar() {
   };
 
   // Abre calculadora em janela externa
-  const handleMenuItemClick = (item: MenuItem, e: React.MouseEvent) => {
+  const handleMenuItemClick = (item: MenuItem | SidebarItemType, e: React.MouseEvent) => {
+    const url = 'url' in item ? item.url : item.href;
+    if (!url) return;
+
     const toolMap: Record<string, { url: string; name: string }> = {
-      '#calculadora-lay': { url: '/ferramentas/protecao-progressiva', name: 'calculadora-protecao' },
       '#calculadora-ev': { url: '/ferramentas/calculadora-ev', name: 'calculadora-ev' },
       '#calculadora-extracao': { url: '/ferramentas/calculadora-extracao', name: 'calculadora-extracao' },
       '#calculadora-hedge-prob': { url: '/ferramentas/calculadora-hedge-probabilistica', name: 'calculadora-hedge-probabilistica' },
     };
-    const tool = toolMap[item.url];
+    
+    const tool = toolMap[url];
     if (tool) {
       e.preventDefault();
-      const width = item.url === '#calculadora-ev' ? 420 : item.url === '#calculadora-extracao' ? 1000 : 900;
-      if (item.url === '#calculadora-hedge-prob') {
+      const width = url === '#calculadora-ev' ? 420 : url === '#calculadora-extracao' ? 1000 : 900;
+      if (url === '#calculadora-hedge-prob') {
         const w = 1100;
         const h = 850;
         const l = Math.max(0, (window.screen.width - w) / 2);
@@ -256,7 +259,7 @@ export function AppSidebar() {
         window.open(tool.url, tool.name, `width=${w},height=${h},left=${l},top=${t},resizable=yes,scrollbars=yes`);
         return;
       }
-      const height = item.url === '#calculadora-ev' ? 580 : item.url === '#calculadora-extracao' ? 800 : 750;
+      const height = url === '#calculadora-ev' ? 580 : url === '#calculadora-extracao' ? 800 : 750;
       const left = Math.max(0, (window.screen.width - width) / 2);
       const top = Math.max(0, (window.screen.height - height) / 2);
       window.open(
