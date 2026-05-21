@@ -1735,12 +1735,12 @@ export function SurebetModalRoot({
       return;
     }
 
-    
-    const originalPerna = originalPernasSnapshot.find(op => op.id === pernaId);
+    const originalPerna = originalPernaIds.includes(pernaId);
     if (!originalPerna) {
-      toast.error("Perna não encontrada no banco de dados");
+      toast.error("Perna não encontrada");
       return;
     }
+
     
     // Mínimo de 2 pernas
     if (odds.length <= 2) {
