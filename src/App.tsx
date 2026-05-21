@@ -83,7 +83,7 @@ const ComunidadeDetalhe = lazyWithChunkRetry(() => import("./pages/ComunidadeDet
 const ComunidadeTopico = lazyWithChunkRetry(() => import("./pages/ComunidadeTopico"));
 const ComunidadeChatPopout = lazyWithChunkRetry(() => import("./pages/ComunidadeChatPopout"));
 const SystemAdmin = lazyWithChunkRetry(() => import("./pages/SystemAdmin"));
-const ProtecaoProgressiva = lazyWithChunkRetry(() => import("./pages/ProtecaoProgressiva"));
+
 const CalculadoraEV = lazyWithChunkRetry(() => import("./pages/CalculadoraEV"));
 const CalculadoraExtracao = lazyWithChunkRetry(() => import("./pages/CalculadoraExtracao"));
 const PlanejamentoCampanhas = lazyWithChunkRetry(() => import("./pages/PlanejamentoCampanhas"));
@@ -466,14 +466,6 @@ const App = () => (
               </ProtectedRoute>
             } />
             
-            {/* Proteção Progressiva - standalone, sem layout */}
-            <Route path="/ferramentas/protecao-progressiva" element={
-              <ProtectedRoute>
-                <Suspense fallback={<PageLoader />}>
-                  <ProtecaoProgressiva />
-                </Suspense>
-              </ProtectedRoute>
-            } />
             
             {/* Calculadora EV - standalone */}
             <Route path="/ferramentas/calculadora-ev" element={
