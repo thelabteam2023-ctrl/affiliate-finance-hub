@@ -116,17 +116,10 @@ export const CalculadoraPontoFuturoContent: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <div className="flex justify-between items-end">
-                <Label htmlFor="valorProtecao" className="text-xs text-muted-foreground flex items-center gap-1">
-                  Valor Futuro da Proteção
-                  <InfoTooltip text="Valor fixo que você pretende apostar futuramente na Bookmaker. Se for em outra moeda, converteremos para BRL." />
-                </Label>
-                {moedaProtecao !== 'BRL' && results && (
-                  <Badge variant="outline" className="text-[9px] h-4 px-1.5 border-primary/20 bg-primary/5 text-primary">
-                    ≈ R$ {results.valorProtecaoBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </Badge>
-                )}
-              </div>
+              <Label htmlFor="valorProtecao" className="text-xs text-muted-foreground flex items-center gap-1">
+                Valor Futuro da Proteção
+                <InfoTooltip text="Valor fixo que você pretende apostar futuramente na Bookmaker. Se for em outra moeda, converteremos para BRL." />
+              </Label>
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <Input
@@ -151,9 +144,16 @@ export const CalculadoraPontoFuturoContent: React.FC = () => {
                 </Select>
               </div>
               {moedaProtecao !== 'BRL' && (
-                <div className="flex items-center gap-1 text-[9px] text-muted-foreground mt-1">
-                  <RefreshCcw className={cn("h-2.5 w-2.5", loading && "animate-spin")} />
-                  Cotação do Sistema: 1 {moedaProtecao} = R$ {getRate(moedaProtecao).toFixed(2)}
+                <div className="flex items-center justify-between gap-1 mt-1">
+                  <div className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
+                    <RefreshCcw className={cn("h-2.5 w-2.5", loading && "animate-spin")} />
+                    1 {moedaProtecao} = R$ {getRate(moedaProtecao).toFixed(2)}
+                  </div>
+                  {results && (
+                    <Badge variant="outline" className="text-[10px] h-5 px-2 border-primary/20 bg-primary/5 text-primary font-bold">
+                      ≈ R$ {results.valorProtecaoBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </Badge>
+                  )}
                 </div>
               )}
             </div>
