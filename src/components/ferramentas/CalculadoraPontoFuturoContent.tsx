@@ -214,7 +214,7 @@ export const CalculadoraPontoFuturoContent: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <MetricBadge 
           label="Distância em Ticks" 
-          value={results ? (results.ticks > 0 ? `+${results.ticks}` : results.ticks) : '---'} 
+          value={results ? (results.ticks > 0 ? `+${results.ticks}` : results.ticks.toString()) : '---'} 
           description="Variação necessária da odd"
         />
         <MetricBadge 
