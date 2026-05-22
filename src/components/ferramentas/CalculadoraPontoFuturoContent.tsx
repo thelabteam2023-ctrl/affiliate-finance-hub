@@ -15,9 +15,10 @@ export const CalculadoraPontoFuturoContent: React.FC = () => {
   // Inputs
   const [oddLay, setOddLay] = useState<string>('2.10');
   const [valorProtecao, setValorProtecao] = useState<string>('100');
-  const [comissao, setComissao] = useState<string>('5');
+  const [comissao, setComissao] = useState<string>('2.8');
   const [lucroDesejado, setLucroDesejado] = useState<number[]>([0]);
   const [moedaProtecao, setMoedaProtecao] = useState<string>('BRL');
+  const comissaoPresets = ['2.8', '4.5', '6'];
 
   const parseNum = (v: string) => {
     const n = parseFloat(v.replace(',', '.'));
@@ -162,16 +163,42 @@ export const CalculadoraPontoFuturoContent: React.FC = () => {
                 Comissão da Exchange (%)
                 <InfoTooltip text="Percentual cobrado pela Exchange sobre o lucro do Lay." />
               </Label>
-              <div className="relative">
-                <Input
-                  id="comissao"
-                  type="text"
-                  value={comissao}
-                  onChange={(e) => setComissao(e.target.value)}
-                  className="pl-8 bg-background/50 border-primary/20 focus:border-primary transition-all"
-                  placeholder="5"
-                />
-                <Percent className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <div className="flex gap-2">
+                <Select 
+                  value={comissaoPresets.includes(comissao) ? comissao : 'custom'} 
+                  onValueChange={(v) => {
+                    if (v !== 'custom') setComissao(v);
+                    else setComissao(''); // Permite digitar um novo valor
+                  }}
+                >
+                  <SelectTrigger className={cn(
+                    "bg-background/50 border-primary/20 h-10 px-2 pl-2 text-xs transition-all",
+                    comissaoPresets.includes(comissao) ? "w-full" : "w-[120px]"
+                  )}>
+                    <SelectValue placeholder="Comissão" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2.8" className="text-xs">2.8% (Padrão)</SelectItem>
+                    <SelectItem value="4.5" className="text-xs">4.5%</SelectItem>
+                    <SelectItem value="6" className="text-xs">6.0%</SelectItem>
+                    <SelectItem value="custom" className="text-xs">Outro...</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {!comissaoPresets.includes(comissao) && (
+                  <div className="relative flex-1 animate-in slide-in-from-left-2 duration-200">
+                    <Input
+                      id="comissao"
+                      type="text"
+                      value={comissao}
+                      onChange={(e) => setComissao(e.target.value)}
+                      className="pl-8 bg-background/50 border-primary/20 focus:border-primary transition-all h-10"
+                      placeholder="Ex: 5"
+                      autoFocus
+                    />
+                    <Percent className="absolute left-2.5 top-3 h-4 w-4 text-muted-foreground" />
+                  </div>
+                )}
               </div>
             </div>
 
