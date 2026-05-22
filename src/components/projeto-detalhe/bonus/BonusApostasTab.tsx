@@ -698,17 +698,9 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
     ...filteredSurebets.map(sb => ({ tipo: "surebet" as const, data: sb, data_aposta: sb.data_operacao })),
   ].sort((a, b) => parseLocalDateTime(b.data_aposta).getTime() - parseLocalDateTime(a.data_aposta).getTime());
 
-  // Apply date range filter (exclusive to Operações, does not affect Visão Geral)
-  const apostasUnificadas = dateRange
-    ? apostasUnificadasRaw.filter(item => {
-        const itemDate = parseLocalDateTime(item.data_aposta);
-        return itemDate >= dateRange.start && itemDate <= dateRange.end;
-      })
-    : apostasUnificadasRaw;
-
-  // Separate into Abertas (pending) and Histórico (settled)
-  // Abertas: ordenadas por data_aposta crescente (jogo mais próximo primeiro)
-  const apostasAbertas = apostasUnificadas.filter(item => {
+  // Abertas: NUNCA filtrar por dateRange — apostas pendentes (incl. eventos futuros)
+  // devem aparecer independente do período selecionado. Status é o único critério.
+  const apostasAbertas = apostasUnificadasRaw.filter(item => {
     if (item.tipo === "simples") {
       const a = item.data as Aposta;
       return a.status === "PENDENTE" || !a.resultado;
@@ -724,7 +716,15 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
     return false;
   }).sort((a, b) => new Date(a.data_aposta).getTime() - new Date(b.data_aposta).getTime());
 
-  const apostasHistorico = apostasUnificadas.filter(item => {
+  // Histórico: aplica dateRange (filtro de período do usuário) somente sobre liquidadas
+  const apostasHistoricoBase = dateRange
+    ? apostasUnificadasRaw.filter(item => {
+        const itemDate = parseLocalDateTime(item.data_aposta);
+        return itemDate >= dateRange.start && itemDate <= dateRange.end;
+      })
+    : apostasUnificadasRaw;
+
+  const apostasHistorico = apostasHistoricoBase.filter(item => {
     if (item.tipo === "simples") {
       const a = item.data as Aposta;
       return a.status !== "PENDENTE" && a.resultado;

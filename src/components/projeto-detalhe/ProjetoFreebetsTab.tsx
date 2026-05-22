@@ -466,7 +466,26 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
   }, [apostasNoPeriodo, casaFilter, searchTerm]);
 
   // Apostas por status
-  const apostasAtivas = apostasFiltradas.filter(ap => ap.status === "PENDENTE" || ap.resultado === "PENDENTE");
+  // ATIVAS: ignoram dateRange — apostas pendentes (incl. eventos futuros) sempre visíveis.
+  // Apenas filtros dimensionais (casa/busca) se aplicam.
+  const apostasAtivasBase = useMemo(() => {
+    return apostasOperacionais.filter(ap => {
+      if (casaFilter !== "todas" && ap.bookmaker_nome !== casaFilter) return false;
+      if (searchTerm) {
+        const search = searchTerm.toLowerCase();
+        return (
+          ap.evento.toLowerCase().includes(search) ||
+          ap.selecao.toLowerCase().includes(search) ||
+          ap.mercado?.toLowerCase().includes(search) ||
+          ap.bookmaker_nome.toLowerCase().includes(search) ||
+          ap.parceiro_nome?.toLowerCase().includes(search)
+        );
+      }
+      return true;
+    });
+  }, [apostasOperacionais, casaFilter, searchTerm]);
+
+  const apostasAtivas = apostasAtivasBase.filter(ap => ap.status === "PENDENTE" || ap.resultado === "PENDENTE");
   const apostasHistorico = apostasFiltradas.filter(ap => ap.status === "LIQUIDADA" && ap.resultado !== "PENDENTE");
   
   // Total counts without casa filter for badge comparison
