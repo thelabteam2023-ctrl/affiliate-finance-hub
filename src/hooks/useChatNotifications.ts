@@ -2,16 +2,54 @@ import { useCallback, useRef, useEffect, useState } from 'react';
 import { useChatBroadcast } from './useChatBroadcast';
 import { useWorkspace } from './useWorkspace';
 import { notificationAudioManager, CHAT_SOUNDS } from '@/services/audio/notificationAudioManager';
+import { supabase } from '@/integrations/supabase/client';
 
 export { CHAT_SOUNDS };
 
 export function useChatNotifications() {
   const [unreadCount, setUnreadCount] = useState(0);
-  const { workspace } = useWorkspace();
+  const { workspace, user } = useWorkspace();
   const { broadcast, subscribe } = useChatBroadcast();
   const lastPlayTimeRef = useRef<number>(0);
   const isTabActiveRef = useRef<boolean>(true);
   const lastPlayedMessageIdRef = useRef<string | null>(null);
+
+  // Fetch initial unread count based on last_read_chat_at
+  useEffect(() => {
+    if (!workspace?.id || !user?.id) return;
+
+    const fetchUnreadCount = async () => {
+      // 1. Get the last read timestamp for this member
+      const { data: memberData, error: memberError } = await supabase
+        .from('workspace_members')
+        .select('last_read_chat_at')
+        .eq('workspace_id', workspace.id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (memberError) {
+        console.error('[useChatNotifications] Error fetching member read status:', memberError);
+        return;
+      }
+
+      const lastRead = memberData?.last_read_chat_at || new Date(0).toISOString();
+
+      // 2. Count messages since then
+      const { count, error: countError } = await supabase
+        .from('community_chat_messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('workspace_id', workspace.id)
+        .eq('context_type', 'workspace')
+        .gt('created_at', lastRead)
+        .neq('user_id', user.id);
+
+      if (!countError && count !== null) {
+        setUnreadCount(count);
+      }
+    };
+
+    fetchUnreadCount();
+  }, [workspace?.id, user?.id]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -77,12 +115,21 @@ export function useChatNotifications() {
     });
   }, [broadcast]);
 
-  const resetUnread = useCallback((isInternalAction = false) => {
+  const resetUnread = useCallback(async (isInternalAction = false) => {
     setUnreadCount(0);
     if (!isInternalAction) {
       broadcast({ type: 'NEW_MESSAGE_COUNT', count: 0 });
+      
+      // Persist the read status in the database
+      if (workspace?.id && user?.id) {
+        await supabase
+          .from('workspace_members')
+          .update({ last_read_chat_at: new Date().toISOString() })
+          .eq('workspace_id', workspace.id)
+          .eq('user_id', user.id);
+      }
     }
-  }, [broadcast]);
+  }, [broadcast, workspace?.id, user?.id]);
 
   // Listen for coordination events
   useEffect(() => {
