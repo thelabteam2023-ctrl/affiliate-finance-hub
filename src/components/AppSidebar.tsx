@@ -396,9 +396,15 @@ export function AppSidebar() {
 
     const isCentralPage = item.url === "/";
     const isSolicitacoesPage = item.url === "/solicitacoes";
+    const isComunidadePage = item.url === "/comunidade";
     const solicitacoesPendentes = kpisSolicitacoes?.pendentes ?? 0;
-    const showBadge = (isCentralPage && alertsCount > 0) || (isSolicitacoesPage && solicitacoesPendentes > 0);
-    const badgeCount = isSolicitacoesPage ? solicitacoesPendentes : alertsCount;
+    
+    const showBadge = (isCentralPage && alertsCount > 0) || 
+                     (isSolicitacoesPage && solicitacoesPendentes > 0) ||
+                     (isComunidadePage && chatUnreadCount > 0);
+                     
+    const badgeCount = isSolicitacoesPage ? solicitacoesPendentes : 
+                      isComunidadePage ? chatUnreadCount : alertsCount;
     const isToolLink = item.url.startsWith('#');
 
     const sidebarItem: SidebarItemType = {
