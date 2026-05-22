@@ -495,7 +495,7 @@ const App = () => (
               </ProtectedRoute>
             } />
 
-            {/* Calculadora Ponto Futuro - standalone */}
+            {/* Ponto de Edge Futuro - standalone */}
             <Route path="/ferramentas/calculadora-ponto-futuro" element={
               <ProtectedRoute>
                 <Suspense fallback={<PageLoader />}>
