@@ -45,7 +45,7 @@ export function CommunityChat() {
   const [convertMessage, setConvertMessage] = useState<ChatMessage | null>(null);
   
   const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const fetchMessages = useCallback(async () => {
     if (!workspaceId) return;
@@ -401,14 +401,16 @@ export function CommunityChat() {
           {canWrite ? (
             <div className="p-3 border-t border-border shrink-0">
               <div className="flex gap-2">
-                <Input
+                <Textarea
                   ref={inputRef}
-                  placeholder="Digite sua mensagem..."
+                  placeholder="Digite sua mensagem... (Shift+Enter p/ nova linha)"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   onKeyDown={handleKeyDown}
                   disabled={sending}
                   maxLength={500}
+                  rows={1}
+                  className="flex-1 min-h-[40px] max-h-32 resize-none py-2"
                 />
                 <Button 
                   size="icon" 
