@@ -185,7 +185,7 @@ export const CalculadoraPontoFuturoContent: React.FC = () => {
             <CardContent className="pt-2 pb-8 space-y-6">
               <div className="grid grid-cols-2 gap-4 divide-x divide-primary/20">
                 <div className="flex flex-col items-center justify-center text-center space-y-1">
-                  <span className="text-[9px] font-semibold text-muted-foreground uppercase">Stake do Backer</span>
+                  <span className="text-[9px] font-semibold text-muted-foreground uppercase">Stake do BACK</span>
                   <div className="text-3xl font-black text-primary tracking-tighter">
                     {results ? `R$ ${results.stakeLay.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '---'}
                   </div>
