@@ -361,7 +361,7 @@ export function AppSidebar() {
         window.open(tool.url, tool.name, `width=${w},height=${h},left=${l},top=${t},resizable=yes,scrollbars=yes`);
         return;
       }
-      const height = url === '#calculadora-ev' ? 580 : url === '#calculadora-extracao' ? 800 : 750;
+      const height = url === '#calculadora-ev' ? 580 : (url === '#calculadora-extracao' || url === '#calculadora-ponto-futuro') ? 800 : 750;
       const left = Math.max(0, (window.screen.width - width) / 2);
       const top = Math.max(0, (window.screen.height - height) / 2);
       window.open(
