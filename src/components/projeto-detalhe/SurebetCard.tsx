@@ -301,6 +301,7 @@ function PernaItem({
     ? perna.entries!.some(e => e.fonte_saldo === 'FREEBET')
     : isFreebet;
   // Usar odd_media e stake_total se disponíveis, senão usar valores legados
+  // Se houver múltiplas entradas, o stake_total e odd_media são as fontes de verdade
   const displayOdd = perna.odd_media || perna.odd;
   const displayStake = perna.stake_total || perna.stake;
   
