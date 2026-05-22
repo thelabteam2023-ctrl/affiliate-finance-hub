@@ -169,23 +169,48 @@ export const CalculadoraPontoFuturoContent: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Output Principal */}
+        {/* Execução na Exchange (Output Principal) */}
         <div className="space-y-6">
-          <Card className="border-primary/40 bg-primary/5 shadow-lg shadow-primary/5">
-            <CardContent className="pt-6 pb-8 flex flex-col items-center justify-center text-center space-y-2">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-primary/70">
-                Stake Ideal do Lay Inicial
-              </span>
-              <div className="text-5xl font-black text-primary tracking-tighter">
-                {results ? `R$ ${results.stakeLay.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '---'}
+          <Card className="border-primary/40 bg-primary/5 shadow-lg shadow-primary/5 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-3">
+              <InfoTooltip text="Stake é o valor que você 'arrisca' como Layer. Responsabilidade (Liability) é o valor que a Exchange bloqueia da sua banca. Preencha apenas um dos campos na sua Exchange." />
+            </div>
+            
+            <CardHeader className="pb-2 text-center">
+              <CardTitle className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70">
+                Execução na Exchange (Lay Inicial)
+              </CardTitle>
+            </CardHeader>
+
+            <CardContent className="pt-2 pb-8 space-y-6">
+              <div className="grid grid-cols-2 gap-4 divide-x divide-primary/20">
+                <div className="flex flex-col items-center justify-center text-center space-y-1">
+                  <span className="text-[9px] font-semibold text-muted-foreground uppercase">Stake do Backer</span>
+                  <div className="text-3xl font-black text-primary tracking-tighter">
+                    {results ? `R$ ${results.stakeLay.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '---'}
+                  </div>
+                  <span className="text-[8px] text-muted-foreground/60">Campo "Stake"</span>
+                </div>
+
+                <div className="flex flex-col items-center justify-center text-center space-y-1">
+                  <span className="text-[9px] font-semibold text-muted-foreground uppercase">Responsabilidade</span>
+                  <div className="text-3xl font-black text-primary tracking-tighter">
+                    {results ? `R$ ${results.liability.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '---'}
+                  </div>
+                  <span className="text-[8px] text-muted-foreground/60">Campo "Liability"</span>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground max-w-[200px]">
-                Invista este valor agora na Exchange para garantir o objetivo futuro.
-              </p>
+
+              <div className="pt-2 text-center">
+                <p className="text-[10px] text-muted-foreground leading-relaxed px-4">
+                  Ambos representam a mesma aposta. A odd atual de <span className="font-bold text-primary">{oddLay}</span> 
+                  {results && results.stakeLay > results.liability ? " exige menos responsabilidade que a stake." : " exige uma responsabilidade proporcional."}
+                </p>
+              </div>
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <OutputCard 
               label="Odd Futura Necessária" 
               value={results ? results.oddFutura.toFixed(2) : '---'} 
@@ -193,18 +218,15 @@ export const CalculadoraPontoFuturoContent: React.FC = () => {
               highlight
             />
             <OutputCard 
-              label="Liability (Risco)" 
-              value={results ? `R$ ${results.liability.toFixed(2)}` : '---'} 
-              icon={<Info className="h-3 w-3" />}
-            />
-            <OutputCard 
               label="Lucro Líquido" 
               value={results ? `R$ ${results.lucroLiquido.toFixed(2)}` : '---'} 
               color={lucroDesejado[0] >= 0 ? "text-emerald-500" : "text-red-500"}
+              icon={<TrendingUp className="h-3 w-3" />}
             />
             <OutputCard 
               label="ROI Estimado" 
               value={results ? `${results.roi.toFixed(2)}%` : '---'} 
+              icon={<Percent className="h-3 w-3" />}
             />
           </div>
         </div>
