@@ -855,6 +855,7 @@ export function SurebetModalRoot({
         
         return {
           pernaId: perna.id,
+          mainEntryId: mainEntry.id,
           bookmaker_id: mainEntry.bookmaker_id,
           moeda: (mainEntry.moeda || "BRL") as SupportedCurrency,
           odd: mainEntry.odd?.toString() || "",

@@ -56,6 +56,8 @@ export interface OddEntry {
   gerouFreebet?: boolean;
   valorFreebetGerada?: string;
   fonteSaldo?: 'REAL' | 'FREEBET';
+  /** ID da entrada principal no banco (apostas_perna_entradas.id) */
+  mainEntryId?: string;
   /** UUID da perna no banco (apostas_pernas.id). Undefined para pernas novas. */
   pernaId?: string;
   additionalEntries?: OddFormEntry[];
