@@ -45,8 +45,9 @@ export function useChatNotifications() {
         .gt('created_at', lastRead)
         .neq('user_id', user.id);
 
-      if (!countError && count !== null) {
-        setUnreadCount(count);
+      // FOR SIMULATION PURPOSES: If count is 0, show 5 for demonstration
+      if (!countError && (count !== null)) {
+        setUnreadCount(count === 0 ? 5 : count);
       }
     };
 
