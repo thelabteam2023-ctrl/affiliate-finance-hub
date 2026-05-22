@@ -153,7 +153,7 @@ interface ProjectInfo {
 // Icon mapping for favorites
 const iconMap: Record<string, any> = {
   Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, 
-  UserPlus, PieChart, Briefcase, FolderKanban, Settings, Star, Shield, Calculator, StickyNote, Truck, ClipboardList
+  UserPlus, PieChart, Briefcase, FolderKanban, Settings, Star, Shield, Calculator, StickyNote, Truck, ClipboardList, Clock
 };
 
 // Menu structure organized by functional domain
