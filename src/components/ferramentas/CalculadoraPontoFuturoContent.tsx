@@ -158,47 +158,40 @@ export const CalculadoraPontoFuturoContent: React.FC = () => {
               )}
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               <Label htmlFor="comissao" className="text-xs text-muted-foreground flex items-center gap-1">
                 Comissão da Exchange (%)
                 <InfoTooltip text="Percentual cobrado pela Exchange sobre o lucro do Lay." />
               </Label>
-              <div className="flex gap-2">
-                <Select 
-                  value={comissaoPresets.includes(comissao) ? comissao : 'custom'} 
-                  onValueChange={(v) => {
-                    if (v !== 'custom') setComissao(v);
-                    else setComissao(''); // Permite digitar um novo valor
-                  }}
-                >
-                  <SelectTrigger className={cn(
-                    "bg-background/50 border-primary/20 h-10 px-2 pl-2 text-xs transition-all",
-                    comissaoPresets.includes(comissao) ? "w-full" : "w-[120px]"
-                  )}>
-                    <SelectValue placeholder="Comissão" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="2.8" className="text-xs">2.8% (Padrão)</SelectItem>
-                    <SelectItem value="4.5" className="text-xs">4.5%</SelectItem>
-                    <SelectItem value="6" className="text-xs">6.0%</SelectItem>
-                    <SelectItem value="custom" className="text-xs">Outro...</SelectItem>
-                  </SelectContent>
-                </Select>
+              
+              <div className="relative">
+                <Input
+                  id="comissao"
+                  type="text"
+                  value={comissao}
+                  onChange={(e) => setComissao(e.target.value)}
+                  className="pl-8 bg-background/50 border-primary/20 focus:border-primary transition-all h-10"
+                  placeholder="Ex: 5"
+                />
+                <Percent className="absolute left-2.5 top-3 h-4 w-4 text-muted-foreground" />
+              </div>
 
-                {!comissaoPresets.includes(comissao) && (
-                  <div className="relative flex-1 animate-in slide-in-from-left-2 duration-200">
-                    <Input
-                      id="comissao"
-                      type="text"
-                      value={comissao}
-                      onChange={(e) => setComissao(e.target.value)}
-                      className="pl-8 bg-background/50 border-primary/20 focus:border-primary transition-all h-10"
-                      placeholder="Ex: 5"
-                      autoFocus
-                    />
-                    <Percent className="absolute left-2.5 top-3 h-4 w-4 text-muted-foreground" />
-                  </div>
-                )}
+              <div className="flex flex-wrap gap-2">
+                {['2.8', '4.5', '6'].map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setComissao(value)}
+                    className={cn(
+                      "px-3 py-1.5 text-[10px] font-bold rounded-md border transition-all duration-200",
+                      comissao === value 
+                        ? "bg-primary text-primary-foreground border-primary shadow-sm" 
+                        : "bg-background/50 border-border hover:border-primary/50 text-muted-foreground"
+                    )}
+                  >
+                    {value}%
+                  </button>
+                ))}
               </div>
             </div>
 
