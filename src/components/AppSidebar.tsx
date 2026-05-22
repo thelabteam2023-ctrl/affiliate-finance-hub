@@ -9,6 +9,7 @@ import { useFavorites } from "@/hooks/useFavorites";
 import { useProjectFavorites } from "@/hooks/useProjectFavorites";
 import { useModuleAccess } from "@/hooks/useModuleAccess";
 import { useCentralAlertsCount } from "@/hooks/useCentralAlertsCount";
+import { useChatNotifications } from "@/hooks/useChatNotifications";
 import { useUserWorkspaces } from "@/hooks/useUserWorkspaces";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
