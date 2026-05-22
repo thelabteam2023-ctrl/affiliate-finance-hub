@@ -293,6 +293,7 @@ export function SurebetModalRoot({
   const [conversionInProgress, setConversionInProgress] = useState(false);
   
   const [focusedLeg, setFocusedLeg] = useState<number | null>(null);
+  const [viewLayout, setViewLayout] = useState<'vertical' | 'horizontal'>('vertical');
   const [showLiquidadaConfirmation, setShowLiquidadaConfirmation] = useState(false);
   const isLiquidada = surebet?.status === 'LIQUIDADA';
     const [errosPorPerna, setErrosPorPerna] = useState<Record<number, string>>({});
