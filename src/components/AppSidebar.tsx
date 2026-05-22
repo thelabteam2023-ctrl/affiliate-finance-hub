@@ -211,7 +211,7 @@ const menuGroups: MenuGroup[] = [
           { title: "Calculadora EV", url: "#calculadora-ev", icon: Calculator, iconName: "Calculator", moduleKey: "ferramentas" },
           { title: "Calculadora Extração", url: "#calculadora-extracao", icon: Calculator, iconName: "Calculator", moduleKey: "ferramentas" },
           { title: "Hedge Probabilístico", url: "#calculadora-hedge-prob", icon: Target, iconName: "Target", moduleKey: "ferramentas" },
-          { title: "Ponto Futuro", url: "#calculadora-ponto-futuro", icon: Clock, iconName: "Clock", moduleKey: "ferramentas" },
+          { title: "Ponto de Edge Futuro", url: "#calculadora-ponto-futuro", icon: Clock, iconName: "Clock", moduleKey: "ferramentas" },
         ]
       },
       { title: "Planejamento", url: "/ferramentas/planejamento", icon: CalendarDays, iconName: "CalendarDays", moduleKey: "ferramentas" },
