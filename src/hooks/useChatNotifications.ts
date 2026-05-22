@@ -1,6 +1,7 @@
 import { useCallback, useRef, useEffect, useState } from 'react';
 import { useChatBroadcast } from './useChatBroadcast';
 import { useWorkspace } from './useWorkspace';
+import { useAuth } from './useAuth';
 import { notificationAudioManager, CHAT_SOUNDS } from '@/services/audio/notificationAudioManager';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -8,7 +9,8 @@ export { CHAT_SOUNDS };
 
 export function useChatNotifications() {
   const [unreadCount, setUnreadCount] = useState(0);
-  const { workspace, user } = useWorkspace();
+  const { workspace } = useWorkspace();
+  const { user } = useAuth();
   const { broadcast, subscribe } = useChatBroadcast();
   const lastPlayTimeRef = useRef<number>(0);
   const isTabActiveRef = useRef<boolean>(true);
