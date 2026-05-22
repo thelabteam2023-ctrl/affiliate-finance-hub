@@ -273,12 +273,20 @@ export const CalculadoraPontoFuturoContent: React.FC = () => {
               icon={<Clock className="h-3 w-3" />}
               highlight
             />
-            <OutputCard 
-              label="Lucro Líquido" 
-              value={results ? `R$ ${results.lucroLiquido.toFixed(2)}` : '---'} 
-              color={lucroDesejado[0] >= 0 ? "text-emerald-500" : "text-red-500"}
-              icon={<TrendingUp className="h-3 w-3" />}
-            />
+            <div className="p-3 rounded-lg border border-border/50 bg-muted/10">
+              <div className="flex items-center gap-1.5 mb-1">
+                <TrendingUp className="h-3 w-3 text-primary/70" />
+                <span className="text-[10px] font-medium text-muted-foreground uppercase">Lucro Esperado</span>
+              </div>
+              <div className={cn("text-lg font-bold truncate", lucroDesejado[0] >= 0 ? "text-emerald-500" : "text-red-500")}>
+                {results ? `R$ ${results.lucroLiquido.toFixed(2)}` : '---'}
+              </div>
+              {moedaProtecao !== 'BRL' && results && (
+                <div className="text-[10px] text-muted-foreground font-medium mt-1">
+                  ou {moedaProtecao === 'USD' ? '$' : '€'} {(results.lucroLiquido / getRate(moedaProtecao)).toFixed(2)} ({moedaProtecao})
+                </div>
+              )}
+            </div>
             <OutputCard 
               label="ROI Estimado" 
               value={results ? `${results.roi.toFixed(2)}%` : '---'} 
