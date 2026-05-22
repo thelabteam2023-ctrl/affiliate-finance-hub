@@ -11871,6 +11871,7 @@ export type Database = {
           invited_by: string | null
           is_active: boolean
           joined_at: string | null
+          last_read_chat_at: string | null
           role: Database["public"]["Enums"]["app_role"]
           updated_at: string
           user_id: string
@@ -11884,6 +11885,7 @@ export type Database = {
           invited_by?: string | null
           is_active?: boolean
           joined_at?: string | null
+          last_read_chat_at?: string | null
           role: Database["public"]["Enums"]["app_role"]
           updated_at?: string
           user_id: string
@@ -11897,6 +11899,7 @@ export type Database = {
           invited_by?: string | null
           is_active?: boolean
           joined_at?: string | null
+          last_read_chat_at?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string
           user_id?: string
