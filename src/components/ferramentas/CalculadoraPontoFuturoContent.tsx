@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Calculator, Target, TrendingUp, Clock, Info, ArrowRight, DollarSign, Percent, Globe, RefreshCcw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -7,41 +7,17 @@ import { Slider } from '@/components/ui/slider';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { useExchangeRates } from '@/contexts/ExchangeRatesContext';
 import { cn } from '@/lib/utils';
 
 export const CalculadoraPontoFuturoContent: React.FC = () => {
+  const { getRate, loading, lastUpdate } = useExchangeRates() || { getRate: () => 1, loading: false, lastUpdate: null };
   // Inputs
   const [oddLay, setOddLay] = useState<string>('2.10');
   const [valorProtecao, setValorProtecao] = useState<string>('100');
   const [comissao, setComissao] = useState<string>('5');
   const [lucroDesejado, setLucroDesejado] = useState<number[]>([0]);
   const [moedaProtecao, setMoedaProtecao] = useState<string>('BRL');
-  const [cotacoes, setCotacoes] = useState<Record<string, number>>({ 'BRL': 1, 'USD': 5.20, 'EUR': 5.60 });
-  const [loadingCotacoes, setLoadingCotacoes] = useState(false);
-
-  useEffect(() => {
-    const fetchRates = async () => {
-      setLoadingCotacoes(true);
-      try {
-        const response = await fetch('https://open.er-api.com/v6/latest/BRL');
-        const data = await response.json();
-        if (data && data.rates) {
-          // A API retorna 1 BRL = X OutraMoeda. 
-          // Para converter de OutraMoeda para BRL, dividimos por esse valor.
-          // Mas vamos inverter para facilitar: 1 OutraMoeda = Y BRL
-          const newRates: Record<string, number> = { 'BRL': 1 };
-          if (data.rates.USD) newRates['USD'] = 1 / data.rates.USD;
-          if (data.rates.EUR) newRates['EUR'] = 1 / data.rates.EUR;
-          setCotacoes(newRates);
-        }
-      } catch (error) {
-        console.error("Erro ao buscar cotações:", error);
-      } finally {
-        setLoadingCotacoes(false);
-      }
-    };
-    fetchRates();
-  }, []);
 
   const parseNum = (v: string) => {
     const n = parseFloat(v.replace(',', '.'));
@@ -52,8 +28,8 @@ export const CalculadoraPontoFuturoContent: React.FC = () => {
     const ol = parseNum(oddLay);
     const vpOriginal = parseNum(valorProtecao);
     
-    // Converte valor de proteção para BRL se necessário
-    const taxa = cotacoes[moedaProtecao] || 1;
+    // Converte valor de proteção para BRL se necessário usando o context centralizado
+    const taxa = getRate(moedaProtecao);
     const vp = vpOriginal * taxa;
 
     const comm = parseNum(comissao) / 100;
@@ -106,7 +82,7 @@ export const CalculadoraPontoFuturoContent: React.FC = () => {
       spreadEfetivo,
       valorProtecaoBRL: vp
     };
-  }, [oddLay, valorProtecao, comissao, lucroDesejado, moedaProtecao, cotacoes]);
+  }, [oddLay, valorProtecao, comissao, lucroDesejado, moedaProtecao, getRate]);
 
   return (
     <div className="p-4 max-w-4xl mx-auto space-y-6 animate-in fade-in duration-500">
@@ -175,8 +151,8 @@ export const CalculadoraPontoFuturoContent: React.FC = () => {
               </div>
               {moedaProtecao !== 'BRL' && (
                 <div className="flex items-center gap-1 text-[9px] text-muted-foreground mt-1">
-                  <RefreshCcw className={cn("h-2.5 w-2.5", loadingCotacoes && "animate-spin")} />
-                  Cotação: 1 {moedaProtecao} = R$ {cotacoes[moedaProtecao].toFixed(2)}
+                  <RefreshCcw className={cn("h-2.5 w-2.5", loading && "animate-spin")} />
+                  Cotação do Sistema: 1 {moedaProtecao} = R$ {getRate(moedaProtecao).toFixed(2)}
                 </div>
               )}
             </div>
