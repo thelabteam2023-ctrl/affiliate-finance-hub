@@ -1,4 +1,4 @@
-import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, Settings, LogOut, Star, Shield, Calculator, StickyNote, ShieldCheck, ChevronUp, ChevronDown, Sun, Moon, Target, Layers, ArrowLeftRight, Zap, Truck, ClipboardList, CalendarDays, Activity, X, ArrowDownToLine, ArrowUpFromLine, HandCoins, Clock } from "lucide-react";
+import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, Settings, LogOut, Star, Shield, Calculator, StickyNote, ShieldCheck, ChevronUp, ChevronDown, Sun, Moon, Target, Layers, ArrowLeftRight, Zap, Truck, ClipboardList, CalendarDays, Activity, X, ArrowDownToLine, ArrowUpFromLine, HandCoins, Clock, MessageCircle } from "lucide-react";
 import { useSolicitacoesKpis } from "@/hooks/useSolicitacoes";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -9,6 +9,7 @@ import { useFavorites } from "@/hooks/useFavorites";
 import { useProjectFavorites } from "@/hooks/useProjectFavorites";
 import { useModuleAccess } from "@/hooks/useModuleAccess";
 import { useCentralAlertsCount } from "@/hooks/useCentralAlertsCount";
+import { useChatNotifications } from "@/hooks/useChatNotifications";
 import { useUserWorkspaces } from "@/hooks/useUserWorkspaces";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -241,6 +242,7 @@ export function AppSidebar() {
    const { workspace } = useWorkspace();
   const { canAccess } = useModuleAccess();
   const { count: alertsCount } = useCentralAlertsCount();
+  const { unreadCount: chatUnreadCount } = useChatNotifications();
   const { data: kpisSolicitacoes } = useSolicitacoesKpis();
   const { 
     workspaces: userWorkspaces, 
@@ -394,9 +396,15 @@ export function AppSidebar() {
 
     const isCentralPage = item.url === "/";
     const isSolicitacoesPage = item.url === "/solicitacoes";
+    const isComunidadePage = item.url === "/comunidade";
     const solicitacoesPendentes = kpisSolicitacoes?.pendentes ?? 0;
-    const showBadge = (isCentralPage && alertsCount > 0) || (isSolicitacoesPage && solicitacoesPendentes > 0);
-    const badgeCount = isSolicitacoesPage ? solicitacoesPendentes : alertsCount;
+    
+    const showBadge = (isCentralPage && alertsCount > 0) || 
+                     (isSolicitacoesPage && solicitacoesPendentes > 0) ||
+                     (isComunidadePage && chatUnreadCount > 0);
+                     
+    const badgeCount = isSolicitacoesPage ? solicitacoesPendentes : 
+                      isComunidadePage ? chatUnreadCount : alertsCount;
     const isToolLink = item.url.startsWith('#');
 
     const sidebarItem: SidebarItemType = {
