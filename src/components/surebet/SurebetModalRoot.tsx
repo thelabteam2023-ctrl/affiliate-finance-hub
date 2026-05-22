@@ -293,7 +293,8 @@ export function SurebetModalRoot({
   const [conversionInProgress, setConversionInProgress] = useState(false);
   
   const [focusedLeg, setFocusedLeg] = useState<number | null>(null);
-   const [viewLayout, setViewLayout] = useState<'vertical' | 'horizontal'>('vertical');
+  const [showLiquidadaConfirmation, setShowLiquidadaConfirmation] = useState(false);
+  const isLiquidada = surebet?.status === 'LIQUIDADA';
     const [errosPorPerna, setErrosPorPerna] = useState<Record<number, string>>({});
 
  /**
@@ -1584,26 +1585,35 @@ export function SurebetModalRoot({
           payload: { ...payloadEdit, oddsState: odds.map(o => ({ odd: o.odd, stake: o.stake, bk: o.bookmaker_id, pernaId: o.pernaId })), entradasEnviadas: entradasRPC }
         });
 
-        const { data: rpcResult, error: rpcError } = await supabase.rpc('editar_surebet_completa_v3' as any, payloadEdit);
+        const handleActualSave = async () => {
+          const { data: rpcResult, error: rpcError } = await supabase.rpc('editar_surebet_completa_v3' as any, payloadEdit);
 
-        if (rpcError) {
+          if (rpcError) {
+            await logDebug({
+              modulo: 'Surebet',
+              evento: 'UPDATE_ERROR',
+              payload: payloadEdit,
+              erro: rpcError
+            });
+            console.error('[SurebetModalRoot] ❌ Erro na RPC v3:', rpcError);
+            throw new Error(`Erro ao salvar: ${rpcError.message}`);
+          }
+
           await logDebug({
             modulo: 'Surebet',
-            evento: 'UPDATE_ERROR',
-            payload: payloadEdit,
-            erro: rpcError
+            evento: 'UPDATE_SUCCESS',
+            payload: { aposta_id: surebet.id },
+            resposta: rpcResult
           });
-          console.error('[SurebetModalRoot] ❌ Erro na RPC v3:', rpcError);
-          throw new Error(`Erro ao salvar: ${rpcError.message}`);
-        }
+          console.log('[SurebetModalRoot] ✅ Edição 1:N concluída', rpcResult);
+        };
 
-        await logDebug({
-          modulo: 'Surebet',
-          evento: 'UPDATE_SUCCESS',
-          payload: { aposta_id: surebet.id },
-          resposta: rpcResult
-        });
-        console.log('[SurebetModalRoot] ✅ Edição 1:N concluída', rpcResult);
+        if (surebet.status === 'LIQUIDADA') {
+          // A confirmação agora é tratada pelo modal de confirmação disparado pelo handleSave
+          await handleActualSave();
+        } else {
+          await handleActualSave();
+        }
       } else {
         const payloadCreate = {
           p_workspace_id: workspaceId,
@@ -2137,6 +2147,19 @@ export function SurebetModalRoot({
 
           {/* CONTENT */}
           <div className="p-3 md:p-4 space-y-3 overflow-auto flex-1">
+            {/* Aviso de Edição Pós-Liquidação */}
+            {isEditing && isLiquidada && (
+              <div className="flex items-center gap-3 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg text-sm mb-1">
+                <AlertTriangle className="h-4 w-4 text-blue-500 shrink-0" />
+                <div className="flex-1">
+                  <span className="font-medium text-blue-500">Operação Liquidada:</span>{" "}
+                  <span className="text-muted-foreground">
+                    Salvar irá recalcular saldos e lucro com base nos novos valores de odd/stake.
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Operação parcial warning */}
             {analysis.isOperacaoParcial && !isEditing && (
               <div className="flex items-center gap-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm">
@@ -2423,7 +2446,7 @@ export function SurebetModalRoot({
                 </Button>
               )}
                 <Button 
-                  onClick={handleSave} 
+                  onClick={handleSaveWrapper} 
                   disabled={saving || !isEstruturaCompleta || Object.keys(errosPorPerna).length > 0 || balanceValidation.hasInsufficientBalance}
                   title={
                     !isEstruturaCompleta 
@@ -2486,6 +2509,42 @@ export function SurebetModalRoot({
               className="bg-primary"
             >
               {conversionInProgress ? "Registrando..." : "Registrar como Apostas Simples"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog de Confirmação para Aposta Liquidada */}
+      <AlertDialog open={showLiquidadaConfirmation} onOpenChange={setShowLiquidadaConfirmation}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Confirmar Alteração em Aposta Liquidada
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta operação já possui resultados definidos e movimentações financeiras no Ledger.
+              <br /><br />
+              Ao salvar, o sistema irá:
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>Estornar os payouts/reembolsos atuais no Ledger</li>
+                <li>Recalcular e lançar novos eventos com os valores atualizados</li>
+                <li>Atualizar o lucro/prejuízo final da operação</li>
+              </ul>
+              <br />
+              Deseja prosseguir com o recalculo financeiro?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                setShowLiquidadaConfirmation(false);
+                handleSave();
+              }}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Confirmar e Recalcular
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
