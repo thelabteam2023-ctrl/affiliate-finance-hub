@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Send, Image, Mic, Loader2 } from 'lucide-react';
 import { useChatMedia } from '@/hooks/useChatMedia';
 import { useChatMediaRateLimit } from '@/hooks/useChatMediaPreferences';
@@ -25,7 +26,7 @@ export function ChatInput({
   const { toast } = useToast();
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -209,15 +210,16 @@ export function ChatInput({
         </Button>
 
         {/* Text input */}
-        <Input
-          ref={inputRef}
-          placeholder="Digite sua mensagem... (CTRL+V para imagem)"
+        <Textarea
+          ref={inputRef as any}
+          placeholder="Digite sua mensagem... (Shift+Enter p/ nova linha)"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
           disabled={sending || uploading || disabled || state !== 'idle'}
           maxLength={500}
-          className="flex-1"
+          rows={1}
+          className="flex-1 min-h-[40px] max-h-32 resize-none py-2"
         />
 
         {/* Send button */}
