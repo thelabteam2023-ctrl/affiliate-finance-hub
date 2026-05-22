@@ -26,7 +26,7 @@ export function ChatInput({
   const { toast } = useToast();
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
