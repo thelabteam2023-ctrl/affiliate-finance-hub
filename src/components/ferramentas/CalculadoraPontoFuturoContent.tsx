@@ -289,21 +289,16 @@ export const CalculadoraPontoFuturoContent: React.FC = () => {
       </div>
 
       {/* Métricas Secundárias */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <MetricBadge 
           label="Distância em Ticks" 
           value={results ? (results.ticks > 0 ? `+${results.ticks}` : results.ticks.toString()) : '---'} 
-          description="Variação necessária da odd"
+          description="Variação necessária da odd para o objetivo"
         />
         <MetricBadge 
-          label="Spread Efetivo" 
-          value={results ? results.spreadEfetivo.toFixed(3) : '---'} 
-          description="Eficiência da operação"
-        />
-        <MetricBadge 
-          label="Equilíbrio Operacional" 
-          value={lucroDesejado[0] === 0 ? "Ativo" : "Ajustado"} 
-          description="Status do motor matemático"
+          label="Capital Total Exposto" 
+          value={results ? `R$ ${(results.liability + results.valorProtecaoBRL).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '---'} 
+          description="Soma da Responsabilidade + Proteção"
         />
       </div>
     </div>
