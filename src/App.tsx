@@ -87,6 +87,7 @@ const SystemAdmin = lazyWithChunkRetry(() => import("./pages/SystemAdmin"));
 const CalculadoraEV = lazyWithChunkRetry(() => import("./pages/CalculadoraEV"));
 const CalculadoraExtracao = lazyWithChunkRetry(() => import("./pages/CalculadoraExtracao"));
 const PlanejamentoCampanhas = lazyWithChunkRetry(() => import("./pages/PlanejamentoCampanhas"));
+const CalculadoraPontoFuturo = lazyWithChunkRetry(() => import("./pages/CalculadoraPontoFuturo"));
 const CalculadoraHedgeProbabilistica = lazyWithChunkRetry(() => import("./pages/CalculadoraHedgeProbabilistica"));
 const SurebetWindowPage = lazyWithChunkRetry(() => import("./pages/SurebetWindowPage"));
 const ApostaWindowPage = lazyWithChunkRetry(() => import("./pages/ApostaWindowPage"));
@@ -490,6 +491,15 @@ const App = () => (
               <ProtectedRoute>
                 <Suspense fallback={<PageLoader />}>
                   <CalculadoraHedgeProbabilistica />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+
+            {/* Calculadora Ponto Futuro - standalone */}
+            <Route path="/ferramentas/calculadora-ponto-futuro" element={
+              <ProtectedRoute>
+                <Suspense fallback={<PageLoader />}>
+                  <CalculadoraPontoFuturo />
                 </Suspense>
               </ProtectedRoute>
             } />
