@@ -1576,10 +1576,11 @@ export function SurebetModalRoot({
           p_status_manual: null
         };
 
+
         await logDebug({
           modulo: 'Surebet',
           evento: 'UPDATE_START',
-          payload: { ...payloadEdit, oddsState: odds.map(o => ({ odd: o.odd, stake: o.stake, bk: o.bookmaker_id, pernaId: o.pernaId })) }
+          payload: { ...payloadEdit, oddsState: odds.map(o => ({ odd: o.odd, stake: o.stake, bk: o.bookmaker_id, pernaId: o.pernaId })), entradasEnviadas: entradasRPC }
         });
 
         const { data: rpcResult, error: rpcError } = await supabase.rpc('editar_surebet_completa_v3' as any, payloadEdit);
