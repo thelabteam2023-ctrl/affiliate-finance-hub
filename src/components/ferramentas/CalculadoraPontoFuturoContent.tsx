@@ -93,7 +93,7 @@ export const CalculadoraPontoFuturoContent: React.FC = () => {
           <CardHeader className="pb-4">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Target className="h-4 w-4 text-primary" />
-              Parâmetros de Entrada
+              Parâmetros de Edge Futuro
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
