@@ -435,6 +435,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "apostas_pernas_aposta_id_fkey"
+            columns: ["aposta_id"]
+            isOneToOne: false
+            referencedRelation: "vw_auditoria_integridade_surebet"
+            referencedColumns: ["aposta_id"]
+          },
+          {
             foreignKeyName: "apostas_pernas_bookmaker_id_fkey"
             columns: ["bookmaker_id"]
             isOneToOne: false
@@ -762,6 +769,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "apostas_unificada_aposta_relacionada_id_fkey"
+            columns: ["aposta_relacionada_id"]
+            isOneToOne: false
+            referencedRelation: "vw_auditoria_integridade_surebet"
+            referencedColumns: ["aposta_id"]
+          },
+          {
             foreignKeyName: "apostas_unificada_bonus_id_fkey"
             columns: ["bonus_id"]
             isOneToOne: false
@@ -899,6 +913,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "apostas_unificada"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_anomalias_aposta_id_fkey"
+            columns: ["aposta_id"]
+            isOneToOne: false
+            referencedRelation: "vw_auditoria_integridade_surebet"
+            referencedColumns: ["aposta_id"]
           },
           {
             foreignKeyName: "audit_anomalias_event_id_fkey"
@@ -4471,6 +4492,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "financial_events_aposta_id_fkey"
+            columns: ["aposta_id"]
+            isOneToOne: false
+            referencedRelation: "vw_auditoria_integridade_surebet"
+            referencedColumns: ["aposta_id"]
+          },
+          {
             foreignKeyName: "financial_events_bookmaker_id_fkey"
             columns: ["bookmaker_id"]
             isOneToOne: false
@@ -4991,6 +5019,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "apostas_unificada"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "freebets_recebidas_qualificadora_id_fkey"
+            columns: ["qualificadora_id"]
+            isOneToOne: false
+            referencedRelation: "vw_auditoria_integridade_surebet"
+            referencedColumns: ["aposta_id"]
           },
           {
             foreignKeyName: "freebets_recebidas_workspace_id_fkey"
@@ -6321,6 +6356,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "apostas_unificada"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_aposta_id_fkey"
+            columns: ["aposta_id"]
+            isOneToOne: false
+            referencedRelation: "vw_auditoria_integridade_surebet"
+            referencedColumns: ["aposta_id"]
           },
           {
             foreignKeyName: "ocorrencias_bookmaker_id_fkey"
@@ -13502,6 +13544,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "freebets_recebidas_qualificadora_id_fkey"
+            columns: ["qualificadora_id"]
+            isOneToOne: false
+            referencedRelation: "vw_auditoria_integridade_surebet"
+            referencedColumns: ["aposta_id"]
+          },
+          {
             foreignKeyName: "freebets_recebidas_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -14785,7 +14834,50 @@ export type Database = {
             referencedRelation: "apostas_unificada"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "apostas_pernas_aposta_id_fkey"
+            columns: ["aposta_id"]
+            isOneToOne: false
+            referencedRelation: "vw_auditoria_integridade_surebet"
+            referencedColumns: ["aposta_id"]
+          },
         ]
+      }
+      vw_auditoria_integridade_surebet: {
+        Row: {
+          aposta_id: string | null
+          data_aposta: string | null
+          evento: string | null
+          lucro_real_ledger: number | null
+          lucro_registrado: number | null
+          stake_registrada: number | null
+          tem_divergencia_lucro: boolean | null
+          total_entradas: number | null
+          total_pernas: number | null
+        }
+        Insert: {
+          aposta_id?: string | null
+          data_aposta?: string | null
+          evento?: string | null
+          lucro_real_ledger?: never
+          lucro_registrado?: number | null
+          stake_registrada?: number | null
+          tem_divergencia_lucro?: never
+          total_entradas?: never
+          total_pernas?: never
+        }
+        Update: {
+          aposta_id?: string | null
+          data_aposta?: string | null
+          evento?: string | null
+          lucro_real_ledger?: never
+          lucro_registrado?: number | null
+          stake_registrada?: number | null
+          tem_divergencia_lucro?: never
+          total_entradas?: never
+          total_pernas?: never
+        }
+        Relationships: []
       }
       vw_saude_financeira: {
         Row: {
