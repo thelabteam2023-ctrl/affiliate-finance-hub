@@ -1696,6 +1696,14 @@ export function SurebetModalRoot({
     }
   };
 
+  const handleSaveWrapper = useCallback(() => {
+    if (isEditing && isLiquidada) {
+      setShowLiquidadaConfirmation(true);
+    } else {
+      handleSave();
+    }
+  }, [isEditing, isLiquidada, handleSave]);
+
   const handleConvertToSimpleBets = async () => {
     if (pernasValidas.length < 2) {
       toast.error("Mínimo de 2 pernas válidas para conversão");
