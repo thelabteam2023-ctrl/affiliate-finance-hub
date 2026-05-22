@@ -86,7 +86,8 @@ export function ChatInput({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    // Enter = nova linha. Ctrl/Cmd+Enter = enviar.
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       handleSend();
     }
@@ -212,7 +213,7 @@ export function ChatInput({
         {/* Text input */}
         <Textarea
           ref={inputRef as any}
-          placeholder="Digite sua mensagem... (Shift+Enter p/ nova linha)"
+          placeholder="Digite sua mensagem... (Enter = nova linha, Ctrl+Enter = enviar)"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}

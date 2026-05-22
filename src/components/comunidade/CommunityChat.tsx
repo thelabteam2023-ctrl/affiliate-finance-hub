@@ -218,7 +218,7 @@ export function CommunityChat() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       handleSend();
     }
@@ -403,7 +403,7 @@ export function CommunityChat() {
               <div className="flex gap-2">
                 <Textarea
                   ref={inputRef}
-                  placeholder="Digite sua mensagem... (Shift+Enter p/ nova linha)"
+                  placeholder="Digite sua mensagem... (Enter = nova linha, Ctrl+Enter = enviar)"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   onKeyDown={handleKeyDown}
