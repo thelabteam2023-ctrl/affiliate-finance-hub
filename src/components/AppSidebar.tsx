@@ -241,6 +241,7 @@ export function AppSidebar() {
    const { workspace } = useWorkspace();
   const { canAccess } = useModuleAccess();
   const { count: alertsCount } = useCentralAlertsCount();
+  const { unreadCount: chatUnreadCount } = useChatNotifications();
   const { data: kpisSolicitacoes } = useSolicitacoesKpis();
   const { 
     workspaces: userWorkspaces, 
