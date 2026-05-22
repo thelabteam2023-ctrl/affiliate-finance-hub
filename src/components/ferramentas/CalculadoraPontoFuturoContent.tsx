@@ -15,9 +15,10 @@ export const CalculadoraPontoFuturoContent: React.FC = () => {
   // Inputs
   const [oddLay, setOddLay] = useState<string>('2.10');
   const [valorProtecao, setValorProtecao] = useState<string>('100');
-  const [comissao, setComissao] = useState<string>('5');
+  const [comissao, setComissao] = useState<string>('2.8');
   const [lucroDesejado, setLucroDesejado] = useState<number[]>([0]);
   const [moedaProtecao, setMoedaProtecao] = useState<string>('BRL');
+  const comissaoPresets = ['2.8', '4.5', '6'];
 
   const parseNum = (v: string) => {
     const n = parseFloat(v.replace(',', '.'));
