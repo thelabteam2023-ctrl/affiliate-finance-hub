@@ -27,7 +27,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   Users, Building2, Shield, Ban, Check, Plus, UserPlus, Settings2, 
-  Eye, RefreshCw, Crown, AlertTriangle, Trash2, Archive, MessagesSquare, DollarSign, CreditCard, History, BarChart3, ArrowUpDown
+  Eye, RefreshCw, Crown, AlertTriangle, Trash2, Archive, MessagesSquare, DollarSign, CreditCard, History, BarChart3, ArrowUpDown, Activity
 } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { format, differenceInDays } from 'date-fns';
