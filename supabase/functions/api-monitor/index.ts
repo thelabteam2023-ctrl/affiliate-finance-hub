@@ -283,16 +283,23 @@ Deno.serve(async (req) => {
     if (request.method === 'POST' && path === 'run-job') {
       const { job } = await request.json();
       try {
-        let result;
         if (job === 'fetch_events') {
-          result = await syncDailyEvents(supabase, 'manual');
+          // @ts-ignore EdgeRuntime is available in Supabase Edge Functions
+          EdgeRuntime.waitUntil(
+            syncDailyEvents(supabase, 'manual').catch((err) =>
+              console.error('[BG] syncDailyEvents failed:', err)
+            )
+          );
+          return new Response(
+            JSON.stringify({ success: true, result: { queued: true, message: 'Sincronização iniciada em background. Os dados aparecerão em alguns minutos.', totalSaved: 0 } }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
         } else if (job === 'sync_leagues') {
           await syncMonitoredLeagues(supabase);
-          result = { success: true };
+          return new Response(JSON.stringify({ success: true, result: { success: true } }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         } else {
           return new Response(JSON.stringify({ error: 'Job desconhecido' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
-        return new Response(JSON.stringify({ success: true, result }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       } catch (err) {
         return new Response(JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
