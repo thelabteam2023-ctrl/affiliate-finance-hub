@@ -162,7 +162,9 @@ export default function ApiExplorer() {
   const [monitoredLeagues, setMonitoredLeagues] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [syncingLogos, setSyncingLogos] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(null);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'matches' | 'coverage'>('matches');
   const [timeFilter, setTimeFilter] = useState<'today' | 'tomorrow' | 'upcoming' | 'custom'>('today');
