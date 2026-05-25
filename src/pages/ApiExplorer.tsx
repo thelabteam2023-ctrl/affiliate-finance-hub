@@ -167,8 +167,13 @@ export default function ApiExplorer() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      toast.success(`Sincronização concluída: ${data.result.totalSaved} eventos.`);
-      loadData();
+      if (data.result?.queued) {
+        toast.success(data.result.message || 'Sincronização iniciada em background.');
+        setTimeout(() => loadData(), 8000);
+      } else {
+        toast.success(`Sincronização concluída: ${data.result.totalSaved} eventos.`);
+        loadData();
+      }
     } catch (err: any) {
       toast.error(err.message);
     } finally {
