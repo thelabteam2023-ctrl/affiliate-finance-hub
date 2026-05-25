@@ -176,6 +176,27 @@ export function ApiMonitorTab() {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between bg-primary/5 border border-primary/10 p-4 rounded-xl">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-primary/20 rounded-lg">
+            <Globe className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold">Explorador de Dados</h3>
+            <p className="text-xs text-muted-foreground">Visualize jogos e ligas em tempo real da API</p>
+          </div>
+        </div>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => window.location.href = '/admin/api-explorer'}
+          className="gap-2"
+        >
+          Acessar Explorador
+          <ArrowRight className="h-4 w-4" />
+        </Button>
+      </div>
+
       {/* BLOCO 1 — Cards de consumo */}
       <div className="grid gap-4 md:grid-cols-2">
         {['odds_api', 'api_football'].map(api => {

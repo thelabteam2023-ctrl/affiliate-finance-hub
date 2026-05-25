@@ -723,9 +723,9 @@ export function AppSidebar() {
                </DropdownMenuItem>
              )}
             {isSystemOwner && (
-              <DropdownMenuItem onClick={() => navigate("/admin?tab=apis")}>
+              <DropdownMenuItem onClick={() => navigate("/admin/api-explorer")}>
                 <Globe className="mr-2 h-4 w-4" />
-                Monitor de APIs
+                Explorador de Dados
                 <Badge variant="secondary" className="ml-auto text-[8px] h-3 px-1">novo</Badge>
               </DropdownMenuItem>
             )}

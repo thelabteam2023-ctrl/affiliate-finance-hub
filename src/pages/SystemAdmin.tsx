@@ -322,7 +322,7 @@ export default function SystemAdmin() {
           </TabsTrigger>
           <TabsTrigger value="apis" className="gap-2">
             <Activity className="h-4 w-4" />
-            APIs
+            Monitor de APIs
           </TabsTrigger>
         </TabsList>
 
