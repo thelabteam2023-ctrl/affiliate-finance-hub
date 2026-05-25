@@ -97,6 +97,7 @@ const SupplierPortal = lazyWithChunkRetry(() => import("./pages/SupplierPortal")
 const FornecedoresPortal = lazyWithChunkRetry(() => import("./pages/FornecedoresPortal"));
 const Solicitacoes = lazyWithChunkRetry(() => import("./pages/Solicitacoes"));
 const DevLedgerMonitor = lazyWithChunkRetry(() => import("./pages/DevLedgerMonitor"));
+const ApiExplorer = lazyWithChunkRetry(() => import("./pages/ApiExplorer"));
 
 // ─── QueryClient com defaults globais de performance ───
 const queryClient = new QueryClient({
@@ -401,6 +402,15 @@ const App = () => (
               <ProtectedRoute requiredPermission="caixa.read">
                 <AuthenticatedLayout>
                   <Caixa />
+                </AuthenticatedLayout>
+              </ProtectedRoute>
+            } />
+            
+            {/* Monitor de APIs / Explorador de Dados */}
+            <Route path="/admin/api-explorer" element={
+              <ProtectedRoute>
+                <AuthenticatedLayout>
+                  <ApiExplorer />
                 </AuthenticatedLayout>
               </ProtectedRoute>
             } />
