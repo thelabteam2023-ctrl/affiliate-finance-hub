@@ -354,6 +354,30 @@ Deno.serve(async (req) => {
       );
     }
 
+    if (request.method === 'GET' && path === 'logo-status') {
+      const today = new Date().toISOString().split('T')[0];
+
+      const { data: stats } = await supabase.rpc('get_logo_stats', { p_date: today });
+      
+      const { count: totalCache } = await supabase
+        .from('team_logos')
+        .select('*', { count: 'exact', head: true });
+        
+      const { count: foundCache } = await supabase
+        .from('team_logos')
+        .select('*', { count: 'exact', head: true })
+        .eq('found', true);
+
+      return new Response(
+        JSON.stringify({
+          today: stats?.[0] || { with_logo: 0, without_logo: 0, teams_missing: 0 },
+          cache: { total: totalCache, found: foundCache }
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+
     if (request.method === 'GET' && path === 'summary') {
       const today = new Date().toISOString().split('T')[0];
       const month = today.slice(0, 7);
