@@ -300,31 +300,130 @@ export default function ApiExplorer() {
         </div>
 
         {activeTab === 'matches' && (
-          <div className="flex flex-wrap items-center gap-1 bg-muted/50 p-1 rounded-xl w-fit border border-border/20">
-            {['today', 'tomorrow', 'upcoming'].map((t) => (
-              <Button 
-                key={t}
-                variant={timeFilter === t ? 'secondary' : 'ghost'} 
-                size="sm" 
-                onClick={() => setTimeFilter(t as any)}
-                className={cn(
-                  "rounded-lg px-4 h-8 text-[11px] font-black uppercase tracking-tight",
-                  timeFilter === t && "bg-background shadow-sm"
-                )}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl border border-border/20 shadow-sm">
+              {[
+                { id: 'today', label: 'Hoje' },
+                { id: 'tomorrow', label: 'Amanhã' },
+                { id: 'upcoming', label: 'Próximos' }
+              ].map((t) => (
+                <Button 
+                  key={t.id}
+                  variant={timeFilter === t.id ? 'secondary' : 'ghost'} 
+                  size="sm" 
+                  onClick={() => setTimeFilter(t.id as any)}
+                  className={cn(
+                    "rounded-lg px-4 h-8 text-[11px] font-black uppercase tracking-tight transition-all duration-200",
+                    timeFilter === t.id ? "bg-background shadow-md text-primary scale-105" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {t.label}
+                </Button>
+              ))}
+            </div>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button 
+                  variant={timeFilter === 'custom' ? 'secondary' : 'outline'}
+                  size="sm"
+                  className={cn(
+                    "h-10 rounded-xl px-4 border-border/40 bg-card shadow-sm hover:bg-accent transition-all flex items-center gap-2",
+                    timeFilter === 'custom' && "border-primary/40 bg-primary/5 text-primary font-bold"
+                  )}
+                >
+                  <CalendarDays className="h-4 w-4" />
+                  <span className="text-xs">
+                    {timeFilter === 'custom' ? format(parseISO(customDate), "dd 'de' MMM", { locale: ptBR }) : 'Selecionar Data'}
+                  </span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent 
+                className="w-auto p-0 border-none shadow-2xl rounded-2xl overflow-hidden z-[100]" 
+                align="end"
+                sideOffset={8}
               >
-                {t === 'today' ? 'Hoje' : t === 'tomorrow' ? 'Amanhã' : 'Próximos'}
-              </Button>
-            ))}
-            <div className="h-4 w-[1px] bg-border mx-1" />
-            <Input
-              type="date"
-              value={customDate}
-              onChange={(e) => {
-                setTimeFilter('custom');
-                setCustomDate(e.target.value);
-              }}
-              className="h-8 w-[130px] text-[11px] font-bold bg-background border-none shadow-sm rounded-lg"
-            />
+                <div className="bg-card/95 backdrop-blur-md border rounded-2xl">
+                  <div className="p-3 border-b bg-muted/30 flex flex-col gap-2">
+                    <div className="flex justify-between items-center px-1">
+                      <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Seletor Inteligente</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-8 text-[10px] font-bold rounded-lg border-primary/20 hover:bg-primary/5 hover:text-primary"
+                        onClick={() => {
+                          const d = format(new Date(), 'yyyy-MM-dd');
+                          setCustomDate(d);
+                          setTimeFilter('custom');
+                        }}
+                      >
+                        Hoje
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-8 text-[10px] font-bold rounded-lg border-primary/20 hover:bg-primary/5 hover:text-primary"
+                        onClick={() => {
+                          const d = format(new Date(new Date().setDate(new Date().getDate() + 7)), 'yyyy-MM-dd');
+                          setCustomDate(d);
+                          setTimeFilter('custom');
+                        }}
+                      >
+                        Próx. Semana
+                      </Button>
+                    </div>
+                  </div>
+                  <Calendar
+                    mode="single"
+                    selected={parseISO(customDate)}
+                    onSelect={(date) => {
+                      if (date) {
+                        setCustomDate(format(date, 'yyyy-MM-dd'));
+                        setTimeFilter('custom');
+                      }
+                    }}
+                    locale={ptBR}
+                    className="p-4 pointer-events-auto"
+                    classNames={{
+                      day_selected: "bg-primary text-primary-foreground hover:bg-primary/90 focus:bg-primary rounded-xl transition-all scale-110",
+                      day_today: "bg-primary/10 text-primary font-bold border-none rounded-xl ring-1 ring-primary/30",
+                      day: "h-9 w-9 p-0 font-medium aria-selected:opacity-100 hover:bg-primary/5 hover:text-primary rounded-xl transition-colors",
+                      head_cell: "text-muted-foreground rounded-md w-9 font-black text-[10px] uppercase tracking-wider",
+                    }}
+                    modifiers={{
+                      hasGames: (date) => {
+                        const dateStr = format(date, 'yyyy-MM-dd');
+                        return !!matchCounts[dateStr];
+                      }
+                    }}
+                    modifiersClassNames={{
+                      hasGames: "after:content-[''] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-primary after:rounded-full after:shadow-[0_0_4px_rgba(var(--primary),0.6)]"
+                    }}
+                    initialFocus
+                  />
+                  <div className="p-3 bg-muted/20 border-t flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 bg-primary rounded-full" />
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">Dias com jogos</span>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-7 text-[10px] font-black uppercase text-primary hover:bg-primary/10"
+                      onClick={() => {
+                        const d = format(new Date(), 'yyyy-MM-dd');
+                        setCustomDate(d);
+                        setTimeFilter('today');
+                      }}
+                    >
+                      Limpar
+                    </Button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         )}
       </div>
