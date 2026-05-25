@@ -350,7 +350,7 @@ export default function ApiExplorer() {
                         <span className="text-lg">{league.flag}</span>
                         <span className="text-xs font-black uppercase tracking-wider">{league.name}</span>
                       </div>
-                      <Badge variant="ghost" className="text-[10px] font-mono text-muted-foreground">
+                      <Badge variant="outline" className="text-[10px] font-mono text-muted-foreground border-none">
                         {league.games.length} jogos
                       </Badge>
                     </div>
