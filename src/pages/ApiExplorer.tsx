@@ -776,10 +776,16 @@ export default function ApiExplorer() {
                                 .filter(l => l.continent === continent)
                                 .map(league => {
                                   const gameCount = events.filter(e => e.league_key === league.league_key).length;
+                                  const firstGame = events.find(e => e.league_key === league.league_key);
                                   return (
                                     <div key={league.league_key} className="flex items-center justify-between p-3 rounded-lg border border-border/20 bg-card/50 hover:bg-muted/50 transition-colors">
                                       <div className="flex items-center gap-3">
-                                        <span className="text-lg">{league.league_flag}</span>
+                                        {firstGame?.league_logo ? (
+                                          <img src={firstGame.league_logo} alt={league.league_name} className="h-6 w-6 object-contain" />
+                                        ) : (
+                                          <span className="text-lg">{league.league_flag}</span>
+                                        )}
+
                                         <div className="flex flex-col">
                                           <span className="text-xs font-bold leading-none">{league.league_name}</span>
                                           <span className="text-[10px] text-muted-foreground font-semibold uppercase">{league.country}</span>
