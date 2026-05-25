@@ -16339,6 +16339,14 @@ export type Database = {
         }[]
       }
       get_invite_by_token: { Args: { _token: string }; Returns: Json }
+      get_logo_stats: {
+        Args: { p_date: string }
+        Returns: {
+          teams_missing: number
+          with_logo: number
+          without_logo: number
+        }[]
+      }
       get_movimentacao_dependencies: {
         Args: { p_transacao_id: string }
         Returns: Json
