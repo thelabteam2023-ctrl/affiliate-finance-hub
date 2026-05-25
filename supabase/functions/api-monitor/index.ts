@@ -2,7 +2,6 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { withMiddleware, corsHeaders } from '../_shared/middleware.ts';
 import { callExternalApi } from '../_shared/apiWrapper.ts';
 
-
 const FN_NAME = 'api-monitor';
 
 const API_SPORTS_ENDPOINTS: Record<string, string> = {
@@ -20,6 +19,118 @@ const LEAGUE_LOGO_BASE_URLS: Record<string, string> = {
   icehockey:        'https://media.api-sports.io/hockey/leagues',
   baseball:         'https://media.api-sports.io/baseball/leagues',
   americanfootball: 'https://media.api-sports.io/american-football/leagues',
+};
+
+const TEAM_ID_MAP: Record<string, { sport: string, id: number }> = {
+  // BRASILEIRÃO
+  'Flamengo':              { sport: 'soccer', id: 127  },
+  'Palmeiras':             { sport: 'soccer', id: 121  },
+  'Atletico Mineiro':      { sport: 'soccer', id: 1062 },
+  'Atletico Goianiense':   { sport: 'soccer', id: 1193 },
+  'Corinthians':           { sport: 'soccer', id: 131  },
+  'Sao Paulo':             { sport: 'soccer', id: 126  },
+  'Internacional':         { sport: 'soccer', id: 119  },
+  'Gremio':                { sport: 'soccer', id: 120  },
+  'Fluminense':            { sport: 'soccer', id: 124  },
+  'Botafogo':              { sport: 'soccer', id: 116  },
+  'Santos':                { sport: 'soccer', id: 123  },
+  'Cruzeiro':              { sport: 'soccer', id: 140  },
+  'Bahia':                 { sport: 'soccer', id: 118  },
+  'Vasco da Gama':         { sport: 'soccer', id: 130  },
+  'Atletico Paranaense':   { sport: 'soccer', id: 117  },
+  'Fortaleza':             { sport: 'soccer', id: 2019 },
+  'Bragantino':            { sport: 'soccer', id: 2022 },
+  'Coritiba':              { sport: 'soccer', id: 136  },
+  'Sport Recife':          { sport: 'soccer', id: 128  },
+  'Ceara':                 { sport: 'soccer', id: 2020 },
+  // PREMIER LEAGUE
+  'Arsenal':               { sport: 'soccer', id: 42   },
+  'Chelsea':               { sport: 'soccer', id: 49   },
+  'Liverpool':             { sport: 'soccer', id: 40   },
+  'Manchester City':       { sport: 'soccer', id: 50   },
+  'Manchester United':     { sport: 'soccer', id: 33   },
+  'Tottenham':             { sport: 'soccer', id: 47   },
+  'Newcastle United':      { sport: 'soccer', id: 34   },
+  'Aston Villa':           { sport: 'soccer', id: 66   },
+  'West Ham United':       { sport: 'soccer', id: 48   },
+  'Brighton':              { sport: 'soccer', id: 51   },
+  'Brentford':             { sport: 'soccer', id: 55   },
+  'Fulham':                { sport: 'soccer', id: 36   },
+  'Crystal Palace':        { sport: 'soccer', id: 52   },
+  'Everton':               { sport: 'soccer', id: 45   },
+  'Wolverhampton':         { sport: 'soccer', id: 39   },
+  'Nottingham Forest':     { sport: 'soccer', id: 65   },
+  'Bournemouth':           { sport: 'soccer', id: 35   },
+  'Leicester City':        { sport: 'soccer', id: 46   },
+  'Ipswich':               { sport: 'soccer', id: 57   },
+  'Southampton':           { sport: 'soccer', id: 41   },
+  // BUNDESLIGA
+  'Bayern Munich':         { sport: 'soccer', id: 157  },
+  'Borussia Dortmund':     { sport: 'soccer', id: 165  },
+  'RB Leipzig':            { sport: 'soccer', id: 173  },
+  'Bayer Leverkusen':      { sport: 'soccer', id: 168  },
+  'Eintracht Frankfurt':   { sport: 'soccer', id: 169  },
+  'Stuttgart':             { sport: 'soccer', id: 172  },
+  'Wolfsburg':             { sport: 'soccer', id: 161  },
+  'Freiburg':              { sport: 'soccer', id: 160  },
+  'Borussia Monchengladbach': { sport: 'soccer', id: 163 },
+  'SC Paderborn':          { sport: 'soccer', id: 188  },
+  'VfL Wolfsburg':         { sport: 'soccer', id: 161  },
+  // LA LIGA
+  'Real Madrid':           { sport: 'soccer', id: 541  },
+  'Barcelona':             { sport: 'soccer', id: 529  },
+  'Atletico Madrid':       { sport: 'soccer', id: 530  },
+  'Sevilla':               { sport: 'soccer', id: 536  },
+  'Real Sociedad':         { sport: 'soccer', id: 548  },
+  'Villarreal':            { sport: 'soccer', id: 533  },
+  'Athletic Club':         { sport: 'soccer', id: 531  },
+  'Valencia':              { sport: 'soccer', id: 532  },
+  'Real Betis':            { sport: 'soccer', id: 543  },
+  // SERIE A
+  'Inter':                 { sport: 'soccer', id: 505  },
+  'AC Milan':              { sport: 'soccer', id: 489  },
+  'Juventus':              { sport: 'soccer', id: 496  },
+  'Napoli':                { sport: 'soccer', id: 492  },
+  'AS Roma':               { sport: 'soccer', id: 497  },
+  'Lazio':                 { sport: 'soccer', id: 487  },
+  'Fiorentina':            { sport: 'soccer', id: 502  },
+  'Atalanta':              { sport: 'soccer', id: 499  },
+  'Torino':                { sport: 'soccer', id: 503  },
+  'Bologna':               { sport: 'soccer', id: 500  },
+  // CHAMPIONS LEAGUE (times adicionais)
+  'PSG':                   { sport: 'soccer', id: 85   },
+  'Paris Saint Germain':   { sport: 'soccer', id: 85   },
+  'Benfica':               { sport: 'soccer', id: 211  },
+  'Porto':                 { sport: 'soccer', id: 212  },
+  'Ajax':                  { sport: 'soccer', id: 194  },
+  'Sporting CP':           { sport: 'soccer', id: 228  },
+  'Celtic':                { sport: 'soccer', id: 396  },
+  'Rangers':               { sport: 'soccer', id: 397  },
+  // NBA
+  'Los Angeles Lakers':    { sport: 'basketball', id: 37  },
+  'Golden State Warriors': { sport: 'basketball', id: 11  },
+  'Boston Celtics':        { sport: 'basketball', id: 2   },
+  'Miami Heat':            { sport: 'basketball', id: 20  },
+  'Chicago Bulls':         { sport: 'basketball', id: 8   },
+  'Brooklyn Nets':         { sport: 'basketball', id: 4   },
+  'Milwaukee Bucks':       { sport: 'basketball', id: 26  },
+  'Phoenix Suns':          { sport: 'basketball', id: 28  },
+  'Denver Nuggets':        { sport: 'basketball', id: 10  },
+  'Dallas Mavericks':      { sport: 'basketball', id: 9   },
+  'Oklahoma City Thunder': { sport: 'basketball', id: 25  },
+  'Indiana Pacers':        { sport: 'basketball', id: 16  },
+  'New York Knicks':       { sport: 'basketball', id: 22  },
+  'Cleveland Cavaliers':   { sport: 'basketball', id: 7   },
+  'Minnesota Timberwolves':{ sport: 'basketball', id: 21  },
+  // NHL
+  'Tampa Bay Lightning':   { sport: 'hockey', id: 30  },
+  'Colorado Avalanche':    { sport: 'hockey', id: 7   },
+  'Vegas Golden Knights':  { sport: 'hockey', id: 34  },
+  'Toronto Maple Leafs':   { sport: 'hockey', id: 31  },
+  'Boston Bruins':         { sport: 'hockey', id: 1   },
+  'New York Rangers':      { sport: 'hockey', id: 20  },
+  'Carolina Hurricanes':   { sport: 'hockey', id: 6   },
+  'Florida Panthers':      { sport: 'hockey', id: 13  },
 };
 
 const LEAGUE_ID_MAP: Record<string, { sport: string, id: number }> = {
@@ -40,185 +151,57 @@ const LEAGUE_ID_MAP: Record<string, { sport: string, id: number }> = {
   'soccer_netherlands_eredivisie':     { sport: 'soccer', id: 88  },
   'soccer_portugal_primeira_liga':     { sport: 'soccer', id: 94  },
   'soccer_mexico_ligamx':              { sport: 'soccer', id: 262 },
-
-  // BASQUETE
   'basketball_nba':                    { sport: 'basketball', id: 12  },
   'basketball_euroleague':             { sport: 'basketball', id: 120 },
-  'basketball_wnba':                   { sport: 'basketball', id: 13  },
-
-  // HOCKEY
   'icehockey_nhl':                     { sport: 'icehockey', id: 57 },
-
-  // FUTEBOL AMERICANO
   'americanfootball_nfl':              { sport: 'americanfootball', id: 1 },
-
-  // BEISEBOL
   'baseball_mlb':                      { sport: 'baseball', id: 1 },
 };
 
-// Lista completa de todas as ligas monitoradas com metadados geográficos e de tipo
+// Lista completa de todas as ligas monitoradas
 const ALL_LEAGUES = [
-...
-  { sport: 'soccer_fifa', key: 'soccer_fifa_cyber_live_arena', name: 'Cyber Live Arena', flag: '🎮', continent: 'Mundo', country: 'Simulado', type: 'league' },
+  { sport: 'soccer', key: 'soccer_brazil_campeonato', name: 'Brasileirão Série A', flag: '🇧🇷', continent: 'América do Sul', country: 'Brasil', type: 'league' },
+  { sport: 'soccer', key: 'soccer_brazil_serie_b', name: 'Série B', flag: '🇧🇷', continent: 'América do Sul', country: 'Brasil', type: 'league' },
+  { sport: 'soccer', key: 'soccer_epl', name: 'Premier League', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', continent: 'Europa', country: 'Inglaterra', type: 'league' },
+  { sport: 'soccer', key: 'soccer_germany_bundesliga', name: 'Bundesliga', flag: '🇩🇪', continent: 'Europa', country: 'Alemanha', type: 'league' },
+  { sport: 'soccer', key: 'soccer_spain_la_liga', name: 'La Liga', flag: '🇪🇸', continent: 'Europa', country: 'Espanha', type: 'league' },
+  { sport: 'soccer', key: 'soccer_italy_serie_a', name: 'Serie A', flag: '🇮🇹', continent: 'Europa', country: 'Itália', type: 'league' },
+  { sport: 'soccer', key: 'soccer_france_ligue_one', name: 'Ligue 1', flag: '🇫🇷', continent: 'Europa', country: 'França', type: 'league' },
+  { sport: 'soccer', key: 'soccer_uefa_champs_league', name: 'Champions League', flag: '🏆', continent: 'Europa', country: 'Continental', type: 'continental' },
+  { sport: 'soccer', key: 'soccer_uefa_europa_league', name: 'Europa League', flag: '🏆', continent: 'Europa', country: 'Continental', type: 'continental' },
+  { sport: 'soccer', key: 'soccer_usa_mls', name: 'MLS', flag: '🇺🇸', continent: 'América do Norte', country: 'EUA', type: 'league' },
+  { sport: 'soccer', key: 'soccer_mexico_ligamx', name: 'Liga MX', flag: '🇲🇽', continent: 'América do Norte', country: 'México', type: 'league' },
+  { sport: 'soccer', key: 'soccer_argentina_primera_division', name: 'Liga Argentina', flag: '🇦🇷', continent: 'América do Sul', country: 'Argentina', type: 'league' },
+  { sport: 'soccer', key: 'soccer_saudi_professional_league', name: 'Saudi Pro League', flag: '🇸🇦', continent: 'Oriente Médio', country: 'Arábia Saudita', type: 'league' },
+  { sport: 'soccer', key: 'soccer_turkey_super_league', name: 'Süper Lig', flag: '🇹🇷', continent: 'Europa', country: 'Turquia', type: 'league' },
+  { sport: 'soccer', key: 'soccer_netherlands_eredivisie', name: 'Eredivisie', flag: '🇳🇱', continent: 'Europa', country: 'Holanda', type: 'league' },
+  { sport: 'soccer', key: 'soccer_portugal_primeira_liga', name: 'Primeira Liga', flag: '🇵🇹', continent: 'Europa', country: 'Portugal', type: 'league' },
+  { sport: 'basketball', key: 'basketball_nba', name: 'NBA', flag: '🇺🇸', continent: 'América do Norte', country: 'EUA', type: 'league' },
+  { sport: 'basketball', key: 'basketball_euroleague', name: 'EuroLeague', flag: '🇪🇺', continent: 'Europa', country: 'Continental', type: 'continental' },
+  { sport: 'icehockey', key: 'icehockey_nhl', name: 'NHL', flag: '🇺🇸', continent: 'América do Norte', country: 'EUA', type: 'league' },
 ];
 
-async function syncMonitoredLeagues(supabase: any) {
-  console.log(`Syncing ${ALL_LEAGUES.length} leagues to monitored_leagues table...`);
-  
-  for (const league of ALL_LEAGUES) {
-    const { error } = await supabase
-      .from('monitored_leagues')
-      .upsert({
-        sport: league.sport,
-        league_key: league.key,
-        league_name: league.name,
-        league_flag: league.flag,
-        continent: league.continent,
-        country: league.country,
-        competition_type: league.type,
-        is_active: true,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'league_key' });
-      
-    if (error) console.error(`Error syncing league ${league.key}:`, error);
+function chunkArray<T>(array: T[], size: number): T[][] {
+  const chunked: T[][] = [];
+  for (let i = 0; i < array.length; i += size) {
+    chunked.push(array.slice(i, i + size));
   }
+  return chunked;
 }
 
-async function syncDailyEvents(supabase: any, triggeredBy: 'cron' | 'manual' = 'cron') {
-  const apiKey = Deno.env.get('ODDS_API_KEY');
-  if (!apiKey) throw new Error('ODDS_API_KEY not set');
-
-  // Primeiro sincroniza a lista de ligas
-  await syncMonitoredLeagues(supabase);
-
-  let totalSaved = 0;
-  let totalCredits = 0;
-
-  for (const league of ALL_LEAGUES) {
-    try {
-      const endpoint = `https://api.the-odds-api.com/v4/sports/${league.key}/events?apiKey=${apiKey}&dateFormat=iso`;
-      
-      const result = await callExternalApi({
-        apiName: 'odds_api',
-        endpoint,
-        sportKey: league.key,
-        triggeredBy,
-        creditsUsed: 1
-      });
-
-      totalCredits++;
-
-      if (result.errorMessage || !result.data) {
-        console.warn(`[SKIP] ${league.key}: ${result.errorMessage || 'No data'}`);
-        continue;
-      }
-
-      const events = result.data;
-
-      for (const ev of events) {
-        const { error } = await supabase
-          .from('daily_events')
-          .upsert({
-            api_id: ev.id,
-            sport: league.sport,
-            league_key: league.key,
-            league_name: league.name,
-            league_flag: league.flag,
-            continent: league.continent,
-            country: league.country,
-            competition_type: league.type,
-            home_team: ev.home_team,
-            away_team: ev.away_team,
-            home_team_logo: ev.home_team_logo || null,
-            away_team_logo: ev.away_team_logo || null,
-            commence_time: ev.commence_time,
-            event_date: ev.commence_time.split('T')[0],
-            synced_at: new Date().toISOString()
-          }, { 
-            onConflict: 'api_id' 
-          });
-
-        if (error) {
-          console.error(`Error saving event ${ev.id}:`, error);
-        } else {
-          totalSaved++;
-        }
-      }
-
-      await new Promise(r => setTimeout(r, 100));
-
-    } catch (err) {
-      console.error(`[ERROR] ${league.key}:`, err instanceof Error ? err.message : String(err));
-    }
-  }
-
-  return { totalSaved, totalCredits };
-}
-
-function normalizeName(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')  // remove acentos
-    .replace(/\s+/g, ' ')             // normaliza espaços
-    .trim();
-}
-
-async function getTeamLogo(supabase: any, teamName: string, sport: string) {
-  const normalized = normalizeName(teamName);
-  const apiKey = Deno.env.get('API_FOOTBALL_KEY');
-
-  // 1. Verifica cache no banco
-  const { data: cached } = await supabase
-    .from('team_logos')
-    .select('logo_url, found')
-    .eq('sport', sport)
-    .eq('team_name_normalized', normalized)
-    .maybeSingle();
-
-  if (cached) {
-    return cached.found ? cached.logo_url : null;
-  }
-
-  if (!apiKey) return null;
-
-  // 2. Busca na API-Football
-  const baseUrl = API_SPORTS_ENDPOINTS[sport] || API_SPORTS_ENDPOINTS.soccer;
-
-  try {
-    const res = await fetch(
-      `${baseUrl}/teams?search=${encodeURIComponent(teamName)}`,
-      { headers: { 'x-apisports-key': apiKey } }
-    );
-
-    const data = await res.json();
-    const team = data.response?.[0]?.team;
-
-    const logoUrl = team?.logo || null;
-    const apiId   = team?.id   || null;
-    const found   = !!logoUrl;
-
-    // 3. Salva no cache
-    await supabase.from('team_logos').upsert({
-      sport,
-      team_name_normalized: normalized,
-      team_name_original: teamName,
-      api_sports_id: apiId,
-      logo_url: logoUrl,
-      found,
-      searched_at: new Date().toISOString()
-    }, { onConflict: 'sport,team_name_normalized' });
-
-    return logoUrl;
-
-  } catch (err) {
-    console.error(`Erro ao buscar logo de ${teamName}:`, err);
-    return null;
-  }
+function getLogoUrl(teamName: string) {
+  const mapping = TEAM_ID_MAP[teamName];
+  if (!mapping) return null;
+  const bases: Record<string, string> = {
+    soccer:      'https://media.api-sports.io/football/teams',
+    basketball:  'https://media.api-sports.io/basketball/teams',
+    hockey:      'https://media.api-sports.io/hockey/teams',
+    baseball:    'https://media.api-sports.io/baseball/teams',
+  };
+  return `${bases[mapping.sport]}/${mapping.id}.png`;
 }
 
 async function getLeagueLogo(supabase: any, leagueKey: string, sport: string) {
-  // 1. Verifica cache
   const { data: cached } = await supabase
     .from('league_logos')
     .select('logo_url, found')
@@ -226,21 +209,16 @@ async function getLeagueLogo(supabase: any, leagueKey: string, sport: string) {
     .eq('league_key', leagueKey)
     .maybeSingle();
 
-  if (cached) {
-    return cached.found ? cached.logo_url : null;
-  }
+  if (cached) return cached.found ? cached.logo_url : null;
 
-  // 2. Busca pelo ID mapeado
   const mapping = LEAGUE_ID_MAP[leagueKey];
   if (!mapping) return null;
 
   const logoUrl = `${LEAGUE_LOGO_BASE_URLS[mapping.sport]}/${mapping.id}.png`;
 
-  // 3. Salva no cache
   await supabase.from('league_logos').upsert({
     sport,
     league_key: leagueKey,
-    league_name: null, 
     api_sports_id: mapping.id,
     logo_url: logoUrl,
     found: true,
@@ -250,215 +228,164 @@ async function getLeagueLogo(supabase: any, leagueKey: string, sport: string) {
   return logoUrl;
 }
 
-async function syncLogosForToday(supabase: any) {
-  console.log('Starting logo synchronization pass...');
-  const today = new Date().toISOString().split('T')[0];
+async function fetchLeagueEvents(supabase: any, league: any, apiKey: string, triggeredBy: string) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
 
-  const { data: events, error } = await supabase
-    .from('daily_events')
-    .select('home_team, away_team, sport, league_key')
-    .eq('event_date', today);
+  try {
+    const endpoint = `https://api.the-odds-api.com/v4/sports/${league.key}/events?apiKey=${apiKey}&dateFormat=iso`;
+    const result = await callExternalApi({
+      apiName: 'odds_api',
+      endpoint,
+      sportKey: league.key,
+      triggeredBy: triggeredBy as any,
+      creditsUsed: 1
+    });
 
-  if (error || !events) return { apiCallsUsed: 0 };
-
-  // Filtrar eventos que faltam pelo menos uma logo
-  const pendingEvents = events.filter((ev: any) => !ev.home_team_logo || !ev.away_team_logo || !ev.league_logo);
-
-  if (pendingEvents.length === 0) {
-    console.log('All events already have logos cached.');
-    return { apiCallsUsed: 0 };
-  }
-
-  // Remover duplicados para otimizar chamadas
-  const uniqueTeams = new Map<string, { name: string, sport: string }>();
-  const uniqueLeagues = new Set<string>();
-
-  pendingEvents.forEach((ev: any) => {
-    uniqueTeams.set(`${ev.sport}|${ev.home_team}`, { name: ev.home_team, sport: ev.sport });
-    uniqueTeams.set(`${ev.sport}|${ev.away_team}`, { name: ev.away_team, sport: ev.sport });
-    uniqueLeagues.add(`${ev.sport}|${ev.league_key}`);
-  });
-
-  let apiCallsUsed = 0;
-  const MAX_CALLS_PER_RUN = 80;
-
-  // 1. Sync leagues first (free)
-  for (const item of uniqueLeagues) {
-    const [sport, league_key] = item.split('|');
-    await getLeagueLogo(supabase, league_key, sport);
-  }
-
-  // 2. Sync teams
-  for (const [key, team] of uniqueTeams.entries()) {
-    if (apiCallsUsed >= MAX_CALLS_PER_RUN) break;
-
-    // Verificar se já está em cache antes de contar chamada
-    const normalized = normalizeName(team.name);
-    const { data: cached } = await supabase
-      .from('team_logos')
-      .select('id')
-      .eq('sport', team.sport)
-      .eq('team_name_normalized', normalized)
-      .maybeSingle();
-
-    if (!cached) {
-      await getTeamLogo(supabase, team.name, team.sport);
-      apiCallsUsed++;
-      // Sleep para evitar rate limit da API
-      await new Promise(r => setTimeout(r, 150));
+    if (result.errorMessage || !result.data) {
+      console.warn(`[SKIP] ${league.key}: ${result.errorMessage || 'No data'}`);
+      return 0;
     }
+
+    const events = result.data;
+    let savedCount = 0;
+
+    const leagueLogo = await getLeagueLogo(supabase, league.key, league.sport);
+
+    for (const ev of events) {
+      const { error } = await supabase
+        .from('daily_events')
+        .upsert({
+          api_id: ev.id,
+          sport: league.sport,
+          league_key: league.key,
+          league_name: league.name,
+          league_flag: league.flag,
+          continent: league.continent,
+          country: league.country,
+          competition_type: league.type,
+          home_team: ev.home_team,
+          away_team: ev.away_team,
+          home_team_logo: getLogoUrl(ev.home_team),
+          away_team_logo: getLogoUrl(ev.away_team),
+          league_logo: leagueLogo,
+          commence_time: ev.commence_time,
+          event_date: ev.commence_time.split('T')[0],
+          synced_at: new Date().toISOString()
+        }, { 
+          onConflict: 'api_id' 
+        });
+
+      if (!error) savedCount++;
+    }
+    return savedCount;
+  } catch (err) {
+    console.error(`[ERROR] ${league.key}:`, err instanceof Error ? err.message : String(err));
+    return 0;
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  // 3. Update events with findings from cache
-  for (const ev of events) {
-    const homeLogo = await getTeamLogo(supabase, ev.home_team, ev.sport);
-    const awayLogo = await getTeamLogo(supabase, ev.away_team, ev.sport);
-    const leagueLogo = await getLeagueLogo(supabase, ev.league_key, ev.sport);
-
-    await supabase
-      .from('daily_events')
-      .update({
-        home_team_logo: homeLogo,
-        away_team_logo: awayLogo,
-        league_logo: leagueLogo
-      })
-      .eq('home_team', ev.home_team)
-      .eq('away_team', ev.away_team)
-      .eq('event_date', today);
-  }
-
-  console.log(`Logo sync finished. API calls used: ${apiCallsUsed}`);
-  return { apiCallsUsed };
 }
 
+async function syncMonitoredLeagues(supabase: any) {
+  for (const league of ALL_LEAGUES) {
+    await supabase.from('monitored_leagues').upsert({
+      sport: league.sport,
+      league_key: league.key,
+      league_name: league.name,
+      league_flag: league.flag,
+      continent: league.continent,
+      country: league.country,
+      competition_type: league.type,
+      is_active: true,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'league_key' });
+  }
+}
+
+async function syncDailyEvents(supabase: any, triggeredBy: 'cron' | 'manual' = 'cron') {
+  const apiKey = Deno.env.get('ODDS_API_KEY');
+  if (!apiKey) throw new Error('ODDS_API_KEY not set');
+
+  await syncMonitoredLeagues(supabase);
+
+  let totalSaved = 0;
+  const chunks = chunkArray(ALL_LEAGUES, 5);
+
+  for (const chunk of chunks) {
+    const results = await Promise.all(chunk.map(league => fetchLeagueEvents(supabase, league, apiKey, triggeredBy)));
+    totalSaved += results.reduce((a, b) => a + b, 0);
+  }
+
+  return { totalSaved };
+}
+
+async function syncLogosForToday(supabase: any) {
+  const today = new Date().toISOString().split('T')[0];
+  const { data: events } = await supabase
+    .from('daily_events')
+    .select('id, home_team, away_team, sport, league_key')
+    .eq('event_date', today);
+
+  if (!events) return { updated: 0 };
+
+  let updatedCount = 0;
+  for (const ev of events) {
+    const leagueLogo = await getLeagueLogo(supabase, ev.league_key, ev.sport);
+    const { error } = await supabase
+      .from('daily_events')
+      .update({
+        home_team_logo: getLogoUrl(ev.home_team),
+        away_team_logo: getLogoUrl(ev.away_team),
+        league_logo: leagueLogo
+      })
+      .eq('id', ev.id);
+    if (!error) updatedCount++;
+  }
+  return { updatedCount };
+}
 
 Deno.serve(async (req) => {
   return await withMiddleware(req, FN_NAME, async (auth, request) => {
     const url = new URL(request.url);
     const path = url.pathname.split('/').pop();
+    const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_system_owner')
-      .eq('id', auth.userId)
-      .single();
-
+    const { data: profile } = await supabase.from('profiles').select('is_system_owner').eq('id', auth.userId).single();
     if (!profile?.is_system_owner) {
-      return new Response(
-        JSON.stringify({ error: 'Acesso restrito ao proprietário do sistema.' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: 'Acesso restrito.' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
-
-    if (request.method === 'GET' && path === 'logo-status') {
-      const today = new Date().toISOString().split('T')[0];
-
-      const { data: stats } = await supabase.rpc('get_logo_stats', { p_date: today });
-      
-      const { count: totalCache } = await supabase
-        .from('team_logos')
-        .select('*', { count: 'exact', head: true });
-        
-      const { count: foundCache } = await supabase
-        .from('team_logos')
-        .select('*', { count: 'exact', head: true })
-        .eq('found', true);
-
-      return new Response(
-        JSON.stringify({
-          today: stats?.[0] || { with_logo: 0, without_logo: 0, teams_missing: 0 },
-          cache: { total: totalCache, found: foundCache }
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
 
     if (request.method === 'GET' && path === 'summary') {
       const today = new Date().toISOString().split('T')[0];
       const month = today.slice(0, 7);
-
       const [dayStats, monthStats, lastCall] = await Promise.all([
-        supabase
-          .from('api_usage_summary')
-          .select('api_name, total_calls, total_credits, total_errors')
-          .eq('period_type', 'day')
-          .eq('period_key', today),
-        
-        supabase
-          .from('api_usage_summary')
-          .select('api_name, total_calls, total_credits, total_errors')
-          .eq('period_type', 'month')
-          .eq('period_key', month),
-
-        supabase
-          .from('api_request_logs')
-          .select('api_name, created_at, status_code, duration_ms')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single()
+        supabase.from('api_usage_summary').select('*').eq('period_type', 'day').eq('period_key', today),
+        supabase.from('api_usage_summary').select('*').eq('period_type', 'month').eq('period_key', month),
+        supabase.from('api_request_logs').select('*').order('created_at', { ascending: false }).limit(1).single()
       ]);
-
-      return new Response(
-        JSON.stringify({
-          today: dayStats.data || [],
-          month: monthStats.data || [],
-          lastCall: lastCall.data || null,
-          limits: {
-            odds_api: { daily: null, monthly: 500 },
-            api_football: { daily: 100, monthly: null }
-          }
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ today: dayStats.data || [], month: monthStats.data || [], lastCall: lastCall.data || null, limits: { odds_api: { monthly: 500 }, api_football: { daily: 100 } } }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     if (request.method === 'POST' && path === 'run-job') {
       const { job } = await request.json();
-      try {
-        if (job === 'fetch_events') {
-          // @ts-ignore EdgeRuntime is available in Supabase Edge Functions
-          EdgeRuntime.waitUntil(
-            (async () => {
-              try {
-                const results = await syncDailyEvents(supabase, 'manual');
-                await syncLogosForToday(supabase);
-                console.log(`[BG] fetch_events + sync_logos completed. Saved: ${results.totalSaved}`);
-              } catch (err) {
-                console.error('[BG] fetch_events + sync_logos failed:', err);
-              }
-            })()
-          );
-          return new Response(
-            JSON.stringify({ success: true, result: { queued: true, message: 'Sincronização de jogos e escudos iniciada em background.', totalSaved: 0 } }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        } else if (job === 'sync_logos') {
-          // @ts-ignore EdgeRuntime is available in Supabase Edge Functions
-          EdgeRuntime.waitUntil(
-            syncLogosForToday(supabase).catch((err) =>
-              console.error('[BG] syncLogosForToday failed:', err)
-            )
-          );
-          return new Response(
-            JSON.stringify({ success: true, result: { queued: true, message: 'Sincronização de escudos iniciada em background.' } }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        } else if (job === 'sync_leagues') {
-          await syncMonitoredLeagues(supabase);
-          return new Response(JSON.stringify({ success: true, result: { success: true } }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-        } else {
-          return new Response(JSON.stringify({ error: 'Job desconhecido' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-        }
-      } catch (err) {
-        return new Response(JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      if (job === 'fetch_events') {
+        // @ts-ignore
+        EdgeRuntime.waitUntil((async () => {
+          try {
+            const results = await syncDailyEvents(supabase, 'manual');
+            console.log(`Job fetch_events completed. Saved: ${results.totalSaved}`);
+          } catch (err) { console.error('Job fetch_events failed:', err); }
+        })());
+        return new Response(JSON.stringify({ success: true, result: { queued: true, message: 'Sincronização iniciada em background.' } }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+      if (job === 'sync_logos') {
+        // @ts-ignore
+        EdgeRuntime.waitUntil(syncLogosForToday(supabase).catch(err => console.error('Job sync_logos failed:', err)));
+        return new Response(JSON.stringify({ success: true, result: { queued: true, message: 'Sincronização de escudos iniciada.' } }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
     }
 
-    return new Response(JSON.stringify({ error: 'Rota não encontrada' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   });
 });
