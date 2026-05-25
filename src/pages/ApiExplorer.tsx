@@ -385,11 +385,14 @@ export default function ApiExplorer() {
                       }
                     }}
                     locale={ptBR}
+                    captionLayout="dropdown-buttons"
+                    fromYear={2024}
+                    toYear={2027}
                     className="p-4 pointer-events-auto"
                     classNames={{
-                      day_selected: "bg-primary text-primary-foreground hover:bg-primary/90 focus:bg-primary rounded-xl transition-all scale-110",
+                      day_selected: "bg-primary text-primary-foreground hover:bg-primary/90 focus:bg-primary rounded-xl transition-all scale-110 shadow-lg shadow-primary/30",
                       day_today: "bg-primary/10 text-primary font-bold border-none rounded-xl ring-1 ring-primary/30",
-                      day: "h-9 w-9 p-0 font-medium aria-selected:opacity-100 hover:bg-primary/5 hover:text-primary rounded-xl transition-colors",
+                      day: "h-9 w-9 p-0 font-medium aria-selected:opacity-100 hover:bg-primary/5 hover:text-primary rounded-xl transition-all relative",
                       head_cell: "text-muted-foreground rounded-md w-9 font-black text-[10px] uppercase tracking-wider",
                     }}
                     modifiers={{
@@ -399,7 +402,7 @@ export default function ApiExplorer() {
                       }
                     }}
                     modifiersClassNames={{
-                      hasGames: "after:content-[''] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-primary after:rounded-full after:shadow-[0_0_4px_rgba(var(--primary),0.6)]"
+                      hasGames: "after:content-[''] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-primary after:rounded-full"
                     }}
                     initialFocus
                   />
