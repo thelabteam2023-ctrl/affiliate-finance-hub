@@ -22,7 +22,8 @@ import {
   XCircle,
   LayoutGrid,
   Info,
-  ListFilter
+  ListFilter,
+  CalendarDays
 } from 'lucide-react';
 import { 
   Sheet, 
@@ -32,6 +33,12 @@ import {
   SheetDescription,
   SheetTrigger 
 } from '@/components/ui/sheet';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format, isToday, parseISO, differenceInMinutes, startOfDay, endOfDay } from 'date-fns';
