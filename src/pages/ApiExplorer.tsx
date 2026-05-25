@@ -380,16 +380,26 @@ export default function ApiExplorer() {
             </div>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button 
+            variant="outline"
+            onClick={handleSyncLogos} 
+            disabled={syncingLogos || syncing}
+            className="rounded-full h-11 px-6 font-bold border-primary/20 hover:bg-primary/5 text-primary"
+          >
+            {syncingLogos ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Globe className="h-4 w-4 mr-2" />}
+            {syncingLogos ? 'Sincronizando...' : 'Sincronizar Escudos'}
+          </Button>
           <Button 
             onClick={handleManualSync} 
-            disabled={syncing}
+            disabled={syncing || syncingLogos}
             className="rounded-full shadow-lg shadow-primary/20 h-11 px-6 font-bold"
           >
             {syncing ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-            {syncing ? 'Sincronizando...' : 'Sincronizar Ligas'}
+            {syncing ? 'Sincronizando...' : 'Sincronizar Jogos'}
           </Button>
         </div>
+
       </div>
 
       {/* NAVIGATION TABS */}
