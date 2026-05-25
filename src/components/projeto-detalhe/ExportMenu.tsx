@@ -262,7 +262,7 @@ export function transformApostaToExport(
   // Calcula stake em unidades (stake / 100 como padrão se não informado, ou apenas o valor nominal)
   const stakeUnidades = typeof stakeConvertido === 'number' ? stakeConvertido / 100 : '-';
   const lucroUnidades = typeof lucroConvertido === 'number' ? lucroConvertido / 100 : '-';
-  const roi = typeof stakeConvertido === 'number' && typeof lucroConvertido === 'number' && stakeConvertido > 0
+  const roiValue = typeof stakeConvertido === 'number' && typeof lucroConvertido === 'number' && stakeConvertido > 0
     ? (lucroConvertido / stakeConvertido) * 100
     : '-';
 
@@ -286,7 +286,7 @@ export function transformApostaToExport(
     status: aposta.status,
     lucro_prejuizo: lucroConvertido,
     lucro_unidades: lucroUnidades,
-    roi: roi,
+    roi: roiValue,
     observacoes: aposta.observacoes || '',
   };
 }
