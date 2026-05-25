@@ -122,6 +122,26 @@ const TEAM_ID_MAP: Record<string, { sport: string, id: number }> = {
   'New York Knicks':       { sport: 'basketball', id: 22  },
   'Cleveland Cavaliers':   { sport: 'basketball', id: 7   },
   'Minnesota Timberwolves':{ sport: 'basketball', id: 21  },
+  'Indiana Pacers':        { sport: 'basketball', id: 16  },
+  'Atlanta Hawks':         { sport: 'basketball', id: 1   },
+  'Charlotte Hornets':     { sport: 'basketball', id: 5   },
+  'Cleveland Cavaliers':   { sport: 'basketball', id: 7   },
+  'Detroit Pistons':       { sport: 'basketball', id: 11  },
+  'Orlando Magic':         { sport: 'basketball', id: 24  },
+  'Philadelphia 76ers':    { sport: 'basketball', id: 27  },
+  'Toronto Raptors':       { sport: 'basketball', id: 33  },
+  'Washington Wizards':    { sport: 'basketball', id: 40  },
+  'Houston Rockets':       { sport: 'basketball', id: 14  },
+  'Memphis Grizzlies':     { sport: 'basketball', id: 18  },
+  'New Orleans Pelicans':  { sport: 'basketball', id: 23  },
+  'San Antonio Spurs':     { sport: 'basketball', id: 31  },
+  'Denver Nuggets':        { sport: 'basketball', id: 10  },
+  'Minnesota Timberwolves':{ sport: 'basketball', id: 21  },
+  'Oklahoma City Thunder': { sport: 'basketball', id: 25  },
+  'Portland Trail Blazers':{ sport: 'basketball', id: 29  },
+  'Utah Jazz':              { sport: 'basketball', id: 34  },
+  'Sacramento Kings':      { sport: 'basketball', id: 30  },
+  'LA Clippers':           { sport: 'basketball', id: 19  },
   // NHL
   'Tampa Bay Lightning':   { sport: 'hockey', id: 30  },
   'Colorado Avalanche':    { sport: 'hockey', id: 7   },
@@ -131,6 +151,14 @@ const TEAM_ID_MAP: Record<string, { sport: string, id: number }> = {
   'New York Rangers':      { sport: 'hockey', id: 20  },
   'Carolina Hurricanes':   { sport: 'hockey', id: 6   },
   'Florida Panthers':      { sport: 'hockey', id: 13  },
+  // ADICIONAIS SOLICITADOS
+  'Nice':                  { sport: 'soccer', id: 84   },
+  'Saint Etienne':         { sport: 'soccer', id: 1063 },
+  'Palestino':             { sport: 'soccer', id: 2309 },
+  'Athletic Club':         { sport: 'soccer', id: 10325 }, // MG
+  'Athletic Bilbao':       { sport: 'soccer', id: 531  },
+  'Greuther Furth':        { sport: 'soccer', id: 184  },
+  'Rot-Weiss Essen':       { sport: 'soccer', id: 504  },
 };
 
 const LEAGUE_ID_MAP: Record<string, { sport: string, id: number }> = {
@@ -189,16 +217,72 @@ function chunkArray<T>(array: T[], size: number): T[][] {
   return chunked;
 }
 
-function getLogoUrl(teamName: string) {
-  const mapping = TEAM_ID_MAP[teamName];
-  if (!mapping) return null;
-  const bases: Record<string, string> = {
-    soccer:      'https://media.api-sports.io/football/teams',
-    basketball:  'https://media.api-sports.io/basketball/teams',
-    hockey:      'https://media.api-sports.io/hockey/teams',
-    baseball:    'https://media.api-sports.io/baseball/teams',
-  };
-  return `${bases[mapping.sport]}/${mapping.id}.png`;
+async function getOrSearchTeamLogo(supabase: any, teamName: string, sport: string, triggeredBy: string) {
+  // 1. Mapa estático (zero custo, instantâneo)
+  const staticMapping = TEAM_ID_MAP[teamName];
+  if (staticMapping) {
+    const bases: Record<string, string> = {
+      soccer:      'https://media.api-sports.io/football/teams',
+      basketball:  'https://media.api-sports.io/basketball/teams',
+      hockey:      'https://media.api-sports.io/hockey/teams',
+      baseball:    'https://media.api-sports.io/baseball/teams',
+      americanfootball: 'https://media.api-sports.io/american-football/teams',
+    };
+    const sportKey = staticMapping.sport || sport;
+    return `${bases[sportKey] || bases.soccer}/${staticMapping.id}.png`;
+  }
+
+  // 2. Cache no banco de dados
+  const normalized = teamName.toLowerCase().trim();
+  const { data: cached } = await supabase
+    .from('team_logos')
+    .select('logo_url, found')
+    .eq('sport', sport)
+    .eq('team_name_normalized', normalized)
+    .maybeSingle();
+
+  if (cached) return cached.found ? cached.logo_url : null;
+
+  // 3. Busca reativa na API (Apenas se não mapeado e não em cache)
+  const apiEndpoint = API_SPORTS_ENDPOINTS[sport] || API_SPORTS_ENDPOINTS.soccer;
+  const searchUrl = `${apiEndpoint}/teams?name=${encodeURIComponent(teamName)}`;
+
+  try {
+    const result = await callExternalApi({
+      apiName: 'api_football', // Usa o wrapper que já tem o header correto
+      endpoint: searchUrl,
+      sportKey: sport,
+      creditsUsed: 1,
+      triggeredBy: triggeredBy as any
+    });
+
+    let logoUrl = null;
+    let apiId = null;
+
+    if (result.data?.response?.length > 0) {
+      // Pega o primeiro resultado da busca por nome
+      const teamRes = result.data.response[0];
+      const team = teamRes.team || teamRes; // Depende da API de cada esporte
+      logoUrl = team.logo;
+      apiId = team.id;
+    }
+
+    // Salva no cache para não cobrar novamente
+    await supabase.from('team_logos').upsert({
+      sport,
+      team_name_normalized: normalized,
+      team_name_original: teamName,
+      api_sports_id: apiId,
+      logo_url: logoUrl,
+      found: !!logoUrl,
+      searched_at: new Date().toISOString()
+    }, { onConflict: 'sport,team_name_normalized' });
+
+    return logoUrl;
+  } catch (err) {
+    console.error(`Erro ao buscar escudo para ${teamName}:`, err);
+    return null;
+  }
 }
 
 async function getLeagueLogo(supabase: any, leagueKey: string, sport: string) {
@@ -252,6 +336,18 @@ async function fetchLeagueEvents(supabase: any, league: any, apiKey: string, tri
 
     const leagueLogo = await getLeagueLogo(supabase, league.key, league.sport);
 
+    // Otimização: Coletar todos os nomes de times únicos para buscar escudos em paralelo
+    const uniqueTeams = new Set<string>();
+    for (const ev of events) {
+      uniqueTeams.add(ev.home_team);
+      uniqueTeams.add(ev.away_team);
+    }
+
+    const teamLogoMap: Record<string, string | null> = {};
+    await Promise.all(Array.from(uniqueTeams).map(async (teamName) => {
+      teamLogoMap[teamName] = await getOrSearchTeamLogo(supabase, teamName, league.sport, triggeredBy);
+    }));
+
     for (const ev of events) {
       const { error } = await supabase
         .from('daily_events')
@@ -266,8 +362,8 @@ async function fetchLeagueEvents(supabase: any, league: any, apiKey: string, tri
           competition_type: league.type,
           home_team: ev.home_team,
           away_team: ev.away_team,
-          home_team_logo: getLogoUrl(ev.home_team),
-          away_team_logo: getLogoUrl(ev.away_team),
+          home_team_logo: teamLogoMap[ev.home_team],
+          away_team_logo: teamLogoMap[ev.away_team],
           league_logo: leagueLogo,
           commence_time: ev.commence_time,
           event_date: ev.commence_time.split('T')[0],
@@ -320,7 +416,7 @@ async function syncDailyEvents(supabase: any, triggeredBy: 'cron' | 'manual' = '
   return { totalSaved };
 }
 
-async function syncLogosForToday(supabase: any) {
+async function syncLogosForToday(supabase: any, triggeredBy: string = 'manual') {
   const today = new Date().toISOString().split('T')[0];
   const { data: events } = await supabase
     .from('daily_events')
@@ -329,14 +425,32 @@ async function syncLogosForToday(supabase: any) {
 
   if (!events) return { updated: 0 };
 
+  // Otimização: Coletar todos os times únicos por esporte
+  const teamsBySport: Record<string, Set<string>> = {};
+  for (const ev of events) {
+    if (!teamsBySport[ev.sport]) teamsBySport[ev.sport] = new Set();
+    teamsBySport[ev.sport].add(ev.home_team);
+    teamsBySport[ev.sport].add(ev.away_team);
+  }
+
+  const teamLogoMap: Record<string, Record<string, string | null>> = {};
+  
+  for (const sport in teamsBySport) {
+    teamLogoMap[sport] = {};
+    const teams = Array.from(teamsBySport[sport]);
+    await Promise.all(teams.map(async (teamName) => {
+      teamLogoMap[sport][teamName] = await getOrSearchTeamLogo(supabase, teamName, sport, triggeredBy);
+    }));
+  }
+
   let updatedCount = 0;
   for (const ev of events) {
     const leagueLogo = await getLeagueLogo(supabase, ev.league_key, ev.sport);
     const { error } = await supabase
       .from('daily_events')
       .update({
-        home_team_logo: getLogoUrl(ev.home_team),
-        away_team_logo: getLogoUrl(ev.away_team),
+        home_team_logo: teamLogoMap[ev.sport][ev.home_team],
+        away_team_logo: teamLogoMap[ev.sport][ev.away_team],
         league_logo: leagueLogo
       })
       .eq('id', ev.id);
