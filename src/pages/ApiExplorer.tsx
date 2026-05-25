@@ -80,8 +80,10 @@ interface Event {
   result_away: string | null;
   home_team_logo: string | null;
   away_team_logo: string | null;
+  league_logo: string | null;
   synced_at: string;
 }
+
 
 // Paleta determinística premium para fallback (HSL — combina com design system)
 const TEAM_GRADIENTS = [
@@ -160,7 +162,9 @@ export default function ApiExplorer() {
   const [monitoredLeagues, setMonitoredLeagues] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [syncingLogos, setSyncingLogos] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(null);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'matches' | 'coverage'>('matches');
   const [timeFilter, setTimeFilter] = useState<'today' | 'tomorrow' | 'upcoming' | 'custom'>('today');
@@ -249,6 +253,32 @@ export default function ApiExplorer() {
       setSyncing(false);
     }
   };
+
+  const handleSyncLogos = async () => {
+    if (!window.confirm('Sincronizar escudos agora? Isso consumirá créditos da API-Sports (1 req por time novo).')) return;
+    setSyncingLogos(true);
+    try {
+      const session = (await supabase.auth.getSession()).data.session;
+      const res = await fetch(`https://kxfkmritrhpkgmwlxcft.supabase.co/functions/v1/api-monitor/run-job`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ job: 'sync_logos' })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      
+      toast.success(data.result.message || 'Sincronização de escudos iniciada em background.');
+      setTimeout(() => loadData(), 5000);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setSyncingLogos(false);
+    }
+  };
+
 
   // Derived Data
   const continents = useMemo(() => Array.from(new Set(events.map(e => e.continent).filter(Boolean))), [events]);
@@ -350,16 +380,26 @@ export default function ApiExplorer() {
             </div>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button 
+            variant="outline"
+            onClick={handleSyncLogos} 
+            disabled={syncingLogos || syncing}
+            className="rounded-full h-11 px-6 font-bold border-primary/20 hover:bg-primary/5 text-primary"
+          >
+            {syncingLogos ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Globe className="h-4 w-4 mr-2" />}
+            {syncingLogos ? 'Sincronizando...' : 'Sincronizar Escudos'}
+          </Button>
           <Button 
             onClick={handleManualSync} 
-            disabled={syncing}
+            disabled={syncing || syncingLogos}
             className="rounded-full shadow-lg shadow-primary/20 h-11 px-6 font-bold"
           >
             {syncing ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-            {syncing ? 'Sincronizando...' : 'Sincronizar Ligas'}
+            {syncing ? 'Sincronizando...' : 'Sincronizar Jogos'}
           </Button>
         </div>
+
       </div>
 
       {/* NAVIGATION TABS */}
@@ -736,10 +776,16 @@ export default function ApiExplorer() {
                                 .filter(l => l.continent === continent)
                                 .map(league => {
                                   const gameCount = events.filter(e => e.league_key === league.league_key).length;
+                                  const firstGame = events.find(e => e.league_key === league.league_key);
                                   return (
                                     <div key={league.league_key} className="flex items-center justify-between p-3 rounded-lg border border-border/20 bg-card/50 hover:bg-muted/50 transition-colors">
                                       <div className="flex items-center gap-3">
-                                        <span className="text-lg">{league.league_flag}</span>
+                                        {firstGame?.league_logo ? (
+                                          <img src={firstGame.league_logo} alt={league.league_name} className="h-6 w-6 object-contain" />
+                                        ) : (
+                                          <span className="text-lg">{league.league_flag}</span>
+                                        )}
+
                                         <div className="flex flex-col">
                                           <span className="text-xs font-bold leading-none">{league.league_name}</span>
                                           <span className="text-[10px] text-muted-foreground font-semibold uppercase">{league.country}</span>
@@ -818,7 +864,12 @@ export default function ApiExplorer() {
                               <Card key={leagueName} className="overflow-hidden border-border/40 shadow-sm rounded-xl">
                                 <div className="bg-muted/40 px-4 py-2 flex justify-between items-center border-b border-border/40">
                                   <div className="flex items-center gap-2">
-                                    <span className="text-base">{matches[0].league_flag}</span>
+                                    {matches[0].league_logo ? (
+                                      <img src={matches[0].league_logo} alt={leagueName} className="h-5 w-5 object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                                    ) : (
+                                      <span className="text-base">{matches[0].league_flag}</span>
+                                    )}
+
                                     <span className="text-[11px] font-black uppercase tracking-wider">{leagueName}</span>
                                     <Badge variant="outline" className="text-[9px] h-4 px-1.5 font-bold uppercase border-primary/20 text-primary">
                                       {type}

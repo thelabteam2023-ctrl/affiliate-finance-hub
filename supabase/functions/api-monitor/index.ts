@@ -2,129 +2,63 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { withMiddleware, corsHeaders } from '../_shared/middleware.ts';
 import { callExternalApi } from '../_shared/apiWrapper.ts';
 
+
 const FN_NAME = 'api-monitor';
+
+const API_SPORTS_ENDPOINTS: Record<string, string> = {
+  soccer:           'https://v3.football.api-sports.io',
+  basketball:       'https://v3.basketball.api-sports.io',
+  icehockey:        'https://v3.hockey.api-sports.io',
+  baseball:         'https://v3.baseball.api-sports.io',
+  americanfootball: 'https://v3.american-football.api-sports.io',
+  tennis:           'https://v3.tennis.api-sports.io',
+};
+
+const LEAGUE_LOGO_BASE_URLS: Record<string, string> = {
+  soccer:           'https://media.api-sports.io/football/leagues',
+  basketball:       'https://media.api-sports.io/basketball/leagues',
+  icehockey:        'https://media.api-sports.io/hockey/leagues',
+  baseball:         'https://media.api-sports.io/baseball/leagues',
+  americanfootball: 'https://media.api-sports.io/american-football/leagues',
+};
+
+const LEAGUE_ID_MAP: Record<string, { sport: string, id: number }> = {
+  // FUTEBOL
+  'soccer_epl':                        { sport: 'soccer', id: 39  },
+  'soccer_germany_bundesliga':         { sport: 'soccer', id: 78  },
+  'soccer_spain_la_liga':              { sport: 'soccer', id: 140 },
+  'soccer_italy_serie_a':              { sport: 'soccer', id: 135 },
+  'soccer_france_ligue_one':           { sport: 'soccer', id: 61  },
+  'soccer_brazil_campeonato':          { sport: 'soccer', id: 71  },
+  'soccer_brazil_serie_b':             { sport: 'soccer', id: 72  },
+  'soccer_uefa_champs_league':         { sport: 'soccer', id: 2   },
+  'soccer_uefa_europa_league':         { sport: 'soccer', id: 3   },
+  'soccer_usa_mls':                    { sport: 'soccer', id: 253 },
+  'soccer_argentina_primera_division': { sport: 'soccer', id: 128 },
+  'soccer_saudi_professional_league':  { sport: 'soccer', id: 307 },
+  'soccer_turkey_super_league':        { sport: 'soccer', id: 203 },
+  'soccer_netherlands_eredivisie':     { sport: 'soccer', id: 88  },
+  'soccer_portugal_primeira_liga':     { sport: 'soccer', id: 94  },
+  'soccer_mexico_ligamx':              { sport: 'soccer', id: 262 },
+
+  // BASQUETE
+  'basketball_nba':                    { sport: 'basketball', id: 12  },
+  'basketball_euroleague':             { sport: 'basketball', id: 120 },
+  'basketball_wnba':                   { sport: 'basketball', id: 13  },
+
+  // HOCKEY
+  'icehockey_nhl':                     { sport: 'icehockey', id: 57 },
+
+  // FUTEBOL AMERICANO
+  'americanfootball_nfl':              { sport: 'americanfootball', id: 1 },
+
+  // BEISEBOL
+  'baseball_mlb':                      { sport: 'baseball', id: 1 },
+};
 
 // Lista completa de todas as ligas monitoradas com metadados geográficos e de tipo
 const ALL_LEAGUES = [
-  // FUTEBOL - AMÉRICA DO SUL
-  { sport: 'soccer', key: 'soccer_brazil_campeonato', name: 'Brasileirão Série A', flag: '🇧🇷', continent: 'América do Sul', country: 'Brasil', type: 'league' },
-  { sport: 'soccer', key: 'soccer_brazil_serie_b', name: 'Brasileirão Série B', flag: '🇧🇷', continent: 'América do Sul', country: 'Brasil', type: 'league' },
-  { sport: 'soccer', key: 'soccer_argentina_primera_division', name: 'Liga Profesional', flag: '🇦🇷', continent: 'América do Sul', country: 'Argentina', type: 'league' },
-  { sport: 'soccer', key: 'soccer_chile_campeonato', name: 'Campeonato Nacional', flag: '🇨🇱', continent: 'América do Sul', country: 'Chile', type: 'league' },
-  { sport: 'soccer', key: 'soccer_conmebol_copa_libertadores', name: 'Copa Libertadores', flag: '🏆', continent: 'América do Sul', country: 'Continental', type: 'continental' },
-  { sport: 'soccer', key: 'soccer_conmebol_copa_sudamericana', name: 'Copa Sudamericana', flag: '🏆', continent: 'América do Sul', country: 'Continental', type: 'continental' },
-  
-  // FUTEBOL - AMÉRICA DO NORTE / CENTRAL
-  { sport: 'soccer', key: 'soccer_usa_mls', name: 'MLS', flag: '🇺🇸', continent: 'América do Norte', country: 'Estados Unidos', type: 'league' },
-  { sport: 'soccer', key: 'soccer_mexico_ligamx', name: 'Liga MX', flag: '🇲🇽', continent: 'América do Norte', country: 'México', type: 'league' },
-  { sport: 'soccer', key: 'soccer_concacaf_leagues_cup', name: 'Leagues Cup', flag: '🏆', continent: 'América do Norte', country: 'Continental', type: 'continental' },
-
-  // FUTEBOL - EUROPA
-  { sport: 'soccer', key: 'soccer_epl', name: 'Premier League', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', continent: 'Europa', country: 'Inglaterra', type: 'league' },
-  { sport: 'soccer', key: 'soccer_efl_champ', name: 'Championship', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', continent: 'Europa', country: 'Inglaterra', type: 'league' },
-  { sport: 'soccer', key: 'soccer_fa_cup', name: 'FA Cup', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', continent: 'Europa', country: 'Inglaterra', type: 'cup' },
-  { sport: 'soccer', key: 'soccer_england_efl_cup', name: 'EFL Cup', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', continent: 'Europa', country: 'Inglaterra', type: 'cup' },
-  { sport: 'soccer', key: 'soccer_spain_la_liga', name: 'La Liga', flag: '🇪🇸', continent: 'Europa', country: 'Espanha', type: 'league' },
-  { sport: 'soccer', key: 'soccer_spain_segunda_division', name: 'La Liga 2', flag: '🇪🇸', continent: 'Europa', country: 'Espanha', type: 'league' },
-  { sport: 'soccer', key: 'soccer_spain_copa_del_rey', name: 'Copa del Rey', flag: '🇪🇸', continent: 'Europa', country: 'Espanha', type: 'cup' },
-  { sport: 'soccer', key: 'soccer_italy_serie_a', name: 'Serie A', flag: '🇮🇹', continent: 'Europa', country: 'Itália', type: 'league' },
-  { sport: 'soccer', key: 'soccer_italy_serie_b', name: 'Serie B', flag: '🇮🇹', continent: 'Europa', country: 'Itália', type: 'league' },
-  { sport: 'soccer', key: 'soccer_italy_coppa_italia', name: 'Coppa Italia', flag: '🇮🇹', continent: 'Europa', country: 'Itália', type: 'cup' },
-  { sport: 'soccer', key: 'soccer_germany_bundesliga', name: 'Bundesliga', flag: '🇩🇪', continent: 'Europa', country: 'Alemanha', type: 'league' },
-  { sport: 'soccer', key: 'soccer_germany_bundesliga2', name: '2. Bundesliga', flag: '🇩🇪', continent: 'Europa', country: 'Alemanha', type: 'league' },
-  { sport: 'soccer', key: 'soccer_germany_dfb_pokal', name: 'DFB-Pokal', flag: '🇩🇪', continent: 'Europa', country: 'Alemanha', type: 'cup' },
-  { sport: 'soccer', key: 'soccer_france_ligue_one', name: 'Ligue 1', flag: '🇫🇷', continent: 'Europa', country: 'França', type: 'league' },
-  { sport: 'soccer', key: 'soccer_france_ligue_two', name: 'Ligue 2', flag: '🇫🇷', continent: 'Europa', country: 'França', type: 'league' },
-  { sport: 'soccer', key: 'soccer_france_coupe_de_france', name: 'Coupe de France', flag: '🇫🇷', continent: 'Europa', country: 'França', type: 'cup' },
-  { sport: 'soccer', key: 'soccer_portugal_primeira_liga', name: 'Primeira Liga', flag: '🇵🇹', continent: 'Europa', country: 'Portugal', type: 'league' },
-  { sport: 'soccer', key: 'soccer_netherlands_eredivisie', name: 'Eredivisie', flag: '🇳🇱', continent: 'Europa', country: 'Holanda', type: 'league' },
-  { sport: 'soccer', key: 'soccer_belgium_first_div', name: 'Pro League', flag: '🇧🇪', continent: 'Europa', country: 'Bélgica', type: 'league' },
-  { sport: 'soccer', key: 'soccer_turkey_super_league', name: 'Süper Lig', flag: '🇹🇷', continent: 'Europa', country: 'Turquia', type: 'league' },
-  { sport: 'soccer', key: 'soccer_uefa_champs_league', name: 'Champions League', flag: '🏆', continent: 'Europa', country: 'Continental', type: 'continental' },
-  { sport: 'soccer', key: 'soccer_uefa_europa_league', name: 'Europa League', flag: '🏆', continent: 'Europa', country: 'Continental', type: 'continental' },
-  { sport: 'soccer', key: 'soccer_uefa_europa_conference_league', name: 'Conference League', flag: '🏆', continent: 'Europa', country: 'Continental', type: 'continental' },
-  { sport: 'soccer', key: 'soccer_uefa_euro_cup', name: 'Eurocopa', flag: '🇪🇺', continent: 'Europa', country: 'Continental', type: 'continental' },
-  { sport: 'soccer', key: 'soccer_conmebol_copa_america', name: 'Copa América', flag: '🏆', continent: 'América do Sul', country: 'Continental', type: 'continental' },
-  { sport: 'soccer', key: 'soccer_fifa_world_cup', name: 'Copa do Mundo', flag: '🌎', continent: 'Mundo', country: 'Internacional', type: 'cup' },
-  { sport: 'soccer', key: 'soccer_fifa_world_cup_qualifiers_south_america', name: 'Eliminatórias Copa (Am. Sul)', flag: '🌎', continent: 'América do Sul', country: 'Continental', type: 'continental' },
-  { sport: 'soccer', key: 'soccer_fifa_world_cup_qualifiers_europe', name: 'Eliminatórias Copa (Europa)', flag: '🌎', continent: 'Europa', country: 'Continental', type: 'continental' },
-
-  // FUTEBOL - ORIENTE MÉDIO / ÁSIA
-  { sport: 'soccer', key: 'soccer_saudi_arabia_pro_league', name: 'Saudi Pro League', flag: '🇸🇦', continent: 'Oriente Médio', country: 'Arábia Saudita', type: 'league' },
-  { sport: 'soccer', key: 'soccer_japan_j_league', name: 'J1 League', flag: '🇯🇵', continent: 'Ásia', country: 'Japão', type: 'league' },
-  { sport: 'soccer', key: 'soccer_china_superleague', name: 'Chinese Super League', flag: '🇨🇳', continent: 'Ásia', country: 'China', type: 'league' },
-  { sport: 'soccer', key: 'soccer_korea_kleague1', name: 'K League 1', flag: '🇰🇷', continent: 'Ásia', country: 'Coreia do Sul', type: 'league' },
-
-  // BASQUETE
-  { sport: 'basketball', key: 'basketball_nba', name: 'NBA', flag: '🇺🇸', continent: 'América do Norte', country: 'Estados Unidos', type: 'league' },
-  { sport: 'basketball', key: 'basketball_euroleague', name: 'EuroLeague', flag: '🇪🇺', continent: 'Europa', country: 'Continental', type: 'continental' },
-  { sport: 'basketball', key: 'basketball_eurocup', name: 'EuroCup', flag: '🇪🇺', continent: 'Europa', country: 'Continental', type: 'continental' },
-  { sport: 'basketball', key: 'basketball_champions_league', name: 'Champions League', flag: '🇪🇺', continent: 'Europa', country: 'Continental', type: 'continental' },
-  { sport: 'basketball', key: 'basketball_spain_liga_acb', name: 'Liga ACB', flag: '🇪🇸', continent: 'Europa', country: 'Espanha', type: 'league' },
-  { sport: 'basketball', key: 'basketball_turkey_bsl', name: 'Süper Ligi', flag: '🇹🇷', continent: 'Europa', country: 'Turquia', type: 'league' },
-  { sport: 'basketball', key: 'basketball_italy_lega_a', name: 'Lega Basket Serie A', flag: '🇮🇹', continent: 'Europa', country: 'Itália', type: 'league' },
-  { sport: 'basketball', key: 'basketball_france_lnb', name: 'LNB Pro A', flag: '🇫🇷', continent: 'Europa', country: 'França', type: 'league' },
-  { sport: 'basketball', key: 'basketball_germany_bbl', name: 'Basketball Bundesliga', flag: '🇩🇪', continent: 'Europa', country: 'Alemanha', type: 'league' },
-  { sport: 'basketball', key: 'basketball_greece_heba', name: 'Greek Basket League', flag: '🇬🇷', continent: 'Europa', country: 'Grécia', type: 'league' },
-  { sport: 'basketball', key: 'basketball_china_cba', name: 'CBA', flag: '🇨🇳', continent: 'Ásia', country: 'China', type: 'league' },
-  { sport: 'basketball', key: 'basketball_japan_bleague', name: 'B.League', flag: '🇯🇵', continent: 'Ásia', country: 'Japão', type: 'league' },
-  { sport: 'basketball', key: 'basketball_philippines_pba', name: 'PBA', flag: '🇵🇭', continent: 'Ásia', country: 'Filipinas', type: 'league' },
-  { sport: 'basketball', key: 'basketball_brazil_nbb', name: 'NBB', flag: '🇧🇷', continent: 'América do Sul', country: 'Brasil', type: 'league' },
-  { sport: 'basketball', key: 'basketball_argentina_lnb', name: 'Liga Nacional', flag: '🇦🇷', continent: 'América do Sul', country: 'Argentina', type: 'league' },
-  { sport: 'basketball', key: 'basketball_fiba_world_cup', name: 'FIBA World Cup', flag: '🌎', continent: 'Mundo', country: 'Internacional', type: 'cup' },
-  { sport: 'basketball', key: 'basketball_olympics', name: 'Olympics', flag: '🏅', continent: 'Mundo', country: 'Internacional', type: 'cup' },
-
-  // BEISEBOL
-  { sport: 'baseball', key: 'baseball_mlb', name: 'MLB', flag: '🇺🇸', continent: 'América do Norte', country: 'Estados Unidos', type: 'league' },
-  { sport: 'baseball', key: 'baseball_npb', name: 'NPB', flag: '🇯🇵', continent: 'Ásia', country: 'Japão', type: 'league' },
-  { sport: 'baseball', key: 'baseball_kbo', name: 'KBO League', flag: '🇰🇷', continent: 'Ásia', country: 'Coreia do Sul', type: 'league' },
-  { sport: 'baseball', key: 'baseball_mexico_lmb', name: 'Liga Mexicana de Beisbol', flag: '🇲🇽', continent: 'América do Norte', country: 'México', type: 'league' },
-  { sport: 'baseball', key: 'baseball_wbc', name: 'World Baseball Classic', flag: '🌎', continent: 'Mundo', country: 'Internacional', type: 'cup' },
-
-  // FUTEBOL AMERICANO
-  { sport: 'americanfootball', key: 'americanfootball_nfl', name: 'NFL', flag: '🇺🇸', continent: 'América do Norte', country: 'Estados Unidos', type: 'league' },
-  { sport: 'americanfootball', key: 'americanfootball_cfl', name: 'CFL', flag: '🇨🇦', continent: 'América do Norte', country: 'Canadá', type: 'league' },
-  { sport: 'americanfootball', key: 'americanfootball_elf', name: 'European League of Football', flag: '🇪🇺', continent: 'Europa', country: 'Continental', type: 'continental' },
-  { sport: 'americanfootball', key: 'americanfootball_lfa', name: 'Liga de Fútbol Americano', flag: '🇲🇽', continent: 'América do Norte', country: 'México', type: 'league' },
-  { sport: 'americanfootball', key: 'americanfootball_ncaaf', name: 'NCAA Division I', flag: '🇺🇸', continent: 'América do Norte', country: 'Estados Unidos', type: 'league' },
-
-  // TÊNIS (EXEMPLOS)
-  { sport: 'tennis', key: 'tennis_atp_french_open', name: 'ATP French Open', flag: '🇫🇷', continent: 'Europa', country: 'França', type: 'cup' },
-  { sport: 'tennis', key: 'tennis_wta_french_open', name: 'WTA French Open', flag: '🇫🇷', continent: 'Europa', country: 'França', type: 'cup' },
-
-  // HÓQUEI
-  { sport: 'icehockey', key: 'icehockey_nhl', name: 'NHL', flag: '🇺🇸', continent: 'América do Norte', country: 'Estados Unidos', type: 'league' },
-  { sport: 'icehockey', key: 'icehockey_khl', name: 'KHL', flag: '🇷🇺', continent: 'Europa', country: 'Rússia', type: 'league' },
-  { sport: 'icehockey', key: 'icehockey_sweden_allsvenskan', name: 'Swedish Hockey League', flag: '🇸🇪', continent: 'Europa', country: 'Suécia', type: 'league' },
-  { sport: 'icehockey', key: 'icehockey_finland_liiga', name: 'Liiga', flag: '🇫🇮', continent: 'Europa', country: 'Finlândia', type: 'league' },
-  { sport: 'icehockey', key: 'icehockey_switzerland_national_league', name: 'National League', flag: '🇨🇭', continent: 'Europa', country: 'Suíça', type: 'league' },
-  { sport: 'icehockey', key: 'icehockey_germany_del', name: 'DEL', flag: '🇩🇪', continent: 'Europa', country: 'Alemanha', type: 'league' },
-  { sport: 'icehockey', key: 'icehockey_czech_extraliga', name: 'Czech Extraliga', flag: '🇨🇿', continent: 'Europa', country: 'República Tcheca', type: 'league' },
-  { sport: 'icehockey', key: 'icehockey_champions_hockey_league', name: 'Champions Hockey League', flag: '🇪🇺', continent: 'Europa', country: 'Continental', type: 'continental' },
-
-  // ESPORTS - LEAGUE OF LEGENDS
-  { sport: 'leagueoflegends', key: 'leagueoflegends_worlds', name: 'LoL Worlds', flag: '🎮', continent: 'Mundo', country: 'Internacional', type: 'cup' },
-  { sport: 'leagueoflegends', key: 'leagueoflegends_lck', name: 'LCK', flag: '🇰🇷', continent: 'Ásia', country: 'Coreia do Sul', type: 'league' },
-  { sport: 'leagueoflegends', key: 'leagueoflegends_lpl', name: 'LPL', flag: '🇨🇳', continent: 'Ásia', country: 'China', type: 'league' },
-  { sport: 'leagueoflegends', key: 'leagueoflegends_lec', name: 'LEC', flag: '🇪🇺', continent: 'Europa', country: 'Continental', type: 'league' },
-  { sport: 'leagueoflegends', key: 'leagueoflegends_lcs', name: 'LCS', flag: '🇺🇸', continent: 'América do Norte', country: 'Estados Unidos', type: 'league' },
-  
-  // ESPORTS - CS2
-  { sport: 'csgo', key: 'csgo_esl_pro_league', name: 'ESL Pro League', flag: '🔫', continent: 'Mundo', country: 'Internacional', type: 'league' },
-  { sport: 'csgo', key: 'csgo_iem', name: 'IEM', flag: '🔫', continent: 'Mundo', country: 'Internacional', type: 'cup' },
-  { sport: 'csgo', key: 'csgo_blast_premier', name: 'BLAST Premier', flag: '🔫', continent: 'Mundo', country: 'Internacional', type: 'league' },
-
-  // ESPORTS - DOTA 2
-  { sport: 'dota2', key: 'dota2_the_international', name: 'The International', flag: '🧙', continent: 'Mundo', country: 'Internacional', type: 'cup' },
-  { sport: 'dota2', key: 'dota2_esl_one', name: 'ESL One', flag: '🧙', continent: 'Mundo', country: 'Internacional', type: 'league' },
-
-  // ESPORTS - VALORANT
-  { sport: 'valorant', key: 'valorant_vct_americas', name: 'VCT Americas', flag: '🎯', continent: 'América', country: 'Continental', type: 'league' },
-  { sport: 'valorant', key: 'valorant_vct_emea', name: 'VCT EMEA', flag: '🎯', continent: 'Europa', country: 'Continental', type: 'league' },
-  
-  // ESPORTS - FIFA / EA FC
-  { sport: 'soccer_fifa', key: 'soccer_fifa_esoccer_battle', name: 'Esoccer Battle', flag: '🎮', continent: 'Mundo', country: 'Simulado', type: 'league' },
-  { sport: 'soccer_fifa', key: 'soccer_fifa_gt_leagues', name: 'GT Leagues', flag: '🎮', continent: 'Mundo', country: 'Simulado', type: 'league' },
+...
   { sport: 'soccer_fifa', key: 'soccer_fifa_cyber_live_arena', name: 'Cyber Live Arena', flag: '🎮', continent: 'Mundo', country: 'Simulado', type: 'league' },
 ];
 
@@ -221,6 +155,183 @@ async function syncDailyEvents(supabase: any, triggeredBy: 'cron' | 'manual' = '
   return { totalSaved, totalCredits };
 }
 
+function normalizeName(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')  // remove acentos
+    .replace(/\s+/g, ' ')             // normaliza espaços
+    .trim();
+}
+
+async function getTeamLogo(supabase: any, teamName: string, sport: string) {
+  const normalized = normalizeName(teamName);
+  const apiKey = Deno.env.get('API_FOOTBALL_KEY');
+
+  // 1. Verifica cache no banco
+  const { data: cached } = await supabase
+    .from('team_logos')
+    .select('logo_url, found')
+    .eq('sport', sport)
+    .eq('team_name_normalized', normalized)
+    .maybeSingle();
+
+  if (cached) {
+    return cached.found ? cached.logo_url : null;
+  }
+
+  if (!apiKey) return null;
+
+  // 2. Busca na API-Football
+  const baseUrl = API_SPORTS_ENDPOINTS[sport] || API_SPORTS_ENDPOINTS.soccer;
+
+  try {
+    const res = await fetch(
+      `${baseUrl}/teams?search=${encodeURIComponent(teamName)}`,
+      { headers: { 'x-apisports-key': apiKey } }
+    );
+
+    const data = await res.json();
+    const team = data.response?.[0]?.team;
+
+    const logoUrl = team?.logo || null;
+    const apiId   = team?.id   || null;
+    const found   = !!logoUrl;
+
+    // 3. Salva no cache
+    await supabase.from('team_logos').upsert({
+      sport,
+      team_name_normalized: normalized,
+      team_name_original: teamName,
+      api_sports_id: apiId,
+      logo_url: logoUrl,
+      found,
+      searched_at: new Date().toISOString()
+    }, { onConflict: 'sport,team_name_normalized' });
+
+    return logoUrl;
+
+  } catch (err) {
+    console.error(`Erro ao buscar logo de ${teamName}:`, err);
+    return null;
+  }
+}
+
+async function getLeagueLogo(supabase: any, leagueKey: string, sport: string) {
+  // 1. Verifica cache
+  const { data: cached } = await supabase
+    .from('league_logos')
+    .select('logo_url, found')
+    .eq('sport', sport)
+    .eq('league_key', leagueKey)
+    .maybeSingle();
+
+  if (cached) {
+    return cached.found ? cached.logo_url : null;
+  }
+
+  // 2. Busca pelo ID mapeado
+  const mapping = LEAGUE_ID_MAP[leagueKey];
+  if (!mapping) return null;
+
+  const logoUrl = `${LEAGUE_LOGO_BASE_URLS[mapping.sport]}/${mapping.id}.png`;
+
+  // 3. Salva no cache
+  await supabase.from('league_logos').upsert({
+    sport,
+    league_key: leagueKey,
+    league_name: null, 
+    api_sports_id: mapping.id,
+    logo_url: logoUrl,
+    found: true,
+    searched_at: new Date().toISOString()
+  }, { onConflict: 'sport,league_key' });
+
+  return logoUrl;
+}
+
+async function syncLogosForToday(supabase: any) {
+  console.log('Starting logo synchronization pass...');
+  const today = new Date().toISOString().split('T')[0];
+
+  const { data: events, error } = await supabase
+    .from('daily_events')
+    .select('home_team, away_team, sport, league_key')
+    .eq('event_date', today);
+
+  if (error || !events) return { apiCallsUsed: 0 };
+
+  // Filtrar eventos que faltam pelo menos uma logo
+  const pendingEvents = events.filter((ev: any) => !ev.home_team_logo || !ev.away_team_logo || !ev.league_logo);
+
+  if (pendingEvents.length === 0) {
+    console.log('All events already have logos cached.');
+    return { apiCallsUsed: 0 };
+  }
+
+  // Remover duplicados para otimizar chamadas
+  const uniqueTeams = new Map<string, { name: string, sport: string }>();
+  const uniqueLeagues = new Set<string>();
+
+  pendingEvents.forEach((ev: any) => {
+    uniqueTeams.set(`${ev.sport}|${ev.home_team}`, { name: ev.home_team, sport: ev.sport });
+    uniqueTeams.set(`${ev.sport}|${ev.away_team}`, { name: ev.away_team, sport: ev.sport });
+    uniqueLeagues.add(`${ev.sport}|${ev.league_key}`);
+  });
+
+  let apiCallsUsed = 0;
+  const MAX_CALLS_PER_RUN = 80;
+
+  // 1. Sync leagues first (free)
+  for (const item of uniqueLeagues) {
+    const [sport, league_key] = item.split('|');
+    await getLeagueLogo(supabase, league_key, sport);
+  }
+
+  // 2. Sync teams
+  for (const [key, team] of uniqueTeams.entries()) {
+    if (apiCallsUsed >= MAX_CALLS_PER_RUN) break;
+
+    // Verificar se já está em cache antes de contar chamada
+    const normalized = normalizeName(team.name);
+    const { data: cached } = await supabase
+      .from('team_logos')
+      .select('id')
+      .eq('sport', team.sport)
+      .eq('team_name_normalized', normalized)
+      .maybeSingle();
+
+    if (!cached) {
+      await getTeamLogo(supabase, team.name, team.sport);
+      apiCallsUsed++;
+      // Sleep para evitar rate limit da API
+      await new Promise(r => setTimeout(r, 150));
+    }
+  }
+
+  // 3. Update events with findings from cache
+  for (const ev of events) {
+    const homeLogo = await getTeamLogo(supabase, ev.home_team, ev.sport);
+    const awayLogo = await getTeamLogo(supabase, ev.away_team, ev.sport);
+    const leagueLogo = await getLeagueLogo(supabase, ev.league_key, ev.sport);
+
+    await supabase
+      .from('daily_events')
+      .update({
+        home_team_logo: homeLogo,
+        away_team_logo: awayLogo,
+        league_logo: leagueLogo
+      })
+      .eq('home_team', ev.home_team)
+      .eq('away_team', ev.away_team)
+      .eq('event_date', today);
+  }
+
+  console.log(`Logo sync finished. API calls used: ${apiCallsUsed}`);
+  return { apiCallsUsed };
+}
+
+
 Deno.serve(async (req) => {
   return await withMiddleware(req, FN_NAME, async (auth, request) => {
     const url = new URL(request.url);
@@ -242,6 +353,30 @@ Deno.serve(async (req) => {
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    if (request.method === 'GET' && path === 'logo-status') {
+      const today = new Date().toISOString().split('T')[0];
+
+      const { data: stats } = await supabase.rpc('get_logo_stats', { p_date: today });
+      
+      const { count: totalCache } = await supabase
+        .from('team_logos')
+        .select('*', { count: 'exact', head: true });
+        
+      const { count: foundCache } = await supabase
+        .from('team_logos')
+        .select('*', { count: 'exact', head: true })
+        .eq('found', true);
+
+      return new Response(
+        JSON.stringify({
+          today: stats?.[0] || { with_logo: 0, without_logo: 0, teams_missing: 0 },
+          cache: { total: totalCache, found: foundCache }
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
 
     if (request.method === 'GET' && path === 'summary') {
       const today = new Date().toISOString().split('T')[0];
@@ -288,12 +423,29 @@ Deno.serve(async (req) => {
         if (job === 'fetch_events') {
           // @ts-ignore EdgeRuntime is available in Supabase Edge Functions
           EdgeRuntime.waitUntil(
-            syncDailyEvents(supabase, 'manual').catch((err) =>
-              console.error('[BG] syncDailyEvents failed:', err)
+            (async () => {
+              try {
+                const results = await syncDailyEvents(supabase, 'manual');
+                await syncLogosForToday(supabase);
+                console.log(`[BG] fetch_events + sync_logos completed. Saved: ${results.totalSaved}`);
+              } catch (err) {
+                console.error('[BG] fetch_events + sync_logos failed:', err);
+              }
+            })()
+          );
+          return new Response(
+            JSON.stringify({ success: true, result: { queued: true, message: 'Sincronização de jogos e escudos iniciada em background.', totalSaved: 0 } }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } else if (job === 'sync_logos') {
+          // @ts-ignore EdgeRuntime is available in Supabase Edge Functions
+          EdgeRuntime.waitUntil(
+            syncLogosForToday(supabase).catch((err) =>
+              console.error('[BG] syncLogosForToday failed:', err)
             )
           );
           return new Response(
-            JSON.stringify({ success: true, result: { queued: true, message: 'Sincronização iniciada em background. Os dados aparecerão em alguns minutos.', totalSaved: 0 } }),
+            JSON.stringify({ success: true, result: { queued: true, message: 'Sincronização de escudos iniciada em background.' } }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         } else if (job === 'sync_leagues') {

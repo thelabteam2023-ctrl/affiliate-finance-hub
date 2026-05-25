@@ -3579,6 +3579,7 @@ export type Database = {
           id: string
           league_flag: string | null
           league_key: string
+          league_logo: string | null
           league_name: string
           result_away: string | null
           result_home: string | null
@@ -3601,6 +3602,7 @@ export type Database = {
           id?: string
           league_flag?: string | null
           league_key: string
+          league_logo?: string | null
           league_name: string
           result_away?: string | null
           result_home?: string | null
@@ -3623,6 +3625,7 @@ export type Database = {
           id?: string
           league_flag?: string | null
           league_key?: string
+          league_logo?: string | null
           league_name?: string
           result_away?: string | null
           result_home?: string | null
@@ -5868,6 +5871,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      league_logos: {
+        Row: {
+          api_sports_id: number | null
+          found: boolean | null
+          id: string
+          league_key: string
+          league_name: string | null
+          logo_url: string | null
+          searched_at: string | null
+          sport: string
+        }
+        Insert: {
+          api_sports_id?: number | null
+          found?: boolean | null
+          id?: string
+          league_key: string
+          league_name?: string | null
+          logo_url?: string | null
+          searched_at?: string | null
+          sport: string
+        }
+        Update: {
+          api_sports_id?: number | null
+          found?: boolean | null
+          id?: string
+          league_key?: string
+          league_name?: string | null
+          logo_url?: string | null
+          searched_at?: string | null
+          sport?: string
+        }
+        Relationships: []
       }
       limitation_events: {
         Row: {
@@ -11383,6 +11419,39 @@ export type Database = {
           },
         ]
       }
+      team_logos: {
+        Row: {
+          api_sports_id: number | null
+          found: boolean | null
+          id: string
+          logo_url: string | null
+          searched_at: string | null
+          sport: string
+          team_name_normalized: string
+          team_name_original: string
+        }
+        Insert: {
+          api_sports_id?: number | null
+          found?: boolean | null
+          id?: string
+          logo_url?: string | null
+          searched_at?: string | null
+          sport: string
+          team_name_normalized: string
+          team_name_original: string
+        }
+        Update: {
+          api_sports_id?: number | null
+          found?: boolean | null
+          id?: string
+          logo_url?: string | null
+          searched_at?: string | null
+          sport?: string
+          team_name_normalized?: string
+          team_name_original?: string
+        }
+        Relationships: []
+      }
       transacoes_bookmakers: {
         Row: {
           bookmaker_id: string
@@ -16270,6 +16339,14 @@ export type Database = {
         }[]
       }
       get_invite_by_token: { Args: { _token: string }; Returns: Json }
+      get_logo_stats: {
+        Args: { p_date: string }
+        Returns: {
+          teams_missing: number
+          with_logo: number
+          without_logo: number
+        }[]
+      }
       get_movimentacao_dependencies: {
         Args: { p_transacao_id: string }
         Returns: Json
