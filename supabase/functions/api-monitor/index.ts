@@ -139,7 +139,7 @@ const TEAM_ID_MAP: Record<string, { sport: string, id: number }> = {
   'Minnesota Timberwolves':{ sport: 'basketball', id: 21  },
   'Oklahoma City Thunder': { sport: 'basketball', id: 25  },
   'Portland Trail Blazers':{ sport: 'basketball', id: 29  },
-  'Utah Jazz:              { sport: 'basketball', id: 34  },
+  'Utah Jazz':              { sport: 'basketball', id: 34  },
   'Sacramento Kings':      { sport: 'basketball', id: 30  },
   'LA Clippers':           { sport: 'basketball', id: 19  },
   // NHL
