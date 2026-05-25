@@ -101,6 +101,31 @@ const ALL_LEAGUES = [
   { sport: 'icehockey', key: 'icehockey_germany_del', name: 'DEL', flag: '🇩🇪', continent: 'Europa', country: 'Alemanha', type: 'league' },
   { sport: 'icehockey', key: 'icehockey_czech_extraliga', name: 'Czech Extraliga', flag: '🇨🇿', continent: 'Europa', country: 'República Tcheca', type: 'league' },
   { sport: 'icehockey', key: 'icehockey_champions_hockey_league', name: 'Champions Hockey League', flag: '🇪🇺', continent: 'Europa', country: 'Continental', type: 'continental' },
+
+  // ESPORTS - LEAGUE OF LEGENDS
+  { sport: 'leagueoflegends', key: 'leagueoflegends_worlds', name: 'LoL Worlds', flag: '🎮', continent: 'Mundo', country: 'Internacional', type: 'cup' },
+  { sport: 'leagueoflegends', key: 'leagueoflegends_lck', name: 'LCK', flag: '🇰🇷', continent: 'Ásia', country: 'Coreia do Sul', type: 'league' },
+  { sport: 'leagueoflegends', key: 'leagueoflegends_lpl', name: 'LPL', flag: '🇨🇳', continent: 'Ásia', country: 'China', type: 'league' },
+  { sport: 'leagueoflegends', key: 'leagueoflegends_lec', name: 'LEC', flag: '🇪🇺', continent: 'Europa', country: 'Continental', type: 'league' },
+  { sport: 'leagueoflegends', key: 'leagueoflegends_lcs', name: 'LCS', flag: '🇺🇸', continent: 'América do Norte', country: 'Estados Unidos', type: 'league' },
+  
+  // ESPORTS - CS2
+  { sport: 'csgo', key: 'csgo_esl_pro_league', name: 'ESL Pro League', flag: '🔫', continent: 'Mundo', country: 'Internacional', type: 'league' },
+  { sport: 'csgo', key: 'csgo_iem', name: 'IEM', flag: '🔫', continent: 'Mundo', country: 'Internacional', type: 'cup' },
+  { sport: 'csgo', key: 'csgo_blast_premier', name: 'BLAST Premier', flag: '🔫', continent: 'Mundo', country: 'Internacional', type: 'league' },
+
+  // ESPORTS - DOTA 2
+  { sport: 'dota2', key: 'dota2_the_international', name: 'The International', flag: '🧙', continent: 'Mundo', country: 'Internacional', type: 'cup' },
+  { sport: 'dota2', key: 'dota2_esl_one', name: 'ESL One', flag: '🧙', continent: 'Mundo', country: 'Internacional', type: 'league' },
+
+  // ESPORTS - VALORANT
+  { sport: 'valorant', key: 'valorant_vct_americas', name: 'VCT Americas', flag: '🎯', continent: 'América', country: 'Continental', type: 'league' },
+  { sport: 'valorant', key: 'valorant_vct_emea', name: 'VCT EMEA', flag: '🎯', continent: 'Europa', country: 'Continental', type: 'league' },
+  
+  // ESPORTS - FIFA / EA FC
+  { sport: 'soccer_fifa', key: 'soccer_fifa_esoccer_battle', name: 'Esoccer Battle', flag: '🎮', continent: 'Mundo', country: 'Simulado', type: 'league' },
+  { sport: 'soccer_fifa', key: 'soccer_fifa_gt_leagues', name: 'GT Leagues', flag: '🎮', continent: 'Mundo', country: 'Simulado', type: 'league' },
+  { sport: 'soccer_fifa', key: 'soccer_fifa_cyber_live_arena', name: 'Cyber Live Arena', flag: '🎮', continent: 'Mundo', country: 'Simulado', type: 'league' },
 ];
 
 async function syncMonitoredLeagues(supabase: any) {
