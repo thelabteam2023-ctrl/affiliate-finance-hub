@@ -482,20 +482,47 @@ export default function ApiExplorer() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Esporte</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {SPORTS.map(s => (
-                    <Button 
-                      key={s.id} 
-                      variant={selectedSport === s.id ? 'default' : 'outline'} 
-                      size="sm"
-                      onClick={() => setSelectedSport(s.id)}
-                      className="h-10 text-[11px] font-bold"
-                    >
-                      {s.icon} {s.label}
-                    </Button>
-                  ))}
+              <div className="space-y-4">
+                <div className="flex p-1 bg-muted/50 rounded-xl">
+                  <Button 
+                    variant={sportType === 'traditional' ? 'secondary' : 'ghost'} 
+                    size="sm"
+                    onClick={() => {
+                      setSportType('traditional');
+                      setSelectedSport('soccer');
+                    }}
+                    className="flex-1 h-8 text-[10px] font-black uppercase tracking-tight"
+                  >
+                    Esportes
+                  </Button>
+                  <Button 
+                    variant={sportType === 'esports' ? 'secondary' : 'ghost'} 
+                    size="sm"
+                    onClick={() => {
+                      setSportType('esports');
+                      setSelectedSport('leagueoflegends');
+                    }}
+                    className="flex-1 h-8 text-[10px] font-black uppercase tracking-tight"
+                  >
+                    eSports
+                  </Button>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Esporte Selecionado</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(sportType === 'traditional' ? TRADITIONAL_SPORTS : ESPORTS).map(s => (
+                      <Button 
+                        key={s.id} 
+                        variant={selectedSport === s.id ? 'default' : 'outline'} 
+                        size="sm"
+                        onClick={() => setSelectedSport(s.id)}
+                        className="h-10 text-[11px] font-bold"
+                      >
+                        {s.icon} {s.label}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
