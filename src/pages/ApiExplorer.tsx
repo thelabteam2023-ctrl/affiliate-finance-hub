@@ -599,7 +599,7 @@ export default function ApiExplorer() {
                     <SheetHeader className="p-6 border-b">
                       <SheetTitle className="text-xl font-black tracking-tight flex items-center gap-2">
                         <ListFilter className="h-5 w-5 text-primary" />
-                        Auditoria de Ligas: {SPORTS.find(s => s.id === selectedSport)?.label}
+                        Auditoria de Ligas: {(sportType === 'traditional' ? TRADITIONAL_SPORTS : ESPORTS).find(s => s.id === selectedSport)?.label}
                       </SheetTitle>
                       <SheetDescription className="text-xs font-bold uppercase tracking-wider">
                         Controle de cobertura e integridade de dados.
