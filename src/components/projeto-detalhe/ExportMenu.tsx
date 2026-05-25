@@ -56,7 +56,7 @@ export function ExportMenu({
   size = 'icon',
   className = '',
 }: ExportMenuProps) {
-  const { exportToCSV, exportToXML, exporting, canExport } = useExportApostas();
+  const { exportToCSV, exportToXML, exportToExcel, exporting, canExport } = useExportApostas();
   const [open, setOpen] = useState(false);
 
   const handleExport = useCallback(async (format: ExportFormat) => {
@@ -69,11 +69,13 @@ export function ExportMenu({
 
     if (format === 'csv') {
       await exportToCSV(data, filename, context);
+    } else if (format === 'xlsx') {
+      await exportToExcel(data, filename, context);
     } else {
       await exportToXML(data, filename, context);
     }
     setOpen(false);
-  }, [getData, abaOrigem, filename, filtrosAplicados, exportToCSV, exportToXML]);
+  }, [getData, abaOrigem, filename, filtrosAplicados, exportToCSV, exportToExcel, exportToXML]);
 
   if (!canExport) {
     return null;
@@ -108,6 +110,14 @@ export function ExportMenu({
       </Tooltip>
 
       <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuItem
+          onClick={() => handleExport('xlsx')}
+          disabled={exporting}
+          className="cursor-pointer"
+        >
+          <FileSpreadsheet className="mr-2 h-4 w-4 text-emerald-600" />
+          <span>Exportar Excel (.xlsx)</span>
+        </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => handleExport('csv')}
           disabled={exporting}
@@ -249,6 +259,13 @@ export function transformApostaToExport(
   const lucroConvertido = convertValue(aposta.lucro_prejuizo, moeda, convert);
   const retornoConvertido = convertValue(aposta.valor_retorno, moeda, convert);
 
+  // Calcula stake em unidades (stake / 100 como padrão se não informado, ou apenas o valor nominal)
+  const stakeUnidades = typeof stakeConvertido === 'number' ? stakeConvertido / 100 : '-';
+  const lucroUnidades = typeof lucroConvertido === 'number' ? lucroConvertido / 100 : '-';
+  const roiValue = typeof stakeConvertido === 'number' && typeof lucroConvertido === 'number' && stakeConvertido > 0
+    ? (lucroConvertido / stakeConvertido) * 100
+    : '-';
+
   return {
     id: aposta.id,
     data_hora: aposta.data_aposta,
@@ -257,13 +274,19 @@ export function transformApostaToExport(
     aba_origem: abaOrigem,
     evento: aposta.evento || '-',
     mercado: aposta.mercado || '-',
+    esporte: aposta.esporte || '-',
     selecao: aposta.selecao || '-',
     odd: aposta.odd || 0,
+    fair_value: (aposta as any).fair_value || '-',
+    tipo_aposta: (aposta as any).tipo_aposta || (aposta.estrategia === 'VALUEBET' ? 'value bet' : 'back'),
     stake: stakeConvertido,
+    stake_unidades: stakeUnidades,
     retorno: retornoConvertido,
     resultado: aposta.resultado || 'PENDENTE',
     status: aposta.status,
     lucro_prejuizo: lucroConvertido,
+    lucro_unidades: lucroUnidades,
+    roi: roiValue,
     observacoes: aposta.observacoes || '',
   };
 }
