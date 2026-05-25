@@ -285,9 +285,6 @@ export default function ApiExplorer() {
   const countries = useMemo(() => Array.from(new Set(events.filter(e => e.continent === filters.continent || filters.continent === 'all').map(e => e.country).filter(Boolean))), [events, filters.continent]);
 
   const filteredEvents = useMemo(() => {
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
-    const tomorrowStr = format(new Date(new Date().setDate(new Date().getDate() + 1)), 'yyyy-MM-dd');
-    
     return events.filter(e => {
       const matchSearch = e.home_team.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           e.away_team.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -296,13 +293,19 @@ export default function ApiExplorer() {
       const matchCountry = filters.country === 'all' || e.country === filters.country;
       const matchType = filters.type === 'all' || e.competition_type === filters.type;
       
-      // Time filtering logic
-      const eventDate = e.commence_time.split('T')[0];
+      // Time filtering logic (considering local timezone)
+      const eventDate = parseISO(e.commence_time);
+      const localDateStr = format(eventDate, 'yyyy-MM-dd');
+      
+      const today = new Date();
+      const todayStr = format(today, 'yyyy-MM-dd');
+      const tomorrowStr = format(new Date(new Date().setDate(today.getDate() + 1)), 'yyyy-MM-dd');
+      
       let matchTime = false;
-      if (timeFilter === 'today') matchTime = eventDate === todayStr;
-      else if (timeFilter === 'tomorrow') matchTime = eventDate === tomorrowStr;
-      else if (timeFilter === 'upcoming') matchTime = eventDate > tomorrowStr;
-      else if (timeFilter === 'custom') matchTime = eventDate === customDate;
+      if (timeFilter === 'today') matchTime = localDateStr === todayStr;
+      else if (timeFilter === 'tomorrow') matchTime = localDateStr === tomorrowStr;
+      else if (timeFilter === 'upcoming') matchTime = localDateStr > tomorrowStr;
+      else if (timeFilter === 'custom') matchTime = localDateStr === customDate;
       
       return matchSearch && matchContinent && matchCountry && matchType && matchTime;
     });
