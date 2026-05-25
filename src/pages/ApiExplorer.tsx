@@ -48,20 +48,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 // Sports mapping
 const TRADITIONAL_SPORTS = [
-  { id: 'soccer', label: 'Futebol', icon: '⚽' },
-  { id: 'basketball', label: 'Basquete', icon: '🏀' },
-  { id: 'americanfootball', label: 'F. Americano', icon: '🏈' },
-  { id: 'baseball', label: 'Beisebol', icon: '⚾' },
-  { id: 'tennis', label: 'Tênis', icon: '🎾' },
-  { id: 'icehockey', label: 'Hóquei', icon: '🏒' },
+  { id: 'soccer', label: 'Futebol', icon: '⚽', status: 'supported' },
+  { id: 'basketball', label: 'Basquete', icon: '🏀', status: 'supported' },
+  { id: 'americanfootball', label: 'F. Americano', icon: '🏈', status: 'supported' },
+  { id: 'baseball', label: 'Beisebol', icon: '⚾', status: 'supported' },
+  { id: 'tennis', label: 'Tênis', icon: '🎾', status: 'supported' },
+  { id: 'icehockey', label: 'Hóquei', icon: '🏒', status: 'partial' },
 ];
 
 const ESPORTS = [
-  { id: 'leagueoflegends', label: 'LoL', icon: '🎮' },
-  { id: 'csgo', label: 'CS2', icon: '🔫' },
-  { id: 'valorant', label: 'Valorant', icon: '🎯' },
-  { id: 'dota2', label: 'Dota 2', icon: '🧙' },
-  { id: 'soccer_fifa', label: 'EA FC / FIFA', icon: '🎮' },
+  { id: 'leagueoflegends', label: 'LoL', icon: '🎮', status: 'unavailable' },
+  { id: 'csgo', label: 'CS2', icon: '🔫', status: 'unavailable' },
+  { id: 'valorant', label: 'Valorant', icon: '🎯', status: 'unavailable' },
+  { id: 'dota2', label: 'Dota 2', icon: '🧙', status: 'unavailable' },
+  { id: 'soccer_fifa', label: 'EA FC / FIFA', icon: '🎮', status: 'unavailable' },
 ];
 
 interface Event {
