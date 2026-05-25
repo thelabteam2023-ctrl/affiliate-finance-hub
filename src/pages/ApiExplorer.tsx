@@ -194,6 +194,16 @@ export default function ApiExplorer() {
     });
   }, [events, searchTerm, filters, timeFilter, customDate]);
 
+  // Match counts per date for calendar indicators
+  const matchCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    events.forEach(ev => {
+      const date = ev.commence_time.split('T')[0];
+      counts[date] = (counts[date] || 0) + 1;
+    });
+    return counts;
+  }, [events]);
+
   // Hierarchy for matches
   const groupedMatches = useMemo(() => {
     return filteredEvents.reduce((acc, ev) => {
