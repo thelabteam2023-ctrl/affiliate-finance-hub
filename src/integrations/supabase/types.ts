@@ -3568,6 +3568,9 @@ export type Database = {
           api_id: string
           away_team: string
           commence_time: string
+          competition_type: string | null
+          continent: string | null
+          country: string | null
           created_at: string | null
           event_date: string
           home_team: string
@@ -3585,6 +3588,9 @@ export type Database = {
           api_id: string
           away_team: string
           commence_time: string
+          competition_type?: string | null
+          continent?: string | null
+          country?: string | null
           created_at?: string | null
           event_date: string
           home_team: string
@@ -3602,6 +3608,9 @@ export type Database = {
           api_id?: string
           away_team?: string
           commence_time?: string
+          competition_type?: string | null
+          continent?: string | null
+          country?: string | null
           created_at?: string | null
           event_date?: string
           home_team?: string
