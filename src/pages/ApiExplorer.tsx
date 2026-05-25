@@ -365,7 +365,7 @@ export default function ApiExplorer() {
                     {Object.entries(countries).map(([country, types]: [string, any]) => (
                       <div key={country} className="space-y-4">
                         <div className="flex items-center gap-2 px-2">
-                          <Map className="h-4 w-4 text-primary" />
+                          <MapIcon className="h-4 w-4 text-primary" />
                           <h3 className="text-lg font-black tracking-tight">{country}</h3>
                         </div>
 
