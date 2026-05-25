@@ -122,6 +122,26 @@ const TEAM_ID_MAP: Record<string, { sport: string, id: number }> = {
   'New York Knicks':       { sport: 'basketball', id: 22  },
   'Cleveland Cavaliers':   { sport: 'basketball', id: 7   },
   'Minnesota Timberwolves':{ sport: 'basketball', id: 21  },
+  'Indiana Pacers':        { sport: 'basketball', id: 16  },
+  'Atlanta Hawks':         { sport: 'basketball', id: 1   },
+  'Charlotte Hornets':     { sport: 'basketball', id: 5   },
+  'Cleveland Cavaliers':   { sport: 'basketball', id: 7   },
+  'Detroit Pistons':       { sport: 'basketball', id: 11  },
+  'Orlando Magic':         { sport: 'basketball', id: 24  },
+  'Philadelphia 76ers':    { sport: 'basketball', id: 27  },
+  'Toronto Raptors':       { sport: 'basketball', id: 33  },
+  'Washington Wizards':    { sport: 'basketball', id: 40  },
+  'Houston Rockets':       { sport: 'basketball', id: 14  },
+  'Memphis Grizzlies':     { sport: 'basketball', id: 18  },
+  'New Orleans Pelicans':  { sport: 'basketball', id: 23  },
+  'San Antonio Spurs':     { sport: 'basketball', id: 31  },
+  'Denver Nuggets':        { sport: 'basketball', id: 10  },
+  'Minnesota Timberwolves':{ sport: 'basketball', id: 21  },
+  'Oklahoma City Thunder': { sport: 'basketball', id: 25  },
+  'Portland Trail Blazers':{ sport: 'basketball', id: 29  },
+  'Utah Jazz:              { sport: 'basketball', id: 34  },
+  'Sacramento Kings':      { sport: 'basketball', id: 30  },
+  'LA Clippers':           { sport: 'basketball', id: 19  },
   // NHL
   'Tampa Bay Lightning':   { sport: 'hockey', id: 30  },
   'Colorado Avalanche':    { sport: 'hockey', id: 7   },
@@ -131,6 +151,14 @@ const TEAM_ID_MAP: Record<string, { sport: string, id: number }> = {
   'New York Rangers':      { sport: 'hockey', id: 20  },
   'Carolina Hurricanes':   { sport: 'hockey', id: 6   },
   'Florida Panthers':      { sport: 'hockey', id: 13  },
+  // ADICIONAIS SOLICITADOS
+  'Nice':                  { sport: 'soccer', id: 84   },
+  'Saint Etienne':         { sport: 'soccer', id: 1063 },
+  'Palestino':             { sport: 'soccer', id: 2309 },
+  'Athletic Club':         { sport: 'soccer', id: 10325 }, // MG
+  'Athletic Bilbao':       { sport: 'soccer', id: 531  },
+  'Greuther Furth':        { sport: 'soccer', id: 184  },
+  'Rot-Weiss Essen':       { sport: 'soccer', id: 504  },
 };
 
 const LEAGUE_ID_MAP: Record<string, { sport: string, id: number }> = {
