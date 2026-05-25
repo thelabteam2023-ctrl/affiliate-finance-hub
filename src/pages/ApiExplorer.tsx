@@ -279,13 +279,16 @@ export default function ApiExplorer() {
       </div>
 
       {/* NAVIGATION TABS */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-xl w-fit">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex items-center gap-1 bg-muted/30 p-1.5 rounded-2xl w-fit border border-border/10 backdrop-blur-sm">
           <Button 
             variant={activeTab === 'matches' ? 'default' : 'ghost'} 
             size="sm" 
             onClick={() => setActiveTab('matches')}
-            className="rounded-lg px-4 h-9"
+            className={cn(
+              "rounded-xl px-6 h-10 transition-all duration-300 font-bold",
+              activeTab === 'matches' ? "shadow-lg shadow-primary/20 scale-105" : "text-muted-foreground hover:text-foreground"
+            )}
           >
             <CalendarIcon className="h-4 w-4 mr-2" /> Calendário
           </Button>
@@ -293,9 +296,12 @@ export default function ApiExplorer() {
             variant={activeTab === 'coverage' ? 'default' : 'ghost'} 
             size="sm" 
             onClick={() => setActiveTab('coverage')}
-            className="rounded-lg px-4 h-9"
+            className={cn(
+              "rounded-xl px-6 h-10 transition-all duration-300 font-bold",
+              activeTab === 'coverage' ? "shadow-lg shadow-primary/20 scale-105" : "text-muted-foreground hover:text-foreground"
+            )}
           >
-            <Globe className="h-4 w-4 mr-2" /> Cobertura de Ligas
+            <Globe className="h-4 w-4 mr-2" /> Cobertura
           </Button>
         </div>
 
