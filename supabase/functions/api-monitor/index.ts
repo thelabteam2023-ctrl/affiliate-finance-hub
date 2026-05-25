@@ -89,8 +89,8 @@ const ALL_LEAGUES = [
   { sport: 'americanfootball', key: 'americanfootball_ncaaf', name: 'NCAA Division I', flag: '🇺🇸', continent: 'América do Norte', country: 'Estados Unidos', type: 'league' },
 
   // TÊNIS (EXEMPLOS)
-  { sport: 'soccer', key: 'tennis_atp_french_open', name: 'ATP French Open', flag: '🇫🇷', continent: 'Europa', country: 'França', type: 'cup' },
-  { sport: 'soccer', key: 'tennis_wta_french_open', name: 'WTA French Open', flag: '🇫🇷', continent: 'Europa', country: 'França', type: 'cup' },
+  { sport: 'tennis', key: 'tennis_atp_french_open', name: 'ATP French Open', flag: '🇫🇷', continent: 'Europa', country: 'França', type: 'cup' },
+  { sport: 'tennis', key: 'tennis_wta_french_open', name: 'WTA French Open', flag: '🇫🇷', continent: 'Europa', country: 'França', type: 'cup' },
 
   // HÓQUEI
   { sport: 'icehockey', key: 'icehockey_nhl', name: 'NHL', flag: '🇺🇸', continent: 'América do Norte', country: 'Estados Unidos', type: 'league' },

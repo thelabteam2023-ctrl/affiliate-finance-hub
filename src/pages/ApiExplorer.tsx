@@ -83,20 +83,69 @@ interface Event {
   synced_at: string;
 }
 
+// Paleta determinística premium para fallback (HSL — combina com design system)
+const TEAM_GRADIENTS = [
+  ['hsl(217 91% 60%)', 'hsl(224 76% 38%)'],   // azul royal
+  ['hsl(142 71% 45%)', 'hsl(160 84% 30%)'],   // verde esmeralda
+  ['hsl(0 84% 60%)',   'hsl(346 87% 43%)'],   // vermelho carmim
+  ['hsl(38 92% 50%)',  'hsl(24 95% 53%)'],    // âmbar/laranja
+  ['hsl(271 91% 65%)', 'hsl(262 83% 48%)'],   // violeta
+  ['hsl(189 94% 43%)', 'hsl(199 89% 38%)'],   // ciano
+  ['hsl(330 81% 60%)', 'hsl(316 70% 43%)'],   // magenta
+  ['hsl(48 96% 53%)',  'hsl(36 92% 45%)'],    // dourado
+  ['hsl(173 80% 40%)', 'hsl(180 84% 28%)'],   // teal
+  ['hsl(280 65% 55%)', 'hsl(252 70% 42%)'],   // índigo/púrpura
+];
+
+const hashName = (s: string) => {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h) + s.charCodeAt(i);
+  return Math.abs(h);
+};
+
+const getInitials = (name: string) => {
+  const clean = name.trim().replace(/[^\p{L}\p{N}\s]/gu, '');
+  const parts = clean.split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
 const TeamLogo = ({ name, url, className }: { name: string, url?: string | null, className?: string }) => {
   const [error, setError] = useState(false);
-  
-  // Use a reliable logo placeholder service as fallback
-  const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff&bold=true&font-size=0.45`;
+  const hasImage = !!url && !error;
+
+  const [c1, c2] = TEAM_GRADIENTS[hashName(name) % TEAM_GRADIENTS.length];
+  const initials = getInitials(name);
 
   return (
-    <div className={cn("relative flex h-8 w-8 shrink-0 overflow-hidden rounded-full border bg-muted shadow-sm", className)}>
-      <img 
-        src={error || !url ? fallbackUrl : url} 
-        alt={name} 
-        className="aspect-square h-full w-full object-contain p-0.5"
-        onError={() => setError(true)}
-      />
+    <div
+      className={cn(
+        "relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.4)] ring-1 ring-black/20",
+        className
+      )}
+      style={hasImage ? undefined : { background: `linear-gradient(135deg, ${c1}, ${c2})` }}
+      aria-label={name}
+    >
+      {hasImage ? (
+        <img
+          src={url!}
+          alt={name}
+          className="aspect-square h-full w-full object-contain p-0.5"
+          onError={() => setError(true)}
+        />
+      ) : (
+        <>
+          <span
+            className="relative z-10 text-[10px] font-black uppercase tracking-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]"
+            style={{ fontFeatureSettings: '"ss01"' }}
+          >
+            {initials}
+          </span>
+          {/* gloss overlay premium */}
+          <span className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/25 via-transparent to-black/20" />
+        </>
+      )}
     </div>
   );
 };
