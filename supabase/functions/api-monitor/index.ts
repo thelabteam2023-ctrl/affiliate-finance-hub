@@ -43,6 +43,11 @@ const ALL_LEAGUES = [
   { sport: 'soccer', key: 'soccer_uefa_champs_league', name: 'Champions League', flag: '🏆', continent: 'Europa', country: 'Continental', type: 'continental' },
   { sport: 'soccer', key: 'soccer_uefa_europa_league', name: 'Europa League', flag: '🏆', continent: 'Europa', country: 'Continental', type: 'continental' },
   { sport: 'soccer', key: 'soccer_uefa_europa_conference_league', name: 'Conference League', flag: '🏆', continent: 'Europa', country: 'Continental', type: 'continental' },
+  { sport: 'soccer', key: 'soccer_uefa_euro_cup', name: 'Eurocopa', flag: '🇪🇺', continent: 'Europa', country: 'Continental', type: 'continental' },
+  { sport: 'soccer', key: 'soccer_conmebol_copa_america', name: 'Copa América', flag: '🏆', continent: 'América do Sul', country: 'Continental', type: 'continental' },
+  { sport: 'soccer', key: 'soccer_fifa_world_cup', name: 'Copa do Mundo', flag: '🌎', continent: 'Mundo', country: 'Internacional', type: 'cup' },
+  { sport: 'soccer', key: 'soccer_fifa_world_cup_qualifiers_south_america', name: 'Eliminatórias Copa (Am. Sul)', flag: '🌎', continent: 'América do Sul', country: 'Continental', type: 'continental' },
+  { sport: 'soccer', key: 'soccer_fifa_world_cup_qualifiers_europe', name: 'Eliminatórias Copa (Europa)', flag: '🌎', continent: 'Europa', country: 'Continental', type: 'continental' },
 
   // FUTEBOL - ORIENTE MÉDIO / ÁSIA
   { sport: 'soccer', key: 'soccer_saudi_arabia_pro_league', name: 'Saudi Pro League', flag: '🇸🇦', continent: 'Oriente Médio', country: 'Arábia Saudita', type: 'league' },
