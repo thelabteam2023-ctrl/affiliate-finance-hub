@@ -77,7 +77,8 @@ export default function ApiExplorer() {
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'matches' | 'coverage'>('matches');
-  const [timeFilter, setTimeFilter] = useState<'today' | 'upcoming'>('today');
+  const [timeFilter, setTimeFilter] = useState<'today' | 'tomorrow' | 'upcoming' | 'custom'>('today');
+  const [customDate, setCustomDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   
   // Filters
   const [filters, setFilters] = useState({
@@ -164,6 +165,7 @@ export default function ApiExplorer() {
 
   const filteredEvents = useMemo(() => {
     const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const tomorrowStr = format(new Date(new Date().setDate(new Date().getDate() + 1)), 'yyyy-MM-dd');
     
     return events.filter(e => {
       const matchSearch = e.home_team.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -175,11 +177,15 @@ export default function ApiExplorer() {
       
       // Time filtering logic
       const eventDate = e.commence_time.split('T')[0];
-      const matchTime = timeFilter === 'today' ? eventDate === todayStr : eventDate > todayStr;
+      let matchTime = false;
+      if (timeFilter === 'today') matchTime = eventDate === todayStr;
+      else if (timeFilter === 'tomorrow') matchTime = eventDate === tomorrowStr;
+      else if (timeFilter === 'upcoming') matchTime = eventDate > tomorrowStr;
+      else if (timeFilter === 'custom') matchTime = eventDate === customDate;
       
       return matchSearch && matchContinent && matchCountry && matchType && matchTime;
     });
-  }, [events, searchTerm, filters, timeFilter]);
+  }, [events, searchTerm, filters, timeFilter, customDate]);
 
   // Hierarchy for matches
   const groupedMatches = useMemo(() => {
@@ -277,29 +283,31 @@ export default function ApiExplorer() {
         </div>
 
         {activeTab === 'matches' && (
-          <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl w-fit border border-border/20">
-            <Button 
-              variant={timeFilter === 'today' ? 'secondary' : 'ghost'} 
-              size="sm" 
-              onClick={() => setTimeFilter('today')}
-              className={cn(
-                "rounded-lg px-4 h-8 text-[11px] font-black uppercase tracking-tight",
-                timeFilter === 'today' && "bg-background shadow-sm"
-              )}
-            >
-              Hoje
-            </Button>
-            <Button 
-              variant={timeFilter === 'upcoming' ? 'secondary' : 'ghost'} 
-              size="sm" 
-              onClick={() => setTimeFilter('upcoming')}
-              className={cn(
-                "rounded-lg px-4 h-8 text-[11px] font-black uppercase tracking-tight",
-                timeFilter === 'upcoming' && "bg-background shadow-sm"
-              )}
-            >
-              Próximos
-            </Button>
+          <div className="flex flex-wrap items-center gap-1 bg-muted/50 p-1 rounded-xl w-fit border border-border/20">
+            {['today', 'tomorrow', 'upcoming'].map((t) => (
+              <Button 
+                key={t}
+                variant={timeFilter === t ? 'secondary' : 'ghost'} 
+                size="sm" 
+                onClick={() => setTimeFilter(t as any)}
+                className={cn(
+                  "rounded-lg px-4 h-8 text-[11px] font-black uppercase tracking-tight",
+                  timeFilter === t && "bg-background shadow-sm"
+                )}
+              >
+                {t === 'today' ? 'Hoje' : t === 'tomorrow' ? 'Amanhã' : 'Próximos'}
+              </Button>
+            ))}
+            <div className="h-4 w-[1px] bg-border mx-1" />
+            <Input
+              type="date"
+              value={customDate}
+              onChange={(e) => {
+                setTimeFilter('custom');
+                setCustomDate(e.target.value);
+              }}
+              className="h-8 w-[130px] text-[11px] font-bold bg-background border-none shadow-sm rounded-lg"
+            />
           </div>
         )}
       </div>
