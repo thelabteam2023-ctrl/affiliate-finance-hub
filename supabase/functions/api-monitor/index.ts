@@ -262,7 +262,8 @@ async function getOrSearchTeamLogo(supabase: any, teamName: string, sport: strin
     if (result.data?.response?.length > 0) {
       // Pega o primeiro resultado da busca por nome
       const teamRes = result.data.response[0];
-      const team = teamRes.team || teamRes; // Depende da API de cada esporte
+      // Se for futebol, tem objeto .team. Em outros esportes (ex: basketball) os campos são diretos.
+      const team = teamRes.team || teamRes;
       logoUrl = team.logo;
       apiId = team.id;
     }
