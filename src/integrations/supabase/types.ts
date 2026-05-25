@@ -11422,6 +11422,7 @@ export type Database = {
       team_logos: {
         Row: {
           api_sports_id: number | null
+          country: string | null
           found: boolean | null
           id: string
           logo_url: string | null
@@ -11432,6 +11433,7 @@ export type Database = {
         }
         Insert: {
           api_sports_id?: number | null
+          country?: string | null
           found?: boolean | null
           id?: string
           logo_url?: string | null
@@ -11442,6 +11444,7 @@ export type Database = {
         }
         Update: {
           api_sports_id?: number | null
+          country?: string | null
           found?: boolean | null
           id?: string
           logo_url?: string | null
@@ -16689,6 +16692,7 @@ export type Database = {
         Args: { p_reason?: string; p_topic_id: string }
         Returns: Json
       }
+      normalize_text: { Args: { input_text: string }; Returns: string }
       operator_has_project_access: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
