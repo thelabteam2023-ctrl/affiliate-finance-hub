@@ -504,7 +504,7 @@ export default function ApiExplorer() {
                     }}
                     className="flex-1 h-8 text-[10px] font-black uppercase tracking-tight"
                   >
-                    eSports
+                    E-Sports
                   </Button>
                 </div>
 
