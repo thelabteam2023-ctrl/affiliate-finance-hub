@@ -11431,7 +11431,7 @@ export type Database = {
           country: string | null
           found: boolean | null
           id: string
-          league_key: string | null
+          league_key: string
           logo_url: string | null
           searched_at: string | null
           sport: string
@@ -11443,7 +11443,7 @@ export type Database = {
           country?: string | null
           found?: boolean | null
           id?: string
-          league_key?: string | null
+          league_key: string
           logo_url?: string | null
           searched_at?: string | null
           sport: string
@@ -11455,7 +11455,7 @@ export type Database = {
           country?: string | null
           found?: boolean | null
           id?: string
-          league_key?: string | null
+          league_key?: string
           logo_url?: string | null
           searched_at?: string | null
           sport?: string

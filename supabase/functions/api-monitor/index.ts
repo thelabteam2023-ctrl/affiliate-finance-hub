@@ -73,6 +73,22 @@ async function lookupTeamLogo(supabase: any, teamName: string, leagueKey: string
     .eq('team_name_normalized', normalized)
     .maybeSingle();
   if (data?.found) return data.logo_url;
+
+  // Fallback resiliente: nomes parciais (ex: "Wolves" vs "Wolverhampton Wanderers")
+  if (normalized.length >= 4) {
+    const { data: rows } = await supabase
+      .from('team_logos')
+      .select('logo_url, team_name_normalized, found')
+      .eq('league_key', leagueKey)
+      .eq('found', true);
+    if (rows?.length) {
+      const match = rows.find((r: any) =>
+        r.team_name_normalized.includes(normalized) ||
+        normalized.includes(r.team_name_normalized)
+      );
+      if (match) return match.logo_url;
+    }
+  }
   return null;
 }
 
@@ -89,20 +105,30 @@ async function syncLeagueTeamsBulk(
   country?: string,
 ) {
   const apiEndpoint = API_SPORTS_ENDPOINTS[sport] || API_SPORTS_ENDPOINTS.soccer;
-  const url = `${apiEndpoint}/teams?league=${leagueId}&season=${season}`;
-  console.log(`[BULK SYNC] ${leagueKey} (league=${leagueId}, season=${season}, sport=${sport})`);
+  // Tenta a temporada configurada e faz fallback para a anterior se vier vazia
+  const seasonsToTry = Array.from(new Set([season, season - 1])).filter((s) => s > 2000);
+  let result: any = null;
+  let usedSeason = season;
 
   try {
-    const result = await callExternalApi({
-      apiName: 'api_football',
-      endpoint: url,
-      sportKey: sport,
-      creditsUsed: 1,
-      triggeredBy: 'manual'
-    });
+    for (const s of seasonsToTry) {
+      const url = `${apiEndpoint}/teams?league=${leagueId}&season=${s}`;
+      console.log(`[BULK SYNC] ${leagueKey} (league=${leagueId}, season=${s}, sport=${sport})`);
+      result = await callExternalApi({
+        apiName: 'api_football',
+        endpoint: url,
+        sportKey: sport,
+        creditsUsed: 1,
+        triggeredBy: 'manual'
+      });
+      if (result.data?.response?.length) {
+        usedSeason = s;
+        break;
+      }
+      console.warn(`[BULK SYNC] ${leagueKey} season=${s}: vazio${result.errorMessage ? ` (${result.errorMessage})` : ''}`);
+    }
 
-    if (!result.data?.response?.length) {
-      console.warn(`[BULK SYNC] ${leagueKey}: vazio`);
+    if (!result?.data?.response?.length) {
       return 0;
     }
 
@@ -125,7 +151,7 @@ async function syncLeagueTeamsBulk(
       if (!error) saved++;
       else console.error(`[BULK SYNC] upsert error ${team.name}:`, error.message);
     }
-    console.log(`[BULK SYNC] ${leagueKey}: ${saved} times salvos`);
+    console.log(`[BULK SYNC] ${leagueKey} (season=${usedSeason}): ${saved} times salvos`);
     return saved;
   } catch (err) {
     console.error(`[BULK SYNC] erro ${leagueKey}:`, err);
