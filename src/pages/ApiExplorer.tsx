@@ -78,8 +78,28 @@ interface Event {
   commence_time: string;
   result_home: string | null;
   result_away: string | null;
+  home_team_logo: string | null;
+  away_team_logo: string | null;
   synced_at: string;
 }
+
+const TeamLogo = ({ name, url, className }: { name: string, url?: string | null, className?: string }) => {
+  const [error, setError] = useState(false);
+  
+  // Use a reliable logo placeholder service as fallback
+  const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff&bold=true&font-size=0.45`;
+
+  return (
+    <div className={cn("relative flex h-8 w-8 shrink-0 overflow-hidden rounded-full border bg-muted shadow-sm", className)}>
+      <img 
+        src={error || !url ? fallbackUrl : url} 
+        alt={name} 
+        className="aspect-square h-full w-full object-contain p-0.5"
+        onError={() => setError(true)}
+      />
+    </div>
+  );
+};
 
 export default function ApiExplorer() {
   const { isSystemOwner } = useAuth();
