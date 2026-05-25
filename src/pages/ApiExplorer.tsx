@@ -21,8 +21,17 @@ import {
   CheckCircle2,
   XCircle,
   LayoutGrid,
-  Info
+  Info,
+  ListFilter
 } from 'lucide-react';
+import { 
+  Sheet, 
+  SheetContent, 
+  SheetHeader, 
+  SheetTitle, 
+  SheetDescription,
+  SheetTrigger 
+} from '@/components/ui/sheet';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format, isToday, parseISO, differenceInMinutes, startOfDay, endOfDay } from 'date-fns';
@@ -34,8 +43,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 const SPORTS = [
   { id: 'soccer', label: 'Futebol', icon: '⚽' },
   { id: 'basketball', label: 'Basquete', icon: '🏀' },
+  { id: 'americanfootball', label: 'F. Americano', icon: '🏈' },
+  { id: 'baseball', label: 'Beisebol', icon: '⚾' },
   { id: 'tennis', label: 'Tênis', icon: '🎾' },
-  { id: 'icehockey', label: 'Hockey', icon: '🏒' },
 ];
 
 interface Event {
@@ -61,6 +71,7 @@ export default function ApiExplorer() {
   
   const [selectedSport, setSelectedSport] = useState('soccer');
   const [events, setEvents] = useState<Event[]>([]);
+  const [monitoredLeagues, setMonitoredLeagues] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(null);
@@ -91,15 +102,28 @@ export default function ApiExplorer() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('daily_events')
-        .select('*')
-        .eq('sport', selectedSport)
-        .order('commence_time', { ascending: true });
+      const [eventsRes, leaguesRes] = await Promise.all([
+        supabase
+          .from('daily_events')
+          .select('*')
+          .eq('sport', selectedSport)
+          .order('commence_time', { ascending: true }),
+        supabase
+          .from('monitored_leagues')
+          .select('*')
+          .eq('sport', selectedSport)
+          .order('continent', { ascending: true })
+      ]);
 
-      if (error) throw error;
-      setEvents(data || []);
-      if (data && data.length > 0) setLastSync(data[0].synced_at);
+      if (eventsRes.error) throw eventsRes.error;
+      if (leaguesRes.error) throw leaguesRes.error;
+
+      setEvents(eventsRes.data || []);
+      setMonitoredLeagues(leaguesRes.data || []);
+      
+      if (eventsRes.data && eventsRes.data.length > 0) {
+        setLastSync(eventsRes.data[0].synced_at);
+      }
     } catch (err: any) {
       toast.error('Erro ao carregar dados locais');
     } finally {
@@ -323,18 +347,110 @@ export default function ApiExplorer() {
           </Card>
 
           {/* QUICK STATS */}
-          <Card className="rounded-2xl border-border/40 bg-primary/5 border-primary/10">
-            <CardContent className="p-4 space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Total de Jogos</span>
-                <span className="text-xl font-black text-primary">{events.length}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Ligas Ativas</span>
-                <span className="text-xl font-black text-primary">{coverage.length}</span>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="space-y-4">
+            <Card className="rounded-2xl border-border/40 bg-primary/5 border-primary/10">
+              <CardContent className="p-4 space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Total de Jogos</span>
+                  <span className="text-xl font-black text-primary">{events.length}</span>
+                </div>
+                
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <button className="w-full flex justify-between items-center hover:bg-primary/5 p-2 -m-2 rounded-lg transition-colors group">
+                      <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest group-hover:text-primary">Ligas Monitoradas</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl font-black text-primary">{monitoredLeagues.length}</span>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+                      </div>
+                    </button>
+                  </SheetTrigger>
+                  <SheetContent className="w-full sm:max-w-md md:max-w-lg p-0 border-l">
+                    <SheetHeader className="p-6 border-b">
+                      <SheetTitle className="text-xl font-black tracking-tight flex items-center gap-2">
+                        <ListFilter className="h-5 w-5 text-primary" />
+                        Auditoria de Ligas: {SPORTS.find(s => s.id === selectedSport)?.label}
+                      </SheetTitle>
+                      <SheetDescription className="text-xs font-bold uppercase tracking-wider">
+                        Controle de cobertura e integridade de dados.
+                      </SheetDescription>
+                    </SheetHeader>
+                    
+                    <ScrollArea className="h-[calc(100vh-120px)]">
+                      <div className="p-6 space-y-8">
+                        {/* Summary Cards */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="bg-muted/50 p-4 rounded-xl border border-border/40">
+                            <span className="text-[9px] font-black uppercase text-muted-foreground block mb-1">Com Jogos</span>
+                            <span className="text-2xl font-black text-emerald-500">
+                              {monitoredLeagues.filter(l => events.some(e => e.league_key === l.league_key)).length}
+                            </span>
+                          </div>
+                          <div className="bg-muted/50 p-4 rounded-xl border border-border/40">
+                            <span className="text-[9px] font-black uppercase text-muted-foreground block mb-1">Sem Jogos</span>
+                            <span className="text-2xl font-black text-rose-500">
+                              {monitoredLeagues.filter(l => !events.some(e => e.league_key === l.league_key)).length}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* List by Continent */}
+                        {Array.from(new Set(monitoredLeagues.map(l => l.continent))).sort().map(continent => (
+                          <div key={continent} className="space-y-4">
+                            <div className="flex items-center gap-2">
+                              <Badge className="bg-foreground text-background font-black px-3 py-0.5 rounded-full uppercase tracking-widest text-[9px]">
+                                {continent || 'Outros'}
+                              </Badge>
+                              <div className="h-[1px] flex-1 bg-border/40" />
+                            </div>
+                            
+                            <div className="space-y-2">
+                              {monitoredLeagues
+                                .filter(l => l.continent === continent)
+                                .map(league => {
+                                  const gameCount = events.filter(e => e.league_key === league.league_key).length;
+                                  return (
+                                    <div key={league.league_key} className="flex items-center justify-between p-3 rounded-lg border border-border/20 bg-card/50 hover:bg-muted/50 transition-colors">
+                                      <div className="flex items-center gap-3">
+                                        <span className="text-lg">{league.league_flag}</span>
+                                        <div className="flex flex-col">
+                                          <span className="text-xs font-bold leading-none">{league.league_name}</span>
+                                          <span className="text-[10px] text-muted-foreground font-semibold uppercase">{league.country}</span>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-3">
+                                        {gameCount > 0 ? (
+                                          <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-[10px] font-black">
+                                            {gameCount} JOGOS
+                                          </Badge>
+                                        ) : (
+                                          <Badge variant="outline" className="text-muted-foreground/40 border-muted-foreground/20 text-[10px] font-black">
+                                            Vazio
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </SheetContent>
+                </Sheet>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-2xl border-border/40 bg-muted/20">
+              <CardContent className="p-4">
+                <p className="text-[10px] font-bold text-muted-foreground flex items-center gap-2">
+                  <AlertCircle className="h-3 w-3" />
+                  Ligas sem jogos indicam que não há partidas programadas para as próximas 24h na API.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         {/* MAIN FEED */}
