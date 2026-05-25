@@ -77,6 +77,7 @@ export default function ApiExplorer() {
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'matches' | 'coverage'>('matches');
+  const [timeFilter, setTimeFilter] = useState<'today' | 'upcoming'>('today');
   
   // Filters
   const [filters, setFilters] = useState({
@@ -162,6 +163,8 @@ export default function ApiExplorer() {
   const countries = useMemo(() => Array.from(new Set(events.filter(e => e.continent === filters.continent || filters.continent === 'all').map(e => e.country).filter(Boolean))), [events, filters.continent]);
 
   const filteredEvents = useMemo(() => {
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    
     return events.filter(e => {
       const matchSearch = e.home_team.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           e.away_team.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -170,9 +173,13 @@ export default function ApiExplorer() {
       const matchCountry = filters.country === 'all' || e.country === filters.country;
       const matchType = filters.type === 'all' || e.competition_type === filters.type;
       
-      return matchSearch && matchContinent && matchCountry && matchType;
+      // Time filtering logic
+      const eventDate = e.commence_time.split('T')[0];
+      const matchTime = timeFilter === 'today' ? eventDate === todayStr : eventDate > todayStr;
+      
+      return matchSearch && matchContinent && matchCountry && matchType && matchTime;
     });
-  }, [events, searchTerm, filters]);
+  }, [events, searchTerm, filters, timeFilter]);
 
   // Hierarchy for matches
   const groupedMatches = useMemo(() => {
@@ -249,23 +256,52 @@ export default function ApiExplorer() {
       </div>
 
       {/* NAVIGATION TABS */}
-      <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-xl w-fit">
-        <Button 
-          variant={activeTab === 'matches' ? 'default' : 'ghost'} 
-          size="sm" 
-          onClick={() => setActiveTab('matches')}
-          className="rounded-lg px-4"
-        >
-          <CalendarIcon className="h-4 w-4 mr-2" /> Jogos do Dia
-        </Button>
-        <Button 
-          variant={activeTab === 'coverage' ? 'default' : 'ghost'} 
-          size="sm" 
-          onClick={() => setActiveTab('coverage')}
-          className="rounded-lg px-4"
-        >
-          <Globe className="h-4 w-4 mr-2" /> Cobertura de Ligas
-        </Button>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-xl w-fit">
+          <Button 
+            variant={activeTab === 'matches' ? 'default' : 'ghost'} 
+            size="sm" 
+            onClick={() => setActiveTab('matches')}
+            className="rounded-lg px-4 h-9"
+          >
+            <CalendarIcon className="h-4 w-4 mr-2" /> Calendário
+          </Button>
+          <Button 
+            variant={activeTab === 'coverage' ? 'default' : 'ghost'} 
+            size="sm" 
+            onClick={() => setActiveTab('coverage')}
+            className="rounded-lg px-4 h-9"
+          >
+            <Globe className="h-4 w-4 mr-2" /> Cobertura de Ligas
+          </Button>
+        </div>
+
+        {activeTab === 'matches' && (
+          <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl w-fit border border-border/20">
+            <Button 
+              variant={timeFilter === 'today' ? 'secondary' : 'ghost'} 
+              size="sm" 
+              onClick={() => setTimeFilter('today')}
+              className={cn(
+                "rounded-lg px-4 h-8 text-[11px] font-black uppercase tracking-tight",
+                timeFilter === 'today' && "bg-background shadow-sm"
+              )}
+            >
+              Hoje
+            </Button>
+            <Button 
+              variant={timeFilter === 'upcoming' ? 'secondary' : 'ghost'} 
+              size="sm" 
+              onClick={() => setTimeFilter('upcoming')}
+              className={cn(
+                "rounded-lg px-4 h-8 text-[11px] font-black uppercase tracking-tight",
+                timeFilter === 'upcoming' && "bg-background shadow-sm"
+              )}
+            >
+              Próximos
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="grid lg:grid-cols-[280px_1fr] gap-6">
