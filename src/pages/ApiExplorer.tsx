@@ -255,7 +255,7 @@ export default function ApiExplorer() {
   };
 
   const handleSyncLogos = async () => {
-    if (!window.confirm('Sincronizar escudos agora? Isso consumirá créditos da API-Sports (1 req por time novo).')) return;
+    if (!window.confirm('Sincronização completa de escudos: ~30 créditos da API-Sports (1 por liga monitorada). Continuar?')) return;
     setSyncingLogos(true);
     try {
       const session = (await supabase.auth.getSession()).data.session;
@@ -265,13 +265,13 @@ export default function ApiExplorer() {
           'Authorization': `Bearer ${session?.access_token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ job: 'sync_logos' })
+        body: JSON.stringify({ job: 'sync_all_teams' })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       
-      toast.success(data.result.message || 'Sincronização de escudos iniciada em background.');
-      setTimeout(() => loadData(), 5000);
+      toast.success(data.result.message || 'Sincronização completa iniciada em background.');
+      setTimeout(() => loadData(), 15000);
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -391,7 +391,7 @@ export default function ApiExplorer() {
             className="rounded-full h-11 px-6 font-bold border-primary/20 hover:bg-primary/5 text-primary"
           >
             {syncingLogos ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Globe className="h-4 w-4 mr-2" />}
-            {syncingLogos ? 'Sincronizando...' : 'Sincronizar Escudos'}
+            {syncingLogos ? 'Sincronizando...' : 'Sincronizar Todos os Times'}
           </Button>
           <Button 
             onClick={handleManualSync} 
