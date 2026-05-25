@@ -80,8 +80,10 @@ interface Event {
   result_away: string | null;
   home_team_logo: string | null;
   away_team_logo: string | null;
+  league_logo: string | null;
   synced_at: string;
 }
+
 
 // Paleta determinística premium para fallback (HSL — combina com design system)
 const TEAM_GRADIENTS = [
