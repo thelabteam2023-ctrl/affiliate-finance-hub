@@ -4,6 +4,98 @@ import { callExternalApi } from '../_shared/apiWrapper.ts';
 
 const FN_NAME = 'api-monitor';
 
+// Lista completa de todas as ligas que queremos monitorar (The Odds API keys)
+const ALL_LEAGUES = [
+  // FUTEBOL
+  { sport: 'soccer', key: 'soccer_brazil_campeonato',          name: 'Brasileirão Série A',     flag: '🇧🇷' },
+  { sport: 'soccer', key: 'soccer_epl',                        name: 'Premier League',           flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
+  { sport: 'soccer', key: 'soccer_germany_bundesliga',         name: 'Bundesliga',               flag: '🇩🇪' },
+  { sport: 'soccer', key: 'soccer_spain_la_liga',              name: 'La Liga',                  flag: '🇪🇸' },
+  { sport: 'soccer', key: 'soccer_italy_serie_a',              name: 'Serie A',                  flag: '🇮🇹' },
+  { sport: 'soccer', key: 'soccer_france_ligue_one',           name: 'Ligue 1',                  flag: '🇫🇷' },
+  { sport: 'soccer', key: 'soccer_uefa_champs_league',         name: 'Champions League',         flag: '🏆' },
+  { sport: 'soccer', key: 'soccer_uefa_europa_league',         name: 'Europa League',            flag: '🏆' },
+  { sport: 'soccer', key: 'soccer_usa_mls',                    name: 'MLS',                      flag: '🇺🇸' },
+  { sport: 'soccer', key: 'soccer_argentina_primera_division', name: 'Liga Argentina',           flag: '🇦🇷' },
+  { sport: 'soccer', key: 'soccer_saudi_professional_league',  name: 'Saudi Pro League',         flag: '🇸🇦' },
+  { sport: 'soccer', key: 'soccer_turkey_super_league',        name: 'Süper Lig',                flag: '🇹🇷' },
+  { sport: 'soccer', key: 'soccer_netherlands_eredivisie',     name: 'Eredivisie',               flag: '🇳🇱' },
+  { sport: 'soccer', key: 'soccer_portugal_primeira_liga',     name: 'Primeira Liga',            flag: '🇵🇹' },
+  { sport: 'soccer', key: 'soccer_mexico_ligamx',              name: 'Liga MX',                  flag: '🇲🇽' },
+  // BASQUETE
+  { sport: 'basketball', key: 'basketball_nba',                name: 'NBA',                      flag: '🇺🇸' },
+  { sport: 'basketball', key: 'basketball_euroleague',         name: 'EuroLeague',               flag: '🇪🇺' },
+  // TÊNIS
+  { sport: 'tennis', key: 'tennis_atp_french_open',            name: 'ATP French Open',          flag: '🇫🇷' },
+  { sport: 'tennis', key: 'tennis_wta_french_open',            name: 'WTA French Open',          flag: '🇫🇷' },
+  // HOCKEY
+  { sport: 'icehockey', key: 'icehockey_nhl',                  name: 'NHL',                      flag: '🇺🇸' },
+];
+
+async function syncDailyEvents(supabase: any, triggeredBy: 'cron' | 'manual' = 'cron') {
+  const apiKey = Deno.env.get('ODDS_API_KEY');
+  if (!apiKey) throw new Error('ODDS_API_KEY not set');
+
+  let totalSaved = 0;
+  let totalCredits = 0;
+
+  for (const league of ALL_LEAGUES) {
+    try {
+      const endpoint = `https://api.the-odds-api.com/v4/sports/${league.key}/events?apiKey=${apiKey}&dateFormat=iso`;
+      
+      const result = await callExternalApi({
+        apiName: 'odds_api',
+        endpoint,
+        sportKey: league.key,
+        triggeredBy,
+        creditsUsed: 1
+      });
+
+      totalCredits++;
+
+      if (result.errorMessage || !result.data) {
+        console.warn(`[SKIP] ${league.key}: ${result.errorMessage || 'No data'}`);
+        continue;
+      }
+
+      const events = result.data;
+
+      for (const ev of events) {
+        const { error } = await supabase
+          .from('daily_events')
+          .upsert({
+            api_id: ev.id,
+            sport: league.sport,
+            league_key: league.key,
+            league_name: league.name,
+            league_flag: league.flag,
+            home_team: ev.home_team,
+            away_team: ev.away_team,
+            commence_time: ev.commence_time,
+            event_date: ev.commence_time.split('T')[0],
+            synced_at: new Date().toISOString()
+          }, { 
+            onConflict: 'api_id' 
+          });
+
+        if (error) {
+          console.error(`Error saving event ${ev.id}:`, error);
+        } else {
+          totalSaved++;
+        }
+      }
+
+      // Small pause to avoid hitting rate limits too fast
+      await new Promise(r => setTimeout(r, 200));
+
+    } catch (err) {
+      console.error(`[ERROR] ${league.key}:`, err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  return { totalSaved, totalCredits };
+}
+
 Deno.serve(async (req) => {
   return await withMiddleware(req, FN_NAME, async (auth, request) => {
     const url = new URL(request.url);
@@ -134,19 +226,10 @@ Deno.serve(async (req) => {
     if (request.method === 'POST' && path === 'run-job') {
       const { job } = await request.json();
       
-      // Placeholder for actual job functions. 
-      // In a real scenario, these would be imported from elsewhere or implemented here.
-      let result;
       try {
+        let result;
         if (job === 'fetch_events') {
-          // result = await fetchDailyEvents('manual');
-          result = { success: true, message: 'Job fetch_events disparado (simulado)' };
-        } else if (job === 'fetch_scores') {
-          // result = await fetchDailyScores('manual');
-          result = { success: true, message: 'Job fetch_scores disparado (simulado)' };
-        } else if (job === 'fetch_sports_directory') {
-          // result = await fetchSportsDirectory('manual');
-          result = { success: true, message: 'Job fetch_sports_directory disparado (simulado)' };
+          result = await syncDailyEvents(supabase, 'manual');
         } else {
           return new Response(
             JSON.stringify({ error: 'Job desconhecido' }),
