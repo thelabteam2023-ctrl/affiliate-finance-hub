@@ -155,6 +155,183 @@ async function syncDailyEvents(supabase: any, triggeredBy: 'cron' | 'manual' = '
   return { totalSaved, totalCredits };
 }
 
+function normalizeName(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')  // remove acentos
+    .replace(/\s+/g, ' ')             // normaliza espaços
+    .trim();
+}
+
+async function getTeamLogo(supabase: any, teamName: string, sport: string) {
+  const normalized = normalizeName(teamName);
+  const apiKey = Deno.env.get('API_FOOTBALL_KEY');
+
+  // 1. Verifica cache no banco
+  const { data: cached } = await supabase
+    .from('team_logos')
+    .select('logo_url, found')
+    .eq('sport', sport)
+    .eq('team_name_normalized', normalized)
+    .maybeSingle();
+
+  if (cached) {
+    return cached.found ? cached.logo_url : null;
+  }
+
+  if (!apiKey) return null;
+
+  // 2. Busca na API-Football
+  const baseUrl = API_SPORTS_ENDPOINTS[sport] || API_SPORTS_ENDPOINTS.soccer;
+
+  try {
+    const res = await fetch(
+      `${baseUrl}/teams?search=${encodeURIComponent(teamName)}`,
+      { headers: { 'x-apisports-key': apiKey } }
+    );
+
+    const data = await res.json();
+    const team = data.response?.[0]?.team;
+
+    const logoUrl = team?.logo || null;
+    const apiId   = team?.id   || null;
+    const found   = !!logoUrl;
+
+    // 3. Salva no cache
+    await supabase.from('team_logos').upsert({
+      sport,
+      team_name_normalized: normalized,
+      team_name_original: teamName,
+      api_sports_id: apiId,
+      logo_url: logoUrl,
+      found,
+      searched_at: new Date().toISOString()
+    }, { onConflict: 'sport,team_name_normalized' });
+
+    return logoUrl;
+
+  } catch (err) {
+    console.error(`Erro ao buscar logo de ${teamName}:`, err);
+    return null;
+  }
+}
+
+async function getLeagueLogo(supabase: any, leagueKey: string, sport: string) {
+  // 1. Verifica cache
+  const { data: cached } = await supabase
+    .from('league_logos')
+    .select('logo_url, found')
+    .eq('sport', sport)
+    .eq('league_key', leagueKey)
+    .maybeSingle();
+
+  if (cached) {
+    return cached.found ? cached.logo_url : null;
+  }
+
+  // 2. Busca pelo ID mapeado
+  const mapping = LEAGUE_ID_MAP[leagueKey];
+  if (!mapping) return null;
+
+  const logoUrl = `${LEAGUE_LOGO_BASE_URLS[mapping.sport]}/${mapping.id}.png`;
+
+  // 3. Salva no cache
+  await supabase.from('league_logos').upsert({
+    sport,
+    league_key: leagueKey,
+    league_name: null, 
+    api_sports_id: mapping.id,
+    logo_url: logoUrl,
+    found: true,
+    searched_at: new Date().toISOString()
+  }, { onConflict: 'sport,league_key' });
+
+  return logoUrl;
+}
+
+async function syncLogosForToday(supabase: any) {
+  console.log('Starting logo synchronization pass...');
+  const today = new Date().toISOString().split('T')[0];
+
+  const { data: events, error } = await supabase
+    .from('daily_events')
+    .select('home_team, away_team, sport, league_key')
+    .eq('event_date', today);
+
+  if (error || !events) return { apiCallsUsed: 0 };
+
+  // Filtrar eventos que faltam pelo menos uma logo
+  const pendingEvents = events.filter((ev: any) => !ev.home_team_logo || !ev.away_team_logo || !ev.league_logo);
+
+  if (pendingEvents.length === 0) {
+    console.log('All events already have logos cached.');
+    return { apiCallsUsed: 0 };
+  }
+
+  // Remover duplicados para otimizar chamadas
+  const uniqueTeams = new Map<string, { name: string, sport: string }>();
+  const uniqueLeagues = new Set<string>();
+
+  pendingEvents.forEach((ev: any) => {
+    uniqueTeams.set(`${ev.sport}|${ev.home_team}`, { name: ev.home_team, sport: ev.sport });
+    uniqueTeams.set(`${ev.sport}|${ev.away_team}`, { name: ev.away_team, sport: ev.sport });
+    uniqueLeagues.add(`${ev.sport}|${ev.league_key}`);
+  });
+
+  let apiCallsUsed = 0;
+  const MAX_CALLS_PER_RUN = 80;
+
+  // 1. Sync leagues first (free)
+  for (const item of uniqueLeagues) {
+    const [sport, league_key] = item.split('|');
+    await getLeagueLogo(supabase, league_key, sport);
+  }
+
+  // 2. Sync teams
+  for (const [key, team] of uniqueTeams.entries()) {
+    if (apiCallsUsed >= MAX_CALLS_PER_RUN) break;
+
+    // Verificar se já está em cache antes de contar chamada
+    const normalized = normalizeName(team.name);
+    const { data: cached } = await supabase
+      .from('team_logos')
+      .select('id')
+      .eq('sport', team.sport)
+      .eq('team_name_normalized', normalized)
+      .maybeSingle();
+
+    if (!cached) {
+      await getTeamLogo(supabase, team.name, team.sport);
+      apiCallsUsed++;
+      // Sleep para evitar rate limit da API
+      await new Promise(r => setTimeout(r, 150));
+    }
+  }
+
+  // 3. Update events with findings from cache
+  for (const ev of events) {
+    const homeLogo = await getTeamLogo(supabase, ev.home_team, ev.sport);
+    const awayLogo = await getTeamLogo(supabase, ev.away_team, ev.sport);
+    const leagueLogo = await getLeagueLogo(supabase, ev.league_key, ev.sport);
+
+    await supabase
+      .from('daily_events')
+      .update({
+        home_team_logo: homeLogo,
+        away_team_logo: awayLogo,
+        league_logo: leagueLogo
+      })
+      .eq('home_team', ev.home_team)
+      .eq('away_team', ev.away_team)
+      .eq('event_date', today);
+  }
+
+  console.log(`Logo sync finished. API calls used: ${apiCallsUsed}`);
+  return { apiCallsUsed };
+}
+
+
 Deno.serve(async (req) => {
   return await withMiddleware(req, FN_NAME, async (auth, request) => {
     const url = new URL(request.url);
