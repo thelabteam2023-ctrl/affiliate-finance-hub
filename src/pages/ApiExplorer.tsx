@@ -633,16 +633,39 @@ export default function ApiExplorer() {
                     
                     <ScrollArea className="h-[calc(100vh-120px)]">
                       <div className="p-6 space-y-8">
+                        {/* Sport Coverage Status */}
+                        <Card className="border-border/40 bg-muted/30 overflow-hidden">
+                          <div className="p-4 flex flex-col gap-3">
+                            <div className="flex justify-between items-center">
+                              <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Status da Integração</span>
+                              {(() => {
+                                const sport = (sportType === 'traditional' ? TRADITIONAL_SPORTS : ESPORTS).find(s => s.id === selectedSport);
+                                if (sport?.status === 'supported') return <Badge className="bg-emerald-500 text-white border-none text-[9px] font-black">TOTALMENTE SUPORTADO</Badge>;
+                                if (sport?.status === 'partial') return <Badge className="bg-amber-500 text-white border-none text-[9px] font-black">SUPORTE PARCIAL</Badge>;
+                                return <Badge className="bg-rose-500 text-white border-none text-[9px] font-black">INDISPONÍVEL NA API ATUAL</Badge>;
+                              })()}
+                            </div>
+                            <p className="text-[10px] text-muted-foreground font-medium leading-relaxed">
+                              {(() => {
+                                const sport = (sportType === 'traditional' ? TRADITIONAL_SPORTS : ESPORTS).find(s => s.id === selectedSport);
+                                if (sport?.status === 'supported') return "Esta modalidade possui cobertura completa e estável através da The Odds API, incluindo eventos diários e mercados principais.";
+                                if (sport?.status === 'partial') return "Algumas ligas desta modalidade podem não estar disponíveis dependendo da região ou temporada esportiva na API.";
+                                return "ATENÇÃO: Este esporte foi identificado como sem cobertura ativa na chave da API atual. Nenhuma partida será encontrada.";
+                              })()}
+                            </p>
+                          </div>
+                        </Card>
+
                         {/* Summary Cards */}
                         <div className="grid grid-cols-2 gap-4">
-                          <div className="bg-muted/50 p-4 rounded-xl border border-border/40">
-                            <span className="text-[9px] font-black uppercase text-muted-foreground block mb-1">Com Jogos</span>
+                          <div className="bg-muted/50 p-4 rounded-xl border border-border/40 shadow-sm hover:border-emerald-500/30 transition-colors">
+                            <span className="text-[9px] font-black uppercase text-muted-foreground block mb-1">Ligas com Jogos</span>
                             <span className="text-2xl font-black text-emerald-500">
                               {monitoredLeagues.filter(l => events.some(e => e.league_key === l.league_key)).length}
                             </span>
                           </div>
-                          <div className="bg-muted/50 p-4 rounded-xl border border-border/40">
-                            <span className="text-[9px] font-black uppercase text-muted-foreground block mb-1">Sem Jogos</span>
+                          <div className="bg-muted/50 p-4 rounded-xl border border-border/40 shadow-sm hover:border-rose-500/30 transition-colors">
+                            <span className="text-[9px] font-black uppercase text-muted-foreground block mb-1">Ligas Vazias</span>
                             <span className="text-2xl font-black text-rose-500">
                               {monitoredLeagues.filter(l => !events.some(e => e.league_key === l.league_key)).length}
                             </span>
