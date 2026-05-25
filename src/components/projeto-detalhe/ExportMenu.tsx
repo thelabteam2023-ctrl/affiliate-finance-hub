@@ -56,7 +56,7 @@ export function ExportMenu({
   size = 'icon',
   className = '',
 }: ExportMenuProps) {
-  const { exportToCSV, exportToXML, exporting, canExport } = useExportApostas();
+  const { exportToCSV, exportToXML, exportToExcel, exporting, canExport } = useExportApostas();
   const [open, setOpen] = useState(false);
 
   const handleExport = useCallback(async (format: ExportFormat) => {
