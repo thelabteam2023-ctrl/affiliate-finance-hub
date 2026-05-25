@@ -313,6 +313,10 @@ export default function SystemAdmin() {
             <BarChart3 className="h-4 w-4" />
             Métricas
           </TabsTrigger>
+          <TabsTrigger value="apis" className="gap-2">
+            <Activity className="h-4 w-4" />
+            APIs
+          </TabsTrigger>
         </TabsList>
 
         {/* =============== ABA USUÁRIOS =============== */}
