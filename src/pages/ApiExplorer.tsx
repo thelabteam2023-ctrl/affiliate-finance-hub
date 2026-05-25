@@ -169,22 +169,23 @@ export default function ApiExplorer() {
 
   // Coverage Stats
   const coverage = useMemo(() => {
-    const map = new Map();
+    const map = new Map<string, { name: string, continent: string, country: string, flag: string | null, type: string, count: number }>();
     events.forEach(e => {
       const key = `${e.continent}|${e.country}|${e.league_name}`;
       if (!map.has(key)) {
         map.set(key, { 
           name: e.league_name, 
-          continent: e.continent, 
-          country: e.country, 
+          continent: e.continent || 'Outros', 
+          country: e.country || 'Outros', 
           flag: e.league_flag,
-          type: e.competition_type,
+          type: e.competition_type || 'league',
           count: 0 
         });
       }
-      map.get(key).count++;
+      const item = map.get(key);
+      if (item) item.count++;
     });
-    return Array.from(map.values()).sort((a, b) => a.continent.localeCompare(b.continent));
+    return Array.from(map.values()).sort((a, b) => (a.continent || '').localeCompare(b.continent || ''));
   }, [events]);
 
   if (!isSystemOwner) return <div className="p-10 text-center">Acesso Restrito</div>;
