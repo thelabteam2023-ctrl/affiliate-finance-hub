@@ -254,6 +254,32 @@ export default function ApiExplorer() {
     }
   };
 
+  const handleSyncLogos = async () => {
+    if (!window.confirm('Sincronizar escudos agora? Isso consumirá créditos da API-Sports (1 req por time novo).')) return;
+    setSyncingLogos(true);
+    try {
+      const session = (await supabase.auth.getSession()).data.session;
+      const res = await fetch(`https://kxfkmritrhpkgmwlxcft.supabase.co/functions/v1/api-monitor/run-job`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ job: 'sync_logos' })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      
+      toast.success(data.result.message || 'Sincronização de escudos iniciada em background.');
+      setTimeout(() => loadData(), 5000);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setSyncingLogos(false);
+    }
+  };
+
+
   // Derived Data
   const continents = useMemo(() => Array.from(new Set(events.map(e => e.continent).filter(Boolean))), [events]);
   const countries = useMemo(() => Array.from(new Set(events.filter(e => e.continent === filters.continent || filters.continent === 'all').map(e => e.country).filter(Boolean))), [events, filters.continent]);
