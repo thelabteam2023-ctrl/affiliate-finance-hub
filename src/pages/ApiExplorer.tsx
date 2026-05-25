@@ -768,14 +768,20 @@ export default function ApiExplorer() {
                                       </div>
 
                                       {/* TEAMS */}
-                                      <div className="px-6 flex flex-col gap-2">
-                                        <div className="flex justify-between items-center">
-                                          <span className="text-sm font-bold group-hover:text-primary transition-colors">{ev.home_team}</span>
-                                          {ev.result_home && <span className="font-black text-primary">{ev.result_home}</span>}
+                                      <div className="px-6 flex flex-col gap-3">
+                                        <div className="flex justify-between items-center group/team">
+                                          <div className="flex items-center gap-3">
+                                            <TeamLogo name={ev.home_team} url={ev.home_team_logo} className="h-7 w-7 border-primary/10 shadow-none group-hover/team:scale-110 transition-transform" />
+                                            <span className="text-sm font-bold group-hover:text-primary transition-colors">{ev.home_team}</span>
+                                          </div>
+                                          {ev.result_home && <span className="font-black text-primary bg-primary/5 px-2 py-0.5 rounded text-xs">{ev.result_home}</span>}
                                         </div>
-                                        <div className="flex justify-between items-center">
-                                          <span className="text-sm font-bold group-hover:text-primary transition-colors">{ev.away_team}</span>
-                                          {ev.result_away && <span className="font-black text-primary">{ev.result_away}</span>}
+                                        <div className="flex justify-between items-center group/team">
+                                          <div className="flex items-center gap-3">
+                                            <TeamLogo name={ev.away_team} url={ev.away_team_logo} className="h-7 w-7 border-primary/10 shadow-none group-hover/team:scale-110 transition-transform" />
+                                            <span className="text-sm font-bold group-hover:text-primary transition-colors">{ev.away_team}</span>
+                                          </div>
+                                          {ev.result_away && <span className="font-black text-primary bg-primary/5 px-2 py-0.5 rounded text-xs">{ev.result_away}</span>}
                                         </div>
                                       </div>
 
