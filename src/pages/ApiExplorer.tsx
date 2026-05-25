@@ -344,19 +344,19 @@ export default function ApiExplorer() {
                 sideOffset={8}
               >
                 <div className="bg-card/95 backdrop-blur-md border rounded-2xl">
-                  <div className="p-3 border-b bg-muted/30 flex flex-col gap-2">
+                  <div className="p-4 border-b bg-muted/30 flex flex-col gap-3">
                     <div className="flex justify-between items-center px-1">
-                      <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Seletor Inteligente</span>
+                      <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Navegação Rápida</span>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="h-8 text-[10px] font-bold rounded-lg border-primary/20 hover:bg-primary/5 hover:text-primary"
+                        className="h-9 text-[10px] font-bold rounded-xl border-border/40 hover:border-primary/40 hover:bg-primary/5 hover:text-primary transition-all"
                         onClick={() => {
                           const d = format(new Date(), 'yyyy-MM-dd');
                           setCustomDate(d);
-                          setTimeFilter('custom');
+                          setTimeFilter('today');
                         }}
                       >
                         Hoje
@@ -364,14 +364,38 @@ export default function ApiExplorer() {
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="h-8 text-[10px] font-bold rounded-lg border-primary/20 hover:bg-primary/5 hover:text-primary"
+                        className="h-9 text-[10px] font-bold rounded-xl border-border/40 hover:border-primary/40 hover:bg-primary/5 hover:text-primary transition-all"
+                        onClick={() => {
+                          const d = format(new Date(new Date().setDate(new Date().getDate() + 1)), 'yyyy-MM-dd');
+                          setCustomDate(d);
+                          setTimeFilter('tomorrow');
+                        }}
+                      >
+                        Amanhã
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-9 text-[10px] font-bold rounded-xl border-border/40 hover:border-primary/40 hover:bg-primary/5 hover:text-primary transition-all"
                         onClick={() => {
                           const d = format(new Date(new Date().setDate(new Date().getDate() + 7)), 'yyyy-MM-dd');
                           setCustomDate(d);
                           setTimeFilter('custom');
                         }}
                       >
-                        Próx. Semana
+                        Próx. 7 Dias
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-9 text-[10px] font-bold rounded-xl border-border/40 hover:border-primary/40 hover:bg-primary/5 hover:text-primary transition-all"
+                        onClick={() => {
+                          const d = format(new Date(new Date().setDate(new Date().getDate() + 30)), 'yyyy-MM-dd');
+                          setCustomDate(d);
+                          setTimeFilter('custom');
+                        }}
+                      >
+                        Próx. 30 Dias
                       </Button>
                     </div>
                   </div>
