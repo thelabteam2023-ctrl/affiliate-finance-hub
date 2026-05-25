@@ -396,18 +396,35 @@ Deno.serve(async (req) => {
     if (request.method === 'POST' && path === 'run-job') {
       const { job } = await request.json();
       try {
-        if (job === 'fetch_events') {
-          // @ts-ignore EdgeRuntime is available in Supabase Edge Functions
-          EdgeRuntime.waitUntil(
-            syncDailyEvents(supabase, 'manual').catch((err) =>
-              console.error('[BG] syncDailyEvents failed:', err)
-            )
-          );
-          return new Response(
-            JSON.stringify({ success: true, result: { queued: true, message: 'Sincronização iniciada em background. Os dados aparecerão em alguns minutos.', totalSaved: 0 } }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        } else if (job === 'sync_leagues') {
+        // @ts-ignore EdgeRuntime is available in Supabase Edge Functions
+        EdgeRuntime.waitUntil(
+          (async () => {
+            try {
+              const results = await syncDailyEvents(supabase, 'manual');
+              await syncLogosForToday(supabase);
+              console.log(`[BG] fetch_events + sync_logos completed. Saved: ${results.totalSaved}`);
+            } catch (err) {
+              console.error('[BG] fetch_events + sync_logos failed:', err);
+            }
+          })()
+        );
+        return new Response(
+          JSON.stringify({ success: true, result: { queued: true, message: 'Sincronização de jogos e escudos iniciada em background.', totalSaved: 0 } }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } else if (job === 'sync_logos') {
+        // @ts-ignore EdgeRuntime is available in Supabase Edge Functions
+        EdgeRuntime.waitUntil(
+          syncLogosForToday(supabase).catch((err) =>
+            console.error('[BG] syncLogosForToday failed:', err)
+          )
+        );
+        return new Response(
+          JSON.stringify({ success: true, result: { queued: true, message: 'Sincronização de escudos iniciada em background.' } }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } else if (job === 'sync_leagues') {
+
           await syncMonitoredLeagues(supabase);
           return new Response(JSON.stringify({ success: true, result: { success: true } }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         } else {
