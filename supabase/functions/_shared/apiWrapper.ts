@@ -26,8 +26,8 @@ export async function callExternalApi({
   try {
     const headers: Record<string, string> = {};
     if (apiName === 'api_football') {
-      const apiKey = Deno.env.get('API_FOOTBALL_KEY');
-      if (!apiKey) throw new Error('Missing API_FOOTBALL_KEY');
+      const apiKey = Deno.env.get('API_SPORTS_KEY');
+      if (!apiKey) throw new Error('Missing API_SPORTS_KEY');
       headers['x-apisports-key'] = apiKey;
     }
     // odds_api usually includes the key in the URL
