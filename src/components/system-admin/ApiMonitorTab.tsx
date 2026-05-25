@@ -81,9 +81,10 @@ export function ApiMonitorTab() {
       // My function uses the last segment of url.pathname.
       // Supabase invoke usually calls the root. I'll adjust the call.
       
-      const res = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/api-monitor/summary`, {
+      const session = (await supabase.auth.getSession()).data.session;
+      const res = await fetch(`https://kxfkmritrhpkgmwlxcft.supabase.co/functions/v1/api-monitor/summary`, {
         headers: {
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+          'Authorization': `Bearer ${session?.access_token}`
         }
       });
       const summaryData = await res.json();
@@ -99,9 +100,10 @@ export function ApiMonitorTab() {
   const fetchLogs = async () => {
     setLogsLoading(true);
     try {
-      const res = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/api-monitor/logs?limit=20`, {
+      const session = (await supabase.auth.getSession()).data.session;
+      const res = await fetch(`https://kxfkmritrhpkgmwlxcft.supabase.co/functions/v1/api-monitor/logs?limit=20`, {
         headers: {
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+          'Authorization': `Bearer ${session?.access_token}`
         }
       });
       const data = await res.json();
@@ -122,9 +124,10 @@ export function ApiMonitorTab() {
     setPreviewLoading(true);
     setPreviewResult(null);
     try {
-      const res = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/api-monitor/preview?api=${previewApi}&sport=${previewSport}`, {
+      const session = (await supabase.auth.getSession()).data.session;
+      const res = await fetch(`https://kxfkmritrhpkgmwlxcft.supabase.co/functions/v1/api-monitor/preview?api=${previewApi}&sport=${previewSport}`, {
         headers: {
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+          'Authorization': `Bearer ${session?.access_token}`
         }
       });
       const data = await res.json();
@@ -141,10 +144,11 @@ export function ApiMonitorTab() {
   const runJob = async (jobKey: string) => {
     setJobRunning(jobKey);
     try {
-      const res = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/api-monitor/run-job`, {
+      const session = (await supabase.auth.getSession()).data.session;
+      const res = await fetch(`https://kxfkmritrhpkgmwlxcft.supabase.co/functions/v1/api-monitor/run-job`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'Authorization': `Bearer ${session?.access_token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ job: jobKey })
