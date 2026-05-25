@@ -80,31 +80,46 @@ export default function ApiExplorer() {
   const loadFromDatabase = async (sportKey: string) => {
     setLoading(true);
     setError(null);
-    const today = new Date().toISOString().split('T')[0];
+
+    // "Hoje" pelo fuso de São Paulo (BRT): janela 00:00 → 24:00 local convertida para UTC.
+    // Evita perder jogos que começam tarde da noite (ex.: NBA 21:40 BRT = 00:40 UTC dia seguinte).
+    const nowLocal = new Date();
+    const startLocal = new Date(nowLocal.getFullYear(), nowLocal.getMonth(), nowLocal.getDate(), 0, 0, 0);
+    const endLocal = new Date(nowLocal.getFullYear(), nowLocal.getMonth(), nowLocal.getDate() + 1, 6, 0, 0); // até 06h do dia seguinte (cobre madrugada NBA/NHL)
+    const startIso = startLocal.toISOString();
+    const endIso = endLocal.toISOString();
 
     try {
-      // 1. Fetch events from database
+      // 1. Eventos por janela de tempo (commence_time) em vez de event_date UTC
       const { data: eventsData, error: eventsError } = await supabase
         .from('daily_events')
         .select('*')
         .eq('sport', sportKey)
-        .eq('event_date', today)
+        .gte('commence_time', startIso)
+        .lt('commence_time', endIso)
         .order('commence_time', { ascending: true });
 
       if (eventsError) throw eventsError;
 
-      // 2. Fetch league counts from view
-      const { data: leaguesData, error: leaguesError } = await supabase
-        .from('league_game_counts')
-        .select('*')
-        .eq('sport', sportKey)
-        .eq('event_date', today)
-        .order('game_count', { ascending: false });
-
-      if (leaguesError) throw leaguesError;
+      // 2. Agrega contagem de ligas a partir dos eventos já filtrados (sem depender da view com UTC date)
+      const leagueMap = new Map<string, LeagueCount>();
+      for (const ev of eventsData || []) {
+        const cur = leagueMap.get(ev.league_key);
+        if (cur) {
+          cur.game_count++;
+        } else {
+          leagueMap.set(ev.league_key, {
+            league_key: ev.league_key,
+            league_name: ev.league_name,
+            league_flag: ev.league_flag,
+            game_count: 1,
+          });
+        }
+      }
+      const leaguesData = Array.from(leagueMap.values()).sort((a, b) => b.game_count - a.game_count);
 
       setEvents(eventsData || []);
-      setLeagues(leaguesData || []);
+      setLeagues(leaguesData);
       
       if (eventsData && eventsData.length > 0) {
         setLastSync(eventsData[0].synced_at);
