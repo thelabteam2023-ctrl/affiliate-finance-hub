@@ -298,7 +298,11 @@ export default function SystemAdmin() {
         </Card>
       </div>
 
-      <Tabs defaultValue="usuarios" className="space-y-4">
+      <Tabs 
+        value={activeTab} 
+        onValueChange={(value) => setSearchParams({ tab: value })} 
+        className="space-y-4"
+      >
         <TabsList className="h-auto">
           <TabsTrigger value="usuarios" className="gap-2">
             <Users className="h-4 w-4" />
