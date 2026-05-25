@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { useWorkspace } from "./useWorkspace";
 import { usePermission } from "./usePermission";
+import * as XLSX from 'xlsx';
 import type { 
   ExportApostaRecord, 
   ExportFormat, 
@@ -12,23 +13,53 @@ import type {
   CSV_HEADERS 
 } from "@/types/exportApostas";
 
+// Column order for export
+const EXPORT_COLUMNS: (keyof ExportApostaRecord)[] = [
+  'data_hora',
+  'esporte',
+  'mercado',
+  'evento',
+  'bookmaker',
+  'tipo_aposta',
+  'odd',
+  'fair_value',
+  'stake',
+  'stake_unidades',
+  'resultado',
+  'lucro_unidades',
+  'lucro_prejuizo',
+  'roi',
+  'id',
+  'estrategia',
+  'aba_origem',
+  'selecao',
+  'status',
+  'observacoes'
+];
+
 // CSV Headers mapping
 const HEADERS: Record<keyof ExportApostaRecord, string> = {
   id: 'ID',
   data_hora: 'Data/Hora',
   projeto_nome: 'Projeto',
-  bookmaker: 'Casa',
-  estrategia: 'Estratégia',
-  aba_origem: 'Aba Origem',
-  evento: 'Evento',
+  bookmaker: 'Fonte (Casa)',
+  esporte: 'Esporte',
   mercado: 'Mercado',
+  evento: 'Evento',
+  estrategia: 'Estratégia',
+  tipo_aposta: 'Tipo de Aposta',
+  aba_origem: 'Aba Origem',
   selecao: 'Seleção',
-  odd: 'Odd',
-  stake: 'Stake',
+  odd: 'Cotação',
+  fair_value: 'Cotação Fair Value',
+  stake: 'Stake (R$)',
+  stake_unidades: 'Stake (Unidades)',
   retorno: 'Retorno',
   resultado: 'Resultado',
   status: 'Status',
-  lucro_prejuizo: 'Lucro/Prejuízo',
+  lucro_prejuizo: 'Lucro/Prejuízo (R$)',
+  lucro_unidades: 'Lucro/Prejuízo (Unidades)',
+  roi: 'ROI Individual',
   observacoes: 'Observações',
 };
 
@@ -36,8 +67,7 @@ const HEADERS: Record<keyof ExportApostaRecord, string> = {
 function escapeCSV(value: string | number | undefined | null): string {
   if (value === null || value === undefined) return '';
   const str = String(value);
-  // If contains special chars, wrap in quotes and escape internal quotes
-  if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+  if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r') || str.includes(';')) {
     return `"${str.replace(/"/g, '""')}"`;
   }
   return str;
@@ -47,10 +77,9 @@ function escapeCSV(value: string | number | undefined | null): string {
 function formatValue(key: keyof ExportApostaRecord, value: unknown): string {
   if (value === null || value === undefined) return '';
   
-  if (['odd', 'stake', 'retorno', 'lucro_prejuizo'].includes(key)) {
+  if (['odd', 'fair_value', 'stake', 'stake_unidades', 'retorno', 'lucro_prejuizo', 'lucro_unidades', 'roi'].includes(key)) {
     const num = Number(value);
     if (isNaN(num)) return String(value);
-    // Format with 2 decimal places, using comma as decimal separator for BR
     return num.toFixed(2).replace('.', ',');
   }
   
@@ -61,19 +90,12 @@ function formatValue(key: keyof ExportApostaRecord, value: unknown): string {
 function generateCSV(records: ExportApostaRecord[]): string {
   if (records.length === 0) return '';
   
-  // Column order for export
-  const columns: (keyof ExportApostaRecord)[] = [
-    'id', 'data_hora', 'bookmaker', 'estrategia', 'aba_origem',
-    'evento', 'mercado', 'selecao', 'odd', 'stake', 'retorno',
-    'resultado', 'status', 'lucro_prejuizo', 'observacoes'
-  ];
-  
   // Header row
-  const header = columns.map(col => escapeCSV(HEADERS[col])).join(';');
+  const header = EXPORT_COLUMNS.map(col => escapeCSV(HEADERS[col])).join(';');
   
   // Data rows
   const rows = records.map(record => 
-    columns.map(col => escapeCSV(formatValue(col, record[col]))).join(';')
+    EXPORT_COLUMNS.map(col => escapeCSV(formatValue(col, record[col]))).join(';')
   );
   
   // BOM for UTF-8 (Excel compatibility)
@@ -107,22 +129,10 @@ function generateXML(records: ExportApostaRecord[], context: ExportContext): str
   
   records.forEach(record => {
     lines.push('    <Aposta>');
-    lines.push(`      <ID>${xmlEscape(record.id)}</ID>`);
-    lines.push(`      <DataHora>${xmlEscape(record.data_hora)}</DataHora>`);
-    lines.push(`      <Bookmaker>${xmlEscape(record.bookmaker)}</Bookmaker>`);
-    lines.push(`      <Estrategia>${xmlEscape(record.estrategia)}</Estrategia>`);
-    lines.push(`      <Evento>${xmlEscape(record.evento)}</Evento>`);
-    lines.push(`      <Mercado>${xmlEscape(record.mercado)}</Mercado>`);
-    lines.push(`      <Selecao>${xmlEscape(record.selecao)}</Selecao>`);
-    lines.push(`      <Odd>${xmlEscape(record.odd)}</Odd>`);
-    lines.push(`      <Stake>${xmlEscape(record.stake)}</Stake>`);
-    lines.push(`      <Retorno>${xmlEscape(record.retorno)}</Retorno>`);
-    lines.push(`      <Resultado>${xmlEscape(record.resultado)}</Resultado>`);
-    lines.push(`      <Status>${xmlEscape(record.status)}</Status>`);
-    lines.push(`      <LucroPrejuizo>${xmlEscape(record.lucro_prejuizo)}</LucroPrejuizo>`);
-    if (record.observacoes) {
-      lines.push(`      <Observacoes>${xmlEscape(record.observacoes)}</Observacoes>`);
-    }
+    EXPORT_COLUMNS.forEach(col => {
+      const tag = col.charAt(0).toUpperCase() + col.slice(1);
+      lines.push(`      <${tag}>${xmlEscape(record[col])}</${tag}>`);
+    });
     lines.push('    </Aposta>');
   });
   
@@ -133,8 +143,8 @@ function generateXML(records: ExportApostaRecord[], context: ExportContext): str
 }
 
 // Download file helper
-function downloadFile(content: string, filename: string, mimeType: string): void {
-  const blob = new Blob([content], { type: mimeType });
+function downloadFile(content: string | Blob, filename: string, mimeType: string): void {
+  const blob = content instanceof Blob ? content : new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -153,7 +163,6 @@ async function logExport(
   context: ExportContext
 ): Promise<void> {
   try {
-    // Use 'CREATE' action type with entity_type='export' for audit trail
     await supabase.from('audit_logs').insert({
       actor_user_id: userId,
       workspace_id: workspaceId,
@@ -168,29 +177,16 @@ async function logExport(
       },
     });
   } catch (error) {
-    // Non-blocking - just log error
     console.error('Failed to log export audit:', error);
   }
 }
 
-/**
- * Hook for exporting bets to CSV/XML
- * 
- * Features:
- * - Permission-based access control
- * - Workspace isolation
- * - Audit logging
- * - Excel/Sheets compatible output
- */
 export function useExportApostas(): UseExportApostasReturn {
   const [exporting, setExporting] = useState(false);
   const { user } = useAuth();
   const { workspaceId } = useWorkspace();
-  
-  // Check if user can view bets (required for export)
   const { allowed: canViewApostas, loading: permissionLoading } = usePermission('view_apostas');
   
-  // Can export if user has view permission (or permission check allows)
   const canExport = !permissionLoading && canViewApostas !== false;
   
   const exportToCSV = useCallback(async (
@@ -212,12 +208,8 @@ export function useExportApostas(): UseExportApostasReturn {
     try {
       const csv = generateCSV(records);
       const finalFilename = filename.endsWith('.csv') ? filename : `${filename}.csv`;
-      
       downloadFile(csv, finalFilename, 'text/csv;charset=utf-8');
-      
-      // Audit log
       await logExport(user.id, workspaceId, 'csv', context);
-      
       toast.success(`${records.length} registros exportados para CSV`);
     } catch (error) {
       console.error('Export CSV error:', error);
@@ -246,12 +238,8 @@ export function useExportApostas(): UseExportApostasReturn {
     try {
       const xml = generateXML(records, context);
       const finalFilename = filename.endsWith('.xml') ? filename : `${filename}.xml`;
-      
       downloadFile(xml, finalFilename, 'application/xml;charset=utf-8');
-      
-      // Audit log
       await logExport(user.id, workspaceId, 'xml', context);
-      
       toast.success(`${records.length} registros exportados para XML`);
     } catch (error) {
       console.error('Export XML error:', error);
@@ -260,10 +248,56 @@ export function useExportApostas(): UseExportApostasReturn {
       setExporting(false);
     }
   }, [canExport, user?.id, workspaceId]);
+
+  const exportToExcel = useCallback(async (
+    records: ExportApostaRecord[],
+    filename: string,
+    context: ExportContext
+  ) => {
+    if (!canExport || !user?.id || !workspaceId) {
+      toast.error('Sem permissão para exportar');
+      return;
+    }
+    
+    if (records.length === 0) {
+      toast.error('Nenhum registro para exportar');
+      return;
+    }
+    
+    setExporting(true);
+    try {
+      const data = records.map(record => {
+        const row: any = {};
+        EXPORT_COLUMNS.forEach(col => {
+          row[HEADERS[col]] = record[col];
+        });
+        return row;
+      });
+
+      const worksheet = XLSX.utils.json_to_sheet(data);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Apostas");
+      
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const excelBlob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      
+      const finalFilename = filename.endsWith('.xlsx') ? filename : `${filename}.xlsx`;
+      downloadFile(excelBlob, finalFilename, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      
+      await logExport(user.id, workspaceId, 'xlsx', context);
+      toast.success(`${records.length} registros exportados para Excel`);
+    } catch (error) {
+      console.error('Export Excel error:', error);
+      toast.error('Erro ao exportar Excel');
+    } finally {
+      setExporting(false);
+    }
+  }, [canExport, user?.id, workspaceId]);
   
   return {
     exportToCSV,
     exportToXML,
+    exportToExcel,
     exporting,
     canExport,
   };
