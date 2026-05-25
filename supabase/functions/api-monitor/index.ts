@@ -34,79 +34,6 @@ function normalizeTeamName(name: string): string {
     .trim();
 }
 
-// Mapa estático expandido com chaves normalizadas para performance máxima e zero custo
-const TEAM_ID_MAP: Record<string, { sport: string, id: number }> = {
-  // BRASILEIRÃO A & B
-  [normalizeTeamName('Flamengo')]:            { sport: 'soccer', id: 127  },
-  [normalizeTeamName('Flamengo-RJ')]:         { sport: 'soccer', id: 127  },
-  [normalizeTeamName('Palmeiras')]:           { sport: 'soccer', id: 121  },
-  [normalizeTeamName('Atletico Mineiro')]:    { sport: 'soccer', id: 1062 },
-  [normalizeTeamName('Atletico Goianiense')]: { sport: 'soccer', id: 1193 },
-  [normalizeTeamName('Corinthians')]:         { sport: 'soccer', id: 131  },
-  [normalizeTeamName('Sao Paulo')]:           { sport: 'soccer', id: 126  },
-  [normalizeTeamName('Internacional')]:       { sport: 'soccer', id: 119  },
-  [normalizeTeamName('Gremio')]:              { sport: 'soccer', id: 120  },
-  [normalizeTeamName('Fluminense')]:          { sport: 'soccer', id: 124  },
-  [normalizeTeamName('Botafogo')]:            { sport: 'soccer', id: 116  },
-  [normalizeTeamName('Santos')]:              { sport: 'soccer', id: 123  },
-  [normalizeTeamName('Cruzeiro')]:            { sport: 'soccer', id: 140  },
-  [normalizeTeamName('Bahia')]:               { sport: 'soccer', id: 118  },
-  [normalizeTeamName('Vasco da Gama')]:       { sport: 'soccer', id: 130  },
-  [normalizeTeamName('Atletico Paranaense')]: { sport: 'soccer', id: 117  },
-  [normalizeTeamName('Athletico Paranaense')]:{ sport: 'soccer', id: 117  },
-  [normalizeTeamName('Fortaleza')]:           { sport: 'soccer', id: 2019 },
-  [normalizeTeamName('Bragantino')]:          { sport: 'soccer', id: 2022 },
-  [normalizeTeamName('Coritiba')]:            { sport: 'soccer', id: 136  },
-  [normalizeTeamName('Sport Recife')]:        { sport: 'soccer', id: 128  },
-  [normalizeTeamName('Ceara')]:               { sport: 'soccer', id: 2020 },
-  [normalizeTeamName('Goias')]:               { sport: 'soccer', id: 1111 },
-  [normalizeTeamName('Vitoria')]:             { sport: 'soccer', id: 125  },
-  [normalizeTeamName('Cuiaba')]:              { sport: 'soccer', id: 2021 },
-  [normalizeTeamName('America Mineiro')]:     { sport: 'soccer', id: 1061 },
-  [normalizeTeamName('Avai')]:                { sport: 'soccer', id: 141  },
-  [normalizeTeamName('Ponte Preta')]:         { sport: 'soccer', id: 142  },
-  [normalizeTeamName('Palestino')]:           { sport: 'soccer', id: 2309 },
-  [normalizeTeamName('Athletic Club MG')]:    { sport: 'soccer', id: 10325 },
-  
-  // PREMIER LEAGUE
-  [normalizeTeamName('Arsenal')]:             { sport: 'soccer', id: 42   },
-  [normalizeTeamName('Chelsea')]:             { sport: 'soccer', id: 49   },
-  [normalizeTeamName('Liverpool')]:           { sport: 'soccer', id: 40   },
-  [normalizeTeamName('Manchester City')]:     { sport: 'soccer', id: 50   },
-  [normalizeTeamName('Manchester United')]:   { sport: 'soccer', id: 33   },
-  [normalizeTeamName('Tottenham')]:           { sport: 'soccer', id: 47   },
-  [normalizeTeamName('Newcastle United')]:    { sport: 'soccer', id: 34   },
-  [normalizeTeamName('Aston Villa')]:         { sport: 'soccer', id: 66   },
-
-  // BUNDESLIGA
-  [normalizeTeamName('Bayern Munich')]:       { sport: 'soccer', id: 157  },
-  [normalizeTeamName('Borussia Dortmund')]:   { sport: 'soccer', id: 165  },
-  [normalizeTeamName('RB Leipzig')]:          { sport: 'soccer', id: 173  },
-  [normalizeTeamName('Bayer Leverkusen')]:    { sport: 'soccer', id: 168  },
-  [normalizeTeamName('Greuther Furth')]:      { sport: 'soccer', id: 184  },
-  [normalizeTeamName('Greuther Fürth')]:      { sport: 'soccer', id: 184  },
-  [normalizeTeamName('Rot-Weiss Essen')]:     { sport: 'soccer', id: 504  },
-
-  // LA LIGA
-  [normalizeTeamName('Real Madrid')]:         { sport: 'soccer', id: 541  },
-  [normalizeTeamName('Barcelona')]:           { sport: 'soccer', id: 529  },
-  [normalizeTeamName('Atletico Madrid')]:     { sport: 'soccer', id: 530  },
-  [normalizeTeamName('Athletic Club')]:       { sport: 'soccer', id: 531  }, // Default para Bilbao se não especificado
-  [normalizeTeamName('Athletic Bilbao')]:     { sport: 'soccer', id: 531  },
-
-  // LIGUE 1
-  [normalizeTeamName('PSG')]:                 { sport: 'soccer', id: 85   },
-  [normalizeTeamName('Nice')]:                { sport: 'soccer', id: 84   },
-  [normalizeTeamName('Saint Etienne')]:       { sport: 'soccer', id: 1063 },
-
-  // NBA
-  [normalizeTeamName('Los Angeles Lakers')]:    { sport: 'basketball', id: 37  },
-  [normalizeTeamName('Golden State Warriors')]: { sport: 'basketball', id: 11  },
-  [normalizeTeamName('Boston Celtics')]:        { sport: 'basketball', id: 2   },
-  [normalizeTeamName('Miami Heat')]:            { sport: 'basketball', id: 20  },
-  [normalizeTeamName('Denver Nuggets')]:        { sport: 'basketball', id: 10  },
-};
-
 // Lista de ligas para o Odds API (configuração estática básica)
 const ALL_LEAGUES = [
   { sport: 'soccer', key: 'soccer_brazil_campeonato', name: 'Brasileirão Série A', flag: '🇧🇷', continent: 'América do Sul', country: 'Brasil', type: 'league' },
@@ -134,99 +61,37 @@ function chunkArray<T>(array: T[], size: number): T[][] {
 }
 
 /**
- * Busca escudo de time de forma inteligente (Mapa -> Cache DB -> API Search)
+ * Lookup de escudo via cache indexado por (league_key, nome_normalizado).
+ * Sem fallbacks de busca por nome — evita colisões cross-liga (ex: Botafogo vs Lens).
  */
-async function getOrSearchTeamLogo(supabase: any, teamName: string, sport: string, triggeredBy: string, country?: string) {
+async function lookupTeamLogo(supabase: any, teamName: string, leagueKey: string): Promise<string | null> {
   const normalized = normalizeTeamName(teamName);
-  
-  // 1. Mapa estático (Prioridade máxima, zero custo)
-  let staticMapping = TEAM_ID_MAP[normalized];
-  
-  // Caso especial: Athletic Club
-  if (normalized === 'athleticclub') {
-    if (country === 'Brazil' || country === 'Brasil') staticMapping = { sport: 'soccer', id: 10325 };
-    else staticMapping = { sport: 'soccer', id: 531 };
-  }
-
-  if (staticMapping) {
-    const bases: Record<string, string> = {
-      soccer:      'https://media.api-sports.io/football/teams',
-      basketball:  'https://media.api-sports.io/basketball/teams',
-      icehockey:   'https://media.api-sports.io/hockey/teams',
-      baseball:    'https://media.api-sports.io/baseball/teams',
-      americanfootball: 'https://media.api-sports.io/american-football/teams',
-    };
-    const sportKey = staticMapping.sport || sport;
-    const base = bases[sportKey] || bases.soccer;
-    return `${base}/${staticMapping.id}.png`;
-  }
-
-  // 2. Cache no banco de dados
-  const { data: cached } = await supabase
+  const { data } = await supabase
     .from('team_logos')
     .select('logo_url, found')
-    .eq('sport', sport)
+    .eq('league_key', leagueKey)
     .eq('team_name_normalized', normalized)
     .maybeSingle();
-
-  if (cached) return cached.found ? cached.logo_url : null;
-
-  // 3. Busca reativa na API (Apenas se não mapeado e não em cache)
-  const apiEndpoint = API_SPORTS_ENDPOINTS[sport] || API_SPORTS_ENDPOINTS.soccer;
-  let searchUrl = `${apiEndpoint}/teams?name=${encodeURIComponent(teamName)}`;
-  
-  // Refinar busca por país se disponível
-  if (country && sport === 'soccer') {
-    searchUrl += `&country=${encodeURIComponent(country)}`;
-  }
-
-  try {
-    const result = await callExternalApi({
-      apiName: 'api_football',
-      endpoint: searchUrl,
-      sportKey: sport,
-      creditsUsed: 1,
-      triggeredBy: triggeredBy as any
-    });
-
-    let logoUrl = null;
-    let apiId = null;
-
-    if (result.data?.response?.length > 0) {
-      const teamRes = result.data.response[0];
-      const team = teamRes.team || teamRes;
-      logoUrl = team.logo;
-      apiId = team.id;
-    }
-
-    // Salva no cache para não cobrar novamente
-    await supabase.from('team_logos').upsert({
-      sport,
-      team_name_normalized: normalized,
-      team_name_original: teamName,
-      api_sports_id: apiId,
-      logo_url: logoUrl,
-      found: !!logoUrl,
-      country,
-      searched_at: new Date().toISOString()
-    }, { onConflict: 'sport,team_name_normalized,country' });
-
-    return logoUrl;
-  } catch (err) {
-    console.error(`Erro ao buscar escudo para ${teamName}:`, err);
-    return null;
-  }
+  if (data?.found) return data.logo_url;
+  return null;
 }
 
 /**
- * Sincroniza TODOS os times de uma liga específica (custo fixo de 1 crédito por liga)
+ * Sincroniza TODOS os times de uma liga específica, indexados por league_key.
+ * Custo: 1 crédito api-sports por liga. Idempotente.
  */
-async function syncLeagueTeamsBulk(supabase: any, sport: string, leagueId: number, season: number, country?: string) {
+async function syncLeagueTeamsBulk(
+  supabase: any,
+  sport: string,
+  leagueKey: string,
+  leagueId: number,
+  season: number,
+  country?: string,
+) {
   const apiEndpoint = API_SPORTS_ENDPOINTS[sport] || API_SPORTS_ENDPOINTS.soccer;
   const url = `${apiEndpoint}/teams?league=${leagueId}&season=${season}`;
-  
-  console.log(`[BULK SYNC] Buscando times da liga ${leagueId} (${sport}) - Temporada ${season}...`);
-  
+  console.log(`[BULK SYNC] ${leagueKey} (league=${leagueId}, season=${season}, sport=${sport})`);
+
   try {
     const result = await callExternalApi({
       apiName: 'api_football',
@@ -236,31 +101,59 @@ async function syncLeagueTeamsBulk(supabase: any, sport: string, leagueId: numbe
       triggeredBy: 'manual'
     });
 
-    if (!result.data?.response) return 0;
+    if (!result.data?.response?.length) {
+      console.warn(`[BULK SYNC] ${leagueKey}: vazio`);
+      return 0;
+    }
 
     let saved = 0;
     for (const item of result.data.response) {
       const team = item.team || item;
+      if (!team?.name) continue;
       const normalized = normalizeTeamName(team.name);
-      
       const { error } = await supabase.from('team_logos').upsert({
         sport,
+        league_key: leagueKey,
         team_name_normalized: normalized,
         team_name_original: team.name,
         api_sports_id: team.id,
         logo_url: team.logo,
-        found: true,
-        country: country || item.venue?.city || null,
+        found: !!team.logo,
+        country: country || null,
         searched_at: new Date().toISOString()
-      }, { onConflict: 'sport,team_name_normalized,country' });
-
+      }, { onConflict: 'league_key,team_name_normalized' });
       if (!error) saved++;
+      else console.error(`[BULK SYNC] upsert error ${team.name}:`, error.message);
     }
+    console.log(`[BULK SYNC] ${leagueKey}: ${saved} times salvos`);
     return saved;
   } catch (err) {
-    console.error(`Erro no bulk sync da liga ${leagueId}:`, err);
+    console.error(`[BULK SYNC] erro ${leagueKey}:`, err);
     return 0;
   }
+}
+
+/**
+ * Sincroniza times de TODAS as ligas monitoradas com api_sports_id configurado.
+ * Roda em lotes de 5 ligas em paralelo. Custo: 1 crédito por liga (~30 créditos total).
+ */
+async function syncAllTeams(supabase: any) {
+  const { data: leagues } = await supabase
+    .from('monitored_leagues')
+    .select('league_key, sport, api_sports_id, current_season, country')
+    .not('api_sports_id', 'is', null);
+
+  if (!leagues?.length) return { syncedLeagues: 0, totalTeams: 0 };
+
+  let totalTeams = 0;
+  const chunks = chunkArray(leagues, 5);
+  for (const chunk of chunks) {
+    const results = await Promise.all(chunk.map((lg: any) =>
+      syncLeagueTeamsBulk(supabase, lg.sport, lg.league_key, lg.api_sports_id, lg.current_season || 2024, lg.country)
+    ));
+    totalTeams += results.reduce((a, b) => a + b, 0);
+  }
+  return { syncedLeagues: leagues.length, totalTeams };
 }
 
 async function getLeagueLogo(supabase: any, leagueKey: string, sport: string) {
@@ -329,7 +222,7 @@ async function fetchLeagueEvents(supabase: any, league: any, apiKey: string, tri
 
     const teamLogoMap: Record<string, string | null> = {};
     await Promise.all(Array.from(uniqueTeams).map(async (teamName) => {
-      teamLogoMap[teamName] = await getOrSearchTeamLogo(supabase, teamName, league.sport, triggeredBy, league.country);
+      teamLogoMap[teamName] = await lookupTeamLogo(supabase, teamName, league.key);
     }));
 
     for (const ev of events) {
@@ -405,52 +298,38 @@ async function syncLogosForToday(supabase: any, triggeredBy: string = 'manual') 
 
   if (!events) return { updated: 0 };
 
-  // Identifica quais ligas estão ativas hoje e faz bulk sync se necessário
-  const activeLeagues = new Set(events.map(e => e.league_key));
+  // Identifica quais ligas estão ativas hoje e faz bulk sync (popula cache por league_key)
+  const activeLeagues = Array.from(new Set(events.map((e: any) => e.league_key)));
   const { data: leagueConfigs } = await supabase
     .from('monitored_leagues')
     .select('league_key, api_sports_id, current_season, sport, country')
-    .in('league_key', Array.from(activeLeagues))
-    .filter('api_sports_id', 'not.is', null);
+    .in('league_key', activeLeagues)
+    .not('api_sports_id', 'is', null);
 
-  if (leagueConfigs) {
-    for (const config of leagueConfigs) {
-      // Sincroniza todos os times desta liga para popular o cache
-      await syncLeagueTeamsBulk(supabase, config.sport, config.api_sports_id, config.current_season || 2024, config.country);
+  if (leagueConfigs?.length) {
+    const chunks = chunkArray(leagueConfigs, 5);
+    for (const chunk of chunks) {
+      await Promise.all(chunk.map((c: any) =>
+        syncLeagueTeamsBulk(supabase, c.sport, c.league_key, c.api_sports_id, c.current_season || 2024, c.country)
+      ));
     }
   }
 
-  // Agora re-varre os eventos e atualiza as logos (usando o cache recém populado)
-  const uniqueTeams = new Set<string>();
-  const teamContext: Record<string, { sport: string, country: string }> = {};
-  
-  for (const ev of events) {
-    uniqueTeams.add(ev.home_team);
-    uniqueTeams.add(ev.away_team);
-    teamContext[ev.home_team] = { sport: ev.sport, country: ev.country };
-    teamContext[ev.away_team] = { sport: ev.sport, country: ev.country };
-  }
-
-  const teamLogoMap: Record<string, string | null> = {};
-  await Promise.all(Array.from(uniqueTeams).map(async (teamName) => {
-    const ctx = teamContext[teamName];
-    teamLogoMap[teamName] = await getOrSearchTeamLogo(supabase, teamName, ctx.sport, triggeredBy, ctx.country);
-  }));
-
-  // Atualiza no banco
+  // Atualiza eventos do dia com escudos do cache (lookup por league_key + nome)
   const { data: eventsToUpdate } = await supabase
     .from('daily_events')
-    .select('id, home_team, away_team, sport, league_key')
+    .select('id, home_team, away_team, league_key')
     .eq('event_date', today);
 
   let updatedCount = 0;
-  for (const ev of eventsToUpdate) {
+  for (const ev of eventsToUpdate || []) {
+    const [homeLogo, awayLogo] = await Promise.all([
+      lookupTeamLogo(supabase, ev.home_team, ev.league_key),
+      lookupTeamLogo(supabase, ev.away_team, ev.league_key),
+    ]);
     const { error } = await supabase
       .from('daily_events')
-      .update({
-        home_team_logo: teamLogoMap[ev.home_team],
-        away_team_logo: teamLogoMap[ev.away_team]
-      })
+      .update({ home_team_logo: homeLogo, away_team_logo: awayLogo })
       .eq('id', ev.id);
     if (!error) updatedCount++;
   }
@@ -492,6 +371,20 @@ Deno.serve(async (req) => {
           } catch (err) { console.error('Job sync_logos failed:', err); }
         })());
         return new Response(JSON.stringify({ success: true, result: { queued: true, message: 'Sincronização de escudos iniciada em background com busca por liga.' } }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      if (job === 'sync_all_teams') {
+        // @ts-ignore
+        EdgeRuntime.waitUntil((async () => {
+          try {
+            const result = await syncAllTeams(supabase);
+            console.log(`Job sync_all_teams completed:`, result);
+            // Após popular o cache de todas as ligas, atualiza eventos do dia
+            const upd = await syncLogosForToday(supabase);
+            console.log(`  → eventos atualizados: ${upd.updatedCount}`);
+          } catch (err) { console.error('Job sync_all_teams failed:', err); }
+        })());
+        return new Response(JSON.stringify({ success: true, result: { queued: true, message: 'Sincronização completa iniciada (todas as ligas, ~30 créditos).' } }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
     }
 
