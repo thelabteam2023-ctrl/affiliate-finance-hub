@@ -6118,6 +6118,48 @@ export type Database = {
           },
         ]
       }
+      monitored_leagues: {
+        Row: {
+          competition_type: string | null
+          continent: string | null
+          country: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          league_flag: string | null
+          league_key: string
+          league_name: string
+          sport: string
+          updated_at: string | null
+        }
+        Insert: {
+          competition_type?: string | null
+          continent?: string | null
+          country?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          league_flag?: string | null
+          league_key: string
+          league_name: string
+          sport: string
+          updated_at?: string | null
+        }
+        Update: {
+          competition_type?: string | null
+          continent?: string | null
+          country?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          league_flag?: string | null
+          league_key?: string
+          league_name?: string
+          sport?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       movimentacoes_indicacao: {
         Row: {
           coin: string | null
