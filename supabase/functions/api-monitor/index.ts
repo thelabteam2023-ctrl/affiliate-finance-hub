@@ -222,7 +222,7 @@ async function fetchLeagueEvents(supabase: any, league: any, apiKey: string, tri
 
     const teamLogoMap: Record<string, string | null> = {};
     await Promise.all(Array.from(uniqueTeams).map(async (teamName) => {
-      teamLogoMap[teamName] = await getOrSearchTeamLogo(supabase, teamName, league.sport, triggeredBy, league.country);
+      teamLogoMap[teamName] = await lookupTeamLogo(supabase, teamName, league.key);
     }));
 
     for (const ev of events) {
@@ -298,52 +298,38 @@ async function syncLogosForToday(supabase: any, triggeredBy: string = 'manual') 
 
   if (!events) return { updated: 0 };
 
-  // Identifica quais ligas estão ativas hoje e faz bulk sync se necessário
-  const activeLeagues = new Set(events.map(e => e.league_key));
+  // Identifica quais ligas estão ativas hoje e faz bulk sync (popula cache por league_key)
+  const activeLeagues = Array.from(new Set(events.map((e: any) => e.league_key)));
   const { data: leagueConfigs } = await supabase
     .from('monitored_leagues')
     .select('league_key, api_sports_id, current_season, sport, country')
-    .in('league_key', Array.from(activeLeagues))
-    .filter('api_sports_id', 'not.is', null);
+    .in('league_key', activeLeagues)
+    .not('api_sports_id', 'is', null);
 
-  if (leagueConfigs) {
-    for (const config of leagueConfigs) {
-      // Sincroniza todos os times desta liga para popular o cache
-      await syncLeagueTeamsBulk(supabase, config.sport, config.api_sports_id, config.current_season || 2024, config.country);
+  if (leagueConfigs?.length) {
+    const chunks = chunkArray(leagueConfigs, 5);
+    for (const chunk of chunks) {
+      await Promise.all(chunk.map((c: any) =>
+        syncLeagueTeamsBulk(supabase, c.sport, c.league_key, c.api_sports_id, c.current_season || 2024, c.country)
+      ));
     }
   }
 
-  // Agora re-varre os eventos e atualiza as logos (usando o cache recém populado)
-  const uniqueTeams = new Set<string>();
-  const teamContext: Record<string, { sport: string, country: string }> = {};
-  
-  for (const ev of events) {
-    uniqueTeams.add(ev.home_team);
-    uniqueTeams.add(ev.away_team);
-    teamContext[ev.home_team] = { sport: ev.sport, country: ev.country };
-    teamContext[ev.away_team] = { sport: ev.sport, country: ev.country };
-  }
-
-  const teamLogoMap: Record<string, string | null> = {};
-  await Promise.all(Array.from(uniqueTeams).map(async (teamName) => {
-    const ctx = teamContext[teamName];
-    teamLogoMap[teamName] = await getOrSearchTeamLogo(supabase, teamName, ctx.sport, triggeredBy, ctx.country);
-  }));
-
-  // Atualiza no banco
+  // Atualiza eventos do dia com escudos do cache (lookup por league_key + nome)
   const { data: eventsToUpdate } = await supabase
     .from('daily_events')
-    .select('id, home_team, away_team, sport, league_key')
+    .select('id, home_team, away_team, league_key')
     .eq('event_date', today);
 
   let updatedCount = 0;
-  for (const ev of eventsToUpdate) {
+  for (const ev of eventsToUpdate || []) {
+    const [homeLogo, awayLogo] = await Promise.all([
+      lookupTeamLogo(supabase, ev.home_team, ev.league_key),
+      lookupTeamLogo(supabase, ev.away_team, ev.league_key),
+    ]);
     const { error } = await supabase
       .from('daily_events')
-      .update({
-        home_team_logo: teamLogoMap[ev.home_team],
-        away_team_logo: teamLogoMap[ev.away_team]
-      })
+      .update({ home_team_logo: homeLogo, away_team_logo: awayLogo })
       .eq('id', ev.id);
     if (!error) updatedCount++;
   }
@@ -385,6 +371,20 @@ Deno.serve(async (req) => {
           } catch (err) { console.error('Job sync_logos failed:', err); }
         })());
         return new Response(JSON.stringify({ success: true, result: { queued: true, message: 'Sincronização de escudos iniciada em background com busca por liga.' } }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      if (job === 'sync_all_teams') {
+        // @ts-ignore
+        EdgeRuntime.waitUntil((async () => {
+          try {
+            const result = await syncAllTeams(supabase);
+            console.log(`Job sync_all_teams completed:`, result);
+            // Após popular o cache de todas as ligas, atualiza eventos do dia
+            const upd = await syncLogosForToday(supabase);
+            console.log(`  → eventos atualizados: ${upd.updatedCount}`);
+          } catch (err) { console.error('Job sync_all_teams failed:', err); }
+        })());
+        return new Response(JSON.stringify({ success: true, result: { queued: true, message: 'Sincronização completa iniciada (todas as ligas, ~30 créditos).' } }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
     }
 
