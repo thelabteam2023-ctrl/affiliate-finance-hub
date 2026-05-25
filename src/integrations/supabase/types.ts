@@ -6162,10 +6162,12 @@ export type Database = {
       }
       monitored_leagues: {
         Row: {
+          api_sports_id: number | null
           competition_type: string | null
           continent: string | null
           country: string | null
           created_at: string | null
+          current_season: number | null
           id: string
           is_active: boolean | null
           league_flag: string | null
@@ -6175,10 +6177,12 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          api_sports_id?: number | null
           competition_type?: string | null
           continent?: string | null
           country?: string | null
           created_at?: string | null
+          current_season?: number | null
           id?: string
           is_active?: boolean | null
           league_flag?: string | null
@@ -6188,10 +6192,12 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          api_sports_id?: number | null
           competition_type?: string | null
           continent?: string | null
           country?: string | null
           created_at?: string | null
+          current_season?: number | null
           id?: string
           is_active?: boolean | null
           league_flag?: string | null
