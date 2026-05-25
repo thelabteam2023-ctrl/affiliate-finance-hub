@@ -1,16 +1,42 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useTopBar } from "@/contexts/TopBarContext";
 import { useAuth } from '@/hooks/useAuth';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Globe, RefreshCw, Loader2, AlertCircle, ChevronDown, Filter, Calendar as CalendarIcon, Map } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { 
+  Globe, 
+  RefreshCw, 
+  Search, 
+  Clock, 
+  AlertCircle, 
+  Loader2, 
+  Map, 
+  Calendar as CalendarIcon, 
+  Filter, 
+  ChevronRight,
+  Database,
+  CheckCircle2,
+  XCircle,
+  LayoutGrid,
+  Info
+} from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format, isToday, parseISO, differenceInMinutes, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// Sports mapping
+const SPORTS = [
+  { id: 'soccer', label: 'Futebol', icon: '⚽' },
+  { id: 'basketball', label: 'Basquete', icon: '🏀' },
+  { id: 'tennis', label: 'Tênis', icon: '🎾' },
+  { id: 'icehockey', label: 'Hockey', icon: '🏒' },
+];
 
 interface Event {
   api_id: string;
@@ -31,122 +57,441 @@ interface Event {
 
 export default function ApiExplorer() {
   const { isSystemOwner } = useAuth();
+  const { setContent: setTopBarContent } = useTopBar();
+  
+  const [selectedSport, setSelectedSport] = useState('soccer');
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [selectedSport, setSelectedSport] = useState('soccer');
-  const [filters, setFilters] = useState({ continent: 'all', country: 'all' });
+  const [lastSync, setLastSync] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState<'matches' | 'coverage'>('matches');
+  
+  // Filters
+  const [filters, setFilters] = useState({
+    continent: 'all',
+    country: 'all',
+    type: 'all',
+    date: format(new Date(), 'yyyy-MM-dd')
+  });
+
+  // Set TopBar
+  useEffect(() => {
+    setTopBarContent(
+      <div className="flex items-center gap-2">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+          <Database className="h-4 w-4 text-primary" />
+        </div>
+        <span className="font-semibold text-sm">Explorador de Dados v2</span>
+      </div>
+    );
+    return () => setTopBarContent(null);
+  }, [setTopBarContent]);
 
   const loadData = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('daily_events')
-      .select('*')
-      .eq('sport', selectedSport)
-      .order('commence_time', { ascending: true });
+    try {
+      const { data, error } = await supabase
+        .from('daily_events')
+        .select('*')
+        .eq('sport', selectedSport)
+        .order('commence_time', { ascending: true });
 
-    if (error) {
-      toast.error('Erro ao carregar eventos');
-    } else {
+      if (error) throw error;
       setEvents(data || []);
+      if (data && data.length > 0) setLastSync(data[0].synced_at);
+    } catch (err: any) {
+      toast.error('Erro ao carregar dados locais');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => { loadData(); }, [selectedSport]);
 
+  const handleManualSync = async () => {
+    if (!window.confirm('Sincronizar agora consumirá créditos da API. Continuar?')) return;
+    setSyncing(true);
+    try {
+      const session = (await supabase.auth.getSession()).data.session;
+      const res = await fetch(`https://kxfkmritrhpkgmwlxcft.supabase.co/functions/v1/api-monitor/run-job`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ job: 'fetch_events' })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success(`Sincronização concluída: ${data.result.totalSaved} eventos.`);
+      loadData();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  // Derived Data
   const continents = useMemo(() => Array.from(new Set(events.map(e => e.continent).filter(Boolean))), [events]);
   const countries = useMemo(() => Array.from(new Set(events.filter(e => e.continent === filters.continent || filters.continent === 'all').map(e => e.country).filter(Boolean))), [events, filters.continent]);
 
   const filteredEvents = useMemo(() => {
-    return events.filter(e => 
-      (filters.continent === 'all' || e.continent === filters.continent) &&
-      (filters.country === 'all' || e.country === filters.country)
-    );
-  }, [events, filters]);
+    return events.filter(e => {
+      const matchSearch = e.home_team.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          e.away_team.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          e.league_name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchContinent = filters.continent === 'all' || e.continent === filters.continent;
+      const matchCountry = filters.country === 'all' || e.country === filters.country;
+      const matchType = filters.type === 'all' || e.competition_type === filters.type;
+      
+      return matchSearch && matchContinent && matchCountry && matchType;
+    });
+  }, [events, searchTerm, filters]);
 
-  // Hierarquia: Continente > Pais > Liga
-  const hierarchy = useMemo(() => {
+  // Hierarchy for matches
+  const groupedMatches = useMemo(() => {
     return filteredEvents.reduce((acc, ev) => {
       const cont = ev.continent || 'Outros';
-      const count = ev.country || 'Outros';
-      const league = ev.league_name;
+      const ctry = ev.country || 'Outros';
+      const type = ev.competition_type === 'continental' ? 'Continental' : (ev.competition_type === 'cup' ? 'Copas' : 'Ligas');
       
       if (!acc[cont]) acc[cont] = {};
-      if (!acc[cont][count]) acc[cont][count] = {};
-      if (!acc[cont][count][league]) acc[cont][count][league] = [];
+      if (!acc[cont][ctry]) acc[cont][ctry] = {};
+      if (!acc[cont][ctry][type]) acc[cont][ctry][type] = {};
+      if (!acc[cont][ctry][type][ev.league_name]) acc[cont][ctry][type][ev.league_name] = [];
       
-      acc[cont][count][league].push(ev);
+      acc[cont][ctry][type][ev.league_name].push(ev);
       return acc;
     }, {} as any);
   }, [filteredEvents]);
 
-  if (!isSystemOwner) return <div>Acesso Restrito</div>;
+  // Coverage Stats
+  const coverage = useMemo(() => {
+    const map = new Map();
+    events.forEach(e => {
+      const key = `${e.continent}|${e.country}|${e.league_name}`;
+      if (!map.has(key)) {
+        map.set(key, { 
+          name: e.league_name, 
+          continent: e.continent, 
+          country: e.country, 
+          flag: e.league_flag,
+          type: e.competition_type,
+          count: 0 
+        });
+      }
+      map.get(key).count++;
+    });
+    return Array.from(map.values()).sort((a, b) => a.continent.localeCompare(b.continent));
+  }, [events]);
+
+  if (!isSystemOwner) return <div className="p-10 text-center">Acesso Restrito</div>;
 
   return (
-    <div className="container max-w-6xl py-6 space-y-6">
-      {/* Header and Controls */}
-      <div className="flex flex-col gap-4">
-        <h1 className="text-2xl font-bold">Explorador de Dados Esportivos</h1>
-        
-        <div className="flex gap-2">
-          {['soccer', 'basketball', 'tennis', 'icehockey'].map(s => (
-            <Button key={s} variant={selectedSport === s ? 'default' : 'outline'} onClick={() => setSelectedSport(s)}>
-              {s.toUpperCase()}
-            </Button>
-          ))}
-          <Button variant="secondary" className="ml-auto" onClick={loadData}>
-            <RefreshCw className={cn("h-4 w-4 mr-2", syncing && "animate-spin")} />
-            Atualizar
-          </Button>
+    <div className="container max-w-7xl py-6 space-y-6">
+      
+      {/* HEADER SECTION */}
+      <div className="grid md:grid-cols-[1fr_auto] items-center gap-6 bg-card border p-6 rounded-2xl shadow-sm">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-black tracking-tight flex items-center gap-2">
+            Explorador de Dados de Futebol
+            <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">V2 REAL-TIME</Badge>
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            Auditoria de cobertura de ligas e monitoramento de calendário esportivo.
+          </p>
+          {lastSync && (
+            <div className="flex items-center gap-2 pt-2">
+              <Clock className="h-3 w-3 text-muted-foreground" />
+              <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
+                Sincronizado em: {format(new Date(lastSync), "dd/MM 'às' HH:mm", { locale: ptBR })}
+              </span>
+            </div>
+          )}
         </div>
-
-        {/* Filters */}
-        <div className="flex gap-4 p-4 bg-card rounded-lg border">
-           <select className="bg-transparent border rounded p-2" onChange={e => setFilters({continent: e.target.value, country: 'all'})}>
-             <option value="all">Todos Continentes</option>
-             {continents.map(c => <option key={c} value={c}>{c}</option>)}
-           </select>
-           <select className="bg-transparent border rounded p-2" onChange={e => setFilters({...filters, country: e.target.value})}>
-             <option value="all">Todos Países</option>
-             {countries.map(c => <option key={c} value={c}>{c}</option>)}
-           </select>
+        <div className="flex gap-2">
+          <Button 
+            onClick={handleManualSync} 
+            disabled={syncing}
+            className="rounded-full shadow-lg shadow-primary/20 h-11 px-6 font-bold"
+          >
+            {syncing ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+            {syncing ? 'Sincronizando...' : 'Sincronizar Ligas'}
+          </Button>
         </div>
       </div>
 
-      {/* Main Content */}
-      {loading ? (
-        <Loader2 className="h-12 w-12 animate-spin mx-auto mt-20" />
-      ) : (
-        <div className="space-y-8">
-          {Object.entries(hierarchy).map(([continent, countries]: [string, any]) => (
-            <motion.div key={continent} className="space-y-4">
-              <h2 className="text-xl font-bold flex items-center gap-2"><Globe className="h-5 w-5" /> {continent}</h2>
-              {Object.entries(countries).map(([country, leagues]: [string, any]) => (
-                <div key={country} className="ml-4 space-y-3">
-                  <h3 className="text-lg font-semibold flex items-center gap-2"><Map className="h-4 w-4" /> {country}</h3>
-                  <div className="grid gap-3">
-                    {Object.entries(leagues).map(([leagueName, matches]: [string, any]) => (
-                       <Card key={leagueName} className="p-4">
-                         <h4 className="font-bold text-primary mb-2">{leagueName} ({matches.length})</h4>
-                         <div className="space-y-2">
-                           {matches.map((match: any) => (
-                             <div key={match.api_id} className="flex justify-between items-center text-sm border-b pb-1">
-                               <span>{format(parseISO(match.commence_time), 'HH:mm')}</span>
-                               <span className="font-bold">{match.home_team} vs {match.away_team}</span>
-                               <Badge>{match.competition_type}</Badge>
-                             </div>
-                           ))}
-                         </div>
-                       </Card>
+      {/* NAVIGATION TABS */}
+      <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-xl w-fit">
+        <Button 
+          variant={activeTab === 'matches' ? 'default' : 'ghost'} 
+          size="sm" 
+          onClick={() => setActiveTab('matches')}
+          className="rounded-lg px-4"
+        >
+          <CalendarIcon className="h-4 w-4 mr-2" /> Jogos do Dia
+        </Button>
+        <Button 
+          variant={activeTab === 'coverage' ? 'default' : 'ghost'} 
+          size="sm" 
+          onClick={() => setActiveTab('coverage')}
+          className="rounded-lg px-4"
+        >
+          <Globe className="h-4 w-4 mr-2" /> Cobertura de Ligas
+        </Button>
+      </div>
+
+      <div className="grid lg:grid-cols-[280px_1fr] gap-6">
+        
+        {/* SIDEBAR FILTERS */}
+        <div className="space-y-6">
+          <Card className="rounded-2xl border-border/40">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <Filter className="h-4 w-4 text-primary" /> Filtros Avançados
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Esporte</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {SPORTS.map(s => (
+                    <Button 
+                      key={s.id} 
+                      variant={selectedSport === s.id ? 'default' : 'outline'} 
+                      size="sm"
+                      onClick={() => setSelectedSport(s.id)}
+                      className="h-10 text-[11px] font-bold"
+                    >
+                      {s.icon} {s.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Continente</label>
+                <select 
+                  className="w-full bg-muted/50 border rounded-lg p-2 text-xs font-semibold"
+                  value={filters.continent}
+                  onChange={e => setFilters({...filters, continent: e.target.value, country: 'all'})}
+                >
+                  <option value="all">Todos os Continentes</option>
+                  {continents.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">País</label>
+                <select 
+                  className="w-full bg-muted/50 border rounded-lg p-2 text-xs font-semibold"
+                  value={filters.country}
+                  onChange={e => setFilters({...filters, country: e.target.value})}
+                  disabled={filters.continent === 'all'}
+                >
+                  <option value="all">Todos os Países</option>
+                  {countries.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Tipo</label>
+                <select 
+                  className="w-full bg-muted/50 border rounded-lg p-2 text-xs font-semibold"
+                  value={filters.type}
+                  onChange={e => setFilters({...filters, type: e.target.value})}
+                >
+                  <option value="all">Todas Competições</option>
+                  <option value="league">Ligas Nacionais</option>
+                  <option value="cup">Copas Nacionais</option>
+                  <option value="continental">Continentais</option>
+                </select>
+              </div>
+
+              <div className="pt-2">
+                <Input 
+                  placeholder="Buscar time ou liga..." 
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  className="bg-muted/50 border-none h-10 text-xs"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* QUICK STATS */}
+          <Card className="rounded-2xl border-border/40 bg-primary/5 border-primary/10">
+            <CardContent className="p-4 space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Total de Jogos</span>
+                <span className="text-xl font-black text-primary">{events.length}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Ligas Ativas</span>
+                <span className="text-xl font-black text-primary">{coverage.length}</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* MAIN FEED */}
+        <div className="space-y-6">
+          {activeTab === 'matches' ? (
+            <div className="space-y-10">
+              {loading ? (
+                <div className="py-20 flex flex-col items-center justify-center gap-4">
+                  <Loader2 className="h-10 w-10 animate-spin text-primary/40" />
+                  <p className="text-sm font-bold text-muted-foreground tracking-widest uppercase">Consultando Calendário...</p>
+                </div>
+              ) : Object.keys(groupedMatches).length === 0 ? (
+                <div className="py-20 text-center space-y-4">
+                  <Search className="h-12 w-12 text-muted-foreground/20 mx-auto" />
+                  <p className="text-muted-foreground font-bold">Nenhuma partida encontrada para os filtros atuais.</p>
+                </div>
+              ) : (
+                Object.entries(groupedMatches).map(([continent, countries]: [string, any]) => (
+                  <div key={continent} className="space-y-6">
+                    <div className="flex items-center gap-3">
+                      <div className="h-[1px] flex-1 bg-border/40" />
+                      <Badge className="bg-foreground text-background font-black px-4 py-1 rounded-full uppercase tracking-widest text-[10px]">
+                        {continent}
+                      </Badge>
+                      <div className="h-[1px] flex-1 bg-border/40" />
+                    </div>
+
+                    {Object.entries(countries).map(([country, types]: [string, any]) => (
+                      <div key={country} className="space-y-4">
+                        <div className="flex items-center gap-2 px-2">
+                          <Map className="h-4 w-4 text-primary" />
+                          <h3 className="text-lg font-black tracking-tight">{country}</h3>
+                        </div>
+
+                        {Object.entries(types).map(([type, leagues]: [string, any]) => (
+                          <div key={type} className="space-y-4">
+                            {Object.entries(leagues).map(([leagueName, matches]: [string, any]) => (
+                              <Card key={leagueName} className="overflow-hidden border-border/40 shadow-sm rounded-xl">
+                                <div className="bg-muted/40 px-4 py-2 flex justify-between items-center border-b border-border/40">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-base">{matches[0].league_flag}</span>
+                                    <span className="text-[11px] font-black uppercase tracking-wider">{leagueName}</span>
+                                    <Badge variant="outline" className="text-[9px] h-4 px-1.5 font-bold uppercase border-primary/20 text-primary">
+                                      {type}
+                                    </Badge>
+                                  </div>
+                                  <span className="text-[10px] font-bold text-muted-foreground uppercase">{matches.length} partidas</span>
+                                </div>
+                                <div className="divide-y divide-border/20">
+                                  {matches.map((ev: Event) => (
+                                    <div key={ev.api_id} className="grid grid-cols-[80px_1fr_100px] items-center p-4 hover:bg-primary/5 transition-colors group">
+                                      {/* TIME */}
+                                      <div className="flex flex-col items-center justify-center border-r pr-4">
+                                        <span className="text-sm font-black text-foreground">
+                                          {format(parseISO(ev.commence_time), 'HH:mm')}
+                                        </span>
+                                        <span className="text-[9px] font-bold text-muted-foreground uppercase">
+                                          {format(parseISO(ev.commence_time), 'dd/MM')}
+                                        </span>
+                                      </div>
+
+                                      {/* TEAMS */}
+                                      <div className="px-6 flex flex-col gap-2">
+                                        <div className="flex justify-between items-center">
+                                          <span className="text-sm font-bold group-hover:text-primary transition-colors">{ev.home_team}</span>
+                                          {ev.result_home && <span className="font-black text-primary">{ev.result_home}</span>}
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                          <span className="text-sm font-bold group-hover:text-primary transition-colors">{ev.away_team}</span>
+                                          {ev.result_away && <span className="font-black text-primary">{ev.result_away}</span>}
+                                        </div>
+                                      </div>
+
+                                      {/* STATUS / INFO */}
+                                      <div className="flex justify-end pr-2">
+                                        <Button variant="ghost" size="sm" className="rounded-full h-8 w-8 p-0">
+                                          <Info className="h-4 w-4 text-muted-foreground" />
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </Card>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
                     ))}
                   </div>
-                </div>
-              ))}
-            </motion.div>
-          ))}
+                ))
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <Card className="rounded-2xl border-border/40">
+                <CardHeader>
+                  <CardTitle className="text-lg font-black tracking-tight">Mapeamento de Cobertura</CardTitle>
+                  <CardDescription>Lista completa de campeonatos integrados e volume de dados encontrados.</CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-hidden rounded-b-2xl">
+                    <table className="w-full text-left">
+                      <thead className="bg-muted/50 text-[10px] font-black uppercase text-muted-foreground tracking-widest border-y">
+                        <tr>
+                          <th className="px-6 py-4">Liga / Campeonato</th>
+                          <th className="px-6 py-4">Localização</th>
+                          <th className="px-6 py-4">Tipo</th>
+                          <th className="px-6 py-4 text-right">Jogos Ativos</th>
+                          <th className="px-6 py-4 text-center">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/20">
+                        {coverage.map((item, idx) => (
+                          <tr key={idx} className="hover:bg-primary/5 transition-colors">
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                <span className="text-lg">{item.flag}</span>
+                                <span className="text-xs font-bold">{item.name}</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex flex-col">
+                                <span className="text-[10px] font-black uppercase text-muted-foreground">{item.continent}</span>
+                                <span className="text-xs font-semibold">{item.country}</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <Badge variant="outline" className="text-[9px] font-black uppercase px-2 py-0 h-5 border-primary/20 text-primary">
+                                {item.type === 'league' ? 'Liga' : (item.type === 'cup' ? 'Copa' : 'Continental')}
+                              </Badge>
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <span className="text-sm font-black text-primary">{item.count}</span>
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              {item.count > 0 ? (
+                                <div className="flex items-center justify-center gap-1 text-emerald-500">
+                                  <CheckCircle2 className="h-4 w-4" />
+                                  <span className="text-[10px] font-black uppercase">Coberto</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-center gap-1 text-muted-foreground/40">
+                                  <XCircle className="h-4 w-4" />
+                                  <span className="text-[10px] font-black uppercase">Sem Dados</span>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
