@@ -10,11 +10,13 @@ import { SubscriptionsTab } from '@/components/system-admin/SubscriptionsTab';
 import { OnlineUsersCard } from '@/components/system-admin/OnlineUsersCard';
 import { LoginHistoryTab } from '@/components/system-admin/LoginHistoryTab';
 import { InfluenceMetricsTab } from '@/components/system-admin/InfluenceMetricsTab';
+import { ApiMonitorTab } from '@/components/system-admin/ApiMonitorTab';
 import { OnlineStatusIndicator } from '@/components/system-admin/OnlineStatusIndicator';
 import { UserWorkspacesList } from '@/components/system-admin/UserWorkspacesList';
 import { usePresence } from '@/contexts/PresenceContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useSearchParams } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,7 +28,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   Users, Building2, Shield, Ban, Check, Plus, UserPlus, Settings2, 
-  Eye, RefreshCw, Crown, AlertTriangle, Trash2, Archive, MessagesSquare, DollarSign, CreditCard, History, BarChart3, ArrowUpDown
+  Eye, RefreshCw, Crown, AlertTriangle, Trash2, Archive, MessagesSquare, DollarSign, CreditCard, History, BarChart3, ArrowUpDown, Activity
 } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { format, differenceInDays } from 'date-fns';
@@ -54,6 +56,8 @@ const ROLES = [
 
 export default function SystemAdmin() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'usuarios';
   const { isUserOnline } = usePresence();
   const { setContent: setTopBarContent } = useTopBar();
   const {
@@ -294,7 +298,11 @@ export default function SystemAdmin() {
         </Card>
       </div>
 
-      <Tabs defaultValue="usuarios" className="space-y-4">
+      <Tabs 
+        value={activeTab} 
+        onValueChange={(value) => setSearchParams({ tab: value })} 
+        className="space-y-4"
+      >
         <TabsList className="h-auto">
           <TabsTrigger value="usuarios" className="gap-2">
             <Users className="h-4 w-4" />
@@ -311,6 +319,10 @@ export default function SystemAdmin() {
           <TabsTrigger value="metricas" className="gap-2">
             <BarChart3 className="h-4 w-4" />
             Métricas
+          </TabsTrigger>
+          <TabsTrigger value="apis" className="gap-2">
+            <Activity className="h-4 w-4" />
+            APIs
           </TabsTrigger>
         </TabsList>
 
@@ -735,6 +747,11 @@ export default function SystemAdmin() {
         {/* =============== ABA MÉTRICAS =============== */}
         <TabsContent value="metricas" className="space-y-4">
           <InfluenceMetricsTab />
+        </TabsContent>
+
+        {/* =============== ABA APIs =============== */}
+        <TabsContent value="apis" className="space-y-4">
+          <ApiMonitorTab />
         </TabsContent>
       </Tabs>
 

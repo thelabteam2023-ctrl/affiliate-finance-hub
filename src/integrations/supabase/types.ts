@@ -217,6 +217,87 @@ export type Database = {
           },
         ]
       }
+      api_request_logs: {
+        Row: {
+          api_name: string
+          created_at: string | null
+          credits_used: number | null
+          duration_ms: number | null
+          endpoint: string
+          error_message: string | null
+          id: string
+          method: string | null
+          records_returned: number | null
+          records_saved: number | null
+          sport_key: string | null
+          status_code: number | null
+          triggered_by: string | null
+        }
+        Insert: {
+          api_name: string
+          created_at?: string | null
+          credits_used?: number | null
+          duration_ms?: number | null
+          endpoint: string
+          error_message?: string | null
+          id?: string
+          method?: string | null
+          records_returned?: number | null
+          records_saved?: number | null
+          sport_key?: string | null
+          status_code?: number | null
+          triggered_by?: string | null
+        }
+        Update: {
+          api_name?: string
+          created_at?: string | null
+          credits_used?: number | null
+          duration_ms?: number | null
+          endpoint?: string
+          error_message?: string | null
+          id?: string
+          method?: string | null
+          records_returned?: number | null
+          records_saved?: number | null
+          sport_key?: string | null
+          status_code?: number | null
+          triggered_by?: string | null
+        }
+        Relationships: []
+      }
+      api_usage_summary: {
+        Row: {
+          api_name: string
+          id: string
+          period_key: string
+          period_type: string
+          total_calls: number | null
+          total_credits: number | null
+          total_errors: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          api_name: string
+          id?: string
+          period_key: string
+          period_type: string
+          total_calls?: number | null
+          total_credits?: number | null
+          total_errors?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          api_name?: string
+          id?: string
+          period_key?: string
+          period_type?: string
+          total_calls?: number | null
+          total_credits?: number | null
+          total_errors?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       apostas_perna_entradas: {
         Row: {
           bookmaker_id: string
@@ -16320,6 +16401,16 @@ export type Database = {
       has_route_access: {
         Args: { _route: string; _user_id: string; _workspace_id?: string }
         Returns: Json
+      }
+      increment_api_usage: {
+        Args: {
+          p_api_name: string
+          p_credits: number
+          p_has_error: boolean
+          p_period_key: string
+          p_period_type: string
+        }
+        Returns: undefined
       }
       is_active_workspace_member: {
         Args: { _user_id: string; _workspace_id: string }
