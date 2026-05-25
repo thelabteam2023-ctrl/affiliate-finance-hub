@@ -1,0 +1,2 @@
+UPDATE public.monitored_leagues SET sport = 'tennis' WHERE league_key LIKE 'tennis_%' AND sport <> 'tennis';
+UPDATE public.daily_events SET sport = 'tennis' WHERE league_key LIKE 'tennis_%' AND sport <> 'tennis';
