@@ -1,0 +1,1 @@
+UPDATE public.daily_events SET continent='Europa', country='França', league_flag='🇫🇷' WHERE league_key IN ('tennis_atp_french_open','tennis_wta_french_open') AND (continent IS NULL OR continent='' OR country IS NULL OR country='');
