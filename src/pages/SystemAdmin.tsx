@@ -56,6 +56,8 @@ const ROLES = [
 
 export default function SystemAdmin() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'usuarios';
   const { isUserOnline } = usePresence();
   const { setContent: setTopBarContent } = useTopBar();
   const {
