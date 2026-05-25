@@ -1160,20 +1160,35 @@ export function ProjetoValueBetTab({
               onSortOrderToggle={tabFilters.toggleSortOrder}
               extraActions={
                 <ExportMenu
-                  getData={() => apostasFiltradas.map(a => transformApostaToExport({
-                    ...a,
-                    data_aposta: a.data_aposta,
-                    estrategia: "VALUEBET",
-                  }, "ValueBet", convertToConsolidationFn))}
+                  getData={() => {
+                    const formatPeriod = (start: Date | undefined, end: Date | undefined) => {
+                      if (!start) return "completo";
+                      const fmt = (d: Date) => d.toISOString().split('T')[0];
+                      return `${fmt(start)}_a_${fmt(end || start)}`;
+                    };
+                    const filenamePeriod = tabFilters.period === "custom" 
+                      ? formatPeriod(tabFilters.customDateRange?.from, tabFilters.customDateRange?.to)
+                      : formatPeriod(dateRange?.start, dateRange?.end);
+
+                    return apostasFiltradas.map(a => transformApostaToExport({
+                      ...a,
+                      data_aposta: a.data_aposta,
+                      estrategia: "VALUEBET",
+                    }, "ValueBet", convertToConsolidationFn));
+                  }}
                   abaOrigem="ValueBet"
-                filename={`valuebets-${projetoId}-${format(new Date(), 'yyyy-MM-dd')}`}
-                filtrosAplicados={{
-                  periodo: tabFilters.period,
-                  dataInicio: dateRange?.start.toISOString(),
-                  dataFim: dateRange?.end.toISOString(),
-                }}
-              />
-            }
+                  filename={`apostas_${
+                    tabFilters.period === "custom" 
+                      ? (tabFilters.customDateRange?.from ? `${tabFilters.customDateRange.from.toISOString().split('T')[0]}_a_${(tabFilters.customDateRange.to || tabFilters.customDateRange.from).toISOString().split('T')[0]}` : "completo")
+                      : (dateRange?.start ? `${dateRange.start.toISOString().split('T')[0]}_a_${dateRange.end.toISOString().split('T')[0]}` : "completo")
+                  }`}
+                  filtrosAplicados={{
+                    periodo: tabFilters.period,
+                    dataInicio: dateRange?.start.toISOString(),
+                    dataFim: dateRange?.end.toISOString(),
+                  }}
+                />
+              }
           />
         </div>
         <div className="flex items-center gap-4">
