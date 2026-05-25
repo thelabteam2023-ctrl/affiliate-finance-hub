@@ -3563,6 +3563,60 @@ export type Database = {
           },
         ]
       }
+      daily_events: {
+        Row: {
+          api_id: string
+          away_team: string
+          commence_time: string
+          created_at: string | null
+          event_date: string
+          home_team: string
+          id: string
+          league_flag: string | null
+          league_key: string
+          league_name: string
+          result_away: string | null
+          result_home: string | null
+          sport: string
+          status: string | null
+          synced_at: string | null
+        }
+        Insert: {
+          api_id: string
+          away_team: string
+          commence_time: string
+          created_at?: string | null
+          event_date: string
+          home_team: string
+          id?: string
+          league_flag?: string | null
+          league_key: string
+          league_name: string
+          result_away?: string | null
+          result_home?: string | null
+          sport: string
+          status?: string | null
+          synced_at?: string | null
+        }
+        Update: {
+          api_id?: string
+          away_team?: string
+          commence_time?: string
+          created_at?: string | null
+          event_date?: string
+          home_team?: string
+          id?: string
+          league_flag?: string | null
+          league_key?: string
+          league_name?: string
+          result_away?: string | null
+          result_home?: string | null
+          sport?: string
+          status?: string | null
+          synced_at?: string | null
+        }
+        Relationships: []
+      }
       debug_logs: {
         Row: {
           created_at: string | null
@@ -12157,6 +12211,17 @@ export type Database = {
       }
     }
     Views: {
+      league_game_counts: {
+        Row: {
+          event_date: string | null
+          game_count: number | null
+          league_flag: string | null
+          league_key: string | null
+          league_name: string | null
+          sport: string | null
+        }
+        Relationships: []
+      }
       v_ajustes_auditoria: {
         Row: {
           ajuste_direcao: string | null
