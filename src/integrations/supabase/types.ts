@@ -6162,10 +6162,12 @@ export type Database = {
       }
       monitored_leagues: {
         Row: {
+          api_sports_id: number | null
           competition_type: string | null
           continent: string | null
           country: string | null
           created_at: string | null
+          current_season: number | null
           id: string
           is_active: boolean | null
           league_flag: string | null
@@ -6175,10 +6177,12 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          api_sports_id?: number | null
           competition_type?: string | null
           continent?: string | null
           country?: string | null
           created_at?: string | null
+          current_season?: number | null
           id?: string
           is_active?: boolean | null
           league_flag?: string | null
@@ -6188,10 +6192,12 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          api_sports_id?: number | null
           competition_type?: string | null
           continent?: string | null
           country?: string | null
           created_at?: string | null
+          current_season?: number | null
           id?: string
           is_active?: boolean | null
           league_flag?: string | null
@@ -11422,6 +11428,7 @@ export type Database = {
       team_logos: {
         Row: {
           api_sports_id: number | null
+          country: string | null
           found: boolean | null
           id: string
           logo_url: string | null
@@ -11432,6 +11439,7 @@ export type Database = {
         }
         Insert: {
           api_sports_id?: number | null
+          country?: string | null
           found?: boolean | null
           id?: string
           logo_url?: string | null
@@ -11442,6 +11450,7 @@ export type Database = {
         }
         Update: {
           api_sports_id?: number | null
+          country?: string | null
           found?: boolean | null
           id?: string
           logo_url?: string | null
@@ -16689,6 +16698,7 @@ export type Database = {
         Args: { p_reason?: string; p_topic_id: string }
         Returns: Json
       }
+      normalize_text: { Args: { input_text: string }; Returns: string }
       operator_has_project_access: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
