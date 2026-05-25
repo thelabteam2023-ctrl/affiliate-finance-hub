@@ -16402,6 +16402,16 @@ export type Database = {
         Args: { _route: string; _user_id: string; _workspace_id?: string }
         Returns: Json
       }
+      increment_api_usage: {
+        Args: {
+          p_api_name: string
+          p_credits: number
+          p_has_error: boolean
+          p_period_key: string
+          p_period_type: string
+        }
+        Returns: undefined
+      }
       is_active_workspace_member: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
