@@ -89,8 +89,18 @@ const ALL_LEAGUES = [
   { sport: 'americanfootball', key: 'americanfootball_ncaaf', name: 'NCAA Division I', flag: '🇺🇸', continent: 'América do Norte', country: 'Estados Unidos', type: 'league' },
 
   // TÊNIS (EXEMPLOS)
-  { sport: 'tennis', key: 'tennis_atp_french_open', name: 'ATP French Open', flag: '🇫🇷', continent: 'Europa', country: 'França', type: 'cup' },
-  { sport: 'tennis', key: 'tennis_wta_french_open', name: 'WTA French Open', flag: '🇫🇷', continent: 'Europa', country: 'França', type: 'cup' },
+  { sport: 'soccer', key: 'tennis_atp_french_open', name: 'ATP French Open', flag: '🇫🇷', continent: 'Europa', country: 'França', type: 'cup' },
+  { sport: 'soccer', key: 'tennis_wta_french_open', name: 'WTA French Open', flag: '🇫🇷', continent: 'Europa', country: 'França', type: 'cup' },
+
+  // HÓQUEI
+  { sport: 'icehockey', key: 'icehockey_nhl', name: 'NHL', flag: '🇺🇸', continent: 'América do Norte', country: 'Estados Unidos', type: 'league' },
+  { sport: 'icehockey', key: 'icehockey_khl', name: 'KHL', flag: '🇷🇺', continent: 'Europa', country: 'Rússia', type: 'league' },
+  { sport: 'icehockey', key: 'icehockey_sweden_allsvenskan', name: 'Swedish Hockey League', flag: '🇸🇪', continent: 'Europa', country: 'Suécia', type: 'league' },
+  { sport: 'icehockey', key: 'icehockey_finland_liiga', name: 'Liiga', flag: '🇫🇮', continent: 'Europa', country: 'Finlândia', type: 'league' },
+  { sport: 'icehockey', key: 'icehockey_switzerland_national_league', name: 'National League', flag: '🇨🇭', continent: 'Europa', country: 'Suíça', type: 'league' },
+  { sport: 'icehockey', key: 'icehockey_germany_del', name: 'DEL', flag: '🇩🇪', continent: 'Europa', country: 'Alemanha', type: 'league' },
+  { sport: 'icehockey', key: 'icehockey_czech_extraliga', name: 'Czech Extraliga', flag: '🇨🇿', continent: 'Europa', country: 'República Tcheca', type: 'league' },
+  { sport: 'icehockey', key: 'icehockey_champions_hockey_league', name: 'Champions Hockey League', flag: '🇪🇺', continent: 'Europa', country: 'Continental', type: 'continental' },
 ];
 
 async function syncMonitoredLeagues(supabase: any) {
