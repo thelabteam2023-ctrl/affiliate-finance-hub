@@ -85,6 +85,7 @@ export default function ApiExplorer() {
   const { isSystemOwner } = useAuth();
   const { setContent: setTopBarContent } = useTopBar();
   
+  const [sportType, setSportType] = useState<'traditional' | 'esports'>('traditional');
   const [selectedSport, setSelectedSport] = useState('soccer');
   const [events, setEvents] = useState<Event[]>([]);
   const [monitoredLeagues, setMonitoredLeagues] = useState<any[]>([]);
