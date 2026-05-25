@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { withMiddleware, corsHeaders } from '../_shared/middleware.ts';
 import { callExternalApi } from '../_shared/apiWrapper.ts';
 
+
 const FN_NAME = 'api-monitor';
 
 // Lista completa de todas as ligas monitoradas com metadados geográficos e de tipo
