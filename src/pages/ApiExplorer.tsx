@@ -467,7 +467,7 @@ export default function ApiExplorer() {
                       }
                     }}
                     modifiersClassNames={{
-                      hasGames: "after:content-[''] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-primary after:rounded-full"
+                      hasGames: "after:content-[''] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-emerald-500 after:rounded-full after:shadow-[0_0_5px_rgba(16,185,129,0.8)]"
                     }}
                     initialFocus
                   />
