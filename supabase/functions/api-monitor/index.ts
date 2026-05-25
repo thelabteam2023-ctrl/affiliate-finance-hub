@@ -195,6 +195,8 @@ async function syncDailyEvents(supabase: any, triggeredBy: 'cron' | 'manual' = '
             competition_type: league.type,
             home_team: ev.home_team,
             away_team: ev.away_team,
+            home_team_logo: ev.home_team_logo || null,
+            away_team_logo: ev.away_team_logo || null,
             commence_time: ev.commence_time,
             event_date: ev.commence_time.split('T')[0],
             synced_at: new Date().toISOString()

@@ -3567,6 +3567,7 @@ export type Database = {
         Row: {
           api_id: string
           away_team: string
+          away_team_logo: string | null
           commence_time: string
           competition_type: string | null
           continent: string | null
@@ -3574,6 +3575,7 @@ export type Database = {
           created_at: string | null
           event_date: string
           home_team: string
+          home_team_logo: string | null
           id: string
           league_flag: string | null
           league_key: string
@@ -3587,6 +3589,7 @@ export type Database = {
         Insert: {
           api_id: string
           away_team: string
+          away_team_logo?: string | null
           commence_time: string
           competition_type?: string | null
           continent?: string | null
@@ -3594,6 +3597,7 @@ export type Database = {
           created_at?: string | null
           event_date: string
           home_team: string
+          home_team_logo?: string | null
           id?: string
           league_flag?: string | null
           league_key: string
@@ -3607,6 +3611,7 @@ export type Database = {
         Update: {
           api_id?: string
           away_team?: string
+          away_team_logo?: string | null
           commence_time?: string
           competition_type?: string | null
           continent?: string | null
@@ -3614,6 +3619,7 @@ export type Database = {
           created_at?: string | null
           event_date?: string
           home_team?: string
+          home_team_logo?: string | null
           id?: string
           league_flag?: string | null
           league_key?: string

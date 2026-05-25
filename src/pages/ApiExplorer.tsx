@@ -48,20 +48,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 // Sports mapping
 const TRADITIONAL_SPORTS = [
-  { id: 'soccer', label: 'Futebol', icon: '⚽' },
-  { id: 'basketball', label: 'Basquete', icon: '🏀' },
-  { id: 'americanfootball', label: 'F. Americano', icon: '🏈' },
-  { id: 'baseball', label: 'Beisebol', icon: '⚾' },
-  { id: 'tennis', label: 'Tênis', icon: '🎾' },
-  { id: 'icehockey', label: 'Hóquei', icon: '🏒' },
+  { id: 'soccer', label: 'Futebol', icon: '⚽', status: 'supported' },
+  { id: 'basketball', label: 'Basquete', icon: '🏀', status: 'supported' },
+  { id: 'americanfootball', label: 'F. Americano', icon: '🏈', status: 'supported' },
+  { id: 'baseball', label: 'Beisebol', icon: '⚾', status: 'supported' },
+  { id: 'tennis', label: 'Tênis', icon: '🎾', status: 'supported' },
+  { id: 'icehockey', label: 'Hóquei', icon: '🏒', status: 'partial' },
 ];
 
 const ESPORTS = [
-  { id: 'leagueoflegends', label: 'LoL', icon: '🎮' },
-  { id: 'csgo', label: 'CS2', icon: '🔫' },
-  { id: 'valorant', label: 'Valorant', icon: '🎯' },
-  { id: 'dota2', label: 'Dota 2', icon: '🧙' },
-  { id: 'soccer_fifa', label: 'EA FC / FIFA', icon: '🎮' },
+  { id: 'leagueoflegends', label: 'LoL', icon: '🎮', status: 'unavailable' },
+  { id: 'csgo', label: 'CS2', icon: '🔫', status: 'unavailable' },
+  { id: 'valorant', label: 'Valorant', icon: '🎯', status: 'unavailable' },
+  { id: 'dota2', label: 'Dota 2', icon: '🧙', status: 'unavailable' },
+  { id: 'soccer_fifa', label: 'EA FC / FIFA', icon: '🎮', status: 'unavailable' },
 ];
 
 interface Event {
@@ -78,8 +78,28 @@ interface Event {
   commence_time: string;
   result_home: string | null;
   result_away: string | null;
+  home_team_logo: string | null;
+  away_team_logo: string | null;
   synced_at: string;
 }
+
+const TeamLogo = ({ name, url, className }: { name: string, url?: string | null, className?: string }) => {
+  const [error, setError] = useState(false);
+  
+  // Use a reliable logo placeholder service as fallback
+  const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff&bold=true&font-size=0.45`;
+
+  return (
+    <div className={cn("relative flex h-8 w-8 shrink-0 overflow-hidden rounded-full border bg-muted shadow-sm", className)}>
+      <img 
+        src={error || !url ? fallbackUrl : url} 
+        alt={name} 
+        className="aspect-square h-full w-full object-contain p-0.5"
+        onError={() => setError(true)}
+      />
+    </div>
+  );
+};
 
 export default function ApiExplorer() {
   const { isSystemOwner } = useAuth();
@@ -447,7 +467,7 @@ export default function ApiExplorer() {
                       }
                     }}
                     modifiersClassNames={{
-                      hasGames: "after:content-[''] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-primary after:rounded-full"
+                      hasGames: "after:content-[''] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-emerald-500 after:rounded-full after:shadow-[0_0_5px_rgba(16,185,129,0.8)]"
                     }}
                     initialFocus
                   />
@@ -613,16 +633,39 @@ export default function ApiExplorer() {
                     
                     <ScrollArea className="h-[calc(100vh-120px)]">
                       <div className="p-6 space-y-8">
+                        {/* Sport Coverage Status */}
+                        <Card className="border-border/40 bg-muted/30 overflow-hidden">
+                          <div className="p-4 flex flex-col gap-3">
+                            <div className="flex justify-between items-center">
+                              <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Status da Integração</span>
+                              {(() => {
+                                const sport = (sportType === 'traditional' ? TRADITIONAL_SPORTS : ESPORTS).find(s => s.id === selectedSport);
+                                if (sport?.status === 'supported') return <Badge className="bg-emerald-500 text-white border-none text-[9px] font-black">TOTALMENTE SUPORTADO</Badge>;
+                                if (sport?.status === 'partial') return <Badge className="bg-amber-500 text-white border-none text-[9px] font-black">SUPORTE PARCIAL</Badge>;
+                                return <Badge className="bg-rose-500 text-white border-none text-[9px] font-black">INDISPONÍVEL NA API ATUAL</Badge>;
+                              })()}
+                            </div>
+                            <p className="text-[10px] text-muted-foreground font-medium leading-relaxed">
+                              {(() => {
+                                const sport = (sportType === 'traditional' ? TRADITIONAL_SPORTS : ESPORTS).find(s => s.id === selectedSport);
+                                if (sport?.status === 'supported') return "Esta modalidade possui cobertura completa e estável através da The Odds API, incluindo eventos diários e mercados principais.";
+                                if (sport?.status === 'partial') return "Algumas ligas desta modalidade podem não estar disponíveis dependendo da região ou temporada esportiva na API.";
+                                return "ATENÇÃO: Este esporte foi identificado como sem cobertura ativa na chave da API atual. Nenhuma partida será encontrada.";
+                              })()}
+                            </p>
+                          </div>
+                        </Card>
+
                         {/* Summary Cards */}
                         <div className="grid grid-cols-2 gap-4">
-                          <div className="bg-muted/50 p-4 rounded-xl border border-border/40">
-                            <span className="text-[9px] font-black uppercase text-muted-foreground block mb-1">Com Jogos</span>
+                          <div className="bg-muted/50 p-4 rounded-xl border border-border/40 shadow-sm hover:border-emerald-500/30 transition-colors">
+                            <span className="text-[9px] font-black uppercase text-muted-foreground block mb-1">Ligas com Jogos</span>
                             <span className="text-2xl font-black text-emerald-500">
                               {monitoredLeagues.filter(l => events.some(e => e.league_key === l.league_key)).length}
                             </span>
                           </div>
-                          <div className="bg-muted/50 p-4 rounded-xl border border-border/40">
-                            <span className="text-[9px] font-black uppercase text-muted-foreground block mb-1">Sem Jogos</span>
+                          <div className="bg-muted/50 p-4 rounded-xl border border-border/40 shadow-sm hover:border-rose-500/30 transition-colors">
+                            <span className="text-[9px] font-black uppercase text-muted-foreground block mb-1">Ligas Vazias</span>
                             <span className="text-2xl font-black text-rose-500">
                               {monitoredLeagues.filter(l => !events.some(e => e.league_key === l.league_key)).length}
                             </span>
@@ -748,14 +791,20 @@ export default function ApiExplorer() {
                                       </div>
 
                                       {/* TEAMS */}
-                                      <div className="px-6 flex flex-col gap-2">
-                                        <div className="flex justify-between items-center">
-                                          <span className="text-sm font-bold group-hover:text-primary transition-colors">{ev.home_team}</span>
-                                          {ev.result_home && <span className="font-black text-primary">{ev.result_home}</span>}
+                                      <div className="px-6 flex flex-col gap-3">
+                                        <div className="flex justify-between items-center group/team">
+                                          <div className="flex items-center gap-3">
+                                            <TeamLogo name={ev.home_team} url={ev.home_team_logo} className="h-7 w-7 border-primary/10 shadow-none group-hover/team:scale-110 transition-transform" />
+                                            <span className="text-sm font-bold group-hover:text-primary transition-colors">{ev.home_team}</span>
+                                          </div>
+                                          {ev.result_home && <span className="font-black text-primary bg-primary/5 px-2 py-0.5 rounded text-xs">{ev.result_home}</span>}
                                         </div>
-                                        <div className="flex justify-between items-center">
-                                          <span className="text-sm font-bold group-hover:text-primary transition-colors">{ev.away_team}</span>
-                                          {ev.result_away && <span className="font-black text-primary">{ev.result_away}</span>}
+                                        <div className="flex justify-between items-center group/team">
+                                          <div className="flex items-center gap-3">
+                                            <TeamLogo name={ev.away_team} url={ev.away_team_logo} className="h-7 w-7 border-primary/10 shadow-none group-hover/team:scale-110 transition-transform" />
+                                            <span className="text-sm font-bold group-hover:text-primary transition-colors">{ev.away_team}</span>
+                                          </div>
+                                          {ev.result_away && <span className="font-black text-primary bg-primary/5 px-2 py-0.5 rounded text-xs">{ev.result_away}</span>}
                                         </div>
                                       </div>
 
