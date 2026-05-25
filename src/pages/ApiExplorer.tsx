@@ -53,6 +53,7 @@ const SPORTS = [
   { id: 'americanfootball', label: 'F. Americano', icon: '🏈' },
   { id: 'baseball', label: 'Beisebol', icon: '⚾' },
   { id: 'tennis', label: 'Tênis', icon: '🎾' },
+  { id: 'icehockey', label: 'Hóquei', icon: '🏒' },
 ];
 
 interface Event {
