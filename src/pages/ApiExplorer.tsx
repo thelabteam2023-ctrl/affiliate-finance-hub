@@ -47,13 +47,21 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Sports mapping
-const SPORTS = [
+const TRADITIONAL_SPORTS = [
   { id: 'soccer', label: 'Futebol', icon: '⚽' },
   { id: 'basketball', label: 'Basquete', icon: '🏀' },
   { id: 'americanfootball', label: 'F. Americano', icon: '🏈' },
   { id: 'baseball', label: 'Beisebol', icon: '⚾' },
   { id: 'tennis', label: 'Tênis', icon: '🎾' },
   { id: 'icehockey', label: 'Hóquei', icon: '🏒' },
+];
+
+const ESPORTS = [
+  { id: 'leagueoflegends', label: 'LoL', icon: '🎮' },
+  { id: 'csgo', label: 'CS2', icon: '🔫' },
+  { id: 'valorant', label: 'Valorant', icon: '🎯' },
+  { id: 'dota2', label: 'Dota 2', icon: '🧙' },
+  { id: 'soccer_fifa', label: 'EA FC / FIFA', icon: '🎮' },
 ];
 
 interface Event {
