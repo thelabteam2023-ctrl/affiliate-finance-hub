@@ -13,7 +13,7 @@ import {
   Clock, 
   AlertCircle, 
   Loader2, 
-  Map, 
+  Map as MapIcon, 
   Calendar as CalendarIcon, 
   Filter, 
   ChevronRight,
