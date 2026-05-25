@@ -858,7 +858,12 @@ export default function ApiExplorer() {
                               <Card key={leagueName} className="overflow-hidden border-border/40 shadow-sm rounded-xl">
                                 <div className="bg-muted/40 px-4 py-2 flex justify-between items-center border-b border-border/40">
                                   <div className="flex items-center gap-2">
-                                    <span className="text-base">{matches[0].league_flag}</span>
+                                    {matches[0].league_logo ? (
+                                      <img src={matches[0].league_logo} alt={leagueName} className="h-5 w-5 object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                                    ) : (
+                                      <span className="text-base">{matches[0].league_flag}</span>
+                                    )}
+
                                     <span className="text-[11px] font-black uppercase tracking-wider">{leagueName}</span>
                                     <Badge variant="outline" className="text-[9px] h-4 px-1.5 font-bold uppercase border-primary/20 text-primary">
                                       {type}
