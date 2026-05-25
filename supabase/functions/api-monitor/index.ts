@@ -4,32 +4,64 @@ import { callExternalApi } from '../_shared/apiWrapper.ts';
 
 const FN_NAME = 'api-monitor';
 
-// Lista completa de todas as ligas que queremos monitorar (The Odds API keys)
+// Lista completa de todas as ligas monitoradas com metadados geográficos e de tipo
 const ALL_LEAGUES = [
-  // FUTEBOL
-  { sport: 'soccer', key: 'soccer_brazil_campeonato',          name: 'Brasileirão Série A',     flag: '🇧🇷' },
-  { sport: 'soccer', key: 'soccer_epl',                        name: 'Premier League',           flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
-  { sport: 'soccer', key: 'soccer_germany_bundesliga',         name: 'Bundesliga',               flag: '🇩🇪' },
-  { sport: 'soccer', key: 'soccer_spain_la_liga',              name: 'La Liga',                  flag: '🇪🇸' },
-  { sport: 'soccer', key: 'soccer_italy_serie_a',              name: 'Serie A',                  flag: '🇮🇹' },
-  { sport: 'soccer', key: 'soccer_france_ligue_one',           name: 'Ligue 1',                  flag: '🇫🇷' },
-  { sport: 'soccer', key: 'soccer_uefa_champs_league',         name: 'Champions League',         flag: '🏆' },
-  { sport: 'soccer', key: 'soccer_uefa_europa_league',         name: 'Europa League',            flag: '🏆' },
-  { sport: 'soccer', key: 'soccer_usa_mls',                    name: 'MLS',                      flag: '🇺🇸' },
-  { sport: 'soccer', key: 'soccer_argentina_primera_division', name: 'Liga Argentina',           flag: '🇦🇷' },
-  { sport: 'soccer', key: 'soccer_saudi_professional_league',  name: 'Saudi Pro League',         flag: '🇸🇦' },
-  { sport: 'soccer', key: 'soccer_turkey_super_league',        name: 'Süper Lig',                flag: '🇹🇷' },
-  { sport: 'soccer', key: 'soccer_netherlands_eredivisie',     name: 'Eredivisie',               flag: '🇳🇱' },
-  { sport: 'soccer', key: 'soccer_portugal_primeira_liga',     name: 'Primeira Liga',            flag: '🇵🇹' },
-  { sport: 'soccer', key: 'soccer_mexico_ligamx',              name: 'Liga MX',                  flag: '🇲🇽' },
-  // BASQUETE
-  { sport: 'basketball', key: 'basketball_nba',                name: 'NBA',                      flag: '🇺🇸' },
-  { sport: 'basketball', key: 'basketball_euroleague',         name: 'EuroLeague',               flag: '🇪🇺' },
-  // TÊNIS
-  { sport: 'tennis', key: 'tennis_atp_french_open',            name: 'ATP French Open',          flag: '🇫🇷' },
-  { sport: 'tennis', key: 'tennis_wta_french_open',            name: 'WTA French Open',          flag: '🇫🇷' },
-  // HOCKEY
-  { sport: 'icehockey', key: 'icehockey_nhl',                  name: 'NHL',                      flag: '🇺🇸' },
+  // AMÉRICA DO SUL
+  { sport: 'soccer', key: 'soccer_brazil_campeonato', name: 'Brasileirão Série A', flag: '🇧🇷', continent: 'América do Sul', country: 'Brasil', type: 'league' },
+  { sport: 'soccer', key: 'soccer_brazil_serie_b', name: 'Brasileirão Série B', flag: '🇧🇷', continent: 'América do Sul', country: 'Brasil', type: 'league' },
+  { sport: 'soccer', key: 'soccer_argentina_primera_division', name: 'Liga Profesional', flag: '🇦🇷', continent: 'América do Sul', country: 'Argentina', type: 'league' },
+  { sport: 'soccer', key: 'soccer_chile_campeonato', name: 'Campeonato Nacional', flag: '🇨🇱', continent: 'América do Sul', country: 'Chile', type: 'league' },
+  { sport: 'soccer', key: 'soccer_conmebol_copa_libertadores', name: 'Copa Libertadores', flag: '🏆', continent: 'América do Sul', country: 'Continental', type: 'continental' },
+  { sport: 'soccer', key: 'soccer_conmebol_copa_sudamericana', name: 'Copa Sudamericana', flag: '🏆', continent: 'América do Sul', country: 'Continental', type: 'continental' },
+  
+  // AMÉRICA DO NORTE / CENTRAL
+  { sport: 'soccer', key: 'soccer_usa_mls', name: 'MLS', flag: '🇺🇸', continent: 'América do Norte', country: 'Estados Unidos', type: 'league' },
+  { sport: 'soccer', key: 'soccer_mexico_ligamx', name: 'Liga MX', flag: '🇲🇽', continent: 'América do Norte', country: 'México', type: 'league' },
+  { sport: 'soccer', key: 'soccer_concacaf_leagues_cup', name: 'Leagues Cup', flag: '🏆', continent: 'América do Norte', country: 'Continental', type: 'continental' },
+
+  // EUROPA
+  { sport: 'soccer', key: 'soccer_epl', name: 'Premier League', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', continent: 'Europa', country: 'Inglaterra', type: 'league' },
+  { sport: 'soccer', key: 'soccer_efl_champ', name: 'Championship', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', continent: 'Europa', country: 'Inglaterra', type: 'league' },
+  { sport: 'soccer', key: 'soccer_fa_cup', name: 'FA Cup', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', continent: 'Europa', country: 'Inglaterra', type: 'cup' },
+  { sport: 'soccer', key: 'soccer_england_efl_cup', name: 'EFL Cup', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', continent: 'Europa', country: 'Inglaterra', type: 'cup' },
+  
+  { sport: 'soccer', key: 'soccer_spain_la_liga', name: 'La Liga', flag: '🇪🇸', continent: 'Europa', country: 'Espanha', type: 'league' },
+  { sport: 'soccer', key: 'soccer_spain_segunda_division', name: 'La Liga 2', flag: '🇪🇸', continent: 'Europa', country: 'Espanha', type: 'league' },
+  { sport: 'soccer', key: 'soccer_spain_copa_del_rey', name: 'Copa del Rey', flag: '🇪🇸', continent: 'Europa', country: 'Espanha', type: 'cup' },
+  
+  { sport: 'soccer', key: 'soccer_italy_serie_a', name: 'Serie A', flag: '🇮🇹', continent: 'Europa', country: 'Itália', type: 'league' },
+  { sport: 'soccer', key: 'soccer_italy_serie_b', name: 'Serie B', flag: '🇮🇹', continent: 'Europa', country: 'Itália', type: 'league' },
+  { sport: 'soccer', key: 'soccer_italy_coppa_italia', name: 'Coppa Italia', flag: '🇮🇹', continent: 'Europa', country: 'Itália', type: 'cup' },
+  
+  { sport: 'soccer', key: 'soccer_germany_bundesliga', name: 'Bundesliga', flag: '🇩🇪', continent: 'Europa', country: 'Alemanha', type: 'league' },
+  { sport: 'soccer', key: 'soccer_germany_bundesliga2', name: '2. Bundesliga', flag: '🇩🇪', continent: 'Europa', country: 'Alemanha', type: 'league' },
+  { sport: 'soccer', key: 'soccer_germany_dfb_pokal', name: 'DFB-Pokal', flag: '🇩🇪', continent: 'Europa', country: 'Alemanha', type: 'cup' },
+  
+  { sport: 'soccer', key: 'soccer_france_ligue_one', name: 'Ligue 1', flag: '🇫🇷', continent: 'Europa', country: 'França', type: 'league' },
+  { sport: 'soccer', key: 'soccer_france_ligue_two', name: 'Ligue 2', flag: '🇫🇷', continent: 'Europa', country: 'França', type: 'league' },
+  { sport: 'soccer', key: 'soccer_france_coupe_de_france', name: 'Coupe de France', flag: '🇫🇷', continent: 'Europa', country: 'França', type: 'cup' },
+  
+  { sport: 'soccer', key: 'soccer_portugal_primeira_liga', name: 'Primeira Liga', flag: '🇵🇹', continent: 'Europa', country: 'Portugal', type: 'league' },
+  { sport: 'soccer', key: 'soccer_netherlands_eredivisie', name: 'Eredivisie', flag: '🇳🇱', continent: 'Europa', country: 'Holanda', type: 'league' },
+  { sport: 'soccer', key: 'soccer_belgium_first_div', name: 'Pro League', flag: '🇧🇪', continent: 'Europa', country: 'Bélgica', type: 'league' },
+  { sport: 'soccer', key: 'soccer_turkey_super_league', name: 'Süper Lig', flag: '🇹🇷', continent: 'Europa', country: 'Turquia', type: 'league' },
+  
+  { sport: 'soccer', key: 'soccer_uefa_champs_league', name: 'Champions League', flag: '🏆', continent: 'Europa', country: 'Continental', type: 'continental' },
+  { sport: 'soccer', key: 'soccer_uefa_europa_league', name: 'Europa League', flag: '🏆', continent: 'Europa', country: 'Continental', type: 'continental' },
+  { sport: 'soccer', key: 'soccer_uefa_europa_conference_league', name: 'Conference League', flag: '🏆', continent: 'Europa', country: 'Continental', type: 'continental' },
+
+  // ORIENTE MÉDIO / ÁSIA
+  { sport: 'soccer', key: 'soccer_saudi_arabia_pro_league', name: 'Saudi Pro League', flag: '🇸🇦', continent: 'Oriente Médio', country: 'Arábia Saudita', type: 'league' },
+  { sport: 'soccer', key: 'soccer_japan_j_league', name: 'J1 League', flag: '🇯🇵', continent: 'Ásia', country: 'Japão', type: 'league' },
+  { sport: 'soccer', key: 'soccer_china_superleague', name: 'Chinese Super League', flag: '🇨🇳', continent: 'Ásia', country: 'China', type: 'league' },
+  { sport: 'soccer', key: 'soccer_korea_kleague1', name: 'K League 1', flag: '🇰🇷', continent: 'Ásia', country: 'Coreia do Sul', type: 'league' },
+
+  // OUTROS ESPORTES
+  { sport: 'basketball', key: 'basketball_nba', name: 'NBA', flag: '🇺🇸', continent: 'América do Norte', country: 'Estados Unidos', type: 'league' },
+  { sport: 'basketball', key: 'basketball_euroleague', name: 'EuroLeague', flag: '🇪🇺', continent: 'Europa', country: 'Continental', type: 'continental' },
+  { sport: 'tennis', key: 'tennis_atp_french_open', name: 'ATP French Open', flag: '🇫🇷', continent: 'Europa', country: 'França', type: 'cup' },
+  { sport: 'tennis', key: 'tennis_wta_french_open', name: 'WTA French Open', flag: '🇫🇷', continent: 'Europa', country: 'França', type: 'cup' },
+  { sport: 'icehockey', key: 'icehockey_nhl', name: 'NHL', flag: '🇺🇸', continent: 'América do Norte', country: 'Estados Unidos', type: 'league' },
 ];
 
 async function syncDailyEvents(supabase: any, triggeredBy: 'cron' | 'manual' = 'cron') {
@@ -69,6 +101,9 @@ async function syncDailyEvents(supabase: any, triggeredBy: 'cron' | 'manual' = '
             league_key: league.key,
             league_name: league.name,
             league_flag: league.flag,
+            continent: league.continent,
+            country: league.country,
+            competition_type: league.type,
             home_team: ev.home_team,
             away_team: ev.away_team,
             commence_time: ev.commence_time,
@@ -85,7 +120,6 @@ async function syncDailyEvents(supabase: any, triggeredBy: 'cron' | 'manual' = '
         }
       }
 
-      // Small pause to avoid hitting rate limits too fast
       await new Promise(r => setTimeout(r, 200));
 
     } catch (err) {
@@ -105,7 +139,6 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Security: Only system owners can access this function
     const { data: profile } = await supabase
       .from('profiles')
       .select('is_system_owner')
@@ -119,7 +152,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // --- GET /summary ---
     if (request.method === 'GET' && path === 'summary') {
       const today = new Date().toISOString().split('T')[0];
       const month = today.slice(0, 7);
@@ -159,99 +191,21 @@ Deno.serve(async (req) => {
       );
     }
 
-    // --- GET /logs ---
-    if (request.method === 'GET' && path === 'logs') {
-      const api = url.searchParams.get('api');
-      const status = url.searchParams.get('status');
-      const limit = parseInt(url.searchParams.get('limit') || '50');
-      const page = parseInt(url.searchParams.get('page') || '1');
-      const offset = (page - 1) * limit;
-
-      let query = supabase
-        .from('api_request_logs')
-        .select('*', { count: 'exact' });
-
-      if (api) query = query.eq('api_name', api);
-      if (status === 'error') query = query.not('error_message', 'is', null);
-      if (status === 'ok') query = query.is('error_message', null);
-
-      const { data, count, error } = await query
-        .order('created_at', { ascending: false })
-        .range(offset, offset + limit - 1);
-
-      if (error) throw error;
-
-      return new Response(
-        JSON.stringify({ logs: data, count, page, limit }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // --- GET /preview ---
-    if (request.method === 'GET' && path === 'preview') {
-      const api = url.searchParams.get('api') as 'odds_api' | 'api_football' || 'odds_api';
-      const sport = url.searchParams.get('sport') || 'soccer_epl';
-
-      let endpoint = '';
-      if (api === 'odds_api') {
-        const apiKey = Deno.env.get('ODDS_API_KEY');
-        endpoint = `https://api.the-odds-api.com/v4/sports/${sport}/events?apiKey=${apiKey}&dateFormat=iso`;
-      } else {
-        const today = new Date().toISOString().split('T')[0];
-        endpoint = `https://v3.football.api-sports.io/fixtures?date=${today}`;
-      }
-
-      const result = await callExternalApi({
-        apiName: api,
-        endpoint,
-        sportKey: sport,
-        triggeredBy: 'manual',
-        creditsUsed: 1
-      });
-
-      return new Response(
-        JSON.stringify({
-          url: endpoint.replace(Deno.env.get('ODDS_API_KEY') || '', 'HIDDEN_KEY'),
-          statusCode: result.statusCode,
-          durationMs: result.durationMs,
-          recordsReturned: result.recordsReturned,
-          errorMessage: result.errorMessage,
-          rawData: result.data
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // --- POST /run-job ---
     if (request.method === 'POST' && path === 'run-job') {
       const { job } = await request.json();
-      
       try {
         let result;
         if (job === 'fetch_events') {
           result = await syncDailyEvents(supabase, 'manual');
         } else {
-          return new Response(
-            JSON.stringify({ error: 'Job desconhecido' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ error: 'Job desconhecido' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
-
-        return new Response(
-          JSON.stringify({ success: true, result }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ success: true, result }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       } catch (err) {
-        return new Response(
-          JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
     }
 
-    return new Response(
-      JSON.stringify({ error: 'Rota não encontrada' }),
-      { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ error: 'Rota não encontrada' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   });
 });
