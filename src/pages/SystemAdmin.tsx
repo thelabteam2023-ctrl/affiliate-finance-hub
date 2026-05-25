@@ -741,6 +741,11 @@ export default function SystemAdmin() {
         <TabsContent value="metricas" className="space-y-4">
           <InfluenceMetricsTab />
         </TabsContent>
+
+        {/* =============== ABA APIs =============== */}
+        <TabsContent value="apis" className="space-y-4">
+          <ApiMonitorTab />
+        </TabsContent>
       </Tabs>
 
       {/* Create Workspace Dialog */}
