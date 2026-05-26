@@ -8,7 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Sparkles, ScanText, Loader2 } from "lucide-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useMercadosBiblioteca, ESPORTES_BIBLIOTECA, type MercadoBiblioteca } from "@/hooks/useMercadosBiblioteca";
