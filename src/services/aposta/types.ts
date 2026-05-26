@@ -169,6 +169,8 @@ export interface NovaEntradaExtraFields {
   clv_percentual?: number | null;
   modelo_aposta?: string | null;
   is_novo_formulario?: boolean;
+  time_casa?: string | null;
+  time_fora?: string | null;
 }
 
 /**
