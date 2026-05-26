@@ -437,7 +437,10 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           back_comissao, back_em_exchange, gerou_freebet, valor_freebet_gerada,
           tipo_freebet, is_bonus_bet, contexto_operacional, forma_registro, pernas,
           moeda_operacao, stake_consolidado, pl_consolidado, consolidation_currency, valor_brl_referencia, lucro_prejuizo_brl_referencia,
-          usar_freebet, fonte_saldo
+          usar_freebet, fonte_saldo,
+          is_novo_formulario, mercado_categoria, mercado_objeto, mercado_formato,
+          mercado_direcao, mercado_linha, mercado_display, liga, fair_value,
+          edge_percentual, modelo_aposta, time_casa, time_fora, fonte_entrada
         `;
 
       let dateFilters: { startUTC?: string; endUTC?: string } = {};
