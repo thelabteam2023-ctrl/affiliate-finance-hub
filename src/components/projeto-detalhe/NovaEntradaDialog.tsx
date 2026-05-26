@@ -368,6 +368,13 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
         apostaMandante: mandante ? String(mandante) : null,
         apostaVisitante: visitante ? String(visitante) : null,
       };
+      pushDebugRun({
+        mercadoRaw: mercadoTxt || null,
+        apostaRaw: sel || null,
+        linhaExtraida: linhaSign,
+        categoriaInferida: cat,
+        needle: mercadoText || "(vazio)",
+      });
       // Dispara o Passo 0 mesmo quando categoriaOptions/categoria não mudaram
       setOcrTrigger((n) => n + 1);
       // NÃO chama setCategoria aqui — um efeito abaixo aguarda os mercados
