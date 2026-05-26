@@ -772,6 +772,65 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     if (bm?.moeda) setMoeda(bm.moeda);
   }, [bookmakerId, bookmakers]);
 
+  // ---------- Modo edição: pré-preenchimento ----------
+  useEffect(() => {
+    if (!open) {
+      editPrefilledRef.current = null;
+      pendingEditRef.current = null;
+      return;
+    }
+    if (!apostaParaEditar) return;
+    if (editPrefilledRef.current === apostaParaEditar.id) return;
+
+    pendingEditRef.current = apostaParaEditar.id;
+    setFonteEntrada(apostaParaEditar.fonte_entrada ?? null);
+    setEsporte(apostaParaEditar.esporte || "soccer");
+    setLiga(apostaParaEditar.liga ?? "");
+    setEvento(apostaParaEditar.evento ?? "");
+    setTimeCasa(apostaParaEditar.time_casa ?? "");
+    setTimeFora(apostaParaEditar.time_fora ?? "");
+    setBookmakerId(apostaParaEditar.bookmaker_id ?? "");
+    setMoeda(apostaParaEditar.moeda_operacao || "BRL");
+    setOddObtida(apostaParaEditar.odd != null ? String(apostaParaEditar.odd) : "");
+    setFairValue(apostaParaEditar.fair_value != null ? String(apostaParaEditar.fair_value) : "");
+    setStake(apostaParaEditar.stake != null ? String(apostaParaEditar.stake) : "");
+    setResultado("PENDENTE");
+    if (apostaParaEditar.data_aposta) {
+      const d = new Date(apostaParaEditar.data_aposta);
+      if (!isNaN(d.getTime())) {
+        const pad = (n: number) => String(n).padStart(2, "0");
+        setDataHora(`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+      }
+    }
+    if (apostaParaEditar.modelo_aposta === "ao-vivo" || apostaParaEditar.modelo_aposta === "pre-jogo") {
+      setModelo(apostaParaEditar.modelo_aposta);
+    }
+    setCategoria(apostaParaEditar.mercado_categoria ?? "");
+    setFormato(apostaParaEditar.mercado_formato ?? "");
+    setDirecao(apostaParaEditar.mercado_direcao ?? "");
+    setLinha(apostaParaEditar.mercado_linha != null ? String(apostaParaEditar.mercado_linha) : "");
+    setMercadoSel(null); // será resolvido pelo efeito de match abaixo
+    editPrefilledRef.current = apostaParaEditar.id;
+  }, [open, apostaParaEditar]);
+
+  // ---------- Modo edição: match do MercadoBiblioteca após carregar opções ----------
+  useEffect(() => {
+    if (!isEdit || !apostaParaEditar?.mercado_objeto) return;
+    if (!pendingEditRef.current) return;
+    if (categoria !== (apostaParaEditar.mercado_categoria ?? "")) return;
+    if (!objetosOptions.length) return;
+    if (mercadoSel && mercadoSel.objeto === apostaParaEditar.mercado_objeto) {
+      pendingEditRef.current = null;
+      return;
+    }
+    const match = objetosOptions.find((m) => m.objeto === apostaParaEditar.mercado_objeto);
+    if (match) {
+      mercadoSetByOcrRef.current = true; // reaproveita flag p/ pular reset do efeito [mercadoSel]
+      setMercadoSel(match);
+      pendingEditRef.current = null;
+    }
+  }, [isEdit, apostaParaEditar, objetosOptions, categoria, mercadoSel]);
+
   // ---------- Derivados ----------
   const oddNum = Number(oddObtida) || null;
   const fairNum = Number(fairValue) || null;
