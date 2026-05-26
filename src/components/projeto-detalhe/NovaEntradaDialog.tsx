@@ -449,8 +449,8 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     if (t.linha != null && mercadoSel.tem_linha) {
       setLinha(t.linha);
     }
-    // Limpa flags
-    mercadoSetByOcrRef.current = false;
+    // NÃO limpa `mercadoSetByOcrRef` aqui — o efeito de reset (declarado mais
+    // abaixo) roda DEPOIS deste no mesmo ciclo. Ele lê a flag e a limpa.
     pendingOcrRef.current = null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mercadoSel]);
@@ -500,17 +500,20 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     if (!mercadoSel) return;
 
     if (mercadoSetByOcrRef.current) {
-      // Veio do OCR — só aplica placeholder de linha se o OCR não trouxe linha própria
-      const t = pendingOcrRef.current;
-      const temLinhaOcr = t?.linha != null;
+      // Veio do OCR — Passo 2 já preencheu formato/direcao/linha acima neste ciclo.
+      // Aqui só aplicamos o placeholder de linha quando o OCR não trouxe linha
+      // própria e o mercado exige uma. Em seguida, limpa a flag.
+      const linhaState = linha;
+      const temLinhaJaSet = linhaState !== "";
       if (
-        !temLinhaOcr &&
+        !temLinhaJaSet &&
         mercadoSel.tem_linha &&
         mercadoSel.linha_placeholder &&
         mercadoSel.linha_placeholder !== "livre"
       ) {
         setLinha(mercadoSel.linha_placeholder);
       }
+      mercadoSetByOcrRef.current = false;
       return;
     }
 
