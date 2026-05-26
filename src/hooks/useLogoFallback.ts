@@ -5,10 +5,27 @@ const normalize = (s: string) =>
   (s || '')
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9 ]/g, ' ')
     .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim();
+    .replace(/[^a-z0-9]/g, '');
+
+// Stop-words / sufixos comuns em nomes de clubes que atrapalham matching parcial
+const STOPWORDS = [
+  'fc', 'cf', 'sc', 'ac', 'afc', 'cfc', 'sk', 'rc', 'as',
+  'club', 'clube', 'futebol', 'football', 'soccer',
+  'de', 'do', 'da', 'of', 'the',
+  'ec', 'ce', 'se', 'aa', 'aac',
+];
+
+const stripStopwordsAndDigits = (norm: string): string => {
+  // Remove dígitos (anos como "07", "1900") e stopwords
+  let s = norm.replace(/[0-9]/g, '');
+  for (const w of STOPWORDS) {
+    // remove ocorrências do stopword como prefixo/sufixo/standalone
+    const re = new RegExp(`(^${w}|${w}$)`, 'g');
+    s = s.replace(re, '');
+  }
+  return s;
+};
 
 interface TeamRow {
   league_key: string;
@@ -61,16 +78,41 @@ export function useLogoFallback(sport: string | null | undefined) {
     for (const t of teams) {
       if (!t.logo_url) continue;
       m.set(`${t.league_key}|${t.team_name_normalized}`, t.logo_url);
+      // Variante sem stopwords/dígitos para matching parcial
+      const stripped = stripStopwordsAndDigits(t.team_name_normalized);
+      if (stripped && stripped.length >= 3) {
+        const altKey = `${t.league_key}|@stripped|${stripped}`;
+        if (!m.has(altKey)) m.set(altKey, t.logo_url);
+      }
     }
     return m;
   }, [teams]);
 
   const teamByName = useMemo(() => {
-    // Fallback global por esporte (quando não sabemos a liga)
     const m = new Map<string, string>();
     for (const t of teams) {
       if (!t.logo_url) continue;
       if (!m.has(t.team_name_normalized)) m.set(t.team_name_normalized, t.logo_url);
+      const stripped = stripStopwordsAndDigits(t.team_name_normalized);
+      if (stripped && stripped.length >= 3 && !m.has(`@stripped|${stripped}`)) {
+        m.set(`@stripped|${stripped}`, t.logo_url);
+      }
+    }
+    return m;
+  }, [teams]);
+
+  // Index por liga: lista de [normalized, stripped, logo] para fallback contains
+  const teamsByLeague = useMemo(() => {
+    const m = new Map<string, Array<{ norm: string; stripped: string; logo: string }>>();
+    for (const t of teams) {
+      if (!t.logo_url) continue;
+      const arr = m.get(t.league_key) || [];
+      arr.push({
+        norm: t.team_name_normalized,
+        stripped: stripStopwordsAndDigits(t.team_name_normalized),
+        logo: t.logo_url,
+      });
+      m.set(t.league_key, arr);
     }
     return m;
   }, [teams]);
@@ -87,13 +129,42 @@ export function useLogoFallback(sport: string | null | undefined) {
     (teamName: string, leagueKey?: string | null): string | null => {
       const norm = normalize(teamName);
       if (!norm) return null;
+      const normStripped = stripStopwordsAndDigits(norm);
+
       if (leagueKey) {
-        const hit = teamByLeagueName.get(`${leagueKey}|${norm}`);
-        if (hit) return hit;
+        // 1. Match exato por liga
+        const exact = teamByLeagueName.get(`${leagueKey}|${norm}`);
+        if (exact) return exact;
+        // 2. Match stripped por liga
+        if (normStripped && normStripped.length >= 3) {
+          const stripped = teamByLeagueName.get(`${leagueKey}|@stripped|${normStripped}`);
+          if (stripped) return stripped;
+        }
+        // 3. Contains dentro da liga (ex: API="Paderborn" vs DB="scpaderborn07")
+        const arr = teamsByLeague.get(leagueKey);
+        if (arr && normStripped && normStripped.length >= 4) {
+          for (const t of arr) {
+            if (
+              t.norm.includes(normStripped) ||
+              normStripped.includes(t.stripped && t.stripped.length >= 4 ? t.stripped : '____nope____') ||
+              (t.stripped && t.stripped.length >= 4 && t.stripped.includes(normStripped))
+            ) {
+              return t.logo;
+            }
+          }
+        }
       }
-      return teamByName.get(norm) || null;
+      // 4. Fallback global exato
+      const globalExact = teamByName.get(norm);
+      if (globalExact) return globalExact;
+      // 5. Fallback global stripped
+      if (normStripped && normStripped.length >= 3) {
+        const globalStripped = teamByName.get(`@stripped|${normStripped}`);
+        if (globalStripped) return globalStripped;
+      }
+      return null;
     },
-    [teamByLeagueName, teamByName],
+    [teamByLeagueName, teamByName, teamsByLeague],
   );
 
   const getLeagueLogo = useCallback(
