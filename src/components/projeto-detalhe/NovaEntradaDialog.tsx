@@ -153,10 +153,11 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     if (odd) setOddObtida(String(odd).replace(",", "."));
     const stk = getV(parsed.stake);
     if (stk) setStake(String(stk).replace(",", "."));
-    // Bookmaker — tenta casar pelo nome
+    // Bookmaker — tenta casar pelo nome (lê via cache para evitar dependência circular)
     const bmNome = (getV(parsed.bookmakerNome) || "").toString().toLowerCase().trim();
-    if (bmNome && bookmakers.length) {
-      const match = bookmakers.find((b) => b.nome.toLowerCase().includes(bmNome) || bmNome.includes(b.nome.toLowerCase()));
+    if (bmNome) {
+      const cachedBms = queryClient.getQueryData<Bookmaker[]>(["bookmakers-nova-entrada", projetoId]) || [];
+      const match = cachedBms.find((b) => b.nome.toLowerCase().includes(bmNome) || bmNome.includes(b.nome.toLowerCase()));
       if (match) setBookmakerId(match.id);
     }
   };
@@ -211,7 +212,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     window.addEventListener("paste", onPaste);
     return () => window.removeEventListener("paste", onPaste);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, bookmakers]);
+  }, [open]);
 
   // ---------- Data ----------
   const { data: bookmakers = [] } = useQuery<Bookmaker[]>({
