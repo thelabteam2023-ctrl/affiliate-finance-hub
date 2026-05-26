@@ -1,0 +1,1 @@
+CREATE POLICY "Users can delete workspace sources" ON public.workspace_bet_sources FOR DELETE TO authenticated USING (EXISTS (SELECT 1 FROM workspace_members wm WHERE wm.workspace_id = workspace_bet_sources.workspace_id AND wm.user_id = auth.uid()));
