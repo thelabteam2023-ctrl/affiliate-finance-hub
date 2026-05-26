@@ -122,6 +122,13 @@ interface Aposta {
   fonte_saldo?: string | null;
   forma_registro?: string | null;
   pernas?: unknown | null;
+  // Campos do novo formulário "Nova Entrada"
+  is_novo_formulario?: boolean | null;
+  mercado_categoria?: string | null;
+  mercado_objeto?: string | null;
+  mercado_direcao?: string | null;
+  mercado_linha?: number | null;
+  mercado_display?: string | null;
   // Campos de consolidação multi-moeda
   moeda_operacao?: string | null;
   stake_consolidado?: number | null;
@@ -1757,6 +1764,12 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                    stake_freebet: aposta.stake_freebet ?? null,
                    pl_consolidado: aposta.pl_consolidado ?? undefined,
                    stake_consolidado: aposta.stake_consolidado ?? undefined,
+                    is_novo_formulario: aposta.is_novo_formulario ?? null,
+                    mercado_categoria: aposta.mercado_categoria ?? null,
+                    mercado_objeto: aposta.mercado_objeto ?? null,
+                    mercado_direcao: aposta.mercado_direcao ?? null,
+                    mercado_linha: aposta.mercado_linha ?? null,
+                    mercado_display: aposta.mercado_display ?? null,
                  };
               
               return (

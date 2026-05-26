@@ -95,6 +95,13 @@ export interface ApostaCardData {
   pl_consolidado?: number | null;
   /** Stake consolidado na moeda do projeto */
   stake_consolidado?: number | null;
+  // Campos do novo formulário "Nova Entrada" (Opção A — fallback)
+  is_novo_formulario?: boolean | null;
+  mercado_categoria?: string | null;
+  mercado_objeto?: string | null;
+  mercado_direcao?: string | null;
+  mercado_linha?: number | null;
+  mercado_display?: string | null;
 }
 
 interface ApostaCardProps {
@@ -311,6 +318,48 @@ export function ApostaCard({
   const hasSelecoes = aposta.selecoes && aposta.selecoes.length > 1;
   const isMultipla = hasSelecoes || !!aposta.tipo_multipla;
   const hasSubEntries = aposta.sub_entries && aposta.sub_entries.length > 0;
+
+  // ──────────────────────────────────────────────────────────────────────
+  // Badges Mercado/Seleção — fallback para o novo formulário "Nova Entrada"
+  // (Opção A): quando is_novo_formulario=true, monta a partir dos campos
+  // estruturados (categoria · objeto / direção · linha). Caso contrário,
+  // usa o comportamento legado (texto livre `mercado` / `selecao`).
+  // ──────────────────────────────────────────────────────────────────────
+  const formatMercadoLinha = (linha: number, categoria?: string | null): string => {
+    const isHandicap = (categoria || "").toLowerCase().includes("handicap");
+    // Remove zeros à direita preservando o sinal
+    const abs = Math.abs(linha);
+    const txt = Number.isInteger(abs) ? abs.toString() : abs.toString();
+    if (isHandicap) {
+      if (linha > 0) return `+${txt}`;
+      if (linha < 0) return `-${txt}`;
+      return `0`;
+    }
+    return linha < 0 ? `-${txt}` : txt;
+  };
+
+  const badgePair: { left: string | null; right: string | null } = (() => {
+    if (aposta.is_novo_formulario) {
+      const leftParts = [aposta.mercado_categoria, aposta.mercado_objeto].filter(
+        (v): v is string => !!v && v.trim().length > 0,
+      );
+      const left = leftParts.length > 0 ? leftParts.join(" · ") : aposta.mercado || null;
+
+      const direcao = (aposta.mercado_direcao || "").trim();
+      let right: string | null = null;
+      if (aposta.mercado_linha !== null && aposta.mercado_linha !== undefined) {
+        const linhaTxt = formatMercadoLinha(Number(aposta.mercado_linha), aposta.mercado_categoria);
+        right = direcao ? `${direcao} ${linhaTxt}` : linhaTxt;
+      } else if (direcao) {
+        right = direcao;
+      } else {
+        right = aposta.selecao || null;
+      }
+      return { left, right };
+    }
+    return { left: aposta.mercado || null, right: aposta.selecao || null };
+  })();
+  const hasBadgePair = !!(badgePair.left || badgePair.right);
   const isSimples = !isMultipla && !hasPernas;
   const [isSubEntriesOpen, setIsSubEntriesOpen] = useState(false);
   
@@ -496,16 +545,16 @@ export function ApostaCard({
             {/* Top row on mobile: Logo + Casa */}
             <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 overflow-hidden">
               {/* Para apostas simples: Badge de mercado + seleção antes do logo - hidden on very small screens */}
-              {isSimples && (aposta.mercado || aposta.selecao) && (
+              {isSimples && hasBadgePair && (
                 <div className="hidden sm:flex items-center gap-1 shrink-0">
-                  {aposta.mercado && (
+                  {badgePair.left && (
                     <SelectionBadge minWidth={60} maxWidth={116}>
-                      {aposta.mercado}
+                      {badgePair.left}
                     </SelectionBadge>
                   )}
-                  {aposta.selecao && (
+                  {badgePair.right && (
                     <SelectionBadge minWidth={60} maxWidth={116}>
-                      {aposta.selecao}
+                      {badgePair.right}
                     </SelectionBadge>
                   )}
                 </div>
@@ -530,16 +579,16 @@ export function ApostaCard({
             </div>
             
             {/* Mobile: Selection badge on separate row */}
-            {isSimples && (aposta.mercado || aposta.selecao) && (
+            {isSimples && hasBadgePair && (
               <div className="sm:hidden flex items-center gap-1">
-                {aposta.mercado && (
+                {badgePair.left && (
                   <SelectionBadge minWidth={50} maxWidth={100}>
-                    {aposta.mercado}
+                    {badgePair.left}
                   </SelectionBadge>
                 )}
-                {aposta.selecao && (
+                {badgePair.right && (
                   <SelectionBadge minWidth={50} maxWidth={100}>
-                    {aposta.selecao}
+                    {badgePair.right}
                   </SelectionBadge>
                 )}
               </div>
@@ -848,16 +897,16 @@ export function ApostaCard({
             {/* Top row: Logo + Casa */}
             <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1 overflow-hidden">
               {/* Badges de mercado + seleção - hidden on very small */}
-              {(aposta.mercado || aposta.selecao) && (
+              {hasBadgePair && (
                 <div className="shrink-0 hidden sm:flex items-center gap-1">
-                  {aposta.mercado && (
+                  {badgePair.left && (
                     <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/10 truncate max-w-[80px]">
-                      {aposta.mercado}
+                      {badgePair.left}
                     </Badge>
                   )}
-                  {aposta.selecao && (
+                  {badgePair.right && (
                     <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/10 truncate max-w-[80px]">
-                      {aposta.selecao}
+                      {badgePair.right}
                     </Badge>
                   )}
                 </div>
@@ -882,16 +931,16 @@ export function ApostaCard({
             </div>
             
             {/* Mobile: Selection badges on separate row */}
-            {(aposta.mercado || aposta.selecao) && (
+            {hasBadgePair && (
               <div className="sm:hidden flex items-center gap-1">
-                {aposta.mercado && (
+                {badgePair.left && (
                   <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/10 truncate max-w-[100px]">
-                    {aposta.mercado}
+                    {badgePair.left}
                   </Badge>
                 )}
-                {aposta.selecao && (
+                {badgePair.right && (
                   <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/10 truncate max-w-[100px]">
-                    {aposta.selecao}
+                    {badgePair.right}
                   </Badge>
                 )}
               </div>
