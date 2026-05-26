@@ -451,6 +451,18 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     }
     // Se não houve match textual, e só existe uma opção, usa ela
     if (!best && objetosOptions.length === 1) best = objetosOptions[0];
+    // Sem match textual e mais de uma opção: cai no "objeto padrão" do esporte
+    // (gols p/ futebol, pontos p/ basquete/tênis, etc.) — quase sempre é a
+    // intenção do print quando o software omite o objeto (ex.: "Handicap Asiático").
+    if (!best && objetosOptions.length > 1) {
+      const DEFAULT_OBJECTS = ["gols", "pontos", "mapas", "rounds", "sets", "games"];
+      for (const def of DEFAULT_OBJECTS) {
+        const found = objetosOptions.find((o) => o.objeto === def);
+        if (found) { best = found; break; }
+      }
+      // último recurso: a primeira opção (já vem ordenada por prioridade)
+      if (!best) best = objetosOptions[0];
+    }
     if (best) {
       mercadoSetByOcrRef.current = true; // marcar ANTES do setState
       setMercadoSel(best);
