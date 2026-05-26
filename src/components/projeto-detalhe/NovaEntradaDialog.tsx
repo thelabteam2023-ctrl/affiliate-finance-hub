@@ -84,6 +84,26 @@ function inferCategoriaFromMercado(mercado: string): string | null {
   return null;
 }
 
+/**
+ * Detecta o período da aposta (1º Tempo, 2º Tempo) a partir do texto do mercado.
+ * Cobre PT/EN/abreviações: "1º Tempo", "1T", "primeiro tempo", "1ª parte", "HT",
+ * "1st half", "first half" → "1T". Análogo para 2T. null = jogo inteiro (FT).
+ */
+function inferPeriodoFromMercado(mercado: string): "1T" | "2T" | null {
+  const m = stripAccents(mercado).toLowerCase();
+  if (/\b1\s*[ºoª]?\s*tempo\b|\bprimeir[oa]\s*tempo\b|\b1\s*[ºoª]?\s*parte\b|\b1\s*t\b|\bht\b|\b1st\s*half\b|\bfirst\s*half\b/.test(m)) return "1T";
+  if (/\b2\s*[ºoª]?\s*tempo\b|\bsegund[oa]\s*tempo\b|\b2\s*[ºoª]?\s*parte\b|\b2\s*t\b|\b2nd\s*half\b|\bsecond\s*half\b/.test(m)) return "2T";
+  return null;
+}
+
+/** Verifica se um item do catálogo é variante de 1ºT / 2ºT. */
+function mercadoIsHT(m: MercadoBiblioteca): boolean {
+  return /-ht\b/.test(m.objeto || "") || /1[ºoª]\s*t\b|1º\s*tempo/i.test(m.display_nome);
+}
+function mercadoIs2T(m: MercadoBiblioteca): boolean {
+  return /-ft2\b|-2t\b/.test(m.objeto || "") || /2[ºoª]\s*t\b|2º\s*tempo/i.test(m.display_nome);
+}
+
 /** Detecta a direção (Over/Under/Sim/Não) a partir do texto da aposta. */
 function inferDirecaoSpecial(aposta: string, direcaoOpcoes: string[]): string | null {
   const a = stripAccents(aposta);
@@ -139,6 +159,7 @@ function buildMercadoDisplay(
 interface OcrCascadeTarget {
   categoria: string;
   mercadoText: string;        // texto bruto pós-categoria (ex: "de mapas")
+  mercadoTextRaw: string;     // texto cru do mercado (preserva "1º Tempo" etc.)
   apostaText: string;         // texto bruto da seleção OCR
   linha: string | null;       // ex: "+1.5"
   apostaMandante: string | null;
@@ -377,6 +398,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
       pendingOcrRef.current = {
         categoria: cat,
         mercadoText,
+        mercadoTextRaw: mercadoTxt,
         apostaText: sel,
         linha: linhaSign,
         apostaMandante: mandante ? String(mandante) : null,
@@ -510,9 +532,24 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     if (mercadoSel && mercadoSel.categoria === t.categoria) return; // já casou
 
     const needle = t.mercadoText;
+    // Período (1ºT / 2ºT / FT) inferido do texto bruto do mercado lido pelo OCR
+    const periodoOcr = inferPeriodoFromMercado(t.mercadoTextRaw || "");
+    // Filtra o pool de candidatos por período: se OCR indica 1T/2T, só
+    // considera variantes correspondentes; senão, prefere as de jogo inteiro.
+    let pool = objetosOptions;
+    if (periodoOcr === "1T") {
+      const sub = objetosOptions.filter(mercadoIsHT);
+      if (sub.length) pool = sub;
+    } else if (periodoOcr === "2T") {
+      const sub = objetosOptions.filter(mercadoIs2T);
+      if (sub.length) pool = sub;
+    } else {
+      const sub = objetosOptions.filter((m) => !mercadoIsHT(m) && !mercadoIs2T(m));
+      if (sub.length) pool = sub;
+    }
     let best: MercadoBiblioteca | null = null;
     let bestScore = 0;
-    for (const m of objetosOptions) {
+    for (const m of pool) {
       const hay = `${stripAccents(m.display_nome)} ${m.objeto ? stripAccents(m.objeto) : ""}`;
       // Score = nº de palavras (≥3 letras) do needle presentes no hay
       const words = needle.split(/\s+/).filter((w) => w.length >= 3);
@@ -523,24 +560,24 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
       }
     }
     // Se não houve match textual, e só existe uma opção, usa ela
-    if (!best && objetosOptions.length === 1) best = objetosOptions[0];
+    if (!best && pool.length === 1) best = pool[0];
     // Sem match textual e mais de uma opção: cai no "objeto padrão" do esporte
     // (gols p/ futebol, pontos p/ basquete/tênis, etc.) — quase sempre é a
     // intenção do print quando o software omite o objeto (ex.: "Handicap Asiático").
-    if (!best && objetosOptions.length > 1) {
+    if (!best && pool.length > 1) {
       const DEFAULT_OBJECTS = ["gols", "pontos", "mapas", "rounds", "sets", "games"];
       for (const def of DEFAULT_OBJECTS) {
-        const found = objetosOptions.find((o) => o.objeto === def);
+        const found = pool.find((o) => (o.objeto || "").replace(/-(ht|ft2|2t)$/, "") === def);
         if (found) { best = found; break; }
       }
       // último recurso: a primeira opção (já vem ordenada por prioridade)
-      if (!best) best = objetosOptions[0];
+      if (!best) best = pool[0];
     }
     if (best) {
       mercadoSetByOcrRef.current = true; // marcar ANTES do setState
       setMercadoSel(best);
       bumpDebug("passo1", `set mercado="${best.display_nome}"`);
-      pushDebugRun({ mercadoEscolhido: `${best.display_nome} (score=${bestScore})` });
+      pushDebugRun({ mercadoEscolhido: `${best.display_nome} (score=${bestScore}, periodo=${periodoOcr ?? "FT"})` });
     }
   }, [categoria, objetosOptions, mercadoSel]);
 
