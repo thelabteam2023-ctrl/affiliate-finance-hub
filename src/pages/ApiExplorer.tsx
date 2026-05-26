@@ -115,9 +115,34 @@ const getInitials = (name: string) => {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
-const TeamLogo = ({ name, url, className }: { name: string, url?: string | null, className?: string }) => {
-  const [error, setError] = useState(false);
-  const hasImage = !!url && !error;
+const TeamLogo = ({
+  name,
+  url,
+  fallbackUrl,
+  className,
+}: {
+  name: string;
+  url?: string | null;
+  fallbackUrl?: string | null;
+  className?: string;
+}) => {
+  // Constrói lista de candidatos (API → DB fallback), filtrando vazios/duplicatas
+  const candidates = useMemo(() => {
+    const arr = [url, fallbackUrl]
+      .filter((u): u is string => typeof u === 'string' && u.trim().length > 0);
+    return Array.from(new Set(arr));
+  }, [url, fallbackUrl]);
+
+  const [idx, setIdx] = useState(0);
+
+  // RESET quando as URLs mudam (caso contrário, um erro antigo trava para sempre
+  // mesmo depois do fallback do DB carregar com uma URL válida)
+  useEffect(() => {
+    setIdx(0);
+  }, [candidates.join('|')]);
+
+  const current = candidates[idx];
+  const hasImage = !!current;
 
   const [c1, c2] = TEAM_GRADIENTS[hashName(name) % TEAM_GRADIENTS.length];
   const initials = getInitials(name);
@@ -133,10 +158,11 @@ const TeamLogo = ({ name, url, className }: { name: string, url?: string | null,
     >
       {hasImage ? (
         <img
-          src={url!}
+          key={current}
+          src={current}
           alt={name}
           className="aspect-square h-full w-full object-contain p-0.5"
-          onError={() => setError(true)}
+          onError={() => setIdx((i) => i + 1)}
         />
       ) : (
         <>
@@ -921,14 +947,14 @@ export default function ApiExplorer() {
                                       <div className="px-6 flex flex-col gap-3">
                                         <div className="flex justify-between items-center group/team">
                                           <div className="flex items-center gap-3">
-                                            <TeamLogo name={ev.home_team} url={ev.home_team_logo || getTeamLogo(ev.home_team, ev.league_key)} className="h-7 w-7 border-primary/10 shadow-none group-hover/team:scale-110 transition-transform" />
+                                            <TeamLogo name={ev.home_team} url={ev.home_team_logo} fallbackUrl={getTeamLogo(ev.home_team, ev.league_key)} className="h-7 w-7 border-primary/10 shadow-none group-hover/team:scale-110 transition-transform" />
                                             <span className="text-sm font-bold group-hover:text-primary transition-colors">{ev.home_team}</span>
                                           </div>
                                           {ev.result_home && <span className="font-black text-primary bg-primary/5 px-2 py-0.5 rounded text-xs">{ev.result_home}</span>}
                                         </div>
                                         <div className="flex justify-between items-center group/team">
                                           <div className="flex items-center gap-3">
-                                            <TeamLogo name={ev.away_team} url={ev.away_team_logo || getTeamLogo(ev.away_team, ev.league_key)} className="h-7 w-7 border-primary/10 shadow-none group-hover/team:scale-110 transition-transform" />
+                                            <TeamLogo name={ev.away_team} url={ev.away_team_logo} fallbackUrl={getTeamLogo(ev.away_team, ev.league_key)} className="h-7 w-7 border-primary/10 shadow-none group-hover/team:scale-110 transition-transform" />
                                             <span className="text-sm font-bold group-hover:text-primary transition-colors">{ev.away_team}</span>
                                           </div>
                                           {ev.result_away && <span className="font-black text-primary bg-primary/5 px-2 py-0.5 rounded text-xs">{ev.result_away}</span>}
