@@ -60,6 +60,26 @@ function chunkArray<T>(array: T[], size: number): T[][] {
   return chunked;
 }
 
+const API_SPORTS_COUNTRY_MAP: Record<string, string> = {
+  'Brasil': 'Brazil',
+  'Alemanha': 'Germany',
+  'França': 'France',
+  'Itália': 'Italy',
+  'Espanha': 'Spain',
+  'Inglaterra': 'England',
+  'Holanda': 'Netherlands',
+  'Equador': 'Ecuador',
+  'Uruguai': 'Uruguay',
+  'Paraguai': 'Paraguay',
+  'Peru': 'Peru',
+  'Argentina': 'Argentina',
+};
+
+function toApiSportsCountry(country?: string) {
+  if (!country) return null;
+  return API_SPORTS_COUNTRY_MAP[country] || country;
+}
+
 /**
  * Lookup de escudo via cache indexado por (league_key, nome_normalizado).
  * Ordem: (1) match exato em team_logos, (2) alias em team_name_aliases,
@@ -154,6 +174,25 @@ async function syncLeagueTeamsBulk(
         break;
       }
       console.warn(`[BULK SYNC] ${leagueKey} season=${seasonParam}: vazio${result.errorMessage ? ` (${result.errorMessage})` : ''}`);
+    }
+
+    // Fallback: alguns campeonatos de baixa liquidez retornam vazio por league/season,
+    // mas a API ainda expõe os clubes pelo país. Isso popula o cache de escudos sem
+    // passar a trazer jogos dessas ligas para o calendário.
+    if (!result?.data?.response?.length) {
+      const apiCountry = toApiSportsCountry(country);
+      if (apiCountry) {
+        const countryUrl = `${apiEndpoint}/teams?country=${encodeURIComponent(apiCountry)}`;
+        console.log(`[BULK SYNC] ${leagueKey}: fallback por país (${apiCountry})`);
+        result = await callExternalApi({
+          apiName: 'api_football',
+          endpoint: countryUrl,
+          sportKey: sport,
+          creditsUsed: 1,
+          triggeredBy: 'manual'
+        });
+        usedSeason = `country:${apiCountry}`;
+      }
     }
 
     if (!result?.data?.response?.length) {
