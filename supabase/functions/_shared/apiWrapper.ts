@@ -32,6 +32,19 @@ function isQuotaError(statusCode: number, body: string): boolean {
   return false;
 }
 
+function collectErrorMessages(value: unknown): string[] {
+  if (!value) return [];
+  if (typeof value === 'string') return value.trim() ? [value] : [];
+  if (Array.isArray(value)) return value.flatMap(collectErrorMessages);
+  if (typeof value === 'object') return Object.values(value as Record<string, unknown>).flatMap(collectErrorMessages);
+  return [String(value)];
+}
+
+function isQuotaLikeApiSportsError(messages: string[]): boolean {
+  const text = messages.join(' ').toLowerCase();
+  return /rate|quota|limit|request|usage|credit|subscription|plan|token|key|unauthori[sz]ed|forbidden/.test(text);
+}
+
 export async function callExternalApi({
   apiName,
   endpoint,
@@ -94,18 +107,23 @@ export async function callExternalApi({
 
       try { data = JSON.parse(bodyText); } catch { data = bodyText; }
 
-      // api-sports retorna 200 com errors quando estoura quota diária
+      // api-sports retorna 200 com `errors` tanto para cota/plano quanto para token.
+      // Antes só detectávamos strings diretas; algumas respostas vêm aninhadas em arrays/objetos
+      // e acabavam registradas como sucesso com 0 times, mascarando o motivo real.
       if (apiName === 'api_football' && data && typeof data === 'object') {
-        const errs = data.errors;
-        const hasRateErr = errs && (
-          (Array.isArray(errs) && errs.some((e: any) => typeof e === 'string' && /rate|quota|limit/i.test(e)))
-          || (typeof errs === 'object' && !Array.isArray(errs) && Object.values(errs).some((v: any) => typeof v === 'string' && /rate|quota|limit/i.test(v)))
-        );
-        if (hasRateErr && i < pool.length - 1) {
+        const messages = collectErrorMessages(data.errors);
+        const hasApiError = messages.length > 0;
+        const shouldTryNextKey = hasApiError && isQuotaLikeApiSportsError(messages) && i < pool.length - 1;
+        if (shouldTryNextKey) {
           console.warn(`[apiWrapper] Chave #${keyIndexUsed} de ${apiName} estourou cota (body errors). Trocando...`);
-          errorMessage = `Quota error: ${JSON.stringify(errs)}`;
+          errorMessage = `API-Sports error: ${messages.join(' | ').slice(0, 300)}`;
           data = null;
           continue;
+        }
+        if (hasApiError) {
+          errorMessage = `API-Sports error: ${messages.join(' | ').slice(0, 300)}`;
+          data = null;
+          break;
         }
       }
 
