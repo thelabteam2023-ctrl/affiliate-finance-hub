@@ -672,11 +672,22 @@ export default function TeamsLeaguesTab() {
                   className="h-9 pl-8 w-[200px]"
                 />
               </div>
+              <Select value={teamSportFilter} onValueChange={setTeamSportFilter}>
+                <SelectTrigger className="w-[150px] h-9"><SelectValue placeholder="Esporte" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os esportes</SelectItem>
+                  {sportsAvailable.map((s) => (
+                    <SelectItem key={s} value={s}>{(SPORT_BADGE[s]?.label) || s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Select value={teamCountryFilter} onValueChange={setTeamCountryFilter}>
                 <SelectTrigger className="w-[170px] h-9"><SelectValue placeholder="País" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os países</SelectItem>
-                  {countriesAvailable.map((c) => (
+                  {countriesAvailable
+                    .filter((c) => teamSportFilter === "all" || leagues.some((l) => l.sport === teamSportFilter && l.country === c))
+                    .map((c) => (
                     <SelectItem key={c} value={c}>{c}</SelectItem>
                   ))}
                 </SelectContent>
@@ -686,6 +697,7 @@ export default function TeamsLeaguesTab() {
                 <SelectContent>
                   <SelectItem value="all">Todas as ligas</SelectItem>
                   {leagues
+                    .filter((l) => teamSportFilter === "all" || l.sport === teamSportFilter)
                     .filter((l) => teamCountryFilter === "all" || l.country === teamCountryFilter)
                     .map((l) => (
                       <SelectItem key={l.league_key} value={l.league_key}>{l.league_name}</SelectItem>
