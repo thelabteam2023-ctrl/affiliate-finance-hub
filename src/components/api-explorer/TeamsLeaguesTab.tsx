@@ -916,8 +916,10 @@ export default function TeamsLeaguesTab() {
           </div>
         </CardContent>
       </Card>
+      )}
 
       {/* SEÇÃO 5: AÇÕES GLOBAIS */}
+      {activeSection === "actions" && (
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Ações globais</CardTitle>
@@ -954,6 +956,9 @@ export default function TeamsLeaguesTab() {
           />
         </CardContent>
       </Card>
+      )}
+        </div>
+      </div>
     </div>
   );
 }
