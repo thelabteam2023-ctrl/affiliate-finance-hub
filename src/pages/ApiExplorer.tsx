@@ -931,15 +931,29 @@ export default function ApiExplorer() {
                                   <span className="text-[10px] font-bold text-muted-foreground uppercase">{matches.length} partidas</span>
                                 </div>
                                 <div className="divide-y divide-border/20">
-                                  {matches.map((ev: Event) => (
-                                    <div key={ev.api_id} className="grid grid-cols-[80px_1fr_100px] items-center p-4 hover:bg-primary/5 transition-colors group">
+                                  {matches.map((ev: Event) => {
+                                    const startsAt = parseISO(ev.commence_time);
+                                    const isPast = startsAt.getTime() < Date.now();
+                                    return (
+                                    <div
+                                      key={ev.api_id}
+                                      className={cn(
+                                        "grid grid-cols-[80px_1fr_100px] items-center p-4 transition-colors group",
+                                        isPast
+                                          ? "bg-amber-500/10 hover:bg-amber-500/15"
+                                          : "hover:bg-primary/5"
+                                      )}
+                                    >
                                       {/* TIME */}
                                       <div className="flex flex-col items-center justify-center border-r pr-4">
-                                        <span className="text-sm font-black text-foreground">
-                                          {format(parseISO(ev.commence_time), 'HH:mm')}
+                                        <span className={cn(
+                                          "text-sm font-black",
+                                          isPast ? "text-amber-700 dark:text-amber-500 line-through decoration-amber-700/40" : "text-foreground"
+                                        )}>
+                                          {format(startsAt, 'HH:mm')}
                                         </span>
                                         <span className="text-[9px] font-bold text-muted-foreground uppercase">
-                                          {format(parseISO(ev.commence_time), 'dd/MM')}
+                                          {format(startsAt, 'dd/MM')}
                                         </span>
                                       </div>
 
@@ -963,12 +977,21 @@ export default function ApiExplorer() {
 
                                       {/* STATUS / INFO */}
                                       <div className="flex justify-end pr-2">
+                                        {isPast && (
+                                          <Badge
+                                            variant="outline"
+                                            className="mr-1 h-5 px-1.5 text-[9px] font-black uppercase tracking-wider border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-400"
+                                          >
+                                            Encerrado
+                                          </Badge>
+                                        )}
                                         <Button variant="ghost" size="sm" className="rounded-full h-8 w-8 p-0">
                                           <Info className="h-4 w-4 text-muted-foreground" />
                                         </Button>
                                       </div>
                                     </div>
-                                  ))}
+                                  );
+                                  })}
                                 </div>
                               </Card>
                             ))}
