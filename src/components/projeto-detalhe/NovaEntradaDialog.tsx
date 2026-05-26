@@ -53,12 +53,6 @@ const RESULTADOS: { value: Resultado; label: string; className: string }[] = [
   { value: "VOID",       label: "Void",     className: "border-border text-muted-foreground" },
 ];
 
-interface Bookmaker {
-  id: string;
-  nome: string;
-  moeda: string;
-}
-
 interface NovaEntradaDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
