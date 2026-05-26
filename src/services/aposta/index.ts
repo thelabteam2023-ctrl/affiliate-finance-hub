@@ -22,6 +22,7 @@ export {
   liquidarPernaSurebet,
   reliquidarAposta,
   healthCheck,
+  aplicarCamposNovaEntrada,
 } from './ApostaService';
 
 // Re-exportar tipos de input para liquidação de surebet

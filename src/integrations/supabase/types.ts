@@ -605,6 +605,7 @@ export type Database = {
           cancel_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
+          clv_percentual: number | null
           consolidation_currency: string | null
           contexto_operacional: string
           conversion_rate_used: number | null
@@ -613,9 +614,11 @@ export type Database = {
           cotacao_snapshot_at: string | null
           created_at: string
           data_aposta: string
+          edge_percentual: number | null
           esporte: string | null
           estrategia: string
           evento: string | null
+          fair_value: number | null
           fonte_entrada: string | null
           fonte_saldo: string | null
           forma_registro: string
@@ -624,6 +627,7 @@ export type Database = {
           is_bonus_bet: boolean | null
           is_manual_override: boolean | null
           is_multicurrency: boolean | null
+          is_novo_formulario: boolean
           lado_aposta: string | null
           lay_comissao: number | null
           lay_exchange: string | null
@@ -632,6 +636,7 @@ export type Database = {
           lay_stake: number | null
           legacy_id: string | null
           legacy_table: string | null
+          liga: string | null
           lucro_esperado: number | null
           lucro_prejuizo: number | null
           lucro_prejuizo_brl_referencia: number | null
@@ -639,12 +644,20 @@ export type Database = {
           manual_override_by: string | null
           manual_override_reason: string | null
           mercado: string | null
+          mercado_categoria: string | null
+          mercado_direcao: string | null
+          mercado_display: string | null
+          mercado_formato: string | null
+          mercado_linha: number | null
+          mercado_objeto: string | null
           modelo: string | null
+          modelo_aposta: string | null
           modo_entrada: string | null
           moeda_operacao: string | null
           moeda_original: string | null
           observacoes: string | null
           odd: number | null
+          odd_fechamento: number | null
           odd_final: number | null
           pernas: Json | null
           pl_consolidado: number | null
@@ -687,6 +700,7 @@ export type Database = {
           cancel_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
+          clv_percentual?: number | null
           consolidation_currency?: string | null
           contexto_operacional?: string
           conversion_rate_used?: number | null
@@ -695,9 +709,11 @@ export type Database = {
           cotacao_snapshot_at?: string | null
           created_at?: string
           data_aposta?: string
+          edge_percentual?: number | null
           esporte?: string | null
           estrategia?: string
           evento?: string | null
+          fair_value?: number | null
           fonte_entrada?: string | null
           fonte_saldo?: string | null
           forma_registro?: string
@@ -706,6 +722,7 @@ export type Database = {
           is_bonus_bet?: boolean | null
           is_manual_override?: boolean | null
           is_multicurrency?: boolean | null
+          is_novo_formulario?: boolean
           lado_aposta?: string | null
           lay_comissao?: number | null
           lay_exchange?: string | null
@@ -714,6 +731,7 @@ export type Database = {
           lay_stake?: number | null
           legacy_id?: string | null
           legacy_table?: string | null
+          liga?: string | null
           lucro_esperado?: number | null
           lucro_prejuizo?: number | null
           lucro_prejuizo_brl_referencia?: number | null
@@ -721,12 +739,20 @@ export type Database = {
           manual_override_by?: string | null
           manual_override_reason?: string | null
           mercado?: string | null
+          mercado_categoria?: string | null
+          mercado_direcao?: string | null
+          mercado_display?: string | null
+          mercado_formato?: string | null
+          mercado_linha?: number | null
+          mercado_objeto?: string | null
           modelo?: string | null
+          modelo_aposta?: string | null
           modo_entrada?: string | null
           moeda_operacao?: string | null
           moeda_original?: string | null
           observacoes?: string | null
           odd?: number | null
+          odd_fechamento?: number | null
           odd_final?: number | null
           pernas?: Json | null
           pl_consolidado?: number | null
@@ -769,6 +795,7 @@ export type Database = {
           cancel_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
+          clv_percentual?: number | null
           consolidation_currency?: string | null
           contexto_operacional?: string
           conversion_rate_used?: number | null
@@ -777,9 +804,11 @@ export type Database = {
           cotacao_snapshot_at?: string | null
           created_at?: string
           data_aposta?: string
+          edge_percentual?: number | null
           esporte?: string | null
           estrategia?: string
           evento?: string | null
+          fair_value?: number | null
           fonte_entrada?: string | null
           fonte_saldo?: string | null
           forma_registro?: string
@@ -788,6 +817,7 @@ export type Database = {
           is_bonus_bet?: boolean | null
           is_manual_override?: boolean | null
           is_multicurrency?: boolean | null
+          is_novo_formulario?: boolean
           lado_aposta?: string | null
           lay_comissao?: number | null
           lay_exchange?: string | null
@@ -796,6 +826,7 @@ export type Database = {
           lay_stake?: number | null
           legacy_id?: string | null
           legacy_table?: string | null
+          liga?: string | null
           lucro_esperado?: number | null
           lucro_prejuizo?: number | null
           lucro_prejuizo_brl_referencia?: number | null
@@ -803,12 +834,20 @@ export type Database = {
           manual_override_by?: string | null
           manual_override_reason?: string | null
           mercado?: string | null
+          mercado_categoria?: string | null
+          mercado_direcao?: string | null
+          mercado_display?: string | null
+          mercado_formato?: string | null
+          mercado_linha?: number | null
+          mercado_objeto?: string | null
           modelo?: string | null
+          modelo_aposta?: string | null
           modo_entrada?: string | null
           moeda_operacao?: string | null
           moeda_original?: string | null
           observacoes?: string | null
           odd?: number | null
+          odd_fechamento?: number | null
           odd_final?: number | null
           pernas?: Json | null
           pl_consolidado?: number | null
@@ -6110,6 +6149,51 @@ export type Database = {
           user_name?: string | null
           workspace_id?: string | null
           workspace_name?: string | null
+        }
+        Relationships: []
+      }
+      mercados_biblioteca: {
+        Row: {
+          ativo: boolean
+          categoria: string
+          created_at: string
+          direcao_opcoes: string[]
+          display_nome: string
+          esporte: string
+          formato_opcoes: string[] | null
+          id: string
+          linha_placeholder: string | null
+          objeto: string | null
+          prioridade: number
+          tem_linha: boolean
+        }
+        Insert: {
+          ativo?: boolean
+          categoria: string
+          created_at?: string
+          direcao_opcoes: string[]
+          display_nome: string
+          esporte: string
+          formato_opcoes?: string[] | null
+          id?: string
+          linha_placeholder?: string | null
+          objeto?: string | null
+          prioridade?: number
+          tem_linha?: boolean
+        }
+        Update: {
+          ativo?: boolean
+          categoria?: string
+          created_at?: string
+          direcao_opcoes?: string[]
+          display_nome?: string
+          esporte?: string
+          formato_opcoes?: string[] | null
+          id?: string
+          linha_placeholder?: string | null
+          objeto?: string | null
+          prioridade?: number
+          tem_linha?: boolean
         }
         Relationships: []
       }

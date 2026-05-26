@@ -21,6 +21,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { BonusDialog } from "./BonusDialog";
+import { NovaEntradaDialog } from "./NovaEntradaDialog";
 import { useProjectBonuses } from "@/hooks/useProjectBonuses";
 import { useBookmakerSaldosQuery } from "@/hooks/useBookmakerSaldosQuery";
 import { useAuth } from "@/hooks/useAuth";
@@ -115,6 +116,10 @@ export function GlobalActionsBar({
   // Dialog states
   const [bonusDialogOpen, setBonusDialogOpen] = useState(false);
   const [rascunhosOpen, setRascunhosOpen] = useState(false);
+  const [novaEntradaOpen, setNovaEntradaOpen] = useState(false);
+
+  const novaEntradaEstrategia = activeTab === "surebet" ? "SUREBET" : "VALUEBET";
+  const showNovaEntrada = activeTab === "valuebet" || activeTab === "surebet";
 
   // Bonus hook
   const { bonuses, createBonus, saving: bonusSaving } = useProjectBonuses({ projectId: projetoId });
@@ -257,6 +262,16 @@ export function GlobalActionsBar({
                   </DropdownMenuItem>
                 </>
               )}
+              {showNovaEntrada && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setNovaEntradaOpen(true)}>
+                    <TrendingUp className="mr-2 h-4 w-4 text-primary" />
+                    Nova Entrada
+                    <span className="ml-auto text-[9px] uppercase tracking-wider text-muted-foreground">beta</span>
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         )}
@@ -307,6 +322,15 @@ export function GlobalActionsBar({
           onContinuarMultipla={handleContinuarMultipla}
         />
       )}
+
+      {/* Nova Entrada (formulário paralelo) */}
+      <NovaEntradaDialog
+        open={novaEntradaOpen}
+        onOpenChange={setNovaEntradaOpen}
+        projetoId={projetoId}
+        estrategia={novaEntradaEstrategia}
+        onCreated={onApostaCreated}
+      />
     </>
   );
 }
