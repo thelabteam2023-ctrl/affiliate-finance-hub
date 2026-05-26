@@ -1432,5 +1432,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
         </div>
       </DialogContent>
     </Dialog>
+    <NovaEntradaDiagnostico diag={diagnostico} onClose={() => setDiagnostico(null)} />
+    </>
   );
 }
