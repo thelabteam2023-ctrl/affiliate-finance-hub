@@ -158,6 +158,10 @@ export default function TeamsLeaguesTab() {
   const [aliasForm, setAliasForm] = useState({ league_key: "", alias: "", team_logo_id: "" });
   const [teamSearchInModal, setTeamSearchInModal] = useState("");
 
+  // menu lateral — seção ativa
+  type Section = "leagues" | "teams" | "aliases" | "actions";
+  const [activeSection, setActiveSection] = useState<Section>("leagues");
+
   const loadAll = async () => {
     setLoading(true);
     try {
