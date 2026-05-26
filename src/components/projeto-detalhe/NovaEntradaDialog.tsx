@@ -937,7 +937,10 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
           </DialogDescription>
         </DialogHeader>
 
-        <div className="px-4 py-3 space-y-3 max-h-[75vh] overflow-y-auto">
+        <div
+          className="px-4 py-3 space-y-3 max-h-[75vh] overflow-y-auto"
+          title="Cole um print com Ctrl+V em qualquer lugar deste formulário para preenchimento automático"
+        >
           {/* OCR — upload de print + paste (Ctrl+V) */}
           <input
             ref={fileInputRef}
@@ -957,12 +960,12 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
             disabled={ocrLoading}
             className="w-full h-8 text-[11px] border-primary/40 text-primary hover:bg-primary/10"
             onClick={() => fileInputRef.current?.click()}
-            title="Faça upload ou cole (Ctrl+V) um print do bilhete"
+            title="Faça upload de um print ou cole com Ctrl+V"
           >
             {ocrLoading ? (
               <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Lendo print…</>
             ) : (
-              <><ScanText className="h-3.5 w-3.5 mr-1.5" /> Ler print (OCR) — ou cole com Ctrl+V</>
+              <><ScanText className="h-3.5 w-3.5 mr-1.5" /> Ler print ou cole com Ctrl+V</>
             )}
           </Button>
 
