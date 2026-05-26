@@ -602,34 +602,44 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
             )}
           </div>
 
-          {/* Casa de apostas */}
+          {/* Casa de apostas — mesmo componente canônico dos outros formulários */}
           <div className="space-y-1">
-            <Label className="text-[11px] text-muted-foreground">Casa de apostas</Label>
+            <Label className="text-[11px] text-muted-foreground">
+              Casa de apostas
+              {bookmakerId && (() => {
+                const bk = bookmakers.find((b) => b.id === bookmakerId);
+                return bk ? <span className="text-muted-foreground ml-1">({bk.moeda})</span> : null;
+              })()}
+            </Label>
             <Select value={bookmakerId} onValueChange={setBookmakerId}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecionar casa" /></SelectTrigger>
-              <SelectContent>
-                {bookmakers.map((b) => (
-                  <SelectItem key={b.id} value={b.id} className="text-xs">
-                    {b.nome} <span className="text-muted-foreground ml-1">({b.moeda})</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
+              <SelectTrigger className="h-9 text-xs w-full border-dashed">
+                <BookmakerSelectTrigger
+                  bookmaker={
+                    bookmakerId
+                      ? (() => {
+                          const bk = bookmakers.find((b) => b.id === bookmakerId);
+                          return bk
+                            ? {
+                                nome: bk.nome,
+                                parceiro_nome: bk.parceiro_nome,
+                                moeda: bk.moeda,
+                                saldo_operavel: bk.saldo_operavel,
+                                logo_url: bk.logo_url,
+                                instance_identifier: bk.instance_identifier,
+                              }
+                            : null;
+                        })()
+                      : null
+                  }
+                  placeholder="Selecionar casa"
+                />
+              </SelectTrigger>
+              <BookmakerSearchableSelectContent bookmakers={bookmakers} itemClassName="max-w-full" />
             </Select>
           </div>
 
-          {/* Moeda + Odd + Fair + Edge */}
-          <div className="grid grid-cols-4 gap-2">
-            <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground">Moeda</Label>
-              <Select value={moeda} onValueChange={setMoeda}>
-                <SelectTrigger className="h-8 text-xs px-2"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {MOEDAS_NOVA_ENTRADA.map((m) => (
-                    <SelectItem key={m.code} value={m.code} className="text-xs">{m.code}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Odd + Fair + Edge — moeda agora vem da casa (sem seletor independente) */}
+          <div className="grid grid-cols-3 gap-2">
             <div className="space-y-1">
               <Label className="text-[10px] text-muted-foreground">Odd</Label>
               <Input value={oddObtida} onChange={(e) => setOddObtida(e.target.value)} className="h-8 text-xs" inputMode="decimal" placeholder="2.00" />
