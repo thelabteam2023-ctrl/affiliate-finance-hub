@@ -267,6 +267,20 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     });
 
   const applyOcrParsed = (parsed: any) => {
+    if (DEBUG) {
+      setDebugRawOcr(parsed);
+      currentRunRef.current = {
+        at: Date.now(),
+        mercadoRaw: null,
+        apostaRaw: null,
+        linhaExtraida: null,
+        categoriaInferida: null,
+        needle: null,
+        mercadoEscolhido: null,
+        direcaoEscolhida: null,
+        linhaFinal: null,
+      };
+    }
     const getV = (f: any) => (f && typeof f === "object" ? f.value : null);
     // Esporte
     const ocrSport = (getV(parsed.esporte) || "").toString().toLowerCase().trim();
