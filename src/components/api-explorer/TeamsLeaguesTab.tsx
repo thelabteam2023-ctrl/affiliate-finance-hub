@@ -164,7 +164,7 @@ export default function TeamsLeaguesTab() {
       const today = new Date().toISOString().split("T")[0];
 
       // 1) league + team stats
-      const [{ data: lgStats }, { data: tlStats }] = await Promise.all([
+      const [{ data: lgStats }, tlStats] = await Promise.all([
         supabase.from("monitored_leagues").select("api_sports_id"),
         fetchAllRows<{ logo_url: string | null; found: boolean }>("team_logos", "logo_url, found"),
       ]);
