@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarDays, ChevronLeft, ChevronRight, Flame } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Flame, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -20,26 +20,33 @@ function getIntensityLevel(value: number, maxAbsValue: number): number {
 }
 
 function getHeatmapColor(lucro: number, temDados: boolean, maxAbs: number): string {
-  if (!temDados) return "bg-muted/20";
-  if (lucro === 0) return "bg-muted/40";
+  if (!temDados) return "bg-muted/15";
+  if (lucro === 0) return "bg-muted/30";
   const level = getIntensityLevel(lucro, maxAbs);
   if (lucro > 0) {
     switch (level) {
-      case 1: return "bg-emerald-500/15";
-      case 2: return "bg-emerald-500/30";
-      case 3: return "bg-emerald-500/50";
-      case 4: return "bg-emerald-500/70";
-      default: return "bg-emerald-500/15";
+      case 1: return "bg-emerald-500/20";
+      case 2: return "bg-emerald-500/35";
+      case 3: return "bg-emerald-500/55";
+      case 4: return "bg-emerald-500/75";
+      default: return "bg-emerald-500/20";
     }
   } else {
     switch (level) {
-      case 1: return "bg-red-500/15";
-      case 2: return "bg-red-500/30";
-      case 3: return "bg-red-500/50";
-      case 4: return "bg-red-500/70";
-      default: return "bg-red-500/15";
+      case 1: return "bg-red-500/20";
+      case 2: return "bg-red-500/35";
+      case 3: return "bg-red-500/55";
+      case 4: return "bg-red-500/75";
+      default: return "bg-red-500/20";
     }
   }
+}
+
+function getHeatmapBorder(lucro: number, temDados: boolean): string {
+  if (!temDados) return "border-transparent";
+  if (lucro === 0) return "border-border/30";
+  if (lucro > 0) return "border-emerald-500/20";
+  return "border-red-500/20";
 }
 
 function formatCompactValue(value: number): string {
@@ -47,7 +54,7 @@ function formatCompactValue(value: number): string {
   const sign = value < 0 ? "-" : "";
   if (abs >= 1000) {
     const k = abs / 1000;
-    return `${sign}${k.toFixed(2).replace(".", ",")}k`;
+    return `${sign}${k.toFixed(1).replace(".", ",")}k`;
   }
   if (abs >= 100) return `${sign}${Math.round(abs)}`;
   if (abs >= 10) return `${sign}${abs.toFixed(0)}`;
@@ -72,7 +79,6 @@ export function SharedCalendar({ daily, currencySymbol }: Props) {
         const totalOps = entries.reduce((s, e) => s + e.qtd, 0);
         const diasPositivos = entries.filter(e => e.lucro > 0).length;
         const diasNegativos = entries.filter(e => e.lucro < 0).length;
-        // streak
         const sorted = [...entries].sort((a, b) => a.dia.localeCompare(b.dia));
         let streak = 0, best = 0;
         sorted.forEach(e => { if (e.lucro > 0) { streak++; best = Math.max(best, streak); } else { streak = 0; } });
@@ -83,8 +89,9 @@ export function SharedCalendar({ daily, currencySymbol }: Props) {
 
   if (!monthData.length) {
     return (
-      <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-        <CardContent className="py-8 text-center text-muted-foreground">
+      <Card className="border-border/40 bg-gradient-to-b from-card/80 to-card/40 backdrop-blur-sm">
+        <CardContent className="py-12 text-center text-muted-foreground">
+          <CalendarDays className="h-8 w-8 mx-auto mb-3 text-muted-foreground/30" />
           Nenhuma aposta registrada
         </CardContent>
       </Card>
@@ -112,47 +119,70 @@ export function SharedCalendar({ daily, currencySymbol }: Props) {
 
   const formatFull = (v: number) => `${currencySymbol} ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
+  const weekDays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
   return (
-    <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-      <CardHeader className="py-3 pb-2">
-        <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
-          <CalendarDays className="h-4 w-4" />
-          Calendário de Performance
+    <Card className="border-border/30 bg-gradient-to-b from-card/90 to-card/50 backdrop-blur-md shadow-soft overflow-hidden">
+      <CardHeader className="py-4 pb-3 border-b border-border/20">
+        <CardTitle className="text-sm font-semibold flex items-center gap-2.5 text-foreground">
+          <div className="h-8 w-8 rounded-lg bg-gradient-primary flex items-center justify-center shadow-glow">
+            <CalendarDays className="h-4 w-4 text-white" />
+          </div>
+          <span className="tracking-tight">Calendário de Performance</span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-0 pb-4">
+
+      <CardContent className="pt-5 pb-5">
         {/* Navigation */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" disabled={!canPrev} onClick={() => setCurrentIndex(i => i + 1)}>
-              <ChevronLeft className="h-3.5 w-3.5" />
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-1.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              disabled={!canPrev}
+              onClick={() => setCurrentIndex(i => i + 1)}
+            >
+              <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="text-sm font-semibold min-w-[120px] text-center capitalize text-foreground">{monthName}</span>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" disabled={!canNext} onClick={() => setCurrentIndex(i => i - 1)}>
-              <ChevronRight className="h-3.5 w-3.5" />
+            <span className="text-sm font-bold min-w-[160px] text-center capitalize text-foreground tracking-tight">
+              {monthName}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              disabled={!canNext}
+              onClick={() => setCurrentIndex(i => i - 1)}
+            >
+              <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/60">
+
+          {/* Mini legend */}
+          <div className="flex items-center gap-1 text-[10px] text-muted-foreground/50">
             <span>Menos</span>
-            <div className="w-2.5 h-2.5 rounded-[2px] bg-muted/20" />
-            <div className="w-2.5 h-2.5 rounded-[2px] bg-emerald-500/15" />
-            <div className="w-2.5 h-2.5 rounded-[2px] bg-emerald-500/30" />
-            <div className="w-2.5 h-2.5 rounded-[2px] bg-emerald-500/50" />
-            <div className="w-2.5 h-2.5 rounded-[2px] bg-emerald-500/70" />
+            <div className="w-3 h-3 rounded-sm bg-emerald-500/15 border border-emerald-500/20" />
+            <div className="w-3 h-3 rounded-sm bg-emerald-500/30 border border-emerald-500/25" />
+            <div className="w-3 h-3 rounded-sm bg-emerald-500/55 border border-emerald-500/30" />
+            <div className="w-3 h-3 rounded-sm bg-emerald-500/75 border border-emerald-500/35" />
             <span>Mais</span>
           </div>
         </div>
 
         {/* Heatmap Grid */}
-        <TooltipProvider delayDuration={100}>
-          <div className="grid grid-cols-7 gap-[1px] mt-3">
-            {["D", "S", "T", "Q", "Q", "S", "S"].map((d, idx) => (
-              <div key={idx} className="text-center text-[9px] text-muted-foreground/60 font-medium pb-0.5 select-none">{d}</div>
+        <TooltipProvider delayDuration={80}>
+          <div className="grid grid-cols-7 gap-[3px]">
+            {/* Week day headers */}
+            {weekDays.map((d, idx) => (
+              <div key={idx} className="text-center text-[10px] text-muted-foreground/50 font-medium py-1 select-none uppercase tracking-wider">
+                {d}
+              </div>
             ))}
 
-            {/* Empty cells */}
+            {/* Empty cells for alignment */}
             {Array.from({ length: firstDayOfWeek }).map((_, i) => (
-              <div key={`e-${i}`} className="aspect-[1.6] rounded-[2px] bg-transparent" />
+              <div key={`e-${i}`} className="aspect-square rounded-lg bg-transparent" />
             ))}
 
             {/* Day cells */}
@@ -163,53 +193,58 @@ export function SharedCalendar({ daily, currencySymbol }: Props) {
               const lucro = entry?.lucro ?? 0;
               const isToday = isCurrentMonth && today.getDate() === day;
               const bgClass = getHeatmapColor(lucro, hasData, maxAbs);
+              const borderClass = getHeatmapBorder(lucro, hasData);
 
               return (
                 <Tooltip key={day}>
                   <TooltipTrigger asChild>
                     <div className={cn(
-                      "aspect-[1.6] rounded-[2px] flex flex-col items-center justify-center cursor-default transition-all duration-200 gap-0 px-0.5",
+                      "aspect-square rounded-lg flex flex-col items-center justify-center cursor-default transition-all duration-300 gap-0.5 border",
                       bgClass,
-                      isToday && "ring-1 ring-primary ring-offset-1 ring-offset-background",
-                      "hover:ring-1 hover:ring-foreground/20 hover:scale-105"
+                      borderClass,
+                      isToday && "ring-2 ring-primary ring-offset-2 ring-offset-background shadow-glow",
+                      "hover:scale-110 hover:z-10 hover:shadow-medium"
                     )}>
                       <span className={cn(
-                        "text-xs font-semibold leading-none select-none",
+                        "text-[10px] font-semibold leading-none select-none",
                         hasData
-                          ? lucro > 0 ? "text-emerald-300" : lucro < 0 ? "text-red-300" : "text-muted-foreground"
-                          : "text-muted-foreground/40"
+                          ? lucro > 0 ? "text-emerald-300" : lucro < 0 ? "text-red-300" : "text-muted-foreground/70"
+                          : "text-muted-foreground/25"
                       )}>
                         {day}
                       </span>
                       {hasData && lucro !== 0 && (
                         <span className={cn(
-                          "text-[13px] font-bold leading-none select-none mt-1 tabular-nums",
-                          lucro > 0 ? "text-emerald-200/90" : "text-red-200/90"
+                          "text-[10px] font-bold leading-none select-none tabular-nums",
+                          lucro > 0 ? "text-emerald-100/90" : "text-red-100/90"
                         )}>
                           {formatCompactValue(lucro)}
                         </span>
                       )}
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent side="top" className="bg-popover border-border shadow-xl">
-                    <div className="space-y-2 min-w-[160px]">
-                      <p className="text-xs font-medium text-foreground">
+                  <TooltipContent side="top" className="bg-popover border-border shadow-xl p-3 rounded-xl">
+                    <div className="space-y-2.5 min-w-[180px]">
+                      <p className="text-xs font-semibold text-foreground">
                         {new Date(+year, +m - 1, day).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
                       </p>
                       <div className="h-px bg-border" />
                       {hasData ? (
-                        <>
+                        <div className="space-y-1.5">
                           <div className="flex items-center justify-between gap-4">
-                            <span className="text-xs text-muted-foreground">Lucro/Prejuízo</span>
-                            <span className={cn("text-xs font-semibold tabular-nums", lucro > 0 ? "text-emerald-400" : lucro < 0 ? "text-red-400" : "text-muted-foreground")}>
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              {lucro > 0 ? <TrendingUp className="h-3 w-3 text-emerald-400" /> : lucro < 0 ? <TrendingDown className="h-3 w-3 text-red-400" /> : <Minus className="h-3 w-3 text-muted-foreground" />}
+                              Lucro/Prejuízo
+                            </span>
+                            <span className={cn("text-xs font-bold tabular-nums", lucro > 0 ? "text-emerald-400" : lucro < 0 ? "text-red-400" : "text-muted-foreground")}>
                               {formatFull(lucro)}
                             </span>
                           </div>
                           <div className="flex items-center justify-between gap-4">
                             <span className="text-xs text-muted-foreground">Operações</span>
-                            <span className="text-xs font-semibold tabular-nums text-foreground">{entry!.qtd}</span>
+                            <span className="text-xs font-bold tabular-nums text-foreground">{entry!.qtd}</span>
                           </div>
-                        </>
+                        </div>
                       ) : (
                         <p className="text-xs text-muted-foreground">Sem operações</p>
                       )}
@@ -221,45 +256,45 @@ export function SharedCalendar({ daily, currencySymbol }: Props) {
           </div>
         </TooltipProvider>
 
-        {/* Stats */}
-        <div className="grid grid-cols-4 gap-2 mt-4">
-          <div className="bg-muted/20 rounded-lg px-3 py-2.5 text-center">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-4 gap-3 mt-5">
+          <div className="bg-gradient-to-br from-muted/40 to-muted/20 rounded-xl px-3 py-3 text-center border border-border/20 hover:border-border/40 transition-colors">
             <div className={cn("text-sm font-bold tabular-nums", totalLucro > 0 ? "text-emerald-400" : totalLucro < 0 ? "text-red-400" : "text-muted-foreground")}>
               {formatFull(totalLucro)}
             </div>
-            <div className="text-[10px] text-muted-foreground/60 mt-0.5">Lucro</div>
+            <div className="text-[10px] text-muted-foreground/60 mt-1 uppercase tracking-wider font-medium">Lucro</div>
           </div>
-          <div className="bg-muted/20 rounded-lg px-3 py-2.5 text-center">
+          <div className="bg-gradient-to-br from-muted/40 to-muted/20 rounded-xl px-3 py-3 text-center border border-border/20 hover:border-border/40 transition-colors">
             <div className="text-sm font-bold tabular-nums text-foreground">{totalOps}</div>
-            <div className="text-[10px] text-muted-foreground/60 mt-0.5">Operações</div>
+            <div className="text-[10px] text-muted-foreground/60 mt-1 uppercase tracking-wider font-medium">Operações</div>
           </div>
-          <div className="bg-muted/20 rounded-lg px-3 py-2.5 text-center">
+          <div className="bg-gradient-to-br from-muted/40 to-muted/20 rounded-xl px-3 py-3 text-center border border-border/20 hover:border-border/40 transition-colors">
             <div className="flex items-center justify-center gap-1">
               <span className="text-sm font-bold tabular-nums text-emerald-400">{diasPositivos}</span>
-              <span className="text-muted-foreground/40">/</span>
+              <span className="text-muted-foreground/30 text-xs">/</span>
               <span className="text-sm font-bold tabular-nums text-red-400">{diasNegativos}</span>
             </div>
-            <div className="text-[10px] text-muted-foreground/60 mt-0.5">Green / Red</div>
+            <div className="text-[10px] text-muted-foreground/60 mt-1 uppercase tracking-wider font-medium">Green / Red</div>
           </div>
-          <div className="bg-muted/20 rounded-lg px-3 py-2.5 text-center">
+          <div className="bg-gradient-to-br from-muted/40 to-muted/20 rounded-xl px-3 py-3 text-center border border-border/20 hover:border-border/40 transition-colors">
             <div className="flex items-center justify-center gap-1">
               <Flame className="h-3.5 w-3.5 text-amber-400" />
               <span className="text-sm font-bold tabular-nums text-foreground">{melhorStreak}</span>
             </div>
-            <div className="text-[10px] text-muted-foreground/60 mt-0.5">Streak</div>
+            <div className="text-[10px] text-muted-foreground/60 mt-1 uppercase tracking-wider font-medium">Streak</div>
           </div>
         </div>
 
         {/* Page dots */}
         {monthData.length > 1 && (
-          <div className="flex justify-center gap-1.5 mt-4">
+          <div className="flex justify-center gap-2 mt-5">
             {monthData.map((_, idx) => (
               <button
                 key={idx}
                 onClick={() => setCurrentIndex(idx)}
                 className={cn(
-                  "h-1.5 rounded-full transition-all",
-                  idx === currentIndex ? "w-4 bg-primary" : "w-1.5 bg-muted-foreground/30"
+                  "h-1.5 rounded-full transition-all duration-300",
+                  idx === currentIndex ? "w-5 bg-gradient-to-r from-primary to-primary-glow shadow-glow" : "w-1.5 bg-muted-foreground/25 hover:bg-muted-foreground/40"
                 )}
               />
             ))}
@@ -269,3 +304,4 @@ export function SharedCalendar({ daily, currencySymbol }: Props) {
     </Card>
   );
 }
+
