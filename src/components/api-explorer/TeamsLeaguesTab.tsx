@@ -13,6 +13,30 @@ import { Loader2, RefreshCw, Shield, Trash2, Plus, Search, AlertCircle, CheckCir
 import { cn } from "@/lib/utils";
 
 // ---------------- helpers ----------------
+// Supabase impõe teto rígido de 1000 linhas por request. Paginamos via range().
+async function fetchAllRows<T = any>(
+  table: string,
+  select: string,
+  order?: { column: string; ascending: boolean }
+): Promise<T[]> {
+  const pageSize = 1000;
+  let from = 0;
+  const all: T[] = [];
+  for (;;) {
+    let q: any = supabase.from(table as any).select(select);
+    if (order) q = q.order(order.column, { ascending: order.ascending });
+    q = q.range(from, from + pageSize - 1);
+    const { data, error } = await q;
+    if (error) throw error;
+    const rows = (data as any[]) || [];
+    all.push(...(rows as T[]));
+    if (rows.length < pageSize) break;
+    from += pageSize;
+    if (from > 50000) break; // safety guard
+  }
+  return all;
+}
+
 const SPORT_BADGE: Record<string, { label: string; color: string }> = {
   soccer:           { label: "Futebol",       color: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30" },
   basketball:       { label: "Basquete",      color: "bg-orange-500/15 text-orange-300 border-orange-500/30" },
@@ -140,9 +164,9 @@ export default function TeamsLeaguesTab() {
       const today = new Date().toISOString().split("T")[0];
 
       // 1) league + team stats
-      const [{ data: lgStats }, { data: tlStats }] = await Promise.all([
+      const [{ data: lgStats }, tlStats] = await Promise.all([
         supabase.from("monitored_leagues").select("api_sports_id"),
-        supabase.from("team_logos").select("logo_url, found"),
+        fetchAllRows<{ logo_url: string | null; found: boolean }>("team_logos", "logo_url, found"),
       ]);
       setLeagueStats({
         total: lgStats?.length || 0,
@@ -154,10 +178,10 @@ export default function TeamsLeaguesTab() {
       });
 
       // 2) leagues with computed counts
-      const [{ data: lgs }, { data: logos }, { data: tlAll }, { data: deToday }] = await Promise.all([
+      const [{ data: lgs }, { data: logos }, tlAll, { data: deToday }] = await Promise.all([
         supabase.from("monitored_leagues").select("league_key, sport, league_name, country, api_sports_id, current_season"),
         supabase.from("league_logos").select("league_key, logo_url, found"),
-        supabase.from("team_logos").select("league_key"),
+        fetchAllRows<{ league_key: string }>("team_logos", "league_key"),
         supabase.from("daily_events").select("league_key, home_team_logo, away_team_logo").eq("event_date", today),
       ]);
 
@@ -195,19 +219,20 @@ export default function TeamsLeaguesTab() {
       setLeagues(built);
 
       // 3) teams
-      const { data: ts } = await supabase
-        .from("team_logos")
-        .select("id, team_name_original, team_name_normalized, league_key, sport, short_name, country, logo_url, found")
-        .order("team_name_original", { ascending: true })
-        .limit(5000);
-      setTeams((ts as any) || []);
+      const ts = await fetchAllRows<any>(
+        "team_logos",
+        "id, team_name_original, team_name_normalized, league_key, sport, short_name, country, logo_url, found",
+        { column: "team_name_original", ascending: true }
+      );
+      setTeams(ts || []);
 
       // 4) aliases
-      const { data: al } = await supabase
-        .from("team_name_aliases")
-        .select("id, league_key, alias_normalized, team_logo_id, team_logos(team_name_original, logo_url)")
-        .order("league_key", { ascending: true });
-      setAliases((al as any) || []);
+      const al = await fetchAllRows<any>(
+        "team_name_aliases",
+        "id, league_key, alias_normalized, team_logo_id, team_logos(team_name_original, logo_url)",
+        { column: "league_key", ascending: true }
+      );
+      setAliases(al || []);
     } catch (e: any) {
       toast.error(e.message || "Erro ao carregar dados");
     } finally {
