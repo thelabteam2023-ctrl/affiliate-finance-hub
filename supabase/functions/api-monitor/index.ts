@@ -116,14 +116,22 @@ async function syncLeagueTeamsBulk(
   country?: string,
 ) {
   const apiEndpoint = API_SPORTS_ENDPOINTS[sport] || API_SPORTS_ENDPOINTS.soccer;
-  // Esportes que usam season no formato "YYYY-YYYY" (NBA, NHL, NFL, etc.)
-  const usesRangeSeason = ['basketball', 'icehockey', 'americanfootball'].includes(sport);
+  // FORMATO DE TEMPORADA por esporte (confirmado por sondagem direta na API-Sports):
+  //  - basketball: "YYYY-YYYY"   (ex.: "2024-2025")
+  //  - icehockey:  "YYYY"          (API rejeita formato com hífen)
+  //  - americanfootball: "YYYY"   (API rejeita formato com hífen)
+  //  - soccer/baseball: "YYYY"
+  const usesRangeSeason = sport === 'basketball';
   const formatSeason = (s: number) =>
     usesRangeSeason ? `${s}-${s + 1}` : String(s);
-  // Tenta a temporada atual + 2 anteriores (cobre ligas com calendário cruzado e ligas brasileiras anuais)
-  const seasonsToTry = Array.from(new Set([season, season - 1, season - 2])).filter((s) => s > 2000);
+  // Plano free da API-Sports só libera até 2024. Começa em 2024 e cai até 2022.
+  // Se vier season>2024, força teto em 2024 para evitar erro "Free plans do not have access".
+  const startSeason = Math.min(season, 2024);
+  const seasonsToTry = Array.from(
+    new Set([startSeason, startSeason - 1, startSeason - 2]),
+  ).filter((s) => s > 2000);
   let result: any = null;
-  let usedSeason: number | string = formatSeason(season);
+  let usedSeason: number | string = formatSeason(startSeason);
 
   try {
     for (const s of seasonsToTry) {
@@ -188,12 +196,15 @@ async function syncAllTeams(supabase: any) {
   if (!leagues?.length) return { syncedLeagues: 0, totalTeams: 0 };
 
   let totalTeams = 0;
-  const chunks = chunkArray(leagues, 5);
-  for (const chunk of chunks) {
-    const results = await Promise.all(chunk.map((lg: any) =>
-      syncLeagueTeamsBulk(supabase, lg.sport, lg.league_key, lg.api_sports_id, lg.current_season || 2024, lg.country)
-    ));
-    totalTeams += results.reduce((a, b) => a + b, 0);
+  // Rate-limit do plano free: 10 req/min. Processa serialmente com delay de 7s
+  // entre ligas (cada liga consome 1-3 requisições devido às tentativas de season).
+  for (const lg of leagues) {
+    const saved = await syncLeagueTeamsBulk(
+      supabase, lg.sport, lg.league_key, lg.api_sports_id,
+      lg.current_season || 2024, lg.country,
+    );
+    totalTeams += saved;
+    await new Promise((r) => setTimeout(r, 7000));
   }
   return { syncedLeagues: leagues.length, totalTeams };
 }
@@ -229,8 +240,9 @@ async function syncMissingLeaguesOnly(supabase: any) {
       );
       totalTeams += saved;
       processed++;
-      // pequeno delay para respeitar rate-limit api-sports (free=10/min, pago=450/min)
-      await new Promise((r) => setTimeout(r, 400));
+      // Rate-limit api-sports free = 10 req/min. Cada liga = 1-3 reqs (tenta 3 seasons).
+      // 7s entre ligas mantém folga e evita "Too many requests".
+      await new Promise((r) => setTimeout(r, 7000));
     } catch (err) {
       console.error(`[SYNC MISSING] erro ${lg.league_key}:`, err);
     }
