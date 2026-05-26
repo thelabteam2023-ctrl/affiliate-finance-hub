@@ -70,7 +70,7 @@ export function FonteEntradaSelector({
   onChange,
   className,
 }: FonteEntradaSelectorProps) {
-  const { sources, addSource, toggleFavorite } = useWorkspaceBetSources(workspaceId);
+  const { sources, addSource, toggleFavorite, deleteSource } = useWorkspaceBetSources(workspaceId);
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
 
@@ -154,6 +154,21 @@ export function FonteEntradaSelector({
                 title={source.is_favorite ? "Remover favorita" : "Definir como padrão"}
               >
                 <Star className={cn("h-3 w-3", source.is_favorite ? "fill-amber-400 text-amber-400" : "text-muted-foreground")} />
+              </button>
+              {/* Delete button on hover */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (confirm(`Remover a fonte "${source.name}"?`)) {
+                    if (isActive) onChange(null);
+                    deleteSource.mutate(source.id);
+                  }
+                }}
+                className="absolute -top-2 -left-2 h-5 w-5 rounded-full border border-border/50 bg-background flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-destructive hover:text-destructive-foreground hover:border-destructive transition-all z-10"
+                title="Remover fonte"
+              >
+                <X className="h-3 w-3" />
               </button>
             </div>
           );
