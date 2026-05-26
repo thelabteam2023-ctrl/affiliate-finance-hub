@@ -11,11 +11,14 @@ import { Sparkles, ScanText, Loader2 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useMercadosBiblioteca, ESPORTES_BIBLIOTECA, MOEDAS_NOVA_ENTRADA, type MercadoBiblioteca } from "@/hooks/useMercadosBiblioteca";
+import { useMercadosBiblioteca, ESPORTES_BIBLIOTECA, type MercadoBiblioteca } from "@/hooks/useMercadosBiblioteca";
 import { FonteEntradaSelector } from "@/components/apostas/FonteEntradaSelector";
 import { criarAposta, aplicarCamposNovaEntrada } from "@/services/aposta";
 import { APOSTA_ESTRATEGIA, FORMA_REGISTRO, type ApostaEstrategia } from "@/lib/apostaConstants";
 import { useProjetoWorkingRates } from "@/hooks/useProjetoWorkingRates";
+import { useBookmakerSaldosQuery } from "@/hooks/useBookmakerSaldosQuery";
+import { BookmakerSelectTrigger } from "@/components/bookmakers/BookmakerSelectOption";
+import { BookmakerSearchableSelectContent } from "@/components/bookmakers/BookmakerSearchableSelectContent";
 
 type Resultado = "PENDENTE" | "GREEN" | "RED" | "MEIO_GREEN" | "MEIO_RED" | "VOID";
 
