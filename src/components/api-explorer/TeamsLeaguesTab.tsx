@@ -451,6 +451,15 @@ export default function TeamsLeaguesTab() {
                   ))}
                 </SelectContent>
               </Select>
+              <Select value={countryFilter} onValueChange={setCountryFilter}>
+                <SelectTrigger className="w-[180px] h-9"><SelectValue placeholder="País" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os países</SelectItem>
+                  {countriesAvailable.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-lg">
                 {[
                   { id: "all", label: "Todas" },
