@@ -530,9 +530,24 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     if (mercadoSel && mercadoSel.categoria === t.categoria) return; // já casou
 
     const needle = t.mercadoText;
+    // Período (1ºT / 2ºT / FT) inferido do texto bruto do mercado lido pelo OCR
+    const periodoOcr = inferPeriodoFromMercado(t.mercadoTextRaw || "");
+    // Filtra o pool de candidatos por período: se OCR indica 1T/2T, só
+    // considera variantes correspondentes; senão, prefere as de jogo inteiro.
+    let pool = objetosOptions;
+    if (periodoOcr === "1T") {
+      const sub = objetosOptions.filter(mercadoIsHT);
+      if (sub.length) pool = sub;
+    } else if (periodoOcr === "2T") {
+      const sub = objetosOptions.filter(mercadoIs2T);
+      if (sub.length) pool = sub;
+    } else {
+      const sub = objetosOptions.filter((m) => !mercadoIsHT(m) && !mercadoIs2T(m));
+      if (sub.length) pool = sub;
+    }
     let best: MercadoBiblioteca | null = null;
     let bestScore = 0;
-    for (const m of objetosOptions) {
+    for (const m of pool) {
       const hay = `${stripAccents(m.display_nome)} ${m.objeto ? stripAccents(m.objeto) : ""}`;
       // Score = nº de palavras (≥3 letras) do needle presentes no hay
       const words = needle.split(/\s+/).filter((w) => w.length >= 3);
@@ -543,24 +558,24 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
       }
     }
     // Se não houve match textual, e só existe uma opção, usa ela
-    if (!best && objetosOptions.length === 1) best = objetosOptions[0];
+    if (!best && pool.length === 1) best = pool[0];
     // Sem match textual e mais de uma opção: cai no "objeto padrão" do esporte
     // (gols p/ futebol, pontos p/ basquete/tênis, etc.) — quase sempre é a
     // intenção do print quando o software omite o objeto (ex.: "Handicap Asiático").
-    if (!best && objetosOptions.length > 1) {
+    if (!best && pool.length > 1) {
       const DEFAULT_OBJECTS = ["gols", "pontos", "mapas", "rounds", "sets", "games"];
       for (const def of DEFAULT_OBJECTS) {
-        const found = objetosOptions.find((o) => o.objeto === def);
+        const found = pool.find((o) => (o.objeto || "").replace(/-(ht|ft2|2t)$/, "") === def);
         if (found) { best = found; break; }
       }
       // último recurso: a primeira opção (já vem ordenada por prioridade)
-      if (!best) best = objetosOptions[0];
+      if (!best) best = pool[0];
     }
     if (best) {
       mercadoSetByOcrRef.current = true; // marcar ANTES do setState
       setMercadoSel(best);
       bumpDebug("passo1", `set mercado="${best.display_nome}"`);
-      pushDebugRun({ mercadoEscolhido: `${best.display_nome} (score=${bestScore})` });
+      pushDebugRun({ mercadoEscolhido: `${best.display_nome} (score=${bestScore}, periodo=${periodoOcr ?? "FT"})` });
     }
   }, [categoria, objetosOptions, mercadoSel]);
 
