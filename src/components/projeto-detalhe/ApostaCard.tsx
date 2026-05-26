@@ -579,16 +579,16 @@ export function ApostaCard({
             </div>
             
             {/* Mobile: Selection badge on separate row */}
-            {isSimples && (aposta.mercado || aposta.selecao) && (
+            {isSimples && hasBadgePair && (
               <div className="sm:hidden flex items-center gap-1">
-                {aposta.mercado && (
+                {badgePair.left && (
                   <SelectionBadge minWidth={50} maxWidth={100}>
-                    {aposta.mercado}
+                    {badgePair.left}
                   </SelectionBadge>
                 )}
-                {aposta.selecao && (
+                {badgePair.right && (
                   <SelectionBadge minWidth={50} maxWidth={100}>
-                    {aposta.selecao}
+                    {badgePair.right}
                   </SelectionBadge>
                 )}
               </div>
