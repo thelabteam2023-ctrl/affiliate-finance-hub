@@ -805,7 +805,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     setOddObtida("");
     setFairValue("");
     setStake("");
-    setModelo("pre-jogo");
+    setModelo(modeloFavorito);
     setResultado("PENDENTE");
     setOcrHintMercado(null);
     setOcrHintAposta(null);
