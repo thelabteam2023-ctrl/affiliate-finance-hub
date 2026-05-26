@@ -151,6 +151,27 @@ export interface CriarApostaInput {
 }
 
 /**
+ * Campos adicionais do formulário "Nova Entrada" (analíticos — NÃO afetam
+ * saldo, ledger ou Lucro Canônico). São aplicados via UPDATE após o RPC
+ * atômico, garantindo zero impacto no motor financeiro.
+ */
+export interface NovaEntradaExtraFields {
+  liga?: string | null;
+  mercado_categoria?: string | null;
+  mercado_objeto?: string | null;
+  mercado_formato?: string | null;
+  mercado_direcao?: string | null;
+  mercado_linha?: number | null;
+  mercado_display?: string | null;
+  fair_value?: number | null;
+  edge_percentual?: number | null;
+  odd_fechamento?: number | null;
+  clv_percentual?: number | null;
+  modelo_aposta?: string | null;
+  is_novo_formulario?: boolean;
+}
+
+/**
  * Dados para atualização de aposta
  */
 export interface AtualizarApostaInput {
