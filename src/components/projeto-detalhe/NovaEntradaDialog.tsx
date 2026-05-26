@@ -922,6 +922,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
 
   // ---------- Render ----------
   return (
+    <>
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-[480px] p-0 gap-0 bg-card border-border">
         <DialogHeader className="px-4 pt-4 pb-2">
