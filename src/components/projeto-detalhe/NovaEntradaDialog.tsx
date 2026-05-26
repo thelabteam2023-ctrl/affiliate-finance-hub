@@ -1072,7 +1072,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
           <div className="flex items-center justify-between gap-3">
             <DialogTitle className="flex items-center gap-2 text-base">
               <Sparkles className="h-4 w-4 text-primary" />
-              Nova Entrada
+              {isEdit ? "Editar Entrada" : "Nova Entrada"}
               <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-normal ml-1">
                 {estrategia === "SUREBET" ? "Surebet" : "ValueBet"}
               </span>
