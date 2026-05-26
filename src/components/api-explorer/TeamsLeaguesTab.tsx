@@ -282,6 +282,7 @@ export default function TeamsLeaguesTab() {
   const teamsFiltered = useMemo(() => {
     const q = teamSearch.trim().toLowerCase();
     return teams.filter((t) => {
+      if (teamSportFilter !== "all" && t.sport !== teamSportFilter) return false;
       if (teamLeagueFilter !== "all" && t.league_key !== teamLeagueFilter) return false;
       if (teamCountryFilter !== "all" && leagueCountryMap.get(t.league_key) !== teamCountryFilter) return false;
       if (teamLogoFilter === "with" && !(t.found && t.logo_url)) return false;
@@ -289,7 +290,7 @@ export default function TeamsLeaguesTab() {
       if (q && !t.team_name_original.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [teams, teamSearch, teamLeagueFilter, teamCountryFilter, teamLogoFilter, leagueCountryMap]);
+  }, [teams, teamSearch, teamSportFilter, teamLeagueFilter, teamCountryFilter, teamLogoFilter, leagueCountryMap]);
 
   // Times únicos (agrupados por api_sports_id ou nome normalizado dentro do esporte)
   interface UniqueTeamRow {
@@ -338,7 +339,7 @@ export default function TeamsLeaguesTab() {
   const filteredTeams = teamsFiltered;
   const displayRowsCount = teamUniqueMode ? uniqueTeams.length : filteredTeams.length;
 
-  useEffect(() => { setTeamsPage(0); }, [teamSearch, teamLeagueFilter, teamCountryFilter, teamLogoFilter, teamUniqueMode]);
+  useEffect(() => { setTeamsPage(0); }, [teamSearch, teamSportFilter, teamLeagueFilter, teamCountryFilter, teamLogoFilter, teamUniqueMode]);
 
   const teamsPaged = useMemo(
     () => filteredTeams.slice(teamsPage * PAGE_SIZE, (teamsPage + 1) * PAGE_SIZE),
