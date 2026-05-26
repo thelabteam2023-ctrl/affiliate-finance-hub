@@ -931,16 +931,16 @@ export function ApostaCard({
             </div>
             
             {/* Mobile: Selection badges on separate row */}
-            {(aposta.mercado || aposta.selecao) && (
+            {hasBadgePair && (
               <div className="sm:hidden flex items-center gap-1">
-                {aposta.mercado && (
+                {badgePair.left && (
                   <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/10 truncate max-w-[100px]">
-                    {aposta.mercado}
+                    {badgePair.left}
                   </Badge>
                 )}
-                {aposta.selecao && (
+                {badgePair.right && (
                   <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/10 truncate max-w-[100px]">
-                    {aposta.selecao}
+                    {badgePair.right}
                   </Badge>
                 )}
               </div>
