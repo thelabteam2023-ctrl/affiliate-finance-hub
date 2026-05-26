@@ -982,19 +982,16 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
           </Button>
 
           {/* Fonte de entrada */}
-          <div className="space-y-1">
-            <Label className="text-[11px] text-muted-foreground">Fonte da entrada</Label>
-            <FonteEntradaSelector
-              workspaceId={workspaceId}
-              value={fonteEntrada}
-              onChange={setFonteEntrada}
-            />
-          </div>
+          <FonteEntradaSelector
+            workspaceId={workspaceId}
+            value={fonteEntrada}
+            onChange={setFonteEntrada}
+          />
 
           {/* Esporte + Liga */}
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
-              <Label className="text-[11px] text-muted-foreground">Esporte</Label>
+              <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">Esporte</Label>
               <Select value={esporte} onValueChange={setEsporte}>
                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -1005,14 +1002,14 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
               </Select>
             </div>
             <div className="space-y-1">
-              <Label className="text-[11px] text-muted-foreground">Liga</Label>
+              <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">Liga</Label>
               <Input value={liga} onChange={(e) => setLiga(e.target.value)} className="h-8 text-xs" placeholder="Ex: Premier League" />
             </div>
           </div>
 
           {/* Evento */}
           <div className="space-y-1">
-            <Label className="text-[11px] text-muted-foreground">Evento</Label>
+            <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">Evento</Label>
             <Input value={evento} onChange={(e) => setEvento(e.target.value)} className="h-8 text-xs" placeholder="Time 1 vs Time 2" />
           </div>
 
@@ -1104,7 +1101,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
 
           {/* Casa de apostas — mesmo componente canônico dos outros formulários */}
           <div className="space-y-1">
-            <Label className="text-[11px] text-muted-foreground">
+            <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">
               Casa de apostas
               {bookmakerId && (() => {
                 const bk = bookmakers.find((b) => b.id === bookmakerId);
@@ -1141,15 +1138,15 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
           {/* Odd + Fair + Edge — moeda agora vem da casa (sem seletor independente) */}
           <div className="grid grid-cols-3 gap-2">
             <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground">Odd</Label>
+              <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">Odd</Label>
               <Input value={oddObtida} onChange={(e) => setOddObtida(e.target.value)} className="h-8 text-xs" inputMode="decimal" placeholder="2.00" />
             </div>
             <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground">Fair</Label>
+              <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">Fair</Label>
               <Input value={fairValue} onChange={(e) => setFairValue(e.target.value)} className="h-8 text-xs" inputMode="decimal" placeholder="1.85" />
             </div>
             <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground">Edge</Label>
+              <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">Edge</Label>
               <div
                 className={cn(
                   "h-8 px-2 rounded-md border bg-background flex items-center text-xs font-semibold",
@@ -1167,7 +1164,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
           {/* Stake + DataHora */}
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground">
+              <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">
                 Stake {moeda !== "BRL" && stakeBRL != null && (
                   <span className="text-muted-foreground/60">≈ R$ {stakeBRL.toFixed(2)}</span>
                 )}
@@ -1175,7 +1172,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
               <Input value={stake} onChange={(e) => setStake(e.target.value)} className="h-8 text-xs" inputMode="decimal" placeholder="0,00" />
             </div>
             <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground">Data / Hora</Label>
+              <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">Data / Hora</Label>
               <Input type="datetime-local" value={dataHora} onChange={(e) => setDataHora(e.target.value)} className="h-8 text-xs" />
             </div>
           </div>
@@ -1184,7 +1181,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
           <TooltipProvider>
             <div className="grid grid-cols-2 gap-2 opacity-50">
               <div className="space-y-1">
-                <Label className="text-[10px] text-muted-foreground">Odd fechamento</Label>
+                <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">Odd fechamento</Label>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Input disabled placeholder="via API Pinnacle" className="h-8 text-xs cursor-not-allowed" />
@@ -1195,7 +1192,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
                 </Tooltip>
               </div>
               <div className="space-y-1">
-                <Label className="text-[10px] text-muted-foreground">CLV %</Label>
+                <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">CLV %</Label>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Input disabled placeholder="automático" className="h-8 text-xs cursor-not-allowed" />
@@ -1211,7 +1208,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
           {/* Resultado */}
           <div className="grid grid-cols-1 gap-3 items-end">
             <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground block text-center">Resultado</Label>
+              <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider block text-center">Resultado</Label>
               <div className="flex flex-wrap gap-1 justify-center">
                 {RESULTADOS.map((r) => (
                   <button

@@ -8,6 +8,16 @@ import { Plus, Check, X, Star } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -73,6 +83,7 @@ export function FonteEntradaSelector({
   const { sources, addSource, toggleFavorite, deleteSource } = useWorkspaceBetSources(workspaceId);
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<BetSource | null>(null);
 
   const handleAdd = async () => {
     const trimmed = newName.trim();
@@ -160,10 +171,7 @@ export function FonteEntradaSelector({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (confirm(`Remover a fonte "${source.name}"?`)) {
-                    if (isActive) onChange(null);
-                    deleteSource.mutate(source.id);
-                  }
+                  setPendingDelete(source);
                 }}
                 className="absolute -top-2 -left-2 h-5 w-5 rounded-full border border-border/50 bg-background flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-destructive hover:text-destructive-foreground hover:border-destructive transition-all z-10"
                 title="Remover fonte"
@@ -204,6 +212,35 @@ export function FonteEntradaSelector({
           </button>
         )}
       </div>
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={(o) => !o && setPendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover fonte de entrada</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover a fonte <span className="font-semibold text-foreground">"{pendingDelete?.name}"</span>?
+              <br />
+              <span className="text-xs text-muted-foreground/80 mt-2 block">
+                As apostas já registradas com essa fonte continuarão preservadas — apenas a opção será removida do seletor.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (!pendingDelete) return;
+                if (value === pendingDelete.name) onChange(null);
+                deleteSource.mutate(pendingDelete.id);
+                setPendingDelete(null);
+              }}
+            >
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
