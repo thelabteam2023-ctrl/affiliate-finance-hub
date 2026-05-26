@@ -1442,6 +1442,35 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
 
   // Abrir aposta simples em janela externa (mesmo comportamento do Surebet)
   const handleOpenDialog = (aposta: Aposta | null) => {
+    // Apostas registradas pelo formulário "Nova Entrada" abrem no MESMO formulário
+    // em modo edição — preservando categoria/objeto/formato/direção/linha.
+    if (aposta?.is_novo_formulario) {
+      setEditingNovaEntrada({
+        id: aposta.id,
+        status: aposta.status,
+        evento: aposta.evento,
+        esporte: aposta.esporte,
+        liga: aposta.liga ?? null,
+        data_aposta: aposta.data_aposta,
+        bookmaker_id: aposta.bookmaker_id,
+        moeda_operacao: aposta.moeda_operacao ?? "BRL",
+        odd: aposta.odd,
+        stake: aposta.stake,
+        fonte_entrada: aposta.fonte_entrada ?? null,
+        modelo_aposta: aposta.modelo_aposta ?? null,
+        fair_value: aposta.fair_value ?? null,
+        mercado_categoria: aposta.mercado_categoria ?? null,
+        mercado_objeto: aposta.mercado_objeto ?? null,
+        mercado_formato: aposta.mercado_formato ?? null,
+        mercado_direcao: aposta.mercado_direcao ?? null,
+        mercado_linha: aposta.mercado_linha ?? null,
+        mercado_display: aposta.mercado_display ?? null,
+        time_casa: aposta.time_casa ?? null,
+        time_fora: aposta.time_fora ?? null,
+      });
+      setNovaEntradaEditOpen(true);
+      return;
+    }
     const apostaId = aposta?.id || 'novo';
     const url = `/janela/aposta/${apostaId}?projetoId=${encodeURIComponent(projetoId)}&tab=apostas&estrategia=PUNTER`;
     window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
