@@ -19,6 +19,7 @@ import { useProjetoWorkingRates } from "@/hooks/useProjetoWorkingRates";
 import { useBookmakerSaldosQuery } from "@/hooks/useBookmakerSaldosQuery";
 import { BookmakerSelectTrigger } from "@/components/bookmakers/BookmakerSelectOption";
 import { BookmakerSearchableSelectContent } from "@/components/bookmakers/BookmakerSearchableSelectContent";
+import { NovaEntradaDiagnostico, type DiagnosticoPayload } from "./NovaEntradaDiagnostico";
 
 type Resultado = "PENDENTE" | "GREEN" | "RED" | "MEIO_GREEN" | "MEIO_RED" | "VOID";
 
