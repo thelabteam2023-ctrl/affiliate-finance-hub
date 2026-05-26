@@ -645,8 +645,10 @@ export default function TeamsLeaguesTab() {
           </div>
         </CardContent>
       </Card>
+      )}
 
       {/* SEÇÃO 3: TIMES */}
+      {activeSection === "teams" && (
       <Card>
         <CardHeader>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
