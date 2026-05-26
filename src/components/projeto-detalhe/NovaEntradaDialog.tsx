@@ -786,6 +786,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
 
   const handleClose = () => {
     if (saving) return;
+    handleReset();
     onOpenChange(false);
   };
 
