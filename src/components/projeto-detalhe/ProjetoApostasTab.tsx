@@ -356,6 +356,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
   const [selectedAposta, setSelectedAposta] = useState<Aposta | null>(null);
   const [selectedApostaMultipla, setSelectedApostaMultipla] = useState<ApostaMultipla | null>(null);
   const [selectedSurebet, setSelectedSurebet] = useState<SurebetData | null>(null);
+  // Edição via formulário "Nova Entrada" (apenas para apostas com is_novo_formulario=true)
+  const [editingNovaEntrada, setEditingNovaEntrada] = useState<ApostaParaEditar | null>(null);
+  const [novaEntradaEditOpen, setNovaEntradaEditOpen] = useState(false);
   const [bookmakers, setBookmakers] = useState<any[]>([]);
   
   // Estados para modal de exclusão
