@@ -300,8 +300,13 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     if (cat) {
       // Texto do mercado *sem* a palavra da categoria, p/ casar com "objeto" depois
       const mercadoText = stripAccents(mercadoTxt)
+        // remove a palavra-chave de categoria
         .replace(/handicap|spread|puck\s*line|run\s*line|total|over|under|vencedor|moneyline|resultado/g, "")
-        .replace(/\bde\b|\bdo\b|\bda\b/g, "")
+        // remove rótulos de FORMATO (não fazem parte do "objeto")
+        .replace(/\basiatico\b|\beuropeu\b|\basian\b|\beuropean\b/g, "")
+        // remove conectivos e marcadores comuns (ex.: "(1x2)", "match winner")
+        .replace(/\bde\b|\bdo\b|\bda\b|\bfinal\b|\bmatch\b|\bwinner\b/g, "")
+        .replace(/[()]/g, " ")
         .trim();
       pendingOcrRef.current = {
         categoria: cat,
@@ -446,6 +451,18 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     }
     // Se não houve match textual, e só existe uma opção, usa ela
     if (!best && objetosOptions.length === 1) best = objetosOptions[0];
+    // Sem match textual e mais de uma opção: cai no "objeto padrão" do esporte
+    // (gols p/ futebol, pontos p/ basquete/tênis, etc.) — quase sempre é a
+    // intenção do print quando o software omite o objeto (ex.: "Handicap Asiático").
+    if (!best && objetosOptions.length > 1) {
+      const DEFAULT_OBJECTS = ["gols", "pontos", "mapas", "rounds", "sets", "games"];
+      for (const def of DEFAULT_OBJECTS) {
+        const found = objetosOptions.find((o) => o.objeto === def);
+        if (found) { best = found; break; }
+      }
+      // último recurso: a primeira opção (já vem ordenada por prioridade)
+      if (!best) best = objetosOptions[0];
+    }
     if (best) {
       mercadoSetByOcrRef.current = true; // marcar ANTES do setState
       setMercadoSel(best);
