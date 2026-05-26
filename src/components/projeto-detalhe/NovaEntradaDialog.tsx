@@ -187,6 +187,11 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
   // Usado para o efeito de reset de [mercadoSel] pular a limpeza e permitir
   // que o Passo 2 do OCR preencha formato/direcao/linha no mesmo ciclo de render.
   const mercadoSetByOcrRef = useRef(false);
+  // Contador incrementado sempre que `pendingOcrRef.current` é definido.
+  // Funciona como gatilho de re-render para o Passo 0 — caso contrário
+  // ele só dispararia se `categoriaOptions`/`categoria` mudassem, o que
+  // não acontece quando o esporte/mercados já estavam carregados antes do OCR.
+  const [ocrTrigger, setOcrTrigger] = useState(0);
 
   // ---------- DEBUG PANEL (DEV ONLY) ----------
   const DEBUG = import.meta.env.DEV;
@@ -306,6 +311,8 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
         apostaMandante: mandante ? String(mandante) : null,
         apostaVisitante: visitante ? String(visitante) : null,
       };
+      // Dispara o Passo 0 mesmo quando categoriaOptions/categoria não mudaram
+      setOcrTrigger((n) => n + 1);
       // NÃO chama setCategoria aqui — um efeito abaixo aguarda os mercados
       // do esporte carregarem (após eventual reset do [esporte]) e então
       // aplica a categoria pendente em sequência.
@@ -412,7 +419,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     if (!categoriaOptions.includes(t.categoria)) return;
     setCategoria(t.categoria);
     bumpDebug("passo0", `set categoria="${t.categoria}"`);
-  }, [categoriaOptions, categoria]);
+  }, [categoriaOptions, categoria, ocrTrigger]);
 
   // --- Auto-preenchimento sequencial da cascata via OCR ----------------------
   // Passo 1: assim que `categoria` muda e os `objetosOptions` carregam,
