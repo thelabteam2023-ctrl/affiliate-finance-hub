@@ -1,0 +1,3 @@
+ALTER TABLE public.apostas_unificada
+  ADD COLUMN IF NOT EXISTS time_casa VARCHAR(200),
+  ADD COLUMN IF NOT EXISTS time_fora VARCHAR(200);
