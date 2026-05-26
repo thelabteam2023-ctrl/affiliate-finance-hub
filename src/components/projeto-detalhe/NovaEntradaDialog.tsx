@@ -1232,6 +1232,51 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
                     {row("Reset mercadoSel", fmtTick(debugTicks.reset, debugTicks.passo1.count > 0))}
                     {row("Passo 2 (dir/linha)", fmtTick(debugTicks.passo2, ocrExpected))}
                   </div>
+                  {/* OCR RAW (último print) */}
+                  {debugRawOcr && (
+                    <div className="border-t border-border/40 mt-2 pt-1">
+                      <div className="px-4 py-1 text-amber-400/80">OCR RAW (edge)</div>
+                      <div className="px-4 pb-2 text-foreground/80">
+                        <pre className="whitespace-pre-wrap break-all">
+                          {JSON.stringify(debugRawOcr, null, 2)}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+                  {/* Histórico de execuções */}
+                  {debugRuns.length > 0 && (
+                    <div className="border-t border-border/40 mt-2 pt-1">
+                      <div className="px-4 py-1 text-amber-400/80">
+                        Histórico OCR ({debugRuns.length})
+                      </div>
+                      <div className="px-4 pb-2 space-y-2">
+                        {debugRuns.map((r) => {
+                          const ok = !!r.mercadoEscolhido && !!r.direcaoEscolhida;
+                          return (
+                            <div
+                              key={r.at}
+                              className={cn(
+                                "border rounded p-2",
+                                ok ? "border-emerald-500/30" : "border-red-500/30",
+                              )}
+                            >
+                              <div className="text-muted-foreground/70">
+                                {new Date(r.at).toLocaleTimeString()}
+                              </div>
+                              <div>mercadoRaw: <span className="text-foreground/90">{r.mercadoRaw ?? "—"}</span></div>
+                              <div>apostaRaw: <span className="text-foreground/90">{r.apostaRaw ?? "—"}</span></div>
+                              <div>linhaExtraída: <span className="text-foreground/90">{r.linhaExtraida ?? "—"}</span></div>
+                              <div>categoriaInferida: <span className="text-foreground/90">{r.categoriaInferida ?? "—"}</span></div>
+                              <div>needle: <span className="text-foreground/90">{r.needle ?? "—"}</span></div>
+                              <div>→ mercadoEscolhido: <span className={cn(r.mercadoEscolhido ? "text-emerald-400" : "text-red-400")}>{r.mercadoEscolhido ?? "(nenhum)"}</span></div>
+                              <div>→ direcaoEscolhida: <span className={cn(r.direcaoEscolhida ? "text-emerald-400" : "text-red-400")}>{r.direcaoEscolhida ?? "(nenhuma)"}</span></div>
+                              <div>→ linhaFinal: <span className="text-foreground/90">{r.linhaFinal ?? "—"}</span></div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })()}
