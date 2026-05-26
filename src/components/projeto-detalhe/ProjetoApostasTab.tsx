@@ -1905,6 +1905,21 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       />
 
       {/* Dialogs removidos - todos os formulários abrem em janela externa */}
+
+      {/* Edição inline de apostas do novo formulário (Nova Entrada) */}
+      {editingNovaEntrada && (
+        <NovaEntradaDialog
+          open={novaEntradaEditOpen}
+          onOpenChange={(o) => {
+            setNovaEntradaEditOpen(o);
+            if (!o) setEditingNovaEntrada(null);
+          }}
+          projetoId={projetoId}
+          estrategia={(editingNovaEntrada.status && (editingNovaEntrada as any).estrategia) || "VALUEBET" as any}
+          apostaParaEditar={editingNovaEntrada}
+          onCreated={fetchApostas}
+        />
+      )}
     </div>
   );
 }
