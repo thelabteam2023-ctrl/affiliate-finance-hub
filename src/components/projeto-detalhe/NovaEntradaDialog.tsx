@@ -110,6 +110,8 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
   const [saving, setSaving] = useState(false);
   const [ocrLoading, setOcrLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [ocrHintMercado, setOcrHintMercado] = useState<string | null>(null);
+  const [ocrHintAposta, setOcrHintAposta] = useState<string | null>(null);
 
   const fileToBase64 = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
@@ -231,19 +233,31 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
   }, [open]);
 
   // ---------- Data ----------
-  const { data: bookmakers = [] } = useQuery<Bookmaker[]>({
-    queryKey: ["bookmakers-nova-entrada", projetoId],
-    enabled: !!projetoId && open,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("bookmakers")
-        .select("id, nome, moeda")
-        .eq("projeto_id", projetoId)
-        .order("nome");
-      if (error) throw error;
-      return (data || []) as Bookmaker[];
-    },
+  // Usa o hook canônico de saldos — mesmo componente/modelo dos outros formulários
+  const { data: bookmakerSaldos = [] } = useBookmakerSaldosQuery({
+    projetoId,
+    enabled: open,
+    includeZeroBalance: true,
   });
+  const bookmakers = useMemo(
+    () =>
+      bookmakerSaldos
+        .filter((bk) => !bk.has_pending_transactions)
+        .map((bk) => ({
+          id: bk.id,
+          nome: bk.nome,
+          parceiro_nome: bk.parceiro_nome,
+          instance_identifier: bk.instance_identifier,
+          moeda: bk.moeda,
+          logo_url: bk.logo_url,
+          saldo_operavel: bk.saldo_operavel,
+          saldo_disponivel: bk.saldo_disponivel,
+          saldo_freebet: bk.saldo_freebet,
+          saldo_bonus: bk.saldo_bonus,
+          bonus_rollover_started: bk.bonus_rollover_started,
+        })),
+    [bookmakerSaldos],
+  );
 
   const { data: mercadosByCategoria = {}, isLoading: loadingMercados } = useMercadosBiblioteca(esporte);
 
