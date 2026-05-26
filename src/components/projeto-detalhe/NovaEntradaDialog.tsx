@@ -1091,7 +1091,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
             )}
 
             {(ocrHintMercado || ocrHintAposta) && (
-              <div className="text-[10px] text-amber-500/90 bg-amber-500/5 border border-amber-500/20 rounded px-2 py-1 leading-snug">
+              <div className="text-[10px] text-amber-500/90 bg-amber-500/5 border border-amber-500/20 rounded px-2 py-1 leading-snug text-center">
                 <div className="uppercase tracking-wider text-[9px] text-amber-500/70 mb-0.5">
                   OCR detectou
                 </div>
