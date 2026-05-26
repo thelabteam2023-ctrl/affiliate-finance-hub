@@ -144,6 +144,7 @@ export default function TeamsLeaguesTab() {
   const [teamSearch, setTeamSearch] = useState("");
   const [teamLeagueFilter, setTeamLeagueFilter] = useState<string>("all");
   const [teamCountryFilter, setTeamCountryFilter] = useState<string>("all");
+  const [teamSportFilter, setTeamSportFilter] = useState<string>("all");
   const [teamLogoFilter, setTeamLogoFilter] = useState<"all" | "with" | "without">("all");
   const [teamUniqueMode, setTeamUniqueMode] = useState<boolean>(true);
   const [teamsPage, setTeamsPage] = useState(0);
