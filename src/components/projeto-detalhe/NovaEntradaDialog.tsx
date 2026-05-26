@@ -1287,7 +1287,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
                 return bk ? <span className="text-muted-foreground ml-1">({bk.moeda})</span> : null;
               })()}
             </Label>
-            <Select value={bookmakerId} onValueChange={setBookmakerId}>
+            <Select value={bookmakerId} onValueChange={setBookmakerId} disabled={isEdit}>
               <SelectTrigger className="h-9 text-xs w-full border-dashed">
                 <BookmakerSelectTrigger
                   bookmaker={
