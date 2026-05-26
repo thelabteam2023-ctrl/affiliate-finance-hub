@@ -808,8 +808,10 @@ export default function TeamsLeaguesTab() {
           )}
         </CardContent>
       </Card>
+      )}
 
       {/* SEÇÃO 4: ALIASES */}
+      {activeSection === "aliases" && (
       <Card>
         <CardHeader>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
