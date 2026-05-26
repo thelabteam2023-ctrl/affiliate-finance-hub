@@ -686,6 +686,14 @@ Estes prints normalmente NÃO mostram stake nem retorno, e usam os seguintes ró
       parsedData.odd.value = normalizeNumericString(parsedData.odd?.value, 5);
       parsedData.stake.value = normalizeNumericString(parsedData.stake?.value);
       parsedData.retorno.value = normalizeNumericString(parsedData.retorno?.value);
+      if (parsedData.fairValue) {
+        parsedData.fairValue.value = normalizeNumericString(parsedData.fairValue?.value, 5);
+      } else {
+        parsedData.fairValue = { value: null, confidence: "none" };
+      }
+      if (!parsedData.liga) {
+        parsedData.liga = { value: null, confidence: "none" };
+      }
 
       // REGRA CRÍTICA: Recalcular odd a partir de stake/retorno para máxima precisão
       const { oddValue, wasRecalculated } = recalcularOddFromStakeRetorno(
