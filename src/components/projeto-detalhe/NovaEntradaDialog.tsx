@@ -833,6 +833,20 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
 
       if (!result.success || !result.data?.id) {
         toast.error(result.error?.message || "Falha ao registrar entrada");
+        setDiagnostico({
+          timestamp: new Date().toISOString(),
+          id_gerado: null,
+          erro: result.error?.message || "Falha ao registrar entrada (sem id)",
+          campos_analiticos: {
+            is_novo_formulario: true,
+            mercado_categoria: mercadoSel.categoria,
+            mercado_objeto: mercadoSel.objeto,
+            mercado_display: previewMercado,
+            estrategia,
+            projeto_id: projetoId,
+          },
+          estrategia_esperada: estrategia,
+        });
         setSaving(false);
         return;
       }
@@ -868,11 +882,39 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
       await queryClient.invalidateQueries({ queryKey: ["apostas-projeto", projetoId] });
       await queryClient.invalidateQueries({ queryKey: ["apostas_unificada"] });
       onCreated?.();
+      setDiagnostico({
+        timestamp: new Date().toISOString(),
+        id_gerado: apostaId,
+        erro: null,
+        campos_analiticos: {
+          is_novo_formulario: true,
+          mercado_categoria: mercadoSel.categoria,
+          mercado_objeto: mercadoSel.objeto,
+          mercado_display: previewMercado,
+          estrategia,
+          projeto_id: projetoId,
+        },
+        estrategia_esperada: estrategia,
+      });
       handleReset();
       onOpenChange(false);
     } catch (err: any) {
       console.error("[NovaEntradaDialog] erro:", err);
       toast.error(err?.message || "Erro inesperado");
+      setDiagnostico({
+        timestamp: new Date().toISOString(),
+        id_gerado: null,
+        erro: err?.message || String(err) || "Erro inesperado",
+        campos_analiticos: {
+          is_novo_formulario: true,
+          mercado_categoria: mercadoSel?.categoria ?? null,
+          mercado_objeto: mercadoSel?.objeto ?? null,
+          mercado_display: previewMercado,
+          estrategia,
+          projeto_id: projetoId,
+        },
+        estrategia_esperada: estrategia,
+      });
     } finally {
       setSaving(false);
     }
