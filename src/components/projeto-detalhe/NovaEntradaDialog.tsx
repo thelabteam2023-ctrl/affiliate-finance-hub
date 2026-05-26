@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,28 @@ import { APOSTA_ESTRATEGIA, FORMA_REGISTRO, type ApostaEstrategia } from "@/lib/
 import { useProjetoWorkingRates } from "@/hooks/useProjetoWorkingRates";
 
 type Resultado = "PENDENTE" | "GREEN" | "RED" | "MEIO_GREEN" | "MEIO_RED" | "VOID";
+
+// Mapeia "esporte" retornado pelo OCR (PT-BR) para o code da biblioteca.
+const OCR_SPORT_MAP: Record<string, string> = {
+  "futebol": "soccer",
+  "soccer": "soccer",
+  "basquete": "basketball",
+  "basketball": "basketball",
+  "tênis": "tennis",
+  "tenis": "tennis",
+  "tennis": "tennis",
+  "hockey": "hockey",
+  "handebol": "handball",
+  "handball": "handball",
+  "counter-strike": "cs2",
+  "cs:go": "cs2",
+  "cs2": "cs2",
+  "league of legends": "lol",
+  "lol": "lol",
+  "dota 2": "dota2",
+  "dota2": "dota2",
+  "valorant": "valorant",
+};
 
 const RESULTADOS: { value: Resultado; label: string; className: string }[] = [
   { value: "PENDENTE",   label: "Pendente", className: "border-border text-muted-foreground" },
@@ -89,6 +111,108 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
   const [resultado, setResultado] = useState<Resultado>("PENDENTE");
 
   const [saving, setSaving] = useState(false);
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const fileToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result as string);
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
+
+  const applyOcrParsed = (parsed: any) => {
+    const getV = (f: any) => (f && typeof f === "object" ? f.value : null);
+    // Esporte
+    const ocrSport = (getV(parsed.esporte) || "").toString().toLowerCase().trim();
+    if (ocrSport && OCR_SPORT_MAP[ocrSport]) {
+      setEsporte(OCR_SPORT_MAP[ocrSport]);
+    }
+    // Evento
+    const mandante = getV(parsed.mandante);
+    const visitante = getV(parsed.visitante);
+    if (mandante && visitante) {
+      setEvento(`${mandante} x ${visitante}`);
+    } else if (mandante) {
+      setEvento(mandante);
+    }
+    // Data/hora
+    const dh = getV(parsed.dataHora);
+    if (dh) {
+      const d = new Date(dh);
+      if (!isNaN(d.getTime())) {
+        // local datetime-local format
+        const pad = (n: number) => String(n).padStart(2, "0");
+        const local = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        setDataHora(local);
+      }
+    }
+    // Odd / stake
+    const odd = getV(parsed.odd);
+    if (odd) setOddObtida(String(odd).replace(",", "."));
+    const stk = getV(parsed.stake);
+    if (stk) setStake(String(stk).replace(",", "."));
+    // Bookmaker — tenta casar pelo nome (lê via cache para evitar dependência circular)
+    const bmNome = (getV(parsed.bookmakerNome) || "").toString().toLowerCase().trim();
+    if (bmNome) {
+      const cachedBms = queryClient.getQueryData<Bookmaker[]>(["bookmakers-nova-entrada", projetoId]) || [];
+      const match = cachedBms.find((b) => b.nome.toLowerCase().includes(bmNome) || bmNome.includes(b.nome.toLowerCase()));
+      if (match) setBookmakerId(match.id);
+    }
+  };
+
+  const handleOcrImage = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Arquivo precisa ser uma imagem");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Imagem muito grande (máx. 10MB)");
+      return;
+    }
+    setOcrLoading(true);
+    try {
+      const base64 = await fileToBase64(file);
+      const { data, error } = await supabase.functions.invoke("parse-betting-slip", {
+        body: { imageBase64: base64 },
+      });
+      if (error) throw error;
+      if (!data?.success || !data?.data) throw new Error("Sem dados extraídos");
+      applyOcrParsed(data.data);
+      toast.success("Print lido — confira os campos");
+    } catch (e: any) {
+      console.error("[NovaEntrada OCR]", e);
+      const msg = String(e?.message || "");
+      if (msg.includes("429")) toast.error("Limite de IA atingido, tente em alguns segundos");
+      else if (msg.includes("402")) toast.error("Créditos de IA esgotados");
+      else toast.error("Não foi possível ler o print");
+    } finally {
+      setOcrLoading(false);
+    }
+  };
+
+  // Paste image from clipboard while dialog open
+  useEffect(() => {
+    if (!open) return;
+    const onPaste = (ev: ClipboardEvent) => {
+      const items = ev.clipboardData?.items;
+      if (!items) return;
+      for (const it of Array.from(items)) {
+        if (it.type.startsWith("image/")) {
+          const f = it.getAsFile();
+          if (f) {
+            ev.preventDefault();
+            handleOcrImage(f);
+            return;
+          }
+        }
+      }
+    };
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   // ---------- Data ----------
   const { data: bookmakers = [] } = useQuery<Bookmaker[]>({
@@ -309,15 +433,32 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
         </DialogHeader>
 
         <div className="px-4 py-3 space-y-3 max-h-[75vh] overflow-y-auto">
-          {/* OCR button */}
+          {/* OCR — upload de print + paste (Ctrl+V) */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) handleOcrImage(f);
+              e.target.value = "";
+            }}
+          />
           <Button
             type="button"
             variant="outline"
             size="sm"
+            disabled={ocrLoading}
             className="w-full h-8 text-[11px] border-primary/40 text-primary hover:bg-primary/10"
-            onClick={() => toast.info("OCR — em breve será integrado ao parser de mercados.")}
+            onClick={() => fileInputRef.current?.click()}
+            title="Faça upload ou cole (Ctrl+V) um print do bilhete"
           >
-            <ScanText className="h-3.5 w-3.5 mr-1.5" /> Ler print (OCR)
+            {ocrLoading ? (
+              <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Lendo print…</>
+            ) : (
+              <><ScanText className="h-3.5 w-3.5 mr-1.5" /> Ler print (OCR) — ou cole com Ctrl+V</>
+            )}
           </Button>
 
           {/* Fonte de entrada */}
