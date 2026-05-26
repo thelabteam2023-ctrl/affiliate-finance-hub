@@ -364,12 +364,12 @@ async function getLeagueLogo(supabase: any, leagueKey: string, sport: string) {
   return logoUrl;
 }
 
-async function fetchLeagueEvents(supabase: any, league: any, apiKey: string, triggeredBy: string) {
+async function fetchLeagueEvents(supabase: any, league: any, triggeredBy: string) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000);
 
   try {
-    const endpoint = `https://api.the-odds-api.com/v4/sports/${league.key}/events?apiKey=${apiKey}&dateFormat=iso`;
+    const endpoint = `https://api.the-odds-api.com/v4/sports/${league.key}/events?dateFormat=iso`;
     const result = await callExternalApi({
       apiName: 'odds_api',
       endpoint,
@@ -434,9 +434,6 @@ async function fetchLeagueEvents(supabase: any, league: any, apiKey: string, tri
 }
 
 async function syncDailyEvents(supabase: any, triggeredBy: 'cron' | 'manual' = 'cron') {
-  const apiKey = Deno.env.get('ODDS_API_KEY');
-  if (!apiKey) throw new Error('ODDS_API_KEY not set');
-
   // Atualiza as ligas no banco antes de buscar eventos
   for (const league of ALL_LEAGUES) {
     await supabase.from('monitored_leagues').upsert({
@@ -457,7 +454,7 @@ async function syncDailyEvents(supabase: any, triggeredBy: 'cron' | 'manual' = '
   const chunks = chunkArray(ALL_LEAGUES, 5);
 
   for (const chunk of chunks) {
-    const results = await Promise.all(chunk.map(league => fetchLeagueEvents(supabase, league, apiKey, triggeredBy)));
+    const results = await Promise.all(chunk.map(league => fetchLeagueEvents(supabase, league, triggeredBy)));
     totalSaved += results.reduce((a, b) => a + b, 0);
   }
 
