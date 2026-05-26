@@ -524,7 +524,7 @@ export default function TeamsLeaguesTab() {
               <CardDescription>Cobertura por liga e ações de sincronização</CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Select value={sportFilter} onValueChange={setSportFilter}>
+              <Select value={sportFilter} onValueChange={(v) => { setSportFilter(v); setCountryFilter("all"); }}>
                 <SelectTrigger className="w-[160px] h-9"><SelectValue placeholder="Esporte" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os esportes</SelectItem>
@@ -537,7 +537,9 @@ export default function TeamsLeaguesTab() {
                 <SelectTrigger className="w-[180px] h-9"><SelectValue placeholder="País" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os países</SelectItem>
-                  {countriesAvailable.map((c) => (
+                  {countriesAvailable
+                    .filter((c) => sportFilter === "all" || leagues.some((l) => l.sport === sportFilter && l.country === c))
+                    .map((c) => (
                     <SelectItem key={c} value={c}>{c}</SelectItem>
                   ))}
                 </SelectContent>
