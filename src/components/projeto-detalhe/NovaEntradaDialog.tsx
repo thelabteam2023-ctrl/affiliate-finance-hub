@@ -711,7 +711,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
   useEffect(() => {
     // Se há OCR pendente, NÃO resetar — o applyOcrParsed já limpou os campos
     // necessários e o Passo 0/1 vai preencher categoria/mercado no mesmo ciclo.
-    if (pendingOcrRef.current) {
+    if (pendingOcrRef.current || pendingEditRef.current) {
       bumpDebug("reset", "pulou reset [esporte] (ocr pendente)");
       return;
     }
@@ -731,6 +731,8 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
       bumpDebug("reset", "pulou reset [categoria] (ocr pendente)");
       return;
     }
+    // Mesmo princípio para modo edição: o efeito de match (abaixo) vai setar mercadoSel.
+    if (pendingEditRef.current) return;
     setMercadoSel(null);
     setFormato("");
     setDirecao("");
