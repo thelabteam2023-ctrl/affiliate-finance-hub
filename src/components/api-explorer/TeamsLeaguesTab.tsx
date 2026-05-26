@@ -476,7 +476,44 @@ export default function TeamsLeaguesTab() {
         />
       </div>
 
-      {/* SEÇÃO 2: TABELA DE LIGAS */}
+      {/* MENU + CONTAINER PRINCIPAL */}
+      <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
+        {/* MENU LATERAL */}
+        <Card className="h-fit lg:sticky lg:top-4">
+          <CardContent className="p-2">
+            <nav className="flex flex-col gap-1">
+              {([
+                { id: "leagues", label: "Ligas monitoradas", count: leagues.length },
+                { id: "teams", label: "Times em cache", count: teams.length },
+                { id: "aliases", label: "Aliases de nomes", count: aliases.length },
+                { id: "actions", label: "Ações globais", count: null },
+              ] as { id: Section; label: string; count: number | null }[]).map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setActiveSection(item.id)}
+                  className={cn(
+                    "flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors text-left",
+                    activeSection === item.id
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                  )}
+                >
+                  <span>{item.label}</span>
+                  {item.count !== null && (
+                    <Badge variant="outline" className="text-[10px] font-mono bg-muted/40">
+                      {item.count}
+                    </Badge>
+                  )}
+                </button>
+              ))}
+            </nav>
+          </CardContent>
+        </Card>
+
+        {/* CONTAINER PRINCIPAL */}
+        <div className="space-y-6 min-w-0">
+      {activeSection === "leagues" && (
       <Card>
         <CardHeader>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
