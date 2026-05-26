@@ -526,6 +526,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
       mercadoSetByOcrRef.current = true; // marcar ANTES do setState
       setMercadoSel(best);
       bumpDebug("passo1", `set mercado="${best.display_nome}"`);
+      pushDebugRun({ mercadoEscolhido: `${best.display_nome} (score=${bestScore})` });
     }
   }, [categoria, objetosOptions, mercadoSel]);
 
@@ -574,6 +575,10 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
       setLinha(t.linha);
     }
     bumpDebug("passo2", `dir="${dir ?? ""}" linha="${t.linha ?? ""}"`);
+    pushDebugRun({
+      direcaoEscolhida: dir,
+      linhaFinal: t.linha != null && mercadoSel.tem_linha ? t.linha : null,
+    });
     // NÃO limpa `mercadoSetByOcrRef` nem `pendingOcrRef` aqui — o efeito de
     // reset (declarado mais abaixo) roda DEPOIS deste no mesmo ciclo. Ele
     // lê ambos e faz a limpeza final.
