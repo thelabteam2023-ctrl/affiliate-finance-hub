@@ -53,6 +53,8 @@ export async function aplicarCamposNovaEntrada(
     "odd_fechamento",
     "clv_percentual",
     "modelo_aposta",
+    "time_casa",
+    "time_fora",
   ];
   for (const k of keys) {
     if (extras[k] !== undefined && extras[k] !== null && extras[k] !== "") {
