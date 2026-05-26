@@ -45,6 +45,7 @@ import { format, isToday, parseISO, differenceInMinutes, startOfDay, endOfDay } 
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import TeamsLeaguesTab from '@/components/api-explorer/TeamsLeaguesTab';
 
 // Sports mapping
 const TRADITIONAL_SPORTS = [
@@ -166,7 +167,7 @@ export default function ApiExplorer() {
   const [lastSync, setLastSync] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'matches' | 'coverage'>('matches');
+  const [activeTab, setActiveTab] = useState<'matches' | 'coverage' | 'teams'>('matches');
   const [timeFilter, setTimeFilter] = useState<'today' | 'tomorrow' | 'upcoming' | 'custom'>('today');
   const [customDate, setCustomDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   
@@ -430,6 +431,17 @@ export default function ApiExplorer() {
           >
             <Globe className="h-4 w-4 mr-2" /> Cobertura
           </Button>
+          <Button
+            variant={activeTab === 'teams' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setActiveTab('teams')}
+            className={cn(
+              "rounded-xl px-6 h-10 transition-all duration-300 font-bold",
+              activeTab === 'teams' ? "shadow-lg shadow-primary/20 scale-105" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Database className="h-4 w-4 mr-2" /> Times & Ligas
+          </Button>
         </div>
 
         {activeTab === 'matches' && (
@@ -588,9 +600,10 @@ export default function ApiExplorer() {
         )}
       </div>
 
-      <div className="grid lg:grid-cols-[280px_1fr] gap-6">
-        
+      <div className={cn("grid gap-6", activeTab === 'teams' ? "grid-cols-1" : "lg:grid-cols-[280px_1fr]")}>
+
         {/* SIDEBAR FILTERS */}
+        {activeTab !== 'teams' && (
         <div className="space-y-6">
           <Card className="rounded-2xl border-border/40">
             <CardHeader className="pb-3">
@@ -828,10 +841,13 @@ export default function ApiExplorer() {
             </Card>
           </div>
         </div>
+        )}
 
         {/* MAIN FEED */}
         <div className="space-y-6">
-          {activeTab === 'matches' ? (
+          {activeTab === 'teams' ? (
+            <TeamsLeaguesTab />
+          ) : activeTab === 'matches' ? (
             <div className="space-y-10">
               {loading ? (
                 <div className="py-20 flex flex-col items-center justify-center gap-4">

@@ -352,8 +352,9 @@ Deno.serve(async (req) => {
     }
 
     if (request.method === 'POST' && path === 'run-job') {
-      const { job } = await request.json();
-      
+      const body = await request.json().catch(() => ({}));
+      const { job, leagueKey } = body as { job: string; leagueKey?: string };
+
       if (job === 'fetch_events') {
         // @ts-ignore
         EdgeRuntime.waitUntil((async () => {
@@ -388,6 +389,38 @@ Deno.serve(async (req) => {
           } catch (err) { console.error('Job sync_all_teams failed:', err); }
         })());
         return new Response(JSON.stringify({ success: true, result: { queued: true, message: 'Sincronização completa iniciada (todas as ligas, ~30 créditos).' } }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      if (job === 'sync_league_teams') {
+        if (!leagueKey) {
+          return new Response(JSON.stringify({ error: 'leagueKey required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        const { data: lg, error: lgErr } = await supabase
+          .from('monitored_leagues')
+          .select('league_key, sport, api_sports_id, current_season, country')
+          .eq('league_key', leagueKey)
+          .maybeSingle();
+        if (lgErr || !lg) {
+          return new Response(JSON.stringify({ error: 'Liga não encontrada' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        if (!lg.api_sports_id) {
+          return new Response(JSON.stringify({ error: 'Liga sem api_sports_id configurado' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        const saved = await syncLeagueTeamsBulk(
+          supabase, lg.sport, lg.league_key, lg.api_sports_id, lg.current_season || 2024, lg.country || undefined,
+        );
+        // Backfill imediato para hoje
+        await supabase.rpc('backfill_daily_event_logos', { p_date: new Date().toISOString().split('T')[0] });
+        return new Response(JSON.stringify({ success: true, result: { leagueKey, teamsSaved: saved } }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      if (job === 'reprocess_event_logos') {
+        const today = new Date().toISOString().split('T')[0];
+        const { data, error } = await supabase.rpc('backfill_daily_event_logos', { p_date: today });
+        if (error) {
+          return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        return new Response(JSON.stringify({ success: true, result: data }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
     }
 
