@@ -1570,7 +1570,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
             disabled={!canSubmit || saving}
             className="h-8 text-xs bg-emerald-600 hover:bg-emerald-500 text-white"
           >
-            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Registrar"}
+            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : (isEdit ? "Salvar alterações" : "Registrar")}
           </Button>
         </div>
       </DialogContent>
