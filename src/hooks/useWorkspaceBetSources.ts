@@ -143,5 +143,23 @@ export function useWorkspaceBetSources(workspaceId: string | null) {
     },
   });
 
-  return { sources, isLoading, addSource, toggleFavorite, favoriteSource };
+  const deleteSource = useMutation({
+    mutationFn: async (sourceId: string) => {
+      if (!workspaceId) throw new Error("No workspace");
+      const { error } = await supabase
+        .from("workspace_bet_sources" as any)
+        .delete()
+        .eq("id", sourceId)
+        .eq("workspace_id", workspaceId);
+      if (error) throw error;
+      return sourceId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
+      toast.success("Fonte removida");
+    },
+    onError: () => toast.error("Não foi possível remover a fonte"),
+  });
+
+  return { sources, isLoading, addSource, toggleFavorite, deleteSource, favoriteSource };
 }
