@@ -1447,6 +1447,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     if (aposta?.is_novo_formulario) {
       setEditingNovaEntrada({
         id: aposta.id,
+        estrategia: aposta.estrategia || "VALUEBET",
         status: aposta.status,
         evento: aposta.evento,
         esporte: aposta.esporte,
