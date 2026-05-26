@@ -211,6 +211,32 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     bumpAt: 0,
   });
   const [debugOpen, setDebugOpen] = useState(false);
+  // Raw OCR payload retornado pela edge (último print)
+  const [debugRawOcr, setDebugRawOcr] = useState<any>(null);
+  // Histórico das últimas execuções (máx 5)
+  type DebugRun = {
+    at: number;
+    mercadoRaw: string | null;
+    apostaRaw: string | null;
+    linhaExtraida: string | null;
+    categoriaInferida: string | null;
+    needle: string | null;
+    mercadoEscolhido: string | null;
+    direcaoEscolhida: string | null;
+    linhaFinal: string | null;
+  };
+  const [debugRuns, setDebugRuns] = useState<DebugRun[]>([]);
+  const currentRunRef = useRef<DebugRun | null>(null);
+  const pushDebugRun = (patch: Partial<DebugRun>) => {
+    if (!DEBUG) return;
+    const cur = currentRunRef.current;
+    if (!cur) return;
+    Object.assign(cur, patch);
+    setDebugRuns((rs) => {
+      const others = rs.filter((r) => r.at !== cur.at);
+      return [{ ...cur }, ...others].slice(0, 5);
+    });
+  };
   const bumpDebug = (key: "passo0" | "passo1" | "reset" | "passo2", note?: string) => {
     if (!DEBUG) return;
     setDebugTicks((d) => ({
@@ -227,6 +253,9 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
       passo2: emptyTick(),
       bumpAt: Date.now(),
     });
+    setDebugRuns([]);
+    setDebugRawOcr(null);
+    currentRunRef.current = null;
   };
 
   const fileToBase64 = (file: File): Promise<string> =>
@@ -238,6 +267,20 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     });
 
   const applyOcrParsed = (parsed: any) => {
+    if (DEBUG) {
+      setDebugRawOcr(parsed);
+      currentRunRef.current = {
+        at: Date.now(),
+        mercadoRaw: null,
+        apostaRaw: null,
+        linhaExtraida: null,
+        categoriaInferida: null,
+        needle: null,
+        mercadoEscolhido: null,
+        direcaoEscolhida: null,
+        linhaFinal: null,
+      };
+    }
     const getV = (f: any) => (f && typeof f === "object" ? f.value : null);
     // Esporte
     const ocrSport = (getV(parsed.esporte) || "").toString().toLowerCase().trim();
@@ -325,6 +368,13 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
         apostaMandante: mandante ? String(mandante) : null,
         apostaVisitante: visitante ? String(visitante) : null,
       };
+      pushDebugRun({
+        mercadoRaw: mercadoTxt || null,
+        apostaRaw: sel || null,
+        linhaExtraida: linhaSign,
+        categoriaInferida: cat,
+        needle: mercadoText || "(vazio)",
+      });
       // Dispara o Passo 0 mesmo quando categoriaOptions/categoria não mudaram
       setOcrTrigger((n) => n + 1);
       // NÃO chama setCategoria aqui — um efeito abaixo aguarda os mercados
@@ -476,6 +526,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
       mercadoSetByOcrRef.current = true; // marcar ANTES do setState
       setMercadoSel(best);
       bumpDebug("passo1", `set mercado="${best.display_nome}"`);
+      pushDebugRun({ mercadoEscolhido: `${best.display_nome} (score=${bestScore})` });
     }
   }, [categoria, objetosOptions, mercadoSel]);
 
@@ -524,6 +575,10 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
       setLinha(t.linha);
     }
     bumpDebug("passo2", `dir="${dir ?? ""}" linha="${t.linha ?? ""}"`);
+    pushDebugRun({
+      direcaoEscolhida: dir,
+      linhaFinal: t.linha != null && mercadoSel.tem_linha ? t.linha : null,
+    });
     // NÃO limpa `mercadoSetByOcrRef` nem `pendingOcrRef` aqui — o efeito de
     // reset (declarado mais abaixo) roda DEPOIS deste no mesmo ciclo. Ele
     // lê ambos e faz a limpeza final.
@@ -1177,6 +1232,51 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
                     {row("Reset mercadoSel", fmtTick(debugTicks.reset, debugTicks.passo1.count > 0))}
                     {row("Passo 2 (dir/linha)", fmtTick(debugTicks.passo2, ocrExpected))}
                   </div>
+                  {/* OCR RAW (último print) */}
+                  {debugRawOcr && (
+                    <div className="border-t border-border/40 mt-2 pt-1">
+                      <div className="px-4 py-1 text-amber-400/80">OCR RAW (edge)</div>
+                      <div className="px-4 pb-2 text-foreground/80">
+                        <pre className="whitespace-pre-wrap break-all">
+                          {JSON.stringify(debugRawOcr, null, 2)}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+                  {/* Histórico de execuções */}
+                  {debugRuns.length > 0 && (
+                    <div className="border-t border-border/40 mt-2 pt-1">
+                      <div className="px-4 py-1 text-amber-400/80">
+                        Histórico OCR ({debugRuns.length})
+                      </div>
+                      <div className="px-4 pb-2 space-y-2">
+                        {debugRuns.map((r) => {
+                          const ok = !!r.mercadoEscolhido && !!r.direcaoEscolhida;
+                          return (
+                            <div
+                              key={r.at}
+                              className={cn(
+                                "border rounded p-2",
+                                ok ? "border-emerald-500/30" : "border-red-500/30",
+                              )}
+                            >
+                              <div className="text-muted-foreground/70">
+                                {new Date(r.at).toLocaleTimeString()}
+                              </div>
+                              <div>mercadoRaw: <span className="text-foreground/90">{r.mercadoRaw ?? "—"}</span></div>
+                              <div>apostaRaw: <span className="text-foreground/90">{r.apostaRaw ?? "—"}</span></div>
+                              <div>linhaExtraída: <span className="text-foreground/90">{r.linhaExtraida ?? "—"}</span></div>
+                              <div>categoriaInferida: <span className="text-foreground/90">{r.categoriaInferida ?? "—"}</span></div>
+                              <div>needle: <span className="text-foreground/90">{r.needle ?? "—"}</span></div>
+                              <div>→ mercadoEscolhido: <span className={cn(r.mercadoEscolhido ? "text-emerald-400" : "text-red-400")}>{r.mercadoEscolhido ?? "(nenhum)"}</span></div>
+                              <div>→ direcaoEscolhida: <span className={cn(r.direcaoEscolhida ? "text-emerald-400" : "text-red-400")}>{r.direcaoEscolhida ?? "(nenhuma)"}</span></div>
+                              <div>→ linhaFinal: <span className="text-foreground/90">{r.linhaFinal ?? "—"}</span></div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })()}
