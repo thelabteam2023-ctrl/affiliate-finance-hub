@@ -95,6 +95,13 @@ export interface ApostaCardData {
   pl_consolidado?: number | null;
   /** Stake consolidado na moeda do projeto */
   stake_consolidado?: number | null;
+  // Campos do novo formulário "Nova Entrada" (Opção A — fallback)
+  is_novo_formulario?: boolean | null;
+  mercado_categoria?: string | null;
+  mercado_objeto?: string | null;
+  mercado_direcao?: string | null;
+  mercado_linha?: number | null;
+  mercado_display?: string | null;
 }
 
 interface ApostaCardProps {
