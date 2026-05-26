@@ -113,12 +113,15 @@ export default function TeamsLeaguesTab() {
 
   // filtros ligas
   const [sportFilter, setSportFilter] = useState<string>("all");
+  const [countryFilter, setCountryFilter] = useState<string>("all");
   const [leagueModeFilter, setLeagueModeFilter] = useState<"all" | "no_id" | "no_logo">("all");
 
   // filtros times
   const [teamSearch, setTeamSearch] = useState("");
   const [teamLeagueFilter, setTeamLeagueFilter] = useState<string>("all");
+  const [teamCountryFilter, setTeamCountryFilter] = useState<string>("all");
   const [teamLogoFilter, setTeamLogoFilter] = useState<"all" | "with" | "without">("all");
+  const [teamUniqueMode, setTeamUniqueMode] = useState<boolean>(true);
   const [teamsPage, setTeamsPage] = useState(0);
   const PAGE_SIZE = 50;
 
@@ -216,10 +219,15 @@ export default function TeamsLeaguesTab() {
 
   // ---------------- derived ----------------
   const sportsAvailable = useMemo(() => Array.from(new Set(leagues.map((l) => l.sport))).sort(), [leagues]);
+  const countriesAvailable = useMemo(
+    () => Array.from(new Set(leagues.map((l) => l.country).filter(Boolean) as string[])).sort((a, b) => a.localeCompare(b)),
+    [leagues],
+  );
 
   const filteredLeagues = useMemo(() => {
     return leagues
       .filter((l) => sportFilter === "all" || l.sport === sportFilter)
+      .filter((l) => countryFilter === "all" || l.country === countryFilter)
       .filter((l) => {
         if (leagueModeFilter === "no_id") return l.api_sports_id == null;
         if (leagueModeFilter === "no_logo") return !l.league_logo;
@@ -231,24 +239,84 @@ export default function TeamsLeaguesTab() {
         const bCov = b.cobertura_hoje_pct ?? -1;
         return aCov - bCov;
       });
-  }, [leagues, sportFilter, leagueModeFilter]);
+  }, [leagues, sportFilter, countryFilter, leagueModeFilter]);
 
-  const filteredTeams = useMemo(() => {
+  // map league_key -> country (for team filtering)
+  const leagueCountryMap = useMemo(() => {
+    const m = new Map<string, string | null>();
+    leagues.forEach((l) => m.set(l.league_key, l.country));
+    return m;
+  }, [leagues]);
+
+  // Times "achatados" (1 linha por liga) filtrados
+  const teamsFiltered = useMemo(() => {
     const q = teamSearch.trim().toLowerCase();
     return teams.filter((t) => {
       if (teamLeagueFilter !== "all" && t.league_key !== teamLeagueFilter) return false;
+      if (teamCountryFilter !== "all" && leagueCountryMap.get(t.league_key) !== teamCountryFilter) return false;
       if (teamLogoFilter === "with" && !(t.found && t.logo_url)) return false;
       if (teamLogoFilter === "without" && t.found && t.logo_url) return false;
       if (q && !t.team_name_original.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [teams, teamSearch, teamLeagueFilter, teamLogoFilter]);
+  }, [teams, teamSearch, teamLeagueFilter, teamCountryFilter, teamLogoFilter, leagueCountryMap]);
 
-  useEffect(() => { setTeamsPage(0); }, [teamSearch, teamLeagueFilter, teamLogoFilter]);
+  // Times únicos (agrupados por api_sports_id ou nome normalizado dentro do esporte)
+  interface UniqueTeamRow {
+    key: string;
+    team_name_original: string;
+    sport: string;
+    short_name: string | null;
+    country: string | null;
+    logo_url: string | null;
+    found: boolean;
+    api_sports_id: number | null;
+    league_keys: string[];
+  }
+  const uniqueTeams = useMemo<UniqueTeamRow[]>(() => {
+    const map = new Map<string, UniqueTeamRow>();
+    for (const t of teamsFiltered) {
+      const key = t.found && (t as any).logo_url
+        ? `${t.sport}::id::${(teams as any) && (t as any) ? ((t as any).logo_url || "") : ""}::${t.team_name_normalized}`
+        : `${t.sport}::name::${t.team_name_normalized}`;
+      // Preferir agrupar por logo_url (que mapeia 1:1 ao api_sports_id) quando existir
+      const groupKey = t.logo_url ? `${t.sport}::${t.logo_url}` : `${t.sport}::${t.team_name_normalized}`;
+      const ex = map.get(groupKey);
+      if (ex) {
+        if (!ex.league_keys.includes(t.league_key)) ex.league_keys.push(t.league_key);
+        if (!ex.logo_url && t.logo_url) {
+          ex.logo_url = t.logo_url;
+          ex.found = true;
+        }
+      } else {
+        map.set(groupKey, {
+          key: groupKey,
+          team_name_original: t.team_name_original,
+          sport: t.sport,
+          short_name: t.short_name,
+          country: t.country,
+          logo_url: t.logo_url,
+          found: t.found,
+          api_sports_id: null,
+          league_keys: [t.league_key],
+        });
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.team_name_original.localeCompare(b.team_name_original));
+  }, [teamsFiltered]);
+
+  const filteredTeams = teamsFiltered;
+  const displayRowsCount = teamUniqueMode ? uniqueTeams.length : filteredTeams.length;
+
+  useEffect(() => { setTeamsPage(0); }, [teamSearch, teamLeagueFilter, teamCountryFilter, teamLogoFilter, teamUniqueMode]);
 
   const teamsPaged = useMemo(
     () => filteredTeams.slice(teamsPage * PAGE_SIZE, (teamsPage + 1) * PAGE_SIZE),
     [filteredTeams, teamsPage],
+  );
+  const uniqueTeamsPaged = useMemo(
+    () => uniqueTeams.slice(teamsPage * PAGE_SIZE, (teamsPage + 1) * PAGE_SIZE),
+    [uniqueTeams, teamsPage],
   );
 
   const teamModalCandidates = useMemo(() => {
