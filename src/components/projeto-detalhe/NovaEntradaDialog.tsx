@@ -131,6 +131,37 @@ interface NovaEntradaDialogProps {
   projetoId: string;
   estrategia: ApostaEstrategia; // VALUEBET ou SUREBET (modo simples)
   onCreated?: () => void;
+  /** Quando definido, abre o formulário em MODO EDIÇÃO pré-preenchido com a aposta. */
+  apostaParaEditar?: ApostaParaEditar | null;
+}
+
+/**
+ * Subset da aposta usado para abrir o formulário em modo edição.
+ * Campos financeiros sensíveis (stake/bookmaker/data/moeda) NÃO são editados
+ * por aqui — esses ficam read-only para preservar o motor de ledger.
+ */
+export interface ApostaParaEditar {
+  id: string;
+  status?: string | null;
+  evento: string;
+  esporte: string;
+  liga?: string | null;
+  data_aposta: string;
+  bookmaker_id: string;
+  moeda_operacao?: string | null;
+  odd: number;
+  stake: number;
+  fonte_entrada?: string | null;
+  modelo_aposta?: string | null;
+  fair_value?: number | null;
+  mercado_categoria?: string | null;
+  mercado_objeto?: string | null;
+  mercado_formato?: string | null;
+  mercado_direcao?: string | null;
+  mercado_linha?: number | null;
+  mercado_display?: string | null;
+  time_casa?: string | null;
+  time_fora?: string | null;
 }
 
 function calcEdge(odd: number | null, fair: number | null): number | null {
@@ -167,10 +198,18 @@ interface OcrCascadeTarget {
   apostaVisitante: string | null;
 }
 
-export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, onCreated }: NovaEntradaDialogProps) {
+export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, onCreated, apostaParaEditar }: NovaEntradaDialogProps) {
   const { user, workspaceId } = useAuth();
   const queryClient = useQueryClient();
   const { getEffectiveRate } = useProjetoWorkingRates(projetoId);
+
+  // ---------- Modo edição ----------
+  const isEdit = !!apostaParaEditar;
+  // Permite editar campos financeiros apenas quando a aposta ainda está PENDENTE.
+  // (Por segurança do ledger, mantemos stake/bookmaker/data/moeda read-only mesmo em PENDENTE neste primeiro corte.)
+  // Ref para sinalizar aos efeitos de reset (esporte/categoria) que estamos em pré-preenchimento de edição.
+  const pendingEditRef = useRef<string | null>(null);
+  const editPrefilledRef = useRef<string | null>(null);
 
   // ---------- Form state ----------
   const [fonteEntrada, setFonteEntrada] = useState<string | null>(null);
@@ -672,7 +711,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
   useEffect(() => {
     // Se há OCR pendente, NÃO resetar — o applyOcrParsed já limpou os campos
     // necessários e o Passo 0/1 vai preencher categoria/mercado no mesmo ciclo.
-    if (pendingOcrRef.current) {
+    if (pendingOcrRef.current || pendingEditRef.current) {
       bumpDebug("reset", "pulou reset [esporte] (ocr pendente)");
       return;
     }
@@ -692,6 +731,8 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
       bumpDebug("reset", "pulou reset [categoria] (ocr pendente)");
       return;
     }
+    // Mesmo princípio para modo edição: o efeito de match (abaixo) vai setar mercadoSel.
+    if (pendingEditRef.current) return;
     setMercadoSel(null);
     setFormato("");
     setDirecao("");
@@ -730,6 +771,65 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     const bm = bookmakers.find((b) => b.id === bookmakerId);
     if (bm?.moeda) setMoeda(bm.moeda);
   }, [bookmakerId, bookmakers]);
+
+  // ---------- Modo edição: pré-preenchimento ----------
+  useEffect(() => {
+    if (!open) {
+      editPrefilledRef.current = null;
+      pendingEditRef.current = null;
+      return;
+    }
+    if (!apostaParaEditar) return;
+    if (editPrefilledRef.current === apostaParaEditar.id) return;
+
+    pendingEditRef.current = apostaParaEditar.id;
+    setFonteEntrada(apostaParaEditar.fonte_entrada ?? null);
+    setEsporte(apostaParaEditar.esporte || "soccer");
+    setLiga(apostaParaEditar.liga ?? "");
+    setEvento(apostaParaEditar.evento ?? "");
+    setTimeCasa(apostaParaEditar.time_casa ?? "");
+    setTimeFora(apostaParaEditar.time_fora ?? "");
+    setBookmakerId(apostaParaEditar.bookmaker_id ?? "");
+    setMoeda(apostaParaEditar.moeda_operacao || "BRL");
+    setOddObtida(apostaParaEditar.odd != null ? String(apostaParaEditar.odd) : "");
+    setFairValue(apostaParaEditar.fair_value != null ? String(apostaParaEditar.fair_value) : "");
+    setStake(apostaParaEditar.stake != null ? String(apostaParaEditar.stake) : "");
+    setResultado("PENDENTE");
+    if (apostaParaEditar.data_aposta) {
+      const d = new Date(apostaParaEditar.data_aposta);
+      if (!isNaN(d.getTime())) {
+        const pad = (n: number) => String(n).padStart(2, "0");
+        setDataHora(`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+      }
+    }
+    if (apostaParaEditar.modelo_aposta === "ao-vivo" || apostaParaEditar.modelo_aposta === "pre-jogo") {
+      setModelo(apostaParaEditar.modelo_aposta);
+    }
+    setCategoria(apostaParaEditar.mercado_categoria ?? "");
+    setFormato(apostaParaEditar.mercado_formato ?? "");
+    setDirecao(apostaParaEditar.mercado_direcao ?? "");
+    setLinha(apostaParaEditar.mercado_linha != null ? String(apostaParaEditar.mercado_linha) : "");
+    setMercadoSel(null); // será resolvido pelo efeito de match abaixo
+    editPrefilledRef.current = apostaParaEditar.id;
+  }, [open, apostaParaEditar]);
+
+  // ---------- Modo edição: match do MercadoBiblioteca após carregar opções ----------
+  useEffect(() => {
+    if (!isEdit || !apostaParaEditar?.mercado_objeto) return;
+    if (!pendingEditRef.current) return;
+    if (categoria !== (apostaParaEditar.mercado_categoria ?? "")) return;
+    if (!objetosOptions.length) return;
+    if (mercadoSel && mercadoSel.objeto === apostaParaEditar.mercado_objeto) {
+      pendingEditRef.current = null;
+      return;
+    }
+    const match = objetosOptions.find((m) => m.objeto === apostaParaEditar.mercado_objeto);
+    if (match) {
+      mercadoSetByOcrRef.current = true; // reaproveita flag p/ pular reset do efeito [mercadoSel]
+      setMercadoSel(match);
+      pendingEditRef.current = null;
+    }
+  }, [isEdit, apostaParaEditar, objetosOptions, categoria, mercadoSel]);
 
   // ---------- Derivados ----------
   const oddNum = Number(oddObtida) || null;
@@ -807,6 +907,49 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     setSaving(true);
 
     try {
+      // ===== MODO EDIÇÃO =====
+      if (isEdit && apostaParaEditar) {
+        const updates: Record<string, unknown> = {
+          evento: evento.trim(),
+          esporte,
+          mercado: previewMercado,
+          selecao: direcao,
+          odd: oddNum,
+          // Analíticos / Nova Entrada
+          is_novo_formulario: true,
+          liga: liga.trim() || null,
+          mercado_categoria: mercadoSel.categoria,
+          mercado_objeto: mercadoSel.objeto,
+          mercado_formato: formato || null,
+          mercado_direcao: direcao,
+          mercado_linha: linhaNum,
+          mercado_display: previewMercado,
+          fair_value: fairNum,
+          edge_percentual: edge,
+          modelo_aposta: modelo,
+          time_casa: timeCasa.trim() || null,
+          time_fora: timeFora.trim() || null,
+          fonte_entrada: fonteEntrada,
+        };
+        const { error } = await supabase
+          .from("apostas_unificada")
+          .update(updates as any)
+          .eq("id", apostaParaEditar.id);
+        if (error) {
+          toast.error(`Falha ao atualizar: ${error.message}`);
+          setSaving(false);
+          return;
+        }
+        toast.success("Entrada atualizada");
+        await queryClient.invalidateQueries({ queryKey: ["apostas-projeto", projetoId] });
+        await queryClient.invalidateQueries({ queryKey: ["apostas_unificada"] });
+        onCreated?.();
+        handleReset();
+        onOpenChange(false);
+        setSaving(false);
+        return;
+      }
+
       const result = await criarAposta({
         projeto_id: projetoId,
         workspace_id: workspaceId,
@@ -929,7 +1072,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
           <div className="flex items-center justify-between gap-3">
             <DialogTitle className="flex items-center gap-2 text-base">
               <Sparkles className="h-4 w-4 text-primary" />
-              Nova Entrada
+              {isEdit ? "Editar Entrada" : "Nova Entrada"}
               <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-normal ml-1">
                 {estrategia === "SUREBET" ? "Surebet" : "ValueBet"}
               </span>
@@ -1144,7 +1287,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
                 return bk ? <span className="text-muted-foreground ml-1">({bk.moeda})</span> : null;
               })()}
             </Label>
-            <Select value={bookmakerId} onValueChange={setBookmakerId}>
+            <Select value={bookmakerId} onValueChange={setBookmakerId} disabled={isEdit}>
               <SelectTrigger className="h-9 text-xs w-full border-dashed">
                 <BookmakerSelectTrigger
                   bookmaker={
@@ -1205,13 +1348,19 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
                   <span className="text-muted-foreground/60">≈ R$ {stakeBRL.toFixed(2)}</span>
                 )}
               </Label>
-              <Input value={stake} onChange={(e) => setStake(e.target.value)} className="h-8 text-xs" inputMode="decimal" placeholder="0,00" />
+              <Input value={stake} onChange={(e) => setStake(e.target.value)} className="h-8 text-xs" inputMode="decimal" placeholder="0,00" disabled={isEdit} />
             </div>
             <div className="space-y-1">
               <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">Data / Hora</Label>
-              <Input type="datetime-local" value={dataHora} onChange={(e) => setDataHora(e.target.value)} className="h-8 text-xs" />
+              <Input type="datetime-local" value={dataHora} onChange={(e) => setDataHora(e.target.value)} className="h-8 text-xs" disabled={isEdit} />
             </div>
           </div>
+          {isEdit && (
+            <div className="text-[10px] text-amber-500/90 bg-amber-500/5 border border-amber-500/20 rounded px-2 py-1 leading-snug text-center">
+              Stake, casa, data e moeda não podem ser alterados após o registro.
+              Para corrigi-los, exclua a aposta e recadastre.
+            </div>
+          )}
 
           {/* CLV / Odd fechamento (futuro) */}
           <TooltipProvider>
@@ -1427,7 +1576,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
             disabled={!canSubmit || saving}
             className="h-8 text-xs bg-emerald-600 hover:bg-emerald-500 text-white"
           >
-            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Registrar"}
+            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : (isEdit ? "Salvar alterações" : "Registrar")}
           </Button>
         </div>
       </DialogContent>

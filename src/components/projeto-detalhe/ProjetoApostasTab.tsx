@@ -42,6 +42,7 @@ import { ptBR } from "date-fns/locale";
 import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
 import { ApostaDialog } from "@/components/projeto-detalhe/ApostaDialog";
 import { ApostaMultiplaDialog } from "@/components/projeto-detalhe/ApostaMultiplaDialog";
+import { NovaEntradaDialog, type ApostaParaEditar } from "@/components/projeto-detalhe/NovaEntradaDialog";
 import { ResultadoPill } from "@/components/projeto-detalhe/ResultadoPill";
 import {
   Select,
@@ -126,9 +127,17 @@ interface Aposta {
   is_novo_formulario?: boolean | null;
   mercado_categoria?: string | null;
   mercado_objeto?: string | null;
+  mercado_formato?: string | null;
   mercado_direcao?: string | null;
   mercado_linha?: number | null;
   mercado_display?: string | null;
+  liga?: string | null;
+  fair_value?: number | null;
+  edge_percentual?: number | null;
+  modelo_aposta?: string | null;
+  time_casa?: string | null;
+  time_fora?: string | null;
+  fonte_entrada?: string | null;
   // Campos de consolidação multi-moeda
   moeda_operacao?: string | null;
   stake_consolidado?: number | null;
@@ -347,6 +356,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
   const [selectedAposta, setSelectedAposta] = useState<Aposta | null>(null);
   const [selectedApostaMultipla, setSelectedApostaMultipla] = useState<ApostaMultipla | null>(null);
   const [selectedSurebet, setSelectedSurebet] = useState<SurebetData | null>(null);
+  // Edição via formulário "Nova Entrada" (apenas para apostas com is_novo_formulario=true)
+  const [editingNovaEntrada, setEditingNovaEntrada] = useState<(ApostaParaEditar & { estrategia: string }) | null>(null);
+  const [novaEntradaEditOpen, setNovaEntradaEditOpen] = useState(false);
   const [bookmakers, setBookmakers] = useState<any[]>([]);
   
   // Estados para modal de exclusão
@@ -437,7 +449,10 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           back_comissao, back_em_exchange, gerou_freebet, valor_freebet_gerada,
           tipo_freebet, is_bonus_bet, contexto_operacional, forma_registro, pernas,
           moeda_operacao, stake_consolidado, pl_consolidado, consolidation_currency, valor_brl_referencia, lucro_prejuizo_brl_referencia,
-          usar_freebet, fonte_saldo
+          usar_freebet, fonte_saldo,
+          is_novo_formulario, mercado_categoria, mercado_objeto, mercado_formato,
+          mercado_direcao, mercado_linha, mercado_display, liga, fair_value,
+          edge_percentual, modelo_aposta, time_casa, time_fora, fonte_entrada
         `;
 
       let dateFilters: { startUTC?: string; endUTC?: string } = {};
@@ -1427,6 +1442,36 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
 
   // Abrir aposta simples em janela externa (mesmo comportamento do Surebet)
   const handleOpenDialog = (aposta: Aposta | null) => {
+    // Apostas registradas pelo formulário "Nova Entrada" abrem no MESMO formulário
+    // em modo edição — preservando categoria/objeto/formato/direção/linha.
+    if (aposta?.is_novo_formulario) {
+      setEditingNovaEntrada({
+        id: aposta.id,
+        estrategia: aposta.estrategia || "VALUEBET",
+        status: aposta.status,
+        evento: aposta.evento,
+        esporte: aposta.esporte,
+        liga: aposta.liga ?? null,
+        data_aposta: aposta.data_aposta,
+        bookmaker_id: aposta.bookmaker_id,
+        moeda_operacao: aposta.moeda_operacao ?? "BRL",
+        odd: aposta.odd,
+        stake: aposta.stake,
+        fonte_entrada: aposta.fonte_entrada ?? null,
+        modelo_aposta: aposta.modelo_aposta ?? null,
+        fair_value: aposta.fair_value ?? null,
+        mercado_categoria: aposta.mercado_categoria ?? null,
+        mercado_objeto: aposta.mercado_objeto ?? null,
+        mercado_formato: aposta.mercado_formato ?? null,
+        mercado_direcao: aposta.mercado_direcao ?? null,
+        mercado_linha: aposta.mercado_linha ?? null,
+        mercado_display: aposta.mercado_display ?? null,
+        time_casa: aposta.time_casa ?? null,
+        time_fora: aposta.time_fora ?? null,
+      });
+      setNovaEntradaEditOpen(true);
+      return;
+    }
     const apostaId = aposta?.id || 'novo';
     const url = `/janela/aposta/${apostaId}?projetoId=${encodeURIComponent(projetoId)}&tab=apostas&estrategia=PUNTER`;
     window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
@@ -1861,6 +1906,21 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       />
 
       {/* Dialogs removidos - todos os formulários abrem em janela externa */}
+
+      {/* Edição inline de apostas do novo formulário (Nova Entrada) */}
+      {editingNovaEntrada && (
+        <NovaEntradaDialog
+          open={novaEntradaEditOpen}
+          onOpenChange={(o) => {
+            setNovaEntradaEditOpen(o);
+            if (!o) setEditingNovaEntrada(null);
+          }}
+          projetoId={projetoId}
+          estrategia={(editingNovaEntrada.estrategia as any) || "VALUEBET"}
+          apostaParaEditar={editingNovaEntrada}
+          onCreated={fetchApostas}
+        />
+      )}
     </div>
   );
 }
