@@ -356,6 +356,20 @@ export default function TeamsLeaguesTab() {
     }
   };
 
+  const handleSyncMissing = async () => {
+    if (!confirm("Sincronizar apenas as ligas que ainda não têm times cacheados. Continuar?")) return;
+    setGlobalAction("missing");
+    try {
+      await callJob("sync_missing_only");
+      toast.success("Sincronização das ligas faltantes iniciada. Atualize em ~3min.");
+      setTimeout(() => loadAll(), 30000);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setGlobalAction(null);
+    }
+  };
+
   const handleSyncEvents = async () => {
     if (!confirm("Sincronizar eventos de hoje agora. Continuar?")) return;
     setGlobalAction("events");
@@ -846,6 +860,13 @@ export default function TeamsLeaguesTab() {
             buttonLabel="Sincronizar"
             loading={globalAction === "all"}
             onClick={handleSyncAll}
+          />
+          <GlobalActionRow
+            title="Sincronizar apenas ligas faltantes"
+            description="Processa só as ligas sem times no cache (Brasileirão, NBA, NBB, MLS, etc). Serial, sem timeout."
+            buttonLabel="Sincronizar faltantes"
+            loading={globalAction === "missing"}
+            onClick={handleSyncMissing}
           />
           <GlobalActionRow
             title="Sincronizar eventos de hoje"
