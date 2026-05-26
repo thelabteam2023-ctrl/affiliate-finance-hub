@@ -183,6 +183,10 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
 
   // Alvo pendente de auto-preenchimento da cascata (consumido pelos efeitos abaixo)
   const pendingOcrRef = useRef<OcrCascadeTarget | null>(null);
+  // Indica que o mercadoSel atual foi definido pelo OCR (não pelo usuário).
+  // Usado para o efeito de reset de [mercadoSel] pular a limpeza e permitir
+  // que o Passo 2 do OCR preencha formato/direcao/linha no mesmo ciclo de render.
+  const mercadoSetByOcrRef = useRef(false);
 
   const fileToBase64 = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
@@ -398,45 +402,56 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     }
     // Se não houve match textual, e só existe uma opção, usa ela
     if (!best && objetosOptions.length === 1) best = objetosOptions[0];
-    if (best) setMercadoSel(best);
+    if (best) {
+      mercadoSetByOcrRef.current = true; // marcar ANTES do setState
+      setMercadoSel(best);
+    }
   }, [categoria, objetosOptions, mercadoSel]);
 
-  // Passo 2: quando `mercadoSel` é definido, aplica formato/direção/linha do OCR
-  // *depois* do efeito de placeholder (setTimeout 0 garante a ordem).
+  // Passo 2: quando `mercadoSel` é definido pelo OCR, aplica formato/direção/linha
+  // no mesmo ciclo de render — sem setTimeout. O efeito de reset abaixo já sabe
+  // pular a limpeza quando `mercadoSetByOcrRef.current === true`.
   useEffect(() => {
     const t = pendingOcrRef.current;
     if (!t || !mercadoSel) return;
     if (mercadoSel.categoria !== t.categoria) return;
-    const id = setTimeout(() => {
-      // Formato (Asiático / Europeu): se há marcador no texto do mercado, usa-o
-      const opts = mercadoSel.formato_opcoes || [];
-      if (opts.length > 1) {
-        const m = stripAccents(t.mercadoText);
-        const matched = opts.find((o) => m.includes(stripAccents(o)));
-        if (matched) setFormato(matched);
-      }
-      // Direção: tenta casar pelo nome do time, depois por Over/Under/Sim/Não
-      const dirOpts = mercadoSel.direcao_opcoes || [];
-      let dir: string | null = null;
-      const apostaLower = stripAccents(t.apostaText);
-      const mand = t.apostaMandante ? stripAccents(t.apostaMandante) : null;
-      const vis = t.apostaVisitante ? stripAccents(t.apostaVisitante) : null;
-      const isHomeStyle = dirOpts.some((d) => /casa|time 1|j1/i.test(d));
-      if (isHomeStyle && mand && vis) {
-        const homeIdx = dirOpts.findIndex((d) => /casa|time 1|j1/i.test(d));
-        const awayIdx = dirOpts.findIndex((d) => /fora|time 2|j2/i.test(d));
-        if (apostaLower.includes(mand) && homeIdx >= 0) dir = dirOpts[homeIdx];
-        else if (apostaLower.includes(vis) && awayIdx >= 0) dir = dirOpts[awayIdx];
-      }
-      if (!dir) dir = inferDirecaoSpecial(t.apostaText, dirOpts);
-      if (dir) setDirecao(dir);
-      // Linha: preserva o sinal exato lido do print
-      if (t.linha != null && mercadoSel.tem_linha) {
-        setLinha(t.linha);
-      }
-      pendingOcrRef.current = null;
-    }, 0);
-    return () => clearTimeout(id);
+    if (!mercadoSetByOcrRef.current) return; // só roda se veio do OCR
+
+    // Formato (Asiático / Europeu): se há marcador no texto do mercado, usa-o
+    const opts = mercadoSel.formato_opcoes || [];
+    if (opts.length > 1) {
+      const m = stripAccents(t.mercadoText);
+      const matched = opts.find((o) => m.includes(stripAccents(o)));
+      if (matched) setFormato(matched);
+    }
+    // Direção: tenta casar pelo nome do time, depois por Over/Under/Sim/Não
+    const dirOpts = mercadoSel.direcao_opcoes || [];
+    let dir: string | null = null;
+    const apostaLower = stripAccents(t.apostaText);
+    const mand = t.apostaMandante ? stripAccents(t.apostaMandante) : null;
+    const vis = t.apostaVisitante ? stripAccents(t.apostaVisitante) : null;
+    if (mand && apostaLower.includes(mand)) {
+      dir =
+        dirOpts.find((d) => stripAccents(d).includes(mand)) ||
+        dirOpts.find((d) => /^(casa|time 1|j1)$/i.test(d)) ||
+        dirOpts[0] ||
+        null;
+    } else if (vis && apostaLower.includes(vis)) {
+      dir =
+        dirOpts.find((d) => stripAccents(d).includes(vis)) ||
+        dirOpts.find((d) => /^(fora|time 2|j2)$/i.test(d)) ||
+        dirOpts[1] ||
+        null;
+    }
+    if (!dir) dir = inferDirecaoSpecial(t.apostaText, dirOpts);
+    if (dir) setDirecao(dir);
+    // Linha: preserva o sinal exato lido do print
+    if (t.linha != null && mercadoSel.tem_linha) {
+      setLinha(t.linha);
+    }
+    // NÃO limpa `mercadoSetByOcrRef` nem `pendingOcrRef` aqui — o efeito de
+    // reset (declarado mais abaixo) roda DEPOIS deste no mesmo ciclo. Ele
+    // lê ambos e faz a limpeza final.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mercadoSel]);
 
@@ -478,9 +493,32 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     setLinha("");
   }, [categoria]);
 
-  // Quando seleciona mercado, prefill linha placeholder
+  // Quando seleciona mercado, prefill linha placeholder (reset normal do usuário).
+  // Se o mercado foi definido pelo OCR, NÃO zera formato/direcao/linha — o Passo 2
+  // do OCR vai preenchê-los no mesmo ciclo.
   useEffect(() => {
     if (!mercadoSel) return;
+
+    if (mercadoSetByOcrRef.current) {
+      // Veio do OCR — Passo 2 já preencheu formato/direcao/linha acima neste ciclo.
+      // Aqui só aplicamos o placeholder de linha quando o OCR não trouxe linha
+      // própria e o mercado exige uma. Em seguida, limpa flag + payload.
+      const t = pendingOcrRef.current;
+      const temLinhaOcr = t?.linha != null;
+      if (
+        !temLinhaOcr &&
+        mercadoSel.tem_linha &&
+        mercadoSel.linha_placeholder &&
+        mercadoSel.linha_placeholder !== "livre"
+      ) {
+        setLinha(mercadoSel.linha_placeholder);
+      }
+      mercadoSetByOcrRef.current = false;
+      pendingOcrRef.current = null;
+      return;
+    }
+
+    // Reset normal (usuário trocou manualmente)
     if (mercadoSel.tem_linha && mercadoSel.linha_placeholder && mercadoSel.linha_placeholder !== "livre") {
       setLinha(mercadoSel.linha_placeholder);
     } else {
