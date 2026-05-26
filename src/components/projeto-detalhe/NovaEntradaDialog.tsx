@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,28 @@ import { APOSTA_ESTRATEGIA, FORMA_REGISTRO, type ApostaEstrategia } from "@/lib/
 import { useProjetoWorkingRates } from "@/hooks/useProjetoWorkingRates";
 
 type Resultado = "PENDENTE" | "GREEN" | "RED" | "MEIO_GREEN" | "MEIO_RED" | "VOID";
+
+// Mapeia "esporte" retornado pelo OCR (PT-BR) para o code da biblioteca.
+const OCR_SPORT_MAP: Record<string, string> = {
+  "futebol": "soccer",
+  "soccer": "soccer",
+  "basquete": "basketball",
+  "basketball": "basketball",
+  "tênis": "tennis",
+  "tenis": "tennis",
+  "tennis": "tennis",
+  "hockey": "hockey",
+  "handebol": "handball",
+  "handball": "handball",
+  "counter-strike": "cs2",
+  "cs:go": "cs2",
+  "cs2": "cs2",
+  "league of legends": "lol",
+  "lol": "lol",
+  "dota 2": "dota2",
+  "dota2": "dota2",
+  "valorant": "valorant",
+};
 
 const RESULTADOS: { value: Resultado; label: string; className: string }[] = [
   { value: "PENDENTE",   label: "Pendente", className: "border-border text-muted-foreground" },
