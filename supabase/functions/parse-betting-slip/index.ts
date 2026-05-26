@@ -12,9 +12,11 @@ interface ParsedBetSlip {
   visitante: ParsedField;
   dataHora: ParsedField;
   esporte: ParsedField;
+  liga: ParsedField;
   mercado: ParsedField;
   selecao: ParsedField;
   odd: ParsedField;
+  fairValue: ParsedField;
   stake: ParsedField;
   retorno: ParsedField;
   resultado: ParsedField;
