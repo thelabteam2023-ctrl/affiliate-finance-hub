@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Sparkles, ScanText, Loader2 } from "lucide-react";
+import { Sparkles, ScanText, Loader2, Star } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -172,7 +172,21 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
   const [fairValue, setFairValue] = useState<string>("");
   const [stake, setStake] = useState<string>("");
   const [dataHora, setDataHora] = useState<string>(() => new Date().toISOString().slice(0, 16));
-  const [modelo, setModelo] = useState<"pre-jogo" | "ao-vivo">("pre-jogo");
+  const FAV_MODELO_KEY = "nova-entrada:modelo-favorito";
+  const getFavModelo = (): "pre-jogo" | "ao-vivo" => {
+    try {
+      const v = localStorage.getItem(FAV_MODELO_KEY);
+      return v === "ao-vivo" ? "ao-vivo" : "pre-jogo";
+    } catch {
+      return "pre-jogo";
+    }
+  };
+  const [modeloFavorito, setModeloFavorito] = useState<"pre-jogo" | "ao-vivo">(getFavModelo);
+  const [modelo, setModelo] = useState<"pre-jogo" | "ao-vivo">(getFavModelo);
+  const toggleFavModelo = (v: "pre-jogo" | "ao-vivo") => {
+    setModeloFavorito(v);
+    try { localStorage.setItem(FAV_MODELO_KEY, v); } catch {}
+  };
   const [resultado, setResultado] = useState<Resultado>("PENDENTE");
 
   const [saving, setSaving] = useState(false);
@@ -836,13 +850,60 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-[480px] p-0 gap-0 bg-card border-border">
         <DialogHeader className="px-4 pt-4 pb-2">
-          <DialogTitle className="flex items-center gap-2 text-base">
-            <Sparkles className="h-4 w-4 text-primary" />
-            Nova Entrada
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-normal ml-1">
-              {estrategia === "SUREBET" ? "Surebet" : "ValueBet"}
-            </span>
-          </DialogTitle>
+          <div className="flex items-center justify-between gap-3">
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Sparkles className="h-4 w-4 text-primary" />
+              Nova Entrada
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-normal ml-1">
+                {estrategia === "SUREBET" ? "Surebet" : "ValueBet"}
+              </span>
+            </DialogTitle>
+            <TooltipProvider delayDuration={150}>
+              <div className="inline-flex rounded-md border border-border/60 overflow-hidden bg-muted/20">
+                {([
+                  { v: "pre-jogo", label: "Pré-jogo" },
+                  { v: "ao-vivo", label: "Ao vivo" },
+                ] as const).map((opt) => {
+                  const active = modelo === opt.v;
+                  const fav = modeloFavorito === opt.v;
+                  return (
+                    <div key={opt.v} className="flex items-stretch">
+                      <button
+                        type="button"
+                        onClick={() => setModelo(opt.v)}
+                        className={cn(
+                          "px-2.5 h-7 text-[11px] font-medium transition-colors",
+                          active
+                            ? "bg-primary text-primary-foreground"
+                            : "text-muted-foreground hover:bg-muted/40"
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            onClick={() => toggleFavModelo(opt.v)}
+                            className={cn(
+                              "px-1.5 h-7 border-l border-border/60 transition-colors",
+                              fav ? "text-amber-400" : "text-muted-foreground/50 hover:text-muted-foreground"
+                            )}
+                            aria-label={`Fixar ${opt.label} como favorito`}
+                          >
+                            <Star className={cn("h-3 w-3", fav && "fill-amber-400")} />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="text-[11px]">
+                          {fav ? `${opt.label} é o favorito (abre selecionado)` : `Fixar ${opt.label} como favorito`}
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  );
+                })}
+              </div>
+            </TooltipProvider>
+          </div>
           <DialogDescription className="text-[11px] text-muted-foreground">
             Formulário compacto com biblioteca de mercados, multi-moeda e edge ao vivo.
           </DialogDescription>
@@ -1104,18 +1165,8 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
             </div>
           </TooltipProvider>
 
-          {/* Modelo + Resultado */}
-          <div className="grid grid-cols-[auto_1fr] gap-3 items-end">
-            <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground">Modelo</Label>
-              <Select value={modelo} onValueChange={(v) => setModelo(v as "pre-jogo" | "ao-vivo")}>
-                <SelectTrigger className="h-8 text-xs w-[110px]"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pre-jogo" className="text-xs">Pré-jogo</SelectItem>
-                  <SelectItem value="ao-vivo" className="text-xs">Ao vivo</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Resultado */}
+          <div className="grid grid-cols-1 gap-3 items-end">
             <div className="space-y-1">
               <Label className="text-[10px] text-muted-foreground">Resultado</Label>
               <div className="flex flex-wrap gap-1">
