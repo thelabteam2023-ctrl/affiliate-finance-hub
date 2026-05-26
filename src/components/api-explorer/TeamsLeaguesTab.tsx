@@ -572,7 +572,11 @@ export default function TeamsLeaguesTab() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div>
               <CardTitle className="text-lg">Times em cache</CardTitle>
-              <CardDescription>{filteredTeams.length} times encontrados</CardDescription>
+              <CardDescription>
+                {teamUniqueMode
+                  ? `${uniqueTeams.length} times únicos (${filteredTeams.length} entradas no total)`
+                  : `${filteredTeams.length} entradas (1 por liga)`}
+              </CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative">
@@ -584,15 +588,40 @@ export default function TeamsLeaguesTab() {
                   className="h-9 pl-8 w-[200px]"
                 />
               </div>
+              <Select value={teamCountryFilter} onValueChange={setTeamCountryFilter}>
+                <SelectTrigger className="w-[170px] h-9"><SelectValue placeholder="País" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os países</SelectItem>
+                  {countriesAvailable.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Select value={teamLeagueFilter} onValueChange={setTeamLeagueFilter}>
                 <SelectTrigger className="w-[200px] h-9"><SelectValue placeholder="Liga" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas as ligas</SelectItem>
-                  {leagues.map((l) => (
-                    <SelectItem key={l.league_key} value={l.league_key}>{l.league_name}</SelectItem>
-                  ))}
+                  {leagues
+                    .filter((l) => teamCountryFilter === "all" || l.country === teamCountryFilter)
+                    .map((l) => (
+                      <SelectItem key={l.league_key} value={l.league_key}>{l.league_name}</SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
+              <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-lg">
+                <Button
+                  size="sm"
+                  variant={teamUniqueMode ? "secondary" : "ghost"}
+                  onClick={() => setTeamUniqueMode(true)}
+                  className="h-7 px-3 text-[11px]"
+                >Únicos</Button>
+                <Button
+                  size="sm"
+                  variant={!teamUniqueMode ? "secondary" : "ghost"}
+                  onClick={() => setTeamUniqueMode(false)}
+                  className="h-7 px-3 text-[11px]"
+                >Por liga</Button>
+              </div>
               <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-lg">
                 {[
                   { id: "all", label: "Todos" },
@@ -620,7 +649,7 @@ export default function TeamsLeaguesTab() {
                 <TableRow>
                   <TableHead className="w-[60px]">Logo</TableHead>
                   <TableHead>Time</TableHead>
-                  <TableHead>Liga</TableHead>
+                  <TableHead>{teamUniqueMode ? "Ligas" : "Liga"}</TableHead>
                   <TableHead>Esporte</TableHead>
                   <TableHead>Short</TableHead>
                   <TableHead>País</TableHead>
@@ -628,7 +657,37 @@ export default function TeamsLeaguesTab() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {teamsPaged.length === 0 ? (
+                {teamUniqueMode ? (
+                  uniqueTeamsPaged.length === 0 ? (
+                    <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum time</TableCell></TableRow>
+                  ) : uniqueTeamsPaged.map((t) => (
+                    <TableRow key={t.key}>
+                      <TableCell><LogoCell name={t.team_name_original} url={t.logo_url} size={32} /></TableCell>
+                      <TableCell className="font-medium">{t.team_name_original}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1 max-w-[280px]">
+                          {t.league_keys.map((lk) => (
+                            <Badge key={lk} variant="outline" className="text-[10px] font-mono bg-muted/40">{lk.replace(/^soccer_/, "").replace(/^basketball_/, "").replace(/^icehockey_/, "")}</Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell><SportBadge sport={t.sport} /></TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{t.short_name || "—"}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{t.country || "—"}</TableCell>
+                      <TableCell className="text-right">
+                        {t.found && t.logo_url ? (
+                          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px]">
+                            <CheckCircle2 className="h-3 w-3 mr-1" /> OK
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/30 text-[10px]">
+                            <XCircle className="h-3 w-3 mr-1" /> Sem logo
+                          </Badge>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : teamsPaged.length === 0 ? (
                   <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum time</TableCell></TableRow>
                 ) : teamsPaged.map((t) => (
                   <TableRow key={t.id}>
@@ -654,14 +713,14 @@ export default function TeamsLeaguesTab() {
               </TableBody>
             </Table>
           </div>
-          {filteredTeams.length > PAGE_SIZE && (
+          {displayRowsCount > PAGE_SIZE && (
             <div className="flex items-center justify-between p-3 border-t border-border/30">
               <span className="text-xs text-muted-foreground">
-                Página {teamsPage + 1} de {Math.ceil(filteredTeams.length / PAGE_SIZE)}
+                Página {teamsPage + 1} de {Math.ceil(displayRowsCount / PAGE_SIZE)}
               </span>
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" disabled={teamsPage === 0} onClick={() => setTeamsPage((p) => p - 1)}>Anterior</Button>
-                <Button size="sm" variant="outline" disabled={(teamsPage + 1) * PAGE_SIZE >= filteredTeams.length} onClick={() => setTeamsPage((p) => p + 1)}>Próxima</Button>
+                <Button size="sm" variant="outline" disabled={(teamsPage + 1) * PAGE_SIZE >= displayRowsCount} onClick={() => setTeamsPage((p) => p + 1)}>Próxima</Button>
               </div>
             </div>
           )}
