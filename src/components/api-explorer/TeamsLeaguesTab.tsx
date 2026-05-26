@@ -13,6 +13,30 @@ import { Loader2, RefreshCw, Shield, Trash2, Plus, Search, AlertCircle, CheckCir
 import { cn } from "@/lib/utils";
 
 // ---------------- helpers ----------------
+// Supabase impõe teto rígido de 1000 linhas por request. Paginamos via range().
+async function fetchAllRows<T = any>(
+  table: string,
+  select: string,
+  order?: { column: string; ascending: boolean }
+): Promise<T[]> {
+  const pageSize = 1000;
+  let from = 0;
+  const all: T[] = [];
+  for (;;) {
+    let q: any = supabase.from(table as any).select(select);
+    if (order) q = q.order(order.column, { ascending: order.ascending });
+    q = q.range(from, from + pageSize - 1);
+    const { data, error } = await q;
+    if (error) throw error;
+    const rows = (data as any[]) || [];
+    all.push(...(rows as T[]));
+    if (rows.length < pageSize) break;
+    from += pageSize;
+    if (from > 50000) break; // safety guard
+  }
+  return all;
+}
+
 const SPORT_BADGE: Record<string, { label: string; color: string }> = {
   soccer:           { label: "Futebol",       color: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30" },
   basketball:       { label: "Basquete",      color: "bg-orange-500/15 text-orange-300 border-orange-500/30" },
