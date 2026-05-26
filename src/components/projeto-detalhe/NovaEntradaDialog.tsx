@@ -217,6 +217,10 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
   const [ocrHintMercado, setOcrHintMercado] = useState<string | null>(null);
   const [ocrHintAposta, setOcrHintAposta] = useState<string | null>(null);
 
+  // Painel de diagnóstico autônomo (não-bloqueante) — surge automaticamente
+  // após o submit (sucesso ou erro) e se auto-fecha em 30s.
+  const [diagnostico, setDiagnostico] = useState<DiagnosticoPayload | null>(null);
+
   // Alvo pendente de auto-preenchimento da cascata (consumido pelos efeitos abaixo)
   const pendingOcrRef = useRef<OcrCascadeTarget | null>(null);
   // Indica que o mercadoSel atual foi definido pelo OCR (não pelo usuário).
