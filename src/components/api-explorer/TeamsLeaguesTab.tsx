@@ -142,7 +142,7 @@ export default function TeamsLeaguesTab() {
       // 1) league + team stats
       const [{ data: lgStats }, { data: tlStats }] = await Promise.all([
         supabase.from("monitored_leagues").select("api_sports_id"),
-        supabase.from("team_logos").select("logo_url, found"),
+        fetchAllRows<{ logo_url: string | null; found: boolean }>("team_logos", "logo_url, found"),
       ]);
       setLeagueStats({
         total: lgStats?.length || 0,
@@ -154,10 +154,10 @@ export default function TeamsLeaguesTab() {
       });
 
       // 2) leagues with computed counts
-      const [{ data: lgs }, { data: logos }, { data: tlAll }, { data: deToday }] = await Promise.all([
+      const [{ data: lgs }, { data: logos }, tlAll, { data: deToday }] = await Promise.all([
         supabase.from("monitored_leagues").select("league_key, sport, league_name, country, api_sports_id, current_season"),
         supabase.from("league_logos").select("league_key, logo_url, found"),
-        supabase.from("team_logos").select("league_key"),
+        fetchAllRows<{ league_key: string }>("team_logos", "league_key"),
         supabase.from("daily_events").select("league_key, home_team_logo, away_team_logo").eq("event_date", today),
       ]);
 
@@ -195,19 +195,20 @@ export default function TeamsLeaguesTab() {
       setLeagues(built);
 
       // 3) teams
-      const { data: ts } = await supabase
-        .from("team_logos")
-        .select("id, team_name_original, team_name_normalized, league_key, sport, short_name, country, logo_url, found")
-        .order("team_name_original", { ascending: true })
-        .limit(5000);
-      setTeams((ts as any) || []);
+      const ts = await fetchAllRows<any>(
+        "team_logos",
+        "id, team_name_original, team_name_normalized, league_key, sport, short_name, country, logo_url, found",
+        { column: "team_name_original", ascending: true }
+      );
+      setTeams(ts || []);
 
       // 4) aliases
-      const { data: al } = await supabase
-        .from("team_name_aliases")
-        .select("id, league_key, alias_normalized, team_logo_id, team_logos(team_name_original, logo_url)")
-        .order("league_key", { ascending: true });
-      setAliases((al as any) || []);
+      const al = await fetchAllRows<any>(
+        "team_name_aliases",
+        "id, league_key, alias_normalized, team_logo_id, team_logos(team_name_original, logo_url)",
+        { column: "league_key", ascending: true }
+      );
+      setAliases(al || []);
     } catch (e: any) {
       toast.error(e.message || "Erro ao carregar dados");
     } finally {
