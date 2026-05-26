@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -188,6 +188,42 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
   // que o Passo 2 do OCR preencha formato/direcao/linha no mesmo ciclo de render.
   const mercadoSetByOcrRef = useRef(false);
 
+  // ---------- DEBUG PANEL (DEV ONLY) ----------
+  const DEBUG = import.meta.env.DEV;
+  type DebugTick = { count: number; lastAt: number | null; note?: string };
+  const emptyTick = (): DebugTick => ({ count: 0, lastAt: null });
+  const [debugTicks, setDebugTicks] = useState<{
+    passo0: DebugTick;
+    passo1: DebugTick;
+    reset: DebugTick;
+    passo2: DebugTick;
+    bumpAt: number; // força re-render quando refs mudam
+  }>({
+    passo0: emptyTick(),
+    passo1: emptyTick(),
+    reset: emptyTick(),
+    passo2: emptyTick(),
+    bumpAt: 0,
+  });
+  const [debugOpen, setDebugOpen] = useState(false);
+  const bumpDebug = (key: "passo0" | "passo1" | "reset" | "passo2", note?: string) => {
+    if (!DEBUG) return;
+    setDebugTicks((d) => ({
+      ...d,
+      [key]: { count: d[key].count + 1, lastAt: Date.now(), note },
+      bumpAt: Date.now(),
+    }));
+  };
+  const resetDebugTracking = () => {
+    setDebugTicks({
+      passo0: emptyTick(),
+      passo1: emptyTick(),
+      reset: emptyTick(),
+      passo2: emptyTick(),
+      bumpAt: Date.now(),
+    });
+  };
+
   const fileToBase64 = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
       const r = new FileReader();
@@ -375,6 +411,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     if (!categoriaOptions.length) return;
     if (!categoriaOptions.includes(t.categoria)) return;
     setCategoria(t.categoria);
+    bumpDebug("passo0", `set categoria="${t.categoria}"`);
   }, [categoriaOptions, categoria]);
 
   // --- Auto-preenchimento sequencial da cascata via OCR ----------------------
@@ -405,6 +442,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     if (best) {
       mercadoSetByOcrRef.current = true; // marcar ANTES do setState
       setMercadoSel(best);
+      bumpDebug("passo1", `set mercado="${best.display_nome}"`);
     }
   }, [categoria, objetosOptions, mercadoSel]);
 
@@ -415,7 +453,10 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     const t = pendingOcrRef.current;
     if (!t || !mercadoSel) return;
     if (mercadoSel.categoria !== t.categoria) return;
-    if (!mercadoSetByOcrRef.current) return; // só roda se veio do OCR
+    if (!mercadoSetByOcrRef.current) {
+      bumpDebug("passo2", "pulou (mercadoSetByOcrRef=false)");
+      return;
+    }
 
     // Formato (Asiático / Europeu): se há marcador no texto do mercado, usa-o
     const opts = mercadoSel.formato_opcoes || [];
@@ -449,6 +490,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     if (t.linha != null && mercadoSel.tem_linha) {
       setLinha(t.linha);
     }
+    bumpDebug("passo2", `dir="${dir ?? ""}" linha="${t.linha ?? ""}"`);
     // NÃO limpa `mercadoSetByOcrRef` nem `pendingOcrRef` aqui — o efeito de
     // reset (declarado mais abaixo) roda DEPOIS deste no mesmo ciclo. Ele
     // lê ambos e faz a limpeza final.
@@ -515,6 +557,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
       }
       mercadoSetByOcrRef.current = false;
       pendingOcrRef.current = null;
+      bumpDebug("reset", "pulou reset (ocr=true) + limpou flags");
       return;
     }
 
@@ -530,6 +573,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
       setFormato("");
     }
     setDirecao("");
+    bumpDebug("reset", "reset normal (usuário)");
   }, [mercadoSel]);
 
   // Auto-ajustar moeda quando bookmaker muda
@@ -990,6 +1034,113 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
             </div>
           </div>
         </div>
+
+        {/* DEBUG PANEL — dev only */}
+        {DEBUG && (
+          <div className="border-t border-border/50 bg-black/40 text-[10px] font-mono">
+            <button
+              type="button"
+              onClick={() => setDebugOpen((v) => !v)}
+              className="w-full flex items-center justify-between px-4 py-1.5 text-amber-400/90 hover:bg-amber-500/5"
+            >
+              <span>{debugOpen ? "▼" : "▶"} Debug OCR & Cascata</span>
+              <span className="text-muted-foreground/60">
+                p0:{debugTicks.passo0.count} p1:{debugTicks.passo1.count} rst:{debugTicks.reset.count} p2:{debugTicks.passo2.count}
+              </span>
+            </button>
+            {debugOpen && (() => {
+              const pending = pendingOcrRef.current;
+              const mercadoOk = !!mercadoSel;
+              const direcaoMissing = mercadoOk && !direcao;
+              const linhaMissing = mercadoOk && mercadoSel!.tem_linha && !linha;
+              const fmtTick = (t: DebugTick, expected: boolean) => {
+                const ok = t.count > 0;
+                const mark = ok ? "✓" : expected ? "✗" : "·";
+                const color = ok
+                  ? "text-emerald-400"
+                  : expected
+                  ? "text-red-400"
+                  : "text-muted-foreground/50";
+                const when = t.lastAt ? new Date(t.lastAt).toLocaleTimeString() : "—";
+                return (
+                  <span className={color}>
+                    {mark} {t.count}x {t.lastAt ? `@ ${when}` : ""} {t.note ? `· ${t.note}` : ""}
+                  </span>
+                );
+              };
+              const row = (
+                label: string,
+                value: ReactNode,
+                highlight: boolean = false,
+              ) => (
+                <div className="grid grid-cols-[140px_1fr] gap-2 px-4 py-1 border-t border-border/20">
+                  <span className="text-muted-foreground/70">{label}</span>
+                  <span
+                    className={cn(
+                      "break-all whitespace-pre-wrap",
+                      highlight ? "text-red-400" : "text-foreground/90",
+                    )}
+                  >
+                    {value ?? <span className="text-muted-foreground/40">—</span>}
+                  </span>
+                </div>
+              );
+              const ocrExpected = !!pending || mercadoSetByOcrRef.current ||
+                debugTicks.passo0.count + debugTicks.passo1.count + debugTicks.passo2.count > 0;
+              return (
+                <div className="pb-2">
+                  <div className="flex justify-end px-4 py-1">
+                    <button
+                      type="button"
+                      onClick={resetDebugTracking}
+                      className="text-[10px] px-2 py-0.5 rounded border border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                    >
+                      Resetar rastreio
+                    </button>
+                  </div>
+                  {row(
+                    "pendingOcrRef",
+                    pending
+                      ? JSON.stringify(
+                          {
+                            categoria: pending.categoria,
+                            mercadoText: pending.mercadoText,
+                            apostaText: pending.apostaText,
+                            linha: pending.linha,
+                            mandante: pending.apostaMandante,
+                            visitante: pending.apostaVisitante,
+                          },
+                          null,
+                          2,
+                        )
+                      : null,
+                  )}
+                  {row("mercadoSetByOcr", String(mercadoSetByOcrRef.current))}
+                  {row("categoriaOptions", JSON.stringify(categoriaOptions))}
+                  {row("categoria", categoria || null)}
+                  {row(
+                    "objetosOptions",
+                    JSON.stringify(objetosOptions.map((o) => o.display_nome)),
+                  )}
+                  {row("mercadoSel", mercadoSel?.display_nome || null)}
+                  {row(
+                    "direcaoOptions",
+                    JSON.stringify(direcaoOptionsDisplay.map((d) => d.label)),
+                  )}
+                  {row("direcao", direcao || null, direcaoMissing)}
+                  {row("formato", formato || null)}
+                  {row("linha", linha || null, linhaMissing)}
+                  <div className="border-t border-border/40 mt-1 pt-1">
+                    {row("Passo 0 (categoria)", fmtTick(debugTicks.passo0, ocrExpected))}
+                    {row("Passo 1 (mercado)", fmtTick(debugTicks.passo1, ocrExpected))}
+                    {row("Reset mercadoSel", fmtTick(debugTicks.reset, debugTicks.passo1.count > 0))}
+                    {row("Passo 2 (dir/linha)", fmtTick(debugTicks.passo2, ocrExpected))}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
 
         {/* Footer */}
         <div className="px-4 py-3 border-t border-border/50 flex justify-end gap-2 bg-muted/10">
