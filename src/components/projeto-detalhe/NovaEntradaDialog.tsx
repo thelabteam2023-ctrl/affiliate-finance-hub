@@ -1210,8 +1210,8 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
           {/* Resultado */}
           <div className="grid grid-cols-1 gap-3 items-end">
             <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground">Resultado</Label>
-              <div className="flex flex-wrap gap-1">
+              <Label className="text-[10px] text-muted-foreground block text-center">Resultado</Label>
+              <div className="flex flex-wrap gap-1 justify-center">
                 {RESULTADOS.map((r) => (
                   <button
                     key={r.value}
