@@ -188,6 +188,42 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
   // que o Passo 2 do OCR preencha formato/direcao/linha no mesmo ciclo de render.
   const mercadoSetByOcrRef = useRef(false);
 
+  // ---------- DEBUG PANEL (DEV ONLY) ----------
+  const DEBUG = import.meta.env.DEV;
+  type DebugTick = { count: number; lastAt: number | null; note?: string };
+  const emptyTick = (): DebugTick => ({ count: 0, lastAt: null });
+  const [debugTicks, setDebugTicks] = useState<{
+    passo0: DebugTick;
+    passo1: DebugTick;
+    reset: DebugTick;
+    passo2: DebugTick;
+    bumpAt: number; // força re-render quando refs mudam
+  }>({
+    passo0: emptyTick(),
+    passo1: emptyTick(),
+    reset: emptyTick(),
+    passo2: emptyTick(),
+    bumpAt: 0,
+  });
+  const [debugOpen, setDebugOpen] = useState(false);
+  const bumpDebug = (key: "passo0" | "passo1" | "reset" | "passo2", note?: string) => {
+    if (!DEBUG) return;
+    setDebugTicks((d) => ({
+      ...d,
+      [key]: { count: d[key].count + 1, lastAt: Date.now(), note },
+      bumpAt: Date.now(),
+    }));
+  };
+  const resetDebugTracking = () => {
+    setDebugTicks({
+      passo0: emptyTick(),
+      passo1: emptyTick(),
+      reset: emptyTick(),
+      passo2: emptyTick(),
+      bumpAt: Date.now(),
+    });
+  };
+
   const fileToBase64 = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
       const r = new FileReader();
@@ -375,6 +411,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     if (!categoriaOptions.length) return;
     if (!categoriaOptions.includes(t.categoria)) return;
     setCategoria(t.categoria);
+    bumpDebug("passo0", `set categoria="${t.categoria}"`);
   }, [categoriaOptions, categoria]);
 
   // --- Auto-preenchimento sequencial da cascata via OCR ----------------------
@@ -405,6 +442,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     if (best) {
       mercadoSetByOcrRef.current = true; // marcar ANTES do setState
       setMercadoSel(best);
+      bumpDebug("passo1", `set mercado="${best.display_nome}"`);
     }
   }, [categoria, objetosOptions, mercadoSel]);
 
@@ -415,7 +453,10 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     const t = pendingOcrRef.current;
     if (!t || !mercadoSel) return;
     if (mercadoSel.categoria !== t.categoria) return;
-    if (!mercadoSetByOcrRef.current) return; // só roda se veio do OCR
+    if (!mercadoSetByOcrRef.current) {
+      bumpDebug("passo2", "pulou (mercadoSetByOcrRef=false)");
+      return;
+    }
 
     // Formato (Asiático / Europeu): se há marcador no texto do mercado, usa-o
     const opts = mercadoSel.formato_opcoes || [];
@@ -449,6 +490,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     if (t.linha != null && mercadoSel.tem_linha) {
       setLinha(t.linha);
     }
+    bumpDebug("passo2", `dir="${dir ?? ""}" linha="${t.linha ?? ""}"`);
     // NÃO limpa `mercadoSetByOcrRef` nem `pendingOcrRef` aqui — o efeito de
     // reset (declarado mais abaixo) roda DEPOIS deste no mesmo ciclo. Ele
     // lê ambos e faz a limpeza final.
@@ -515,6 +557,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
       }
       mercadoSetByOcrRef.current = false;
       pendingOcrRef.current = null;
+      bumpDebug("reset", "pulou reset (ocr=true) + limpou flags");
       return;
     }
 
@@ -530,6 +573,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
       setFormato("");
     }
     setDirecao("");
+    bumpDebug("reset", "reset normal (usuário)");
   }, [mercadoSel]);
 
   // Auto-ajustar moeda quando bookmaker muda
