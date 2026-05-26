@@ -266,8 +266,9 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
         apostaMandante: mandante ? String(mandante) : null,
         apostaVisitante: visitante ? String(visitante) : null,
       };
-      // Dispara a cascata — a categoria reseta os campos dependentes via efeito existente
-      setCategoria(cat);
+      // NÃO chama setCategoria aqui — um efeito abaixo aguarda os mercados
+      // do esporte carregarem (após eventual reset do [esporte]) e então
+      // aplica a categoria pendente em sequência.
     } else if (linhaSign) {
       // Sem categoria reconhecida — pelo menos guarda a linha p/ quando o user escolher manualmente
       setLinha(linhaSign);
@@ -360,6 +361,17 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     () => (categoria ? mercadosByCategoria[categoria] || [] : []),
     [categoria, mercadosByCategoria],
   );
+
+  // Passo 0: aplica a categoria pendente do OCR depois que os mercados do esporte
+  // estiverem carregados — garante que o reset disparado pelo [esporte] já rodou.
+  useEffect(() => {
+    const t = pendingOcrRef.current;
+    if (!t) return;
+    if (categoria === t.categoria) return;
+    if (!categoriaOptions.length) return;
+    if (!categoriaOptions.includes(t.categoria)) return;
+    setCategoria(t.categoria);
+  }, [categoriaOptions, categoria]);
 
   // --- Auto-preenchimento sequencial da cascata via OCR ----------------------
   // Passo 1: assim que `categoria` muda e os `objetosOptions` carregam,
