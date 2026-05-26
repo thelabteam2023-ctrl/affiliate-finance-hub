@@ -907,6 +907,49 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     setSaving(true);
 
     try {
+      // ===== MODO EDIÇÃO =====
+      if (isEdit && apostaParaEditar) {
+        const updates: Record<string, unknown> = {
+          evento: evento.trim(),
+          esporte,
+          mercado: previewMercado,
+          selecao: direcao,
+          odd: oddNum,
+          // Analíticos / Nova Entrada
+          is_novo_formulario: true,
+          liga: liga.trim() || null,
+          mercado_categoria: mercadoSel.categoria,
+          mercado_objeto: mercadoSel.objeto,
+          mercado_formato: formato || null,
+          mercado_direcao: direcao,
+          mercado_linha: linhaNum,
+          mercado_display: previewMercado,
+          fair_value: fairNum,
+          edge_percentual: edge,
+          modelo_aposta: modelo,
+          time_casa: timeCasa.trim() || null,
+          time_fora: timeFora.trim() || null,
+          fonte_entrada: fonteEntrada,
+        };
+        const { error } = await supabase
+          .from("apostas_unificada")
+          .update(updates as any)
+          .eq("id", apostaParaEditar.id);
+        if (error) {
+          toast.error(`Falha ao atualizar: ${error.message}`);
+          setSaving(false);
+          return;
+        }
+        toast.success("Entrada atualizada");
+        await queryClient.invalidateQueries({ queryKey: ["apostas-projeto", projetoId] });
+        await queryClient.invalidateQueries({ queryKey: ["apostas_unificada"] });
+        onCreated?.();
+        handleReset();
+        onOpenChange(false);
+        setSaving(false);
+        return;
+      }
+
       const result = await criarAposta({
         projeto_id: projetoId,
         workspace_id: workspaceId,
