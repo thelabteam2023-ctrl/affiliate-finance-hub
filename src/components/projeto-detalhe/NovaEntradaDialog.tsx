@@ -44,6 +44,57 @@ const OCR_SPORT_MAP: Record<string, string> = {
   "valorant": "valorant",
 };
 
+// --- Helpers de normalização e parsing -----------------------------------
+const stripAccents = (s: string) =>
+  s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
+/** Extrai os times de um evento "A vs B" / "A x B" / "A × B". */
+function parseEventoTimes(texto: string): { timeCasa: string; timeFora: string } | null {
+  if (!texto) return null;
+  const seps = [" × ", " x ", " X ", " vs ", " VS ", " v ", " V "];
+  for (const sep of seps) {
+    const idx = texto.indexOf(sep);
+    if (idx > 0) {
+      const casa = texto.slice(0, idx).trim();
+      const fora = texto.slice(idx + sep.length).trim();
+      if (casa && fora) return { timeCasa: casa, timeFora: fora };
+    }
+  }
+  return null;
+}
+
+/** Extrai a linha (com sinal preservado) da seleção OCR. Ex: "Karmine Corp Blue (+1.5)" → "+1.5". */
+function extractLinhaFromAposta(aposta: string): string | null {
+  if (!aposta) return null;
+  // Prioridade: número entre parênteses no final
+  const paren = aposta.match(/\(\s*([+-]?\d+(?:[.,]\d+)?)\s*\)\s*$/);
+  if (paren) return paren[1].replace(",", ".");
+  // Fallback: número final solto
+  const tail = aposta.match(/([+-]?\d+(?:[.,]\d+)?)\s*$/);
+  if (tail) return tail[1].replace(",", ".");
+  return null;
+}
+
+/** Mapeia o texto bruto do mercado (OCR) para uma categoria conhecida. */
+function inferCategoriaFromMercado(mercado: string): string | null {
+  const m = stripAccents(mercado);
+  if (/handicap|spread|puck\s*line|run\s*line/.test(m)) return "handicap";
+  if (/\btotal\b|over|under|mais de|menos de|acima|abaixo|\bo\/u\b/.test(m)) return "total";
+  if (/vencedor|moneyline|resultado|match\s*winner|btts|ambas|empate|draw|1x2|dupla chance|placar/.test(m)) return "resultado";
+  return null;
+}
+
+/** Detecta a direção (Over/Under/Sim/Não) a partir do texto da aposta. */
+function inferDirecaoSpecial(aposta: string, direcaoOpcoes: string[]): string | null {
+  const a = stripAccents(aposta);
+  const has = (v: string) => direcaoOpcoes.some((d) => stripAccents(d) === v);
+  if (/\bover\b|\bmais de\b|\bacima\b/.test(a) && has("over")) return "Over";
+  if (/\bunder\b|\bmenos de\b|\babaixo\b/.test(a) && has("under")) return "Under";
+  if (/\bsim\b|\byes\b/.test(a) && has("sim")) return "Sim";
+  if (/\bnao\b|\bno\b/.test(a) && has("nao")) return "Não";
+  return null;
+}
+
 const RESULTADOS: { value: Resultado; label: string; className: string }[] = [
   { value: "PENDENTE",   label: "Pendente", className: "border-border text-muted-foreground" },
   { value: "GREEN",      label: "Green",    className: "border-emerald-500/40 text-emerald-500" },
@@ -81,6 +132,19 @@ function buildMercadoDisplay(
   return parts.filter(Boolean).join(" · ");
 }
 
+/**
+ * Alvo de auto-preenchimento do OCR que é aplicado *sequencialmente* na cascata
+ * (categoria → mercado → formato/direção/linha) via efeitos encadeados.
+ */
+interface OcrCascadeTarget {
+  categoria: string;
+  mercadoText: string;        // texto bruto pós-categoria (ex: "de mapas")
+  apostaText: string;         // texto bruto da seleção OCR
+  linha: string | null;       // ex: "+1.5"
+  apostaMandante: string | null;
+  apostaVisitante: string | null;
+}
+
 export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, onCreated }: NovaEntradaDialogProps) {
   const { user, workspaceId } = useAuth();
   const queryClient = useQueryClient();
@@ -98,6 +162,10 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
   const [direcao, setDirecao] = useState<string>("");
   const [linha, setLinha] = useState<string>("");
 
+  // Nomes reais dos times (derivados do evento ou OCR)
+  const [timeCasa, setTimeCasa] = useState<string>("");
+  const [timeFora, setTimeFora] = useState<string>("");
+
   const [bookmakerId, setBookmakerId] = useState<string>("");
   const [moeda, setMoeda] = useState<string>("BRL");
   const [oddObtida, setOddObtida] = useState<string>("");
@@ -112,6 +180,9 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [ocrHintMercado, setOcrHintMercado] = useState<string | null>(null);
   const [ocrHintAposta, setOcrHintAposta] = useState<string | null>(null);
+
+  // Alvo pendente de auto-preenchimento da cascata (consumido pelos efeitos abaixo)
+  const pendingOcrRef = useRef<OcrCascadeTarget | null>(null);
 
   const fileToBase64 = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
@@ -133,8 +204,11 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     const visitante = getV(parsed.visitante);
     if (mandante && visitante) {
       setEvento(`${mandante} x ${visitante}`);
+      setTimeCasa(String(mandante));
+      setTimeFora(String(visitante));
     } else if (mandante) {
       setEvento(mandante);
+      setTimeCasa(String(mandante));
     }
     // Data/hora
     const dh = getV(parsed.dataHora);
@@ -171,13 +245,34 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     // Fair value (odd justa)
     const fv = getV(parsed.fairValue);
     if (fv) setFairValue(String(fv).replace(",", "."));
-    // Extrai linha numérica da seleção (ex: "Karmine Corp Blue (+1.5)" → "+1.5")
+    // Hints visuais e payload para auto-preenchimento sequencial da cascata
     const sel = (getV(parsed.selecao) || "").toString();
-    const lineMatch = sel.match(/\(?([+-]?\d+(?:\.\d+)?)\)?\s*$/);
-    if (lineMatch) setLinha(lineMatch[1]);
-    // Hints visuais (mercado bruto + aposta bruta para o usuário casar manualmente)
-    setOcrHintMercado((getV(parsed.mercado) || "").toString() || null);
+    const mercadoTxt = (getV(parsed.mercado) || "").toString();
+    setOcrHintMercado(mercadoTxt || null);
     setOcrHintAposta(sel || null);
+    const linhaSign = extractLinhaFromAposta(sel); // preserva o sinal (+/-) exato
+    const cat = mercadoTxt ? inferCategoriaFromMercado(mercadoTxt) : null;
+    if (cat) {
+      // Texto do mercado *sem* a palavra da categoria, p/ casar com "objeto" depois
+      const mercadoText = stripAccents(mercadoTxt)
+        .replace(/handicap|spread|puck\s*line|run\s*line|total|over|under|vencedor|moneyline|resultado/g, "")
+        .replace(/\bde\b|\bdo\b|\bda\b/g, "")
+        .trim();
+      pendingOcrRef.current = {
+        categoria: cat,
+        mercadoText,
+        apostaText: sel,
+        linha: linhaSign,
+        apostaMandante: mandante ? String(mandante) : null,
+        apostaVisitante: visitante ? String(visitante) : null,
+      };
+      // NÃO chama setCategoria aqui — um efeito abaixo aguarda os mercados
+      // do esporte carregarem (após eventual reset do [esporte]) e então
+      // aplica a categoria pendente em sequência.
+    } else if (linhaSign) {
+      // Sem categoria reconhecida — pelo menos guarda a linha p/ quando o user escolher manualmente
+      setLinha(linhaSign);
+    }
   };
 
   const handleOcrImage = async (file: File) => {
@@ -266,6 +361,106 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     () => (categoria ? mercadosByCategoria[categoria] || [] : []),
     [categoria, mercadosByCategoria],
   );
+
+  // Passo 0: aplica a categoria pendente do OCR depois que os mercados do esporte
+  // estiverem carregados — garante que o reset disparado pelo [esporte] já rodou.
+  useEffect(() => {
+    const t = pendingOcrRef.current;
+    if (!t) return;
+    if (categoria === t.categoria) return;
+    if (!categoriaOptions.length) return;
+    if (!categoriaOptions.includes(t.categoria)) return;
+    setCategoria(t.categoria);
+  }, [categoriaOptions, categoria]);
+
+  // --- Auto-preenchimento sequencial da cascata via OCR ----------------------
+  // Passo 1: assim que `categoria` muda e os `objetosOptions` carregam,
+  // tenta encontrar o melhor mercado (objeto/display) com base no texto do OCR.
+  useEffect(() => {
+    const t = pendingOcrRef.current;
+    if (!t || !categoria) return;
+    if (categoria !== t.categoria) return;
+    if (!objetosOptions.length) return;
+    if (mercadoSel && mercadoSel.categoria === t.categoria) return; // já casou
+
+    const needle = t.mercadoText;
+    let best: MercadoBiblioteca | null = null;
+    let bestScore = 0;
+    for (const m of objetosOptions) {
+      const hay = `${stripAccents(m.display_nome)} ${m.objeto ? stripAccents(m.objeto) : ""}`;
+      // Score = nº de palavras (≥3 letras) do needle presentes no hay
+      const words = needle.split(/\s+/).filter((w) => w.length >= 3);
+      const score = words.reduce((acc, w) => acc + (hay.includes(w) ? 1 : 0), 0);
+      if (score > bestScore) {
+        bestScore = score;
+        best = m;
+      }
+    }
+    // Se não houve match textual, e só existe uma opção, usa ela
+    if (!best && objetosOptions.length === 1) best = objetosOptions[0];
+    if (best) setMercadoSel(best);
+  }, [categoria, objetosOptions, mercadoSel]);
+
+  // Passo 2: quando `mercadoSel` é definido, aplica formato/direção/linha do OCR
+  // *depois* do efeito de placeholder (setTimeout 0 garante a ordem).
+  useEffect(() => {
+    const t = pendingOcrRef.current;
+    if (!t || !mercadoSel) return;
+    if (mercadoSel.categoria !== t.categoria) return;
+    const id = setTimeout(() => {
+      // Formato (Asiático / Europeu): se há marcador no texto do mercado, usa-o
+      const opts = mercadoSel.formato_opcoes || [];
+      if (opts.length > 1) {
+        const m = stripAccents(t.mercadoText);
+        const matched = opts.find((o) => m.includes(stripAccents(o)));
+        if (matched) setFormato(matched);
+      }
+      // Direção: tenta casar pelo nome do time, depois por Over/Under/Sim/Não
+      const dirOpts = mercadoSel.direcao_opcoes || [];
+      let dir: string | null = null;
+      const apostaLower = stripAccents(t.apostaText);
+      const mand = t.apostaMandante ? stripAccents(t.apostaMandante) : null;
+      const vis = t.apostaVisitante ? stripAccents(t.apostaVisitante) : null;
+      const isHomeStyle = dirOpts.some((d) => /casa|time 1|j1/i.test(d));
+      if (isHomeStyle && mand && vis) {
+        const homeIdx = dirOpts.findIndex((d) => /casa|time 1|j1/i.test(d));
+        const awayIdx = dirOpts.findIndex((d) => /fora|time 2|j2/i.test(d));
+        if (apostaLower.includes(mand) && homeIdx >= 0) dir = dirOpts[homeIdx];
+        else if (apostaLower.includes(vis) && awayIdx >= 0) dir = dirOpts[awayIdx];
+      }
+      if (!dir) dir = inferDirecaoSpecial(t.apostaText, dirOpts);
+      if (dir) setDirecao(dir);
+      // Linha: preserva o sinal exato lido do print
+      if (t.linha != null && mercadoSel.tem_linha) {
+        setLinha(t.linha);
+      }
+      pendingOcrRef.current = null;
+    }, 0);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mercadoSel]);
+
+  // Deriva timeCasa/timeFora automaticamente do evento (quando ainda não foram preenchidos pelo OCR)
+  useEffect(() => {
+    if (!evento) return;
+    if (timeCasa && timeFora) return;
+    const parsed = parseEventoTimes(evento);
+    if (parsed) {
+      if (!timeCasa) setTimeCasa(parsed.timeCasa);
+      if (!timeFora) setTimeFora(parsed.timeFora);
+    }
+  }, [evento, timeCasa, timeFora]);
+
+  // Opções de Direção: substitui placeholders genéricos pelos nomes reais dos times
+  const direcaoOptionsDisplay = useMemo(() => {
+    const raw = mercadoSel?.direcao_opcoes || [];
+    if (!timeCasa && !timeFora) return raw.map((d) => ({ value: d, label: d }));
+    return raw.map((d) => {
+      if (/^(casa|time 1|j1)$/i.test(d) && timeCasa) return { value: d, label: timeCasa };
+      if (/^(fora|time 2|j2)$/i.test(d) && timeFora) return { value: d, label: timeFora };
+      return { value: d, label: d };
+    });
+  }, [mercadoSel, timeCasa, timeFora]);
 
   // Reset cascade dependents when esporte or categoria changes
   useEffect(() => {
@@ -358,6 +553,8 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     setFonteEntrada(null);
     setLiga("");
     setEvento("");
+    setTimeCasa("");
+    setTimeFora("");
     setCategoria("");
     setMercadoSel(null);
     setFormato("");
@@ -371,6 +568,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     setResultado("PENDENTE");
     setOcrHintMercado(null);
     setOcrHintAposta(null);
+    pendingOcrRef.current = null;
   };
 
   const handleSubmit = async () => {
@@ -423,6 +621,8 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
         edge_percentual: edge,
         modelo_aposta: modelo,
         is_novo_formulario: true,
+        time_casa: timeCasa.trim() || null,
+        time_fora: timeFora.trim() || null,
       });
 
       // Se o usuário marcou um resultado diferente de Pendente, deixamos para
@@ -577,8 +777,8 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
               <Select value={direcao} onValueChange={setDirecao} disabled={!mercadoSel}>
                 <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Direção" /></SelectTrigger>
                 <SelectContent>
-                  {(mercadoSel?.direcao_opcoes || []).map((d) => (
-                    <SelectItem key={d} value={d} className="text-xs">{d}</SelectItem>
+                  {direcaoOptionsDisplay.map((d) => (
+                    <SelectItem key={d.value} value={d.value} className="text-xs">{d.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

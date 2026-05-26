@@ -680,6 +680,8 @@ export type Database = {
           status: string
           surebet_legado_id: string | null
           taxa_conversao_audit: number | null
+          time_casa: string | null
+          time_fora: string | null
           tipo_freebet: string | null
           tipo_multipla: string | null
           updated_at: string
@@ -775,6 +777,8 @@ export type Database = {
           status?: string
           surebet_legado_id?: string | null
           taxa_conversao_audit?: number | null
+          time_casa?: string | null
+          time_fora?: string | null
           tipo_freebet?: string | null
           tipo_multipla?: string | null
           updated_at?: string
@@ -870,6 +874,8 @@ export type Database = {
           status?: string
           surebet_legado_id?: string | null
           taxa_conversao_audit?: number | null
+          time_casa?: string | null
+          time_fora?: string | null
           tipo_freebet?: string | null
           tipo_multipla?: string | null
           updated_at?: string
