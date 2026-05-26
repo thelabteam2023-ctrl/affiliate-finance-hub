@@ -349,6 +349,23 @@ Nível de confiança:
 
 DICA: Em boletins de apostas, a ODD geralmente aparece em verde/destaque próximo à seleção com formato decimal (2.90). O STAKE é o valor apostado que aparece na lateral ou rodapé (ex: 120.00). O RETORNO é calculado como stake * odd.`;
 
+    // Append PT-BR value-bet software label hints to the system prompt
+    const valueBetHints = `\n\nREGRAS ESPECIAIS — PRINTS DE SOFTWARES DE VALUE BET (RebelBetting, OddsNotifier, OddsHunter, OddsJam — interface em português):
+Estes prints normalmente NÃO mostram stake nem retorno, e usam os seguintes rótulos em português que você DEVE reconhecer literalmente:
+- "Mercado:"          → preenche o campo "mercado" (texto completo após os dois pontos, ex: "Handicap de Mapas")
+- "Aposta:"           → preenche o campo "selecao" (texto completo após os dois pontos, ex: "Karmine Corp Blue (+1.5)")
+- "Odd oferecida:"    → preenche o campo "odd"
+- "Odd justa:"        → preenche o campo "fairValue" (NÃO confunda com a odd oferecida)
+- "Prob. implícita:"  → IGNORAR (não retornar)
+- "Prob. justa:"      → IGNORAR (não retornar)
+- "Liga:" ou texto da liga abaixo do esporte → preenche "liga" (capture o nome COMPLETO mesmo que esteja truncado com "...", ex: "League of Legends")
+- Cabeçalho com nomes dos times no formato "Time A vs Time B" → preenche "mandante" e "visitante"
+- Data no formato "27 May · 13:00" ou similar → preenche "dataHora" (ano = ${currentYear} se ausente)
+- Esporte mostrado como "E-Sports" → use a liga para inferir o esporte específico (ex: "League of Legends", "Counter-Strike", "Dota 2", "Valorant"); se não der, retorne o esporte específico da liga
+- Casa de apostas em badge verde no topo (ex: "Bet365", "Betano", "Pinnacle") → preenche "bookmakerNome"
+- Nestes prints, "stake" e "retorno" geralmente são null/none — NÃO invente valores`;
+    const finalSystemPrompt = isMultipla ? systemPrompt : systemPrompt + valueBetHints;
+
     const userPrompt = isMultipla 
       ? "Analise este print de APOSTA MÚLTIPLA (combinada/acumuladora) e extraia as informações de TODAS as seleções. Retorne APENAS o JSON, sem explicações adicionais."
       : "Analise este print de boletim de aposta e extraia as informações de contexto. Retorne APENAS o JSON, sem explicações adicionais.";
