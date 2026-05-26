@@ -153,10 +153,29 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     // Bookmaker — tenta casar pelo nome (lê via cache para evitar dependência circular)
     const bmNome = (getV(parsed.bookmakerNome) || "").toString().toLowerCase().trim();
     if (bmNome) {
-      const cachedBms = queryClient.getQueryData<Bookmaker[]>(["bookmakers-nova-entrada", projetoId]) || [];
-      const match = cachedBms.find((b) => b.nome.toLowerCase().includes(bmNome) || bmNome.includes(b.nome.toLowerCase()));
+      const cachedBms =
+        (queryClient.getQueryData<any[]>(["bookmaker-saldos", projetoId, true, null]) as any[] | undefined) ||
+        (queryClient.getQueriesData<any[]>({ queryKey: ["bookmaker-saldos", projetoId] }).flatMap(([, v]) => v || [])) ||
+        [];
+      const match = cachedBms.find((b: any) => {
+        const n = (b?.nome || "").toLowerCase();
+        return n && (n.includes(bmNome) || bmNome.includes(n));
+      });
       if (match) setBookmakerId(match.id);
     }
+    // Liga
+    const lg = getV(parsed.liga);
+    if (lg) setLiga(String(lg));
+    // Fair value (odd justa)
+    const fv = getV(parsed.fairValue);
+    if (fv) setFairValue(String(fv).replace(",", "."));
+    // Extrai linha numérica da seleção (ex: "Karmine Corp Blue (+1.5)" → "+1.5")
+    const sel = (getV(parsed.selecao) || "").toString();
+    const lineMatch = sel.match(/\(?([+-]?\d+(?:\.\d+)?)\)?\s*$/);
+    if (lineMatch) setLinha(lineMatch[1]);
+    // Hints visuais (mercado bruto + aposta bruta para o usuário casar manualmente)
+    setOcrHintMercado((getV(parsed.mercado) || "").toString() || null);
+    setOcrHintAposta(sel || null);
   };
 
   const handleOcrImage = async (file: File) => {
