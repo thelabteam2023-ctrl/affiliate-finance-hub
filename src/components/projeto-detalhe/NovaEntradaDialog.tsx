@@ -84,6 +84,26 @@ function inferCategoriaFromMercado(mercado: string): string | null {
   return null;
 }
 
+/**
+ * Detecta o período da aposta (1º Tempo, 2º Tempo) a partir do texto do mercado.
+ * Cobre PT/EN/abreviações: "1º Tempo", "1T", "primeiro tempo", "1ª parte", "HT",
+ * "1st half", "first half" → "1T". Análogo para 2T. null = jogo inteiro (FT).
+ */
+function inferPeriodoFromMercado(mercado: string): "1T" | "2T" | null {
+  const m = stripAccents(mercado).toLowerCase();
+  if (/\b1\s*[ºoª]?\s*tempo\b|\bprimeir[oa]\s*tempo\b|\b1\s*[ºoª]?\s*parte\b|\b1\s*t\b|\bht\b|\b1st\s*half\b|\bfirst\s*half\b/.test(m)) return "1T";
+  if (/\b2\s*[ºoª]?\s*tempo\b|\bsegund[oa]\s*tempo\b|\b2\s*[ºoª]?\s*parte\b|\b2\s*t\b|\b2nd\s*half\b|\bsecond\s*half\b/.test(m)) return "2T";
+  return null;
+}
+
+/** Verifica se um item do catálogo é variante de 1ºT / 2ºT. */
+function mercadoIsHT(m: MercadoBiblioteca): boolean {
+  return /-ht\b/.test(m.objeto || "") || /1[ºoª]\s*t\b|1º\s*tempo/i.test(m.display_nome);
+}
+function mercadoIs2T(m: MercadoBiblioteca): boolean {
+  return /-ft2\b|-2t\b/.test(m.objeto || "") || /2[ºoª]\s*t\b|2º\s*tempo/i.test(m.display_nome);
+}
+
 /** Detecta a direção (Over/Under/Sim/Não) a partir do texto da aposta. */
 function inferDirecaoSpecial(aposta: string, direcaoOpcoes: string[]): string | null {
   const a = stripAccents(aposta);
