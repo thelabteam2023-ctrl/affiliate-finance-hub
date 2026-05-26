@@ -52,21 +52,38 @@ export function useLogoFallback(sport: string | null | undefined) {
     if (!sport) return;
     let cancelled = false;
     (async () => {
-      const [t, l] = await Promise.all([
-        supabase
-          .from('team_logos')
-          .select('league_key, team_name_normalized, team_name_original, logo_url')
-          .eq('sport', sport)
-          .not('logo_url', 'is', null),
+      // Paginação manual: Supabase tem limite default de 1000 linhas por query
+      // e team_logos tem >2k registros de soccer. Sem paginação, Coritiba/Bahia
+      // e outros times caem fora do retorno e nunca casam o fallback.
+      const fetchAllTeams = async (): Promise<TeamRow[]> => {
+        const pageSize = 1000;
+        const out: TeamRow[] = [];
+        for (let from = 0; ; from += pageSize) {
+          const { data, error } = await supabase
+            .from('team_logos')
+            .select('league_key, team_name_normalized, team_name_original, logo_url')
+            .eq('sport', sport)
+            .not('logo_url', 'is', null)
+            .range(from, from + pageSize - 1);
+          if (error || !data || data.length === 0) break;
+          out.push(...(data as TeamRow[]));
+          if (data.length < pageSize) break;
+        }
+        return out;
+      };
+
+      const [teamRows, leaguesRes] = await Promise.all([
+        fetchAllTeams(),
         supabase
           .from('league_logos')
           .select('league_key, league_name, logo_url')
           .eq('sport', sport)
-          .not('logo_url', 'is', null),
+          .not('logo_url', 'is', null)
+          .range(0, 4999),
       ]);
       if (cancelled) return;
-      setTeams((t.data as TeamRow[]) || []);
-      setLeagues((l.data as LeagueRow[]) || []);
+      setTeams(teamRows);
+      setLeagues((leaguesRes.data as LeagueRow[]) || []);
     })();
     return () => {
       cancelled = true;
