@@ -195,7 +195,7 @@ export default function ApiExplorer() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'matches' | 'coverage' | 'teams'>('matches');
-  const [timeFilter, setTimeFilter] = useState<'today' | 'tomorrow' | 'upcoming' | 'custom'>('today');
+  const [timeFilter, setTimeFilter] = useState<'today' | 'tomorrow' | 'yesterday' | 'upcoming' | 'custom'>('today');
   const [customDate, setCustomDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   
   // Filters
