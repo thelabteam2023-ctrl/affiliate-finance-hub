@@ -1010,7 +1010,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
           {/* Evento */}
           <div className="space-y-1">
             <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">Evento</Label>
-            <Input value={evento} onChange={(e) => setEvento(e.target.value)} className="h-8 text-xs" placeholder="Time 1 vs Time 2" />
+            <Input value={evento} onChange={(e) => setEvento(e.target.value)} className="h-8 text-xs text-center" placeholder="Time 1 vs Time 2" />
           </div>
 
           {/* Cascata Mercado */}
