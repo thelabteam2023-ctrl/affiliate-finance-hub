@@ -600,9 +600,10 @@ export default function ApiExplorer() {
         )}
       </div>
 
-      <div className="grid lg:grid-cols-[280px_1fr] gap-6">
-        
+      <div className={cn("grid gap-6", activeTab === 'teams' ? "grid-cols-1" : "lg:grid-cols-[280px_1fr]")}>
+
         {/* SIDEBAR FILTERS */}
+        {activeTab !== 'teams' && (
         <div className="space-y-6">
           <Card className="rounded-2xl border-border/40">
             <CardHeader className="pb-3">
@@ -840,6 +841,7 @@ export default function ApiExplorer() {
             </Card>
           </div>
         </div>
+        )}
 
         {/* MAIN FEED */}
         <div className="space-y-6">
