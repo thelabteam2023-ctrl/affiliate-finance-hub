@@ -42,6 +42,7 @@ import { ptBR } from "date-fns/locale";
 import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
 import { ApostaDialog } from "@/components/projeto-detalhe/ApostaDialog";
 import { ApostaMultiplaDialog } from "@/components/projeto-detalhe/ApostaMultiplaDialog";
+import { NovaEntradaDialog, type ApostaParaEditar } from "@/components/projeto-detalhe/NovaEntradaDialog";
 import { ResultadoPill } from "@/components/projeto-detalhe/ResultadoPill";
 import {
   Select,
