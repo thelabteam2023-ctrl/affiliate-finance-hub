@@ -131,6 +131,37 @@ interface NovaEntradaDialogProps {
   projetoId: string;
   estrategia: ApostaEstrategia; // VALUEBET ou SUREBET (modo simples)
   onCreated?: () => void;
+  /** Quando definido, abre o formulário em MODO EDIÇÃO pré-preenchido com a aposta. */
+  apostaParaEditar?: ApostaParaEditar | null;
+}
+
+/**
+ * Subset da aposta usado para abrir o formulário em modo edição.
+ * Campos financeiros sensíveis (stake/bookmaker/data/moeda) NÃO são editados
+ * por aqui — esses ficam read-only para preservar o motor de ledger.
+ */
+export interface ApostaParaEditar {
+  id: string;
+  status?: string | null;
+  evento: string;
+  esporte: string;
+  liga?: string | null;
+  data_aposta: string;
+  bookmaker_id: string;
+  moeda_operacao?: string | null;
+  odd: number;
+  stake: number;
+  fonte_entrada?: string | null;
+  modelo_aposta?: string | null;
+  fair_value?: number | null;
+  mercado_categoria?: string | null;
+  mercado_objeto?: string | null;
+  mercado_formato?: string | null;
+  mercado_direcao?: string | null;
+  mercado_linha?: number | null;
+  mercado_display?: string | null;
+  time_casa?: string | null;
+  time_fora?: string | null;
 }
 
 function calcEdge(odd: number | null, fair: number | null): number | null {
@@ -167,10 +198,18 @@ interface OcrCascadeTarget {
   apostaVisitante: string | null;
 }
 
-export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, onCreated }: NovaEntradaDialogProps) {
+export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, onCreated, apostaParaEditar }: NovaEntradaDialogProps) {
   const { user, workspaceId } = useAuth();
   const queryClient = useQueryClient();
   const { getEffectiveRate } = useProjetoWorkingRates(projetoId);
+
+  // ---------- Modo edição ----------
+  const isEdit = !!apostaParaEditar;
+  // Permite editar campos financeiros apenas quando a aposta ainda está PENDENTE.
+  // (Por segurança do ledger, mantemos stake/bookmaker/data/moeda read-only mesmo em PENDENTE neste primeiro corte.)
+  // Ref para sinalizar aos efeitos de reset (esporte/categoria) que estamos em pré-preenchimento de edição.
+  const pendingEditRef = useRef<string | null>(null);
+  const editPrefilledRef = useRef<string | null>(null);
 
   // ---------- Form state ----------
   const [fonteEntrada, setFonteEntrada] = useState<string | null>(null);
