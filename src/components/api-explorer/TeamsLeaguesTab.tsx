@@ -674,7 +674,7 @@ export default function TeamsLeaguesTab() {
                   className="h-9 pl-8 w-[200px]"
                 />
               </div>
-              <Select value={teamSportFilter} onValueChange={setTeamSportFilter}>
+              <Select value={teamSportFilter} onValueChange={(v) => { setTeamSportFilter(v); setTeamCountryFilter("all"); setTeamLeagueFilter("all"); }}>
                 <SelectTrigger className="w-[150px] h-9"><SelectValue placeholder="Esporte" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os esportes</SelectItem>
