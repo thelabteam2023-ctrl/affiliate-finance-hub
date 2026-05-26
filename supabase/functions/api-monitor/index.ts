@@ -389,6 +389,11 @@ Deno.serve(async (req) => {
         })());
         return new Response(JSON.stringify({ success: true, result: { queued: true, message: 'Sincronização completa iniciada (todas as ligas, ~30 créditos).' } }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
+
+      if (job === 'sync_league_teams') {
+        const { leagueKey } = await Promise.resolve({ leagueKey: (request as any).__leagueKey });
+        // leagueKey já lido no body acima — reparse
+      }
     }
 
     return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
