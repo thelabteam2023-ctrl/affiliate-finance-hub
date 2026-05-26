@@ -600,6 +600,16 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
                 {previewMercado}
               </div>
             )}
+
+            {(ocrHintMercado || ocrHintAposta) && (
+              <div className="text-[10px] text-amber-500/90 bg-amber-500/5 border border-amber-500/20 rounded px-2 py-1 leading-snug">
+                <div className="uppercase tracking-wider text-[9px] text-amber-500/70 mb-0.5">
+                  OCR detectou
+                </div>
+                {ocrHintMercado && <div>Mercado: <span className="text-foreground/80">{ocrHintMercado}</span></div>}
+                {ocrHintAposta && <div>Aposta: <span className="text-foreground/80">{ocrHintAposta}</span></div>}
+              </div>
+            )}
           </div>
 
           {/* Casa de apostas — mesmo componente canônico dos outros formulários */}
