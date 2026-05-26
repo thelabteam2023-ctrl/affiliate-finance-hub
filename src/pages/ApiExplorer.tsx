@@ -46,6 +46,7 @@ import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import TeamsLeaguesTab from '@/components/api-explorer/TeamsLeaguesTab';
+import { useLogoFallback } from '@/hooks/useLogoFallback';
 
 // Sports mapping
 const TRADITIONAL_SPORTS = [
@@ -178,6 +179,9 @@ export default function ApiExplorer() {
     type: 'all',
     date: format(new Date(), 'yyyy-MM-dd')
   });
+
+  // Fallback de logos a partir do cache local (team_logos / league_logos)
+  const { getTeamLogo, getLeagueLogo } = useLogoFallback(selectedSport);
 
   // Set TopBar
   useEffect(() => {
