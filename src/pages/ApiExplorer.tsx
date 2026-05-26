@@ -843,7 +843,9 @@ export default function ApiExplorer() {
 
         {/* MAIN FEED */}
         <div className="space-y-6">
-          {activeTab === 'matches' ? (
+          {activeTab === 'teams' ? (
+            <TeamsLeaguesTab />
+          ) : activeTab === 'matches' ? (
             <div className="space-y-10">
               {loading ? (
                 <div className="py-20 flex flex-col items-center justify-center gap-4">
