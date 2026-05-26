@@ -298,6 +298,15 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     const linhaSign = extractLinhaFromAposta(sel); // preserva o sinal (+/-) exato
     const cat = mercadoTxt ? inferCategoriaFromMercado(mercadoTxt) : null;
     if (cat) {
+      // Reset dos campos derivados ANTES de agendar o novo OCR — garante que,
+      // mesmo que a categoria/mercado coincidam com o OCR anterior, o Passo 1
+      // re-executa (mercadoSel volta a null) e o Passo 2 sobrescreve linha/
+      // direção/formato com os novos valores do print.
+      setMercadoSel(null);
+      setFormato("");
+      setDirecao("");
+      setLinha("");
+      mercadoSetByOcrRef.current = false;
       // Texto do mercado *sem* a palavra da categoria, p/ casar com "objeto" depois
       const mercadoText = stripAccents(mercadoTxt)
         // remove a palavra-chave de categoria
