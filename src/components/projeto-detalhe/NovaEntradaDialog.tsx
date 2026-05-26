@@ -300,8 +300,13 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     if (cat) {
       // Texto do mercado *sem* a palavra da categoria, p/ casar com "objeto" depois
       const mercadoText = stripAccents(mercadoTxt)
+        // remove a palavra-chave de categoria
         .replace(/handicap|spread|puck\s*line|run\s*line|total|over|under|vencedor|moneyline|resultado/g, "")
-        .replace(/\bde\b|\bdo\b|\bda\b/g, "")
+        // remove rótulos de FORMATO (não fazem parte do "objeto")
+        .replace(/\basiatico\b|\beuropeu\b|\basian\b|\beuropean\b/g, "")
+        // remove conectivos e marcadores comuns (ex.: "(1x2)", "match winner")
+        .replace(/\bde\b|\bdo\b|\bda\b|\bfinal\b|\bmatch\b|\bwinner\b/g, "")
+        .replace(/[()]/g, " ")
         .trim();
       pendingOcrRef.current = {
         categoria: cat,
