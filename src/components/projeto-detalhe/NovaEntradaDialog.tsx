@@ -596,8 +596,13 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     // Formato (Asiático / Europeu): se há marcador no texto do mercado, usa-o
     const opts = mercadoSel.formato_opcoes || [];
     if (opts.length > 1) {
-      const m = stripAccents(t.mercadoText);
-      const matched = opts.find((o) => m.includes(stripAccents(o)));
+      // Usa o texto cru (mercadoTextRaw) — o `mercadoText` tem "asiatico/europeu" removidos
+      const m = stripAccents(t.mercadoTextRaw || t.mercadoText).toLowerCase();
+      const matched =
+        opts.find((o) => m.includes(stripAccents(o).toLowerCase())) ||
+        // fallbacks comuns: "asian" / "european" em inglês
+        (/(asiatic|asian)/.test(m) ? opts.find((o) => /asiatic|asian/i.test(stripAccents(o))) : null) ||
+        (/(europ)/.test(m) ? opts.find((o) => /europ/i.test(stripAccents(o))) : null);
       if (matched) setFormato(matched);
     }
     // Direção: tenta casar pelo nome do time, depois por Over/Under/Sim/Não
