@@ -6,11 +6,11 @@ const FN_NAME = 'api-monitor';
 
 const API_SPORTS_ENDPOINTS: Record<string, string> = {
   soccer:           'https://v3.football.api-sports.io',
-  basketball:       'https://v3.basketball.api-sports.io',
-  icehockey:        'https://v3.hockey.api-sports.io',
-  baseball:         'https://v3.baseball.api-sports.io',
-  americanfootball: 'https://v3.american-football.api-sports.io',
-  tennis:           'https://v3.tennis.api-sports.io',
+  basketball:       'https://v1.basketball.api-sports.io',
+  icehockey:        'https://v1.hockey.api-sports.io',
+  baseball:         'https://v1.baseball.api-sports.io',
+  americanfootball: 'https://v1.american-football.api-sports.io',
+  tennis:           'https://v1.tennis.api-sports.io',
 };
 
 const LEAGUE_LOGO_BASE_URLS: Record<string, string> = {
@@ -116,15 +116,20 @@ async function syncLeagueTeamsBulk(
   country?: string,
 ) {
   const apiEndpoint = API_SPORTS_ENDPOINTS[sport] || API_SPORTS_ENDPOINTS.soccer;
-  // Tenta a temporada configurada e faz fallback para a anterior se vier vazia
-  const seasonsToTry = Array.from(new Set([season, season - 1])).filter((s) => s > 2000);
+  // Esportes que usam season no formato "YYYY-YYYY" (NBA, NHL, NFL, etc.)
+  const usesRangeSeason = ['basketball', 'icehockey', 'americanfootball'].includes(sport);
+  const formatSeason = (s: number) =>
+    usesRangeSeason ? `${s}-${s + 1}` : String(s);
+  // Tenta a temporada atual + 2 anteriores (cobre ligas com calendário cruzado e ligas brasileiras anuais)
+  const seasonsToTry = Array.from(new Set([season, season - 1, season - 2])).filter((s) => s > 2000);
   let result: any = null;
-  let usedSeason = season;
+  let usedSeason: number | string = formatSeason(season);
 
   try {
     for (const s of seasonsToTry) {
-      const url = `${apiEndpoint}/teams?league=${leagueId}&season=${s}`;
-      console.log(`[BULK SYNC] ${leagueKey} (league=${leagueId}, season=${s}, sport=${sport})`);
+      const seasonParam = formatSeason(s);
+      const url = `${apiEndpoint}/teams?league=${leagueId}&season=${encodeURIComponent(seasonParam)}`;
+      console.log(`[BULK SYNC] ${leagueKey} (league=${leagueId}, season=${seasonParam}, sport=${sport})`);
       result = await callExternalApi({
         apiName: 'api_football',
         endpoint: url,
@@ -133,10 +138,10 @@ async function syncLeagueTeamsBulk(
         triggeredBy: 'manual'
       });
       if (result.data?.response?.length) {
-        usedSeason = s;
+        usedSeason = seasonParam;
         break;
       }
-      console.warn(`[BULK SYNC] ${leagueKey} season=${s}: vazio${result.errorMessage ? ` (${result.errorMessage})` : ''}`);
+      console.warn(`[BULK SYNC] ${leagueKey} season=${seasonParam}: vazio${result.errorMessage ? ` (${result.errorMessage})` : ''}`);
     }
 
     if (!result?.data?.response?.length) {
