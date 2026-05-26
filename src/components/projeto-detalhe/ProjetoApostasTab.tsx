@@ -126,9 +126,17 @@ interface Aposta {
   is_novo_formulario?: boolean | null;
   mercado_categoria?: string | null;
   mercado_objeto?: string | null;
+  mercado_formato?: string | null;
   mercado_direcao?: string | null;
   mercado_linha?: number | null;
   mercado_display?: string | null;
+  liga?: string | null;
+  fair_value?: number | null;
+  edge_percentual?: number | null;
+  modelo_aposta?: string | null;
+  time_casa?: string | null;
+  time_fora?: string | null;
+  fonte_entrada?: string | null;
   // Campos de consolidação multi-moeda
   moeda_operacao?: string | null;
   stake_consolidado?: number | null;
