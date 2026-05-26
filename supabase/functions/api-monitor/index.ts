@@ -124,9 +124,13 @@ async function syncLeagueTeamsBulk(
   const usesRangeSeason = sport === 'basketball';
   const formatSeason = (s: number) =>
     usesRangeSeason ? `${s}-${s + 1}` : String(s);
-  // Plano free da API-Sports só libera até 2024. Começa em 2024 e cai até 2022.
-  // Se vier season>2024, força teto em 2024 para evitar erro "Free plans do not have access".
-  const startSeason = Math.min(season, 2024);
+  // Plano free da API-Sports só libera até 2024 (configurável via API_SPORTS_MAX_SEASON).
+  // Quando o usuário fizer upgrade, basta definir o secret API_SPORTS_MAX_SEASON=2026.
+  const maxSeasonEnv = Number(Deno.env.get('API_SPORTS_MAX_SEASON'));
+  const maxSeason = Number.isFinite(maxSeasonEnv) && maxSeasonEnv > 2000
+    ? maxSeasonEnv
+    : 2024;
+  const startSeason = Math.min(season, maxSeason);
   const seasonsToTry = Array.from(
     new Set([startSeason, startSeason - 1, startSeason - 2]),
   ).filter((s) => s > 2000);
