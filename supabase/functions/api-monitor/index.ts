@@ -6,11 +6,11 @@ const FN_NAME = 'api-monitor';
 
 const API_SPORTS_ENDPOINTS: Record<string, string> = {
   soccer:           'https://v3.football.api-sports.io',
-  basketball:       'https://v3.basketball.api-sports.io',
-  icehockey:        'https://v3.hockey.api-sports.io',
-  baseball:         'https://v3.baseball.api-sports.io',
-  americanfootball: 'https://v3.american-football.api-sports.io',
-  tennis:           'https://v3.tennis.api-sports.io',
+  basketball:       'https://v1.basketball.api-sports.io',
+  icehockey:        'https://v1.hockey.api-sports.io',
+  baseball:         'https://v1.baseball.api-sports.io',
+  americanfootball: 'https://v1.american-football.api-sports.io',
+  tennis:           'https://v1.tennis.api-sports.io',
 };
 
 const LEAGUE_LOGO_BASE_URLS: Record<string, string> = {
