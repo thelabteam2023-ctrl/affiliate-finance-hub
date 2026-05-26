@@ -1764,6 +1764,12 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                    stake_freebet: aposta.stake_freebet ?? null,
                    pl_consolidado: aposta.pl_consolidado ?? undefined,
                    stake_consolidado: aposta.stake_consolidado ?? undefined,
+                    is_novo_formulario: aposta.is_novo_formulario ?? null,
+                    mercado_categoria: aposta.mercado_categoria ?? null,
+                    mercado_objeto: aposta.mercado_objeto ?? null,
+                    mercado_direcao: aposta.mercado_direcao ?? null,
+                    mercado_linha: aposta.mercado_linha ?? null,
+                    mercado_display: aposta.mercado_display ?? null,
                  };
               
               return (
