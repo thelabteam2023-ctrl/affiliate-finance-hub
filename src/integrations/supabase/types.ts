@@ -15616,6 +15616,7 @@ export type Database = {
         Args: { p_perna_id: string }
         Returns: Json
       }
+      backfill_daily_event_logos: { Args: { p_date?: string }; Returns: Json }
       bookmaker_pode_operar: {
         Args: { p_bookmaker_id: string }
         Returns: boolean
@@ -16736,6 +16737,7 @@ export type Database = {
         Args: { p_reason?: string; p_topic_id: string }
         Returns: Json
       }
+      normalize_team_name: { Args: { name: string }; Returns: string }
       normalize_text: { Args: { input_text: string }; Returns: string }
       operator_has_project_access: {
         Args: { _project_id: string; _user_id: string }
