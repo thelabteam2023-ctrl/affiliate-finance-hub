@@ -1035,6 +1035,113 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
           </div>
         </div>
 
+        {/* DEBUG PANEL — dev only */}
+        {DEBUG && (
+          <div className="border-t border-border/50 bg-black/40 text-[10px] font-mono">
+            <button
+              type="button"
+              onClick={() => setDebugOpen((v) => !v)}
+              className="w-full flex items-center justify-between px-4 py-1.5 text-amber-400/90 hover:bg-amber-500/5"
+            >
+              <span>{debugOpen ? "▼" : "▶"} Debug OCR & Cascata</span>
+              <span className="text-muted-foreground/60">
+                p0:{debugTicks.passo0.count} p1:{debugTicks.passo1.count} rst:{debugTicks.reset.count} p2:{debugTicks.passo2.count}
+              </span>
+            </button>
+            {debugOpen && (() => {
+              const pending = pendingOcrRef.current;
+              const mercadoOk = !!mercadoSel;
+              const direcaoMissing = mercadoOk && !direcao;
+              const linhaMissing = mercadoOk && mercadoSel!.tem_linha && !linha;
+              const fmtTick = (t: DebugTick, expected: boolean) => {
+                const ok = t.count > 0;
+                const mark = ok ? "✓" : expected ? "✗" : "·";
+                const color = ok
+                  ? "text-emerald-400"
+                  : expected
+                  ? "text-red-400"
+                  : "text-muted-foreground/50";
+                const when = t.lastAt ? new Date(t.lastAt).toLocaleTimeString() : "—";
+                return (
+                  <span className={color}>
+                    {mark} {t.count}x {t.lastAt ? `@ ${when}` : ""} {t.note ? `· ${t.note}` : ""}
+                  </span>
+                );
+              };
+              const row = (
+                label: string,
+                value: React.ReactNode,
+                highlight: boolean = false,
+              ) => (
+                <div className="grid grid-cols-[140px_1fr] gap-2 px-4 py-1 border-t border-border/20">
+                  <span className="text-muted-foreground/70">{label}</span>
+                  <span
+                    className={cn(
+                      "break-all whitespace-pre-wrap",
+                      highlight ? "text-red-400" : "text-foreground/90",
+                    )}
+                  >
+                    {value ?? <span className="text-muted-foreground/40">—</span>}
+                  </span>
+                </div>
+              );
+              const ocrExpected = !!pending || mercadoSetByOcrRef.current ||
+                debugTicks.passo0.count + debugTicks.passo1.count + debugTicks.passo2.count > 0;
+              return (
+                <div className="pb-2">
+                  <div className="flex justify-end px-4 py-1">
+                    <button
+                      type="button"
+                      onClick={resetDebugTracking}
+                      className="text-[10px] px-2 py-0.5 rounded border border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                    >
+                      Resetar rastreio
+                    </button>
+                  </div>
+                  {row(
+                    "pendingOcrRef",
+                    pending
+                      ? JSON.stringify(
+                          {
+                            categoria: pending.categoria,
+                            mercadoText: pending.mercadoText,
+                            apostaText: pending.apostaText,
+                            linha: pending.linha,
+                            mandante: pending.apostaMandante,
+                            visitante: pending.apostaVisitante,
+                          },
+                          null,
+                          2,
+                        )
+                      : null,
+                  )}
+                  {row("mercadoSetByOcr", String(mercadoSetByOcrRef.current))}
+                  {row("categoriaOptions", JSON.stringify(categoriaOptions))}
+                  {row("categoria", categoria || null)}
+                  {row(
+                    "objetosOptions",
+                    JSON.stringify(objetosOptions.map((o) => o.display_nome)),
+                  )}
+                  {row("mercadoSel", mercadoSel?.display_nome || null)}
+                  {row(
+                    "direcaoOptions",
+                    JSON.stringify(direcaoOptionsDisplay.map((d) => d.label)),
+                  )}
+                  {row("direcao", direcao || null, direcaoMissing)}
+                  {row("formato", formato || null)}
+                  {row("linha", linha || null, linhaMissing)}
+                  <div className="border-t border-border/40 mt-1 pt-1">
+                    {row("Passo 0 (categoria)", fmtTick(debugTicks.passo0, ocrExpected))}
+                    {row("Passo 1 (mercado)", fmtTick(debugTicks.passo1, ocrExpected))}
+                    {row("Reset mercadoSel", fmtTick(debugTicks.reset, debugTicks.passo1.count > 0))}
+                    {row("Passo 2 (dir/linha)", fmtTick(debugTicks.passo2, ocrExpected))}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
         {/* Footer */}
         <div className="px-4 py-3 border-t border-border/50 flex justify-end gap-2 bg-muted/10">
           <Button variant="ghost" size="sm" onClick={handleClose} disabled={saving} className="h-8 text-xs">
