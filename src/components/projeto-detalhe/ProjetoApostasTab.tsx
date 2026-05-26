@@ -1916,7 +1916,10 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
             if (!o) setEditingNovaEntrada(null);
           }}
           projetoId={projetoId}
-          estrategia={(editingNovaEntrada.estrategia as any) || "VALUEBET"}
+          // Estratégia FIXA pela instância (aba) — não pode ser sobrescrita pelo
+          // valor armazenado na aposta. Hoje a edição de Nova Entrada só ocorre
+          // dentro da aba ValueBet, então forçamos "VALUEBET" como referência.
+          estrategia={"VALUEBET" as any}
           apostaParaEditar={editingNovaEntrada}
           onCreated={fetchApostas}
         />
