@@ -19,6 +19,7 @@ import { useProjetoWorkingRates } from "@/hooks/useProjetoWorkingRates";
 import { useBookmakerSaldosQuery } from "@/hooks/useBookmakerSaldosQuery";
 import { BookmakerSelectTrigger } from "@/components/bookmakers/BookmakerSelectOption";
 import { BookmakerSearchableSelectContent } from "@/components/bookmakers/BookmakerSearchableSelectContent";
+import { NovaEntradaDiagnostico, type DiagnosticoPayload } from "./NovaEntradaDiagnostico";
 
 type Resultado = "PENDENTE" | "GREEN" | "RED" | "MEIO_GREEN" | "MEIO_RED" | "VOID";
 
@@ -215,6 +216,10 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [ocrHintMercado, setOcrHintMercado] = useState<string | null>(null);
   const [ocrHintAposta, setOcrHintAposta] = useState<string | null>(null);
+
+  // Painel de diagnóstico autônomo (não-bloqueante) — surge automaticamente
+  // após o submit (sucesso ou erro) e se auto-fecha em 30s.
+  const [diagnostico, setDiagnostico] = useState<DiagnosticoPayload | null>(null);
 
   // Alvo pendente de auto-preenchimento da cascata (consumido pelos efeitos abaixo)
   const pendingOcrRef = useRef<OcrCascadeTarget | null>(null);
@@ -828,6 +833,20 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
 
       if (!result.success || !result.data?.id) {
         toast.error(result.error?.message || "Falha ao registrar entrada");
+        setDiagnostico({
+          timestamp: new Date().toISOString(),
+          id_gerado: null,
+          erro: result.error?.message || "Falha ao registrar entrada (sem id)",
+          campos_analiticos: {
+            is_novo_formulario: true,
+            mercado_categoria: mercadoSel.categoria,
+            mercado_objeto: mercadoSel.objeto,
+            mercado_display: previewMercado,
+            estrategia,
+            projeto_id: projetoId,
+          },
+          estrategia_esperada: estrategia,
+        });
         setSaving(false);
         return;
       }
@@ -863,11 +882,39 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
       await queryClient.invalidateQueries({ queryKey: ["apostas-projeto", projetoId] });
       await queryClient.invalidateQueries({ queryKey: ["apostas_unificada"] });
       onCreated?.();
+      setDiagnostico({
+        timestamp: new Date().toISOString(),
+        id_gerado: apostaId,
+        erro: null,
+        campos_analiticos: {
+          is_novo_formulario: true,
+          mercado_categoria: mercadoSel.categoria,
+          mercado_objeto: mercadoSel.objeto,
+          mercado_display: previewMercado,
+          estrategia,
+          projeto_id: projetoId,
+        },
+        estrategia_esperada: estrategia,
+      });
       handleReset();
       onOpenChange(false);
     } catch (err: any) {
       console.error("[NovaEntradaDialog] erro:", err);
       toast.error(err?.message || "Erro inesperado");
+      setDiagnostico({
+        timestamp: new Date().toISOString(),
+        id_gerado: null,
+        erro: err?.message || String(err) || "Erro inesperado",
+        campos_analiticos: {
+          is_novo_formulario: true,
+          mercado_categoria: mercadoSel?.categoria ?? null,
+          mercado_objeto: mercadoSel?.objeto ?? null,
+          mercado_display: previewMercado,
+          estrategia,
+          projeto_id: projetoId,
+        },
+        estrategia_esperada: estrategia,
+      });
     } finally {
       setSaving(false);
     }
@@ -875,6 +922,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
 
   // ---------- Render ----------
   return (
+    <>
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-[480px] p-0 gap-0 bg-card border-border">
         <DialogHeader className="px-4 pt-4 pb-2">
@@ -1384,5 +1432,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
         </div>
       </DialogContent>
     </Dialog>
+    <NovaEntradaDiagnostico diag={diagnostico} onClose={() => setDiagnostico(null)} />
+    </>
   );
 }
