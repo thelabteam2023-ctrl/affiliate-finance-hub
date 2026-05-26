@@ -536,6 +536,14 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
   }, [esporte]);
 
   useEffect(() => {
+    // Se o OCR está em curso e a categoria recém-aplicada é a alvo, NÃO resetar:
+    // Passo 1 (que roda no mesmo commit) vai setar mercadoSel — limpar aqui
+    // sobrescreve o valor dele e quebra a cascata.
+    const t = pendingOcrRef.current;
+    if (t && categoria === t.categoria) {
+      bumpDebug("reset", "pulou reset [categoria] (ocr pendente)");
+      return;
+    }
     setMercadoSel(null);
     setFormato("");
     setDirecao("");
