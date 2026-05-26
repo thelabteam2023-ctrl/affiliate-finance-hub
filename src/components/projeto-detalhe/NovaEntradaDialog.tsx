@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1070,7 +1070,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
               };
               const row = (
                 label: string,
-                value: React.ReactNode,
+                value: ReactNode,
                 highlight: boolean = false,
               ) => (
                 <div className="grid grid-cols-[140px_1fr] gap-2 px-4 py-1 border-t border-border/20">
