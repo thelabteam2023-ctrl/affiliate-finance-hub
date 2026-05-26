@@ -12,9 +12,11 @@ interface ParsedBetSlip {
   visitante: ParsedField;
   dataHora: ParsedField;
   esporte: ParsedField;
+  liga: ParsedField;
   mercado: ParsedField;
   selecao: ParsedField;
   odd: ParsedField;
+  fairValue: ParsedField;
   stake: ParsedField;
   retorno: ParsedField;
   resultado: ParsedField;
@@ -328,9 +330,11 @@ FORMATO DE RESPOSTA (JSON estrito):
   "visitante": { "value": "NOME DO TIME VISITANTE ou null", "confidence": "high|medium|low|none" },
   "dataHora": { "value": "YYYY-MM-DDTHH:mm ou null", "confidence": "high|medium|low|none" },
   "esporte": { "value": "NOME DO ESPORTE DA LISTA ou null", "confidence": "high|medium|low|none" },
+  "liga": { "value": "NOME COMPLETO DA LIGA/COMPETIÇÃO ou null", "confidence": "high|medium|low|none" },
   "mercado": { "value": "TEXTO EXATO DO MERCADO COMO APARECE NO PRINT ou null", "confidence": "high|medium|low|none" },
   "selecao": { "value": "TEXTO DA SELEÇÃO ou null", "confidence": "high|medium|low|none" },
   "odd": { "value": "VALOR NUMÉRICO DA ODD ou null", "confidence": "high|medium|low|none" },
+  "fairValue": { "value": "ODD JUSTA / FAIR VALUE numérico ou null", "confidence": "high|medium|low|none" },
   "stake": { "value": "VALOR NUMÉRICO APOSTADO ou null", "confidence": "high|medium|low|none" },
   "retorno": { "value": "VALOR NUMÉRICO DO RETORNO ou null", "confidence": "high|medium|low|none" },
   "resultado": { "value": "GREEN|RED|VOID ou null se pendente", "confidence": "high|medium|low|none" },
@@ -345,6 +349,23 @@ Nível de confiança:
 
 DICA: Em boletins de apostas, a ODD geralmente aparece em verde/destaque próximo à seleção com formato decimal (2.90). O STAKE é o valor apostado que aparece na lateral ou rodapé (ex: 120.00). O RETORNO é calculado como stake * odd.`;
 
+    // Append PT-BR value-bet software label hints to the system prompt
+    const valueBetHints = `\n\nREGRAS ESPECIAIS — PRINTS DE SOFTWARES DE VALUE BET (RebelBetting, OddsNotifier, OddsHunter, OddsJam — interface em português):
+Estes prints normalmente NÃO mostram stake nem retorno, e usam os seguintes rótulos em português que você DEVE reconhecer literalmente:
+- "Mercado:"          → preenche o campo "mercado" (texto completo após os dois pontos, ex: "Handicap de Mapas")
+- "Aposta:"           → preenche o campo "selecao" (texto completo após os dois pontos, ex: "Karmine Corp Blue (+1.5)")
+- "Odd oferecida:"    → preenche o campo "odd"
+- "Odd justa:"        → preenche o campo "fairValue" (NÃO confunda com a odd oferecida)
+- "Prob. implícita:"  → IGNORAR (não retornar)
+- "Prob. justa:"      → IGNORAR (não retornar)
+- "Liga:" ou texto da liga abaixo do esporte → preenche "liga" (capture o nome COMPLETO mesmo que esteja truncado com "...", ex: "League of Legends")
+- Cabeçalho com nomes dos times no formato "Time A vs Time B" → preenche "mandante" e "visitante"
+- Data no formato "27 May · 13:00" ou similar → preenche "dataHora" (ano = ${currentYear} se ausente)
+- Esporte mostrado como "E-Sports" → use a liga para inferir o esporte específico (ex: "League of Legends", "Counter-Strike", "Dota 2", "Valorant"); se não der, retorne o esporte específico da liga
+- Casa de apostas em badge verde no topo (ex: "Bet365", "Betano", "Pinnacle") → preenche "bookmakerNome"
+- Nestes prints, "stake" e "retorno" geralmente são null/none — NÃO invente valores`;
+    const finalSystemPrompt = isMultipla ? systemPrompt : systemPrompt + valueBetHints;
+
     const userPrompt = isMultipla 
       ? "Analise este print de APOSTA MÚLTIPLA (combinada/acumuladora) e extraia as informações de TODAS as seleções. Retorne APENAS o JSON, sem explicações adicionais."
       : "Analise este print de boletim de aposta e extraia as informações de contexto. Retorne APENAS o JSON, sem explicações adicionais.";
@@ -358,7 +379,7 @@ DICA: Em boletins de apostas, a ODD geralmente aparece em verde/destaque próxim
       body: JSON.stringify({
         model: aiModel,
         messages: [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: finalSystemPrompt },
           {
             role: "user",
             content: [
@@ -665,6 +686,14 @@ DICA: Em boletins de apostas, a ODD geralmente aparece em verde/destaque próxim
       parsedData.odd.value = normalizeNumericString(parsedData.odd?.value, 5);
       parsedData.stake.value = normalizeNumericString(parsedData.stake?.value);
       parsedData.retorno.value = normalizeNumericString(parsedData.retorno?.value);
+      if (parsedData.fairValue) {
+        parsedData.fairValue.value = normalizeNumericString(parsedData.fairValue?.value, 5);
+      } else {
+        parsedData.fairValue = { value: null, confidence: "none" };
+      }
+      if (!parsedData.liga) {
+        parsedData.liga = { value: null, confidence: "none" };
+      }
 
       // REGRA CRÍTICA: Recalcular odd a partir de stake/retorno para máxima precisão
       const { oddValue, wasRecalculated } = recalcularOddFromStakeRetorno(

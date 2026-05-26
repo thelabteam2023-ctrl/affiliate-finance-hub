@@ -8,14 +8,17 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Sparkles, ScanText, Loader2 } from "lucide-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useMercadosBiblioteca, ESPORTES_BIBLIOTECA, MOEDAS_NOVA_ENTRADA, type MercadoBiblioteca } from "@/hooks/useMercadosBiblioteca";
+import { useMercadosBiblioteca, ESPORTES_BIBLIOTECA, type MercadoBiblioteca } from "@/hooks/useMercadosBiblioteca";
 import { FonteEntradaSelector } from "@/components/apostas/FonteEntradaSelector";
 import { criarAposta, aplicarCamposNovaEntrada } from "@/services/aposta";
 import { APOSTA_ESTRATEGIA, FORMA_REGISTRO, type ApostaEstrategia } from "@/lib/apostaConstants";
 import { useProjetoWorkingRates } from "@/hooks/useProjetoWorkingRates";
+import { useBookmakerSaldosQuery } from "@/hooks/useBookmakerSaldosQuery";
+import { BookmakerSelectTrigger } from "@/components/bookmakers/BookmakerSelectOption";
+import { BookmakerSearchableSelectContent } from "@/components/bookmakers/BookmakerSearchableSelectContent";
 
 type Resultado = "PENDENTE" | "GREEN" | "RED" | "MEIO_GREEN" | "MEIO_RED" | "VOID";
 
@@ -49,12 +52,6 @@ const RESULTADOS: { value: Resultado; label: string; className: string }[] = [
   { value: "MEIO_RED",   label: "½ Red",    className: "border-red-500/30 text-red-400/80" },
   { value: "VOID",       label: "Void",     className: "border-border text-muted-foreground" },
 ];
-
-interface Bookmaker {
-  id: string;
-  nome: string;
-  moeda: string;
-}
 
 interface NovaEntradaDialogProps {
   open: boolean;
@@ -113,6 +110,8 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
   const [saving, setSaving] = useState(false);
   const [ocrLoading, setOcrLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [ocrHintMercado, setOcrHintMercado] = useState<string | null>(null);
+  const [ocrHintAposta, setOcrHintAposta] = useState<string | null>(null);
 
   const fileToBase64 = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
@@ -156,10 +155,29 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     // Bookmaker — tenta casar pelo nome (lê via cache para evitar dependência circular)
     const bmNome = (getV(parsed.bookmakerNome) || "").toString().toLowerCase().trim();
     if (bmNome) {
-      const cachedBms = queryClient.getQueryData<Bookmaker[]>(["bookmakers-nova-entrada", projetoId]) || [];
-      const match = cachedBms.find((b) => b.nome.toLowerCase().includes(bmNome) || bmNome.includes(b.nome.toLowerCase()));
+      const cachedBms =
+        (queryClient.getQueryData<any[]>(["bookmaker-saldos", projetoId, true, null]) as any[] | undefined) ||
+        (queryClient.getQueriesData<any[]>({ queryKey: ["bookmaker-saldos", projetoId] }).flatMap(([, v]) => v || [])) ||
+        [];
+      const match = cachedBms.find((b: any) => {
+        const n = (b?.nome || "").toLowerCase();
+        return n && (n.includes(bmNome) || bmNome.includes(n));
+      });
       if (match) setBookmakerId(match.id);
     }
+    // Liga
+    const lg = getV(parsed.liga);
+    if (lg) setLiga(String(lg));
+    // Fair value (odd justa)
+    const fv = getV(parsed.fairValue);
+    if (fv) setFairValue(String(fv).replace(",", "."));
+    // Extrai linha numérica da seleção (ex: "Karmine Corp Blue (+1.5)" → "+1.5")
+    const sel = (getV(parsed.selecao) || "").toString();
+    const lineMatch = sel.match(/\(?([+-]?\d+(?:\.\d+)?)\)?\s*$/);
+    if (lineMatch) setLinha(lineMatch[1]);
+    // Hints visuais (mercado bruto + aposta bruta para o usuário casar manualmente)
+    setOcrHintMercado((getV(parsed.mercado) || "").toString() || null);
+    setOcrHintAposta(sel || null);
   };
 
   const handleOcrImage = async (file: File) => {
@@ -215,19 +233,31 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
   }, [open]);
 
   // ---------- Data ----------
-  const { data: bookmakers = [] } = useQuery<Bookmaker[]>({
-    queryKey: ["bookmakers-nova-entrada", projetoId],
-    enabled: !!projetoId && open,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("bookmakers")
-        .select("id, nome, moeda")
-        .eq("projeto_id", projetoId)
-        .order("nome");
-      if (error) throw error;
-      return (data || []) as Bookmaker[];
-    },
+  // Usa o hook canônico de saldos — mesmo componente/modelo dos outros formulários
+  const { data: bookmakerSaldos = [] } = useBookmakerSaldosQuery({
+    projetoId,
+    enabled: open,
+    includeZeroBalance: true,
   });
+  const bookmakers = useMemo(
+    () =>
+      bookmakerSaldos
+        .filter((bk) => !bk.has_pending_transactions)
+        .map((bk) => ({
+          id: bk.id,
+          nome: bk.nome,
+          parceiro_nome: bk.parceiro_nome,
+          instance_identifier: bk.instance_identifier,
+          moeda: bk.moeda,
+          logo_url: bk.logo_url,
+          saldo_operavel: bk.saldo_operavel,
+          saldo_disponivel: bk.saldo_disponivel,
+          saldo_freebet: bk.saldo_freebet,
+          saldo_bonus: bk.saldo_bonus,
+          bonus_rollover_started: bk.bonus_rollover_started,
+        })),
+    [bookmakerSaldos],
+  );
 
   const { data: mercadosByCategoria = {}, isLoading: loadingMercados } = useMercadosBiblioteca(esporte);
 
@@ -339,6 +369,8 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     setStake("");
     setModelo("pre-jogo");
     setResultado("PENDENTE");
+    setOcrHintMercado(null);
+    setOcrHintAposta(null);
   };
 
   const handleSubmit = async () => {
@@ -570,36 +602,56 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
                 {previewMercado}
               </div>
             )}
+
+            {(ocrHintMercado || ocrHintAposta) && (
+              <div className="text-[10px] text-amber-500/90 bg-amber-500/5 border border-amber-500/20 rounded px-2 py-1 leading-snug">
+                <div className="uppercase tracking-wider text-[9px] text-amber-500/70 mb-0.5">
+                  OCR detectou
+                </div>
+                {ocrHintMercado && <div>Mercado: <span className="text-foreground/80">{ocrHintMercado}</span></div>}
+                {ocrHintAposta && <div>Aposta: <span className="text-foreground/80">{ocrHintAposta}</span></div>}
+              </div>
+            )}
           </div>
 
-          {/* Casa de apostas */}
+          {/* Casa de apostas — mesmo componente canônico dos outros formulários */}
           <div className="space-y-1">
-            <Label className="text-[11px] text-muted-foreground">Casa de apostas</Label>
+            <Label className="text-[11px] text-muted-foreground">
+              Casa de apostas
+              {bookmakerId && (() => {
+                const bk = bookmakers.find((b) => b.id === bookmakerId);
+                return bk ? <span className="text-muted-foreground ml-1">({bk.moeda})</span> : null;
+              })()}
+            </Label>
             <Select value={bookmakerId} onValueChange={setBookmakerId}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecionar casa" /></SelectTrigger>
-              <SelectContent>
-                {bookmakers.map((b) => (
-                  <SelectItem key={b.id} value={b.id} className="text-xs">
-                    {b.nome} <span className="text-muted-foreground ml-1">({b.moeda})</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
+              <SelectTrigger className="h-9 text-xs w-full border-dashed">
+                <BookmakerSelectTrigger
+                  bookmaker={
+                    bookmakerId
+                      ? (() => {
+                          const bk = bookmakers.find((b) => b.id === bookmakerId);
+                          return bk
+                            ? {
+                                nome: bk.nome,
+                                parceiro_nome: bk.parceiro_nome,
+                                moeda: bk.moeda,
+                                saldo_operavel: bk.saldo_operavel,
+                                logo_url: bk.logo_url,
+                                instance_identifier: bk.instance_identifier,
+                              }
+                            : null;
+                        })()
+                      : null
+                  }
+                  placeholder="Selecionar casa"
+                />
+              </SelectTrigger>
+              <BookmakerSearchableSelectContent bookmakers={bookmakers} itemClassName="max-w-full" />
             </Select>
           </div>
 
-          {/* Moeda + Odd + Fair + Edge */}
-          <div className="grid grid-cols-4 gap-2">
-            <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground">Moeda</Label>
-              <Select value={moeda} onValueChange={setMoeda}>
-                <SelectTrigger className="h-8 text-xs px-2"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {MOEDAS_NOVA_ENTRADA.map((m) => (
-                    <SelectItem key={m.code} value={m.code} className="text-xs">{m.code}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Odd + Fair + Edge — moeda agora vem da casa (sem seletor independente) */}
+          <div className="grid grid-cols-3 gap-2">
             <div className="space-y-1">
               <Label className="text-[10px] text-muted-foreground">Odd</Label>
               <Input value={oddObtida} onChange={(e) => setOddObtida(e.target.value)} className="h-8 text-xs" inputMode="decimal" placeholder="2.00" />
