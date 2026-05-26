@@ -369,6 +369,8 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     setStake("");
     setModelo("pre-jogo");
     setResultado("PENDENTE");
+    setOcrHintMercado(null);
+    setOcrHintAposta(null);
   };
 
   const handleSubmit = async () => {
