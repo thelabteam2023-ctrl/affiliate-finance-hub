@@ -27,7 +27,48 @@ import type {
   LiquidarApostaInput,
   ApostaServiceResult,
   PernaInput,
+  NovaEntradaExtraFields,
 } from "./types";
+
+/**
+ * Aplica campos analíticos do formulário "Nova Entrada" via UPDATE.
+ * NÃO toca em campos financeiros (stake/saldo/ledger). Falha silenciosa
+ * (logged) — a aposta principal continua válida mesmo se o update fallar.
+ */
+export async function aplicarCamposNovaEntrada(
+  apostaId: string,
+  extras: NovaEntradaExtraFields
+): Promise<void> {
+  const payload: Record<string, unknown> = { is_novo_formulario: true };
+  const keys: (keyof NovaEntradaExtraFields)[] = [
+    "liga",
+    "mercado_categoria",
+    "mercado_objeto",
+    "mercado_formato",
+    "mercado_direcao",
+    "mercado_linha",
+    "mercado_display",
+    "fair_value",
+    "edge_percentual",
+    "odd_fechamento",
+    "clv_percentual",
+    "modelo_aposta",
+  ];
+  for (const k of keys) {
+    if (extras[k] !== undefined && extras[k] !== null && extras[k] !== "") {
+      payload[k] = extras[k];
+    }
+  }
+
+  const { error } = await supabase
+    .from("apostas_unificada")
+    .update(payload as any)
+    .eq("id", apostaId);
+
+  if (error) {
+    console.warn("[ApostaService] Falha ao aplicar campos Nova Entrada (não-bloqueante):", error);
+  }
+}
 
 // ============================================================================
 // HELPERS
