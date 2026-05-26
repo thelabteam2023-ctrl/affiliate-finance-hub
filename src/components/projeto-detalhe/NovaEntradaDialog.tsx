@@ -609,6 +609,12 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
 
   // Reset cascade dependents when esporte or categoria changes
   useEffect(() => {
+    // Se há OCR pendente, NÃO resetar — o applyOcrParsed já limpou os campos
+    // necessários e o Passo 0/1 vai preencher categoria/mercado no mesmo ciclo.
+    if (pendingOcrRef.current) {
+      bumpDebug("reset", "pulou reset [esporte] (ocr pendente)");
+      return;
+    }
     setCategoria("");
     setMercadoSel(null);
     setFormato("");
