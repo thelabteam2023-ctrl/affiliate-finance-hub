@@ -331,10 +331,12 @@ export default function ApiExplorer() {
       const today = new Date();
       const todayStr = format(today, 'yyyy-MM-dd');
       const tomorrowStr = format(new Date(new Date().setDate(today.getDate() + 1)), 'yyyy-MM-dd');
+      const yesterdayStr = format(new Date(new Date().setDate(today.getDate() - 1)), 'yyyy-MM-dd');
       
       let matchTime = false;
       if (timeFilter === 'today') matchTime = localDateStr === todayStr;
       else if (timeFilter === 'tomorrow') matchTime = localDateStr === tomorrowStr;
+      else if (timeFilter === 'yesterday') matchTime = localDateStr === yesterdayStr;
       else if (timeFilter === 'upcoming') matchTime = localDateStr > tomorrowStr;
       else if (timeFilter === 'custom') matchTime = localDateStr === customDate;
       
@@ -478,6 +480,7 @@ export default function ApiExplorer() {
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl border border-border/20 shadow-sm">
               {[
+                { id: 'yesterday', label: 'Ontem' },
                 { id: 'today', label: 'Hoje' },
                 { id: 'tomorrow', label: 'Amanhã' },
                 { id: 'upcoming', label: 'Próximos' }
