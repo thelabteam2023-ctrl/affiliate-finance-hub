@@ -34,6 +34,21 @@ function normalizeTeamName(name: string): string {
     .trim();
 }
 
+function normalizeTeamMatchKey(name: string): string {
+  if (!name) return '';
+  const stopWords = new Set(['fc', 'cf', 'cd', 'sc', 'ac', 'club', 'de', 'da', 'do', 'del', 'di', 'du', 'la', 'le', 'el', 'the']);
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter((token) => token && !stopWords.has(token))
+    .sort()
+    .join('');
+}
+
 // Lista de ligas para o Odds API (configuração estática básica)
 const ALL_LEAGUES = [
   { sport: 'soccer', key: 'soccer_brazil_campeonato', name: 'Brasileirão Série A', flag: '🇧🇷', continent: 'América do Sul', country: 'Brasil', type: 'league' },
@@ -87,6 +102,7 @@ function toApiSportsCountry(country?: string) {
  */
 async function lookupTeamLogo(supabase: any, teamName: string, leagueKey: string): Promise<string | null> {
   const normalized = normalizeTeamName(teamName);
+  const matchKey = normalizeTeamMatchKey(teamName);
   const { data } = await supabase
     .from('team_logos')
     .select('logo_url, found')
@@ -119,6 +135,28 @@ async function lookupTeamLogo(supabase: any, teamName: string, leagueKey: string
       );
       if (match) return match.logo_url;
     }
+  }
+
+  // Fallback global seguro: procura o mesmo time em outras ligas do mesmo esporte
+  // (ex.: cache nacional do Peru/Equador alimentando Libertadores/Sudamericana).
+  // Só aceita se houver um único logo distinto para evitar confundir homônimos.
+  if (matchKey.length >= 4) {
+    const sport = leagueKey.split('_')[0] || 'soccer';
+    const { data: globalRows } = await supabase
+      .from('team_logos')
+      .select('logo_url, team_name_original, found')
+      .eq('sport', sport)
+      .eq('found', true);
+    const matches = (globalRows || []).filter((r: any) => {
+      const candidateKey = normalizeTeamMatchKey(r.team_name_original || '');
+      return candidateKey && (
+        candidateKey === matchKey ||
+        candidateKey.includes(matchKey) ||
+        matchKey.includes(candidateKey)
+      );
+    });
+    const uniqueLogos = Array.from(new Set(matches.map((r: any) => r.logo_url).filter(Boolean)));
+    if (uniqueLogos.length === 1) return uniqueLogos[0] as string;
   }
   return null;
 }
