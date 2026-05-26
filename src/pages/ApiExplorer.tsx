@@ -45,6 +45,7 @@ import { format, isToday, parseISO, differenceInMinutes, startOfDay, endOfDay } 
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import TeamsLeaguesTab from '@/components/api-explorer/TeamsLeaguesTab';
 
 // Sports mapping
 const TRADITIONAL_SPORTS = [
@@ -166,7 +167,7 @@ export default function ApiExplorer() {
   const [lastSync, setLastSync] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'matches' | 'coverage'>('matches');
+  const [activeTab, setActiveTab] = useState<'matches' | 'coverage' | 'teams'>('matches');
   const [timeFilter, setTimeFilter] = useState<'today' | 'tomorrow' | 'upcoming' | 'custom'>('today');
   const [customDate, setCustomDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   
@@ -429,6 +430,17 @@ export default function ApiExplorer() {
             )}
           >
             <Globe className="h-4 w-4 mr-2" /> Cobertura
+          </Button>
+          <Button
+            variant={activeTab === 'teams' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setActiveTab('teams')}
+            className={cn(
+              "rounded-xl px-6 h-10 transition-all duration-300 font-bold",
+              activeTab === 'teams' ? "shadow-lg shadow-primary/20 scale-105" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Database className="h-4 w-4 mr-2" /> Times & Ligas
           </Button>
         </div>
 
