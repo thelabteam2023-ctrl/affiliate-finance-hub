@@ -11434,6 +11434,7 @@ export type Database = {
           league_key: string
           logo_url: string | null
           searched_at: string | null
+          short_name: string | null
           sport: string
           team_name_normalized: string
           team_name_original: string
@@ -11446,6 +11447,7 @@ export type Database = {
           league_key: string
           logo_url?: string | null
           searched_at?: string | null
+          short_name?: string | null
           sport: string
           team_name_normalized: string
           team_name_original: string
@@ -11458,11 +11460,44 @@ export type Database = {
           league_key?: string
           logo_url?: string | null
           searched_at?: string | null
+          short_name?: string | null
           sport?: string
           team_name_normalized?: string
           team_name_original?: string
         }
         Relationships: []
+      }
+      team_name_aliases: {
+        Row: {
+          alias_normalized: string
+          created_at: string | null
+          id: string
+          league_key: string
+          team_logo_id: string | null
+        }
+        Insert: {
+          alias_normalized: string
+          created_at?: string | null
+          id?: string
+          league_key: string
+          team_logo_id?: string | null
+        }
+        Update: {
+          alias_normalized?: string
+          created_at?: string | null
+          id?: string
+          league_key?: string
+          team_logo_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_name_aliases_team_logo_id_fkey"
+            columns: ["team_logo_id"]
+            isOneToOne: false
+            referencedRelation: "team_logos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       transacoes_bookmakers: {
         Row: {
@@ -16961,6 +16996,8 @@ export type Database = {
         Args: { _workspace_id: string }
         Returns: boolean
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       simulate_excluir_movimentacao_caixa: {
         Args: {
           p_actor_user_id: string

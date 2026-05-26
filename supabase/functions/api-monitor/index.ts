@@ -62,7 +62,8 @@ function chunkArray<T>(array: T[], size: number): T[][] {
 
 /**
  * Lookup de escudo via cache indexado por (league_key, nome_normalizado).
- * Sem fallbacks de busca por nome — evita colisões cross-liga (ex: Botafogo vs Lens).
+ * Ordem: (1) match exato em team_logos, (2) alias em team_name_aliases,
+ * (3) fallback substring na mesma liga. Sempre escopo por league_key.
  */
 async function lookupTeamLogo(supabase: any, teamName: string, leagueKey: string): Promise<string | null> {
   const normalized = normalizeTeamName(teamName);
@@ -73,6 +74,16 @@ async function lookupTeamLogo(supabase: any, teamName: string, leagueKey: string
     .eq('team_name_normalized', normalized)
     .maybeSingle();
   if (data?.found) return data.logo_url;
+
+  // Alias lookup: nomes divergentes Odds API vs API-Sports
+  const { data: alias } = await supabase
+    .from('team_name_aliases')
+    .select('team_logos!inner(logo_url, found)')
+    .eq('league_key', leagueKey)
+    .eq('alias_normalized', normalized)
+    .maybeSingle();
+  const aliasLogo = (alias as any)?.team_logos;
+  if (aliasLogo?.found && aliasLogo.logo_url) return aliasLogo.logo_url;
 
   // Fallback resiliente: nomes parciais (ex: "Wolves" vs "Wolverhampton Wanderers")
   if (normalized.length >= 4) {
