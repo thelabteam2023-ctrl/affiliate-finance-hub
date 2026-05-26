@@ -431,6 +431,19 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ success: true, result: { queued: true, message: 'Sincronização completa iniciada (todas as ligas, ~30 créditos).' } }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
+      if (job === 'sync_missing_only') {
+        // @ts-ignore
+        EdgeRuntime.waitUntil((async () => {
+          try {
+            const result = await syncMissingLeaguesOnly(supabase);
+            console.log(`Job sync_missing_only completed:`, result);
+            const today = new Date().toISOString().split('T')[0];
+            await supabase.rpc('backfill_daily_event_logos', { p_date: today });
+          } catch (err) { console.error('Job sync_missing_only failed:', err); }
+        })());
+        return new Response(JSON.stringify({ success: true, result: { queued: true, message: 'Sincronizando ligas faltantes em background. Atualize em ~3min.' } }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
       if (job === 'sync_league_teams') {
         if (!leagueKey) {
           return new Response(JSON.stringify({ error: 'leagueKey required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
