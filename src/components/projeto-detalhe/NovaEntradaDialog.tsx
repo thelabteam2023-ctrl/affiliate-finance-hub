@@ -211,6 +211,32 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
     bumpAt: 0,
   });
   const [debugOpen, setDebugOpen] = useState(false);
+  // Raw OCR payload retornado pela edge (último print)
+  const [debugRawOcr, setDebugRawOcr] = useState<any>(null);
+  // Histórico das últimas execuções (máx 5)
+  type DebugRun = {
+    at: number;
+    mercadoRaw: string | null;
+    apostaRaw: string | null;
+    linhaExtraida: string | null;
+    categoriaInferida: string | null;
+    needle: string | null;
+    mercadoEscolhido: string | null;
+    direcaoEscolhida: string | null;
+    linhaFinal: string | null;
+  };
+  const [debugRuns, setDebugRuns] = useState<DebugRun[]>([]);
+  const currentRunRef = useRef<DebugRun | null>(null);
+  const pushDebugRun = (patch: Partial<DebugRun>) => {
+    if (!DEBUG) return;
+    const cur = currentRunRef.current;
+    if (!cur) return;
+    Object.assign(cur, patch);
+    setDebugRuns((rs) => {
+      const others = rs.filter((r) => r.at !== cur.at);
+      return [{ ...cur }, ...others].slice(0, 5);
+    });
+  };
   const bumpDebug = (key: "passo0" | "passo1" | "reset" | "passo2", note?: string) => {
     if (!DEBUG) return;
     setDebugTicks((d) => ({
@@ -227,6 +253,9 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
       passo2: emptyTick(),
       bumpAt: Date.now(),
     });
+    setDebugRuns([]);
+    setDebugRawOcr(null);
+    currentRunRef.current = null;
   };
 
   const fileToBase64 = (file: File): Promise<string> =>
