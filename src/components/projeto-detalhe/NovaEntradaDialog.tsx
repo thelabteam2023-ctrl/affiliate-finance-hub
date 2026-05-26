@@ -701,30 +701,15 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
 
     if (mercadoSetByOcrRef.current) {
       // Veio do OCR — Passo 2 já preencheu formato/direcao/linha acima neste ciclo.
-      // Aqui só aplicamos o placeholder de linha quando o OCR não trouxe linha
-      // própria e o mercado exige uma. Em seguida, limpa flag + payload.
-      const t = pendingOcrRef.current;
-      const temLinhaOcr = t?.linha != null;
-      if (
-        !temLinhaOcr &&
-        mercadoSel.tem_linha &&
-        mercadoSel.linha_placeholder &&
-        mercadoSel.linha_placeholder !== "livre"
-      ) {
-        setLinha(mercadoSel.linha_placeholder);
-      }
+      // Em seguida, limpa flag + payload.
       mercadoSetByOcrRef.current = false;
       pendingOcrRef.current = null;
       bumpDebug("reset", "pulou reset (ocr=true) + limpou flags");
       return;
     }
 
-    // Reset normal (usuário trocou manualmente)
-    if (mercadoSel.tem_linha && mercadoSel.linha_placeholder && mercadoSel.linha_placeholder !== "livre") {
-      setLinha(mercadoSel.linha_placeholder);
-    } else {
-      setLinha("");
-    }
+    // Reset normal (usuário trocou manualmente) — linha sempre vazia
+    setLinha("");
     if (!mercadoSel.formato_opcoes || mercadoSel.formato_opcoes.length === 1) {
       setFormato(mercadoSel.formato_opcoes?.[0] || "");
     } else {
