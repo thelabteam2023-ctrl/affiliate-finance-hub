@@ -328,50 +328,16 @@ async function syncDailyEvents(supabase: any, triggeredBy: 'cron' | 'manual' = '
 
 async function syncLogosForToday(supabase: any, triggeredBy: string = 'manual') {
   const today = new Date().toISOString().split('T')[0];
-  const { data: events } = await supabase
-    .from('daily_events')
-    .select('home_team, away_team, sport, league_key, country')
-    .eq('event_date', today);
-
-  if (!events) return { updated: 0 };
-
-  // Identifica quais ligas estão ativas hoje e faz bulk sync (popula cache por league_key)
-  const activeLeagues = Array.from(new Set(events.map((e: any) => e.league_key)));
-  const { data: leagueConfigs } = await supabase
-    .from('monitored_leagues')
-    .select('league_key, api_sports_id, current_season, sport, country')
-    .in('league_key', activeLeagues)
-    .not('api_sports_id', 'is', null);
-
-  if (leagueConfigs?.length) {
-    const chunks = chunkArray(leagueConfigs, 5);
-    for (const chunk of chunks) {
-      await Promise.all(chunk.map((c: any) =>
-        syncLeagueTeamsBulk(supabase, c.sport, c.league_key, c.api_sports_id, c.current_season || 2024, c.country)
-      ));
-    }
+  // Opção rápida: aplica match exato + aliases + fallback substring em uma única RPC.
+  // Não re-chama syncLeagueTeamsBulk aqui — isso é responsabilidade do job sync_all_teams.
+  const { data, error } = await supabase.rpc('backfill_daily_event_logos', { p_date: today });
+  if (error) {
+    console.error('[syncLogosForToday] RPC error:', error.message);
+    return { updatedCount: 0 };
   }
-
-  // Atualiza eventos do dia com escudos do cache (lookup por league_key + nome)
-  const { data: eventsToUpdate } = await supabase
-    .from('daily_events')
-    .select('id, home_team, away_team, league_key')
-    .eq('event_date', today);
-
-  let updatedCount = 0;
-  for (const ev of eventsToUpdate || []) {
-    const [homeLogo, awayLogo] = await Promise.all([
-      lookupTeamLogo(supabase, ev.home_team, ev.league_key),
-      lookupTeamLogo(supabase, ev.away_team, ev.league_key),
-    ]);
-    const { error } = await supabase
-      .from('daily_events')
-      .update({ home_team_logo: homeLogo, away_team_logo: awayLogo })
-      .eq('id', ev.id);
-    if (!error) updatedCount++;
-  }
-
-  return { updatedCount };
+  const total = (data as any)?.total ?? 0;
+  console.log(`[syncLogosForToday] backfill:`, data);
+  return { updatedCount: total };
 }
 
 Deno.serve(async (req) => {
