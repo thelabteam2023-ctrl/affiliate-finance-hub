@@ -42,7 +42,7 @@ function collectErrorMessages(value: unknown): string[] {
 
 function isQuotaLikeApiSportsError(messages: string[]): boolean {
   const text = messages.join(' ').toLowerCase();
-  return /rate|quota|limit|request|usage|credit|subscription|plan|token|key|unauthori[sz]ed|forbidden/.test(text);
+  return /rate|quota|limit|request|usage|credit|subscription|plan|token|key|unauthori[sz]ed|forbidden|suspend|suspended|inactive|disabled|account/.test(text);
 }
 
 export async function callExternalApi({
