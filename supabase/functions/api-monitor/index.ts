@@ -193,6 +193,46 @@ async function syncAllTeams(supabase: any) {
   return { syncedLeagues: leagues.length, totalTeams };
 }
 
+/**
+ * Sincroniza APENAS as ligas que ainda não têm nenhum time no cache.
+ * Processa serialmente para evitar rate-limit e timeout.
+ */
+async function syncMissingLeaguesOnly(supabase: any) {
+  const { data: leagues } = await supabase
+    .from('monitored_leagues')
+    .select('league_key, sport, api_sports_id, current_season, country')
+    .eq('is_active', true)
+    .not('api_sports_id', 'is', null);
+
+  if (!leagues?.length) return { processed: 0, totalTeams: 0, skipped: 0 };
+
+  // Filtra apenas ligas com 0 times no cache
+  const { data: existing } = await supabase
+    .from('team_logos')
+    .select('league_key');
+  const hasCache = new Set<string>((existing || []).map((r: any) => r.league_key));
+  const missing = leagues.filter((l: any) => !hasCache.has(l.league_key));
+
+  console.log(`[SYNC MISSING] ${missing.length} ligas sem cache de times (de ${leagues.length} total)`);
+
+  let totalTeams = 0;
+  let processed = 0;
+  for (const lg of missing) {
+    try {
+      const saved = await syncLeagueTeamsBulk(
+        supabase, lg.sport, lg.league_key, lg.api_sports_id, lg.current_season || 2024, lg.country,
+      );
+      totalTeams += saved;
+      processed++;
+      // pequeno delay para respeitar rate-limit api-sports (free=10/min, pago=450/min)
+      await new Promise((r) => setTimeout(r, 400));
+    } catch (err) {
+      console.error(`[SYNC MISSING] erro ${lg.league_key}:`, err);
+    }
+  }
+  return { processed, totalTeams, skipped: leagues.length - missing.length };
+}
+
 async function getLeagueLogo(supabase: any, leagueKey: string, sport: string) {
   const { data: cached } = await supabase
     .from('league_logos')
@@ -389,6 +429,19 @@ Deno.serve(async (req) => {
           } catch (err) { console.error('Job sync_all_teams failed:', err); }
         })());
         return new Response(JSON.stringify({ success: true, result: { queued: true, message: 'Sincronização completa iniciada (todas as ligas, ~30 créditos).' } }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      if (job === 'sync_missing_only') {
+        // @ts-ignore
+        EdgeRuntime.waitUntil((async () => {
+          try {
+            const result = await syncMissingLeaguesOnly(supabase);
+            console.log(`Job sync_missing_only completed:`, result);
+            const today = new Date().toISOString().split('T')[0];
+            await supabase.rpc('backfill_daily_event_logos', { p_date: today });
+          } catch (err) { console.error('Job sync_missing_only failed:', err); }
+        })());
+        return new Response(JSON.stringify({ success: true, result: { queued: true, message: 'Sincronizando ligas faltantes em background. Atualize em ~3min.' } }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
       if (job === 'sync_league_teams') {
