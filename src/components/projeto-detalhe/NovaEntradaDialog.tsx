@@ -159,6 +159,7 @@ function buildMercadoDisplay(
 interface OcrCascadeTarget {
   categoria: string;
   mercadoText: string;        // texto bruto pós-categoria (ex: "de mapas")
+  mercadoTextRaw: string;     // texto cru do mercado (preserva "1º Tempo" etc.)
   apostaText: string;         // texto bruto da seleção OCR
   linha: string | null;       // ex: "+1.5"
   apostaMandante: string | null;
@@ -397,6 +398,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
       pendingOcrRef.current = {
         categoria: cat,
         mercadoText,
+        mercadoTextRaw: mercadoTxt,
         apostaText: sel,
         linha: linhaSign,
         apostaMandante: mandante ? String(mandante) : null,
