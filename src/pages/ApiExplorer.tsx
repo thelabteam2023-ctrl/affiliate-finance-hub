@@ -46,6 +46,7 @@ import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import TeamsLeaguesTab from '@/components/api-explorer/TeamsLeaguesTab';
+import { useLogoFallback } from '@/hooks/useLogoFallback';
 
 // Sports mapping
 const TRADITIONAL_SPORTS = [
@@ -178,6 +179,9 @@ export default function ApiExplorer() {
     type: 'all',
     date: format(new Date(), 'yyyy-MM-dd')
   });
+
+  // Fallback de logos a partir do cache local (team_logos / league_logos)
+  const { getTeamLogo, getLeagueLogo } = useLogoFallback(selectedSport);
 
   // Set TopBar
   useEffect(() => {
@@ -798,6 +802,8 @@ export default function ApiExplorer() {
                                       <div className="flex items-center gap-3">
                                         {firstGame?.league_logo ? (
                                           <img src={firstGame.league_logo} alt={league.league_name} className="h-6 w-6 object-contain" />
+                                        ) : getLeagueLogo(league.league_key) ? (
+                                          <img src={getLeagueLogo(league.league_key)!} alt={league.league_name} className="h-6 w-6 object-contain" />
                                         ) : (
                                           <span className="text-lg">{league.league_flag}</span>
                                         )}
@@ -885,6 +891,8 @@ export default function ApiExplorer() {
                                   <div className="flex items-center gap-2">
                                     {matches[0].league_logo ? (
                                       <img src={matches[0].league_logo} alt={leagueName} className="h-5 w-5 object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                                    ) : getLeagueLogo(matches[0].league_key) ? (
+                                      <img src={getLeagueLogo(matches[0].league_key)!} alt={leagueName} className="h-5 w-5 object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
                                     ) : (
                                       <span className="text-base">{matches[0].league_flag}</span>
                                     )}
@@ -913,14 +921,14 @@ export default function ApiExplorer() {
                                       <div className="px-6 flex flex-col gap-3">
                                         <div className="flex justify-between items-center group/team">
                                           <div className="flex items-center gap-3">
-                                            <TeamLogo name={ev.home_team} url={ev.home_team_logo} className="h-7 w-7 border-primary/10 shadow-none group-hover/team:scale-110 transition-transform" />
+                                            <TeamLogo name={ev.home_team} url={ev.home_team_logo || getTeamLogo(ev.home_team, ev.league_key)} className="h-7 w-7 border-primary/10 shadow-none group-hover/team:scale-110 transition-transform" />
                                             <span className="text-sm font-bold group-hover:text-primary transition-colors">{ev.home_team}</span>
                                           </div>
                                           {ev.result_home && <span className="font-black text-primary bg-primary/5 px-2 py-0.5 rounded text-xs">{ev.result_home}</span>}
                                         </div>
                                         <div className="flex justify-between items-center group/team">
                                           <div className="flex items-center gap-3">
-                                            <TeamLogo name={ev.away_team} url={ev.away_team_logo} className="h-7 w-7 border-primary/10 shadow-none group-hover/team:scale-110 transition-transform" />
+                                            <TeamLogo name={ev.away_team} url={ev.away_team_logo || getTeamLogo(ev.away_team, ev.league_key)} className="h-7 w-7 border-primary/10 shadow-none group-hover/team:scale-110 transition-transform" />
                                             <span className="text-sm font-bold group-hover:text-primary transition-colors">{ev.away_team}</span>
                                           </div>
                                           {ev.result_away && <span className="font-black text-primary bg-primary/5 px-2 py-0.5 rounded text-xs">{ev.result_away}</span>}
