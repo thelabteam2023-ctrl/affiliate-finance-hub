@@ -802,6 +802,8 @@ export default function ApiExplorer() {
                                       <div className="flex items-center gap-3">
                                         {firstGame?.league_logo ? (
                                           <img src={firstGame.league_logo} alt={league.league_name} className="h-6 w-6 object-contain" />
+                                        ) : getLeagueLogo(league.league_key) ? (
+                                          <img src={getLeagueLogo(league.league_key)!} alt={league.league_name} className="h-6 w-6 object-contain" />
                                         ) : (
                                           <span className="text-lg">{league.league_flag}</span>
                                         )}
