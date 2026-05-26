@@ -1916,7 +1916,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
             if (!o) setEditingNovaEntrada(null);
           }}
           projetoId={projetoId}
-          estrategia={(editingNovaEntrada.status && (editingNovaEntrada as any).estrategia) || "VALUEBET" as any}
+          estrategia={(editingNovaEntrada.estrategia as any) || "VALUEBET"}
           apostaParaEditar={editingNovaEntrada}
           onCreated={fetchApostas}
         />
