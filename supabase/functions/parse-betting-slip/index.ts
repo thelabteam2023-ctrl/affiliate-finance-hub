@@ -379,7 +379,7 @@ Estes prints normalmente NÃO mostram stake nem retorno, e usam os seguintes ró
       body: JSON.stringify({
         model: aiModel,
         messages: [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: finalSystemPrompt },
           {
             role: "user",
             content: [
