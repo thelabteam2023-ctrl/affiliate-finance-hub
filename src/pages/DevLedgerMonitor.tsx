@@ -605,7 +605,7 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
       </div>
 
       {/* Counters */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
         <Card className="bg-card">
           <CardContent className="p-3">
             <div className="flex items-center gap-2">
@@ -642,6 +642,17 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
         <Card>
           <CardContent className="p-3">
             <div className="flex items-center gap-2">
+              <History className="h-4 w-4 text-orange-500" />
+              <div>
+                <div className="text-xs text-muted-foreground">Edições auditadas</div>
+                <div className="text-lg font-bold tabular-nums">{apostaEditAudit.data?.length ?? 0}</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
               <Zap className="h-4 w-4 text-amber-500" />
               <div>
                 <div className="text-xs text-muted-foreground">RPCs (sessão)</div>
@@ -657,6 +668,7 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
         <TabsList className="self-start">
           <TabsTrigger value="ledger">Cash Ledger</TabsTrigger>
           <TabsTrigger value="apostas">Apostas</TabsTrigger>
+          <TabsTrigger value="edit-audit">Auditoria Edição</TabsTrigger>
           <TabsTrigger value="bookmakers">Saldos Bookmakers</TabsTrigger>
           <TabsTrigger value="reconciliacao">
             Reconciliação
