@@ -931,6 +931,11 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
           time_casa: timeCasa.trim() || null,
           time_fora: timeFora.trim() || null,
           fonte_entrada: fonteEntrada,
+          // Stake é editável: triggers (tg_sync_aposta_simples_resultado_financeiro,
+          // tr_normalize_apostas_unificada_stake_split, trg_recalc_aposta_consolidado)
+          // recalculam stake_real/stake_freebet, snapshot consolidado e ressincronizam
+          // resultado financeiro / ledger automaticamente.
+          stake: stakeNum,
         };
         // Data/Hora do evento é editável (mesmo padrão do Surebet via editar_surebet_completa_v3).
         // Não afeta o ledger; a atribuição de ciclo é recalculada on-the-fly pelas RPCs.
