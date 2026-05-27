@@ -1369,13 +1369,12 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
             </div>
             <div className="space-y-1">
               <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">Data / Hora</Label>
-              <Input type="datetime-local" value={dataHora} onChange={(e) => setDataHora(e.target.value)} className="h-8 text-xs" disabled={isEdit} />
+              <Input type="datetime-local" value={dataHora} onChange={(e) => setDataHora(e.target.value)} className="h-8 text-xs" />
             </div>
           </div>
           {isEdit && (
             <div className="text-[10px] text-amber-500/90 bg-amber-500/5 border border-amber-500/20 rounded px-2 py-1 leading-snug text-center">
-              Stake, casa, data e moeda não podem ser alterados após o registro.
-              Para corrigi-los, exclua a aposta e recadastre.
+              Stake, casa e moeda não podem ser alterados após o registro. Para corrigi-los, exclua a aposta e recadastre.
             </div>
           )}
 
