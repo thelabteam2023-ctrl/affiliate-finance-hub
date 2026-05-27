@@ -1241,6 +1241,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
         onSuccess={handleFreebetSuccess}
         preselectedBookmakerId={preselectedBookmakerId}
       />
+      {novaEntradaEdit.dialog}
     </div>
   );
 }
