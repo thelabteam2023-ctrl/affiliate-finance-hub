@@ -932,6 +932,11 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
           time_fora: timeFora.trim() || null,
           fonte_entrada: fonteEntrada,
         };
+        // Data/Hora do evento é editável (mesmo padrão do Surebet via editar_surebet_completa_v3).
+        // Não afeta o ledger; a atribuição de ciclo é recalculada on-the-fly pelas RPCs.
+        if (dataHora) {
+          updates.data_aposta = new Date(dataHora).toISOString();
+        }
         const { error } = await supabase
           .from("apostas_unificada")
           .update(updates as any)
