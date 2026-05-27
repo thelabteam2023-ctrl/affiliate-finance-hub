@@ -28,6 +28,8 @@ import { useInactivityTimeout } from "@/hooks/useInactivityTimeout";
 import { Loader2, NotebookPen, MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { installRpcInterceptor } from "@/lib/dev/rpcInterceptor";
+import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
+import { ErrorMonitorPanel } from "@/components/ErrorMonitorPanel";
 
 // Install RPC interceptor for the system-owner Ledger Monitor (no-op for everyone else)
 installRpcInterceptor();
@@ -270,6 +272,7 @@ const App = () => (
                   <Toaster />
                   <Sonner />
                   <ApostaPopupContainer />
+                  <ErrorMonitorPanel />
                   <BrowserRouter>
             <Routes>
             {/* Public routes - no layout */}
