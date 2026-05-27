@@ -292,6 +292,13 @@ export function ProjetoValueBetTab({
     fetchData();
   }, [projetoId, tabFilters.period, tabFilters.customDateRange, refreshTrigger]);
 
+  // Bridge para edição inline via novo formulário "Nova Entrada"
+  const novaEntradaEdit = useNovaEntradaEdit({
+    projetoId,
+    estrategia: "VALUEBET",
+    onUpdated: () => { fetchData(); onDataChange?.(); },
+  });
+
   const fetchData = async () => {
     try {
       if (!loadedOnceRef.current) setLoading(true);
