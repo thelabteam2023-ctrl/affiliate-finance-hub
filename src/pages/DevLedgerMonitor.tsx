@@ -321,6 +321,26 @@ function fmtRate(rate: number | null | undefined, from?: string | null, to?: str
   });
 }
 
+   // ─── Auditoria de edição de apostas ───
+   function useApostaEditAudit(workspaceId: string | null, enabled: boolean) {
+  return useQuery({
+      queryKey: ["dev-monitor", "aposta-edit-audit", workspaceId],
+    queryFn: async () => {
+        let query = (supabase as any)
+        .from("aposta_edit_audit_logs")
+          .select("id, created_at, aposta_id, projeto_id, bookmaker_id, actor_user_id, status_before, resultado_before, status_after, resultado_after, changed_fields, bookmaker_balance_before, bookmaker_balance_after, before_data, after_data, ledger_before, ledger_after, success, error_message");
+
+        if (workspaceId) query = query.eq("workspace_id", workspaceId);
+
+        const { data, error } = await query.order("created_at", { ascending: false }).limit(100);
+      if (error) throw error;
+      return data ?? [];
+    },
+    refetchInterval: enabled ? POLL_MS : false,
+    refetchIntervalInBackground: true,
+  });
+}
+
    // ─── Bookmaker Saldos (Filtered by Workspace) ───
    function useBookmakerSaldos(workspaceId: string | null, enabled: boolean) {
   return useQuery({
@@ -445,6 +465,7 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
 
     const ledger = useCashLedger(effectiveWorkspaceId, enabled);
     const apostas = useApostas(effectiveWorkspaceId, enabled);
+    const apostaEditAudit = useApostaEditAudit(effectiveWorkspaceId, enabled);
     const bookmakers = useBookmakerSaldos(effectiveWorkspaceId, enabled);
     const reconciliation = useReconciliation(effectiveWorkspaceId, enabled);
 
@@ -475,6 +496,13 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
       filterFn(`${r.estrategia} ${r.evento ?? ""} ${r.status} ${r.resultado ?? ""}`)
     ),
     [apostas.data, filter]
+  );
+
+  const apostaEditAuditFiltered = useMemo(
+    () => (apostaEditAudit.data ?? []).filter((r: any) =>
+      filterFn(`${r.aposta_id} ${(r.changed_fields ?? []).join(" ")} ${r.status_before} ${r.resultado_before} ${r.status_after} ${r.resultado_after}`)
+    ),
+    [apostaEditAudit.data, filter]
   );
 
   const bookmakersFiltered = useMemo(
@@ -577,7 +605,7 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
       </div>
 
       {/* Counters */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
         <Card className="bg-card">
           <CardContent className="p-3">
             <div className="flex items-center gap-2">
@@ -614,6 +642,17 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
         <Card>
           <CardContent className="p-3">
             <div className="flex items-center gap-2">
+              <History className="h-4 w-4 text-orange-500" />
+              <div>
+                <div className="text-xs text-muted-foreground">Edições auditadas</div>
+                <div className="text-lg font-bold tabular-nums">{apostaEditAudit.data?.length ?? 0}</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
               <Zap className="h-4 w-4 text-amber-500" />
               <div>
                 <div className="text-xs text-muted-foreground">RPCs (sessão)</div>
@@ -629,6 +668,7 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
         <TabsList className="self-start">
           <TabsTrigger value="ledger">Cash Ledger</TabsTrigger>
           <TabsTrigger value="apostas">Apostas</TabsTrigger>
+          <TabsTrigger value="edit-audit">Auditoria Edição</TabsTrigger>
           <TabsTrigger value="bookmakers">Saldos Bookmakers</TabsTrigger>
           <TabsTrigger value="reconciliacao">
             Reconciliação
