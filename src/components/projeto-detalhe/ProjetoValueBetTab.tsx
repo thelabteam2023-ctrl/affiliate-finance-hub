@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllPaginated } from "@/lib/fetchAllPaginated";
 import { fetchChunkedIn } from "@/lib/fetchChunkedIn";
+import { useNovaEntradaEdit } from "@/components/projeto-detalhe/hooks/useNovaEntradaEdit";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { KpiSummaryBar } from "@/components/ui/kpi-summary-bar";
 import { LucroCurrencyTooltip } from "@/components/ui/lucro-currency-tooltip";
@@ -870,6 +871,9 @@ export function ProjetoValueBetTab({
 
   // Abrir formulário em janela externa (padronizado com Surebet)
   const openEditDialog = useCallback((a: Aposta) => {
+    // Apostas registradas pelo novo formulário "Nova Entrada" abrem inline
+    // no MESMO formulário em modo edição.
+    if (novaEntradaEdit.tryOpenEdit(a as any)) return;
     const isMultipla =
       a.forma_registro === "MULTIPLA" ||
       Boolean(a.tipo_multipla) ||
@@ -882,7 +886,7 @@ export function ProjetoValueBetTab({
       const url = `/janela/aposta/${a.id}?projetoId=${encodeURIComponent(projetoId)}&tab=valuebet&estrategia=VALUEBET`;
       window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
     }
-  }, [projetoId]);
+  }, [projetoId, novaEntradaEdit]);
 
   // Hook centralizado para sincronização cross-window
   useCrossWindowSync({
