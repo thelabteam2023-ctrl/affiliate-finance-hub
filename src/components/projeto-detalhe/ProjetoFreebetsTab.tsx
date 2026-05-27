@@ -255,7 +255,10 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
             gerou_freebet, valor_freebet_gerada, bookmaker_id, estrategia, modo_entrada,
             esporte, forma_registro, lay_exchange, lay_odd, lay_stake, lay_liability,
             lay_comissao, back_comissao, back_em_exchange, selecoes, tipo_multipla,
-            stake_freebet, usar_freebet, fonte_saldo
+            stake_freebet, usar_freebet, fonte_saldo,
+            is_novo_formulario, liga, fair_value, modelo_aposta, moeda_operacao,
+            mercado_categoria, mercado_objeto, mercado_formato, mercado_direcao, mercado_linha, mercado_display,
+            time_casa, time_fora, fonte_entrada
           `)
           .eq("projeto_id", projetoId)
           .or("contexto_operacional.eq.FREEBET,gerou_freebet.eq.true,tipo_freebet.not.is.null,stake_freebet.gt.0,usar_freebet.eq.true")
