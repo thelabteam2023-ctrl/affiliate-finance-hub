@@ -331,7 +331,10 @@ export function ProjetoPunterTab({
           contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
           back_em_exchange, back_comissao, pernas, modelo, selecoes, tipo_multipla, odd_final,
           moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia,
-          fonte_entrada, usar_freebet, fonte_saldo
+          fonte_entrada, usar_freebet, fonte_saldo,
+          is_novo_formulario, liga, fair_value, modelo_aposta,
+          mercado_categoria, mercado_objeto, mercado_formato, mercado_direcao, mercado_linha, mercado_display,
+          time_casa, time_fora
         `;
 
       let dateFilters: { startUTC?: string; endUTC?: string } = {};

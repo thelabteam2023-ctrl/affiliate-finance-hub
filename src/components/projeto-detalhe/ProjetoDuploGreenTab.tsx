@@ -310,7 +310,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
 
   const fetchApostas = async () => {
     try {
-      const selectFields = `id, workspace_id, created_at, data_aposta, esporte, evento, mercado, selecao, odd, stake, estrategia, status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id, modo_entrada, gerou_freebet, valor_freebet_gerada, tipo_freebet, forma_registro, contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao, back_em_exchange, back_comissao, pernas, stake_total, spread_calculado, roi_esperado, roi_real, lucro_esperado, modelo, moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia`;
+      const selectFields = `id, workspace_id, created_at, data_aposta, esporte, evento, mercado, selecao, odd, stake, estrategia, status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id, modo_entrada, gerou_freebet, valor_freebet_gerada, tipo_freebet, forma_registro, contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao, back_em_exchange, back_comissao, pernas, stake_total, spread_calculado, roi_esperado, roi_real, lucro_esperado, modelo, moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia, is_novo_formulario, liga, fair_value, modelo_aposta, mercado_categoria, mercado_objeto, mercado_formato, mercado_direcao, mercado_linha, mercado_display, time_casa, time_fora, fonte_entrada, fonte_saldo`;
 
       let dateFilters: { startUTC?: string; endUTC?: string } = {};
       if (dateRange) {
