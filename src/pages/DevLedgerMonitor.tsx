@@ -321,6 +321,26 @@ function fmtRate(rate: number | null | undefined, from?: string | null, to?: str
   });
 }
 
+   // ─── Auditoria de edição de apostas ───
+   function useApostaEditAudit(workspaceId: string | null, enabled: boolean) {
+  return useQuery({
+      queryKey: ["dev-monitor", "aposta-edit-audit", workspaceId],
+    queryFn: async () => {
+        let query = (supabase as any)
+        .from("aposta_edit_audit_logs")
+          .select("id, created_at, aposta_id, projeto_id, bookmaker_id, actor_user_id, status_before, resultado_before, status_after, resultado_after, changed_fields, bookmaker_balance_before, bookmaker_balance_after, before_data, after_data, ledger_before, ledger_after, success, error_message");
+
+        if (workspaceId) query = query.eq("workspace_id", workspaceId);
+
+        const { data, error } = await query.order("created_at", { ascending: false }).limit(100);
+      if (error) throw error;
+      return data ?? [];
+    },
+    refetchInterval: enabled ? POLL_MS : false,
+    refetchIntervalInBackground: true,
+  });
+}
+
    // ─── Bookmaker Saldos (Filtered by Workspace) ───
    function useBookmakerSaldos(workspaceId: string | null, enabled: boolean) {
   return useQuery({
