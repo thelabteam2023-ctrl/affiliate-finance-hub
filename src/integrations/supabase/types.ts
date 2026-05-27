@@ -4309,6 +4309,57 @@ export type Database = {
           },
         ]
       }
+      error_logs: {
+        Row: {
+          context: Json | null
+          created_at: string
+          error_type: string | null
+          id: string
+          message: string | null
+          occurred_at: string
+          resolved: boolean
+          resolved_at: string | null
+          resolved_by: string | null
+          stack: string | null
+          url: string | null
+          user_agent: string | null
+          user_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          context?: Json | null
+          created_at?: string
+          error_type?: string | null
+          id?: string
+          message?: string | null
+          occurred_at?: string
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          stack?: string | null
+          url?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          context?: Json | null
+          created_at?: string
+          error_type?: string | null
+          id?: string
+          message?: string | null
+          occurred_at?: string
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          stack?: string | null
+          url?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: []
+      }
       exchange_adjustments: {
         Row: {
           bookmaker_id: string | null
