@@ -260,6 +260,7 @@ function FloatingChatButton({ onClick, isOpen }: { onClick: () => void, isOpen: 
 }
 
 const App = () => (
+  <GlobalErrorBoundary>
   <ThemeProvider attribute="class" defaultTheme="dark" storageKey="stakesync-theme">
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
