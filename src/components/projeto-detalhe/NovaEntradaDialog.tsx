@@ -20,6 +20,7 @@ import { useBookmakerSaldosQuery } from "@/hooks/useBookmakerSaldosQuery";
 import { BookmakerSelectTrigger } from "@/components/bookmakers/BookmakerSelectOption";
 import { BookmakerSearchableSelectContent } from "@/components/bookmakers/BookmakerSearchableSelectContent";
 import { NovaEntradaDiagnostico, type DiagnosticoPayload } from "./NovaEntradaDiagnostico";
+import { logError } from "@/lib/errorLogger";
 
 type Resultado = "PENDENTE" | "GREEN" | "RED" | "MEIO_GREEN" | "MEIO_RED" | "VOID";
 
@@ -936,6 +937,17 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
           .update(updates as any)
           .eq("id", apostaParaEditar.id);
         if (error) {
+          logError(error, {
+            screen: "NovaEntradaDialog",
+            action: "update apostas_unificada (edit)",
+            aposta_id: apostaParaEditar.id,
+            projeto_id: projetoId,
+            estrategia,
+            is_novo_formulario: true,
+            pg_code: (error as any).code,
+            pg_details: (error as any).details,
+            pg_hint: (error as any).hint,
+          }, "ApostaEditError");
           toast.error(`Falha ao atualizar: ${error.message}`);
           setSaving(false);
           return;
