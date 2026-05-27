@@ -298,6 +298,78 @@ export type Database = {
         }
         Relationships: []
       }
+      aposta_edit_audit_logs: {
+        Row: {
+          action: string
+          actor_user_id: string
+          after_data: Json
+          aposta_id: string
+          before_data: Json
+          bookmaker_balance_after: Json
+          bookmaker_balance_before: Json
+          bookmaker_id: string | null
+          changed_fields: string[]
+          created_at: string
+          error_message: string | null
+          id: string
+          ledger_after: Json
+          ledger_before: Json
+          projeto_id: string
+          resultado_after: string | null
+          resultado_before: string | null
+          status_after: string | null
+          status_before: string | null
+          success: boolean
+          workspace_id: string
+        }
+        Insert: {
+          action?: string
+          actor_user_id: string
+          after_data?: Json
+          aposta_id: string
+          before_data?: Json
+          bookmaker_balance_after?: Json
+          bookmaker_balance_before?: Json
+          bookmaker_id?: string | null
+          changed_fields?: string[]
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          ledger_after?: Json
+          ledger_before?: Json
+          projeto_id: string
+          resultado_after?: string | null
+          resultado_before?: string | null
+          status_after?: string | null
+          status_before?: string | null
+          success?: boolean
+          workspace_id: string
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string
+          after_data?: Json
+          aposta_id?: string
+          before_data?: Json
+          bookmaker_balance_after?: Json
+          bookmaker_balance_before?: Json
+          bookmaker_id?: string | null
+          changed_fields?: string[]
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          ledger_after?: Json
+          ledger_before?: Json
+          projeto_id?: string
+          resultado_after?: string | null
+          resultado_before?: string | null
+          status_after?: string | null
+          status_before?: string | null
+          success?: boolean
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       apostas_perna_entradas: {
         Row: {
           bookmaker_id: string
@@ -16189,6 +16261,10 @@ export type Database = {
           p_novo_resultado?: string
           p_novo_stake?: number
         }
+        Returns: Json
+      }
+      editar_aposta_simples_segura: {
+        Args: { p_aposta_id: string; p_updates: Json }
         Returns: Json
       }
       editar_perna_surebet_atomica: {
