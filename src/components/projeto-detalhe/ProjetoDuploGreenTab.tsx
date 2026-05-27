@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllPaginated } from "@/lib/fetchAllPaginated";
 import { fetchChunkedIn } from "@/lib/fetchChunkedIn";
+import { useNovaEntradaEdit } from "@/components/projeto-detalhe/hooks/useNovaEntradaEdit";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { KpiSummaryBar } from "@/components/ui/kpi-summary-bar";
 import { LucroCurrencyTooltip } from "@/components/ui/lucro-currency-tooltip";
@@ -277,6 +278,13 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
   useEffect(() => { localStorage.setItem(NAV_STORAGE_KEY, navMode); }, [navMode]);
 
   useEffect(() => { fetchData(); }, [projetoId, tabFilters.period, tabFilters.customDateRange, refreshTrigger]);
+
+  // Bridge para edição inline via novo formulário "Nova Entrada"
+  const novaEntradaEdit = useNovaEntradaEdit({
+    projetoId,
+    estrategia: "DUPLO_GREEN",
+    onUpdated: () => { /* fetchData definido abaixo */ },
+  });
 
   const fetchData = async () => {
     try {
