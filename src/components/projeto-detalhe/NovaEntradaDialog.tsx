@@ -942,14 +942,14 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
         if (dataHora) {
           updates.data_aposta = new Date(dataHora).toISOString();
         }
-        const { error } = await supabase
-          .from("apostas_unificada")
-          .update(updates as any)
-          .eq("id", apostaParaEditar.id);
+        const { data: editResult, error } = await (supabase as any).rpc("editar_aposta_simples_segura", {
+          p_aposta_id: apostaParaEditar.id,
+          p_updates: updates,
+        });
         if (error) {
           logError(error, {
             screen: "NovaEntradaDialog",
-            action: "update apostas_unificada (edit)",
+            action: "rpc editar_aposta_simples_segura",
             aposta_id: apostaParaEditar.id,
             projeto_id: projetoId,
             estrategia,
@@ -962,7 +962,21 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
           setSaving(false);
           return;
         }
-        toast.success("Entrada atualizada");
+        if (!editResult?.success) {
+          const message = editResult?.error || "Falha ao atualizar entrada";
+          logError(new Error(message), {
+            screen: "NovaEntradaDialog",
+            action: "editar_aposta_simples_segura returned false",
+            aposta_id: apostaParaEditar.id,
+            projeto_id: projetoId,
+            estrategia,
+            result: editResult,
+          }, "ApostaEditError");
+          toast.error(message);
+          setSaving(false);
+          return;
+        }
+        toast.success(editResult?.was_liquidada ? "Entrada reliquidada e auditada" : "Entrada atualizada e auditada");
         await queryClient.invalidateQueries({ queryKey: ["apostas-projeto", projetoId] });
         await queryClient.invalidateQueries({ queryKey: ["apostas_unificada"] });
         onCreated?.();
