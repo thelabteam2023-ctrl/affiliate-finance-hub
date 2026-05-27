@@ -1003,6 +1003,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
   const handleApostaUpdated = () => { fetchData(); onDataChange?.(); };
   // Abrir formulário em janela externa (padronizado com Surebet)
   const handleOpenAposta = useCallback((aposta: Aposta) => {
+    if (novaEntradaEdit.tryOpenEdit(aposta as any)) return;
     console.log("[DuploGreen] handleOpenAposta chamado:", { id: aposta.id, forma_registro: aposta.forma_registro });
     
     let url: string;
@@ -1024,7 +1025,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
     if (!win) {
       window.open(url, '_blank');
     }
-  }, [projetoId]);
+  }, [projetoId, novaEntradaEdit]);
 
   // Hook centralizado para sincronização cross-window
   useCrossWindowSync({
