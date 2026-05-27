@@ -465,6 +465,7 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
 
     const ledger = useCashLedger(effectiveWorkspaceId, enabled);
     const apostas = useApostas(effectiveWorkspaceId, enabled);
+    const apostaEditAudit = useApostaEditAudit(effectiveWorkspaceId, enabled);
     const bookmakers = useBookmakerSaldos(effectiveWorkspaceId, enabled);
     const reconciliation = useReconciliation(effectiveWorkspaceId, enabled);
 
@@ -495,6 +496,13 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
       filterFn(`${r.estrategia} ${r.evento ?? ""} ${r.status} ${r.resultado ?? ""}`)
     ),
     [apostas.data, filter]
+  );
+
+  const apostaEditAuditFiltered = useMemo(
+    () => (apostaEditAudit.data ?? []).filter((r: any) =>
+      filterFn(`${r.aposta_id} ${(r.changed_fields ?? []).join(" ")} ${r.status_before} ${r.resultado_before} ${r.status_after} ${r.resultado_after}`)
+    ),
+    [apostaEditAudit.data, filter]
   );
 
   const bookmakersFiltered = useMemo(
