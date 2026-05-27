@@ -1630,6 +1630,7 @@ export function ProjetoValueBetTab({
           {renderMainContent()}
         </div>
       </div>
+      {novaEntradaEdit.dialog}
     </div>
   );
 }
