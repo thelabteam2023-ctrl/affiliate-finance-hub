@@ -679,6 +679,101 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
           <TabsTrigger value="rpc">RPCs</TabsTrigger>
         </TabsList>
 
+          {/* Auditoria Edição de Apostas */}
+          <TabsContent value="edit-audit" className="flex-1 min-h-0 mt-2">
+            <Card className="h-full flex flex-col">
+              <CardHeader className="py-2 border-b mb-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-sm">Auditoria de Edição de Apostas</CardTitle>
+                    <CardDescription className="text-[11px]">
+                      Snapshots before/after de cada edição via RPC <code>editar_aposta_simples_segura</code>, incluindo ledger e saldo do bookmaker.
+                    </CardDescription>
+                  </div>
+                  {apostaEditAudit.isFetching && (
+                    <span className="text-[10px] text-muted-foreground animate-pulse italic uppercase font-bold">
+                      carregando...
+                    </span>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="flex-1 min-h-0 p-0">
+                <ScrollArea className="h-full">
+                  <table className="w-full text-xs">
+                    <thead className="sticky top-0 bg-card border-b z-10">
+                      <tr className="text-left text-muted-foreground">
+                        <th className="px-2 py-1.5">Quando</th>
+                        <th className="px-2 py-1.5">Aposta</th>
+                        <th className="px-2 py-1.5">Status (antes → depois)</th>
+                        <th className="px-2 py-1.5">Resultado (antes → depois)</th>
+                        <th className="px-2 py-1.5">Campos alterados</th>
+                        <th className="px-2 py-1.5 text-right">Saldo Bookmaker (antes → depois)</th>
+                        <th className="px-2 py-1.5 text-right">Δ Ledger</th>
+                        <th className="px-2 py-1.5">OK?</th>
+                      </tr>
+                    </thead>
+                    <tbody className="font-mono">
+                      {(apostaEditAudit.data ?? []).length === 0 && (
+                        <tr>
+                          <td colSpan={8} className="px-2 py-6 text-center text-muted-foreground">
+                            Nenhuma edição auditada ainda. Edite uma aposta liquidada para gerar um registro aqui.
+                          </td>
+                        </tr>
+                      )}
+                      {(apostaEditAudit.data ?? []).map((row: any) => {
+                        const changed: string[] = Array.isArray(row.changed_fields)
+                          ? row.changed_fields
+                          : (row.changed_fields ? Object.keys(row.changed_fields) : []);
+                        const ledgerBeforeCount = Array.isArray(row.ledger_before) ? row.ledger_before.length : 0;
+                        const ledgerAfterCount = Array.isArray(row.ledger_after) ? row.ledger_after.length : 0;
+                        const deltaLedger = ledgerAfterCount - ledgerBeforeCount;
+                        return (
+                          <tr key={row.id} className={`border-b hover:bg-accent/30 ${row.success === false ? 'bg-destructive/10' : ''}`}>
+                            <td className="px-2 py-2 text-muted-foreground whitespace-nowrap">{fmtTime(row.created_at)}</td>
+                            <td className="px-2 py-2 text-[10px]" title={row.aposta_id}>{String(row.aposta_id).slice(0, 8)}…</td>
+                            <td className="px-2 py-2">
+                              <span className="text-muted-foreground">{row.status_before ?? '—'}</span>
+                              <span className="mx-1">→</span>
+                              <span className="font-semibold">{row.status_after ?? '—'}</span>
+                            </td>
+                            <td className="px-2 py-2">
+                              <span className="text-muted-foreground">{row.resultado_before ?? '—'}</span>
+                              <span className="mx-1">→</span>
+                              <span className="font-semibold">{row.resultado_after ?? '—'}</span>
+                            </td>
+                            <td className="px-2 py-2 max-w-[280px]">
+                              <div className="flex flex-wrap gap-1">
+                                {changed.length === 0 && <span className="text-muted-foreground">—</span>}
+                                {changed.map((f) => (
+                                  <Badge key={f} variant="outline" className="text-[9px] px-1 py-0">{f}</Badge>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="px-2 py-2 text-right tabular-nums">
+                              <span className="text-muted-foreground">{Number(row.bookmaker_balance_before ?? 0).toFixed(2)}</span>
+                              <span className="mx-1">→</span>
+                              <span className="font-semibold">{Number(row.bookmaker_balance_after ?? 0).toFixed(2)}</span>
+                            </td>
+                            <td className={`px-2 py-2 text-right tabular-nums font-bold ${deltaLedger === 0 ? 'text-muted-foreground' : deltaLedger > 0 ? 'text-emerald-500' : 'text-orange-500'}`}>
+                              {deltaLedger > 0 ? '+' : ''}{deltaLedger}
+                            </td>
+                            <td className="px-2 py-2">
+                              {row.success === false ? (
+                                <Badge variant="destructive" className="text-[10px]" title={row.error_message ?? ''}>FALHA</Badge>
+                              ) : (
+                                <Badge variant="default" className="text-[10px]">OK</Badge>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Reconciliação */}
           <TabsContent value="reconciliacao" className="flex-1 min-h-0 mt-2">
             <Card className="h-full flex flex-col">
