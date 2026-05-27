@@ -283,7 +283,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
   const novaEntradaEdit = useNovaEntradaEdit({
     projetoId,
     estrategia: "DUPLO_GREEN",
-    onUpdated: () => { /* fetchData definido abaixo */ },
+    onUpdated: () => { fetchData(); onDataChange?.(); },
   });
 
   const fetchData = async () => {
