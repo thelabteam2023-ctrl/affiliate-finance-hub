@@ -1606,6 +1606,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
         </div>
         <div className="flex-1 min-w-0">{renderMainContent()}</div>
       </div>
+      {novaEntradaEdit.dialog}
     </div>
   );
 }
