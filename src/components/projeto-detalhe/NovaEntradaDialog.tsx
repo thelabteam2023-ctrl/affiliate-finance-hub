@@ -931,6 +931,11 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
           time_casa: timeCasa.trim() || null,
           time_fora: timeFora.trim() || null,
           fonte_entrada: fonteEntrada,
+          // Stake é editável: triggers (tg_sync_aposta_simples_resultado_financeiro,
+          // tr_normalize_apostas_unificada_stake_split, trg_recalc_aposta_consolidado)
+          // recalculam stake_real/stake_freebet, snapshot consolidado e ressincronizam
+          // resultado financeiro / ledger automaticamente.
+          stake: stakeNum,
         };
         // Data/Hora do evento é editável (mesmo padrão do Surebet via editar_surebet_completa_v3).
         // Não afeta o ledger; a atribuição de ciclo é recalculada on-the-fly pelas RPCs.
@@ -1365,7 +1370,13 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
                   <span className="text-muted-foreground/60">≈ R$ {stakeBRL.toFixed(2)}</span>
                 )}
               </Label>
-              <Input value={stake} onChange={(e) => setStake(e.target.value)} className="h-8 text-xs" inputMode="decimal" placeholder="0,00" disabled={isEdit} />
+              <Input
+                value={stake}
+                onChange={(e) => setStake(e.target.value)}
+                className={`h-8 text-xs ${isEdit ? "ring-1 ring-amber-500/30 focus-visible:ring-amber-500/50" : ""}`}
+                inputMode="decimal"
+                placeholder="0,00"
+              />
             </div>
             <div className="space-y-1">
               <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">Data / Hora</Label>
@@ -1374,7 +1385,7 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
           </div>
           {isEdit && (
             <div className="text-[10px] text-amber-500/90 bg-amber-500/5 border border-amber-500/20 rounded px-2 py-1 leading-snug text-center">
-              Stake, casa e moeda não podem ser alterados após o registro. Para corrigi-los, exclua a aposta e recadastre.
+              Alterar a stake recalcula automaticamente o resultado financeiro e o saldo da casa. Casa e moeda permanecem bloqueadas — para trocá-las, exclua e recadastre.
             </div>
           )}
 
