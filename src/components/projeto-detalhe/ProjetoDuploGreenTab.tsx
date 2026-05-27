@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllPaginated } from "@/lib/fetchAllPaginated";
 import { fetchChunkedIn } from "@/lib/fetchChunkedIn";
+import { useNovaEntradaEdit } from "@/components/projeto-detalhe/hooks/useNovaEntradaEdit";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { KpiSummaryBar } from "@/components/ui/kpi-summary-bar";
 import { LucroCurrencyTooltip } from "@/components/ui/lucro-currency-tooltip";
@@ -277,6 +278,13 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
   useEffect(() => { localStorage.setItem(NAV_STORAGE_KEY, navMode); }, [navMode]);
 
   useEffect(() => { fetchData(); }, [projetoId, tabFilters.period, tabFilters.customDateRange, refreshTrigger]);
+
+  // Bridge para edição inline via novo formulário "Nova Entrada"
+  const novaEntradaEdit = useNovaEntradaEdit({
+    projetoId,
+    estrategia: "DUPLO_GREEN",
+    onUpdated: () => { fetchData(); onDataChange?.(); },
+  });
 
   const fetchData = async () => {
     try {
@@ -995,6 +1003,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
   const handleApostaUpdated = () => { fetchData(); onDataChange?.(); };
   // Abrir formulário em janela externa (padronizado com Surebet)
   const handleOpenAposta = useCallback((aposta: Aposta) => {
+    if (novaEntradaEdit.tryOpenEdit(aposta as any)) return;
     console.log("[DuploGreen] handleOpenAposta chamado:", { id: aposta.id, forma_registro: aposta.forma_registro });
     
     let url: string;
@@ -1016,7 +1025,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
     if (!win) {
       window.open(url, '_blank');
     }
-  }, [projetoId]);
+  }, [projetoId, novaEntradaEdit]);
 
   // Hook centralizado para sincronização cross-window
   useCrossWindowSync({
@@ -1597,6 +1606,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
         </div>
         <div className="flex-1 min-w-0">{renderMainContent()}</div>
       </div>
+      {novaEntradaEdit.dialog}
     </div>
   );
 }

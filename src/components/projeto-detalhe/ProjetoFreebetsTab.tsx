@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllPaginated } from "@/lib/fetchAllPaginated";
+import { useNovaEntradaEdit } from "@/components/projeto-detalhe/hooks/useNovaEntradaEdit";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KpiSummaryBar } from "@/components/ui/kpi-summary-bar";
 import { Badge } from "@/components/ui/badge";
@@ -376,8 +377,16 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
     onDataChange?.();
   };
 
+  // Bridge para edição inline via novo formulário "Nova Entrada"
+  const novaEntradaEdit = useNovaEntradaEdit({
+    projetoId,
+    estrategia: "FREEBET",
+    onUpdated: () => { fetchData(); onDataChange?.(); },
+  });
+
   // Abrir formulário em janela externa (padronizado com Surebet)
   const handleEditClick = useCallback((aposta: ApostaOperacionalFreebet) => {
+    if (novaEntradaEdit.tryOpenEdit(aposta as any)) return;
     if (aposta.tipo === "multipla") {
       const url = `/janela/multipla/${aposta.id}?projetoId=${encodeURIComponent(projetoId)}&tab=freebets&estrategia=FREEBET`;
       window.open(url, '_blank', 'width=540,height=750,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
@@ -385,7 +394,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
       const url = `/janela/aposta/${aposta.id}?projetoId=${encodeURIComponent(projetoId)}&tab=freebets&estrategia=FREEBET`;
       window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
     }
-  }, [projetoId]);
+  }, [projetoId, novaEntradaEdit]);
 
   // Hook centralizado para sincronização cross-window
   useCrossWindowSync({
@@ -1232,6 +1241,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
         onSuccess={handleFreebetSuccess}
         preselectedBookmakerId={preselectedBookmakerId}
       />
+      {novaEntradaEdit.dialog}
     </div>
   );
 }
