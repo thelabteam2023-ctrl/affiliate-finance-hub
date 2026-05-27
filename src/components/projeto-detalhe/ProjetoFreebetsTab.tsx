@@ -377,6 +377,13 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
     onDataChange?.();
   };
 
+  // Bridge para edição inline via novo formulário "Nova Entrada"
+  const novaEntradaEdit = useNovaEntradaEdit({
+    projetoId,
+    estrategia: "FREEBET",
+    onUpdated: () => { fetchData(); onDataChange?.(); },
+  });
+
   // Abrir formulário em janela externa (padronizado com Surebet)
   const handleEditClick = useCallback((aposta: ApostaOperacionalFreebet) => {
     if (novaEntradaEdit.tryOpenEdit(aposta as any)) return;
@@ -388,13 +395,6 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
       window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
     }
   }, [projetoId, novaEntradaEdit]);
-
-  // Bridge para edição inline via novo formulário "Nova Entrada"
-  const novaEntradaEdit = useNovaEntradaEdit({
-    projetoId,
-    estrategia: "FREEBET",
-    onUpdated: () => { fetchData(); onDataChange?.(); },
-  });
 
   // Hook centralizado para sincronização cross-window
   useCrossWindowSync({
