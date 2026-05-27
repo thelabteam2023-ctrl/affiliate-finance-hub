@@ -932,6 +932,11 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
           time_fora: timeFora.trim() || null,
           fonte_entrada: fonteEntrada,
         };
+        // Data/Hora do evento é editável (mesmo padrão do Surebet via editar_surebet_completa_v3).
+        // Não afeta o ledger; a atribuição de ciclo é recalculada on-the-fly pelas RPCs.
+        if (dataHora) {
+          updates.data_aposta = new Date(dataHora).toISOString();
+        }
         const { error } = await supabase
           .from("apostas_unificada")
           .update(updates as any)
@@ -1364,13 +1369,12 @@ export function NovaEntradaDialog({ open, onOpenChange, projetoId, estrategia, o
             </div>
             <div className="space-y-1">
               <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">Data / Hora</Label>
-              <Input type="datetime-local" value={dataHora} onChange={(e) => setDataHora(e.target.value)} className="h-8 text-xs" disabled={isEdit} />
+              <Input type="datetime-local" value={dataHora} onChange={(e) => setDataHora(e.target.value)} className="h-8 text-xs" />
             </div>
           </div>
           {isEdit && (
             <div className="text-[10px] text-amber-500/90 bg-amber-500/5 border border-amber-500/20 rounded px-2 py-1 leading-snug text-center">
-              Stake, casa, data e moeda não podem ser alterados após o registro.
-              Para corrigi-los, exclua a aposta e recadastre.
+              Stake, casa e moeda não podem ser alterados após o registro. Para corrigi-los, exclua a aposta e recadastre.
             </div>
           )}
 
