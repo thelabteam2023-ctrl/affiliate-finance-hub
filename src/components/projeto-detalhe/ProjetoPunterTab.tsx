@@ -1613,6 +1613,7 @@ export function ProjetoPunterTab({
           {renderMainContent()}
         </div>
       </div>
+      {novaEntradaEdit.dialog}
     </div>
   );
 }
