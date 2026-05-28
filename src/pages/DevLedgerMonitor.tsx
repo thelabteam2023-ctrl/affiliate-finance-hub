@@ -27,7 +27,6 @@ import {
 } from "@/lib/dev/rpcInterceptor";
 import { explainRpcCall } from "@/lib/dev/rpcExplain";
  import { Activity, AlertTriangle, Database, Receipt, Wallet, Zap, Trash2, Pause, Play, HelpCircle, ArrowRight, History, Search, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
-import { getTabWorkspaceId, getTabId } from "@/lib/tabWorkspace";
  import {
    Tooltip,
    TooltipContent,
@@ -426,120 +425,6 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
 
   const AUTHORIZED_EMAILS = ['lu-lipe@hotmail.com', 'labbetconsultoria@gmail.com'];
 
-  // ─── Identity & Workspace Diagnostic Banner ───
-  function IdentityDiagnosticBanner({
-    contextWorkspaceId,
-    effectiveWorkspaceId,
-    isSystemOwner,
-  }: {
-    contextWorkspaceId: string | null;
-    effectiveWorkspaceId: string | null;
-    isSystemOwner: boolean;
-  }) {
-    const { user } = useAuthContext();
-    const tabWs = getTabWorkspaceId();
-    const tabId = getTabId();
-    const [diag, setDiag] = useState<any>(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    const runCheck = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const { data, error } = await supabase.rpc("get_identity_diagnostic" as any);
-        if (error) throw error;
-        setDiag(data);
-      } catch (e: any) {
-        setError(e?.message ?? String(e));
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    useEffect(() => {
-      runCheck();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [effectiveWorkspaceId]);
-
-    const mismatch =
-      diag &&
-      (diag.auth_uid !== user?.id ||
-        (tabWs && diag.resolved_workspace_id && tabWs !== diag.resolved_workspace_id));
-
-    const Item = ({ label, value, mono = true }: { label: string; value: any; mono?: boolean }) => (
-      <div className="flex flex-col gap-0.5 min-w-0">
-        <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold">{label}</span>
-        <span className={`text-[11px] ${mono ? "font-mono" : ""} truncate`}>{value ?? "—"}</span>
-      </div>
-    );
-
-    return (
-      <Card className={mismatch ? "border-destructive bg-destructive/5" : "border-primary/20 bg-card"}>
-        <CardContent className="p-3 space-y-2">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-2">
-              {mismatch ? (
-                <AlertTriangle className="h-4 w-4 text-destructive" />
-              ) : (
-                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-              )}
-              <span className="text-xs font-bold uppercase tracking-wider">
-                Identity & Workspace Diagnostic
-              </span>
-              {mismatch && (
-                <Badge variant="destructive" className="text-[9px] h-4">
-                  CONTEXT MISMATCH
-                </Badge>
-              )}
-            </div>
-            <Button size="sm" variant="outline" onClick={runCheck} disabled={loading} className="h-7 text-[11px]">
-              {loading ? "Verificando..." : "Re-checar agora"}
-            </Button>
-          </div>
-
-          {error && (
-            <div className="text-[11px] text-destructive font-mono">RPC error: {error}</div>
-          )}
-
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 pt-1">
-            <Item label="Email (client)" value={user?.email} mono={false} />
-            <Item label="auth.uid (server)" value={diag?.auth_uid} />
-            <Item label="System Owner" value={String(isSystemOwner) + (diag ? ` / db:${diag.is_system_owner}` : "")} mono={false} />
-            <Item label="Tab ID" value={tabId} />
-            <Item label="Tab Workspace (sessionStorage)" value={tabWs} />
-            <Item label="Header x-workspace-id" value={diag?.header_raw} />
-            <Item
-              label="Header → Workspace"
-              value={diag?.header_workspace_name ? `${diag.header_workspace_name}` : diag?.header_uuid}
-              mono={false}
-            />
-            <Item
-              label="Header é membro ativo?"
-              value={diag ? (diag.header_is_active_member === null ? "—" : String(diag.header_is_active_member)) : "—"}
-              mono={false}
-            />
-            <Item
-              label="Resolved Workspace (RLS)"
-              value={diag?.resolved_workspace_name ? `${diag.resolved_workspace_name}` : diag?.resolved_workspace_id}
-              mono={false}
-            />
-            <Item label="Resolved ID" value={diag?.resolved_workspace_id} />
-            <Item label="Context Workspace" value={contextWorkspaceId} />
-            <Item label="Effective Filter" value={effectiveWorkspaceId ?? "ALL"} />
-          </div>
-
-          {mismatch && (
-            <div className="text-[11px] text-destructive pt-1 border-t border-destructive/20">
-              ⚠ O workspace que a aba acredita estar usando NÃO bate com o que o backend resolveu via RLS.
-              Isso pode esconder dados (apostas, ledger). Verifique troca de workspace ou faça logout/login.
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    );
-  }
-
   export default function DevLedgerMonitor() {
     const { user, isSystemOwner: originalIsSystemOwner, initialized, workspaceId, role } = useAuthContext();
     
@@ -718,13 +603,6 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
           </Button>
         </div>
       </div>
-
-      {/* Identity & Workspace Diagnostic Banner */}
-      <IdentityDiagnosticBanner
-        contextWorkspaceId={workspaceId}
-        effectiveWorkspaceId={effectiveWorkspaceId}
-        isSystemOwner={isSystemOwner}
-      />
 
       {/* Counters */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
