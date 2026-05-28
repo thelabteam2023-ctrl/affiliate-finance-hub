@@ -350,7 +350,28 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
           allData = [...allData, ...newPendentes];
         }
       }
-      
+
+      // LIQUIDADAS recém-atualizadas no range (cobre bets fora do range por data_aposta)
+      if (dateRange && dateFilters.startUTC && dateFilters.endUTC) {
+        const liquidadasRecentes = await fetchAllPaginated(() =>
+          supabase
+            .from("apostas_unificada")
+            .select(selectFields)
+            .eq("projeto_id", projetoId)
+            .eq("estrategia", APOSTA_ESTRATEGIA.DUPLO_GREEN)
+            .eq("status", "LIQUIDADA")
+            .is("cancelled_at", null)
+            .gte("updated_at", dateFilters.startUTC)
+            .lte("updated_at", dateFilters.endUTC)
+            .order("updated_at", { ascending: false })
+        );
+        if (liquidadasRecentes && liquidadasRecentes.length > 0) {
+          const existingIds = new Set(allData.map((a: any) => a.id));
+          const novas = liquidadasRecentes.filter((p: any) => !existingIds.has(p.id));
+          allData = [...allData, ...novas];
+        }
+      }
+
       const bookmakerIds = [...new Set(allData.map((a: any) => a.bookmaker_id).filter(Boolean))];
       let bookmakerMap = new Map<string, { nome: string; parceiroNome: string | null; logoUrl: string | null; instanceIdentifier: string | null }>();
       if (bookmakerIds.length > 0) {

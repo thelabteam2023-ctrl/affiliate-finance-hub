@@ -378,6 +378,27 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
         }
       }
 
+      // LIQUIDADAS recém-atualizadas no range (cobre bets fora do range por data_aposta)
+      if (dateRange && dateFilters.startUTC && dateFilters.endUTC) {
+        const liquidadasRecentes = await fetchAllPaginated(() =>
+          supabase
+            .from("apostas_unificada")
+            .select(selectFields)
+            .eq("projeto_id", projetoId)
+            .eq("estrategia", "SUREBET")
+            .eq("status", "LIQUIDADA")
+            .is("cancelled_at", null)
+            .gte("updated_at", dateFilters.startUTC)
+            .lte("updated_at", dateFilters.endUTC)
+            .order("updated_at", { ascending: false })
+        );
+        if (liquidadasRecentes && liquidadasRecentes.length > 0) {
+          const existingIds = new Set(allData.map((a: any) => a.id));
+          const novas = liquidadasRecentes.filter((p: any) => !existingIds.has(p.id));
+          allData = [...allData, ...novas];
+        }
+      }
+
       if (allData.length === 0) return [];
 
       // Buscar pernas para TODAS as apostas (incluindo SIMPLES com multi-entry)
