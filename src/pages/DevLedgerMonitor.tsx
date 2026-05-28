@@ -605,6 +605,13 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
         </div>
       </div>
 
+      {/* Identity & Workspace Diagnostic Banner */}
+      <IdentityDiagnosticBanner
+        contextWorkspaceId={workspaceId}
+        effectiveWorkspaceId={effectiveWorkspaceId}
+        isSystemOwner={isSystemOwner}
+      />
+
       {/* Counters */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
         <Card className="bg-card">
