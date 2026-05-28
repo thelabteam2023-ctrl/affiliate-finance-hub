@@ -27,6 +27,7 @@ import {
 } from "@/lib/dev/rpcInterceptor";
 import { explainRpcCall } from "@/lib/dev/rpcExplain";
  import { Activity, AlertTriangle, Database, Receipt, Wallet, Zap, Trash2, Pause, Play, HelpCircle, ArrowRight, History, Search, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
+import { getTabWorkspaceId, getTabId } from "@/lib/tabWorkspace";
  import {
    Tooltip,
    TooltipContent,
