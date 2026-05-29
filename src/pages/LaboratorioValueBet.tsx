@@ -233,7 +233,7 @@ export default function LaboratorioValueBet() {
                     </Button>
                   </div>
                   <Button 
-                    variant="primary" 
+                    variant="default" 
                     size="sm" 
                     className="text-[10px] uppercase font-black h-8 w-full shadow-lg shadow-primary/20" 
                     onClick={() => {
