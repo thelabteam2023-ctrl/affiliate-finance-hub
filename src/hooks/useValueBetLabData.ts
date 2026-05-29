@@ -112,8 +112,17 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
 
     data.forEach(bet => {
       // Normalização para evitar duplicidade por case ou nulos
-      const sportName = bet.esporte ? (bet.esporte.trim() === "" ? "Indefinido" : bet.esporte.charAt(0).toUpperCase() + bet.esporte.slice(1).toLowerCase()) : 'Indefinido';
-      const marketName = bet.mercado ? (bet.mercado.trim() === "" ? "Geral" : bet.mercado) : 'Geral';
+      let sportName = bet.esporte || 'Indefinido';
+      sportName = sportName.trim() === "" ? "Indefinido" : sportName.charAt(0).toUpperCase() + sportName.slice(1).toLowerCase();
+      
+      // Mapeamento de sinonimos ou erros comuns
+      if (sportName === 'Soccer') sportName = 'Futebol';
+      if (sportName === 'Efootball') sportName = 'E-sports';
+      if (sportName === 'Counter-strike' || sportName === 'League of legends' || sportName === 'Valorant' || sportName === 'Dota 2') sportName = 'E-sports';
+
+      let marketName = bet.mercado || 'Geral';
+      marketName = marketName.trim() === "" ? "Geral" : marketName;
+      
       const oddRange = getOddRange(bet.odd);
 
       if (!sports[sportName]) {
@@ -132,7 +141,11 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
     // Finalize metrics per hierarchy
     Object.keys(sports).forEach(sName => {
       const sportBets = data.filter(b => {
-        const bSport = b.esporte ? (b.esporte.trim() === "" ? "Indefinido" : b.esporte.charAt(0).toUpperCase() + b.esporte.slice(1).toLowerCase()) : 'Indefinido';
+        let bSport = b.esporte || 'Indefinido';
+        bSport = bSport.trim() === "" ? "Indefinido" : bSport.charAt(0).toUpperCase() + bSport.slice(1).toLowerCase();
+        if (bSport === 'Soccer') bSport = 'Futebol';
+        if (bSport === 'Efootball') bSport = 'E-sports';
+        if (bSport === 'Counter-strike' || bSport === 'League of legends' || bSport === 'Valorant' || bSport === 'Dota 2') bSport = 'E-sports';
         return bSport === sName;
       });
       sports[sName] = { ...sports[sName], ...calculateMetrics(sportBets) };
