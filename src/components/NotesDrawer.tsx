@@ -435,6 +435,12 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
           )}
         </div>
       </div>
+
+      <InsertCopyableDialog
+        open={copyDialogOpen}
+        onOpenChange={setCopyDialogOpen}
+        onInsert={insertAtCursor}
+      />
     </>
   );
 };
