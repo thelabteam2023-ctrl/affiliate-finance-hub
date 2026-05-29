@@ -218,6 +218,18 @@ export default function SystemAdmin() {
     setViewMembersDialog({ open: true, workspaceId, workspaceName, members });
   };
 
+  const handleDeleteWorkspacePermanently = async () => {
+    if (deleteWorkspaceConfirm !== deleteWorkspaceDialog.workspaceName) return;
+    setDeletingWorkspace(true);
+    try {
+      await deleteWorkspacePermanently(deleteWorkspaceDialog.workspaceId, deleteWorkspaceConfirm);
+      setDeleteWorkspaceDialog({ open: false, workspaceId: '', workspaceName: '' });
+      setDeleteWorkspaceConfirm('');
+    } finally {
+      setDeletingWorkspace(false);
+    }
+  };
+
   const getPlanBadge = (plan: string) => {
     const planConfig = PLANS.find(p => p.value === plan) || PLANS[0];
     return <Badge className={planConfig.color}>{planConfig.label}</Badge>;
