@@ -6,7 +6,7 @@ import { FluxoCardDetailDialog } from "./FluxoCardDetailDialog";
 import { ContentRenderer } from "./ContentRenderer";
 import { useImageUpload } from "@/hooks/useImageUpload";
 import { useAuth } from "@/hooks/useAuth";
-import { InsertCopyableDialog } from "./InsertCopyableDialog";
+import { InsertCopyablePanel } from "./InsertCopyablePanel";
 
 // Cores suaves estilo post-it para dark mode
 const CARD_COLORS = [
@@ -273,6 +273,12 @@ export function FluxoCardComponent({
             </div>
           </div>
         )}
+        {/* Painel inline de dado copiável */}
+        <InsertCopyablePanel
+          open={copyDialogOpen}
+          onClose={() => setCopyDialogOpen(false)}
+          onInsert={insertAtCursor}
+        />
       </div>
 
       {/* Dialog de detalhes */}
@@ -281,12 +287,6 @@ export function FluxoCardComponent({
         open={showDetail}
         onOpenChange={setShowDetail}
         onUpdate={onUpdate}
-      />
-
-      <InsertCopyableDialog
-        open={copyDialogOpen}
-        onOpenChange={setCopyDialogOpen}
-        onInsert={insertAtCursor}
       />
     </>
   );
