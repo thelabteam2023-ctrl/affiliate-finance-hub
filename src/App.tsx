@@ -99,6 +99,7 @@ const SupplierPortal = lazyWithChunkRetry(() => import("./pages/SupplierPortal")
 const FornecedoresPortal = lazyWithChunkRetry(() => import("./pages/FornecedoresPortal"));
 const Solicitacoes = lazyWithChunkRetry(() => import("./pages/Solicitacoes"));
 const DevLedgerMonitor = lazyWithChunkRetry(() => import("./pages/DevLedgerMonitor"));
+const LaboratorioValueBet = lazyWithChunkRetry(() => import("./pages/LaboratorioValueBet"));
 const ApiExplorer = lazyWithChunkRetry(() => import("./pages/ApiExplorer"));
 
 // ─── QueryClient com defaults globais de performance ───
@@ -406,6 +407,14 @@ const App = () => (
               <ProtectedRoute requiredPermission="caixa.read">
                 <AuthenticatedLayout>
                   <Caixa />
+                </AuthenticatedLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/ferramentas/laboratorio-valuebet" element={
+              <ProtectedRoute>
+                <AuthenticatedLayout>
+                  <LaboratorioValueBet />
                 </AuthenticatedLayout>
               </ProtectedRoute>
             } />
