@@ -486,6 +486,68 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Acesso restrito.' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    // ===== GET /summary =====
+    if (request.method === 'GET' && path === 'summary') {
+      const todayKey = new Date().toISOString().split('T')[0];
+      const monthKey = todayKey.substring(0, 7);
+
+      const [todayRes, monthRes, lastRes] = await Promise.all([
+        supabase.from('api_usage_summary').select('api_name,total_calls,total_credits,total_errors')
+          .eq('period_type', 'day').eq('period_key', todayKey),
+        supabase.from('api_usage_summary').select('api_name,total_calls,total_credits,total_errors')
+          .eq('period_type', 'month').eq('period_key', monthKey),
+        supabase.from('api_request_logs').select('api_name,created_at,status_code,duration_ms')
+          .order('created_at', { ascending: false }).limit(1).maybeSingle(),
+      ]);
+
+      const limits = {
+        odds_api: { daily: null as number | null, monthly: 20000 },
+        api_football: { daily: 100, monthly: null as number | null },
+      };
+
+      return new Response(JSON.stringify({
+        today: todayRes.data || [],
+        month: monthRes.data || [],
+        lastCall: lastRes.data || null,
+        limits,
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // ===== GET /logs =====
+    if (request.method === 'GET' && path === 'logs') {
+      const limit = Math.min(parseInt(url.searchParams.get('limit') || '20', 10) || 20, 100);
+      const { data, error } = await supabase.from('api_request_logs')
+        .select('id,api_name,endpoint,sport_key,status_code,credits_used,records_returned,duration_ms,error_message,triggered_by,created_at')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      if (error) {
+        return new Response(JSON.stringify({ error: error.message, logs: [] }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+      return new Response(JSON.stringify({ logs: data || [] }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // ===== GET /preview =====
+    if (request.method === 'GET' && path === 'preview') {
+      const apiName = (url.searchParams.get('api') || 'odds_api') as 'odds_api' | 'api_football';
+      const sportKey = url.searchParams.get('sport') || 'soccer_epl';
+      const endpoint = apiName === 'odds_api'
+        ? `https://api.the-odds-api.com/v4/sports/${sportKey}/odds?regions=eu&markets=h2h`
+        : `https://v3.football.api-sports.io/fixtures?league=39&season=2024&next=5`;
+      try {
+        const result = await callExternalApi({ apiName, endpoint, sportKey, creditsUsed: 1, triggeredBy: 'manual' });
+        return new Response(JSON.stringify({
+          statusCode: result.statusCode,
+          durationMs: result.durationMs,
+          recordsReturned: result.recordsReturned,
+          url: endpoint,
+          rawData: result.data,
+          error: result.errorMessage,
+        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      } catch (err: any) {
+        return new Response(JSON.stringify({ error: err?.message || 'Preview failed' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+    }
+
     if (request.method === 'POST' && path === 'run-job') {
       const body = await request.json().catch(() => ({}));
       const { job, leagueKey } = body as { job: string; leagueKey?: string };
