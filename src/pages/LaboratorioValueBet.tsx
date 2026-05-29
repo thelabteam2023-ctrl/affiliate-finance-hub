@@ -161,14 +161,26 @@ export default function LaboratorioValueBet() {
           <div className="flex items-center gap-2">
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 text-xs gap-2 border-primary/20 bg-card/50">
-                  <Filter className="h-3.5 w-3.5" /> Projetos
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-9 px-4 text-xs gap-2 border-primary/20 bg-primary/5 hover:bg-primary/10 hover:border-primary/40 text-primary font-bold rounded-full transition-all shadow-sm"
+                >
+                  <Filter className="h-3.5 w-3.5" /> 
+                  Configurar Projetos
+                  {selectedProjectIds.length > 0 && (
+                    <span className="ml-1 bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full text-[10px]">
+                      {selectedProjectIds.length}
+                    </span>
+                  )}
                 </Button>
               </SheetTrigger>
-              <SheetContent className="w-[400px] p-0 border-l border-border/40 bg-card">
-                <SheetHeader className="p-6 pb-0">
-                  <SheetTitle>Projetos em Estudo</SheetTitle>
-                  <SheetDescription>Filtre os dados por fonte de aposta.</SheetDescription>
+              <SheetContent className="w-[400px] p-0 border-l border-border/40 bg-card/95 backdrop-blur-xl">
+                <SheetHeader className="p-6 pb-2">
+                  <SheetTitle className="text-xl font-black uppercase tracking-tighter">Projetos em Estudo</SheetTitle>
+                  <SheetDescription className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Filtre os dados por fonte de aposta.
+                  </SheetDescription>
                 </SheetHeader>
                 <div className="p-4 h-[calc(100vh-150px)]">
                   <ValuebetProjectPicker
@@ -185,26 +197,51 @@ export default function LaboratorioValueBet() {
 
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 text-xs gap-2 border-primary/20 bg-card/50">
-                  <Calendar className="h-3.5 w-3.5" />
-                  {dateRange?.from ? format(dateRange.from, "dd/MM/yy") : '...'} - {dateRange?.to ? format(dateRange.to, "dd/MM/yy") : '...'}
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-9 px-4 text-xs gap-2 border-border/40 bg-card/40 hover:bg-card/60 rounded-full transition-all"
+                >
+                  <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                  {dateRange?.from ? format(dateRange.from, "dd/MM/yy") : 'Início'} — {dateRange?.to ? format(dateRange.to, "dd/MM/yy") : 'Fim'}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="end">
-                <div className="p-2 flex flex-col gap-1 border-b border-border/10 bg-muted/20">
-                  <div className="grid grid-cols-2 gap-1">
-                    <Button variant="ghost" size="sm" className="text-[10px] uppercase font-bold h-7" onClick={() => {
-                      const now = new Date();
-                      setDateRange({ from: startOfMonth(now), to: endOfMonth(now) });
-                    }}>Mês Atual</Button>
-                    <Button variant="ghost" size="sm" className="text-[10px] uppercase font-bold h-7" onClick={() => {
-                      const now = new Date();
-                      setDateRange({ from: startOfYear(now), to: endOfYear(now) });
-                    }}>Ano Atual</Button>
+                <div className="p-3 flex flex-col gap-2 border-b border-border/10 bg-muted/20">
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="text-[10px] uppercase font-black h-8 bg-background/50" 
+                      onClick={() => {
+                        const now = new Date();
+                        setDateRange({ from: startOfMonth(now), to: endOfMonth(now) });
+                      }}
+                    >
+                      Mês Atual
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="text-[10px] uppercase font-black h-8 bg-background/50" 
+                      onClick={() => {
+                        const now = new Date();
+                        setDateRange({ from: startOfYear(now), to: endOfYear(now) });
+                      }}
+                    >
+                      Ano Atual
+                    </Button>
                   </div>
-                  <Button variant="ghost" size="sm" className="text-[10px] uppercase font-bold h-7 w-full text-primary" onClick={() => {
-                    setDateRange(undefined);
-                  }}>Ver Todo o Período</Button>
+                  <Button 
+                    variant="default" 
+                    size="sm" 
+                    className="text-[10px] uppercase font-black h-8 w-full shadow-lg shadow-primary/20" 
+                    onClick={() => {
+                      setDateRange(undefined);
+                    }}
+                  >
+                    Ver Todo o Período
+                  </Button>
                 </div>
                 <CalendarComponent
                   mode="range"
