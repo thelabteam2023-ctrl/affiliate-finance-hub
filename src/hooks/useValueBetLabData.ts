@@ -98,7 +98,8 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
         .select("id, data_aposta, esporte, mercado, odd, stake_consolidado, pl_consolidado, valor_brl_referencia, stake_total, lucro_prejuizo, resultado, evento, selecao, bookmaker_id")
         .eq("workspace_id", workspaceId)
         .eq("estrategia", "VALUEBET")
-        .order('data_aposta', { ascending: false });
+        .order('data_aposta', { ascending: false })
+        .limit(15000);
 
       if (projectIds && projectIds.length > 0) {
         q = q.in("projeto_id", projectIds);
