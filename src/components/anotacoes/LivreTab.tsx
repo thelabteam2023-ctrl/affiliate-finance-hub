@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useWorkspaceGuard } from "@/hooks/useWorkspaceGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Send, Trash2, Image as ImageIcon } from "lucide-react";
+import { Loader2, Send, Trash2, Image as ImageIcon, Copy, Code } from "lucide-react";
 import { AnotacaoLivre } from "./types";
 import { cn } from "@/lib/utils";
 import { useImageUpload } from "@/hooks/useImageUpload";
@@ -348,7 +348,7 @@ function AnotacaoLivreCard({
   return (
     <div
       className={cn(
-        "relative group rounded-xl",
+        "relative group rounded-xl min-w-0 max-w-full overflow-hidden",
         "bg-muted/10 border border-border/20",
         "focus-within:border-border/40 focus-within:bg-muted/20",
         "transition-all duration-200",
@@ -390,7 +390,7 @@ function AnotacaoLivreCard({
           placeholder="Comece a escrever... (cole ou arraste imagens)"
           className={cn(
             "w-full min-h-[120px] p-6 bg-transparent resize-none",
-            "text-lg leading-relaxed text-foreground/90",
+            "text-lg leading-relaxed text-foreground/90 [overflow-wrap:anywhere] break-words",
             "placeholder:text-muted-foreground/30",
             "focus:outline-none",
             "font-light tracking-wide"
@@ -416,6 +416,53 @@ function AnotacaoLivreCard({
               salvando...
             </span>
           )}
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              const t = textareaLocalRef.current;
+              const snippet = "`valor`";
+              const curr = anotacao.conteudo || "";
+              const start = t?.selectionStart ?? curr.length;
+              const end = t?.selectionEnd ?? curr.length;
+              const next = curr.slice(0, start) + snippet + curr.slice(end);
+              onContentChange(anotacao.id, next);
+              requestAnimationFrame(() => {
+                if (t) {
+                  t.focus();
+                  t.setSelectionRange(start + 1, start + 6);
+                }
+              });
+            }}
+            className="text-[10px] text-muted-foreground/50 hover:text-foreground flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-muted/30 opacity-0 group-hover:opacity-100 transition-opacity"
+            title="Inserir linha copiável (`valor`)"
+          >
+            <Copy className="h-2.5 w-2.5" /> linha
+          </button>
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              const t = textareaLocalRef.current;
+              const snippet = "\n```PROXY\nvalor1\nvalor2\n```\n";
+              const curr = anotacao.conteudo || "";
+              const start = t?.selectionStart ?? curr.length;
+              const end = t?.selectionEnd ?? curr.length;
+              const next = curr.slice(0, start) + snippet + curr.slice(end);
+              onContentChange(anotacao.id, next);
+              requestAnimationFrame(() => {
+                if (t) {
+                  t.focus();
+                  const sel = start + 4; // after \n```
+                  t.setSelectionRange(sel, sel + 5);
+                }
+              });
+            }}
+            className="text-[10px] text-muted-foreground/50 hover:text-foreground flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-muted/30 opacity-0 group-hover:opacity-100 transition-opacity"
+            title="Inserir bloco copiável (```label ... ```)"
+          >
+            <Code className="h-2.5 w-2.5" /> bloco
+          </button>
           <span className="text-[10px] text-muted-foreground/30 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <ImageIcon className="h-2.5 w-2.5" />
             Cole ou arraste imagens
