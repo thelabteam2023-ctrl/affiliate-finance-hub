@@ -44,7 +44,11 @@ export function DangerZone() {
 
   if (!workspace || !workspaceId) return null;
 
-  const isActive = workspace.is_active !== false && !workspace.deactivated_at;
+  const ws = workspace as typeof workspace & {
+    is_active?: boolean | null;
+    deactivated_at?: string | null;
+  };
+  const isActive = ws.is_active !== false && !ws.deactivated_at;
   const nameMatches = confirmName.trim() === workspace.name;
 
   const handleDeactivate = async () => {
