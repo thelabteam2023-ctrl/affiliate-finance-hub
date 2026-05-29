@@ -16,6 +16,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useNotesData } from '@/hooks/useNotesData';
 import { ContentRenderer } from '@/components/anotacoes/ContentRenderer';
+import { InsertCopyableDialog } from '@/components/anotacoes/InsertCopyableDialog';
 
 interface NotesDrawerProps {
   isOpen: boolean;
@@ -42,11 +43,11 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
   const [selectedCategory, setSelectedCategory] = useState<string>('Todas');
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false);
 
-  const insertSnippet = (kind: 'linha' | 'bloco') => {
+  const insertAtCursor = (snippet: string) => {
     const ta = textareaRef.current;
     const current = newNoteText;
-    const snippet = kind === 'linha' ? '`valor`' : '```label\nlinha1\nlinha2\n```';
     const start = ta?.selectionStart ?? current.length;
     const end = ta?.selectionEnd ?? current.length;
     const next = current.slice(0, start) + snippet + current.slice(end);
@@ -54,17 +55,8 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
     requestAnimationFrame(() => {
       if (!textareaRef.current) return;
       textareaRef.current.focus();
-      // Posiciona o cursor sobre a primeira palavra editável
-      const placeholderStart = start + (kind === 'linha' ? 1 : 4); // após ` ou ```\n? -> ajustamos abaixo
-      if (kind === 'linha') {
-        const s = start + 1;
-        const e = s + 'valor'.length;
-        textareaRef.current.setSelectionRange(s, e);
-      } else {
-        const s = start + 3; // após ```
-        const e = s + 'label'.length;
-        textareaRef.current.setSelectionRange(s, e);
-      }
+      const pos = start + snippet.length;
+      textareaRef.current.setSelectionRange(pos, pos);
     });
   };
 
@@ -299,25 +291,17 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
                   )}
                   {/* Snippet toolbar */}
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-[10px] uppercase tracking-wide text-gray-500">Inserir:</span>
                     <button
                       type="button"
-                      onClick={() => insertSnippet('linha')}
-                      title="Inserir chip copiável inline (`valor`)"
-                      className="px-2 py-0.5 text-[10px] font-medium rounded bg-[#0f1218] text-gray-300 border border-[#2a2d35] hover:border-[#00c853]/40 hover:text-[#00c853] transition-colors"
+                      onClick={() => setCopyDialogOpen(true)}
+                      title="Adicionar valor copiável (token, proxy, URL, IP…)"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-md bg-[#0f1218] text-gray-200 border border-[#2a2d35] hover:border-[#00c853]/40 hover:text-[#00c853] transition-colors"
                     >
-                      linha
+                      <Plus className="w-3 h-3" />
+                      Dado copiável
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => insertSnippet('bloco')}
-                      title="Inserir bloco copiável (```label … ```)"
-                      className="px-2 py-0.5 text-[10px] font-medium rounded bg-[#0f1218] text-gray-300 border border-[#2a2d35] hover:border-[#00c853]/40 hover:text-[#00c853] transition-colors"
-                    >
-                      bloco
-                    </button>
-                    <span className="text-[10px] text-gray-600 ml-auto">
-                      `valor` → chip · ```label\\n…``` → bloco
+                    <span className="text-[10px] text-gray-500 ml-auto">
+                      gera um botão de copiar
                     </span>
                   </div>
                   <textarea
@@ -451,6 +435,12 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
           )}
         </div>
       </div>
+
+      <InsertCopyableDialog
+        open={copyDialogOpen}
+        onOpenChange={setCopyDialogOpen}
+        onInsert={insertAtCursor}
+      />
     </>
   );
 };

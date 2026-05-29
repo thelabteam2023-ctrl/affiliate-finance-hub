@@ -198,8 +198,16 @@ function parseTextSegment(text: string): ContentSegment[] {
     // Token
     const token = match[0];
     if (token.startsWith("`") && token.endsWith("`")) {
-      const value = token.slice(1, -1);
-      segments.push({ type: "copy-inline", value });
+      const raw = token.slice(1, -1);
+      // Suporta sintaxe `label::value` para chip rotulado
+      const sepIdx = raw.indexOf("::");
+      if (sepIdx > 0 && sepIdx < raw.length - 2) {
+        const label = raw.slice(0, sepIdx).trim();
+        const value = raw.slice(sepIdx + 2).trim();
+        segments.push({ type: "copy-inline", value, label: label || undefined });
+      } else {
+        segments.push({ type: "copy-inline", value: raw });
+      }
     } else if (token.startsWith("#")) {
       segments.push({ type: "tag", text: token });
     } else if (token.startsWith("@")) {

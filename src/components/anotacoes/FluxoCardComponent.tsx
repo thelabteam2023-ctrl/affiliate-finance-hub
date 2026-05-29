@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Trash2, Loader2, Image as ImageIcon, Copy, Code } from "lucide-react";
+import { Trash2, Loader2, Image as ImageIcon, Wand2 } from "lucide-react";
 import { FluxoCard } from "./types";
 import { cn } from "@/lib/utils";
 import { FluxoCardDetailDialog } from "./FluxoCardDetailDialog";
 import { ContentRenderer } from "./ContentRenderer";
 import { useImageUpload } from "@/hooks/useImageUpload";
 import { useAuth } from "@/hooks/useAuth";
+import { InsertCopyableDialog } from "./InsertCopyableDialog";
 
 // Cores suaves estilo post-it para dark mode
 const CARD_COLORS = [
@@ -49,6 +50,7 @@ export function FluxoCardComponent({
   const [localContent, setLocalContent] = useState(card.conteudo);
   const [isEditing, setIsEditing] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -162,30 +164,22 @@ export function FluxoCardComponent({
     }
   };
 
-  // Inserir snippet de copiável no textarea
-  const insertSnippet = (snippet: string, selectInside?: { from: number; to: number }) => {
+  // Inserir snippet copiável no cursor
+  const insertAtCursor = (snippet: string) => {
     const textarea = textareaRef.current;
-    if (!textarea) return;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
+    const start = textarea?.selectionStart ?? localContent.length;
+    const end = textarea?.selectionEnd ?? localContent.length;
     const before = localContent.slice(0, start);
     const after = localContent.slice(end);
-    const needsLeadingNewline = before.length > 0 && !before.endsWith("\n") && snippet.startsWith("\n") === false && snippet.includes("\n");
-    const prefix = needsLeadingNewline ? "\n" : "";
-    const next = before + prefix + snippet + after;
+    const next = before + snippet + after;
     setLocalContent(next);
     debouncedSave(next);
     requestAnimationFrame(() => {
       const t = textareaRef.current;
       if (!t) return;
-      const base = before.length + prefix.length;
-      if (selectInside) {
-        t.focus();
-        t.setSelectionRange(base + selectInside.from, base + selectInside.to);
-      } else {
-        t.focus();
-        t.setSelectionRange(base + snippet.length, base + snippet.length);
-      }
+      const pos = before.length + snippet.length;
+      t.focus();
+      t.setSelectionRange(pos, pos);
     });
   };
 
@@ -267,21 +261,11 @@ export function FluxoCardComponent({
           >
             <button
               type="button"
-              onClick={() => insertSnippet("`valor`", { from: 1, to: 6 })}
-              className="inline-flex items-center gap-1 text-[9px] text-muted-foreground/80 hover:text-foreground hover:bg-muted/40 px-1.5 py-0.5 rounded"
-              title="Inserir linha copiável (envolva com crases)"
+              onClick={() => setCopyDialogOpen(true)}
+              className="inline-flex items-center gap-1 text-[10px] text-muted-foreground/80 hover:text-foreground hover:bg-muted/40 px-1.5 py-0.5 rounded border border-border/30"
+              title="Adicionar valor copiável (token, proxy, URL, IP…)"
             >
-              <Copy className="h-2.5 w-2.5" /> linha
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                insertSnippet("```PROXY\nvalor1\nvalor2\n```", { from: 3, to: 8 })
-              }
-              className="inline-flex items-center gap-1 text-[9px] text-muted-foreground/80 hover:text-foreground hover:bg-muted/40 px-1.5 py-0.5 rounded"
-              title="Inserir bloco copiável (```label ... ```)"
-            >
-              <Code className="h-2.5 w-2.5" /> bloco
+              <Wand2 className="h-2.5 w-2.5" /> Dado copiável
             </button>
             <div className="flex items-center gap-1 ml-auto">
               <ImageIcon className="h-2.5 w-2.5 text-muted-foreground/60" />
@@ -297,6 +281,12 @@ export function FluxoCardComponent({
         open={showDetail}
         onOpenChange={setShowDetail}
         onUpdate={onUpdate}
+      />
+
+      <InsertCopyableDialog
+        open={copyDialogOpen}
+        onOpenChange={setCopyDialogOpen}
+        onInsert={insertAtCursor}
       />
     </>
   );
