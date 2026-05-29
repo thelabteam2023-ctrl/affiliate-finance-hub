@@ -6,6 +6,7 @@ import { LabKPIPanel } from "@/components/laboratorio/LabKPIPanel";
 import { MarketsTab } from "@/components/laboratorio/tabs/MarketsTab";
 import { OddRangesTab } from "@/components/laboratorio/tabs/OddRangesTab";
 import { EvolutionTab } from "@/components/laboratorio/tabs/EvolutionTab";
+import { StatisticsTab } from "@/components/laboratorio/tabs/StatisticsTab";
 import { BetsTab } from "@/components/laboratorio/tabs/BetsTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -291,11 +292,11 @@ export default function LaboratorioValueBet() {
                 <TabsTrigger value="markets" className="bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none px-0 py-2 text-xs font-black uppercase tracking-widest text-muted-foreground data-[state=active]:text-foreground transition-all">
                   Mercados
                 </TabsTrigger>
+                <TabsTrigger value="statistics" className="bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none px-0 py-2 text-xs font-black uppercase tracking-widest text-muted-foreground data-[state=active]:text-foreground transition-all">
+                  Estatísticas
+                </TabsTrigger>
                 <TabsTrigger value="odds" className="bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none px-0 py-2 text-xs font-black uppercase tracking-widest text-muted-foreground data-[state=active]:text-foreground transition-all">
                   Faixas de Odd
-                </TabsTrigger>
-                <TabsTrigger value="evolution" className="bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none px-0 py-2 text-xs font-black uppercase tracking-widest text-muted-foreground data-[state=active]:text-foreground transition-all">
-                  Evolução
                 </TabsTrigger>
                 <TabsTrigger value="bets" className="bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none px-0 py-2 text-xs font-black uppercase tracking-widest text-muted-foreground data-[state=active]:text-foreground transition-all">
                   Apostas
@@ -304,29 +305,19 @@ export default function LaboratorioValueBet() {
             </div>
 
             <TabsContent value="markets" className="mt-0">
-              <div className="space-y-6">
-                <MarketsTab markets={filteredMarketsForTab} />
-                {/* Gráfico adicional no menu: Entrada por Entrada */}
-                <Card className="bg-card/40 border-border/40">
-                  <CardHeader>
-                    <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Desempenho Diário do Escopo (Entrada por Entrada)</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <EvolutionTab 
-                      evolution={stats?.evolution || []} 
-                      evolutionByEntry={stats?.evolutionByEntry}
-                    />
-                  </CardContent>
-                </Card>
-              </div>
+              <MarketsTab markets={filteredMarketsForTab} />
             </TabsContent>
             
-            <TabsContent value="odds" className="mt-0">
-              <OddRangesTab markets={filteredMarketsForTab} />
+            <TabsContent value="statistics" className="mt-0">
+              <StatisticsTab 
+                markets={filteredMarketsForTab} 
+                evolution={stats?.evolution || []} 
+                evolutionByEntry={stats?.evolutionByEntry} 
+              />
             </TabsContent>
 
-            <TabsContent value="evolution" className="mt-0">
-              <EvolutionTab evolution={stats?.evolution || []} evolutionByEntry={stats?.evolutionByEntry} />
+            <TabsContent value="odds" className="mt-0">
+              <OddRangesTab markets={filteredMarketsForTab} />
             </TabsContent>
 
             <TabsContent value="bets" className="mt-0">
