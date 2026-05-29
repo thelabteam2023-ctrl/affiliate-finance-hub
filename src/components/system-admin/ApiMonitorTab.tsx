@@ -88,7 +88,13 @@ export function ApiMonitorTab() {
         }
       });
       const summaryData = await res.json();
-      setSummary(summaryData);
+      // Guarda contra respostas de erro: garante a forma esperada
+      setSummary({
+        today: Array.isArray(summaryData?.today) ? summaryData.today : [],
+        month: Array.isArray(summaryData?.month) ? summaryData.month : [],
+        lastCall: summaryData?.lastCall ?? null,
+        limits: summaryData?.limits ?? {},
+      });
     } catch (err) {
       console.error('Error fetching summary:', err);
       toast.error('Erro ao carregar resumo de uso das APIs');
@@ -170,8 +176,8 @@ export function ApiMonitorTab() {
 
   const getUsageForApi = (apiName: string, type: 'today' | 'month') => {
     if (!summary) return { total_calls: 0, total_credits: 0, total_errors: 0 };
-    const list = type === 'today' ? summary.today : summary.month;
-    return list.find(u => u.api_name === apiName) || { total_calls: 0, total_credits: 0, total_errors: 0 };
+    const list = (type === 'today' ? summary.today : summary.month) || [];
+    return list.find((u: ApiUsage) => u.api_name === apiName) || { total_calls: 0, total_credits: 0, total_errors: 0 };
   };
 
   return (
