@@ -63,7 +63,19 @@ export default function LaboratorioValueBet() {
   const filteredBetsForTab = useMemo(() => {
     if (!stats?.raw) return [];
     if (!selectedSport) return stats.raw;
-    return stats.raw.filter(b => (b.esporte || 'Outros') === selectedSport);
+    return stats.raw.filter(b => {
+      let rawSport = b.esporte || 'Outros';
+      let bSport = rawSport.trim() === "" ? "Outros" : rawSport.charAt(0).toUpperCase() + rawSport.slice(1).toLowerCase();
+      // Apply same normalization as hook
+      if (bSport.toLowerCase() === 'soccer') bSport = 'Futebol';
+      if (bSport.toLowerCase() === 'efootball') bSport = 'E-sports';
+      if (['counter-strike', 'league of legends', 'valorant', 'dota 2'].includes(bSport.toLowerCase())) bSport = 'E-sports';
+      if (bSport.toLowerCase() === 'hockey') bSport = 'Hóquei';
+      if (bSport.toLowerCase() === 'basketball') bSport = 'Basquete';
+      if (bSport.toLowerCase() === 'tennis') bSport = 'Tênis';
+      if (bSport.toLowerCase() === 'volleyball') bSport = 'Vôlei';
+      return bSport === selectedSport;
+    });
   }, [stats, selectedSport]);
 
   const filteredMarketsForTab = useMemo(() => {

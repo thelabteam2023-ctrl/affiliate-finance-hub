@@ -123,8 +123,9 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
 
     data.forEach(bet => {
       // Normalização para evitar duplicidade por case ou nulos
-      let rawSport = bet.esporte || 'Indefinido';
-      let sportName = rawSport.trim() === "" ? "Indefinido" : rawSport.charAt(0).toUpperCase() + rawSport.slice(1).toLowerCase();
+      let rawSport = bet.esporte || 'Outros';
+      let sportName = rawSport.trim() === "" ? "Outros" : rawSport.charAt(0).toUpperCase() + rawSport.slice(1).toLowerCase();
+
       
       // Mapeamento de sinonimos ou erros comuns
       if (sportName.toLowerCase() === 'soccer') sportName = 'Futebol';
@@ -156,8 +157,9 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
     // Finalize metrics per hierarchy
     Object.keys(sports).forEach(sName => {
       const sportBets = data.filter(b => {
-        let rawSport = b.esporte || 'Indefinido';
-        let bSport = rawSport.trim() === "" ? "Indefinido" : rawSport.charAt(0).toUpperCase() + rawSport.slice(1).toLowerCase();
+        let rawSport = b.esporte || 'Outros';
+        let bSport = rawSport.trim() === "" ? "Outros" : rawSport.charAt(0).toUpperCase() + rawSport.slice(1).toLowerCase();
+
         if (bSport.toLowerCase() === 'soccer') bSport = 'Futebol';
         if (bSport.toLowerCase() === 'efootball') bSport = 'E-sports';
         if (['counter-strike', 'league of legends', 'valorant', 'dota 2'].includes(bSport.toLowerCase())) bSport = 'E-sports';
@@ -188,8 +190,9 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
     const evolution: Record<string, { date: string, profit: number, volume: number, bets: number }> = {};
     const evolutionData = selectedSport 
       ? data.filter(b => {
-          let rawSport = b.esporte || 'Indefinido';
-          let bSport = rawSport.trim() === "" ? "Indefinido" : rawSport.charAt(0).toUpperCase() + rawSport.slice(1).toLowerCase();
+          let rawSport = b.esporte || 'Outros';
+          let bSport = rawSport.trim() === "" ? "Outros" : rawSport.charAt(0).toUpperCase() + rawSport.slice(1).toLowerCase();
+
           if (bSport.toLowerCase() === 'soccer') bSport = 'Futebol';
           if (bSport.toLowerCase() === 'efootball') bSport = 'E-sports';
           if (['counter-strike', 'league of legends', 'valorant', 'dota 2'].includes(bSport.toLowerCase())) bSport = 'E-sports';
