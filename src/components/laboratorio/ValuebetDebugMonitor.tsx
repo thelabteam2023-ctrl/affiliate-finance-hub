@@ -43,22 +43,34 @@ export function ValuebetDebugMonitor({
         .eq("workspace_id", workspaceId);
 
       // Busca por variações de estratégia (Case Insensitive)
-      const { data: strategies } = await supabase
+      const { data: strategiesRaw } = await supabase
         .from("apostas_unificada")
-        .select("estrategia, status, count()")
+        .select("estrategia, status")
         .eq("workspace_id", workspaceId)
-        .ilike("estrategia", "%value%")
-        .group("estrategia, status");
+        .ilike("estrategia", "%value%");
+
+      // Agrupar manualmente no JS já que o Postgrest não suporta .group() direto via SDK JS desta forma
+      const strategies = (strategiesRaw || []).reduce((acc: any[], curr) => {
+        const existing = acc.find(a => a.estrategia === curr.estrategia && a.status === curr.status);
+        if (existing) existing.count++;
+        else acc.push({ estrategia: curr.estrategia, status: curr.status, count: 1 });
+        return acc;
+      }, []);
 
       // Verificar projetos selecionados
       let projectCheck = [];
       if (projectIds && projectIds.length > 0) {
-        const { data } = await supabase
+        const { data: projectsRaw } = await supabase
           .from("apostas_unificada")
-          .select("projeto_id, estrategia, status, count()")
-          .in("projeto_id", projectIds)
-          .group("projeto_id, estrategia, status");
-        projectCheck = data || [];
+          .select("projeto_id, estrategia, status")
+          .in("projeto_id", projectIds);
+        
+        projectCheck = (projectsRaw || []).reduce((acc: any[], curr) => {
+          const existing = acc.find(a => a.projeto_id === curr.projeto_id && a.estrategia === curr.estrategia && a.status === curr.status);
+          if (existing) existing.count++;
+          else acc.push({ projeto_id: curr.projeto_id, estrategia: curr.estrategia, status: curr.status, count: 1 });
+          return acc;
+        }, []);
       }
 
       addLog("Auditoria concluída.", "success");
