@@ -437,49 +437,11 @@ function AnotacaoLivreCard({
           <button
             type="button"
             onMouseDown={(e) => e.preventDefault()}
-            onClick={() => {
-              const t = textareaLocalRef.current;
-              const snippet = "`valor`";
-              const curr = anotacao.conteudo || "";
-              const start = t?.selectionStart ?? curr.length;
-              const end = t?.selectionEnd ?? curr.length;
-              const next = curr.slice(0, start) + snippet + curr.slice(end);
-              onContentChange(anotacao.id, next);
-              requestAnimationFrame(() => {
-                if (t) {
-                  t.focus();
-                  t.setSelectionRange(start + 1, start + 6);
-                }
-              });
-            }}
-            className="text-[10px] text-muted-foreground/50 hover:text-foreground flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-muted/30 opacity-0 group-hover:opacity-100 transition-opacity"
-            title="Inserir linha copiável (`valor`)"
+            onClick={() => setCopyDialogOpen(true)}
+            className="text-[11px] text-muted-foreground/70 hover:text-foreground flex items-center gap-1.5 px-2 py-1 rounded border border-border/30 hover:border-border/60 hover:bg-muted/30 opacity-0 group-hover:opacity-100 transition-opacity"
+            title="Adicionar valor copiável (token, proxy, URL, IP…)"
           >
-            <Copy className="h-2.5 w-2.5" /> linha
-          </button>
-          <button
-            type="button"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => {
-              const t = textareaLocalRef.current;
-              const snippet = "\n```PROXY\nvalor1\nvalor2\n```\n";
-              const curr = anotacao.conteudo || "";
-              const start = t?.selectionStart ?? curr.length;
-              const end = t?.selectionEnd ?? curr.length;
-              const next = curr.slice(0, start) + snippet + curr.slice(end);
-              onContentChange(anotacao.id, next);
-              requestAnimationFrame(() => {
-                if (t) {
-                  t.focus();
-                  const sel = start + 4; // after \n```
-                  t.setSelectionRange(sel, sel + 5);
-                }
-              });
-            }}
-            className="text-[10px] text-muted-foreground/50 hover:text-foreground flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-muted/30 opacity-0 group-hover:opacity-100 transition-opacity"
-            title="Inserir bloco copiável (```label ... ```)"
-          >
-            <Code className="h-2.5 w-2.5" /> bloco
+            <Wand2 className="h-3 w-3" /> Dado copiável
           </button>
           <span className="text-[10px] text-muted-foreground/30 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <ImageIcon className="h-2.5 w-2.5" />
@@ -502,6 +464,11 @@ function AnotacaoLivreCard({
           </button>
         )}
       </div>
+      <InsertCopyableDialog
+        open={copyDialogOpen}
+        onOpenChange={setCopyDialogOpen}
+        onInsert={insertAtCursor}
+      />
     </div>
   );
 }
