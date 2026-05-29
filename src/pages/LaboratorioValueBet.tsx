@@ -123,10 +123,14 @@ export default function LaboratorioValueBet() {
     return (
       <div className="flex flex-col items-center justify-center h-full space-y-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground animate-pulse">Processando Laboratório...</p>
+        <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground animate-pulse">
+          Sincronizando Banco de Dados...
+        </p>
+        <p className="text-[10px] text-muted-foreground uppercase font-medium">Buscando registros em blocos de 1000</p>
       </div>
     );
   }
+
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -143,15 +147,24 @@ export default function LaboratorioValueBet() {
         <header className="h-16 border-b border-border/40 flex items-center justify-between px-6 bg-card/10 backdrop-blur-md z-10">
           <div className="flex items-center gap-4">
             <div className="flex flex-col">
-              <h1 className="text-xl font-black flex items-center gap-2">
-                <BarChart3 className="text-primary h-5 w-5" /> 
-                {selectedSport || "Todos os Esportes"}
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-black flex items-center gap-2">
+                  <BarChart3 className="text-primary h-5 w-5" /> 
+                  {selectedSport || "Todos os Esportes"}
+                </h1>
+                {stats && selectedProjectIds.length > 0 && (
+                  <span className="bg-primary/10 text-primary text-[10px] font-black px-2 py-0.5 rounded-full border border-primary/20">
+                    {stats.raw.length.toLocaleString()} APOSTAS CARREGADAS
+                    {stats.totalInDb > 15000 && ` (DE ${stats.totalInDb.toLocaleString()})`}
+                  </span>
+                )}
+              </div>
               <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
                 Monitor Analítico • ValueBet
               </p>
             </div>
           </div>
+
 
           <div className="flex items-center gap-2">
             <Sheet open={configOpen} onOpenChange={setConfigOpen}>

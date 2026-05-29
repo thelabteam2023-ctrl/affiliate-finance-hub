@@ -93,23 +93,70 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
   const query = useQuery({
     queryKey: ["valuebet-lab-raw", projectIds, startDate, endDate, workspaceId, selectedSport],
     queryFn: async () => {
-      let q = supabase
+      if (!workspaceId) return { bets: [] as RawBet[], totalInDb: 0 };
+
+      // 1. Obter o COUNT total para os filtros selecionados
+      let countQuery = supabase
         .from("apostas_unificada")
-        .select("id, data_aposta, esporte, mercado, odd, stake_consolidado, pl_consolidado, valor_brl_referencia, stake_total, lucro_prejuizo, resultado, evento, selecao, bookmaker_id")
+        .select("*", { count: 'exact', head: true })
         .eq("workspace_id", workspaceId)
-        .eq("estrategia", "VALUEBET")
-        .order('data_aposta', { ascending: false })
-        .limit(15000);
+        .eq("estrategia", "VALUEBET");
 
       if (projectIds && projectIds.length > 0) {
-        q = q.in("projeto_id", projectIds);
+        countQuery = countQuery.in("projeto_id", projectIds);
       }
-      if (startDate) q = q.gte("data_aposta", startDate);
-      if (endDate) q = q.lte("data_aposta", endDate);
+      if (startDate) countQuery = countQuery.gte("data_aposta", startDate);
+      if (endDate) countQuery = countQuery.lte("data_aposta", endDate);
 
-      const { data, error } = await q;
-      if (error) throw error;
-      return data as RawBet[];
+      const { count: totalCount, error: countError } = await countQuery;
+      if (countError) throw countError;
+
+      const total = totalCount || 0;
+      if (total === 0) return { bets: [], totalInDb: 0 };
+
+      // Limite de segurança de 15.000 como solicitado
+      const safeTotal = Math.min(total, 15000);
+      const pageSize = 1000;
+      const pages = Math.ceil(safeTotal / pageSize);
+
+      // 2. Carregamento paralelo em chunks de 1000
+      const promises = Array.from({ length: pages }, (_, i) => {
+        const from = i * pageSize;
+        const to = Math.min((i + 1) * pageSize - 1, safeTotal - 1);
+
+        let q = supabase
+          .from("apostas_unificada")
+          .select("id, data_aposta, esporte, mercado, odd, stake_consolidado, pl_consolidado, valor_brl_referencia, stake_total, lucro_prejuizo, resultado, evento, selecao, bookmaker_id")
+          .eq("workspace_id", workspaceId)
+          .eq("estrategia", "VALUEBET")
+          .order('data_aposta', { ascending: false })
+          .range(from, to);
+
+        if (projectIds && projectIds.length > 0) {
+          q = q.in("projeto_id", projectIds);
+        }
+        if (startDate) q = q.gte("data_aposta", startDate);
+        if (endDate) q = q.lte("data_aposta", endDate);
+
+        return q;
+      });
+
+      const results = await Promise.all(promises);
+      const allData: RawBet[] = [];
+
+      results.forEach(({ data, error }, index) => {
+        if (error) throw error;
+        if (data) allData.push(...(data as RawBet[]));
+      });
+
+      // 3. Validação de integridade
+      if (allData.length < safeTotal) {
+        console.error(`ATENÇÃO: carregadas ${allData.length} apostas de ${safeTotal} esperadas (Total no banco: ${total})`);
+      } else {
+        console.log(`Sucesso: ${allData.length} apostas carregadas corretamente.`);
+      }
+
+      return { bets: allData, totalInDb: total };
     },
     enabled: !!workspaceId && !!projectIds && projectIds.length > 0,
   });
@@ -117,8 +164,9 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
   const stats = useMemo(() => {
     if (!query.data) return null;
 
-    const data = query.data;
+    const data = query.data.bets;
     const globalMetrics = calculateMetrics(data);
+
 
     const sports: Record<string, SportStats> = {};
 
@@ -237,9 +285,11 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
       sports,
       evolution: evolutionArray,
       evolutionByEntry,
-      raw: data
+      raw: data,
+      totalInDb: query.data.totalInDb
     };
   }, [query.data]);
+
 
   return { ...query, stats };
 }
