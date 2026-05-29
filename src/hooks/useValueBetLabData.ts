@@ -111,7 +111,7 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
       if (error) throw error;
       return data as RawBet[];
     },
-    enabled: !!workspaceId,
+    enabled: !!workspaceId && !!projectIds && projectIds.length > 0,
   });
 
   const stats = useMemo(() => {
