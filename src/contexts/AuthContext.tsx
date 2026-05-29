@@ -22,6 +22,8 @@ interface Workspace {
   plan: string;
   chat_moderation_level?: string;
   chat_notification_sound?: string;
+  is_active?: boolean | null;
+  deactivated_at?: string | null;
 }
 
 // ── State Machine ──────────────────────────────────────────────
