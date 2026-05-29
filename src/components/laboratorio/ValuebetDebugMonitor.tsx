@@ -155,19 +155,27 @@ export function ValuebetDebugMonitor({
             Monitor de Diagnóstico e Auto-Cura
           </CardTitle>
         </div>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="h-8 gap-2 bg-card"
-          onClick={() => {
-            refetchAudit();
-            queryClient.invalidateQueries({ queryKey: ["laboratorio-valuebet"] });
-          }}
-          disabled={auditing || rpcLoading}
-        >
-          <RefreshCw className={cn("h-3 w-3", (auditing || rpcLoading) && "animate-spin")} />
-          Recalibrar Ecossistema
-        </Button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-muted/40 rounded-full border border-border/20">
+            <Activity className={cn("h-3 w-3", rpcData?._metadata?.fetch_duration_ms > 1000 ? "text-amber-500" : "text-emerald-500")} />
+            <span className="text-[10px] font-bold tabular-nums">
+              {rpcData?._metadata?.fetch_duration_ms ? `${rpcData._metadata.fetch_duration_ms.toFixed(0)}ms` : "--"}
+            </span>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-8 gap-2 bg-card hover:bg-primary/10 hover:text-primary transition-all"
+            onClick={() => {
+              refetchAudit();
+              queryClient.invalidateQueries({ queryKey: ["laboratorio-valuebet"] });
+            }}
+            disabled={auditing || rpcLoading}
+          >
+            <RefreshCw className={cn("h-3 w-3", (auditing || rpcLoading) && "animate-spin")} />
+            Diagnóstico Profundo
+          </Button>
+        </div>
       </CardHeader>
       
       <CardContent className="pt-6">
