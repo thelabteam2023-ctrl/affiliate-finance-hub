@@ -54,9 +54,11 @@ export default function LaboratorioValueBet() {
   );
 
   const totalBetsHeader = useMemo(() => {
+    if (loadingStats) return "Carregando...";
+    if (rpcError) return "Erro nos dados";
     if (!stats?.kpis?.total_bets) return "0 apostas";
     return `${stats.kpis.total_bets.toLocaleString()} apostas`;
-  }, [stats?.kpis?.total_bets]);
+  }, [stats?.kpis?.total_bets, loadingStats, rpcError]);
 
   const toggleProject = (id: string) => {
     setSelectedProjectIds(prev => 
