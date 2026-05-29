@@ -43,11 +43,11 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
   const [selectedCategory, setSelectedCategory] = useState<string>('Todas');
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false);
 
-  const insertSnippet = (kind: 'linha' | 'bloco') => {
+  const insertAtCursor = (snippet: string) => {
     const ta = textareaRef.current;
     const current = newNoteText;
-    const snippet = kind === 'linha' ? '`valor`' : '```label\nlinha1\nlinha2\n```';
     const start = ta?.selectionStart ?? current.length;
     const end = ta?.selectionEnd ?? current.length;
     const next = current.slice(0, start) + snippet + current.slice(end);
@@ -55,17 +55,8 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
     requestAnimationFrame(() => {
       if (!textareaRef.current) return;
       textareaRef.current.focus();
-      // Posiciona o cursor sobre a primeira palavra editável
-      const placeholderStart = start + (kind === 'linha' ? 1 : 4); // após ` ou ```\n? -> ajustamos abaixo
-      if (kind === 'linha') {
-        const s = start + 1;
-        const e = s + 'valor'.length;
-        textareaRef.current.setSelectionRange(s, e);
-      } else {
-        const s = start + 3; // após ```
-        const e = s + 'label'.length;
-        textareaRef.current.setSelectionRange(s, e);
-      }
+      const pos = start + snippet.length;
+      textareaRef.current.setSelectionRange(pos, pos);
     });
   };
 
