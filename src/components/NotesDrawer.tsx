@@ -16,7 +16,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useNotesData } from '@/hooks/useNotesData';
 import { ContentRenderer } from '@/components/anotacoes/ContentRenderer';
-import { InsertCopyableDialog } from '@/components/anotacoes/InsertCopyableDialog';
+import { InsertCopyablePanel } from '@/components/anotacoes/InsertCopyablePanel';
 
 interface NotesDrawerProps {
   isOpen: boolean;
@@ -323,6 +323,12 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
                     placeholder={view === 'geral' ? "Escreva sua anotação livre..." : "O que você está pensando?"}
                     className="w-full bg-transparent border-none focus:ring-0 text-sm text-gray-200 resize-none min-h-[100px] font-mono"
                   />
+                  <InsertCopyablePanel
+                    open={copyDialogOpen}
+                    onClose={() => setCopyDialogOpen(false)}
+                    onInsert={insertAtCursor}
+                    variant="drawer"
+                  />
                   <div className="flex justify-end gap-2 pt-2 border-t border-[#2a2d35]">
                     <button 
                       onClick={() => { 
@@ -435,12 +441,6 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
           )}
         </div>
       </div>
-
-      <InsertCopyableDialog
-        open={copyDialogOpen}
-        onOpenChange={setCopyDialogOpen}
-        onInsert={insertAtCursor}
-      />
     </>
   );
 };
