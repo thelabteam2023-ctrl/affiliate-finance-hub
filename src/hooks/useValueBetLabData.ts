@@ -213,10 +213,26 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
 
     const evolutionArray = Object.values(evolution).sort((a, b) => a.date.localeCompare(b.date));
 
+    // Entry by entry evolution (cumulative profit)
+    let cumulative = 0;
+    const evolutionByEntry = evolutionData
+      .sort((a, b) => a.data_aposta.localeCompare(b.data_aposta))
+      .map((bet, index) => {
+        cumulative += (bet.pl_consolidado ?? bet.lucro_prejuizo ?? 0);
+        return {
+          index,
+          profit: (bet.pl_consolidado ?? bet.lucro_prejuizo ?? 0),
+          cumulative,
+          date: bet.data_aposta,
+          label: `${format(parseISO(bet.data_aposta), "dd/MM")}`
+        };
+      });
+
     return {
       global: globalMetrics,
       sports,
       evolution: evolutionArray,
+      evolutionByEntry,
       raw: data
     };
   }, [query.data]);
