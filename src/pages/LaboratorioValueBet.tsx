@@ -246,12 +246,10 @@ export default function LaboratorioValueBet() {
                     <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Desempenho Diário do Escopo (Entrada por Entrada)</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <EvolutionTab evolution={stats?.evolution.filter(e => {
-                      // Se tem esporte selecionado, a evolução já vem do raw que foi filtrado no hook (atualmente o hook agrupa global, preciso que a evolução responda ao filtro lateral)
-                      // Ajuste: O hook agrupa por dia de TODAS as apostas carregadas. 
-                      // Para o gráfico responder ao esporte, precisamos de uma evolução filtrada.
-                      return true; // Simplificando por enquanto, mas o ideal é o hook prover evolution por esporte
-                    }) || []} />
+                    <EvolutionTab 
+                      evolution={stats?.evolution || []} 
+                      evolutionByEntry={stats?.evolutionByEntry}
+                    />
                   </CardContent>
                 </Card>
               </div>
@@ -262,7 +260,7 @@ export default function LaboratorioValueBet() {
             </TabsContent>
 
             <TabsContent value="evolution" className="mt-0">
-              <EvolutionTab evolution={stats?.evolution || []} />
+              <EvolutionTab evolution={stats?.evolution || []} evolutionByEntry={stats?.evolutionByEntry} />
             </TabsContent>
 
             <TabsContent value="bets" className="mt-0">
