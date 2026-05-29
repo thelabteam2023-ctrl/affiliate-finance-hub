@@ -3,10 +3,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { useWorkspaceGuard } from "@/hooks/useWorkspaceGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Send, Trash2, Image as ImageIcon, Copy, Code } from "lucide-react";
+import { Loader2, Send, Trash2, Image as ImageIcon, Wand2 } from "lucide-react";
 import { AnotacaoLivre } from "./types";
 import { cn } from "@/lib/utils";
 import { useImageUpload } from "@/hooks/useImageUpload";
+import { InsertCopyableDialog } from "./InsertCopyableDialog";
 
 /**
  * Aba Livre - Espaço de escrita simples, silencioso e fluido
@@ -323,6 +324,7 @@ function AnotacaoLivreCard({
   autoResize,
 }: AnotacaoLivreCardProps) {
   const textareaLocalRef = useRef<HTMLTextAreaElement | null>(null);
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false);
 
   // Hook de upload de imagem
   const { isUploading, handlePaste, handleDrop, handleDragOver } = useImageUpload({
@@ -343,6 +345,22 @@ function AnotacaoLivreCard({
   const handleTextareaRef = (el: HTMLTextAreaElement | null) => {
     textareaLocalRef.current = el;
     textareaRef(el);
+  };
+
+  const insertAtCursor = (snippet: string) => {
+    const t = textareaLocalRef.current;
+    const curr = anotacao.conteudo || "";
+    const start = t?.selectionStart ?? curr.length;
+    const end = t?.selectionEnd ?? curr.length;
+    const next = curr.slice(0, start) + snippet + curr.slice(end);
+    onContentChange(anotacao.id, next);
+    requestAnimationFrame(() => {
+      if (t) {
+        t.focus();
+        const pos = start + snippet.length;
+        t.setSelectionRange(pos, pos);
+      }
+    });
   };
 
   return (
