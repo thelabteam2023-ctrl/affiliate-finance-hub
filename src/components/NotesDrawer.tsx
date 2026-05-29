@@ -16,6 +16,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useNotesData } from '@/hooks/useNotesData';
 import { ContentRenderer } from '@/components/anotacoes/ContentRenderer';
+import { InsertCopyableDialog } from '@/components/anotacoes/InsertCopyableDialog';
 
 interface NotesDrawerProps {
   isOpen: boolean;
