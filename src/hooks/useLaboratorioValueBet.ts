@@ -33,14 +33,26 @@ export function useLaboratorioValueBet(projectIds: string[] | null, startDate: s
   return useQuery({
     queryKey: ["laboratorio-valuebet", projectIds, startDate, endDate, workspaceId],
     queryFn: async () => {
+      const startTime = performance.now();
+      
       const { data, error } = await supabase.rpc("get_valuebet_lab_stats", {
         p_project_ids: projectIds && projectIds.length > 0 ? projectIds : null,
         p_start_date: startDate,
         p_end_date: endDate,
       });
 
+      const endTime = performance.now();
+      const duration = endTime - startTime;
+
       if (error) throw error;
-      return data as LabStats;
+
+      return {
+        ...(data as LabStats),
+        _metadata: {
+          fetch_duration_ms: duration,
+          timestamp: new Date().toISOString()
+        }
+      } as LabStats & { _metadata: { fetch_duration_ms: number; timestamp: string } };
     },
     enabled: !!workspaceId,
   });
