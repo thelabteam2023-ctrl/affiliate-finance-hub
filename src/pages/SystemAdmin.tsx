@@ -23,6 +23,16 @@ import { Input } from '@/components/ui/input';
 import { SearchInput } from '@/components/ui/search-input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -72,6 +82,7 @@ export default function SystemAdmin() {
     setUserBlocked,
     updateWorkspacePlan,
     setWorkspaceActive,
+    deleteWorkspacePermanently,
     getWorkspaceMembers,
   } = useSystemAdmin();
 
@@ -86,6 +97,7 @@ export default function SystemAdmin() {
   const [blockUserDialog, setBlockUserDialog] = useState<{ open: boolean; userId: string; userName: string; currentlyBlocked: boolean }>({ open: false, userId: '', userName: '', currentlyBlocked: false });
   const [changePlanDialog, setChangePlanDialog] = useState<{ open: boolean; workspaceId: string; workspaceName: string; currentPlan: string }>({ open: false, workspaceId: '', workspaceName: '', currentPlan: '' });
   const [viewMembersDialog, setViewMembersDialog] = useState<{ open: boolean; workspaceId: string; workspaceName: string; members: any[] }>({ open: false, workspaceId: '', workspaceName: '', members: [] });
+  const [deleteWorkspaceDialog, setDeleteWorkspaceDialog] = useState<{ open: boolean; workspaceId: string; workspaceName: string }>({ open: false, workspaceId: '', workspaceName: '' });
   
   // Form states
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
@@ -95,6 +107,8 @@ export default function SystemAdmin() {
   const [selectedRole, setSelectedRole] = useState('user');
   const [blockReason, setBlockReason] = useState('');
   const [selectedPlan, setSelectedPlan] = useState('');
+  const [deleteWorkspaceConfirm, setDeleteWorkspaceConfirm] = useState('');
+  const [deletingWorkspace, setDeletingWorkspace] = useState(false);
 
   useEffect(() => {
     fetchUsers();
