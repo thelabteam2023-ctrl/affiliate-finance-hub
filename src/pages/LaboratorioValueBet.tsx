@@ -10,7 +10,7 @@ import {
 } from "recharts";
 import { format, startOfWeek, startOfMonth, parseISO, startOfYear, endOfMonth, endOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Loader2, TrendingUp, TrendingDown, Target, Zap, BarChart3, PieChart as PieChartIcon, Calendar, AlertCircle, Settings2, SlidersHorizontal } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, Target, Zap, BarChart3, PieChart as PieChartIcon, Calendar, AlertCircle, Settings2, SlidersHorizontal, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
