@@ -127,13 +127,40 @@ export default function LaboratorioValueBet() {
           <p className="text-muted-foreground">Análise profunda de performance e ROI para estratégias de valor.</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="bg-card text-xs"
+            onClick={() => {
+              const end = new Date();
+              const start = new Date();
+              start.setDate(start.getDate() - 7);
+              setDateRange({ from: start, to: end });
+            }}
+          >
+            7 dias
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="bg-card text-xs"
+            onClick={() => {
+              const end = new Date();
+              const start = new Date();
+              start.setDate(start.getDate() - 30);
+              setDateRange({ from: start, to: end });
+            }}
+          >
+            30 dias
+          </Button>
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 variant={"outline"}
+                size="sm"
                 className={cn(
-                  "w-[240px] justify-start text-left font-normal bg-card",
+                  "w-[240px] justify-start text-left font-normal bg-card text-xs",
                   !dateRange && "text-muted-foreground"
                 )}
               >
