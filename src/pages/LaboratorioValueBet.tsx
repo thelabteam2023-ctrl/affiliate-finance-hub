@@ -131,10 +131,10 @@ export default function LaboratorioValueBet() {
     <div className="flex h-screen bg-background overflow-hidden">
       {/* Navigation Level 1 — Sidebar */}
       <LabSidebar 
-        sports={stats?.sports || {}} 
+        sports={selectedProjectIds.length > 0 ? (stats?.sports || {}) : {}} 
         selectedSport={selectedSport}
         onSelect={setSelectedSport}
-        globalRoi={stats?.global.roi || 0}
+        globalRoi={selectedProjectIds.length > 0 ? (stats?.global.roi || 0) : 0}
       />
 
       <div className="flex-1 flex flex-col h-full overflow-hidden">
