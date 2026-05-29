@@ -12,7 +12,7 @@ export function useRole() {
     isFinance: role === 'finance',
     isOperator: role === 'operator',
     isViewer: role === 'viewer',
-    canManageWorkspace: role === 'owner' || role === 'admin',
-    canManageMembers: role === 'owner' || role === 'admin',
+    canManageWorkspace: isSystemOwner || role === 'owner' || role === 'admin',
+    canManageMembers: isSystemOwner || role === 'owner' || role === 'admin',
   };
 }
