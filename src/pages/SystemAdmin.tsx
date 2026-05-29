@@ -1032,6 +1032,53 @@ export default function SystemAdmin() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={deleteWorkspaceDialog.open}
+        onOpenChange={(open) => {
+          setDeleteWorkspaceDialog({ ...deleteWorkspaceDialog, open });
+          if (!open) setDeleteWorkspaceConfirm('');
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Excluir workspace permanentemente
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm">
+                <p>
+                  Esta ação apagará definitivamente <strong>{deleteWorkspaceDialog.workspaceName}</strong> e todos os dados vinculados.
+                </p>
+                <p className="text-destructive">Não há como desfazer.</p>
+                <div className="space-y-2 pt-2">
+                  <Label htmlFor="adminDeleteWorkspaceConfirm" className="text-foreground">
+                    Digite o nome exato do workspace para confirmar:
+                  </Label>
+                  <Input
+                    id="adminDeleteWorkspaceConfirm"
+                    value={deleteWorkspaceConfirm}
+                    onChange={(e) => setDeleteWorkspaceConfirm(e.target.value)}
+                    placeholder={deleteWorkspaceDialog.workspaceName}
+                    autoComplete="off"
+                  />
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingWorkspace}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteWorkspacePermanently}
+              disabled={deleteWorkspaceConfirm !== deleteWorkspaceDialog.workspaceName || deletingWorkspace}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingWorkspace ? 'Excluindo...' : 'Excluir definitivamente'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
