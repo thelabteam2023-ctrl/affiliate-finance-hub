@@ -76,11 +76,11 @@ function calculateMetrics(bets: RawBet[]): Metrics {
   return { total, validas, stake, profit, roi, winRate, greens, meioGreens, meioReds, reds, voids };
 }
 
-export function useValueBetLabData(projectIds: string[] | null, startDate: string | null, endDate: string | null) {
+export function useValueBetLabData(projectIds: string[] | null, startDate: string | null, endDate: string | null, selectedSport: string | null = null) {
   const { workspaceId } = useAuth();
 
   const query = useQuery({
-    queryKey: ["valuebet-lab-raw", projectIds, startDate, endDate, workspaceId],
+    queryKey: ["valuebet-lab-raw", projectIds, startDate, endDate, workspaceId, selectedSport],
     queryFn: async () => {
       let q = supabase
         .from("apostas_unificada")
