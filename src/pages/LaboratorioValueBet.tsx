@@ -18,6 +18,7 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { DateRange } from "react-day-picker";
 import { KPIAnchorCard } from "@/components/kpis/KPIAnchorCard";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from "@/components/ui/sheet";
+import { ValuebetDebugMonitor } from "@/components/laboratorio/ValuebetDebugMonitor";
 
 export default function LaboratorioValueBet() {
   const { workspaceId } = useAuth();
