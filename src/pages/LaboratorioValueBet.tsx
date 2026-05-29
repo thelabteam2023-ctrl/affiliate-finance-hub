@@ -1,26 +1,22 @@
 import { useState, useMemo, useEffect } from "react";
 import { useLaboratorioValueBet } from "@/hooks/useLaboratorioValueBet";
+import { useValuebetProjectsSummary } from "@/hooks/useValuebetProjectsSummary";
+import { ValuebetProjectPicker } from "@/components/laboratorio/ValuebetProjectPicker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, 
-  BarChart, Bar, Legend, Cell
+  BarChart, Bar, Cell
 } from "recharts";
-import { format, startOfWeek, startOfMonth, parseISO, isWithinInterval } from "date-fns";
+import { format, startOfWeek, startOfMonth, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Loader2, TrendingUp, TrendingDown, Target, Zap, BarChart3, PieChart as PieChartIcon, Calendar } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Loader2, TrendingUp, TrendingDown, Target, Zap, BarChart3, PieChart as PieChartIcon, Calendar, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { DateRange } from "react-day-picker";
-
-const COLORS = ["#00C853", "#2962FF", "#AA00FF", "#FFAB00", "#FF1744", "#00B0FF", "#F50057", "#00E5FF"];
+import { KPIAnchorCard } from "@/components/kpis/KPIAnchorCard";
 
 export default function LaboratorioValueBet() {
   const { workspaceId } = useAuth();
@@ -248,100 +244,101 @@ export default function LaboratorioValueBet() {
                 />
               </div>
 
-          {/* Gráfico de Evolução */}
-          <Card className="border-border bg-card/50">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base font-medium">Evolução de Lucro Acumulado</CardTitle>
-              <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-md">
-                {(["daily", "weekly", "monthly"] as const).map((g) => (
-                  <button
-                    key={g}
-                    onClick={() => setTimeGrouping(g)}
-                    className={cn(
-                      "px-3 py-1 text-xs rounded-sm transition-colors",
-                      timeGrouping === g ? "bg-primary text-black font-medium" : "text-muted-foreground hover:text-foreground"
+              {/* Gráfico de Evolução */}
+              <Card className="border-border bg-card/50">
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="text-base font-medium">Evolução de Lucro Acumulado</CardTitle>
+                  <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-md">
+                    {(["daily", "weekly", "monthly"] as const).map((g) => (
+                      <button
+                        key={g}
+                        onClick={() => setTimeGrouping(g)}
+                        className={cn(
+                          "px-3 py-1 text-xs rounded-sm transition-colors",
+                          timeGrouping === g ? "bg-primary text-black font-medium" : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        {g === "daily" ? "Dia" : g === "weekly" ? "Semana" : "Mês"}
+                      </button>
+                    ))}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px] w-full">
+                    {loadingStats ? (
+                      <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin" /></div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={groupedEvolutionData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#2a2d35" vertical={false} />
+                          <XAxis dataKey="formattedDate" stroke="#888888" fontSize={10} tickLine={false} axisLine={false} />
+                          <YAxis stroke="#888888" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `R$${v}`} />
+                          <RechartsTooltip 
+                            contentStyle={{ backgroundColor: "#1e2128", border: "1px solid #2a2d35", borderRadius: "8px" }}
+                            labelStyle={{ color: "#888888", marginBottom: "4px" }}
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="cumulative" 
+                            stroke="#00C853" 
+                            strokeWidth={2} 
+                            dot={false}
+                            activeDot={{ r: 4, fill: "#00C853" }} 
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
                     )}
-                  >
-                    {g === "daily" ? "Dia" : g === "weekly" ? "Semana" : "Mês"}
-                  </button>
-                ))}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[300px] w-full">
-                {loadingStats ? (
-                  <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin" /></div>
-                ) : (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={groupedEvolutionData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#2a2d35" vertical={false} />
-                      <XAxis dataKey="formattedDate" stroke="#888888" fontSize={10} tickLine={false} axisLine={false} />
-                      <YAxis stroke="#888888" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `R$${v}`} />
-                      <RechartsTooltip 
-                        contentStyle={{ backgroundColor: "#1e2128", border: "1px solid #2a2d35", borderRadius: "8px" }}
-                        labelStyle={{ color: "#888888", marginBottom: "4px" }}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="cumulative" 
-                        stroke="#00C853" 
-                        strokeWidth={2} 
-                        dot={false}
-                        activeDot={{ r: 4, fill: "#00C853" }} 
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                  </div>
+                </CardContent>
+              </Card>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Gráfico por Mercado */}
-            <Card className="border-border bg-card/50">
-              <CardHeader><CardTitle className="text-base font-medium">Performance por Mercado</CardTitle></CardHeader>
-              <CardContent>
-                <div className="h-[250px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={stats?.markets?.sort((a,b) => b.profit - a.profit)}>
-                      <XAxis dataKey="mercado_grupo" stroke="#888888" fontSize={10} hide />
-                      <YAxis stroke="#888888" fontSize={10} tickFormatter={(v) => `R$${v}`} />
-                      <RechartsTooltip 
-                        contentStyle={{ backgroundColor: "#1e2128", border: "1px solid #2a2d35", borderRadius: "8px" }}
-                      />
-                      <Bar dataKey="profit" name="Lucro/Prejuízo">
-                        {stats?.markets?.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.profit >= 0 ? "#00C853" : "#FF1744"} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Gráfico por Mercado */}
+                <Card className="border-border bg-card/50">
+                  <CardHeader><CardTitle className="text-base font-medium">Performance por Mercado</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="h-[250px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={stats?.markets?.sort((a,b) => b.profit - a.profit)}>
+                          <XAxis dataKey="mercado_grupo" stroke="#888888" fontSize={10} hide />
+                          <YAxis stroke="#888888" fontSize={10} tickFormatter={(v) => `R$${v}`} />
+                          <RechartsTooltip 
+                            contentStyle={{ backgroundColor: "#1e2128", border: "1px solid #2a2d35", borderRadius: "8px" }}
+                          />
+                          <Bar dataKey="profit" name="Lucro/Prejuízo">
+                            {stats?.markets?.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.profit >= 0 ? "#00C853" : "#FF1744"} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
 
-            {/* Gráfico por Faixa de Odd */}
-            <Card className="border-border bg-card/50">
-              <CardHeader><CardTitle className="text-base font-medium">Performance por Faixa de Odd</CardTitle></CardHeader>
-              <CardContent>
-                <div className="h-[250px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={stats?.odds}>
-                      <XAxis dataKey="faixa_odd" stroke="#888888" fontSize={10} />
-                      <YAxis stroke="#888888" fontSize={10} tickFormatter={(v) => `R$${v}`} />
-                      <RechartsTooltip 
-                        contentStyle={{ backgroundColor: "#1e2128", border: "1px solid #2a2d35", borderRadius: "8px" }}
-                      />
-                      <Bar dataKey="profit" name="Lucro/Prejuízo">
-                        {stats?.odds?.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.profit >= 0 ? "#2962FF" : "#FF1744"} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
+                {/* Gráfico por Faixa de Odd */}
+                <Card className="border-border bg-card/50">
+                  <CardHeader><CardTitle className="text-base font-medium">Performance por Faixa de Odd</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="h-[250px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={stats?.odds}>
+                          <XAxis dataKey="faixa_odd" stroke="#888888" fontSize={10} />
+                          <YAxis stroke="#888888" fontSize={10} tickFormatter={(v) => `R$${v}`} />
+                          <RechartsTooltip 
+                            contentStyle={{ backgroundColor: "#1e2128", border: "1px solid #2a2d35", borderRadius: "8px" }}
+                          />
+                          <Bar dataKey="profit" name="Lucro/Prejuízo">
+                            {stats?.odds?.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.profit >= 0 ? "#2962FF" : "#FF1744"} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </>
           )}
         </div>
