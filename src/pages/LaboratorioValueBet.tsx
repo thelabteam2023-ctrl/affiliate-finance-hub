@@ -25,6 +25,7 @@ import { ValuebetDebugMonitor } from "@/components/laboratorio/ValuebetDebugMoni
 import { cn } from "@/lib/utils";
 
 export default function LaboratorioValueBet() {
+  const [configOpen, setConfigOpen] = useState(false);
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
@@ -152,7 +153,7 @@ export default function LaboratorioValueBet() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Sheet>
+            <Sheet open={configOpen} onOpenChange={setConfigOpen}>
               <SheetTrigger asChild>
                 <Button 
                   variant="outline" 
@@ -261,14 +262,13 @@ export default function LaboratorioValueBet() {
                   Para começar a análise, clique no botão <span className="text-primary font-bold">Configurar Projetos</span> no topo da página e escolha quais fontes de dados deseja estudar.
                 </p>
               </div>
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button size="lg" className="rounded-full px-8 font-black uppercase tracking-widest text-xs gap-2 shadow-xl shadow-primary/20">
-                    Começar Agora
-                  </Button>
-                </SheetTrigger>
-                {/* O conteúdo do Sheet já está definido no header, mas podemos replicar o Trigger aqui por conveniência */}
-              </Sheet>
+              <Button 
+                size="lg" 
+                className="rounded-full px-8 font-black uppercase tracking-widest text-xs gap-2 shadow-xl shadow-primary/20"
+                onClick={() => setConfigOpen(true)}
+              >
+                Começar Agora
+              </Button>
             </div>
           )}
 
