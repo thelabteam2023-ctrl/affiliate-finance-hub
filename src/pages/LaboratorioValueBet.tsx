@@ -126,6 +126,48 @@ export default function LaboratorioValueBet() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm" className="bg-card text-xs border-primary/20 hover:bg-primary/10 hover:text-primary transition-all gap-2">
+                <SlidersHorizontal className="h-3.5 w-3.5 text-primary" />
+                Configurar Estudo
+              </Button>
+            </SheetTrigger>
+            <SheetContent className="w-[350px] sm:w-[450px] p-0 border-l border-border/40 bg-card">
+              <SheetHeader className="p-6 pb-0">
+                <SheetTitle>Configuração do Estudo</SheetTitle>
+                <SheetDescription>Selecione os projetos e estratégias para análise.</SheetDescription>
+              </SheetHeader>
+              <div className="h-full p-4 overflow-hidden">
+                <ValuebetProjectPicker
+                  projects={projectsSummary || []}
+                  selectedIds={selectedProjectIds}
+                  onToggle={toggleProject}
+                  onSelectAll={selectAll}
+                  onClear={clearSelection}
+                  className="border-0 bg-transparent shadow-none h-full"
+                />
+              </div>
+            </SheetContent>
+          </Sheet>
+
+          <div className="h-6 w-px bg-border/40 mx-1 hidden md:block" />
+
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className={cn(
+              "bg-card text-xs hover:bg-primary/10 hover:text-primary border-border/50",
+              startDateStr === format(new Date(), "yyyy-MM-dd") && "border-primary text-primary bg-primary/5"
+            )}
+            onClick={() => {
+              const end = new Date();
+              const start = new Date();
+              setDateRange({ from: start, to: end });
+            }}
+          >
+            Hoje
+          </Button>
           <Button 
             variant="outline" 
             size="sm" 
@@ -152,6 +194,38 @@ export default function LaboratorioValueBet() {
           >
             30 dias
           </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="bg-card text-xs hover:bg-primary/10 hover:text-primary border-border/50"
+            onClick={() => {
+              const now = new Date();
+              setDateRange({ from: startOfMonth(now), to: endOfMonth(now) });
+            }}
+          >
+            Mês
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="bg-card text-xs hover:bg-primary/10 hover:text-primary border-border/50"
+            onClick={() => {
+              const now = new Date();
+              setDateRange({ from: startOfYear(now), to: endOfYear(now) });
+            }}
+          >
+            Ano
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="bg-card text-xs hover:bg-primary/10 hover:text-primary border-border/50"
+            onClick={() => {
+              setDateRange(undefined);
+            }}
+          >
+            Tudo
+          </Button>
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -172,7 +246,7 @@ export default function LaboratorioValueBet() {
                     format(dateRange.from, "dd/MM/yyyy")
                   )
                 ) : (
-                  <span>Selecionar período</span>
+                  <span>Todo o período</span>
                 )}
               </Button>
             </PopoverTrigger>
@@ -180,7 +254,7 @@ export default function LaboratorioValueBet() {
               <CalendarComponent
                 initialFocus
                 mode="range"
-                defaultMonth={dateRange?.from}
+                defaultMonth={dateRange?.from || new Date()}
                 selected={dateRange}
                 onSelect={setDateRange}
                 numberOfMonths={2}
@@ -191,20 +265,25 @@ export default function LaboratorioValueBet() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Sidebar Filtros */}
-        <div className="lg:col-span-1">
-          <ValuebetProjectPicker
-            projects={projectsSummary || []}
-            selectedIds={selectedProjectIds}
-            onToggle={toggleProject}
-            onSelectAll={selectAll}
-            onClear={clearSelection}
-          />
-        </div>
+      <div className="space-y-6">
+        {/* Resumo de Filtros Ativos */}
+        {selectedProjectIds.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 p-3 bg-muted/30 rounded-lg border border-border/40">
+            <span className="text-[10px] uppercase font-bold text-muted-foreground mr-2">Estudo atual:</span>
+            {selectedProjectIds.length === projectsSummary?.length ? (
+              <span className="bg-primary/10 text-primary text-[10px] px-2 py-0.5 rounded-full font-bold">Todos os Projetos</span>
+            ) : (
+              <span className="bg-primary/10 text-primary text-[10px] px-2 py-0.5 rounded-full font-bold">{selectedProjectIds.length} Projetos selecionados</span>
+            )}
+            <span className="text-muted-foreground/30 px-1">•</span>
+            <span className="text-[10px] font-medium text-muted-foreground">
+              Período: {dateRange?.from ? `${format(dateRange.from, "dd/MM/yy")} - ${dateRange.to ? format(dateRange.to, "dd/MM/yy") : '...'}` : 'Todo o tempo'}
+            </span>
+          </div>
+        )}
 
         {/* Dashboard Content */}
-        <div className="lg:col-span-3 space-y-6">
+        <div className="space-y-6">
           {selectedProjectIds.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 bg-card/30 rounded-xl border border-dashed border-border/50 space-y-4">
               <AlertCircle className="h-12 w-12 text-muted-foreground/30" />
