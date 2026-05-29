@@ -15822,6 +15822,10 @@ export type Database = {
         }
         Returns: Json
       }
+      audit_valuebet_integrity: {
+        Args: { p_project_ids?: string[] }
+        Returns: Json
+      }
       author_delete_comment: { Args: { p_comment_id: string }; Returns: Json }
       author_delete_topic: { Args: { p_topic_id: string }; Returns: Json }
       autocorrigir_anomalias: { Args: never; Returns: number }
