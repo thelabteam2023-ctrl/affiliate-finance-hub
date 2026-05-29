@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Trash2, Loader2, Image as ImageIcon } from "lucide-react";
+import { Trash2, Loader2, Image as ImageIcon, Copy, Code } from "lucide-react";
 import { FluxoCard } from "./types";
 import { cn } from "@/lib/utils";
 import { FluxoCardDetailDialog } from "./FluxoCardDetailDialog";
@@ -162,6 +162,33 @@ export function FluxoCardComponent({
     }
   };
 
+  // Inserir snippet de copiável no textarea
+  const insertSnippet = (snippet: string, selectInside?: { from: number; to: number }) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const before = localContent.slice(0, start);
+    const after = localContent.slice(end);
+    const needsLeadingNewline = before.length > 0 && !before.endsWith("\n") && snippet.startsWith("\n") === false && snippet.includes("\n");
+    const prefix = needsLeadingNewline ? "\n" : "";
+    const next = before + prefix + snippet + after;
+    setLocalContent(next);
+    debouncedSave(next);
+    requestAnimationFrame(() => {
+      const t = textareaRef.current;
+      if (!t) return;
+      const base = before.length + prefix.length;
+      if (selectInside) {
+        t.focus();
+        t.setSelectionRange(base + selectInside.from, base + selectInside.to);
+      } else {
+        t.focus();
+        t.setSelectionRange(base + snippet.length, base + snippet.length);
+      }
+    });
+  };
+
   return (
     <>
       <div
@@ -173,6 +200,7 @@ export function FluxoCardComponent({
         onDrop={handleCardDrop}
         className={cn(
           "group relative rounded-lg border p-3 cursor-grab active:cursor-grabbing",
+          "min-w-0 max-w-full overflow-hidden",
           "transition-all duration-200",
           "shadow-sm hover:shadow-md",
           cardColor,
@@ -196,7 +224,7 @@ export function FluxoCardComponent({
         </button>
 
         {/* Área de conteúdo */}
-        <div className="min-h-[60px]">
+        <div className="min-h-[60px] min-w-0 max-w-full">
           {isEditing || autoFocus ? (
             <div className="relative">
               <textarea
@@ -211,6 +239,7 @@ export function FluxoCardComponent({
                 placeholder="Escreva sua ideia... (cole ou arraste imagens)"
                 className={cn(
                   "w-full bg-transparent border-none resize-none outline-none",
+                  "[overflow-wrap:anywhere] break-words",
                   "text-sm text-foreground/90 leading-relaxed",
                   "placeholder:text-muted-foreground/40"
                 )}
@@ -224,17 +253,40 @@ export function FluxoCardComponent({
               )}
             </div>
           ) : (
-            <div className="text-sm text-foreground/90 leading-relaxed">
+            <div className="text-sm text-foreground/90 leading-relaxed min-w-0 max-w-full">
               <ContentRenderer content={localContent} compact />
             </div>
           )}
         </div>
 
-        {/* Indicador de suporte a imagens */}
+        {/* Toolbar de inserção (modo edição) */}
         {(isEditing || autoFocus) && !isUploading && (
-          <div className="flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-50 transition-opacity">
-            <ImageIcon className="h-2.5 w-2.5 text-muted-foreground" />
-            <span className="text-[9px] text-muted-foreground">Cole imagens</span>
+          <div
+            className="flex items-center gap-1 mt-1 opacity-60 group-hover:opacity-100 transition-opacity"
+            onMouseDown={(e) => e.preventDefault()}
+          >
+            <button
+              type="button"
+              onClick={() => insertSnippet("`valor`", { from: 1, to: 6 })}
+              className="inline-flex items-center gap-1 text-[9px] text-muted-foreground/80 hover:text-foreground hover:bg-muted/40 px-1.5 py-0.5 rounded"
+              title="Inserir linha copiável (envolva com crases)"
+            >
+              <Copy className="h-2.5 w-2.5" /> linha
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                insertSnippet("```PROXY\nvalor1\nvalor2\n```", { from: 3, to: 8 })
+              }
+              className="inline-flex items-center gap-1 text-[9px] text-muted-foreground/80 hover:text-foreground hover:bg-muted/40 px-1.5 py-0.5 rounded"
+              title="Inserir bloco copiável (```label ... ```)"
+            >
+              <Code className="h-2.5 w-2.5" /> bloco
+            </button>
+            <div className="flex items-center gap-1 ml-auto">
+              <ImageIcon className="h-2.5 w-2.5 text-muted-foreground/60" />
+              <span className="text-[9px] text-muted-foreground/60">Cole imagens</span>
+            </div>
           </div>
         )}
       </div>
