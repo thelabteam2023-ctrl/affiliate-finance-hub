@@ -5,7 +5,7 @@ import { LabSidebar } from "@/components/laboratorio/LabSidebar";
 import { LabKPIPanel } from "@/components/laboratorio/LabKPIPanel";
 import { MarketsTab } from "@/components/laboratorio/tabs/MarketsTab";
 import { OddRangesTab } from "@/components/laboratorio/tabs/OddRangesTab";
-import { EvolutionTab } from "@/components/laboratorio/tabs/EvolutionTab";
+
 import { StatisticsTab } from "@/components/laboratorio/tabs/StatisticsTab";
 import { BetsTab } from "@/components/laboratorio/tabs/BetsTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
