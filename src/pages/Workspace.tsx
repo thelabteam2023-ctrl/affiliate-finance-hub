@@ -22,6 +22,7 @@ import { PendingInvitesList } from "@/components/workspace/PendingInvitesList";
 import { ReceivedInvitesList } from "@/components/workspace/ReceivedInvitesList";
 import { PlanUsageCard } from "@/components/workspace/PlanUsageCard";
 import { SubscriptionInfoCard } from "@/components/workspace/SubscriptionInfoCard";
+import { DangerZone } from "@/components/workspace/DangerZone";
 import { Database } from "@/integrations/supabase/types";
 import {
   Accordion,
@@ -600,6 +601,9 @@ export default function Workspace() {
         workspaceId={workspaceId || ''}
         onMemberInvited={handleMemberInvited}
       />
+
+      {/* Danger Zone — owner only */}
+      {(isOwner || isSystemOwner) && <DangerZone />}
     </div>
   );
 }

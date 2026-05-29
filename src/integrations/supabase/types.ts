@@ -16241,6 +16241,10 @@ export type Database = {
         }[]
       }
       deletar_perna_surebet_v1: { Args: { p_perna_id: string }; Returns: Json }
+      delete_workspace_cascade: {
+        Args: { _confirm_name: string; _workspace_id: string }
+        Returns: Json
+      }
       desvincular_bookmaker_atomico: {
         Args: {
           p_bookmaker_id: string
