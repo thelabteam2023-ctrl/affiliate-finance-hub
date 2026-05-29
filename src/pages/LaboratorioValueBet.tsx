@@ -27,9 +27,28 @@ import { cn } from "@/lib/utils";
 
 export default function LaboratorioValueBet() {
   const [configOpen, setConfigOpen] = useState(false);
-  const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
-  const [selectedSport, setSelectedSport] = useState<string | null>(null);
+  const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>(() => {
+    const saved = localStorage.getItem("lab_selected_project_ids");
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [selectedSport, setSelectedSport] = useState<string | null>(() => {
+    return localStorage.getItem("lab_selected_sport");
+  });
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+
+  // Persistence
+  useEffect(() => {
+    localStorage.setItem("lab_selected_project_ids", JSON.stringify(selectedProjectIds));
+  }, [selectedProjectIds]);
+
+  useEffect(() => {
+    if (selectedSport) {
+      localStorage.setItem("lab_selected_sport", selectedSport);
+    } else {
+      localStorage.removeItem("lab_selected_sport");
+    }
+  }, [selectedSport]);
+
 
   const startDateStr = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : null;
   const endDateStr = dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : null;
@@ -298,15 +317,15 @@ export default function LaboratorioValueBet() {
 
           {/* Tabs */}
           {selectedProjectIds.length > 0 && (
-            <Tabs defaultValue="markets" className="space-y-6">
+            <Tabs defaultValue="statistics" className="space-y-6">
 
             <div className="flex items-center justify-between border-b border-border/20 pb-1">
               <TabsList className="bg-transparent h-auto p-0 gap-8">
-                <TabsTrigger value="markets" className="bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none px-0 py-2 text-xs font-black uppercase tracking-widest text-muted-foreground data-[state=active]:text-foreground transition-all">
-                  Mercados
-                </TabsTrigger>
                 <TabsTrigger value="statistics" className="bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none px-0 py-2 text-xs font-black uppercase tracking-widest text-muted-foreground data-[state=active]:text-foreground transition-all">
                   Estatísticas
+                </TabsTrigger>
+                <TabsTrigger value="markets" className="bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none px-0 py-2 text-xs font-black uppercase tracking-widest text-muted-foreground data-[state=active]:text-foreground transition-all">
+                  Mercados
                 </TabsTrigger>
                 <TabsTrigger value="odds" className="bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none px-0 py-2 text-xs font-black uppercase tracking-widest text-muted-foreground data-[state=active]:text-foreground transition-all">
                   Faixas de Odd
@@ -317,10 +336,6 @@ export default function LaboratorioValueBet() {
               </TabsList>
             </div>
 
-            <TabsContent value="markets" className="mt-0">
-              <MarketsTab markets={filteredMarketsForTab} />
-            </TabsContent>
-            
             <TabsContent value="statistics" className="mt-0">
               <StatisticsTab 
                 markets={filteredMarketsForTab} 
@@ -328,6 +343,11 @@ export default function LaboratorioValueBet() {
                 evolutionByEntry={stats?.evolutionByEntry} 
               />
             </TabsContent>
+
+            <TabsContent value="markets" className="mt-0">
+              <MarketsTab markets={filteredMarketsForTab} />
+            </TabsContent>
+
 
             <TabsContent value="odds" className="mt-0">
               <OddRangesTab markets={filteredMarketsForTab} />
