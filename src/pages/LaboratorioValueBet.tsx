@@ -127,6 +127,20 @@ export default function LaboratorioValueBet() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full hover:bg-muted">
+                <Info className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-4 bg-card border-border shadow-xl" align="end">
+              <div className="space-y-2">
+                <h4 className="font-bold text-sm">Central de Diagnóstico</h4>
+                <p className="text-xs text-muted-foreground">O Monitor de Debug abaixo analisa inconsistências no ecossistema (Case sensitivity, status e sincronia de workspace).</p>
+              </div>
+            </PopoverContent>
+          </Popover>
+
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="outline" size="sm" className="bg-card text-xs border-primary/20 hover:bg-primary/10 hover:text-primary transition-all gap-2">
