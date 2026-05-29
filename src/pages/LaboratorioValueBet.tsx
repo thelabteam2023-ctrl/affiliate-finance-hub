@@ -40,11 +40,9 @@ export default function LaboratorioValueBet() {
     selectedSport
   );
 
-  // Auto-select projects
+  // Don't auto-select projects by default, let user choose
   useEffect(() => {
-    if (projectsSummary && projectsSummary.length > 0 && selectedProjectIds.length === 0) {
-      setSelectedProjectIds(projectsSummary.map(p => p.projeto_id));
-    }
+    // We removed the auto-select logic to start with no projects as requested
   }, [projectsSummary]);
 
   const activeMetrics = useMemo(() => {
@@ -252,6 +250,28 @@ export default function LaboratorioValueBet() {
 
         {/* Content */}
         <main className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-thin scrollbar-thumb-primary/20">
+          {selectedProjectIds.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-20 px-4 text-center space-y-4 bg-card/20 border border-dashed border-primary/20 rounded-3xl animate-in fade-in zoom-in duration-500">
+              <div className="p-4 bg-primary/10 rounded-full">
+                <Filter className="h-8 w-8 text-primary animate-bounce" />
+              </div>
+              <div className="space-y-2 max-w-sm">
+                <h3 className="text-xl font-black uppercase tracking-tighter">Selecione os Projetos</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Para começar a análise, clique no botão <span className="text-primary font-bold">Configurar Projetos</span> no topo da página e escolha quais fontes de dados deseja estudar.
+                </p>
+              </div>
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button size="lg" className="rounded-full px-8 font-black uppercase tracking-widest text-xs gap-2 shadow-xl shadow-primary/20">
+                    Começar Agora
+                  </Button>
+                </SheetTrigger>
+                {/* O conteúdo do Sheet já está definido no header, mas podemos replicar o Trigger aqui por conveniência */}
+              </Sheet>
+            </div>
+          )}
+
           {rpcError && (
             <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-xl flex items-center gap-3">
               <Info className="h-5 w-5 text-red-500" />
