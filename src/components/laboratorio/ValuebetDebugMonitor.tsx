@@ -222,14 +222,19 @@ export function ValuebetDebugMonitor({
             </div>
 
             <div className="grid grid-cols-2 gap-4 pt-4">
-              <div className="bg-card/50 p-3 rounded-lg border border-border/20">
-                <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">Status RPC</p>
-                <Badge variant={rpcError ? "destructive" : "secondary"} className="text-[10px]">
-                  {rpcLoading ? "Chamando..." : rpcError ? "Erro na Função" : "Função Ativa"}
-                </Badge>
+              <div className="bg-card/50 p-3 rounded-lg border border-border/20 group hover:border-primary/30 transition-colors">
+                <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1 flex items-center gap-1">
+                  <Wrench className="h-2.5 w-2.5" /> Latência
+                </p>
+                <span className={cn(
+                  "text-xs font-bold tabular-nums",
+                  rpcData?._metadata?.fetch_duration_ms > 1000 ? "text-amber-500" : "text-emerald-500"
+                )}>
+                  {rpcData?._metadata?.fetch_duration_ms ? `${rpcData._metadata.fetch_duration_ms.toFixed(1)}ms` : "N/A"}
+                </span>
               </div>
-              <div className="bg-card/50 p-3 rounded-lg border border-border/20">
-                <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">Dados no Workspace</p>
+              <div className="bg-card/50 p-3 rounded-lg border border-border/20 group hover:border-primary/30 transition-colors">
+                <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">Integridade</p>
                 <div className="flex items-center gap-2">
                   <Database className="h-3 w-3 text-muted-foreground" />
                   <span className="text-xs font-bold">{audit?.totalWorkspace || 0}</span>
