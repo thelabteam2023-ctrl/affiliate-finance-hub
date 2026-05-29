@@ -16594,6 +16594,7 @@ export type Database = {
           total_perdas: number
         }[]
       }
+      get_identity_diagnostic: { Args: never; Returns: Json }
       get_influence_config: {
         Args: never
         Returns: {
