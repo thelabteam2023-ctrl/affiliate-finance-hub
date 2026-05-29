@@ -111,8 +111,9 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
     const sports: Record<string, SportStats> = {};
 
     data.forEach(bet => {
-      const sportName = bet.esporte || 'Outros';
-      const marketName = bet.mercado || 'Outros';
+      // Normalização para evitar duplicidade por case ou nulos
+      const sportName = bet.esporte ? (bet.esporte.trim() === "" ? "Indefinido" : bet.esporte.charAt(0).toUpperCase() + bet.esporte.slice(1).toLowerCase()) : 'Indefinido';
+      const marketName = bet.mercado ? (bet.mercado.trim() === "" ? "Geral" : bet.mercado) : 'Geral';
       const oddRange = getOddRange(bet.odd);
 
       if (!sports[sportName]) {
@@ -130,11 +131,17 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
 
     // Finalize metrics per hierarchy
     Object.keys(sports).forEach(sName => {
-      const sportBets = data.filter(b => (b.esporte || 'Outros') === sName);
+      const sportBets = data.filter(b => {
+        const bSport = b.esporte ? (b.esporte.trim() === "" ? "Indefinido" : b.esporte.charAt(0).toUpperCase() + b.esporte.slice(1).toLowerCase()) : 'Indefinido';
+        return bSport === sName;
+      });
       sports[sName] = { ...sports[sName], ...calculateMetrics(sportBets) };
 
       Object.keys(sports[sName].markets).forEach(mName => {
-        const marketBets = sportBets.filter(b => (b.mercado || 'Outros') === mName);
+        const marketBets = sportBets.filter(b => {
+          const bMarket = b.mercado ? (b.mercado.trim() === "" ? "Geral" : b.mercado) : 'Geral';
+          return bMarket === mName;
+        });
         sports[sName].markets[mName] = { ...sports[sName].markets[mName], ...calculateMetrics(marketBets) };
 
         Object.keys(sports[sName].markets[mName].oddRanges).forEach(oRange => {
@@ -144,16 +151,16 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
       });
     });
 
-    // Evolution (Monthly)
+    // Evolution (Daily for "entry by entry" feeling but grouped by day)
     const evolution: Record<string, { date: string, profit: number, volume: number, bets: number }> = {};
     data.forEach(bet => {
-      const monthKey = format(startOfMonth(parseISO(bet.data_aposta)), 'yyyy-MM');
-      if (!evolution[monthKey]) {
-        evolution[monthKey] = { date: monthKey, profit: 0, volume: 0, bets: 0 };
+      const dateKey = bet.data_aposta.split('T')[0];
+      if (!evolution[dateKey]) {
+        evolution[dateKey] = { date: dateKey, profit: 0, volume: 0, bets: 0 };
       }
-      evolution[monthKey].profit += (bet.pl_consolidado || 0);
-      evolution[monthKey].volume += (bet.stake_consolidado || 0);
-      evolution[monthKey].bets += 1;
+      evolution[dateKey].profit += (bet.pl_consolidado || 0);
+      evolution[dateKey].volume += (bet.stake_consolidado || 0);
+      evolution[dateKey].bets += 1;
     });
 
     return {
