@@ -182,9 +182,12 @@ export function ValuebetDebugMonitor({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Lado Esquerdo: Resultados do Diagnóstico */}
           <div className="space-y-4">
-            <h3 className="text-xs font-bold text-muted-foreground flex items-center gap-2">
-              <Search className="h-3 w-3" /> ANÁLISE DO OBSERVADOR
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-muted-foreground flex items-center gap-2">
+                <Microscope className="h-3 w-3" /> LABORATÓRIO DE TESTES
+              </h3>
+              <Badge variant="outline" className="text-[9px] border-primary/20 text-primary">Modo Observador</Badge>
+            </div>
             
             <div className="space-y-2">
               {diagnosticResults.length === 0 && !auditing && (
