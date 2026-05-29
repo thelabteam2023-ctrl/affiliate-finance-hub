@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Trash2, Loader2, Image as ImageIcon, Copy, Code } from "lucide-react";
+import { Trash2, Loader2, Image as ImageIcon, Wand2 } from "lucide-react";
 import { FluxoCard } from "./types";
 import { cn } from "@/lib/utils";
 import { FluxoCardDetailDialog } from "./FluxoCardDetailDialog";
 import { ContentRenderer } from "./ContentRenderer";
 import { useImageUpload } from "@/hooks/useImageUpload";
 import { useAuth } from "@/hooks/useAuth";
+import { InsertCopyableDialog } from "./InsertCopyableDialog";
 
 // Cores suaves estilo post-it para dark mode
 const CARD_COLORS = [
@@ -49,6 +50,7 @@ export function FluxoCardComponent({
   const [localContent, setLocalContent] = useState(card.conteudo);
   const [isEditing, setIsEditing] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -162,30 +164,22 @@ export function FluxoCardComponent({
     }
   };
 
-  // Inserir snippet de copiável no textarea
-  const insertSnippet = (snippet: string, selectInside?: { from: number; to: number }) => {
+  // Inserir snippet copiável no cursor
+  const insertAtCursor = (snippet: string) => {
     const textarea = textareaRef.current;
-    if (!textarea) return;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
+    const start = textarea?.selectionStart ?? localContent.length;
+    const end = textarea?.selectionEnd ?? localContent.length;
     const before = localContent.slice(0, start);
     const after = localContent.slice(end);
-    const needsLeadingNewline = before.length > 0 && !before.endsWith("\n") && snippet.startsWith("\n") === false && snippet.includes("\n");
-    const prefix = needsLeadingNewline ? "\n" : "";
-    const next = before + prefix + snippet + after;
+    const next = before + snippet + after;
     setLocalContent(next);
     debouncedSave(next);
     requestAnimationFrame(() => {
       const t = textareaRef.current;
       if (!t) return;
-      const base = before.length + prefix.length;
-      if (selectInside) {
-        t.focus();
-        t.setSelectionRange(base + selectInside.from, base + selectInside.to);
-      } else {
-        t.focus();
-        t.setSelectionRange(base + snippet.length, base + snippet.length);
-      }
+      const pos = before.length + snippet.length;
+      t.focus();
+      t.setSelectionRange(pos, pos);
     });
   };
 
