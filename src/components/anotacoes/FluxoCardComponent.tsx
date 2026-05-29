@@ -261,21 +261,11 @@ export function FluxoCardComponent({
           >
             <button
               type="button"
-              onClick={() => insertSnippet("`valor`", { from: 1, to: 6 })}
-              className="inline-flex items-center gap-1 text-[9px] text-muted-foreground/80 hover:text-foreground hover:bg-muted/40 px-1.5 py-0.5 rounded"
-              title="Inserir linha copiável (envolva com crases)"
+              onClick={() => setCopyDialogOpen(true)}
+              className="inline-flex items-center gap-1 text-[10px] text-muted-foreground/80 hover:text-foreground hover:bg-muted/40 px-1.5 py-0.5 rounded border border-border/30"
+              title="Adicionar valor copiável (token, proxy, URL, IP…)"
             >
-              <Copy className="h-2.5 w-2.5" /> linha
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                insertSnippet("```PROXY\nvalor1\nvalor2\n```", { from: 3, to: 8 })
-              }
-              className="inline-flex items-center gap-1 text-[9px] text-muted-foreground/80 hover:text-foreground hover:bg-muted/40 px-1.5 py-0.5 rounded"
-              title="Inserir bloco copiável (```label ... ```)"
-            >
-              <Code className="h-2.5 w-2.5" /> bloco
+              <Wand2 className="h-2.5 w-2.5" /> Dado copiável
             </button>
             <div className="flex items-center gap-1 ml-auto">
               <ImageIcon className="h-2.5 w-2.5 text-muted-foreground/60" />
@@ -291,6 +281,12 @@ export function FluxoCardComponent({
         open={showDetail}
         onOpenChange={setShowDetail}
         onUpdate={onUpdate}
+      />
+
+      <InsertCopyableDialog
+        open={copyDialogOpen}
+        onOpenChange={setCopyDialogOpen}
+        onInsert={insertAtCursor}
       />
     </>
   );
