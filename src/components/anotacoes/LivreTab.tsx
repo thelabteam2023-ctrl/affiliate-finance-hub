@@ -7,7 +7,7 @@ import { Loader2, Send, Trash2, Image as ImageIcon, Wand2 } from "lucide-react";
 import { AnotacaoLivre } from "./types";
 import { cn } from "@/lib/utils";
 import { useImageUpload } from "@/hooks/useImageUpload";
-import { InsertCopyableDialog } from "./InsertCopyableDialog";
+import { InsertCopyablePanel } from "./InsertCopyablePanel";
 
 /**
  * Aba Livre - Espaço de escrita simples, silencioso e fluido
