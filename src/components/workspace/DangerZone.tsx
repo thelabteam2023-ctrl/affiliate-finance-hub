@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { AlertTriangle, Loader2, Trash2, PowerOff, RotateCcw } from "lucide-react";
+import {
+  AlertTriangle, Loader2, Trash2, PowerOff, RotateCcw,
+  Target, Wallet, FolderKanban, Building2, CalendarRange,
+  MessagesSquare, Handshake, StickyNote,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +27,26 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+
+type ResetModuleId =
+  | "apostas" | "financeiro" | "projetos" | "bookmakers"
+  | "planejamento" | "comunidade" | "parceiros" | "anotacoes";
+
+const RESET_MODULES: {
+  id: ResetModuleId;
+  label: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+}[] = [
+  { id: "apostas",      label: "Apostas & Surebets",      icon: Target,         description: "Apostas, pernas, surebets, liquidações e reservas de stake." },
+  { id: "financeiro",   label: "Financeiro",              icon: Wallet,         description: "Ledger, eventos financeiros, transações de bookmakers, câmbio, snapshots e despesas." },
+  { id: "projetos",     label: "Projetos & Ciclos",       icon: FolderKanban,   description: "Projetos, ciclos, baselines, investidores, operadores e pagamentos." },
+  { id: "bookmakers",   label: "Bookmakers & Contas",     icon: Building2,      description: "Casas vinculadas, grupos, freebets, bônus, cashback e bancos." },
+  { id: "planejamento", label: "Planejamento",            icon: CalendarRange,  description: "Campanhas, distribuição, cenários e calendário." },
+  { id: "comunidade",   label: "Comunidade & Ocorrências",icon: MessagesSquare, description: "Chat, moderação, influência, ocorrências e solicitações." },
+  { id: "parceiros",    label: "Parceiros & Fornecedores",icon: Handshake,      description: "Parceiros, fornecedores, indicações e movimentações de parceria." },
+  { id: "anotacoes",    label: "Anotações",               icon: StickyNote,     description: "Notas livres, fluxos e colunas do quadro." },
+];
 
 /**
  * Danger Zone — owner-only.
@@ -45,6 +70,17 @@ export function DangerZone() {
   const [resetting, setResetting] = useState(false);
   const [confirmName, setConfirmName] = useState("");
   const [confirmResetName, setConfirmResetName] = useState("");
+  const [selectedModules, setSelectedModules] = useState<Set<ResetModuleId>>(new Set());
+
+  const toggleModule = (id: ResetModuleId) => {
+    setSelectedModules((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const selectAll = () => setSelectedModules(new Set(RESET_MODULES.map((m) => m.id)));
+  const clearAll = () => setSelectedModules(new Set());
 
   if (!workspace || !workspaceId) return null;
 
@@ -55,6 +91,7 @@ export function DangerZone() {
   const isActive = ws.is_active !== false && !ws.deactivated_at;
   const nameMatches = confirmName.trim() === workspace.name;
   const resetNameMatches = confirmResetName.trim() === workspace.name;
+  const hasSelection = selectedModules.size > 0;
 
   const handleDeactivate = async () => {
     setDeactivating(true);
@@ -82,20 +119,22 @@ export function DangerZone() {
   };
 
   const handleResetData = async () => {
-    if (!resetNameMatches) return;
+    if (!resetNameMatches || !hasSelection) return;
     setResetting(true);
     try {
-      const { data, error } = await supabase.rpc("reset_workspace_data", {
+      const { data, error } = await supabase.rpc("reset_workspace_data_partial", {
         _workspace_id: workspaceId,
         _confirm_name: confirmResetName.trim(),
+        _modules: Array.from(selectedModules),
       });
       if (error) throw error;
       toast({
-        title: "Workspace resetado",
-        description: `${(data as any)?.rows_deleted ?? 0} registros removidos. Membros e assinatura preservados.`,
+        title: "Reset concluído",
+        description: `${(data as any)?.rows_deleted ?? 0} registros removidos em ${selectedModules.size} módulo(s). Membros e assinatura preservados.`,
       });
       queryClient.clear();
       setConfirmResetName("");
+      setSelectedModules(new Set());
       // Reload so all caches/contexts repopulate from a clean state
       window.location.reload();
     } catch (err: any) {
@@ -161,40 +200,94 @@ export function DangerZone() {
       <CardContent className="space-y-6">
         {/* Owner action: Reset workspace data */}
         {(isOwner || isSystemOwner) && (
-          <div className="flex flex-col gap-3 rounded-lg border border-destructive/40 bg-background/60 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
+          <div className="flex flex-col gap-3 rounded-lg border border-destructive/40 bg-background/60 p-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1 sm:max-w-xl">
               <p className="text-sm font-medium text-destructive">Resetar workspace</p>
               <p className="text-xs text-muted-foreground">
-                Apaga <strong>todos os dados operacionais</strong> (apostas, financeiro,
-                projetos, bookmakers, planejamento, comunidade, ocorrências, fornecedores).
-                <strong> Mantém</strong> membros, convites, papéis e assinatura. O workspace
-                continua existindo, pronto para começar do zero. Irreversível.
+                Apaga seletivamente os dados do workspace. <strong>Você escolhe</strong> quais
+                módulos limpar (ex.: apenas Parceiros, ou Apostas + Financeiro). Membros,
+                convites, papéis e assinatura são <strong>sempre preservados</strong>. Irreversível.
               </p>
             </div>
-            <AlertDialog onOpenChange={(open) => { if (!open) setConfirmResetName(""); }}>
+            <AlertDialog onOpenChange={(open) => { if (!open) { setConfirmResetName(""); setSelectedModules(new Set()); } }}>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" disabled={resetting}>
                   <RotateCcw className="mr-2 h-4 w-4" />
-                  Resetar dados
+                  Resetar dados…
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent>
+              <AlertDialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <AlertDialogHeader>
                   <AlertDialogTitle className="flex items-center gap-2 text-destructive">
                     <AlertTriangle className="h-5 w-5" />
-                    Reset de dados do workspace
+                    Reset seletivo do workspace
                   </AlertDialogTitle>
                   <AlertDialogDescription asChild>
-                    <div className="space-y-3 text-sm">
+                    <div className="space-y-4 text-sm">
                       <p>
-                        Todos os dados operacionais do workspace{" "}
-                        <strong>{workspace.name}</strong> serão apagados. Membros, papéis
+                        Selecione abaixo <strong>quais módulos</strong> do workspace{" "}
+                        <strong>{workspace.name}</strong> devem ser apagados. Membros, papéis
                         e assinatura permanecem intactos.
                       </p>
+
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          {selectedModules.size} de {RESET_MODULES.length} módulo(s) selecionado(s)
+                        </span>
+                        <div className="flex gap-2">
+                          <Button type="button" variant="ghost" size="sm" onClick={selectAll}>
+                            Selecionar todos
+                          </Button>
+                          <Button type="button" variant="ghost" size="sm" onClick={clearAll}>
+                            Limpar
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        {RESET_MODULES.map((mod) => {
+                          const Icon = mod.icon;
+                          const checked = selectedModules.has(mod.id);
+                          return (
+                            <label
+                              key={mod.id}
+                              htmlFor={`mod-${mod.id}`}
+                              className={`flex cursor-pointer items-start gap-3 rounded-md border p-3 transition-colors ${
+                                checked
+                                  ? "border-destructive/60 bg-destructive/5"
+                                  : "border-border hover:bg-muted/40"
+                              }`}
+                            >
+                              <Checkbox
+                                id={`mod-${mod.id}`}
+                                checked={checked}
+                                onCheckedChange={() => toggleModule(mod.id)}
+                                className="mt-0.5"
+                              />
+                              <div className="space-y-0.5">
+                                <div className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+                                  <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                                  {mod.label}
+                                </div>
+                                <div className="text-xs text-muted-foreground">{mod.description}</div>
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+
+                      <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300">
+                        <strong>Dica:</strong> alguns módulos têm dependências entre si.
+                        Ex.: ao apagar <em>Projetos</em>, também é recomendável apagar
+                        <em> Apostas</em> e <em>Financeiro</em>, pois eles referenciam projetos.
+                        Se o reset falhar com erro de dependência, selecione os módulos relacionados juntos.
+                      </div>
+
                       <p className="text-destructive">
                         Esta ação <strong>não pode ser desfeita</strong>.
                       </p>
-                      <div className="space-y-2 pt-2">
+
+                      <div className="space-y-2 pt-1">
                         <Label htmlFor="confirmResetName" className="text-foreground">
                           Digite o nome do workspace para confirmar:
                         </Label>
@@ -214,11 +307,11 @@ export function DangerZone() {
                   <AlertDialogCancel disabled={resetting}>Cancelar</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={handleResetData}
-                    disabled={!resetNameMatches || resetting}
+                    disabled={!resetNameMatches || !hasSelection || resetting}
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   >
                     {resetting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Resetar dados
+                    Resetar {selectedModules.size > 0 ? `${selectedModules.size} módulo(s)` : "dados"}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
