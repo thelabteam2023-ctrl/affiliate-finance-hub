@@ -52,6 +52,11 @@ export function ValuebetDebugMonitor({
         pending: number;
         excluded_status: number;
         healthy: number;
+        column_health?: {
+          total: number;
+          filled_stake_cons: number;
+          filled_pl_cons: number;
+        };
       };
     },
     enabled: !!workspaceId,
@@ -199,7 +204,7 @@ export function ValuebetDebugMonitor({
               ))}
             </div>
 
-            <div className="grid grid-cols-2 gap-4 pt-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
               <div className="bg-card/50 p-3 rounded-lg border border-border/20 group hover:border-primary/30 transition-colors">
                 <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1 flex items-center gap-1">
                   <Wrench className="h-2.5 w-2.5" /> Latência
@@ -216,6 +221,15 @@ export function ValuebetDebugMonitor({
                 <div className="flex items-center gap-2">
                   <Database className="h-3 w-3 text-muted-foreground" />
                   <span className="text-xs font-bold">{(audit?.healthy || 0) + (audit?.pending || 0) + (audit?.wrong_workspace || 0)}</span>
+                </div>
+              </div>
+              <div className="bg-card/50 p-3 rounded-lg border border-border/20 group hover:border-primary/30 transition-colors">
+                <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">Cobertura PL</p>
+                <div className="flex items-center gap-2">
+                  <Activity className={cn("h-3 w-3", audit?.column_health && audit.column_health.filled_pl_cons / (audit.column_health.total || 1) < 0.9 ? "text-amber-500" : "text-emerald-500")} />
+                  <span className="text-xs font-bold">
+                    {audit?.column_health ? `${((audit.column_health.filled_pl_cons / (audit.column_health.total || 1)) * 100).toFixed(0)}%` : "--"}
+                  </span>
                 </div>
               </div>
             </div>
