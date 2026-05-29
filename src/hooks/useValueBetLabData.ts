@@ -176,10 +176,12 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
       evolution[dateKey].bets += 1;
     });
 
+    const evolutionArray = Object.values(evolution).sort((a, b) => a.date.localeCompare(b.date));
+
     return {
       global: globalMetrics,
       sports,
-      evolution: Object.values(evolution).sort((a, b) => a.date.localeCompare(b.date)),
+      evolution: evolutionArray,
       raw: data
     };
   }, [query.data]);
