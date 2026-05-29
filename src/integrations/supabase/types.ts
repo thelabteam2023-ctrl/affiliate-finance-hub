@@ -16806,6 +16806,7 @@ export type Database = {
         }
         Returns: Json
       }
+      get_valuebet_projects_summary: { Args: never; Returns: Json }
       get_volume_pl_by_catalogo_limitadas: {
         Args: { p_workspace_id: string }
         Returns: {
