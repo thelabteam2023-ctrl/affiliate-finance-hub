@@ -203,13 +203,16 @@ const menuGroups: MenuGroup[] = [
     label: "LABORATÓRIO",
     items: [
       {
-        title: "Ferramentas",
-        url: "#laboratorio-ferramentas",
-        icon: Beaker,
-        iconName: "Beaker",
+        title: "Sistemas de Análise",
+        url: "#laboratorio-sistemas-analise",
+        icon: Layers,
+        iconName: "Layers",
         moduleKey: "ferramentas",
         children: [
-          { title: "Laboratório ValueBet", url: "/ferramentas/laboratorio-valuebet", icon: Activity, iconName: "Activity", moduleKey: "ferramentas" },
+          { title: "ValueBet", url: "/laboratorio/valuebet", icon: Activity, iconName: "Activity", moduleKey: "ferramentas" },
+          { title: "Under Pressure", url: "#under-pressure", icon: Shield, iconName: "Shield", moduleKey: "ferramentas" },
+          { title: "OverTrend", url: "#overtrend", icon: TrendingUp, iconName: "TrendingUp", moduleKey: "ferramentas" },
+          { title: "Momentum", url: "#momentum", icon: Zap, iconName: "Zap", moduleKey: "ferramentas" },
         ]
       }
     ]
