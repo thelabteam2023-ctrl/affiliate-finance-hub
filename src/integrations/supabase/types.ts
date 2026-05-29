@@ -16389,6 +16389,7 @@ export type Database = {
           saldo_materializado: number
         }[]
       }
+      fn_get_market_group: { Args: { p_market: string }; Returns: string }
       fn_ledger_profundo_bookmaker: {
         Args: { p_bookmaker_id: string }
         Returns: {
@@ -16796,6 +16797,14 @@ export type Database = {
           workspace_name: string
           workspace_slug: string
         }[]
+      }
+      get_valuebet_lab_stats: {
+        Args: {
+          p_end_date?: string
+          p_project_ids: string[]
+          p_start_date?: string
+        }
+        Returns: Json
       }
       get_volume_pl_by_catalogo_limitadas: {
         Args: { p_workspace_id: string }
