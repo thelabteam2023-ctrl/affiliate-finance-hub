@@ -17174,6 +17174,14 @@ export type Database = {
         Args: { _confirm_name: string; _workspace_id: string }
         Returns: Json
       }
+      reset_workspace_data_partial: {
+        Args: {
+          _confirm_name: string
+          _modules: string[]
+          _workspace_id: string
+        }
+        Returns: Json
+      }
       resolver_impacto_saldo: {
         Args: { p_fonte_saldo: string; p_resultado: string; p_valor: number }
         Returns: {
