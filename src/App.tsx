@@ -411,7 +411,7 @@ const App = () => (
               </ProtectedRoute>
             } />
             
-            <Route path="/ferramentas/laboratorio-valuebet" element={
+            <Route path="/laboratorio/valuebet" element={
               <ProtectedRoute>
                 <AuthenticatedLayout>
                   <LaboratorioValueBet />
