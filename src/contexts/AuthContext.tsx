@@ -184,7 +184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const fetchData = async () => {
         const [wsResult, roleResult] = await Promise.all([
-          supabase.from('workspaces').select('id, name, slug, plan, chat_moderation_level, chat_notification_sound').eq('id', targetWorkspaceId).single(),
+          supabase.from('workspaces').select('id, name, slug, plan, chat_moderation_level, chat_notification_sound, is_active, deactivated_at').eq('id', targetWorkspaceId).single(),
           supabase.rpc('get_user_role', { _user_id: userId, _workspace_id: targetWorkspaceId }),
         ]);
         
