@@ -177,7 +177,7 @@ export default function LaboratorioValueBet() {
             </div>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[300px] pr-4">
+            <ScrollArea className="h-[450px] pr-4">
               <div className="space-y-3">
                 {projects?.map((project) => (
                   <div key={project.id} className="flex items-center space-x-2">
