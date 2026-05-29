@@ -425,6 +425,15 @@ function AnotacaoLivreCard({
         )}
       </div>
 
+      {/* Painel inline de dado copiável */}
+      <div className="px-6">
+        <InsertCopyablePanel
+          open={copyDialogOpen}
+          onClose={() => setCopyDialogOpen(false)}
+          onInsert={insertAtCursor}
+        />
+      </div>
+
       {/* Footer */}
       <div className="flex items-center justify-between px-6 pb-4">
         <div className="flex items-center gap-3">
@@ -464,11 +473,6 @@ function AnotacaoLivreCard({
           </button>
         )}
       </div>
-      <InsertCopyableDialog
-        open={copyDialogOpen}
-        onOpenChange={setCopyDialogOpen}
-        onInsert={insertAtCursor}
-      />
     </div>
   );
 }
