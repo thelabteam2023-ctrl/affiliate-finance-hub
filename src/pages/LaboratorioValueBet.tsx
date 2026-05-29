@@ -47,7 +47,7 @@ export default function LaboratorioValueBet() {
     }
   }, [projectsSummary]);
 
-  const { data: stats, isLoading: loadingStats } = useLaboratorioValueBet(
+  const { data: stats, isLoading: loadingStats, error: rpcError } = useLaboratorioValueBet(
     selectedProjectIds.length > 0 ? selectedProjectIds : null,
     startDateStr,
     endDateStr
@@ -299,6 +299,22 @@ export default function LaboratorioValueBet() {
 
         {/* Dashboard Content */}
         <div className="space-y-6">
+          {rpcError && (
+            <div className="bg-destructive/15 border border-destructive/30 p-4 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+              <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="text-sm font-bold text-destructive">Falha crítica no carregamento dos dados</p>
+                <p className="text-xs text-destructive/80 leading-relaxed">
+                  Ocorreu um erro ao processar as estatísticas do laboratório. 
+                  Isso geralmente indica uma falha na comunicação com o banco de dados ou uma regra de negócio inválida.
+                </p>
+                <p className="text-[10px] font-mono bg-destructive/10 p-2 rounded mt-2 text-destructive-foreground break-all">
+                  Erro: {rpcError instanceof Error ? rpcError.message : JSON.stringify(rpcError)}
+                </p>
+              </div>
+            </div>
+          )}
+
           {selectedProjectIds.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 bg-card/30 rounded-xl border border-dashed border-border/50 space-y-4">
               <AlertCircle className="h-12 w-12 text-muted-foreground/30" />

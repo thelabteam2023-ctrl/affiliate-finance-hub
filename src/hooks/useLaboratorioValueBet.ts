@@ -44,10 +44,15 @@ export function useLaboratorioValueBet(projectIds: string[] | null, startDate: s
       const endTime = performance.now();
       const duration = endTime - startTime;
 
-      if (error) throw error;
+      if (error) {
+        console.error("[useLaboratorioValueBet] RPC Error:", error);
+        throw error;
+      }
+
+      const stats = data as LabStats;
 
       return {
-        ...(data as LabStats),
+        ...stats,
         _metadata: {
           fetch_duration_ms: duration,
           timestamp: new Date().toISOString()
@@ -55,5 +60,6 @@ export function useLaboratorioValueBet(projectIds: string[] | null, startDate: s
       } as LabStats & { _metadata: { fetch_duration_ms: number; timestamp: string } };
     },
     enabled: !!workspaceId,
+    retry: 1,
   });
 }
