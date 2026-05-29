@@ -689,6 +689,15 @@ export default function SystemAdmin() {
                                 >
                                   {w.is_active ? <Ban className="h-4 w-4" /> : <Check className="h-4 w-4" />}
                                 </Button>
+                                {!w.is_active && (
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => setDeleteWorkspaceDialog({ open: true, workspaceId: w.id, workspaceName: w.name })}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
                               </div>
                             </TableCell>
                           </TableRow>
