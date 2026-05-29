@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useLaboratorioValueBet } from "@/hooks/useLaboratorioValueBet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
@@ -8,13 +8,17 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, 
   BarChart, Bar, Legend, Cell
 } from "recharts";
-import { format, startOfWeek, startOfMonth, parseISO } from "date-fns";
+import { format, startOfWeek, startOfMonth, parseISO, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Loader2, TrendingUp, TrendingDown, Target, Zap, BarChart3, PieChart as PieChartIcon } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, Target, Zap, BarChart3, PieChart as PieChartIcon, Calendar } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { DateRange } from "react-day-picker";
 
 const COLORS = ["#00C853", "#2962FF", "#AA00FF", "#FFAB00", "#FF1744", "#00B0FF", "#F50057", "#00E5FF"];
 
@@ -22,6 +26,18 @@ export default function LaboratorioValueBet() {
   const { workspaceId } = useAuth();
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
   const [timeGrouping, setTimeGrouping] = useState<"daily" | "weekly" | "monthly">("daily");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+
+  // Initialize with last 30 days
+  useEffect(() => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - 30);
+    setDateRange({ from: start, to: end });
+  }, []);
+
+  const startDateStr = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : null;
+  const endDateStr = dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : null;
 
   // Fetch available projects with ValueBet strategy
   const { data: projects, isLoading: loadingProjects } = useQuery({
@@ -41,8 +57,8 @@ export default function LaboratorioValueBet() {
 
   const { data: stats, isLoading: loadingStats } = useLaboratorioValueBet(
     selectedProjectIds.length > 0 ? selectedProjectIds : null,
-    null, // start_date
-    null  // end_date
+    startDateStr,
+    endDateStr
   );
 
   const toggleProject = (id: string) => {
@@ -106,9 +122,47 @@ export default function LaboratorioValueBet() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
-            <BarChart3 className="text-primary" /> Laboratório ValueBet
+            <BarChart3 className="text-[#00C853]" /> Laboratório ValueBet
           </h1>
           <p className="text-muted-foreground">Análise profunda de performance e ROI para estratégias de valor.</p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className={cn(
+                  "w-[240px] justify-start text-left font-normal bg-card",
+                  !dateRange && "text-muted-foreground"
+                )}
+              >
+                <Calendar className="mr-2 h-4 w-4" />
+                {dateRange?.from ? (
+                  dateRange.to ? (
+                    <>
+                      {format(dateRange.from, "dd/MM/yyyy")} - {format(dateRange.to, "dd/MM/yyyy")}
+                    </>
+                  ) : (
+                    format(dateRange.from, "dd/MM/yyyy")
+                  )
+                ) : (
+                  <span>Selecionar período</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 bg-card border-border" align="end">
+              <CalendarComponent
+                initialFocus
+                mode="range"
+                defaultMonth={dateRange?.from}
+                selected={dateRange}
+                onSelect={setDateRange}
+                numberOfMonths={2}
+                locale={ptBR}
+              />
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
@@ -286,5 +340,3 @@ function KPICard({ title, value, isCurrency, isPercent, icon: Icon, color }: {
     </Card>
   );
 }
-
-import { cn } from "@/lib/utils";
