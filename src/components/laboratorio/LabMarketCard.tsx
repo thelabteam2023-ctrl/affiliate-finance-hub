@@ -9,11 +9,15 @@ interface LabMarketCardProps {
   metrics: Metrics;
   onClick?: () => void;
   className?: string;
+  totalVolume?: number;
 }
 
-export function LabMarketCard({ name, metrics, onClick, className }: LabMarketCardProps) {
+export function LabMarketCard({ name, metrics, onClick, className, totalVolume }: LabMarketCardProps) {
+
   const isPositive = metrics.profit >= 0;
   const progressValue = metrics.validas > 0 ? (metrics.greens / metrics.validas) * 100 : 0;
+  const volumeShare = totalVolume && totalVolume > 0 ? (metrics.stake / totalVolume) * 100 : 0;
+
 
   return (
     <Card 
@@ -29,6 +33,12 @@ export function LabMarketCard({ name, metrics, onClick, className }: LabMarketCa
             <h3 className="text-lg font-bold truncate max-w-[180px]">{name}</h3>
             <p className="text-[10px] text-muted-foreground uppercase font-medium">
               {metrics.total} APOSTAS • R$ {metrics.stake.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              {volumeShare > 0 && (
+                <span className="ml-1 text-primary font-black">
+                  ({volumeShare.toFixed(1)}%)
+                </span>
+              )}
+
             </p>
           </div>
           <div className={cn(
