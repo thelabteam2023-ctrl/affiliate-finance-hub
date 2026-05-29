@@ -62,7 +62,7 @@ export function ValuebetDebugMonitor({
         };
       };
     },
-    enabled: !!workspaceId,
+    enabled: !!workspaceId && !!projectIds && projectIds.length > 0,
   });
 
   // Efeito para monitorar erros e performance da RPC principal
@@ -83,12 +83,21 @@ export function ValuebetDebugMonitor({
   const diagnostics = () => {
     const results = [];
     
+    if (!projectIds || projectIds.length === 0) {
+      results.push({ 
+        msg: `AGUARDANDO SELEÇÃO: Escolha ao menos um projeto para iniciar o diagnóstico de integridade.`, 
+        type: "info" 
+      });
+      return results;
+    }
+    
     if (rpcError) {
       results.push({ 
         msg: `ERRO DE SISTEMA: A RPC principal falhou. Verifique logs do console.`, 
         type: "error" 
       });
     }
+
 
     if (audit) {
       if (audit.wrong_workspace > 0) {

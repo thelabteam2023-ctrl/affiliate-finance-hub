@@ -280,10 +280,12 @@ export default function LaboratorioValueBet() {
           )}
 
           {/* KPIs Globais */}
-          {activeMetrics && <LabKPIPanel metrics={activeMetrics} />}
+          {selectedProjectIds.length > 0 && activeMetrics && <LabKPIPanel metrics={activeMetrics} />}
 
           {/* Tabs */}
-          <Tabs defaultValue="markets" className="space-y-6">
+          {selectedProjectIds.length > 0 && (
+            <Tabs defaultValue="markets" className="space-y-6">
+
             <div className="flex items-center justify-between border-b border-border/20 pb-1">
               <TabsList className="bg-transparent h-auto p-0 gap-8">
                 <TabsTrigger value="markets" className="bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none px-0 py-2 text-xs font-black uppercase tracking-widest text-muted-foreground data-[state=active]:text-foreground transition-all">
@@ -330,7 +332,8 @@ export default function LaboratorioValueBet() {
             <TabsContent value="bets" className="mt-0">
               <BetsTab bets={filteredBetsForTab} />
             </TabsContent>
-          </Tabs>
+            </Tabs>
+          )}
 
           {/* Debug Monitor at the bottom */}
           <ValuebetDebugMonitor 
@@ -340,6 +343,7 @@ export default function LaboratorioValueBet() {
             rpcError={rpcError} 
             rpcLoading={isLoading} 
           />
+
         </main>
       </div>
     </div>
