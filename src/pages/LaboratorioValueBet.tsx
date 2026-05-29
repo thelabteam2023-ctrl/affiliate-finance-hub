@@ -8,15 +8,16 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, 
   BarChart, Bar, Cell
 } from "recharts";
-import { format, startOfWeek, startOfMonth, parseISO } from "date-fns";
+import { format, startOfWeek, startOfMonth, parseISO, startOfYear, endOfMonth, endOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Loader2, TrendingUp, TrendingDown, Target, Zap, BarChart3, PieChart as PieChartIcon, Calendar, AlertCircle } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, Target, Zap, BarChart3, PieChart as PieChartIcon, Calendar, AlertCircle, Settings2, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { DateRange } from "react-day-picker";
 import { KPIAnchorCard } from "@/components/kpis/KPIAnchorCard";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from "@/components/ui/sheet";
 
 export default function LaboratorioValueBet() {
   const { workspaceId } = useAuth();
