@@ -422,7 +422,6 @@ export default function LaboratorioValueBet() {
             </>
           )}
         </div>
-      </div>
     </div>
   );
 }
