@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { AlertTriangle, Loader2, Trash2, PowerOff } from "lucide-react";
+import { AlertTriangle, Loader2, Trash2, PowerOff, RotateCcw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useUserWorkspaces } from "@/hooks/useUserWorkspaces";
+import { useRole } from "@/hooks/useRole";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,13 +35,16 @@ import {
 export function DangerZone() {
   const { workspace, workspaceId, refreshWorkspace } = useWorkspace();
   const { workspaces, switchWorkspace } = useUserWorkspaces();
+  const { isOwner, isSystemOwner } = useRole();
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const [deactivating, setDeactivating] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [confirmName, setConfirmName] = useState("");
+  const [confirmResetName, setConfirmResetName] = useState("");
 
   if (!workspace || !workspaceId) return null;
 
@@ -50,14 +54,16 @@ export function DangerZone() {
   };
   const isActive = ws.is_active !== false && !ws.deactivated_at;
   const nameMatches = confirmName.trim() === workspace.name;
+  const resetNameMatches = confirmResetName.trim() === workspace.name;
 
   const handleDeactivate = async () => {
     setDeactivating(true);
     try {
-      const { error } = await supabase
-        .from("workspaces")
-        .update({ is_active: false, deactivated_at: new Date().toISOString() })
-        .eq("id", workspaceId);
+      const { error } = await supabase.rpc("admin_set_workspace_active", {
+        _workspace_id: workspaceId,
+        _active: false,
+        _reason: "Desativado via Zona de Perigo",
+      });
       if (error) throw error;
       toast({
         title: "Workspace desativado",
@@ -72,6 +78,33 @@ export function DangerZone() {
       });
     } finally {
       setDeactivating(false);
+    }
+  };
+
+  const handleResetData = async () => {
+    if (!resetNameMatches) return;
+    setResetting(true);
+    try {
+      const { data, error } = await supabase.rpc("reset_workspace_data", {
+        _workspace_id: workspaceId,
+        _confirm_name: confirmResetName.trim(),
+      });
+      if (error) throw error;
+      toast({
+        title: "Workspace resetado",
+        description: `${(data as any)?.rows_deleted ?? 0} registros removidos. Membros e assinatura preservados.`,
+      });
+      queryClient.clear();
+      setConfirmResetName("");
+      // Reload so all caches/contexts repopulate from a clean state
+      window.location.reload();
+    } catch (err: any) {
+      toast({
+        title: "Falha no reset",
+        description: err.message ?? String(err),
+        variant: "destructive",
+      });
+      setResetting(false);
     }
   };
 
@@ -119,16 +152,87 @@ export function DangerZone() {
           Zona de Perigo
         </CardTitle>
         <CardDescription>
-          Ações irreversíveis sobre este workspace. Disponível apenas para o owner.
+          Ações irreversíveis sobre este workspace.
+          {isSystemOwner
+            ? " Desativação e exclusão são restritas a administradores do sistema."
+            : " O owner pode resetar os dados; desativação e exclusão são feitas pelo administrador do sistema."}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Step 1: Deactivate */}
+        {/* Owner action: Reset workspace data */}
+        {(isOwner || isSystemOwner) && (
+          <div className="flex flex-col gap-3 rounded-lg border border-destructive/40 bg-background/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-destructive">Resetar workspace</p>
+              <p className="text-xs text-muted-foreground">
+                Apaga <strong>todos os dados operacionais</strong> (apostas, financeiro,
+                projetos, bookmakers, planejamento, comunidade, ocorrências, fornecedores).
+                <strong> Mantém</strong> membros, convites, papéis e assinatura. O workspace
+                continua existindo, pronto para começar do zero. Irreversível.
+              </p>
+            </div>
+            <AlertDialog onOpenChange={(open) => { if (!open) setConfirmResetName(""); }}>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" disabled={resetting}>
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Resetar dados
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                    <AlertTriangle className="h-5 w-5" />
+                    Reset de dados do workspace
+                  </AlertDialogTitle>
+                  <AlertDialogDescription asChild>
+                    <div className="space-y-3 text-sm">
+                      <p>
+                        Todos os dados operacionais do workspace{" "}
+                        <strong>{workspace.name}</strong> serão apagados. Membros, papéis
+                        e assinatura permanecem intactos.
+                      </p>
+                      <p className="text-destructive">
+                        Esta ação <strong>não pode ser desfeita</strong>.
+                      </p>
+                      <div className="space-y-2 pt-2">
+                        <Label htmlFor="confirmResetName" className="text-foreground">
+                          Digite o nome do workspace para confirmar:
+                        </Label>
+                        <Input
+                          id="confirmResetName"
+                          value={confirmResetName}
+                          onChange={(e) => setConfirmResetName(e.target.value)}
+                          placeholder={workspace.name}
+                          autoComplete="off"
+                          autoFocus
+                        />
+                      </div>
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={resetting}>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleResetData}
+                    disabled={!resetNameMatches || resetting}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {resetting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Resetar dados
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        )}
+
+        {/* System-owner-only: Deactivate */}
+        {isSystemOwner && (
         <div className="flex flex-col gap-3 rounded-lg border border-border bg-background/60 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <p className="text-sm font-medium">Desativar workspace</p>
             <p className="text-xs text-muted-foreground">
-              Marca o workspace como inativo. Necessário antes da exclusão definitiva.
+              Marca o workspace como inativo. Necessário antes da exclusão definitiva. (System Owner)
             </p>
           </div>
           <Button
@@ -145,12 +249,14 @@ export function DangerZone() {
             {isActive ? "Desativar" : "Já desativado"}
           </Button>
         </div>
+        )}
 
-        {/* Step 2: Permanent delete */}
+        {/* System-owner-only: Permanent delete */}
+        {isSystemOwner && (
         <div className="flex flex-col gap-3 rounded-lg border border-destructive/40 bg-background/60 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <p className="text-sm font-medium text-destructive">
-              Excluir permanentemente
+              Excluir permanentemente (System Owner)
             </p>
             <p className="text-xs text-muted-foreground">
               Apaga o workspace e <strong>todos os dados</strong> (apostas, financeiro,
@@ -216,6 +322,7 @@ export function DangerZone() {
             </AlertDialogContent>
           </AlertDialog>
         </div>
+        )}
       </CardContent>
     </Card>
   );
