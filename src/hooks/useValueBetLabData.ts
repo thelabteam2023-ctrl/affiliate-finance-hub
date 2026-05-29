@@ -14,6 +14,9 @@ export interface RawBet {
   odd: number | null;
   stake_consolidado: number | null;
   pl_consolidado: number | null;
+  valor_brl_referencia: number | null;
+  stake_total: number | null;
+  lucro_prejuizo: number | null;
   resultado: Resultado | null;
   evento: string | null;
   selecao: string | null;
@@ -62,8 +65,16 @@ function calculateMetrics(bets: RawBet[]): Metrics {
   const total = bets.length;
   const voids = bets.filter(b => b.resultado === 'VOID').length;
   const validas = total - voids;
-  const stake = bets.reduce((acc, b) => acc + (b.stake_consolidado || 0), 0);
-  const profit = bets.reduce((acc, b) => acc + (b.pl_consolidado || 0), 0);
+  
+  const stake = bets.reduce((acc, b) => {
+    const val = b.stake_consolidado ?? b.valor_brl_referencia ?? b.stake_total ?? 0;
+    return acc + Number(val);
+  }, 0);
+  
+  const profit = bets.reduce((acc, b) => {
+    const val = b.pl_consolidado ?? b.lucro_prejuizo ?? 0;
+    return acc + Number(val);
+  }, 0);
   
   const greens = bets.filter(b => b.resultado === 'GREEN').length;
   const meioGreens = bets.filter(b => b.resultado === 'MEIO_GREEN').length;
@@ -84,7 +95,7 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
     queryFn: async () => {
       let q = supabase
         .from("apostas_unificada")
-        .select("id, data_aposta, esporte, mercado, odd, stake_consolidado, pl_consolidado, resultado, evento, selecao, bookmaker_id")
+        .select("id, data_aposta, esporte, mercado, odd, stake_consolidado, pl_consolidado, valor_brl_referencia, stake_total, lucro_prejuizo, resultado, evento, selecao, bookmaker_id")
         .eq("workspace_id", workspaceId)
         .eq("estrategia", "VALUEBET")
         .order('data_aposta', { ascending: false });
@@ -112,13 +123,17 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
 
     data.forEach(bet => {
       // Normalização para evitar duplicidade por case ou nulos
-      let sportName = bet.esporte || 'Indefinido';
-      sportName = sportName.trim() === "" ? "Indefinido" : sportName.charAt(0).toUpperCase() + sportName.slice(1).toLowerCase();
+      let rawSport = bet.esporte || 'Indefinido';
+      let sportName = rawSport.trim() === "" ? "Indefinido" : rawSport.charAt(0).toUpperCase() + rawSport.slice(1).toLowerCase();
       
       // Mapeamento de sinonimos ou erros comuns
-      if (sportName === 'Soccer') sportName = 'Futebol';
-      if (sportName === 'Efootball') sportName = 'E-sports';
-      if (sportName === 'Counter-strike' || sportName === 'League of legends' || sportName === 'Valorant' || sportName === 'Dota 2') sportName = 'E-sports';
+      if (sportName.toLowerCase() === 'soccer') sportName = 'Futebol';
+      if (sportName.toLowerCase() === 'efootball') sportName = 'E-sports';
+      if (['counter-strike', 'league of legends', 'valorant', 'dota 2'].includes(sportName.toLowerCase())) sportName = 'E-sports';
+      if (sportName.toLowerCase() === 'hockey') sportName = 'Hóquei';
+      if (sportName.toLowerCase() === 'basketball') sportName = 'Basquete';
+      if (sportName.toLowerCase() === 'tennis') sportName = 'Tênis';
+      if (sportName.toLowerCase() === 'volleyball') sportName = 'Vôlei';
 
       let marketName = bet.mercado || 'Geral';
       marketName = marketName.trim() === "" ? "Geral" : marketName;
@@ -141,11 +156,15 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
     // Finalize metrics per hierarchy
     Object.keys(sports).forEach(sName => {
       const sportBets = data.filter(b => {
-        let bSport = b.esporte || 'Indefinido';
-        bSport = bSport.trim() === "" ? "Indefinido" : bSport.charAt(0).toUpperCase() + bSport.slice(1).toLowerCase();
-        if (bSport === 'Soccer') bSport = 'Futebol';
-        if (bSport === 'Efootball') bSport = 'E-sports';
-        if (bSport === 'Counter-strike' || bSport === 'League of legends' || bSport === 'Valorant' || bSport === 'Dota 2') bSport = 'E-sports';
+        let rawSport = b.esporte || 'Indefinido';
+        let bSport = rawSport.trim() === "" ? "Indefinido" : rawSport.charAt(0).toUpperCase() + rawSport.slice(1).toLowerCase();
+        if (bSport.toLowerCase() === 'soccer') bSport = 'Futebol';
+        if (bSport.toLowerCase() === 'efootball') bSport = 'E-sports';
+        if (['counter-strike', 'league of legends', 'valorant', 'dota 2'].includes(bSport.toLowerCase())) bSport = 'E-sports';
+        if (bSport.toLowerCase() === 'hockey') bSport = 'Hóquei';
+        if (bSport.toLowerCase() === 'basketball') bSport = 'Basquete';
+        if (bSport.toLowerCase() === 'tennis') bSport = 'Tênis';
+        if (bSport.toLowerCase() === 'volleyball') bSport = 'Vôlei';
         return bSport === sName;
       });
       sports[sName] = { ...sports[sName], ...calculateMetrics(sportBets) };
@@ -169,11 +188,15 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
     const evolution: Record<string, { date: string, profit: number, volume: number, bets: number }> = {};
     const evolutionData = selectedSport 
       ? data.filter(b => {
-          let bSport = b.esporte || 'Indefinido';
-          bSport = bSport.trim() === "" ? "Indefinido" : bSport.charAt(0).toUpperCase() + bSport.slice(1).toLowerCase();
-          if (bSport === 'Soccer') bSport = 'Futebol';
-          if (bSport === 'Efootball') bSport = 'E-sports';
-          if (bSport === 'Counter-strike' || bSport === 'League of legends' || bSport === 'Valorant' || bSport === 'Dota 2') bSport = 'E-sports';
+          let rawSport = b.esporte || 'Indefinido';
+          let bSport = rawSport.trim() === "" ? "Indefinido" : rawSport.charAt(0).toUpperCase() + rawSport.slice(1).toLowerCase();
+          if (bSport.toLowerCase() === 'soccer') bSport = 'Futebol';
+          if (bSport.toLowerCase() === 'efootball') bSport = 'E-sports';
+          if (['counter-strike', 'league of legends', 'valorant', 'dota 2'].includes(bSport.toLowerCase())) bSport = 'E-sports';
+          if (bSport.toLowerCase() === 'hockey') bSport = 'Hóquei';
+          if (bSport.toLowerCase() === 'basketball') bSport = 'Basquete';
+          if (bSport.toLowerCase() === 'tennis') bSport = 'Tênis';
+          if (bSport.toLowerCase() === 'volleyball') bSport = 'Vôlei';
           return bSport === selectedSport;
         })
       : data;
@@ -183,8 +206,8 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
       if (!evolution[dateKey]) {
         evolution[dateKey] = { date: dateKey, profit: 0, volume: 0, bets: 0 };
       }
-      evolution[dateKey].profit += (bet.pl_consolidado || 0);
-      evolution[dateKey].volume += (bet.stake_consolidado || 0);
+      evolution[dateKey].profit += (bet.pl_consolidado ?? bet.lucro_prejuizo ?? 0);
+      evolution[dateKey].volume += (bet.stake_consolidado ?? bet.valor_brl_referencia ?? bet.stake_total ?? 0);
       evolution[dateKey].bets += 1;
     });
 
