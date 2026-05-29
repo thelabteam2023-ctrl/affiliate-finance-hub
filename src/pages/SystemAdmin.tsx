@@ -23,6 +23,16 @@ import { Input } from '@/components/ui/input';
 import { SearchInput } from '@/components/ui/search-input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -72,6 +82,7 @@ export default function SystemAdmin() {
     setUserBlocked,
     updateWorkspacePlan,
     setWorkspaceActive,
+    deleteWorkspacePermanently,
     getWorkspaceMembers,
   } = useSystemAdmin();
 
@@ -86,6 +97,7 @@ export default function SystemAdmin() {
   const [blockUserDialog, setBlockUserDialog] = useState<{ open: boolean; userId: string; userName: string; currentlyBlocked: boolean }>({ open: false, userId: '', userName: '', currentlyBlocked: false });
   const [changePlanDialog, setChangePlanDialog] = useState<{ open: boolean; workspaceId: string; workspaceName: string; currentPlan: string }>({ open: false, workspaceId: '', workspaceName: '', currentPlan: '' });
   const [viewMembersDialog, setViewMembersDialog] = useState<{ open: boolean; workspaceId: string; workspaceName: string; members: any[] }>({ open: false, workspaceId: '', workspaceName: '', members: [] });
+  const [deleteWorkspaceDialog, setDeleteWorkspaceDialog] = useState<{ open: boolean; workspaceId: string; workspaceName: string }>({ open: false, workspaceId: '', workspaceName: '' });
   
   // Form states
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
@@ -95,6 +107,8 @@ export default function SystemAdmin() {
   const [selectedRole, setSelectedRole] = useState('user');
   const [blockReason, setBlockReason] = useState('');
   const [selectedPlan, setSelectedPlan] = useState('');
+  const [deleteWorkspaceConfirm, setDeleteWorkspaceConfirm] = useState('');
+  const [deletingWorkspace, setDeletingWorkspace] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -202,6 +216,18 @@ export default function SystemAdmin() {
   const handleViewMembers = async (workspaceId: string, workspaceName: string) => {
     const members = await getWorkspaceMembers(workspaceId);
     setViewMembersDialog({ open: true, workspaceId, workspaceName, members });
+  };
+
+  const handleDeleteWorkspacePermanently = async () => {
+    if (deleteWorkspaceConfirm !== deleteWorkspaceDialog.workspaceName) return;
+    setDeletingWorkspace(true);
+    try {
+      await deleteWorkspacePermanently(deleteWorkspaceDialog.workspaceId, deleteWorkspaceConfirm);
+      setDeleteWorkspaceDialog({ open: false, workspaceId: '', workspaceName: '' });
+      setDeleteWorkspaceConfirm('');
+    } finally {
+      setDeletingWorkspace(false);
+    }
   };
 
   const getPlanBadge = (plan: string) => {
@@ -663,6 +689,15 @@ export default function SystemAdmin() {
                                 >
                                   {w.is_active ? <Ban className="h-4 w-4" /> : <Check className="h-4 w-4" />}
                                 </Button>
+                                {!w.is_active && (
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => setDeleteWorkspaceDialog({ open: true, workspaceId: w.id, workspaceName: w.name })}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
                               </div>
                             </TableCell>
                           </TableRow>
@@ -997,6 +1032,53 @@ export default function SystemAdmin() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={deleteWorkspaceDialog.open}
+        onOpenChange={(open) => {
+          setDeleteWorkspaceDialog({ ...deleteWorkspaceDialog, open });
+          if (!open) setDeleteWorkspaceConfirm('');
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Excluir workspace permanentemente
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm">
+                <p>
+                  Esta ação apagará definitivamente <strong>{deleteWorkspaceDialog.workspaceName}</strong> e todos os dados vinculados.
+                </p>
+                <p className="text-destructive">Não há como desfazer.</p>
+                <div className="space-y-2 pt-2">
+                  <Label htmlFor="adminDeleteWorkspaceConfirm" className="text-foreground">
+                    Digite o nome exato do workspace para confirmar:
+                  </Label>
+                  <Input
+                    id="adminDeleteWorkspaceConfirm"
+                    value={deleteWorkspaceConfirm}
+                    onChange={(e) => setDeleteWorkspaceConfirm(e.target.value)}
+                    placeholder={deleteWorkspaceDialog.workspaceName}
+                    autoComplete="off"
+                  />
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingWorkspace}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteWorkspacePermanently}
+              disabled={deleteWorkspaceConfirm !== deleteWorkspaceDialog.workspaceName || deletingWorkspace}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingWorkspace ? 'Excluindo...' : 'Excluir definitivamente'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -226,6 +226,27 @@ export function useSystemAdmin() {
     }
   }, [fetchWorkspaces]);
 
+  const deleteWorkspacePermanently = useCallback(async (
+    workspaceId: string,
+    confirmName: string
+  ) => {
+    try {
+      const { data, error } = await supabase.rpc('delete_workspace_cascade', {
+        _workspace_id: workspaceId,
+        _confirm_name: confirmName
+      });
+      if (error) throw error;
+      toast.success('Workspace excluído permanentemente');
+      await fetchUsers();
+      await fetchWorkspaces();
+      return data;
+    } catch (error: any) {
+      console.error('Error deleting workspace permanently:', error);
+      toast.error(error.message || 'Erro ao excluir workspace permanentemente');
+      throw error;
+    }
+  }, [fetchUsers, fetchWorkspaces]);
+
   const getWorkspaceMembers = useCallback(async (workspaceId: string): Promise<WorkspaceMember[]> => {
     try {
       const { data, error } = await supabase.rpc('admin_get_workspace_members', {
@@ -252,6 +273,7 @@ export function useSystemAdmin() {
     setUserBlocked,
     updateWorkspacePlan,
     setWorkspaceActive,
+    deleteWorkspacePermanently,
     getWorkspaceMembers,
   };
 }
