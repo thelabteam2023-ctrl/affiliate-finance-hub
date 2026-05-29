@@ -7,6 +7,7 @@ interface MarketsTabProps {
 
 export function MarketsTab({ markets }: MarketsTabProps) {
   const marketList = Object.values(markets).sort((a, b) => b.total - a.total);
+  const totalVolume = marketList.reduce((acc, m) => acc + m.stake, 0);
   
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -17,6 +18,7 @@ export function MarketsTab({ markets }: MarketsTabProps) {
             key={market.name} 
             name={market.name} 
             metrics={market} 
+            totalVolume={totalVolume}
           />
         ))}
       </div>
