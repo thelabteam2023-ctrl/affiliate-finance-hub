@@ -34,53 +34,24 @@ export function ValuebetDebugMonitor({
   const { data: audit, refetch: refetchAudit, isFetching: auditing } = useQuery({
     queryKey: ["valuebet-deep-audit", workspaceId, projectIds],
     queryFn: async () => {
-      addLog("Iniciando auditoria profunda de integridade estrutural...", "info");
+      addLog("Iniciando auditoria profunda de integridade...", "info");
       
-      const { data: deepAudit, error: auditError } = await supabase.rpc("audit_valuebet_integrity", {
+      const { data: auditResult, error: auditError } = await supabase.rpc("audit_valuebet_integrity", {
         p_project_ids: projectIds && projectIds.length > 0 ? projectIds : null
       });
 
       if (auditError) {
         addLog(`Erro na RPC de Auditoria: ${auditError.message}`, "error");
+        throw auditError;
       }
 
-      // Busca por variações de estratégia (Case Insensitive)
-      const { data: strategiesRaw } = await supabase
-        .from("apostas_unificada")
-        .select("estrategia, status")
-        .eq("workspace_id", workspaceId)
-        .ilike("estrategia", "%value%");
-
-      // Agrupar manualmente no JS já que o Postgrest não suporta .group() direto via SDK JS desta forma
-      const strategies = (strategiesRaw || []).reduce((acc: any[], curr) => {
-        const existing = acc.find(a => a.estrategia === curr.estrategia && a.status === curr.status);
-        if (existing) existing.count++;
-        else acc.push({ estrategia: curr.estrategia, status: curr.status, count: 1 });
-        return acc;
-      }, []);
-
-      // Verificar projetos selecionados
-      let projectCheck = [];
-      if (projectIds && projectIds.length > 0) {
-        const { data: projectsRaw } = await supabase
-          .from("apostas_unificada")
-          .select("projeto_id, estrategia, status")
-          .in("projeto_id", projectIds);
-        
-        projectCheck = (projectsRaw || []).reduce((acc: any[], curr) => {
-          const existing = acc.find(a => a.projeto_id === curr.projeto_id && a.estrategia === curr.estrategia && a.status === curr.status);
-          if (existing) existing.count++;
-          else acc.push({ projeto_id: curr.projeto_id, estrategia: curr.estrategia, status: curr.status, count: 1 });
-          return acc;
-        }, []);
-      }
-
-      addLog("Auditoria concluída.", "success");
-      return { 
-        totalWorkspace: (deepAudit as any)?.issues?.reduce((acc: number, i: any) => acc + i.count, 0) || 0, 
-        strategies, 
-        projectCheck,
-        discrepancies: (deepAudit as any)?.issues?.filter((i: any) => i.is_hidden) || []
+      addLog("Auditoria concluída com sucesso.", "success");
+      return auditResult as {
+        wrong_workspace: number;
+        wrong_case: number;
+        pending: number;
+        excluded_status: number;
+        healthy: number;
       };
     },
     enabled: !!workspaceId,
@@ -89,14 +60,14 @@ export function ValuebetDebugMonitor({
   // Efeito para monitorar erros e performance da RPC principal
   useEffect(() => {
     if (rpcError) {
-      addLog(`Erro na RPC: ${rpcError.message || JSON.stringify(rpcError)}`, "error");
+      addLog(`Falha na RPC Principal: ${rpcError.message || JSON.stringify(rpcError)}`, "error");
     }
     if (rpcData?._metadata?.fetch_duration_ms) {
       const duration = rpcData._metadata.fetch_duration_ms;
       if (duration > 1500) {
-        addLog(`ALERTA: Lentidão na RPC detectada (${duration.toFixed(0)}ms).`, "warning");
+        addLog(`ALERTA: Latência elevada (${duration.toFixed(0)}ms).`, "warning");
       } else {
-        addLog(`Performance estável: RPC respondida em ${duration.toFixed(0)}ms.`, "success");
+        addLog(`Ecossistema estável (${duration.toFixed(0)}ms).`, "success");
       }
     }
   }, [rpcError, rpcData]);
@@ -104,41 +75,48 @@ export function ValuebetDebugMonitor({
   const diagnostics = () => {
     const results = [];
     
-    if (!workspaceId) results.push({ msg: "FALHA: Workspace ID não identificado.", type: "error" });
-    
-    // Análise de Discrepâncias Estruturais (da nova RPC de auditoria)
-    if (audit?.discrepancies && audit.discrepancies.length > 0) {
-      const hiddenCount = audit.discrepancies.reduce((acc: number, d: any) => acc + d.count, 0);
+    if (rpcError) {
       results.push({ 
-        msg: `FALHA DE VISIBILIDADE: Existem ${hiddenCount} apostas que não pertencem ao seu workspace atual ou possuem status/estratégia inválidos.`, 
-        type: "error",
-        action: "Sincronizar dados"
+        msg: `ERRO DE SISTEMA: A RPC principal falhou. Verifique logs do console.`, 
+        type: "error" 
       });
-      
-      const caseIssues = audit.discrepancies.filter((d: any) => d.estrategia.toUpperCase() === 'VALUEBET' && d.estrategia !== 'VALUEBET');
-      if (caseIssues.length > 0) {
-        results.push({
-          msg: `CASE SENSITIVITY: Identificamos ${caseIssues.reduce((acc: number, d: any) => acc + d.count, 0)} apostas com grafia incorreta (Ex: ${caseIssues[0].estrategia}).`,
-          type: "warning"
-        });
-      }
     }
-    
-    if (audit?.strategies) {
-      const totalValue = audit.strategies.reduce((acc, s) => acc + s.count, 0);
-      if (totalValue > 0 && (!rpcData?.kpis?.total_bets || rpcData.kpis.total_bets === 0)) {
+
+    if (audit) {
+      if (audit.wrong_workspace > 0) {
         results.push({ 
-          msg: `FILTRO BLOQUEANTE: Existem ${totalValue} apostas no projeto, mas elas não passam no filtro de DATA ou STATUS da visualização.`, 
+          msg: `CRÍTICO: ${audit.wrong_workspace} apostas pertencem a outro workspace e estão invisíveis.`, 
           type: "error" 
         });
       }
-    }
+      
+      if (audit.wrong_case > 0) {
+        results.push({ 
+          msg: `AVISO: ${audit.wrong_case} apostas com grafia errada (Ex: valuebet ao invés de VALUEBET).`, 
+          type: "warning" 
+        });
+      }
 
-    if (rpcData?._metadata?.fetch_duration_ms > 2000) {
-      results.push({
-        msg: `GARGALO DE PERFORMANCE: O processamento levou ${rpcData._metadata.fetch_duration_ms.toFixed(0)}ms. O sistema pode estar lento para 15k+ linhas.`,
-        type: "warning"
-      });
+      if (audit.pending > 0) {
+        results.push({ 
+          msg: `INFORMAÇÃO: ${audit.pending} apostas PENDENTES (não entram nos KPIs por padrão).`, 
+          type: "info" 
+        });
+      }
+
+      if (audit.excluded_status > 0) {
+        results.push({ 
+          msg: `AVISO: ${audit.excluded_status} apostas com status não suportado pelo Laboratório.`, 
+          type: "warning" 
+        });
+      }
+
+      if (audit.healthy > 0 && (!rpcData?.kpis?.total_bets || rpcData.kpis.total_bets === 0)) {
+        results.push({ 
+          msg: `FILTRO DE DATA: Existem ${audit.healthy} apostas saudáveis, mas o período selecionado não as engloba.`, 
+          type: "warning" 
+        });
+      }
     }
 
     return results;
@@ -193,7 +171,7 @@ export function ValuebetDebugMonitor({
               {diagnosticResults.length === 0 && !auditing && (
                 <div className="flex items-center gap-2 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
                   <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                  <span className="text-xs text-emerald-400 font-medium">Nenhuma anomalia estrutural detectada. Se os dados não aparecem, verifique o filtro de data.</span>
+                  <span className="text-xs text-emerald-400 font-medium">Ecossistema saudável: {audit?.healthy || 0} apostas integras detectadas.</span>
                 </div>
               )}
               
@@ -234,10 +212,10 @@ export function ValuebetDebugMonitor({
                 </span>
               </div>
               <div className="bg-card/50 p-3 rounded-lg border border-border/20 group hover:border-primary/30 transition-colors">
-                <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">Integridade</p>
+                <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">Total Auditado</p>
                 <div className="flex items-center gap-2">
                   <Database className="h-3 w-3 text-muted-foreground" />
-                  <span className="text-xs font-bold">{audit?.totalWorkspace || 0}</span>
+                  <span className="text-xs font-bold">{(audit?.healthy || 0) + (audit?.pending || 0) + (audit?.wrong_workspace || 0)}</span>
                 </div>
               </div>
             </div>
