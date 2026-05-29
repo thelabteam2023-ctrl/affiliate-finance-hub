@@ -178,11 +178,11 @@ export default function LaboratorioValueBet() {
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="end">
                 <div className="p-2 grid grid-cols-2 gap-2 border-b border-border/10 bg-muted/20">
-                  <Button variant="ghost" size="xs" className="text-[10px] uppercase font-bold" onClick={() => {
+                  <Button variant="ghost" size="sm" className="text-[10px] uppercase font-bold h-7" onClick={() => {
                     const now = new Date();
                     setDateRange({ from: startOfMonth(now), to: endOfMonth(now) });
                   }}>Mês Atual</Button>
-                  <Button variant="ghost" size="xs" className="text-[10px] uppercase font-bold" onClick={() => {
+                  <Button variant="ghost" size="sm" className="text-[10px] uppercase font-bold h-7" onClick={() => {
                     const now = new Date();
                     setDateRange({ from: startOfYear(now), to: endOfYear(now) });
                   }}>Ano Atual</Button>
