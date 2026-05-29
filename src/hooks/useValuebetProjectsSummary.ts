@@ -23,7 +23,7 @@ export function useValuebetProjectsSummary() {
         throw error;
       }
 
-      return data as ValuebetProjectSummary[];
+      return (data as unknown) as ValuebetProjectSummary[];
     },
     enabled: !!workspaceId,
   });
