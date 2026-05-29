@@ -34,13 +34,15 @@ export function ValuebetDebugMonitor({
   const { data: audit, refetch: refetchAudit, isFetching: auditing } = useQuery({
     queryKey: ["valuebet-deep-audit", workspaceId, projectIds],
     queryFn: async () => {
-      addLog("Iniciando auditoria profunda de dados...", "info");
+      addLog("Iniciando auditoria profunda de integridade estrutural...", "info");
       
-      // Contagem total no workspace
-      const { count: totalWorkspace } = await supabase
-        .from("apostas_unificada")
-        .select("*", { count: 'exact', head: true })
-        .eq("workspace_id", workspaceId);
+      const { data: deepAudit, error: auditError } = await supabase.rpc("audit_valuebet_integrity", {
+        p_project_ids: projectIds && projectIds.length > 0 ? projectIds : null
+      });
+
+      if (auditError) {
+        addLog(`Erro na RPC de Auditoria: ${auditError.message}`, "error");
+      }
 
       // Busca por variações de estratégia (Case Insensitive)
       const { data: strategiesRaw } = await supabase
