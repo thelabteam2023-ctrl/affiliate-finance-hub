@@ -434,6 +434,14 @@ export default function LaboratorioValueBet() {
                   </CardContent>
                 </Card>
               </div>
+
+              <ValuebetDebugMonitor 
+                workspaceId={workspaceId}
+                projectIds={selectedProjectIds}
+                rpcData={stats}
+                rpcError={loadingStats ? null : (stats === undefined ? { message: "Nenhum dado retornado" } : null)}
+                rpcLoading={loadingStats}
+              />
             </>
           )}
         </div>
