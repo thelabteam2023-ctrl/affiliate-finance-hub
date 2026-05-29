@@ -17170,6 +17170,10 @@ export type Database = {
         Args: { p_dry_run?: boolean; p_projeto_id: string; p_user_id: string }
         Returns: Json
       }
+      reset_workspace_data: {
+        Args: { _confirm_name: string; _workspace_id: string }
+        Returns: Json
+      }
       resolver_impacto_saldo: {
         Args: { p_fonte_saldo: string; p_resultado: string; p_valor: number }
         Returns: {
