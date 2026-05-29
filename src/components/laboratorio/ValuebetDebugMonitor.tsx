@@ -56,6 +56,9 @@ export function ValuebetDebugMonitor({
           total: number;
           filled_stake_cons: number;
           filled_pl_cons: number;
+          filled_valor_brl: number;
+          filled_stake_total: number;
+          filled_lp_raw: number;
         };
       };
     },
@@ -126,13 +129,24 @@ export function ValuebetDebugMonitor({
 
     if (audit?.column_health) {
       const total = audit.column_health.total || 1;
-      const lpRate = audit.column_health.filled_pl_cons / total;
-      const stakeRate = audit.column_health.filled_stake_cons / total;
+      const lpRate = (audit.column_health.filled_pl_cons + audit.column_health.filled_lp_raw) > 0 ? 1 : 0;
+      const stakeRate = (audit.column_health.filled_stake_cons + audit.column_health.filled_valor_brl + audit.column_health.filled_stake_total) > 0 ? 1 : 0;
       
-      if (lpRate < 0.95 || stakeRate < 0.95) {
+      const filledLP = Math.max(audit.column_health.filled_pl_cons, audit.column_health.filled_lp_raw);
+      const filledStake = Math.max(audit.column_health.filled_stake_cons, audit.column_health.filled_valor_brl, audit.column_health.filled_stake_total);
+      
+      const lpCoverage = filledLP / total;
+      const stakeCoverage = filledStake / total;
+
+      if (lpCoverage < 0.95 || stakeCoverage < 0.95) {
         results.push({
-          msg: `OBSERVABILIDADE: ${( (1 - Math.min(lpRate, stakeRate)) * 100).toFixed(1)}% das apostas possuem campos financeiros nulos (PL/Stake), o que distorce os lucros e ROI.`,
+          msg: `OBSERVABILIDADE: Coverage financeiro baixo (PL: ${(lpCoverage * 100).toFixed(1)}%, Stake: ${(stakeCoverage * 100).toFixed(1)}%). Os lucros e ROI podem estar subestimados.`,
           type: "error"
+        });
+      } else if (audit.column_health.filled_stake_cons === 0 && filledStake > 0) {
+        results.push({
+          msg: `AUTO-CURA ATIVA: Coluna principal de Stake está vazia. O sistema está utilizando fallbacks (valor_brl_referencia) para calcular ROI corretamente.`,
+          type: "success"
         });
       }
     }
@@ -237,11 +251,11 @@ export function ValuebetDebugMonitor({
                 </div>
               </div>
               <div className="bg-card/50 p-3 rounded-lg border border-border/20 group hover:border-primary/30 transition-colors">
-                <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">Cobertura PL</p>
+                <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">Cobertura PL/Stake</p>
                 <div className="flex items-center gap-2">
-                  <Activity className={cn("h-3 w-3", audit?.column_health && audit.column_health.filled_pl_cons / (audit.column_health.total || 1) < 0.9 ? "text-amber-500" : "text-emerald-500")} />
+                  <Activity className={cn("h-3 w-3", ( (audit?.column_health?.filled_pl_cons || 0) / (audit?.column_health?.total || 1)) < 0.9 ? "text-amber-500" : "text-emerald-500")} />
                   <span className="text-xs font-bold">
-                    {audit?.column_health ? `${((audit.column_health.filled_pl_cons / (audit.column_health.total || 1)) * 100).toFixed(0)}%` : "--"}
+                    {audit?.column_health ? `${((Math.max(audit.column_health.filled_pl_cons, audit.column_health.filled_lp_raw) / (audit.column_health.total || 1)) * 100).toFixed(0)}% / ${((Math.max(audit.column_health.filled_stake_cons, audit.column_health.filled_valor_brl, audit.column_health.filled_stake_total) / (audit.column_health.total || 1)) * 100).toFixed(0)}%` : "--"}
                   </span>
                 </div>
               </div>

@@ -63,7 +63,19 @@ export default function LaboratorioValueBet() {
   const filteredBetsForTab = useMemo(() => {
     if (!stats?.raw) return [];
     if (!selectedSport) return stats.raw;
-    return stats.raw.filter(b => (b.esporte || 'Outros') === selectedSport);
+    return stats.raw.filter(b => {
+      let rawSport = b.esporte || 'Outros';
+      let bSport = rawSport.trim() === "" ? "Outros" : rawSport.charAt(0).toUpperCase() + rawSport.slice(1).toLowerCase();
+      // Apply same normalization as hook
+      if (bSport.toLowerCase() === 'soccer') bSport = 'Futebol';
+      if (bSport.toLowerCase() === 'efootball') bSport = 'E-sports';
+      if (['counter-strike', 'league of legends', 'valorant', 'dota 2'].includes(bSport.toLowerCase())) bSport = 'E-sports';
+      if (bSport.toLowerCase() === 'hockey') bSport = 'Hóquei';
+      if (bSport.toLowerCase() === 'basketball') bSport = 'Basquete';
+      if (bSport.toLowerCase() === 'tennis') bSport = 'Tênis';
+      if (bSport.toLowerCase() === 'volleyball') bSport = 'Vôlei';
+      return bSport === selectedSport;
+    });
   }, [stats, selectedSport]);
 
   const filteredMarketsForTab = useMemo(() => {
@@ -179,15 +191,20 @@ export default function LaboratorioValueBet() {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="end">
-                <div className="p-2 grid grid-cols-2 gap-2 border-b border-border/10 bg-muted/20">
-                  <Button variant="ghost" size="sm" className="text-[10px] uppercase font-bold h-7" onClick={() => {
-                    const now = new Date();
-                    setDateRange({ from: startOfMonth(now), to: endOfMonth(now) });
-                  }}>Mês Atual</Button>
-                  <Button variant="ghost" size="sm" className="text-[10px] uppercase font-bold h-7" onClick={() => {
-                    const now = new Date();
-                    setDateRange({ from: startOfYear(now), to: endOfYear(now) });
-                  }}>Ano Atual</Button>
+                <div className="p-2 flex flex-col gap-1 border-b border-border/10 bg-muted/20">
+                  <div className="grid grid-cols-2 gap-1">
+                    <Button variant="ghost" size="sm" className="text-[10px] uppercase font-bold h-7" onClick={() => {
+                      const now = new Date();
+                      setDateRange({ from: startOfMonth(now), to: endOfMonth(now) });
+                    }}>Mês Atual</Button>
+                    <Button variant="ghost" size="sm" className="text-[10px] uppercase font-bold h-7" onClick={() => {
+                      const now = new Date();
+                      setDateRange({ from: startOfYear(now), to: endOfYear(now) });
+                    }}>Ano Atual</Button>
+                  </div>
+                  <Button variant="ghost" size="sm" className="text-[10px] uppercase font-bold h-7 w-full text-primary" onClick={() => {
+                    setDateRange(undefined);
+                  }}>Ver Todo o Período</Button>
                 </div>
                 <CalendarComponent
                   mode="range"
@@ -241,12 +258,10 @@ export default function LaboratorioValueBet() {
                     <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Desempenho Diário do Escopo (Entrada por Entrada)</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <EvolutionTab evolution={stats?.evolution.filter(e => {
-                      // Se tem esporte selecionado, a evolução já vem do raw que foi filtrado no hook (atualmente o hook agrupa global, preciso que a evolução responda ao filtro lateral)
-                      // Ajuste: O hook agrupa por dia de TODAS as apostas carregadas. 
-                      // Para o gráfico responder ao esporte, precisamos de uma evolução filtrada.
-                      return true; // Simplificando por enquanto, mas o ideal é o hook prover evolution por esporte
-                    }) || []} />
+                    <EvolutionTab 
+                      evolution={stats?.evolution || []} 
+                      evolutionByEntry={stats?.evolutionByEntry}
+                    />
                   </CardContent>
                 </Card>
               </div>
@@ -257,7 +272,7 @@ export default function LaboratorioValueBet() {
             </TabsContent>
 
             <TabsContent value="evolution" className="mt-0">
-              <EvolutionTab evolution={stats?.evolution || []} />
+              <EvolutionTab evolution={stats?.evolution || []} evolutionByEntry={stats?.evolutionByEntry} />
             </TabsContent>
 
             <TabsContent value="bets" className="mt-0">

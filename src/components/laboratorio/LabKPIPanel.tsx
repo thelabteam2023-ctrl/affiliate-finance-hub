@@ -22,12 +22,12 @@ export function LabKPIPanel({ metrics, className }: LabKPIPanelProps) {
     },
     { 
       label: "Volume", 
-      value: `R$ ${metrics.stake.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`, 
+      value: `R$ ${metrics.stake.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 
       icon: <Zap className="h-4 w-4" /> 
     },
     { 
       label: "Lucro/Prejuízo", 
-      value: `R$ ${metrics.profit.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`, 
+      value: `R$ ${metrics.profit.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 
       color: isPositive ? "text-green-500" : "text-red-500",
       icon: isPositive ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" /> 
     },
