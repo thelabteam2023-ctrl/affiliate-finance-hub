@@ -1,4 +1,4 @@
-import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, Settings, LogOut, Star, Shield, Calculator, StickyNote, ShieldCheck, ChevronUp, ChevronDown, Sun, Moon, Target, Layers, ArrowLeftRight, Zap, Truck, ClipboardList, CalendarDays, Activity, X, ArrowDownToLine, ArrowUpFromLine, HandCoins, Clock, MessageCircle, Globe } from "lucide-react";
+import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, Settings, LogOut, Star, Shield, Calculator, StickyNote, ShieldCheck, ChevronUp, ChevronDown, Sun, Moon, Target, Layers, ArrowLeftRight, Zap, Truck, ClipboardList, CalendarDays, Activity, X, ArrowDownToLine, ArrowUpFromLine, HandCoins, Clock, MessageCircle, Globe, Beaker } from "lucide-react";
 import { useSolicitacoesKpis } from "@/hooks/useSolicitacoes";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -198,6 +198,21 @@ const menuGroups: MenuGroup[] = [
       { title: "Captação", url: "/programa-indicacao", icon: UserPlus, iconName: "UserPlus", moduleKey: "captacao" },
       { title: "Fornecedores", url: "/fornecedores-portal", icon: Truck, iconName: "Truck", moduleKey: "captacao" },
     ],
+  },
+  {
+    label: "LABORATÓRIO",
+    items: [
+      {
+        title: "Ferramentas",
+        url: "#laboratorio-ferramentas",
+        icon: Beaker,
+        iconName: "Beaker",
+        moduleKey: "ferramentas",
+        children: [
+          { title: "Laboratório ValueBet", url: "/ferramentas/laboratorio-valuebet", icon: Activity, iconName: "Activity", moduleKey: "ferramentas" },
+        ]
+      }
+    ]
   },
   {
     label: "FERRAMENTAS",
