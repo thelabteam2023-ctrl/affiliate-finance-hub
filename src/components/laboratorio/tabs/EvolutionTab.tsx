@@ -7,9 +7,10 @@ import { ptBR } from "date-fns/locale";
 
 interface EvolutionTabProps {
   evolution: Array<{ date: string, profit: number, volume: number, bets: number }>;
+  evolutionByEntry?: Array<{ index: number, profit: number, cumulative: number, date: string, label: string }>;
 }
 
-export function EvolutionTab({ evolution }: EvolutionTabProps) {
+export function EvolutionTab({ evolution, evolutionByEntry }: EvolutionTabProps) {
   let cumulativeProfit = 0;
   const chartData = evolution.map(item => {
     cumulativeProfit += item.profit;
@@ -21,17 +22,21 @@ export function EvolutionTab({ evolution }: EvolutionTabProps) {
     };
   });
 
+  const entryData = evolutionByEntry || [];
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {/* Lucro Acumulado — Sensação "Entrada por Entrada" */}
       <Card className="bg-card/40 border-border/40">
-        <CardHeader>
-          <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Lucro Acumulado (R$)</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+            {entryData.length > 0 ? "Evolução Entrada por Entrada" : "Lucro Acumulado Diário"} (R$)
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
+              <AreaChart data={entryData.length > 0 ? entryData : chartData}>
                 <defs>
                   <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
@@ -39,17 +44,17 @@ export function EvolutionTab({ evolution }: EvolutionTabProps) {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#333" />
-                <XAxis dataKey="formattedDate" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#888' }} />
+                <XAxis dataKey={entryData.length > 0 ? "label" : "formattedDate"} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#888' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#888' }} tickFormatter={(v) => `R$${v}`} />
                 <Tooltip 
                   contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }}
                   labelStyle={{ color: '#888', fontWeight: 'bold' }}
                   formatter={(value: number, name: string) => [
                     `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 
-                    name === 'cumulativeProfit' ? 'Acumulado' : 'No Dia'
+                    name === 'cumulativeProfit' || name === 'cumulative' ? 'Acumulado' : 'No Ponto'
                   ]}
                 />
-                <Area type="monotone" dataKey="cumulativeProfit" stroke="#10b981" fillOpacity={1} fill="url(#colorProfit)" strokeWidth={2} />
+                <Area type="monotone" dataKey={entryData.length > 0 ? "cumulative" : "cumulativeProfit"} stroke="#10b981" fillOpacity={1} fill="url(#colorProfit)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
