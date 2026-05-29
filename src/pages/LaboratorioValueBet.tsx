@@ -1,468 +1,261 @@
 import { useState, useMemo, useEffect } from "react";
-import { useLaboratorioValueBet } from "@/hooks/useLaboratorioValueBet";
+import { useValueBetLabData } from "@/hooks/useValueBetLabData";
 import { useValuebetProjectsSummary } from "@/hooks/useValuebetProjectsSummary";
-import { ValuebetProjectPicker } from "@/components/laboratorio/ValuebetProjectPicker";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from "@/hooks/useAuth";
-import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, 
-  BarChart, Bar, Cell
-} from "recharts";
-import { format, startOfWeek, startOfMonth, parseISO, startOfYear, endOfMonth, endOfYear } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { Loader2, TrendingUp, TrendingDown, Target, Zap, BarChart3, PieChart as PieChartIcon, Calendar, AlertCircle, Settings2, SlidersHorizontal, Info } from "lucide-react";
+import { LabSidebar } from "@/components/laboratorio/LabSidebar";
+import { LabKPIPanel } from "@/components/laboratorio/LabKPIPanel";
+import { MarketsTab } from "@/components/laboratorio/tabs/MarketsTab";
+import { OddRangesTab } from "@/components/laboratorio/tabs/OddRangesTab";
+import { EvolutionTab } from "@/components/laboratorio/tabs/EvolutionTab";
+import { BetsTab } from "@/components/laboratorio/tabs/BetsTab";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { 
+  Loader2, Filter, Calendar, Info, BarChart3, 
+  Target, Zap, TrendingUp, ChevronDown 
+} from "lucide-react";
+import { format, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { DateRange } from "react-day-picker";
-import { KPIAnchorCard } from "@/components/kpis/KPIAnchorCard";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from "@/components/ui/sheet";
+import { ValuebetProjectPicker } from "@/components/laboratorio/ValuebetProjectPicker";
 import { ValuebetDebugMonitor } from "@/components/laboratorio/ValuebetDebugMonitor";
+import { cn } from "@/lib/utils";
 
 export default function LaboratorioValueBet() {
-  const { workspaceId } = useAuth();
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
-  const [timeGrouping, setTimeGrouping] = useState<"daily" | "weekly" | "monthly">("daily");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
-
-  // Initialize with last 30 days
-  useEffect(() => {
+  const [selectedSport, setSelectedSport] = useState<string | null>(null);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
     const end = new Date();
     const start = new Date();
     start.setDate(start.getDate() - 30);
-    setDateRange({ from: start, to: end });
-  }, []);
+    return { from: start, to: end };
+  });
 
   const startDateStr = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : null;
   const endDateStr = dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : null;
 
-  // Fetch available projects with ValueBet statistics
-  const { data: projectsSummary, isLoading: loadingProjects } = useValuebetProjectsSummary();
+  const { data: projectsSummary } = useValuebetProjectsSummary();
+  const { stats, isLoading, error: rpcError } = useValueBetLabData(
+    selectedProjectIds.length > 0 ? selectedProjectIds : null,
+    startDateStr,
+    endDateStr
+  );
 
-  // Auto-select all projects on first load
+  // Auto-select projects
   useEffect(() => {
     if (projectsSummary && projectsSummary.length > 0 && selectedProjectIds.length === 0) {
       setSelectedProjectIds(projectsSummary.map(p => p.projeto_id));
     }
   }, [projectsSummary]);
 
-  const { data: stats, isLoading: loadingStats, error: rpcError } = useLaboratorioValueBet(
-    selectedProjectIds.length > 0 ? selectedProjectIds : null,
-    startDateStr,
-    endDateStr
-  );
-
-  const totalBetsHeader = useMemo(() => {
-    if (loadingStats) return "Carregando...";
-    if (rpcError) return "Erro nos dados";
-    if (!stats?.kpis?.total_bets) return "0 apostas";
-    return `${stats.kpis.total_bets.toLocaleString()} apostas`;
-  }, [stats?.kpis?.total_bets, loadingStats, rpcError]);
-
-  const toggleProject = (id: string) => {
-    setSelectedProjectIds(prev => 
-      prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
-    );
-  };
-
-  const selectAll = () => {
-    if (projectsSummary) {
-      setSelectedProjectIds(projectsSummary.map(p => p.projeto_id));
+  const activeMetrics = useMemo(() => {
+    if (!stats) return null;
+    if (selectedSport && stats.sports[selectedSport]) {
+      return stats.sports[selectedSport];
     }
-  };
+    return stats.global;
+  }, [stats, selectedSport]);
 
-  const clearSelection = () => {
-    setSelectedProjectIds([]);
-  };
+  const filteredBetsForTab = useMemo(() => {
+    if (!stats?.raw) return [];
+    if (!selectedSport) return stats.raw;
+    return stats.raw.filter(b => (b.esporte || 'Outros') === selectedSport);
+  }, [stats, selectedSport]);
 
-  const groupedEvolutionData = useMemo(() => {
-    if (!stats?.evolution) return [];
-
-    const grouped: Record<string, number> = {};
-    
-    stats.evolution.forEach(item => {
-      const date = parseISO(item.date);
-      let key = item.date;
-      
-      if (timeGrouping === "weekly") {
-        key = format(startOfWeek(date), "yyyy-MM-dd");
-      } else if (timeGrouping === "monthly") {
-        key = format(startOfMonth(date), "yyyy-MM-01");
-      }
-      
-      grouped[key] = (grouped[key] || 0) + item.daily_profit;
-    });
-
-    let cumulative = 0;
-    return Object.entries(grouped)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, profit]) => {
-        cumulative += profit;
-        return {
-          date,
-          profit,
-          cumulative,
-          formattedDate: format(parseISO(date), timeGrouping === "daily" ? "dd/MM" : timeGrouping === "weekly" ? "'Sem' dd/MM" : "MMM/yy", { locale: ptBR })
-        };
+  const filteredMarketsForTab = useMemo(() => {
+    if (!stats) return {};
+    if (!selectedSport) {
+      // Aggregate markets from all sports
+      const aggregated: any = {};
+      Object.values(stats.sports).forEach(sport => {
+        Object.entries(sport.markets).forEach(([mName, mStats]) => {
+          if (!aggregated[mName]) {
+            aggregated[mName] = { ...mStats, oddRanges: { ...mStats.oddRanges } };
+          } else {
+            aggregated[mName].total += mStats.total;
+            aggregated[mName].validas += mStats.validas;
+            aggregated[mName].stake += mStats.stake;
+            aggregated[mName].profit += mStats.profit;
+            aggregated[mName].greens += mStats.greens;
+            aggregated[mName].meioGreens += mStats.meioGreens;
+            aggregated[mName].meioReds += mStats.meioReds;
+            aggregated[mName].reds += mStats.reds;
+            aggregated[mName].voids += mStats.voids;
+            aggregated[mName].roi = aggregated[mName].stake > 0 ? (aggregated[mName].profit / aggregated[mName].stake) * 100 : 0;
+            aggregated[mName].winRate = aggregated[mName].validas > 0 ? ((aggregated[mName].greens + aggregated[mName].meioGreens * 0.5) / aggregated[mName].validas) * 100 : 0;
+            
+            // Merge odd ranges
+            Object.entries(mStats.oddRanges).forEach(([oRange, oMetrics]) => {
+              if (!aggregated[mName].oddRanges[oRange]) {
+                aggregated[mName].oddRanges[oRange] = { ...oMetrics };
+              } else {
+                aggregated[mName].oddRanges[oRange].total += oMetrics.total;
+                aggregated[mName].oddRanges[oRange].validas += oMetrics.validas;
+                aggregated[mName].oddRanges[oRange].stake += oMetrics.stake;
+                aggregated[mName].oddRanges[oRange].profit += oMetrics.profit;
+                aggregated[mName].oddRanges[oRange].greens += oMetrics.greens;
+                aggregated[mName].oddRanges[oRange].meioGreens += oMetrics.meioGreens;
+                aggregated[mName].oddRanges[oRange].meioReds += oMetrics.meioReds;
+                aggregated[mName].oddRanges[oRange].reds += oMetrics.reds;
+                aggregated[mName].oddRanges[oRange].voids += oMetrics.voids;
+              }
+            });
+          }
+        });
       });
-  }, [stats?.evolution, timeGrouping]);
+      return aggregated;
+    }
+    return stats.sports[selectedSport].markets;
+  }, [stats, selectedSport]);
 
-  if (loadingProjects) {
+  if (isLoading && !stats) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex flex-col items-center justify-center h-full space-y-4">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground animate-pulse">Processando Laboratório...</p>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6 bg-background min-h-full text-foreground">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <BarChart3 className="text-[#00C853]" /> Monitor de Apostas
-          </h1>
-          <p className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
-            {totalBetsHeader} • Estratégia: VALUEBET
-          </p>
-        </div>
+    <div className="flex h-screen bg-background overflow-hidden">
+      {/* Navigation Level 1 — Sidebar */}
+      <LabSidebar 
+        sports={stats?.sports || {}} 
+        selectedSport={selectedSport}
+        onSelect={setSelectedSport}
+        globalRoi={stats?.global.roi || 0}
+      />
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full hover:bg-muted">
-                <Info className="h-4 w-4 text-muted-foreground" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80 p-4 bg-card border-border shadow-xl" align="end">
-              <div className="space-y-2">
-                <h4 className="font-bold text-sm">Central de Diagnóstico</h4>
-                <p className="text-xs text-muted-foreground">O Monitor de Debug abaixo analisa inconsistências no ecossistema (Case sensitivity, status e sincronia de workspace).</p>
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="sm" className="bg-card text-xs border-primary/20 hover:bg-primary/10 hover:text-primary transition-all gap-2">
-                <SlidersHorizontal className="h-3.5 w-3.5 text-primary" />
-                Configurar Estudo
-              </Button>
-            </SheetTrigger>
-            <SheetContent className="w-[350px] sm:w-[450px] p-0 border-l border-border/40 bg-card">
-              <SheetHeader className="p-6 pb-0">
-                <SheetTitle>Configuração do Estudo</SheetTitle>
-                <SheetDescription>Selecione os projetos e estratégias para análise.</SheetDescription>
-              </SheetHeader>
-              <div className="h-full p-4 overflow-hidden">
-                <ValuebetProjectPicker
-                  projects={projectsSummary || []}
-                  selectedIds={selectedProjectIds}
-                  onToggle={toggleProject}
-                  onSelectAll={selectAll}
-                  onClear={clearSelection}
-                  className="border-0 bg-transparent shadow-none h-full"
-                />
-              </div>
-            </SheetContent>
-          </Sheet>
-
-          <div className="h-6 w-px bg-border/40 mx-1 hidden md:block" />
-
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className={cn(
-              "bg-card text-xs hover:bg-primary/10 hover:text-primary border-border/50",
-              startDateStr === format(new Date(), "yyyy-MM-dd") && "border-primary text-primary bg-primary/5"
-            )}
-            onClick={() => {
-              const end = new Date();
-              const start = new Date();
-              setDateRange({ from: start, to: end });
-            }}
-          >
-            Hoje
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="bg-card text-xs hover:bg-primary/10 hover:text-primary border-border/50"
-            onClick={() => {
-              const end = new Date();
-              const start = new Date();
-              start.setDate(start.getDate() - 7);
-              setDateRange({ from: start, to: end });
-            }}
-          >
-            7 dias
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="bg-card text-xs hover:bg-primary/10 hover:text-primary border-border/50"
-            onClick={() => {
-              const end = new Date();
-              const start = new Date();
-              start.setDate(start.getDate() - 30);
-              setDateRange({ from: start, to: end });
-            }}
-          >
-            30 dias
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="bg-card text-xs hover:bg-primary/10 hover:text-primary border-border/50"
-            onClick={() => {
-              const now = new Date();
-              setDateRange({ from: startOfMonth(now), to: endOfMonth(now) });
-            }}
-          >
-            Mês
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="bg-card text-xs hover:bg-primary/10 hover:text-primary border-border/50"
-            onClick={() => {
-              const now = new Date();
-              setDateRange({ from: startOfYear(now), to: endOfYear(now) });
-            }}
-          >
-            Ano
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="bg-card text-xs hover:bg-primary/10 hover:text-primary border-border/50"
-            onClick={() => {
-              setDateRange(undefined);
-            }}
-          >
-            Tudo
-          </Button>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant={"outline"}
-                size="sm"
-                className={cn(
-                  "w-[240px] justify-start text-left font-normal bg-card text-xs border-border/50",
-                  !dateRange && "text-muted-foreground"
-                )}
-              >
-                <Calendar className="mr-2 h-4 w-4 text-primary" />
-                {dateRange?.from ? (
-                  dateRange.to ? (
-                    <>
-                      {format(dateRange.from, "dd/MM/yyyy")} - {format(dateRange.to, "dd/MM/yyyy")}
-                    </>
-                  ) : (
-                    format(dateRange.from, "dd/MM/yyyy")
-                  )
-                ) : (
-                  <span>Todo o período</span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-card border-border" align="end">
-              <CalendarComponent
-                initialFocus
-                mode="range"
-                defaultMonth={dateRange?.from || new Date()}
-                selected={dateRange}
-                onSelect={setDateRange}
-                numberOfMonths={2}
-                locale={ptBR}
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
-      </div>
-
-      <div className="space-y-6">
-        {/* Resumo de Filtros Ativos */}
-        {selectedProjectIds.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 p-3 bg-muted/30 rounded-lg border border-border/40">
-            <span className="text-[10px] uppercase font-bold text-muted-foreground mr-2">Estudo atual:</span>
-            {selectedProjectIds.length === projectsSummary?.length ? (
-              <span className="bg-primary/10 text-primary text-[10px] px-2 py-0.5 rounded-full font-bold">Todos os Projetos</span>
-            ) : (
-              <span className="bg-primary/10 text-primary text-[10px] px-2 py-0.5 rounded-full font-bold">{selectedProjectIds.length} Projetos selecionados</span>
-            )}
-            <span className="text-muted-foreground/30 px-1">•</span>
-            <span className="text-[10px] font-medium text-muted-foreground">
-              Período: {dateRange?.from ? `${format(dateRange.from, "dd/MM/yy")} - ${dateRange.to ? format(dateRange.to, "dd/MM/yy") : '...'}` : 'Todo o tempo'}
-            </span>
+      <div className="flex-1 flex flex-col h-full overflow-hidden">
+        {/* Header */}
+        <header className="h-16 border-b border-border/40 flex items-center justify-between px-6 bg-card/10 backdrop-blur-md z-10">
+          <div className="flex items-center gap-4">
+            <div className="flex flex-col">
+              <h1 className="text-xl font-black flex items-center gap-2">
+                <BarChart3 className="text-primary h-5 w-5" /> 
+                {selectedSport || "Todos os Esportes"}
+              </h1>
+              <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+                Monitor Analítico • ValueBet
+              </p>
+            </div>
           </div>
-        )}
 
-        {/* Dashboard Content */}
-        <div className="space-y-6">
+          <div className="flex items-center gap-2">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 text-xs gap-2 border-primary/20 bg-card/50">
+                  <Filter className="h-3.5 w-3.5" /> Projetos
+                </Button>
+              </SheetTrigger>
+              <SheetContent className="w-[400px] p-0 border-l border-border/40 bg-card">
+                <SheetHeader className="p-6 pb-0">
+                  <SheetTitle>Projetos em Estudo</SheetTitle>
+                  <SheetDescription>Filtre os dados por fonte de aposta.</SheetDescription>
+                </SheetHeader>
+                <div className="p-4 h-[calc(100vh-150px)]">
+                  <ValuebetProjectPicker
+                    projects={projectsSummary || []}
+                    selectedIds={selectedProjectIds}
+                    onToggle={(id) => setSelectedProjectIds(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id])}
+                    onSelectAll={() => setSelectedProjectIds(projectsSummary?.map(p => p.projeto_id) || [])}
+                    onClear={() => setSelectedProjectIds([])}
+                    className="border-0 bg-transparent shadow-none"
+                  />
+                </div>
+              </SheetContent>
+            </Sheet>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 text-xs gap-2 border-primary/20 bg-card/50">
+                  <Calendar className="h-3.5 w-3.5" />
+                  {dateRange?.from ? format(dateRange.from, "dd/MM/yy") : '...'} - {dateRange?.to ? format(dateRange.to, "dd/MM/yy") : '...'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <div className="p-2 grid grid-cols-2 gap-2 border-b border-border/10 bg-muted/20">
+                  <Button variant="ghost" size="xs" className="text-[10px] uppercase font-bold" onClick={() => {
+                    const now = new Date();
+                    setDateRange({ from: startOfMonth(now), to: endOfMonth(now) });
+                  }}>Mês Atual</Button>
+                  <Button variant="ghost" size="xs" className="text-[10px] uppercase font-bold" onClick={() => {
+                    const now = new Date();
+                    setDateRange({ from: startOfYear(now), to: endOfYear(now) });
+                  }}>Ano Atual</Button>
+                </div>
+                <CalendarComponent
+                  mode="range"
+                  selected={dateRange}
+                  onSelect={setDateRange}
+                  numberOfMonths={2}
+                  locale={ptBR}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+        </header>
+
+        {/* Content */}
+        <main className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-thin scrollbar-thumb-primary/20">
           {rpcError && (
-            <div className="bg-destructive/15 border border-destructive/30 p-4 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
-              <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <p className="text-sm font-bold text-destructive">Falha crítica no carregamento dos dados</p>
-                <p className="text-xs text-destructive/80 leading-relaxed">
-                  Ocorreu um erro ao processar as estatísticas do laboratório. 
-                  Isso geralmente indica uma falha na comunicação com o banco de dados ou uma regra de negócio inválida.
-                </p>
-                <p className="text-[10px] font-mono bg-destructive/10 p-2 rounded mt-2 text-destructive-foreground break-all">
-                  Erro: {rpcError instanceof Error ? rpcError.message : JSON.stringify(rpcError)}
-                </p>
-              </div>
+            <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-xl flex items-center gap-3">
+              <Info className="h-5 w-5 text-red-500" />
+              <p className="text-sm font-bold text-red-400">Falha ao carregar dados: {rpcError.message}</p>
             </div>
           )}
 
-          {selectedProjectIds.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-24 bg-card/30 rounded-xl border border-dashed border-border/50 space-y-4">
-              <AlertCircle className="h-12 w-12 text-muted-foreground/30" />
-              <div className="text-center">
-                <p className="text-lg font-medium text-muted-foreground">Nenhum projeto selecionado</p>
-                <p className="text-sm text-muted-foreground/60">Selecione ao menos um projeto na lista ao lado para ver os dados.</p>
-              </div>
-              <Button variant="outline" onClick={selectAll}>Selecionar Todos</Button>
+          {/* KPIs Globais */}
+          {activeMetrics && <LabKPIPanel metrics={activeMetrics} />}
+
+          {/* Tabs */}
+          <Tabs defaultValue="markets" className="space-y-6">
+            <div className="flex items-center justify-between border-b border-border/20 pb-1">
+              <TabsList className="bg-transparent h-auto p-0 gap-8">
+                <TabsTrigger value="markets" className="bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none px-0 py-2 text-xs font-black uppercase tracking-widest text-muted-foreground data-[state=active]:text-foreground transition-all">
+                  Mercados
+                </TabsTrigger>
+                <TabsTrigger value="odds" className="bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none px-0 py-2 text-xs font-black uppercase tracking-widest text-muted-foreground data-[state=active]:text-foreground transition-all">
+                  Faixas de Odd
+                </TabsTrigger>
+                <TabsTrigger value="evolution" className="bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none px-0 py-2 text-xs font-black uppercase tracking-widest text-muted-foreground data-[state=active]:text-foreground transition-all">
+                  Evolução
+                </TabsTrigger>
+                <TabsTrigger value="bets" className="bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none px-0 py-2 text-xs font-black uppercase tracking-widest text-muted-foreground data-[state=active]:text-foreground transition-all">
+                  Apostas
+                </TabsTrigger>
+              </TabsList>
             </div>
-          ) : (
-            <>
-              {/* KPIs */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <KPIAnchorCard 
-                  label="TOTAL DE APOSTAS" 
-                  value={stats?.kpis?.total_bets ?? 0} 
-                  icon={<Target className="h-4 w-4 text-muted-foreground/60" />}
-                />
-                <KPIAnchorCard 
-                  label="VOLUME APOSTADO" 
-                  value={new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(stats?.kpis?.volume ?? 0)} 
-                  icon={<Zap className="h-4 w-4 text-muted-foreground/60" />}
-                />
-                <KPIAnchorCard 
-                  label="LUCRO / PREJUÍZO" 
-                  value={new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(stats?.kpis?.profit ?? 0)} 
-                  valueClass={stats?.kpis?.profit && stats.kpis.profit >= 0 ? "text-green-500" : "text-red-500"}
-                  icon={stats?.kpis?.profit && stats.kpis.profit >= 0 ? <TrendingUp className="h-4 w-4 text-green-500/60" /> : <TrendingDown className="h-4 w-4 text-red-500/60" />}
-                />
-                <KPIAnchorCard 
-                  label="ROI GERAL" 
-                  value={`${(stats?.kpis?.roi ?? 0).toFixed(2)}%`}
-                  valueClass={stats?.kpis?.roi && stats.kpis.roi >= 0 ? "text-green-400" : "text-red-400"}
-                />
-                <KPIAnchorCard 
-                  label="WIN RATE" 
-                  value={`${(stats?.kpis?.win_rate ?? 0).toFixed(1)}%`}
-                />
-              </div>
 
-              {/* Gráfico de Evolução */}
-              <Card className="border-border bg-card/50">
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="text-base font-medium">Evolução de Lucro Acumulado</CardTitle>
-                  <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-md">
-                    {(["daily", "weekly", "monthly"] as const).map((g) => (
-                      <button
-                        key={g}
-                        onClick={() => setTimeGrouping(g)}
-                        className={cn(
-                          "px-3 py-1 text-xs rounded-sm transition-colors",
-                          timeGrouping === g ? "bg-primary text-black font-medium" : "text-muted-foreground hover:text-foreground"
-                        )}
-                      >
-                        {g === "daily" ? "Dia" : g === "weekly" ? "Semana" : "Mês"}
-                      </button>
-                    ))}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px] w-full">
-                    {loadingStats ? (
-                      <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin" /></div>
-                    ) : (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={groupedEvolutionData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#2a2d35" vertical={false} />
-                          <XAxis dataKey="formattedDate" stroke="#888888" fontSize={10} tickLine={false} axisLine={false} />
-                          <YAxis stroke="#888888" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `R$${v}`} />
-                          <RechartsTooltip 
-                            contentStyle={{ backgroundColor: "#1e2128", border: "1px solid #2a2d35", borderRadius: "8px" }}
-                            labelStyle={{ color: "#888888", marginBottom: "4px" }}
-                          />
-                          <Line 
-                            type="monotone" 
-                            dataKey="cumulative" 
-                            stroke="#00C853" 
-                            strokeWidth={2} 
-                            dot={false}
-                            activeDot={{ r: 4, fill: "#00C853" }} 
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+            <TabsContent value="markets" className="mt-0">
+              <MarketsTab markets={filteredMarketsForTab} />
+            </TabsContent>
+            
+            <TabsContent value="odds" className="mt-0">
+              <OddRangesTab markets={filteredMarketsForTab} />
+            </TabsContent>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Gráfico por Mercado */}
-                <Card className="border-border bg-card/50">
-                  <CardHeader><CardTitle className="text-base font-medium">Performance por Mercado</CardTitle></CardHeader>
-                  <CardContent>
-                    <div className="h-[250px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={stats?.markets?.sort((a,b) => b.profit - a.profit)}>
-                          <XAxis dataKey="mercado_grupo" stroke="#888888" fontSize={10} hide />
-                          <YAxis stroke="#888888" fontSize={10} tickFormatter={(v) => `R$${v}`} />
-                          <RechartsTooltip 
-                            contentStyle={{ backgroundColor: "#1e2128", border: "1px solid #2a2d35", borderRadius: "8px" }}
-                          />
-                          <Bar dataKey="profit" name="Lucro/Prejuízo">
-                            {stats?.markets?.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.profit >= 0 ? "#00C853" : "#FF1744"} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
+            <TabsContent value="evolution" className="mt-0">
+              <EvolutionTab evolution={stats?.evolution || []} />
+            </TabsContent>
 
-                {/* Gráfico por Faixa de Odd */}
-                <Card className="border-border bg-card/50">
-                  <CardHeader><CardTitle className="text-base font-medium">Performance por Faixa de Odd</CardTitle></CardHeader>
-                  <CardContent>
-                    <div className="h-[250px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={stats?.odds}>
-                          <XAxis dataKey="faixa_odd" stroke="#888888" fontSize={10} />
-                          <YAxis stroke="#888888" fontSize={10} tickFormatter={(v) => `R$${v}`} />
-                          <RechartsTooltip 
-                            contentStyle={{ backgroundColor: "#1e2128", border: "1px solid #2a2d35", borderRadius: "8px" }}
-                          />
-                          <Bar dataKey="profit" name="Lucro/Prejuízo">
-                            {stats?.odds?.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.profit >= 0 ? "#2962FF" : "#FF1744"} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+            <TabsContent value="bets" className="mt-0">
+              <BetsTab bets={filteredBetsForTab} />
+            </TabsContent>
+          </Tabs>
 
-              <ValuebetDebugMonitor 
-                workspaceId={workspaceId}
-                projectIds={selectedProjectIds}
-                rpcData={stats}
-                rpcError={loadingStats ? null : (stats === undefined ? { message: "Nenhum dado retornado" } : null)}
-                rpcLoading={loadingStats}
-              />
-            </>
-          )}
-        </div>
+          {/* Debug Monitor at the bottom */}
+          <ValuebetDebugMonitor 
+            workspaceId={null} 
+            projectIds={selectedProjectIds} 
+            rpcData={stats} 
+            rpcError={rpcError} 
+            rpcLoading={isLoading} 
+          />
+        </main>
       </div>
     </div>
   );
