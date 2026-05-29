@@ -86,46 +86,59 @@ export function ValuebetDebugMonitor({
     enabled: !!workspaceId,
   });
 
-  // Efeito para monitorar erros da RPC principal
+  // Efeito para monitorar erros e performance da RPC principal
   useEffect(() => {
     if (rpcError) {
       addLog(`Erro na RPC: ${rpcError.message || JSON.stringify(rpcError)}`, "error");
     }
-  }, [rpcError]);
+    if (rpcData?._metadata?.fetch_duration_ms) {
+      const duration = rpcData._metadata.fetch_duration_ms;
+      if (duration > 1500) {
+        addLog(`ALERTA: Lentidão na RPC detectada (${duration.toFixed(0)}ms).`, "warning");
+      } else {
+        addLog(`Performance estável: RPC respondida em ${duration.toFixed(0)}ms.`, "success");
+      }
+    }
+  }, [rpcError, rpcData]);
 
   const diagnostics = () => {
     const results = [];
     
     if (!workspaceId) results.push({ msg: "FALHA: Workspace ID não identificado.", type: "error" });
     
-    if (audit?.strategies) {
-      const caseSensitiveValue = audit.strategies.find(s => s.estrategia === 'valuebet' || s.estrategia === 'ValueBet');
-      if (caseSensitiveValue) {
-        results.push({ 
-          msg: `AVISO: Encontramos apostas com estratégia "${caseSensitiveValue.estrategia}". A RPC espera "VALUEBET" (maiúsculo).`, 
-          type: "warning",
-          action: "Normalizar nomes"
+    // Análise de Discrepâncias Estruturais (da nova RPC de auditoria)
+    if (audit?.discrepancies && audit.discrepancies.length > 0) {
+      const hiddenCount = audit.discrepancies.reduce((acc: number, d: any) => acc + d.count, 0);
+      results.push({ 
+        msg: `FALHA DE VISIBILIDADE: Existem ${hiddenCount} apostas que não pertencem ao seu workspace atual ou possuem status/estratégia inválidos.`, 
+        type: "error",
+        action: "Sincronizar dados"
+      });
+      
+      const caseIssues = audit.discrepancies.filter((d: any) => d.estrategia.toUpperCase() === 'VALUEBET' && d.estrategia !== 'VALUEBET');
+      if (caseIssues.length > 0) {
+        results.push({
+          msg: `CASE SENSITIVITY: Identificamos ${caseIssues.reduce((acc: number, d: any) => acc + d.count, 0)} apostas com grafia incorreta (Ex: ${caseIssues[0].estrategia}).`,
+          type: "warning"
         });
       }
-
+    }
+    
+    if (audit?.strategies) {
       const totalValue = audit.strategies.reduce((acc, s) => acc + s.count, 0);
       if (totalValue > 0 && (!rpcData?.kpis?.total_bets || rpcData.kpis.total_bets === 0)) {
         results.push({ 
-          msg: `CRÍTICO: Existem ${totalValue} apostas no banco, mas a RPC retorna 0. Provável erro de filtro de STATUS ou DATA.`, 
+          msg: `FILTRO BLOQUEANTE: Existem ${totalValue} apostas no projeto, mas elas não passam no filtro de DATA ou STATUS da visualização.`, 
           type: "error" 
         });
       }
     }
 
-    if (audit?.projectCheck && audit.projectCheck.length > 0) {
-      const pendingBets = audit.projectCheck.filter(p => p.status === 'PENDENTE');
-      if (pendingBets.length > 0) {
-        const count = pendingBets.reduce((acc, p) => acc + p.count, 0);
-        results.push({ 
-          msg: `INFO: Existem ${count} apostas PENDENTES que são ignoradas pelos KPIs da evolução.`, 
-          type: "info" 
-        });
-      }
+    if (rpcData?._metadata?.fetch_duration_ms > 2000) {
+      results.push({
+        msg: `GARGALO DE PERFORMANCE: O processamento levou ${rpcData._metadata.fetch_duration_ms.toFixed(0)}ms. O sistema pode estar lento para 15k+ linhas.`,
+        type: "warning"
+      });
     }
 
     return results;
