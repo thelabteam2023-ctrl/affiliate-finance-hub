@@ -118,8 +118,8 @@ export default function LaboratorioValueBet() {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium">Projetos</CardTitle>
             <div className="flex gap-2 mt-2">
-              <Button variant="outline" size="xs" className="text-[10px] h-7" onClick={selectAll}>Todos</Button>
-              <Button variant="outline" size="xs" className="text-[10px] h-7" onClick={clearSelection}>Limpar</Button>
+              <Button variant="outline" size="sm" className="text-[10px] h-7 px-2" onClick={selectAll}>Todos</Button>
+              <Button variant="outline" size="sm" className="text-[10px] h-7 px-2" onClick={clearSelection}>Limpar</Button>
             </div>
           </CardHeader>
           <CardContent>
