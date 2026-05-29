@@ -179,15 +179,20 @@ export default function LaboratorioValueBet() {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="end">
-                <div className="p-2 grid grid-cols-2 gap-2 border-b border-border/10 bg-muted/20">
-                  <Button variant="ghost" size="sm" className="text-[10px] uppercase font-bold h-7" onClick={() => {
-                    const now = new Date();
-                    setDateRange({ from: startOfMonth(now), to: endOfMonth(now) });
-                  }}>Mês Atual</Button>
-                  <Button variant="ghost" size="sm" className="text-[10px] uppercase font-bold h-7" onClick={() => {
-                    const now = new Date();
-                    setDateRange({ from: startOfYear(now), to: endOfYear(now) });
-                  }}>Ano Atual</Button>
+                <div className="p-2 flex flex-col gap-1 border-b border-border/10 bg-muted/20">
+                  <div className="grid grid-cols-2 gap-1">
+                    <Button variant="ghost" size="sm" className="text-[10px] uppercase font-bold h-7" onClick={() => {
+                      const now = new Date();
+                      setDateRange({ from: startOfMonth(now), to: endOfMonth(now) });
+                    }}>Mês Atual</Button>
+                    <Button variant="ghost" size="sm" className="text-[10px] uppercase font-bold h-7" onClick={() => {
+                      const now = new Date();
+                      setDateRange({ from: startOfYear(now), to: endOfYear(now) });
+                    }}>Ano Atual</Button>
+                  </div>
+                  <Button variant="ghost" size="sm" className="text-[10px] uppercase font-bold h-7 w-full text-primary" onClick={() => {
+                    setDateRange(undefined);
+                  }}>Ver Todo o Período</Button>
                 </div>
                 <CalendarComponent
                   mode="range"
