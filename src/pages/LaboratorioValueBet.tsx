@@ -41,7 +41,8 @@ export default function LaboratorioValueBet() {
   const { stats, isLoading, error: rpcError } = useValueBetLabData(
     selectedProjectIds.length > 0 ? selectedProjectIds : null,
     startDateStr,
-    endDateStr
+    endDateStr,
+    selectedSport
   );
 
   // Auto-select projects
