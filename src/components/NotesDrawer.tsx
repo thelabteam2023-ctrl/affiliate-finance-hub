@@ -278,15 +278,48 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
               ) : (
                 <div className="bg-[#1a1e26] border border-[#2a2d35] rounded-lg p-3 shadow-lg ring-1 ring-white/5">
                   {view === 'geral' && (
-                    <div className="flex items-center gap-2 mb-2 pb-2 border-b border-[#2a2d35]">
-                      <Tag className="w-3.5 h-3.5 text-gray-500" />
-                      <input 
-                        type="text"
-                        value={newNoteCategory}
-                        onChange={(e) => setNewNoteCategory(e.target.value)}
-                        placeholder="Tópico (ex: Segurança)"
-                        className="bg-transparent border-none focus:ring-0 text-xs text-gray-300 w-full p-0"
-                      />
+                    <div className="mb-2 pb-2 border-b border-[#2a2d35] space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <Tag className="w-3.5 h-3.5 text-gray-500" />
+                        <input
+                          type="text"
+                          list="notes-topic-suggestions"
+                          value={newNoteCategory}
+                          onChange={(e) => setNewNoteCategory(e.target.value)}
+                          placeholder="Tópico (ex: Segurança) — use os existentes abaixo"
+                          className="bg-transparent border-none focus:ring-0 text-xs text-gray-300 w-full p-0"
+                        />
+                        <datalist id="notes-topic-suggestions">
+                          {allCategories.map((cat) => (
+                            <option key={cat} value={cat} />
+                          ))}
+                        </datalist>
+                      </div>
+                      {allCategories.length > 0 && (() => {
+                        const q = newNoteCategory.trim().toLowerCase();
+                        const suggestions = allCategories
+                          .filter((c) => c.toLowerCase() !== q)
+                          .filter((c) => !q || c.toLowerCase().includes(q))
+                          .slice(0, 6);
+                        if (suggestions.length === 0) return null;
+                        return (
+                          <div className="flex flex-wrap gap-1 pl-5">
+                            <span className="text-[9px] uppercase tracking-wide text-gray-600 self-center mr-0.5">
+                              reutilizar:
+                            </span>
+                            {suggestions.map((cat) => (
+                              <button
+                                key={cat}
+                                type="button"
+                                onClick={() => setNewNoteCategory(cat)}
+                                className="px-1.5 py-0.5 text-[10px] rounded bg-[#0f1218] text-gray-300 border border-[#2a2d35] hover:border-[#00c853]/40 hover:text-[#00c853] transition-colors"
+                              >
+                                {cat}
+                              </button>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
                   {/* Snippet toolbar */}
