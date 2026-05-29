@@ -27,12 +27,7 @@ import { cn } from "@/lib/utils";
 export default function LaboratorioValueBet() {
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
-    const end = new Date();
-    const start = new Date();
-    start.setDate(start.getDate() - 30);
-    return { from: start, to: end };
-  });
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   const startDateStr = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : null;
   const endDateStr = dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : null;
