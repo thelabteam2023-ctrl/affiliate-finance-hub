@@ -76,7 +76,12 @@ export function ValuebetDebugMonitor({
       }
 
       addLog("Auditoria concluída.", "success");
-      return { totalWorkspace, strategies, projectCheck };
+      return { 
+        totalWorkspace: (deepAudit as any)?.issues?.reduce((acc: number, i: any) => acc + i.count, 0) || 0, 
+        strategies, 
+        projectCheck,
+        discrepancies: (deepAudit as any)?.issues?.filter((i: any) => i.is_hidden) || []
+      };
     },
     enabled: !!workspaceId,
   });
