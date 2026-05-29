@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useNotesData } from '@/hooks/useNotesData';
+import { ContentRenderer } from '@/components/anotacoes/ContentRenderer';
 
 interface NotesDrawerProps {
   isOpen: boolean;
@@ -41,6 +42,31 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
   const [selectedCategory, setSelectedCategory] = useState<string>('Todas');
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const insertSnippet = (kind: 'linha' | 'bloco') => {
+    const ta = textareaRef.current;
+    const current = newNoteText;
+    const snippet = kind === 'linha' ? '`valor`' : '```label\nlinha1\nlinha2\n```';
+    const start = ta?.selectionStart ?? current.length;
+    const end = ta?.selectionEnd ?? current.length;
+    const next = current.slice(0, start) + snippet + current.slice(end);
+    setNewNoteText(next);
+    requestAnimationFrame(() => {
+      if (!textareaRef.current) return;
+      textareaRef.current.focus();
+      // Posiciona o cursor sobre a primeira palavra editável
+      const placeholderStart = start + (kind === 'linha' ? 1 : 4); // após ` ou ```\n? -> ajustamos abaixo
+      if (kind === 'linha') {
+        const s = start + 1;
+        const e = s + 'valor'.length;
+        textareaRef.current.setSelectionRange(s, e);
+      } else {
+        const s = start + 3; // após ```
+        const e = s + 'label'.length;
+        textareaRef.current.setSelectionRange(s, e);
+      }
+    });
+  };
 
   const colunasFluxo = colunas.filter(c => c.nome !== 'Geral');
   const colunaGeral = colunas.find(c => c.nome === 'Geral');
@@ -271,6 +297,29 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
                       />
                     </div>
                   )}
+                  {/* Snippet toolbar */}
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-[10px] uppercase tracking-wide text-gray-500">Inserir:</span>
+                    <button
+                      type="button"
+                      onClick={() => insertSnippet('linha')}
+                      title="Inserir chip copiável inline (`valor`)"
+                      className="px-2 py-0.5 text-[10px] font-medium rounded bg-[#0f1218] text-gray-300 border border-[#2a2d35] hover:border-[#00c853]/40 hover:text-[#00c853] transition-colors"
+                    >
+                      linha
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => insertSnippet('bloco')}
+                      title="Inserir bloco copiável (```label … ```)"
+                      className="px-2 py-0.5 text-[10px] font-medium rounded bg-[#0f1218] text-gray-300 border border-[#2a2d35] hover:border-[#00c853]/40 hover:text-[#00c853] transition-colors"
+                    >
+                      bloco
+                    </button>
+                    <span className="text-[10px] text-gray-600 ml-auto">
+                      `valor` → chip · ```label\\n…``` → bloco
+                    </span>
+                  </div>
                   <textarea
                     ref={textareaRef}
                     value={newNoteText}
@@ -288,7 +337,7 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
                       }
                     }}
                     placeholder={view === 'geral' ? "Escreva sua anotação livre..." : "O que você está pensando?"}
-                    className="w-full bg-transparent border-none focus:ring-0 text-sm text-gray-200 resize-none min-h-[100px]"
+                    className="w-full bg-transparent border-none focus:ring-0 text-sm text-gray-200 resize-none min-h-[100px] font-mono"
                   />
                   <div className="flex justify-end gap-2 pt-2 border-t border-[#2a2d35]">
                     <button 
@@ -322,7 +371,7 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
                   columnCards.map((note) => (
                     <div 
                       key={note.id}
-                      className="group bg-[#1a1e26] border border-[#2a2d35] rounded-lg p-3 hover:border-white/10 transition-colors shadow-sm"
+                      className="group bg-[#1a1e26] border border-[#2a2d35] rounded-lg p-3 hover:border-white/10 transition-colors shadow-sm min-w-0 max-w-full overflow-hidden"
                     >
                       <div className="flex flex-wrap gap-2 mb-2">
                         {note.categoria && (
@@ -333,9 +382,15 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
                         )}
                       </div>
 
-                      <p className="text-sm text-gray-200 whitespace-pre-wrap leading-relaxed">
-                        {note.conteudo || <span className="italic text-gray-600">(Sem conteúdo)</span>}
-                      </p>
+                      {note.conteudo ? (
+                        <ContentRenderer
+                          content={note.conteudo}
+                          compact
+                          className="text-sm text-gray-200 leading-relaxed"
+                        />
+                      ) : (
+                        <p className="text-sm italic text-gray-600">(Sem conteúdo)</p>
+                      )}
                       
                       <div className="flex items-center justify-between pt-3 mt-3 border-t border-[#2a2d35]">
                         <span className="text-[10px] text-gray-500">
