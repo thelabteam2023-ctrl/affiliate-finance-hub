@@ -165,8 +165,20 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
     });
 
     // Evolution (Daily for "entry by entry" feeling but grouped by day)
+    // Now responding to selected sport
     const evolution: Record<string, { date: string, profit: number, volume: number, bets: number }> = {};
-    data.forEach(bet => {
+    const evolutionData = selectedSport 
+      ? data.filter(b => {
+          let bSport = b.esporte || 'Indefinido';
+          bSport = bSport.trim() === "" ? "Indefinido" : bSport.charAt(0).toUpperCase() + bSport.slice(1).toLowerCase();
+          if (bSport === 'Soccer') bSport = 'Futebol';
+          if (bSport === 'Efootball') bSport = 'E-sports';
+          if (bSport === 'Counter-strike' || bSport === 'League of legends' || bSport === 'Valorant' || bSport === 'Dota 2') bSport = 'E-sports';
+          return bSport === selectedSport;
+        })
+      : data;
+
+    evolutionData.forEach(bet => {
       const dateKey = bet.data_aposta.split('T')[0];
       if (!evolution[dateKey]) {
         evolution[dateKey] = { date: dateKey, profit: 0, volume: 0, bets: 0 };
