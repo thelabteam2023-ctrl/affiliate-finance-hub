@@ -76,11 +76,11 @@ function calculateMetrics(bets: RawBet[]): Metrics {
   return { total, validas, stake, profit, roi, winRate, greens, meioGreens, meioReds, reds, voids };
 }
 
-export function useValueBetLabData(projectIds: string[] | null, startDate: string | null, endDate: string | null) {
+export function useValueBetLabData(projectIds: string[] | null, startDate: string | null, endDate: string | null, selectedSport: string | null = null) {
   const { workspaceId } = useAuth();
 
   const query = useQuery({
-    queryKey: ["valuebet-lab-raw", projectIds, startDate, endDate, workspaceId],
+    queryKey: ["valuebet-lab-raw", projectIds, startDate, endDate, workspaceId, selectedSport],
     queryFn: async () => {
       let q = supabase
         .from("apostas_unificada")
@@ -111,8 +111,18 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
     const sports: Record<string, SportStats> = {};
 
     data.forEach(bet => {
-      const sportName = bet.esporte || 'Outros';
-      const marketName = bet.mercado || 'Outros';
+      // Normalização para evitar duplicidade por case ou nulos
+      let sportName = bet.esporte || 'Indefinido';
+      sportName = sportName.trim() === "" ? "Indefinido" : sportName.charAt(0).toUpperCase() + sportName.slice(1).toLowerCase();
+      
+      // Mapeamento de sinonimos ou erros comuns
+      if (sportName === 'Soccer') sportName = 'Futebol';
+      if (sportName === 'Efootball') sportName = 'E-sports';
+      if (sportName === 'Counter-strike' || sportName === 'League of legends' || sportName === 'Valorant' || sportName === 'Dota 2') sportName = 'E-sports';
+
+      let marketName = bet.mercado || 'Geral';
+      marketName = marketName.trim() === "" ? "Geral" : marketName;
+      
       const oddRange = getOddRange(bet.odd);
 
       if (!sports[sportName]) {
@@ -130,11 +140,21 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
 
     // Finalize metrics per hierarchy
     Object.keys(sports).forEach(sName => {
-      const sportBets = data.filter(b => (b.esporte || 'Outros') === sName);
+      const sportBets = data.filter(b => {
+        let bSport = b.esporte || 'Indefinido';
+        bSport = bSport.trim() === "" ? "Indefinido" : bSport.charAt(0).toUpperCase() + bSport.slice(1).toLowerCase();
+        if (bSport === 'Soccer') bSport = 'Futebol';
+        if (bSport === 'Efootball') bSport = 'E-sports';
+        if (bSport === 'Counter-strike' || bSport === 'League of legends' || bSport === 'Valorant' || bSport === 'Dota 2') bSport = 'E-sports';
+        return bSport === sName;
+      });
       sports[sName] = { ...sports[sName], ...calculateMetrics(sportBets) };
 
       Object.keys(sports[sName].markets).forEach(mName => {
-        const marketBets = sportBets.filter(b => (b.mercado || 'Outros') === mName);
+        const marketBets = sportBets.filter(b => {
+          const bMarket = b.mercado ? (b.mercado.trim() === "" ? "Geral" : b.mercado) : 'Geral';
+          return bMarket === mName;
+        });
         sports[sName].markets[mName] = { ...sports[sName].markets[mName], ...calculateMetrics(marketBets) };
 
         Object.keys(sports[sName].markets[mName].oddRanges).forEach(oRange => {
@@ -144,22 +164,36 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
       });
     });
 
-    // Evolution (Monthly)
+    // Evolution (Daily for "entry by entry" feeling but grouped by day)
+    // Now responding to selected sport
     const evolution: Record<string, { date: string, profit: number, volume: number, bets: number }> = {};
-    data.forEach(bet => {
-      const monthKey = format(startOfMonth(parseISO(bet.data_aposta)), 'yyyy-MM');
-      if (!evolution[monthKey]) {
-        evolution[monthKey] = { date: monthKey, profit: 0, volume: 0, bets: 0 };
+    const evolutionData = selectedSport 
+      ? data.filter(b => {
+          let bSport = b.esporte || 'Indefinido';
+          bSport = bSport.trim() === "" ? "Indefinido" : bSport.charAt(0).toUpperCase() + bSport.slice(1).toLowerCase();
+          if (bSport === 'Soccer') bSport = 'Futebol';
+          if (bSport === 'Efootball') bSport = 'E-sports';
+          if (bSport === 'Counter-strike' || bSport === 'League of legends' || bSport === 'Valorant' || bSport === 'Dota 2') bSport = 'E-sports';
+          return bSport === selectedSport;
+        })
+      : data;
+
+    evolutionData.forEach(bet => {
+      const dateKey = bet.data_aposta.split('T')[0];
+      if (!evolution[dateKey]) {
+        evolution[dateKey] = { date: dateKey, profit: 0, volume: 0, bets: 0 };
       }
-      evolution[monthKey].profit += (bet.pl_consolidado || 0);
-      evolution[monthKey].volume += (bet.stake_consolidado || 0);
-      evolution[monthKey].bets += 1;
+      evolution[dateKey].profit += (bet.pl_consolidado || 0);
+      evolution[dateKey].volume += (bet.stake_consolidado || 0);
+      evolution[dateKey].bets += 1;
     });
+
+    const evolutionArray = Object.values(evolution).sort((a, b) => a.date.localeCompare(b.date));
 
     return {
       global: globalMetrics,
       sports,
-      evolution: Object.values(evolution).sort((a, b) => a.date.localeCompare(b.date)),
+      evolution: evolutionArray,
       raw: data
     };
   }, [query.data]);

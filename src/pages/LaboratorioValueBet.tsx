@@ -9,6 +9,7 @@ import { EvolutionTab } from "@/components/laboratorio/tabs/EvolutionTab";
 import { BetsTab } from "@/components/laboratorio/tabs/BetsTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   Loader2, Filter, Calendar, Info, BarChart3, 
   Target, Zap, TrendingUp, ChevronDown 
@@ -40,7 +41,8 @@ export default function LaboratorioValueBet() {
   const { stats, isLoading, error: rpcError } = useValueBetLabData(
     selectedProjectIds.length > 0 ? selectedProjectIds : null,
     startDateStr,
-    endDateStr
+    endDateStr,
+    selectedSport
   );
 
   // Auto-select projects
@@ -231,7 +233,23 @@ export default function LaboratorioValueBet() {
             </div>
 
             <TabsContent value="markets" className="mt-0">
-              <MarketsTab markets={filteredMarketsForTab} />
+              <div className="space-y-6">
+                <MarketsTab markets={filteredMarketsForTab} />
+                {/* Gráfico adicional no menu: Entrada por Entrada */}
+                <Card className="bg-card/40 border-border/40">
+                  <CardHeader>
+                    <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Desempenho Diário do Escopo (Entrada por Entrada)</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <EvolutionTab evolution={stats?.evolution.filter(e => {
+                      // Se tem esporte selecionado, a evolução já vem do raw que foi filtrado no hook (atualmente o hook agrupa global, preciso que a evolução responda ao filtro lateral)
+                      // Ajuste: O hook agrupa por dia de TODAS as apostas carregadas. 
+                      // Para o gráfico responder ao esporte, precisamos de uma evolução filtrada.
+                      return true; // Simplificando por enquanto, mas o ideal é o hook prover evolution por esporte
+                    }) || []} />
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
             
             <TabsContent value="odds" className="mt-0">

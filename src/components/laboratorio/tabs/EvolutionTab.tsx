@@ -10,18 +10,23 @@ interface EvolutionTabProps {
 }
 
 export function EvolutionTab({ evolution }: EvolutionTabProps) {
-  const chartData = evolution.map(item => ({
-    ...item,
-    roi: item.volume > 0 ? (item.profit / item.volume) * 100 : 0,
-    formattedDate: format(parseISO(`${item.date}-01`), "MMM/yy", { locale: ptBR })
-  }));
+  let cumulativeProfit = 0;
+  const chartData = evolution.map(item => {
+    cumulativeProfit += item.profit;
+    return {
+      ...item,
+      cumulativeProfit,
+      roi: item.volume > 0 ? (item.profit / item.volume) * 100 : 0,
+      formattedDate: format(parseISO(item.date), "dd/MM", { locale: ptBR })
+    };
+  });
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Lucro Acumulado / Mensal */}
+      {/* Lucro Acumulado — Sensação "Entrada por Entrada" */}
       <Card className="bg-card/40 border-border/40">
         <CardHeader>
-          <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Evolução Mensal de Lucro (R$)</CardTitle>
+          <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Lucro Acumulado (R$)</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-[300px] w-full">
@@ -38,9 +43,13 @@ export function EvolutionTab({ evolution }: EvolutionTabProps) {
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#888' }} tickFormatter={(v) => `R$${v}`} />
                 <Tooltip 
                   contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }}
-                  formatter={(value: number) => [`R$ ${value.toLocaleString()}`, 'Lucro']}
+                  labelStyle={{ color: '#888', fontWeight: 'bold' }}
+                  formatter={(value: number, name: string) => [
+                    `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 
+                    name === 'cumulativeProfit' ? 'Acumulado' : 'No Dia'
+                  ]}
                 />
-                <Area type="monotone" dataKey="profit" stroke="#10b981" fillOpacity={1} fill="url(#colorProfit)" strokeWidth={2} />
+                <Area type="monotone" dataKey="cumulativeProfit" stroke="#10b981" fillOpacity={1} fill="url(#colorProfit)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -48,10 +57,10 @@ export function EvolutionTab({ evolution }: EvolutionTabProps) {
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* ROI Mensal */}
+        {/* ROI Diário */}
         <Card className="bg-card/40 border-border/40">
           <CardHeader>
-            <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">ROI Mensal (%)</CardTitle>
+            <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">ROI Diário (%)</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[250px] w-full">
@@ -64,17 +73,17 @@ export function EvolutionTab({ evolution }: EvolutionTabProps) {
                     contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }}
                     formatter={(value: number) => [`${value.toFixed(2)}%`, 'ROI']}
                   />
-                  <Line type="monotone" dataKey="roi" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 4, fill: '#8b5cf6' }} activeDot={{ r: 6 }} />
+                  <Line type="monotone" dataKey="roi" stroke="#8b5cf6" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
 
-        {/* Volume Mensal */}
+        {/* Volume Diário */}
         <Card className="bg-card/40 border-border/40">
           <CardHeader>
-            <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Volume Mensal Apostado (R$)</CardTitle>
+            <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Volume Diário Apostado (R$)</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[250px] w-full">
@@ -85,9 +94,9 @@ export function EvolutionTab({ evolution }: EvolutionTabProps) {
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#888' }} tickFormatter={(v) => `R$${(v/1000).toFixed(0)}k`} />
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }}
-                    formatter={(value: number) => [`R$ ${value.toLocaleString()}`, 'Volume']}
+                    formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR')}`, 'Volume']}
                   />
-                  <Bar dataKey="volume" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="volume" fill="#3b82f6" radius={[2, 2, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

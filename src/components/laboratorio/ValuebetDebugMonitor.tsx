@@ -124,6 +124,19 @@ export function ValuebetDebugMonitor({
       }
     }
 
+    if (audit?.column_health) {
+      const total = audit.column_health.total || 1;
+      const lpRate = audit.column_health.filled_pl_cons / total;
+      const stakeRate = audit.column_health.filled_stake_cons / total;
+      
+      if (lpRate < 0.95 || stakeRate < 0.95) {
+        results.push({
+          msg: `OBSERVABILIDADE: ${( (1 - Math.min(lpRate, stakeRate)) * 100).toFixed(1)}% das apostas possuem campos financeiros nulos (PL/Stake), o que distorce os lucros e ROI.`,
+          type: "error"
+        });
+      }
+    }
+
     return results;
   };
 
