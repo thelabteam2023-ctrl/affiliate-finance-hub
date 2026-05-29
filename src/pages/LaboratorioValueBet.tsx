@@ -9,6 +9,7 @@ import { EvolutionTab } from "@/components/laboratorio/tabs/EvolutionTab";
 import { BetsTab } from "@/components/laboratorio/tabs/BetsTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   Loader2, Filter, Calendar, Info, BarChart3, 
   Target, Zap, TrendingUp, ChevronDown 
