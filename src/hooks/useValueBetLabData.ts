@@ -9,15 +9,15 @@ export type Resultado = 'GREEN' | 'MEIO_GREEN' | 'MEIO_RED' | 'RED' | 'VOID';
 export interface RawBet {
   id: string;
   data_aposta: string;
-  esporte: string;
-  mercado: string;
-  odd: number;
-  stake_consolidado: number;
-  pl_consolidado: number;
-  resultado: Resultado;
-  evento: string;
-  selecao: string;
-  casa: string;
+  esporte: string | null;
+  mercado: string | null;
+  odd: number | null;
+  stake_consolidado: number | null;
+  pl_consolidado: number | null;
+  resultado: Resultado | null;
+  evento: string | null;
+  selecao: string | null;
+  bookmaker_id: string | null;
 }
 
 export interface Metrics {
@@ -52,7 +52,8 @@ export const ODD_RANGES = [
   { min: 3.00, max: 999, label: '3.00+' },
 ];
 
-function getOddRange(odd: number): string {
+function getOddRange(odd: number | null): string {
+  if (odd === null) return 'N/A';
   const range = ODD_RANGES.find(r => odd >= r.min && odd <= r.max);
   return range ? range.label : 'Outras';
 }
@@ -83,7 +84,7 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
     queryFn: async () => {
       let q = supabase
         .from("apostas_unificada")
-        .select("id, data_aposta, esporte, mercado, odd, stake_consolidado, pl_consolidado, resultado, evento, selecao, casa")
+        .select("id, data_aposta, esporte, mercado, odd, stake_consolidado, pl_consolidado, resultado, evento, selecao, bookmaker_id")
         .eq("workspace_id", workspaceId)
         .eq("estrategia", "VALUEBET")
         .order('data_aposta', { ascending: false });
