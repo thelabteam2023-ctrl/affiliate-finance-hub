@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AlertCircle, CheckCircle2, RefreshCw, Terminal, Search, ShieldAlert, Database, Info } from "lucide-react";
+import { AlertCircle, CheckCircle2, RefreshCw, Terminal, Search, ShieldAlert, Database, Info, Activity, Microscope, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ValuebetDebugMonitorProps {
@@ -34,13 +34,15 @@ export function ValuebetDebugMonitor({
   const { data: audit, refetch: refetchAudit, isFetching: auditing } = useQuery({
     queryKey: ["valuebet-deep-audit", workspaceId, projectIds],
     queryFn: async () => {
-      addLog("Iniciando auditoria profunda de dados...", "info");
+      addLog("Iniciando auditoria profunda de integridade estrutural...", "info");
       
-      // Contagem total no workspace
-      const { count: totalWorkspace } = await supabase
-        .from("apostas_unificada")
-        .select("*", { count: 'exact', head: true })
-        .eq("workspace_id", workspaceId);
+      const { data: deepAudit, error: auditError } = await supabase.rpc("audit_valuebet_integrity", {
+        p_project_ids: projectIds && projectIds.length > 0 ? projectIds : null
+      });
+
+      if (auditError) {
+        addLog(`Erro na RPC de Auditoria: ${auditError.message}`, "error");
+      }
 
       // Busca por variações de estratégia (Case Insensitive)
       const { data: strategiesRaw } = await supabase
@@ -74,51 +76,69 @@ export function ValuebetDebugMonitor({
       }
 
       addLog("Auditoria concluída.", "success");
-      return { totalWorkspace, strategies, projectCheck };
+      return { 
+        totalWorkspace: (deepAudit as any)?.issues?.reduce((acc: number, i: any) => acc + i.count, 0) || 0, 
+        strategies, 
+        projectCheck,
+        discrepancies: (deepAudit as any)?.issues?.filter((i: any) => i.is_hidden) || []
+      };
     },
     enabled: !!workspaceId,
   });
 
-  // Efeito para monitorar erros da RPC principal
+  // Efeito para monitorar erros e performance da RPC principal
   useEffect(() => {
     if (rpcError) {
       addLog(`Erro na RPC: ${rpcError.message || JSON.stringify(rpcError)}`, "error");
     }
-  }, [rpcError]);
+    if (rpcData?._metadata?.fetch_duration_ms) {
+      const duration = rpcData._metadata.fetch_duration_ms;
+      if (duration > 1500) {
+        addLog(`ALERTA: Lentidão na RPC detectada (${duration.toFixed(0)}ms).`, "warning");
+      } else {
+        addLog(`Performance estável: RPC respondida em ${duration.toFixed(0)}ms.`, "success");
+      }
+    }
+  }, [rpcError, rpcData]);
 
   const diagnostics = () => {
     const results = [];
     
     if (!workspaceId) results.push({ msg: "FALHA: Workspace ID não identificado.", type: "error" });
     
-    if (audit?.strategies) {
-      const caseSensitiveValue = audit.strategies.find(s => s.estrategia === 'valuebet' || s.estrategia === 'ValueBet');
-      if (caseSensitiveValue) {
-        results.push({ 
-          msg: `AVISO: Encontramos apostas com estratégia "${caseSensitiveValue.estrategia}". A RPC espera "VALUEBET" (maiúsculo).`, 
-          type: "warning",
-          action: "Normalizar nomes"
+    // Análise de Discrepâncias Estruturais (da nova RPC de auditoria)
+    if (audit?.discrepancies && audit.discrepancies.length > 0) {
+      const hiddenCount = audit.discrepancies.reduce((acc: number, d: any) => acc + d.count, 0);
+      results.push({ 
+        msg: `FALHA DE VISIBILIDADE: Existem ${hiddenCount} apostas que não pertencem ao seu workspace atual ou possuem status/estratégia inválidos.`, 
+        type: "error",
+        action: "Sincronizar dados"
+      });
+      
+      const caseIssues = audit.discrepancies.filter((d: any) => d.estrategia.toUpperCase() === 'VALUEBET' && d.estrategia !== 'VALUEBET');
+      if (caseIssues.length > 0) {
+        results.push({
+          msg: `CASE SENSITIVITY: Identificamos ${caseIssues.reduce((acc: number, d: any) => acc + d.count, 0)} apostas com grafia incorreta (Ex: ${caseIssues[0].estrategia}).`,
+          type: "warning"
         });
       }
-
+    }
+    
+    if (audit?.strategies) {
       const totalValue = audit.strategies.reduce((acc, s) => acc + s.count, 0);
       if (totalValue > 0 && (!rpcData?.kpis?.total_bets || rpcData.kpis.total_bets === 0)) {
         results.push({ 
-          msg: `CRÍTICO: Existem ${totalValue} apostas no banco, mas a RPC retorna 0. Provável erro de filtro de STATUS ou DATA.`, 
+          msg: `FILTRO BLOQUEANTE: Existem ${totalValue} apostas no projeto, mas elas não passam no filtro de DATA ou STATUS da visualização.`, 
           type: "error" 
         });
       }
     }
 
-    if (audit?.projectCheck && audit.projectCheck.length > 0) {
-      const pendingBets = audit.projectCheck.filter(p => p.status === 'PENDENTE');
-      if (pendingBets.length > 0) {
-        const count = pendingBets.reduce((acc, p) => acc + p.count, 0);
-        results.push({ 
-          msg: `INFO: Existem ${count} apostas PENDENTES que são ignoradas pelos KPIs da evolução.`, 
-          type: "info" 
-        });
-      }
+    if (rpcData?._metadata?.fetch_duration_ms > 2000) {
+      results.push({
+        msg: `GARGALO DE PERFORMANCE: O processamento levou ${rpcData._metadata.fetch_duration_ms.toFixed(0)}ms. O sistema pode estar lento para 15k+ linhas.`,
+        type: "warning"
+      });
     }
 
     return results;
@@ -135,28 +155,39 @@ export function ValuebetDebugMonitor({
             Monitor de Diagnóstico e Auto-Cura
           </CardTitle>
         </div>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="h-8 gap-2 bg-card"
-          onClick={() => {
-            refetchAudit();
-            queryClient.invalidateQueries({ queryKey: ["laboratorio-valuebet"] });
-          }}
-          disabled={auditing || rpcLoading}
-        >
-          <RefreshCw className={cn("h-3 w-3", (auditing || rpcLoading) && "animate-spin")} />
-          Recalibrar Ecossistema
-        </Button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-muted/40 rounded-full border border-border/20">
+            <Activity className={cn("h-3 w-3", rpcData?._metadata?.fetch_duration_ms > 1000 ? "text-amber-500" : "text-emerald-500")} />
+            <span className="text-[10px] font-bold tabular-nums">
+              {rpcData?._metadata?.fetch_duration_ms ? `${rpcData._metadata.fetch_duration_ms.toFixed(0)}ms` : "--"}
+            </span>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-8 gap-2 bg-card hover:bg-primary/10 hover:text-primary transition-all"
+            onClick={() => {
+              refetchAudit();
+              queryClient.invalidateQueries({ queryKey: ["laboratorio-valuebet"] });
+            }}
+            disabled={auditing || rpcLoading}
+          >
+            <RefreshCw className={cn("h-3 w-3", (auditing || rpcLoading) && "animate-spin")} />
+            Diagnóstico Profundo
+          </Button>
+        </div>
       </CardHeader>
       
       <CardContent className="pt-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Lado Esquerdo: Resultados do Diagnóstico */}
           <div className="space-y-4">
-            <h3 className="text-xs font-bold text-muted-foreground flex items-center gap-2">
-              <Search className="h-3 w-3" /> ANÁLISE DO OBSERVADOR
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-muted-foreground flex items-center gap-2">
+                <Microscope className="h-3 w-3" /> LABORATÓRIO DE TESTES
+              </h3>
+              <Badge variant="outline" className="text-[9px] border-primary/20 text-primary">Modo Observador</Badge>
+            </div>
             
             <div className="space-y-2">
               {diagnosticResults.length === 0 && !auditing && (
@@ -191,14 +222,19 @@ export function ValuebetDebugMonitor({
             </div>
 
             <div className="grid grid-cols-2 gap-4 pt-4">
-              <div className="bg-card/50 p-3 rounded-lg border border-border/20">
-                <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">Status RPC</p>
-                <Badge variant={rpcError ? "destructive" : "secondary"} className="text-[10px]">
-                  {rpcLoading ? "Chamando..." : rpcError ? "Erro na Função" : "Função Ativa"}
-                </Badge>
+              <div className="bg-card/50 p-3 rounded-lg border border-border/20 group hover:border-primary/30 transition-colors">
+                <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1 flex items-center gap-1">
+                  <Wrench className="h-2.5 w-2.5" /> Latência
+                </p>
+                <span className={cn(
+                  "text-xs font-bold tabular-nums",
+                  rpcData?._metadata?.fetch_duration_ms > 1000 ? "text-amber-500" : "text-emerald-500"
+                )}>
+                  {rpcData?._metadata?.fetch_duration_ms ? `${rpcData._metadata.fetch_duration_ms.toFixed(1)}ms` : "N/A"}
+                </span>
               </div>
-              <div className="bg-card/50 p-3 rounded-lg border border-border/20">
-                <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">Dados no Workspace</p>
+              <div className="bg-card/50 p-3 rounded-lg border border-border/20 group hover:border-primary/30 transition-colors">
+                <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">Integridade</p>
                 <div className="flex items-center gap-2">
                   <Database className="h-3 w-3 text-muted-foreground" />
                   <span className="text-xs font-bold">{audit?.totalWorkspace || 0}</span>
