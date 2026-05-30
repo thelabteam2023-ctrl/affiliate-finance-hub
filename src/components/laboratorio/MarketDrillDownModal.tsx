@@ -618,3 +618,238 @@ function SortableTh({
     </th>
   );
 }
+
+/* ============================================================
+ *  PREMIUM CHART PRIMITIVES
+ * ========================================================== */
+
+function TotalChip({ label, value, tone }: { label: string; value: string; tone?: "pos" | "neg" }) {
+  return (
+    <div className="flex items-baseline gap-1.5">
+      <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold">{label}</span>
+      <span
+        className={cn(
+          "tabular-nums font-bold text-xs",
+          tone === "pos" && "text-emerald-400",
+          tone === "neg" && "text-red-400",
+        )}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Custom tooltip — used by every chart. Replaces recharts default.
+ * `kind` switches between money (R$), percent (%, signed) and raw count.
+ */
+function PremiumTooltip({
+  active,
+  payload,
+  label,
+  kind = "money",
+}: any) {
+  if (!active || !payload || payload.length === 0) return null;
+  const p = payload[0];
+  const raw = Number(p.value);
+  const positive = raw >= 0;
+  const color =
+    kind === "percent" || kind === "money"
+      ? positive
+        ? "#22c55e"
+        : "#ef4444"
+      : (p.payload?.fill as string) || "#e5e7eb";
+
+  let primary: string;
+  if (kind === "money") primary = fmtMoney(raw);
+  else if (kind === "percent") primary = fmtPctSigned(raw);
+  else primary = raw.toLocaleString("pt-BR");
+
+  const secondaryLabel = p.payload?.name ?? label ?? p.name;
+
+  return (
+    <div
+      className="pointer-events-none animate-in fade-in-0 duration-[120ms]"
+      style={{
+        background: "#1a1e2a",
+        border: "1px solid rgba(255,255,255,0.1)",
+        borderRadius: 8,
+        padding: "10px 14px",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+        minWidth: 120,
+      }}
+    >
+      <div
+        className="text-[10px] uppercase tracking-widest font-semibold mb-1"
+        style={{ color: "rgba(255,255,255,0.5)" }}
+      >
+        {secondaryLabel}
+      </div>
+      <div
+        className="font-bold tabular-nums leading-none"
+        style={{ color, fontSize: 15 }}
+      >
+        {primary}
+      </div>
+      {p.payload?.total !== undefined && kind !== "count" && (
+        <div className="text-[10px] mt-1.5" style={{ color: "rgba(255,255,255,0.4)" }}>
+          {p.payload.total} aposta{p.payload.total === 1 ? "" : "s"}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* --- Bar chart: ROI por faixa de odd --- */
+function RoiBarChart({ data }: { data: Array<{ range: string; roi: number; total: number; profit: number; stake: number }> }) {
+  const [activeIdx, setActiveIdx] = useState<number | null>(null);
+  const chartData = data.map((d) => ({ name: d.range, value: d.roi, total: d.total }));
+
+  return (
+    <ResponsiveContainer>
+      <BarChart
+        data={chartData}
+        margin={{ top: 16, right: 16, left: 0, bottom: 8 }}
+        barCategoryGap="40%"
+        onMouseLeave={() => setActiveIdx(null)}
+      >
+        <defs>
+          <linearGradient id="barPos" x1="0" y1="1" x2="0" y2="0">
+            <stop offset="0%" stopColor="#22c55e" stopOpacity={0.85} />
+            <stop offset="100%" stopColor="#4ade80" stopOpacity={1} />
+          </linearGradient>
+          <linearGradient id="barNeg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#ef4444" stopOpacity={0.85} />
+            <stop offset="100%" stopColor="#dc2626" stopOpacity={1} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+        <XAxis
+          dataKey="name"
+          tick={{ fontSize: 10, fill: "rgba(255,255,255,0.55)" }}
+          axisLine={false}
+          tickLine={false}
+          dy={4}
+        />
+        <YAxis
+          tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }}
+          axisLine={false}
+          tickLine={false}
+          tickFormatter={(v) => `${v}%`}
+          width={40}
+        />
+        <ReferenceLine y={0} stroke="rgba(255,255,255,0.15)" />
+        <Tooltip
+          cursor={false}
+          wrapperStyle={{ outline: "none", zIndex: 60 }}
+          content={<PremiumTooltip kind="percent" />}
+          animationDuration={120}
+        />
+        <Bar
+          dataKey="value"
+          radius={[6, 6, 0, 0]}
+          isAnimationActive
+          animationDuration={400}
+          animationEasing="ease-out"
+          onMouseLeave={() => setActiveIdx(null)}
+        >
+          {chartData.map((d, i) => {
+            const positive = d.value >= 0;
+            const fill = positive ? "url(#barPos)" : "url(#barNeg)";
+            const isActive = activeIdx === null || activeIdx === i;
+            return (
+              <Cell
+                key={i}
+                fill={fill}
+                cursor="pointer"
+                onMouseEnter={() => setActiveIdx(i)}
+                style={{
+                  transition: "opacity 150ms, filter 150ms",
+                  opacity: isActive ? 1 : 0.4,
+                  filter: activeIdx === i ? "brightness(1.15)" : "none",
+                }}
+              />
+            );
+          })}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+/* --- Profit area chart (mensal) --- */
+function ProfitAreaChart({ data }: { data: Array<{ label: string; profit: number; roi: number; stake: number }> }) {
+  const chartData = data.map((d) => ({ name: d.label, value: d.profit }));
+  const allNeg = chartData.every((d) => d.value < 0);
+  const lineColor = allNeg ? "#ef4444" : "#22c55e";
+  const fillId = allNeg ? "areaNeg" : "areaPos";
+
+  return (
+    <ResponsiveContainer>
+      <AreaChart data={chartData} margin={{ top: 16, right: 16, left: 0, bottom: 8 }}>
+        <defs>
+          <linearGradient id="areaPos" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#22c55e" stopOpacity={0.15} />
+            <stop offset="100%" stopColor="#22c55e" stopOpacity={0} />
+          </linearGradient>
+          <linearGradient id="areaNeg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#ef4444" stopOpacity={0.15} />
+            <stop offset="100%" stopColor="#ef4444" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} horizontal />
+        <XAxis dataKey="name" tick={{ fontSize: 10, fill: "rgba(255,255,255,0.55)" }} axisLine={false} tickLine={false} />
+        <YAxis tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }} axisLine={false} tickLine={false} width={50} tickFormatter={(v) => `R$${Math.round(v).toLocaleString("pt-BR")}`} />
+        <ReferenceLine y={0} stroke="rgba(255,255,255,0.15)" />
+        <Tooltip cursor={{ stroke: "rgba(255,255,255,0.1)", strokeWidth: 1 }} wrapperStyle={{ outline: "none", zIndex: 60 }} content={<PremiumTooltip kind="money" />} animationDuration={120} />
+        <Area
+          type="monotone"
+          dataKey="value"
+          stroke={lineColor}
+          strokeWidth={2.5}
+          fill={`url(#${fillId})`}
+          activeDot={{ r: 6, stroke: "#fff", strokeWidth: 2, fill: lineColor }}
+          dot={{ r: 4, stroke: "#fff", strokeWidth: 2, fill: lineColor }}
+          isAnimationActive
+          animationDuration={500}
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}
+
+/* --- ROI line chart (mensal) --- */
+function RoiLineChart({ data }: { data: Array<{ label: string; roi: number; profit: number; stake: number }> }) {
+  const chartData = data.map((d) => ({ name: d.label, value: d.roi }));
+
+  return (
+    <ResponsiveContainer>
+      <LineChart data={chartData} margin={{ top: 16, right: 16, left: 0, bottom: 8 }}>
+        <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} horizontal />
+        <XAxis dataKey="name" tick={{ fontSize: 10, fill: "rgba(255,255,255,0.55)" }} axisLine={false} tickLine={false} />
+        <YAxis tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }} axisLine={false} tickLine={false} width={45} tickFormatter={(v) => `${v}%`} />
+        <ReferenceLine y={0} stroke="rgba(255,255,255,0.15)" />
+        <Tooltip cursor={{ stroke: "rgba(255,255,255,0.1)", strokeWidth: 1 }} wrapperStyle={{ outline: "none", zIndex: 60 }} content={<PremiumTooltip kind="percent" />} animationDuration={120} />
+        <Line
+          type="monotone"
+          dataKey="value"
+          stroke="#3b82f6"
+          strokeWidth={2.5}
+          activeDot={(props: any) => {
+            const v = props.payload?.value ?? 0;
+            const c = v >= 0 ? "#22c55e" : "#ef4444";
+            return <circle cx={props.cx} cy={props.cy} r={6} fill={c} stroke="#fff" strokeWidth={2} />;
+          }}
+          dot={(props: any) => {
+            const v = props.payload?.value ?? 0;
+            const c = v >= 0 ? "#22c55e" : "#ef4444";
+            return <circle key={props.index} cx={props.cx} cy={props.cy} r={4} fill={c} stroke="#fff" strokeWidth={2} />;
+          }}
+          isAnimationActive
+          animationDuration={500}
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+}
