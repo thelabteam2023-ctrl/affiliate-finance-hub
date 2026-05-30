@@ -270,7 +270,7 @@ export function MarketDrillDownModal({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-[90vw] w-[90vw] h-[90vh] p-0 flex flex-col gap-0 overflow-hidden">
+      <DialogContent className="max-w-[92vw] w-[92vw] h-[90vh] p-0 flex flex-col gap-0 overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b border-border/40 shrink-0">
           <DialogTitle className="flex items-baseline gap-3">
             <span className="text-2xl font-black tracking-tight">{marketName ?? ""}</span>
@@ -280,7 +280,7 @@ export function MarketDrillDownModal({
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="analise" className="flex-1 flex flex-col overflow-hidden">
+        <Tabs defaultValue="analise" className="flex-1 flex flex-col overflow-hidden min-h-0">
           <div className="px-6 pt-3 shrink-0">
             <TabsList accentColor="bg-foreground">
               <TabsTrigger value="analise">Análise</TabsTrigger>
@@ -289,7 +289,11 @@ export function MarketDrillDownModal({
           </div>
 
           {/* === ABA ANÁLISE === */}
-          <TabsContent value="analise" className="flex-1 overflow-y-auto mt-0 px-6 py-5 space-y-8">
+          <TabsContent
+            value="analise"
+            className="flex-1 min-h-0 overflow-y-auto mt-0 px-6 py-5 space-y-6 data-[state=inactive]:hidden"
+            forceMount
+          >
             {/* KPIs */}
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
               <Kpi label="Apostas" value={kpis.total.toString()} />
@@ -313,8 +317,8 @@ export function MarketDrillDownModal({
 
             {/* Faixas de Odd */}
             <Section title="ROI por faixa de odd">
-              <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                <div className="lg:col-span-2 border border-border/40 rounded-lg overflow-hidden">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="border border-border/40 rounded-lg overflow-hidden max-h-[320px] overflow-y-auto">
                   <table className="w-full text-xs">
                     <thead className="bg-muted/30">
                       <tr className="text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -355,27 +359,27 @@ export function MarketDrillDownModal({
                     </tbody>
                   </table>
                 </div>
-                <div className="lg:col-span-3 h-72">
+                <div className="w-full h-[280px] relative">
                   <RoiBarChart data={oddRangeRows} />
                 </div>
               </div>
             </Section>
 
             {/* Evolução temporal */}
-            <Section title="Evolução temporal (mensal)">
+            <Section title="Evolução temporal (mensal)" divider>
               {monthlyRows.length === 0 ? (
                 <p className="text-xs text-muted-foreground">Sem dados.</p>
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Lucro por mês</p>
-                    <div className="h-64">
+                    <div className="w-full h-[220px] relative">
                       <ProfitAreaChart data={monthlyRows} />
                     </div>
                   </div>
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">ROI por mês</p>
-                    <div className="h-64">
+                    <div className="w-full h-[220px] relative">
                       <RoiLineChart data={monthlyRows} />
                     </div>
                   </div>
@@ -384,12 +388,12 @@ export function MarketDrillDownModal({
             </Section>
 
             {/* Distribuição */}
-            <Section title="Distribuição de resultados">
+            <Section title="Distribuição de resultados" divider>
               {pieData.length === 0 ? (
                 <p className="text-xs text-muted-foreground">Sem dados.</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-                  <div className="h-64">
+                  <div className="w-full h-[260px] relative">
                     <ResponsiveContainer>
                       <PieChart>
                         <Pie
