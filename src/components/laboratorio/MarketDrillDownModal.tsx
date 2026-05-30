@@ -452,6 +452,44 @@ export function MarketDrillDownModal({
               )}
             </Section>
 
+            {/* Evolução Detalhada */}
+            <Section title="Evolução detalhada">
+              {cumulativeRows.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Sem dados.</p>
+              ) : (
+                <div className="flex flex-col gap-5">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                      Lucro acumulado (entrada por entrada)
+                    </p>
+                    <div className="w-full h-[200px] relative">
+                      <CumulativeProfitChart data={cumulativeRows} />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        Volume &amp; lucro por dia da semana
+                      </p>
+                      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: "rgba(59,130,246,0.5)" }} />
+                          Volume
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: "rgba(34,197,94,0.7)" }} />
+                          Lucro
+                        </span>
+                      </div>
+                    </div>
+                    <div className="w-full h-[220px] relative">
+                      <WeekdayChart data={weekdayRows} />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </Section>
+
             {/* Distribuição */}
             <Section title="Distribuição de resultados">
               {pieData.length === 0 ? (
