@@ -46,6 +46,10 @@ interface Props {
   sportLabel: string;
   /** All bets already scoped to sport+projects+period (filteredBetsForTab). */
   bets: RawBet[];
+  /** Optional: open the modal scoped to a tipo (sem sub-tipo específico). */
+  tipoKey?: TipoMercadoKey | null;
+  /** Optional: sub-label inicial selecionado na sidebar ("ALL" para Todos). */
+  initialSubLabel?: string | "ALL";
 }
 
 const RESULT_COLORS: Record<string, string> = {
@@ -342,6 +346,8 @@ export function MarketDrillDownModal({
   marketName,
   sportLabel,
   bets,
+  tipoKey: tipoKeyProp = null,
+  initialSubLabel,
 }: Props) {
   const [search, setSearch] = useState("");
   const [filterRange, setFilterRange] = useState<string>("ALL");
@@ -351,23 +357,28 @@ export function MarketDrillDownModal({
   const [page, setPage] = useState(1);
   const [faixaSelecionada, setFaixaSelecionada] = useState<string | null>(null);
   // Sidebar de navegação interna entre sub-tipos do mesmo tipo
-  const [activeSubLabel, setActiveSubLabel] = useState<string | "ALL">(marketName ?? "ALL");
+  const [activeSubLabel, setActiveSubLabel] = useState<string | "ALL">(
+    initialSubLabel ?? marketName ?? "ALL",
+  );
 
   useEffect(() => {
-    if (marketName) setActiveSubLabel(marketName);
-  }, [marketName, open]);
+    if (initialSubLabel) setActiveSubLabel(initialSubLabel);
+    else if (marketName) setActiveSubLabel(marketName);
+  }, [marketName, initialSubLabel, open]);
 
   // Computa siblings (todos os sub-tipos do mesmo tipo do marketName inicial)
   const siblings = useMemo(() => {
-    let tipoKey: TipoMercadoKey | null = null;
+    let tipoKey: TipoMercadoKey | null = tipoKeyProp;
     let tipoLabel = "";
-    if (!marketName) return { tipoKey, tipoLabel, items: [] as Array<{ label: string; n: number; roi: number; hasGen1: boolean }>, allBets: [] as RawBet[] };
-    for (const b of bets) {
-      const r = resolverMercado(b);
-      if (r.label_completo === marketName) {
-        tipoKey = r.tipo_key;
-        tipoLabel = r.tipo;
-        break;
+    if (!marketName && !tipoKey) return { tipoKey, tipoLabel, items: [] as Array<{ label: string; n: number; roi: number; hasGen1: boolean }>, allBets: [] as RawBet[] };
+    if (!tipoKey && marketName) {
+      for (const b of bets) {
+        const r = resolverMercado(b);
+        if (r.label_completo === marketName) {
+          tipoKey = r.tipo_key;
+          tipoLabel = r.tipo;
+          break;
+        }
       }
     }
     if (!tipoKey) return { tipoKey, tipoLabel, items: [], allBets: [] };
@@ -376,6 +387,7 @@ export function MarketDrillDownModal({
     for (const b of bets) {
       const r = resolverMercado(b);
       if (r.tipo_key !== tipoKey) continue;
+      if (!tipoLabel) tipoLabel = r.tipo;
       allBets.push(b);
       let s = map.get(r.label_completo);
       if (!s) {
@@ -398,7 +410,7 @@ export function MarketDrillDownModal({
       })
       .sort((a, b) => b.n - a.n);
     return { tipoKey, tipoLabel, items, allBets };
-  }, [bets, marketName]);
+  }, [bets, marketName, tipoKeyProp]);
 
   const allAggregate = useMemo(() => {
     const stake = siblings.allBets.reduce((a, b) => a + stakeOf(b), 0);
@@ -410,7 +422,7 @@ export function MarketDrillDownModal({
   }, [siblings.allBets]);
 
   const marketBets = useMemo(() => {
-    if (!marketName) return [];
+    if (!marketName && !tipoKeyProp) return [];
     if (activeSubLabel === "ALL") return siblings.allBets;
     return bets.filter((b) => {
       const resolved = resolverMercado(b);
@@ -419,7 +431,7 @@ export function MarketDrillDownModal({
       const m = b.mercado && b.mercado.trim() !== "" ? b.mercado : "Geral";
       return m === activeSubLabel;
     });
-  }, [bets, marketName, activeSubLabel, siblings.allBets]);
+  }, [bets, marketName, tipoKeyProp, activeSubLabel, siblings.allBets]);
 
   // Cobertura de Edge (apenas para indicador — UI completa virá em entrega futura).
   const apostasComEdge = useMemo(() => contarApostasComEdge(marketBets), [marketBets]);
