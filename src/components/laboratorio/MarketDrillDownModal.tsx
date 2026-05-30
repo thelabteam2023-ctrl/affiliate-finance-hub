@@ -1730,11 +1730,6 @@ function DrawdownChart({ data }: { data: Array<{ idx: number; date: string; date
   );
 }
 
-/* --- Sequence blocks bar chart --- */
-function SequenceTooltip({ active, payload }: any) {
-  // (kept below)
-  return _SequenceTooltipImpl({ active, payload });
-}
 function RunupTooltip({ active, payload }: any) {
   if (!active || !payload || payload.length === 0) return null;
   const row = payload[0].payload as { dateLabel: string; runup: number; cumulative: number };
@@ -1815,83 +1810,6 @@ function RunupChart({ data }: { data: Array<{ idx: number; date: string; dateLab
           animationDuration={400}
         />
       </AreaChart>
-    </ResponsiveContainer>
-  );
-}
-
-function _SequenceTooltipImpl({ active, payload }: any) {
-  if (!active || !payload || payload.length === 0) return null;
-  const row = payload[0].payload as { kind: "GREEN" | "RED"; length: number; pl: number; startDate: string; endDate: string };
-  const c = row.kind === "GREEN" ? "#22c55e" : "#ef4444";
-  return (
-    <div
-      className="pointer-events-none animate-in fade-in-0 duration-[120ms]"
-      style={{
-        background: "#1a1e2a",
-        border: "1px solid rgba(255,255,255,0.1)",
-        borderRadius: 8,
-        padding: "10px 14px",
-        boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-        minWidth: 200,
-      }}
-    >
-      <div className="text-[10px] uppercase tracking-widest font-semibold mb-1.5" style={{ color: "rgba(255,255,255,0.5)" }}>
-        Sequência
-      </div>
-      <div className="flex items-baseline justify-between gap-4">
-        <span className="text-[11px]" style={{ color: "#e5e7eb" }}>
-          {row.length} {row.kind === "GREEN" ? "greens" : "reds"} consecutivos
-        </span>
-      </div>
-      <div className="text-[10px] mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>
-        {fmtDM(row.startDate)} → {fmtDM(row.endDate)}
-      </div>
-      <div className="flex items-baseline justify-between gap-4 mt-1.5">
-        <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.5)" }}>
-          {row.kind === "GREEN" ? "Lucro" : "Prejuízo"}
-        </span>
-        <span className="font-bold tabular-nums" style={{ color: c, fontSize: 13 }}>{fmtMoney(row.pl)}</span>
-      </div>
-    </div>
-  );
-}
-
-function SequenceBarsChart({ data }: { data: Array<{ idx: number; kind: "GREEN" | "RED"; length: number; pl: number; startDate: string; endDate: string }> }) {
-  const chartData = data.map((d) => ({
-    ...d,
-    name: String(d.idx + 1),
-    value: d.kind === "GREEN" ? d.length : -d.length,
-  }));
-  return (
-    <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 6 }} barCategoryGap="20%">
-        <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
-        <XAxis
-          dataKey="name"
-          tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }}
-          axisLine={false}
-          tickLine={false}
-          interval="preserveStartEnd"
-        />
-        <YAxis
-          tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }}
-          axisLine={false}
-          tickLine={false}
-          width={32}
-        />
-        <ReferenceLine y={0} stroke="rgba(255,255,255,0.2)" />
-        <Tooltip
-          cursor={{ fill: "rgba(255,255,255,0.04)" }}
-          wrapperStyle={{ outline: "none", zIndex: 60 }}
-          content={<SequenceTooltip />}
-          animationDuration={120}
-        />
-        <Bar dataKey="value" radius={[3, 3, 3, 3]} isAnimationActive animationDuration={400}>
-          {chartData.map((d, i) => (
-            <Cell key={i} fill={d.kind === "GREEN" ? "#22c55e" : "#ef4444"} />
-          ))}
-        </Bar>
-      </BarChart>
     </ResponsiveContainer>
   );
 }
