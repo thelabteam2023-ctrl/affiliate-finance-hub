@@ -93,6 +93,186 @@ function calcMetrics(bets: RawBet[]) {
   return { total, validas, stake, profit, roi, winRate, greens, meioGreens, meioReds, reds, voids };
 }
 
+/* ---------------- Risk helpers ---------------- */
+
+function sortByDateAsc(bets: RawBet[]): RawBet[] {
+  return [...bets]
+    .filter((b) => !!b.data_aposta)
+    .sort((a, b) => (a.data_aposta ?? "").localeCompare(b.data_aposta ?? ""));
+}
+
+function fmtDM(iso: string | null | undefined) {
+  if (!iso) return "—";
+  try { return format(parseISO(iso), "dd/MM"); } catch { return "—"; }
+}
+
+function daysBetween(a: string | null, b: string | null): number {
+  if (!a || !b) return 0;
+  const da = parseISO(a).getTime();
+  const db = parseISO(b).getTime();
+  return Math.max(0, Math.round((db - da) / 86400000));
+}
+
+interface DrawdownResult {
+  maxDrawdown: number;
+  peakDate: string | null;
+  valleyDate: string | null;
+  series: Array<{ idx: number; date: string; dateLabel: string; cumulative: number; drawdown: number }>;
+}
+
+function computeDrawdown(betsAsc: RawBet[]): DrawdownResult {
+  let peak = 0;
+  let maxDD = 0;
+  let peakDate: string | null = null;
+  let valleyDate: string | null = null;
+  let currentPeakDate: string | null = null;
+  let acc = 0;
+  const series: DrawdownResult["series"] = [];
+  betsAsc.forEach((b, i) => {
+    acc += profitOf(b);
+    if (acc > peak) {
+      peak = acc;
+      currentPeakDate = b.data_aposta!;
+    }
+    const dd = peak - acc;
+    if (dd > maxDD) {
+      maxDD = dd;
+      peakDate = currentPeakDate;
+      valleyDate = b.data_aposta!;
+    }
+    series.push({
+      idx: i + 1,
+      date: b.data_aposta!,
+      dateLabel: fmtDM(b.data_aposta!),
+      cumulative: acc,
+      drawdown: -dd,
+    });
+  });
+  return { maxDrawdown: maxDD, peakDate, valleyDate, series };
+}
+
+interface StreakResult {
+  length: number;
+  startDate: string | null;
+  endDate: string | null;
+  pl: number;
+  stakeAvg: number;
+  blocks: Array<{ idx: number; kind: "GREEN" | "RED"; length: number; pl: number; startDate: string; endDate: string }>;
+}
+
+function computeStreaks(betsAsc: RawBet[]): { reds: StreakResult; greens: StreakResult } {
+  const isRed = (r: string | null) => r === "RED" || r === "MEIO_RED";
+  const isGreen = (r: string | null) => r === "GREEN" || r === "MEIO_GREEN";
+
+  const blocks: StreakResult["blocks"] = [];
+  let cur: { kind: "GREEN" | "RED"; bets: RawBet[] } | null = null;
+
+  betsAsc.forEach((b) => {
+    if (b.resultado === "VOID" || !b.resultado) return; // ignore voids
+    const kind: "GREEN" | "RED" = isGreen(b.resultado) ? "GREEN" : isRed(b.resultado) ? "RED" : "GREEN";
+    if (!isGreen(b.resultado) && !isRed(b.resultado)) return;
+    if (!cur || cur.kind !== kind) {
+      if (cur) {
+        const startDate = cur.bets[0].data_aposta!;
+        const endDate = cur.bets[cur.bets.length - 1].data_aposta!;
+        const pl = cur.bets.reduce((a, x) => a + profitOf(x), 0);
+        blocks.push({ idx: blocks.length, kind: cur.kind, length: cur.bets.length, pl, startDate, endDate });
+      }
+      cur = { kind, bets: [b] };
+    } else {
+      cur.bets.push(b);
+    }
+  });
+  if (cur) {
+    const c = cur as { kind: "GREEN" | "RED"; bets: RawBet[] };
+    const startDate = c.bets[0].data_aposta!;
+    const endDate = c.bets[c.bets.length - 1].data_aposta!;
+    const pl = c.bets.reduce((a, x) => a + profitOf(x), 0);
+    blocks.push({ idx: blocks.length, kind: c.kind, length: c.bets.length, pl, startDate, endDate });
+  }
+
+  function pick(kind: "GREEN" | "RED"): StreakResult {
+    const filtered = blocks.filter((b) => b.kind === kind);
+    if (filtered.length === 0) {
+      return { length: 0, startDate: null, endDate: null, pl: 0, stakeAvg: 0, blocks };
+    }
+    const best = filtered.reduce((a, b) => (b.length > a.length ? b : a), filtered[0]);
+    // Stake average during best streak
+    const streakBets = betsAsc.filter(
+      (b) => b.data_aposta && b.data_aposta >= best.startDate && b.data_aposta <= best.endDate &&
+        ((kind === "GREEN" && (b.resultado === "GREEN" || b.resultado === "MEIO_GREEN")) ||
+         (kind === "RED" && (b.resultado === "RED" || b.resultado === "MEIO_RED")))
+    );
+    const stakeAvg = streakBets.length > 0 ? streakBets.reduce((a, b) => a + stakeOf(b), 0) / streakBets.length : 0;
+    return { length: best.length, startDate: best.startDate, endDate: best.endDate, pl: best.pl, stakeAvg, blocks };
+  }
+
+  return { reds: pick("RED"), greens: pick("GREEN") };
+}
+
+const STAKE_BUCKETS = [
+  { label: "0–100", min: 0, max: 100 },
+  { label: "100–300", min: 100, max: 300 },
+  { label: "300–500", min: 300, max: 500 },
+  { label: "500–1.000", min: 500, max: 1000 },
+  { label: "1.000–2.000", min: 1000, max: 2000 },
+  { label: "2.000+", min: 2000, max: Infinity },
+];
+
+function computeStakeDistribution(bets: RawBet[]) {
+  const totalBets = bets.length;
+  return STAKE_BUCKETS.map((b) => {
+    const sub = bets.filter((x) => {
+      const s = stakeOf(x);
+      return s >= b.min && s < b.max;
+    });
+    const stake = sub.reduce((a, x) => a + stakeOf(x), 0);
+    const profit = sub.reduce((a, x) => a + profitOf(x), 0);
+    const roi = stake > 0 ? (profit / stake) * 100 : 0;
+    return {
+      label: b.label,
+      n: sub.length,
+      pct: totalBets > 0 ? (sub.length / totalBets) * 100 : 0,
+      stake,
+      profit,
+      roi,
+    };
+  });
+}
+
+function computeWeightedStrike(bets: RawBet[]) {
+  const valid = bets.filter((b) => b.resultado && b.resultado !== "VOID");
+  const denom = valid.reduce((a, b) => a + stakeOf(b), 0);
+  const num = valid.reduce((a, b) => {
+    if (b.resultado === "GREEN") return a + stakeOf(b);
+    if (b.resultado === "MEIO_GREEN") return a + stakeOf(b) * 0.5;
+    return a;
+  }, 0);
+  return denom > 0 ? (num / denom) * 100 : 0;
+}
+
+function computeBookmakerPerformance(bets: RawBet[]) {
+  const map = new Map<string, RawBet[]>();
+  bets.forEach((b) => {
+    const k = b.bookmaker_id ?? "—";
+    if (!map.has(k)) map.set(k, []);
+    map.get(k)!.push(b);
+  });
+  const rows = Array.from(map.entries()).map(([casa, arr]) => {
+    const m = calcMetrics(arr);
+    return {
+      casa,
+      n: m.total,
+      stake: m.stake,
+      profit: m.profit,
+      roi: m.roi,
+      winRate: m.winRate,
+    };
+  });
+  rows.sort((a, b) => b.roi - a.roi);
+  return rows;
+}
+
 type SortKey =
   | "data"
   | "evento"
