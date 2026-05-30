@@ -558,13 +558,14 @@ export function MarketDrillDownModal({
       if (filterRange !== "ALL" && getOddRange(b.odd) !== filterRange) return false;
       if (filterResult !== "ALL" && b.resultado !== filterResult) return false;
       if (!q) return true;
+      const casaNome = b.bookmaker_id ? (resolvedBookmakerMap.get(b.bookmaker_id)?.displayName ?? "") : "";
       return (
         (b.evento ?? "").toLowerCase().includes(q) ||
         (b.selecao ?? "").toLowerCase().includes(q) ||
-        (b.bookmaker_id ?? "").toLowerCase().includes(q)
+        casaNome.toLowerCase().includes(q)
       );
     });
-  }, [marketBets, search, filterRange, filterResult]);
+  }, [marketBets, search, filterRange, filterResult, resolvedBookmakerMap]);
 
   const sortedTableBets = useMemo(() => {
     const arr = [...filteredTableBets];
@@ -604,8 +605,8 @@ export function MarketDrillDownModal({
           bv = b.resultado ?? "";
           break;
         case "casa":
-          av = a.bookmaker_id ?? "";
-          bv = b.bookmaker_id ?? "";
+          av = a.bookmaker_id ? (resolvedBookmakerMap.get(a.bookmaker_id)?.displayName ?? "") : "";
+          bv = b.bookmaker_id ? (resolvedBookmakerMap.get(b.bookmaker_id)?.displayName ?? "") : "";
           break;
       }
       if (av < bv) return sortDir === "asc" ? -1 : 1;
@@ -613,7 +614,7 @@ export function MarketDrillDownModal({
       return 0;
     });
     return arr;
-  }, [filteredTableBets, sortKey, sortDir]);
+  }, [filteredTableBets, sortKey, sortDir, resolvedBookmakerMap]);
 
   const totals = useMemo(() => calcMetrics(filteredTableBets), [filteredTableBets]);
 
