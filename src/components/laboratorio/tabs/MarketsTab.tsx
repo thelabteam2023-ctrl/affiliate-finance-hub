@@ -1,13 +1,10 @@
 import { useMemo, useState } from "react";
 import { MarketStats, RawBet } from "@/hooks/useValueBetLabData";
-import { LabMarketCard } from "../LabMarketCard";
 import { MarketDrillDownModal } from "../MarketDrillDownModal";
 import { resolverMercado, TipoMercadoKey, TIPOS_MERCADO } from "@/utils/mercadoResolver";
-import { contarApostasComEdge } from "@/utils/edgeCalculator";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, History, Sparkles } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Sparkles } from "lucide-react";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 interface MarketsTabProps {
   markets: Record<string, MarketStats>;
@@ -57,8 +54,7 @@ function fmtBRL(n: number): string {
 }
 
 export function MarketsTab({ bets = [], selectedSport }: MarketsTabProps) {
-  const [selectedTipo, setSelectedTipo] = useState<TipoMercadoKey | null>(null);
-  const [openMarket, setOpenMarket] = useState<string | null>(null);
+  const [openTipo, setOpenTipo] = useState<TipoMercadoKey | null>(null);
 
   /** Agrega bets em tipos → sub-tipos via MercadoResolver. */
   const tipos = useMemo<Map<TipoMercadoKey, TipoAgg>>(() => {
@@ -130,12 +126,6 @@ export function MarketsTab({ bets = [], selectedSport }: MarketsTabProps) {
 
   const totalVolume = useMemo(() => tipoList.reduce((a, t) => a + t.stake, 0), [tipoList]);
 
-  const currentTipo = selectedTipo ? tipos.get(selectedTipo) ?? null : null;
-  const subTipoList = useMemo(() => {
-    if (!currentTipo) return [];
-    return Array.from(currentTipo.subTipos.values()).sort((a, b) => b.bets.length - a.bets.length);
-  }, [currentTipo]);
-
   if (tipoList.length === 0) {
     return (
       <div className="py-12 text-center text-sm text-muted-foreground">
@@ -150,23 +140,16 @@ export function MarketsTab({ bets = [], selectedSport }: MarketsTabProps) {
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest font-bold text-muted-foreground">
           <span>{selectedSport ?? "Todos os esportes"}</span>
-          {currentTipo && (
-            <>
-              <span className="opacity-40">›</span>
-              <span className="text-foreground">{currentTipo.label}</span>
-            </>
-          )}
         </div>
 
-        {/* NÍVEL 1 — Tipos */}
-        {!currentTipo && (
-          <>
+        {/* NÍVEL ÚNICO — Tipos (sub-tipos navegados na sidebar do modal) */}
+        <>
             <div>
               <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-2">
                 Tipos de mercado
               </h3>
               <p className="text-[11px] text-muted-foreground/80 italic">
-                Selecione um tipo para ver os sub-tipos disponíveis. Apostas históricas são classificadas automaticamente.
+                Selecione um tipo para abrir a análise completa. Use a sidebar do modal para alternar entre sub-tipos.
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -176,7 +159,7 @@ export function MarketsTab({ bets = [], selectedSport }: MarketsTabProps) {
                 return (
                   <button
                     key={t.key}
-                    onClick={() => setSelectedTipo(t.key)}
+                    onClick={() => setOpenTipo(t.key)}
                     className={cn(
                       "text-left p-5 rounded-xl border bg-gradient-to-br transition-all hover:scale-[1.02] hover:shadow-xl",
                       TIPO_COLORS[t.key],
@@ -227,93 +210,14 @@ export function MarketsTab({ bets = [], selectedSport }: MarketsTabProps) {
                 );
               })}
             </div>
-          </>
-        )}
-
-        {/* NÍVEL 2 — Sub-tipos */}
-        {currentTipo && (
-          <>
-            <div className="flex items-center justify-between gap-4">
-              <button
-                onClick={() => setSelectedTipo(null)}
-                className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4" /> Voltar aos tipos
-              </button>
-              <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                {currentTipo.hasGen1 && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Badge variant="outline" className="text-[10px] gap-1 border-border/40 text-muted-foreground">
-                        <History className="w-3 h-3" /> inclui dados históricos
-                      </Badge>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-[280px] text-[11px]">
-                      Parte das apostas deste grupo foi classificada automaticamente por não possuir sub-tipo registrado (apostas anteriores ao novo formulário).
-                    </TooltipContent>
-                  </Tooltip>
-                )}
-                {currentTipo.edgeCount > 0 && (
-                  <Badge variant="outline" className="text-[10px] gap-1 border-blue-500/30 text-blue-400 bg-blue-500/5">
-                    <Sparkles className="w-3 h-3" /> {currentTipo.edgeCount} com fair odd
-                  </Badge>
-                )}
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {subTipoList.map((sub) => {
-                const m: MarketStats = aggToMarketStats(sub);
-                return (
-                  <div key={sub.label} className="relative">
-                    <LabMarketCard
-                      name={sub.label}
-                      metrics={m}
-                      totalVolume={totalVolume}
-                      onClick={() => setOpenMarket(sub.label)}
-                    />
-                    {/* Badges sobre o card */}
-                    <div className="absolute top-2 right-2 flex flex-col items-end gap-1 pointer-events-none">
-                      {sub.hasGen1 && sub.hasGen2 && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Badge variant="outline" className="text-[9px] gap-1 border-border/40 text-muted-foreground bg-background/80 pointer-events-auto">
-                              {sub.countGen2} exatas + {sub.countGen1} inferidas
-                            </Badge>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-[260px] text-[11px]">
-                            Este sub-tipo combina apostas com classificação exata (novo formulário) e apostas históricas classificadas automaticamente.
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                      {sub.hasGen1 && !sub.hasGen2 && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Badge variant="outline" className="text-[9px] gap-1 border-border/40 text-muted-foreground bg-background/80 pointer-events-auto">
-                              <History className="w-2.5 h-2.5" /> inclui dados históricos
-                            </Badge>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-[280px] text-[11px]">
-                            Parte das apostas deste grupo foi classificada automaticamente por não possuir sub-tipo registrado (apostas anteriores ao novo formulário).
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                      {sub.edgeCount > 0 && (
-                        <Badge variant="outline" className="text-[9px] gap-1 border-blue-500/30 text-blue-400 bg-blue-500/10 pointer-events-auto">
-                          <Sparkles className="w-2.5 h-2.5" /> {sub.edgeCount} c/ edge
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
+        </>
 
         <MarketDrillDownModal
-          open={!!openMarket}
-          onOpenChange={(v) => !v && setOpenMarket(null)}
-          marketName={openMarket}
+          open={!!openTipo}
+          onOpenChange={(v) => !v && setOpenTipo(null)}
+          marketName={null}
+          tipoKey={openTipo}
+          initialSubLabel="ALL"
           sportLabel={selectedSport ?? "Todos os esportes"}
           bets={bets}
         />
