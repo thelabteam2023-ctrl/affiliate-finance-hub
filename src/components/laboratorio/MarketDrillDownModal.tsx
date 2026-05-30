@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { ArrowUpDown, Trophy, Info } from "lucide-react";
 import { format, parseISO } from "date-fns";
@@ -17,6 +18,9 @@ import {
   CartesianGrid,
   LineChart,
   Line,
+  Area,
+  AreaChart,
+  ReferenceLine,
   PieChart,
   Pie,
   Cell,
@@ -38,7 +42,7 @@ const RESULT_COLORS: Record<string, string> = {
   MEIO_GREEN: "#14b8a6",
   MEIO_RED: "#f97316",
   RED: "#ef4444",
-  VOID: "#64748b",
+  VOID: "#6b7280",
 };
 
 const RESULT_LABEL: Record<string, string> = {
@@ -66,6 +70,10 @@ function fmtMoney(n: number) {
 }
 function fmtPct(n: number) {
   return `${n.toFixed(2)}%`;
+}
+function fmtPctSigned(n: number) {
+  const s = n >= 0 ? "+" : "";
+  return `${s}${n.toFixed(2)}%`;
 }
 
 function calcMetrics(bets: RawBet[]) {
