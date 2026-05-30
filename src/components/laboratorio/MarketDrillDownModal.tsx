@@ -93,6 +93,186 @@ function calcMetrics(bets: RawBet[]) {
   return { total, validas, stake, profit, roi, winRate, greens, meioGreens, meioReds, reds, voids };
 }
 
+/* ---------------- Risk helpers ---------------- */
+
+function sortByDateAsc(bets: RawBet[]): RawBet[] {
+  return [...bets]
+    .filter((b) => !!b.data_aposta)
+    .sort((a, b) => (a.data_aposta ?? "").localeCompare(b.data_aposta ?? ""));
+}
+
+function fmtDM(iso: string | null | undefined) {
+  if (!iso) return "—";
+  try { return format(parseISO(iso), "dd/MM"); } catch { return "—"; }
+}
+
+function daysBetween(a: string | null, b: string | null): number {
+  if (!a || !b) return 0;
+  const da = parseISO(a).getTime();
+  const db = parseISO(b).getTime();
+  return Math.max(0, Math.round((db - da) / 86400000));
+}
+
+interface DrawdownResult {
+  maxDrawdown: number;
+  peakDate: string | null;
+  valleyDate: string | null;
+  series: Array<{ idx: number; date: string; dateLabel: string; cumulative: number; drawdown: number }>;
+}
+
+function computeDrawdown(betsAsc: RawBet[]): DrawdownResult {
+  let peak = 0;
+  let maxDD = 0;
+  let peakDate: string | null = null;
+  let valleyDate: string | null = null;
+  let currentPeakDate: string | null = null;
+  let acc = 0;
+  const series: DrawdownResult["series"] = [];
+  betsAsc.forEach((b, i) => {
+    acc += profitOf(b);
+    if (acc > peak) {
+      peak = acc;
+      currentPeakDate = b.data_aposta!;
+    }
+    const dd = peak - acc;
+    if (dd > maxDD) {
+      maxDD = dd;
+      peakDate = currentPeakDate;
+      valleyDate = b.data_aposta!;
+    }
+    series.push({
+      idx: i + 1,
+      date: b.data_aposta!,
+      dateLabel: fmtDM(b.data_aposta!),
+      cumulative: acc,
+      drawdown: -dd,
+    });
+  });
+  return { maxDrawdown: maxDD, peakDate, valleyDate, series };
+}
+
+interface StreakResult {
+  length: number;
+  startDate: string | null;
+  endDate: string | null;
+  pl: number;
+  stakeAvg: number;
+  blocks: Array<{ idx: number; kind: "GREEN" | "RED"; length: number; pl: number; startDate: string; endDate: string }>;
+}
+
+function computeStreaks(betsAsc: RawBet[]): { reds: StreakResult; greens: StreakResult } {
+  const isRed = (r: string | null) => r === "RED" || r === "MEIO_RED";
+  const isGreen = (r: string | null) => r === "GREEN" || r === "MEIO_GREEN";
+
+  const blocks: StreakResult["blocks"] = [];
+  let cur: { kind: "GREEN" | "RED"; bets: RawBet[] } | null = null;
+
+  betsAsc.forEach((b) => {
+    if (b.resultado === "VOID" || !b.resultado) return; // ignore voids
+    const kind: "GREEN" | "RED" = isGreen(b.resultado) ? "GREEN" : isRed(b.resultado) ? "RED" : "GREEN";
+    if (!isGreen(b.resultado) && !isRed(b.resultado)) return;
+    if (!cur || cur.kind !== kind) {
+      if (cur) {
+        const startDate = cur.bets[0].data_aposta!;
+        const endDate = cur.bets[cur.bets.length - 1].data_aposta!;
+        const pl = cur.bets.reduce((a, x) => a + profitOf(x), 0);
+        blocks.push({ idx: blocks.length, kind: cur.kind, length: cur.bets.length, pl, startDate, endDate });
+      }
+      cur = { kind, bets: [b] };
+    } else {
+      cur.bets.push(b);
+    }
+  });
+  if (cur) {
+    const c = cur as { kind: "GREEN" | "RED"; bets: RawBet[] };
+    const startDate = c.bets[0].data_aposta!;
+    const endDate = c.bets[c.bets.length - 1].data_aposta!;
+    const pl = c.bets.reduce((a, x) => a + profitOf(x), 0);
+    blocks.push({ idx: blocks.length, kind: c.kind, length: c.bets.length, pl, startDate, endDate });
+  }
+
+  function pick(kind: "GREEN" | "RED"): StreakResult {
+    const filtered = blocks.filter((b) => b.kind === kind);
+    if (filtered.length === 0) {
+      return { length: 0, startDate: null, endDate: null, pl: 0, stakeAvg: 0, blocks };
+    }
+    const best = filtered.reduce((a, b) => (b.length > a.length ? b : a), filtered[0]);
+    // Stake average during best streak
+    const streakBets = betsAsc.filter(
+      (b) => b.data_aposta && b.data_aposta >= best.startDate && b.data_aposta <= best.endDate &&
+        ((kind === "GREEN" && (b.resultado === "GREEN" || b.resultado === "MEIO_GREEN")) ||
+         (kind === "RED" && (b.resultado === "RED" || b.resultado === "MEIO_RED")))
+    );
+    const stakeAvg = streakBets.length > 0 ? streakBets.reduce((a, b) => a + stakeOf(b), 0) / streakBets.length : 0;
+    return { length: best.length, startDate: best.startDate, endDate: best.endDate, pl: best.pl, stakeAvg, blocks };
+  }
+
+  return { reds: pick("RED"), greens: pick("GREEN") };
+}
+
+const STAKE_BUCKETS = [
+  { label: "0–100", min: 0, max: 100 },
+  { label: "100–300", min: 100, max: 300 },
+  { label: "300–500", min: 300, max: 500 },
+  { label: "500–1.000", min: 500, max: 1000 },
+  { label: "1.000–2.000", min: 1000, max: 2000 },
+  { label: "2.000+", min: 2000, max: Infinity },
+];
+
+function computeStakeDistribution(bets: RawBet[]) {
+  const totalBets = bets.length;
+  return STAKE_BUCKETS.map((b) => {
+    const sub = bets.filter((x) => {
+      const s = stakeOf(x);
+      return s >= b.min && s < b.max;
+    });
+    const stake = sub.reduce((a, x) => a + stakeOf(x), 0);
+    const profit = sub.reduce((a, x) => a + profitOf(x), 0);
+    const roi = stake > 0 ? (profit / stake) * 100 : 0;
+    return {
+      label: b.label,
+      n: sub.length,
+      pct: totalBets > 0 ? (sub.length / totalBets) * 100 : 0,
+      stake,
+      profit,
+      roi,
+    };
+  });
+}
+
+function computeWeightedStrike(bets: RawBet[]) {
+  const valid = bets.filter((b) => b.resultado && b.resultado !== "VOID");
+  const denom = valid.reduce((a, b) => a + stakeOf(b), 0);
+  const num = valid.reduce((a, b) => {
+    if (b.resultado === "GREEN") return a + stakeOf(b);
+    if (b.resultado === "MEIO_GREEN") return a + stakeOf(b) * 0.5;
+    return a;
+  }, 0);
+  return denom > 0 ? (num / denom) * 100 : 0;
+}
+
+function computeBookmakerPerformance(bets: RawBet[]) {
+  const map = new Map<string, RawBet[]>();
+  bets.forEach((b) => {
+    const k = b.bookmaker_id ?? "—";
+    if (!map.has(k)) map.set(k, []);
+    map.get(k)!.push(b);
+  });
+  const rows = Array.from(map.entries()).map(([casa, arr]) => {
+    const m = calcMetrics(arr);
+    return {
+      casa,
+      n: m.total,
+      stake: m.stake,
+      profit: m.profit,
+      roi: m.roi,
+      winRate: m.winRate,
+    };
+  });
+  rows.sort((a, b) => b.roi - a.roi);
+  return rows;
+}
+
 type SortKey =
   | "data"
   | "evento"
@@ -130,6 +310,48 @@ export function MarketDrillDownModal({
   }, [bets, marketName]);
 
   const kpis = useMemo(() => calcMetrics(marketBets), [marketBets]);
+
+  // === RISK METRICS (computed once per marketBets) ===
+  const marketBetsAsc = useMemo(() => sortByDateAsc(marketBets), [marketBets]);
+
+  const drawdown = useMemo(() => computeDrawdown(marketBetsAsc), [marketBetsAsc]);
+  const streaks = useMemo(() => computeStreaks(marketBetsAsc), [marketBetsAsc]);
+  const stakeDistribution = useMemo(() => computeStakeDistribution(marketBets), [marketBets]);
+  const weightedStrike = useMemo(() => computeWeightedStrike(marketBets), [marketBets]);
+  const bookmakerPerf = useMemo(() => computeBookmakerPerformance(marketBets), [marketBets]);
+
+  const ddDuration = drawdown.peakDate && drawdown.valleyDate ? daysBetween(drawdown.peakDate, drawdown.valleyDate) : 0;
+  const ddPctOfStake = kpis.stake > 0 ? Math.min(100, (drawdown.maxDrawdown / kpis.stake) * 100) : 0;
+
+  const stakeDistBest = useMemo(() => {
+    const eligible = stakeDistribution.filter((s) => s.n > 0);
+    if (eligible.length === 0) return null;
+    const principal = eligible.reduce((a, b) => (b.n > a.n ? b : a), eligible[0]);
+    const bestRoi = eligible.reduce((a, b) => (b.roi > a.roi ? b : a), eligible[0]);
+    return { principalLabel: principal.label, bestRoiLabel: bestRoi.label };
+  }, [stakeDistribution]);
+
+  const bookmakerStats = useMemo(() => {
+    const eligible = bookmakerPerf.filter((r) => r.n >= 10);
+    const avgRoi = eligible.length > 0 ? eligible.reduce((a, b) => a + b.roi, 0) / eligible.length : 0;
+    return {
+      bestLabel: eligible.length > 0 ? eligible[0].casa : null,
+      worstLabel: eligible.length > 0 ? eligible[eligible.length - 1].casa : null,
+      avgRoi,
+    };
+  }, [bookmakerPerf]);
+
+  // Drawdown per odd range (for the table column)
+  const drawdownByRange = useMemo(() => {
+    const map = new Map<string, number>();
+    ODD_RANGES.forEach((r) => {
+      const sub = marketBets.filter((b) => b.odd !== null && b.odd !== undefined && b.odd >= r.min && b.odd <= r.max);
+      map.set(r.label, computeDrawdown(sortByDateAsc(sub)).maxDrawdown);
+    });
+    const naSub = marketBets.filter((b) => b.odd === null || b.odd === undefined);
+    if (naSub.length > 0) map.set("N/A", computeDrawdown(sortByDateAsc(naSub)).maxDrawdown);
+    return map;
+  }, [marketBets]);
 
   const oddRangeRows = useMemo(() => {
     const rows = ODD_RANGES.map((r) => {
@@ -374,6 +596,7 @@ export function MarketDrillDownModal({
           <div className="px-6 pt-3 shrink-0">
             <TabsList accentColor="bg-foreground">
               <TabsTrigger value="analise">Análise</TabsTrigger>
+              <TabsTrigger value="risco">Risco</TabsTrigger>
               <TabsTrigger value="apostas">Apostas ({marketBets.length})</TabsTrigger>
             </TabsList>
           </div>
@@ -385,15 +608,35 @@ export function MarketDrillDownModal({
             forceMount
           >
             {/* KPIs */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
               <Kpi label="Apostas" value={kpis.total.toString()} />
               <Kpi label="Stake" value={fmtMoney(kpis.stake)} />
               <Kpi label="Lucro" value={fmtMoney(kpis.profit)} tone={kpis.profit >= 0 ? "pos" : "neg"} />
               <Kpi label="ROI" value={fmtPctSigned(kpis.roi)} tone={kpis.roi >= 0 ? "pos" : "neg"} />
               <Kpi label="Win Rate" value={fmtPct(kpis.winRate)} />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               <Kpi label="Greens" value={kpis.greens.toString()} tone="pos" />
               <Kpi label="Reds" value={kpis.reds.toString()} tone="neg" />
               <Kpi label="Voids" value={kpis.voids.toString()} tone="muted" />
+              <Kpi
+                label="Drawdown Máx."
+                value={fmtMoney(drawdown.maxDrawdown)}
+                tone="neg"
+                sub={drawdown.peakDate && drawdown.valleyDate ? `pico ${fmtDM(drawdown.peakDate)} · vale ${fmtDM(drawdown.valleyDate)}` : "—"}
+                title="Maior queda do pico ao vale no período"
+              />
+              <Kpi
+                label="Maior Seq. Reds"
+                value={`${streaks.reds.length} reds`}
+                tone="neg"
+                sub={
+                  streaks.reds.length > 0
+                    ? `${fmtDM(streaks.reds.startDate)} → ${fmtDM(streaks.reds.endDate)} · ${fmtMoney(streaks.reds.pl)}`
+                    : "—"
+                }
+                title="Maior sequência consecutiva de reds (void não quebra)"
+              />
             </div>
 
             <div className="flex items-start gap-2 text-[11px] text-muted-foreground bg-muted/20 border border-border/30 rounded px-3 py-2">
@@ -417,18 +660,20 @@ export function MarketDrillDownModal({
                         <Th align="right">Stake</Th>
                         <Th align="right">Lucro</Th>
                         <Th align="right">ROI</Th>
+                      <Th align="right">Drawdown</Th>
                       </tr>
                     </thead>
                     <tbody>
                       {oddRangeRows.length === 0 && (
                         <tr>
-                          <td colSpan={5} className="text-center py-6 text-muted-foreground">Sem dados.</td>
+                          <td colSpan={6} className="text-center py-6 text-muted-foreground">Sem dados.</td>
                         </tr>
                       )}
                       {oddRangeRows.map((r) => {
                         const isBest = bestOddRange?.range === r.range;
                         const isActive = faixaSelecionada === r.range;
                         const dim = faixaSelecionada !== null && !isActive;
+                      const dd = drawdownByRange.get(r.range) ?? 0;
                         return (
                           <tr
                             key={r.range}
@@ -457,6 +702,12 @@ export function MarketDrillDownModal({
                             <td className={cn("px-3 py-2 text-right tabular-nums font-semibold", r.roi >= 0 ? "text-emerald-400" : "text-red-400")}>
                               {fmtPctSigned(r.roi)}
                             </td>
+                          <td
+                            className={cn("px-3 py-2 text-right tabular-nums", dd > 0 ? "text-red-400 font-semibold" : "text-muted-foreground")}
+                            title="Maior queda do pico ao vale para apostas desta faixa"
+                          >
+                            {dd > 0 ? fmtMoney(dd) : "—"}
+                          </td>
                           </tr>
                         );
                       })}
@@ -604,6 +855,245 @@ export function MarketDrillDownModal({
             </Section>
           </TabsContent>
 
+          {/* === ABA RISCO === */}
+          <TabsContent
+            value="risco"
+            className="flex-1 min-h-0 overflow-y-auto mt-0 px-6 py-5 space-y-6 data-[state=inactive]:hidden"
+            forceMount
+          >
+            {marketBets.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Sem dados.</p>
+            ) : (
+              <>
+                {/* SEÇÃO 1 — DRAWDOWN DETALHADO */}
+                <Section title="Drawdown detalhado">
+                  <div className="border border-border/40 rounded-lg p-4 bg-card/40 space-y-3">
+                    <div className="flex items-baseline justify-between flex-wrap gap-3">
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Drawdown máximo do período</p>
+                        <p className="text-2xl font-black tabular-nums text-red-500 mt-1">{fmtMoney(drawdown.maxDrawdown)}</p>
+                      </div>
+                      <div className="flex items-center gap-5 text-[11px]">
+                        <div>
+                          <p className="uppercase tracking-widest text-muted-foreground text-[9px] font-bold">Pico</p>
+                          <p className="tabular-nums font-semibold">{fmtDM(drawdown.peakDate)}</p>
+                        </div>
+                        <div>
+                          <p className="uppercase tracking-widest text-muted-foreground text-[9px] font-bold">Vale</p>
+                          <p className="tabular-nums font-semibold">{fmtDM(drawdown.valleyDate)}</p>
+                        </div>
+                        <div>
+                          <p className="uppercase tracking-widest text-muted-foreground text-[9px] font-bold">Duração</p>
+                          <p className="tabular-nums font-semibold">{ddDuration}d</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="w-full h-1.5 bg-white/[0.05] rounded-full overflow-hidden">
+                        <div className="h-full bg-red-500/70" style={{ width: `${ddPctOfStake}%` }} />
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">{fmtPct(ddPctOfStake)} do volume total apostado</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Profundidade do drawdown</p>
+                    <div className="w-full h-[180px] relative">
+                      <DrawdownChart data={drawdown.series} />
+                    </div>
+                  </div>
+                </Section>
+
+                {/* SEÇÃO 2 — ANÁLISE DE SEQUÊNCIAS */}
+                <Section title="Análise de sequências">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <StreakCard
+                      title="Maior sequência de reds"
+                      length={streaks.reds.length}
+                      labelKind="reds consecutivos"
+                      startDate={streaks.reds.startDate}
+                      endDate={streaks.reds.endDate}
+                      pl={streaks.reds.pl}
+                      stakeAvg={streaks.reds.stakeAvg}
+                      tone="neg"
+                    />
+                    <StreakCard
+                      title="Maior sequência de greens"
+                      length={streaks.greens.length}
+                      labelKind="greens consecutivos"
+                      startDate={streaks.greens.startDate}
+                      endDate={streaks.greens.endDate}
+                      pl={streaks.greens.pl}
+                      stakeAvg={streaks.greens.stakeAvg}
+                      tone="pos"
+                    />
+                  </div>
+
+                  {streaks.reds.blocks.length > 0 && (
+                    <div className="mt-4">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                        Blocos cronológicos de sequências
+                      </p>
+                      <div className="w-full h-[160px] relative">
+                        <SequenceBarsChart data={streaks.reds.blocks} />
+                      </div>
+                    </div>
+                  )}
+                </Section>
+
+                {/* SEÇÃO 3 — DISTRIBUIÇÃO DE STAKE */}
+                <Section title="Consistência de stake">
+                  <p className="text-[12px] text-muted-foreground italic">
+                    Stake média isolada pode ser enganosa em operações com apostas de valores variados. A distribuição abaixo mostra onde está concentrado o volume real da operação.
+                  </p>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-3">
+                    <div className="border border-border/40 rounded-lg overflow-hidden">
+                      <table className="w-full text-xs">
+                        <thead className="bg-muted/30">
+                          <tr className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                            <Th>Faixa</Th>
+                            <Th align="right">Apostas</Th>
+                            <Th align="right">%</Th>
+                            <Th align="right">Stake</Th>
+                            <Th align="right">Lucro</Th>
+                            <Th align="right">ROI</Th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {stakeDistribution.map((row) => {
+                            const isPrincipal = stakeDistBest?.principalLabel === row.label && row.n > 0;
+                            const isBestRoi = stakeDistBest?.bestRoiLabel === row.label && row.n > 0;
+                            return (
+                              <tr key={row.label} className="border-t border-border/30">
+                                <td className="px-3 py-2 font-bold">
+                                  <span className="inline-flex items-center gap-1.5">
+                                    {row.label}
+                                    {isPrincipal && (
+                                      <span className="text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-300 font-bold">principal</span>
+                                    )}
+                                    {isBestRoi && (
+                                      <span className="text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-bold">melhor ROI</span>
+                                    )}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2 text-right tabular-nums">{row.n}</td>
+                                <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{fmtPct(row.pct)}</td>
+                                <td className="px-3 py-2 text-right tabular-nums">{fmtMoney(row.stake)}</td>
+                                <td className={cn("px-3 py-2 text-right tabular-nums font-semibold", row.profit >= 0 ? "text-emerald-400" : "text-red-400")}>
+                                  {row.n > 0 ? fmtMoney(row.profit) : "—"}
+                                </td>
+                                <td className={cn("px-3 py-2 text-right tabular-nums font-semibold", row.roi >= 0 ? "text-emerald-400" : "text-red-400")}>
+                                  {row.n > 0 ? fmtPctSigned(row.roi) : "—"}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="w-full h-[200px] relative">
+                      <StakeDistributionChart data={stakeDistribution} />
+                    </div>
+                  </div>
+                </Section>
+
+                {/* SEÇÃO 4 — STRIKE RATE PONDERADO */}
+                <Section title="Strike rate ponderado por stake">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="border border-border/40 rounded-lg p-4 bg-card/40">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Win Rate Simples</p>
+                      <p className="text-2xl font-black tabular-nums mt-1">{fmtPct(kpis.winRate)}</p>
+                      <p className="text-[10px] text-muted-foreground/80 mt-1">(1 aposta = 1 voto)</p>
+                    </div>
+                    <div className="border border-border/40 rounded-lg p-4 bg-card/40">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Strike Rate Ponderado</p>
+                      <p className="text-2xl font-black tabular-nums mt-1">{fmtPct(weightedStrike)}</p>
+                      <p className="text-[10px] text-muted-foreground/80 mt-1">(R$ 1 = 1 voto)</p>
+                    </div>
+                  </div>
+                  {(() => {
+                    const diff = weightedStrike - kpis.winRate;
+                    if (diff > 2) {
+                      return (
+                        <p className="text-xs text-emerald-400 mt-3">
+                          Você acerta proporcionalmente mais nas apostas de maior valor. Sinal positivo de calibração de stake.
+                        </p>
+                      );
+                    }
+                    if (diff < -2) {
+                      return (
+                        <p className="text-xs text-orange-400 mt-3">
+                          Você acerta proporcionalmente menos nas apostas de maior valor. Considere revisar os critérios de sizing.
+                        </p>
+                      );
+                    }
+                    return (
+                      <p className="text-xs text-muted-foreground mt-3">
+                        Assertividade consistente independente do valor apostado.
+                      </p>
+                    );
+                  })()}
+                </Section>
+
+                {/* SEÇÃO 5 — PERFORMANCE POR BOOKMAKER */}
+                <Section title="Performance por bookmaker">
+                  {bookmakerPerf.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Sem dados.</p>
+                  ) : (
+                    <div className="border border-border/40 rounded-lg overflow-hidden">
+                      <table className="w-full text-xs">
+                        <thead className="bg-muted/30">
+                          <tr className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                            <Th>Casa</Th>
+                            <Th align="right">Apostas</Th>
+                            <Th align="right">Stake</Th>
+                            <Th align="right">Lucro</Th>
+                            <Th align="right">ROI</Th>
+                            <Th align="right">Win Rate</Th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {bookmakerPerf.map((row) => {
+                            const isBest = bookmakerStats.bestLabel === row.casa && row.n >= 10;
+                            const isWorst = bookmakerStats.worstLabel === row.casa && row.n >= 10 && bookmakerStats.bestLabel !== row.casa;
+                            const farBelow = row.n >= 10 && bookmakerStats.avgRoi - row.roi > 5;
+                            return (
+                              <tr
+                                key={row.casa}
+                                className={cn("border-t border-border/30", farBelow && "bg-red-500/[0.06]")}
+                              >
+                                <td className="px-3 py-2 font-semibold">
+                                  <span className="inline-flex items-center gap-1.5">
+                                    <span className="truncate max-w-[200px]" title={row.casa}>{row.casa}</span>
+                                    {isBest && (
+                                      <span className="text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-bold">melhor</span>
+                                    )}
+                                    {isWorst && (
+                                      <span className="text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-300 font-bold">atenção</span>
+                                    )}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2 text-right tabular-nums">{row.n}</td>
+                                <td className="px-3 py-2 text-right tabular-nums">{fmtMoney(row.stake)}</td>
+                                <td className={cn("px-3 py-2 text-right tabular-nums font-semibold", row.profit >= 0 ? "text-emerald-400" : "text-red-400")}>
+                                  {fmtMoney(row.profit)}
+                                </td>
+                                <td className={cn("px-3 py-2 text-right tabular-nums font-semibold", row.roi >= 0 ? "text-emerald-400" : "text-red-400")}>
+                                  {fmtPctSigned(row.roi)}
+                                </td>
+                                <td className="px-3 py-2 text-right tabular-nums">{fmtPct(row.winRate)}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </Section>
+              </>
+            )}
+          </TabsContent>
+
           {/* === ABA APOSTAS === */}
           <TabsContent
             value="apostas"
@@ -719,13 +1209,17 @@ function Kpi({
   label,
   value,
   tone,
+  sub,
+  title,
 }: {
   label: string;
   value: string;
   tone?: "pos" | "neg" | "muted";
+  sub?: string;
+  title?: string;
 }) {
   return (
-    <div className="border border-border/40 rounded-lg px-3 py-2 bg-card/40">
+    <div className="border border-border/40 rounded-lg px-3 py-2 bg-card/40" title={title}>
       <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold">{label}</p>
       <p
         className={cn(
@@ -737,6 +1231,11 @@ function Kpi({
       >
         {value}
       </p>
+      {sub && (
+        <p className="text-[9px] text-muted-foreground/80 mt-0.5 leading-tight truncate" title={sub}>
+          {sub}
+        </p>
+      )}
     </div>
   );
 }
@@ -1022,6 +1521,291 @@ function RoiVolumeTooltip({ active, payload, label }: any) {
         <span className="font-semibold tabular-nums" style={{ color: "#e5e7eb", fontSize: 13 }}>{fmtMoney(stake)}</span>
       </div>
     </div>
+  );
+}
+
+/* ============================================================
+ *  RISK-TAB CHART PRIMITIVES
+ * ========================================================== */
+
+function StreakCard({
+  title,
+  length,
+  labelKind,
+  startDate,
+  endDate,
+  pl,
+  stakeAvg,
+  tone,
+}: {
+  title: string;
+  length: number;
+  labelKind: string;
+  startDate: string | null;
+  endDate: string | null;
+  pl: number;
+  stakeAvg: number;
+  tone: "pos" | "neg";
+}) {
+  const accent = tone === "pos" ? "text-emerald-400" : "text-red-500";
+  return (
+    <div className="border border-border/40 rounded-lg p-4 bg-card/40">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{title}</p>
+      <p className={cn("text-3xl font-black tabular-nums mt-1", accent)}>{length}</p>
+      <p className="text-[11px] text-muted-foreground mt-0.5">{labelKind}</p>
+      <div className="mt-3 flex flex-col gap-1 text-[11px]">
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">Período</span>
+          <span className="tabular-nums">
+            {length > 0 ? `${fmtDM(startDate)} → ${fmtDM(endDate)}` : "—"}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">{tone === "pos" ? "Lucro" : "Prejuízo"}</span>
+          <span className={cn("tabular-nums font-bold", accent)}>{length > 0 ? fmtMoney(pl) : "—"}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">Stake médio</span>
+          <span className="tabular-nums">{length > 0 ? fmtMoney(stakeAvg) : "—"}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* --- Drawdown depth area chart --- */
+function DrawdownTooltip({ active, payload }: any) {
+  if (!active || !payload || payload.length === 0) return null;
+  const row = payload[0].payload as { dateLabel: string; drawdown: number; cumulative: number };
+  return (
+    <div
+      className="pointer-events-none animate-in fade-in-0 duration-[120ms]"
+      style={{
+        background: "#1a1e2a",
+        border: "1px solid rgba(255,255,255,0.1)",
+        borderRadius: 8,
+        padding: "10px 14px",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+        minWidth: 200,
+      }}
+    >
+      <div className="text-[10px] uppercase tracking-widest font-semibold mb-1.5" style={{ color: "rgba(255,255,255,0.5)" }}>
+        {row.dateLabel}
+      </div>
+      <div className="flex items-baseline justify-between gap-4">
+        <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.5)" }}>Drawdown</span>
+        <span className="font-bold tabular-nums" style={{ color: "#ef4444", fontSize: 14 }}>{fmtMoney(Math.abs(row.drawdown))}</span>
+      </div>
+      <div className="flex items-baseline justify-between gap-4 mt-1">
+        <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.5)" }}>Acumulado</span>
+        <span className="font-semibold tabular-nums" style={{ color: row.cumulative >= 0 ? "#22c55e" : "#ef4444", fontSize: 13 }}>{fmtMoney(row.cumulative)}</span>
+      </div>
+    </div>
+  );
+}
+
+function DrawdownChart({ data }: { data: Array<{ idx: number; date: string; dateLabel: string; cumulative: number; drawdown: number }> }) {
+  const step = Math.max(1, Math.ceil(data.length / 12));
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <AreaChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 6 }}>
+        <defs>
+          <linearGradient id="ddFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#ef4444" stopOpacity={0.25} />
+            <stop offset="100%" stopColor="#ef4444" stopOpacity={0.05} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+        <XAxis
+          dataKey="dateLabel"
+          tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }}
+          axisLine={false}
+          tickLine={false}
+          interval={step - 1}
+          minTickGap={20}
+        />
+        <YAxis
+          tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }}
+          axisLine={false}
+          tickLine={false}
+          width={55}
+          tickFormatter={(v) => {
+            const n = Number(v);
+            if (Math.abs(n) >= 1000) return `R$${(n / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}k`;
+            return `R$${n.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
+          }}
+        />
+        <ReferenceLine y={0} stroke="rgba(255,255,255,0.15)" strokeDasharray="4 4" />
+        <Tooltip
+          cursor={{ stroke: "rgba(255,255,255,0.2)", strokeWidth: 1 }}
+          wrapperStyle={{ outline: "none", zIndex: 60 }}
+          content={<DrawdownTooltip />}
+          animationDuration={120}
+        />
+        <Area
+          type="monotone"
+          dataKey="drawdown"
+          stroke="#ef4444"
+          strokeWidth={1.5}
+          fill="url(#ddFill)"
+          dot={false}
+          activeDot={{ r: 4, stroke: "#fff", strokeWidth: 2, fill: "#ef4444" }}
+          isAnimationActive
+          animationDuration={400}
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}
+
+/* --- Sequence blocks bar chart --- */
+function SequenceTooltip({ active, payload }: any) {
+  if (!active || !payload || payload.length === 0) return null;
+  const row = payload[0].payload as { kind: "GREEN" | "RED"; length: number; pl: number; startDate: string; endDate: string };
+  const c = row.kind === "GREEN" ? "#22c55e" : "#ef4444";
+  return (
+    <div
+      className="pointer-events-none animate-in fade-in-0 duration-[120ms]"
+      style={{
+        background: "#1a1e2a",
+        border: "1px solid rgba(255,255,255,0.1)",
+        borderRadius: 8,
+        padding: "10px 14px",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+        minWidth: 200,
+      }}
+    >
+      <div className="text-[10px] uppercase tracking-widest font-semibold mb-1.5" style={{ color: "rgba(255,255,255,0.5)" }}>
+        Sequência
+      </div>
+      <div className="flex items-baseline justify-between gap-4">
+        <span className="text-[11px]" style={{ color: "#e5e7eb" }}>
+          {row.length} {row.kind === "GREEN" ? "greens" : "reds"} consecutivos
+        </span>
+      </div>
+      <div className="text-[10px] mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>
+        {fmtDM(row.startDate)} → {fmtDM(row.endDate)}
+      </div>
+      <div className="flex items-baseline justify-between gap-4 mt-1.5">
+        <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.5)" }}>
+          {row.kind === "GREEN" ? "Lucro" : "Prejuízo"}
+        </span>
+        <span className="font-bold tabular-nums" style={{ color: c, fontSize: 13 }}>{fmtMoney(row.pl)}</span>
+      </div>
+    </div>
+  );
+}
+
+function SequenceBarsChart({ data }: { data: Array<{ idx: number; kind: "GREEN" | "RED"; length: number; pl: number; startDate: string; endDate: string }> }) {
+  const chartData = data.map((d) => ({
+    ...d,
+    name: String(d.idx + 1),
+    value: d.kind === "GREEN" ? d.length : -d.length,
+  }));
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 6 }} barCategoryGap="20%">
+        <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+        <XAxis
+          dataKey="name"
+          tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }}
+          axisLine={false}
+          tickLine={false}
+          interval="preserveStartEnd"
+        />
+        <YAxis
+          tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }}
+          axisLine={false}
+          tickLine={false}
+          width={32}
+        />
+        <ReferenceLine y={0} stroke="rgba(255,255,255,0.2)" />
+        <Tooltip
+          cursor={{ fill: "rgba(255,255,255,0.04)" }}
+          wrapperStyle={{ outline: "none", zIndex: 60 }}
+          content={<SequenceTooltip />}
+          animationDuration={120}
+        />
+        <Bar dataKey="value" radius={[3, 3, 3, 3]} isAnimationActive animationDuration={400}>
+          {chartData.map((d, i) => (
+            <Cell key={i} fill={d.kind === "GREEN" ? "#22c55e" : "#ef4444"} />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+/* --- Stake distribution horizontal bars --- */
+function StakeDistTooltip({ active, payload }: any) {
+  if (!active || !payload || payload.length === 0) return null;
+  const row = payload[0].payload as { label: string; n: number; stake: number; profit: number; roi: number };
+  const profitColor = row.profit >= 0 ? "#22c55e" : "#ef4444";
+  return (
+    <div
+      className="pointer-events-none animate-in fade-in-0 duration-[120ms]"
+      style={{
+        background: "#1a1e2a",
+        border: "1px solid rgba(255,255,255,0.1)",
+        borderRadius: 8,
+        padding: "10px 14px",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+        minWidth: 180,
+      }}
+    >
+      <div className="text-[10px] uppercase tracking-widest font-semibold mb-1.5" style={{ color: "rgba(255,255,255,0.5)" }}>
+        {row.label}
+      </div>
+      <div className="flex items-baseline justify-between gap-4">
+        <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.5)" }}>Apostas</span>
+        <span className="font-semibold tabular-nums" style={{ color: "#e5e7eb", fontSize: 13 }}>{row.n}</span>
+      </div>
+      <div className="flex items-baseline justify-between gap-4 mt-1">
+        <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.5)" }}>Lucro</span>
+        <span className="font-bold tabular-nums" style={{ color: profitColor, fontSize: 13 }}>{fmtMoney(row.profit)}</span>
+      </div>
+      <div className="flex items-baseline justify-between gap-4 mt-1">
+        <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.5)" }}>ROI</span>
+        <span className="font-bold tabular-nums" style={{ color: profitColor, fontSize: 13 }}>{fmtPctSigned(row.roi)}</span>
+      </div>
+    </div>
+  );
+}
+
+function StakeDistributionChart({ data }: { data: Array<{ label: string; n: number; stake: number; profit: number; roi: number; pct: number }> }) {
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart
+        data={data}
+        layout="vertical"
+        margin={{ top: 8, right: 56, left: 8, bottom: 6 }}
+        barGap={2}
+        barCategoryGap="22%"
+      >
+        <CartesianGrid stroke="rgba(255,255,255,0.06)" horizontal={false} />
+        <XAxis
+          type="number"
+          tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }}
+          axisLine={false}
+          tickLine={false}
+        />
+        <YAxis
+          type="category"
+          dataKey="label"
+          tick={{ fontSize: 10, fill: "rgba(255,255,255,0.6)" }}
+          axisLine={false}
+          tickLine={false}
+          width={84}
+        />
+        <Tooltip
+          cursor={{ fill: "rgba(255,255,255,0.04)" }}
+          wrapperStyle={{ outline: "none", zIndex: 60 }}
+          content={<StakeDistTooltip />}
+          animationDuration={120}
+        />
+        <Bar dataKey="n" fill="rgba(59,130,246,0.6)" radius={[3, 3, 3, 3]} isAnimationActive animationDuration={400} />
+      </BarChart>
+    </ResponsiveContainer>
   );
 }
 
