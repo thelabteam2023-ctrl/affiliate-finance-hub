@@ -2490,3 +2490,275 @@ function ResultDistribution({ bets }: { bets: RawBet[] }) {
     </div>
   );
 }
+
+/* ============================================================
+ *  CALIBRAÇÃO DE STAKE — comparador Win Rate vs Strike Rate
+ * ========================================================== */
+
+function CalibracaoStakeSection({
+  kpis,
+  weightedStrike,
+  buckets,
+}: {
+  kpis: { total: number; validas: number; stake: number; winRate: number; greens: number; meioGreens: number };
+  weightedStrike: { pct: number; winningStake: number; totalStake: number };
+  buckets: CalibrationBucket[];
+}) {
+  const winRate = kpis.winRate;
+  const strikeRate = weightedStrike.pct;
+  const delta = strikeRate - winRate;
+  const vencedoras = kpis.greens + kpis.meioGreens;
+
+  // Display buckets: only those with n>=5
+  const displayBuckets = buckets.filter((b) => b.n >= 5);
+  const chartData = displayBuckets.map((b) => ({ ...b }));
+
+  // Color helper vs general win rate
+  const colorFor = (wr: number) => {
+    if (wr - winRate > 2) return "#22c55e";
+    if (winRate - wr > 2) return "#ef4444";
+    return "#6b7280";
+  };
+
+  // Interpretation logic (n>=10)
+  const interpBuckets = buckets.filter((b) => b.n >= 10);
+  let bestRoi: CalibrationBucket | null = null;
+  let worstRoi: CalibrationBucket | null = null;
+  let mostFrequent: CalibrationBucket | null = null;
+  interpBuckets.forEach((b) => {
+    if (!bestRoi || b.roi > bestRoi.roi) bestRoi = b;
+    if (!worstRoi || b.roi < worstRoi.roi) worstRoi = b;
+    if (!mostFrequent || b.n > mostFrequent.n) mostFrequent = b;
+  });
+
+  const allWithin2pp = interpBuckets.length >= 2 && (() => {
+    const rois = interpBuckets.map((b) => b.roi);
+    return Math.max(...rois) - Math.min(...rois) <= 2;
+  })();
+
+  let interpretation: string | null = null;
+  if (delta < -3) {
+    interpretation = `Você acerta proporcionalmente menos nas apostas de maior valor (Strike Rate ${fmtPct(strikeRate)} vs Win Rate ${fmtPct(winRate)}). Considere revisar os critérios que definem quando aumentar o stake.`;
+  } else if (worstRoi && mostFrequent && worstRoi.label === mostFrequent.label) {
+    interpretation = `A faixa com mais apostas (${mostFrequent.label}) também é a de pior ROI (${fmtPctSigned(worstRoi.roi)}). Isso pode estar puxando o resultado geral para baixo.`;
+  } else if (bestRoi && mostFrequent && bestRoi.roi > 0 && bestRoi.label !== mostFrequent.label) {
+    interpretation = `Sua melhor performance está na faixa ${bestRoi.label} (${fmtPctSigned(bestRoi.roi)}), mas a maioria das suas apostas está na faixa ${mostFrequent.label}. Concentrar mais volume na faixa de melhor desempenho pode melhorar o resultado geral.`;
+  } else if (allWithin2pp) {
+    interpretation = "Sua performance é consistente independente do valor apostado. Boa calibração de stake.";
+  }
+
+  return (
+    <section className="space-y-3">
+      <div className="border-b border-border/30 pb-2">
+        <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+          Calibração de stake
+        </h3>
+        <p className="text-[12px] text-muted-foreground italic mt-0.5">
+          Você está apostando mais nos jogos que acerta ou nos que erra?
+        </p>
+      </div>
+
+      {/* Comparador visual */}
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-3 items-stretch">
+        {/* WIN RATE */}
+        <div className="border border-border/40 rounded-lg p-4 bg-card/40 flex flex-col">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Win Rate Simples</p>
+          <p className="text-3xl font-black tabular-nums mt-2">{fmtPct(winRate)}</p>
+          <p className="text-[11px] text-foreground/80 mt-1 font-semibold">"1 aposta = 1 voto"</p>
+          <p className="text-[11px] text-muted-foreground/80">independe do valor</p>
+          <p className="text-[11px] text-muted-foreground mt-2">
+            Das {kpis.validas.toLocaleString("pt-BR")} apostas, {vencedoras.toLocaleString("pt-BR")} foram vencedoras
+          </p>
+        </div>
+
+        {/* DELTA central */}
+        <div className="flex md:flex-col items-center justify-center gap-2 md:gap-1 md:px-2">
+          {delta > 2 ? (
+            <>
+              <ArrowUp className="w-7 h-7 text-emerald-500" strokeWidth={2.5} />
+              <span className="text-base font-black tabular-nums text-emerald-500">+{delta.toFixed(2)}pp</span>
+              <span className="text-[10px] text-center text-muted-foreground max-w-[140px] leading-tight">
+                Você acerta MAIS nas apostas grandes
+              </span>
+            </>
+          ) : delta < -2 ? (
+            <>
+              <ArrowDown className="w-7 h-7 text-red-500" strokeWidth={2.5} />
+              <span className="text-base font-black tabular-nums text-red-500">{delta.toFixed(2)}pp</span>
+              <span className="text-[10px] text-center text-muted-foreground max-w-[140px] leading-tight">
+                Você acerta MENOS nas apostas grandes
+              </span>
+            </>
+          ) : (
+            <>
+              <Equal className="w-7 h-7 text-muted-foreground" strokeWidth={2.5} />
+              <span className="text-base font-black tabular-nums text-muted-foreground">≈ neutro</span>
+              <span className="text-[10px] text-center text-muted-foreground max-w-[140px] leading-tight">
+                Assertividade consistente
+              </span>
+            </>
+          )}
+        </div>
+
+        {/* STRIKE RATE */}
+        <div className="border border-border/40 rounded-lg p-4 bg-card/40 flex flex-col">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Strike Rate Ponderado</p>
+          <p className="text-3xl font-black tabular-nums mt-2">{fmtPct(strikeRate)}</p>
+          <p className="text-[11px] text-foreground/80 mt-1 font-semibold">"R$ 1 = 1 voto"</p>
+          <p className="text-[11px] text-muted-foreground/80">pesa pelo stake</p>
+          <p className="text-[11px] text-muted-foreground mt-2">
+            Do total apostado ({fmtMoney(weightedStrike.totalStake)}), {fmtMoney(weightedStrike.winningStake)} estava em apostas vencedoras
+          </p>
+        </div>
+      </div>
+
+      {/* Gráfico — taxa de acerto por faixa de stake */}
+      <div className="pt-3">
+        <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">
+          Taxa de acerto por faixa de stake
+        </p>
+        <p className="text-[11px] text-muted-foreground italic mt-0.5">
+          Revela em quais valores de aposta você performa melhor
+        </p>
+        <div className="w-full h-[180px] mt-2 relative">
+          {chartData.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Faixas insuficientes (mín. 5 apostas por faixa).</p>
+          ) : (
+            <CalibrationBarsChart data={chartData} winRateGeral={winRate} colorFor={colorFor} />
+          )}
+        </div>
+      </div>
+
+      {/* Interpretação */}
+      {interpretation && (
+        <div
+          className="flex items-start gap-2 rounded-lg border border-border/40 px-3 py-2.5"
+          style={{ background: "rgba(255,255,255,0.03)" }}
+        >
+          <Lightbulb className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <p className="text-[12px] text-foreground/90 leading-relaxed">{interpretation}</p>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function CalibrationTooltip({ active, payload, winRateGeral }: any) {
+  if (!active || !payload || payload.length === 0) return null;
+  const row = payload[0].payload as CalibrationBucket;
+  const wrColor = row.winRate - winRateGeral > 2 ? "#22c55e" : winRateGeral - row.winRate > 2 ? "#ef4444" : "#9ca3af";
+  return (
+    <div
+      className="pointer-events-none animate-in fade-in-0 duration-[120ms]"
+      style={{
+        background: "#1a1e2a",
+        border: "1px solid rgba(255,255,255,0.1)",
+        borderRadius: 8,
+        padding: "10px 14px",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+        minWidth: 220,
+      }}
+    >
+      <div className="text-[11px] font-bold mb-1.5" style={{ color: "#e5e7eb" }}>
+        Faixa {row.label}
+      </div>
+      <div className="flex items-baseline justify-between gap-4">
+        <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.5)" }}>Win Rate</span>
+        <span className="font-bold tabular-nums" style={{ color: wrColor, fontSize: 13 }}>{fmtPct(row.winRate)}</span>
+      </div>
+      <div className="flex items-baseline justify-between gap-4 mt-1">
+        <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.5)" }}>ROI</span>
+        <span className="font-bold tabular-nums" style={{ color: row.roi >= 0 ? "#22c55e" : "#ef4444", fontSize: 13 }}>{fmtPctSigned(row.roi)}</span>
+      </div>
+      <div className="flex items-baseline justify-between gap-4 mt-1">
+        <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.5)" }}>Apostas</span>
+        <span className="font-semibold tabular-nums" style={{ color: "#e5e7eb", fontSize: 13 }}>{row.n}</span>
+      </div>
+      <div className="flex items-baseline justify-between gap-4 mt-1">
+        <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.5)" }}>Stake total</span>
+        <span className="font-semibold tabular-nums" style={{ color: "#e5e7eb", fontSize: 13 }}>{fmtMoney(row.stake)}</span>
+      </div>
+    </div>
+  );
+}
+
+function CalibrationBarsChart({
+  data,
+  winRateGeral,
+  colorFor,
+}: {
+  data: CalibrationBucket[];
+  winRateGeral: number;
+  colorFor: (wr: number) => string;
+}) {
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart
+        data={data}
+        layout="vertical"
+        margin={{ top: 4, right: 160, left: 0, bottom: 4 }}
+      >
+        <CartesianGrid stroke="rgba(255,255,255,0.06)" horizontal={false} />
+        <XAxis
+          type="number"
+          domain={[0, (max: number) => Math.max(100, Math.ceil((max + 5) / 10) * 10)]}
+          tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }}
+          axisLine={false}
+          tickLine={false}
+          tickFormatter={(v) => `${v}%`}
+        />
+        <YAxis
+          type="category"
+          dataKey="label"
+          tick={{ fontSize: 11, fill: "rgba(255,255,255,0.75)" }}
+          axisLine={false}
+          tickLine={false}
+          width={90}
+        />
+        <ReferenceLine
+          x={winRateGeral}
+          stroke="rgba(255,255,255,0.2)"
+          strokeDasharray="4 4"
+          label={{
+            value: `média ${fmtPct(winRateGeral)}`,
+            position: "top",
+            fill: "rgba(255,255,255,0.45)",
+            fontSize: 10,
+          }}
+        />
+        <Tooltip
+          cursor={{ fill: "rgba(255,255,255,0.04)" }}
+          wrapperStyle={{ outline: "none", zIndex: 60 }}
+          content={<CalibrationTooltip winRateGeral={winRateGeral} />}
+          animationDuration={120}
+        />
+        <Bar dataKey="winRate" radius={[0, 4, 4, 0]} isAnimationActive animationDuration={400}>
+          {data.map((d, i) => (
+            <Cell key={i} fill={colorFor(d.winRate)} />
+          ))}
+          <LabelList
+            dataKey="winRate"
+            position="right"
+            content={(props: any) => {
+              const { x, y, width, height, index } = props;
+              const row = data[index];
+              if (!row) return null;
+              return (
+                <text
+                  x={(x ?? 0) + (width ?? 0) + 6}
+                  y={(y ?? 0) + (height ?? 0) / 2}
+                  fill="rgba(255,255,255,0.7)"
+                  fontSize={10}
+                  dominantBaseline="middle"
+                  className="tabular-nums"
+                >
+                  {`${fmtPct(row.winRate)} · ${row.n} apostas · ROI ${fmtPctSigned(row.roi)}`}
+                </text>
+              );
+            }}
+          />
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
