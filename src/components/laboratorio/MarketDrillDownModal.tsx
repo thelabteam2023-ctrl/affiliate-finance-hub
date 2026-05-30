@@ -280,22 +280,22 @@ export function MarketDrillDownModal({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto">
-          <div className="px-6 py-5 space-y-8">
+        <Tabs defaultValue="analise" className="flex-1 flex flex-col overflow-hidden">
+          <div className="px-6 pt-3 shrink-0">
+            <TabsList accentColor="bg-foreground">
+              <TabsTrigger value="analise">Análise</TabsTrigger>
+              <TabsTrigger value="apostas">Apostas ({marketBets.length})</TabsTrigger>
+            </TabsList>
+          </div>
+
+          {/* === ABA ANÁLISE === */}
+          <TabsContent value="analise" className="flex-1 overflow-y-auto mt-0 px-6 py-5 space-y-8">
             {/* KPIs */}
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
               <Kpi label="Apostas" value={kpis.total.toString()} />
               <Kpi label="Stake" value={fmtMoney(kpis.stake)} />
-              <Kpi
-                label="Lucro"
-                value={fmtMoney(kpis.profit)}
-                tone={kpis.profit >= 0 ? "pos" : "neg"}
-              />
-              <Kpi
-                label="ROI"
-                value={fmtPct(kpis.roi)}
-                tone={kpis.roi >= 0 ? "pos" : "neg"}
-              />
+              <Kpi label="Lucro" value={fmtMoney(kpis.profit)} tone={kpis.profit >= 0 ? "pos" : "neg"} />
+              <Kpi label="ROI" value={fmtPctSigned(kpis.roi)} tone={kpis.roi >= 0 ? "pos" : "neg"} />
               <Kpi label="Win Rate" value={fmtPct(kpis.winRate)} />
               <Kpi label="Greens" value={kpis.greens.toString()} tone="pos" />
               <Kpi label="Reds" value={kpis.reds.toString()} tone="neg" />
@@ -307,167 +307,83 @@ export function MarketDrillDownModal({
               <span>
                 Sub-tipos de {marketName?.toLowerCase()} não disponíveis para apostas deste período. Consulte a coluna
                 <span className="font-semibold text-foreground"> Seleção </span>
-                na tabela para interpretar manualmente.
+                na tabela de apostas para interpretar manualmente.
               </span>
             </div>
 
-            {/* SEÇÃO 1 — Faixas de Odd */}
-            <Section title="Faixas de Odd">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="border border-border/40 rounded-lg overflow-hidden">
+            {/* Faixas de Odd */}
+            <Section title="ROI por faixa de odd">
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                <div className="lg:col-span-2 border border-border/40 rounded-lg overflow-hidden">
                   <table className="w-full text-xs">
                     <thead className="bg-muted/30">
                       <tr className="text-[10px] uppercase tracking-wider text-muted-foreground">
                         <Th>Faixa</Th>
-                        <Th align="right">Apostas</Th>
+                        <Th align="right">N</Th>
                         <Th align="right">Stake</Th>
                         <Th align="right">Lucro</Th>
                         <Th align="right">ROI</Th>
-                        <Th align="right">Win Rate</Th>
-                        <Th align="right">G</Th>
-                        <Th align="right">R</Th>
                       </tr>
                     </thead>
                     <tbody>
                       {oddRangeRows.length === 0 && (
                         <tr>
-                          <td colSpan={8} className="text-center py-6 text-muted-foreground">
-                            Sem dados.
-                          </td>
+                          <td colSpan={5} className="text-center py-6 text-muted-foreground">Sem dados.</td>
                         </tr>
                       )}
                       {oddRangeRows.map((r) => {
                         const isBest = bestOddRange?.range === r.range;
                         return (
-                          <tr
-                            key={r.range}
-                            className={cn(
-                              "border-t border-border/30",
-                              isBest && "bg-emerald-500/10",
-                            )}
-                          >
-                            <td className="px-3 py-2 font-bold flex items-center gap-1.5">
-                              {isBest && <Trophy className="w-3 h-3 text-emerald-500" />}
-                              {r.range}
+                          <tr key={r.range} className={cn("border-t border-border/30", isBest && "bg-emerald-500/10")}>
+                            <td className="px-3 py-2 font-bold">
+                              <span className="inline-flex items-center gap-1.5">
+                                {isBest && <Trophy className="w-3 h-3 text-emerald-500" />}
+                                {r.range}
+                              </span>
                             </td>
                             <td className="px-3 py-2 text-right tabular-nums">{r.total}</td>
                             <td className="px-3 py-2 text-right tabular-nums">{fmtMoney(r.stake)}</td>
-                            <td
-                              className={cn(
-                                "px-3 py-2 text-right tabular-nums font-semibold",
-                                r.profit >= 0 ? "text-green-500" : "text-red-500",
-                              )}
-                            >
+                            <td className={cn("px-3 py-2 text-right tabular-nums font-semibold", r.profit >= 0 ? "text-emerald-400" : "text-red-400")}>
                               {fmtMoney(r.profit)}
                             </td>
-                            <td
-                              className={cn(
-                                "px-3 py-2 text-right tabular-nums font-semibold",
-                                r.roi >= 0 ? "text-green-500" : "text-red-500",
-                              )}
-                            >
-                              {fmtPct(r.roi)}
+                            <td className={cn("px-3 py-2 text-right tabular-nums font-semibold", r.roi >= 0 ? "text-emerald-400" : "text-red-400")}>
+                              {fmtPctSigned(r.roi)}
                             </td>
-                            <td className="px-3 py-2 text-right tabular-nums">{fmtPct(r.winRate)}</td>
-                            <td className="px-3 py-2 text-right tabular-nums text-green-500">{r.greens}</td>
-                            <td className="px-3 py-2 text-right tabular-nums text-red-500">{r.reds}</td>
                           </tr>
                         );
                       })}
                     </tbody>
                   </table>
                 </div>
-                <div className="h-64">
-                  <ResponsiveContainer>
-                    <BarChart data={oddRangeRows}>
-                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                      <XAxis dataKey="range" tick={{ fontSize: 10 }} />
-                      <YAxis tick={{ fontSize: 10 }} unit="%" />
-                      <Tooltip
-                        formatter={(v: any) => fmtPct(Number(v))}
-                        contentStyle={{
-                          background: "hsl(var(--card))",
-                          border: "1px solid hsl(var(--border))",
-                          fontSize: 11,
-                        }}
-                      />
-                      <Bar dataKey="roi" radius={[4, 4, 0, 0]}>
-                        {oddRangeRows.map((r, i) => (
-                          <Cell
-                            key={i}
-                            fill={r.roi >= 0 ? "hsl(var(--primary))" : "hsl(0 84% 60%)"}
-                          />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+                <div className="lg:col-span-3 h-72">
+                  <RoiBarChart data={oddRangeRows} />
                 </div>
               </div>
             </Section>
 
-            {/* SEÇÃO 2 — Evolução temporal */}
+            {/* Evolução temporal */}
             <Section title="Evolução temporal (mensal)">
               {monthlyRows.length === 0 ? (
                 <p className="text-xs text-muted-foreground">Sem dados.</p>
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="h-64">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
-                      Lucro por mês
-                    </p>
-                    <ResponsiveContainer>
-                      <BarChart data={monthlyRows}>
-                        <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                        <XAxis dataKey="label" tick={{ fontSize: 10 }} />
-                        <YAxis tick={{ fontSize: 10 }} />
-                        <Tooltip
-                          formatter={(v: any) => fmtMoney(Number(v))}
-                          contentStyle={{
-                            background: "hsl(var(--card))",
-                            border: "1px solid hsl(var(--border))",
-                            fontSize: 11,
-                          }}
-                        />
-                        <Bar dataKey="profit" radius={[4, 4, 0, 0]}>
-                          {monthlyRows.map((r, i) => (
-                            <Cell key={i} fill={r.profit >= 0 ? "#22c55e" : "#ef4444"} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Lucro por mês</p>
+                    <div className="h-64">
+                      <ProfitAreaChart data={monthlyRows} />
+                    </div>
                   </div>
-                  <div className="h-64">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
-                      ROI por mês
-                    </p>
-                    <ResponsiveContainer>
-                      <LineChart data={monthlyRows}>
-                        <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                        <XAxis dataKey="label" tick={{ fontSize: 10 }} />
-                        <YAxis tick={{ fontSize: 10 }} unit="%" />
-                        <Tooltip
-                          formatter={(v: any) => fmtPct(Number(v))}
-                          contentStyle={{
-                            background: "hsl(var(--card))",
-                            border: "1px solid hsl(var(--border))",
-                            fontSize: 11,
-                          }}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="roi"
-                          stroke="hsl(var(--primary))"
-                          strokeWidth={2}
-                          dot={{ r: 3 }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">ROI por mês</p>
+                    <div className="h-64">
+                      <RoiLineChart data={monthlyRows} />
+                    </div>
                   </div>
                 </div>
               )}
             </Section>
 
-            {/* SEÇÃO 3 — Distribuição de resultados */}
+            {/* Distribuição */}
             <Section title="Distribuição de resultados">
               {pieData.length === 0 ? (
                 <p className="text-xs text-muted-foreground">Sem dados.</p>
@@ -480,22 +396,21 @@ export function MarketDrillDownModal({
                           data={pieData}
                           dataKey="value"
                           nameKey="name"
-                          innerRadius={50}
-                          outerRadius={90}
-                          paddingAngle={2}
+                          innerRadius={55}
+                          outerRadius={95}
+                          paddingAngle={3}
+                          stroke="hsl(var(--background))"
+                          strokeWidth={2}
                         >
                           {pieData.map((d, i) => (
                             <Cell key={i} fill={RESULT_COLORS[d.key]} />
                           ))}
                         </Pie>
                         <Tooltip
-                          contentStyle={{
-                            background: "hsl(var(--card))",
-                            border: "1px solid hsl(var(--border))",
-                            fontSize: 11,
-                          }}
+                          cursor={false}
+                          wrapperStyle={{ outline: "none" }}
+                          content={<PremiumTooltip kind="count" />}
                         />
-                        <Legend wrapperStyle={{ fontSize: 11 }} />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
@@ -503,15 +418,9 @@ export function MarketDrillDownModal({
                     {pieData.map((d) => {
                       const pct = kpis.total > 0 ? (d.value / kpis.total) * 100 : 0;
                       return (
-                        <div
-                          key={d.key}
-                          className="flex items-center justify-between border border-border/30 rounded px-3 py-2 text-xs"
-                        >
+                        <div key={d.key} className="flex items-center justify-between border border-border/30 rounded px-3 py-2 text-xs">
                           <div className="flex items-center gap-2">
-                            <span
-                              className="w-3 h-3 rounded-sm"
-                              style={{ background: RESULT_COLORS[d.key] }}
-                            />
+                            <span className="w-3 h-3 rounded-sm" style={{ background: RESULT_COLORS[d.key] }} />
                             <span className="font-semibold">{d.name}</span>
                           </div>
                           <div className="tabular-nums">
@@ -525,211 +434,99 @@ export function MarketDrillDownModal({
                 </div>
               )}
             </Section>
+          </TabsContent>
 
-            {/* SEÇÃO 4 — Tabela de apostas */}
-            <Section title={`Apostas (${filteredTableBets.length})`}>
-              <div className="flex flex-wrap gap-2 mb-3">
-                <Input
-                  placeholder="Buscar evento, seleção, casa..."
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setPage(1);
-                  }}
-                  className="h-8 text-xs max-w-xs"
-                />
-                <Select
-                  value={filterRange}
-                  onValueChange={(v) => {
-                    setFilterRange(v);
-                    setPage(1);
-                  }}
-                >
-                  <SelectTrigger className="h-8 text-xs w-[180px]">
-                    <SelectValue placeholder="Faixa de odd" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">Todas as faixas</SelectItem>
-                    {ODD_RANGES.map((r) => (
-                      <SelectItem key={r.label} value={r.label}>
-                        {r.label}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="N/A">N/A</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={filterResult}
-                  onValueChange={(v) => {
-                    setFilterResult(v);
-                    setPage(1);
-                  }}
-                >
-                  <SelectTrigger className="h-8 text-xs w-[160px]">
-                    <SelectValue placeholder="Resultado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">Todos resultados</SelectItem>
-                    {(["GREEN", "MEIO_GREEN", "MEIO_RED", "RED", "VOID"] as const).map((r) => (
-                      <SelectItem key={r} value={r}>
-                        {RESULT_LABEL[r]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          {/* === ABA APOSTAS === */}
+          <TabsContent value="apostas" className="flex-1 overflow-hidden mt-0 px-6 py-5 flex flex-col gap-3">
+            <div className="flex flex-wrap gap-2 shrink-0">
+              <Input
+                placeholder="Buscar evento, seleção, casa..."
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                className="h-8 text-xs max-w-xs"
+              />
+              <Select value={filterRange} onValueChange={(v) => { setFilterRange(v); setPage(1); }}>
+                <SelectTrigger className="h-8 text-xs w-[180px]"><SelectValue placeholder="Faixa de odd" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Todas as faixas</SelectItem>
+                  {ODD_RANGES.map((r) => (<SelectItem key={r.label} value={r.label}>{r.label}</SelectItem>))}
+                  <SelectItem value="N/A">N/A</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={filterResult} onValueChange={(v) => { setFilterResult(v); setPage(1); }}>
+                <SelectTrigger className="h-8 text-xs w-[160px]"><SelectValue placeholder="Resultado" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Todos resultados</SelectItem>
+                  {(["GREEN", "MEIO_GREEN", "MEIO_RED", "RED", "VOID"] as const).map((r) => (
+                    <SelectItem key={r} value={r}>{RESULT_LABEL[r]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="ml-auto flex items-center gap-4 text-[11px]">
+                <TotalChip label="Stake" value={fmtMoney(totals.stake)} />
+                <TotalChip label="Lucro" value={fmtMoney(totals.profit)} tone={totals.profit >= 0 ? "pos" : "neg"} />
+                <TotalChip label="ROI" value={fmtPctSigned(totals.roi)} tone={totals.roi >= 0 ? "pos" : "neg"} />
               </div>
+            </div>
 
-              <div className="border border-border/40 rounded-lg overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead className="bg-muted/30 sticky top-0">
-                      <tr className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                        <SortableTh sortKey="data" current={sortKey} dir={sortDir} onClick={toggleSort}>
-                          Data
-                        </SortableTh>
-                        <SortableTh sortKey="evento" current={sortKey} dir={sortDir} onClick={toggleSort}>
-                          Evento
-                        </SortableTh>
-                        <SortableTh sortKey="selecao" current={sortKey} dir={sortDir} onClick={toggleSort}>
-                          Seleção
-                        </SortableTh>
-                        <SortableTh align="right" sortKey="odd" current={sortKey} dir={sortDir} onClick={toggleSort}>
-                          Odd
-                        </SortableTh>
-                        <SortableTh sortKey="faixa" current={sortKey} dir={sortDir} onClick={toggleSort}>
-                          Faixa
-                        </SortableTh>
-                        <SortableTh align="right" sortKey="stake" current={sortKey} dir={sortDir} onClick={toggleSort}>
-                          Stake
-                        </SortableTh>
-                        <SortableTh align="right" sortKey="lucro" current={sortKey} dir={sortDir} onClick={toggleSort}>
-                          Lucro
-                        </SortableTh>
-                        <SortableTh sortKey="resultado" current={sortKey} dir={sortDir} onClick={toggleSort}>
-                          Resultado
-                        </SortableTh>
-                        <SortableTh sortKey="casa" current={sortKey} dir={sortDir} onClick={toggleSort}>
-                          Casa
-                        </SortableTh>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pageBets.length === 0 && (
-                        <tr>
-                          <td colSpan={9} className="text-center py-8 text-muted-foreground">
-                            Nenhuma aposta corresponde aos filtros.
+            <div className="flex-1 border border-border/40 rounded-lg overflow-hidden flex flex-col">
+              <div className="flex-1 overflow-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-muted/30 sticky top-0 z-10">
+                    <tr className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                      <SortableTh sortKey="data" current={sortKey} dir={sortDir} onClick={toggleSort}>Data</SortableTh>
+                      <SortableTh sortKey="evento" current={sortKey} dir={sortDir} onClick={toggleSort}>Evento</SortableTh>
+                      <SortableTh sortKey="selecao" current={sortKey} dir={sortDir} onClick={toggleSort}>Seleção</SortableTh>
+                      <SortableTh align="right" sortKey="odd" current={sortKey} dir={sortDir} onClick={toggleSort}>Odd</SortableTh>
+                      <SortableTh sortKey="faixa" current={sortKey} dir={sortDir} onClick={toggleSort}>Faixa</SortableTh>
+                      <SortableTh align="right" sortKey="stake" current={sortKey} dir={sortDir} onClick={toggleSort}>Stake</SortableTh>
+                      <SortableTh align="right" sortKey="lucro" current={sortKey} dir={sortDir} onClick={toggleSort}>Lucro</SortableTh>
+                      <SortableTh sortKey="resultado" current={sortKey} dir={sortDir} onClick={toggleSort}>Resultado</SortableTh>
+                      <SortableTh sortKey="casa" current={sortKey} dir={sortDir} onClick={toggleSort}>Casa</SortableTh>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pageBets.length === 0 && (
+                      <tr><td colSpan={9} className="text-center py-8 text-muted-foreground">Nenhuma aposta corresponde aos filtros.</td></tr>
+                    )}
+                    {pageBets.map((b) => {
+                      const lucro = profitOf(b);
+                      return (
+                        <tr key={b.id} className="border-t border-border/30 hover:bg-muted/20">
+                          <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">{b.data_aposta ? format(parseISO(b.data_aposta), "dd/MM/yy HH:mm") : "—"}</td>
+                          <td className="px-3 py-2 max-w-[260px] truncate" title={b.evento ?? ""}>{b.evento ?? "—"}</td>
+                          <td className="px-3 py-2 max-w-[200px] truncate" title={b.selecao ?? ""}>{b.selecao ?? "—"}</td>
+                          <td className="px-3 py-2 text-right tabular-nums">{b.odd != null ? b.odd.toFixed(2) : "—"}</td>
+                          <td className="px-3 py-2 text-muted-foreground">{getOddRange(b.odd)}</td>
+                          <td className="px-3 py-2 text-right tabular-nums">{fmtMoney(stakeOf(b))}</td>
+                          <td className={cn("px-3 py-2 text-right tabular-nums font-semibold", lucro >= 0 ? "text-emerald-400" : "text-red-400")}>{fmtMoney(lucro)}</td>
+                          <td className="px-3 py-2">
+                            {b.resultado ? (
+                              <Badge variant="outline" className="text-[10px] font-bold border-none" style={{ background: `${RESULT_COLORS[b.resultado]}22`, color: RESULT_COLORS[b.resultado] }}>
+                                {RESULT_LABEL[b.resultado]}
+                              </Badge>
+                            ) : (<span className="text-muted-foreground">—</span>)}
                           </td>
+                          <td className="px-3 py-2 text-muted-foreground max-w-[140px] truncate">{b.bookmaker_id ?? "—"}</td>
                         </tr>
-                      )}
-                      {pageBets.map((b) => {
-                        const lucro = profitOf(b);
-                        return (
-                          <tr key={b.id} className="border-t border-border/30 hover:bg-muted/20">
-                            <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">
-                              {b.data_aposta ? format(parseISO(b.data_aposta), "dd/MM/yy HH:mm") : "—"}
-                            </td>
-                            <td className="px-3 py-2 max-w-[260px] truncate" title={b.evento ?? ""}>
-                              {b.evento ?? "—"}
-                            </td>
-                            <td className="px-3 py-2 max-w-[200px] truncate" title={b.selecao ?? ""}>
-                              {b.selecao ?? "—"}
-                            </td>
-                            <td className="px-3 py-2 text-right tabular-nums">
-                              {b.odd != null ? b.odd.toFixed(2) : "—"}
-                            </td>
-                            <td className="px-3 py-2 text-muted-foreground">{getOddRange(b.odd)}</td>
-                            <td className="px-3 py-2 text-right tabular-nums">{fmtMoney(stakeOf(b))}</td>
-                            <td
-                              className={cn(
-                                "px-3 py-2 text-right tabular-nums font-semibold",
-                                lucro >= 0 ? "text-green-500" : "text-red-500",
-                              )}
-                            >
-                              {fmtMoney(lucro)}
-                            </td>
-                            <td className="px-3 py-2">
-                              {b.resultado ? (
-                                <Badge
-                                  variant="outline"
-                                  className="text-[10px] font-bold border-none"
-                                  style={{
-                                    background: `${RESULT_COLORS[b.resultado]}22`,
-                                    color: RESULT_COLORS[b.resultado],
-                                  }}
-                                >
-                                  {RESULT_LABEL[b.resultado]}
-                                </Badge>
-                              ) : (
-                                <span className="text-muted-foreground">—</span>
-                              )}
-                            </td>
-                            <td className="px-3 py-2 text-muted-foreground max-w-[140px] truncate">
-                              {b.bookmaker_id ?? "—"}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                    <tfoot>
-                      <tr className="border-t-2 border-border/60 bg-muted/40 font-bold">
-                        <td colSpan={5} className="px-3 py-2 text-[10px] uppercase tracking-wider">
-                          Totais filtrados ({filteredTableBets.length})
-                        </td>
-                        <td className="px-3 py-2 text-right tabular-nums">{fmtMoney(totals.stake)}</td>
-                        <td
-                          className={cn(
-                            "px-3 py-2 text-right tabular-nums",
-                            totals.profit >= 0 ? "text-green-500" : "text-red-500",
-                          )}
-                        >
-                          {fmtMoney(totals.profit)}
-                        </td>
-                        <td
-                          colSpan={2}
-                          className={cn(
-                            "px-3 py-2 text-right tabular-nums",
-                            totals.roi >= 0 ? "text-green-500" : "text-red-500",
-                          )}
-                        >
-                          ROI {fmtPct(totals.roi)}
-                        </td>
-                      </tr>
-                    </tfoot>
-                  </table>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between text-xs shrink-0">
+                <span className="text-muted-foreground">Página {safePage} de {totalPages} · {PAGE_SIZE} por página</span>
+                <div className="flex gap-1">
+                  <Button size="sm" variant="outline" className="h-7 text-xs" disabled={safePage === 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>Anterior</Button>
+                  <Button size="sm" variant="outline" className="h-7 text-xs" disabled={safePage === totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>Próxima</Button>
                 </div>
               </div>
-
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between mt-3 text-xs">
-                  <span className="text-muted-foreground">
-                    Página {safePage} de {totalPages} · {PAGE_SIZE} por página
-                  </span>
-                  <div className="flex gap-1">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-xs"
-                      disabled={safePage === 1}
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    >
-                      Anterior
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-xs"
-                      disabled={safePage === totalPages}
-                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    >
-                      Próxima
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </Section>
-          </div>
-        </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
