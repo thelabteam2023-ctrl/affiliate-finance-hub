@@ -262,10 +262,15 @@ export function EvolutionTab({ evolution, evolutionByEntry }: EvolutionTabProps)
                 <ComposedChart
                   data={chartData.map((d) => ({
                     ...d,
-                    absLucro: Math.min(Math.abs(d.profit), d.volume),
+                    volume: Number(d.volume) || 0,
+                    profit: Number(d.profit) || 0,
+                    absLucro: Math.min(
+                      Math.abs(Number(d.profit) || 0),
+                      Number(d.volume) || 0
+                    ),
                   }))}
                   margin={{ top: 12, right: 8, left: 0, bottom: 8 }}
-                  barGap={-9999}
+                  barGap={-17}
                   barCategoryGap="10%"
                 >
                   <CartesianGrid strokeDasharray="3 3" horizontal vertical={false} stroke="rgba(255,255,255,0.05)" />
