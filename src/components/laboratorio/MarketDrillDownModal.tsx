@@ -1,4 +1,7 @@
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -251,17 +254,34 @@ function computeWeightedStrike(bets: RawBet[]) {
   return denom > 0 ? (num / denom) * 100 : 0;
 }
 
-function computeBookmakerPerformance(bets: RawBet[]) {
-  const map = new Map<string, RawBet[]>();
+interface BookmakerInfo {
+  displayName: string;
+  logoUrl: string | null;
+  groupKey: string;
+}
+
+function computeBookmakerPerformance(
+  bets: RawBet[],
+  bookmakerMap: Map<string, BookmakerInfo>,
+) {
+  const map = new Map<string, { info: BookmakerInfo; bets: RawBet[] }>();
   bets.forEach((b) => {
-    const k = b.bookmaker_id ?? "—";
-    if (!map.has(k)) map.set(k, []);
-    map.get(k)!.push(b);
+    const id = b.bookmaker_id ?? "—";
+    const info = bookmakerMap.get(id) ?? {
+      displayName: id === "—" ? "—" : "Casa desconhecida",
+      logoUrl: null,
+      groupKey: id,
+    };
+    const key = info.groupKey;
+    if (!map.has(key)) map.set(key, { info, bets: [] });
+    map.get(key)!.bets.push(b);
   });
-  const rows = Array.from(map.entries()).map(([casa, arr]) => {
+  const rows = Array.from(map.entries()).map(([groupKey, { info, bets: arr }]) => {
     const m = calcMetrics(arr);
     return {
-      casa,
+      casa: info.displayName,
+      groupKey,
+      logoUrl: info.logoUrl,
       n: m.total,
       stake: m.stake,
       profit: m.profit,
