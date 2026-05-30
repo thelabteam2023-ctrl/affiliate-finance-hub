@@ -131,6 +131,13 @@ export function EvolutionTab({ evolution, evolutionByEntry }: EvolutionTabProps)
   const lastCumulative = Number((lastRow as any)?.[cumulativeKey] ?? 0);
   const cumulativeColor = lastCumulative >= 0 ? "#22c55e" : "#ef4444";
 
+  // Compute zero-crossing offset for split green/red gradient (matches MarketDrillDownModal)
+  const cumValues = cumulativeData.map((d: any) => Number(d[cumulativeKey] ?? 0));
+  const maxV = Math.max(0, ...cumValues);
+  const minV = Math.min(0, ...cumValues);
+  const range = maxV - minV;
+  const zeroOffsetPct = Math.max(0, Math.min(1, range > 0 ? maxV / range : 0.5)) * 100;
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {/* Lucro Acumulado */}
@@ -151,13 +158,17 @@ export function EvolutionTab({ evolution, evolutionByEntry }: EvolutionTabProps)
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={cumulativeData} margin={{ top: 12, right: 16, left: 0, bottom: 8 }}>
                 <defs>
-                  <linearGradient id="evoCumPos" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#22c55e" stopOpacity={0.45} />
-                    <stop offset="100%" stopColor="#22c55e" stopOpacity={0} />
+                  <linearGradient id="evoCumStroke" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#22c55e" stopOpacity={1} />
+                    <stop offset={`${zeroOffsetPct}%`} stopColor="#22c55e" stopOpacity={1} />
+                    <stop offset={`${zeroOffsetPct}%`} stopColor="#ef4444" stopOpacity={1} />
+                    <stop offset="100%" stopColor="#ef4444" stopOpacity={1} />
                   </linearGradient>
-                  <linearGradient id="evoCumNeg" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#ef4444" stopOpacity={0.45} />
-                    <stop offset="100%" stopColor="#ef4444" stopOpacity={0} />
+                  <linearGradient id="evoCumFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#22c55e" stopOpacity={0.35} />
+                    <stop offset={`${zeroOffsetPct}%`} stopColor="#22c55e" stopOpacity={0.02} />
+                    <stop offset={`${zeroOffsetPct}%`} stopColor="#ef4444" stopOpacity={0.02} />
+                    <stop offset="100%" stopColor="#ef4444" stopOpacity={0.35} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" horizontal vertical={false} stroke="rgba(255,255,255,0.06)" />
@@ -168,11 +179,15 @@ export function EvolutionTab({ evolution, evolutionByEntry }: EvolutionTabProps)
                 <Area
                   type="monotone"
                   dataKey={cumulativeKey}
-                  stroke={cumulativeColor}
+                  stroke="url(#evoCumStroke)"
                   strokeWidth={2.5}
-                  fill={`url(#${lastCumulative >= 0 ? "evoCumPos" : "evoCumNeg"})`}
+                  fill="url(#evoCumFill)"
                   animationDuration={400}
-                  activeDot={{ r: 5, strokeWidth: 2, stroke: "#0b0f17", fill: cumulativeColor }}
+                  activeDot={(props: any) => {
+                    const v = Number(props.payload?.[cumulativeKey] ?? 0);
+                    const c = v >= 0 ? "#22c55e" : "#ef4444";
+                    return <circle cx={props.cx} cy={props.cy} r={5} fill={c} stroke="#0b0f17" strokeWidth={2} />;
+                  }}
                 />
               </AreaChart>
             </ResponsiveContainer>
