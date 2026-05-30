@@ -167,6 +167,58 @@ export function MarketDrillDownModal({
       }));
   }, [marketBets]);
 
+  // Cumulative profit, entry by entry
+  const cumulativeRows = useMemo(() => {
+    const sorted = [...marketBets]
+      .filter((b) => !!b.data_aposta)
+      .sort((a, b) => (a.data_aposta ?? "").localeCompare(b.data_aposta ?? ""));
+    let acc = 0;
+    return sorted.map((b, i) => {
+      const p = profitOf(b);
+      acc += p;
+      return {
+        idx: i + 1,
+        total: sorted.length,
+        date: b.data_aposta!,
+        dateLabel: format(parseISO(b.data_aposta!), "dd/MM"),
+        bet: p,
+        cumulative: acc,
+      };
+    });
+  }, [marketBets]);
+
+  // Weekday breakdown (Mon..Sun)
+  const weekdayRows = useMemo(() => {
+    const ORDER = [1, 2, 3, 4, 5, 6, 0]; // Mon..Sun
+    const SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+    const FULL = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+    const buckets = new Map<number, { volume: number; profit: number; n: number }>();
+    ORDER.forEach((d) => buckets.set(d, { volume: 0, profit: 0, n: 0 }));
+    marketBets.forEach((b) => {
+      if (!b.data_aposta) return;
+      const d = parseISO(b.data_aposta).getDay();
+      const entry = buckets.get(d)!;
+      entry.volume += stakeOf(b);
+      entry.profit += profitOf(b);
+      entry.n += 1;
+    });
+    const rows = ORDER.map((d) => {
+      const e = buckets.get(d)!;
+      return {
+        day: d,
+        short: SHORT[d],
+        full: FULL[d],
+        volume: e.volume,
+        profit: e.profit,
+        n: e.n,
+        roi: e.volume > 0 ? (e.profit / e.volume) * 100 : 0,
+      };
+    });
+    const eligible = rows.filter((r) => r.n > 0);
+    const bestProfit = eligible.length > 0 ? Math.max(...eligible.map((r) => r.profit)) : null;
+    return rows.map((r) => ({ ...r, isBest: bestProfit !== null && r.profit === bestProfit && r.profit > 0 }));
+  }, [marketBets]);
+
   const pieData = useMemo(() => {
     const order: Resultado[] = ["GREEN", "MEIO_GREEN", "MEIO_RED", "RED", "VOID"];
     return order
