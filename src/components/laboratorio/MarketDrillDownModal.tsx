@@ -361,9 +361,9 @@ export function MarketDrillDownModal({
   const marketBetsAsc = useMemo(() => sortByDateAsc(marketBets), [marketBets]);
 
   const drawdown = useMemo(() => computeDrawdown(marketBetsAsc), [marketBetsAsc]);
-  const streaks = useMemo(() => computeStreaks(marketBetsAsc), [marketBetsAsc]);
   const stakeDistribution = useMemo(() => computeStakeDistribution(marketBets), [marketBets]);
   const weightedStrike = useMemo(() => computeWeightedStrike(marketBets), [marketBets]);
+  const calibrationBuckets = useMemo(() => computeCalibrationBuckets(marketBets), [marketBets]);
 
   // Fetch bookmaker info (nome + catalog logo) for the IDs present in the scoped bets.
   const bookmakerIds = useMemo(() => {
