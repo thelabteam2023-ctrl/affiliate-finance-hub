@@ -25,6 +25,7 @@ import {
   Pie,
   Cell,
   Legend,
+  ComposedChart,
 } from "recharts";
 import { ODD_RANGES, RawBet, Resultado } from "@/hooks/useValueBetLabData";
 
@@ -378,7 +379,19 @@ export function MarketDrillDownModal({
                     </div>
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">ROI por mês</p>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">ROI &amp; Volume por mês</p>
+                      <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: "rgba(148,163,184,0.55)" }} />
+                          Volume
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="inline-block w-3 h-[2px] rounded-full" style={{ background: "#3b82f6" }} />
+                          ROI
+                        </span>
+                      </div>
+                    </div>
                     <div className="w-full h-[220px] relative">
                       <RoiLineChart data={monthlyRows} />
                     </div>
@@ -827,37 +840,112 @@ function ProfitAreaChart({ data }: { data: Array<{ label: string; profit: number
   );
 }
 
-/* --- ROI line chart (mensal) --- */
+/* --- ROI + Volume combo chart (mensal) --- */
+function RoiVolumeTooltip({ active, payload, label }: any) {
+  if (!active || !payload || payload.length === 0) return null;
+  const row = payload[0].payload as { name: string; roi: number; stake: number };
+  const roi = row.roi ?? 0;
+  const stake = row.stake ?? 0;
+  const roiColor = roi >= 0 ? "#22c55e" : "#ef4444";
+  return (
+    <div
+      className="pointer-events-none animate-in fade-in-0 duration-[120ms]"
+      style={{
+        background: "#1a1e2a",
+        border: "1px solid rgba(255,255,255,0.1)",
+        borderRadius: 8,
+        padding: "10px 14px",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+        minWidth: 160,
+      }}
+    >
+      <div className="text-[10px] uppercase tracking-widest font-semibold mb-1.5" style={{ color: "rgba(255,255,255,0.5)" }}>
+        {label}
+      </div>
+      <div className="flex items-baseline justify-between gap-4">
+        <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.5)" }}>ROI</span>
+        <span className="font-bold tabular-nums" style={{ color: roiColor, fontSize: 14 }}>{fmtPctSigned(roi)}</span>
+      </div>
+      <div className="flex items-baseline justify-between gap-4 mt-1">
+        <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.5)" }}>Volume</span>
+        <span className="font-semibold tabular-nums" style={{ color: "#e5e7eb", fontSize: 13 }}>{fmtMoney(stake)}</span>
+      </div>
+    </div>
+  );
+}
+
 function RoiLineChart({ data }: { data: Array<{ label: string; roi: number; profit: number; stake: number }> }) {
-  const chartData = data.map((d) => ({ name: d.label, value: d.roi }));
+  const chartData = data.map((d) => ({ name: d.label, roi: d.roi, stake: d.stake }));
 
   return (
     <ResponsiveContainer>
-      <LineChart data={chartData} margin={{ top: 16, right: 16, left: 0, bottom: 8 }}>
+      <ComposedChart data={chartData} margin={{ top: 16, right: 8, left: 0, bottom: 8 }}>
+        <defs>
+          <linearGradient id="volumeBarGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="rgba(148,163,184,0.55)" />
+            <stop offset="100%" stopColor="rgba(148,163,184,0.15)" />
+          </linearGradient>
+        </defs>
         <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} horizontal />
         <XAxis dataKey="name" tick={{ fontSize: 10, fill: "rgba(255,255,255,0.55)" }} axisLine={false} tickLine={false} />
-        <YAxis tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }} axisLine={false} tickLine={false} width={45} tickFormatter={(v) => `${v}%`} />
-        <ReferenceLine y={0} stroke="rgba(255,255,255,0.15)" />
-        <Tooltip cursor={{ stroke: "rgba(255,255,255,0.1)", strokeWidth: 1 }} wrapperStyle={{ outline: "none", zIndex: 60 }} content={<PremiumTooltip kind="percent" />} animationDuration={120} />
+        <YAxis
+          yAxisId="roi"
+          orientation="left"
+          tick={{ fontSize: 10, fill: "rgba(59,130,246,0.75)" }}
+          axisLine={false}
+          tickLine={false}
+          width={45}
+          tickFormatter={(v) => `${v}%`}
+        />
+        <YAxis
+          yAxisId="vol"
+          orientation="right"
+          tick={{ fontSize: 10, fill: "rgba(148,163,184,0.7)" }}
+          axisLine={false}
+          tickLine={false}
+          width={52}
+          tickFormatter={(v) => {
+            const n = Number(v);
+            if (Math.abs(n) >= 1000) return `${(n / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}k`;
+            return n.toLocaleString("pt-BR");
+          }}
+        />
+        <ReferenceLine yAxisId="roi" y={0} stroke="rgba(255,255,255,0.15)" />
+        <Tooltip
+          cursor={{ fill: "rgba(255,255,255,0.04)" }}
+          wrapperStyle={{ outline: "none", zIndex: 60 }}
+          content={<RoiVolumeTooltip />}
+          animationDuration={120}
+        />
+        <Bar
+          yAxisId="vol"
+          dataKey="stake"
+          fill="url(#volumeBarGradient)"
+          radius={[4, 4, 0, 0]}
+          maxBarSize={36}
+          isAnimationActive
+          animationDuration={500}
+        />
         <Line
+          yAxisId="roi"
           type="monotone"
-          dataKey="value"
+          dataKey="roi"
           stroke="#3b82f6"
           strokeWidth={2.5}
           activeDot={(props: any) => {
-            const v = props.payload?.value ?? 0;
+            const v = props.payload?.roi ?? 0;
             const c = v >= 0 ? "#22c55e" : "#ef4444";
             return <circle cx={props.cx} cy={props.cy} r={6} fill={c} stroke="#fff" strokeWidth={2} />;
           }}
           dot={(props: any) => {
-            const v = props.payload?.value ?? 0;
+            const v = props.payload?.roi ?? 0;
             const c = v >= 0 ? "#22c55e" : "#ef4444";
             return <circle key={props.index} cx={props.cx} cy={props.cy} r={4} fill={c} stroke="#fff" strokeWidth={2} />;
           }}
           isAnimationActive
           animationDuration={500}
         />
-      </LineChart>
+      </ComposedChart>
     </ResponsiveContainer>
   );
 }
