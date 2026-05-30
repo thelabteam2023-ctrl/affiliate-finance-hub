@@ -1035,11 +1035,12 @@ export function MarketDrillDownModal({
                   <section className="space-y-3">
                     <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground border-b border-border/30 pb-2 flex items-center gap-1.5">
                       Runup
-                      <HelpCircle
-                        className="w-3.5 h-3.5 text-muted-foreground/70 cursor-help"
-                        aria-label="Sobre runup"
+                      <span
+                        className="inline-flex"
                         title="Runup é o oposto do drawdown — a maior valorização consecutiva do vale ao pico no período. Mede a força positiva da operação."
-                      />
+                      >
+                        <HelpCircle className="w-3.5 h-3.5 text-muted-foreground/70 cursor-help" aria-label="Sobre runup" />
+                      </span>
                     </h3>
                     <div className="border border-border/40 rounded-lg p-4 bg-card/40 space-y-3">
                       <div className="flex items-baseline justify-between flex-wrap gap-3">
