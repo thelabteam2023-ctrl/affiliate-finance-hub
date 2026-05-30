@@ -1524,6 +1524,291 @@ function RoiVolumeTooltip({ active, payload, label }: any) {
   );
 }
 
+/* ============================================================
+ *  RISK-TAB CHART PRIMITIVES
+ * ========================================================== */
+
+function StreakCard({
+  title,
+  length,
+  labelKind,
+  startDate,
+  endDate,
+  pl,
+  stakeAvg,
+  tone,
+}: {
+  title: string;
+  length: number;
+  labelKind: string;
+  startDate: string | null;
+  endDate: string | null;
+  pl: number;
+  stakeAvg: number;
+  tone: "pos" | "neg";
+}) {
+  const accent = tone === "pos" ? "text-emerald-400" : "text-red-500";
+  return (
+    <div className="border border-border/40 rounded-lg p-4 bg-card/40">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{title}</p>
+      <p className={cn("text-3xl font-black tabular-nums mt-1", accent)}>{length}</p>
+      <p className="text-[11px] text-muted-foreground mt-0.5">{labelKind}</p>
+      <div className="mt-3 flex flex-col gap-1 text-[11px]">
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">Período</span>
+          <span className="tabular-nums">
+            {length > 0 ? `${fmtDM(startDate)} → ${fmtDM(endDate)}` : "—"}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">{tone === "pos" ? "Lucro" : "Prejuízo"}</span>
+          <span className={cn("tabular-nums font-bold", accent)}>{length > 0 ? fmtMoney(pl) : "—"}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">Stake médio</span>
+          <span className="tabular-nums">{length > 0 ? fmtMoney(stakeAvg) : "—"}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* --- Drawdown depth area chart --- */
+function DrawdownTooltip({ active, payload }: any) {
+  if (!active || !payload || payload.length === 0) return null;
+  const row = payload[0].payload as { dateLabel: string; drawdown: number; cumulative: number };
+  return (
+    <div
+      className="pointer-events-none animate-in fade-in-0 duration-[120ms]"
+      style={{
+        background: "#1a1e2a",
+        border: "1px solid rgba(255,255,255,0.1)",
+        borderRadius: 8,
+        padding: "10px 14px",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+        minWidth: 200,
+      }}
+    >
+      <div className="text-[10px] uppercase tracking-widest font-semibold mb-1.5" style={{ color: "rgba(255,255,255,0.5)" }}>
+        {row.dateLabel}
+      </div>
+      <div className="flex items-baseline justify-between gap-4">
+        <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.5)" }}>Drawdown</span>
+        <span className="font-bold tabular-nums" style={{ color: "#ef4444", fontSize: 14 }}>{fmtMoney(Math.abs(row.drawdown))}</span>
+      </div>
+      <div className="flex items-baseline justify-between gap-4 mt-1">
+        <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.5)" }}>Acumulado</span>
+        <span className="font-semibold tabular-nums" style={{ color: row.cumulative >= 0 ? "#22c55e" : "#ef4444", fontSize: 13 }}>{fmtMoney(row.cumulative)}</span>
+      </div>
+    </div>
+  );
+}
+
+function DrawdownChart({ data }: { data: Array<{ idx: number; date: string; dateLabel: string; cumulative: number; drawdown: number }> }) {
+  const step = Math.max(1, Math.ceil(data.length / 12));
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <AreaChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 6 }}>
+        <defs>
+          <linearGradient id="ddFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#ef4444" stopOpacity={0.25} />
+            <stop offset="100%" stopColor="#ef4444" stopOpacity={0.05} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+        <XAxis
+          dataKey="dateLabel"
+          tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }}
+          axisLine={false}
+          tickLine={false}
+          interval={step - 1}
+          minTickGap={20}
+        />
+        <YAxis
+          tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }}
+          axisLine={false}
+          tickLine={false}
+          width={55}
+          tickFormatter={(v) => {
+            const n = Number(v);
+            if (Math.abs(n) >= 1000) return `R$${(n / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}k`;
+            return `R$${n.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
+          }}
+        />
+        <ReferenceLine y={0} stroke="rgba(255,255,255,0.15)" strokeDasharray="4 4" />
+        <Tooltip
+          cursor={{ stroke: "rgba(255,255,255,0.2)", strokeWidth: 1 }}
+          wrapperStyle={{ outline: "none", zIndex: 60 }}
+          content={<DrawdownTooltip />}
+          animationDuration={120}
+        />
+        <Area
+          type="monotone"
+          dataKey="drawdown"
+          stroke="#ef4444"
+          strokeWidth={1.5}
+          fill="url(#ddFill)"
+          dot={false}
+          activeDot={{ r: 4, stroke: "#fff", strokeWidth: 2, fill: "#ef4444" }}
+          isAnimationActive
+          animationDuration={400}
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}
+
+/* --- Sequence blocks bar chart --- */
+function SequenceTooltip({ active, payload }: any) {
+  if (!active || !payload || payload.length === 0) return null;
+  const row = payload[0].payload as { kind: "GREEN" | "RED"; length: number; pl: number; startDate: string; endDate: string };
+  const c = row.kind === "GREEN" ? "#22c55e" : "#ef4444";
+  return (
+    <div
+      className="pointer-events-none animate-in fade-in-0 duration-[120ms]"
+      style={{
+        background: "#1a1e2a",
+        border: "1px solid rgba(255,255,255,0.1)",
+        borderRadius: 8,
+        padding: "10px 14px",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+        minWidth: 200,
+      }}
+    >
+      <div className="text-[10px] uppercase tracking-widest font-semibold mb-1.5" style={{ color: "rgba(255,255,255,0.5)" }}>
+        Sequência
+      </div>
+      <div className="flex items-baseline justify-between gap-4">
+        <span className="text-[11px]" style={{ color: "#e5e7eb" }}>
+          {row.length} {row.kind === "GREEN" ? "greens" : "reds"} consecutivos
+        </span>
+      </div>
+      <div className="text-[10px] mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>
+        {fmtDM(row.startDate)} → {fmtDM(row.endDate)}
+      </div>
+      <div className="flex items-baseline justify-between gap-4 mt-1.5">
+        <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.5)" }}>
+          {row.kind === "GREEN" ? "Lucro" : "Prejuízo"}
+        </span>
+        <span className="font-bold tabular-nums" style={{ color: c, fontSize: 13 }}>{fmtMoney(row.pl)}</span>
+      </div>
+    </div>
+  );
+}
+
+function SequenceBarsChart({ data }: { data: Array<{ idx: number; kind: "GREEN" | "RED"; length: number; pl: number; startDate: string; endDate: string }> }) {
+  const chartData = data.map((d) => ({
+    ...d,
+    name: String(d.idx + 1),
+    value: d.kind === "GREEN" ? d.length : -d.length,
+  }));
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 6 }} barCategoryGap="20%">
+        <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+        <XAxis
+          dataKey="name"
+          tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }}
+          axisLine={false}
+          tickLine={false}
+          interval="preserveStartEnd"
+        />
+        <YAxis
+          tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }}
+          axisLine={false}
+          tickLine={false}
+          width={32}
+        />
+        <ReferenceLine y={0} stroke="rgba(255,255,255,0.2)" />
+        <Tooltip
+          cursor={{ fill: "rgba(255,255,255,0.04)" }}
+          wrapperStyle={{ outline: "none", zIndex: 60 }}
+          content={<SequenceTooltip />}
+          animationDuration={120}
+        />
+        <Bar dataKey="value" radius={[3, 3, 3, 3]} isAnimationActive animationDuration={400}>
+          {chartData.map((d, i) => (
+            <Cell key={i} fill={d.kind === "GREEN" ? "#22c55e" : "#ef4444"} />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+/* --- Stake distribution horizontal bars --- */
+function StakeDistTooltip({ active, payload }: any) {
+  if (!active || !payload || payload.length === 0) return null;
+  const row = payload[0].payload as { label: string; n: number; stake: number; profit: number; roi: number };
+  const profitColor = row.profit >= 0 ? "#22c55e" : "#ef4444";
+  return (
+    <div
+      className="pointer-events-none animate-in fade-in-0 duration-[120ms]"
+      style={{
+        background: "#1a1e2a",
+        border: "1px solid rgba(255,255,255,0.1)",
+        borderRadius: 8,
+        padding: "10px 14px",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+        minWidth: 180,
+      }}
+    >
+      <div className="text-[10px] uppercase tracking-widest font-semibold mb-1.5" style={{ color: "rgba(255,255,255,0.5)" }}>
+        {row.label}
+      </div>
+      <div className="flex items-baseline justify-between gap-4">
+        <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.5)" }}>Apostas</span>
+        <span className="font-semibold tabular-nums" style={{ color: "#e5e7eb", fontSize: 13 }}>{row.n}</span>
+      </div>
+      <div className="flex items-baseline justify-between gap-4 mt-1">
+        <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.5)" }}>Lucro</span>
+        <span className="font-bold tabular-nums" style={{ color: profitColor, fontSize: 13 }}>{fmtMoney(row.profit)}</span>
+      </div>
+      <div className="flex items-baseline justify-between gap-4 mt-1">
+        <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.5)" }}>ROI</span>
+        <span className="font-bold tabular-nums" style={{ color: profitColor, fontSize: 13 }}>{fmtPctSigned(row.roi)}</span>
+      </div>
+    </div>
+  );
+}
+
+function StakeDistributionChart({ data }: { data: Array<{ label: string; n: number; stake: number; profit: number; roi: number; pct: number }> }) {
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart
+        data={data}
+        layout="vertical"
+        margin={{ top: 8, right: 56, left: 8, bottom: 6 }}
+        barGap={2}
+        barCategoryGap="22%"
+      >
+        <CartesianGrid stroke="rgba(255,255,255,0.06)" horizontal={false} />
+        <XAxis
+          type="number"
+          tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }}
+          axisLine={false}
+          tickLine={false}
+        />
+        <YAxis
+          type="category"
+          dataKey="label"
+          tick={{ fontSize: 10, fill: "rgba(255,255,255,0.6)" }}
+          axisLine={false}
+          tickLine={false}
+          width={84}
+        />
+        <Tooltip
+          cursor={{ fill: "rgba(255,255,255,0.04)" }}
+          wrapperStyle={{ outline: "none", zIndex: 60 }}
+          content={<StakeDistTooltip />}
+          animationDuration={120}
+        />
+        <Bar dataKey="n" fill="rgba(59,130,246,0.6)" radius={[3, 3, 3, 3]} isAnimationActive animationDuration={400} />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
 function RoiLineChart({ data }: { data: Array<{ label: string; roi: number; profit: number; stake: number }> }) {
   const chartData = data.map((d) => ({ name: d.label, roi: d.roi, stake: d.stake }));
 
