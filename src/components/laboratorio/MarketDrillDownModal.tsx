@@ -423,6 +423,8 @@ export function MarketDrillDownModal({
 
   const ddDuration = drawdown.peakDate && drawdown.valleyDate ? daysBetween(drawdown.peakDate, drawdown.valleyDate) : 0;
   const ddPctOfStake = kpis.stake > 0 ? Math.min(100, (drawdown.maxDrawdown / kpis.stake) * 100) : 0;
+  const ruDuration = drawdown.runupValleyDate && drawdown.runupPeakDate ? daysBetween(drawdown.runupValleyDate, drawdown.runupPeakDate) : 0;
+  const ruPctOfStake = kpis.stake > 0 ? Math.min(100, (drawdown.maxRunup / kpis.stake) * 100) : 0;
 
   const stakeDistBest = useMemo(() => {
     const eligible = stakeDistribution.filter((s) => s.n > 0);
