@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { ArrowUpDown, Trophy, Info, X, Filter } from "lucide-react";
+import { HelpCircle } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import {
   ResponsiveContainer,
@@ -121,6 +122,10 @@ interface DrawdownResult {
   peakDate: string | null;
   valleyDate: string | null;
   series: Array<{ idx: number; date: string; dateLabel: string; cumulative: number; drawdown: number }>;
+  maxRunup: number;
+  runupValleyDate: string | null;
+  runupPeakDate: string | null;
+  runupSeries: Array<{ idx: number; date: string; dateLabel: string; cumulative: number; runup: number }>;
 }
 
 function computeDrawdown(betsAsc: RawBet[]): DrawdownResult {
@@ -129,8 +134,14 @@ function computeDrawdown(betsAsc: RawBet[]): DrawdownResult {
   let peakDate: string | null = null;
   let valleyDate: string | null = null;
   let currentPeakDate: string | null = null;
+  let valley = 0;
+  let maxRU = 0;
+  let runupValleyDate: string | null = null;
+  let runupPeakDate: string | null = null;
+  let currentValleyDate: string | null = null;
   let acc = 0;
   const series: DrawdownResult["series"] = [];
+  const runupSeries: DrawdownResult["runupSeries"] = [];
   betsAsc.forEach((b, i) => {
     acc += profitOf(b);
     if (acc > peak) {
@@ -143,6 +154,16 @@ function computeDrawdown(betsAsc: RawBet[]): DrawdownResult {
       peakDate = currentPeakDate;
       valleyDate = b.data_aposta!;
     }
+    if (acc < valley) {
+      valley = acc;
+      currentValleyDate = b.data_aposta!;
+    }
+    const ru = acc - valley;
+    if (ru > maxRU) {
+      maxRU = ru;
+      runupValleyDate = currentValleyDate;
+      runupPeakDate = b.data_aposta!;
+    }
     series.push({
       idx: i + 1,
       date: b.data_aposta!,
@@ -150,8 +171,24 @@ function computeDrawdown(betsAsc: RawBet[]): DrawdownResult {
       cumulative: acc,
       drawdown: -dd,
     });
+    runupSeries.push({
+      idx: i + 1,
+      date: b.data_aposta!,
+      dateLabel: fmtDM(b.data_aposta!),
+      cumulative: acc,
+      runup: ru,
+    });
   });
-  return { maxDrawdown: maxDD, peakDate, valleyDate, series };
+  return {
+    maxDrawdown: maxDD,
+    peakDate,
+    valleyDate,
+    series,
+    maxRunup: maxRU,
+    runupValleyDate,
+    runupPeakDate,
+    runupSeries,
+  };
 }
 
 interface StreakResult {
@@ -386,6 +423,8 @@ export function MarketDrillDownModal({
 
   const ddDuration = drawdown.peakDate && drawdown.valleyDate ? daysBetween(drawdown.peakDate, drawdown.valleyDate) : 0;
   const ddPctOfStake = kpis.stake > 0 ? Math.min(100, (drawdown.maxDrawdown / kpis.stake) * 100) : 0;
+  const ruDuration = drawdown.runupValleyDate && drawdown.runupPeakDate ? daysBetween(drawdown.runupValleyDate, drawdown.runupPeakDate) : 0;
+  const ruPctOfStake = kpis.stake > 0 ? Math.min(100, (drawdown.maxRunup / kpis.stake) * 100) : 0;
 
   const stakeDistBest = useMemo(() => {
     const eligible = stakeDistribution.filter((s) => s.n > 0);
@@ -673,35 +712,55 @@ export function MarketDrillDownModal({
             forceMount
           >
             {/* KPIs */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
-              <Kpi label="Apostas" value={kpis.total.toString()} />
-              <Kpi label="Stake" value={fmtMoney(kpis.stake)} />
-              <Kpi label="Lucro" value={fmtMoney(kpis.profit)} tone={kpis.profit >= 0 ? "pos" : "neg"} />
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+              <Kpi
+                label="Apostas"
+                value={`${kpis.total.toLocaleString("pt-BR")} apostas`}
+                sub={`${kpis.validas.toLocaleString("pt-BR")} válidas`}
+              />
+              <Kpi
+                label="Stake Total"
+                value={fmtMoney(kpis.stake)}
+                sub={`stake médio: ${fmtMoney(kpis.total > 0 ? kpis.stake / kpis.total : 0)}`}
+              />
+              <Kpi label="Lucro / Prejuízo" value={fmtMoney(kpis.profit)} tone={kpis.profit >= 0 ? "pos" : "neg"} />
               <Kpi label="ROI" value={fmtPctSigned(kpis.roi)} tone={kpis.roi >= 0 ? "pos" : "neg"} />
               <Kpi label="Win Rate" value={fmtPct(kpis.winRate)} />
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-              <Kpi label="Greens" value={kpis.greens.toString()} tone="pos" />
-              <Kpi label="Reds" value={kpis.reds.toString()} tone="neg" />
-              <Kpi label="Voids" value={kpis.voids.toString()} tone="muted" />
-              <Kpi
-                label="Drawdown Máx."
-                value={fmtMoney(drawdown.maxDrawdown)}
-                tone="neg"
-                sub={drawdown.peakDate && drawdown.valleyDate ? `pico ${fmtDM(drawdown.peakDate)} · vale ${fmtDM(drawdown.valleyDate)}` : "—"}
-                title="Maior queda do pico ao vale no período"
-              />
-              <Kpi
-                label="Maior Seq. Reds"
-                value={`${streaks.reds.length} reds`}
-                tone="neg"
-                sub={
-                  streaks.reds.length > 0
-                    ? `${fmtDM(streaks.reds.startDate)} → ${fmtDM(streaks.reds.endDate)} · ${fmtMoney(streaks.reds.pl)}`
-                    : "—"
-                }
-                title="Maior sequência consecutiva de reds (void não quebra)"
-              />
+              <div className="border border-border/40 rounded-lg px-3 py-2 bg-card/40">
+                <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold">Resultados</p>
+                <div className="mt-1 grid grid-cols-2 gap-x-2 gap-y-0.5">
+                  <div className="flex items-baseline gap-1 text-emerald-500">
+                    <span className="text-[10px]">●</span>
+                    <span className="font-bold tabular-nums" style={{ fontSize: 12 }}>{kpis.greens}</span>
+                    <span className="text-emerald-500/80" style={{ fontSize: 11 }}>Greens</span>
+                  </div>
+                  <div className="flex items-baseline gap-1 text-emerald-500">
+                    <span className="font-bold tabular-nums" style={{ fontSize: 12 }}>{kpis.meioGreens}</span>
+                    <span className="text-emerald-500/80" style={{ fontSize: 11 }}>MG</span>
+                  </div>
+                  <div className="flex items-baseline gap-1 text-red-500">
+                    <span className="text-[10px]">●</span>
+                    <span className="font-bold tabular-nums" style={{ fontSize: 12 }}>{kpis.reds}</span>
+                    <span className="text-red-500/80" style={{ fontSize: 11 }}>Reds</span>
+                  </div>
+                  <div className="flex items-baseline gap-1 text-red-500">
+                    <span className="font-bold tabular-nums" style={{ fontSize: 12 }}>{kpis.meioReds}</span>
+                    <span className="text-red-500/80" style={{ fontSize: 11 }}>MR</span>
+                  </div>
+                  <div className="flex items-baseline gap-1 text-muted-foreground col-span-2">
+                    <span className="text-[10px]">○</span>
+                    <span className="font-bold tabular-nums" style={{ fontSize: 12 }}>{kpis.voids}</span>
+                    <span style={{ fontSize: 11 }}>Voids</span>
+                  </div>
+                </div>
+              </div>
+              <div className="border border-border/40 rounded-lg px-3 py-2 bg-card/40" title="Maior queda do pico ao vale no período">
+                <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold">Drawdown Máx.</p>
+                <p className="text-sm font-black tabular-nums mt-0.5 text-red-500">{fmtMoney(drawdown.maxDrawdown)}</p>
+                <p className="text-muted-foreground/80 mt-0.5 leading-tight truncate" style={{ fontSize: 10 }}>
+                  {drawdown.peakDate && drawdown.valleyDate ? `pico ${fmtDM(drawdown.peakDate)} · vale ${fmtDM(drawdown.valleyDate)}` : "—"}
+                </p>
+              </div>
             </div>
 
             <div className="flex items-start gap-2 text-[11px] text-muted-foreground bg-muted/20 border border-border/30 rounded px-3 py-2">
@@ -930,44 +989,94 @@ export function MarketDrillDownModal({
               <p className="text-xs text-muted-foreground">Sem dados.</p>
             ) : (
               <>
-                {/* SEÇÃO 1 — DRAWDOWN DETALHADO */}
-                <Section title="Drawdown detalhado">
-                  <div className="border border-border/40 rounded-lg p-4 bg-card/40 space-y-3">
-                    <div className="flex items-baseline justify-between flex-wrap gap-3">
-                      <div>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Drawdown máximo do período</p>
-                        <p className="text-2xl font-black tabular-nums text-red-500 mt-1">{fmtMoney(drawdown.maxDrawdown)}</p>
+                {/* SEÇÃO 1 — DRAWDOWN + RUNUP em 2 colunas */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                  {/* Coluna esquerda — DRAWDOWN */}
+                  <section className="space-y-3">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground border-b border-border/30 pb-2">
+                      Drawdown
+                    </h3>
+                    <div className="border border-border/40 rounded-lg p-4 bg-card/40 space-y-3">
+                      <div className="flex items-baseline justify-between flex-wrap gap-3">
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Drawdown máximo</p>
+                          <p className="text-2xl font-black tabular-nums text-red-500 mt-1">{fmtMoney(drawdown.maxDrawdown)}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">{fmtPct(ddPctOfStake)} do volume</p>
+                        </div>
+                        <div className="flex flex-col gap-1.5 text-[11px]">
+                          <div className="flex items-center gap-2">
+                            <span className="uppercase tracking-widest text-muted-foreground text-[9px] font-bold w-14">Pico</span>
+                            <span className="tabular-nums font-semibold">{fmtDM(drawdown.peakDate)}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="uppercase tracking-widest text-muted-foreground text-[9px] font-bold w-14">Vale</span>
+                            <span className="tabular-nums font-semibold">{fmtDM(drawdown.valleyDate)}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="uppercase tracking-widest text-muted-foreground text-[9px] font-bold w-14">Duração</span>
+                            <span className="tabular-nums font-semibold">{ddDuration}d</span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-5 text-[11px]">
-                        <div>
-                          <p className="uppercase tracking-widest text-muted-foreground text-[9px] font-bold">Pico</p>
-                          <p className="tabular-nums font-semibold">{fmtDM(drawdown.peakDate)}</p>
-                        </div>
-                        <div>
-                          <p className="uppercase tracking-widest text-muted-foreground text-[9px] font-bold">Vale</p>
-                          <p className="tabular-nums font-semibold">{fmtDM(drawdown.valleyDate)}</p>
-                        </div>
-                        <div>
-                          <p className="uppercase tracking-widest text-muted-foreground text-[9px] font-bold">Duração</p>
-                          <p className="tabular-nums font-semibold">{ddDuration}d</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
                       <div className="w-full h-1.5 bg-white/[0.05] rounded-full overflow-hidden">
                         <div className="h-full bg-red-500/70" style={{ width: `${ddPctOfStake}%` }} />
                       </div>
-                      <p className="text-[10px] text-muted-foreground">{fmtPct(ddPctOfStake)} do volume total apostado</p>
                     </div>
-                  </div>
 
-                  <div className="mt-4">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Profundidade do drawdown</p>
-                    <div className="w-full h-[180px] relative">
-                      <DrawdownChart data={drawdown.series} />
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Profundidade do drawdown</p>
+                      <div className="w-full h-[220px] relative">
+                        <DrawdownChart data={drawdown.series} />
+                      </div>
                     </div>
-                  </div>
-                </Section>
+                  </section>
+
+                  {/* Coluna direita — RUNUP */}
+                  <section className="space-y-3">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground border-b border-border/30 pb-2 flex items-center gap-1.5">
+                      Runup
+                      <span
+                        className="inline-flex"
+                        title="Runup é o oposto do drawdown — a maior valorização consecutiva do vale ao pico no período. Mede a força positiva da operação."
+                      >
+                        <HelpCircle className="w-3.5 h-3.5 text-muted-foreground/70 cursor-help" aria-label="Sobre runup" />
+                      </span>
+                    </h3>
+                    <div className="border border-border/40 rounded-lg p-4 bg-card/40 space-y-3">
+                      <div className="flex items-baseline justify-between flex-wrap gap-3">
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Runup máximo</p>
+                          <p className="text-2xl font-black tabular-nums text-emerald-500 mt-1">{fmtMoney(drawdown.maxRunup)}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">{fmtPct(ruPctOfStake)} do volume</p>
+                        </div>
+                        <div className="flex flex-col gap-1.5 text-[11px]">
+                          <div className="flex items-center gap-2">
+                            <span className="uppercase tracking-widest text-muted-foreground text-[9px] font-bold w-14">Vale</span>
+                            <span className="tabular-nums font-semibold">{fmtDM(drawdown.runupValleyDate)}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="uppercase tracking-widest text-muted-foreground text-[9px] font-bold w-14">Pico</span>
+                            <span className="tabular-nums font-semibold">{fmtDM(drawdown.runupPeakDate)}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="uppercase tracking-widest text-muted-foreground text-[9px] font-bold w-14">Duração</span>
+                            <span className="tabular-nums font-semibold">{ruDuration}d</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="w-full h-1.5 bg-white/[0.05] rounded-full overflow-hidden">
+                        <div className="h-full bg-emerald-500/70" style={{ width: `${ruPctOfStake}%` }} />
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Profundidade do runup</p>
+                      <div className="w-full h-[220px] relative">
+                        <RunupChart data={drawdown.runupSeries} />
+                      </div>
+                    </div>
+                  </section>
+                </div>
 
                 {/* SEÇÃO 2 — ANÁLISE DE SEQUÊNCIAS */}
                 <Section title="Análise de sequências">
@@ -1747,6 +1856,94 @@ function DrawdownChart({ data }: { data: Array<{ idx: number; date: string; date
 
 /* --- Sequence blocks bar chart --- */
 function SequenceTooltip({ active, payload }: any) {
+  // (kept below)
+  return _SequenceTooltipImpl({ active, payload });
+}
+function RunupTooltip({ active, payload }: any) {
+  if (!active || !payload || payload.length === 0) return null;
+  const row = payload[0].payload as { dateLabel: string; runup: number; cumulative: number };
+  return (
+    <div
+      className="pointer-events-none animate-in fade-in-0 duration-[120ms]"
+      style={{
+        background: "#1a1e2a",
+        border: "1px solid rgba(255,255,255,0.1)",
+        borderRadius: 8,
+        padding: "10px 14px",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+        minWidth: 220,
+      }}
+    >
+      <div className="text-[10px] uppercase tracking-widest font-semibold mb-1.5" style={{ color: "rgba(255,255,255,0.5)" }}>
+        {row.dateLabel}
+      </div>
+      <div className="flex items-baseline justify-between gap-4">
+        <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.5)" }}>Runup atual</span>
+        <span className="font-bold tabular-nums" style={{ color: "#22c55e", fontSize: 14 }}>{fmtMoney(row.runup)}</span>
+      </div>
+      <div className="flex items-baseline justify-between gap-4 mt-1">
+        <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.5)" }}>Acumulado</span>
+        <span className="font-semibold tabular-nums" style={{ color: row.cumulative >= 0 ? "#22c55e" : "#ef4444", fontSize: 13 }}>{fmtMoney(row.cumulative)}</span>
+      </div>
+    </div>
+  );
+}
+
+function RunupChart({ data }: { data: Array<{ idx: number; date: string; dateLabel: string; cumulative: number; runup: number }> }) {
+  const step = Math.max(1, Math.ceil(data.length / 12));
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <AreaChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 6 }}>
+        <defs>
+          <linearGradient id="ruFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#22c55e" stopOpacity={0.25} />
+            <stop offset="100%" stopColor="#22c55e" stopOpacity={0.05} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+        <XAxis
+          dataKey="dateLabel"
+          tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }}
+          axisLine={false}
+          tickLine={false}
+          interval={step - 1}
+          minTickGap={20}
+        />
+        <YAxis
+          tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }}
+          axisLine={false}
+          tickLine={false}
+          width={55}
+          tickFormatter={(v) => {
+            const n = Number(v);
+            if (Math.abs(n) >= 1000) return `R$${(n / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}k`;
+            return `R$${n.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
+          }}
+        />
+        <ReferenceLine y={0} stroke="rgba(255,255,255,0.15)" strokeDasharray="4 4" />
+        <Tooltip
+          cursor={{ stroke: "rgba(255,255,255,0.2)", strokeWidth: 1 }}
+          wrapperStyle={{ outline: "none", zIndex: 60 }}
+          content={<RunupTooltip />}
+          animationDuration={120}
+        />
+        <Area
+          type="monotone"
+          dataKey="runup"
+          stroke="#22c55e"
+          strokeWidth={1.5}
+          fill="url(#ruFill)"
+          dot={false}
+          activeDot={{ r: 4, stroke: "#fff", strokeWidth: 2, fill: "#22c55e" }}
+          isAnimationActive
+          animationDuration={400}
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}
+
+function _SequenceTooltipImpl({ active, payload }: any) {
   if (!active || !payload || payload.length === 0) return null;
   const row = payload[0].payload as { kind: "GREEN" | "RED"; length: number; pl: number; startDate: string; endDate: string };
   const c = row.kind === "GREEN" ? "#22c55e" : "#ef4444";
