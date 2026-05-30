@@ -311,6 +311,48 @@ export function MarketDrillDownModal({
 
   const kpis = useMemo(() => calcMetrics(marketBets), [marketBets]);
 
+  // === RISK METRICS (computed once per marketBets) ===
+  const marketBetsAsc = useMemo(() => sortByDateAsc(marketBets), [marketBets]);
+
+  const drawdown = useMemo(() => computeDrawdown(marketBetsAsc), [marketBetsAsc]);
+  const streaks = useMemo(() => computeStreaks(marketBetsAsc), [marketBetsAsc]);
+  const stakeDistribution = useMemo(() => computeStakeDistribution(marketBets), [marketBets]);
+  const weightedStrike = useMemo(() => computeWeightedStrike(marketBets), [marketBets]);
+  const bookmakerPerf = useMemo(() => computeBookmakerPerformance(marketBets), [marketBets]);
+
+  const ddDuration = drawdown.peakDate && drawdown.valleyDate ? daysBetween(drawdown.peakDate, drawdown.valleyDate) : 0;
+  const ddPctOfStake = kpis.stake > 0 ? Math.min(100, (drawdown.maxDrawdown / kpis.stake) * 100) : 0;
+
+  const stakeDistBest = useMemo(() => {
+    const eligible = stakeDistribution.filter((s) => s.n > 0);
+    if (eligible.length === 0) return null;
+    const principal = eligible.reduce((a, b) => (b.n > a.n ? b : a), eligible[0]);
+    const bestRoi = eligible.reduce((a, b) => (b.roi > a.roi ? b : a), eligible[0]);
+    return { principalLabel: principal.label, bestRoiLabel: bestRoi.label };
+  }, [stakeDistribution]);
+
+  const bookmakerStats = useMemo(() => {
+    const eligible = bookmakerPerf.filter((r) => r.n >= 10);
+    const avgRoi = eligible.length > 0 ? eligible.reduce((a, b) => a + b.roi, 0) / eligible.length : 0;
+    return {
+      bestLabel: eligible.length > 0 ? eligible[0].casa : null,
+      worstLabel: eligible.length > 0 ? eligible[eligible.length - 1].casa : null,
+      avgRoi,
+    };
+  }, [bookmakerPerf]);
+
+  // Drawdown per odd range (for the table column)
+  const drawdownByRange = useMemo(() => {
+    const map = new Map<string, number>();
+    ODD_RANGES.forEach((r) => {
+      const sub = marketBets.filter((b) => b.odd !== null && b.odd !== undefined && b.odd >= r.min && b.odd <= r.max);
+      map.set(r.label, computeDrawdown(sortByDateAsc(sub)).maxDrawdown);
+    });
+    const naSub = marketBets.filter((b) => b.odd === null || b.odd === undefined);
+    if (naSub.length > 0) map.set("N/A", computeDrawdown(sortByDateAsc(naSub)).maxDrawdown);
+    return map;
+  }, [marketBets]);
+
   const oddRangeRows = useMemo(() => {
     const rows = ODD_RANGES.map((r) => {
       const sub = marketBets.filter((b) => b.odd !== null && b.odd >= r.min && b.odd <= r.max);
