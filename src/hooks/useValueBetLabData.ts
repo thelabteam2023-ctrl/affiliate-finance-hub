@@ -209,9 +209,10 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
       if (sportName.toLowerCase() === 'tennis') sportName = 'Tênis';
       if (sportName.toLowerCase() === 'volleyball') sportName = 'Vôlei';
 
-      let marketName = bet.mercado || 'Geral';
-      marketName = marketName.trim() === "" ? "Geral" : marketName;
-      
+      // Usa o nome canônico do MercadoResolver para agrupar (evita fragmentação
+      // tipo "GOLS", "Draw No Bet", "Vencedor" como entradas separadas).
+      const marketName = resolverMercado(bet).label_completo || "Geral";
+
       const oddRange = getOddRange(bet.odd);
 
       if (!sports[sportName]) {
@@ -251,7 +252,7 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
 
       Object.keys(sports[sName].markets).forEach(mName => {
         const marketBets = sportBets.filter(b => {
-          const bMarket = b.mercado ? (b.mercado.trim() === "" ? "Geral" : b.mercado) : 'Geral';
+          const bMarket = resolverMercado(b).label_completo || "Geral";
           return bMarket === mName;
         });
         sports[sName].markets[mName] = { ...sports[sName].markets[mName], ...calculateMetrics(marketBets) };
