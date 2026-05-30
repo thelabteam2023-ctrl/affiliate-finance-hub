@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
@@ -34,7 +34,8 @@ import {
   LabelList,
 } from "recharts";
 import { ODD_RANGES, RawBet, Resultado } from "@/hooks/useValueBetLabData";
-import { resolverMercado } from "@/utils/mercadoResolver";
+import { resolverMercado, TipoMercadoKey } from "@/utils/mercadoResolver";
+import { History } from "lucide-react";
 import { contarApostasComEdge } from "@/utils/edgeCalculator";
 import { EdgeAnalysisTab } from "./EdgeAnalysisTab";
 
