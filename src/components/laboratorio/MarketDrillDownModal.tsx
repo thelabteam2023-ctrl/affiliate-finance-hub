@@ -1139,9 +1139,14 @@ function CumulativeTooltip({ active, payload }: any) {
 
 function CumulativeProfitChart({
   data,
+  trend,
 }: {
   data: Array<{ idx: number; total: number; date: string; dateLabel: string; bet: number; cumulative: number }>;
+  trend?: Array<{ dateLabel: string; trendValue: number }>;
 }) {
+  const merged = trend
+    ? data.map((d, i) => ({ ...d, trendValue: trend[i]?.trendValue }))
+    : data;
   const values = data.map((d) => d.cumulative);
   const maxV = Math.max(0, ...values);
   const minV = Math.min(0, ...values);
@@ -1156,7 +1161,7 @@ function CumulativeProfitChart({
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <AreaChart data={data} margin={{ top: 10, right: 16, left: 0, bottom: 6 }}>
+      <ComposedChart data={merged} margin={{ top: 10, right: 16, left: 0, bottom: 6 }}>
         <defs>
           <linearGradient id="cumStroke" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#22c55e" stopOpacity={1} />
@@ -1211,10 +1216,48 @@ function CumulativeProfitChart({
             return <circle cx={props.cx} cy={props.cy} r={5} fill={c} stroke="#fff" strokeWidth={2} />;
           }}
           isAnimationActive
-          animationDuration={500}
+          animationDuration={300}
         />
-      </AreaChart>
+        {trend && (
+          <Line
+            type="linear"
+            dataKey="trendValue"
+            stroke="rgba(255,255,255,0.5)"
+            strokeWidth={1}
+            strokeDasharray="4 4"
+            dot={false}
+            activeDot={false}
+            isAnimationActive={false}
+          />
+        )}
+      </ComposedChart>
     </ResponsiveContainer>
+  );
+}
+
+/* --- Pill button for odd-range quick filter --- */
+function FaixaPill({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "text-[11px] px-2.5 py-1 rounded-full border transition-all tabular-nums",
+        active
+          ? "border-white/30 bg-white/[0.08] text-foreground"
+          : "border-white/[0.12] bg-transparent text-muted-foreground hover:text-foreground hover:border-white/20"
+      )}
+    >
+      {label}
+    </button>
   );
 }
 
