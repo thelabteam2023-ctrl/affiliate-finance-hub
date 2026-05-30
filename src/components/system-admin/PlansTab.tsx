@@ -75,7 +75,7 @@ export function PlansTab() {
   };
 
   const openEditPrice = (plan: PlanWithDetails, priceId: string) => {
-    const price = plan.prices.find(p => p.id === priceId);
+    const price = plan.prices?.find(p => p.id === priceId);
     if (!price) return;
     setPriceForm({
       amount: price.amount.toString(),
@@ -174,7 +174,7 @@ export function PlansTab() {
               </TableHeader>
               <TableBody>
                 {plans.map((plan) => {
-                  const monthlyPrice = plan.prices.find(p => p.billing_period === 'monthly' && p.is_active);
+                  const monthlyPrice = plan.prices?.find(p => p.billing_period === 'monthly' && p.is_active);
                   const statusConfig = STATUS_LABELS[plan.status];
                   
                   return (
