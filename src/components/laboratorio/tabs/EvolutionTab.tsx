@@ -80,30 +80,31 @@ function RoiDailyTooltip({ active, payload, label }: any) {
   );
 }
 
-function VolumeComposedTooltip({ active, payload, label }: any) {
+function VolumeDailyTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   const row = payload[0].payload;
   const profit = Number(row.profit);
   const roi = Number(row.roi);
-  const profitColor = profit >= 0 ? "#22c55e" : "#ef4444";
-  const roiColor = roi >= 0 ? "#22c55e" : "#ef4444";
+  const profitColor = profit > 0 ? "#22c55e" : profit < 0 ? "#ef4444" : "rgba(255,255,255,0.6)";
+  const roiColor = roi > 0 ? "#22c55e" : roi < 0 ? "#ef4444" : "rgba(255,255,255,0.6)";
   return (
     <TooltipShell title={label}>
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         <div className="flex items-center justify-between gap-6">
-          <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(96,165,250,0.9)" }}>Volume</span>
-          <span className="font-bold tabular-nums" style={{ color: "#60a5fa", fontSize: 14 }}>{fmtBRL(row.volume)}</span>
+          <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.55)" }}>Volume</span>
+          <span className="font-bold tabular-nums" style={{ color: "#e5e7eb", fontSize: 13 }}>{fmtBRL(row.volume)}</span>
         </div>
         <div className="flex items-center justify-between gap-6">
           <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.55)" }}>Lucro</span>
-          <span className="font-bold tabular-nums" style={{ color: profitColor, fontSize: 14 }}>{fmtBRL(profit)}</span>
+          <span className="font-bold tabular-nums" style={{ color: profitColor, fontSize: 13 }}>{fmtBRL(profit)}</span>
         </div>
-        <div className="flex items-center justify-between gap-6 pt-1.5 mt-1.5 border-t" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+        <div className="flex items-center justify-between gap-6">
           <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.55)" }}>ROI</span>
-          <span className="font-bold tabular-nums" style={{ color: roiColor, fontSize: 14 }}>{fmtPctSigned(roi)}</span>
+          <span className="font-bold tabular-nums" style={{ color: roiColor, fontSize: 13 }}>{fmtPctSigned(roi)}</span>
         </div>
-        <div className="text-[10px] pt-1" style={{ color: "rgba(255,255,255,0.4)" }}>
-          {row.bets} aposta{row.bets === 1 ? "" : "s"}
+        <div className="flex items-center justify-between gap-6">
+          <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.55)" }}>Apostas</span>
+          <span className="font-bold tabular-nums" style={{ color: "#e5e7eb", fontSize: 13 }}>{row.bets}</span>
         </div>
       </div>
     </TooltipShell>
@@ -234,24 +235,24 @@ export function EvolutionTab({ evolution, evolutionByEntry }: EvolutionTabProps)
           </CardContent>
         </Card>
 
-        {/* Volume Diário com Lucro e ROI sobrepostos */}
+        {/* Volume Diário Apostado — barras sobrepostas (volume + |lucro|) */}
         <Card className="bg-card/40 border-border/40">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
-              Volume × Lucro × ROI Diário
+              Volume Diário Apostado
             </CardTitle>
-            <div className="flex items-center gap-3 text-[10px] uppercase tracking-wider text-muted-foreground/70">
-              <span className="flex items-center gap-1">
-                <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: "#60a5fa", opacity: 0.55 }} />
+            <div className="flex items-center gap-3 text-[11px] text-muted-foreground/70">
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: "rgba(59,130,246,0.45)" }} />
                 Volume
               </span>
-              <span className="flex items-center gap-1">
-                <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: "#22c55e" }} />
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: "rgba(34,197,94,0.75)" }} />
                 Lucro
               </span>
-              <span className="flex items-center gap-1">
-                <span className="inline-block w-3 h-0.5" style={{ background: "#f59e0b" }} />
-                ROI
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: "rgba(239,68,68,0.75)" }} />
+                Prejuízo
               </span>
             </div>
           </CardHeader>
@@ -259,81 +260,61 @@ export function EvolutionTab({ evolution, evolutionByEntry }: EvolutionTabProps)
             <div className="h-[260px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart
-                  data={chartData}
+                  data={chartData.map((d) => ({
+                    ...d,
+                    absLucro: Math.min(Math.abs(d.profit), d.volume),
+                  }))}
                   margin={{ top: 12, right: 8, left: 0, bottom: 8 }}
                   barGap={-9999}
-                  barCategoryGap="25%"
+                  barCategoryGap="10%"
                 >
-                  <defs>
-                    <linearGradient id="volBar" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#60a5fa" stopOpacity={0.55} />
-                      <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.25} />
-                    </linearGradient>
-                    <linearGradient id="profitPos" x1="0" y1="1" x2="0" y2="0">
-                      <stop offset="0%" stopColor="#16a34a" stopOpacity={0.9} />
-                      <stop offset="100%" stopColor="#4ade80" stopOpacity={1} />
-                    </linearGradient>
-                    <linearGradient id="profitNeg" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#dc2626" stopOpacity={0.95} />
-                      <stop offset="100%" stopColor="#f87171" stopOpacity={0.85} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" horizontal vertical={false} stroke="rgba(255,255,255,0.06)" />
-                  <XAxis dataKey="formattedDate" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#888" }} />
-                  <YAxis
-                    yAxisId="left"
+                  <CartesianGrid strokeDasharray="3 3" horizontal vertical={false} stroke="rgba(255,255,255,0.05)" />
+                  <XAxis
+                    dataKey="formattedDate"
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fontSize: 10, fill: "#888" }}
+                    tick={{ fontSize: 10, fill: "#636b85" }}
+                    interval={Math.max(0, Math.floor(chartData.length / 12))}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 10, fill: "#636b85" }}
                     tickFormatter={fmtBRLShort}
                     width={56}
                   />
-                  <YAxis
-                    yAxisId="right"
-                    orientation="right"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 10, fill: "#f59e0b" }}
-                    tickFormatter={(v) => `${v}%`}
-                    width={42}
-                  />
-                  <ReferenceLine yAxisId="left" y={0} stroke="rgba(255,255,255,0.15)" strokeDasharray="2 2" />
                   <Tooltip
                     cursor={{ fill: "rgba(255,255,255,0.04)" }}
-                    content={<VolumeComposedTooltip />}
+                    content={<VolumeDailyTooltip />}
                   />
-                  {/* Volume bar (background, wider) */}
+                  {/* Volume bar — fundo, mais larga */}
                   <Bar
-                    yAxisId="left"
                     dataKey="volume"
-                    fill="url(#volBar)"
-                    radius={[4, 4, 0, 0]}
+                    fill="rgba(59,130,246,0.25)"
+                    radius={[3, 3, 0, 0]}
                     animationDuration={400}
-                    barSize={28}
+                    barSize={22}
                   />
-                  {/* Profit bar (overlay, narrower, centered) */}
+                  {/* |Lucro| bar — sobreposta, mais estreita, cor por sinal */}
                   <Bar
-                    yAxisId="left"
-                    dataKey="profit"
+                    dataKey="absLucro"
                     radius={[3, 3, 0, 0]}
                     animationDuration={400}
                     barSize={12}
                   >
                     {chartData.map((d, i) => (
-                      <Cell key={i} fill={d.profit >= 0 ? "url(#profitPos)" : "url(#profitNeg)"} />
+                      <Cell
+                        key={i}
+                        fill={
+                          d.profit > 0
+                            ? "rgba(34,197,94,0.75)"
+                            : d.profit < 0
+                            ? "rgba(239,68,68,0.75)"
+                            : "rgba(75,85,99,0.5)"
+                        }
+                      />
                     ))}
                   </Bar>
-                  {/* ROI line on right axis */}
-                  <Line
-                    yAxisId="right"
-                    type="monotone"
-                    dataKey="roi"
-                    stroke="#f59e0b"
-                    strokeWidth={2}
-                    dot={false}
-                    activeDot={{ r: 4, strokeWidth: 2, stroke: "#0b0f17", fill: "#f59e0b" }}
-                    animationDuration={400}
-                  />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
