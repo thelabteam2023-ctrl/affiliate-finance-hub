@@ -746,15 +746,143 @@ export function MarketDrillDownModal({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-[92vw] w-[92vw] h-[90vh] p-0 flex flex-col gap-0 overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b border-border/40 shrink-0">
-          <DialogTitle className="flex items-baseline gap-3">
-            <span className="text-2xl font-black tracking-tight">{marketName ?? ""}</span>
-            <span className="text-xs uppercase tracking-widest text-muted-foreground font-bold">
-              {sportLabel} · ValueBet
-            </span>
+          <DialogTitle className="flex flex-col gap-1">
+            <div className="flex items-baseline gap-3">
+              <span className="text-2xl font-black tracking-tight">
+                {activeSubLabel === "ALL"
+                  ? `${siblings.tipoLabel || "Mercado"} · Todos os sub-tipos`
+                  : activeSubLabel}
+              </span>
+              <span className="text-xs uppercase tracking-widest text-muted-foreground font-bold">
+                {sportLabel} · ValueBet
+              </span>
+            </div>
+            {siblings.tipoLabel && (
+              <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-widest font-bold text-muted-foreground">
+                <span>{sportLabel}</span>
+                <span className="opacity-40">›</span>
+                <span>{siblings.tipoLabel}</span>
+                <span className="opacity-40">›</span>
+                <span className="text-foreground/80 normal-case tracking-normal font-semibold">
+                  {activeSubLabel === "ALL" ? "Todos os sub-tipos" : activeSubLabel}
+                </span>
+              </div>
+            )}
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="analise" className="flex-1 flex flex-col overflow-hidden min-h-0">
+        <div className="flex-1 flex flex-row overflow-hidden min-h-0">
+          {/* Sidebar de sub-tipos (desktop) */}
+          {siblings.tipoKey && siblings.items.length > 0 && (
+            <aside className="hidden md:flex w-[200px] shrink-0 flex-col border-r border-border/40 bg-muted/20 overflow-y-auto">
+              <div className="px-4 pt-3 pb-1.5 text-[10px] uppercase tracking-widest text-muted-foreground font-bold">
+                Sub-tipos
+              </div>
+              {/* Item "Todos" */}
+              <button
+                onClick={() => setActiveSubLabel("ALL")}
+                className={cn(
+                  "text-left px-4 py-2.5 border-l-2 border-b border-border/40 transition-colors duration-[120ms] cursor-pointer",
+                  activeSubLabel === "ALL"
+                    ? "border-l-foreground bg-white/[0.05]"
+                    : "border-l-transparent hover:bg-white/[0.03]",
+                )}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="text-[13px] font-bold leading-tight">Todos</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">
+                      {allAggregate.n} apostas
+                    </div>
+                  </div>
+                  <span
+                    className={cn(
+                      "text-[12px] font-bold tabular-nums shrink-0",
+                      allAggregate.n === 0
+                        ? "text-muted-foreground"
+                        : allAggregate.roi >= 0
+                          ? "text-emerald-400"
+                          : "text-red-400",
+                    )}
+                  >
+                    {allAggregate.n === 0
+                      ? "—"
+                      : `${allAggregate.roi >= 0 ? "+" : ""}${allAggregate.roi.toFixed(2)}%`}
+                  </span>
+                </div>
+              </button>
+              {/* Itens por sub-tipo */}
+              {siblings.items.map((it) => {
+                const isActive = activeSubLabel === it.label;
+                const disabled = it.n === 0;
+                return (
+                  <button
+                    key={it.label}
+                    onClick={() => !disabled && setActiveSubLabel(it.label)}
+                    disabled={disabled}
+                    className={cn(
+                      "text-left px-4 py-2.5 border-l-2 transition-colors duration-[120ms]",
+                      isActive
+                        ? "border-l-emerald-400 bg-white/[0.05]"
+                        : "border-l-transparent hover:bg-white/[0.03]",
+                      disabled && "opacity-40 cursor-default hover:bg-transparent",
+                      !disabled && "cursor-pointer",
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="text-[13px] leading-tight truncate flex items-center gap-1">
+                          <span className="truncate">{it.label}</span>
+                          {it.hasGen1 && (
+                            <History className="w-2.5 h-2.5 text-muted-foreground shrink-0" aria-label="inclui dados históricos" />
+                          )}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground mt-0.5">
+                          {it.n} aposta{it.n === 1 ? "" : "s"}
+                        </div>
+                      </div>
+                      <span
+                        className={cn(
+                          "text-[12px] font-bold tabular-nums shrink-0",
+                          disabled
+                            ? "text-muted-foreground"
+                            : it.roi >= 0
+                              ? "text-emerald-400"
+                              : "text-red-400",
+                        )}
+                      >
+                        {disabled ? "—" : `${it.roi >= 0 ? "+" : ""}${it.roi.toFixed(2)}%`}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </aside>
+          )}
+
+          <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+            {/* Dropdown de sub-tipos (mobile) */}
+            {siblings.tipoKey && siblings.items.length > 0 && (
+              <div className="md:hidden px-4 pt-3 shrink-0">
+                <Select value={activeSubLabel} onValueChange={(v) => setActiveSubLabel(v as string)}>
+                  <SelectTrigger className="h-9 text-xs">
+                    <SelectValue placeholder="Sub-tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">
+                      Todos · {allAggregate.n} apostas
+                    </SelectItem>
+                    {siblings.items.map((it) => (
+                      <SelectItem key={it.label} value={it.label} disabled={it.n === 0}>
+                        {it.label} · {it.n} apostas
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <Tabs defaultValue="analise" className="flex-1 flex flex-col overflow-hidden min-h-0">
           <div className="px-6 pt-3 shrink-0">
             <TabsList accentColor="bg-foreground">
               <TabsTrigger value="analise">Análise</TabsTrigger>
