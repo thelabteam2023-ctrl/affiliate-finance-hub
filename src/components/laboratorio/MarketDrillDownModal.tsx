@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { ArrowUpDown, Trophy, Info, X, Filter } from "lucide-react";
+import { ArrowUpDown, Trophy, Info, X, Filter, ArrowUp, ArrowDown, Equal, Lightbulb } from "lucide-react";
 import { HelpCircle } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import {
@@ -31,6 +31,7 @@ import {
   Legend,
   ComposedChart,
   Sector,
+  LabelList,
 } from "recharts";
 import { ODD_RANGES, RawBet, Resultado } from "@/hooks/useValueBetLabData";
 
