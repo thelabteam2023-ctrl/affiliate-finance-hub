@@ -1123,43 +1123,12 @@ export function MarketDrillDownModal({
                   </div>
                 </Section>
 
-                {/* SEÇÃO 4 — STRIKE RATE PONDERADO */}
-                <Section title="Strike rate ponderado por stake">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="border border-border/40 rounded-lg p-4 bg-card/40">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Win Rate Simples</p>
-                      <p className="text-2xl font-black tabular-nums mt-1">{fmtPct(kpis.winRate)}</p>
-                      <p className="text-[10px] text-muted-foreground/80 mt-1">(1 aposta = 1 voto)</p>
-                    </div>
-                    <div className="border border-border/40 rounded-lg p-4 bg-card/40">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Strike Rate Ponderado</p>
-                      <p className="text-2xl font-black tabular-nums mt-1">{fmtPct(weightedStrike)}</p>
-                      <p className="text-[10px] text-muted-foreground/80 mt-1">(R$ 1 = 1 voto)</p>
-                    </div>
-                  </div>
-                  {(() => {
-                    const diff = weightedStrike - kpis.winRate;
-                    if (diff > 2) {
-                      return (
-                        <p className="text-xs text-emerald-400 mt-3">
-                          Você acerta proporcionalmente mais nas apostas de maior valor. Sinal positivo de calibração de stake.
-                        </p>
-                      );
-                    }
-                    if (diff < -2) {
-                      return (
-                        <p className="text-xs text-orange-400 mt-3">
-                          Você acerta proporcionalmente menos nas apostas de maior valor. Considere revisar os critérios de sizing.
-                        </p>
-                      );
-                    }
-                    return (
-                      <p className="text-xs text-muted-foreground mt-3">
-                        Assertividade consistente independente do valor apostado.
-                      </p>
-                    );
-                  })()}
-                </Section>
+                {/* SEÇÃO 4 — CALIBRAÇÃO DE STAKE */}
+                <CalibracaoStakeSection
+                  kpis={kpis}
+                  weightedStrike={weightedStrike}
+                  buckets={calibrationBuckets}
+                />
 
                 {/* SEÇÃO 5 — PERFORMANCE POR BOOKMAKER */}
                 <Section title="Performance por bookmaker">
