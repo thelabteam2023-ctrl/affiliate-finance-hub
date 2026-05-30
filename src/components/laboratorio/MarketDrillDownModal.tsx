@@ -1252,3 +1252,242 @@ function WeekdayChart({
     </ResponsiveContainer>
   );
 }
+
+/* ============================================================
+ *  RESULT DISTRIBUTION — premium donut + cards + proportion bar
+ * ========================================================== */
+
+const DONUT_COLORS: Record<string, string> = {
+  GREEN: "#22c55e",
+  MEIO_GREEN: "#14b8a6",
+  MEIO_RED: "#f97316",
+  RED: "#ef4444",
+  VOID: "#4b5563",
+};
+
+function ResultDistribution({ bets }: { bets: RawBet[] }) {
+  const KEYS: Resultado[] = ["GREEN", "MEIO_GREEN", "MEIO_RED", "RED", "VOID"];
+  const LEGEND_ORDER: Resultado[] = ["GREEN", "RED", "VOID", "MEIO_GREEN", "MEIO_RED"];
+
+  const stats = useMemo(() => {
+    const map = new Map<Resultado, { count: number; profit: number }>();
+    KEYS.forEach((k) => map.set(k, { count: 0, profit: 0 }));
+    bets.forEach((b) => {
+      if (!b.resultado) return;
+      const e = map.get(b.resultado as Resultado);
+      if (!e) return;
+      e.count += 1;
+      e.profit += profitOf(b);
+    });
+    return map;
+  }, [bets]);
+
+  const totalValid = useMemo(
+    () => KEYS.reduce((acc, k) => acc + (stats.get(k)?.count ?? 0), 0),
+    [stats]
+  );
+
+  // Pie data (donut order = visual ordering around the ring)
+  const pieData = useMemo(
+    () =>
+      KEYS.map((k) => ({
+        key: k,
+        name: RESULT_LABEL[k],
+        value: stats.get(k)?.count ?? 0,
+      })).filter((d) => d.value > 0),
+    [stats]
+  );
+
+  const [activeIdx, setActiveIdx] = useState<number | null>(null);
+
+  const hovered = activeIdx !== null ? pieData[activeIdx] : null;
+  const hoveredPct = hovered && totalValid > 0 ? (hovered.value / totalValid) * 100 : 0;
+
+  // Proportion bar: Green · Meio Green · Meio Red · Red · Void
+  const BAR_ORDER: Resultado[] = ["GREEN", "MEIO_GREEN", "MEIO_RED", "RED", "VOID"];
+  const barSegments = BAR_ORDER.map((k) => ({
+    key: k,
+    value: stats.get(k)?.count ?? 0,
+    color: DONUT_COLORS[k],
+  })).filter((s) => s.value > 0);
+
+  const favoraveisPct =
+    totalValid > 0
+      ? (((stats.get("GREEN")?.count ?? 0) + (stats.get("MEIO_GREEN")?.count ?? 0)) / totalValid) * 100
+      : 0;
+  const desfavoraveisPct =
+    totalValid > 0
+      ? (((stats.get("RED")?.count ?? 0) + (stats.get("MEIO_RED")?.count ?? 0)) / totalValid) * 100
+      : 0;
+
+  // Active shape: keep same dimensions but offset outward +6px
+  const renderActiveShape = (props: any) => {
+    const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
+    return (
+      <Sector
+        cx={cx}
+        cy={cy}
+        innerRadius={innerRadius + 6}
+        outerRadius={outerRadius + 6}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        fill={fill}
+      />
+    );
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+        {/* Donut */}
+        <div className="relative w-full h-[260px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={pieData}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                innerRadius="56%"
+                outerRadius="78%"
+                paddingAngle={2}
+                stroke="none"
+                startAngle={90}
+                endAngle={-270}
+                isAnimationActive
+                animationDuration={600}
+                animationEasing="ease-out"
+                activeIndex={activeIdx ?? undefined}
+                activeShape={renderActiveShape}
+                onMouseLeave={() => setActiveIdx(null)}
+              >
+                {pieData.map((d, i) => {
+                  const dim = activeIdx !== null && activeIdx !== i;
+                  return (
+                    <Cell
+                      key={i}
+                      fill={DONUT_COLORS[d.key]}
+                      onMouseEnter={() => setActiveIdx(i)}
+                      style={{
+                        opacity: dim ? 0.5 : 1,
+                        transition: "opacity 150ms ease-out",
+                        cursor: "pointer",
+                        outline: "none",
+                      }}
+                    />
+                  );
+                })}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+
+          {/* Center label */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+            {hovered ? (
+              <>
+                <span
+                  className="font-bold tabular-nums leading-none"
+                  style={{ fontSize: 22, color: DONUT_COLORS[hovered.key] }}
+                >
+                  {fmtPct(hoveredPct)}
+                </span>
+                <span
+                  className="mt-1 uppercase tracking-widest font-semibold"
+                  style={{ fontSize: 11, color: "rgba(255,255,255,0.55)" }}
+                >
+                  {hovered.name}
+                </span>
+              </>
+            ) : (
+              <>
+                <span
+                  className="font-bold tabular-nums leading-none"
+                  style={{ fontSize: 22, color: "#e5e7eb" }}
+                >
+                  {totalValid.toLocaleString("pt-BR")}
+                </span>
+                <span
+                  className="mt-1 uppercase tracking-widest font-semibold"
+                  style={{ fontSize: 11, color: "rgba(255,255,255,0.45)" }}
+                >
+                  apostas
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Legend cards */}
+        <div className="flex flex-col">
+          {LEGEND_ORDER.map((k) => {
+            const s = stats.get(k);
+            if (!s || s.count === 0) return null;
+            const pct = totalValid > 0 ? (s.count / totalValid) * 100 : 0;
+            const isVoid = k === "VOID";
+            const profitColor = isVoid
+              ? "rgba(255,255,255,0.4)"
+              : s.profit >= 0
+                ? "#22c55e"
+                : "#ef4444";
+            const profitLabel = isVoid
+              ? "—"
+              : `${s.profit >= 0 ? "+" : "-"}${fmtMoney(Math.abs(s.profit)).replace("R$ ", "R$ ")}`;
+            return (
+              <div
+                key={k}
+                className="flex items-center gap-3 px-3 py-[10px] rounded-md transition-colors hover:bg-white/[0.04]"
+              >
+                <span
+                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                  style={{ background: DONUT_COLORS[k] }}
+                />
+                <span className="text-xs font-semibold text-foreground min-w-[88px]">
+                  {RESULT_LABEL[k]}
+                </span>
+                <span className="text-[11px] tabular-nums text-muted-foreground min-w-[78px]">
+                  {s.count.toLocaleString("pt-BR")} apostas
+                </span>
+                <span className="text-[11px] tabular-nums text-muted-foreground min-w-[58px]">
+                  {fmtPct(pct)}
+                </span>
+                <span
+                  className="text-xs tabular-nums font-bold ml-auto"
+                  style={{ color: profitColor }}
+                >
+                  {profitLabel}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Proportion bar */}
+      <div>
+        <div
+          className="flex w-full overflow-hidden"
+          style={{ height: 6, borderRadius: 3 }}
+        >
+          {barSegments.map((s) => (
+            <div
+              key={s.key}
+              style={{
+                width: `${(s.value / totalValid) * 100}%`,
+                background: s.color,
+              }}
+            />
+          ))}
+        </div>
+        <div className="flex items-center justify-between mt-2 text-[11px] font-semibold">
+          <span style={{ color: "#22c55e" }}>
+            ✓ Favoráveis {fmtPct(favoraveisPct)}
+          </span>
+          <span style={{ color: "#ef4444" }}>
+            ✗ Desfavoráveis {fmtPct(desfavoraveisPct)}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
