@@ -215,7 +215,12 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
       const oddRange = getOddRange(bet.odd);
 
       if (!sports[sportName]) {
-        sports[sportName] = { name: sportName, markets: {}, ...calculateMetrics([]) };
+        sports[sportName] = {
+          name: sportName,
+          markets: {},
+          tipos: {} as Record<TipoMercadoKey, TipoStats>,
+          ...calculateMetrics([]),
+        };
       }
 
       if (!sports[sportName].markets[marketName]) {
@@ -256,6 +261,60 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
           sports[sName].markets[mName].oddRanges[oRange] = calculateMetrics(rangeBets);
         });
       });
+
+      // --- NOVA HIERARQUIA: por TIPO → SUB_TIPO (via MercadoResolver) ---
+      const tipos: Record<TipoMercadoKey, TipoStats> = {} as any;
+      sportBets.forEach((b) => {
+        const resolved = resolverMercado(b);
+        const tk = resolved.tipo_key;
+        if (!tipos[tk]) {
+          tipos[tk] = {
+            tipo_key: tk,
+            tipo: resolved.tipo,
+            subTipos: {},
+            hasGeracao1: false,
+            hasGeracao2: false,
+            apostasComEdge: 0,
+            ...calculateMetrics([]),
+          };
+        }
+        const subKey = resolved.label_completo;
+        if (!tipos[tk].subTipos[subKey]) {
+          tipos[tk].subTipos[subKey] = {
+            name: subKey,
+            oddRanges: {},
+            hasGeracao1: false,
+            hasGeracao2: false,
+            apostasComEdge: 0,
+            ...calculateMetrics([]),
+          };
+        }
+        if (resolved.geracao === 1) {
+          tipos[tk].hasGeracao1 = true;
+          tipos[tk].subTipos[subKey].hasGeracao1 = true;
+        } else {
+          tipos[tk].hasGeracao2 = true;
+          tipos[tk].subTipos[subKey].hasGeracao2 = true;
+        }
+        if (b.fair_odd !== null && b.fair_odd !== undefined && Number(b.fair_odd) > 1) {
+          tipos[tk].apostasComEdge = (tipos[tk].apostasComEdge ?? 0) + 1;
+          tipos[tk].subTipos[subKey].apostasComEdge =
+            (tipos[tk].subTipos[subKey].apostasComEdge ?? 0) + 1;
+        }
+      });
+      // Calcular métricas agregadas para cada tipo e sub-tipo
+      Object.keys(tipos).forEach((tk) => {
+        const tKey = tk as TipoMercadoKey;
+        const tipoBets = sportBets.filter((b) => resolverMercado(b).tipo_key === tKey);
+        const tipoMetrics = calculateMetrics(tipoBets);
+        tipos[tKey] = { ...tipos[tKey], ...tipoMetrics };
+        Object.keys(tipos[tKey].subTipos).forEach((subKey) => {
+          const subBets = tipoBets.filter((b) => resolverMercado(b).label_completo === subKey);
+          const subMetrics = calculateMetrics(subBets);
+          tipos[tKey].subTipos[subKey] = { ...tipos[tKey].subTipos[subKey], ...subMetrics };
+        });
+      });
+      sports[sName].tipos = tipos;
     });
 
     // Evolution (Daily for "entry by entry" feeling but grouped by day)
