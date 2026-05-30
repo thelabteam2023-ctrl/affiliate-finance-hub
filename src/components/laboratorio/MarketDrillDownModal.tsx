@@ -192,64 +192,7 @@ function computeDrawdown(betsAsc: RawBet[]): DrawdownResult {
   };
 }
 
-interface StreakResult {
-  length: number;
-  startDate: string | null;
-  endDate: string | null;
-  pl: number;
-  stakeAvg: number;
-  blocks: Array<{ idx: number; kind: "GREEN" | "RED"; length: number; pl: number; startDate: string; endDate: string }>;
-}
-
-function computeStreaks(betsAsc: RawBet[]): { reds: StreakResult; greens: StreakResult } {
-  const isRed = (r: string | null) => r === "RED" || r === "MEIO_RED";
-  const isGreen = (r: string | null) => r === "GREEN" || r === "MEIO_GREEN";
-
-  const blocks: StreakResult["blocks"] = [];
-  let cur: { kind: "GREEN" | "RED"; bets: RawBet[] } | null = null;
-
-  betsAsc.forEach((b) => {
-    if (b.resultado === "VOID" || !b.resultado) return; // ignore voids
-    const kind: "GREEN" | "RED" = isGreen(b.resultado) ? "GREEN" : isRed(b.resultado) ? "RED" : "GREEN";
-    if (!isGreen(b.resultado) && !isRed(b.resultado)) return;
-    if (!cur || cur.kind !== kind) {
-      if (cur) {
-        const startDate = cur.bets[0].data_aposta!;
-        const endDate = cur.bets[cur.bets.length - 1].data_aposta!;
-        const pl = cur.bets.reduce((a, x) => a + profitOf(x), 0);
-        blocks.push({ idx: blocks.length, kind: cur.kind, length: cur.bets.length, pl, startDate, endDate });
-      }
-      cur = { kind, bets: [b] };
-    } else {
-      cur.bets.push(b);
-    }
-  });
-  if (cur) {
-    const c = cur as { kind: "GREEN" | "RED"; bets: RawBet[] };
-    const startDate = c.bets[0].data_aposta!;
-    const endDate = c.bets[c.bets.length - 1].data_aposta!;
-    const pl = c.bets.reduce((a, x) => a + profitOf(x), 0);
-    blocks.push({ idx: blocks.length, kind: c.kind, length: c.bets.length, pl, startDate, endDate });
-  }
-
-  function pick(kind: "GREEN" | "RED"): StreakResult {
-    const filtered = blocks.filter((b) => b.kind === kind);
-    if (filtered.length === 0) {
-      return { length: 0, startDate: null, endDate: null, pl: 0, stakeAvg: 0, blocks };
-    }
-    const best = filtered.reduce((a, b) => (b.length > a.length ? b : a), filtered[0]);
-    // Stake average during best streak
-    const streakBets = betsAsc.filter(
-      (b) => b.data_aposta && b.data_aposta >= best.startDate && b.data_aposta <= best.endDate &&
-        ((kind === "GREEN" && (b.resultado === "GREEN" || b.resultado === "MEIO_GREEN")) ||
-         (kind === "RED" && (b.resultado === "RED" || b.resultado === "MEIO_RED")))
-    );
-    const stakeAvg = streakBets.length > 0 ? streakBets.reduce((a, b) => a + stakeOf(b), 0) / streakBets.length : 0;
-    return { length: best.length, startDate: best.startDate, endDate: best.endDate, pl: best.pl, stakeAvg, blocks };
-  }
-
-  return { reds: pick("RED"), greens: pick("GREEN") };
-}
+/* (streak analysis removed) */
 
 const STAKE_BUCKETS = [
   { label: "0–100", min: 0, max: 100 },
@@ -283,13 +226,58 @@ function computeStakeDistribution(bets: RawBet[]) {
 
 function computeWeightedStrike(bets: RawBet[]) {
   const valid = bets.filter((b) => b.resultado && b.resultado !== "VOID");
-  const denom = valid.reduce((a, b) => a + stakeOf(b), 0);
-  const num = valid.reduce((a, b) => {
+  const totalStake = valid.reduce((a, b) => a + stakeOf(b), 0);
+  const winningStake = valid.reduce((a, b) => {
     if (b.resultado === "GREEN") return a + stakeOf(b);
     if (b.resultado === "MEIO_GREEN") return a + stakeOf(b) * 0.5;
     return a;
   }, 0);
-  return denom > 0 ? (num / denom) * 100 : 0;
+  return {
+    pct: totalStake > 0 ? (winningStake / totalStake) * 100 : 0,
+    winningStake,
+    totalStake,
+  };
+}
+
+const CALIBRATION_BUCKETS = [
+  { label: "R$ 0–100", min: 0, max: 100 },
+  { label: "R$ 100–300", min: 100, max: 300 },
+  { label: "R$ 300–500", min: 300, max: 500 },
+  { label: "R$ 500–1k", min: 500, max: 1000 },
+  { label: "R$ 1k+", min: 1000, max: Infinity },
+];
+
+export interface CalibrationBucket {
+  label: string;
+  n: number;
+  stake: number;
+  profit: number;
+  roi: number;
+  winRate: number;
+}
+
+function computeCalibrationBuckets(bets: RawBet[]): CalibrationBucket[] {
+  return CALIBRATION_BUCKETS.map((b) => {
+    const sub = bets.filter((x) => {
+      const s = stakeOf(x);
+      return s >= b.min && s < b.max;
+    });
+    const validas = sub.filter((x) => x.resultado && x.resultado !== "VOID");
+    const greens = validas.filter((x) => x.resultado === "GREEN").length;
+    const meioGreens = validas.filter((x) => x.resultado === "MEIO_GREEN").length;
+    const stake = sub.reduce((a, x) => a + stakeOf(x), 0);
+    const profit = sub.reduce((a, x) => a + profitOf(x), 0);
+    const roi = stake > 0 ? (profit / stake) * 100 : 0;
+    const winRate = validas.length > 0 ? ((greens + meioGreens * 0.5) / validas.length) * 100 : 0;
+    return {
+      label: b.label,
+      n: sub.length,
+      stake,
+      profit,
+      roi,
+      winRate,
+    };
+  });
 }
 
 interface BookmakerInfo {
