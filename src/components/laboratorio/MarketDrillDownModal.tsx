@@ -1,4 +1,7 @@
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -251,17 +254,34 @@ function computeWeightedStrike(bets: RawBet[]) {
   return denom > 0 ? (num / denom) * 100 : 0;
 }
 
-function computeBookmakerPerformance(bets: RawBet[]) {
-  const map = new Map<string, RawBet[]>();
+interface BookmakerInfo {
+  displayName: string;
+  logoUrl: string | null;
+  groupKey: string;
+}
+
+function computeBookmakerPerformance(
+  bets: RawBet[],
+  bookmakerMap: Map<string, BookmakerInfo>,
+) {
+  const map = new Map<string, { info: BookmakerInfo; bets: RawBet[] }>();
   bets.forEach((b) => {
-    const k = b.bookmaker_id ?? "—";
-    if (!map.has(k)) map.set(k, []);
-    map.get(k)!.push(b);
+    const id = b.bookmaker_id ?? "—";
+    const info = bookmakerMap.get(id) ?? {
+      displayName: id === "—" ? "—" : "Casa desconhecida",
+      logoUrl: null,
+      groupKey: id,
+    };
+    const key = info.groupKey;
+    if (!map.has(key)) map.set(key, { info, bets: [] });
+    map.get(key)!.bets.push(b);
   });
-  const rows = Array.from(map.entries()).map(([casa, arr]) => {
+  const rows = Array.from(map.entries()).map(([groupKey, { info, bets: arr }]) => {
     const m = calcMetrics(arr);
     return {
-      casa,
+      casa: info.displayName,
+      groupKey,
+      logoUrl: info.logoUrl,
       n: m.total,
       stake: m.stake,
       profit: m.profit,
@@ -318,7 +338,51 @@ export function MarketDrillDownModal({
   const streaks = useMemo(() => computeStreaks(marketBetsAsc), [marketBetsAsc]);
   const stakeDistribution = useMemo(() => computeStakeDistribution(marketBets), [marketBets]);
   const weightedStrike = useMemo(() => computeWeightedStrike(marketBets), [marketBets]);
-  const bookmakerPerf = useMemo(() => computeBookmakerPerformance(marketBets), [marketBets]);
+
+  // Fetch bookmaker info (nome + catalog logo) for the IDs present in the scoped bets.
+  const bookmakerIds = useMemo(() => {
+    const set = new Set<string>();
+    marketBets.forEach((b) => { if (b.bookmaker_id) set.add(b.bookmaker_id); });
+    return Array.from(set);
+  }, [marketBets]);
+
+  const { data: bookmakerMap } = useQuery({
+    queryKey: ["market-drilldown-bookmakers", bookmakerIds.sort().join(",")],
+    queryFn: async (): Promise<Map<string, BookmakerInfo>> => {
+      const map = new Map<string, BookmakerInfo>();
+      if (bookmakerIds.length === 0) return map;
+      const { data, error } = await supabase
+        .from("bookmakers")
+        .select(`
+          id,
+          nome,
+          bookmaker_catalogo_id,
+          bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (id, nome, logo_url)
+        `)
+        .in("id", bookmakerIds);
+      if (error) throw error;
+      (data || []).forEach((b: any) => {
+        const cat = b.bookmakers_catalogo;
+        const displayName = cat?.nome || b.nome || "—";
+        const groupKey = cat?.id || b.id;
+        map.set(b.id, {
+          displayName,
+          logoUrl: cat?.logo_url || null,
+          groupKey,
+        });
+      });
+      return map;
+    },
+    enabled: bookmakerIds.length > 0,
+    staleTime: 5 * 60_000,
+  });
+
+  const resolvedBookmakerMap = bookmakerMap ?? new Map<string, BookmakerInfo>();
+
+  const bookmakerPerf = useMemo(
+    () => computeBookmakerPerformance(marketBets, resolvedBookmakerMap),
+    [marketBets, resolvedBookmakerMap],
+  );
 
   const ddDuration = drawdown.peakDate && drawdown.valleyDate ? daysBetween(drawdown.peakDate, drawdown.valleyDate) : 0;
   const ddPctOfStake = kpis.stake > 0 ? Math.min(100, (drawdown.maxDrawdown / kpis.stake) * 100) : 0;
@@ -494,13 +558,14 @@ export function MarketDrillDownModal({
       if (filterRange !== "ALL" && getOddRange(b.odd) !== filterRange) return false;
       if (filterResult !== "ALL" && b.resultado !== filterResult) return false;
       if (!q) return true;
+      const casaNome = b.bookmaker_id ? (resolvedBookmakerMap.get(b.bookmaker_id)?.displayName ?? "") : "";
       return (
         (b.evento ?? "").toLowerCase().includes(q) ||
         (b.selecao ?? "").toLowerCase().includes(q) ||
-        (b.bookmaker_id ?? "").toLowerCase().includes(q)
+        casaNome.toLowerCase().includes(q)
       );
     });
-  }, [marketBets, search, filterRange, filterResult]);
+  }, [marketBets, search, filterRange, filterResult, resolvedBookmakerMap]);
 
   const sortedTableBets = useMemo(() => {
     const arr = [...filteredTableBets];
@@ -540,8 +605,8 @@ export function MarketDrillDownModal({
           bv = b.resultado ?? "";
           break;
         case "casa":
-          av = a.bookmaker_id ?? "";
-          bv = b.bookmaker_id ?? "";
+          av = a.bookmaker_id ? (resolvedBookmakerMap.get(a.bookmaker_id)?.displayName ?? "") : "";
+          bv = b.bookmaker_id ? (resolvedBookmakerMap.get(b.bookmaker_id)?.displayName ?? "") : "";
           break;
       }
       if (av < bv) return sortDir === "asc" ? -1 : 1;
@@ -549,7 +614,7 @@ export function MarketDrillDownModal({
       return 0;
     });
     return arr;
-  }, [filteredTableBets, sortKey, sortDir]);
+  }, [filteredTableBets, sortKey, sortDir, resolvedBookmakerMap]);
 
   const totals = useMemo(() => calcMetrics(filteredTableBets), [filteredTableBets]);
 
@@ -1059,11 +1124,17 @@ export function MarketDrillDownModal({
                             const farBelow = row.n >= 10 && bookmakerStats.avgRoi - row.roi > 5;
                             return (
                               <tr
-                                key={row.casa}
+                                key={row.groupKey}
                                 className={cn("border-t border-border/30", farBelow && "bg-red-500/[0.06]")}
                               >
                                 <td className="px-3 py-2 font-semibold">
-                                  <span className="inline-flex items-center gap-1.5">
+                                  <span className="inline-flex items-center gap-2">
+                                    <BookmakerLogo
+                                      logoUrl={row.logoUrl}
+                                      alt={row.casa}
+                                      size="h-6 w-6"
+                                      iconSize="h-3.5 w-3.5"
+                                    />
                                     <span className="truncate max-w-[200px]" title={row.casa}>{row.casa}</span>
                                     {isBest && (
                                       <span className="text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-bold">melhor</span>
@@ -1169,7 +1240,23 @@ export function MarketDrillDownModal({
                               </Badge>
                             ) : (<span className="text-muted-foreground">—</span>)}
                           </td>
-                          <td className="px-3 py-2 text-muted-foreground max-w-[140px] truncate">{b.bookmaker_id ?? "—"}</td>
+                          <td className="px-3 py-2 text-muted-foreground max-w-[180px]">
+                            {(() => {
+                              const info = b.bookmaker_id ? resolvedBookmakerMap.get(b.bookmaker_id) : null;
+                              if (!info) return <span className="truncate">—</span>;
+                              return (
+                                <span className="inline-flex items-center gap-1.5">
+                                  <BookmakerLogo
+                                    logoUrl={info.logoUrl}
+                                    alt={info.displayName}
+                                    size="h-5 w-5"
+                                    iconSize="h-3 w-3"
+                                  />
+                                  <span className="truncate" title={info.displayName}>{info.displayName}</span>
+                                </span>
+                              );
+                            })()}
+                          </td>
                         </tr>
                       );
                     })}
