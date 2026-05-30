@@ -80,30 +80,31 @@ function RoiDailyTooltip({ active, payload, label }: any) {
   );
 }
 
-function VolumeComposedTooltip({ active, payload, label }: any) {
+function VolumeDailyTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   const row = payload[0].payload;
   const profit = Number(row.profit);
   const roi = Number(row.roi);
-  const profitColor = profit >= 0 ? "#22c55e" : "#ef4444";
-  const roiColor = roi >= 0 ? "#22c55e" : "#ef4444";
+  const profitColor = profit > 0 ? "#22c55e" : profit < 0 ? "#ef4444" : "rgba(255,255,255,0.6)";
+  const roiColor = roi > 0 ? "#22c55e" : roi < 0 ? "#ef4444" : "rgba(255,255,255,0.6)";
   return (
     <TooltipShell title={label}>
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         <div className="flex items-center justify-between gap-6">
-          <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(96,165,250,0.9)" }}>Volume</span>
-          <span className="font-bold tabular-nums" style={{ color: "#60a5fa", fontSize: 14 }}>{fmtBRL(row.volume)}</span>
+          <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.55)" }}>Volume</span>
+          <span className="font-bold tabular-nums" style={{ color: "#e5e7eb", fontSize: 13 }}>{fmtBRL(row.volume)}</span>
         </div>
         <div className="flex items-center justify-between gap-6">
           <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.55)" }}>Lucro</span>
-          <span className="font-bold tabular-nums" style={{ color: profitColor, fontSize: 14 }}>{fmtBRL(profit)}</span>
+          <span className="font-bold tabular-nums" style={{ color: profitColor, fontSize: 13 }}>{fmtBRL(profit)}</span>
         </div>
-        <div className="flex items-center justify-between gap-6 pt-1.5 mt-1.5 border-t" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+        <div className="flex items-center justify-between gap-6">
           <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.55)" }}>ROI</span>
-          <span className="font-bold tabular-nums" style={{ color: roiColor, fontSize: 14 }}>{fmtPctSigned(roi)}</span>
+          <span className="font-bold tabular-nums" style={{ color: roiColor, fontSize: 13 }}>{fmtPctSigned(roi)}</span>
         </div>
-        <div className="text-[10px] pt-1" style={{ color: "rgba(255,255,255,0.4)" }}>
-          {row.bets} aposta{row.bets === 1 ? "" : "s"}
+        <div className="flex items-center justify-between gap-6">
+          <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.55)" }}>Apostas</span>
+          <span className="font-bold tabular-nums" style={{ color: "#e5e7eb", fontSize: 13 }}>{row.bets}</span>
         </div>
       </div>
     </TooltipShell>
