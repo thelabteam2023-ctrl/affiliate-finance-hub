@@ -596,6 +596,7 @@ export function MarketDrillDownModal({
           <div className="px-6 pt-3 shrink-0">
             <TabsList accentColor="bg-foreground">
               <TabsTrigger value="analise">Análise</TabsTrigger>
+              <TabsTrigger value="risco">Risco</TabsTrigger>
               <TabsTrigger value="apostas">Apostas ({marketBets.length})</TabsTrigger>
             </TabsList>
           </div>
@@ -607,15 +608,35 @@ export function MarketDrillDownModal({
             forceMount
           >
             {/* KPIs */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
               <Kpi label="Apostas" value={kpis.total.toString()} />
               <Kpi label="Stake" value={fmtMoney(kpis.stake)} />
               <Kpi label="Lucro" value={fmtMoney(kpis.profit)} tone={kpis.profit >= 0 ? "pos" : "neg"} />
               <Kpi label="ROI" value={fmtPctSigned(kpis.roi)} tone={kpis.roi >= 0 ? "pos" : "neg"} />
               <Kpi label="Win Rate" value={fmtPct(kpis.winRate)} />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               <Kpi label="Greens" value={kpis.greens.toString()} tone="pos" />
               <Kpi label="Reds" value={kpis.reds.toString()} tone="neg" />
               <Kpi label="Voids" value={kpis.voids.toString()} tone="muted" />
+              <Kpi
+                label="Drawdown Máx."
+                value={fmtMoney(drawdown.maxDrawdown)}
+                tone="neg"
+                sub={drawdown.peakDate && drawdown.valleyDate ? `pico ${fmtDM(drawdown.peakDate)} · vale ${fmtDM(drawdown.valleyDate)}` : "—"}
+                title="Maior queda do pico ao vale no período"
+              />
+              <Kpi
+                label="Maior Seq. Reds"
+                value={`${streaks.reds.length} reds`}
+                tone="neg"
+                sub={
+                  streaks.reds.length > 0
+                    ? `${fmtDM(streaks.reds.startDate)} → ${fmtDM(streaks.reds.endDate)} · ${fmtMoney(streaks.reds.pl)}`
+                    : "—"
+                }
+                title="Maior sequência consecutiva de reds (void não quebra)"
+              />
             </div>
 
             <div className="flex items-start gap-2 text-[11px] text-muted-foreground bg-muted/20 border border-border/30 rounded px-3 py-2">
@@ -639,18 +660,20 @@ export function MarketDrillDownModal({
                         <Th align="right">Stake</Th>
                         <Th align="right">Lucro</Th>
                         <Th align="right">ROI</Th>
+                      <Th align="right">Drawdown</Th>
                       </tr>
                     </thead>
                     <tbody>
                       {oddRangeRows.length === 0 && (
                         <tr>
-                          <td colSpan={5} className="text-center py-6 text-muted-foreground">Sem dados.</td>
+                          <td colSpan={6} className="text-center py-6 text-muted-foreground">Sem dados.</td>
                         </tr>
                       )}
                       {oddRangeRows.map((r) => {
                         const isBest = bestOddRange?.range === r.range;
                         const isActive = faixaSelecionada === r.range;
                         const dim = faixaSelecionada !== null && !isActive;
+                      const dd = drawdownByRange.get(r.range) ?? 0;
                         return (
                           <tr
                             key={r.range}
@@ -679,6 +702,12 @@ export function MarketDrillDownModal({
                             <td className={cn("px-3 py-2 text-right tabular-nums font-semibold", r.roi >= 0 ? "text-emerald-400" : "text-red-400")}>
                               {fmtPctSigned(r.roi)}
                             </td>
+                          <td
+                            className={cn("px-3 py-2 text-right tabular-nums", dd > 0 ? "text-red-400 font-semibold" : "text-muted-foreground")}
+                            title="Maior queda do pico ao vale para apostas desta faixa"
+                          >
+                            {dd > 0 ? fmtMoney(dd) : "—"}
+                          </td>
                           </tr>
                         );
                       })}
