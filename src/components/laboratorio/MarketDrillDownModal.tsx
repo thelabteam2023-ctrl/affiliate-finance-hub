@@ -25,6 +25,7 @@ import {
   Pie,
   Cell,
   Legend,
+  ComposedChart,
 } from "recharts";
 import { ODD_RANGES, RawBet, Resultado } from "@/hooks/useValueBetLabData";
 
