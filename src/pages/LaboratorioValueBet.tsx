@@ -24,9 +24,11 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescri
 import { ValuebetProjectPicker } from "@/components/laboratorio/ValuebetProjectPicker";
 import { ValuebetDebugMonitor } from "@/components/laboratorio/ValuebetDebugMonitor";
 import { cn } from "@/lib/utils";
+import { usePermissions } from "@/contexts/PermissionsContext";
 
 export default function LaboratorioValueBet() {
   const [configOpen, setConfigOpen] = useState(false);
+  const { isSystemOwner } = usePermissions();
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>(() => {
     const saved = localStorage.getItem("lab_selected_project_ids");
     return saved ? JSON.parse(saved) : [];
@@ -363,14 +365,16 @@ export default function LaboratorioValueBet() {
             </Tabs>
           )}
 
-          {/* Debug Monitor at the bottom */}
-          <ValuebetDebugMonitor 
-            workspaceId={null} 
-            projectIds={selectedProjectIds} 
-            rpcData={stats} 
-            rpcError={rpcError} 
-            rpcLoading={isLoading} 
-          />
+          {/* Debug Monitor — restrito a System Owner */}
+          {isSystemOwner && (
+            <ValuebetDebugMonitor 
+              workspaceId={null} 
+              projectIds={selectedProjectIds} 
+              rpcData={stats} 
+              rpcError={rpcError} 
+              rpcLoading={isLoading} 
+            />
+          )}
 
         </main>
       </div>
