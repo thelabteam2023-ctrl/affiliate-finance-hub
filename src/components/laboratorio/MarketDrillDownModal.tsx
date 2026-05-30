@@ -26,6 +26,7 @@ import {
   Cell,
   Legend,
   ComposedChart,
+  Sector,
 } from "recharts";
 import { ODD_RANGES, RawBet, Resultado } from "@/hooks/useValueBetLabData";
 
@@ -412,8 +413,17 @@ export function MarketDrillDownModal({
                     </tbody>
                   </table>
                 </div>
-                <div className="w-full h-[280px] relative">
-                  <RoiBarChart data={oddRangeRows} />
+                <div className="flex flex-col h-full min-h-[280px]">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                    Evolução acumulada
+                  </p>
+                  <div className="flex-1 w-full relative min-h-[260px]">
+                    {cumulativeRows.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">Sem dados.</p>
+                    ) : (
+                      <CumulativeProfitChart data={cumulativeRows} />
+                    )}
+                  </div>
                 </div>
               </div>
             </Section>
@@ -495,50 +505,7 @@ export function MarketDrillDownModal({
               {pieData.length === 0 ? (
                 <p className="text-xs text-muted-foreground">Sem dados.</p>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-                  <div className="w-full h-[260px] relative">
-                    <ResponsiveContainer>
-                      <PieChart>
-                        <Pie
-                          data={pieData}
-                          dataKey="value"
-                          nameKey="name"
-                          innerRadius={55}
-                          outerRadius={95}
-                          paddingAngle={3}
-                          stroke="hsl(var(--background))"
-                          strokeWidth={2}
-                        >
-                          {pieData.map((d, i) => (
-                            <Cell key={i} fill={RESULT_COLORS[d.key]} />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          cursor={false}
-                          wrapperStyle={{ outline: "none" }}
-                          content={<PremiumTooltip kind="count" />}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="space-y-2">
-                    {pieData.map((d) => {
-                      const pct = kpis.total > 0 ? (d.value / kpis.total) * 100 : 0;
-                      return (
-                        <div key={d.key} className="flex items-center justify-between border border-border/30 rounded px-3 py-2 text-xs">
-                          <div className="flex items-center gap-2">
-                            <span className="w-3 h-3 rounded-sm" style={{ background: RESULT_COLORS[d.key] }} />
-                            <span className="font-semibold">{d.name}</span>
-                          </div>
-                          <div className="tabular-nums">
-                            <span className="font-bold">{d.value}</span>
-                            <span className="text-muted-foreground ml-2">({fmtPct(pct)})</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                <ResultDistribution bets={marketBets} />
               )}
             </Section>
           </TabsContent>
