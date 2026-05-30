@@ -379,7 +379,19 @@ export function MarketDrillDownModal({
                     </div>
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">ROI por mês</p>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">ROI &amp; Volume por mês</p>
+                      <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: "rgba(148,163,184,0.55)" }} />
+                          Volume
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="inline-block w-3 h-[2px] rounded-full" style={{ background: "#3b82f6" }} />
+                          ROI
+                        </span>
+                      </div>
+                    </div>
                     <div className="w-full h-[220px] relative">
                       <RoiLineChart data={monthlyRows} />
                     </div>
