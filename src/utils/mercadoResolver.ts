@@ -48,7 +48,6 @@ export const SUB_TIPOS_POR_TIPO: Record<TipoMercadoKey, string[]> = {
   ],
   resultado: [
     "Resultado Final (1X2)",
-    "Draw No Bet",
     "Double Chance",
     "Resultado 1º Tempo",
     "Resultado 2º Tempo",
@@ -165,9 +164,9 @@ function resolverGeracaoUm(mercadoRaw: string | null | undefined): MercadoNormal
     return mk("Resultado", "resultado", "1X2", "Resultado Final (1X2)", original);
   }
 
-  // DRAW NO BET
+  // DRAW NO BET → absorvido por Resultado Final (1X2)
   if (norm === "DRAW NO BET" || norm === "DNB") {
-    return mk("Resultado", "resultado", "Draw No Bet", "Draw No Bet", original);
+    return mk("Resultado", "resultado", "1X2", "Resultado Final (1X2)", original);
   }
 
   // CARTÕES
