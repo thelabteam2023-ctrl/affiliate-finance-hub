@@ -1856,6 +1856,94 @@ function DrawdownChart({ data }: { data: Array<{ idx: number; date: string; date
 
 /* --- Sequence blocks bar chart --- */
 function SequenceTooltip({ active, payload }: any) {
+  // (kept below)
+  return _SequenceTooltipImpl({ active, payload });
+}
+function RunupTooltip({ active, payload }: any) {
+  if (!active || !payload || payload.length === 0) return null;
+  const row = payload[0].payload as { dateLabel: string; runup: number; cumulative: number };
+  return (
+    <div
+      className="pointer-events-none animate-in fade-in-0 duration-[120ms]"
+      style={{
+        background: "#1a1e2a",
+        border: "1px solid rgba(255,255,255,0.1)",
+        borderRadius: 8,
+        padding: "10px 14px",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+        minWidth: 220,
+      }}
+    >
+      <div className="text-[10px] uppercase tracking-widest font-semibold mb-1.5" style={{ color: "rgba(255,255,255,0.5)" }}>
+        {row.dateLabel}
+      </div>
+      <div className="flex items-baseline justify-between gap-4">
+        <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.5)" }}>Runup atual</span>
+        <span className="font-bold tabular-nums" style={{ color: "#22c55e", fontSize: 14 }}>{fmtMoney(row.runup)}</span>
+      </div>
+      <div className="flex items-baseline justify-between gap-4 mt-1">
+        <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.5)" }}>Acumulado</span>
+        <span className="font-semibold tabular-nums" style={{ color: row.cumulative >= 0 ? "#22c55e" : "#ef4444", fontSize: 13 }}>{fmtMoney(row.cumulative)}</span>
+      </div>
+    </div>
+  );
+}
+
+function RunupChart({ data }: { data: Array<{ idx: number; date: string; dateLabel: string; cumulative: number; runup: number }> }) {
+  const step = Math.max(1, Math.ceil(data.length / 12));
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <AreaChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 6 }}>
+        <defs>
+          <linearGradient id="ruFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#22c55e" stopOpacity={0.25} />
+            <stop offset="100%" stopColor="#22c55e" stopOpacity={0.05} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+        <XAxis
+          dataKey="dateLabel"
+          tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }}
+          axisLine={false}
+          tickLine={false}
+          interval={step - 1}
+          minTickGap={20}
+        />
+        <YAxis
+          tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }}
+          axisLine={false}
+          tickLine={false}
+          width={55}
+          tickFormatter={(v) => {
+            const n = Number(v);
+            if (Math.abs(n) >= 1000) return `R$${(n / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}k`;
+            return `R$${n.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
+          }}
+        />
+        <ReferenceLine y={0} stroke="rgba(255,255,255,0.15)" strokeDasharray="4 4" />
+        <Tooltip
+          cursor={{ stroke: "rgba(255,255,255,0.2)", strokeWidth: 1 }}
+          wrapperStyle={{ outline: "none", zIndex: 60 }}
+          content={<RunupTooltip />}
+          animationDuration={120}
+        />
+        <Area
+          type="monotone"
+          dataKey="runup"
+          stroke="#22c55e"
+          strokeWidth={1.5}
+          fill="url(#ruFill)"
+          dot={false}
+          activeDot={{ r: 4, stroke: "#fff", strokeWidth: 2, fill: "#22c55e" }}
+          isAnimationActive
+          animationDuration={400}
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}
+
+function _SequenceTooltipImpl({ active, payload }: any) {
   if (!active || !payload || payload.length === 0) return null;
   const row = payload[0].payload as { kind: "GREEN" | "RED"; length: number; pl: number; startDate: string; endDate: string };
   const c = row.kind === "GREEN" ? "#22c55e" : "#ef4444";
