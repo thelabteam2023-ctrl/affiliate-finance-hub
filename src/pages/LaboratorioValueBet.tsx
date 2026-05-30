@@ -345,7 +345,11 @@ export default function LaboratorioValueBet() {
             </TabsContent>
 
             <TabsContent value="markets" className="mt-0">
-              <MarketsTab markets={filteredMarketsForTab} />
+              <MarketsTab
+                markets={filteredMarketsForTab}
+                bets={filteredBetsForTab}
+                selectedSport={selectedSport}
+              />
             </TabsContent>
 
 
