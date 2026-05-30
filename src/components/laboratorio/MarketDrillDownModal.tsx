@@ -366,7 +366,7 @@ export function MarketDrillDownModal({
             </Section>
 
             {/* Evolução temporal */}
-            <Section title="Evolução temporal (mensal)" divider>
+            <Section title="Evolução temporal (mensal)">
               {monthlyRows.length === 0 ? (
                 <p className="text-xs text-muted-foreground">Sem dados.</p>
               ) : (
@@ -388,7 +388,7 @@ export function MarketDrillDownModal({
             </Section>
 
             {/* Distribuição */}
-            <Section title="Distribuição de resultados" divider>
+            <Section title="Distribuição de resultados">
               {pieData.length === 0 ? (
                 <p className="text-xs text-muted-foreground">Sem dados.</p>
               ) : (
@@ -441,7 +441,11 @@ export function MarketDrillDownModal({
           </TabsContent>
 
           {/* === ABA APOSTAS === */}
-          <TabsContent value="apostas" className="flex-1 overflow-hidden mt-0 px-6 py-5 flex flex-col gap-3">
+          <TabsContent
+            value="apostas"
+            className="flex-1 min-h-0 overflow-hidden mt-0 px-6 py-5 flex flex-col gap-3 data-[state=inactive]:hidden"
+            forceMount
+          >
             <div className="flex flex-wrap gap-2 shrink-0">
               <Input
                 placeholder="Buscar evento, seleção, casa..."
