@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { ArrowUpDown, Trophy, Info, X, Filter } from "lucide-react";
+import { HelpCircle } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import {
   ResponsiveContainer,
@@ -121,6 +122,10 @@ interface DrawdownResult {
   peakDate: string | null;
   valleyDate: string | null;
   series: Array<{ idx: number; date: string; dateLabel: string; cumulative: number; drawdown: number }>;
+  maxRunup: number;
+  runupValleyDate: string | null;
+  runupPeakDate: string | null;
+  runupSeries: Array<{ idx: number; date: string; dateLabel: string; cumulative: number; runup: number }>;
 }
 
 function computeDrawdown(betsAsc: RawBet[]): DrawdownResult {
@@ -129,8 +134,14 @@ function computeDrawdown(betsAsc: RawBet[]): DrawdownResult {
   let peakDate: string | null = null;
   let valleyDate: string | null = null;
   let currentPeakDate: string | null = null;
+  let valley = 0;
+  let maxRU = 0;
+  let runupValleyDate: string | null = null;
+  let runupPeakDate: string | null = null;
+  let currentValleyDate: string | null = null;
   let acc = 0;
   const series: DrawdownResult["series"] = [];
+  const runupSeries: DrawdownResult["runupSeries"] = [];
   betsAsc.forEach((b, i) => {
     acc += profitOf(b);
     if (acc > peak) {
@@ -143,6 +154,16 @@ function computeDrawdown(betsAsc: RawBet[]): DrawdownResult {
       peakDate = currentPeakDate;
       valleyDate = b.data_aposta!;
     }
+    if (acc < valley) {
+      valley = acc;
+      currentValleyDate = b.data_aposta!;
+    }
+    const ru = acc - valley;
+    if (ru > maxRU) {
+      maxRU = ru;
+      runupValleyDate = currentValleyDate;
+      runupPeakDate = b.data_aposta!;
+    }
     series.push({
       idx: i + 1,
       date: b.data_aposta!,
@@ -150,8 +171,24 @@ function computeDrawdown(betsAsc: RawBet[]): DrawdownResult {
       cumulative: acc,
       drawdown: -dd,
     });
+    runupSeries.push({
+      idx: i + 1,
+      date: b.data_aposta!,
+      dateLabel: fmtDM(b.data_aposta!),
+      cumulative: acc,
+      runup: ru,
+    });
   });
-  return { maxDrawdown: maxDD, peakDate, valleyDate, series };
+  return {
+    maxDrawdown: maxDD,
+    peakDate,
+    valleyDate,
+    series,
+    maxRunup: maxRU,
+    runupValleyDate,
+    runupPeakDate,
+    runupSeries,
+  };
 }
 
 interface StreakResult {
