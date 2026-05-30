@@ -338,7 +338,51 @@ export function MarketDrillDownModal({
   const streaks = useMemo(() => computeStreaks(marketBetsAsc), [marketBetsAsc]);
   const stakeDistribution = useMemo(() => computeStakeDistribution(marketBets), [marketBets]);
   const weightedStrike = useMemo(() => computeWeightedStrike(marketBets), [marketBets]);
-  const bookmakerPerf = useMemo(() => computeBookmakerPerformance(marketBets), [marketBets]);
+
+  // Fetch bookmaker info (nome + catalog logo) for the IDs present in the scoped bets.
+  const bookmakerIds = useMemo(() => {
+    const set = new Set<string>();
+    marketBets.forEach((b) => { if (b.bookmaker_id) set.add(b.bookmaker_id); });
+    return Array.from(set);
+  }, [marketBets]);
+
+  const { data: bookmakerMap } = useQuery({
+    queryKey: ["market-drilldown-bookmakers", bookmakerIds.sort().join(",")],
+    queryFn: async (): Promise<Map<string, BookmakerInfo>> => {
+      const map = new Map<string, BookmakerInfo>();
+      if (bookmakerIds.length === 0) return map;
+      const { data, error } = await supabase
+        .from("bookmakers")
+        .select(`
+          id,
+          nome,
+          bookmaker_catalogo_id,
+          bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (id, nome, logo_url)
+        `)
+        .in("id", bookmakerIds);
+      if (error) throw error;
+      (data || []).forEach((b: any) => {
+        const cat = b.bookmakers_catalogo;
+        const displayName = cat?.nome || b.nome || "—";
+        const groupKey = cat?.id || b.id;
+        map.set(b.id, {
+          displayName,
+          logoUrl: cat?.logo_url || null,
+          groupKey,
+        });
+      });
+      return map;
+    },
+    enabled: bookmakerIds.length > 0,
+    staleTime: 5 * 60_000,
+  });
+
+  const resolvedBookmakerMap = bookmakerMap ?? new Map<string, BookmakerInfo>();
+
+  const bookmakerPerf = useMemo(
+    () => computeBookmakerPerformance(marketBets, resolvedBookmakerMap),
+    [marketBets, resolvedBookmakerMap],
+  );
 
   const ddDuration = drawdown.peakDate && drawdown.valleyDate ? daysBetween(drawdown.peakDate, drawdown.valleyDate) : 0;
   const ddPctOfStake = kpis.stake > 0 ? Math.min(100, (drawdown.maxDrawdown / kpis.stake) * 100) : 0;
