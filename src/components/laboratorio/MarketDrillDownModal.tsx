@@ -167,6 +167,58 @@ export function MarketDrillDownModal({
       }));
   }, [marketBets]);
 
+  // Cumulative profit, entry by entry
+  const cumulativeRows = useMemo(() => {
+    const sorted = [...marketBets]
+      .filter((b) => !!b.data_aposta)
+      .sort((a, b) => (a.data_aposta ?? "").localeCompare(b.data_aposta ?? ""));
+    let acc = 0;
+    return sorted.map((b, i) => {
+      const p = profitOf(b);
+      acc += p;
+      return {
+        idx: i + 1,
+        total: sorted.length,
+        date: b.data_aposta!,
+        dateLabel: format(parseISO(b.data_aposta!), "dd/MM"),
+        bet: p,
+        cumulative: acc,
+      };
+    });
+  }, [marketBets]);
+
+  // Weekday breakdown (Mon..Sun)
+  const weekdayRows = useMemo(() => {
+    const ORDER = [1, 2, 3, 4, 5, 6, 0]; // Mon..Sun
+    const SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+    const FULL = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+    const buckets = new Map<number, { volume: number; profit: number; n: number }>();
+    ORDER.forEach((d) => buckets.set(d, { volume: 0, profit: 0, n: 0 }));
+    marketBets.forEach((b) => {
+      if (!b.data_aposta) return;
+      const d = parseISO(b.data_aposta).getDay();
+      const entry = buckets.get(d)!;
+      entry.volume += stakeOf(b);
+      entry.profit += profitOf(b);
+      entry.n += 1;
+    });
+    const rows = ORDER.map((d) => {
+      const e = buckets.get(d)!;
+      return {
+        day: d,
+        short: SHORT[d],
+        full: FULL[d],
+        volume: e.volume,
+        profit: e.profit,
+        n: e.n,
+        roi: e.volume > 0 ? (e.profit / e.volume) * 100 : 0,
+      };
+    });
+    const eligible = rows.filter((r) => r.n > 0);
+    const bestProfit = eligible.length > 0 ? Math.max(...eligible.map((r) => r.profit)) : null;
+    return rows.map((r) => ({ ...r, isBest: bestProfit !== null && r.profit === bestProfit && r.profit > 0 }));
+  }, [marketBets]);
+
   const pieData = useMemo(() => {
     const order: Resultado[] = ["GREEN", "MEIO_GREEN", "MEIO_RED", "RED", "VOID"];
     return order
@@ -394,6 +446,44 @@ export function MarketDrillDownModal({
                     </div>
                     <div className="w-full h-[220px] relative">
                       <RoiLineChart data={monthlyRows} />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </Section>
+
+            {/* Evolução Detalhada */}
+            <Section title="Evolução detalhada">
+              {cumulativeRows.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Sem dados.</p>
+              ) : (
+                <div className="flex flex-col gap-5">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                      Lucro acumulado (entrada por entrada)
+                    </p>
+                    <div className="w-full h-[200px] relative">
+                      <CumulativeProfitChart data={cumulativeRows} />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        Volume &amp; lucro por dia da semana
+                      </p>
+                      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: "rgba(59,130,246,0.5)" }} />
+                          Volume
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: "rgba(34,197,94,0.7)" }} />
+                          Lucro
+                        </span>
+                      </div>
+                    </div>
+                    <div className="w-full h-[220px] relative">
+                      <WeekdayChart data={weekdayRows} />
                     </div>
                   </div>
                 </div>
@@ -945,6 +1035,252 @@ function RoiLineChart({ data }: { data: Array<{ label: string; roi: number; prof
           isAnimationActive
           animationDuration={500}
         />
+      </ComposedChart>
+    </ResponsiveContainer>
+  );
+}
+
+/* --- Cumulative profit chart (entry by entry) --- */
+function CumulativeTooltip({ active, payload }: any) {
+  if (!active || !payload || payload.length === 0) return null;
+  const row = payload[0].payload as { dateLabel: string; cumulative: number; bet: number; idx: number; total: number };
+  const accColor = row.cumulative >= 0 ? "#22c55e" : "#ef4444";
+  const betColor = row.bet >= 0 ? "#22c55e" : "#ef4444";
+  return (
+    <div
+      className="pointer-events-none animate-in fade-in-0 duration-[120ms]"
+      style={{
+        background: "#1a1e2a",
+        border: "1px solid rgba(255,255,255,0.1)",
+        borderRadius: 8,
+        padding: "10px 14px",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+        minWidth: 180,
+      }}
+    >
+      <div className="text-[10px] uppercase tracking-widest font-semibold mb-1.5" style={{ color: "rgba(255,255,255,0.5)" }}>
+        {row.dateLabel}
+      </div>
+      <div className="flex items-baseline justify-between gap-4">
+        <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.5)" }}>Acumulado</span>
+        <span className="font-bold tabular-nums" style={{ color: accColor, fontSize: 14 }}>{fmtMoney(row.cumulative)}</span>
+      </div>
+      <div className="flex items-baseline justify-between gap-4 mt-1">
+        <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.5)" }}>Aposta</span>
+        <span className="font-semibold tabular-nums" style={{ color: betColor, fontSize: 13 }}>{fmtMoney(row.bet)}</span>
+      </div>
+      <div className="text-[10px] mt-1.5" style={{ color: "rgba(255,255,255,0.4)" }}>
+        #{row.idx} de {row.total}
+      </div>
+    </div>
+  );
+}
+
+function CumulativeProfitChart({
+  data,
+}: {
+  data: Array<{ idx: number; total: number; date: string; dateLabel: string; bet: number; cumulative: number }>;
+}) {
+  const values = data.map((d) => d.cumulative);
+  const maxV = Math.max(0, ...values);
+  const minV = Math.min(0, ...values);
+  // gradient offset where the line crosses zero (0..1 from top to bottom)
+  const range = maxV - minV;
+  const zeroOffset = range > 0 ? maxV / range : 0.5;
+  const off = Math.max(0, Math.min(1, zeroOffset));
+
+  // Limit x-axis labels to ~12
+  const step = Math.max(1, Math.ceil(data.length / 12));
+  const interval = step - 1;
+
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <AreaChart data={data} margin={{ top: 10, right: 16, left: 0, bottom: 6 }}>
+        <defs>
+          <linearGradient id="cumStroke" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#22c55e" stopOpacity={1} />
+            <stop offset={`${off * 100}%`} stopColor="#22c55e" stopOpacity={1} />
+            <stop offset={`${off * 100}%`} stopColor="#ef4444" stopOpacity={1} />
+            <stop offset="100%" stopColor="#ef4444" stopOpacity={1} />
+          </linearGradient>
+          <linearGradient id="cumFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#22c55e" stopOpacity={0.12} />
+            <stop offset={`${off * 100}%`} stopColor="#22c55e" stopOpacity={0.02} />
+            <stop offset={`${off * 100}%`} stopColor="#ef4444" stopOpacity={0.02} />
+            <stop offset="100%" stopColor="#ef4444" stopOpacity={0.12} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+        <XAxis
+          dataKey="dateLabel"
+          tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }}
+          axisLine={false}
+          tickLine={false}
+          interval={interval}
+          minTickGap={20}
+        />
+        <YAxis
+          tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }}
+          axisLine={false}
+          tickLine={false}
+          width={55}
+          tickFormatter={(v) => {
+            const n = Number(v);
+            if (Math.abs(n) >= 1000) return `R$${(n / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}k`;
+            return `R$${n.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
+          }}
+        />
+        <ReferenceLine y={0} stroke="rgba(255,255,255,0.15)" strokeDasharray="4 4" />
+        <Tooltip
+          cursor={{ stroke: "rgba(255,255,255,0.2)", strokeWidth: 1 }}
+          wrapperStyle={{ outline: "none", zIndex: 60 }}
+          content={<CumulativeTooltip />}
+          animationDuration={120}
+        />
+        <Area
+          type="monotone"
+          dataKey="cumulative"
+          stroke="url(#cumStroke)"
+          strokeWidth={2}
+          fill="url(#cumFill)"
+          dot={false}
+          activeDot={(props: any) => {
+            const v = props.payload?.cumulative ?? 0;
+            const c = v >= 0 ? "#22c55e" : "#ef4444";
+            return <circle cx={props.cx} cy={props.cy} r={5} fill={c} stroke="#fff" strokeWidth={2} />;
+          }}
+          isAnimationActive
+          animationDuration={500}
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}
+
+/* --- Weekday volume + profit chart --- */
+function WeekdayTooltip({ active, payload }: any) {
+  if (!active || !payload || payload.length === 0) return null;
+  const row = payload[0].payload as { full: string; volume: number; profit: number; roi: number; n: number };
+  const profitColor = row.profit >= 0 ? "#22c55e" : "#ef4444";
+  const roiColor = row.roi >= 0 ? "#22c55e" : "#ef4444";
+  return (
+    <div
+      className="pointer-events-none animate-in fade-in-0 duration-[120ms]"
+      style={{
+        background: "#1a1e2a",
+        border: "1px solid rgba(255,255,255,0.1)",
+        borderRadius: 8,
+        padding: "10px 14px",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+        minWidth: 180,
+      }}
+    >
+      <div className="text-[11px] font-bold mb-1.5" style={{ color: "rgba(255,255,255,0.85)" }}>
+        {row.full}
+      </div>
+      <div className="flex items-baseline justify-between gap-4">
+        <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.5)" }}>Volume</span>
+        <span className="font-semibold tabular-nums" style={{ color: "#e5e7eb", fontSize: 13 }}>{fmtMoney(row.volume)}</span>
+      </div>
+      <div className="flex items-baseline justify-between gap-4 mt-1">
+        <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.5)" }}>Lucro</span>
+        <span className="font-bold tabular-nums" style={{ color: profitColor, fontSize: 13 }}>{fmtMoney(row.profit)}</span>
+      </div>
+      <div className="flex items-baseline justify-between gap-4 mt-1">
+        <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.5)" }}>ROI</span>
+        <span className="font-bold tabular-nums" style={{ color: roiColor, fontSize: 13 }}>{fmtPctSigned(row.roi)}</span>
+      </div>
+      <div className="flex items-baseline justify-between gap-4 mt-1">
+        <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.5)" }}>Apostas</span>
+        <span className="font-semibold tabular-nums" style={{ color: "#e5e7eb", fontSize: 13 }}>{row.n}</span>
+      </div>
+    </div>
+  );
+}
+
+function WeekdayChart({
+  data,
+}: {
+  data: Array<{ day: number; short: string; full: string; volume: number; profit: number; n: number; roi: number; isBest: boolean }>;
+}) {
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <ComposedChart data={data} margin={{ top: 18, right: 16, left: 0, bottom: 6 }} barGap={4} barCategoryGap="22%">
+        <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+        <XAxis
+          dataKey="short"
+          tick={{ fontSize: 11, fill: "rgba(255,255,255,0.6)" }}
+          axisLine={false}
+          tickLine={false}
+          dy={4}
+        />
+        <YAxis
+          yAxisId="vol"
+          orientation="left"
+          tick={{ fontSize: 10, fill: "rgba(148,163,184,0.7)" }}
+          axisLine={false}
+          tickLine={false}
+          width={50}
+          tickFormatter={(v) => {
+            const n = Number(v);
+            if (Math.abs(n) >= 1000) return `R$${(n / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}k`;
+            return `R$${n.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
+          }}
+        />
+        <YAxis
+          yAxisId="profit"
+          orientation="right"
+          tick={{ fontSize: 10, fill: "rgba(255,255,255,0.55)" }}
+          axisLine={false}
+          tickLine={false}
+          width={55}
+          tickFormatter={(v) => {
+            const n = Number(v);
+            const sign = n > 0 ? "+" : n < 0 ? "-" : "";
+            const abs = Math.abs(n);
+            if (abs >= 1000) return `${sign}${(abs / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}k`;
+            return `${sign}${abs.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
+          }}
+        />
+        <ReferenceLine yAxisId="profit" y={0} stroke="rgba(255,255,255,0.15)" strokeDasharray="4 4" />
+        <Tooltip
+          cursor={{ fill: "rgba(255,255,255,0.04)" }}
+          wrapperStyle={{ outline: "none", zIndex: 60 }}
+          content={<WeekdayTooltip />}
+          animationDuration={120}
+        />
+        <Bar
+          yAxisId="vol"
+          dataKey="volume"
+          radius={[4, 4, 0, 0]}
+          maxBarSize={26}
+          isAnimationActive
+          animationDuration={400}
+        >
+          {data.map((d, i) => (
+            <Cell
+              key={`v-${i}`}
+              fill="rgba(59, 130, 246, 0.5)"
+              style={{ filter: d.isBest ? "brightness(1.15)" : "none", transition: "filter 150ms" }}
+            />
+          ))}
+        </Bar>
+        <Bar
+          yAxisId="profit"
+          dataKey="profit"
+          radius={[4, 4, 0, 0]}
+          maxBarSize={26}
+          isAnimationActive
+          animationDuration={400}
+        >
+          {data.map((d, i) => (
+            <Cell
+              key={`p-${i}`}
+              fill={d.profit >= 0 ? "rgba(34,197,94,0.7)" : "rgba(239,68,68,0.7)"}
+              style={{ filter: d.isBest ? "brightness(1.15)" : "none", transition: "filter 150ms" }}
+            />
+          ))}
+        </Bar>
       </ComposedChart>
     </ResponsiveContainer>
   );
