@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
@@ -34,7 +34,8 @@ import {
   LabelList,
 } from "recharts";
 import { ODD_RANGES, RawBet, Resultado } from "@/hooks/useValueBetLabData";
-import { resolverMercado } from "@/utils/mercadoResolver";
+import { resolverMercado, TipoMercadoKey } from "@/utils/mercadoResolver";
+import { History } from "lucide-react";
 import { contarApostasComEdge } from "@/utils/edgeCalculator";
 import { EdgeAnalysisTab } from "./EdgeAnalysisTab";
 
@@ -349,19 +350,76 @@ export function MarketDrillDownModal({
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
   const [faixaSelecionada, setFaixaSelecionada] = useState<string | null>(null);
+  // Sidebar de navegação interna entre sub-tipos do mesmo tipo
+  const [activeSubLabel, setActiveSubLabel] = useState<string | "ALL">(marketName ?? "ALL");
+
+  useEffect(() => {
+    if (marketName) setActiveSubLabel(marketName);
+  }, [marketName, open]);
+
+  // Computa siblings (todos os sub-tipos do mesmo tipo do marketName inicial)
+  const siblings = useMemo(() => {
+    let tipoKey: TipoMercadoKey | null = null;
+    let tipoLabel = "";
+    if (!marketName) return { tipoKey, tipoLabel, items: [] as Array<{ label: string; n: number; roi: number; hasGen1: boolean }>, allBets: [] as RawBet[] };
+    for (const b of bets) {
+      const r = resolverMercado(b);
+      if (r.label_completo === marketName) {
+        tipoKey = r.tipo_key;
+        tipoLabel = r.tipo;
+        break;
+      }
+    }
+    if (!tipoKey) return { tipoKey, tipoLabel, items: [], allBets: [] };
+    const map = new Map<string, { label: string; bets: RawBet[]; hasGen1: boolean }>();
+    const allBets: RawBet[] = [];
+    for (const b of bets) {
+      const r = resolverMercado(b);
+      if (r.tipo_key !== tipoKey) continue;
+      allBets.push(b);
+      let s = map.get(r.label_completo);
+      if (!s) {
+        s = { label: r.label_completo, bets: [], hasGen1: false };
+        map.set(r.label_completo, s);
+      }
+      s.bets.push(b);
+      if (r.geracao === 1) s.hasGen1 = true;
+    }
+    const items = Array.from(map.values())
+      .map((s) => {
+        const stake = s.bets.reduce((a, b) => a + stakeOf(b), 0);
+        const profit = s.bets.reduce((a, b) => a + profitOf(b), 0);
+        return {
+          label: s.label,
+          n: s.bets.length,
+          roi: stake > 0 ? (profit / stake) * 100 : 0,
+          hasGen1: s.hasGen1,
+        };
+      })
+      .sort((a, b) => b.n - a.n);
+    return { tipoKey, tipoLabel, items, allBets };
+  }, [bets, marketName]);
+
+  const allAggregate = useMemo(() => {
+    const stake = siblings.allBets.reduce((a, b) => a + stakeOf(b), 0);
+    const profit = siblings.allBets.reduce((a, b) => a + profitOf(b), 0);
+    return {
+      n: siblings.allBets.length,
+      roi: stake > 0 ? (profit / stake) * 100 : 0,
+    };
+  }, [siblings.allBets]);
 
   const marketBets = useMemo(() => {
     if (!marketName) return [];
+    if (activeSubLabel === "ALL") return siblings.allBets;
     return bets.filter((b) => {
-      // Compatível com Geração 1 (mercado livre) e Geração 2 (sub_tipo_mercado).
-      // O `marketName` agora vem como `label_completo` do MercadoResolver.
       const resolved = resolverMercado(b);
-      if (resolved.label_completo === marketName) return true;
-      // Fallback de retrocompatibilidade: clicar em um nome bruto legado também funciona.
+      if (resolved.label_completo === activeSubLabel) return true;
+      // Fallback de retrocompatibilidade
       const m = b.mercado && b.mercado.trim() !== "" ? b.mercado : "Geral";
-      return m === marketName;
+      return m === activeSubLabel;
     });
-  }, [bets, marketName]);
+  }, [bets, marketName, activeSubLabel, siblings.allBets]);
 
   // Cobertura de Edge (apenas para indicador — UI completa virá em entrega futura).
   const apostasComEdge = useMemo(() => contarApostasComEdge(marketBets), [marketBets]);
@@ -688,15 +746,143 @@ export function MarketDrillDownModal({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-[92vw] w-[92vw] h-[90vh] p-0 flex flex-col gap-0 overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b border-border/40 shrink-0">
-          <DialogTitle className="flex items-baseline gap-3">
-            <span className="text-2xl font-black tracking-tight">{marketName ?? ""}</span>
-            <span className="text-xs uppercase tracking-widest text-muted-foreground font-bold">
-              {sportLabel} · ValueBet
-            </span>
+          <DialogTitle className="flex flex-col gap-1">
+            <div className="flex items-baseline gap-3">
+              <span className="text-2xl font-black tracking-tight">
+                {activeSubLabel === "ALL"
+                  ? `${siblings.tipoLabel || "Mercado"} · Todos os sub-tipos`
+                  : activeSubLabel}
+              </span>
+              <span className="text-xs uppercase tracking-widest text-muted-foreground font-bold">
+                {sportLabel} · ValueBet
+              </span>
+            </div>
+            {siblings.tipoLabel && (
+              <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-widest font-bold text-muted-foreground">
+                <span>{sportLabel}</span>
+                <span className="opacity-40">›</span>
+                <span>{siblings.tipoLabel}</span>
+                <span className="opacity-40">›</span>
+                <span className="text-foreground/80 normal-case tracking-normal font-semibold">
+                  {activeSubLabel === "ALL" ? "Todos os sub-tipos" : activeSubLabel}
+                </span>
+              </div>
+            )}
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="analise" className="flex-1 flex flex-col overflow-hidden min-h-0">
+        <div className="flex-1 flex flex-row overflow-hidden min-h-0">
+          {/* Sidebar de sub-tipos (desktop) */}
+          {siblings.tipoKey && siblings.items.length > 0 && (
+            <aside className="hidden md:flex w-[200px] shrink-0 flex-col border-r border-border/40 bg-muted/20 overflow-y-auto">
+              <div className="px-4 pt-3 pb-1.5 text-[10px] uppercase tracking-widest text-muted-foreground font-bold">
+                Sub-tipos
+              </div>
+              {/* Item "Todos" */}
+              <button
+                onClick={() => setActiveSubLabel("ALL")}
+                className={cn(
+                  "text-left px-4 py-2.5 border-l-2 border-b border-border/40 transition-colors duration-[120ms] cursor-pointer",
+                  activeSubLabel === "ALL"
+                    ? "border-l-foreground bg-white/[0.05]"
+                    : "border-l-transparent hover:bg-white/[0.03]",
+                )}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="text-[13px] font-bold leading-tight">Todos</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">
+                      {allAggregate.n} apostas
+                    </div>
+                  </div>
+                  <span
+                    className={cn(
+                      "text-[12px] font-bold tabular-nums shrink-0",
+                      allAggregate.n === 0
+                        ? "text-muted-foreground"
+                        : allAggregate.roi >= 0
+                          ? "text-emerald-400"
+                          : "text-red-400",
+                    )}
+                  >
+                    {allAggregate.n === 0
+                      ? "—"
+                      : `${allAggregate.roi >= 0 ? "+" : ""}${allAggregate.roi.toFixed(2)}%`}
+                  </span>
+                </div>
+              </button>
+              {/* Itens por sub-tipo */}
+              {siblings.items.map((it) => {
+                const isActive = activeSubLabel === it.label;
+                const disabled = it.n === 0;
+                return (
+                  <button
+                    key={it.label}
+                    onClick={() => !disabled && setActiveSubLabel(it.label)}
+                    disabled={disabled}
+                    className={cn(
+                      "text-left px-4 py-2.5 border-l-2 transition-colors duration-[120ms]",
+                      isActive
+                        ? "border-l-emerald-400 bg-white/[0.05]"
+                        : "border-l-transparent hover:bg-white/[0.03]",
+                      disabled && "opacity-40 cursor-default hover:bg-transparent",
+                      !disabled && "cursor-pointer",
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="text-[13px] leading-tight truncate flex items-center gap-1">
+                          <span className="truncate">{it.label}</span>
+                          {it.hasGen1 && (
+                            <History className="w-2.5 h-2.5 text-muted-foreground shrink-0" aria-label="inclui dados históricos" />
+                          )}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground mt-0.5">
+                          {it.n} aposta{it.n === 1 ? "" : "s"}
+                        </div>
+                      </div>
+                      <span
+                        className={cn(
+                          "text-[12px] font-bold tabular-nums shrink-0",
+                          disabled
+                            ? "text-muted-foreground"
+                            : it.roi >= 0
+                              ? "text-emerald-400"
+                              : "text-red-400",
+                        )}
+                      >
+                        {disabled ? "—" : `${it.roi >= 0 ? "+" : ""}${it.roi.toFixed(2)}%`}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </aside>
+          )}
+
+          <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+            {/* Dropdown de sub-tipos (mobile) */}
+            {siblings.tipoKey && siblings.items.length > 0 && (
+              <div className="md:hidden px-4 pt-3 shrink-0">
+                <Select value={activeSubLabel} onValueChange={(v) => setActiveSubLabel(v as string)}>
+                  <SelectTrigger className="h-9 text-xs">
+                    <SelectValue placeholder="Sub-tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">
+                      Todos · {allAggregate.n} apostas
+                    </SelectItem>
+                    {siblings.items.map((it) => (
+                      <SelectItem key={it.label} value={it.label} disabled={it.n === 0}>
+                        {it.label} · {it.n} apostas
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <Tabs defaultValue="analise" className="flex-1 flex flex-col overflow-hidden min-h-0">
           <div className="px-6 pt-3 shrink-0">
             <TabsList accentColor="bg-foreground">
               <TabsTrigger value="analise">Análise</TabsTrigger>
@@ -1336,6 +1522,8 @@ export function MarketDrillDownModal({
             )}
           </TabsContent>
         </Tabs>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
