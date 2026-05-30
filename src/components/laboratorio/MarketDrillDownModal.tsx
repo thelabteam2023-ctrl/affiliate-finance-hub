@@ -1067,43 +1067,6 @@ export function MarketDrillDownModal({
                   </section>
                 </div>
 
-                {/* SEÇÃO 2 — ANÁLISE DE SEQUÊNCIAS */}
-                <Section title="Análise de sequências">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <StreakCard
-                      title="Maior sequência de reds"
-                      length={streaks.reds.length}
-                      labelKind="reds consecutivos"
-                      startDate={streaks.reds.startDate}
-                      endDate={streaks.reds.endDate}
-                      pl={streaks.reds.pl}
-                      stakeAvg={streaks.reds.stakeAvg}
-                      tone="neg"
-                    />
-                    <StreakCard
-                      title="Maior sequência de greens"
-                      length={streaks.greens.length}
-                      labelKind="greens consecutivos"
-                      startDate={streaks.greens.startDate}
-                      endDate={streaks.greens.endDate}
-                      pl={streaks.greens.pl}
-                      stakeAvg={streaks.greens.stakeAvg}
-                      tone="pos"
-                    />
-                  </div>
-
-                  {streaks.reds.blocks.length > 0 && (
-                    <div className="mt-4">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
-                        Blocos cronológicos de sequências
-                      </p>
-                      <div className="w-full h-[160px] relative">
-                        <SequenceBarsChart data={streaks.reds.blocks} />
-                      </div>
-                    </div>
-                  )}
-                </Section>
-
                 {/* SEÇÃO 3 — DISTRIBUIÇÃO DE STAKE */}
                 <Section title="Consistência de stake">
                   <p className="text-[12px] text-muted-foreground italic">
