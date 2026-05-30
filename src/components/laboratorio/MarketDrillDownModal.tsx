@@ -427,12 +427,26 @@ export function MarketDrillDownModal({
                       )}
                       {oddRangeRows.map((r) => {
                         const isBest = bestOddRange?.range === r.range;
+                        const isActive = faixaSelecionada === r.range;
+                        const dim = faixaSelecionada !== null && !isActive;
                         return (
-                          <tr key={r.range} className={cn("border-t border-border/30", isBest && "bg-emerald-500/10")}>
+                          <tr
+                            key={r.range}
+                            onClick={() => setFaixaSelecionada((cur) => (cur === r.range ? null : r.range))}
+                            className={cn(
+                              "border-t border-border/30 cursor-pointer transition-all group",
+                              isBest && !faixaSelecionada && "bg-emerald-500/10",
+                              isActive && "bg-white/[0.05]",
+                              dim && "opacity-45",
+                              !isActive && "hover:bg-white/[0.03]"
+                            )}
+                            style={isActive ? { boxShadow: "inset 2px 0 0 0 #22c55e" } : undefined}
+                          >
                             <td className="px-3 py-2 font-bold">
                               <span className="inline-flex items-center gap-1.5">
                                 {isBest && <Trophy className="w-3 h-3 text-emerald-500" />}
                                 {r.range}
+                                <Filter className={cn("w-3 h-3 ml-0.5 transition-opacity", isActive ? "opacity-80 text-emerald-400" : "opacity-0 group-hover:opacity-40")} />
                               </span>
                             </td>
                             <td className="px-3 py-2 text-right tabular-nums">{r.total}</td>
@@ -450,14 +464,73 @@ export function MarketDrillDownModal({
                   </table>
                 </div>
                 <div className="flex flex-col h-full min-h-[280px]">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
-                    Evolução acumulada
-                  </p>
+                  <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      Evolução acumulada
+                      {faixaSelecionada && (
+                        <span className="ml-1.5 text-foreground">· {faixaSelecionada}</span>
+                      )}
+                    </p>
+                    {trend && (
+                      <span
+                        className="text-[10px] font-semibold"
+                        style={{ color: trend.slope >= 0 ? "#22c55e" : "#ef4444" }}
+                      >
+                        {trend.slope >= 0 ? "↗ tendência positiva" : "↘ tendência negativa"}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Mini KPIs */}
+                  <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-[12px] tabular-nums mb-2">
+                    <span><span className="text-muted-foreground">Apostas:</span> <span className="font-semibold text-foreground">{scopedKpis.total}</span></span>
+                    <span className="text-muted-foreground/40">·</span>
+                    <span><span className="text-muted-foreground">Stake:</span> <span className="font-semibold text-foreground">{fmtMoney(scopedKpis.stake)}</span></span>
+                    <span className="text-muted-foreground/40">·</span>
+                    <span><span className="text-muted-foreground">Lucro:</span> <span className={cn("font-semibold", scopedKpis.profit >= 0 ? "text-emerald-400" : "text-red-400")}>{fmtMoney(scopedKpis.profit)}</span></span>
+                    <span className="text-muted-foreground/40">·</span>
+                    <span><span className="text-muted-foreground">ROI:</span> <span className={cn("font-semibold", scopedKpis.roi >= 0 ? "text-emerald-400" : "text-red-400")}>{fmtPctSigned(scopedKpis.roi)}</span></span>
+                    <span className="text-muted-foreground/40">·</span>
+                    <span><span className="text-muted-foreground">Win Rate:</span> <span className="font-semibold text-foreground">{fmtPct(scopedKpis.winRate)}</span></span>
+                  </div>
+
+                  {/* Pills */}
+                  <div className="flex items-center flex-wrap gap-1.5 mb-2">
+                    <FaixaPill label="Todas" active={faixaSelecionada === null} onClick={() => setFaixaSelecionada(null)} />
+                    {oddRangeRows.map((r) => (
+                      <FaixaPill
+                        key={r.range}
+                        label={r.range}
+                        active={faixaSelecionada === r.range}
+                        onClick={() => setFaixaSelecionada((cur) => (cur === r.range ? null : r.range))}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Active filter indicator */}
+                  {faixaSelecionada && (
+                    <div className="flex items-center gap-2 mb-2 text-[11px]">
+                      <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded border border-white/15 bg-white/[0.04]">
+                        <span className="text-muted-foreground">Faixa:</span>
+                        <span className="font-semibold text-foreground">{faixaSelecionada}</span>
+                        <span className="text-muted-foreground">·</span>
+                        <span className="tabular-nums text-muted-foreground">{scopedKpis.total} apostas</span>
+                        <button
+                          onClick={() => setFaixaSelecionada(null)}
+                          className="ml-1 -mr-0.5 rounded hover:bg-white/10 p-0.5"
+                          aria-label="Limpar filtro"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    </div>
+                  )}
+
                   <div className="flex-1 w-full relative min-h-[260px]">
                     {cumulativeRows.length === 0 ? (
                       <p className="text-xs text-muted-foreground">Sem dados.</p>
                     ) : (
-                      <CumulativeProfitChart data={cumulativeRows} />
+                      <CumulativeProfitChart data={cumulativeRows} trend={trend?.series} />
                     )}
                   </div>
                 </div>
