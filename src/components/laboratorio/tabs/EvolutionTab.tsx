@@ -127,7 +127,8 @@ export function EvolutionTab({ evolution, evolutionByEntry }: EvolutionTabProps)
   const cumulativeKey = entryData.length > 0 ? "cumulative" : "cumulativeProfit";
   const cumulativeXKey = entryData.length > 0 ? "label" : "formattedDate";
 
-  const lastCumulative = Number(cumulativeData.at(-1)?.[cumulativeKey] ?? 0);
+  const lastRow = cumulativeData.length > 0 ? cumulativeData[cumulativeData.length - 1] : null;
+  const lastCumulative = Number((lastRow as any)?.[cumulativeKey] ?? 0);
   const cumulativeColor = lastCumulative >= 0 ? "#22c55e" : "#ef4444";
 
   return (
