@@ -855,6 +855,245 @@ export function MarketDrillDownModal({
             </Section>
           </TabsContent>
 
+          {/* === ABA RISCO === */}
+          <TabsContent
+            value="risco"
+            className="flex-1 min-h-0 overflow-y-auto mt-0 px-6 py-5 space-y-6 data-[state=inactive]:hidden"
+            forceMount
+          >
+            {marketBets.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Sem dados.</p>
+            ) : (
+              <>
+                {/* SEÇÃO 1 — DRAWDOWN DETALHADO */}
+                <Section title="Drawdown detalhado">
+                  <div className="border border-border/40 rounded-lg p-4 bg-card/40 space-y-3">
+                    <div className="flex items-baseline justify-between flex-wrap gap-3">
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Drawdown máximo do período</p>
+                        <p className="text-2xl font-black tabular-nums text-red-500 mt-1">{fmtMoney(drawdown.maxDrawdown)}</p>
+                      </div>
+                      <div className="flex items-center gap-5 text-[11px]">
+                        <div>
+                          <p className="uppercase tracking-widest text-muted-foreground text-[9px] font-bold">Pico</p>
+                          <p className="tabular-nums font-semibold">{fmtDM(drawdown.peakDate)}</p>
+                        </div>
+                        <div>
+                          <p className="uppercase tracking-widest text-muted-foreground text-[9px] font-bold">Vale</p>
+                          <p className="tabular-nums font-semibold">{fmtDM(drawdown.valleyDate)}</p>
+                        </div>
+                        <div>
+                          <p className="uppercase tracking-widest text-muted-foreground text-[9px] font-bold">Duração</p>
+                          <p className="tabular-nums font-semibold">{ddDuration}d</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="w-full h-1.5 bg-white/[0.05] rounded-full overflow-hidden">
+                        <div className="h-full bg-red-500/70" style={{ width: `${ddPctOfStake}%` }} />
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">{fmtPct(ddPctOfStake)} do volume total apostado</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Profundidade do drawdown</p>
+                    <div className="w-full h-[180px] relative">
+                      <DrawdownChart data={drawdown.series} />
+                    </div>
+                  </div>
+                </Section>
+
+                {/* SEÇÃO 2 — ANÁLISE DE SEQUÊNCIAS */}
+                <Section title="Análise de sequências">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <StreakCard
+                      title="Maior sequência de reds"
+                      length={streaks.reds.length}
+                      labelKind="reds consecutivos"
+                      startDate={streaks.reds.startDate}
+                      endDate={streaks.reds.endDate}
+                      pl={streaks.reds.pl}
+                      stakeAvg={streaks.reds.stakeAvg}
+                      tone="neg"
+                    />
+                    <StreakCard
+                      title="Maior sequência de greens"
+                      length={streaks.greens.length}
+                      labelKind="greens consecutivos"
+                      startDate={streaks.greens.startDate}
+                      endDate={streaks.greens.endDate}
+                      pl={streaks.greens.pl}
+                      stakeAvg={streaks.greens.stakeAvg}
+                      tone="pos"
+                    />
+                  </div>
+
+                  {streaks.reds.blocks.length > 0 && (
+                    <div className="mt-4">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                        Blocos cronológicos de sequências
+                      </p>
+                      <div className="w-full h-[160px] relative">
+                        <SequenceBarsChart data={streaks.reds.blocks} />
+                      </div>
+                    </div>
+                  )}
+                </Section>
+
+                {/* SEÇÃO 3 — DISTRIBUIÇÃO DE STAKE */}
+                <Section title="Consistência de stake">
+                  <p className="text-[12px] text-muted-foreground italic">
+                    Stake média isolada pode ser enganosa em operações com apostas de valores variados. A distribuição abaixo mostra onde está concentrado o volume real da operação.
+                  </p>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-3">
+                    <div className="border border-border/40 rounded-lg overflow-hidden">
+                      <table className="w-full text-xs">
+                        <thead className="bg-muted/30">
+                          <tr className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                            <Th>Faixa</Th>
+                            <Th align="right">Apostas</Th>
+                            <Th align="right">%</Th>
+                            <Th align="right">Stake</Th>
+                            <Th align="right">Lucro</Th>
+                            <Th align="right">ROI</Th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {stakeDistribution.map((row) => {
+                            const isPrincipal = stakeDistBest?.principalLabel === row.label && row.n > 0;
+                            const isBestRoi = stakeDistBest?.bestRoiLabel === row.label && row.n > 0;
+                            return (
+                              <tr key={row.label} className="border-t border-border/30">
+                                <td className="px-3 py-2 font-bold">
+                                  <span className="inline-flex items-center gap-1.5">
+                                    {row.label}
+                                    {isPrincipal && (
+                                      <span className="text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-300 font-bold">principal</span>
+                                    )}
+                                    {isBestRoi && (
+                                      <span className="text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-bold">melhor ROI</span>
+                                    )}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2 text-right tabular-nums">{row.n}</td>
+                                <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{fmtPct(row.pct)}</td>
+                                <td className="px-3 py-2 text-right tabular-nums">{fmtMoney(row.stake)}</td>
+                                <td className={cn("px-3 py-2 text-right tabular-nums font-semibold", row.profit >= 0 ? "text-emerald-400" : "text-red-400")}>
+                                  {row.n > 0 ? fmtMoney(row.profit) : "—"}
+                                </td>
+                                <td className={cn("px-3 py-2 text-right tabular-nums font-semibold", row.roi >= 0 ? "text-emerald-400" : "text-red-400")}>
+                                  {row.n > 0 ? fmtPctSigned(row.roi) : "—"}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="w-full h-[200px] relative">
+                      <StakeDistributionChart data={stakeDistribution} />
+                    </div>
+                  </div>
+                </Section>
+
+                {/* SEÇÃO 4 — STRIKE RATE PONDERADO */}
+                <Section title="Strike rate ponderado por stake">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="border border-border/40 rounded-lg p-4 bg-card/40">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Win Rate Simples</p>
+                      <p className="text-2xl font-black tabular-nums mt-1">{fmtPct(kpis.winRate)}</p>
+                      <p className="text-[10px] text-muted-foreground/80 mt-1">(1 aposta = 1 voto)</p>
+                    </div>
+                    <div className="border border-border/40 rounded-lg p-4 bg-card/40">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Strike Rate Ponderado</p>
+                      <p className="text-2xl font-black tabular-nums mt-1">{fmtPct(weightedStrike)}</p>
+                      <p className="text-[10px] text-muted-foreground/80 mt-1">(R$ 1 = 1 voto)</p>
+                    </div>
+                  </div>
+                  {(() => {
+                    const diff = weightedStrike - kpis.winRate;
+                    if (diff > 2) {
+                      return (
+                        <p className="text-xs text-emerald-400 mt-3">
+                          Você acerta proporcionalmente mais nas apostas de maior valor. Sinal positivo de calibração de stake.
+                        </p>
+                      );
+                    }
+                    if (diff < -2) {
+                      return (
+                        <p className="text-xs text-orange-400 mt-3">
+                          Você acerta proporcionalmente menos nas apostas de maior valor. Considere revisar os critérios de sizing.
+                        </p>
+                      );
+                    }
+                    return (
+                      <p className="text-xs text-muted-foreground mt-3">
+                        Assertividade consistente independente do valor apostado.
+                      </p>
+                    );
+                  })()}
+                </Section>
+
+                {/* SEÇÃO 5 — PERFORMANCE POR BOOKMAKER */}
+                <Section title="Performance por bookmaker">
+                  {bookmakerPerf.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Sem dados.</p>
+                  ) : (
+                    <div className="border border-border/40 rounded-lg overflow-hidden">
+                      <table className="w-full text-xs">
+                        <thead className="bg-muted/30">
+                          <tr className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                            <Th>Casa</Th>
+                            <Th align="right">Apostas</Th>
+                            <Th align="right">Stake</Th>
+                            <Th align="right">Lucro</Th>
+                            <Th align="right">ROI</Th>
+                            <Th align="right">Win Rate</Th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {bookmakerPerf.map((row) => {
+                            const isBest = bookmakerStats.bestLabel === row.casa && row.n >= 10;
+                            const isWorst = bookmakerStats.worstLabel === row.casa && row.n >= 10 && bookmakerStats.bestLabel !== row.casa;
+                            const farBelow = row.n >= 10 && bookmakerStats.avgRoi - row.roi > 5;
+                            return (
+                              <tr
+                                key={row.casa}
+                                className={cn("border-t border-border/30", farBelow && "bg-red-500/[0.06]")}
+                              >
+                                <td className="px-3 py-2 font-semibold">
+                                  <span className="inline-flex items-center gap-1.5">
+                                    <span className="truncate max-w-[200px]" title={row.casa}>{row.casa}</span>
+                                    {isBest && (
+                                      <span className="text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-bold">melhor</span>
+                                    )}
+                                    {isWorst && (
+                                      <span className="text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-300 font-bold">atenção</span>
+                                    )}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2 text-right tabular-nums">{row.n}</td>
+                                <td className="px-3 py-2 text-right tabular-nums">{fmtMoney(row.stake)}</td>
+                                <td className={cn("px-3 py-2 text-right tabular-nums font-semibold", row.profit >= 0 ? "text-emerald-400" : "text-red-400")}>
+                                  {fmtMoney(row.profit)}
+                                </td>
+                                <td className={cn("px-3 py-2 text-right tabular-nums font-semibold", row.roi >= 0 ? "text-emerald-400" : "text-red-400")}>
+                                  {fmtPctSigned(row.roi)}
+                                </td>
+                                <td className="px-3 py-2 text-right tabular-nums">{fmtPct(row.winRate)}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </Section>
+              </>
+            )}
+          </TabsContent>
+
           {/* === ABA APOSTAS === */}
           <TabsContent
             value="apostas"
