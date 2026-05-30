@@ -34,6 +34,8 @@ import {
   LabelList,
 } from "recharts";
 import { ODD_RANGES, RawBet, Resultado } from "@/hooks/useValueBetLabData";
+import { resolverMercado } from "@/utils/mercadoResolver";
+import { contarApostasComEdge } from "@/utils/edgeCalculator";
 
 interface Props {
   open: boolean;
@@ -350,10 +352,18 @@ export function MarketDrillDownModal({
   const marketBets = useMemo(() => {
     if (!marketName) return [];
     return bets.filter((b) => {
+      // Compatível com Geração 1 (mercado livre) e Geração 2 (sub_tipo_mercado).
+      // O `marketName` agora vem como `label_completo` do MercadoResolver.
+      const resolved = resolverMercado(b);
+      if (resolved.label_completo === marketName) return true;
+      // Fallback de retrocompatibilidade: clicar em um nome bruto legado também funciona.
       const m = b.mercado && b.mercado.trim() !== "" ? b.mercado : "Geral";
       return m === marketName;
     });
   }, [bets, marketName]);
+
+  // Cobertura de Edge (apenas para indicador — UI completa virá em entrega futura).
+  const apostasComEdge = useMemo(() => contarApostasComEdge(marketBets), [marketBets]);
 
   const kpis = useMemo(() => calcMetrics(marketBets), [marketBets]);
 

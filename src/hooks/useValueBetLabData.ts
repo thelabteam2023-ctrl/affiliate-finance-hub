@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { startOfMonth, format, parseISO } from "date-fns";
+import { resolverMercado, MercadoNormalizado, TipoMercadoKey } from "@/utils/mercadoResolver";
 
 export type Resultado = 'GREEN' | 'MEIO_GREEN' | 'MEIO_RED' | 'RED' | 'VOID';
 
@@ -11,6 +12,9 @@ export interface RawBet {
   data_aposta: string;
   esporte: string | null;
   mercado: string | null;
+  tipo_mercado: string | null;
+  sub_tipo_mercado: string | null;
+  fair_odd: number | null;
   odd: number | null;
   stake_consolidado: number | null;
   pl_consolidado: number | null;
@@ -40,11 +44,31 @@ export interface Metrics {
 export interface MarketStats extends Metrics {
   name: string;
   oddRanges: Record<string, Metrics>;
+  /** true se algum bet do grupo veio sem `sub_tipo_mercado` (inferido por Geração 1). */
+  hasGeracao1?: boolean;
+  /** true se algum bet veio com sub_tipo_mercado explícito (Geração 2). */
+  hasGeracao2?: boolean;
+  /** Apostas com fair_odd preenchida no grupo. */
+  apostasComEdge?: number;
+}
+
+export interface TipoStats extends Metrics {
+  /** chave canônica (`handicap` | `resultado` | `total` | `outro`). */
+  tipo_key: TipoMercadoKey;
+  /** label exibido ("Handicap", "Total", ...). */
+  tipo: string;
+  /** Sub-tipos pertencentes a este tipo, indexados pelo `label_completo`. */
+  subTipos: Record<string, MarketStats>;
+  hasGeracao1?: boolean;
+  hasGeracao2?: boolean;
+  apostasComEdge?: number;
 }
 
 export interface SportStats extends Metrics {
   name: string;
   markets: Record<string, MarketStats>;
+  /** Nova estrutura por tipo (Geração 1+2). Indexada por `tipo_key`. */
+  tipos: Record<TipoMercadoKey, TipoStats>;
 }
 
 export const ODD_RANGES = [
@@ -126,7 +150,7 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
 
         let q = supabase
           .from("apostas_unificada")
-          .select("id, data_aposta, esporte, mercado, odd, stake_consolidado, pl_consolidado, valor_brl_referencia, stake_total, lucro_prejuizo, resultado, evento, selecao, bookmaker_id")
+          .select("id, data_aposta, esporte, mercado, tipo_mercado, sub_tipo_mercado, fair_odd, odd, stake_consolidado, pl_consolidado, valor_brl_referencia, stake_total, lucro_prejuizo, resultado, evento, selecao, bookmaker_id")
           .eq("workspace_id", workspaceId)
           .eq("estrategia", "VALUEBET")
           .order('data_aposta', { ascending: false })
@@ -191,7 +215,12 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
       const oddRange = getOddRange(bet.odd);
 
       if (!sports[sportName]) {
-        sports[sportName] = { name: sportName, markets: {}, ...calculateMetrics([]) };
+        sports[sportName] = {
+          name: sportName,
+          markets: {},
+          tipos: {} as Record<TipoMercadoKey, TipoStats>,
+          ...calculateMetrics([]),
+        };
       }
 
       if (!sports[sportName].markets[marketName]) {
@@ -232,6 +261,60 @@ export function useValueBetLabData(projectIds: string[] | null, startDate: strin
           sports[sName].markets[mName].oddRanges[oRange] = calculateMetrics(rangeBets);
         });
       });
+
+      // --- NOVA HIERARQUIA: por TIPO → SUB_TIPO (via MercadoResolver) ---
+      const tipos: Record<TipoMercadoKey, TipoStats> = {} as any;
+      sportBets.forEach((b) => {
+        const resolved = resolverMercado(b);
+        const tk = resolved.tipo_key;
+        if (!tipos[tk]) {
+          tipos[tk] = {
+            tipo_key: tk,
+            tipo: resolved.tipo,
+            subTipos: {},
+            hasGeracao1: false,
+            hasGeracao2: false,
+            apostasComEdge: 0,
+            ...calculateMetrics([]),
+          };
+        }
+        const subKey = resolved.label_completo;
+        if (!tipos[tk].subTipos[subKey]) {
+          tipos[tk].subTipos[subKey] = {
+            name: subKey,
+            oddRanges: {},
+            hasGeracao1: false,
+            hasGeracao2: false,
+            apostasComEdge: 0,
+            ...calculateMetrics([]),
+          };
+        }
+        if (resolved.geracao === 1) {
+          tipos[tk].hasGeracao1 = true;
+          tipos[tk].subTipos[subKey].hasGeracao1 = true;
+        } else {
+          tipos[tk].hasGeracao2 = true;
+          tipos[tk].subTipos[subKey].hasGeracao2 = true;
+        }
+        if (b.fair_odd !== null && b.fair_odd !== undefined && Number(b.fair_odd) > 1) {
+          tipos[tk].apostasComEdge = (tipos[tk].apostasComEdge ?? 0) + 1;
+          tipos[tk].subTipos[subKey].apostasComEdge =
+            (tipos[tk].subTipos[subKey].apostasComEdge ?? 0) + 1;
+        }
+      });
+      // Calcular métricas agregadas para cada tipo e sub-tipo
+      Object.keys(tipos).forEach((tk) => {
+        const tKey = tk as TipoMercadoKey;
+        const tipoBets = sportBets.filter((b) => resolverMercado(b).tipo_key === tKey);
+        const tipoMetrics = calculateMetrics(tipoBets);
+        tipos[tKey] = { ...tipos[tKey], ...tipoMetrics };
+        Object.keys(tipos[tKey].subTipos).forEach((subKey) => {
+          const subBets = tipoBets.filter((b) => resolverMercado(b).label_completo === subKey);
+          const subMetrics = calculateMetrics(subBets);
+          tipos[tKey].subTipos[subKey] = { ...tipos[tKey].subTipos[subKey], ...subMetrics };
+        });
+      });
+      sports[sName].tipos = tipos;
     });
 
     // Evolution (Daily for "entry by entry" feeling but grouped by day)
