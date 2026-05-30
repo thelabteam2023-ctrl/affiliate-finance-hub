@@ -710,35 +710,55 @@ export function MarketDrillDownModal({
             forceMount
           >
             {/* KPIs */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
-              <Kpi label="Apostas" value={kpis.total.toString()} />
-              <Kpi label="Stake" value={fmtMoney(kpis.stake)} />
-              <Kpi label="Lucro" value={fmtMoney(kpis.profit)} tone={kpis.profit >= 0 ? "pos" : "neg"} />
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+              <Kpi
+                label="Apostas"
+                value={`${kpis.total.toLocaleString("pt-BR")} apostas`}
+                sub={`${kpis.validas.toLocaleString("pt-BR")} válidas`}
+              />
+              <Kpi
+                label="Stake Total"
+                value={fmtMoney(kpis.stake)}
+                sub={`stake médio: ${fmtMoney(kpis.total > 0 ? kpis.stake / kpis.total : 0)}`}
+              />
+              <Kpi label="Lucro / Prejuízo" value={fmtMoney(kpis.profit)} tone={kpis.profit >= 0 ? "pos" : "neg"} />
               <Kpi label="ROI" value={fmtPctSigned(kpis.roi)} tone={kpis.roi >= 0 ? "pos" : "neg"} />
               <Kpi label="Win Rate" value={fmtPct(kpis.winRate)} />
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-              <Kpi label="Greens" value={kpis.greens.toString()} tone="pos" />
-              <Kpi label="Reds" value={kpis.reds.toString()} tone="neg" />
-              <Kpi label="Voids" value={kpis.voids.toString()} tone="muted" />
-              <Kpi
-                label="Drawdown Máx."
-                value={fmtMoney(drawdown.maxDrawdown)}
-                tone="neg"
-                sub={drawdown.peakDate && drawdown.valleyDate ? `pico ${fmtDM(drawdown.peakDate)} · vale ${fmtDM(drawdown.valleyDate)}` : "—"}
-                title="Maior queda do pico ao vale no período"
-              />
-              <Kpi
-                label="Maior Seq. Reds"
-                value={`${streaks.reds.length} reds`}
-                tone="neg"
-                sub={
-                  streaks.reds.length > 0
-                    ? `${fmtDM(streaks.reds.startDate)} → ${fmtDM(streaks.reds.endDate)} · ${fmtMoney(streaks.reds.pl)}`
-                    : "—"
-                }
-                title="Maior sequência consecutiva de reds (void não quebra)"
-              />
+              <div className="border border-border/40 rounded-lg px-3 py-2 bg-card/40">
+                <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold">Resultados</p>
+                <div className="mt-1 grid grid-cols-2 gap-x-2 gap-y-0.5">
+                  <div className="flex items-baseline gap-1 text-emerald-500">
+                    <span className="text-[10px]">●</span>
+                    <span className="font-bold tabular-nums" style={{ fontSize: 12 }}>{kpis.greens}</span>
+                    <span className="text-emerald-500/80" style={{ fontSize: 11 }}>Greens</span>
+                  </div>
+                  <div className="flex items-baseline gap-1 text-emerald-500">
+                    <span className="font-bold tabular-nums" style={{ fontSize: 12 }}>{kpis.meioGreens}</span>
+                    <span className="text-emerald-500/80" style={{ fontSize: 11 }}>MG</span>
+                  </div>
+                  <div className="flex items-baseline gap-1 text-red-500">
+                    <span className="text-[10px]">●</span>
+                    <span className="font-bold tabular-nums" style={{ fontSize: 12 }}>{kpis.reds}</span>
+                    <span className="text-red-500/80" style={{ fontSize: 11 }}>Reds</span>
+                  </div>
+                  <div className="flex items-baseline gap-1 text-red-500">
+                    <span className="font-bold tabular-nums" style={{ fontSize: 12 }}>{kpis.meioReds}</span>
+                    <span className="text-red-500/80" style={{ fontSize: 11 }}>MR</span>
+                  </div>
+                  <div className="flex items-baseline gap-1 text-muted-foreground col-span-2">
+                    <span className="text-[10px]">○</span>
+                    <span className="font-bold tabular-nums" style={{ fontSize: 12 }}>{kpis.voids}</span>
+                    <span style={{ fontSize: 11 }}>Voids</span>
+                  </div>
+                </div>
+              </div>
+              <div className="border border-border/40 rounded-lg px-3 py-2 bg-card/40" title="Maior queda do pico ao vale no período">
+                <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold">Drawdown Máx.</p>
+                <p className="text-sm font-black tabular-nums mt-0.5 text-red-500">{fmtMoney(drawdown.maxDrawdown)}</p>
+                <p className="text-muted-foreground/80 mt-0.5 leading-tight truncate" style={{ fontSize: 10 }}>
+                  {drawdown.peakDate && drawdown.valleyDate ? `pico ${fmtDM(drawdown.peakDate)} · vale ${fmtDM(drawdown.valleyDate)}` : "—"}
+                </p>
+              </div>
             </div>
 
             <div className="flex items-start gap-2 text-[11px] text-muted-foreground bg-muted/20 border border-border/30 rounded px-3 py-2">
