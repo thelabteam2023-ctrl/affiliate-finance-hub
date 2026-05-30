@@ -989,44 +989,93 @@ export function MarketDrillDownModal({
               <p className="text-xs text-muted-foreground">Sem dados.</p>
             ) : (
               <>
-                {/* SEÇÃO 1 — DRAWDOWN DETALHADO */}
-                <Section title="Drawdown detalhado">
-                  <div className="border border-border/40 rounded-lg p-4 bg-card/40 space-y-3">
-                    <div className="flex items-baseline justify-between flex-wrap gap-3">
-                      <div>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Drawdown máximo do período</p>
-                        <p className="text-2xl font-black tabular-nums text-red-500 mt-1">{fmtMoney(drawdown.maxDrawdown)}</p>
+                {/* SEÇÃO 1 — DRAWDOWN + RUNUP em 2 colunas */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                  {/* Coluna esquerda — DRAWDOWN */}
+                  <section className="space-y-3">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground border-b border-border/30 pb-2">
+                      Drawdown
+                    </h3>
+                    <div className="border border-border/40 rounded-lg p-4 bg-card/40 space-y-3">
+                      <div className="flex items-baseline justify-between flex-wrap gap-3">
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Drawdown máximo</p>
+                          <p className="text-2xl font-black tabular-nums text-red-500 mt-1">{fmtMoney(drawdown.maxDrawdown)}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">{fmtPct(ddPctOfStake)} do volume</p>
+                        </div>
+                        <div className="flex flex-col gap-1.5 text-[11px]">
+                          <div className="flex items-center gap-2">
+                            <span className="uppercase tracking-widest text-muted-foreground text-[9px] font-bold w-14">Pico</span>
+                            <span className="tabular-nums font-semibold">{fmtDM(drawdown.peakDate)}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="uppercase tracking-widest text-muted-foreground text-[9px] font-bold w-14">Vale</span>
+                            <span className="tabular-nums font-semibold">{fmtDM(drawdown.valleyDate)}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="uppercase tracking-widest text-muted-foreground text-[9px] font-bold w-14">Duração</span>
+                            <span className="tabular-nums font-semibold">{ddDuration}d</span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-5 text-[11px]">
-                        <div>
-                          <p className="uppercase tracking-widest text-muted-foreground text-[9px] font-bold">Pico</p>
-                          <p className="tabular-nums font-semibold">{fmtDM(drawdown.peakDate)}</p>
-                        </div>
-                        <div>
-                          <p className="uppercase tracking-widest text-muted-foreground text-[9px] font-bold">Vale</p>
-                          <p className="tabular-nums font-semibold">{fmtDM(drawdown.valleyDate)}</p>
-                        </div>
-                        <div>
-                          <p className="uppercase tracking-widest text-muted-foreground text-[9px] font-bold">Duração</p>
-                          <p className="tabular-nums font-semibold">{ddDuration}d</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
                       <div className="w-full h-1.5 bg-white/[0.05] rounded-full overflow-hidden">
                         <div className="h-full bg-red-500/70" style={{ width: `${ddPctOfStake}%` }} />
                       </div>
-                      <p className="text-[10px] text-muted-foreground">{fmtPct(ddPctOfStake)} do volume total apostado</p>
                     </div>
-                  </div>
 
-                  <div className="mt-4">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Profundidade do drawdown</p>
-                    <div className="w-full h-[180px] relative">
-                      <DrawdownChart data={drawdown.series} />
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Profundidade do drawdown</p>
+                      <div className="w-full h-[220px] relative">
+                        <DrawdownChart data={drawdown.series} />
+                      </div>
                     </div>
-                  </div>
-                </Section>
+                  </section>
+
+                  {/* Coluna direita — RUNUP */}
+                  <section className="space-y-3">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground border-b border-border/30 pb-2 flex items-center gap-1.5">
+                      Runup
+                      <HelpCircle
+                        className="w-3.5 h-3.5 text-muted-foreground/70 cursor-help"
+                        aria-label="Sobre runup"
+                        title="Runup é o oposto do drawdown — a maior valorização consecutiva do vale ao pico no período. Mede a força positiva da operação."
+                      />
+                    </h3>
+                    <div className="border border-border/40 rounded-lg p-4 bg-card/40 space-y-3">
+                      <div className="flex items-baseline justify-between flex-wrap gap-3">
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Runup máximo</p>
+                          <p className="text-2xl font-black tabular-nums text-emerald-500 mt-1">{fmtMoney(drawdown.maxRunup)}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">{fmtPct(ruPctOfStake)} do volume</p>
+                        </div>
+                        <div className="flex flex-col gap-1.5 text-[11px]">
+                          <div className="flex items-center gap-2">
+                            <span className="uppercase tracking-widest text-muted-foreground text-[9px] font-bold w-14">Vale</span>
+                            <span className="tabular-nums font-semibold">{fmtDM(drawdown.runupValleyDate)}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="uppercase tracking-widest text-muted-foreground text-[9px] font-bold w-14">Pico</span>
+                            <span className="tabular-nums font-semibold">{fmtDM(drawdown.runupPeakDate)}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="uppercase tracking-widest text-muted-foreground text-[9px] font-bold w-14">Duração</span>
+                            <span className="tabular-nums font-semibold">{ruDuration}d</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="w-full h-1.5 bg-white/[0.05] rounded-full overflow-hidden">
+                        <div className="h-full bg-emerald-500/70" style={{ width: `${ruPctOfStake}%` }} />
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Profundidade do runup</p>
+                      <div className="w-full h-[220px] relative">
+                        <RunupChart data={drawdown.runupSeries} />
+                      </div>
+                    </div>
+                  </section>
+                </div>
 
                 {/* SEÇÃO 2 — ANÁLISE DE SEQUÊNCIAS */}
                 <Section title="Análise de sequências">
