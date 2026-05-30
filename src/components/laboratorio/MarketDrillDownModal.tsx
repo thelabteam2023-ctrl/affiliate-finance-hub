@@ -350,19 +350,76 @@ export function MarketDrillDownModal({
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
   const [faixaSelecionada, setFaixaSelecionada] = useState<string | null>(null);
+  // Sidebar de navegação interna entre sub-tipos do mesmo tipo
+  const [activeSubLabel, setActiveSubLabel] = useState<string | "ALL">(marketName ?? "ALL");
+
+  useEffect(() => {
+    if (marketName) setActiveSubLabel(marketName);
+  }, [marketName, open]);
+
+  // Computa siblings (todos os sub-tipos do mesmo tipo do marketName inicial)
+  const siblings = useMemo(() => {
+    let tipoKey: TipoMercadoKey | null = null;
+    let tipoLabel = "";
+    if (!marketName) return { tipoKey, tipoLabel, items: [] as Array<{ label: string; n: number; roi: number; hasGen1: boolean }>, allBets: [] as RawBet[] };
+    for (const b of bets) {
+      const r = resolverMercado(b);
+      if (r.label_completo === marketName) {
+        tipoKey = r.tipo_key;
+        tipoLabel = r.tipo;
+        break;
+      }
+    }
+    if (!tipoKey) return { tipoKey, tipoLabel, items: [], allBets: [] };
+    const map = new Map<string, { label: string; bets: RawBet[]; hasGen1: boolean }>();
+    const allBets: RawBet[] = [];
+    for (const b of bets) {
+      const r = resolverMercado(b);
+      if (r.tipo_key !== tipoKey) continue;
+      allBets.push(b);
+      let s = map.get(r.label_completo);
+      if (!s) {
+        s = { label: r.label_completo, bets: [], hasGen1: false };
+        map.set(r.label_completo, s);
+      }
+      s.bets.push(b);
+      if (r.geracao === 1) s.hasGen1 = true;
+    }
+    const items = Array.from(map.values())
+      .map((s) => {
+        const stake = s.bets.reduce((a, b) => a + stakeOf(b), 0);
+        const profit = s.bets.reduce((a, b) => a + profitOf(b), 0);
+        return {
+          label: s.label,
+          n: s.bets.length,
+          roi: stake > 0 ? (profit / stake) * 100 : 0,
+          hasGen1: s.hasGen1,
+        };
+      })
+      .sort((a, b) => b.n - a.n);
+    return { tipoKey, tipoLabel, items, allBets };
+  }, [bets, marketName]);
+
+  const allAggregate = useMemo(() => {
+    const stake = siblings.allBets.reduce((a, b) => a + stakeOf(b), 0);
+    const profit = siblings.allBets.reduce((a, b) => a + profitOf(b), 0);
+    return {
+      n: siblings.allBets.length,
+      roi: stake > 0 ? (profit / stake) * 100 : 0,
+    };
+  }, [siblings.allBets]);
 
   const marketBets = useMemo(() => {
     if (!marketName) return [];
+    if (activeSubLabel === "ALL") return siblings.allBets;
     return bets.filter((b) => {
-      // Compatível com Geração 1 (mercado livre) e Geração 2 (sub_tipo_mercado).
-      // O `marketName` agora vem como `label_completo` do MercadoResolver.
       const resolved = resolverMercado(b);
-      if (resolved.label_completo === marketName) return true;
-      // Fallback de retrocompatibilidade: clicar em um nome bruto legado também funciona.
+      if (resolved.label_completo === activeSubLabel) return true;
+      // Fallback de retrocompatibilidade
       const m = b.mercado && b.mercado.trim() !== "" ? b.mercado : "Geral";
-      return m === marketName;
+      return m === activeSubLabel;
     });
-  }, [bets, marketName]);
+  }, [bets, marketName, activeSubLabel, siblings.allBets]);
 
   // Cobertura de Edge (apenas para indicador — UI completa virá em entrega futura).
   const apostasComEdge = useMemo(() => contarApostasComEdge(marketBets), [marketBets]);
