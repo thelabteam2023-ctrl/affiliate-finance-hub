@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { RawBet } from "@/hooks/useValueBetLabData";
+import { MarketStats, RawBet } from "@/hooks/useValueBetLabData";
 import { MarketDrillDownModal } from "../MarketDrillDownModal";
 import { resolverMercado, TipoMercadoKey, TIPOS_MERCADO } from "@/utils/mercadoResolver";
 import { cn } from "@/lib/utils";
