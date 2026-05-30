@@ -1522,6 +1522,8 @@ export function MarketDrillDownModal({
             )}
           </TabsContent>
         </Tabs>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
