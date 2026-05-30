@@ -1240,7 +1240,23 @@ export function MarketDrillDownModal({
                               </Badge>
                             ) : (<span className="text-muted-foreground">—</span>)}
                           </td>
-                          <td className="px-3 py-2 text-muted-foreground max-w-[140px] truncate">{b.bookmaker_id ?? "—"}</td>
+                          <td className="px-3 py-2 text-muted-foreground max-w-[180px]">
+                            {(() => {
+                              const info = b.bookmaker_id ? resolvedBookmakerMap.get(b.bookmaker_id) : null;
+                              if (!info) return <span className="truncate">—</span>;
+                              return (
+                                <span className="inline-flex items-center gap-1.5">
+                                  <BookmakerLogo
+                                    logoUrl={info.logoUrl}
+                                    alt={info.displayName}
+                                    size="h-5 w-5"
+                                    iconSize="h-3 w-3"
+                                  />
+                                  <span className="truncate" title={info.displayName}>{info.displayName}</span>
+                                </span>
+                              );
+                            })()}
+                          </td>
                         </tr>
                       );
                     })}
