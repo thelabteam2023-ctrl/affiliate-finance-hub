@@ -1645,51 +1645,6 @@ function RoiVolumeTooltip({ active, payload, label }: any) {
  *  RISK-TAB CHART PRIMITIVES
  * ========================================================== */
 
-function StreakCard({
-  title,
-  length,
-  labelKind,
-  startDate,
-  endDate,
-  pl,
-  stakeAvg,
-  tone,
-}: {
-  title: string;
-  length: number;
-  labelKind: string;
-  startDate: string | null;
-  endDate: string | null;
-  pl: number;
-  stakeAvg: number;
-  tone: "pos" | "neg";
-}) {
-  const accent = tone === "pos" ? "text-emerald-400" : "text-red-500";
-  return (
-    <div className="border border-border/40 rounded-lg p-4 bg-card/40">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{title}</p>
-      <p className={cn("text-3xl font-black tabular-nums mt-1", accent)}>{length}</p>
-      <p className="text-[11px] text-muted-foreground mt-0.5">{labelKind}</p>
-      <div className="mt-3 flex flex-col gap-1 text-[11px]">
-        <div className="flex items-center justify-between">
-          <span className="text-muted-foreground">Período</span>
-          <span className="tabular-nums">
-            {length > 0 ? `${fmtDM(startDate)} → ${fmtDM(endDate)}` : "—"}
-          </span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-muted-foreground">{tone === "pos" ? "Lucro" : "Prejuízo"}</span>
-          <span className={cn("tabular-nums font-bold", accent)}>{length > 0 ? fmtMoney(pl) : "—"}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-muted-foreground">Stake médio</span>
-          <span className="tabular-nums">{length > 0 ? fmtMoney(stakeAvg) : "—"}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* --- Drawdown depth area chart --- */
 function DrawdownTooltip({ active, payload }: any) {
   if (!active || !payload || payload.length === 0) return null;
