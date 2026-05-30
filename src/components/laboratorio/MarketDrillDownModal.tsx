@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { ArrowUpDown, Trophy, Info } from "lucide-react";
+import { ArrowUpDown, Trophy, Info, X, Filter } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import {
   ResponsiveContainer,
@@ -119,6 +119,7 @@ export function MarketDrillDownModal({
   const [sortKey, setSortKey] = useState<SortKey>("data");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
+  const [faixaSelecionada, setFaixaSelecionada] = useState<string | null>(null);
 
   const marketBets = useMemo(() => {
     if (!marketName) return [];
@@ -168,9 +169,22 @@ export function MarketDrillDownModal({
       }));
   }, [marketBets]);
 
-  // Cumulative profit, entry by entry
+  // Bets scoped by the currently selected odd range (or all)
+  const scopedBets = useMemo(() => {
+    if (!faixaSelecionada) return marketBets;
+    if (faixaSelecionada === "N/A") {
+      return marketBets.filter((b) => b.odd === null || b.odd === undefined);
+    }
+    const r = ODD_RANGES.find((x) => x.label === faixaSelecionada);
+    if (!r) return marketBets;
+    return marketBets.filter((b) => b.odd !== null && b.odd !== undefined && b.odd >= r.min && b.odd <= r.max);
+  }, [marketBets, faixaSelecionada]);
+
+  const scopedKpis = useMemo(() => calcMetrics(scopedBets), [scopedBets]);
+
+  // Cumulative profit, entry by entry — respects faixaSelecionada
   const cumulativeRows = useMemo(() => {
-    const sorted = [...marketBets]
+    const sorted = [...scopedBets]
       .filter((b) => !!b.data_aposta)
       .sort((a, b) => (a.data_aposta ?? "").localeCompare(b.data_aposta ?? ""));
     let acc = 0;
@@ -186,7 +200,28 @@ export function MarketDrillDownModal({
         cumulative: acc,
       };
     });
-  }, [marketBets]);
+  }, [scopedBets]);
+
+  // Linear regression on cumulative series (only when filtered)
+  const trend = useMemo(() => {
+    if (!faixaSelecionada || cumulativeRows.length < 2) return null;
+    const n = cumulativeRows.length;
+    let sx = 0, sy = 0, sxy = 0, sxx = 0;
+    cumulativeRows.forEach((r, i) => {
+      const x = i + 1;
+      const y = r.cumulative;
+      sx += x; sy += y; sxy += x * y; sxx += x * x;
+    });
+    const denom = n * sxx - sx * sx;
+    if (denom === 0) return null;
+    const slope = (n * sxy - sx * sy) / denom;
+    const intercept = (sy - slope * sx) / n;
+    const series = cumulativeRows.map((r, i) => ({
+      dateLabel: r.dateLabel,
+      trendValue: slope * (i + 1) + intercept,
+    }));
+    return { slope, series };
+  }, [cumulativeRows, faixaSelecionada]);
 
   // Weekday breakdown (Mon..Sun)
   const weekdayRows = useMemo(() => {
@@ -318,6 +353,7 @@ export function MarketDrillDownModal({
       setSortKey("data");
       setSortDir("desc");
       setPage(1);
+      setFaixaSelecionada(null);
     }
     onOpenChange(v);
   }
