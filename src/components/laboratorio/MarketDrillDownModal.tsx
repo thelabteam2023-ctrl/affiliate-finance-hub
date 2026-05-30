@@ -36,6 +36,7 @@ import {
 import { ODD_RANGES, RawBet, Resultado } from "@/hooks/useValueBetLabData";
 import { resolverMercado } from "@/utils/mercadoResolver";
 import { contarApostasComEdge } from "@/utils/edgeCalculator";
+import { EdgeAnalysisTab } from "./EdgeAnalysisTab";
 
 interface Props {
   open: boolean;
@@ -700,6 +701,14 @@ export function MarketDrillDownModal({
             <TabsList accentColor="bg-foreground">
               <TabsTrigger value="analise">Análise</TabsTrigger>
               <TabsTrigger value="risco">Risco</TabsTrigger>
+              {apostasComEdge > 0 && (
+                <TabsTrigger value="edge">
+                  Edge
+                  <span className="ml-1.5 inline-flex items-center justify-center min-w-[20px] h-[16px] px-1 rounded text-[9px] font-bold bg-violet-500/20 text-violet-300">
+                    {apostasComEdge}
+                  </span>
+                </TabsTrigger>
+              )}
               <TabsTrigger value="apostas">Apostas ({marketBets.length})</TabsTrigger>
             </TabsList>
           </div>
