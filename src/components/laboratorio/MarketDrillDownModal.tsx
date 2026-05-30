@@ -970,13 +970,17 @@ function Kpi({
   label,
   value,
   tone,
+  sub,
+  title,
 }: {
   label: string;
   value: string;
   tone?: "pos" | "neg" | "muted";
+  sub?: string;
+  title?: string;
 }) {
   return (
-    <div className="border border-border/40 rounded-lg px-3 py-2 bg-card/40">
+    <div className="border border-border/40 rounded-lg px-3 py-2 bg-card/40" title={title}>
       <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold">{label}</p>
       <p
         className={cn(
@@ -988,6 +992,11 @@ function Kpi({
       >
         {value}
       </p>
+      {sub && (
+        <p className="text-[9px] text-muted-foreground/80 mt-0.5 leading-tight truncate" title={sub}>
+          {sub}
+        </p>
+      )}
     </div>
   );
 }
