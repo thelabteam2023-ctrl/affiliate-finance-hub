@@ -1214,6 +1214,17 @@ export function MarketDrillDownModal({
             )}
           </TabsContent>
 
+          {/* === ABA EDGE === */}
+          {apostasComEdge > 0 && (
+            <TabsContent
+              value="edge"
+              className="flex-1 min-h-0 overflow-y-auto mt-0 px-6 py-5 data-[state=inactive]:hidden"
+              forceMount
+            >
+              <EdgeAnalysisTab bets={marketBets} />
+            </TabsContent>
+          )}
+
           {/* === ABA APOSTAS === */}
           <TabsContent
             value="apostas"
