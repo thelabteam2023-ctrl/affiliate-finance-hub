@@ -690,6 +690,7 @@ export type Database = {
           esporte: string | null
           estrategia: string
           evento: string | null
+          fair_odd: number | null
           fair_value: number | null
           fonte_entrada: string | null
           fonte_saldo: string | null
@@ -750,11 +751,13 @@ export type Database = {
           stake_real: number | null
           stake_total: number | null
           status: string
+          sub_tipo_mercado: string | null
           surebet_legado_id: string | null
           taxa_conversao_audit: number | null
           time_casa: string | null
           time_fora: string | null
           tipo_freebet: string | null
+          tipo_mercado: string | null
           tipo_multipla: string | null
           updated_at: string
           usar_freebet: boolean | null
@@ -787,6 +790,7 @@ export type Database = {
           esporte?: string | null
           estrategia?: string
           evento?: string | null
+          fair_odd?: number | null
           fair_value?: number | null
           fonte_entrada?: string | null
           fonte_saldo?: string | null
@@ -847,11 +851,13 @@ export type Database = {
           stake_real?: number | null
           stake_total?: number | null
           status?: string
+          sub_tipo_mercado?: string | null
           surebet_legado_id?: string | null
           taxa_conversao_audit?: number | null
           time_casa?: string | null
           time_fora?: string | null
           tipo_freebet?: string | null
+          tipo_mercado?: string | null
           tipo_multipla?: string | null
           updated_at?: string
           usar_freebet?: boolean | null
@@ -884,6 +890,7 @@ export type Database = {
           esporte?: string | null
           estrategia?: string
           evento?: string | null
+          fair_odd?: number | null
           fair_value?: number | null
           fonte_entrada?: string | null
           fonte_saldo?: string | null
@@ -944,11 +951,13 @@ export type Database = {
           stake_real?: number | null
           stake_total?: number | null
           status?: string
+          sub_tipo_mercado?: string | null
           surebet_legado_id?: string | null
           taxa_conversao_audit?: number | null
           time_casa?: string | null
           time_fora?: string | null
           tipo_freebet?: string | null
+          tipo_mercado?: string | null
           tipo_multipla?: string | null
           updated_at?: string
           usar_freebet?: boolean | null
