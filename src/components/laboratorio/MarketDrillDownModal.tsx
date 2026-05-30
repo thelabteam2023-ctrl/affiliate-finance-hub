@@ -1123,11 +1123,17 @@ export function MarketDrillDownModal({
                             const farBelow = row.n >= 10 && bookmakerStats.avgRoi - row.roi > 5;
                             return (
                               <tr
-                                key={row.casa}
+                                key={row.groupKey}
                                 className={cn("border-t border-border/30", farBelow && "bg-red-500/[0.06]")}
                               >
                                 <td className="px-3 py-2 font-semibold">
-                                  <span className="inline-flex items-center gap-1.5">
+                                  <span className="inline-flex items-center gap-2">
+                                    <BookmakerLogo
+                                      logoUrl={row.logoUrl}
+                                      alt={row.casa}
+                                      size="h-6 w-6"
+                                      iconSize="h-3.5 w-3.5"
+                                    />
                                     <span className="truncate max-w-[200px]" title={row.casa}>{row.casa}</span>
                                     {isBest && (
                                       <span className="text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-bold">melhor</span>
