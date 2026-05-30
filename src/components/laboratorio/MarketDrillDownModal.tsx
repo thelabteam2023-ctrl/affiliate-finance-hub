@@ -972,7 +972,7 @@ export function MarketDrillDownModal({
             <div className="flex items-start gap-2 text-[11px] text-muted-foreground bg-muted/20 border border-border/30 rounded px-3 py-2">
               <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
               <span>
-                Sub-tipos de {marketName?.toLowerCase()} não disponíveis para apostas deste período. Consulte a coluna
+                Sub-tipos de {(marketName ?? siblings.tipoLabel ?? "").toLowerCase()} não disponíveis para apostas deste período. Consulte a coluna
                 <span className="font-semibold text-foreground"> Seleção </span>
                 na tabela de apostas para interpretar manualmente.
               </span>
