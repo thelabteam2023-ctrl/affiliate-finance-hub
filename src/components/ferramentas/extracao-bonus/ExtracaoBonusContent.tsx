@@ -44,6 +44,7 @@ export const ExtracaoBonusContent: React.FC = () => {
   const [optProgress, setOptProgress] = useState(0);
   const [optResults, setOptResults] = useState<any[]>([]);
   const [optRankTab, setOptRankTab] = useState<'pMeta' | 'medSeq' | 'eVal' | 'p50' | 'medOps'>('pMeta');
+  const [optIsDirty, setOptIsDirty] = useState(false);
 
   // Parâmetros de Simulação de Banca
   const [bancaParams, setBancaParams] = useState<BancaParams>({
@@ -61,10 +62,12 @@ export const ExtracaoBonusContent: React.FC = () => {
 
   const updateConfig = (key: keyof ExtractionConfig, value: any) => {
     setConfig(prev => ({ ...prev, [key]: value }));
+    setOptIsDirty(true);
   };
 
   const updateOptParams = (key: keyof SimulationParams, value: any) => {
     setOptParams(prev => ({ ...prev, [key]: value }));
+    setOptIsDirty(true);
   };
 
   const updateBancaParams = (key: keyof BancaParams, value: any) => {
@@ -76,6 +79,7 @@ export const ExtracaoBonusContent: React.FC = () => {
     setIsOptimizing(true);
     setOptProgress(0);
     setOptResults([]);
+    setOptIsDirty(false);
 
     const pool = [1.60, 1.65, 1.70, 1.75, 1.80, 1.85, 1.90, 1.95, 2.00, 2.10, 2.20, 2.30, 2.40, 2.50, 2.60, 2.80, 3.00, 3.20, 3.50, 4.00, 4.50, 5.00, 5.50, 6.00, 7.00, 8.00, 9.00, 10.00];
     const combinations: [number, number][] = [];
