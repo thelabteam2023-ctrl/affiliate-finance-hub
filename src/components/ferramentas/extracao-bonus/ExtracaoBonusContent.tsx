@@ -543,6 +543,18 @@ export const ExtracaoBonusContent: React.FC = () => {
               </div>
               <div className="space-y-2">
                 <Label className="text-xs flex items-center gap-1">
+                  Stake por Op.
+                  <CardInfoTooltip 
+                    title="Valor por Aposta" 
+                    description="O otimizador utiliza o 'Valor Apostado' definido na aba Parâmetros Globais para calcular o EV de cada passo. Altere lá para simular passos maiores ou menores." 
+                  />
+                </Label>
+                <div className="h-10 px-3 flex items-center bg-muted/50 rounded-md border text-sm font-bold font-mono text-muted-foreground cursor-not-allowed">
+                  ${fmt(config.bonusAmount)}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs flex items-center gap-1">
                   Prazo ({optParams.nOps} ops)
                   <CardInfoTooltip 
                     title="Janela de Tempo" 
@@ -589,9 +601,9 @@ export const ExtracaoBonusContent: React.FC = () => {
                   Entenda o Prazo Operacional
                 </h5>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  O otimizador testa estratégias que consigam bater a meta de <strong>${fmt(optParams.meta)}</strong> dentro de no máximo <strong>{optParams.nOps} operações</strong>. 
-                  Se você aumentar o prazo, as chances de sucesso (P Meta) aumentam, pois o sistema tem mais tempo para recuperar eventuais perdas e deixar o valor esperado (EV) trabalhar. 
-                  Se o prazo for muito curto em relação ao EV da estratégia, a chance de bater a meta cai drasticamente.
+                  O otimizador utiliza o passo (stake) de <strong>${fmt(config.bonusAmount)}</strong> definido nos parâmetros globais. 
+                  Ele testa quais odds conseguem bater a meta de <strong>${fmt(optParams.meta)}</strong> dentro de no máximo <strong>{optParams.nOps} operações</strong> usando esse valor fixo por aposta.
+                  Se você aumentar o valor apostado na aba principal, cada passo renderá mais EV e a meta será atingida mais rápido.
                 </p>
               </div>
 
@@ -649,7 +661,10 @@ export const ExtracaoBonusContent: React.FC = () => {
                           <p className="text-xs font-bold text-emerald-400">{(res.pMeta * 100).toFixed(1)}%</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-[9px] text-muted-foreground uppercase">EV/Op</p>
+                          <p className="text-[9px] text-muted-foreground uppercase flex items-center justify-center gap-1">
+                            EV/Passo
+                            <CardInfoTooltip title="Lucro por Aposta" description={`Com uma aposta de $${fmt(config.bonusAmount)}, cada operação rende em média este valor.`} />
+                          </p>
                           <p className="text-xs font-bold">${fmt(res.eVal)}</p>
                         </div>
                         <div className="text-center">
