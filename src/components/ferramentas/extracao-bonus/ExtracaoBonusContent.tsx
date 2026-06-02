@@ -661,7 +661,7 @@ export const ExtracaoBonusContent: React.FC = () => {
                   Banca Inicial ($)
                   <CardInfoTooltip 
                     title="Capital de Proteção" 
-                    description="O capital que você tem disponível para cobrir responsabilidades na Exchange. Se o saldo cair abaixo do necessário para a próxima aposta, a simulação é interrompida (Quebra)." 
+                    description="O capital que você tem disponível para cobrir responsabilidades na Exchange. Se o saldo cair abaixo do necessário para a próxima aposta, ocorre a Quebra (interrupção da extração por falta de liquidez)." 
                   />
                 </Label>
                 <Input type="number" value={optParams.initialBanca} onChange={e => updateOptParams('initialBanca', parseFloat(e.target.value) || 0)} />
@@ -831,7 +831,7 @@ export const ExtracaoBonusContent: React.FC = () => {
                         <div className="text-center">
                           <p className="text-[9px] text-muted-foreground uppercase flex items-center justify-center gap-1">
                             P(Quebra)
-                            <CardInfoTooltip title="Risco de Ruína" description="Chance de a banca inicial não ser suficiente para cobrir as responsabilidades da Exchange e a operação ser interrompida." />
+                            <CardInfoTooltip title="Risco de Liquidez" description="Chance de o saldo da Exchange acabar. Nota: O dinheiro não 'some', ele é transferido para a Casa de Apostas, mas você perde a capacidade de continuar o hedge/proteção." />
                           </p>
                           <p className="text-xs font-bold text-red-400">{(res.pQuebra * 100).toFixed(1)}%</p>
                         </div>
@@ -931,6 +931,15 @@ export const ExtracaoBonusContent: React.FC = () => {
 
           {simResult && (
             <div className="space-y-6">
+              <Alert className="bg-blue-500/10 border-blue-500/30 text-blue-200">
+                <Shield className="w-4 h-4" />
+                <AlertTitle className="text-sm font-bold">Importante: O conceito de Quebra</AlertTitle>
+                <AlertDescription className="text-xs">
+                  Diferente de apostas comuns, aqui a <strong>Quebra</strong> significa que seu saldo na <strong>Exchange</strong> acabou e foi parar na <strong>Casa de Apostas</strong>. 
+                  O risco real não é o sumiço do dinheiro, mas sim ele ficar "preso" na Casa sem você ter saldo para continuar fazendo o hedge (proteção) necessário para cumprir o rollover e sacar.
+                </AlertDescription>
+              </Alert>
+
               <div className="p-4 bg-blue-500/5 border border-blue-500/20 rounded-lg">
                 <h4 className="text-xs font-bold text-blue-400 uppercase mb-2 flex items-center gap-2">
                   <Info className="w-3 h-3" />
@@ -939,8 +948,9 @@ export const ExtracaoBonusContent: React.FC = () => {
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   Rodamos <strong>{bancaParams.nSims} simulações</strong> (futuros possíveis). 
                   Em cada uma, você faria até <strong>{bancaParams.maxOps} operações</strong>. 
-                  A <strong>Quebra</strong> ocorre quando sua banca de ${fmt(bancaParams.initialBanca)} não consegue mais cobrir o bônus. 
-                  O <strong>Sucesso</strong> é quando você atinge o lucro de ${fmt(bancaParams.lucroDesejado)} efetivamente transferido para a Exchange.
+                  A <strong>Quebra</strong> ocorre quando sua banca de ${fmt(bancaParams.initialBanca)} esgota na Exchange. Isso não significa perda total, mas que o capital migrou para a Casa de Apostas e você não tem mais como cobrir as apostas. 
+                  O <strong>Sucesso</strong> é quando você atinge o lucro de ${fmt(bancaParams.lucroDesejado)} efetivamente extraído para a Exchange.
+
                 </p>
               </div>
 
@@ -1054,7 +1064,7 @@ export const ExtracaoBonusContent: React.FC = () => {
                       <span className="font-bold text-emerald-400">Sucesso:</span> Você atingiu o lucro de ${fmt(auditTarget.diagnostics.input.meta)} antes do prazo acabar. Isso aconteceu em <span className="font-bold">{(auditTarget.pMeta * 100).toFixed(1)}%</span> das vezes.
                     </li>
                     <li>
-                      <span className="font-bold text-red-400">Quebra:</span> Sua banca de ${fmt(auditTarget.diagnostics.input.initialBanca)} acabou antes de você chegar na meta. Isso é o <strong>Risco de Ruína</strong>.
+                      <span className="font-bold text-red-400">Quebra:</span> Sua banca da Exchange acabou. O dinheiro migrou para a Casa de Apostas, mas você perdeu a capacidade de continuar protegendo suas apostas (Risco de Liquidez).
                     </li>
                     <li>
                       <span className="font-bold text-slate-400">DP (Desvio Padrão):</span> É o quão "nervosa" é a estratégia. Um DP de ${fmt(auditTarget.std)} significa que seu saldo pode oscilar muito para cima ou para baixo em uma única aposta.
