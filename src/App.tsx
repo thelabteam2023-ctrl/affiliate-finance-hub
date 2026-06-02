@@ -528,6 +528,15 @@ const App = () => (
               </ProtectedRoute>
             } />
 
+            {/* Extração de Bônus - standalone */}
+            <Route path="/ferramentas/extracao-bonus" element={
+              <ProtectedRoute>
+                <Suspense fallback={<PageLoader />}>
+                  <CalculadoraExtracaoBonus />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+
             {/* Planejamento de Campanhas - com layout (sub-aba de Ferramentas) */}
             <Route path="/ferramentas/planejamento" element={
               <ProtectedRoute>
