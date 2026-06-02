@@ -37,7 +37,7 @@ export const ExtracaoBonusContent: React.FC = () => {
     nOps: 100,
     oddMin: 1.60,
     oddMaxDupla: 10.00,
-    nSims: 200
+    nSims: 400
   });
 
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -612,7 +612,7 @@ export const ExtracaoBonusContent: React.FC = () => {
                 <div className="flex bg-muted p-1 rounded-lg">
                   {[
                     { id: 'pMeta', label: 'P(Meta)', tooltip: 'Probabilidade de atingir a meta financeira dentro do prazo estipulado (nº de operações).' },
-                    { id: 'medSeq', label: 'Menor Risco', tooltip: 'Ordena pelas estratégias que apresentam a menor sequência mediana de falhas (loss streaks).' },
+                    { id: 'medSeq', label: 'Menor Risco', tooltip: 'Ordena por estratégias que evitam que o dinheiro "caia" na casa (Cenário 3) repetidamente.' },
                     { id: 'eVal', label: 'Maior EV', tooltip: 'Valor Esperado: quanto você ganha, em média, por cada operação realizada.' },
                     { id: 'p50', label: 'Maior Mediana', tooltip: 'O saldo final mais provável (percentil 50) após completar todo o ciclo de operações.' },
                     { id: 'medOps', label: 'Mais Rápida', tooltip: 'Estratégias que atingem a meta com o menor número médio de operações.' }
@@ -670,7 +670,7 @@ export const ExtracaoBonusContent: React.FC = () => {
                         <div className="text-center">
                           <p className="text-[9px] text-muted-foreground uppercase flex items-center justify-center gap-1">
                             Seq. Falhas
-                            <CardInfoTooltip title="Menor Risco" description="Média da maior sequência de perdas consecutivas enfrentada durante as simulações. Quanto menor, mais estável a banca." />
+                            <CardInfoTooltip title="Risco de Rollover" description="Média da maior sequência de operações onde o bônus ficou preso na casa (Cenário 3). Quanto menor, mais eficiente é a extração." />
                           </p>
                           <p className="text-xs font-bold text-amber-400">{res.medSeq} ops</p>
                         </div>

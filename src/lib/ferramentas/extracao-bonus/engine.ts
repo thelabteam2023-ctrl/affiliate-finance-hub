@@ -151,21 +151,27 @@ export function runMonteCarlo(
       if (completa) {
         if (r < sc.pC1) {
           saldo += sc.c1;
-          if (sc.c1 < 0) currentSeqFalhas++; else { maxSeqFalhas = Math.max(maxSeqFalhas, currentSeqFalhas); currentSeqFalhas = 0; }
+          // Sucesso na extração (dinheiro foi para a exchange)
+          maxSeqFalhas = Math.max(maxSeqFalhas, currentSeqFalhas); 
+          currentSeqFalhas = 0;
         } else if (r < sc.pC1 + sc.pC2) {
           saldo += sc.c2;
-          if (sc.c2 < 0) currentSeqFalhas++; else { maxSeqFalhas = Math.max(maxSeqFalhas, currentSeqFalhas); currentSeqFalhas = 0; }
+          // Sucesso na extração (dinheiro foi para a exchange)
+          maxSeqFalhas = Math.max(maxSeqFalhas, currentSeqFalhas); 
+          currentSeqFalhas = 0;
         } else {
           saldo += sc.c3;
-          if (sc.c3 < 0) currentSeqFalhas++; else { maxSeqFalhas = Math.max(maxSeqFalhas, currentSeqFalhas); currentSeqFalhas = 0; }
+          // Falha na extração (dinheiro ficou na casa - Cenário 3)
+          currentSeqFalhas++;
         }
       } else {
         // Zona de Risco
         if (r < sc.pC1) {
           saldo += sc.c1;
-          if (sc.c1 < 0) currentSeqFalhas++; else { maxSeqFalhas = Math.max(maxSeqFalhas, currentSeqFalhas); currentSeqFalhas = 0; }
+          maxSeqFalhas = Math.max(maxSeqFalhas, currentSeqFalhas);
+          currentSeqFalhas = 0;
         } else {
-          // Perna 1 passou mas não tinha capital para Perna 2
+          // Perna 1 passou mas não tinha capital para Perna 2 (Falha crítica)
           vezFatalSemP2++;
           saldo -= sc.limP1;
           currentSeqFalhas++;
