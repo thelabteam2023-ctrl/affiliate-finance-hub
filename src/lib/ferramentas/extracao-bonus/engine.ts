@@ -191,7 +191,13 @@ export function runMonteCarlo(
       if (saldo >= metaAlvo && !hitMeta) {
         hitMeta = true;
         opsParaMeta.push(i + 1);
+        // Opcional: Se quiser que a simulação pare IMEDIATAMENTE ao atingir a meta, 
+        // poderíamos dar um 'break' aqui. Mas por padrão Monte Carlo pode continuar
+        // para ver o potencial total se o usuário continuasse operando.
+        // No entanto, para fins de Auditoria de Prazo, faz mais sentido parar:
+        break; 
       }
+
     }
 
     maxSeqFalhas = Math.max(maxSeqFalhas, currentSeqFalhas);
