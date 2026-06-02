@@ -351,6 +351,7 @@ export function AppSidebar() {
       '#calculadora-extracao': { url: '/ferramentas/calculadora-extracao', name: 'calculadora-extracao' },
       '#calculadora-hedge-prob': { url: '/ferramentas/calculadora-hedge-probabilistica', name: 'calculadora-hedge-probabilistica' },
       '#calculadora-ponto-futuro': { url: '/ferramentas/calculadora-ponto-futuro', name: 'calculadora-ponto-futuro' },
+      '#calculadora-extracao-bonus': { url: '/ferramentas/extracao-bonus', name: 'calculadora-extracao-bonus' },
     };
 
     // Caixa quick actions → navega para /caixa abrindo o dialog correto
