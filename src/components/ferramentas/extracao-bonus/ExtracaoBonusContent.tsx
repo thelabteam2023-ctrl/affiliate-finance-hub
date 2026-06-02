@@ -625,27 +625,55 @@ export const ExtracaoBonusContent: React.FC = () => {
                 <CardInfoTooltip title="Simulação Realista" description="Simula trajetórias de banca considerando a capacidade operacional e o risco de exposição sem cobertura." />
               </CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <Label className="text-xs">Banca Inicial ($)</Label>
-                <Input type="number" value={bancaParams.initialBanca} onChange={e => updateBancaParams('initialBanca', parseFloat(e.target.value) || 0)} />
+            <CardContent>
+              {/* Resumo dos Parâmetros Ativos */}
+              <div className="mb-6 p-3 bg-primary/5 rounded-lg border border-primary/20 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase text-primary">Cenário Operacional Ativo</span>
+                  <span className="text-[9px] text-muted-foreground italic">(Herdado da aba Parâmetros)</span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center">
+                    <p className="text-[9px] text-muted-foreground uppercase">Odd P1</p>
+                    <p className="text-xs font-bold font-mono">{o1.toFixed(2)}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-[9px] text-muted-foreground uppercase">Odd P2</p>
+                    <p className="text-xs font-bold font-mono">{o2.toFixed(2)}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-[9px] text-muted-foreground uppercase">Spread</p>
+                    <p className="text-xs font-bold font-mono">{config.spread.toFixed(1)}%</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-[9px] text-muted-foreground uppercase">EV Médio</p>
+                    <p className={`text-xs font-bold font-mono ${sc.eVal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>${fmt(sc.eVal)}</p>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label className="text-xs">Lucro Desejado ($)</Label>
-                <Input type="number" value={bancaParams.lucroDesejado} onChange={e => updateBancaParams('lucroDesejado', parseFloat(e.target.value) || 0)} />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs">Máximo Tentativas ({bancaParams.maxOps})</Label>
-                <Slider value={[bancaParams.maxOps]} min={10} max={1000} step={10} onValueChange={v => updateBancaParams('maxOps', v[0])} />
-              </div>
-              <div className="flex items-end">
-                <button 
-                  onClick={handleSimulateBanca} 
-                  disabled={isSimulating}
-                  className="w-full h-10 bg-primary text-primary-foreground rounded-md font-bold text-xs uppercase flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  {isSimulating ? 'Simulando...' : 'Rodar Simulação'}
-                </button>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs">Banca Inicial ($)</Label>
+                  <Input type="number" value={bancaParams.initialBanca} onChange={e => updateBancaParams('initialBanca', parseFloat(e.target.value) || 0)} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Lucro Desejado ($)</Label>
+                  <Input type="number" value={bancaParams.lucroDesejado} onChange={e => updateBancaParams('lucroDesejado', parseFloat(e.target.value) || 0)} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Máximo Tentativas ({bancaParams.maxOps})</Label>
+                  <Slider value={[bancaParams.maxOps]} min={10} max={1000} step={10} onValueChange={v => updateBancaParams('maxOps', v[0])} />
+                </div>
+                <div className="flex items-end">
+                  <button 
+                    onClick={handleSimulateBanca} 
+                    disabled={isSimulating}
+                    className="w-full h-10 bg-primary text-primary-foreground rounded-md font-bold text-xs uppercase flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {isSimulating ? 'Simulando...' : 'Rodar Simulação'}
+                  </button>
+                </div>
               </div>
             </CardContent>
           </Card>
