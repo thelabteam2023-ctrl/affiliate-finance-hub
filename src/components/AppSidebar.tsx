@@ -228,6 +228,7 @@ const menuGroups: MenuGroup[] = [
           { title: "Calculadora Extração", url: "#calculadora-extracao", icon: Calculator, iconName: "Calculator", moduleKey: "ferramentas" },
           { title: "Hedge Probabilístico", url: "#calculadora-hedge-prob", icon: Target, iconName: "Target", moduleKey: "ferramentas" },
           { title: "Ponto de Edge Futuro", url: "#calculadora-ponto-futuro", icon: Clock, iconName: "Clock", moduleKey: "ferramentas" },
+          { title: "Extração de Bônus", url: "#calculadora-extracao-bonus", icon: Zap, iconName: "Zap", moduleKey: "ferramentas" },
         ]
       },
       { title: "Planejamento", url: "/ferramentas/planejamento", icon: CalendarDays, iconName: "CalendarDays", moduleKey: "ferramentas" },
@@ -350,6 +351,7 @@ export function AppSidebar() {
       '#calculadora-extracao': { url: '/ferramentas/calculadora-extracao', name: 'calculadora-extracao' },
       '#calculadora-hedge-prob': { url: '/ferramentas/calculadora-hedge-probabilistica', name: 'calculadora-hedge-probabilistica' },
       '#calculadora-ponto-futuro': { url: '/ferramentas/calculadora-ponto-futuro', name: 'calculadora-ponto-futuro' },
+      '#calculadora-extracao-bonus': { url: '/ferramentas/extracao-bonus', name: 'calculadora-extracao-bonus' },
     };
 
     // Caixa quick actions → navega para /caixa abrindo o dialog correto
@@ -369,7 +371,7 @@ export function AppSidebar() {
     const tool = toolMap[url];
     if (tool) {
       e.preventDefault();
-      const width = url === '#calculadora-ev' ? 420 : (url === '#calculadora-extracao' || url === '#calculadora-ponto-futuro') ? 1000 : 900;
+      const width = url === '#calculadora-ev' ? 420 : (url === '#calculadora-extracao' || url === '#calculadora-ponto-futuro' || url === '#calculadora-extracao-bonus') ? 1000 : 900;
       if (url === '#calculadora-hedge-prob') {
         const w = 1100;
         const h = 850;
@@ -378,7 +380,7 @@ export function AppSidebar() {
         window.open(tool.url, tool.name, `width=${w},height=${h},left=${l},top=${t},resizable=yes,scrollbars=yes`);
         return;
       }
-      const height = url === '#calculadora-ev' ? 580 : (url === '#calculadora-extracao' || url === '#calculadora-ponto-futuro') ? 800 : 750;
+      const height = url === '#calculadora-ev' ? 580 : (url === '#calculadora-extracao' || url === '#calculadora-ponto-futuro' || url === '#calculadora-extracao-bonus') ? 800 : 750;
       const left = Math.max(0, (window.screen.width - width) / 2);
       const top = Math.max(0, (window.screen.height - height) / 2);
       window.open(

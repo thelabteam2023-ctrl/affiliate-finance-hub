@@ -91,6 +91,7 @@ const CalculadoraExtracao = lazyWithChunkRetry(() => import("./pages/Calculadora
 const PlanejamentoCampanhas = lazyWithChunkRetry(() => import("./pages/PlanejamentoCampanhas"));
 const CalculadoraPontoFuturo = lazyWithChunkRetry(() => import("./pages/CalculadoraPontoFuturo"));
 const CalculadoraHedgeProbabilistica = lazyWithChunkRetry(() => import("./pages/CalculadoraHedgeProbabilistica"));
+const CalculadoraExtracaoBonus = lazyWithChunkRetry(() => import("./pages/ferramentas/CalculadoraExtracaoBonus"));
 const SurebetWindowPage = lazyWithChunkRetry(() => import("./pages/SurebetWindowPage"));
 const ApostaWindowPage = lazyWithChunkRetry(() => import("./pages/ApostaWindowPage"));
 const ApostaMultiplaWindowPage = lazyWithChunkRetry(() => import("./pages/ApostaMultiplaWindowPage"));
@@ -523,6 +524,15 @@ const App = () => (
               <ProtectedRoute>
                 <Suspense fallback={<PageLoader />}>
                   <CalculadoraPontoFuturo />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+
+            {/* Extração de Bônus - standalone */}
+            <Route path="/ferramentas/extracao-bonus" element={
+              <ProtectedRoute>
+                <Suspense fallback={<PageLoader />}>
+                  <CalculadoraExtracaoBonus />
                 </Suspense>
               </ProtectedRoute>
             } />
