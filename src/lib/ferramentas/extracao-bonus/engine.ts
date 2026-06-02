@@ -1,4 +1,4 @@
-import { ExtractionConfig, ExtractionMode } from "./types";
+import { ExtractionConfig } from "./types";
 
 /**
  * Motor de simulação e cálculo da ferramenta de Extração de Bônus.
