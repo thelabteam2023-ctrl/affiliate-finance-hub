@@ -112,7 +112,8 @@ export const ExtracaoBonusContent: React.FC = () => {
           medSeq: mc.medSeq,
           p50: mc.p50,
           eVal: scLocal.eVal,
-          sc: scLocal
+          sc: scLocal,
+          diagnostics: mc.diagnostics
         });
       }
       setOptProgress(Math.round(((i + batchSize) / total) * 100));
