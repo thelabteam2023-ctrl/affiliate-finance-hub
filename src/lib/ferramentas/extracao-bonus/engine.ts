@@ -265,9 +265,11 @@ export function runMonteCarlo(
 
   return {
     pMeta: successCount / nSims,
+    pQuebra: brokeCount / nSims,
     medOps,
     medSeq,
     p50: stats.p50,
+    stdPerOp: sc.std,
     results,
     diagnostics
   };
