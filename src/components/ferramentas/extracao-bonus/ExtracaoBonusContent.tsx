@@ -150,9 +150,11 @@ export const ExtracaoBonusContent: React.FC = () => {
           o2: odd2,
           oMult: odd1 * odd2,
           pMeta: mc.pMeta,
+          pQuebra: mc.pQuebra,
           medOps: mc.medOps,
           medSeq: mc.medSeq,
           p50: mc.p50,
+          std: mc.stdPerOp,
           eVal: scLocal.eVal,
           sc: scLocal,
           diagnostics: mc.diagnostics
@@ -807,6 +809,13 @@ export const ExtracaoBonusContent: React.FC = () => {
                         </div>
                         <div className="text-center">
                           <p className="text-[9px] text-muted-foreground uppercase flex items-center justify-center gap-1">
+                            DP (Risco)
+                            <CardInfoTooltip title="Desvio Padrão (Volatilidade)" description="Indica o quanto o saldo oscila por operação. Valores altos significam 'montanha-russa' (maior risco de quebra temporária)." />
+                          </p>
+                          <p className="text-xs font-bold text-slate-300">${fmt(res.std)}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-[9px] text-muted-foreground uppercase flex items-center justify-center gap-1">
                             Seq. Falhas
                             <CardInfoTooltip title="Risco de Rollover" description="Média da maior sequência de operações onde o bônus ficou preso na casa (Cenário 3). Quanto menor, mais eficiente é a extração." />
                           </p>
@@ -818,6 +827,13 @@ export const ExtracaoBonusContent: React.FC = () => {
                             <CardInfoTooltip title="Expectativa Realista" description="O saldo final que ocorreu na maioria das simulações. É um indicador mais seguro que a média simples." />
                           </p>
                           <p className="text-xs font-bold">${fmt(res.p50)}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-[9px] text-muted-foreground uppercase flex items-center justify-center gap-1">
+                            P(Quebra)
+                            <CardInfoTooltip title="Risco de Ruína" description="Chance de a banca inicial não ser suficiente para cobrir as responsabilidades da Exchange e a operação ser interrompida." />
+                          </p>
+                          <p className="text-xs font-bold text-red-400">{(res.pQuebra * 100).toFixed(1)}%</p>
                         </div>
                       </div>
                       
@@ -1009,12 +1025,39 @@ export const ExtracaoBonusContent: React.FC = () => {
 
           {auditTarget && (
             <div className="space-y-6 pt-4">
+              {/* Seção 0: Resumo para Leigos */}
+              <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg space-y-2">
+                <h4 className="text-sm font-bold text-blue-400 flex items-center gap-2">
+                  <Info className="w-4 h-4" />
+                  Resumo de Diagnóstico (Leigo)
+                </h4>
+                <div className="text-xs text-slate-300 leading-relaxed space-y-2">
+                  <p>
+                    Esta simulação rodou <span className="font-bold text-white">{auditTarget.diagnostics.input.nSims} "futuros possíveis"</span>. 
+                    Em cada um deles, você tentou fazer até <span className="font-bold text-white">{auditTarget.diagnostics.input.nOps} apostas</span>.
+                  </p>
+                  <ul className="list-disc pl-4 space-y-1">
+                    <li>
+                      <span className="font-bold text-emerald-400">Sucesso:</span> Você atingiu o lucro de ${fmt(auditTarget.diagnostics.input.meta)} antes do prazo acabar. Isso aconteceu em <span className="font-bold">{(auditTarget.pMeta * 100).toFixed(1)}%</span> das vezes.
+                    </li>
+                    <li>
+                      <span className="font-bold text-red-400">Quebra:</span> Sua banca de ${fmt(auditTarget.diagnostics.input.initialBanca)} acabou antes de você chegar na meta. Isso é o <strong>Risco de Ruína</strong>.
+                    </li>
+                    <li>
+                      <span className="font-bold text-slate-400">DP (Desvio Padrão):</span> É o quão "nervosa" é a estratégia. Um DP de ${fmt(auditTarget.std)} significa que seu saldo pode oscilar muito para cima ou para baixo em uma única aposta.
+                    </li>
+                    <li>
+                      <span className="font-bold text-amber-400">Mais Prazo = Mais P(Meta)?</span> Sim, porque você tem mais chances de recuperar perdas, mas cuidado: quanto mais tempo você opera, mais chances tem de enfrentar uma sequência de azares que quebre sua banca.
+                    </li>
+                  </ul>
+                  <p className="pt-2 italic text-[11px] text-slate-400 border-t border-blue-500/20">
+                    Conclusão: {auditTarget.pMeta > 0.5 ? "Esta estratégia é estatisticamente sólida para sua meta." : "Esta meta é muito agressiva para sua banca atual. Você tem grandes chances de quebrar antes de chegar lá."}
+                  </p>
+                </div>
+              </div>
+
               {/* Seção 1: Entrada do Sistema */}
               <div className="space-y-3">
-                <h4 className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2">
-                  <Info className="w-3 h-3" />
-                  Entradas do Modelo
-                </h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   {[
                     { label: 'Meta', val: `$${fmt(auditTarget.diagnostics.input.meta)}` },
