@@ -629,8 +629,11 @@ export const ExtracaoBonusContent: React.FC = () => {
               {/* Resumo dos Parâmetros Ativos */}
               <div className="mb-6 p-3 bg-primary/5 rounded-lg border border-primary/20 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase text-primary">Cenário Operacional Ativo</span>
-                  <span className="text-[9px] text-muted-foreground italic">(Herdado da aba Parâmetros)</span>
+                  <span className="text-[10px] font-bold uppercase text-primary flex items-center gap-2">
+                    <Target className="w-3 h-3" />
+                    Cenário Operacional Ativo
+                  </span>
+                  <span className="text-[9px] text-muted-foreground italic">Valores herdados da aba Parâmetros</span>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center">
