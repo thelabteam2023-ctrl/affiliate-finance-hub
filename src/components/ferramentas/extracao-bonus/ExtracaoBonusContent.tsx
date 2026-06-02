@@ -260,14 +260,22 @@ export const ExtracaoBonusContent: React.FC = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs">Modelo</Label>
+                <Label className="text-xs flex items-center gap-1">
+                  Modelo
+                  <CardInfoTooltip 
+                    title="Modelos de Cálculo" 
+                    description={config.model === 'Equilibrado' 
+                      ? "Modelo Equilibrado: Ajusta as stakes para que o resultado final seja IDENTICO em qualquer cenário. Elimina a variância operacional." 
+                      : "Modelo Cascata: Foca em proteger o capital inicial. O resultado final varia dependendo de qual perna encerra a operação."} 
+                  />
+                </Label>
                 <Select value={config.model} onValueChange={(v: ExtractionMode) => updateConfig('model', v)}>
                   <SelectTrigger className="h-10">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Equilibrado">Equilibrado</SelectItem>
-                    <SelectItem value="Cascata">Cascata</SelectItem>
+                    <SelectItem value="Equilibrado">Equilibrado (Arbitragem)</SelectItem>
+                    <SelectItem value="Cascata">Cascata (Recuperação)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
