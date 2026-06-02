@@ -536,7 +536,13 @@ export const ExtracaoBonusContent: React.FC = () => {
                 <Input type="number" value={optParams.meta} onChange={e => updateOptParams('meta', parseFloat(e.target.value) || 0)} />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs">Operações ({optParams.nOps})</Label>
+                <Label className="text-xs flex items-center gap-1">
+                  Prazo ({optParams.nOps} ops)
+                  <CardInfoTooltip 
+                    title="Janela de Tempo" 
+                    description="Define quantas operações (apostas) o sistema tem de 'prazo' para atingir a meta. Se a meta não for batida dentro deste número de jogadas, a estratégia é marcada como falha no cálculo de P(Meta)." 
+                  />
+                </Label>
                 <Slider value={[optParams.nOps]} min={1} max={1000} step={1} onValueChange={v => updateOptParams('nOps', v[0])} />
               </div>
               <div className="space-y-2">
@@ -571,6 +577,18 @@ export const ExtracaoBonusContent: React.FC = () => {
 
           {optResults.length > 0 && (
             <div className="space-y-4">
+              <div className="bg-blue-500/5 border-l-4 border-l-blue-500 p-4 rounded-r-lg mb-6">
+                <h5 className="text-xs font-bold text-blue-400 uppercase mb-1 flex items-center gap-2">
+                  <Clock className="w-3 h-3" />
+                  Entenda o Prazo Operacional
+                </h5>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  O otimizador testa estratégias que consigam bater a meta de <strong>${fmt(optParams.meta)}</strong> dentro de no máximo <strong>{optParams.nOps} operações</strong>. 
+                  Se você aumentar o prazo, as chances de sucesso (P Meta) aumentam, pois o sistema tem mais tempo para recuperar eventuais perdas e deixar o valor esperado (EV) trabalhar. 
+                  Se o prazo for muito curto em relação ao EV da estratégia, a chance de bater a meta cai drasticamente.
+                </p>
+              </div>
+
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Ranking de Estratégias</h3>
                 <div className="flex bg-muted p-1 rounded-lg">
@@ -632,7 +650,7 @@ export const ExtracaoBonusContent: React.FC = () => {
                       
                       <div className="text-[10px] text-muted-foreground bg-muted/30 p-2 rounded leading-relaxed">
                         Exch ganha {((1 - (1 / res.o1 * 1 / res.o2)) * 100).toFixed(0)}% das ops. 
-                        Ops mínimas: {Math.ceil(optParams.meta / res.eVal)} ops.
+                        Necessário: ~{Math.ceil(optParams.meta / res.eVal)} ops para meta vs {optParams.nOps} ops de prazo.
                       </div>
                     </CardContent>
                   </Card>
@@ -690,7 +708,10 @@ export const ExtracaoBonusContent: React.FC = () => {
                   <Input type="number" value={bancaParams.lucroDesejado} onChange={e => updateBancaParams('lucroDesejado', parseFloat(e.target.value) || 0)} />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs">Máximo Tentativas ({bancaParams.maxOps})</Label>
+                  <Label className="text-xs flex items-center gap-1">
+                    Janela de Tempo ({bancaParams.maxOps})
+                    <CardInfoTooltip title="Prazo Limite" description="Número máximo de operações permitidas para tentar dobrar a banca ou atingir o lucro desejado antes de encerrar a simulação." />
+                  </Label>
                   <Slider value={[bancaParams.maxOps]} min={10} max={1000} step={10} onValueChange={v => updateBancaParams('maxOps', v[0])} />
                 </div>
                 <div className="flex items-end">
