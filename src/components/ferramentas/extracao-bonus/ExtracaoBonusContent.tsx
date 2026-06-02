@@ -273,6 +273,13 @@ export const ExtracaoBonusContent: React.FC = () => {
     }));
   }, [config, optParams, bancaParams, o1, o2]);
 
+  // Garante que o nOps nunca seja menor que o mínimo necessário para a meta
+  useEffect(() => {
+    if (optParams.nOps < minOpsRequired) {
+      setOptParams(prev => ({ ...prev, nOps: minOpsRequired }));
+    }
+  }, [minOpsRequired, optParams.nOps]);
+
   return (
     <div className="p-4 max-w-5xl mx-auto space-y-6 pb-20">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
