@@ -125,10 +125,14 @@ export function runMonteCarlo(
   const results = [];
   
   let successCount = 0;
+  let brokeCount = 0;
+  let stayInBetweenCount = 0; // Entre saldo inicial e meta
   const opsParaMeta = [];
+  const saldosFinaisRaw = [];
 
   for (let s = 0; s < nSims; s++) {
     let saldo = initialBanca !== undefined ? initialBanca : 0;
+    const initialSaldo = saldo;
     const metaAlvo = initialBanca !== undefined ? initialBanca + meta : meta;
     let hitMeta = saldo >= metaAlvo;
     let broke = false;
@@ -186,7 +190,15 @@ export function runMonteCarlo(
     }
 
     maxSeqFalhas = Math.max(maxSeqFalhas, currentSeqFalhas);
-    if (hitMeta) successCount++;
+    if (hitMeta) {
+      successCount++;
+    } else if (broke) {
+      brokeCount++;
+    } else if (saldo > initialSaldo) {
+      stayInBetweenCount++;
+    }
+
+    saldosFinaisRaw.push(saldo);
     results.push({
       saldoFinal: saldo,
       hitMeta,
@@ -201,19 +213,57 @@ export function runMonteCarlo(
   opsParaMeta.sort((a, b) => a - b);
   const medOps = opsParaMeta.length > 0 ? opsParaMeta[Math.floor(opsParaMeta.length / 2)] : 0;
 
-  // Mediana de saldos finais
-  const saldosFinais = results.map(r => r.saldoFinal).sort((a, b) => a - b);
-  const p50 = saldosFinais[Math.floor(saldosFinais.length / 2)];
+  // Estatísticas de saldos finais
+  const sortedSaldos = [...saldosFinaisRaw].sort((a, b) => a - b);
+  const getPercentile = (p: number) => sortedSaldos[Math.floor(sortedSaldos.length * (p / 100))] || 0;
+
+  const stats = {
+    min: sortedSaldos[0],
+    max: sortedSaldos[sortedSaldos.length - 1],
+    avg: saldosFinaisRaw.reduce((a, b) => a + b, 0) / nSims,
+    p5: getPercentile(5),
+    p25: getPercentile(25),
+    p50: getPercentile(50),
+    p75: getPercentile(75),
+    p95: getPercentile(95)
+  };
 
   // Mediana de sequencia de falhas
   const seqFalhas = results.map(r => r.maxSeqFalhas).sort((a, b) => a - b);
   const medSeq = seqFalhas[Math.floor(seqFalhas.length / 2)];
 
+  // Diagnóstico
+  const diagnostics = {
+    input: {
+      meta,
+      nOps,
+      nSims,
+      initialBanca: initialBanca || 0,
+      odd1: o1,
+      odd2: o2,
+      evPerOp: sc.eVal
+    },
+    counts: {
+      success: successCount,
+      broke: brokeCount,
+      stayInBetween: stayInBetweenCount,
+      total: nSims
+    },
+    stats,
+    alerts: [] as string[]
+  };
+
+  // Validação de Consistência (Regras do Sentinel)
+  if (sc.eVal > 0 && stats.avg > (initialBanca || 0) && successCount === 0) {
+    diagnostics.alerts.push("Possível inconsistência: expectativa positiva com probabilidade de meta nula.");
+  }
+
   return {
     pMeta: successCount / nSims,
     medOps,
     medSeq,
-    p50,
-    results
+    p50: stats.p50,
+    results,
+    diagnostics
   };
 }
