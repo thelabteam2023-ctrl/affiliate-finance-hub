@@ -626,7 +626,18 @@ export const ExtracaoBonusContent: React.FC = () => {
                     description="Define quantas operações (apostas) o sistema tem de 'prazo' para atingir a meta. Se a meta não for batida dentro deste número de jogadas, a estratégia é marcada como falha no cálculo de P(Meta)." 
                   />
                 </Label>
-                <Slider value={[optParams.nOps]} min={1} max={1000} step={1} onValueChange={v => updateOptParams('nOps', v[0])} />
+                <Slider 
+                  value={[optParams.nOps]} 
+                  min={minOpsRequired} 
+                  max={Math.max(1000, minOpsRequired + 50)} 
+                  step={1} 
+                  onValueChange={v => updateOptParams('nOps', v[0])} 
+                />
+                {minOpsRequired > 1 && (
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Mínimo de <span className="font-bold">{minOpsRequired}</span> ops para atingir a meta de ${fmt(optParams.meta)}
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label className="text-xs">Odd Min/Per ({optParams.oddMin.toFixed(2)})</Label>
