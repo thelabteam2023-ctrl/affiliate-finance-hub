@@ -41,6 +41,30 @@ export function calculateScenarios(config: ExtractionConfig, o1: number, o2: num
     c1 = ret1 - stake;
     c2 = -resp1 + ret2 - stake;
     c3 = lucroCasas - resp1 - resp2 - stake;
+  } else if (model === 'Cenário 3 Zero') {
+    // Modelo Cenário 3 Zero: Resolve as stakes para que C3 = 0.
+    // C3 = lucroCasas - resp1 - resp2 - stake = 0
+    // resp1 = lay1 * (oLay1 - 1)
+    // resp2 = lay2 * (oLay2 - 1)
+    // lay2 = (ret1 + resp1) / k = (lay1 * k + lay1 * (oLay1 - 1)) / k = lay1 * (k + oLay1 - 1) / k
+    // resp2 = [lay1 * (k + oLay1 - 1) / k] * (oLay2 - 1)
+    
+    // Substituindo em C3:
+    // lucroCasas - stake = lay1 * (oLay1 - 1) + lay1 * [(k + oLay1 - 1) / k] * (oLay2 - 1)
+    // lay1 = (lucroCasas - stake) / [(oLay1 - 1) + ((k + oLay1 - 1) / k) * (oLay2 - 1)]
+    
+    const fatorLay2 = (k + oLay1 - 1) / k;
+    lay1 = (lucroCasas - stake) / ((oLay1 - 1) + fatorLay2 * (oLay2 - 1));
+    resp1 = lay1 * (oLay1 - 1);
+    ret1 = lay1 * k;
+
+    lay2 = lay1 * fatorLay2;
+    resp2 = lay2 * (oLay2 - 1);
+    ret2 = lay2 * k;
+
+    c1 = ret1 - stake;
+    c2 = -resp1 + ret2 - stake;
+    c3 = 0; // Forçado por construção
   } else {
     // Modelo Cascata — lay1 fixado pelo bônus, lay2 cobre perda do lay1 + meta:
     lay1 = bonusAmount;

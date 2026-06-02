@@ -276,6 +276,7 @@ export const ExtracaoBonusContent: React.FC = () => {
                   <SelectContent>
                     <SelectItem value="Equilibrado">Equilibrado (Arbitragem)</SelectItem>
                     <SelectItem value="Cascata">Cascata (Recuperação)</SelectItem>
+                    <SelectItem value="Cenário 3 Zero">Cenário 3 Zero (Proteção)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -408,10 +409,9 @@ export const ExtracaoBonusContent: React.FC = () => {
             <div className="bg-muted/30 p-3 rounded-lg border border-dashed border-border flex flex-col justify-center">
               <h5 className="text-[10px] font-bold uppercase text-primary mb-1">Entenda o {config.model}</h5>
               <p className="text-[10px] text-muted-foreground leading-tight">
-                {config.model === 'Equilibrado' 
-                  ? "Este modelo garante que o lucro final seja rigorosamente o mesmo em todos os cenários. É uma arbitragem matemática pura, eliminando o fator 'sorte' da operação."
-                  : "Este modelo prioriza a proteção do capital. Ele fixa a primeira aposta e recalcula a segunda para cobrir custos, resultando em retornos variáveis conforme o desfecho."
-                }
+                {config.model === 'Equilibrado' && "Este modelo garante que o lucro final seja rigorosamente o mesmo em todos os cenários. É uma arbitragem matemática pura, eliminando o fator 'sorte' da operação."}
+                {config.model === 'Cascata' && "Este modelo prioriza a proteção do capital. Ele fixa a primeira aposta e recalcula a segunda para cobrir custos, resultando em retornos variáveis conforme o desfecho."}
+                {config.model === 'Cenário 3 Zero' && "Neste ajuste, o cenário de 'ganhar na casa' é calibrado para resultar em exatos zero (empate). Isso libera mais potencial de lucro para quando o dinheiro vai para a Exchange (C1 e C2)."}
               </p>
             </div>
           </div>
