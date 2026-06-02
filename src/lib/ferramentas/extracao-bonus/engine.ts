@@ -110,6 +110,7 @@ export function calculateScenarios(config: ExtractionConfig, o1: number, o2: num
     pC2,
     pC3,
     eVal,
+    eValEx: pC1 * ret1 + pC2 * (ret2 - resp1) + pC3 * (-(resp1 + resp2)),
     std,
     limCompleta: resp1 + resp2,
     limP1: resp1
