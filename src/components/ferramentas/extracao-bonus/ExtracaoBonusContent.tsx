@@ -603,7 +603,17 @@ export const ExtracaoBonusContent: React.FC = () => {
                 <Label className="text-xs">Odd Max Dupla ({optParams.oddMaxDupla.toFixed(1)})</Label>
                 <Slider value={[optParams.oddMaxDupla]} min={2} max={20} step={0.5} onValueChange={v => updateOptParams('oddMaxDupla', v[0])} />
               </div>
-              <div className="flex items-end">
+              <div className="space-y-2">
+                <Label className="text-xs flex items-center gap-1">
+                  Banca Inicial ($)
+                  <CardInfoTooltip 
+                    title="Capital de Proteção" 
+                    description="O capital que você tem disponível para cobrir responsabilidades na Exchange. Se o saldo cair abaixo do necessário para a próxima aposta, a simulação é interrompida (Quebra)." 
+                  />
+                </Label>
+                <Input type="number" value={optParams.initialBanca} onChange={e => updateOptParams('initialBanca', parseFloat(e.target.value) || 0)} />
+              </div>
+              <div className="flex items-end lg:col-span-5">
                 <button 
                   onClick={handleOptimize} 
                   disabled={isOptimizing}
@@ -627,6 +637,20 @@ export const ExtracaoBonusContent: React.FC = () => {
 
           {optResults.length > 0 && (
             <div className="space-y-4">
+              {globalAlerts.length > 0 && (
+                <div className="space-y-2">
+                  {globalAlerts.map((alert, i) => (
+                    <Alert key={i} variant="destructive" className="bg-red-500/10 border-red-500/20 text-red-400 py-2">
+                      <ShieldAlert className="h-4 w-4" />
+                      <AlertTitle className="text-xs font-bold uppercase">Sentinela: Inconsistência Detectada</AlertTitle>
+                      <AlertDescription className="text-xs">
+                        {alert}
+                      </AlertDescription>
+                    </Alert>
+                  ))}
+                </div>
+              )}
+
               <div className="bg-blue-500/5 border-l-4 border-l-blue-500 p-4 rounded-r-lg mb-6">
                 <h5 className="text-xs font-bold text-blue-400 uppercase mb-1 flex items-center gap-2">
                   <Clock className="w-3 h-3" />
@@ -681,8 +705,39 @@ export const ExtracaoBonusContent: React.FC = () => {
                             <p className="text-[10px] text-muted-foreground uppercase">{res.oMult.toFixed(2)}x Odd Total</p>
                           </div>
                         </div>
-                        {res.pMeta > 0.9 && <Badge variant="default" className="bg-emerald-500 text-[8px] uppercase">Elite</Badge>}
+                        <div className="flex items-center gap-1">
+                          {res.diagnostics?.alerts?.length > 0 && (
+                            <CardInfoTooltip title="Alertas de Auditoria" description={res.diagnostics.alerts.join(' ')}>
+                              <AlertTriangle className="w-3 h-3 text-amber-500 animate-pulse" />
+                            </CardInfoTooltip>
+                          )}
+                          {res.pMeta > 0.9 && <Badge variant="default" className="bg-emerald-500 text-[8px] uppercase">Elite</Badge>}
+                        </div>
                       </div>
+                      
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-7 text-[9px] uppercase font-bold flex-1 gap-1 border-primary/20 hover:border-primary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setAuditTarget(res);
+                          }}
+                        >
+                          <Bug className="w-3 h-3" />
+                          Auditar
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-7 text-[9px] uppercase font-bold flex-1 gap-1"
+                        >
+                          <Search className="w-3 h-3" />
+                          Selecionar
+                        </Button>
+                      </div>
+
                       
                       <div className="grid grid-cols-2 gap-2 pt-2 border-t">
                         <div className="text-center">
@@ -889,6 +944,124 @@ export const ExtracaoBonusContent: React.FC = () => {
           )}
         </TabsContent>
       </Tabs>
+      <Dialog open={!!auditTarget} onValueChange={() => setAuditTarget(null)}>
+        <DialogContent className="max-w-2xl bg-slate-950 border-slate-800 text-slate-100 max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-primary">
+              <Bug className="w-5 h-5" />
+              Relatório de Auditoria e Observabilidade
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Diagnóstico detalhado da estratégia: {auditTarget?.o1?.toFixed(2)} × {auditTarget?.o2?.toFixed(2)}
+            </DialogDescription>
+          </DialogHeader>
+
+          {auditTarget && (
+            <div className="space-y-6 pt-4">
+              {/* Seção 1: Entrada do Sistema */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2">
+                  <Info className="w-3 h-3" />
+                  Entradas do Modelo
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {[
+                    { label: 'Meta', val: `$${fmt(auditTarget.diagnostics.input.meta)}` },
+                    { label: 'Banca Inicial', val: `$${fmt(auditTarget.diagnostics.input.initialBanca)}` },
+                    { label: 'Stake Base', val: `$${fmt(config.bonusAmount)}` },
+                    { label: 'EV/Op', val: `$${fmt(auditTarget.diagnostics.input.evPerOp)}` },
+                    { label: 'Prazo', val: `${auditTarget.diagnostics.input.nOps} ops` },
+                    { label: 'Simulações', val: auditTarget.diagnostics.input.nSims },
+                    { label: 'Odd 1', val: auditTarget.o1.toFixed(2) },
+                    { label: 'Odd 2', val: auditTarget.o2.toFixed(2) },
+                  ].map((item, i) => (
+                    <div key={i} className="p-2 bg-slate-900 rounded border border-slate-800">
+                      <p className="text-[9px] text-slate-500 uppercase">{item.label}</p>
+                      <p className="text-xs font-bold font-mono">{item.val}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Seção 2: Resultados da Simulação */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2">
+                  <TrendingUp className="w-3 h-3" />
+                  Resultados Brutos (Monte Carlo)
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                   {[
+                    { label: 'Sucessos (Meta)', val: auditTarget.diagnostics.counts.success, color: 'text-emerald-400' },
+                    { label: 'Quebras', val: auditTarget.diagnostics.counts.broke, color: 'text-red-400' },
+                    { label: 'Ficaram no Meio', val: auditTarget.diagnostics.counts.stayInBetween, color: 'text-amber-400' },
+                    { label: 'Total Executado', val: auditTarget.diagnostics.counts.total, color: 'text-slate-100' },
+                  ].map((item, i) => (
+                    <div key={i} className="p-2 bg-slate-900 rounded border border-slate-800">
+                      <p className="text-[9px] text-slate-500 uppercase">{item.label}</p>
+                      <p className={`text-sm font-bold font-mono ${item.color}`}>{item.val}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Seção 3: Distribuição de Probabilidade */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2">
+                  <Calculator className="w-3 h-3" />
+                  Estatísticas de Dispersão (Percentis)
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                  {[
+                    { label: 'Mínimo', val: auditTarget.diagnostics.stats.min },
+                    { label: 'P5', val: auditTarget.diagnostics.stats.p5 },
+                    { label: 'P25', val: auditTarget.diagnostics.stats.p25 },
+                    { label: 'Mediana (P50)', val: auditTarget.diagnostics.stats.p50 },
+                    { label: 'P75', val: auditTarget.diagnostics.stats.p75 },
+                    { label: 'P95', val: auditTarget.diagnostics.stats.p95 },
+                    { label: 'Máximo', val: auditTarget.diagnostics.stats.max },
+                    { label: 'Média Final', val: auditTarget.diagnostics.stats.avg },
+                  ].map((item, i) => (
+                    <div key={i} className={`p-2 bg-slate-900 rounded border border-slate-800 ${item.label === 'Mediana (P50)' ? 'border-primary/50 bg-primary/5' : ''}`}>
+                      <p className="text-[9px] text-slate-500 uppercase">{item.label}</p>
+                      <p className={`text-xs font-bold font-mono ${item.val >= (auditTarget.diagnostics.input.initialBanca) ? 'text-emerald-400' : 'text-red-400'}`}>
+                        ${fmt(item.val)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Seção 4: Auditoria de Fórmulas e Lógica */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2">
+                  <Shield className="w-3 h-3" />
+                  Memória de Cálculo e Lógica
+                </h4>
+                <div className="text-[10px] space-y-2 font-mono text-slate-400 bg-slate-900 p-3 rounded border border-slate-800">
+                  <p><span className="text-primary">P(Meta)</span> = Sucessos / Total Simulações = {auditTarget.diagnostics.counts.success} / {auditTarget.diagnostics.counts.total} = {(auditTarget.pMeta * 100).toFixed(2)}%</p>
+                  <p><span className="text-primary">Mediana</span> = Valor no centro da amostra ordenada de saldos finais.</p>
+                  <p><span className="text-primary">Seq. Falhas</span> = Mediana das maiores sequências de Cenário 3 em cada simulação.</p>
+                  <p className="pt-2 border-t border-slate-800 text-slate-500 italic">
+                    Nota: Se P(Meta) é 0% mas o EV é positivo, verifique se o 'Prazo' é suficiente para atingir a meta com a 'Stake' atual ou se a 'Banca Inicial' está causando quebras prematuras.
+                  </p>
+                </div>
+              </div>
+
+              {auditTarget.diagnostics.alerts.length > 0 && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg space-y-1">
+                  <p className="text-xs font-bold text-red-400 flex items-center gap-1 uppercase">
+                    <AlertTriangle className="w-3 h-3" />
+                    Alertas de Inconsistência
+                  </p>
+                  {auditTarget.diagnostics.alerts.map((alert: string, i: number) => (
+                    <p key={i} className="text-[10px] text-red-300/80">{alert}</p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
