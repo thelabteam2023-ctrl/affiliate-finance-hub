@@ -1110,7 +1110,7 @@ export const ExtracaoBonusContent: React.FC = () => {
                    {[
                     { label: 'Sucessos (Meta)', val: auditTarget.diagnostics.counts.success, color: 'text-emerald-400' },
                     { label: 'Quebras', val: auditTarget.diagnostics.counts.broke, color: 'text-red-400' },
-                    { label: 'Ficaram no Meio', val: auditTarget.diagnostics.counts.stayInBetween, color: 'text-amber-400' },
+                    { label: 'Incompletos (Prazo)', val: auditTarget.diagnostics.counts.stayInBetween, color: 'text-amber-400' },
                     { label: 'Total Executado', val: auditTarget.diagnostics.counts.total, color: 'text-slate-100' },
                   ].map((item, i) => (
                     <div key={i} className="p-2 bg-slate-900 rounded border border-slate-800">
@@ -1119,7 +1119,11 @@ export const ExtracaoBonusContent: React.FC = () => {
                     </div>
                   ))}
                 </div>
+                <p className="text-[10px] text-muted-foreground italic px-1">
+                  * A soma de Sucessos, Quebras e Incompletos agora totaliza 100% das simulações executadas.
+                </p>
               </div>
+
 
               {/* Seção 3: Distribuição de Probabilidade */}
               <div className="space-y-3">

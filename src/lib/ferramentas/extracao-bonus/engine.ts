@@ -199,9 +199,10 @@ export function runMonteCarlo(
       successCount++;
     } else if (broke) {
       brokeCount++;
-    } else if (saldo > initialSaldo) {
+    } else {
       stayInBetweenCount++;
     }
+
 
     saldosFinaisRaw.push(saldo);
     results.push({
