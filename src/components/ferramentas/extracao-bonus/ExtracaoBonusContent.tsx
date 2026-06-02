@@ -944,7 +944,7 @@ export const ExtracaoBonusContent: React.FC = () => {
           )}
         </TabsContent>
       </Tabs>
-      <Dialog open={!!auditTarget} onValueChange={() => setAuditTarget(null)}>
+      <Dialog open={!!auditTarget} onOpenChange={(open) => !open && setAuditTarget(null)}>
         <DialogContent className="max-w-2xl bg-slate-950 border-slate-800 text-slate-100 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-primary">
