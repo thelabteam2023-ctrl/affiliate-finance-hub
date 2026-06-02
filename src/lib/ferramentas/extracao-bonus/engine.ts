@@ -259,8 +259,8 @@ export function runMonteCarlo(
   };
 
   // Validação de Consistência (Regras do Sentinel)
-  if (sc.eVal > 0 && stats.avg > (initialBanca || 0) && successCount === 0) {
-    diagnostics.alerts.push("Possível inconsistência: expectativa positiva com probabilidade de meta nula.");
+  if (sc.eValEx > 0 && stats.avg > (initialBanca || 0) && successCount === 0) {
+    diagnostics.alerts.push("Possível inconsistência: expectativa de extração positiva com probabilidade de meta nula.");
   }
 
   return {
