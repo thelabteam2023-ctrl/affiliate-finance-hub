@@ -1,4 +1,4 @@
-export type ExtractionMode = 'Equilibrado' | 'Cascata';
+export type ExtractionMode = 'Equilibrado' | 'Cascata' | 'Cenário 3 Zero';
 export type CapitalType = 'bonus' | 'real';
 
 export interface ExtractionConfig {
