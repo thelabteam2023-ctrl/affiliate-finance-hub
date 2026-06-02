@@ -17,6 +17,14 @@ import { TrendingUp, Target, Zap, Calculator, Clock, Shield, AlertTriangle, Chec
 
 const fmt = (v: number) => (v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+const calculateMinOps = (config: ExtractionConfig, meta: number, oddMax: number) => {
+  // Estima lucro por op usando odd máxima e modelo equilibrado
+  const o1 = Math.sqrt(oddMax);
+  const sc = calculateScenarios(config, o1, o1);
+  const profit = Math.max(sc.eVal, 1); // Garante ao menos $1 para evitar div/0
+  return Math.ceil(meta / profit);
+};
+
 
 export const ExtracaoBonusContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState('parametros');
