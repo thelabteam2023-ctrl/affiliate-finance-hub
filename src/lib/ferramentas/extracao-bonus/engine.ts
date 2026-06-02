@@ -159,17 +159,17 @@ export function runMonteCarlo(
       
       if (completa) {
         if (r < sc.pC1) {
-          saldo += sc.c1;
+          saldo += sc.cEx1;
           // Sucesso na extração (dinheiro foi para a exchange)
           maxSeqFalhas = Math.max(maxSeqFalhas, currentSeqFalhas); 
           currentSeqFalhas = 0;
         } else if (r < sc.pC1 + sc.pC2) {
-          saldo += sc.c2;
+          saldo += sc.cEx2;
           // Sucesso na extração (dinheiro foi para a exchange)
           maxSeqFalhas = Math.max(maxSeqFalhas, currentSeqFalhas); 
           currentSeqFalhas = 0;
         } else {
-          saldo += sc.c3;
+          saldo += sc.cEx3;
           // Falha na extração (dinheiro ficou na casa - Cenário 3)
           currentSeqFalhas++;
         }
