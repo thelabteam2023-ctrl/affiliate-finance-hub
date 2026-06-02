@@ -102,6 +102,10 @@ export function calculateScenarios(config: ExtractionConfig, o1: number, o2: num
     c1,
     c2,
     c3,
+    // Resultados específicos da Exchange (para rastrear extração real)
+    cEx1: ret1,
+    cEx2: ret2 - resp1,
+    cEx3: -(resp1 + resp2),
     pC1,
     pC2,
     pC3,
