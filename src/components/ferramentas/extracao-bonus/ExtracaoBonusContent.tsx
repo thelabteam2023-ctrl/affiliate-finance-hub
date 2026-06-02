@@ -17,6 +17,14 @@ import { TrendingUp, Target, Zap, Calculator, Clock, Shield, AlertTriangle, Chec
 
 const fmt = (v: number) => (v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+const calculateMinOps = (config: ExtractionConfig, meta: number, oddMax: number) => {
+  // Estima lucro por op usando odd máxima e modelo equilibrado
+  const o1 = Math.sqrt(oddMax);
+  const sc = calculateScenarios(config, o1, o1);
+  const profit = Math.max(sc.eVal, 1); // Garante ao menos $1 para evitar div/0
+  return Math.ceil(meta / profit);
+};
+
 
 export const ExtracaoBonusContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState('parametros');
@@ -67,14 +75,39 @@ export const ExtracaoBonusContent: React.FC = () => {
   const [simResult, setSimResult] = useState<any>(null);
 
   const sc = useMemo(() => calculateScenarios(config, o1, o2), [config, o1, o2]);
+  
+  const minOpsRequired = useMemo(() => {
+    return calculateMinOps(config, optParams.meta, optParams.oddMaxDupla);
+  }, [config, optParams.meta, optParams.oddMaxDupla]);
 
   const updateConfig = (key: keyof ExtractionConfig, value: any) => {
-    setConfig(prev => ({ ...prev, [key]: value }));
+    setConfig(prev => {
+      const newConfig = { ...prev, [key]: value };
+      // Se mudar o valor apostado, recalcula o prazo mínimo necessário para a meta
+      if (key === 'bonusAmount') {
+        const minOps = calculateMinOps(newConfig, optParams.meta, optParams.oddMaxDupla);
+        if (optParams.nOps < minOps) {
+          setOptParams(p => ({ ...p, nOps: minOps }));
+        }
+      }
+      return newConfig;
+    });
     setOptIsDirty(true);
   };
 
   const updateOptParams = (key: keyof SimulationParams, value: any) => {
-    setOptParams(prev => ({ ...prev, [key]: value }));
+    setOptParams(prev => {
+      const newParams = { ...prev, [key]: value };
+      
+      // Validação automática de prazo mínimo se a meta ou stake mudar
+      if (key === 'meta') {
+        const minOps = calculateMinOps(config, newParams.meta, newParams.oddMaxDupla);
+        if (newParams.nOps < minOps) {
+          newParams.nOps = minOps;
+        }
+      }
+      return newParams;
+    });
     setOptIsDirty(true);
   };
 
@@ -239,6 +272,13 @@ export const ExtracaoBonusContent: React.FC = () => {
       o2
     }));
   }, [config, optParams, bancaParams, o1, o2]);
+
+  // Garante que o nOps nunca seja menor que o mínimo necessário para a meta
+  useEffect(() => {
+    if (optParams.nOps < minOpsRequired) {
+      setOptParams(prev => ({ ...prev, nOps: minOpsRequired }));
+    }
+  }, [minOpsRequired, optParams.nOps]);
 
   return (
     <div className="p-4 max-w-5xl mx-auto space-y-6 pb-20">
@@ -593,7 +633,18 @@ export const ExtracaoBonusContent: React.FC = () => {
                     description="Define quantas operações (apostas) o sistema tem de 'prazo' para atingir a meta. Se a meta não for batida dentro deste número de jogadas, a estratégia é marcada como falha no cálculo de P(Meta)." 
                   />
                 </Label>
-                <Slider value={[optParams.nOps]} min={1} max={1000} step={1} onValueChange={v => updateOptParams('nOps', v[0])} />
+                <Slider 
+                  value={[optParams.nOps]} 
+                  min={minOpsRequired} 
+                  max={Math.max(1000, minOpsRequired + 50)} 
+                  step={1} 
+                  onValueChange={v => updateOptParams('nOps', v[0])} 
+                />
+                {minOpsRequired > 1 && (
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Mínimo de <span className="font-bold">{minOpsRequired}</span> ops para atingir a meta de ${fmt(optParams.meta)}
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label className="text-xs">Odd Min/Per ({optParams.oddMin.toFixed(2)})</Label>
