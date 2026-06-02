@@ -470,16 +470,249 @@ export const ExtracaoBonusContent: React.FC = () => {
           </div>
         </TabsContent>
         
-        <TabsContent value="otimizador">
+        <TabsContent value="otimizador" className="space-y-6">
           <Card>
-            <CardContent className="p-6 text-center text-muted-foreground">O módulo Otimizador será implementado na próxima etapa.</CardContent>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+                Configuração do Otimizador
+                <CardInfoTooltip title="Motor de Otimização" description="O otimizador testa múltiplas combinações de odds para encontrar a melhor estratégia para sua meta." />
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="space-y-2">
+                <Label className="text-xs">Meta ($)</Label>
+                <Input type="number" value={optParams.meta} onChange={e => updateOptParams('meta', parseFloat(e.target.value) || 0)} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Operações ({optParams.nOps})</Label>
+                <Slider value={[optParams.nOps]} min={1} max={1000} step={1} onValueChange={v => updateOptParams('nOps', v[0])} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Odd Min/Per ({optParams.oddMin.toFixed(2)})</Label>
+                <Slider value={[optParams.oddMin]} min={1.3} max={3} step={0.05} onValueChange={v => updateOptParams('oddMin', v[0])} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Odd Max Dupla ({optParams.oddMaxDupla.toFixed(1)})</Label>
+                <Slider value={[optParams.oddMaxDupla]} min={2} max={20} step={0.5} onValueChange={v => updateOptParams('oddMaxDupla', v[0])} />
+              </div>
+              <div className="flex items-end">
+                <button 
+                  onClick={handleOptimize} 
+                  disabled={isOptimizing}
+                  className="w-full h-10 bg-primary text-primary-foreground rounded-md font-bold text-xs uppercase flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isOptimizing ? 'Otimizando...' : 'Iniciar Otimização'}
+                </button>
+              </div>
+            </CardContent>
           </Card>
+
+          {isOptimizing && (
+            <div className="space-y-2">
+              <div className="flex justify-between text-[10px] font-bold uppercase text-muted-foreground">
+                <span>Progresso da Simulação Monte Carlo</span>
+                <span>{optProgress}%</span>
+              </div>
+              <Progress value={optProgress} className="h-2" />
+            </div>
+          )}
+
+          {optResults.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Ranking de Estratégias</h3>
+                <div className="flex bg-muted p-1 rounded-lg">
+                  {[
+                    { id: 'pMeta', label: 'P(Meta)' },
+                    { id: 'medSeq', label: 'Menor Risco' },
+                    { id: 'eVal', label: 'Maior EV' },
+                    { id: 'p50', label: 'Maior Mediana' },
+                    { id: 'medOps', label: 'Mais Rápida' }
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setOptRankTab(tab.id as any)}
+                      className={`px-3 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all ${optRankTab === tab.id ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {sortedOptResults.slice(0, 15).map((res, i) => (
+                  <Card key={i} className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => {
+                    setO1(res.o1);
+                    setO2(res.o2);
+                    setActiveTab('parametros');
+                  }}>
+                    <CardContent className="pt-4 space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}</span>
+                          <div>
+                            <p className="text-sm font-bold">{res.o1.toFixed(2)} × {res.o2.toFixed(2)}</p>
+                            <p className="text-[10px] text-muted-foreground uppercase">{res.oMult.toFixed(2)}x Odd Total</p>
+                          </div>
+                        </div>
+                        {res.pMeta > 0.9 && <Badge variant="default" className="bg-emerald-500 text-[8px] uppercase">Elite</Badge>}
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-2 pt-2 border-t">
+                        <div className="text-center">
+                          <p className="text-[9px] text-muted-foreground uppercase">P(Meta)</p>
+                          <p className="text-xs font-bold text-emerald-400">{(res.pMeta * 100).toFixed(1)}%</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-[9px] text-muted-foreground uppercase">EV/Op</p>
+                          <p className="text-xs font-bold">${fmt(res.eVal)}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-[9px] text-muted-foreground uppercase">Seq. Falhas</p>
+                          <p className="text-xs font-bold text-amber-400">{res.medSeq} ops</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-[9px] text-muted-foreground uppercase">Mediana Final</p>
+                          <p className="text-xs font-bold">${fmt(res.p50)}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="text-[10px] text-muted-foreground bg-muted/30 p-2 rounded leading-relaxed">
+                        Exch ganha {((1 - (1 / res.o1 * 1 / res.o2)) * 100).toFixed(0)}% das ops. 
+                        Ops mínimas: {Math.ceil(optParams.meta / res.eVal)} ops.
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
         </TabsContent>
         
-        <TabsContent value="simulacao">
-          <Card>
-            <CardContent className="p-6 text-center text-muted-foreground">O módulo Simulação de Banca será implementado na próxima etapa.</CardContent>
+        <TabsContent value="simulacao" className="space-y-6">
+           <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+                Configuração da Simulação de Banca
+                <CardInfoTooltip title="Simulação Realista" description="Simula trajetórias de banca considerando a capacidade operacional e o risco de exposição sem cobertura." />
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label className="text-xs">Banca Inicial ($)</Label>
+                <Input type="number" value={bancaParams.initialBanca} onChange={e => updateBancaParams('initialBanca', parseFloat(e.target.value) || 0)} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Lucro Desejado ($)</Label>
+                <Input type="number" value={bancaParams.lucroDesejado} onChange={e => updateBancaParams('lucroDesejado', parseFloat(e.target.value) || 0)} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Máximo Tentativas ({bancaParams.maxOps})</Label>
+                <Slider value={[bancaParams.maxOps]} min={10} max={1000} step={10} onValueChange={v => updateBancaParams('maxOps', v[0])} />
+              </div>
+              <div className="flex items-end">
+                <button 
+                  onClick={handleSimulateBanca} 
+                  disabled={isSimulating}
+                  className="w-full h-10 bg-primary text-primary-foreground rounded-md font-bold text-xs uppercase flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isSimulating ? 'Simulando...' : 'Rodar Simulação'}
+                </button>
+              </div>
+            </CardContent>
           </Card>
+
+          {isSimulating && (
+            <div className="space-y-2">
+              <div className="flex justify-between text-[10px] font-bold uppercase text-muted-foreground">
+                <span>Processando trajetórias de banca</span>
+                <span>{simProgress}%</span>
+              </div>
+              <Progress value={simProgress} className="h-2" />
+            </div>
+          )}
+
+          {simResult && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-center gap-4 py-4 bg-muted/20 rounded-lg border border-border">
+                <div className="text-center">
+                  <p className="text-[10px] text-muted-foreground uppercase">Banca Inicial</p>
+                  <p className="text-lg font-bold">${fmt(bancaParams.initialBanca)}</p>
+                </div>
+                <div className="text-muted-foreground">+</div>
+                <div className="text-center">
+                  <p className="text-[10px] text-muted-foreground uppercase">Lucro Desejado</p>
+                  <p className="text-lg font-bold">${fmt(bancaParams.lucroDesejado)}</p>
+                </div>
+                <div className="text-muted-foreground">=</div>
+                <div className="text-center">
+                  <p className="text-[10px] text-primary uppercase font-bold">Meta Final</p>
+                  <p className="text-xl font-bold text-primary">${fmt(bancaParams.initialBanca + bancaParams.lucroDesejado)}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="border-l-4 border-l-emerald-500">
+                  <CardContent className="pt-4 space-y-1">
+                    <h4 className="text-[10px] font-bold uppercase text-muted-foreground">P(Atingir Meta)</h4>
+                    <p className="text-3xl font-bold text-emerald-400">{(simResult.pMeta * 100).toFixed(1)}%</p>
+                    <p className="text-[10px] text-muted-foreground">Trajetórias bem-sucedidas em {bancaParams.maxOps} ops.</p>
+                  </CardContent>
+                </Card>
+                <Card className="border-l-4 border-l-amber-500">
+                  <CardContent className="pt-4 space-y-1">
+                    <h4 className="text-[10px] font-bold uppercase text-muted-foreground">Zona de Risco</h4>
+                    <p className="text-3xl font-bold text-amber-400">{(simResult.pZonaRisco * 100).toFixed(1)}%</p>
+                    <p className="text-[10px] text-muted-foreground">Trajetórias que entraram no Nível 2.</p>
+                  </CardContent>
+                </Card>
+                <Card className="border-l-4 border-l-red-500">
+                  <CardContent className="pt-4 space-y-1">
+                    <h4 className="text-[10px] font-bold uppercase text-muted-foreground">Quebra Total</h4>
+                    <p className="text-3xl font-bold text-red-400">{(simResult.pQuebra * 100).toFixed(1)}%</p>
+                    <p className="text-[10px] text-muted-foreground">Trajetórias que foram ao Nível 3.</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs font-bold uppercase text-muted-foreground">Análise de Percentis (Saldo Final)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b text-muted-foreground">
+                          {['P10', 'P25', 'P50', 'P75', 'P90', 'P95', 'P99'].map(p => <th key={p} className="py-2 text-center">{p}</th>)}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          {Object.values(simResult.percentis).map((val: any, i) => {
+                            let color = 'text-red-400';
+                            const meta = bancaParams.initialBanca + bancaParams.lucroDesejado;
+                            if (val >= meta) color = 'text-emerald-400';
+                            else if (val >= bancaParams.initialBanca + sc.limCompleta) color = 'text-blue-400';
+                            else if (val >= sc.limP1) color = 'text-amber-400';
+                            
+                            return <td key={i} className={`py-3 text-center font-bold font-mono ${color}`}>${fmt(val)}</td>;
+                          })}
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="flex justify-center gap-4 mt-4 text-[9px] uppercase font-bold text-muted-foreground">
+                    <div className="flex items-center gap-1"><div className="w-2 h-2 bg-emerald-500 rounded-full" /> Meta ✓</div>
+                    <div className="flex items-center gap-1"><div className="w-2 h-2 bg-blue-500 rounded-full" /> Op. Completa</div>
+                    <div className="flex items-center gap-1"><div className="w-2 h-2 bg-amber-500 rounded-full" /> Zona Risco</div>
+                    <div className="flex items-center gap-1"><div className="w-2 h-2 bg-red-500 rounded-full" /> Inoperante</div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
