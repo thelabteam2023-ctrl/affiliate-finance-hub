@@ -181,6 +181,33 @@ export const ExtracaoBonusContent: React.FC = () => {
     });
   }, [optResults, optRankTab]);
 
+  // Persistência em localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('extracao-bonus-config');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setConfig(parsed.config || config);
+        setOptParams(parsed.optParams || optParams);
+        setBancaParams(parsed.bancaParams || bancaParams);
+        setO1(parsed.o1 || 2.0);
+        setO2(parsed.o2 || 2.0);
+      } catch (e) {
+        console.error("Erro ao carregar configurações", e);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('extracao-bonus-config', JSON.stringify({
+      config,
+      optParams,
+      bancaParams,
+      o1,
+      o2
+    }));
+  }, [config, optParams, bancaParams, o1, o2]);
+
   return (
     <div className="p-4 max-w-5xl mx-auto space-y-6 pb-20">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
