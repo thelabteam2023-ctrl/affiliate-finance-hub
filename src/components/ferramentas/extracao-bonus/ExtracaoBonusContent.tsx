@@ -74,7 +74,18 @@ export const ExtracaoBonusContent: React.FC = () => {
   };
 
   const updateOptParams = (key: keyof SimulationParams, value: any) => {
-    setOptParams(prev => ({ ...prev, [key]: value }));
+    setOptParams(prev => {
+      const newParams = { ...prev, [key]: value };
+      
+      // Validação automática de prazo mínimo se a meta ou stake mudar
+      if (key === 'meta') {
+        const minOps = calculateMinOps(config, newParams.meta, newParams.oddMaxDupla);
+        if (newParams.nOps < minOps) {
+          newParams.nOps = minOps;
+        }
+      }
+      return newParams;
+    });
     setOptIsDirty(true);
   };
 
