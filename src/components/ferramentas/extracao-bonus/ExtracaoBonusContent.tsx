@@ -577,6 +577,18 @@ export const ExtracaoBonusContent: React.FC = () => {
 
           {optResults.length > 0 && (
             <div className="space-y-4">
+              <div className="bg-blue-500/5 border-l-4 border-l-blue-500 p-4 rounded-r-lg mb-6">
+                <h5 className="text-xs font-bold text-blue-400 uppercase mb-1 flex items-center gap-2">
+                  <Clock className="w-3 h-3" />
+                  Entenda o Prazo Operacional
+                </h5>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  O otimizador testa estratégias que consigam bater a meta de <strong>${fmt(optParams.meta)}</strong> dentro de no máximo <strong>{optParams.nOps} operações</strong>. 
+                  Se você aumentar o prazo, as chances de sucesso (P Meta) aumentam, pois o sistema tem mais tempo para recuperar eventuais perdas e deixar o valor esperado (EV) trabalhar. 
+                  Se o prazo for muito curto em relação ao EV da estratégia, a chance de bater a meta cai drasticamente.
+                </p>
+              </div>
+
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Ranking de Estratégias</h3>
                 <div className="flex bg-muted p-1 rounded-lg">
