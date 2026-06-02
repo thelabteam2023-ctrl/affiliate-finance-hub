@@ -31,11 +31,155 @@ export const ExtracaoBonusContent: React.FC = () => {
   const [o2, setO2] = useState(2.0);
   const [nSimOps, setNSimOps] = useState(100);
 
+  // Parâmetros do Otimizador
+  const [optParams, setOptParams] = useState<SimulationParams>({
+    meta: 5000,
+    nOps: 100,
+    oddMin: 1.60,
+    oddMaxDupla: 10.00,
+    nSims: 200
+  });
+
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [optProgress, setOptProgress] = useState(0);
+  const [optResults, setOptResults] = useState<any[]>([]);
+  const [optRankTab, setOptRankTab] = useState<'pMeta' | 'medSeq' | 'eVal' | 'p50' | 'medOps'>('pMeta');
+
+  // Parâmetros de Simulação de Banca
+  const [bancaParams, setBancaParams] = useState<BancaParams>({
+    initialBanca: 5000,
+    lucroDesejado: 5000,
+    maxOps: 200,
+    nSims: 1000
+  });
+
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [simProgress, setSimProgress] = useState(0);
+  const [simResult, setSimResult] = useState<any>(null);
+
   const sc = useMemo(() => calculateScenarios(config, o1, o2), [config, o1, o2]);
 
   const updateConfig = (key: keyof ExtractionConfig, value: any) => {
     setConfig(prev => ({ ...prev, [key]: value }));
   };
+
+  const updateOptParams = (key: keyof SimulationParams, value: any) => {
+    setOptParams(prev => ({ ...prev, [key]: value }));
+  };
+
+  const updateBancaParams = (key: keyof BancaParams, value: any) => {
+    setBancaParams(prev => ({ ...prev, [key]: value }));
+  };
+
+  // Motor do Otimizador
+  const handleOptimize = async () => {
+    setIsOptimizing(true);
+    setOptProgress(0);
+    setOptResults([]);
+
+    const pool = [1.60, 1.65, 1.70, 1.75, 1.80, 1.85, 1.90, 1.95, 2.00, 2.10, 2.20, 2.30, 2.40, 2.50, 2.60, 2.80, 3.00, 3.20, 3.50, 4.00, 4.50, 5.00, 5.50, 6.00, 7.00, 8.00, 9.00, 10.00];
+    const combinations: [number, number][] = [];
+    
+    for (let i = 0; i < pool.length; i++) {
+      for (let j = i; j < pool.length; j++) {
+        const od1 = pool[i];
+        const od2 = pool[j];
+        if (od1 >= optParams.oddMin && od2 >= optParams.oddMin && od1 * od2 <= optParams.oddMaxDupla) {
+          combinations.push([od1, od2]);
+        }
+      }
+    }
+
+    const total = combinations.length;
+    const results: any[] = [];
+    const batchSize = 5;
+
+    for (let i = 0; i < total; i += batchSize) {
+      const batch = combinations.slice(i, i + batchSize);
+      for (const [odd1, odd2] of batch) {
+        const mc = runMonteCarlo(config, odd1, odd2, optParams.meta, optParams.nOps, optParams.nSims);
+        const scLocal = calculateScenarios(config, odd1, odd2);
+        results.push({
+          o1: odd1,
+          o2: odd2,
+          oMult: odd1 * odd2,
+          pMeta: mc.pMeta,
+          medOps: mc.medOps,
+          medSeq: mc.medSeq,
+          p50: mc.p50,
+          eVal: scLocal.eVal,
+          sc: scLocal
+        });
+      }
+      setOptProgress(Math.round(((i + batchSize) / total) * 100));
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+
+    setOptResults(results);
+    setIsOptimizing(false);
+  };
+
+  // Simulação de Banca
+  const handleSimulateBanca = async () => {
+    setIsSimulating(true);
+    setSimProgress(0);
+    
+    // Simulação em lotes para progresso
+    const totalSims = bancaParams.nSims;
+    const batchSize = 100;
+    let allMcResults: any[] = [];
+
+    for (let i = 0; i < totalSims; i += batchSize) {
+      const mc = runMonteCarlo(
+        config, 
+        o1, 
+        o2, 
+        bancaParams.lucroDesejado, 
+        bancaParams.maxOps, 
+        batchSize, 
+        bancaParams.initialBanca
+      );
+      allMcResults = allMcResults.concat(mc.results);
+      setSimProgress(Math.round(((i + batchSize) / totalSims) * 100));
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+
+    // Calcular agregados
+    const successCount = allMcResults.filter(r => r.hitMeta).length;
+    const brokeCount = allMcResults.filter(r => r.broke).length;
+    const zoneRiscoCount = allMcResults.filter(r => r.vezSemP2 > 0).length;
+    const fatalSemP2Count = allMcResults.filter(r => r.vezFatalSemP2 > 0).length;
+    
+    const saldosFinais = allMcResults.map(r => r.saldoFinal).sort((a, b) => a - b);
+    const getPercentile = (p: number) => saldosFinais[Math.floor(saldosFinais.length * (p / 100))];
+
+    setSimResult({
+      pMeta: successCount / totalSims,
+      pQuebra: brokeCount / totalSims,
+      pZonaRisco: zoneRiscoCount / totalSims,
+      pFatalSemP2: fatalSemP2Count / totalSims,
+      percentis: {
+        p10: getPercentile(10),
+        p25: getPercentile(25),
+        p50: getPercentile(50),
+        p75: getPercentile(75),
+        p90: getPercentile(90),
+        p95: getPercentile(95),
+        p99: getPercentile(99)
+      }
+    });
+    
+    setIsSimulating(false);
+  };
+
+  const sortedOptResults = useMemo(() => {
+    return [...optResults].sort((a, b) => {
+      if (optRankTab === 'medSeq' || optRankTab === 'medOps') {
+        return a[optRankTab] - b[optRankTab];
+      }
+      return b[optRankTab] - a[optRankTab];
+    });
+  }, [optResults, optRankTab]);
 
   return (
     <div className="p-4 max-w-5xl mx-auto space-y-6 pb-20">
