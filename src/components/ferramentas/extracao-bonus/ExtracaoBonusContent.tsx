@@ -579,9 +579,9 @@ export const ExtracaoBonusContent: React.FC = () => {
                 <button 
                   onClick={handleOptimize} 
                   disabled={isOptimizing}
-                  className="w-full h-10 bg-primary text-primary-foreground rounded-md font-bold text-xs uppercase flex items-center justify-center gap-2 disabled:opacity-50"
+                  className={`w-full h-10 rounded-md font-bold text-xs uppercase flex items-center justify-center gap-2 transition-all ${optIsDirty ? 'bg-amber-500 hover:bg-amber-600 text-black animate-pulse' : 'bg-primary text-primary-foreground opacity-100'} disabled:opacity-50`}
                 >
-                  {isOptimizing ? 'Otimizando...' : 'Iniciar Otimização'}
+                  {isOptimizing ? 'Otimizando...' : optIsDirty ? 'Recalcular Ranking' : 'Iniciar Otimização'}
                 </button>
               </div>
             </CardContent>
