@@ -371,7 +371,7 @@ export function AppSidebar() {
     const tool = toolMap[url];
     if (tool) {
       e.preventDefault();
-      const width = url === '#calculadora-ev' ? 420 : (url === '#calculadora-extracao' || url === '#calculadora-ponto-futuro') ? 1000 : 900;
+      const width = url === '#calculadora-ev' ? 420 : (url === '#calculadora-extracao' || url === '#calculadora-ponto-futuro' || url === '#calculadora-extracao-bonus') ? 1000 : 900;
       if (url === '#calculadora-hedge-prob') {
         const w = 1100;
         const h = 850;
