@@ -718,7 +718,7 @@ export const ExtracaoBonusContent: React.FC = () => {
                 <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Ranking de Estratégias</h3>
                 <div className="flex bg-muted p-1 rounded-lg">
                   {[
-                    { id: 'pMeta', label: 'P(Meta)', tooltip: 'Probabilidade de atingir a meta financeira dentro do prazo estipulado (nº de operações).' },
+                    { id: 'pMeta', label: 'P(Meta)', tooltip: 'Probabilidade de que o lucro desejado seja efetivamente transferido para a sua conta na Exchange após o ciclo de operações.' },
                     { id: 'medSeq', label: 'Menor Risco', tooltip: 'Ordena por estratégias que evitam que o dinheiro "caia" na casa (Cenário 3) repetidamente.' },
                     { id: 'eVal', label: 'Maior EV', tooltip: 'Valor Esperado: quanto você ganha, em média, por cada operação realizada.' },
                     { id: 'p50', label: 'Maior Mediana', tooltip: 'O saldo final mais provável (percentil 50) após completar todo o ciclo de operações.' },
