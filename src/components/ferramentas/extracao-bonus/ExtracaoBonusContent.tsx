@@ -1110,19 +1110,19 @@ export const ExtracaoBonusContent: React.FC = () => {
                    {[
                     { label: 'Sucessos (Meta)', val: auditTarget.diagnostics.counts.success, color: 'text-emerald-400' },
                     { label: 'Quebras', val: auditTarget.diagnostics.counts.broke, color: 'text-red-400' },
-                    { label: 'Incompletos (Prazo)', val: auditTarget.diagnostics.counts.stayInBetween, color: 'text-amber-400' },
+                    { label: 'Incompletos (Prazo)', val: auditTarget.diagnostics.counts.stayInBetween, color: 'text-amber-400', tooltip: 'Simulações onde o prazo de operações acabou antes de você atingir a meta ou quebrar a banca. O saldo final ficou entre o valor inicial e o alvo.' },
                     { label: 'Total Executado', val: auditTarget.diagnostics.counts.total, color: 'text-slate-100' },
-                  ].map((item, i) => (
-                    <div key={i} className="p-2 bg-slate-900 rounded border border-slate-800">
-                      <p className="text-[9px] text-slate-500 uppercase">{item.label}</p>
-                      <p className={`text-sm font-bold font-mono ${item.color}`}>{item.val}</p>
-                    </div>
+                  ].map((item: any, i) => (
+                    <CardInfoTooltip key={i} title={item.label} description={item.tooltip || ''}>
+                      <div className="p-2 bg-slate-900 rounded border border-slate-800 cursor-help">
+                        <p className="text-[9px] text-slate-500 uppercase">{item.label}</p>
+                        <p className={`text-sm font-bold font-mono ${item.color}`}>{item.val}</p>
+                      </div>
+                    </CardInfoTooltip>
                   ))}
                 </div>
-                <p className="text-[10px] text-muted-foreground italic px-1">
-                  * A soma de Sucessos, Quebras e Incompletos agora totaliza 100% das simulações executadas.
-                </p>
               </div>
+
 
 
               {/* Seção 3: Distribuição de Probabilidade */}
