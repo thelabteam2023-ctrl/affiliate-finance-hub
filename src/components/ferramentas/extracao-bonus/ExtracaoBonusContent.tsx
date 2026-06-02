@@ -37,13 +37,14 @@ export const ExtracaoBonusContent: React.FC = () => {
     nOps: 100,
     oddMin: 1.60,
     oddMaxDupla: 10.00,
-    nSims: 200
+    nSims: 400
   });
 
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optProgress, setOptProgress] = useState(0);
   const [optResults, setOptResults] = useState<any[]>([]);
   const [optRankTab, setOptRankTab] = useState<'pMeta' | 'medSeq' | 'eVal' | 'p50' | 'medOps'>('pMeta');
+  const [optIsDirty, setOptIsDirty] = useState(false);
 
   // Parâmetros de Simulação de Banca
   const [bancaParams, setBancaParams] = useState<BancaParams>({
@@ -61,10 +62,12 @@ export const ExtracaoBonusContent: React.FC = () => {
 
   const updateConfig = (key: keyof ExtractionConfig, value: any) => {
     setConfig(prev => ({ ...prev, [key]: value }));
+    setOptIsDirty(true);
   };
 
   const updateOptParams = (key: keyof SimulationParams, value: any) => {
     setOptParams(prev => ({ ...prev, [key]: value }));
+    setOptIsDirty(true);
   };
 
   const updateBancaParams = (key: keyof BancaParams, value: any) => {
@@ -76,6 +79,7 @@ export const ExtracaoBonusContent: React.FC = () => {
     setIsOptimizing(true);
     setOptProgress(0);
     setOptResults([]);
+    setOptIsDirty(false);
 
     const pool = [1.60, 1.65, 1.70, 1.75, 1.80, 1.85, 1.90, 1.95, 2.00, 2.10, 2.20, 2.30, 2.40, 2.50, 2.60, 2.80, 3.00, 3.20, 3.50, 4.00, 4.50, 5.00, 5.50, 6.00, 7.00, 8.00, 9.00, 10.00];
     const combinations: [number, number][] = [];
@@ -575,9 +579,9 @@ export const ExtracaoBonusContent: React.FC = () => {
                 <button 
                   onClick={handleOptimize} 
                   disabled={isOptimizing}
-                  className="w-full h-10 bg-primary text-primary-foreground rounded-md font-bold text-xs uppercase flex items-center justify-center gap-2 disabled:opacity-50"
+                  className={`w-full h-10 rounded-md font-bold text-xs uppercase flex items-center justify-center gap-2 transition-all ${optIsDirty ? 'bg-amber-500 hover:bg-amber-600 text-black animate-pulse' : 'bg-primary text-primary-foreground opacity-100'} disabled:opacity-50`}
                 >
-                  {isOptimizing ? 'Otimizando...' : 'Iniciar Otimização'}
+                  {isOptimizing ? 'Otimizando...' : optIsDirty ? 'Recalcular Ranking' : 'Iniciar Otimização'}
                 </button>
               </div>
             </CardContent>
@@ -612,7 +616,7 @@ export const ExtracaoBonusContent: React.FC = () => {
                 <div className="flex bg-muted p-1 rounded-lg">
                   {[
                     { id: 'pMeta', label: 'P(Meta)', tooltip: 'Probabilidade de atingir a meta financeira dentro do prazo estipulado (nº de operações).' },
-                    { id: 'medSeq', label: 'Menor Risco', tooltip: 'Ordena pelas estratégias que apresentam a menor sequência mediana de falhas (loss streaks).' },
+                    { id: 'medSeq', label: 'Menor Risco', tooltip: 'Ordena por estratégias que evitam que o dinheiro "caia" na casa (Cenário 3) repetidamente.' },
                     { id: 'eVal', label: 'Maior EV', tooltip: 'Valor Esperado: quanto você ganha, em média, por cada operação realizada.' },
                     { id: 'p50', label: 'Maior Mediana', tooltip: 'O saldo final mais provável (percentil 50) após completar todo o ciclo de operações.' },
                     { id: 'medOps', label: 'Mais Rápida', tooltip: 'Estratégias que atingem a meta com o menor número médio de operações.' }
@@ -670,7 +674,7 @@ export const ExtracaoBonusContent: React.FC = () => {
                         <div className="text-center">
                           <p className="text-[9px] text-muted-foreground uppercase flex items-center justify-center gap-1">
                             Seq. Falhas
-                            <CardInfoTooltip title="Menor Risco" description="Média da maior sequência de perdas consecutivas enfrentada durante as simulações. Quanto menor, mais estável a banca." />
+                            <CardInfoTooltip title="Risco de Rollover" description="Média da maior sequência de operações onde o bônus ficou preso na casa (Cenário 3). Quanto menor, mais eficiente é a extração." />
                           </p>
                           <p className="text-xs font-bold text-amber-400">{res.medSeq} ops</p>
                         </div>
