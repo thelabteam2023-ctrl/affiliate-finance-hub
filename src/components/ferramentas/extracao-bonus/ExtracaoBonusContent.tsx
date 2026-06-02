@@ -1133,22 +1133,25 @@ export const ExtracaoBonusContent: React.FC = () => {
                 </h4>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
                   {[
-                    { label: 'Mínimo', val: auditTarget.diagnostics.stats.min },
-                    { label: 'P5', val: auditTarget.diagnostics.stats.p5 },
-                    { label: 'P25', val: auditTarget.diagnostics.stats.p25 },
-                    { label: 'Mediana (P50)', val: auditTarget.diagnostics.stats.p50 },
-                    { label: 'P75', val: auditTarget.diagnostics.stats.p75 },
-                    { label: 'P95', val: auditTarget.diagnostics.stats.p95 },
-                    { label: 'Máximo', val: auditTarget.diagnostics.stats.max },
-                    { label: 'Média Final', val: auditTarget.diagnostics.stats.avg },
+                    { label: 'Mínimo', val: auditTarget.diagnostics.stats.min, tooltip: 'O pior resultado possível entre todas as simulações. Representa o "fundo do poço" que o saldo atingiu.' },
+                    { label: 'P5', val: auditTarget.diagnostics.stats.p5, tooltip: 'Indica que em apenas 5% das vezes o resultado foi pior que este. É um cenário de azar extremo.' },
+                    { label: 'P25', val: auditTarget.diagnostics.stats.p25, tooltip: 'Cenário conservador: 25% das vezes o resultado foi abaixo disso, e 75% foi acima.' },
+                    { label: 'Mediana (P50)', val: auditTarget.diagnostics.stats.p50, tooltip: 'O ponto central: metade das simulações terminou acima deste valor e metade abaixo. É a expectativa mais realista.' },
+                    { label: 'P75', val: auditTarget.diagnostics.stats.p75, tooltip: 'Cenário otimista: em 75% das vezes o resultado foi abaixo disso. Você superou a maioria dos casos.' },
+                    { label: 'P95', val: auditTarget.diagnostics.stats.p95, tooltip: 'Cenário de grande sucesso: apenas 5% das simulações conseguiram ser melhores que este valor.' },
+                    { label: 'Máximo', val: auditTarget.diagnostics.stats.max, tooltip: 'O melhor resultado obtido em todas as simulações. O teto máximo de lucro alcançado.' },
+                    { label: 'Média Final', val: auditTarget.diagnostics.stats.avg, tooltip: 'A soma de todos os saldos dividida pelo número de testes. Diferente da mediana, ela é afetada por valores muito altos ou baixos.' },
                   ].map((item, i) => (
-                    <div key={i} className={`p-2 bg-slate-900 rounded border border-slate-800 ${item.label === 'Mediana (P50)' ? 'border-primary/50 bg-primary/5' : ''}`}>
-                      <p className="text-[9px] text-slate-500 uppercase">{item.label}</p>
-                      <p className={`text-xs font-bold font-mono ${item.val >= (auditTarget.diagnostics.input.initialBanca) ? 'text-emerald-400' : 'text-red-400'}`}>
-                        ${fmt(item.val)}
-                      </p>
-                    </div>
+                    <CardInfoTooltip key={i} title={item.label} description={item.tooltip}>
+                      <div className={`p-2 bg-slate-900 rounded border border-slate-800 cursor-help ${item.label === 'Mediana (P50)' ? 'border-primary/50 bg-primary/5' : ''}`}>
+                        <p className="text-[9px] text-slate-500 uppercase">{item.label}</p>
+                        <p className={`text-xs font-bold font-mono ${item.val >= (auditTarget.diagnostics.input.initialBanca) ? 'text-emerald-400' : 'text-red-400'}`}>
+                          ${fmt(item.val)}
+                        </p>
+                      </div>
+                    </CardInfoTooltip>
                   ))}
+
                 </div>
               </div>
 
