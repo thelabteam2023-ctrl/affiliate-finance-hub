@@ -176,7 +176,7 @@ export function runMonteCarlo(
       } else {
         // Zona de Risco
         if (r < sc.pC1) {
-          saldo += sc.c1;
+          saldo += sc.cEx1;
           maxSeqFalhas = Math.max(maxSeqFalhas, currentSeqFalhas);
           currentSeqFalhas = 0;
         } else {
