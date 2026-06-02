@@ -705,12 +705,12 @@ export const ExtracaoBonusContent: React.FC = () => {
               <div className="bg-blue-500/5 border-l-4 border-l-blue-500 p-4 rounded-r-lg mb-6">
                 <h5 className="text-xs font-bold text-blue-400 uppercase mb-1 flex items-center gap-2">
                   <Clock className="w-3 h-3" />
-                  Entenda o Prazo Operacional
+                  Entenda o Prazo e a Extração
                 </h5>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  O otimizador utiliza o passo (stake) de <strong>${fmt(config.bonusAmount)}</strong> definido nos parâmetros globais. 
-                  Ele testa quais odds conseguem bater a meta de <strong>${fmt(optParams.meta)}</strong> dentro de no máximo <strong>{optParams.nOps} operações</strong> usando esse valor fixo por aposta.
-                  Se você aumentar o valor apostado na aba principal, cada passo renderá mais EV e a meta será atingida mais rápido.
+                  O otimizador utiliza o passo (stake) de <strong>${fmt(config.bonusAmount)}</strong> para calcular o EV. 
+                  O indicador <strong>P(Meta)</strong> representa a chance de o lucro ser efetivamente <strong>transferido para a Exchange</strong> dentro de <strong>{optParams.nOps} operações</strong>.
+                  Se o dinheiro "cair na casa" (Cenário 3), o saldo da Exchange diminui e você precisará de mais operações para extrair o valor novamente.
                 </p>
               </div>
 
@@ -718,7 +718,7 @@ export const ExtracaoBonusContent: React.FC = () => {
                 <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Ranking de Estratégias</h3>
                 <div className="flex bg-muted p-1 rounded-lg">
                   {[
-                    { id: 'pMeta', label: 'P(Meta)', tooltip: 'Probabilidade de atingir a meta financeira dentro do prazo estipulado (nº de operações).' },
+                    { id: 'pMeta', label: 'P(Meta)', tooltip: 'Probabilidade de que o lucro desejado seja efetivamente transferido para a sua conta na Exchange após o ciclo de operações.' },
                     { id: 'medSeq', label: 'Menor Risco', tooltip: 'Ordena por estratégias que evitam que o dinheiro "caia" na casa (Cenário 3) repetidamente.' },
                     { id: 'eVal', label: 'Maior EV', tooltip: 'Valor Esperado: quanto você ganha, em média, por cada operação realizada.' },
                     { id: 'p50', label: 'Maior Mediana', tooltip: 'O saldo final mais provável (percentil 50) após completar todo o ciclo de operações.' },

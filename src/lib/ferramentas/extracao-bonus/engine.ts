@@ -102,10 +102,15 @@ export function calculateScenarios(config: ExtractionConfig, o1: number, o2: num
     c1,
     c2,
     c3,
+    // Resultados específicos da Exchange (para rastrear extração real)
+    cEx1: ret1,
+    cEx2: ret2 - resp1,
+    cEx3: -(resp1 + resp2),
     pC1,
     pC2,
     pC3,
     eVal,
+    eValEx: pC1 * ret1 + pC2 * (ret2 - resp1) + pC3 * (-(resp1 + resp2)),
     std,
     limCompleta: resp1 + resp2,
     limP1: resp1
@@ -155,24 +160,24 @@ export function runMonteCarlo(
       
       if (completa) {
         if (r < sc.pC1) {
-          saldo += sc.c1;
+          saldo += sc.cEx1;
           // Sucesso na extração (dinheiro foi para a exchange)
           maxSeqFalhas = Math.max(maxSeqFalhas, currentSeqFalhas); 
           currentSeqFalhas = 0;
         } else if (r < sc.pC1 + sc.pC2) {
-          saldo += sc.c2;
+          saldo += sc.cEx2;
           // Sucesso na extração (dinheiro foi para a exchange)
           maxSeqFalhas = Math.max(maxSeqFalhas, currentSeqFalhas); 
           currentSeqFalhas = 0;
         } else {
-          saldo += sc.c3;
+          saldo += sc.cEx3;
           // Falha na extração (dinheiro ficou na casa - Cenário 3)
           currentSeqFalhas++;
         }
       } else {
         // Zona de Risco
         if (r < sc.pC1) {
-          saldo += sc.c1;
+          saldo += sc.cEx1;
           maxSeqFalhas = Math.max(maxSeqFalhas, currentSeqFalhas);
           currentSeqFalhas = 0;
         } else {
@@ -254,8 +259,8 @@ export function runMonteCarlo(
   };
 
   // Validação de Consistência (Regras do Sentinel)
-  if (sc.eVal > 0 && stats.avg > (initialBanca || 0) && successCount === 0) {
-    diagnostics.alerts.push("Possível inconsistência: expectativa positiva com probabilidade de meta nula.");
+  if (sc.eValEx > 0 && stats.avg > (initialBanca || 0) && successCount === 0) {
+    diagnostics.alerts.push("Possível inconsistência: expectativa de extração positiva com probabilidade de meta nula.");
   }
 
   return {
