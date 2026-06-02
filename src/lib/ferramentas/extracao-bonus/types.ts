@@ -15,6 +15,7 @@ export interface SimulationParams {
   oddMin: number;
   oddMaxDupla: number;
   nSims: number;
+  initialBanca?: number;
 }
 
 export interface BancaParams {
