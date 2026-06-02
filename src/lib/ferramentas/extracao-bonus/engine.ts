@@ -129,7 +129,8 @@ export function runMonteCarlo(
 
   for (let s = 0; s < nSims; s++) {
     let saldo = initialBanca !== undefined ? initialBanca : 0;
-    let hitMeta = false;
+    const metaAlvo = initialBanca !== undefined ? initialBanca + meta : meta;
+    let hitMeta = saldo >= metaAlvo;
     let broke = false;
     let vezSemP2 = 0;
     let vezFatalSemP2 = 0;
@@ -178,7 +179,7 @@ export function runMonteCarlo(
         }
       }
 
-      if (saldo >= (initialBanca !== undefined ? initialBanca + meta : meta) && !hitMeta) {
+      if (saldo >= metaAlvo && !hitMeta) {
         hitMeta = true;
         opsParaMeta.push(i + 1);
       }
