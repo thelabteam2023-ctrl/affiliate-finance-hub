@@ -1110,9 +1110,10 @@ export const ExtracaoBonusContent: React.FC = () => {
                    {[
                     { label: 'Sucessos (Meta)', val: auditTarget.diagnostics.counts.success, color: 'text-emerald-400' },
                     { label: 'Quebras', val: auditTarget.diagnostics.counts.broke, color: 'text-red-400' },
-                    { label: 'Ficaram no Meio', val: auditTarget.diagnostics.counts.stayInBetween, color: 'text-amber-400' },
+                    { label: 'Incompletos (Prazo)', val: auditTarget.diagnostics.counts.stayInBetween, color: 'text-amber-400' },
                     { label: 'Total Executado', val: auditTarget.diagnostics.counts.total, color: 'text-slate-100' },
                   ].map((item, i) => (
+
                     <div key={i} className="p-2 bg-slate-900 rounded border border-slate-800">
                       <p className="text-[9px] text-slate-500 uppercase">{item.label}</p>
                       <p className={`text-sm font-bold font-mono ${item.color}`}>{item.val}</p>
