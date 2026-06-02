@@ -689,7 +689,10 @@ export const ExtracaoBonusContent: React.FC = () => {
                       
                       <div className="text-[10px] text-muted-foreground bg-muted/30 p-2 rounded leading-relaxed">
                         Exch ganha {((1 - (1 / res.o1 * 1 / res.o2)) * 100).toFixed(0)}% das ops. 
-                        Necessário: ~{Math.ceil(optParams.meta / res.eVal)} ops para meta vs {optParams.nOps} ops de prazo.
+                        {res.eVal > 0 
+                          ? `Necessário: ~${Math.ceil(optParams.meta / res.eVal)} ops para meta vs ${optParams.nOps} ops de prazo.`
+                          : "Estratégia com EV negativo: impossível atingir meta de longo prazo."
+                        }
                       </div>
                     </CardContent>
                   </Card>
