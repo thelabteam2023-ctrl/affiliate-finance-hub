@@ -75,6 +75,10 @@ export const ExtracaoBonusContent: React.FC = () => {
   const [simResult, setSimResult] = useState<any>(null);
 
   const sc = useMemo(() => calculateScenarios(config, o1, o2), [config, o1, o2]);
+  
+  const minOpsRequired = useMemo(() => {
+    return calculateMinOps(config, optParams.meta, optParams.oddMaxDupla);
+  }, [config, optParams.meta, optParams.oddMaxDupla]);
 
   const updateConfig = (key: keyof ExtractionConfig, value: any) => {
     setConfig(prev => {
