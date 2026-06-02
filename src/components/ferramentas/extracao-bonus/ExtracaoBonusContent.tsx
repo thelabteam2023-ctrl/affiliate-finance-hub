@@ -317,7 +317,13 @@ export const ExtracaoBonusContent: React.FC = () => {
             {/* 1.4 Bloco Hero do Valor Esperado */}
             <Card className={sc.eVal >= 0 ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-red-500/5 border-red-500/20'}>
               <CardContent className="pt-6 text-center space-y-2">
-                <p className="text-xs text-muted-foreground font-medium uppercase">Valor Esperado por Operação</p>
+                <p className="text-xs text-muted-foreground font-medium uppercase flex items-center justify-center gap-1">
+                  Valor Esperado por Operação (EV)
+                  <CardInfoTooltip 
+                    title="O que é EV?" 
+                    description="O Valor Esperado (Expected Value) é a média matemática de lucro por operação se você repetisse a aposta milhares de vezes. Ele já desconta comissões e spreads."
+                  />
+                </p>
                 <p className={`text-4xl font-bold ${sc.eVal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                   ${fmt(sc.eVal)}
                 </p>
@@ -593,19 +599,24 @@ export const ExtracaoBonusContent: React.FC = () => {
                 <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Ranking de Estratégias</h3>
                 <div className="flex bg-muted p-1 rounded-lg">
                   {[
-                    { id: 'pMeta', label: 'P(Meta)' },
-                    { id: 'medSeq', label: 'Menor Risco' },
-                    { id: 'eVal', label: 'Maior EV' },
-                    { id: 'p50', label: 'Maior Mediana' },
-                    { id: 'medOps', label: 'Mais Rápida' }
+                    { id: 'pMeta', label: 'P(Meta)', tooltip: 'Probabilidade de atingir a meta financeira dentro do prazo estipulado (nº de operações).' },
+                    { id: 'medSeq', label: 'Menor Risco', tooltip: 'Ordena pelas estratégias que apresentam a menor sequência mediana de falhas (loss streaks).' },
+                    { id: 'eVal', label: 'Maior EV', tooltip: 'Valor Esperado: quanto você ganha, em média, por cada operação realizada.' },
+                    { id: 'p50', label: 'Maior Mediana', tooltip: 'O saldo final mais provável (percentil 50) após completar todo o ciclo de operações.' },
+                    { id: 'medOps', label: 'Mais Rápida', tooltip: 'Estratégias que atingem a meta com o menor número médio de operações.' }
                   ].map(tab => (
-                    <button
+                    <CardInfoTooltip 
                       key={tab.id}
-                      onClick={() => setOptRankTab(tab.id as any)}
-                      className={`px-3 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all ${optRankTab === tab.id ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                      title={tab.label}
+                      description={tab.tooltip}
                     >
-                      {tab.label}
-                    </button>
+                      <button
+                        onClick={() => setOptRankTab(tab.id as any)}
+                        className={`px-3 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all ${optRankTab === tab.id ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                      >
+                        {tab.label}
+                      </button>
+                    </CardInfoTooltip>
                   ))}
                 </div>
               </div>
@@ -631,7 +642,10 @@ export const ExtracaoBonusContent: React.FC = () => {
                       
                       <div className="grid grid-cols-2 gap-2 pt-2 border-t">
                         <div className="text-center">
-                          <p className="text-[9px] text-muted-foreground uppercase">P(Meta)</p>
+                          <p className="text-[9px] text-muted-foreground uppercase flex items-center justify-center gap-1">
+                            P(Meta)
+                            <CardInfoTooltip title="Probabilidade da Meta" description="Chance estatística de atingir o lucro desejado dentro do prazo de operações definido." />
+                          </p>
                           <p className="text-xs font-bold text-emerald-400">{(res.pMeta * 100).toFixed(1)}%</p>
                         </div>
                         <div className="text-center">
@@ -639,11 +653,17 @@ export const ExtracaoBonusContent: React.FC = () => {
                           <p className="text-xs font-bold">${fmt(res.eVal)}</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-[9px] text-muted-foreground uppercase">Seq. Falhas</p>
+                          <p className="text-[9px] text-muted-foreground uppercase flex items-center justify-center gap-1">
+                            Seq. Falhas
+                            <CardInfoTooltip title="Menor Risco" description="Média da maior sequência de perdas consecutivas enfrentada durante as simulações. Quanto menor, mais estável a banca." />
+                          </p>
                           <p className="text-xs font-bold text-amber-400">{res.medSeq} ops</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-[9px] text-muted-foreground uppercase">Mediana Final</p>
+                          <p className="text-[9px] text-muted-foreground uppercase flex items-center justify-center gap-1">
+                            Mediana Final
+                            <CardInfoTooltip title="Expectativa Realista" description="O saldo final que ocorreu na maioria das simulações. É um indicador mais seguro que a média simples." />
+                          </p>
                           <p className="text-xs font-bold">${fmt(res.p50)}</p>
                         </div>
                       </div>

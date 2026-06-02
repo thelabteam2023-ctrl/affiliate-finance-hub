@@ -10,16 +10,21 @@ interface CardInfoTooltipProps {
   title: string;
   description: string;
   flow?: string;
+  children?: React.ReactNode;
 }
 
-export function CardInfoTooltip({ title, description, flow }: CardInfoTooltipProps) {
+export function CardInfoTooltip({ title, description, flow, children }: CardInfoTooltipProps) {
   return (
     <TooltipProvider>
       <Tooltip delayDuration={200}>
         <TooltipTrigger asChild>
-          <button className="ml-1 text-muted-foreground hover:text-foreground transition-colors">
-            <HelpCircle className="h-3.5 w-3.5" />
-          </button>
+          {children ? (
+            children
+          ) : (
+            <button className="ml-1 text-muted-foreground hover:text-foreground transition-colors">
+              <HelpCircle className="h-3.5 w-3.5" />
+            </button>
+          )}
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-xs p-3 space-y-2">
           <p className="font-medium text-sm">{title}</p>
