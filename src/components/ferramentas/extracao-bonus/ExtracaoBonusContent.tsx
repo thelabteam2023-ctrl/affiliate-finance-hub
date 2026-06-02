@@ -276,6 +276,7 @@ export const ExtracaoBonusContent: React.FC = () => {
                   <SelectContent>
                     <SelectItem value="Equilibrado">Equilibrado (Arbitragem)</SelectItem>
                     <SelectItem value="Cascata">Cascata (Recuperação)</SelectItem>
+                    <SelectItem value="Cenário 3 Zero">Cenário 3 Zero (Proteção)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
