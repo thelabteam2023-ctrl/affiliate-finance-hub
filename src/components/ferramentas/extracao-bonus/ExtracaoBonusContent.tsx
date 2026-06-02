@@ -386,16 +386,33 @@ export const ExtracaoBonusContent: React.FC = () => {
             </Card>
           </div>
 
-          {/* Probabilidade Visual */}
-          <div className="space-y-2">
-            <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              <span>Distribuição de Probabilidade</span>
-              <span>Total: 100%</span>
+          {/* Probabilidade Visual e Explicação do Modelo */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                <span>Distribuição de Probabilidade</span>
+                <span>Total: 100%</span>
+              </div>
+              <div className="h-4 w-full flex rounded-full overflow-hidden border border-border">
+                <div style={{ width: `${sc.pC1 * 100}%` }} className="bg-blue-500" title={`C1: ${(sc.pC1 * 100).toFixed(1)}%`} />
+                <div style={{ width: `${sc.pC2 * 100}%` }} className="bg-blue-400" title={`C2: ${(sc.pC2 * 100).toFixed(1)}%`} />
+                <div style={{ width: `${sc.pC3 * 100}%` }} className="bg-amber-500" title={`C3: ${(sc.pC3 * 100).toFixed(1)}%`} />
+              </div>
+              <div className="flex gap-4 text-[9px] text-muted-foreground uppercase font-bold justify-center pt-1">
+                <div className="flex items-center gap-1"><div className="w-2 h-2 bg-blue-500 rounded-full" /> P1 Exchange</div>
+                <div className="flex items-center gap-1"><div className="w-2 h-2 bg-blue-400 rounded-full" /> P2 Exchange</div>
+                <div className="flex items-center gap-1"><div className="w-2 h-2 bg-amber-500 rounded-full" /> Dupla Bookie</div>
+              </div>
             </div>
-            <div className="h-4 w-full flex rounded-full overflow-hidden border border-border">
-              <div style={{ width: `${sc.pC1 * 100}%` }} className="bg-blue-500" title={`C1: ${(sc.pC1 * 100).toFixed(1)}%`} />
-              <div style={{ width: `${sc.pC2 * 100}%` }} className="bg-blue-400" title={`C2: ${(sc.pC2 * 100).toFixed(1)}%`} />
-              <div style={{ width: `${sc.pC3 * 100}%` }} className="bg-amber-500" title={`C3: ${(sc.pC3 * 100).toFixed(1)}%`} />
+
+            <div className="bg-muted/30 p-3 rounded-lg border border-dashed border-border flex flex-col justify-center">
+              <h5 className="text-[10px] font-bold uppercase text-primary mb-1">Entenda o {config.model}</h5>
+              <p className="text-[10px] text-muted-foreground leading-tight">
+                {config.model === 'Equilibrado' 
+                  ? "Este modelo garante que o lucro final seja rigorosamente o mesmo em todos os cenários. É uma arbitragem matemática pura, eliminando o fator 'sorte' da operação."
+                  : "Este modelo prioriza a proteção do capital. Ele fixa a primeira aposta e recalcula a segunda para cobrir custos, resultando em retornos variáveis conforme o desfecho."
+                }
+              </p>
             </div>
           </div>
 
