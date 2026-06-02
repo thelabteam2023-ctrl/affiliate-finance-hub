@@ -931,6 +931,19 @@ export const ExtracaoBonusContent: React.FC = () => {
 
           {simResult && (
             <div className="space-y-6">
+              <div className="p-4 bg-blue-500/5 border border-blue-500/20 rounded-lg">
+                <h4 className="text-xs font-bold text-blue-400 uppercase mb-2 flex items-center gap-2">
+                  <Info className="w-3 h-3" />
+                  O que esses números significam?
+                </h4>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Rodamos <strong>{bancaParams.nSims} simulações</strong> (futuros possíveis). 
+                  Em cada uma, você faria até <strong>{bancaParams.maxOps} operações</strong>. 
+                  A <strong>Quebra</strong> ocorre quando sua banca de ${fmt(bancaParams.initialBanca)} não consegue mais cobrir o bônus. 
+                  O <strong>Sucesso</strong> é quando você atinge o lucro de ${fmt(bancaParams.lucroDesejado)} efetivamente transferido para a Exchange.
+                </p>
+              </div>
+
               <div className="flex items-center justify-center gap-4 py-4 bg-muted/20 rounded-lg border border-border">
                 <div className="text-center">
                   <p className="text-[10px] text-muted-foreground uppercase">Banca Inicial</p>
