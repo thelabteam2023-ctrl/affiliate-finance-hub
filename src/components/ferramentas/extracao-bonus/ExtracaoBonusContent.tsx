@@ -8,11 +8,15 @@ import { Slider } from '@/components/ui/slider';
 import { CardInfoTooltip } from '@/components/ui/card-info-tooltip';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { calculateScenarios, runMonteCarlo } from '@/lib/ferramentas/extracao-bonus/engine';
 import { ExtractionConfig, ExtractionMode, CapitalType, SimulationParams, BancaParams } from '@/lib/ferramentas/extracao-bonus/types';
-import { TrendingUp, Target, Zap, Calculator, Clock, Shield, AlertTriangle, CheckCircle2, Trophy, Medal } from 'lucide-react';
+import { TrendingUp, Target, Zap, Calculator, Clock, Shield, AlertTriangle, CheckCircle2, Trophy, Medal, Search, Info, Bug, ShieldAlert } from 'lucide-react';
 
-const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt = (v: number) => (v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 
 export const ExtracaoBonusContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState('parametros');
@@ -37,8 +41,12 @@ export const ExtracaoBonusContent: React.FC = () => {
     nOps: 100,
     oddMin: 1.60,
     oddMaxDupla: 10.00,
-    nSims: 400
+    nSims: 400,
+    initialBanca: 1000 // Adicionado capital inicial padrão para o otimizador
   });
+
+  const [auditTarget, setAuditTarget] = useState<any>(null);
+  const [globalAlerts, setGlobalAlerts] = useState<string[]>([]);
 
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optProgress, setOptProgress] = useState(0);
@@ -80,6 +88,7 @@ export const ExtracaoBonusContent: React.FC = () => {
     setOptProgress(0);
     setOptResults([]);
     setOptIsDirty(false);
+    setGlobalAlerts([]);
 
     const pool = [1.60, 1.65, 1.70, 1.75, 1.80, 1.85, 1.90, 1.95, 2.00, 2.10, 2.20, 2.30, 2.40, 2.50, 2.60, 2.80, 3.00, 3.20, 3.50, 4.00, 4.50, 5.00, 5.50, 6.00, 7.00, 8.00, 9.00, 10.00];
     const combinations: [number, number][] = [];
@@ -101,7 +110,7 @@ export const ExtracaoBonusContent: React.FC = () => {
     for (let i = 0; i < total; i += batchSize) {
       const batch = combinations.slice(i, i + batchSize);
       for (const [odd1, odd2] of batch) {
-        const mc = runMonteCarlo(config, odd1, odd2, optParams.meta, optParams.nOps, optParams.nSims);
+        const mc = runMonteCarlo(config, odd1, odd2, optParams.meta, optParams.nOps, optParams.nSims, optParams.initialBanca);
         const scLocal = calculateScenarios(config, odd1, odd2);
         results.push({
           o1: odd1,
@@ -121,6 +130,24 @@ export const ExtracaoBonusContent: React.FC = () => {
     }
 
     setOptResults(results);
+    
+    // Regra 2: Todas estratégias retornam P(Meta) = 0%
+    const alerts = [];
+    if (results.length > 0 && results.every(r => r.pMeta === 0)) {
+      alerts.push("Possível erro sistêmico. Verificar cálculo de probabilidade de meta (todas em 0%).");
+    }
+    
+    // Regra 3: Todas estratégias retornam Mediana Final = 0
+    if (results.length > 0 && results.every(r => r.p50 === 0)) {
+      alerts.push("Possível erro na captura dos resultados finais ou no cálculo dos percentis (todas medianas em 0).");
+    }
+    
+    // Regra 4: Sequência de Falhas = 0 em todos os cenários
+    if (results.length > 0 && results.every(r => r.medSeq === 0)) {
+      alerts.push("Possível falha no motor de rastreamento de drawdown e falhas consecutivas (todas sequências em 0).");
+    }
+    
+    setGlobalAlerts(alerts);
     setIsOptimizing(false);
   };
 
