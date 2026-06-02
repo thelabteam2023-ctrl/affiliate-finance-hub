@@ -77,7 +77,17 @@ export const ExtracaoBonusContent: React.FC = () => {
   const sc = useMemo(() => calculateScenarios(config, o1, o2), [config, o1, o2]);
 
   const updateConfig = (key: keyof ExtractionConfig, value: any) => {
-    setConfig(prev => ({ ...prev, [key]: value }));
+    setConfig(prev => {
+      const newConfig = { ...prev, [key]: value };
+      // Se mudar o valor apostado, recalcula o prazo mínimo necessário para a meta
+      if (key === 'bonusAmount') {
+        const minOps = calculateMinOps(newConfig, optParams.meta, optParams.oddMaxDupla);
+        if (optParams.nOps < minOps) {
+          setOptParams(p => ({ ...p, nOps: minOps }));
+        }
+      }
+      return newConfig;
+    });
     setOptIsDirty(true);
   };
 
