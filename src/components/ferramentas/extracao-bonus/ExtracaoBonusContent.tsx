@@ -6,8 +6,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Slider } from '@/components/ui/slider';
 import { CardInfoTooltip } from '@/components/ui/card-info-tooltip';
-import { calculateScenarios } from '@/lib/ferramentas/extracao-bonus/engine';
-import { ExtractionConfig, ExtractionMode, CapitalType } from '@/lib/ferramentas/extracao-bonus/types';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
+import { calculateScenarios, runMonteCarlo } from '@/lib/ferramentas/extracao-bonus/engine';
+import { ExtractionConfig, ExtractionMode, CapitalType, SimulationParams, BancaParams } from '@/lib/ferramentas/extracao-bonus/types';
+import { TrendingUp, Target, Zap, Calculator, Clock, Shield, AlertTriangle, CheckCircle2, Trophy, Medal } from 'lucide-react';
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
