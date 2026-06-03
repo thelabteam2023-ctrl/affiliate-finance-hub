@@ -1,4 +1,4 @@
-import { ExtractionConfig, PlannedOp } from "./types";
+import { ExtractionConfig } from "./types";
 
 /**
  * Motor de simulação e cálculo da ferramenta de Extração de Bônus.
@@ -279,58 +279,5 @@ export function runMonteCarlo(
     stdPerOp: sc.std,
     results,
     diagnostics
-  };
-}
-
-export function runSequenceSimulation(
-  config: ExtractionConfig,
-  sequence: PlannedOp[],
-  initialBanca: number,
-  targetProfit: number,
-  nSims: number = 1000
-) {
-  let successCount = 0;
-  let brokeCount = 0;
-  const targetTotal = initialBanca + targetProfit;
-
-  for (let s = 0; s < nSims; s++) {
-    let currentBanca = initialBanca;
-    let finishedSequence = true;
-
-    for (const op of sequence) {
-      const sc = calculateScenarios(config, op.odd1, op.odd2);
-      
-      if (currentBanca < sc.limP1) {
-        finishedSequence = false;
-        break;
-      }
-
-      const r = Math.random();
-      const completa = currentBanca >= sc.limCompleta;
-
-      if (completa) {
-        if (r < sc.pC1) currentBanca += sc.cEx1;
-        else if (r < sc.pC1 + sc.pC2) currentBanca += sc.cEx2;
-        else currentBanca += sc.cEx3;
-      } else {
-        if (r < sc.pC1) currentBanca += sc.cEx1;
-        else {
-          currentBanca -= sc.limP1;
-        }
-      }
-
-      if (currentBanca <= 0) {
-        finishedSequence = false;
-        break;
-      }
-    }
-
-    if (finishedSequence && currentBanca >= targetTotal) successCount++;
-    else if (!finishedSequence || currentBanca <= 0) brokeCount++;
-  }
-
-  return {
-    probSuccess: successCount / nSims,
-    probFailure: brokeCount / nSims
   };
 }
