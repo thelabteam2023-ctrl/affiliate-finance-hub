@@ -138,7 +138,7 @@ export const ExtracaoBonusContent: React.FC = () => {
     for (let i = 0; i < total; i += batchSize) {
       const batch = combinations.slice(i, i + batchSize);
       for (const [odd1, odd2] of batch) {
-        const mc = runMonteCarlo(config, odd1, odd2, optParams.meta, optParams.nOps, optParams.nSims, optParams.initialBanca);
+        const mc = runMonteCarlo(config, odd1, odd2, optParams.meta, optParams.nOps, optParams.nSims, optParams.initialBanca || 0);
         const scLocal = calculateScenarios(config, odd1, odd2);
         results.push({
           o1: odd1,
