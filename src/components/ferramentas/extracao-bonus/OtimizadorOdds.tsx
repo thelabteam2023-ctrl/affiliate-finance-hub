@@ -28,11 +28,11 @@ export const OtimizadorOdds: React.FC<OtimizadorProps> = ({
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
             <Label>Meta ($)</Label>
-            <Input type="number" value={optParams.meta} onChange={e => updateOptParams('meta', Number(e.target.value))} />
+            <Input type="number" value={optParams.meta} onChange={e => updateOptParams('meta', Number(e.target.value))} className="bg-slate-950 border-slate-800 text-slate-100" />
           </div>
           <div className="space-y-2">
             <Label>Banca Inicial ($)</Label>
-            <Input type="number" value={optParams.initialBanca} onChange={e => updateOptParams('initialBanca', Number(e.target.value))} />
+            <Input type="number" value={optParams.initialBanca} onChange={e => updateOptParams('initialBanca', Number(e.target.value))} className="bg-slate-950 border-slate-800 text-slate-100" />
           </div>
           <div className="flex items-end">
             <Button onClick={handleOptimize} disabled={isOptimizing} className="w-full">

@@ -153,7 +153,7 @@ export const ExtracaoBonusContent: React.FC = () => {
             <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
                 <Label className="text-slate-300">Valor da Stake ($)</Label>
-                <Input type="number" value={config.bonusAmount} onChange={e => updateConfig('bonusAmount', Number(e.target.value))} className="bg-slate-950 border-slate-800" />
+                <Input type="number" value={config.bonusAmount} onChange={e => updateConfig('bonusAmount', Number(e.target.value))} className="bg-slate-950 border-slate-800 text-slate-100" />
               </div>
               <div className="space-y-2">
                 <Label className="text-slate-300">Modelo de Extração</Label>
