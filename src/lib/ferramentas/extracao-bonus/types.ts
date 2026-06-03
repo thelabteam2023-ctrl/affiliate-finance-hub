@@ -24,3 +24,18 @@ export interface BancaParams {
   maxOps: number;
   nSims: number;
 }
+
+export interface PlannedOp {
+  id: string;
+  odd1: number;
+  odd2: number;
+  label?: string;
+}
+
+export interface StrategySequence {
+  name: string;
+  steps: PlannedOp[];
+  initialBanca: number;
+  targetProfit: number;
+  stake: number;
+}
