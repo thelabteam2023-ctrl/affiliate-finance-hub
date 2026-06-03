@@ -138,7 +138,7 @@ export const ExtracaoBonusContent: React.FC = () => {
     for (let i = 0; i < total; i += batchSize) {
       const batch = combinations.slice(i, i + batchSize);
       for (const [odd1, odd2] of batch) {
-        const mc = runMonteCarlo(config, odd1, odd2, optParams.meta, optParams.nOps, optParams.nSims, optParams.initialBanca);
+        const mc = runMonteCarlo(config, odd1, odd2, optParams.meta, optParams.nOps, optParams.nSims, optParams.initialBanca || 0);
         const scLocal = calculateScenarios(config, odd1, odd2);
         results.push({
           o1: odd1,
@@ -296,6 +296,36 @@ export const ExtracaoBonusContent: React.FC = () => {
             </CardContent>
           </Card>
           {isOptimizing && <Progress value={optProgress} />}
+          
+          <div className="space-y-4">
+            {sortedOptResults.map((res, i) => (
+              <Card key={i} className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setAuditTarget(res)}>
+                <CardContent className="pt-6">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div>
+                      <p className="text-[10px] uppercase text-muted-foreground">Estratégia</p>
+                      <p className="text-sm font-bold">{res.o1.toFixed(2)} × {res.o2.toFixed(2)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase text-muted-foreground">P(Meta)</p>
+                      <p className="text-sm font-bold text-emerald-400">{(res.pMeta * 100).toFixed(1)}%</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase text-muted-foreground">P(Quebra)</p>
+                      <p className="text-sm font-bold text-red-400">{(res.pQuebra * 100).toFixed(1)}%</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase text-muted-foreground">EV/Op</p>
+                      <p className="text-sm font-bold">${fmt(res.eVal)}</p>
+                    </div>
+                    <div className="flex items-center justify-end">
+                      <Search className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </TabsContent>
 
         <TabsContent value="planejador" className="space-y-4 pt-4">
@@ -351,6 +381,69 @@ export const ExtracaoBonusContent: React.FC = () => {
           </div>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={!!auditTarget} onOpenChange={(open) => !open && setAuditTarget(null)}>
+        <DialogContent className="max-w-2xl bg-slate-950 border-slate-800 text-slate-100 max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-primary">
+              <Bug className="w-5 h-5" />
+              Relatório de Auditoria e Observabilidade
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Diagnóstico detalhado da estratégia: {auditTarget?.o1?.toFixed(2)} × {auditTarget?.o2?.toFixed(2)}
+            </DialogDescription>
+          </DialogHeader>
+
+          {auditTarget && (
+            <div className="space-y-6 pt-4">
+              <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg space-y-2">
+                <h4 className="text-sm font-bold text-blue-400 flex items-center gap-2">
+                  <Info className="w-4 h-4" />
+                  Resumo de Diagnóstico (Leigo)
+                </h4>
+                <div className="text-xs text-slate-300 leading-relaxed space-y-2">
+                  <p>
+                    Esta simulação rodou <span className="font-bold text-white">{auditTarget.diagnostics.input.nSims} "futuros possíveis"</span>. 
+                    Em cada um deles, você tentou fazer até <span className="font-bold text-white">{auditTarget.diagnostics.input.nOps} apostas</span>.
+                  </p>
+                  <ul className="list-disc pl-4 space-y-1">
+                    <li>
+                      <span className="font-bold text-emerald-400">Sucesso:</span> Você atingiu o lucro de ${fmt(auditTarget.diagnostics.input.meta)} antes do prazo acabar. Isso aconteceu em <span className="font-bold">{(auditTarget.pMeta * 100).toFixed(1)}%</span> das vezes.
+                    </li>
+                    <li>
+                      <span className="font-bold text-red-400">Quebra:</span> Sua banca da Exchange acabou. O dinheiro migrou para a Casa de Apostas, mas você perdeu a capacidade de continuar protegendo suas apostas.
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2">
+                  <Calculator className="w-3 h-3" />
+                  Estatísticas de Dispersão (Percentis)
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {[
+                    { label: 'Mínimo', val: auditTarget.diagnostics.stats.min },
+                    { label: 'P25', val: auditTarget.diagnostics.stats.p25 },
+                    { label: 'Mediana (P50)', val: auditTarget.diagnostics.stats.p50 },
+                    { label: 'P75', val: auditTarget.diagnostics.stats.p75 },
+                    { label: 'P95', val: auditTarget.diagnostics.stats.p95 },
+                    { label: 'Máximo', val: auditTarget.diagnostics.stats.max },
+                  ].map((item, i) => (
+                    <div key={i} className="p-2 bg-slate-900 rounded border border-slate-800">
+                      <p className="text-[9px] text-slate-500 uppercase">{item.label}</p>
+                      <p className={`text-xs font-bold font-mono ${item.val >= (auditTarget.diagnostics.input.initialBanca) ? 'text-emerald-400' : 'text-red-400'}`}>
+                        ${fmt(item.val)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
