@@ -1074,7 +1074,7 @@ export const ExtracaoBonusContent: React.FC = () => {
                     </li>
                   </ul>
                   <p className="pt-2 italic text-[11px] text-slate-400 border-t border-blue-500/20">
-                    Conclusão: {auditTarget.pMeta > 0.5 ? "Esta estratégia é estatisticamente sólida para sua meta." : "Esta meta é muito agressiva para sua banca atual. Você tem grandes chances de quebrar antes de chegar lá."}
+                    Conclusão: {auditTarget.pMeta > 0.7 ? "Esta estratégia é estatisticamente sólida para sua meta." : auditTarget.pQuebra > 0.2 ? "Risco elevado: Embora possível, a chance de quebra da liquidez na Exchange é significativa." : "Esta meta é muito agressiva para sua banca atual. Você tem grandes chances de quebrar antes de chegar lá."}
                   </p>
                 </div>
               </div>
