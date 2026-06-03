@@ -1079,7 +1079,36 @@ export const ExtracaoBonusContent: React.FC = () => {
                 </div>
               </div>
 
-              {/* Seção 1: Entrada do Sistema */}
+              {/* Seção 1: Análise de Risco Direta (NOVO) */}
+              <div className="p-4 bg-red-500/5 border border-red-500/20 rounded-lg space-y-3">
+                <h4 className="text-xs font-bold text-red-400 flex items-center gap-2 uppercase">
+                  <ShieldAlert className="w-4 h-4" />
+                  Análise de Risco de Liquidez (Exchange)
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[11px]">
+                  <div className="space-y-2">
+                    <p className="text-slate-400">
+                      Probabilidade do <span className="font-bold text-white">Cenário 3</span> (Dinheiro ficar na Casa):
+                      <span className="block text-lg font-bold text-red-400">{(auditTarget.sc.pC3 * 100).toFixed(1)}%</span>
+                    </p>
+                    <p className="text-slate-400">
+                      Custo de uma falha (Responsabilidade):
+                      <span className="block text-lg font-bold text-red-400">${fmt(auditTarget.sc.limCompleta)}</span>
+                    </p>
+                  </div>
+                  <div className="space-y-2 bg-slate-900/50 p-2 rounded">
+                    <p className="text-slate-300 font-semibold italic">"Por que a quebra é tão alta?"</p>
+                    <p className="text-slate-400 leading-relaxed">
+                      Sua banca de <span className="text-white">${fmt(auditTarget.diagnostics.input.initialBanca)}</span> suporta apenas 
+                      <span className="text-white font-bold"> {Math.floor(auditTarget.diagnostics.input.initialBanca / auditTarget.sc.limCompleta)} falha(s) consecutiva(s)</span> do Cenário 3. 
+                      Como cada aposta tem <span className="text-white">{(auditTarget.sc.pC3 * 100).toFixed(0)}%</span> de chance de falhar, 
+                      é matematicamente provável que você quebre em sequências curtas de azar.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Seção 2: Entrada do Sistema */}
               <div className="space-y-3">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   {[
