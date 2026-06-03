@@ -1191,6 +1191,7 @@ export const ExtracaoBonusContent: React.FC = () => {
                   Memória de Cálculo e Lógica
                 </h4>
                 <div className="text-[10px] space-y-2 font-mono text-slate-400 bg-slate-900 p-3 rounded border border-slate-800">
+                  <p><span className="text-primary font-bold">DISPERSÃO E PRAZO:</span> Estes valores mostram o saldo final após as <span className="text-white font-bold">{auditTarget.diagnostics.input.nOps} operações</span> escolhidas ou no momento da meta/quebra.</p>
                   <p><span className="text-primary">P(Meta)</span> = Sucessos / Total Simulações = {auditTarget.diagnostics.counts.success} / {auditTarget.diagnostics.counts.total} = {(auditTarget.pMeta * 100).toFixed(2)}%</p>
                   <p><span className="text-primary">Mediana</span> = Valor no centro da amostra ordenada de saldos finais.</p>
                   <p><span className="text-primary">Seq. Falhas</span> = Mediana das maiores sequências de Cenário 3 em cada simulação.</p>
