@@ -27,12 +27,12 @@ export const CalculadoraExtração: React.FC<CalculadoraProps> = ({
         <CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Entrada de Odds</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Odd Perna 1</Label>
-            <Input type="number" step="0.01" value={o1} onChange={e => setO1(Number(e.target.value))} />
+            <Label className="text-slate-300">Odd Perna 1</Label>
+            <Input type="number" step="0.01" value={o1} onChange={e => setO1(Number(e.target.value))} className="bg-slate-950 border-slate-800 text-slate-100" />
           </div>
           <div className="space-y-2">
-            <Label>Odd Perna 2</Label>
-            <Input type="number" step="0.01" value={o2} onChange={e => setO2(Number(e.target.value))} />
+            <Label className="text-slate-300">Odd Perna 2</Label>
+            <Input type="number" step="0.01" value={o2} onChange={e => setO2(Number(e.target.value))} className="bg-slate-950 border-slate-800 text-slate-100" />
           </div>
           <Button onClick={addOpToSequence} className="w-full gap-2"><ListPlus className="w-4 h-4" /> Adicionar ao Planejador</Button>
         </CardContent>
