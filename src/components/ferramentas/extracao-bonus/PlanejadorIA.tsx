@@ -32,11 +32,11 @@ export const PlanejadorIA: React.FC<PlanejadorProps> = ({
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>Banca Inicial</Label>
-              <Input type="number" value={seqBanca} onChange={e => setSeqBanca(Number(e.target.value))} />
+              <Input type="number" value={seqBanca} onChange={e => setSeqBanca(Number(e.target.value))} className="bg-slate-950 border-slate-800 text-slate-100" />
             </div>
             <div className="space-y-2">
               <Label>Meta de Lucro</Label>
-              <Input type="number" value={seqMeta} onChange={e => setSeqMeta(Number(e.target.value))} />
+              <Input type="number" value={seqMeta} onChange={e => setSeqMeta(Number(e.target.value))} className="bg-slate-950 border-slate-800 text-slate-100" />
             </div>
             <Button className="w-full gap-2" disabled={sequence.length === 0} onClick={simulateSequence}>
               <Play className="w-4 h-4" /> Simular Sequência
