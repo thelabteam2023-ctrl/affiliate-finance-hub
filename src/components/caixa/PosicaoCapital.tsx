@@ -326,7 +326,7 @@ export function PosicaoCapital({
                   cy="70"
                   r="52"
                   fill="none"
-                  stroke={item.color}
+                  stroke={item.colorHex}
                   strokeWidth={isActive ? 22 : 18}
                   strokeDasharray={`${isMounted ? item.dashFilled : 0} ${2 * Math.PI * 52}`}
                   strokeDashoffset={item.dashOffset}
@@ -338,6 +338,7 @@ export function PosicaoCapital({
                     opacity: isOtherActive ? 0.35 : 1.0
                   }}
                 />
+
               );
             })}
             
