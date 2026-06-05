@@ -565,29 +565,31 @@ export function HistoricoMovimentacoes({
               </Button>
             )}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Tipo filter - Multi-select */}
+          <div className="flex flex-wrap items-center gap-1.5 mb-3.5">
+            {/* Tipo filter - Multi-select refinado */}
             <div className="flex items-center">
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     size="sm"
-                    className={`h-8 text-xs whitespace-nowrap gap-1.5 ${filtroTipo.length > 0 ? "bg-secondary border-secondary" : "border-border/50"}`}
+                    className={cn(
+                      "h-8 text-[11px] px-2.5 rounded-[6px] gap-1.5 border-[var(--border-default)] bg-[var(--bg-input)] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:border-[var(--border-hover)] transition-all",
+                      filtroTipo.length > 0 && "border-[#16a34a33] bg-[rgba(22,163,74,0.09)] text-[#4ade80]"
+                    )}
                   >
-                    <Filter className="h-3 w-3" />
+                    <i className="ti ti-filter text-[11px]"></i>
                     <span>Tipo:</span>
                     {filtroTipo.length === 0 ? (
                       <span>Todos</span>
                     ) : filtroTipo.length === 1 ? (
                       <span>{TIPO_OPTIONS.find(o => o.value === filtroTipo[0])?.label || filtroTipo[0]}</span>
                     ) : (
-                      <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
-                        {filtroTipo.length}
-                      </Badge>
+                      <span>{filtroTipo.length}</span>
                     )}
                   </Button>
                 </PopoverTrigger>
+
                 <PopoverContent className="w-52 p-2" align="start">
                   <div className="space-y-1">
                     {TIPO_OPTIONS.map((opt) => {
