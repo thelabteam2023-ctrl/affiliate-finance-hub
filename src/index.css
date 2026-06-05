@@ -207,6 +207,12 @@ All colors MUST be HSL.
   from { stroke-dasharray: 0 326.7; }
 }
 
+@keyframes expand-down {
+  from { opacity: 0; transform: translateY(-4px); max-height: 0; }
+  to   { opacity: 1; transform: translateY(0);    max-height: 500px; }
+}
+
+
 
 /* Remove spinners from number inputs to prevent accidental value changes */
 input[type="number"]::-webkit-inner-spin-button,
