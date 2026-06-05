@@ -9,6 +9,11 @@ import { useMultiCurrencyConversion } from "@/hooks/useMultiCurrencyConversion";
 import { getCurrencySymbol } from "@/types/currency";
 import { useTabWorkspace } from "@/hooks/useTabWorkspace";
 import { CurrencyBreakdownModal } from "./CurrencyBreakdownModal";
+import { AjusteManualDialog } from "./AjusteManualDialog";
+import { ReconciliacaoDialog } from "./ReconciliacaoDialog";
+import { ReportarScanDialog } from "./ReportarScanDialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { MoreVertical, ShieldAlert, Wrench, CheckCircle2 } from "lucide-react";
 
 interface SaldoFiat {
   moeda: string;
@@ -68,6 +73,9 @@ export function PosicaoCapital({
 
   // Hook de conversão multi-moeda com fontes e status de dados
   const { convert, sources, cotacoes, dataSource, isUsingFallback } = useMultiCurrencyConversion();
+  const [isAjusteOpen, setIsAjusteOpen] = useState(false);
+  const [isReconciliacaoOpen, setIsReconciliacaoOpen] = useState(false);
+  const [isScanOpen, setIsScanOpen] = useState(false);
 
   // Helper para obter info da fonte de uma moeda
   // IMPORTANTE: isOfficial agora considera se os dados vieram do banco (não é fallback real)
@@ -327,9 +335,33 @@ export function PosicaoCapital({
               </Tooltip>
             </TooltipProvider>
           </div>
-          <Badge variant="outline" className="text-base font-mono">
-            {formatCurrency(dadosPosicao.total)}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-accent/50">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => setIsAjusteOpen(true)} className="cursor-pointer">
+                  <Wrench className="mr-2 h-4 w-4" />
+                  Ajuste Manual
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsReconciliacaoOpen(true)} className="cursor-pointer">
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Reconciliação de Saldo
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsScanOpen(true)} className="cursor-pointer text-destructive focus:text-destructive">
+                  <ShieldAlert className="mr-2 h-4 w-4" />
+                  Reportar Scan / Perda
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Badge variant="outline" className="text-base font-mono">
+              {formatCurrency(dadosPosicao.total)}
+            </Badge>
+          </div>
         </div>
       </CardHeader>
 
@@ -527,7 +559,24 @@ export function PosicaoCapital({
         onClose={() => setBreakdownConfig(prev => ({ ...prev, isOpen: false }))}
         category={breakdownConfig.category}
         currency={breakdownConfig.currency}
-        workspaceId={workspaceId}
+      />
+
+      <AjusteManualDialog 
+        open={isAjusteOpen}
+        onClose={() => setIsAjusteOpen(false)}
+        onSuccess={() => {}}
+      />
+
+      <ReconciliacaoDialog
+        open={isReconciliacaoOpen}
+        onClose={() => setIsReconciliacaoOpen(false)}
+        onSuccess={() => {}}
+      />
+
+      <ReportarScanDialog
+        open={isScanOpen}
+        onClose={() => setIsScanOpen(false)}
+        onSuccess={() => {}}
       />
     </>
   );
