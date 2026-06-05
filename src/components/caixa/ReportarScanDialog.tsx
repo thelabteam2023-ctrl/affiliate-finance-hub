@@ -204,7 +204,7 @@ export function ReportarScanDialog({
         const { error } = await supabase.from("cash_ledger").insert({
           workspace_id: workspaceId,
           user_id: user.id,
-          tipo_transacao: "AJUSTE_MANUAL", // Usar um tipo conhecido que acione o ledger corretamente
+          tipo_transacao: "AJUSTE_NEGATIVO", // Tipo nativo para saídas que afetam saldo de bookmaker
           tipo_moeda: isCrypto ? "CRYPTO" : "FIAT",
           moeda,
           valor: valorNum,
