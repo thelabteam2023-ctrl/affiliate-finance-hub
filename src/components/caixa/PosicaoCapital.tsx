@@ -268,14 +268,19 @@ export function PosicaoCapital({
       };
     });
 
-    // 4. Normalizar percentuais para somar exatamente 100% (ajuste de arredondamento)
-    const somaPct = items.reduce((acc, s) => acc + s.pct, 0);
-    const residuo = 100 - somaPct;
-    if (Math.abs(residuo) > 0.0001 && items.length > 0) {
-      const maior = items.reduce((a, b) => a.pct > b.pct ? a : b);
-      maior.pct += residuo;
-      maior.dashFilled = (maior.pct / 100) * CIRCUMFERENCE;
-      maior.dashEmpty = CIRCUMFERENCE - maior.dashFilled;
+    // 4. Normalizar para exatos 100% (distribuindo o resíduo no maior segmento)
+    if (items.length > 0) {
+      const currentSum = items.reduce((acc, s) => acc + s.pct, 0);
+      const diff = 100 - currentSum;
+      
+      const largest = items.reduce((a, b) => a.pct > b.pct ? a : b);
+      largest.pct += diff;
+      
+      // Recalcular dash values com o percentual normalizado
+      items.forEach(s => {
+        s.dashFilled = (s.pct / 100) * CIRCUMFERENCE;
+        s.dashEmpty = CIRCUMFERENCE - s.dashFilled;
+      });
     }
 
     // 5. Calcular offsets
@@ -288,6 +293,7 @@ export function PosicaoCapital({
 
     return { items, total: totalBRL };
   }, []);
+
 
 
 
@@ -333,14 +339,15 @@ export function PosicaoCapital({
 
                   strokeLinecap="butt"
                   style={{ 
+                    stroke: item.colorHex,
                     transition: "stroke-dasharray 0.8s ease-out, stroke-width 0.15s ease, opacity 0.15s ease",
                     transitionDelay: isMounted ? '0s' : `${idx * 0.15}s`,
                     opacity: isOtherActive ? 0.35 : 1.0
                   }}
                 />
-
               );
             })}
+
             
             {/* Hit Areas (Invisíveis) */}
             {dadosPosicao.items.map((item) => (
