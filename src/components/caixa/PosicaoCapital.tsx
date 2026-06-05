@@ -40,6 +40,8 @@ interface PosicaoCapitalProps {
   saldoWalletsParceiros: number;
   /** Cotação USD/BRL atual */
   cotacaoUSD: number;
+  /** Callback para ativar filtro de perdas sem recarregar */
+  onViewPerdas?: () => void;
 }
 
 // Modern gradient color pairs
@@ -59,6 +61,7 @@ export function PosicaoCapital({
   saldosContasParceiros,
   saldoWalletsParceiros,
   cotacaoUSD,
+  onViewPerdas,
 }: PosicaoCapitalProps) {
   const { workspaceId } = useTabWorkspace();
   const [breakdownConfig, setBreakdownConfig] = useState<{
@@ -358,11 +361,15 @@ export function PosicaoCapital({
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   onClick={() => {
-                    // Navegar para o histórico com o filtro de perdas operacional ativo
-                    const searchParams = new URLSearchParams();
-                    searchParams.set("tab", "historico");
-                    searchParams.set("tipo", "PERDA_OPERACIONAL");
-                    window.location.href = `/caixa?${searchParams.toString()}`;
+                    if (onViewPerdas) {
+                      onViewPerdas();
+                    } else {
+                      // Fallback caso o callback não exista
+                      const searchParams = new URLSearchParams();
+                      searchParams.set("tab", "historico");
+                      searchParams.set("tipo", "PERDA_OPERACIONAL");
+                      window.location.href = `/caixa?${searchParams.toString()}`;
+                    }
                   }} 
                   className="cursor-pointer"
                 >

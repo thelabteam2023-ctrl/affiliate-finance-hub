@@ -1259,6 +1259,15 @@ export default function Caixa() {
             saldosContasParceiros={saldosContasParceiros}
             saldoWalletsParceiros={saldoWalletsParceiros}
             cotacaoUSD={cotacaoUSD}
+            onViewPerdas={() => {
+              // Mudança de estado interna sem recarregar a página (SPA behavior)
+              setFiltroTipo(["PERDA_OPERACIONAL"]);
+              // Navegar para a aba de histórico (que está no CaixaTabsContainer controlado pelo searchParams 'tab')
+              // ou forçar a aba se necessário. O CaixaTabsContainer já lê 'tab' do searchParams.
+              const params = new URLSearchParams(window.location.search);
+              params.set("tab", "historico");
+              navigate({ search: params.toString() }, { replace: true });
+            }}
           />
 
           {/* Container com Abas */}
