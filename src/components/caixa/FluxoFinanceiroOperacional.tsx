@@ -9,7 +9,11 @@ import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 import { format, isWithinInterval, subDays, subMonths, startOfMonth } from "date-fns";
 import { parseLocalDate } from "@/lib/dateUtils";
 import { ptBR } from "date-fns/locale";
-import { TrendingUp, TrendingDown, ArrowRightLeft, AlertCircle, Building2, Users, HelpCircle, CalendarIcon } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowRightLeft, AlertCircle, Building2, Users, HelpCircle, CalendarIcon, MoreVertical, Wrench, CheckCircle2, ShieldAlert } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AjusteManualDialog } from "./AjusteManualDialog";
+import { ReconciliacaoDialog } from "./ReconciliacaoDialog";
+import { ReportarScanDialog } from "./ReportarScanDialog";
 import { cn } from "@/lib/utils";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { getCurrencySymbol } from "@/types/currency";
@@ -152,6 +156,10 @@ export function FluxoFinanceiroOperacional({
   const [customStartDate, setCustomStartDate] = useState<Date | undefined>(subDays(new Date(), 30));
   const [customEndDate, setCustomEndDate] = useState<Date | undefined>(new Date());
   const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
+  
+  const [isAjusteOpen, setIsAjusteOpen] = useState(false);
+  const [isReconciliacaoOpen, setIsReconciliacaoOpen] = useState(false);
+  const [isScanOpen, setIsScanOpen] = useState(false);
   
   // Buscar todas as cotações para normalizar as barras do gráfico
   const { cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMXN, cotacaoMYR, cotacaoARS, cotacaoCOP } = useCotacoes();
@@ -631,6 +639,28 @@ export function FluxoFinanceiroOperacional({
             Análise Financeira
           </CardTitle>
           <div className="flex flex-wrap items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-accent/50">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => setIsAjusteOpen(true)} className="cursor-pointer">
+                  <Wrench className="mr-2 h-4 w-4" />
+                  Ajuste Manual
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsReconciliacaoOpen(true)} className="cursor-pointer">
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Reconciliação de Saldo
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsScanOpen(true)} className="cursor-pointer text-destructive focus:text-destructive">
+                  <ShieldAlert className="mr-2 h-4 w-4" />
+                  Reportar Scan / Perda
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Button
               variant={periodo === "dia" ? "default" : "outline"}
               size="sm"
@@ -1115,6 +1145,24 @@ export function FluxoFinanceiroOperacional({
           </TabsContent>
         </Tabs>
       </CardContent>
+
+      <AjusteManualDialog 
+        open={isAjusteOpen}
+        onClose={() => setIsAjusteOpen(false)}
+        onSuccess={() => {}}
+      />
+
+      <ReconciliacaoDialog
+        open={isReconciliacaoOpen}
+        onClose={() => setIsReconciliacaoOpen(false)}
+        onSuccess={() => {}}
+      />
+
+      <ReportarScanDialog
+        open={isScanOpen}
+        onClose={() => setIsScanOpen(false)}
+        onSuccess={() => {}}
+      />
     </Card>
   );
 }

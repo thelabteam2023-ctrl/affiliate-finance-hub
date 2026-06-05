@@ -187,34 +187,61 @@ export function ReportarScanDialog({
       if (!user || !workspaceId) throw new Error("Acesso negado");
 
       const valorNum = parseFloat(valor);
-      
-      // Para CASA_APOSTA, usamos transacoes_bookmakers (que tem bookmaker_id)
-      // Para PARCEIRO_CONTA, precisamos de uma transação que impacte o parceiro, 
-      // mas transacoes_bookmakers não tem conta_bancaria_id.
-      // Vou usar transacoes_bookmakers para o scan de casa.
-      // Para o scan de parceiro, vamos ter que usar outra tabela ou criar um registro genérico.
-      // O sistema parece usar transacoes_bookmakers para tudo que impacta bookmakers.
+      const isCrypto = CRYPTO_CURRENCIES.some(c => c.value === moeda);
+      const cotacao = moeda !== "BRL" ? getRate(moeda) : 1;
       
       if (tipoOrigem === "CASA_APOSTA") {
-        const { error } = await supabase.from("transacoes_bookmakers").insert({
+        const { error } = await supabase.from("cash_ledger").insert({
           workspace_id: workspaceId,
-          bookmaker_id: bookmakerId,
-          tipo: "SAIDA",
+          user_id: user.id,
+          tipo_transacao: "OUTROS",
+          tipo_moeda: isCrypto ? "CRYPTO" : "FIAT",
+          moeda,
           valor: valorNum,
-          saldo_anterior: saldoAtual,
-          saldo_novo: saldoAtual - valorNum,
-          descricao: `[SCAN CASA] ${motivo}`,
-          data_transacao: new Date().toISOString()
+          descricao: `[SCAN CASA] ${motivo} | Saldo anterior: ${saldoAtual.toFixed(2)}`,
+          status: "CONFIRMADO",
+          transit_status: "CONFIRMED",
+          data_transacao: getTodayCivilDate(),
+          origem_tipo: "BOOKMAKER",
+          origem_bookmaker_id: bookmakerId,
+          destino_tipo: "PERDA",
+          impacta_caixa_operacional: false,
+          ajuste_motivo: `SCAN: ${motivo}`,
+          ajuste_direcao: "SAIDA",
+          cotacao: cotacao,
+          auditoria_metadata: {
+            tipo_registro: "REPORTAR_SCAN",
+            origem_scan: tipoOrigem,
+            entidade_id: bookmakerId
+          }
         });
         if (error) throw error;
       } else {
-        // Para parceiro, como não temos conta_bancaria_id em transacoes_bookmakers,
-        // vamos registrar como uma saída genérica ou via ajuste se houver tabela compatível.
-        // Dado o contexto, vou focar no Scan de Casa primeiro ou usar uma descrição que identifique.
-        toast({
-          title: "Aviso",
-          description: "Funcionalidade de Scan de Parceiro em validação de schema.",
+        const { error } = await supabase.from("cash_ledger").insert({
+          workspace_id: workspaceId,
+          user_id: user.id,
+          tipo_transacao: "OUTROS",
+          tipo_moeda: isCrypto ? "CRYPTO" : "FIAT",
+          moeda,
+          valor: valorNum,
+          descricao: `[SCAN PARCEIRO] ${motivo} | Saldo anterior: ${saldoAtual.toFixed(2)}`,
+          status: "CONFIRMADO",
+          transit_status: "CONFIRMED",
+          data_transacao: getTodayCivilDate(),
+          origem_tipo: "PARCEIRO_CONTA",
+          origem_conta_bancaria_id: contaId,
+          destino_tipo: "PERDA",
+          impacta_caixa_operacional: true,
+          ajuste_motivo: `SCAN: ${motivo}`,
+          ajuste_direcao: "SAIDA",
+          cotacao: cotacao,
+          auditoria_metadata: {
+            tipo_registro: "REPORTAR_SCAN",
+            origem_scan: tipoOrigem,
+            entidade_id: contaId
+          }
         });
+        if (error) throw error;
       }
 
       toast({
