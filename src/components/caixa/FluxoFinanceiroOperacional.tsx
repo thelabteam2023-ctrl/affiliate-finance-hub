@@ -529,8 +529,8 @@ export function FluxoFinanceiroOperacional({
       <AjusteManualDialog open={isAjusteOpen} onClose={() => setIsAjusteOpen(false)} onSuccess={() => {}} />
       <ReconciliacaoDialog open={isReconciliacaoOpen} onClose={() => setIsReconciliacaoOpen(false)} onSuccess={() => {}} />
       <ReportarScanDialog open={isScanOpen} onClose={() => setIsScanOpen(false)} onSuccess={() => {}} />
-      </Card>
-    </div>
+    </Card>
   );
 }
+
 
