@@ -38,6 +38,9 @@ interface PosicaoCapitalProps {
   onViewPerdas?: () => void;
 }
 
+const isDev = process.env.NODE_ENV === 'development';
+
+
 const CURRENCY_COLORS: Record<string, { bg: string, color: string }> = {
   BRL:  { bg: '#0c2a1a', color: '#22c55e' },
   ETH:  { bg: '#0e2d36', color: '#0e7490' },
@@ -206,31 +209,39 @@ export function PosicaoCapital({
       },
     ];
 
-    // Cálculo dinâmico para evitar discrepâncias manuais
-    const CIRCUMFERENCE = 2 * Math.PI * 52; // Aproximadamente 326.7
-    const totalBRL = rawItems.reduce((acc, item) => 
+    const CIRCUMFERENCE = 2 * Math.PI * 52; // Aproximadamente 326.7256
+
+    // 1. Validar e filtrar segmentos
+    const validRawItems = rawItems.filter(item => {
+      const segmentValue = item.breakdown.reduce((acc, b) => acc + b.amountBRL, 0);
+      if (segmentValue <= 0) {
+        console.warn(`Segmento "${item.id}" omitido: valor ${segmentValue} <= 0`);
+        return false;
+      }
+      if (!item.color) {
+        console.warn(`Segmento "${item.id}" omitido: cor não definida`);
+        return false;
+      }
+      return true;
+    });
+
+    // 2. Calcular total real
+    const totalBRL = validRawItems.reduce((acc, item) => 
       acc + item.breakdown.reduce((bAcc, b) => bAcc + b.amountBRL, 0), 0
     );
 
-    let currentOffset = -90; // Começamos do topo (-90 graus)
-    const items: CapitalSegment[] = rawItems.map(item => {
+    // 3. Gerar segmentos com percentuais precisos
+    let items: CapitalSegment[] = validRawItems.map(item => {
       const segmentValue = item.breakdown.reduce((acc, b) => acc + b.amountBRL, 0);
       const pct = (segmentValue / totalBRL) * 100;
       
-      const dashFilled = (pct / 100) * CIRCUMFERENCE;
-      const dashEmpty = CIRCUMFERENCE - dashFilled;
-      
-      // O offset no SVG stroke-dashoffset funciona invertido em relação à rotação
-      // Calculamos o offset baseando-se no preenchimento acumulado
-      const dashOffset = -((currentOffset + 90) / 360) * CIRCUMFERENCE;
-      
-      const segment: CapitalSegment = {
+      return {
         id: item.id,
         name: item.name,
         color: item.color,
         value: segmentValue,
         valueFormatted: `R$ ${Math.round(segmentValue).toLocaleString('pt-BR')}`,
-        pct: Number(pct.toFixed(1)),
+        pct: pct, // Usamos o valor bruto para precisão no cálculo do SVG
         detail: item.id === 'bookmakers' 
           ? `R$ ${Math.round(item.breakdown[0].amount).toLocaleString('pt-BR')} · ${item.breakdown.length} moedas`
           : item.id === 'caixa-op'
@@ -238,30 +249,43 @@ export function PosicaoCapital({
           : item.id === 'wallets'
           ? `$${Math.round(item.breakdown[0].amount).toLocaleString('pt-BR')} USD`
           : `R$ ${Math.round(segmentValue).toLocaleString('pt-BR')}`,
-        dashFilled,
-        dashEmpty,
-        dashOffset: -( ( (totalBRL - segmentValue) / 2 ) / totalBRL ) * CIRCUMFERENCE, // Placeholder temporário
+        dashFilled: (pct / 100) * CIRCUMFERENCE,
+        dashEmpty: CIRCUMFERENCE - ((pct / 100) * CIRCUMFERENCE),
+        dashOffset: 0,
         breakdown: item.breakdown.map(b => ({
           ...b,
           pctOfSegment: Number(((b.amountBRL / segmentValue) * 100).toFixed(2))
         }))
       };
-
-      return segment;
     });
 
-    // Re-calculamos os offsets corretamente para que os segmentos fiquem encostados
+    // 4. Normalizar percentuais para somar exatamente 100% (ajuste de arredondamento)
+    const somaPct = items.reduce((acc, s) => acc + s.pct, 0);
+    const residuo = 100 - somaPct;
+    if (Math.abs(residuo) > 0.0001 && items.length > 0) {
+      const maior = items.reduce((a, b) => a.pct > b.pct ? a : b);
+      maior.pct += residuo;
+      maior.dashFilled = (maior.pct / 100) * CIRCUMFERENCE;
+      maior.dashEmpty = CIRCUMFERENCE - maior.dashFilled;
+    }
+
+    // 5. Calcular offsets
     let cumulativePct = 0;
-    items.forEach((item, index) => {
-      // O stroke-dashoffset do SVG começa no ponto (1,0) - 3 horas.
-      // Para começar no topo (12 horas), subtraímos 25% (90 graus) da circunferência.
+    items.forEach((item) => {
       const startPct = cumulativePct;
       item.dashOffset = -((startPct / 100) * CIRCUMFERENCE) + (0.25 * CIRCUMFERENCE);
       cumulativePct += item.pct;
     });
 
-    return { items, total: totalBRL };
+    // 6. Arredondar para exibição APENAS no final
+    const finalItems = items.map(it => ({
+      ...it,
+      pct: Number(it.pct.toFixed(2))
+    }));
+
+    return { items: finalItems, total: totalBRL };
   }, []);
+
 
 
   return (
@@ -345,12 +369,70 @@ export function PosicaoCapital({
             <p className="text-[10px] text-[var(--text-faint)] mt-px">Total BRL</p>
           </div>
 
-          {/* Tooltip do donut */}
+          {/* Diagnóstico visual (Modo Dev) */}
+          {isDev && (
+            <div className="absolute top-[200px] left-[-20px] w-[500px] z-[100] bg-[#0a0f1a] border-[0.5px] border-[#ef4444] rounded-lg p-3 text-[10px] font-mono text-[#9ca3af] shadow-2xl">
+              <div className="text-[#ef4444] font-semibold mb-2 flex items-center gap-2">
+                <span>🔍 DEBUG: Segmentos do Donut</span>
+                <span className="text-[9px] font-normal opacity-70">(Apenas em desenvolvimento)</span>
+              </div>
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="text-[#6b7280] border-b border-[#1f2937]">
+                    <th className="text-left p-1">ID</th>
+                    <th className="text-right p-1">Valor</th>
+                    <th className="text-right p-1">Pct</th>
+                    <th className="text-right p-1">DashFilled</th>
+                    <th className="text-right p-1">Offset</th>
+                    <th className="text-left p-1">Cor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dadosPosicao.items.map(s => (
+                    <tr key={s.id} className="border-b border-[#1f2937]/50 hover:bg-white/[0.02]">
+                      <td className="p-1" style={{ color: s.color }}>{s.id}</td>
+                      <td className="p-1 text-right">{s.value.toLocaleString('pt-BR')}</td>
+                      <td className="p-1 text-right">{s.pct}%</td>
+                      <td className="p-1 text-right">{s.dashFilled.toFixed(2)}</td>
+                      <td className="p-1 text-right">{s.dashOffset.toFixed(2)}</td>
+                      <td className="p-1">
+                        <div className="flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-sm" style={{ background: s.color }} />
+                          {s.color.startsWith('var') ? 'variable' : s.color}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="text-[#6b7280] pt-1">
+                    <td className="p-1 font-bold">TOTAL</td>
+                    <td className="p-1 text-right font-bold text-white">
+                      {dadosPosicao.items.reduce((a, s) => a + s.value, 0).toLocaleString('pt-BR')}
+                    </td>
+                    <td className="p-1 text-right font-bold" style={{ 
+                      color: Math.abs(dadosPosicao.items.reduce((a, s) => a + s.pct, 0) - 100) < 0.1 ? '#22c55e' : '#ef4444' 
+                    }}>
+                      {dadosPosicao.items.reduce((a, s) => a + s.pct, 0).toFixed(2)}%
+                    </td>
+                    <td colSpan={3} className="p-1 text-right italic opacity-60">
+                      Circunferência: {(2 * Math.PI * 52).toFixed(2)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* 3b. Lista de itens de Posição de Capital */}
+        <div className="space-y-1">
+          {/* Tooltip do donut (movido para fora da grid de 2 colunas para não quebrar o layout) */}
           {(activeSegment && !expandedSegment) && (() => {
             const seg = dadosPosicao.items.find(s => s.id === activeSegment);
             if (!seg) return null;
             return (
-              <div className="absolute top-[148px] left-1/2 -translate-x-1/2 z-50 whitespace-nowrap" style={{
+              <div className="absolute top-[210px] left-[100px] -translate-x-1/2 z-50 whitespace-nowrap" style={{
                 padding: '6px 12px',
                 background: '#1a2030',
                 border: '0.5px solid #2d3748',
@@ -368,10 +450,7 @@ export function PosicaoCapital({
               </div>
             );
           })()}
-        </div>
 
-        {/* 3b. Lista de itens de Posição de Capital */}
-        <div className="space-y-1">
           {dadosPosicao.items.map((item, idx) => {
             const isActive = activeSegment === item.id;
             const isExpanded = expandedSegment === item.id;
