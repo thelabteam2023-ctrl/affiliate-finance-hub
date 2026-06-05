@@ -725,7 +725,7 @@ export default function Caixa() {
       ESTORNO_COMISSAO_INDICADOR: "Estorno Comissão",
       SWAP_OUT: "Swap Interno",
       SWAP_IN: "Swap Interno",
-      PERDA_OPERACIONAL: "Scan / Perda",
+      PERDA_OPERACIONAL: "Scan",
     };
     const base = labels[tipo] || tipo;
     
@@ -1182,7 +1182,7 @@ export default function Caixa() {
                     className="flex items-center gap-2 text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
                   >
                     <ShieldAlert className="h-4 w-4" />
-                    <span>Reportar Scan / Perda</span>
+                    <span>Reportar Scan</span>
                     <HelpCircle className="h-3 w-3 ml-auto opacity-50" />
                   </DropdownMenuItem>
                 </TooltipTrigger>

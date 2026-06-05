@@ -60,6 +60,7 @@ export const CASH_REAL_TYPES = [
   // Swap Crypto (troca entre moedas na mesma wallet)
   'SWAP_OUT',
   'SWAP_IN',
+  'PERDA_OPERACIONAL',
 ] as const;
 
 /**
