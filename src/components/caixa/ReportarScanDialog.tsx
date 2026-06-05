@@ -89,10 +89,20 @@ export function ReportarScanDialog({
   useEffect(() => {
     setBookmakerId("");
     setContaId("");
-    setMoeda("BRL");
     setValor("");
     setValorDisplay("");
   }, [tipoOrigem]);
+
+  // Atualizar moeda automaticamente baseado na entidade selecionada
+  useEffect(() => {
+    if (tipoOrigem === "CASA_APOSTA" && bookmakerId) {
+      const bk = bookmakers.find(b => b.id === bookmakerId);
+      if (bk?.moeda) setMoeda(bk.moeda);
+    } else if (tipoOrigem === "PARCEIRO_CONTA" && contaId) {
+      const conta = contas.find(c => c.id === contaId);
+      if (conta?.moeda) setMoeda(conta.moeda);
+    }
+  }, [bookmakerId, contaId, tipoOrigem, bookmakers, contas]);
 
   const fetchData = async () => {
     setFetchingData(true);
@@ -329,25 +339,23 @@ export function ReportarScanDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Valor do Prejuízo</Label>
-              <Input 
-                value={valorDisplay}
-                onChange={handleValorChange}
-                placeholder="0,00"
-                className="font-mono"
-              />
+              <div className="relative">
+                <span className="absolute left-3 top-2.5 text-xs text-muted-foreground font-mono">
+                  {getCurrencySymbol(moeda)}
+                </span>
+                <Input 
+                  value={valorDisplay}
+                  onChange={handleValorChange}
+                  placeholder="0,00"
+                  className="font-mono pl-10"
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Moeda</Label>
-              <Select value={moeda} onValueChange={setMoeda}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {FIAT_CURRENCIES.map(c => (
-                    <SelectItem key={c.value} value={c.value}>{c.value}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="h-10 flex items-center px-3 rounded-md border border-input bg-muted/50 text-sm font-medium font-mono">
+                {moeda}
+              </div>
             </div>
           </div>
 
