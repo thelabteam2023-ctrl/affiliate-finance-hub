@@ -41,20 +41,27 @@ import { BookmakerFilterCombobox, type BookmakerFilterOption } from "@/component
 const PAGE_SIZE = 50;
 
 const TX_TYPES: Record<string, { icon: string, color: string, bg: string, label: string }> = {
-  APORTE:        { icon: 'ti-arrow-down-circle', color: '#22c55e', bg: '#0c2a1a', label: 'Aporte' },
-  APORTE_FINANCEIRO: { icon: 'ti-arrow-down-circle', color: '#22c55e', bg: '#0c2a1a', label: 'Aporte' },
-  SAQUE:         { icon: 'ti-arrow-up-circle',   color: '#f59e0b', bg: '#1a1500', label: 'Saque' },
+  APORTE:        { icon: 'ti-building-bank',     color: '#22c55e', bg: '#0c2a1a', label: 'Aporte' },
+  APORTE_FINANCEIRO: { icon: 'ti-building-bank', color: '#22c55e', bg: '#0c2a1a', label: 'Aporte' },
+  SAQUE:         { icon: 'ti-wallet',            color: '#f59e0b', bg: '#1a1500', label: 'Saque' },
   SCAN:          { icon: 'ti-shield-x',          color: '#a855f7', bg: '#1a1020', label: 'Scan' },
   PERDA_OPERACIONAL: { icon: 'ti-shield-x',      color: '#a855f7', bg: '#1a1020', label: 'Scan' },
-  TRANSFERENCIA: { icon: 'ti-arrows-exchange',   color: '#22d3ee', bg: '#0a2030', label: 'Transferência' },
+  TRANSFERENCIA: { icon: 'ti-arrows-exchange-2', color: '#22d3ee', bg: '#0a2030', label: 'Transferência' },
   CONVERSAO:     { icon: 'ti-refresh',           color: '#818cf8', bg: '#12102a', label: 'Conversão' },
   SWAP:          { icon: 'ti-refresh',           color: '#818cf8', bg: '#12102a', label: 'Swap' },
   TAXA:          { icon: 'ti-receipt',           color: '#6b7280', bg: '#161b27', label: 'Taxa' },
-  AJUSTE:        { icon: 'ti-adjustments',       color: '#94a3b8', bg: '#161b27', label: 'Ajuste' },
+  AJUSTE:        { icon: 'ti-settings',          color: '#94a3b8', bg: '#161b27', label: 'Ajuste' },
 };
 
-function TransactionIcon({ type }: { type: string }) {
+function TransactionIcon({ type, transacao }: { type: string, transacao?: any }) {
   const cfg = TX_TYPES[type] ?? TX_TYPES.AJUSTE;
+  const { getLogoUrl } = useBookmakerLogoMap();
+  
+  // Tentar pegar logo de bookmaker se for uma casa
+  const bookmakerId = transacao?.origem_bookmaker_id || transacao?.destino_bookmaker_id;
+  const bookmakerName = bookmakerId ? transacao?.bookmaker_nome || "" : "";
+  const logoUrl = bookmakerName ? getLogoUrl(bookmakerName) : null;
+
   return (
     <div style={{
       width: 36, height: 36,
@@ -62,9 +69,23 @@ function TransactionIcon({ type }: { type: string }) {
       background: cfg.bg,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       flexShrink: 0,
+      overflow: 'hidden',
+      border: logoUrl ? '1px solid rgba(255,255,255,0.05)' : 'none'
     }}>
-      <i className={`ti ${cfg.icon}`} aria-hidden="true"
-         style={{ fontSize: 17, color: cfg.color }} />
+      {logoUrl ? (
+        <img 
+          src={logoUrl} 
+          alt={bookmakerName} 
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = 'none';
+            (e.target as HTMLImageElement).parentElement!.innerHTML = `<i class="ti ${cfg.icon}" style="font-size: 17px; color: ${cfg.color}"></i>`;
+          }}
+        />
+      ) : (
+        <i className={`ti ${cfg.icon}`} aria-hidden="true"
+           style={{ fontSize: 17, color: cfg.color }} />
+      )}
     </div>
   );
 }
@@ -808,7 +829,10 @@ export function HistoricoMovimentacoes({
                       className="grid grid-cols-[auto_1fr_auto] gap-[12px] items-center py-[12px] border-b border-[#131920] last:border-0 group"
                     >
                       {/* Coluna 1: Ícone */}
-                      <TransactionIcon type={txType} />
+                      <TransactionIcon type={txType} transacao={{
+                        ...tx,
+                        bookmaker_nome: tx.origem_bookmaker_id ? bookmakers[tx.origem_bookmaker_id]?.nome : (tx.destino_bookmaker_id ? bookmakers[tx.destino_bookmaker_id]?.nome : "")
+                      }} />
 
                       {/* Coluna 2: Detalhes */}
                       <div className="min-w-0">
