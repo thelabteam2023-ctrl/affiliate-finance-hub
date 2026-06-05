@@ -155,8 +155,48 @@ All colors MUST be HSL.
     --interactive-selected-bg: 142 76% 36% / 0.2;
     --interactive-hover-bg: 217 30% 15%;
     --interactive-focus-ring: 142 76% 36% / 0.4;
+
+    /* ═══ CAIXA REFINEMENT PALETTE ═══ */
+    --bg-page:    #0e1117;
+    --bg-card:    #161b27;
+    --bg-hover:   #1a2030;
+    --bg-input:   #0e1117;
+
+    --border-default: #1f2937;
+    --border-hover:   #2d3748;
+
+    --text-primary:   #f1f5f9;
+    --text-secondary: #d1d5db;
+    --text-muted:     #6b7280;
+    --text-faint:     #4b5563;
+    --text-ghost:     #374151;
+
+    --accent-fiat:    #4ade80;
+    --accent-crypto:  #22d3ee;
+    --accent-bank:    #818cf8;
+    --accent-success: #16a34a;
+
+    --color-eth:  #818cf8;
+    --color-usdc: #22c55e;
+    --color-usdt: #22c55e;
+    --color-btc:  #f59e0b;
+    --color-ltc:  #94a3b8;
+
+    --seg-bookmakers:  #818cf8;
+    --seg-caixa-op:    #22d3ee;
+    --seg-wallets:     #4ade80;
+    --seg-contas-parc: #f59e0b;
   }
 }
+
+.tabular-data {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes donut-fill {
+  from { stroke-dasharray: 0 326.7; }
+}
+
 
 /* Remove spinners from number inputs to prevent accidental value changes */
 input[type="number"]::-webkit-inner-spin-button,

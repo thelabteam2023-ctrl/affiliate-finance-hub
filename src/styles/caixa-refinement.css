@@ -1,0 +1,49 @@
+/* --- Refinement of Caixa Operational Dashboard --- */
+/* 
+   - All colors strictly adhere to the project palette (e.g., --bg-card: #161b27, --accent-success: #16a34a).
+   - All monetary values utilize `font-variant-numeric: tabular-nums` for precise vertical alignment.
+   - Micro-interactions (hover states, animations) use pure CSS transitions (transform, opacity).
+*/
+
+/* Global resets for this view */
+.caixa-container {
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  font-family: inherit;
+}
+
+/* Card base styling */
+.caixa-card {
+  background-color: var(--bg-card);
+  border: 0.5px solid var(--border-default);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* Badge semântico para Scan (erro/alerta) */
+.badge-scan {
+  background-color: #201010;
+  color: #ef4444;
+  border: 1px solid #7f1d1d;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+/* Tabular Nums utility */
+.tabular-data {
+  font-variant-numeric: tabular-nums;
+}
+
+/* SVG Donut Animation */
+@keyframes donut-fill {
+  from { stroke-dasharray: 0 326.7; }
+  to { stroke-dasharray: var(--dasharray-filled) 326.7; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .animate-donut {
+    animation: donut-fill 0.8s ease-out forwards;
+  }
+}

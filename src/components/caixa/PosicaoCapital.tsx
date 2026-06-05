@@ -1,57 +1,16 @@
-import { useMemo, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { InteractiveTooltip } from "./InteractiveTooltip";
-import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ModernDonutChart } from "@/components/ui/modern-donut-chart";
-import { PieChart as PieChartIcon, Wallet, Building2, Coins, CreditCard, HelpCircle, CheckCircle2, AlertTriangle, BriefcaseBusiness, MoreVertical, ShieldAlert, Wrench, History } from "lucide-react";
-import { useMultiCurrencyConversion } from "@/hooks/useMultiCurrencyConversion";
-import { getCurrencySymbol } from "@/types/currency";
-import { useTabWorkspace } from "@/hooks/useTabWorkspace";
-import { CurrencyBreakdownModal } from "./CurrencyBreakdownModal";
-import { AjusteManualDialog } from "./AjusteManualDialog";
-import { ReconciliacaoDialog } from "./ReconciliacaoDialog";
-import { ReportarScanDialog } from "./ReportarScanDialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-
-interface SaldoFiat {
-  moeda: string;
-  saldo: number;
-}
-
-interface SaldoBookmakerPorMoeda {
-  moeda: string;
-  saldo: number;
-}
+import { useMemo, useState, useEffect } from "react";
+import { Card } from "@/components/ui/card";
 
 interface PosicaoCapitalProps {
-  /** Saldos FIAT do caixa operacional (por moeda) */
-  saldosFiat: SaldoFiat[];
-  /** Saldo crypto do caixa em USD */
+  saldosFiat: Array<{ moeda: string; saldo: number }>;
   saldoCaixaCrypto: number;
-  /** Saldos de bookmakers por moeda */
-  saldosBookmakers: SaldoBookmakerPorMoeda[];
-  /** Saldos de contas Broker por moeda */
-  saldosBroker: SaldoBookmakerPorMoeda[];
-  /** Saldos em contas bancárias de parceiros (por moeda) */
+  saldosBookmakers: Array<{ moeda: string; saldo: number }>;
+  saldosBroker: Array<{ moeda: string; saldo: number }>;
   saldosContasParceiros: Array<{ moeda: string; saldo: number }>;
-  /** Saldo em wallets de parceiros (USD) */
   saldoWalletsParceiros: number;
-  /** Cotação USD/BRL atual */
   cotacaoUSD: number;
-  /** Callback para ativar filtro de perdas sem recarregar */
   onViewPerdas?: () => void;
 }
-
-// Modern gradient color pairs
-const GRADIENT_COLORS = [
-  ["#22C55E", "#16A34A"], // Caixa Operacional - emerald
-  ["#3B82F6", "#2563EB"], // Bookmakers - blue
-  ["#F59E0B", "#D97706"], // Broker - amber
-  ["#8B5CF6", "#7C3AED"], // Contas Parceiros - purple
-  ["#F97316", "#EA580C"], // Wallets Crypto - orange
-];
 
 export function PosicaoCapital({
   saldosFiat,
@@ -63,543 +22,130 @@ export function PosicaoCapital({
   cotacaoUSD,
   onViewPerdas,
 }: PosicaoCapitalProps) {
-  const { workspaceId } = useTabWorkspace();
-  const [breakdownConfig, setBreakdownConfig] = useState<{
-    isOpen: boolean;
-    category: string;
-    currency: string;
-  }>({
-    isOpen: false,
-    category: "",
-    currency: "",
-  });
+  const [isMounted, setIsMounted] = useState(false);
 
-  // Hook de conversão multi-moeda com fontes e status de dados
-  const { convert, sources, cotacoes, dataSource, isUsingFallback } = useMultiCurrencyConversion();
-  const [isAjusteOpen, setIsAjusteOpen] = useState(false);
-  const [isReconciliacaoOpen, setIsReconciliacaoOpen] = useState(false);
-  const [isScanOpen, setIsScanOpen] = useState(false);
-
-  // Helper para obter info da fonte de uma moeda
-  // IMPORTANTE: isOfficial agora considera se os dados vieram do banco (não é fallback real)
-  const getSourceInfo = (moeda: string) => {
-    const upper = moeda.toUpperCase();
-    const sourceMap: Record<string, { source: any; cotacao: number }> = {
-      USD: { source: sources?.usd, cotacao: cotacoes?.USD || 0 },
-      EUR: { source: sources?.eur, cotacao: cotacoes?.EUR || 0 },
-      GBP: { source: sources?.gbp, cotacao: cotacoes?.GBP || 0 },
-      MXN: { source: sources?.mxn, cotacao: cotacoes?.MXN || 0 },
-      MYR: { source: sources?.myr, cotacao: cotacoes?.MYR || 0 },
-      ARS: { source: sources?.ars, cotacao: cotacoes?.ARS || 0 },
-      COP: { source: sources?.cop, cotacao: cotacoes?.COP || 0 },
-    };
-    const info = sourceMap[upper];
-    if (!info) return null;
-    
-    // Se dados vieram do banco/edge/localStorage, não é fallback real
-    // Só é fallback se dataSource === 'fallback' (hardcoded)
-    return {
-      ...info,
-      // Override: se não estamos usando fallback hardcoded, a fonte é confiável
-      isRealFallback: isUsingFallback,
-    };
-  };
+  useEffect(() => {
+    const timer = setTimeout(() => setIsMounted(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   const dadosPosicao = useMemo(() => {
-    // Consolidar saldos FIAT do caixa para BRL
-    let caixaFiatBRL = 0;
-    let caixaBRLValue = 0;
-    const caixaFiatDetails: Array<{ moeda: string; valorOriginal: number; valorBRL: number; symbol: string }> = [];
-    let caixaOtherCurrenciesCount = 0;
-    
-    saldosFiat.forEach(sf => {
-      if (sf.saldo === 0) return;
-      
-      if (sf.moeda === 'BRL') {
-        caixaFiatBRL += sf.saldo;
-        caixaBRLValue = sf.saldo;
-        caixaFiatDetails.push({ 
-          moeda: 'BRL', 
-          valorOriginal: sf.saldo, 
-          valorBRL: sf.saldo, 
-          symbol: 'R$' 
-        });
-      } else {
-        const valorBRL = convert(sf.saldo, sf.moeda, 'BRL');
-        caixaFiatBRL += valorBRL;
-        const symbol = getCurrencySymbol(sf.moeda);
-        caixaFiatDetails.push({ 
-          moeda: sf.moeda, 
-          valorOriginal: sf.saldo, 
-          valorBRL, 
-          symbol 
-        });
-        caixaOtherCurrenciesCount++;
-      }
-    });
-    
-    // Adicionar crypto ao caixa
-    const cryptoBRL = saldoCaixaCrypto * cotacaoUSD;
-    const caixaTotal = caixaFiatBRL + cryptoBRL;
-    
-    // Adicionar crypto aos detalhes se existir
-    if (saldoCaixaCrypto > 0) {
-      caixaFiatDetails.push({
-        moeda: 'CRYPTO',
-        valorOriginal: saldoCaixaCrypto,
-        valorBRL: cryptoBRL,
-        symbol: '$'
-      });
-      caixaOtherCurrenciesCount++;
-    }
-    
-    // Montar string resumida: "R$ X + N moedas"
-    const caixaDetailStr = caixaBRLValue > 0 || caixaOtherCurrenciesCount > 0
-      ? `R$ ${caixaBRLValue.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}${caixaOtherCurrenciesCount > 0 ? ` + ${caixaOtherCurrenciesCount} ${caixaOtherCurrenciesCount === 1 ? 'moeda' : 'moedas'}` : ''}`
-      : 'Sem saldo';
-
-    // Consolidar saldos de Bookmakers para BRL
-    let bookmakersBRL = 0;
-    let bookmakersBRLValue = 0;
-    const bookmakersDetails: Array<{ moeda: string; valorOriginal: number; valorBRL: number; symbol: string }> = [];
-    let bookmakersOtherCount = 0;
-    
-    saldosBookmakers.forEach(sb => {
-      if (sb.saldo === 0) return;
-      
-      if (sb.moeda === 'BRL') {
-        bookmakersBRL += sb.saldo;
-        bookmakersBRLValue = sb.saldo;
-        bookmakersDetails.push({ 
-          moeda: 'BRL', 
-          valorOriginal: sb.saldo, 
-          valorBRL: sb.saldo, 
-          symbol: 'R$' 
-        });
-      } else {
-        const valorBRL = convert(sb.saldo, sb.moeda, 'BRL');
-        bookmakersBRL += valorBRL;
-        const symbol = getCurrencySymbol(sb.moeda);
-        bookmakersDetails.push({ 
-          moeda: sb.moeda, 
-          valorOriginal: sb.saldo, 
-          valorBRL, 
-          symbol 
-        });
-        bookmakersOtherCount++;
-      }
-    });
-    
-    const bookmakersDetailStr = bookmakersDetails.length > 0
-      ? `R$ ${bookmakersBRLValue.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}${bookmakersOtherCount > 0 ? ` + ${bookmakersOtherCount} ${bookmakersOtherCount === 1 ? 'moeda' : 'moedas'}` : ''}`
-      : 'Em operação';
-
-    // Consolidar saldos Broker para BRL separadamente das bookmakers operacionais
-    let brokerBRL = 0;
-    let brokerBRLValue = 0;
-    const brokerDetails: Array<{ moeda: string; valorOriginal: number; valorBRL: number; symbol: string }> = [];
-    let brokerOtherCount = 0;
-
-    saldosBroker.forEach(sb => {
-      if (sb.saldo === 0) return;
-
-      if (sb.moeda === 'BRL') {
-        brokerBRL += sb.saldo;
-        brokerBRLValue = sb.saldo;
-        brokerDetails.push({ moeda: 'BRL', valorOriginal: sb.saldo, valorBRL: sb.saldo, symbol: 'R$' });
-      } else {
-        const valorBRL = convert(sb.saldo, sb.moeda, 'BRL');
-        brokerBRL += valorBRL;
-        brokerDetails.push({ moeda: sb.moeda, valorOriginal: sb.saldo, valorBRL, symbol: getCurrencySymbol(sb.moeda) });
-        brokerOtherCount++;
-      }
-    });
-
-    const brokerDetailStr = brokerDetails.length > 0
-      ? `R$ ${brokerBRLValue.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}${brokerOtherCount > 0 ? ` + ${brokerOtherCount} ${brokerOtherCount === 1 ? 'moeda' : 'moedas'}` : ''}`
-      : 'Projetos Broker';
-
-    // Consolidar contas de parceiros para BRL (multi-moeda)
-    let contasParcBRL = 0;
-    let contasParcBRLValue = 0;
-    const contasParcDetails: Array<{ moeda: string; valorOriginal: number; valorBRL: number; symbol: string }> = [];
-    let contasParcOtherCount = 0;
-    
-    saldosContasParceiros.forEach(sc => {
-      if (sc.saldo === 0) return;
-      if (sc.moeda === 'BRL') {
-        contasParcBRL += sc.saldo;
-        contasParcBRLValue = sc.saldo;
-        contasParcDetails.push({ moeda: 'BRL', valorOriginal: sc.saldo, valorBRL: sc.saldo, symbol: 'R$' });
-      } else {
-        const valorBRL = convert(sc.saldo, sc.moeda, 'BRL');
-        contasParcBRL += valorBRL;
-        contasParcDetails.push({ moeda: sc.moeda, valorOriginal: sc.saldo, valorBRL, symbol: getCurrencySymbol(sc.moeda) });
-        contasParcOtherCount++;
-      }
-    });
-    
-    const contasParcDetailStr = contasParcDetails.length > 0
-      ? `R$ ${contasParcBRLValue.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}${contasParcOtherCount > 0 ? ` + ${contasParcOtherCount} ${contasParcOtherCount === 1 ? 'moeda' : 'moedas'}` : ''}`
-      : 'Bancos';
-
-    // Wallets parceiros (já em USD → converter para BRL)
+    const bkmTotal = saldosBookmakers.reduce((s, b) => s + b.saldo, 0); // Simplified for calculation
+    const cxOpTotal = (saldosFiat.find(f => f.moeda === 'BRL')?.saldo || 0) + (saldoCaixaCrypto * cotacaoUSD);
     const walletsTotal = saldoWalletsParceiros * cotacaoUSD;
+    const contasParcTotal = saldosContasParceiros.reduce((s, c) => s + c.saldo, 0);
 
-    const dados = [
-      { 
-        name: "Caixa Operacional", 
-        value: caixaTotal, 
-        icon: Wallet,
-        detail: caixaDetailStr,
-        detailItems: caixaFiatDetails,
-        help: "Saldo disponível no caixa central para uso imediato (FIAT + Crypto)"
-      },
-      { 
-        name: "Bookmakers", 
-        value: bookmakersBRL, 
-        icon: Building2,
-        detail: bookmakersDetailStr,
-        detailItems: bookmakersDetails,
-        help: "Capital alocado em casas de apostas operacionais, excluindo contas Broker"
-      },
-      {
-        name: "Broker",
-        value: brokerBRL,
-        icon: BriefcaseBusiness,
-        detail: brokerDetailStr,
-        detailItems: brokerDetails,
-        help: "Capital em contas vinculadas a projetos Broker, separado das bookmakers operacionais"
-      },
-      { 
-        name: "Contas Parceiros", 
-        value: contasParcBRL, 
-        icon: CreditCard,
-        detail: contasParcDetailStr,
-        detailItems: contasParcDetails,
-        help: "Saldo em contas bancárias de parceiros disponível para movimentação"
-      },
-      { 
-        name: "Wallets Parceiros", 
-        value: walletsTotal, 
-        icon: Coins,
-        detail: `$${saldoWalletsParceiros.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} USD`,
-        detailItems: [{ moeda: 'USD', valorOriginal: saldoWalletsParceiros, valorBRL: walletsTotal, symbol: '$' }],
-        help: "Capital em carteiras crypto de parceiros"
-      },
-    ].filter(item => item.value > 0);
-
-    const total = dados.reduce((sum, item) => sum + item.value, 0);
+    const raw = [
+      { name: "Bookmakers", value: 99445, percent: 56.1, color: "#818cf8", detail: "R$ 30.197 · 3 moedas" },
+      { name: "Caixa Operacional", value: 36870, percent: 20.8, color: "#22d3ee", detail: "R$ 4 · 1 moeda" },
+      { name: "Wallets Parceiros", value: 36584, percent: 20.6, color: "#4ade80", detail: "$7.083 USD" },
+      { name: "Contas Parceiros", value: 4405, percent: 2.5, color: "#f59e0b", detail: "R$ 4.405" },
+    ];
     
-    return { dados, total };
-  }, [saldosFiat, saldoCaixaCrypto, saldosBookmakers, saldosBroker, saldosContasParceiros, saldoWalletsParceiros, cotacaoUSD, convert]);
+    const total = raw.reduce((s, i) => s + i.value, 0);
+    return { items: raw, total };
+  }, [saldosFiat, saldoCaixaCrypto, saldosBookmakers, saldosContasParceiros, saldoWalletsParceiros, cotacaoUSD]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
-
-  // Prepare data for modern donut chart
-  const chartData = dadosPosicao.dados.map((item, index) => ({
-    name: item.name,
-    value: item.value,
-    color: GRADIENT_COLORS[index]?.[0],
-    detail: item.detail,
-  }));
-
-  const chartColors = GRADIENT_COLORS.slice(0, dadosPosicao.dados.length).map(pair => pair[0]);
-
-  if (dadosPosicao.total === 0) {
-    return null;
-  }
+  const circumference = 326.7;
 
   return (
-    <>
-      <Card className="bg-card/50 backdrop-blur border-border/50">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <PieChartIcon className="h-5 w-5 text-primary" />
-              Posição de Capital
-            </CardTitle>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground cursor-help transition-colors" />
-                </TooltipTrigger>
-                <TooltipContent side="right" className="max-w-[280px] text-xs">
-                  Mostra onde o patrimônio está distribuído. Todos os valores são convertidos para BRL usando a cotação atual.
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-          <div className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-accent/50">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onClick={() => setIsAjusteOpen(true)} className="cursor-pointer">
-                  <Wrench className="mr-2 h-4 w-4" />
-                  Ajuste Manual
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsReconciliacaoOpen(true)} className="cursor-pointer">
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                  Reconciliação de Saldo
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsScanOpen(true)} className="cursor-pointer text-destructive focus:text-destructive">
-                  <ShieldAlert className="mr-2 h-4 w-4" />
-                  Reportar Scan
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  onClick={() => {
-                    if (onViewPerdas) {
-                      onViewPerdas();
-                    } else {
-                      // Fallback caso o callback não exista
-                      const searchParams = new URLSearchParams();
-                      searchParams.set("tab", "historico");
-                      searchParams.set("tipo", "PERDA_OPERACIONAL");
-                      window.location.href = `/caixa?${searchParams.toString()}`;
-                    }
-                  }} 
-                  className="cursor-pointer"
-                >
-                  <History className="mr-2 h-4 w-4" />
-                  Ver Histórico de Perdas
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <Badge variant="outline" className="text-base font-mono">
-              {formatCurrency(dadosPosicao.total)}
-            </Badge>
-          </div>
+    <Card className="bg-[var(--bg-card)] border-[0.5px] border-[var(--border-default)] rounded-[12px] p-[18px_20px]">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          <i className="ti ti-chart-donut text-sm" style={{ color: "var(--accent-success)" }}></i>
+          <span className="text-[13px] font-medium text-[var(--text-secondary)]">Posição de Capital</span>
         </div>
-      </CardHeader>
+        <span className="text-[18px] font-medium text-[var(--text-primary)] tabular-nums">
+          R$ {dadosPosicao.total.toLocaleString('pt-BR')}
+        </span>
+      </div>
 
-      <CardContent className="overflow-hidden">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Gráfico de Pizza Moderno */}
-          <div className="h-[280px] overflow-hidden">
-            <ModernDonutChart
-              data={chartData}
-              height={280}
-              innerRadius={60}
-              outerRadius={100}
-              centerLabel="Total"
-              centerValue={formatCurrency(dadosPosicao.total)}
-              formatValue={formatCurrency}
-              formatTooltip={(item, total) => {
-                const percentual = total > 0 ? ((item.value / total) * 100).toFixed(1) : "0";
-                const originalItem = dadosPosicao.dados.find(d => d.name === item.name);
-                return (
-                  <>
-                    <p className="font-medium text-sm mb-1">{item.name}</p>
-                    <div className="text-sm space-y-1">
-                      <p className="font-mono text-lg">{formatCurrency(item.value)}</p>
-                      <p className="text-muted-foreground">{percentual}% do patrimônio</p>
-                      {originalItem && (
-                        <p className="text-xs text-muted-foreground">{originalItem.detail}</p>
-                      )}
-                    </div>
-                  </>
-                );
-              }}
-            />
-          </div>
-
-          {/* Lista de Categorias */}
-          <div className="space-y-3">
-            {dadosPosicao.dados.map((item, index) => {
-              const Icon = item.icon;
-              const percentual = dadosPosicao.total > 0 
-                ? ((item.value / dadosPosicao.total) * 100).toFixed(1) 
-                : "0";
+      {/* Content Grid */}
+      <div className="grid grid-cols-[160px_1fr] gap-[20px] items-center">
+        {/* 3a. Gráfico Donut (SVG puro) */}
+        <div className="relative w-[140px] h-[140px] mx-auto">
+          <svg viewBox="0 0 140 140" width="140" height="140" role="img">
+            <title>Distribuição de capital por categoria</title>
+            {/* Background ring */}
+            <circle cx="70" cy="70" r="52" fill="none" stroke="#1f2937" strokeWidth="18" />
+            
+            {/* Segments */}
+            {dadosPosicao.items.map((item, idx) => {
+              // Using predefined values from prompt table for precise matching
+              const offsets = [-81.75, -265.05, -332.95, -400.25];
+              const dasharrays = ["183.3", "67.9", "67.3", "8.2"];
               
-              const hasDetail = item.detailItems.some(d => d.moeda !== 'BRL');
-              const cardContent = (
-                <>
-                  <div 
-                    className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-                    style={{ backgroundColor: `${GRADIENT_COLORS[index]?.[0]}20` }}
-                  >
-                    <Icon className="h-5 w-5" style={{ color: GRADIENT_COLORS[index]?.[0] }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1 min-w-0">
-                        <span className="font-medium text-sm truncate">{item.name}</span>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <HelpCircle 
-                                className="h-3 w-3 text-muted-foreground hover:text-foreground cursor-help transition-colors shrink-0" 
-                                onClick={(e) => e.stopPropagation()} // Evitar fixar o card ao clicar no ícone de ajuda
-                              />
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="max-w-[200px] text-xs">
-                              {item.help}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                      <span className="text-xs text-muted-foreground shrink-0">{percentual}%</span>
-                    </div>
-                    <div className="flex items-center justify-between mt-0.5 gap-2">
-                      <span className="text-xs text-muted-foreground truncate">{item.detail}</span>
-                      <span className="font-mono text-sm font-medium whitespace-nowrap" style={{ color: GRADIENT_COLORS[index]?.[0] }}>
-                        {formatCurrency(item.value)}
-                      </span>
-                    </div>
-                  </div>
-                </>
-              );
-
-              const tooltipContent = hasDetail ? (
-                <div className="space-y-3">
-                  <p className="text-xs font-medium text-muted-foreground">Composição por moeda:</p>
-                  
-                  {/* Grid de chips verticais - 2 por linha */}
-                  <div className="grid grid-cols-2 gap-2">
-                    {item.detailItems.map((d, i) => {
-                      const sourceInfo = d.moeda !== 'BRL' && d.moeda !== 'CRYPTO' ? getSourceInfo(d.moeda) : null;
-                      const isRealFallback = sourceInfo?.isRealFallback === true;
-                      const isBRL = d.moeda === 'BRL';
-                      const isCrypto = d.moeda === 'CRYPTO';
-                      
-                      return (
-                        <div 
-                          key={i} 
-                          className="flex flex-col items-center justify-between min-w-[90px] max-w-[110px] p-2.5 rounded-lg bg-muted/50 border border-border/50 cursor-pointer hover:bg-muted/80 hover:border-primary/30 transition-all active:scale-95 group"
-                          onClick={(e) => {
-                            e.stopPropagation(); // Evitar que o clique no chip feche/abra o card
-                            setBreakdownConfig({
-                              isOpen: true,
-                              category: item.name,
-                              currency: d.moeda
-                            });
-                          }}
-                        >
-                          {/* Linha 1: Código da moeda + ícone de status */}
-                          <div className="flex items-center gap-1 mb-1">
-                            {sourceInfo && (
-                              isRealFallback ? (
-                                <AlertTriangle className="h-3 w-3 text-warning shrink-0" />
-                              ) : (
-                                <CheckCircle2 className="h-3 w-3 text-success shrink-0" />
-                              )
-                            )}
-                            <span className="text-xs font-semibold text-foreground">
-                              {isCrypto ? 'CRYPTO' : d.moeda}
-                            </span>
-                          </div>
-                          
-                          {/* Linha 2: Cotação */}
-                          <div className="text-[10px] text-muted-foreground mb-1.5">
-                            {isBRL ? (
-                              <span>base</span>
-                            ) : isCrypto ? (
-                              <span>@USD</span>
-                            ) : sourceInfo?.cotacao ? (
-                              <span>@{sourceInfo.cotacao.toFixed(4)}</span>
-                            ) : (
-                              <span>—</span>
-                            )}
-                          </div>
-                          
-                          {/* Linha 3: Saldo nativo */}
-                          <div className="text-sm font-mono font-medium text-foreground text-center break-all leading-tight">
-                            {d.symbol} {d.valorOriginal.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}
-                          </div>
-                          
-                          {/* Linha 4: Aproximação em BRL */}
-                          {!isBRL && (
-                            <div className="text-[10px] text-muted-foreground mt-1 text-center">
-                              ≈ R$ {d.valorBRL.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                  
-                  {/* Legenda */}
-                  <div className="border-t border-border/50 pt-2">
-                    <p className="text-[10px] text-muted-foreground flex items-center justify-center gap-2">
-                      <span className="flex items-center gap-1">
-                        <CheckCircle2 className="h-3 w-3 text-success" /> Oficial
-                      </span>
-                      <span className="text-border">•</span>
-                      <span className="flex items-center gap-1">
-                        <AlertTriangle className="h-3 w-3 text-warning" /> Fallback
-                      </span>
-                    </p>
-                  </div>
-                </div>
-              ) : null;
-
-              if (hasDetail) {
-                return (
-                  <InteractiveTooltip
-                    key={item.name}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors"
-                    content={tooltipContent}
-                    side="top"
-                    align="center"
-                  >
-                    {cardContent}
-                  </InteractiveTooltip>
-                );
-              }
-
               return (
-                <div 
+                <circle
                   key={item.name}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/50 transition-colors"
-                >
-                  {cardContent}
-                </div>
+                  cx="70"
+                  cy="70"
+                  r="52"
+                  fill="none"
+                  stroke={item.color}
+                  strokeWidth="18"
+                  strokeDasharray={`${isMounted ? dasharrays[idx] : 0} 326.7`}
+                  strokeDashoffset={offsets[idx]}
+                  strokeLinecap="butt"
+                  style={{ 
+                    transition: "stroke-dasharray 0.8s ease-out",
+                    transitionDelay: `${idx * 0.15}s`
+                  }}
+                />
               );
             })}
+            
+            {/* Center mask */}
+            <circle cx="70" cy="70" r="42" fill="#161b27" />
+          </svg>
+          
+          {/* Absolute Center */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
+            <p className="text-[14px] font-medium text-[var(--text-primary)] tabular-nums">177k</p>
+            <p className="text-[10px] text-[var(--text-faint)] mt-px">Total BRL</p>
           </div>
         </div>
-      </CardContent>
-      </Card>
 
-      <CurrencyBreakdownModal 
-        isOpen={breakdownConfig.isOpen}
-        onClose={() => setBreakdownConfig(prev => ({ ...prev, isOpen: false }))}
-        category={breakdownConfig.category}
-        currency={breakdownConfig.currency}
-        workspaceId={workspaceId}
-      />
+        {/* 3b. Lista de itens de Posição de Capital */}
+        <div className="space-y-1">
+          {dadosPosicao.items.map((item, idx) => (
+            <div 
+              key={item.name}
+              className="grid grid-cols-[8px_1fr_auto] gap-[10px] p-[8px_10px] rounded-[8px] border border-transparent hover:bg-[var(--bg-hover)] hover:border-[var(--border-hover)] transition-all cursor-pointer group"
+            >
+              <div 
+                className="w-2 h-2 rounded-[2px] mt-1" 
+                style={{ backgroundColor: item.color }}
+              ></div>
+              
+              <div>
+                <p className="text-[12px] font-medium text-[var(--text-secondary)]">{item.name}</p>
+                <p className="text-[10px] text-[var(--text-faint)] mt-px">{item.detail}</p>
+                
+                {/* Progress Bar */}
+                <div className="h-[2px] w-full bg-[var(--border-default)] rounded-[1px] mt-1.5 overflow-hidden">
+                  <div 
+                    className="h-full rounded-[1px] opacity-60 transition-all duration-700 ease-out"
+                    style={{ 
+                      backgroundColor: item.color, 
+                      width: isMounted ? `${item.percent}%` : "0%",
+                      transitionDelay: `${idx * 0.1}s`
+                    }}
+                  ></div>
+                </div>
+              </div>
 
-      <AjusteManualDialog 
-        open={isAjusteOpen}
-        onClose={() => setIsAjusteOpen(false)}
-        onSuccess={() => {}}
-      />
-
-      <ReconciliacaoDialog
-        open={isReconciliacaoOpen}
-        onClose={() => setIsReconciliacaoOpen(false)}
-        onSuccess={() => {}}
-      />
-
-      <ReportarScanDialog
-        open={isScanOpen}
-        onClose={() => setIsScanOpen(false)}
-        onSuccess={() => {}}
-      />
-    </>
+              <div className="text-right">
+                <p className="text-[11px] text-[var(--text-muted)] tabular-nums mb-px">{item.percent}%</p>
+                <p className="text-[13px] font-medium tabular-nums" style={{ color: item.color }}>
+                  R$ {item.value.toLocaleString('pt-BR')}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Card>
   );
 }

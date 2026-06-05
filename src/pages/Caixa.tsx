@@ -1122,106 +1122,42 @@ export default function Caixa() {
   return (
     <div className="flex flex-col min-h-0 h-full">
       {/* Actions bar e Status de Carregamento */}
-      <div className="flex-shrink-0 px-6 pt-3 pb-2 flex items-center justify-between gap-2">
+      {/* Topbar: Barra superior refinada */}
+      <div className="shrink-0 h-12 flex items-center justify-between px-6 bg-transparent">
         <div className="flex items-center gap-2">
-          {loading && !initialLoading && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground animate-pulse ml-1">
-              <div className="h-3 w-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-              Sincronizando...
-            </div>
-          )}
+          <i className="ti ti-building-bank text-sm" style={{ color: "var(--accent-success)" }} aria-hidden="true"></i>
+          <span className="text-[13px] font-medium tracking-wider uppercase text-[var(--text-muted)]">
+            Caixa Operacional
+          </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <SaldosParceirosSheet />
           {canCreate('caixa', 'caixa.transactions.create') && (
-          <Button onClick={() => setDialogOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Nova Transação
-          </Button>
-        )}
-        {(isOwnerOrAdmin || isSystemOwner) && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9">
-                <MoreHorizontal className="h-4 w-4" />
-                <span className="sr-only">Mais ações</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 bg-popover">
-              <DropdownMenuSeparator />
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenuItem 
-                    onClick={() => setAjusteDialogOpen(true)}
-                    className="flex items-center gap-2 text-muted-foreground cursor-pointer"
-                  >
-                    <Wrench className="h-4 w-4" />
-                    <span>Ajuste Manual</span>
-                    <HelpCircle className="h-3 w-3 ml-auto opacity-50" />
-                  </DropdownMenuItem>
-                </TooltipTrigger>
-                <TooltipContent side="left" className="max-w-[280px] text-xs space-y-1.5 p-3">
-                  <p className="font-semibold">Use quando souber o valor e o motivo</p>
-                  <p className="text-muted-foreground">Ex: "A bookmaker cobrou R$15 de taxa que não registrei" → Ajuste de -15</p>
-                  <p className="text-muted-foreground">Ex: "Recebi R$50 de cashback que esqueci de lançar" → Ajuste de +50</p>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenuItem 
-                    onClick={() => setReconciliacaoDialogOpen(true)}
-                    className="flex items-center gap-2 text-muted-foreground cursor-pointer"
-                  >
-                    <TrendingUp className="h-4 w-4" />
-                    <span>Reconciliação de Saldo</span>
-                    <HelpCircle className="h-3 w-3 ml-auto opacity-50" />
-                  </DropdownMenuItem>
-                </TooltipTrigger>
-                <TooltipContent side="left" className="max-w-[280px] text-xs space-y-1.5 p-3">
-                  <p className="font-semibold">Use quando souber apenas o saldo real</p>
-                  <p className="text-muted-foreground">Ex: "O sistema diz R$1.200, mas na conta real tem R$1.350. Não sei por quê."</p>
-                  <p className="text-muted-foreground">Você informa o saldo real e o sistema calcula o ajuste automaticamente. Uso raro — é um "ponto zero".</p>
-                </TooltipContent>
-              </Tooltip>
-
-              <DropdownMenuSeparator />
-              
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenuItem 
-                    onClick={() => setScanDialogOpen(true)}
-                    className="flex items-center gap-2 text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
-                  >
-                    <ShieldAlert className="h-4 w-4" />
-                    <span>Reportar Scan</span>
-                    <HelpCircle className="h-3 w-3 ml-auto opacity-50" />
-                  </DropdownMenuItem>
-                </TooltipTrigger>
-                <TooltipContent side="left" className="max-w-[280px] text-xs space-y-1.5 p-3">
-                  <p className="font-semibold">Registre perdas extraordinárias</p>
-                  <p className="text-muted-foreground">Use para quando a casa de aposta retém o saldo injustificadamente ou um parceiro realiza movimentações indevidas.</p>
-                  <p className="text-muted-foreground text-destructive font-medium">Isso registrará uma saída definitiva de capital.</p>
-                </TooltipContent>
-              </Tooltip>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            <Button 
+              onClick={() => setDialogOpen(true)} 
+              className="h-9 px-3.5 text-xs font-medium gap-2 bg-[var(--accent-success)] hover:bg-[#15803d] text-white border-none rounded-lg transition-colors"
+            >
+              <i className="ti ti-plus text-sm"></i>
+              Nova Transação
+            </Button>
           )}
         </div>
       </div>
 
       {/* PageContent - ÚNICO scroll vertical */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="px-6 pb-6 space-y-6">
-          {/* KPI Cards */}
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-[1200px]">
-            {/* Saldos FIAT - Interactive Card */}
+      <div className="flex-1 min-h-0 overflow-y-auto bg-[var(--bg-page)]">
+        <div className="px-6 py-4 space-y-3">
+
+          {/* Cards de topo (grid 3 colunas, gap 10px) */}
+          <div className="grid gap-[10px] grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            {/* 2a. Card "Caixa FIAT" */}
             <SaldosFiatCard
               caixaParceiroId={caixaParceiroId}
               formatCurrency={formatCurrency}
               onDataChanged={fetchData}
             />
 
-            {/* Exposição Crypto - Interactive Card */}
+            {/* 2b. Card "Caixa Crypto" */}
             <ExposicaoCryptoCard
               caixaParceiroId={caixaParceiroId}
               cryptoPrices={cryptoPrices}
@@ -1230,25 +1166,41 @@ export default function Caixa() {
               onDataChanged={fetchData}
             />
 
-            {/* Saldo em Bancos dos Parceiros - KPI Card */}
+            {/* 2c. Card "Saldo em Bancos" */}
             <Card
-              className="cursor-pointer hover:border-primary/30 transition-colors"
+              className="bg-[var(--bg-card)] border-[0.5px] border-[var(--border-default)] rounded-[12px] p-[16px_18px] relative overflow-hidden cursor-pointer hover:border-[var(--border-hover)] transition-colors group"
               onClick={() => setSaldoBancosModalOpen(true)}
             >
-              <CardContent className="pt-4 pb-3 px-4">
-                <div className="flex items-center gap-1.5 text-muted-foreground text-xs mb-1">
-                  <Building2 className="h-3.5 w-3.5" />
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent-bank)]" aria-hidden="true"></div>
+                <span className="text-[11px] font-medium tracking-[0.06em] uppercase text-[var(--text-faint)]">
                   Saldo em Bancos
+                </span>
+              </div>
+              
+              <p className="text-2xl font-medium text-[var(--text-primary)] tabular-nums">
+                {formatCurrency(saldosContasParceiros.reduce((s, c) => s + c.saldo, 0), "BRL")}
+              </p>
+              
+              <p className="text-[11px] text-[var(--text-faint)] mt-1 group-hover:text-[var(--text-muted)] transition-colors">
+                Toque para ver detalhes →
+              </p>
+
+              <div className="mt-[14px]">
+                <div className="h-[3px] w-full bg-[var(--border-default)] rounded-[2px] overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-[var(--accent-success)] to-[var(--accent-crypto)] rounded-[2px] transition-all duration-700 ease-out"
+                    style={{ width: "62%" }}
+                  ></div>
                 </div>
-                <p className="text-xl font-bold text-foreground tabular-nums">
-                  {formatCurrency(saldosContasParceiros.reduce((s, c) => s + c.saldo, 0), "BRL")}
-                </p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">
-                  Toque para ver detalhes →
-                </p>
-              </CardContent>
+                <div className="flex justify-between mt-2 text-[10px] text-[var(--text-ghost)]">
+                  <span>62% do limite</span>
+                  <span>Atualizado agora</span>
+                </div>
+              </div>
             </Card>
           </div>
+
 
           {/* Posição de Capital */}
           <PosicaoCapital

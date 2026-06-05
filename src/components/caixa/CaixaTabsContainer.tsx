@@ -105,27 +105,37 @@ export function CaixaTabsContainer({
   return (
     <Card className="bg-card/50 backdrop-blur border-border/50">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="px-4 pt-4 border-b border-border/50">
-          <TabsList className="bg-muted/30">
-            <TabsTrigger value="analise" className="gap-2">
-              <BarChart3 className="h-4 w-4" />
-              Análise Financeira
+        <div className="border-b border-[var(--border-default)] mb-4">
+          <TabsList className="bg-transparent h-auto p-0 gap-0">
+            <TabsTrigger 
+              value="analise" 
+              className="px-4 py-2 text-[12px] gap-2 text-[var(--text-faint)] data-[state=active]:text-[var(--accent-success)] data-[state=active]:border-b-2 data-[state=active]:border-[var(--accent-success)] bg-transparent rounded-none transition-all"
+            >
+              <i className="ti ti-chart-bar text-[13px]"></i>
+              Análise
             </TabsTrigger>
-            <TabsTrigger value="historico" className="gap-2">
-              <History className="h-4 w-4" />
+            <TabsTrigger 
+              value="historico" 
+              className="px-4 py-2 text-[12px] gap-2 text-[var(--text-faint)] data-[state=active]:text-[var(--accent-success)] data-[state=active]:border-b-2 data-[state=active]:border-[var(--accent-success)] bg-transparent rounded-none transition-all"
+            >
+              <i className="ti ti-history text-[13px]"></i>
               Histórico
             </TabsTrigger>
-            <TabsTrigger value="conciliacao" className="gap-2 relative">
-              <RefreshCcw className="h-4 w-4" />
+            <TabsTrigger 
+              value="conciliacao" 
+              className="px-4 py-2 text-[12px] gap-2 text-[var(--text-faint)] data-[state=active]:text-[var(--accent-success)] data-[state=active]:border-b-2 data-[state=active]:border-[var(--accent-success)] bg-transparent rounded-none transition-all relative"
+            >
+              <i className="ti ti-refresh text-[13px]"></i>
               Conciliação
               {pendingCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-amber-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
+                <span className="ml-1 text-[9px] bg-[var(--border-default)] text-[var(--text-muted)] px-1.5 py-0.5 rounded-[4px]">
                   {pendingCount}
                 </span>
-               )}
+              )}
             </TabsTrigger>
           </TabsList>
         </div>
+
 
         <TabsContent value="analise" className="mt-0 p-4">
           <FluxoFinanceiroOperacional
