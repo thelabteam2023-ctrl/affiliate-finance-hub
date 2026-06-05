@@ -795,85 +795,63 @@ export function HistoricoMovimentacoes({
             <p className="text-muted-foreground">Nenhuma transação encontrada no período</p>
           </div>
         ) : (
-          <div className="space-y-3">
-            <ScrollArea className="h-[500px]">
+          <div className="space-y-0">
+            <ScrollArea className="h-[550px]">
               <div className="space-y-0 pr-4">
-                {pagination.paginatedItems.map((transacao) => {
-                  const isScan = transacao.tipo_transacao === "PERDA_OPERACIONAL";
+                {pagination.paginatedItems.map((tx: any) => {
+                  const txType = tx.tipo_transacao;
+                  const isScan = txType === 'PERDA_OPERACIONAL' || txType === 'SCAN';
+                  
                   return (
                     <div 
-                      key={transacao.id} 
-                      className="grid grid-cols-[auto_1fr_auto] gap-3 items-center py-3 border-b border-[#131920] last:border-0 group transition-all"
+                      key={tx.id} 
+                      className="grid grid-cols-[auto_1fr_auto] gap-[12px] items-center py-[12px] border-b border-[#131920] last:border-0 group"
                     >
-                      {/* Coluna 1 — ícone de tipo */}
-                      <div 
-                        className={cn(
-                          "w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0",
-                          isScan ? "bg-[#1a1020]" : "bg-[var(--bg-hover)]"
-                        )}
-                      >
-                        <i 
-                          className={cn(
-                            "text-base",
-                            isScan ? "ti ti-scan text-[#a855f7]" : "ti ti-arrows-exchange text-[var(--text-muted)]"
-                          )}
-                          aria-hidden="true"
-                        ></i>
-                      </div>
+                      {/* Coluna 1: Ícone */}
+                      <TransactionIcon type={txType} />
 
-                      {/* Coluna 2 — detalhes */}
+                      {/* Coluna 2: Detalhes */}
                       <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 mb-0.5">
-                          <span className={cn(
-                            "text-[10px] font-bold px-2 py-0.5 rounded-[4px] flex items-center gap-1 uppercase",
-                            isScan ? "bg-[#1a1020] text-[#a855f7]" : "bg-[var(--bg-input)] text-[var(--text-muted)]"
-                          )}>
-                            {isScan && <i className="ti ti-scan text-[9px]"></i>}
-                            {getTipoLabel(transacao.tipo_transacao, transacao)}
-                          </span>
+                        <TransactionBadge type={txType} label={getTipoLabel(txType, tx)} />
+                        <div className="flex items-center gap-2">
                           <span className="text-[12px] font-medium text-[var(--text-secondary)] truncate">
-                            {isScan ? transacao.descricao?.replace(/\[SCAN.*?\]\s*/i, '') : getOrigemLabel(transacao)}
+                            {isScan ? tx.descricao?.replace(/\[SCAN.*?\]\s*/i, '') : `${getOrigemLabel(tx)} → ${getDestinoLabel(tx)}`}
                           </span>
                         </div>
-                        
-                        <p className="text-[11px] text-[var(--text-faint)] truncate">
-                          {isScan ? "Prejuízo operacional" : getDestinoLabel(transacao)}
-                        </p>
-
+                        <div className="text-[11px] text-[var(--text-faint)] truncate mt-px">
+                          {isScan ? "Prejuízo operacional por fraude/scam" : (tx.descricao || "Sem descrição")}
+                        </div>
                         {isScan && (
-                          <div className="mt-1 flex">
-                            <span className="badge-scan flex items-center gap-1">
-                              <i className="ti ti-alert-triangle text-[8px]"></i>
-                              Perda de Capital
-                            </span>
+                          <div className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-[4px] bg-[#201010] text-[#ef4444] text-[9px] font-medium border border-[#ef4444]/20">
+                            <i className="ti ti-alert-triangle" style={{ fontSize: 9 }}></i>
+                            Perda de Capital
                           </div>
                         )}
                       </div>
 
-                      {/* Coluna 3 — valores */}
-                      <div className="text-right">
-                        <p className="text-[14px] font-medium text-[var(--text-primary)] tabular-nums">
-                          {formatCurrencyDynamic(Math.abs(getValorEfetivo(transacao)), getMoedaEfetiva(transacao))}
-                        </p>
-                        <p className="text-[10px] text-[var(--text-faint)] mt-0.5 tabular-nums">
+                      {/* Coluna 3: Valores e Meta */}
+                      <div className="text-right flex flex-col items-end">
+                        <span className="text-[14px] font-medium text-[var(--text-primary)] tabular-nums">
+                          {formatCurrencyDynamic(Math.abs(getValorEfetivo(tx)), getMoedaEfetiva(tx))}
+                        </span>
+                        <span className="text-[10px] text-[var(--text-faint)] mt-px tabular-nums">
                           {(() => {
-                            const dk = extractCivilDateKey(transacao.data_transacao);
+                            const dk = extractCivilDateKey(tx.data_transacao);
                             if (!dk) return '-';
                             const [y, m, d] = dk.split('-');
                             return `${d}/${m}/${y}`;
                           })()}
-                        </p>
-                        {transacao.user_id && usuariosMap[transacao.user_id] && (
-                          <p className="text-[9px] text-[var(--text-ghost)] mt-px">
-                            por {usuariosMap[transacao.user_id].toUpperCase()}
-                          </p>
-                        )}
+                        </span>
+                        <span className="text-[9px] text-[var(--text-ghost)] mt-0.5 uppercase tracking-wider">
+                          por {usuariosMap[tx.user_id] || "SISTEMA"}
+                        </span>
                       </div>
                     </div>
                   );
                 })}
               </div>
             </ScrollArea>
+
 
             {/* Paginação */}
             <div className="mt-4 pt-4 border-t border-[var(--border-default)]">
