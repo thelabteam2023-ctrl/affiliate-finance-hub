@@ -64,29 +64,28 @@ function TransactionIcon({ type, transacao }: { type: string, transacao?: any })
 
   return (
     <div style={{
-      width: 42, height: 42,
-      borderRadius: 12,
+      width: 40, height: 40,
+      borderRadius: 10,
       background: cfg.bg,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       flexShrink: 0,
       overflow: 'hidden',
-      border: '1px solid rgba(255,255,255,0.08)',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-      marginLeft: '2px'
+      border: '1px solid rgba(255,255,255,0.06)',
+      marginLeft: '4px'
     }}>
       {logoUrl ? (
         <img 
           src={logoUrl} 
           alt={bookmakerName} 
-          className="w-[28px] h-[28px] object-contain transition-transform duration-300 group-hover:scale-110"
+          className="w-[32px] h-[32px] object-contain transition-transform duration-300 group-hover:scale-105"
           onError={(e) => {
             (e.target as HTMLImageElement).style.display = 'none';
-            (e.target as HTMLImageElement).parentElement!.innerHTML = `<i class="ti ${cfg.icon}" style="font-size: 20px; color: ${cfg.color}"></i>`;
+            (e.target as HTMLImageElement).parentElement!.innerHTML = `<i class="ti ${cfg.icon}" style="font-size: 18px; color: ${cfg.color}"></i>`;
           }}
         />
       ) : (
         <i className={`ti ${cfg.icon}`} aria-hidden="true"
-           style={{ fontSize: 20, color: cfg.color }} />
+           style={{ fontSize: 18, color: cfg.color }} />
       )}
     </div>
   );
