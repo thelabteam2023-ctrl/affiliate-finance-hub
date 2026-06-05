@@ -247,9 +247,10 @@ export function PosicaoCapital({
         id: item.id,
         name: item.name,
         color: item.color,
+        colorHex: DONUT_COLORS[item.id] || '#6b7280',
         value: segmentValue,
         valueFormatted: `R$ ${Math.round(segmentValue).toLocaleString('pt-BR')}`,
-        pct: pct, // Usamos o valor bruto para precisão no cálculo do SVG
+        pct: pct, 
         detail: item.id === 'bookmakers' 
           ? `R$ ${Math.round(item.breakdown[0].amount).toLocaleString('pt-BR')} · ${item.breakdown.length} moedas`
           : item.id === 'caixa-op'
@@ -285,14 +286,9 @@ export function PosicaoCapital({
       cumulativePct += item.pct;
     });
 
-    // 6. Arredondar para exibição APENAS no final
-    const finalItems = items.map(it => ({
-      ...it,
-      pct: Number(it.pct.toFixed(2))
-    }));
-
-    return { items: finalItems, total: totalBRL };
+    return { items, total: totalBRL };
   }, []);
+
 
 
 
