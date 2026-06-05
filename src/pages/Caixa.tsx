@@ -110,6 +110,13 @@ export default function Caixa() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { setContent: setTopBarContent } = useTopBar();
+
+  useEffect(() => {
+    // Desabilita o editor rich text nesta tela
+    document.body.setAttribute('data-editor-disabled', 'true');
+    return () => document.body.removeAttribute('data-editor-disabled');
+  }, []);
+
   const [searchParams] = useSearchParams();
   const locationState = location.state as LocationState | null;
   

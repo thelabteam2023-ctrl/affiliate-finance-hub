@@ -187,7 +187,17 @@ All colors MUST be HSL.
     --seg-wallets:     #4ade80;
     --seg-contas-parc: #f59e0b;
   }
+
+  body[data-editor-disabled] .editor-toolbar,
+  body[data-editor-disabled] .floating-toolbar,
+  body[data-editor-disabled] [data-tippy-root],
+  body[data-editor-disabled] .ProseMirror-menubar,
+  body[data-editor-disabled] .tiptap-toolbar {
+    display: none !important;
+    pointer-events: none !important;
+  }
 }
+
 
 .tabular-data {
   font-variant-numeric: tabular-nums;

@@ -40,6 +40,51 @@ import { useRole } from "@/hooks/useRole";
 import { BookmakerFilterCombobox, type BookmakerFilterOption } from "@/components/ui/bookmaker-filter-combobox";
 const PAGE_SIZE = 50;
 
+const TX_TYPES: Record<string, { icon: string, color: string, bg: string, label: string }> = {
+  APORTE:        { icon: 'ti-arrow-down-circle', color: '#22c55e', bg: '#0c2a1a', label: 'Aporte' },
+  APORTE_FINANCEIRO: { icon: 'ti-arrow-down-circle', color: '#22c55e', bg: '#0c2a1a', label: 'Aporte' },
+  SAQUE:         { icon: 'ti-arrow-up-circle',   color: '#f59e0b', bg: '#1a1500', label: 'Saque' },
+  SCAN:          { icon: 'ti-shield-x',          color: '#a855f7', bg: '#1a1020', label: 'Scan' },
+  PERDA_OPERACIONAL: { icon: 'ti-shield-x',      color: '#a855f7', bg: '#1a1020', label: 'Scan' },
+  TRANSFERENCIA: { icon: 'ti-arrows-exchange',   color: '#22d3ee', bg: '#0a2030', label: 'Transferência' },
+  CONVERSAO:     { icon: 'ti-refresh',           color: '#818cf8', bg: '#12102a', label: 'Conversão' },
+  SWAP:          { icon: 'ti-refresh',           color: '#818cf8', bg: '#12102a', label: 'Swap' },
+  TAXA:          { icon: 'ti-receipt',           color: '#6b7280', bg: '#161b27', label: 'Taxa' },
+  AJUSTE:        { icon: 'ti-adjustments',       color: '#94a3b8', bg: '#161b27', label: 'Ajuste' },
+};
+
+function TransactionIcon({ type }: { type: string }) {
+  const cfg = TX_TYPES[type] ?? TX_TYPES.AJUSTE;
+  return (
+    <div style={{
+      width: 36, height: 36,
+      borderRadius: 10,
+      background: cfg.bg,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      flexShrink: 0,
+    }}>
+      <i className={`ti ${cfg.icon}`} aria-hidden="true"
+         style={{ fontSize: 17, color: cfg.color }} />
+    </div>
+  );
+}
+
+function TransactionBadge({ type, label }: { type: string, label?: string }) {
+  const cfg = TX_TYPES[type] ?? TX_TYPES.AJUSTE;
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      fontSize: 10, fontWeight: 500,
+      padding: '2px 7px', borderRadius: 4,
+      background: cfg.bg, color: cfg.color,
+      marginBottom: 3,
+    }}>
+      <i className={`ti ${cfg.icon}`} aria-hidden="true" style={{ fontSize: 9 }} />
+      {label ?? cfg.label}
+    </span>
+  );
+}
+
 const TIPO_OPTIONS = [
   { value: "TRANSFERENCIA", label: "Transferência" },
   { value: "DEPOSITO", label: "Depósito" },
@@ -49,6 +94,7 @@ const TIPO_OPTIONS = [
   { value: "SWAP", label: "Swap Crypto" },
   { value: "OUTROS", label: "Outros" },
 ];
+
 
 const getStatusBadge = (status: string) => {
   switch (status) {
