@@ -738,8 +738,9 @@ export function HistoricoMovimentacoes({
 
           </div>
         </div>
-      </CardHeader>
-      <CardContent>
+      </div>
+      <div>
+
         {loading ? (
           <div className="text-center py-8 text-muted-foreground">Carregando...</div>
         ) : transacoesFiltradas.length === 0 ? (
