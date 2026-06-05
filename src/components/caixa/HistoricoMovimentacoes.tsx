@@ -634,13 +634,11 @@ export function HistoricoMovimentacoes({
               onChange={setFiltroProjeto}
               projetos={projetos}
             />
-            {/* Parceiro filter with search */}
             <ParceiroFilterSelect
               value={filtroParceiro}
               onChange={setFiltroParceiro}
               parceiros={parceirosLista}
             />
-             {/* Casa (Bookmaker) filter with search */}
              <BookmakerFilterCombobox
                bookmakers={bookmakerOptions}
                selectedIds={filtroBookmakerIds}
@@ -651,6 +649,7 @@ export function HistoricoMovimentacoes({
                label="Casa"
                searchPlaceholder="Buscar casa…"
              />
+
  
              {/* Tag filter - Multi-select */}
              {availableTags.length > 0 && (
@@ -726,13 +725,23 @@ export function HistoricoMovimentacoes({
                  </Popover>
                </div>
              )}
-            <DashboardPeriodFilterBar
-              value={periodFilter}
-              onChange={handlePeriodChange}
-              customRange={periodFilter === "custom" && dataInicio && dataFim ? { start: dataInicio, end: dataFim } : undefined}
-              onCustomRangeChange={handleCustomRangeChange}
-              size="sm"
-            />
+            <div className="ml-auto flex items-center gap-1.5">
+              {["mês", "anterior", "ano", "tudo"].map((p) => (
+                <button
+                  key={p}
+                  onClick={() => handlePeriodChange(p as DashboardPeriodFilter)}
+                  className={cn(
+                    "text-[11px] px-3 py-1 rounded-full transition-all",
+                    periodFilter === p 
+                      ? "bg-[var(--accent-success)] text-white" 
+                      : "text-[var(--text-faint)] hover:text-[var(--text-muted)]"
+                  )}
+                >
+                  {p === "tudo" ? "Tudo" : p.charAt(0).toUpperCase() + p.slice(1)}
+                </button>
+              ))}
+            </div>
+
           </div>
         </div>
       </CardHeader>
@@ -748,8 +757,81 @@ export function HistoricoMovimentacoes({
           <div className="space-y-3">
             <ScrollArea className="h-[500px]">
               <div className="space-y-2 pr-4">
-                {pagination.paginatedItems.map((transacao) => (
-                  <div key={transacao.id} className="group flex items-center justify-between p-4 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors">
+                {pagination.paginatedItems.map((transacao) => {
+                  const isScan = transacao.tipo_transacao === "PERDA_OPERACIONAL";
+                  return (
+                  <div 
+                    key={transacao.id} 
+                    className="grid grid-cols-[auto_1fr_auto] gap-3 items-center py-3 border-b border-[#131920] last:border-0 group transition-all"
+                  >
+                    {/* Coluna 1 — ícone de tipo */}
+                    <div 
+                      className={cn(
+                        "w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0",
+                        isScan ? "bg-[#1a1020]" : "bg-[var(--bg-hover)]"
+                      )}
+                    >
+                      <i 
+                        className={cn(
+                          "text-base",
+                          isScan ? "ti ti-scan text-[#a855f7]" : "ti ti-arrows-exchange text-[var(--text-muted)]"
+                        )}
+                        aria-hidden="true"
+                      ></i>
+                    </div>
+
+                    {/* Coluna 2 — detalhes */}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className={cn(
+                          "text-[10px] font-bold px-2 py-0.5 rounded-[4px] flex items-center gap-1 uppercase",
+                          isScan ? "bg-[#1a1020] text-[#a855f7]" : "bg-[var(--bg-input)] text-[var(--text-muted)]"
+                        )}>
+                          {isScan && <i className="ti ti-scan text-[9px]"></i>}
+                          {getTipoLabel(transacao.tipo_transacao, transacao)}
+                        </span>
+                        <span className="text-[12px] font-medium text-[var(--text-secondary)] truncate">
+                          {isScan ? transacao.descricao?.replace(/\[SCAN.*?\]\s*/i, '') : getOrigemLabel(transacao)}
+                        </span>
+                      </div>
+                      
+                      <p className="text-[11px] text-[var(--text-faint)] truncate">
+                        {isScan ? "Prejuízo operacional" : getDestinoLabel(transacao)}
+                      </p>
+
+                      {isScan && (
+                        <div className="mt-1 flex">
+                          <span className="badge-scan flex items-center gap-1">
+                            <i className="ti ti-alert-triangle text-[8px]"></i>
+                            Perda de Capital
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Coluna 3 — valores */}
+                    <div className="text-right">
+                      <p className="text-[14px] font-medium text-[var(--text-primary)] tabular-nums">
+                        {formatCurrencyDynamic(Math.abs(getValorEfetivo(transacao)), getMoedaEfetiva(transacao))}
+                      </p>
+                      <p className="text-[10px] text-[var(--text-faint)] mt-0.5 tabular-nums">
+                        {(() => {
+                          const dk = extractCivilDateKey(transacao.data_transacao);
+                          if (!dk) return '-';
+                          const [y, m, d] = dk.split('-');
+                          return `${d}/${m}/${y}`;
+                        })()}
+                      </p>
+                      {transacao.user_id && usuariosMap[transacao.user_id] && (
+                        <p className="text-[9px] text-[var(--text-ghost)] mt-px">
+                          por {usuariosMap[transacao.user_id].toUpperCase()}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  );
+                })}
+
                 <div className="flex items-center gap-4 flex-1">
                    <div className="flex flex-col gap-1">
                      <Badge className={getTipoColor(transacao.tipo_transacao, transacao)}>
