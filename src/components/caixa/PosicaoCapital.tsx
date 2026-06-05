@@ -38,6 +38,9 @@ interface PosicaoCapitalProps {
   onViewPerdas?: () => void;
 }
 
+const isDev = process.env.NODE_ENV === 'development';
+
+
 const CURRENCY_COLORS: Record<string, { bg: string, color: string }> = {
   BRL:  { bg: '#0c2a1a', color: '#22c55e' },
   ETH:  { bg: '#0e2d36', color: '#0e7490' },
