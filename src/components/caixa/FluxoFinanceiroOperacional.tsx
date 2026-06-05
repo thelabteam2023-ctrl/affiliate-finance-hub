@@ -9,7 +9,11 @@ import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 import { format, isWithinInterval, subDays, subMonths, startOfMonth } from "date-fns";
 import { parseLocalDate } from "@/lib/dateUtils";
 import { ptBR } from "date-fns/locale";
-import { TrendingUp, TrendingDown, ArrowRightLeft, AlertCircle, Building2, Users, HelpCircle, CalendarIcon } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowRightLeft, AlertCircle, Building2, Users, HelpCircle, CalendarIcon, MoreVertical, Wrench, CheckCircle2, ShieldAlert } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AjusteManualDialog } from "./AjusteManualDialog";
+import { ReconciliacaoDialog } from "./ReconciliacaoDialog";
+import { ReportarScanDialog } from "./ReportarScanDialog";
 import { cn } from "@/lib/utils";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { getCurrencySymbol } from "@/types/currency";
@@ -152,6 +156,10 @@ export function FluxoFinanceiroOperacional({
   const [customStartDate, setCustomStartDate] = useState<Date | undefined>(subDays(new Date(), 30));
   const [customEndDate, setCustomEndDate] = useState<Date | undefined>(new Date());
   const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
+  
+  const [isAjusteOpen, setIsAjusteOpen] = useState(false);
+  const [isReconciliacaoOpen, setIsReconciliacaoOpen] = useState(false);
+  const [isScanOpen, setIsScanOpen] = useState(false);
   
   // Buscar todas as cotações para normalizar as barras do gráfico
   const { cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMXN, cotacaoMYR, cotacaoARS, cotacaoCOP } = useCotacoes();

@@ -187,13 +187,8 @@ export function ReportarScanDialog({
       if (!user || !workspaceId) throw new Error("Acesso negado");
 
       const valorNum = parseFloat(valor);
-      
-      // Para CASA_APOSTA, usamos transacoes_bookmakers (que tem bookmaker_id)
-      // Para PARCEIRO_CONTA, precisamos de uma transação que impacte o parceiro, 
-      // mas transacoes_bookmakers não tem conta_bancaria_id.
-      // Vou usar transacoes_bookmakers para o scan de casa.
-      // Para o scan de parceiro, vamos ter que usar outra tabela ou criar um registro genérico.
-      // O sistema parece usar transacoes_bookmakers para tudo que impacta bookmakers.
+      const isCrypto = CRYPTO_CURRENCIES.some(c => c.value === moeda);
+      const cotacao = moeda !== "BRL" ? getRate(moeda) : 1;
       
       if (tipoOrigem === "CASA_APOSTA") {
         const { error } = await supabase.from("cash_ledger").insert({
@@ -209,7 +204,7 @@ export function ReportarScanDialog({
           data_transacao: getTodayCivilDate(),
           origem_tipo: "BOOKMAKER",
           origem_bookmaker_id: bookmakerId,
-          destino_tipo: "PERDA", // Identificador de perda
+          destino_tipo: "PERDA",
           impacta_caixa_operacional: false,
           ajuste_motivo: `SCAN: ${motivo}`,
           ajuste_direcao: "SAIDA",
@@ -236,7 +231,7 @@ export function ReportarScanDialog({
           origem_tipo: "PARCEIRO_CONTA",
           origem_conta_bancaria_id: contaId,
           destino_tipo: "PERDA",
-          impacta_caixa_operacional: true, // Scan de parceiro impacta o caixa (o dinheiro sumiu da conta que o caixa controla)
+          impacta_caixa_operacional: true,
           ajuste_motivo: `SCAN: ${motivo}`,
           ajuste_direcao: "SAIDA",
           cotacao: cotacao,
