@@ -357,8 +357,14 @@ export function ModernBarChart({
               animationEasing={disableAnimations ? "linear" : "ease-out"}
             >
               {data.map((entry, index) => {
-                const value = entry[bar.dataKey];
+                const value = typeof entry[bar.dataKey] === 'number' ? entry[bar.dataKey] : 0;
                 let fillUrl = `url(#barGradient-${bar.dataKey})`;
+                
+                // CRITICAL FIX: Ensure bars with zero value are NOT rendered (preventing dark ghost bars)
+                if (value === 0) {
+                  return null;
+                }
+
                 
                 if (dynamicColors && typeof value === 'number') {
                   if (value < 0) {
