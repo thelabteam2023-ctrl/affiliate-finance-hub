@@ -17,6 +17,7 @@ interface CapitalSegment {
   id: string;
   name: string;
   color: string;
+  colorHex: string;
   pct: number;             
   value: number;
   valueFormatted: string;  
@@ -40,6 +41,12 @@ interface PosicaoCapitalProps {
 
 const isDev = process.env.NODE_ENV === 'development';
 
+const DONUT_COLORS: Record<string, string> = {
+  'bookmakers':  '#818cf8',
+  'caixa-op':    '#22d3ee',
+  'wallets':     '#4ade80',
+  'contas-parc': '#f59e0b',
+};
 
 const CURRENCY_COLORS: Record<string, { bg: string, color: string }> = {
   BRL:  { bg: '#0c2a1a', color: '#22c55e' },
@@ -50,6 +57,7 @@ const CURRENCY_COLORS: Record<string, { bg: string, color: string }> = {
   LTC:  { bg: '#1a1f2a', color: '#94a3b8' },
   USD:  { bg: '#0a1a2a', color: '#22d3ee' },
 };
+
 
 function CurrencyTag({ currency }: { currency: string }) {
   const cfg = CURRENCY_COLORS[currency] ?? { bg: '#161b27', color: '#6b7280' };
@@ -239,9 +247,10 @@ export function PosicaoCapital({
         id: item.id,
         name: item.name,
         color: item.color,
+        colorHex: DONUT_COLORS[item.id] || '#6b7280',
         value: segmentValue,
         valueFormatted: `R$ ${Math.round(segmentValue).toLocaleString('pt-BR')}`,
-        pct: pct, // Usamos o valor bruto para precisão no cálculo do SVG
+        pct: pct, 
         detail: item.id === 'bookmakers' 
           ? `R$ ${Math.round(item.breakdown[0].amount).toLocaleString('pt-BR')} · ${item.breakdown.length} moedas`
           : item.id === 'caixa-op'
@@ -277,14 +286,9 @@ export function PosicaoCapital({
       cumulativePct += item.pct;
     });
 
-    // 6. Arredondar para exibição APENAS no final
-    const finalItems = items.map(it => ({
-      ...it,
-      pct: Number(it.pct.toFixed(2))
-    }));
-
-    return { items: finalItems, total: totalBRL };
+    return { items, total: totalBRL };
   }, []);
+
 
 
 
@@ -322,7 +326,7 @@ export function PosicaoCapital({
                   cy="70"
                   r="52"
                   fill="none"
-                  stroke={item.color}
+                  stroke={item.colorHex}
                   strokeWidth={isActive ? 22 : 18}
                   strokeDasharray={`${isMounted ? item.dashFilled : 0} ${2 * Math.PI * 52}`}
                   strokeDashoffset={item.dashOffset}
@@ -334,6 +338,7 @@ export function PosicaoCapital({
                     opacity: isOtherActive ? 0.35 : 1.0
                   }}
                 />
+
               );
             })}
             
@@ -506,13 +511,14 @@ export function PosicaoCapital({
                   </div>
 
                   <div className="text-right">
-                    <p className="text-[11px] text-[var(--text-muted)] tabular-nums mb-px">{item.pct}%</p>
+                    <p className="text-[11px] text-[var(--text-muted)] tabular-nums mb-px">{item.pct.toFixed(2)}%</p>
                     <p className="font-medium tabular-nums transition-all" style={{ 
                       color: item.color,
                       fontSize: isActive ? 14 : 13
                     }}>
                       {item.valueFormatted}
                     </p>
+
                   </div>
 
                   <div className="flex items-center justify-center pl-1">
