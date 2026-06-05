@@ -120,18 +120,12 @@ export function PosicaoCapital({
   };
 
   const dadosPosicao = useMemo(() => {
-    const items: CapitalSegment[] = [
+    // Definimos os valores base de cada segmento
+    const rawItems = [
       { 
         id: 'bookmakers', 
         name: "Bookmakers", 
-        value: 99445, 
-        pct: 56.1, 
         color: "var(--seg-bookmakers)", 
-        valueFormatted: 'R$ 99.445',
-        detail: "R$ 30.197 · 3 moedas", 
-        dashFilled: 183.3, 
-        dashEmpty: 143.4, 
-        dashOffset: -81.75,
         breakdown: [
           {
             id: 'brl',
@@ -141,7 +135,6 @@ export function PosicaoCapital({
             amountFormatted: 'R$ 30.197,00',
             amountBRL: 30197,
             amountBRLFormatted: '30.197,00',
-            pctOfSegment: 30.4,
           },
           {
             id: 'usdc',
@@ -151,21 +144,13 @@ export function PosicaoCapital({
             amountFormatted: 'US$ 13.800,00',
             amountBRL: 69248,
             amountBRLFormatted: '69.248,00',
-            pctOfSegment: 69.6,
           }
         ]
       },
       { 
         id: 'caixa-op', 
         name: "Caixa Operacional", 
-        value: 36870, 
-        pct: 20.8, 
         color: "var(--seg-caixa-op)", 
-        valueFormatted: 'R$ 36.870',
-        detail: "R$ 4 · 1 moeda", 
-        dashFilled: 67.9, 
-        dashEmpty: 258.8, 
-        dashOffset: -265.05,
         breakdown: [
           {
             id: 'caixa-fiat',
@@ -175,7 +160,6 @@ export function PosicaoCapital({
             amountFormatted: 'R$ 4,20',
             amountBRL: 4.20,
             amountBRLFormatted: '4,20',
-            pctOfSegment: 0.01,
           },
           {
             id: 'caixa-crypto',
@@ -185,21 +169,13 @@ export function PosicaoCapital({
             amountFormatted: 'US$ 7.137,92',
             amountBRL: 36865.80,
             amountBRLFormatted: '36.865,80',
-            pctOfSegment: 99.99,
           }
         ]
       },
       { 
         id: 'wallets', 
         name: "Wallets Parceiros", 
-        value: 36584, 
-        pct: 20.6, 
         color: "var(--seg-wallets)", 
-        valueFormatted: 'R$ 36.584',
-        detail: "$7.083 USD", 
-        dashFilled: 67.3, 
-        dashEmpty: 259.4, 
-        dashOffset: -332.95,
         breakdown: [
           {
             id: 'wallets-total',
@@ -209,21 +185,13 @@ export function PosicaoCapital({
             amountFormatted: 'US$ 7.083,00',
             amountBRL: 36584,
             amountBRLFormatted: '36.584,00',
-            pctOfSegment: 100,
           }
         ]
       },
       { 
         id: 'contas-parc', 
         name: "Contas Parceiros", 
-        value: 4405, 
-        pct: 2.5, 
         color: "var(--seg-contas-parc)", 
-        valueFormatted: 'R$ 4.405',
-        detail: "R$ 4.405", 
-        dashFilled: 8.2, 
-        dashEmpty: 318.5, 
-        dashOffset: -400.25,
         breakdown: [
           {
             id: 'banco-parc',
@@ -233,15 +201,68 @@ export function PosicaoCapital({
             amountFormatted: 'R$ 4.405,00',
             amountBRL: 4405,
             amountBRLFormatted: '4.405,00',
-            pctOfSegment: 100,
           }
         ]
       },
     ];
-    
-    const total = items.reduce((s, i) => s + i.value, 0);
-    return { items, total };
+
+    // Cálculo dinâmico para evitar discrepâncias manuais
+    const CIRCUMFERENCE = 2 * Math.PI * 52; // Aproximadamente 326.7
+    const totalBRL = rawItems.reduce((acc, item) => 
+      acc + item.breakdown.reduce((bAcc, b) => bAcc + b.amountBRL, 0), 0
+    );
+
+    let currentOffset = -90; // Começamos do topo (-90 graus)
+    const items: CapitalSegment[] = rawItems.map(item => {
+      const segmentValue = item.breakdown.reduce((acc, b) => acc + b.amountBRL, 0);
+      const pct = (segmentValue / totalBRL) * 100;
+      
+      const dashFilled = (pct / 100) * CIRCUMFERENCE;
+      const dashEmpty = CIRCUMFERENCE - dashFilled;
+      
+      // O offset no SVG stroke-dashoffset funciona invertido em relação à rotação
+      // Calculamos o offset baseando-se no preenchimento acumulado
+      const dashOffset = -((currentOffset + 90) / 360) * CIRCUMFERENCE;
+      
+      const segment: CapitalSegment = {
+        id: item.id,
+        name: item.name,
+        color: item.color,
+        value: segmentValue,
+        valueFormatted: `R$ ${Math.round(segmentValue).toLocaleString('pt-BR')}`,
+        pct: Number(pct.toFixed(1)),
+        detail: item.id === 'bookmakers' 
+          ? `R$ ${Math.round(item.breakdown[0].amount).toLocaleString('pt-BR')} · ${item.breakdown.length} moedas`
+          : item.id === 'caixa-op'
+          ? `R$ ${Math.round(item.breakdown[0].amount).toLocaleString('pt-BR')} · ${item.breakdown.length} moedas`
+          : item.id === 'wallets'
+          ? `$${Math.round(item.breakdown[0].amount).toLocaleString('pt-BR')} USD`
+          : `R$ ${Math.round(segmentValue).toLocaleString('pt-BR')}`,
+        dashFilled,
+        dashEmpty,
+        dashOffset: -( ( (totalBRL - segmentValue) / 2 ) / totalBRL ) * CIRCUMFERENCE, // Placeholder temporário
+        breakdown: item.breakdown.map(b => ({
+          ...b,
+          pctOfSegment: Number(((b.amountBRL / segmentValue) * 100).toFixed(2))
+        }))
+      };
+
+      return segment;
+    });
+
+    // Re-calculamos os offsets corretamente para que os segmentos fiquem encostados
+    let cumulativePct = 0;
+    items.forEach((item, index) => {
+      // O stroke-dashoffset do SVG começa no ponto (1,0) - 3 horas.
+      // Para começar no topo (12 horas), subtraímos 25% (90 graus) da circunferência.
+      const startPct = cumulativePct;
+      item.dashOffset = -((startPct / 100) * CIRCUMFERENCE) + (0.25 * CIRCUMFERENCE);
+      cumulativePct += item.pct;
+    });
+
+    return { items, total: totalBRL };
   }, []);
+
 
   return (
     <Card className="bg-[var(--bg-card)] border-[0.5px] border-[var(--border-default)] rounded-[12px] p-[18px_20px] overflow-visible">
@@ -279,8 +300,9 @@ export function PosicaoCapital({
                   fill="none"
                   stroke={item.color}
                   strokeWidth={isActive ? 22 : 18}
-                  strokeDasharray={`${isMounted ? item.dashFilled : 0} 326.7`}
+                  strokeDasharray={`${isMounted ? item.dashFilled : 0} ${2 * Math.PI * 52}`}
                   strokeDashoffset={item.dashOffset}
+
                   strokeLinecap="butt"
                   style={{ 
                     transition: "stroke-dasharray 0.8s ease-out, stroke-width 0.15s ease, opacity 0.15s ease",
@@ -299,8 +321,9 @@ export function PosicaoCapital({
                 fill="none"
                 stroke="transparent"
                 strokeWidth="24"
-                strokeDasharray={`${item.dashFilled} 326.7`}
+                strokeDasharray={`${item.dashFilled} ${2 * Math.PI * 52}`}
                 strokeDashoffset={item.dashOffset}
+
                 style={{ cursor: 'pointer' }}
                 onMouseEnter={() => setActiveSegment(item.id)}
                 onMouseLeave={() => {
