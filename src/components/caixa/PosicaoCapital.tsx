@@ -458,7 +458,7 @@ export function PosicaoCapital({
                   {seg.name}
                 </span>
                 <span className="text-[var(--text-muted)] ml-2">
-                  {seg.pct}% · {seg.valueFormatted}
+                  {seg.pct.toFixed(2)}% · {seg.valueFormatted}
                 </span>
               </div>
             );
