@@ -725,6 +725,7 @@ export default function Caixa() {
       ESTORNO_COMISSAO_INDICADOR: "Estorno Comissão",
       SWAP_OUT: "Swap Interno",
       SWAP_IN: "Swap Interno",
+      PERDA_OPERACIONAL: "Scan / Perda",
     };
     const base = labels[tipo] || tipo;
     
@@ -774,6 +775,7 @@ export default function Caixa() {
       ESTORNO_COMISSAO_INDICADOR: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
       SWAP_OUT: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
       SWAP_IN: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
+      PERDA_OPERACIONAL: "bg-red-500/20 text-red-400 border-red-500/30 font-bold",
     };
     return colors[tipo] || "bg-muted text-muted-foreground";
   };
