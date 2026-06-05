@@ -40,17 +40,17 @@ import { useRole } from "@/hooks/useRole";
 import { BookmakerFilterCombobox, type BookmakerFilterOption } from "@/components/ui/bookmaker-filter-combobox";
 const PAGE_SIZE = 50;
 
-const TX_TYPES: Record<string, { icon: string, color: string, bg: string, label: string }> = {
-  APORTE:        { icon: 'ti-building-bank',     color: '#22c55e', bg: 'transparent', label: 'Aporte' },
-  APORTE_FINANCEIRO: { icon: 'ti-building-bank', color: '#22c55e', bg: 'transparent', label: 'Aporte' },
-  SAQUE:         { icon: 'ti-wallet',            color: '#22c55e', bg: 'transparent', label: 'Saque' },
-  SCAN:          { icon: 'ti-shield-x',          color: '#a855f7', bg: 'transparent', label: 'Scan' },
-  PERDA_OPERACIONAL: { icon: 'ti-shield-x',      color: '#a855f7', bg: 'transparent', label: 'Scan' },
-  TRANSFERENCIA: { icon: 'ti-arrows-exchange-2', color: '#22d3ee', bg: 'transparent', label: 'Transferência' },
-  CONVERSAO:     { icon: 'ti-refresh',           color: '#818cf8', bg: 'transparent', label: 'Conversão' },
-  SWAP:          { icon: 'ti-refresh',           color: '#818cf8', bg: 'transparent', label: 'Swap' },
-  TAXA:          { icon: 'ti-receipt',           color: '#6b7280', bg: 'transparent', label: 'Taxa' },
-  AJUSTE:        { icon: 'ti-settings',          color: '#94a3b8', bg: 'transparent', label: 'Ajuste' },
+const TX_TYPES: Record<string, { icon: string, color: string, bg: string, label: string, badgeBg?: string }> = {
+  APORTE:        { icon: 'ti-building-bank',     color: '#22c55e', bg: 'transparent', badgeBg: '#0c2a1a', label: 'Aporte' },
+  APORTE_FINANCEIRO: { icon: 'ti-building-bank', color: '#22c55e', bg: 'transparent', badgeBg: '#0c2a1a', label: 'Aporte' },
+  SAQUE:         { icon: 'ti-wallet',            color: '#22c55e', bg: 'transparent', badgeBg: '#0c2a1a', label: 'Saque' },
+  SCAN:          { icon: 'ti-shield-x',          color: '#a855f7', bg: 'transparent', badgeBg: '#1a1020', label: 'Scan' },
+  PERDA_OPERACIONAL: { icon: 'ti-shield-x',      color: '#a855f7', bg: 'transparent', badgeBg: '#1a1020', label: 'Scan' },
+  TRANSFERENCIA: { icon: 'ti-arrows-exchange-2', color: '#22d3ee', bg: 'transparent', badgeBg: '#0a2030', label: 'Transferência' },
+  CONVERSAO:     { icon: 'ti-refresh',           color: '#818cf8', bg: 'transparent', badgeBg: '#12102a', label: 'Conversão' },
+  SWAP:          { icon: 'ti-refresh',           color: '#818cf8', bg: 'transparent', badgeBg: '#12102a', label: 'Swap' },
+  TAXA:          { icon: 'ti-receipt',           color: '#6b7280', bg: 'transparent', badgeBg: '#161b27', label: 'Taxa' },
+  AJUSTE:        { icon: 'ti-settings',          color: '#94a3b8', bg: 'transparent', badgeBg: '#161b27', label: 'Ajuste' },
 };
 
 function TransactionIcon({ type, transacao }: { type: string, transacao?: any }) {
@@ -98,7 +98,7 @@ function TransactionBadge({ type, label }: { type: string, label?: string }) {
       display: 'inline-flex', alignItems: 'center', gap: 4,
       fontSize: 10, fontWeight: 500,
       padding: '2px 7px', borderRadius: 4,
-      background: cfg.bg, color: cfg.color,
+      background: cfg.badgeBg ?? cfg.bg, color: cfg.color,
       marginBottom: 3,
     }}>
       <i className={`ti ${cfg.icon}`} aria-hidden="true" style={{ fontSize: 9 }} />
