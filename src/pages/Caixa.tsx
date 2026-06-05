@@ -1224,8 +1224,9 @@ export default function Caixa() {
             }}
           />
 
-          {/* Container com Abas */}
+          {/* 4. Seção de Histórico (tabs + filtros + lista) */}
           <CaixaTabsContainer
+
             transacoes={transacoes}
             pendingTransactions={pendingTransactions}
             parceiros={parceiros}
