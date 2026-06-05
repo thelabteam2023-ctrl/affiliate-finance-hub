@@ -1145,8 +1145,9 @@ export default function Caixa() {
       </div>
 
       {/* PageContent - ÚNICO scroll vertical */}
-      <div className="flex-1 min-h-0 overflow-y-auto bg-[var(--bg-page)]">
-        <div className="px-6 py-4 space-y-3">
+      <div className="flex-1 min-h-0 overflow-y-auto bg-[var(--bg-page)] custom-scrollbar">
+        <div className="px-6 py-4 space-y-[10px]">
+
 
           {/* Cards de topo (grid 3 colunas, gap 10px) */}
           <div className="grid gap-[10px] grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
@@ -1202,8 +1203,9 @@ export default function Caixa() {
           </div>
 
 
-          {/* Posição de Capital */}
+          {/* 3. Seção "Posição de Capital" */}
           <PosicaoCapital
+
             saldosFiat={saldosFiat}
             saldoCaixaCrypto={getTotalCryptoUSD()}
             saldosBookmakers={saldosBookmakersPorMoeda}
@@ -1222,8 +1224,9 @@ export default function Caixa() {
             }}
           />
 
-          {/* Container com Abas */}
+          {/* 4. Seção de Histórico (tabs + filtros + lista) */}
           <CaixaTabsContainer
+
             transacoes={transacoes}
             pendingTransactions={pendingTransactions}
             parceiros={parceiros}

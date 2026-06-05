@@ -507,37 +507,31 @@ export function HistoricoMovimentacoes({
 
   return (
     <>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Histórico de Movimentações</CardTitle>
-          <div className="text-right space-y-1">
-            <div className="text-sm text-muted-foreground">
-              {metricas.count} transações {termoBusca ? "encontradas" : "no período"}
-            </div>
-            {/* Métricas agregadas só aparecem quando há filtros ativos (tipo, parceiro ou projeto) */}
+      <div className="px-4 py-3">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <i className="ti ti-history text-[14px] text-[var(--accent-success)]"></i>
+            <span className="text-[13px] font-medium text-[var(--text-secondary)]">Histórico</span>
+          </div>
+          <div className="text-right">
+            {/* Métricas agregadas resumidas */}
             {(filtroTipo.length > 0 || (filtroParceiro && filtroParceiro !== "TODOS") || (filtroProjeto && filtroProjeto !== "TODOS")) && metricas.moedas.length > 0 && (
-              <div className="flex flex-col items-end gap-1">
-                {metricas.moedas.map(({ moeda, total, confirmado, pendente }) => (
+              <div className="flex flex-col items-end gap-0.5">
+                {metricas.moedas.slice(0, 1).map(({ moeda, total, confirmado }) => (
                   <div key={moeda} className="flex flex-col items-end">
-                    <span className="text-sm font-semibold text-primary">
-                      Total: {formatCurrencyDynamic(total, moeda)}
+                    <span className="text-[14px] font-medium text-[var(--text-primary)] tabular-nums">
+                      {formatCurrencyDynamic(total, moeda)}
                     </span>
-                    <div className="flex items-center gap-3 text-[11px]">
-                      <span className="text-emerald-400">
-                        Creditado: {formatCurrencyDynamic(confirmado, moeda)}
-                      </span>
-                      {pendente > 0 && (
-                        <span className="text-yellow-400">
-                          Pendente: {formatCurrencyDynamic(pendente, moeda)}
-                        </span>
-                      )}
-                    </div>
+                    <span className="text-[10px] text-[var(--accent-success)] tabular-nums">
+                      Creditado: {formatCurrencyDynamic(confirmado, moeda)}
+                    </span>
                   </div>
                 ))}
               </div>
             )}
           </div>
         </div>
+
         <div className="space-y-4 mt-4">
           {/* Campo de busca */}
           <div className="relative">
@@ -744,8 +738,9 @@ export function HistoricoMovimentacoes({
 
           </div>
         </div>
-      </CardHeader>
-      <CardContent>
+      </div>
+      <div>
+
         {loading ? (
           <div className="text-center py-8 text-muted-foreground">Carregando...</div>
         ) : transacoesFiltradas.length === 0 ? (
@@ -756,540 +751,86 @@ export function HistoricoMovimentacoes({
         ) : (
           <div className="space-y-3">
             <ScrollArea className="h-[500px]">
-              <div className="space-y-2 pr-4">
+              <div className="space-y-0 pr-4">
                 {pagination.paginatedItems.map((transacao) => {
                   const isScan = transacao.tipo_transacao === "PERDA_OPERACIONAL";
                   return (
-                  <div 
-                    key={transacao.id} 
-                    className="grid grid-cols-[auto_1fr_auto] gap-3 items-center py-3 border-b border-[#131920] last:border-0 group transition-all"
-                  >
-                    {/* Coluna 1 — ícone de tipo */}
                     <div 
-                      className={cn(
-                        "w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0",
-                        isScan ? "bg-[#1a1020]" : "bg-[var(--bg-hover)]"
-                      )}
+                      key={transacao.id} 
+                      className="grid grid-cols-[auto_1fr_auto] gap-3 items-center py-3 border-b border-[#131920] last:border-0 group transition-all"
                     >
-                      <i 
+                      {/* Coluna 1 — ícone de tipo */}
+                      <div 
                         className={cn(
-                          "text-base",
-                          isScan ? "ti ti-scan text-[#a855f7]" : "ti ti-arrows-exchange text-[var(--text-muted)]"
+                          "w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0",
+                          isScan ? "bg-[#1a1020]" : "bg-[var(--bg-hover)]"
                         )}
-                        aria-hidden="true"
-                      ></i>
-                    </div>
-
-                    {/* Coluna 2 — detalhes */}
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5 mb-0.5">
-                        <span className={cn(
-                          "text-[10px] font-bold px-2 py-0.5 rounded-[4px] flex items-center gap-1 uppercase",
-                          isScan ? "bg-[#1a1020] text-[#a855f7]" : "bg-[var(--bg-input)] text-[var(--text-muted)]"
-                        )}>
-                          {isScan && <i className="ti ti-scan text-[9px]"></i>}
-                          {getTipoLabel(transacao.tipo_transacao, transacao)}
-                        </span>
-                        <span className="text-[12px] font-medium text-[var(--text-secondary)] truncate">
-                          {isScan ? transacao.descricao?.replace(/\[SCAN.*?\]\s*/i, '') : getOrigemLabel(transacao)}
-                        </span>
+                      >
+                        <i 
+                          className={cn(
+                            "text-base",
+                            isScan ? "ti ti-scan text-[#a855f7]" : "ti ti-arrows-exchange text-[var(--text-muted)]"
+                          )}
+                          aria-hidden="true"
+                        ></i>
                       </div>
-                      
-                      <p className="text-[11px] text-[var(--text-faint)] truncate">
-                        {isScan ? "Prejuízo operacional" : getDestinoLabel(transacao)}
-                      </p>
 
-                      {isScan && (
-                        <div className="mt-1 flex">
-                          <span className="badge-scan flex items-center gap-1">
-                            <i className="ti ti-alert-triangle text-[8px]"></i>
-                            Perda de Capital
+                      {/* Coluna 2 — detalhes */}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <span className={cn(
+                            "text-[10px] font-bold px-2 py-0.5 rounded-[4px] flex items-center gap-1 uppercase",
+                            isScan ? "bg-[#1a1020] text-[#a855f7]" : "bg-[var(--bg-input)] text-[var(--text-muted)]"
+                          )}>
+                            {isScan && <i className="ti ti-scan text-[9px]"></i>}
+                            {getTipoLabel(transacao.tipo_transacao, transacao)}
+                          </span>
+                          <span className="text-[12px] font-medium text-[var(--text-secondary)] truncate">
+                            {isScan ? transacao.descricao?.replace(/\[SCAN.*?\]\s*/i, '') : getOrigemLabel(transacao)}
                           </span>
                         </div>
-                      )}
-                    </div>
-
-                    {/* Coluna 3 — valores */}
-                    <div className="text-right">
-                      <p className="text-[14px] font-medium text-[var(--text-primary)] tabular-nums">
-                        {formatCurrencyDynamic(Math.abs(getValorEfetivo(transacao)), getMoedaEfetiva(transacao))}
-                      </p>
-                      <p className="text-[10px] text-[var(--text-faint)] mt-0.5 tabular-nums">
-                        {(() => {
-                          const dk = extractCivilDateKey(transacao.data_transacao);
-                          if (!dk) return '-';
-                          const [y, m, d] = dk.split('-');
-                          return `${d}/${m}/${y}`;
-                        })()}
-                      </p>
-                      {transacao.user_id && usuariosMap[transacao.user_id] && (
-                        <p className="text-[9px] text-[var(--text-ghost)] mt-px">
-                          por {usuariosMap[transacao.user_id].toUpperCase()}
+                        
+                        <p className="text-[11px] text-[var(--text-faint)] truncate">
+                          {isScan ? "Prejuízo operacional" : getDestinoLabel(transacao)}
                         </p>
-                      )}
-                    </div>
-                  </div>
-                  );
-                })}
 
-                <div className="flex items-center gap-4 flex-1">
-                   <div className="flex flex-col gap-1">
-                     <Badge className={getTipoColor(transacao.tipo_transacao, transacao)}>
-                       {getTipoLabel(transacao.tipo_transacao, transacao)}
-                     </Badge>
-                      {transacao.tags && Array.isArray(transacao.tags) && transacao.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {transacao.tags.map((tag: string) => (
-                            <span 
-                              key={tag} 
-                              className={cn(
-                                "text-[9px] px-1.5 py-0.5 rounded border font-medium",
-                                getTagColor(tag)
-                              )}
-                            >
-                              {tag}
+                        {isScan && (
+                          <div className="mt-1 flex">
+                            <span className="badge-scan flex items-center gap-1">
+                              <i className="ti ti-alert-triangle text-[8px]"></i>
+                              Perda de Capital
                             </span>
-                          ))}
-                        </div>
-                      )}
-                   </div>
-                  {transacao.reversed_at && (
-                    <Badge variant="outline" className="border-amber-500/40 text-amber-500 bg-amber-500/10">
-                      <Undo2 className="h-3 w-3 mr-1" />
-                      Revertido
-                    </Badge>
-                  )}
-                  {typeof transacao.descricao === "string" && transacao.descricao.startsWith("ESTORNO:") && (
-                    <Badge variant="outline" className="border-violet-500/40 text-violet-400 bg-violet-500/10">
-                      Estorno
-                    </Badge>
-                  )}
-                  <div className="flex items-center gap-2 flex-1">
-                    {transacao.tipo_transacao === "SAQUE" ? (
-                      <>
-                        <div className="flex items-center gap-2">
-                          {transacao.origem_bookmaker_id && bookmakers[transacao.origem_bookmaker_id] && (
-                            <>
-                              {(() => {
-                                const bookmakerNome = bookmakers[transacao.origem_bookmaker_id]?.nome;
-                                const logoUrl = getLogoUrl(bookmakerNome || '');
-                                return logoUrl ? (
-                                  <img src={logoUrl} alt={bookmakerNome} className="h-5 w-5 rounded object-contain bg-background" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                                ) : (
-                                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                                );
-                              })()}
-                              <div className="flex flex-col">
-                                <span className="text-sm text-muted-foreground">{bookmakers[transacao.origem_bookmaker_id]?.nome || 'Bookmaker'}</span>
-                                {(() => {
-                                  const origemInfo = getOrigemInfo ? getOrigemInfo(transacao) : null;
-                                  return origemInfo?.secondary && (
-                                    <span className="text-xs text-muted-foreground/70">{origemInfo.secondary}</span>
-                                  );
-                                })()}
-                              </div>
-                            </>
-                          )}
-                        </div>
-                        <ArrowRight className="h-4 w-4 text-primary" />
-                        <div className="flex items-center gap-2">
-                          <Wallet className="h-4 w-4 text-muted-foreground" />
-                          {(() => {
-                            const destinoInfo = getDestinoInfo ? getDestinoInfo(transacao) : null;
-                            const walletName = transacao.destino_wallet_id 
-                              ? walletsDetalhes.find(w => w.id === transacao.destino_wallet_id)?.exchange || 'Wallet' 
-                              : transacao.destino_conta_bancaria_id 
-                                ? contasBancarias.find(c => c.id === transacao.destino_conta_bancaria_id)?.banco || 'Conta' 
-                                : 'Destino';
-                            const wallet = transacao.destino_wallet_id 
-                              ? walletsDetalhes.find(w => w.id === transacao.destino_wallet_id)
-                              : null;
-                            const walletAddr = wallet?.endereco ? truncateAddress(wallet.endereco, 6, 4) : null;
-                            return (
-                              <div className="flex flex-col">
-                                <span className="text-sm text-muted-foreground">{walletName}</span>
-                                {destinoInfo?.secondary && (
-                                  <span className="text-xs text-muted-foreground/70">{destinoInfo.secondary}</span>
-                                )}
-                                {walletAddr && (
-                                  <span className="text-[10px] font-mono text-muted-foreground/50">{walletAddr}</span>
-                                )}
-                              </div>
-                            );
-                          })()}
-                        </div>
-                      </>
-                    ) : transacao.tipo_transacao === "DEPOSITO" ? (
-                      <>
-                        {/* Origem para depósito */}
-                        <div className="flex items-center gap-2">
-                          {transacao.origem_wallet_id ? (
-                            <Wallet className="h-4 w-4 text-muted-foreground" />
-                          ) : transacao.origem_conta_bancaria_id ? (
-                            <Building2 className="h-4 w-4 text-muted-foreground" />
-                          ) : null}
-                          {(() => {
-                            const origemInfo = getOrigemInfo ? getOrigemInfo(transacao) : { primary: getOrigemLabel(transacao) };
-                            const wallet = transacao.origem_wallet_id
-                              ? walletsDetalhes.find(w => w.id === transacao.origem_wallet_id)
-                              : null;
-                            const walletAddr = wallet?.endereco ? truncateAddress(wallet.endereco, 6, 4) : null;
-                            return (
-                              <div className="flex flex-col">
-                                <span className="text-sm text-muted-foreground">{origemInfo.primary}</span>
-                                {origemInfo.secondary && (
-                                  <span className="text-xs text-muted-foreground/70">{origemInfo.secondary}</span>
-                                )}
-                                {walletAddr && (
-                                  <span className="text-[10px] font-mono text-muted-foreground/50">{walletAddr}</span>
-                                )}
-                              </div>
-                            );
-                          })()}
-                        </div>
-                        <ArrowRight className="h-4 w-4 text-primary" />
-                        {/* Destino com logo da bookmaker */}
-                        <div className="flex items-center gap-2">
-                          {transacao.destino_bookmaker_id && bookmakers[transacao.destino_bookmaker_id] && (
-                            <>
-                              {(() => {
-                                const bookmakerNome = bookmakers[transacao.destino_bookmaker_id]?.nome;
-                                const logoUrl = getLogoUrl(bookmakerNome || '');
-                                return logoUrl ? (
-                                  <img src={logoUrl} alt={bookmakerNome} className="h-5 w-5 rounded object-contain bg-background" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                                ) : (
-                                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                                );
-                              })()}
-                              <div className="flex flex-col">
-                                <span className="text-sm text-muted-foreground">{bookmakers[transacao.destino_bookmaker_id]?.nome || 'Bookmaker'}</span>
-                                {(() => {
-                                  const destinoInfo = getDestinoInfo ? getDestinoInfo(transacao) : null;
-                                  return destinoInfo?.secondary && (
-                                    <span className="text-xs text-muted-foreground/70">{destinoInfo.secondary}</span>
-                                  );
-                                })()}
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        {/* Origem com nome secundário e possível logo */}
-                        {(() => {
-                          const origemInfo = getOrigemInfo ? getOrigemInfo(transacao) : { primary: getOrigemLabel(transacao) };
-                          const isBookmaker = transacao.origem_tipo === "BOOKMAKER" && transacao.origem_bookmaker_id;
-                          const bookmakerNome = isBookmaker ? bookmakers[transacao.origem_bookmaker_id]?.nome : null;
-                          const logoUrl = isBookmaker ? getLogoUrl(bookmakerNome || '') : null;
-                          return (
-                            <div className="flex items-center gap-2">
-                              {logoUrl && (
-                                <img src={logoUrl} alt={bookmakerNome || ''} className="h-5 w-5 rounded object-contain bg-background" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                              )}
-                              <div className="flex flex-col">
-                                <span className="text-sm text-muted-foreground">{origemInfo.primary}</span>
-                                {origemInfo.secondary && (
-                                  <span className="text-xs text-muted-foreground/70">{origemInfo.secondary}</span>
-                                )}
-                                {transacao.origem_wallet_id && (() => {
-                                  const wallet = transacao.origem_wallet_id
-                                    ? walletsDetalhes.find(w => w.id === transacao.origem_wallet_id)
-                                    : null;
-                                  const walletAddr = wallet?.endereco ? truncateAddress(wallet.endereco, 6, 4) : null;
-                                  return walletAddr ? <span className="text-[10px] font-mono text-muted-foreground/50">{walletAddr}</span> : null;
-                                })()}
-                              </div>
-                            </div>
-                          );
-                        })()}
-                        <ArrowRight className="h-4 w-4 text-primary flex-shrink-0" />
-                        {/* Destino com nome secundário e possível logo */}
-                        {(() => {
-                          const destinoInfo = getDestinoInfo ? getDestinoInfo(transacao) : { primary: getDestinoLabel(transacao) };
-                          const isBookmaker = transacao.destino_tipo === "BOOKMAKER" && transacao.destino_bookmaker_id;
-                          const bookmakerNome = isBookmaker ? bookmakers[transacao.destino_bookmaker_id]?.nome : null;
-                          const logoUrl = isBookmaker ? getLogoUrl(bookmakerNome || '') : null;
-                          return (
-                            <div className="flex items-center gap-2">
-                              {logoUrl && (
-                                <img src={logoUrl} alt={bookmakerNome || ''} className="h-5 w-5 rounded object-contain bg-background" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                              )}
-                              {destinoInfo.badgeLabel ? (
-                                <div className="flex flex-col gap-1">
-                                  <Badge variant="outline" className={`w-fit text-[11px] ${destinoInfo.badgeColor || ''}`}>
-                                    {destinoInfo.BadgeIcon && <destinoInfo.BadgeIcon className="h-3 w-3 mr-1" />}
-                                    {destinoInfo.badgeLabel}
-                                  </Badge>
-                                  {destinoInfo.primary && (
-                                    <span className="text-xs text-muted-foreground/70">: {destinoInfo.primary}</span>
-                                  )}
-                                </div>
-                              ) : (
-                                <div className="flex flex-col">
-                                  <span className="text-sm text-muted-foreground">{destinoInfo.primary}</span>
-                                  {destinoInfo.secondary && (
-                                    <span className="text-xs text-muted-foreground/70">{destinoInfo.secondary}</span>
-                                  )}
-                                  {transacao.destino_wallet_id && (() => {
-                                  const wallet = transacao.destino_wallet_id
-                                    ? walletsDetalhes.find(w => w.id === transacao.destino_wallet_id)
-                                    : null;
-                                  const walletAddr = wallet?.endereco ? truncateAddress(wallet.endereco, 6, 4) : null;
-                                    return walletAddr ? <span className="text-[10px] font-mono text-muted-foreground/50">{walletAddr}</span> : null;
-                                  })()}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })()}
-                        {transacao.descricao && (
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <button className="p-1 hover:bg-muted rounded-md"><Info className="h-4 w-4 text-muted-foreground" /></button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader><DialogTitle>Detalhes</DialogTitle></DialogHeader>
-                              <p className="text-sm text-muted-foreground">{transacao.descricao}</p>
-                            </DialogContent>
-                          </Dialog>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
-                    {/* Reconciliação: mostrar Antes → Depois */}
-                    {transacao.tipo_transacao === "AJUSTE_RECONCILIACAO" && transacao.auditoria_metadata ? (() => {
-                      const meta = transacao.auditoria_metadata as any;
-                      const saldoAntes = meta?.saldo_sistema_anterior;
-                      const saldoDepois = meta?.saldo_real_informado;
-                      const diff = meta?.diferenca;
-                      const moedaDisplay = transacao.moeda || "USD";
-                      const getCurrSym = (m: string) => {
-                        if (m === "BRL") return "R$";
-                        if (m === "USD" || m === "USDT" || m === "USDC") return "$";
-                        if (m === "EUR") return "€";
-                        return m + " ";
-                      };
-                      const sym = getCurrSym(moedaDisplay);
-                      const fmtVal = (v: number) => v?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0,00';
-                      return (
-                        <div className="flex flex-col items-end gap-0.5">
-                          <div className="flex items-center gap-1.5 text-xs">
-                            <span className="text-muted-foreground tabular-nums">{sym} {fmtVal(saldoAntes)}</span>
-                            <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                            <span className="font-medium text-foreground tabular-nums">{sym} {fmtVal(saldoDepois)}</span>
-                          </div>
-                          <div className={`text-xs font-medium tabular-nums ${diff > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {diff > 0 ? '+' : ''}{sym} {fmtVal(Math.abs(diff))}
-                          </div>
-                        </div>
-                      );
-                    })() : transacao.tipo_moeda === "CRYPTO" ? (
-                      <div className="flex flex-col items-end">
-                        {/* Cross-currency crypto: moeda_destino differs from coin (e.g. USDT→MXN) */}
-                        {transacao.moeda_destino && transacao.moeda_origem && transacao.moeda_destino !== transacao.moeda_origem && !["USD","USDT","USDC"].includes(transacao.moeda_destino) ? (
-                          <>
-                            <div className="font-medium">
-                              {formatCurrency(transacao.valor_destino ?? transacao.valor, transacao.moeda_destino)}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {transacao.qtd_coin} {transacao.coin} → {transacao.moeda_destino}
-                            </div>
-                            {transacao.cotacao_implicita && (
-                              <div className="text-[10px] text-muted-foreground/70">
-                                Taxa: 1 {transacao.moeda_origem} = {(1 / Number(transacao.cotacao_implicita)).toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })} {transacao.moeda_destino}
-                              </div>
-                            )}
-                          </>
-                        ) : (
-                          <>
-                            <div className="font-medium text-blue-400">${transacao.valor_usd?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0.00'} USD</div>
-                            <div className="text-xs text-muted-foreground">{transacao.qtd_coin} {transacao.coin}</div>
-                          </>
-                        )}
-                        {/* Mostrar valor recebido quando diferente do solicitado */}
-                        {transacao.tipo_transacao === "SAQUE" && transacao.status === "CONFIRMADO" && transacao.valor_confirmado != null && Number(transacao.valor_confirmado) !== Number(transacao.qtd_coin) && (
-                          <div className="text-xs mt-0.5">
-                            <span className="text-muted-foreground">Recebido: </span>
-                            <span className="text-emerald-400 font-medium">{Number(transacao.valor_confirmado)} {transacao.coin}</span>
                           </div>
                         )}
                       </div>
-                    ) : (
-                      <div className="flex flex-col items-end">
-                        <div className="font-medium">{formatCurrency(transacao.valor, transacao.moeda)}</div>
-                        {/* Mostrar valor recebido quando diferente do solicitado (FIAT) */}
-                        {transacao.tipo_transacao === "SAQUE" && transacao.status === "CONFIRMADO" && transacao.valor_confirmado != null && Number(transacao.valor_confirmado) !== Number(transacao.valor) && (
-                          <div className="text-xs mt-0.5">
-                            <span className="text-muted-foreground">Recebido: </span>
-                            <span className="text-emerald-400 font-medium">{formatCurrency(Number(transacao.valor_confirmado), transacao.moeda)}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  {transacao.tipo_transacao === "SAQUE" && transacao.status !== "CONFIRMADO" && getStatusBadge(transacao.status)}
-                  {transacao.tipo_transacao === "SAQUE" && transacao.status === "PENDENTE" && onConfirmarSaque && (
-                    <Button size="sm" variant="outline" onClick={() => onConfirmarSaque(transacao)} className="h-7 px-2 text-xs border-emerald-500/30 text-emerald-400">
-                      <CheckCircle2 className="h-3 w-3 mr-1" />Atualizar Status
-                    </Button>
-                  )}
-                  <div className="flex items-center gap-1 text-right min-w-[100px]">
-                    <div className="flex-1">
-                    {/* Para saques confirmados, mostrar data de solicitação e confirmação */}
-                   {transacao.tipo_transacao === "SAQUE" && transacao.status === "CONFIRMADO" && transacao.data_confirmacao ? (
-                      <div className="space-y-0.5">
-                        <div className="text-xs text-muted-foreground">
-                          Solicitado: {(() => {
+
+                      {/* Coluna 3 — valores */}
+                      <div className="text-right">
+                        <p className="text-[14px] font-medium text-[var(--text-primary)] tabular-nums">
+                          {formatCurrencyDynamic(Math.abs(getValorEfetivo(transacao)), getMoedaEfetiva(transacao))}
+                        </p>
+                        <p className="text-[10px] text-[var(--text-faint)] mt-0.5 tabular-nums">
+                          {(() => {
                             const dk = extractCivilDateKey(transacao.data_transacao);
                             if (!dk) return '-';
                             const [y, m, d] = dk.split('-');
-                            return `${d}/${m}`;
+                            return `${d}/${m}/${y}`;
                           })()}
-                        </div>
-                        <div className="text-sm font-medium text-emerald-400">
-                          Recebido: {(() => {
-                            const dk = extractCivilDateKey(transacao.data_confirmacao);
-                            if (!dk) return '-';
-                            const [y, m, d] = dk.split('-');
-                            return `${d}/${m}`;
-                          })()}
-                        </div>
-                        {(() => {
-                          const solicitacaoKey = extractCivilDateKey(transacao.data_transacao);
-                          const confirmacaoKey = extractCivilDateKey(transacao.data_confirmacao);
-                          if (!solicitacaoKey || !confirmacaoKey) return null;
-                          const [sy, sm, sd] = solicitacaoKey.split('-').map(Number);
-                          const [cy, cm, cd] = confirmacaoKey.split('-').map(Number);
-                          const solicitacao = new Date(sy, sm - 1, sd);
-                          const confirmacao = new Date(cy, cm - 1, cd);
-                          const diffMs = confirmacao.getTime() - solicitacao.getTime();
-                          const diffDias = Math.round(diffMs / (1000 * 60 * 60 * 24));
-                          if (diffDias > 0) {
-                            let diasUteis = 0;
-                            const cur = new Date(solicitacao);
-                            while (cur < confirmacao) {
-                              cur.setDate(cur.getDate() + 1);
-                              const dow = cur.getDay();
-                              if (dow !== 0 && dow !== 6) diasUteis++;
-                            }
-                            return (
-                              <div className="text-[10px] text-muted-foreground">
-                                {diffDias} {diffDias === 1 ? 'dia' : 'dias'} de espera · {diasUteis} {diasUteis === 1 ? 'útil' : 'úteis'}
-                              </div>
-                            );
-                          }
-                          return null;
-                        })()}
+                        </p>
+                        {transacao.user_id && usuariosMap[transacao.user_id] && (
+                          <p className="text-[9px] text-[var(--text-ghost)] mt-px">
+                            por {usuariosMap[transacao.user_id].toUpperCase()}
+                          </p>
+                        )}
                       </div>
-                    ) : (
-                      <>
-                        {(() => {
-                          const dk = extractCivilDateKey(transacao.data_transacao);
-                          if (!dk) return <div className="text-sm font-medium">-</div>;
-                          const [y, m, d] = dk.split('-');
-                          return <div className="text-sm font-medium">{d}/{m}/{y}</div>;
-                        })()}
-                      </>
-                    )}
-                    {transacao.user_id && usuariosMap[transacao.user_id] && (
-                      <div className="text-[10px] text-muted-foreground/70 mt-0.5">
-                        por {usuariosMap[transacao.user_id]}
-                      </div>
-                    )}
                     </div>
-                    {(() => {
-                      const isSaqueConfirmado = transacao.tipo_transacao === "SAQUE" && transacao.status === "CONFIRMADO" && transacao.data_confirmacao;
-                      const revertElig = canRevert(transacao, role);
-                      const deleteElig = canDelete(transacao, role);
-                      const resumo = `${transacao.tipo_transacao} · ${transacao.moeda} ${transacao.valor}`;
-                      return (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button
-                              className="p-1 rounded hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
-                              title="Ações"
-                            >
-                              <MoreVertical className="h-3.5 w-3.5" />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-56">
-                            <DropdownMenuItem onClick={() => {
-                              setEditDateId(transacao.id);
-                              setEditDateValue(transacao.data_transacao);
-                            }}>
-                              <Pencil className="h-3.5 w-3.5 mr-2" />
-                              {isSaqueConfirmado ? "Editar data solicitação" : "Editar data"}
-                            </DropdownMenuItem>
-                            {isSaqueConfirmado && (
-                              <DropdownMenuItem onClick={() => setEditConfirmado({
-                                id: transacao.id,
-                                dataConfirmacao: transacao.data_confirmacao,
-                                valorConfirmado: transacao.valor_confirmado ?? null,
-                                moeda: transacao.moeda,
-                                tipoCrypto: transacao.tipo_moeda === "CRYPTO",
-                                coin: transacao.coin || undefined,
-                              })}>
-                                <Pencil className="h-3.5 w-3.5 mr-2" />
-                                Editar recebimento
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem onClick={() => setEditTagsTx(transacao)}>
-                              <TagIcon className="h-3.5 w-3.5 mr-2" />
-                              Editar tags
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <TooltipProvider delayDuration={150}>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div>
-                                    <DropdownMenuItem
-                                      disabled={!revertElig.allowed}
-                                      onClick={() => revertElig.allowed && setReverterTx({ ...transacao, _resumo: resumo })}
-                                    >
-                                      <Undo2 className="h-3.5 w-3.5 mr-2" />
-                                      Reverter (estorno)
-                                    </DropdownMenuItem>
-                                  </div>
-                                </TooltipTrigger>
-                                {!revertElig.allowed && revertElig.reason && (
-                                  <TooltipContent side="left">{revertElig.reason}</TooltipContent>
-                                )}
-                              </Tooltip>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div>
-                                    <DropdownMenuItem
-                                      disabled={!deleteElig.allowed}
-                                      onClick={() => deleteElig.allowed && setExcluirTx({ ...transacao, _resumo: resumo })}
-                                      className="text-destructive focus:text-destructive"
-                                    >
-                                      <Trash2 className="h-3.5 w-3.5 mr-2" />
-                                      Excluir movimentação
-                                    </DropdownMenuItem>
-                                  </div>
-                                </TooltipTrigger>
-                                {!deleteElig.allowed && deleteElig.reason && (
-                                  <TooltipContent side="left">{deleteElig.reason}</TooltipContent>
-                                )}
-                              </Tooltip>
-                            </TooltipProvider>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      );
-                    })()}
-                  </div>
-                </div>
-              </div>
-            ))}
+                  );
+                })}
               </div>
             </ScrollArea>
-            
+
             {/* Paginação */}
-            {pagination.totalPages > 1 && (
+            <div className="mt-4 pt-4 border-t border-[var(--border-default)]">
               <SimplePagination
                 currentPage={pagination.currentPage}
                 totalPages={pagination.totalPages}
@@ -1302,12 +843,14 @@ export function HistoricoMovimentacoes({
                 onPrevPage={pagination.goToPrevPage}
                 onFirstPage={pagination.goToFirstPage}
                 onLastPage={pagination.goToLastPage}
-                className="pt-3 border-t border-border/50"
               />
-            )}
+            </div>
+
           </div>
+
         )}
-      </CardContent>
+      </div>
+
 
       {editDateId && (
         <EditarDataTransacaoDialog
