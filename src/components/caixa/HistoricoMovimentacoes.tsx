@@ -507,37 +507,31 @@ export function HistoricoMovimentacoes({
 
   return (
     <>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Histórico de Movimentações</CardTitle>
-          <div className="text-right space-y-1">
-            <div className="text-sm text-muted-foreground">
-              {metricas.count} transações {termoBusca ? "encontradas" : "no período"}
-            </div>
-            {/* Métricas agregadas só aparecem quando há filtros ativos (tipo, parceiro ou projeto) */}
+      <div className="px-4 py-3">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <i className="ti ti-history text-[14px] text-[var(--accent-success)]"></i>
+            <span className="text-[13px] font-medium text-[var(--text-secondary)]">Histórico</span>
+          </div>
+          <div className="text-right">
+            {/* Métricas agregadas resumidas */}
             {(filtroTipo.length > 0 || (filtroParceiro && filtroParceiro !== "TODOS") || (filtroProjeto && filtroProjeto !== "TODOS")) && metricas.moedas.length > 0 && (
-              <div className="flex flex-col items-end gap-1">
-                {metricas.moedas.map(({ moeda, total, confirmado, pendente }) => (
+              <div className="flex flex-col items-end gap-0.5">
+                {metricas.moedas.slice(0, 1).map(({ moeda, total, confirmado }) => (
                   <div key={moeda} className="flex flex-col items-end">
-                    <span className="text-sm font-semibold text-primary">
-                      Total: {formatCurrencyDynamic(total, moeda)}
+                    <span className="text-[14px] font-medium text-[var(--text-primary)] tabular-nums">
+                      {formatCurrencyDynamic(total, moeda)}
                     </span>
-                    <div className="flex items-center gap-3 text-[11px]">
-                      <span className="text-emerald-400">
-                        Creditado: {formatCurrencyDynamic(confirmado, moeda)}
-                      </span>
-                      {pendente > 0 && (
-                        <span className="text-yellow-400">
-                          Pendente: {formatCurrencyDynamic(pendente, moeda)}
-                        </span>
-                      )}
-                    </div>
+                    <span className="text-[10px] text-[var(--accent-success)] tabular-nums">
+                      Creditado: {formatCurrencyDynamic(confirmado, moeda)}
+                    </span>
                   </div>
                 ))}
               </div>
             )}
           </div>
         </div>
+
         <div className="space-y-4 mt-4">
           {/* Campo de busca */}
           <div className="relative">
