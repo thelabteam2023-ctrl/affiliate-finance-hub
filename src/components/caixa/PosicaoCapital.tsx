@@ -339,14 +339,15 @@ export function PosicaoCapital({
 
                   strokeLinecap="butt"
                   style={{ 
+                    stroke: item.colorHex,
                     transition: "stroke-dasharray 0.8s ease-out, stroke-width 0.15s ease, opacity 0.15s ease",
                     transitionDelay: isMounted ? '0s' : `${idx * 0.15}s`,
                     opacity: isOtherActive ? 0.35 : 1.0
                   }}
                 />
-
               );
             })}
+
             
             {/* Hit Areas (Invisíveis) */}
             {dadosPosicao.items.map((item) => (
