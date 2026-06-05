@@ -1,5 +1,31 @@
 import { useMemo, useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+
+interface BreakdownEntry {
+  id: string;              
+  label: string;           
+  currency: string;        
+  amount: number;          
+  amountFormatted: string; 
+  amountBRL: number;       
+  amountBRLFormatted: string; 
+  pctOfSegment: number;    
+}
+
+interface CapitalSegment {
+  id: string;
+  name: string;
+  color: string;
+  pct: number;             
+  value: number;
+  valueFormatted: string;  
+  detail: string;
+  dashFilled: number;
+  dashEmpty: number;
+  dashOffset: number;
+  breakdown: BreakdownEntry[];
+}
 
 interface PosicaoCapitalProps {
   saldosFiat: Array<{ moeda: string; saldo: number }>;
@@ -10,6 +36,57 @@ interface PosicaoCapitalProps {
   saldoWalletsParceiros: number;
   cotacaoUSD: number;
   onViewPerdas?: () => void;
+}
+
+const CURRENCY_COLORS: Record<string, { bg: string, color: string }> = {
+  BRL:  { bg: '#0c2a1a', color: '#22c55e' },
+  ETH:  { bg: '#0e2d36', color: '#0e7490' },
+  USDC: { bg: '#0c2a1a', color: '#22c55e' },
+  USDT: { bg: '#0c2a1a', color: '#22c55e' },
+  BTC:  { bg: '#1a1a0a', color: '#eab308' },
+  LTC:  { bg: '#1a1f2a', color: '#94a3b8' },
+  USD:  { bg: '#0a1a2a', color: '#22d3ee' },
+};
+
+function CurrencyTag({ currency }: { currency: string }) {
+  const cfg = CURRENCY_COLORS[currency] ?? { bg: '#161b27', color: '#6b7280' };
+  return (
+    <span style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: 10,
+      fontWeight: 600,
+      padding: '2px 6px',
+      borderRadius: 4,
+      background: cfg.bg,
+      color: cfg.color,
+      minWidth: 36,
+    }}>
+      {currency}
+    </span>
+  );
+}
+
+function BreakdownRow({ entry, segmentColor }: { entry: BreakdownEntry, segmentColor: string }) {
+  return (
+    <div className="flex items-center gap-3 py-2 px-2 hover:bg-[var(--bg-hover)] rounded-md transition-colors group/row">
+      <CurrencyTag currency={entry.currency} />
+      
+      <span className="text-[11px] text-[var(--text-secondary)] flex-1 truncate">
+        {entry.label}
+      </span>
+
+      <div className="text-right shrink-0">
+        <p className="text-[11px] font-medium text-[var(--text-primary)] tabular-nums">
+          {entry.amountFormatted}
+        </p>
+        <p className="text-[9px] text-[var(--text-faint)] tabular-nums">
+          {entry.currency !== 'BRL' ? `≈ R$ ${entry.amountBRLFormatted}` : `R$ ${entry.amountBRLFormatted}`}
+        </p>
+      </div>
+    </div>
+  );
 }
 
 export function PosicaoCapital({
@@ -24,26 +101,147 @@ export function PosicaoCapital({
 }: PosicaoCapitalProps) {
   const [isMounted, setIsMounted] = useState(false);
   const [activeSegment, setActiveSegment] = useState<string | null>(null);
+  const [expandedSegment, setExpandedSegment] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsMounted(true), 100);
     return () => clearTimeout(timer);
   }, []);
 
+  // Sincronizar activeSegment com expandedSegment
+  useEffect(() => {
+    if (expandedSegment) {
+      setActiveSegment(expandedSegment);
+    }
+  }, [expandedSegment]);
+
+  const handleSegmentClick = (id: string) => {
+    setExpandedSegment(prev => prev === id ? null : id);
+  };
+
   const dadosPosicao = useMemo(() => {
-    // These would normally be calculated from props, but the prompt defines specific values for the UI redesign
-    const raw = [
-      { id: 'bookmakers', name: "Bookmakers", value: 99445, percent: 56.1, color: "var(--seg-bookmakers)", detail: "R$ 30.197 · 3 moedas", dashFilled: 183.3, dashEmpty: 143.4, dashOffset: -81.75 },
-      { id: 'caixa-op', name: "Caixa Operacional", value: 36870, percent: 20.8, color: "var(--seg-caixa-op)", detail: "R$ 4 · 1 moeda", dashFilled: 67.9, dashEmpty: 258.8, dashOffset: -265.05 },
-      { id: 'wallets', name: "Wallets Parceiros", value: 36584, percent: 20.6, color: "var(--seg-wallets)", detail: "$7.083 USD", dashFilled: 67.3, dashEmpty: 259.4, dashOffset: -332.95 },
-      { id: 'contas-parc', name: "Contas Parceiros", value: 4405, percent: 2.5, color: "var(--seg-contas-parc)", detail: "R$ 4.405", dashFilled: 8.2, dashEmpty: 318.5, dashOffset: -400.25 },
+    const items: CapitalSegment[] = [
+      { 
+        id: 'bookmakers', 
+        name: "Bookmakers", 
+        value: 99445, 
+        pct: 56.1, 
+        color: "var(--seg-bookmakers)", 
+        valueFormatted: 'R$ 99.445',
+        detail: "R$ 30.197 · 3 moedas", 
+        dashFilled: 183.3, 
+        dashEmpty: 143.4, 
+        dashOffset: -81.75,
+        breakdown: [
+          {
+            id: 'brl',
+            label: 'Real Brasileiro',
+            currency: 'BRL',
+            amount: 30197,
+            amountFormatted: 'R$ 30.197,00',
+            amountBRL: 30197,
+            amountBRLFormatted: '30.197,00',
+            pctOfSegment: 30.4,
+          },
+          {
+            id: 'usdc',
+            label: 'Dólar (USDC)',
+            currency: 'USDC',
+            amount: 13800,
+            amountFormatted: 'US$ 13.800,00',
+            amountBRL: 69248,
+            amountBRLFormatted: '69.248,00',
+            pctOfSegment: 69.6,
+          }
+        ]
+      },
+      { 
+        id: 'caixa-op', 
+        name: "Caixa Operacional", 
+        value: 36870, 
+        pct: 20.8, 
+        color: "var(--seg-caixa-op)", 
+        valueFormatted: 'R$ 36.870',
+        detail: "R$ 4 · 1 moeda", 
+        dashFilled: 67.9, 
+        dashEmpty: 258.8, 
+        dashOffset: -265.05,
+        breakdown: [
+          {
+            id: 'caixa-fiat',
+            label: 'Conta Principal (FIAT)',
+            currency: 'BRL',
+            amount: 4.20,
+            amountFormatted: 'R$ 4,20',
+            amountBRL: 4.20,
+            amountBRLFormatted: '4,20',
+            pctOfSegment: 0.01,
+          },
+          {
+            id: 'caixa-crypto',
+            label: 'Exposição Crypto (Total)',
+            currency: 'USD',
+            amount: 7137.92,
+            amountFormatted: 'US$ 7.137,92',
+            amountBRL: 36865.80,
+            amountBRLFormatted: '36.865,80',
+            pctOfSegment: 99.99,
+          }
+        ]
+      },
+      { 
+        id: 'wallets', 
+        name: "Wallets Parceiros", 
+        value: 36584, 
+        pct: 20.6, 
+        color: "var(--seg-wallets)", 
+        valueFormatted: 'R$ 36.584',
+        detail: "$7.083 USD", 
+        dashFilled: 67.3, 
+        dashEmpty: 259.4, 
+        dashOffset: -332.95,
+        breakdown: [
+          {
+            id: 'wallets-total',
+            label: 'Carteiras de Parceiros',
+            currency: 'USD',
+            amount: 7083,
+            amountFormatted: 'US$ 7.083,00',
+            amountBRL: 36584,
+            amountBRLFormatted: '36.584,00',
+            pctOfSegment: 100,
+          }
+        ]
+      },
+      { 
+        id: 'contas-parc', 
+        name: "Contas Parceiros", 
+        value: 4405, 
+        pct: 2.5, 
+        color: "var(--seg-contas-parc)", 
+        valueFormatted: 'R$ 4.405',
+        detail: "R$ 4.405", 
+        dashFilled: 8.2, 
+        dashEmpty: 318.5, 
+        dashOffset: -400.25,
+        breakdown: [
+          {
+            id: 'banco-parc',
+            label: 'Saldos Bancários (Parceiros)',
+            currency: 'BRL',
+            amount: 4405,
+            amountFormatted: 'R$ 4.405,00',
+            amountBRL: 4405,
+            amountBRLFormatted: '4.405,00',
+            pctOfSegment: 100,
+          }
+        ]
+      },
     ];
     
-    const total = raw.reduce((s, i) => s + i.value, 0);
-    return { items: raw, total };
+    const total = items.reduce((s, i) => s + i.value, 0);
+    return { items, total };
   }, []);
-
-  const circumference = 326.7;
 
   return (
     <Card className="bg-[var(--bg-card)] border-[0.5px] border-[var(--border-default)] rounded-[12px] p-[18px_20px] overflow-visible">
@@ -105,7 +303,12 @@ export function PosicaoCapital({
                 strokeDashoffset={item.dashOffset}
                 style={{ cursor: 'pointer' }}
                 onMouseEnter={() => setActiveSegment(item.id)}
-                onMouseLeave={() => setActiveSegment(null)}
+                onMouseLeave={() => {
+                  if (!expandedSegment) {
+                    setActiveSegment(null);
+                  }
+                }}
+                onClick={() => handleSegmentClick(item.id)}
               />
             ))}
             
@@ -120,7 +323,7 @@ export function PosicaoCapital({
           </div>
 
           {/* Tooltip do donut */}
-          {activeSegment && (() => {
+          {(activeSegment && !expandedSegment) && (() => {
             const seg = dadosPosicao.items.find(s => s.id === activeSegment);
             if (!seg) return null;
             return (
@@ -137,7 +340,7 @@ export function PosicaoCapital({
                   {seg.name}
                 </span>
                 <span className="text-[var(--text-muted)] ml-2">
-                  {seg.percent}% · R$ {seg.value.toLocaleString('pt-BR')}
+                  {seg.pct}% · {seg.valueFormatted}
                 </span>
               </div>
             );
@@ -148,59 +351,112 @@ export function PosicaoCapital({
         <div className="space-y-1">
           {dadosPosicao.items.map((item, idx) => {
             const isActive = activeSegment === item.id;
+            const isExpanded = expandedSegment === item.id;
             const isOtherActive = activeSegment !== null && !isActive;
 
             return (
-              <div 
-                key={item.id}
-                onMouseEnter={() => setActiveSegment(item.id)}
-                onMouseLeave={() => setActiveSegment(null)}
-                style={{
-                  background: isActive ? 'var(--bg-hover)' : 'transparent',
-                  borderColor: isActive ? `${item.color}44` : 'transparent',
-                  transform: isActive ? 'translateX(2px)' : 'none',
-                  transition: 'background 0.15s, border-color 0.15s, transform 0.15s, opacity 0.15s',
-                  opacity: isOtherActive ? 0.45 : 1.0,
-                }}
-                className="grid grid-cols-[8px_1fr_auto] gap-[10px] p-[8px_10px] rounded-[8px] border cursor-pointer group"
-              >
+              <div key={item.id} className="flex flex-col">
                 <div 
-                  className="rounded-[2px] mt-1" 
-                  style={{ 
-                    backgroundColor: item.color,
-                    width: isActive ? 10 : 8,
-                    height: isActive ? 10 : 8,
-                    transition: 'width 0.15s, height 0.15s'
+                  onMouseEnter={() => setActiveSegment(item.id)}
+                  onMouseLeave={() => {
+                    if (!expandedSegment) {
+                      setActiveSegment(null);
+                    }
                   }}
-                ></div>
-                
-                <div>
-                  <p className={`text-[12px] font-medium transition-colors ${isActive ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`}>{item.name}</p>
-                  <p className="text-[10px] text-[var(--text-faint)] mt-px">{item.detail}</p>
+                  onClick={() => handleSegmentClick(item.id)}
+                  style={{
+                    background: isActive ? 'var(--bg-hover)' : 'transparent',
+                    borderColor: isActive ? `${item.color}44` : 'transparent',
+                    transform: isActive ? 'translateX(2px)' : 'none',
+                    transition: 'background 0.15s, border-color 0.15s, transform 0.15s, opacity 0.15s',
+                    opacity: isOtherActive ? 0.45 : 1.0,
+                  }}
+                  className="grid grid-cols-[8px_1fr_auto_auto] gap-[10px] p-[8px_10px] rounded-[8px] border cursor-pointer group"
+                >
+                  <div 
+                    className="rounded-[2px] mt-1" 
+                    style={{ 
+                      backgroundColor: item.color,
+                      width: isActive ? 10 : 8,
+                      height: isActive ? 10 : 8,
+                      transition: 'width 0.15s, height 0.15s'
+                    }}
+                  ></div>
                   
-                  {/* Progress Bar */}
-                  <div className="h-[2px] w-full bg-[var(--border-default)] rounded-[1px] mt-1.5 overflow-hidden">
-                    <div 
-                      className="h-full rounded-[1px] transition-all duration-700 ease-out"
-                      style={{ 
-                        backgroundColor: item.color, 
-                        width: isMounted ? `${item.percent}%` : "0%",
-                        transitionDelay: isMounted ? '0s' : `${idx * 0.1}s`,
-                        opacity: isActive ? 1.0 : 0.6
-                      }}
-                    ></div>
+                  <div>
+                    <p className={`text-[12px] font-medium transition-colors ${isActive ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`}>{item.name}</p>
+                    <p className="text-[10px] text-[var(--text-faint)] mt-px">{item.detail}</p>
+                    
+                    {/* Progress Bar */}
+                    <div className="h-[2px] w-full bg-[var(--border-default)] rounded-[1px] mt-1.5 overflow-hidden">
+                      <div 
+                        className="h-full rounded-[1px] transition-all duration-700 ease-out"
+                        style={{ 
+                          backgroundColor: item.color, 
+                          width: isMounted ? `${item.pct}%` : "0%",
+                          transitionDelay: isMounted ? '0s' : `${idx * 0.1}s`,
+                          opacity: isActive ? 1.0 : 0.6
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <p className="text-[11px] text-[var(--text-muted)] tabular-nums mb-px">{item.pct}%</p>
+                    <p className="font-medium tabular-nums transition-all" style={{ 
+                      color: item.color,
+                      fontSize: isActive ? 14 : 13
+                    }}>
+                      {item.valueFormatted}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-center pl-1">
+                    <i 
+                      className={cn(
+                        "ti ti-chevron-right text-[12px] text-[var(--text-faint)] transition-transform duration-200",
+                        isExpanded && "rotate-90"
+                      )}
+                    ></i>
                   </div>
                 </div>
 
-                <div className="text-right">
-                  <p className="text-[11px] text-[var(--text-muted)] tabular-nums mb-px">{item.percent}%</p>
-                  <p className="font-medium tabular-nums transition-all" style={{ 
-                    color: item.color,
-                    fontSize: isActive ? 14 : 13
-                  }}>
-                    R$ {item.value.toLocaleString('pt-BR')}
-                  </p>
-                </div>
+                {/* Painel de breakdown inline */}
+                {isExpanded && (
+                  <div 
+                    style={{
+                      animation: 'expand-down 0.2s ease-out forwards',
+                      background: 'rgba(22, 27, 39, 0.4)',
+                      borderLeft: `2px solid ${item.color}`,
+                    }}
+                    className="mt-1 mb-2 mx-[10px] rounded-r-lg overflow-hidden"
+                  >
+                    <div className="p-3 border-l border-white/5 bg-white/[0.02]">
+                      <div className="flex items-center justify-between mb-3 px-2">
+                        <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                          Composição de {item.name}
+                        </span>
+                      </div>
+
+                      <div className="space-y-0.5">
+                        {item.breakdown.map(entry => (
+                          <BreakdownRow 
+                            key={entry.id} 
+                            entry={entry} 
+                            segmentColor={item.color} 
+                          />
+                        ))}
+                      </div>
+
+                      <div className="mt-3 pt-2 border-t border-white/5 flex items-center justify-between px-2">
+                        <span className="text-[11px] font-medium text-[var(--text-faint)]">Total</span>
+                        <span className="text-[12px] font-semibold text-[var(--text-primary)] tabular-nums">
+                          {item.valueFormatted}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
