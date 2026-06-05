@@ -27,65 +27,27 @@ function areCotacoesEqual(prev: Record<string, number>, next: Record<string, num
   return keys.every(key => Math.abs(prev[key] - next[key]) < 0.0001);
 }
 
-// Moedas suportadas e suas configurações de cor
-const CURRENCY_CONFIG: Record<string, { 
-  depositGradient: [string, string]; 
-  saqueGradient: [string, string];
-  depositColor: string;
-  saqueColor: string;
-}> = {
-  BRL: { 
-    depositGradient: ["#3B82F6", "#2563EB"], 
-    saqueGradient: ["#8B5CF6", "#7C3AED"],
-    depositColor: "text-blue-500",
-    saqueColor: "text-purple-500",
-  },
-  USD: { 
-    depositGradient: ["#06B6D4", "#0891B2"], 
-    saqueGradient: ["#EC4899", "#DB2777"],
-    depositColor: "text-cyan-500",
-    saqueColor: "text-pink-500",
-  },
-  EUR: { 
-    depositGradient: ["#10B981", "#059669"], 
-    saqueGradient: ["#F59E0B", "#D97706"],
-    depositColor: "text-emerald-500",
-    saqueColor: "text-amber-500",
-  },
-  GBP: { 
-    depositGradient: ["#6366F1", "#4F46E5"], 
-    saqueGradient: ["#EF4444", "#DC2626"],
-    depositColor: "text-indigo-500",
-    saqueColor: "text-red-500",
-  },
-  MXN: { 
-    depositGradient: ["#14B8A6", "#0D9488"], 
-    saqueGradient: ["#F97316", "#EA580C"],
-    depositColor: "text-teal-500",
-    saqueColor: "text-orange-500",
-  },
-  MYR: { 
-    depositGradient: ["#8B5CF6", "#7C3AED"], 
-    saqueGradient: ["#A855F7", "#9333EA"],
-    depositColor: "text-violet-500",
-    saqueColor: "text-purple-500",
-  },
-  ARS: { 
-    depositGradient: ["#22C55E", "#16A34A"], 
-    saqueGradient: ["#84CC16", "#65A30D"],
-    depositColor: "text-green-500",
-    saqueColor: "text-lime-500",
-  },
-  COP: { 
-    depositGradient: ["#0EA5E9", "#0284C7"], 
-    saqueGradient: ["#38BDF8", "#0EA5E9"],
-    depositColor: "text-sky-500",
-    saqueColor: "text-sky-400",
-  },
-};
+interface Cotacoes {
+  USD_BRL: number;
+  USDC_BRL: number;
+  USDT_BRL: number;
+  BTC_BRL: number;
+  ETH_BRL: number;
+  LTC_BRL: number;
+}
 
-const SUPPORTED_CURRENCIES = ["BRL", "USD", "EUR", "GBP", "MXN", "MYR", "ARS", "COP"] as const;
+interface FluxoPonto {
+  data: string;   // 'DD/MM/AAAA'
+  label: string;  // 'DD/MM'
+  depositos: Record<string, number>;
+  saques: Record<string, number>;
+  cotacoes: Cotacoes;
+  isEstimada?: boolean;
+}
+
+const SUPPORTED_CURRENCIES = ["BRL", "USD", "USDC", "USDT", "ETH", "BTC", "LTC"] as const;
 type SupportedCurrency = typeof SUPPORTED_CURRENCIES[number];
+
 
 interface Transacao {
   id: string;
