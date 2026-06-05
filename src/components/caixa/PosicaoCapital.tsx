@@ -4,7 +4,7 @@ import { InteractiveTooltip } from "./InteractiveTooltip";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ModernDonutChart } from "@/components/ui/modern-donut-chart";
-import { PieChart as PieChartIcon, Wallet, Building2, Coins, CreditCard, HelpCircle, CheckCircle2, AlertTriangle, BriefcaseBusiness } from "lucide-react";
+import { PieChart as PieChartIcon, Wallet, Building2, Coins, CreditCard, HelpCircle, CheckCircle2, AlertTriangle, BriefcaseBusiness, MoreVertical, ShieldAlert, Wrench } from "lucide-react";
 import { useMultiCurrencyConversion } from "@/hooks/useMultiCurrencyConversion";
 import { getCurrencySymbol } from "@/types/currency";
 import { useTabWorkspace } from "@/hooks/useTabWorkspace";
@@ -13,7 +13,7 @@ import { AjusteManualDialog } from "./AjusteManualDialog";
 import { ReconciliacaoDialog } from "./ReconciliacaoDialog";
 import { ReportarScanDialog } from "./ReportarScanDialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreVertical, ShieldAlert, Wrench, CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface SaldoFiat {
   moeda: string;
@@ -559,6 +559,7 @@ export function PosicaoCapital({
         onClose={() => setBreakdownConfig(prev => ({ ...prev, isOpen: false }))}
         category={breakdownConfig.category}
         currency={breakdownConfig.currency}
+        workspaceId={workspaceId}
       />
 
       <AjusteManualDialog 
