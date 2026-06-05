@@ -44,6 +44,7 @@ const TIPO_OPTIONS = [
   { value: "TRANSFERENCIA", label: "Transferência" },
   { value: "DEPOSITO", label: "Depósito" },
   { value: "SAQUE", label: "Saque" },
+  { value: "PERDA_OPERACIONAL", label: "Scan / Perda" },
   { value: "APORTE_FINANCEIRO", label: "Aporte & Liquidação" },
   { value: "SWAP", label: "Swap Crypto" },
   { value: "OUTROS", label: "Outros" },
@@ -265,7 +266,19 @@ export function HistoricoMovimentacoes({
   const [usuariosMap, setUsuariosMap] = useState<Record<string, string>>({});
    // Filtro local por casa (bookmaker) — filtra origem OU destino
    const [filtroBookmakerIds, setFiltroBookmakerIds] = useState<string[]>([]);
-   const [filtroTags, setFiltroTags] = useState<string[]>([]);
+    const [filtroTags, setFiltroTags] = useState<string[]>([]);
+  
+    // Capturar filtros via URL para Auditoria de Perdas
+    useEffect(() => {
+      const searchParams = new URLSearchParams(window.location.search);
+      const tipoFilter = searchParams.get("tipo");
+      if (tipoFilter === "PERDA_OPERACIONAL") {
+        setFiltroTipo(["PERDA_OPERACIONAL"]);
+        // Limpar os parâmetros da URL após aplicar o filtro para não persistir em recarregamentos manuais
+        const newUrl = window.location.pathname + (window.location.hash || "");
+        window.history.replaceState({}, "", newUrl);
+      }
+    }, [setFiltroTipo]);
  
    // Get all filtered transactions
    const transacoesBase = useMemo(() => getTransacoesFiltradas(), [getTransacoesFiltradas]);
