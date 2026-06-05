@@ -1,12 +1,11 @@
-import { useMemo, useState, useRef } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { ModernBarChart } from "@/components/ui/modern-bar-chart";
-import { format, isWithinInterval, subDays, subMonths, startOfMonth } from "date-fns";
+import { format, isWithinInterval, subDays, subMonths, startOfMonth, parse } from "date-fns";
 import { parseLocalDate } from "@/lib/dateUtils";
 import { ptBR } from "date-fns/locale";
 import { TrendingUp, TrendingDown, ArrowRightLeft, AlertCircle, Building2, Users, HelpCircle, CalendarIcon, MoreVertical, Wrench, CheckCircle2, ShieldAlert } from "lucide-react";
@@ -18,6 +17,8 @@ import { cn } from "@/lib/utils";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { getCurrencySymbol } from "@/types/currency";
 import { formatCurrencyCompact } from "@/utils/formatCurrency";
+import Chart from "chart.js/auto";
+
 
 // Helper para comparar objetos de cotações por valor (evita re-renders desnecessários)
 function areCotacoesEqual(prev: Record<string, number>, next: Record<string, number>): boolean {
