@@ -44,7 +44,7 @@ const TIPO_OPTIONS = [
   { value: "TRANSFERENCIA", label: "Transferência" },
   { value: "DEPOSITO", label: "Depósito" },
   { value: "SAQUE", label: "Saque" },
-  { value: "PERDA_OPERACIONAL", label: "Scan / Perda" },
+  { value: "PERDA_OPERACIONAL", label: "Scan" },
   { value: "APORTE_FINANCEIRO", label: "Aporte & Liquidação" },
   { value: "SWAP", label: "Swap Crypto" },
   { value: "OUTROS", label: "Outros" },

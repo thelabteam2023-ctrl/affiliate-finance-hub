@@ -353,7 +353,7 @@ export function PosicaoCapital({
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setIsScanOpen(true)} className="cursor-pointer text-destructive focus:text-destructive">
                   <ShieldAlert className="mr-2 h-4 w-4" />
-                  Reportar Scan / Perda
+                  Reportar Scan
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
