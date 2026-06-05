@@ -339,6 +339,7 @@ export function ModernBarChart({
               visibility: 'visible',
               pointerEvents: 'none',
             }}
+            filterBy={(payload: any) => payload.value !== 0}
             allowEscapeViewBox={{ x: false, y: false }}
             position={{ y: 0 }}
             offset={15}
