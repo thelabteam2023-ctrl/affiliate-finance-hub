@@ -360,7 +360,7 @@ export function PosicaoCapital({
                   onClick={() => {
                     // Navegar para o histórico com o filtro de perdas operacional ativo
                     const searchParams = new URLSearchParams();
-                    searchParams.set("tab", "relatorios");
+                    searchParams.set("tab", "historico");
                     searchParams.set("tipo", "PERDA_OPERACIONAL");
                     window.location.href = `/caixa?${searchParams.toString()}`;
                   }} 

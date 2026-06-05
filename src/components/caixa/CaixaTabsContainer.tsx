@@ -1,6 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { BarChart3, History, RefreshCcw } from "lucide-react";
+import { useEffect, useState } from "react";
 import { FluxoFinanceiroOperacional } from "./FluxoFinanceiroOperacional";
 import { HistoricoMovimentacoes } from "./HistoricoMovimentacoes";
 import { ConciliacaoSaldos } from "./ConciliacaoSaldos";
@@ -85,6 +86,15 @@ export function CaixaTabsContainer({
   onRefresh,
   initialTab = "analise",
 }: CaixaTabsContainerProps) {
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  // Sincronizar tab interna com prop inicial (caso mude via URL)
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
   // Conta transações pendentes de conciliação
   // Usa pendingTransactions do hook (busca global sem filtro de data)
   // Filtra apenas DEPOSITO (SAQUE tem fluxo separado de confirmação)
@@ -94,7 +104,7 @@ export function CaixaTabsContainer({
 
   return (
     <Card className="bg-card/50 backdrop-blur border-border/50">
-      <Tabs defaultValue={initialTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="px-4 pt-4 border-b border-border/50">
           <TabsList className="bg-muted/30">
             <TabsTrigger value="analise" className="gap-2">
