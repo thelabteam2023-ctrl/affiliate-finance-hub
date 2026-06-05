@@ -64,27 +64,28 @@ function TransactionIcon({ type, transacao }: { type: string, transacao?: any })
 
   return (
     <div style={{
-      width: 36, height: 36,
-      borderRadius: 10,
+      width: 32, height: 32,
+      borderRadius: 8,
       background: cfg.bg,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       flexShrink: 0,
       overflow: 'hidden',
-      border: logoUrl ? '1px solid rgba(255,255,255,0.05)' : 'none'
+      border: logoUrl ? '1px solid rgba(255,255,255,0.05)' : 'none',
+      marginLeft: '4px'
     }}>
       {logoUrl ? (
         <img 
           src={logoUrl} 
           alt={bookmakerName} 
-          className="w-full h-full object-cover"
+          className="w-[18px] h-[18px] object-contain"
           onError={(e) => {
             (e.target as HTMLImageElement).style.display = 'none';
-            (e.target as HTMLImageElement).parentElement!.innerHTML = `<i class="ti ${cfg.icon}" style="font-size: 17px; color: ${cfg.color}"></i>`;
+            (e.target as HTMLImageElement).parentElement!.innerHTML = `<i class="ti ${cfg.icon}" style="font-size: 15px; color: ${cfg.color}"></i>`;
           }}
         />
       ) : (
         <i className={`ti ${cfg.icon}`} aria-hidden="true"
-           style={{ fontSize: 17, color: cfg.color }} />
+           style={{ fontSize: 15, color: cfg.color }} />
       )}
     </div>
   );
