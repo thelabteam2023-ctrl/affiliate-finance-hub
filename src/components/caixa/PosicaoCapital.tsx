@@ -300,8 +300,9 @@ export function PosicaoCapital({
                   fill="none"
                   stroke={item.color}
                   strokeWidth={isActive ? 22 : 18}
-                  strokeDasharray={`${isMounted ? item.dashFilled : 0} 326.7`}
+                  strokeDasharray={`${isMounted ? item.dashFilled : 0} ${2 * Math.PI * 52}`}
                   strokeDashoffset={item.dashOffset}
+
                   strokeLinecap="butt"
                   style={{ 
                     transition: "stroke-dasharray 0.8s ease-out, stroke-width 0.15s ease, opacity 0.15s ease",
@@ -320,8 +321,9 @@ export function PosicaoCapital({
                 fill="none"
                 stroke="transparent"
                 strokeWidth="24"
-                strokeDasharray={`${item.dashFilled} 326.7`}
+                strokeDasharray={`${item.dashFilled} ${2 * Math.PI * 52}`}
                 strokeDashoffset={item.dashOffset}
+
                 style={{ cursor: 'pointer' }}
                 onMouseEnter={() => setActiveSegment(item.id)}
                 onMouseLeave={() => {
