@@ -78,6 +78,8 @@ function ViewPorParceiro() {
     return ids;
   }, [membros]);
 
+  const hasGroups = useMemo(() => (membros ?? []).length > 0, [membros]);
+
   const [criarDialog, setCriarDialog] = useState<{
     open: boolean;
     parceiroId: string;
@@ -158,12 +160,14 @@ function ViewPorParceiro() {
 
     return catalogoBookmakers.filter((bk) => {
       if (contasSet.has(bk.id)) return false;
-      if (!allGroupedCatalogoIds.has(bk.id)) return false;
+      // Se houver grupos criados no workspace, filtramos apenas os que pertencem a grupos.
+      // Caso contrário (workspace novo), mostramos todas.
+      if (hasGroups && !allGroupedCatalogoIds.has(bk.id)) return false;
       if (grupoIds && !grupoIds.has(bk.id)) return false;
       if (regulamentacaoFilter !== "todas" && bk.status !== regulamentacaoFilter) return false;
       return true;
     });
-  }, [catalogoBookmakers, contasSet, grupoFilter, getCatalogoIdsByGrupo, selectedParceiroId, allGroupedCatalogoIds, regulamentacaoFilter]);
+  }, [catalogoBookmakers, contasSet, grupoFilter, getCatalogoIdsByGrupo, selectedParceiroId, allGroupedCatalogoIds, regulamentacaoFilter, hasGroups]);
 
   // Split into disponiveis / descartados
   const { disponiveis, descartados } = useMemo(() => {
@@ -584,6 +588,8 @@ function ViewPorBookmaker() {
     return ids;
   }, [membrosVPB]);
 
+  const hasGroupsVPB = useMemo(() => (membrosVPB ?? []).length > 0, [membrosVPB]);
+
   const [criarDialog, setCriarDialog] = useState<{
     open: boolean;
     parceiroId: string;
@@ -832,14 +838,14 @@ function ViewPorBookmaker() {
     else marcarIndisponivel(ids);
   };
 
-  // Filter bookmakers in dropdown: must belong to a group + regulamentação
+  // Filter bookmakers in dropdown: must belong to a group (if groups exist) + regulamentação
   const dropdownBookmakers = useMemo(() => {
     const grupoIds = grupoFilter !== "todos" ? getCatalogoIdsByGrupo(grupoFilter) : null;
     return (catalogoBookmakers ?? [])
-      .filter((bk) => allGroupedCatalogoIdsVPB.has(bk.id))
+      .filter((bk) => !hasGroupsVPB || allGroupedCatalogoIdsVPB.has(bk.id))
       .filter((bk) => regulamentacaoFilter === "todas" || bk.status === regulamentacaoFilter)
       .filter((bk) => !grupoIds || grupoIds.has(bk.id));
-  }, [catalogoBookmakers, allGroupedCatalogoIdsVPB, regulamentacaoFilter, grupoFilter, getCatalogoIdsByGrupo]);
+  }, [catalogoBookmakers, allGroupedCatalogoIdsVPB, regulamentacaoFilter, grupoFilter, getCatalogoIdsByGrupo, hasGroupsVPB]);
 
   return (
     <div className="space-y-4">
