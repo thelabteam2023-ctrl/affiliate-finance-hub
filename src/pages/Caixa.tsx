@@ -1194,18 +1194,10 @@ export default function Caixa() {
                 Toque para ver detalhes →
               </p>
 
-              <div className="mt-[14px]">
-                <div className="h-[3px] w-full bg-[var(--border-default)] rounded-[2px] overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-[var(--accent-success)] to-[var(--accent-crypto)] rounded-[2px] transition-all duration-700 ease-out"
-                    style={{ width: "62%" }}
-                  ></div>
-                </div>
-                <div className="flex justify-between mt-2 text-[10px] text-[var(--text-ghost)]">
-                  <span>62% do limite</span>
-                  <span>Atualizado agora</span>
-                </div>
-              </div>
+              <p className="text-[10px] text-[var(--text-ghost)] mt-4">
+                Atualizado às {format(new Date(), "HH:mm")}
+              </p>
+
             </Card>
           </div>
 
