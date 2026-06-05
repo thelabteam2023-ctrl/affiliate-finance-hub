@@ -511,13 +511,14 @@ export function PosicaoCapital({
                   </div>
 
                   <div className="text-right">
-                    <p className="text-[11px] text-[var(--text-muted)] tabular-nums mb-px">{item.pct}%</p>
+                    <p className="text-[11px] text-[var(--text-muted)] tabular-nums mb-px">{item.pct.toFixed(2)}%</p>
                     <p className="font-medium tabular-nums transition-all" style={{ 
                       color: item.color,
                       fontSize: isActive ? 14 : 13
                     }}>
                       {item.valueFormatted}
                     </p>
+
                   </div>
 
                   <div className="flex items-center justify-center pl-1">
