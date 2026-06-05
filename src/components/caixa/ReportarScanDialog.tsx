@@ -194,7 +194,7 @@ export function ReportarScanDialog({
         const { error } = await supabase.from("cash_ledger").insert({
           workspace_id: workspaceId,
           user_id: user.id,
-          tipo_transacao: "OUTROS",
+          tipo_transacao: "AJUSTE_MANUAL", // Usar um tipo conhecido que acione o ledger corretamente
           tipo_moeda: isCrypto ? "CRYPTO" : "FIAT",
           moeda,
           valor: valorNum,
@@ -208,6 +208,7 @@ export function ReportarScanDialog({
           impacta_caixa_operacional: false,
           ajuste_motivo: `SCAN: ${motivo}`,
           ajuste_direcao: "SAIDA",
+          ajuste_natureza: "RECONCILIACAO_OPERACIONAL",
           cotacao: cotacao,
           auditoria_metadata: {
             tipo_registro: "REPORTAR_SCAN",
@@ -220,7 +221,7 @@ export function ReportarScanDialog({
         const { error } = await supabase.from("cash_ledger").insert({
           workspace_id: workspaceId,
           user_id: user.id,
-          tipo_transacao: "OUTROS",
+          tipo_transacao: "AJUSTE_MANUAL",
           tipo_moeda: isCrypto ? "CRYPTO" : "FIAT",
           moeda,
           valor: valorNum,
@@ -234,6 +235,7 @@ export function ReportarScanDialog({
           impacta_caixa_operacional: true,
           ajuste_motivo: `SCAN: ${motivo}`,
           ajuste_direcao: "SAIDA",
+          ajuste_natureza: "RECONCILIACAO_OPERACIONAL",
           cotacao: cotacao,
           auditoria_metadata: {
             tipo_registro: "REPORTAR_SCAN",
