@@ -12,7 +12,7 @@ import { CASH_REAL_TYPES } from "@/lib/cashOperationalTypes";
 import { getGrupoFromCategoria, getGrupoInfo } from "@/lib/despesaGrupos";
 import { Button } from "@/components/ui/button";
 import { useTopBar } from "@/contexts/TopBarContext";
-import { Plus, TrendingUp, TrendingDown, Wallet, AlertCircle, ArrowRight, Calendar, Filter, Info, Wrench, MoreHorizontal, HelpCircle, Building2 } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, Wallet, AlertCircle, ArrowRight, Calendar, Filter, Info, Wrench, MoreHorizontal, HelpCircle, Building2, ShieldAlert } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
@@ -32,6 +32,7 @@ import { PosicaoCapital } from "@/components/caixa/PosicaoCapital";
 import { ConfirmarSaqueDialog } from "@/components/caixa/ConfirmarSaqueDialog";
 import { AjusteManualDialog } from "@/components/caixa/AjusteManualDialog";
 import { ReconciliacaoDialog } from "@/components/caixa/ReconciliacaoDialog";
+import { ReportarScanDialog } from "@/components/caixa/ReportarScanDialog";
 import { SaldosFiatCard } from "@/components/caixa/SaldosFiatCard";
 import { ExposicaoCryptoCard } from "@/components/caixa/ExposicaoCryptoCard";
 import { SaldoBancosParceiroModal } from "@/components/caixa/SaldoBancosParceiroModal";
@@ -139,6 +140,7 @@ export default function Caixa() {
   // Estado para ajuste manual
   const [ajusteDialogOpen, setAjusteDialogOpen] = useState(false);
   const [reconciliacaoDialogOpen, setReconciliacaoDialogOpen] = useState(false);
+  const [scanDialogOpen, setScanDialogOpen] = useState(false);
   const [caixaParceiroId, setCaixaParceiroId] = useState<string | null>(null);
   const [saldoBancosModalOpen, setSaldoBancosModalOpen] = useState(false);
 
@@ -1168,6 +1170,26 @@ export default function Caixa() {
                   <p className="text-muted-foreground">Você informa o saldo real e o sistema calcula o ajuste automaticamente. Uso raro — é um "ponto zero".</p>
                 </TooltipContent>
               </Tooltip>
+
+              <DropdownMenuSeparator />
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuItem 
+                    onClick={() => setScanDialogOpen(true)}
+                    className="flex items-center gap-2 text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
+                  >
+                    <ShieldAlert className="h-4 w-4" />
+                    <span>Reportar Scan / Perda</span>
+                    <HelpCircle className="h-3 w-3 ml-auto opacity-50" />
+                  </DropdownMenuItem>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="max-w-[280px] text-xs space-y-1.5 p-3">
+                  <p className="font-semibold">Registre perdas extraordinárias</p>
+                  <p className="text-muted-foreground">Use para quando a casa de aposta retém o saldo injustificadamente ou um parceiro realiza movimentações indevidas.</p>
+                  <p className="text-muted-foreground text-destructive font-medium">Isso registrará uma saída definitiva de capital.</p>
+                </TooltipContent>
+              </Tooltip>
             </DropdownMenuContent>
           </DropdownMenu>
           )}
@@ -1361,6 +1383,16 @@ export default function Caixa() {
         onClose={() => setReconciliacaoDialogOpen(false)}
         onSuccess={async () => {
           // Não fechamos mais automaticamente para permitir múltiplos lançamentos
+          await new Promise(resolve => setTimeout(resolve, 600));
+          await fetchData();
+        }}
+      />
+
+      {/* Dialog Reportar Scan */}
+      <ReportarScanDialog
+        open={scanDialogOpen}
+        onClose={() => setScanDialogOpen(false)}
+        onSuccess={async () => {
           await new Promise(resolve => setTimeout(resolve, 600));
           await fetchData();
         }}
