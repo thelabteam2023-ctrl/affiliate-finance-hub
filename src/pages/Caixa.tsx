@@ -1203,8 +1203,9 @@ export default function Caixa() {
           </div>
 
 
-          {/* Posição de Capital */}
+          {/* 3. Seção "Posição de Capital" */}
           <PosicaoCapital
+
             saldosFiat={saldosFiat}
             saldoCaixaCrypto={getTotalCryptoUSD()}
             saldosBookmakers={saldosBookmakersPorMoeda}
