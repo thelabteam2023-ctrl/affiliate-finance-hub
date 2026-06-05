@@ -41,16 +41,16 @@ import { BookmakerFilterCombobox, type BookmakerFilterOption } from "@/component
 const PAGE_SIZE = 50;
 
 const TX_TYPES: Record<string, { icon: string, color: string, bg: string, label: string }> = {
-  APORTE:        { icon: 'ti-building-bank',     color: '#22c55e', bg: '#0c2a1a', label: 'Aporte' },
-  APORTE_FINANCEIRO: { icon: 'ti-building-bank', color: '#22c55e', bg: '#0c2a1a', label: 'Aporte' },
-  SAQUE:         { icon: 'ti-wallet',            color: '#f59e0b', bg: '#1a1500', label: 'Saque' },
-  SCAN:          { icon: 'ti-shield-x',          color: '#a855f7', bg: '#1a1020', label: 'Scan' },
-  PERDA_OPERACIONAL: { icon: 'ti-shield-x',      color: '#a855f7', bg: '#1a1020', label: 'Scan' },
-  TRANSFERENCIA: { icon: 'ti-arrows-exchange-2', color: '#22d3ee', bg: '#0a2030', label: 'Transferência' },
-  CONVERSAO:     { icon: 'ti-refresh',           color: '#818cf8', bg: '#12102a', label: 'Conversão' },
-  SWAP:          { icon: 'ti-refresh',           color: '#818cf8', bg: '#12102a', label: 'Swap' },
-  TAXA:          { icon: 'ti-receipt',           color: '#6b7280', bg: '#161b27', label: 'Taxa' },
-  AJUSTE:        { icon: 'ti-settings',          color: '#94a3b8', bg: '#161b27', label: 'Ajuste' },
+  APORTE:        { icon: 'ti-building-bank',     color: '#22c55e', bg: 'transparent', label: 'Aporte' },
+  APORTE_FINANCEIRO: { icon: 'ti-building-bank', color: '#22c55e', bg: 'transparent', label: 'Aporte' },
+  SAQUE:         { icon: 'ti-wallet',            color: '#22c55e', bg: 'transparent', label: 'Saque' },
+  SCAN:          { icon: 'ti-shield-x',          color: '#a855f7', bg: 'transparent', label: 'Scan' },
+  PERDA_OPERACIONAL: { icon: 'ti-shield-x',      color: '#a855f7', bg: 'transparent', label: 'Scan' },
+  TRANSFERENCIA: { icon: 'ti-arrows-exchange-2', color: '#22d3ee', bg: 'transparent', label: 'Transferência' },
+  CONVERSAO:     { icon: 'ti-refresh',           color: '#818cf8', bg: 'transparent', label: 'Conversão' },
+  SWAP:          { icon: 'ti-refresh',           color: '#818cf8', bg: 'transparent', label: 'Swap' },
+  TAXA:          { icon: 'ti-receipt',           color: '#6b7280', bg: 'transparent', label: 'Taxa' },
+  AJUSTE:        { icon: 'ti-settings',          color: '#94a3b8', bg: 'transparent', label: 'Ajuste' },
 };
 
 function TransactionIcon({ type, transacao }: { type: string, transacao?: any }) {
