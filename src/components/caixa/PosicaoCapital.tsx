@@ -369,6 +369,63 @@ export function PosicaoCapital({
             <p className="text-[10px] text-[var(--text-faint)] mt-px">Total BRL</p>
           </div>
 
+          {/* Diagnóstico visual (Modo Dev) */}
+          {isDev && (
+            <div className="absolute top-[200px] left-[-20px] w-[500px] z-[100] bg-[#0a0f1a] border-[0.5px] border-[#ef4444] rounded-lg p-3 text-[10px] font-mono text-[#9ca3af] shadow-2xl">
+              <div className="text-[#ef4444] font-semibold mb-2 flex items-center gap-2">
+                <span>🔍 DEBUG: Segmentos do Donut</span>
+                <span className="text-[9px] font-normal opacity-70">(Apenas em desenvolvimento)</span>
+              </div>
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="text-[#6b7280] border-b border-[#1f2937]">
+                    <th className="text-left p-1">ID</th>
+                    <th className="text-right p-1">Valor</th>
+                    <th className="text-right p-1">Pct</th>
+                    <th className="text-right p-1">DashFilled</th>
+                    <th className="text-right p-1">Offset</th>
+                    <th className="text-left p-1">Cor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dadosPosicao.items.map(s => (
+                    <tr key={s.id} className="border-b border-[#1f2937]/50 hover:bg-white/[0.02]">
+                      <td className="p-1" style={{ color: s.color }}>{s.id}</td>
+                      <td className="p-1 text-right">{s.value.toLocaleString('pt-BR')}</td>
+                      <td className="p-1 text-right">{s.pct}%</td>
+                      <td className="p-1 text-right">{s.dashFilled.toFixed(2)}</td>
+                      <td className="p-1 text-right">{s.dashOffset.toFixed(2)}</td>
+                      <td className="p-1">
+                        <div className="flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-sm" style={{ background: s.color }} />
+                          {s.color.startsWith('var') ? 'variable' : s.color}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="text-[#6b7280] pt-1">
+                    <td className="p-1 font-bold">TOTAL</td>
+                    <td className="p-1 text-right font-bold text-white">
+                      {dadosPosicao.items.reduce((a, s) => a + s.value, 0).toLocaleString('pt-BR')}
+                    </td>
+                    <td className="p-1 text-right font-bold" style={{ 
+                      color: Math.abs(dadosPosicao.items.reduce((a, s) => a + s.pct, 0) - 100) < 0.1 ? '#22c55e' : '#ef4444' 
+                    }}>
+                      {dadosPosicao.items.reduce((a, s) => a + s.pct, 0).toFixed(2)}%
+                    </td>
+                    <td colSpan={3} className="p-1 text-right italic opacity-60">
+                      Circunferência: {(2 * Math.PI * 52).toFixed(2)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+        </div>
+
+
           {/* Tooltip do donut */}
           {(activeSegment && !expandedSegment) && (() => {
             const seg = dadosPosicao.items.find(s => s.id === activeSegment);
