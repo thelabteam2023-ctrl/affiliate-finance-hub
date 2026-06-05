@@ -124,14 +124,13 @@ export function IndicadorDialog({ open, onOpenChange, indicador, isViewMode }: I
   };
 
   const validateCPFUnique = async (cpf: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!workspaceId) return;
 
     let query = supabase
       .from("indicadores_referral")
       .select("id")
       .eq("cpf", cpf)
-      .eq("user_id", user.id);
+      .eq("workspace_id", workspaceId);
 
     if (indicador?.indicador_id) {
       query = query.neq("id", indicador.indicador_id);
@@ -139,7 +138,7 @@ export function IndicadorDialog({ open, onOpenChange, indicador, isViewMode }: I
 
     const { data } = await query;
     if (data && data.length > 0) {
-      setCpfError("CPF já cadastrado");
+      setCpfError("CPF já cadastrado neste workspace");
     }
   };
 
