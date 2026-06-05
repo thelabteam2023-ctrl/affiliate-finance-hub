@@ -639,6 +639,28 @@ export function FluxoFinanceiroOperacional({
             Análise Financeira
           </CardTitle>
           <div className="flex flex-wrap items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-accent/50">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => setIsAjusteOpen(true)} className="cursor-pointer">
+                  <Wrench className="mr-2 h-4 w-4" />
+                  Ajuste Manual
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsReconciliacaoOpen(true)} className="cursor-pointer">
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Reconciliação de Saldo
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsScanOpen(true)} className="cursor-pointer text-destructive focus:text-destructive">
+                  <ShieldAlert className="mr-2 h-4 w-4" />
+                  Reportar Scan / Perda
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Button
               variant={periodo === "dia" ? "default" : "outline"}
               size="sm"
