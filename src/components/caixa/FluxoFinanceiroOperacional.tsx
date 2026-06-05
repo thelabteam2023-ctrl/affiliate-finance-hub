@@ -161,10 +161,6 @@ export function FluxoFinanceiroOperacional({
   const [isReconciliacaoOpen, setIsReconciliacaoOpen] = useState(false);
   const [isScanOpen, setIsScanOpen] = useState(false);
   
-  const [isAjusteOpen, setIsAjusteOpen] = useState(false);
-  const [isReconciliacaoOpen, setIsReconciliacaoOpen] = useState(false);
-  const [isScanOpen, setIsScanOpen] = useState(false);
-  
   // Buscar todas as cotações para normalizar as barras do gráfico
   const { cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMXN, cotacaoMYR, cotacaoARS, cotacaoCOP } = useCotacoes();
   
