@@ -209,7 +209,7 @@ export function ReportarScanDialog({
           moeda,
           valor: valorNum,
           valor_origem: valorNum,
-          descricao: `[SCAN CASA] ${motivo} | Saldo anterior: ${saldoAtual.toFixed(2)}`,
+          descricao: `[SCAN CASA] ${motivo}`,
           status: "CONFIRMADO",
           transit_status: "CONFIRMED",
           data_transacao: getTodayCivilDate(),
@@ -236,7 +236,7 @@ export function ReportarScanDialog({
           moeda,
           valor: valorNum,
           valor_origem: valorNum,
-          descricao: `[SCAN PARCEIRO] ${motivo} | Saldo anterior: ${saldoAtual.toFixed(2)}`,
+          descricao: `[SCAN PARCEIRO] ${motivo}`,
           status: "CONFIRMADO",
           transit_status: "CONFIRMED",
           data_transacao: getTodayCivilDate(),
@@ -281,7 +281,7 @@ export function ReportarScanDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-destructive">
             <ShieldAlert className="h-5 w-5" />
-            Reportar Scan / Perda
+            Reportar Scan
           </DialogTitle>
           <DialogDescription>
             Registre uma perda extraordinária por fraude ou retenção indevida.

@@ -901,6 +901,17 @@ export default function Caixa() {
       return { primary: "Swap Interno", secondary: `${transacao.coin || ''} → ${transacao.moeda_destino || ''}` };
     }
 
+    // PERDA_OPERACIONAL (Scan): Destino é conceitual (Perda de Capital)
+    if (transacao.tipo_transacao === "PERDA_OPERACIONAL") {
+      return { 
+        primary: "Perda de Capital",
+        secondary: "Saída definitiva",
+        badgeLabel: "Scan",
+        badgeColor: "bg-red-500/20 text-red-400 border-red-500/30",
+        BadgeIcon: ShieldAlert,
+      };
+    }
+
     // Para APORTE_FINANCEIRO, verificamos o fluxo pela direção
     if (transacao.tipo_transacao === "APORTE_FINANCEIRO") {
       // Se destino é CAIXA_OPERACIONAL, é um aporte (Investidor → Caixa)
