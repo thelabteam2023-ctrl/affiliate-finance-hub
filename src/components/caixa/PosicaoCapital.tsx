@@ -371,7 +371,7 @@ export function PosicaoCapital({
 
           {/* Diagnóstico visual (Modo Dev) */}
           {isDev && (
-            <div className="absolute top-[200px] left-[-20px] w-[500px] z-[100] bg-[#0a0f1a] border-[0.5px] border-[#ef4444] rounded-lg p-3 text-[10px] font-mono text-[#9ca3af] shadow-2xl">
+            <div className="absolute top-[200px] left-[-20px] w-[500px] z-[100] bg-[#0a0f1a] border-[0.5px] border-[#ef4444] rounded-lg p-3 text-[10px] font-mono text-[#9ca3af] shadow-2xl pointer-events-none">
               <div className="text-[#ef4444] font-semibold mb-2 flex items-center gap-2">
                 <span>🔍 DEBUG: Segmentos do Donut</span>
                 <span className="text-[9px] font-normal opacity-70">(Apenas em desenvolvimento)</span>
@@ -426,19 +426,20 @@ export function PosicaoCapital({
         </div>
 
         {/* 3b. Lista de itens de Posição de Capital */}
-        <div className="space-y-1">
-          {/* Tooltip do donut (movido para fora da grid de 2 colunas para não quebrar o layout) */}
+        <div className="space-y-1 relative">
+          {/* Tooltip do donut (centralizado em relação ao donut) */}
           {(activeSegment && !expandedSegment) && (() => {
             const seg = dadosPosicao.items.find(s => s.id === activeSegment);
             if (!seg) return null;
             return (
-              <div className="absolute top-[210px] left-[100px] -translate-x-1/2 z-50 whitespace-nowrap" style={{
+              <div className="absolute top-[148px] left-[-90px] -translate-x-1/2 z-[60] whitespace-nowrap pointer-events-none" style={{
                 padding: '6px 12px',
                 background: '#1a2030',
                 border: '0.5px solid #2d3748',
                 borderRadius: 8,
                 fontSize: 12,
                 textAlign: 'center',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
                 transition: 'opacity 0.15s',
               }} role="tooltip">
                 <span style={{ color: seg.color, fontWeight: 500 }}>
@@ -450,6 +451,7 @@ export function PosicaoCapital({
               </div>
             );
           })()}
+
 
           {dadosPosicao.items.map((item, idx) => {
             const isActive = activeSegment === item.id;
