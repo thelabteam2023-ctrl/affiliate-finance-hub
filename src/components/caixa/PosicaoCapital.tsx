@@ -4,7 +4,7 @@ import { InteractiveTooltip } from "./InteractiveTooltip";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ModernDonutChart } from "@/components/ui/modern-donut-chart";
-import { PieChart as PieChartIcon, Wallet, Building2, Coins, CreditCard, HelpCircle, CheckCircle2, AlertTriangle, BriefcaseBusiness, MoreVertical, ShieldAlert, Wrench } from "lucide-react";
+import { PieChart as PieChartIcon, Wallet, Building2, Coins, CreditCard, HelpCircle, CheckCircle2, AlertTriangle, BriefcaseBusiness, MoreVertical, ShieldAlert, Wrench, History } from "lucide-react";
 import { useMultiCurrencyConversion } from "@/hooks/useMultiCurrencyConversion";
 import { getCurrencySymbol } from "@/types/currency";
 import { useTabWorkspace } from "@/hooks/useTabWorkspace";
@@ -12,7 +12,7 @@ import { CurrencyBreakdownModal } from "./CurrencyBreakdownModal";
 import { AjusteManualDialog } from "./AjusteManualDialog";
 import { ReconciliacaoDialog } from "./ReconciliacaoDialog";
 import { ReportarScanDialog } from "./ReportarScanDialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 
 interface SaldoFiat {
@@ -354,6 +354,20 @@ export function PosicaoCapital({
                 <DropdownMenuItem onClick={() => setIsScanOpen(true)} className="cursor-pointer text-destructive focus:text-destructive">
                   <ShieldAlert className="mr-2 h-4 w-4" />
                   Reportar Scan / Perda
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={() => {
+                    // Navegar para o histórico com o filtro de perdas operacional ativo
+                    const searchParams = new URLSearchParams();
+                    searchParams.set("tab", "relatorios");
+                    searchParams.set("tipo", "PERDA_OPERACIONAL");
+                    window.location.href = `/caixa?${searchParams.toString()}`;
+                  }} 
+                  className="cursor-pointer"
+                >
+                  <History className="mr-2 h-4 w-4" />
+                  Ver Histórico de Perdas
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
