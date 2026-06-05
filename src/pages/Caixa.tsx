@@ -1148,16 +1148,16 @@ export default function Caixa() {
       <div className="flex-1 min-h-0 overflow-y-auto bg-[var(--bg-page)]">
         <div className="px-6 py-4 space-y-3">
 
-          {/* KPI Cards */}
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-[1200px]">
-            {/* Saldos FIAT - Interactive Card */}
+          {/* Cards de topo (grid 3 colunas, gap 10px) */}
+          <div className="grid gap-[10px] grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            {/* 2a. Card "Caixa FIAT" */}
             <SaldosFiatCard
               caixaParceiroId={caixaParceiroId}
               formatCurrency={formatCurrency}
               onDataChanged={fetchData}
             />
 
-            {/* Exposição Crypto - Interactive Card */}
+            {/* 2b. Card "Caixa Crypto" */}
             <ExposicaoCryptoCard
               caixaParceiroId={caixaParceiroId}
               cryptoPrices={cryptoPrices}
@@ -1166,25 +1166,41 @@ export default function Caixa() {
               onDataChanged={fetchData}
             />
 
-            {/* Saldo em Bancos dos Parceiros - KPI Card */}
+            {/* 2c. Card "Saldo em Bancos" */}
             <Card
-              className="cursor-pointer hover:border-primary/30 transition-colors"
+              className="bg-[var(--bg-card)] border-[0.5px] border-[var(--border-default)] rounded-[12px] p-[16px_18px] relative overflow-hidden cursor-pointer hover:border-[var(--border-hover)] transition-colors group"
               onClick={() => setSaldoBancosModalOpen(true)}
             >
-              <CardContent className="pt-4 pb-3 px-4">
-                <div className="flex items-center gap-1.5 text-muted-foreground text-xs mb-1">
-                  <Building2 className="h-3.5 w-3.5" />
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent-bank)]" aria-hidden="true"></div>
+                <span className="text-[11px] font-medium tracking-[0.06em] uppercase text-[var(--text-faint)]">
                   Saldo em Bancos
+                </span>
+              </div>
+              
+              <p className="text-2xl font-medium text-[var(--text-primary)] tabular-nums">
+                {formatCurrency(saldosContasParceiros.reduce((s, c) => s + c.saldo, 0), "BRL")}
+              </p>
+              
+              <p className="text-[11px] text-[var(--text-faint)] mt-1 group-hover:text-[var(--text-muted)] transition-colors">
+                Toque para ver detalhes →
+              </p>
+
+              <div className="mt-[14px]">
+                <div className="h-[3px] w-full bg-[var(--border-default)] rounded-[2px] overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-[var(--accent-success)] to-[var(--accent-crypto)] rounded-[2px] transition-all duration-700 ease-out"
+                    style={{ width: "62%" }}
+                  ></div>
                 </div>
-                <p className="text-xl font-bold text-foreground tabular-nums">
-                  {formatCurrency(saldosContasParceiros.reduce((s, c) => s + c.saldo, 0), "BRL")}
-                </p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">
-                  Toque para ver detalhes →
-                </p>
-              </CardContent>
+                <div className="flex justify-between mt-2 text-[10px] text-[var(--text-ghost)]">
+                  <span>62% do limite</span>
+                  <span>Atualizado agora</span>
+                </div>
+              </div>
             </Card>
           </div>
+
 
           {/* Posição de Capital */}
           <PosicaoCapital
