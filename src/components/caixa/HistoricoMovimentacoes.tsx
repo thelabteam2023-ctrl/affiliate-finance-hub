@@ -62,31 +62,42 @@ function TransactionIcon({ type, transacao }: { type: string, transacao?: any })
   const bookmakerName = bookmakerId ? transacao?.bookmaker_nome || "" : "";
   const logoUrl = bookmakerName ? getLogoUrl(bookmakerName) : null;
 
-  return (
-    <div style={{
-      width: 40, height: 40,
-      borderRadius: 10,
-      background: cfg.bg,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      flexShrink: 0,
-      overflow: 'hidden',
-      border: '1px solid rgba(255,255,255,0.06)',
-      marginLeft: '4px'
-    }}>
-      {logoUrl ? (
+  // Só renderizamos o "quadrado" se houver uma logo (casa de aposta)
+  if (logoUrl) {
+    return (
+      <div style={{
+        width: 40, height: 40,
+        borderRadius: 10,
+        background: 'transparent',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0,
+        overflow: 'hidden',
+        border: '1px solid rgba(255,255,255,0.06)',
+        marginLeft: '4px'
+      }}>
         <img 
           src={logoUrl} 
           alt={bookmakerName} 
           className="w-[32px] h-[32px] object-contain transition-transform duration-300 group-hover:scale-105"
           onError={(e) => {
             (e.target as HTMLImageElement).style.display = 'none';
-            (e.target as HTMLImageElement).parentElement!.innerHTML = `<i class="ti ${cfg.icon}" style="font-size: 18px; color: ${cfg.color}"></i>`;
+            (e.target as HTMLImageElement).parentElement!.innerHTML = `<i class="ti ${cfg.icon}" style="font-size: 20px; color: ${cfg.color}"></i>`;
           }}
         />
-      ) : (
-        <i className={`ti ${cfg.icon}`} aria-hidden="true"
-           style={{ fontSize: 18, color: cfg.color }} />
-      )}
+      </div>
+    );
+  }
+
+  // Para outros tipos sem logo (Transferência, etc), renderizamos apenas o ícone centralizado, sem o "quadrado" container
+  return (
+    <div style={{
+      width: 40, height: 40,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      flexShrink: 0,
+      marginLeft: '4px'
+    }}>
+      <i className={`ti ${cfg.icon}`} aria-hidden="true"
+         style={{ fontSize: 20, color: cfg.color }} />
     </div>
   );
 }
