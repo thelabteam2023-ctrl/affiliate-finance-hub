@@ -281,7 +281,7 @@ export function ReportarScanDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-destructive">
             <ShieldAlert className="h-5 w-5" />
-            Reportar Scan
+            Reportar scan
           </DialogTitle>
           <DialogDescription>
             Registre uma perda extraordinária por fraude ou retenção indevida.
@@ -377,7 +377,7 @@ export function ReportarScanDialog({
               disabled={loading || !canSubmit()}
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ShieldAlert className="h-4 w-4 mr-2" />}
-              Confirmar Registro de Perda
+              Confirmar registro de perda
             </Button>
           </div>
         </div>

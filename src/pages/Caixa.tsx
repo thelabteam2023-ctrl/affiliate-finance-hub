@@ -1140,13 +1140,47 @@ export default function Caixa() {
         <div className="flex items-center gap-2.5">
           <SaldosParceirosSheet />
           {canCreate('caixa', 'caixa.transactions.create') && (
-            <Button 
-              onClick={() => setDialogOpen(true)} 
-              className="h-9 px-3.5 text-xs font-medium gap-2 bg-[var(--accent-success)] hover:bg-[#15803d] text-white border-none rounded-lg transition-colors"
-            >
-              <i className="ti ti-plus text-sm"></i>
-              Nova Transação
-            </Button>
+            <div className="flex items-center gap-1.5 bg-[var(--bg-card)] border border-[var(--border-default)] rounded-lg p-0.5 shadow-sm">
+              <Button 
+                onClick={() => setDialogOpen(true)} 
+                className="h-8 px-3 text-[11px] font-semibold gap-1.5 bg-[var(--accent-success)] hover:bg-[#15803d] text-white border-none rounded-md transition-all shadow-sm active:scale-[0.98]"
+              >
+                <i className="ti ti-plus text-xs"></i>
+                Nova Transação
+              </Button>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md hover:bg-[var(--bg-hover)] text-[var(--text-muted)] border-none">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52 bg-[var(--bg-popover)] border-[var(--border-default)] shadow-xl p-1.5 rounded-xl animate-in fade-in-0 zoom-in-95">
+                  <DropdownMenuItem 
+                    onClick={() => setAjusteDialogOpen(true)}
+                    className="flex items-center gap-2.5 px-3 py-2 text-[13px] rounded-lg cursor-pointer hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-hover)] transition-colors"
+                  >
+                    <Wrench className="h-4 w-4 text-amber-500" />
+                    <span>Ajuste Manual</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => setReconciliacaoDialogOpen(true)}
+                    className="flex items-center gap-2.5 px-3 py-2 text-[13px] rounded-lg cursor-pointer hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-hover)] transition-colors"
+                  >
+                    <Info className="h-4 w-4 text-blue-500" />
+                    <span>Reconciliação</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="my-1.5 bg-[var(--border-default)] opacity-50" />
+                  <DropdownMenuItem 
+                    onClick={() => setScanDialogOpen(true)}
+                    className="flex items-center gap-2.5 px-3 py-2 text-[13px] text-red-400 font-medium rounded-lg cursor-pointer hover:bg-red-500/10 focus:bg-red-500/10 transition-colors"
+                  >
+                    <ShieldAlert className="h-4 w-4" />
+                    <span>Reportar scan</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           )}
         </div>
       </div>
@@ -1364,7 +1398,7 @@ export default function Caixa() {
         }}
       />
 
-      {/* Dialog Reportar Scan */}
+      {/* Dialog Reportar scan */}
       <ReportarScanDialog
         open={scanDialogOpen}
         onClose={() => setScanDialogOpen(false)}
