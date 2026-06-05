@@ -1,90 +1,39 @@
-import { useMemo, useState, useRef } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useMemo, useState, useRef, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { ModernBarChart } from "@/components/ui/modern-bar-chart";
-import { format, isWithinInterval, subDays, subMonths, startOfMonth } from "date-fns";
+import { format, isWithinInterval, subDays, subMonths, startOfMonth, parse, eachDayOfInterval } from "date-fns";
 import { parseLocalDate } from "@/lib/dateUtils";
 import { ptBR } from "date-fns/locale";
-import { TrendingUp, TrendingDown, ArrowRightLeft, AlertCircle, Building2, Users, HelpCircle, CalendarIcon, MoreVertical, Wrench, CheckCircle2, ShieldAlert } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowRightLeft, AlertCircle, Building2, Users, CalendarIcon, MoreVertical, Wrench, CheckCircle2, ShieldAlert } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AjusteManualDialog } from "./AjusteManualDialog";
 import { ReconciliacaoDialog } from "./ReconciliacaoDialog";
 import { ReportarScanDialog } from "./ReportarScanDialog";
 import { cn } from "@/lib/utils";
 import { useCotacoes } from "@/hooks/useCotacoes";
-import { getCurrencySymbol } from "@/types/currency";
-import { formatCurrencyCompact } from "@/utils/formatCurrency";
+import Chart from "chart.js/auto";
 
-// Helper para comparar objetos de cotações por valor (evita re-renders desnecessários)
-function areCotacoesEqual(prev: Record<string, number>, next: Record<string, number>): boolean {
-  const keys = Object.keys(prev);
-  if (keys.length !== Object.keys(next).length) return false;
-  return keys.every(key => Math.abs(prev[key] - next[key]) < 0.0001);
+interface Cotacoes {
+  USD_BRL: number;
+  USDC_BRL: number;
+  USDT_BRL: number;
+  BTC_BRL: number;
+  ETH_BRL: number;
+  LTC_BRL: number;
 }
 
-// Moedas suportadas e suas configurações de cor
-const CURRENCY_CONFIG: Record<string, { 
-  depositGradient: [string, string]; 
-  saqueGradient: [string, string];
-  depositColor: string;
-  saqueColor: string;
-}> = {
-  BRL: { 
-    depositGradient: ["#3B82F6", "#2563EB"], 
-    saqueGradient: ["#8B5CF6", "#7C3AED"],
-    depositColor: "text-blue-500",
-    saqueColor: "text-purple-500",
-  },
-  USD: { 
-    depositGradient: ["#06B6D4", "#0891B2"], 
-    saqueGradient: ["#EC4899", "#DB2777"],
-    depositColor: "text-cyan-500",
-    saqueColor: "text-pink-500",
-  },
-  EUR: { 
-    depositGradient: ["#10B981", "#059669"], 
-    saqueGradient: ["#F59E0B", "#D97706"],
-    depositColor: "text-emerald-500",
-    saqueColor: "text-amber-500",
-  },
-  GBP: { 
-    depositGradient: ["#6366F1", "#4F46E5"], 
-    saqueGradient: ["#EF4444", "#DC2626"],
-    depositColor: "text-indigo-500",
-    saqueColor: "text-red-500",
-  },
-  MXN: { 
-    depositGradient: ["#14B8A6", "#0D9488"], 
-    saqueGradient: ["#F97316", "#EA580C"],
-    depositColor: "text-teal-500",
-    saqueColor: "text-orange-500",
-  },
-  MYR: { 
-    depositGradient: ["#8B5CF6", "#7C3AED"], 
-    saqueGradient: ["#A855F7", "#9333EA"],
-    depositColor: "text-violet-500",
-    saqueColor: "text-purple-500",
-  },
-  ARS: { 
-    depositGradient: ["#22C55E", "#16A34A"], 
-    saqueGradient: ["#84CC16", "#65A30D"],
-    depositColor: "text-green-500",
-    saqueColor: "text-lime-500",
-  },
-  COP: { 
-    depositGradient: ["#0EA5E9", "#0284C7"], 
-    saqueGradient: ["#38BDF8", "#0EA5E9"],
-    depositColor: "text-sky-500",
-    saqueColor: "text-sky-400",
-  },
-};
-
-const SUPPORTED_CURRENCIES = ["BRL", "USD", "EUR", "GBP", "MXN", "MYR", "ARS", "COP"] as const;
-type SupportedCurrency = typeof SUPPORTED_CURRENCIES[number];
+interface FluxoPonto {
+  data: string;   // 'DD/MM/AAAA'
+  label: string;  // 'DD/MM'
+  depositos: Record<string, number>;
+  saques: Record<string, number>;
+  cotacoes: Cotacoes;
+  isEstimada?: boolean;
+}
 
 interface Transacao {
   id: string;
@@ -111,36 +60,12 @@ interface FluxoFinanceiroOperacionalProps {
 
 type Periodo = "dia" | "semana" | "mes" | "customizado";
 
-// Componente de ajuda reutilizável
-function KpiHelp({ text }: { text: string }) {
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <HelpCircle className="h-3 w-3 text-muted-foreground hover:text-foreground cursor-help transition-colors" />
-        </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-[250px] text-xs">
-          {text}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-}
-
-// Componente de tooltip para abas
-function TabHelp({ text }: { text: string }) {
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <HelpCircle className="h-3 w-3 text-muted-foreground hover:text-foreground cursor-help transition-colors ml-1" />
-        </TooltipTrigger>
-        <TooltipContent side="bottom" className="max-w-[300px] text-xs">
-          {text}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
+function converterParaBRL(valor: number, moeda: string, cotacoes: Cotacoes): number {
+  if (moeda === 'BRL') return valor;
+  const key = `${moeda.toUpperCase()}_BRL` as keyof Cotacoes;
+  const taxa = cotacoes[key];
+  if (!taxa || taxa <= 0) return 0;
+  return valor * taxa;
 }
 
 export function FluxoFinanceiroOperacional({
@@ -149,1020 +74,448 @@ export function FluxoFinanceiroOperacional({
   dataFim,
   setDataInicio,
   setDataFim,
-  saldoBookmakers = 0,
-  onTransacaoClick,
 }: FluxoFinanceiroOperacionalProps) {
   const [periodo, setPeriodo] = useState<Periodo>("dia");
   const [customStartDate, setCustomStartDate] = useState<Date | undefined>(subDays(new Date(), 30));
   const [customEndDate, setCustomEndDate] = useState<Date | undefined>(new Date());
   const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
+  const [datasetVisibility, setDatasetVisibility] = useState<boolean[]>([true, true, true, true]);
   
   const [isAjusteOpen, setIsAjusteOpen] = useState(false);
   const [isReconciliacaoOpen, setIsReconciliacaoOpen] = useState(false);
   const [isScanOpen, setIsScanOpen] = useState(false);
   
-  // Buscar todas as cotações para normalizar as barras do gráfico
-  const { cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMXN, cotacaoMYR, cotacaoARS, cotacaoCOP } = useCotacoes();
-  
-  // ESTABILIZAÇÃO: Usar ref para armazenar cotações e só atualizar se valores mudarem significativamente
-  // Isso evita re-renders do gráfico quando cotações flutuam minimamente
-  const cotacoesRef = useRef<Record<SupportedCurrency, number>>({
-    BRL: 1,
-    USD: cotacaoUSD,
-    EUR: cotacaoEUR,
-    GBP: cotacaoGBP,
-    MXN: cotacaoMXN,
-    MYR: cotacaoMYR,
-    ARS: cotacaoARS,
-    COP: cotacaoCOP,
-  });
-  
-  // Mapa de cotações estável - só atualiza se houver mudança real nos valores
-  const cotacoes: Record<SupportedCurrency, number> = useMemo(() => {
-    const newCotacoes: Record<SupportedCurrency, number> = {
-      BRL: 1,
-      USD: cotacaoUSD,
-      EUR: cotacaoEUR,
-      GBP: cotacaoGBP,
-      MXN: cotacaoMXN,
-      MYR: cotacaoMYR,
-      ARS: cotacaoARS,
-      COP: cotacaoCOP,
-    };
-    
-    // Comparar por valor, não por referência
-    if (areCotacoesEqual(cotacoesRef.current, newCotacoes)) {
-      return cotacoesRef.current; // Retornar mesma referência se valores iguais
-    }
-    
-    // Atualizar ref e retornar novo objeto
-    cotacoesRef.current = newCotacoes;
-    return newCotacoes;
-  }, [cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMXN, cotacaoMYR, cotacaoARS, cotacaoCOP]);
+  const chartRef = useRef<HTMLCanvasElement>(null);
+  const chartInstance = useRef<Chart | null>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
 
-  // Handler para mudar período
-  // CRITICAL: Ao trocar granularidade, expandir o range de datas para que
-  // meses/semanas anteriores sejam buscados do servidor e exibidos no gráfico.
+  const { cotacaoUSD, cryptoPrices } = useCotacoes(["USDC", "USDT", "ETH", "BTC", "LTC"]);
+
+  const cotacoesAtuais: Cotacoes = useMemo(() => ({
+    USD_BRL: cotacaoUSD,
+    USDC_BRL: cryptoPrices.USDC || cotacaoUSD,
+    USDT_BRL: cryptoPrices.USDT || cotacaoUSD,
+    BTC_BRL: cryptoPrices.BTC || 0,
+    ETH_BRL: cryptoPrices.ETH || 0,
+    LTC_BRL: cryptoPrices.LTC || 0,
+  }), [cotacaoUSD, cryptoPrices]);
+
   const handlePeriodoChange = (newPeriodo: Periodo) => {
     setPeriodo(newPeriodo);
+    const now = new Date();
     if (newPeriodo !== "customizado") {
       setShowCustomDatePicker(false);
-      
-      // Expandir range de datas conforme a granularidade selecionada
-      const now = new Date();
       switch (newPeriodo) {
         case "mes":
-          // Mostrar últimos 6 meses completos
-          if (setDataInicio) setDataInicio(startOfMonth(subMonths(now, 5)));
-          if (setDataFim) setDataFim(now);
+          setDataInicio?.(startOfMonth(subMonths(now, 5)));
+          setDataFim?.(now);
           break;
         case "semana":
-          // Mostrar últimas 12 semanas (~90 dias)
-          if (setDataInicio) setDataInicio(subDays(now, 84));
-          if (setDataFim) setDataFim(now);
+          setDataInicio?.(subDays(now, 84));
+          setDataFim?.(now);
           break;
         case "dia":
-          // Mostrar últimos 30 dias
-          if (setDataInicio) setDataInicio(subDays(now, 30));
-          if (setDataFim) setDataFim(now);
+          setDataInicio?.(subDays(now, 30));
+          setDataFim?.(now);
           break;
       }
     } else {
       setShowCustomDatePicker(true);
-      // Aplicar datas customizadas quando mudar para customizado
-      if (setDataInicio && customStartDate) setDataInicio(customStartDate);
-      if (setDataFim && customEndDate) setDataFim(customEndDate);
+      if (customStartDate) setDataInicio?.(customStartDate);
+      if (customEndDate) setDataFim?.(customEndDate);
     }
   };
 
-  // Aplicar datas quando o usuário selecionar
   const handleCustomDateApply = () => {
-    if (setDataInicio) setDataInicio(customStartDate);
-    if (setDataFim) setDataFim(customEndDate);
+    setDataInicio?.(customStartDate);
+    setDataFim?.(customEndDate);
     setShowCustomDatePicker(false);
   };
 
-  // Filtrar transações pelo período selecionado
-  // TAMBÉM exclui pares de estorno (transações de reversão + suas originais)
-  // para evitar distorção nos gráficos de fluxo de caixa
-  const transacoesFiltradas = useMemo(() => {
-    let result = transacoes;
+  const pontosGrafico = useMemo(() => {
+    if (!dataInicio || !dataFim) return [];
     
-    // Filtro de período
-    if (dataInicio || dataFim) {
-      result = result.filter((t) => {
-        const dataTransacao = parseLocalDate(t.data_transacao);
-        if (dataInicio && dataFim) {
-          return isWithinInterval(dataTransacao, { start: dataInicio, end: dataFim });
-        }
-        if (dataInicio) return dataTransacao >= dataInicio;
-        if (dataFim) return dataTransacao <= dataFim;
-        return true;
+    const dias = eachDayOfInterval({ start: dataInicio, end: dataFim });
+    const mapa = new Map<string, FluxoPonto>();
+
+    dias.forEach(dia => {
+      const dStr = format(dia, 'yyyy-MM-dd');
+      mapa.set(dStr, {
+        data: dStr,
+        label: format(dia, 'dd/MM'),
+        depositos: {},
+        saques: {},
+        cotacoes: cotacoesAtuais, // Em prod isso viria do histórico
       });
-    }
-    
-    // Detectar e excluir pares de estorno para não distorcer gráficos
-    // 1. Encontrar IDs de transações referenciadas por estornos (padrão "Ref: <uuid_prefix>")
-    const estornoIds = new Set<string>();
-    const referencedPrefixes = new Set<string>();
-    
-    result.forEach((t) => {
-      const desc = t.descricao || '';
-      if (desc.toUpperCase().startsWith('ESTORNO:') || desc.toUpperCase().startsWith('ESTORNO ')) {
-        estornoIds.add(t.id);
-        // Extrair referência do ID original (padrão "Ref: 52853e41")
-        const refMatch = desc.match(/Ref:\s*([a-f0-9-]+)/i);
-        if (refMatch) {
-          referencedPrefixes.add(refMatch[1]);
+    });
+
+    transacoes.forEach(t => {
+      const dStr = t.data_transacao.split('T')[0];
+      const ponto = mapa.get(dStr);
+      if (ponto) {
+        const moeda = t.moeda || 'BRL';
+        const valor = t.tipo_moeda === 'CRYPTO' ? (t.valor_usd || 0) : t.valor;
+        
+        if (t.tipo_transacao === 'DEPOSITO') {
+          ponto.depositos[moeda] = (ponto.depositos[moeda] || 0) + valor;
+        } else if (t.tipo_transacao === 'SAQUE') {
+          ponto.saques[moeda] = (ponto.saques[moeda] || 0) + valor;
         }
       }
     });
+
+    return Array.from(mapa.values());
+  }, [transacoes, dataInicio, dataFim, cotacoesAtuais]);
+
+  const processado = useMemo(() => {
+    return pontosGrafico.map(p => {
+      const moedasCrypto = ['USD', 'USDC', 'USDT', 'BTC', 'ETH', 'LTC'];
+      
+      const depFiat = p.depositos['BRL'] || 0;
+      const depCrypto = moedasCrypto.reduce((acc, m) => acc + converterParaBRL(p.depositos[m] || 0, m, p.cotacoes), 0);
+      const saqFiat = p.saques['BRL'] || 0;
+      const saqCrypto = moedasCrypto.reduce((acc, m) => acc + converterParaBRL(p.saques[m] || 0, m, p.cotacoes), 0);
+
+      return { label: p.label, depFiat, depCrypto, saqFiat, saqCrypto, raw: p };
+    });
+  }, [pontosGrafico]);
+
+  const kpis = useMemo(() => {
+    const totals = processado.reduce((acc, p) => ({
+      depFiat: acc.depFiat + p.depFiat,
+      depCrypto: acc.depCrypto + p.depCrypto,
+      saqFiat: acc.saqFiat + p.saqFiat,
+      saqCrypto: acc.saqCrypto + p.saqCrypto,
+    }), { depFiat: 0, depCrypto: 0, saqFiat: 0, saqCrypto: 0 });
+
+    const max = Math.max(totals.depFiat, totals.depCrypto, totals.saqFiat, totals.saqCrypto, 1);
     
-    // 2. Se há estornos, filtrar tanto o estorno quanto a transação original
-    if (estornoIds.size > 0) {
-      result = result.filter((t) => {
-        // Excluir a própria transação de estorno
-        if (estornoIds.has(t.id)) return false;
-        // Excluir a transação original referenciada
-        if (referencedPrefixes.size > 0) {
-          for (const prefix of referencedPrefixes) {
-            if (t.id.startsWith(prefix)) return false;
+    return [
+      { label: 'Depósitos BRL', value: totals.depFiat, color: '#22c55e', pct: (totals.depFiat / max) * 100 },
+      { label: 'Depósitos Crypto', value: totals.depCrypto, color: '#22d3ee', pct: (totals.depCrypto / max) * 100, isCrypto: true },
+      { label: 'Saques BRL', value: totals.saqFiat, color: '#f472b6', pct: (totals.saqFiat / max) * 100 },
+      { label: 'Saques Crypto', value: totals.saqCrypto, color: '#818cf8', pct: (totals.saqCrypto / max) * 100, isCrypto: true },
+    ];
+  }, [processado]);
+
+  useEffect(() => {
+    if (!chartRef.current || processado.length === 0) return;
+
+    if (chartInstance.current) {
+      chartInstance.current.destroy();
+    }
+
+    const ctx = chartRef.current.getContext('2d');
+    if (!ctx) return;
+
+    chartInstance.current = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: processado.map(p => p.label),
+        datasets: [
+          {
+            label: 'Depósitos BRL',
+            data: processado.map(p => p.depFiat),
+            backgroundColor: 'rgba(34, 197, 94, 0.75)',
+            borderRadius: 4,
+            hidden: !datasetVisibility[0]
+          },
+          {
+            label: 'Depósitos Crypto (R$)',
+            data: processado.map(p => p.depCrypto),
+            backgroundColor: 'rgba(34, 211, 238, 0.75)',
+            borderRadius: 4,
+            hidden: !datasetVisibility[1]
+          },
+          {
+            label: 'Saques BRL',
+            data: processado.map(p => p.saqFiat),
+            backgroundColor: 'rgba(244, 114, 182, 0.75)',
+            borderRadius: 4,
+            hidden: !datasetVisibility[2]
+          },
+          {
+            label: 'Saques Crypto (R$)',
+            data: processado.map(p => p.saqCrypto),
+            backgroundColor: 'rgba(129, 140, 248, 0.75)',
+            borderRadius: 4,
+            hidden: !datasetVisibility[3]
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            enabled: false,
+            external: (context) => {
+              const { chart, tooltip } = context;
+              const tooltipEl = tooltipRef.current;
+              if (!tooltipEl) return;
+
+              if (tooltip.opacity === 0) {
+                tooltipEl.style.opacity = '0';
+                return;
+              }
+
+              const index = tooltip.dataPoints[0].dataIndex;
+              const ponto = processado[index].raw;
+              
+              let html = `<div class="text-[12px] font-bold pb-2 border-b border-white/10 mb-2">📅 ${format(parseLocalDate(ponto.data), 'dd/MM/yyyy')}</div>`;
+              
+              // BRL Section
+              html += `<div class="mb-2">
+                <div class="text-[9px] uppercase font-bold text-[#22c55e] bg-[#0c2a1a] px-1.5 py-0.5 rounded w-fit mb-1">BRL</div>
+                <div class="flex justify-between text-[11px] mb-0.5">
+                  <span class="text-[#9ca3af]">↓ Depósitos</span>
+                  <span class="text-[#22c55e] font-mono">R$ ${(ponto.depositos['BRL'] || 0).toLocaleString('pt-BR')}</span>
+                </div>
+                <div class="flex justify-between text-[11px]">
+                  <span class="text-[#9ca3af]">↑ Saques</span>
+                  <span class="text-[#f472b6] font-mono">R$ ${(ponto.saques['BRL'] || 0).toLocaleString('pt-BR')}</span>
+                </div>
+              </div>`;
+
+              // Crypto Section
+              const moedasCrypto = Object.keys(ponto.depositos).concat(Object.keys(ponto.saques)).filter(m => m !== 'BRL');
+              const uniqueMoedas = Array.from(new Set(moedasCrypto));
+
+              if (uniqueMoedas.length > 0) {
+                html += `<div class="pt-2 border-t border-white/5">
+                  <div class="text-[9px] uppercase font-bold text-[#22d3ee] bg-[#0a1a2a] px-1.5 py-0.5 rounded w-fit mb-1">Crypto</div>`;
+                
+                uniqueMoedas.forEach(m => {
+                  const dep = ponto.depositos[m] || 0;
+                  const saq = ponto.saques[m] || 0;
+                  if (dep > 0) {
+                    html += `<div class="flex justify-between text-[11px] mb-0.5">
+                      <span class="text-[#9ca3af]">↓ Dep ${m}</span>
+                      <span class="text-white font-mono">${m === 'BRL' ? '' : getCurrencySymbol(m)} ${dep.toLocaleString('pt-BR')} <span class="text-[#6b7280]">≈R$ ${converterParaBRL(dep, m, ponto.cotacoes).toLocaleString('pt-BR')}</span></span>
+                    </div>`;
+                  }
+                  if (saq > 0) {
+                    html += `<div class="flex justify-between text-[11px]">
+                      <span class="text-[#9ca3af]">↑ Saq ${m}</span>
+                      <span class="text-white font-mono">${m === 'BRL' ? '' : getCurrencySymbol(m)} ${saq.toLocaleString('pt-BR')} <span class="text-[#6b7280]">≈R$ ${converterParaBRL(saq, m, ponto.cotacoes).toLocaleString('pt-BR')}</span></span>
+                    </div>`;
+                  }
+                });
+                html += `</div>`;
+              }
+
+              tooltipEl.innerHTML = html;
+              tooltipEl.style.opacity = '1';
+
+              const position = chart.canvas.getBoundingClientRect();
+              const left = tooltip.caretX;
+              const top = tooltip.caretY;
+
+              if (left > chart.width / 2) {
+                tooltipEl.style.left = (left - tooltipEl.offsetWidth - 10) + 'px';
+              } else {
+                tooltipEl.style.left = (left + 10) + 'px';
+              }
+              tooltipEl.style.top = (top - 20) + 'px';
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { color: '#4b5563', font: { size: 10 } }
+          },
+          y: {
+            grid: { color: 'rgba(31, 41, 55, 0.5)' },
+            ticks: {
+              color: '#4b5563',
+              font: { size: 10 },
+              callback: (val) => {
+                const v = Number(val);
+                if (v >= 1000000) return 'R$' + (v/1000000).toFixed(1) + 'M';
+                if (v >= 1000) return 'R$' + (v/1000).toFixed(0) + 'k';
+                return 'R$' + v;
+              }
+            }
           }
         }
-        return true;
-      });
-    }
-    
-    return result;
-  }, [transacoes, dataInicio, dataFim]);
-
-  // 1. Fluxo de Capital Externo (Investidores)
-  // REGRA: Suporta todas as 8 moedas, CRYPTO = USD
-  type GrupoDataExterno = {
-    aportes: Record<SupportedCurrency, number>;
-    liquidacoes: Record<SupportedCurrency, number>;
-    transacoes: Transacao[];
-  };
-  
-  const dadosCapitalExternoBase = useMemo(() => {
-    const agrupamentos: Map<string, GrupoDataExterno> = new Map();
-    
-    // Inicializar objeto vazio para cada moeda
-    const emptyTotals = (): Record<SupportedCurrency, number> => 
-      SUPPORTED_CURRENCIES.reduce((acc, c) => ({ ...acc, [c]: 0 }), {} as Record<SupportedCurrency, number>);
-
-    transacoesFiltradas.forEach((t) => {
-      if (t.tipo_transacao !== "APORTE_FINANCEIRO") return;
-      
-      const data = parseLocalDate(t.data_transacao);
-      let chave: string;
-
-      switch (periodo) {
-        case "dia":
-          chave = format(data, "dd/MM");
-          break;
-        case "semana":
-          chave = `Sem ${format(data, "w")}`;
-          break;
-        case "mes":
-          chave = format(data, "MMM/yy", { locale: ptBR });
-          break;
-        default:
-          chave = format(data, "dd/MM");
-      }
-
-      if (!agrupamentos.has(chave)) {
-        agrupamentos.set(chave, { 
-          aportes: emptyTotals(), 
-          liquidacoes: emptyTotals(), 
-          transacoes: [] 
-        });
-      }
-
-      const grupo = agrupamentos.get(chave)!;
-      grupo.transacoes.push(t);
-      
-      // Determinar moeda: CRYPTO = USD, FIAT = moeda nativa
-      const isCrypto = t.tipo_moeda === "CRYPTO";
-      let moeda: SupportedCurrency = isCrypto ? "USD" : (t.moeda as SupportedCurrency);
-      
-      // Fallback para BRL se moeda não reconhecida
-      if (!SUPPORTED_CURRENCIES.includes(moeda)) {
-        moeda = "BRL";
-      }
-      
-      const valor = isCrypto ? (t.valor_usd || 0) : t.valor;
-
-      // Aporte: Investidor → Caixa
-      if (t.destino_tipo === "CAIXA_OPERACIONAL") {
-        grupo.aportes[moeda] += valor;
-      }
-      // Liquidação: Caixa → Investidor
-      if (t.origem_tipo === "CAIXA_OPERACIONAL") {
-        grupo.liquidacoes[moeda] += valor;
       }
     });
+  }, [processado, datasetVisibility]);
 
-    // Calcular dados para o gráfico (SEM cotações - apenas valores nativos)
-    // IMPORTANTE: Cotações NÃO devem ser dependência deste useMemo
-    // para evitar re-render do gráfico quando taxas atualizam.
-    // A normalização visual é feita separadamente.
-    const dados = Array.from(agrupamentos.entries())
-      .map(([chave, grupo]) => {
-        const result: Record<string, any> = {
-          periodo: chave,
-          transacoes: grupo.transacoes,
-        };
-        
-        // Para cada moeda, adicionar valores reais (sem normalização aqui)
-        SUPPORTED_CURRENCIES.forEach(currency => {
-          const key = currency.toLowerCase();
-          
-          // Valores reais na moeda nativa
-          result[`aportes_${key}`] = grupo.aportes[currency];
-          result[`liquidacoes_${key}`] = grupo.liquidacoes[currency];
-          
-          // Líquido por moeda
-          result[`liquido_${key}`] = grupo.aportes[currency] - grupo.liquidacoes[currency];
-        });
-        
-        return result;
-      });
-
-    // Calcular totais por moeda
-    type CurrencyTotalsExterno = Record<SupportedCurrency, { aportes: number; liquidacoes: number }>;
-    const totais: CurrencyTotalsExterno = SUPPORTED_CURRENCIES.reduce((acc, currency) => {
-      const key = currency.toLowerCase();
-      acc[currency] = {
-        aportes: dados.reduce((sum, d) => sum + (d[`aportes_${key}`] || 0), 0),
-        liquidacoes: dados.reduce((sum, d) => sum + (d[`liquidacoes_${key}`] || 0), 0),
-      };
-      return acc;
-    }, {} as CurrencyTotalsExterno);
-
-    // Detectar quais moedas têm movimentação
-    const moedasAtivas = SUPPORTED_CURRENCIES.filter(currency => 
-      totais[currency].aportes > 0 || totais[currency].liquidacoes > 0
-    );
-
-    return { 
-      dadosBase: dados, // Dados estáveis sem normalização
-      totais,
-      moedasAtivas,
-      // Compatibilidade com código legado
-      totalAportes: totais.BRL.aportes, 
-      totalAportesUSD: totais.USD.aportes,
-      totalLiquidacoes: totais.BRL.liquidacoes,
-      totalLiquidacoesUSD: totais.USD.liquidacoes,
-      liquido: totais.BRL.aportes - totais.BRL.liquidacoes,
-      liquidoUSD: totais.USD.aportes - totais.USD.liquidacoes,
-      hasUSD: totais.USD.aportes > 0 || totais.USD.liquidacoes > 0,
-      hasMultipleCurrencies: moedasAtivas.length > 1,
-    };
-  }, [transacoesFiltradas, periodo]);
-
-  // Normalização separada para renderização do gráfico
-  // ARQUITETURA: Dados base são estáveis. Normalização pode mudar com cotações
-  // mas é aplicada em tempo de renderização, não afetando re-fetches.
-  const dadosCapitalExternoNormalizados = useMemo(() => {
-    return dadosCapitalExternoBase.dadosBase.map(item => {
-      const result = { ...item };
-      SUPPORTED_CURRENCIES.forEach(currency => {
-        const key = currency.toLowerCase();
-        const cotacao = cotacoes[currency];
-        // Adicionar valores normalizados para escala visual
-        result[`aportes_${key}_norm`] = (item[`aportes_${key}`] || 0) * cotacao;
-        result[`liquidacoes_${key}_norm`] = (item[`liquidacoes_${key}`] || 0) * cotacao;
-      });
-      return result;
-    });
-  }, [dadosCapitalExternoBase.dadosBase, cotacoes]);
-
-  // Objeto final para uso nos componentes
-  const dadosCapitalExterno = useMemo(() => ({
-    ...dadosCapitalExternoBase,
-    dados: dadosCapitalExternoNormalizados,
-  }), [dadosCapitalExternoBase, dadosCapitalExternoNormalizados]);
-
-  // 2. Capital Alocado em Operação (Bookmakers)
-  // REGRA: Suporta todas as 8 moedas, CRYPTO = USD
-  type CurrencyTotals = Record<SupportedCurrency, { depositos: number; saques: number }>;
-  
-  const dadosCapitalOperacaoBase = useMemo(() => {
-    // Tipo para agrupamento por período
-    type GrupoData = {
-      depositos: Record<SupportedCurrency, number>;
-      saques: Record<SupportedCurrency, number>;
-      transacoes: Transacao[];
-    };
-    
-    const agrupamentos: Map<string, GrupoData> = new Map();
-    
-    // Inicializar objeto vazio para cada moeda
-    const emptyTotals = (): Record<SupportedCurrency, number> => 
-      SUPPORTED_CURRENCIES.reduce((acc, c) => ({ ...acc, [c]: 0 }), {} as Record<SupportedCurrency, number>);
-
-    transacoesFiltradas.forEach((t) => {
-      if (t.tipo_transacao !== "DEPOSITO" && t.tipo_transacao !== "SAQUE") return;
-      
-      const data = parseLocalDate(t.data_transacao);
-      let chave: string;
-
-      switch (periodo) {
-        case "dia":
-          chave = format(data, "dd/MM");
-          break;
-        case "semana":
-          chave = `Sem ${format(data, "w")}`;
-          break;
-        case "mes":
-          chave = format(data, "MMM/yy", { locale: ptBR });
-          break;
-        default:
-          chave = format(data, "dd/MM");
-      }
-
-      if (!agrupamentos.has(chave)) {
-        agrupamentos.set(chave, { 
-          depositos: emptyTotals(), 
-          saques: emptyTotals(), 
-          transacoes: [] 
-        });
-      }
-
-      const grupo = agrupamentos.get(chave)!;
-      grupo.transacoes.push(t);
-      
-      // Determinar moeda: CRYPTO = USD, FIAT = moeda nativa
-      const isCrypto = t.tipo_moeda === "CRYPTO";
-      let moeda: SupportedCurrency = isCrypto ? "USD" : (t.moeda as SupportedCurrency);
-      
-      // Fallback para BRL se moeda não reconhecida
-      if (!SUPPORTED_CURRENCIES.includes(moeda)) {
-        moeda = "BRL";
-      }
-      
-      const valor = isCrypto ? (t.valor_usd || 0) : t.valor;
-
-      if (t.tipo_transacao === "DEPOSITO") {
-        grupo.depositos[moeda] += valor;
-      } else if (t.tipo_transacao === "SAQUE") {
-        grupo.saques[moeda] += valor;
-      }
-    });
-
-    // Calcular dados para o gráfico (SEM cotações - apenas valores nativos)
-    // IMPORTANTE: Cotações NÃO devem ser dependência deste useMemo
-    // para evitar re-render do gráfico quando taxas atualizam.
-    const dados = Array.from(agrupamentos.entries())
-      .map(([chave, grupo]) => {
-        const result: Record<string, any> = {
-          periodo: chave,
-          transacoes: grupo.transacoes,
-        };
-        
-        // Para cada moeda, adicionar valores reais (sem normalização aqui)
-        SUPPORTED_CURRENCIES.forEach(currency => {
-          // Valores reais na moeda nativa
-          result[`depositos_${currency.toLowerCase()}`] = grupo.depositos[currency];
-          result[`saques_${currency.toLowerCase()}`] = grupo.saques[currency];
-          
-          // Alocação líquida por moeda
-          result[`alocacao_${currency.toLowerCase()}`] = grupo.depositos[currency] - grupo.saques[currency];
-        });
-        
-        return result;
-      });
-
-    // Calcular totais por moeda
-    const totais: CurrencyTotals = SUPPORTED_CURRENCIES.reduce((acc, currency) => {
-      const key = currency.toLowerCase();
-      acc[currency] = {
-        depositos: dados.reduce((sum, d) => sum + (d[`depositos_${key}`] || 0), 0),
-        saques: dados.reduce((sum, d) => sum + (d[`saques_${key}`] || 0), 0),
-      };
-      return acc;
-    }, {} as CurrencyTotals);
-
-    // Detectar quais moedas têm movimentação
-    const moedasAtivas = SUPPORTED_CURRENCIES.filter(currency => 
-      totais[currency].depositos > 0 || totais[currency].saques > 0
-    );
-
-    return { 
-      dadosBase: dados, // Dados estáveis sem normalização
-      totais,
-      moedasAtivas,
-      // Compatibilidade com código legado
-      totalDepositos: totais.BRL.depositos,
-      totalDepositosUSD: totais.USD.depositos,
-      totalSaques: totais.BRL.saques,
-      totalSaquesUSD: totais.USD.saques,
-      alocacaoLiquida: totais.BRL.depositos - totais.BRL.saques,
-      alocacaoLiquidaUSD: totais.USD.depositos - totais.USD.saques,
-      hasUSD: totais.USD.depositos > 0 || totais.USD.saques > 0,
-      hasMultipleCurrencies: moedasAtivas.length > 1,
-    };
-  }, [transacoesFiltradas, periodo]);
-
-  // Normalização separada para renderização do gráfico de Capital Operação
-  const dadosCapitalOperacaoNormalizados = useMemo(() => {
-    return dadosCapitalOperacaoBase.dadosBase.map(item => {
-      const result = { ...item };
-      SUPPORTED_CURRENCIES.forEach(currency => {
-        const key = currency.toLowerCase();
-        const cotacao = cotacoes[currency];
-        // Adicionar valores normalizados para escala visual
-        result[`depositos_${key}_norm`] = (item[`depositos_${key}`] || 0) * cotacao;
-        result[`saques_${key}_norm`] = (item[`saques_${key}`] || 0) * cotacao;
-      });
-      return result;
-    });
-  }, [dadosCapitalOperacaoBase.dadosBase, cotacoes]);
-
-  // Objeto final para uso nos componentes
-  const dadosCapitalOperacao = useMemo(() => ({
-    ...dadosCapitalOperacaoBase,
-    dados: dadosCapitalOperacaoNormalizados,
-  }), [dadosCapitalOperacaoBase, dadosCapitalOperacaoNormalizados]);
-
-  // Formatador de moeda dinâmico
-  const formatCurrencyValue = (value: number, currency: string = "BRL") => {
-    const upper = currency.toUpperCase();
-    const symbol = getCurrencySymbol(upper);
-    
-    // Usar Intl para moedas padrão, símbolo manual para outras
-    const standardCurrencies = ["BRL", "USD", "EUR", "GBP"];
-    
-    if (standardCurrencies.includes(upper)) {
-      return new Intl.NumberFormat("pt-BR", {
-        style: "currency",
-        currency: upper,
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(value);
-    }
-    
-    // Para moedas não padrão, usar símbolo manual
-    return `${symbol} ${value.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
+  const toggleDataset = (index: number) => {
+    const newVisibility = [...datasetVisibility];
+    newVisibility[index] = !newVisibility[index];
+    setDatasetVisibility(newVisibility);
   };
 
-  // Alias para compatibilidade
-  const formatCurrency = (value: number, currency: "BRL" | "USD" = "BRL") => formatCurrencyValue(value, currency);
-  const formatUSD = (value: number) => formatCurrencyValue(value, "USD");
+  const totalDepBRL = processado.reduce((a, b) => a + b.depFiat, 0);
+  const totalSaqBRL = processado.reduce((a, b) => a + b.saqFiat, 0);
+  const totalDepCrypto = processado.reduce((a, b) => a + b.depCrypto, 0);
+  const totalSaqCrypto = processado.reduce((a, b) => a + b.saqCrypto, 0);
+  
+  const fluxoBRL = totalDepBRL - totalSaqBRL;
+  const fluxoCrypto = totalDepCrypto - totalSaqCrypto;
+  const saldoTotal = fluxoBRL + fluxoCrypto;
 
-  if (transacoesFiltradas.length === 0) {
-    return (
-      <Card className="bg-card/50 backdrop-blur border-border/50">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            Análise Financeira
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">Nenhuma transação encontrada no período selecionado</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
+  function getCurrencySymbol(m: string) {
+    if (m === 'USD' || m === 'USDC' || m === 'USDT') return 'US$';
+    return m;
   }
 
   return (
-    <Card className="bg-card/50 backdrop-blur border-border/50">
-      <CardHeader>
+    <Card className="bg-[#0f1219] border-[#1f2937] border-[0.5px] rounded-xl overflow-visible shadow-xl">
+      <CardContent className="p-5 space-y-6">
+        {/* Header & Filters */}
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            Análise Financeira
-          </CardTitle>
-          <div className="flex flex-wrap items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-accent/50">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onClick={() => setIsAjusteOpen(true)} className="cursor-pointer">
-                  <Wrench className="mr-2 h-4 w-4" />
-                  Ajuste Manual
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsReconciliacaoOpen(true)} className="cursor-pointer">
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                  Reconciliação de Saldo
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsScanOpen(true)} className="cursor-pointer text-destructive focus:text-destructive">
-                  <ShieldAlert className="mr-2 h-4 w-4" />
-                  Reportar Scan / Perda
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <TrendingUp className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <h3 className="text-[15px] font-semibold text-white leading-tight">Análise Financeira</h3>
+              <p className="text-[11px] text-[#4b5563]">Fluxo de caixa multi-moeda</p>
+            </div>
+          </div>
 
-            <Button
-              variant={periodo === "dia" ? "default" : "outline"}
-              size="sm"
-              onClick={() => handlePeriodoChange("dia")}
-              className="h-7 px-3 text-xs"
-            >
-              Diário
-            </Button>
-            <Button
-              variant={periodo === "semana" ? "default" : "outline"}
-              size="sm"
-              onClick={() => handlePeriodoChange("semana")}
-              className="h-7 px-3 text-xs"
-            >
-              Semanal
-            </Button>
-            <Button
-              variant={periodo === "mes" ? "default" : "outline"}
-              size="sm"
-              onClick={() => handlePeriodoChange("mes")}
-              className="h-7 px-3 text-xs"
-            >
-              Mensal
-            </Button>
+          <div className="flex items-center gap-1 bg-[#161b27] p-1 rounded-lg border border-[#1f2937]">
+            {["dia", "semana", "mes", "customizado"].map((p) => (
+              <Button
+                key={p}
+                variant="ghost"
+                size="sm"
+                onClick={() => handlePeriodoChange(p as Periodo)}
+                className={cn(
+                  "h-7 px-3 text-[11px] font-medium transition-all rounded-md",
+                  periodo === p ? "bg-[#22c55e] text-white shadow-sm" : "text-[#4b5563] hover:text-[#9ca3af] hover:bg-white/5"
+                )}
+              >
+                {p.charAt(0).toUpperCase() + p.slice(1)}
+              </Button>
+            ))}
+            
             <Popover open={showCustomDatePicker} onOpenChange={setShowCustomDatePicker}>
               <PopoverTrigger asChild>
-                <Button
-                  variant={periodo === "customizado" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handlePeriodoChange("customizado")}
-                  className="h-7 px-3 text-xs gap-1"
-                >
-                  <CalendarIcon className="h-3 w-3" />
-                  Customizado
-                </Button>
+                <div className="w-0 h-0 invisible" />
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-4" align="end">
+              <PopoverContent className="w-auto p-4 bg-[#12161f] border-[#1f2937]" align="end">
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-xs font-medium">Data Início</label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal text-xs h-8",
-                              !customStartDate && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-3 w-3" />
-                            {customStartDate ? format(customStartDate, "dd/MM/yyyy") : "Selecione"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={customStartDate}
-                            onSelect={setCustomStartDate}
-                            initialFocus
-                            className={cn("p-3 pointer-events-auto")}
-                            locale={ptBR}
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <label className="text-[10px] uppercase font-bold text-[#4b5563]">Início</label>
+                      <Calendar
+                        mode="single"
+                        selected={customStartDate}
+                        onSelect={setCustomStartDate}
+                        className="bg-[#0f1219] border border-[#1f2937] rounded-md"
+                        locale={ptBR}
+                      />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs font-medium">Data Fim</label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal text-xs h-8",
-                              !customEndDate && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-3 w-3" />
-                            {customEndDate ? format(customEndDate, "dd/MM/yyyy") : "Selecione"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={customEndDate}
-                            onSelect={setCustomEndDate}
-                            initialFocus
-                            className={cn("p-3 pointer-events-auto")}
-                            locale={ptBR}
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <label className="text-[10px] uppercase font-bold text-[#4b5563]">Fim</label>
+                      <Calendar
+                        mode="single"
+                        selected={customEndDate}
+                        onSelect={setCustomEndDate}
+                        className="bg-[#0f1219] border border-[#1f2937] rounded-md"
+                        locale={ptBR}
+                      />
                     </div>
                   </div>
-                  <Button 
-                    onClick={handleCustomDateApply} 
-                    size="sm" 
-                    className="w-full"
-                    disabled={!customStartDate || !customEndDate}
-                  >
-                    Aplicar
+                  <Button onClick={handleCustomDateApply} size="sm" className="w-full bg-[#22c55e] hover:bg-[#16a34a] text-white">
+                    Aplicar Intervalo
                   </Button>
                 </div>
               </PopoverContent>
             </Popover>
           </div>
         </div>
-      </CardHeader>
 
-      <CardContent className="space-y-6">
-        <Tabs defaultValue="fluxo" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="fluxo" className="gap-1 text-xs sm:text-sm">
-              <Building2 className="h-4 w-4" />
-              <span className="hidden sm:inline">Fluxo de Caixa</span>
-              <span className="sm:hidden">Fluxo</span>
-              <TabHelp text="Representa o fluxo financeiro efetivo da operação. Aqui são exibidos apenas movimentos de caixa: depósitos enviados às bookmakers e saques recebidos delas. Não considera variações internas de saldo." />
-            </TabsTrigger>
-            <TabsTrigger value="externo" className="gap-1 text-xs sm:text-sm">
-              <Users className="h-4 w-4" />
-              <span className="hidden sm:inline">Capital Externo</span>
-              <span className="sm:hidden">Externo</span>
-              <TabHelp text="Fluxo de capital com investidores. Aportes (entrada de capital) e liquidações (retorno de capital ou lucros)." />
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Aba 1: Capital Externo (Investidores) */}
-          {/* forceMount mantém o componente no DOM; data-[state=inactive]:hidden esconde visualmente */}
-          <TabsContent value="externo" className="mt-4 space-y-4 data-[state=inactive]:hidden" forceMount>
-            {/* KPIs Multi-moeda */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-emerald-500/10 rounded-lg p-3 border border-emerald-500/20">
-                <div className="flex items-center gap-2 text-emerald-500 mb-1">
-                  <TrendingUp className="h-4 w-4" />
-                  <span className="text-xs font-medium uppercase">Aportes</span>
-                  <KpiHelp text="Total de capital recebido de investidores no período selecionado" />
-                </div>
-                <div className="space-y-1">
-                  {dadosCapitalExterno.moedasAtivas.length === 0 ? (
-                    <span className="text-lg font-bold text-muted-foreground font-mono">R$ 0</span>
-                  ) : (
-                    dadosCapitalExterno.moedasAtivas.map((currency, idx) => {
-                      const total = dadosCapitalExterno.totais[currency]?.aportes || 0;
-                      if (total <= 0) return null;
-                      return (
-                        <div key={currency} className={cn("font-mono", idx === 0 ? "text-lg font-bold text-emerald-400" : "text-sm text-emerald-300/80")}>
-                          {formatCurrencyValue(total, currency)}
-                        </div>
-                      );
-                    })
-                  )}
+        {/* KPI Grid */}
+        <div className="grid grid-cols-4 gap-2">
+          {kpis.map((kpi, i) => (
+            <div key={i} className="bg-[#161b27] border border-[#1f2937] rounded-xl p-3 relative group overflow-hidden">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[9px] uppercase font-bold tracking-wider" style={{ color: kpi.color }}>{kpi.label}</span>
+                <div className="w-5 h-5 rounded-full flex items-center justify-center bg-white/5">
+                  {kpi.label.includes('Depósitos') ? <TrendingUp className="h-3 w-3" style={{ color: kpi.color }} /> : <TrendingDown className="h-3 w-3" style={{ color: kpi.color }} />}
                 </div>
               </div>
-              <div className="bg-amber-500/10 rounded-lg p-3 border border-amber-500/20">
-                <div className="flex items-center gap-2 text-amber-500 mb-1">
-                  <TrendingDown className="h-4 w-4" />
-                  <span className="text-xs font-medium uppercase">Liquidações</span>
-                  <KpiHelp text="Total de capital devolvido aos investidores (lucros ou resgates)" />
-                </div>
-                <div className="space-y-1">
-                  {dadosCapitalExterno.moedasAtivas.length === 0 ? (
-                    <span className="text-lg font-bold text-muted-foreground font-mono">R$ 0</span>
-                  ) : (
-                    dadosCapitalExterno.moedasAtivas.map((currency, idx) => {
-                      const total = dadosCapitalExterno.totais[currency]?.liquidacoes || 0;
-                      if (total <= 0) return null;
-                      return (
-                        <div key={currency} className={cn("font-mono", idx === 0 ? "text-lg font-bold text-amber-400" : "text-sm text-amber-300/80")}>
-                          {formatCurrencyValue(total, currency)}
-                        </div>
-                      );
-                    })
-                  )}
-                  {/* Mostrar zero se não houver liquidações */}
-                  {dadosCapitalExterno.moedasAtivas.every(c => (dadosCapitalExterno.totais[c]?.liquidacoes || 0) <= 0) && (
-                    <span className="text-lg font-bold text-muted-foreground font-mono">R$ 0</span>
-                  )}
-                </div>
-              </div>
-              <div className={`rounded-lg p-3 border ${
-                (dadosCapitalExterno.totais.BRL?.aportes || 0) - (dadosCapitalExterno.totais.BRL?.liquidacoes || 0) >= 0 
-                  ? "bg-emerald-500/10 border-emerald-500/20" 
-                  : "bg-destructive/10 border-destructive/20"
-              }`}>
-                <div className={`flex items-center gap-2 mb-1 ${
-                  (dadosCapitalExterno.totais.BRL?.aportes || 0) - (dadosCapitalExterno.totais.BRL?.liquidacoes || 0) >= 0 ? "text-emerald-500" : "text-destructive"
-                }`}>
-                  <ArrowRightLeft className="h-4 w-4" />
-                  <span className="text-xs font-medium uppercase">Saldo Líquido</span>
-                  <KpiHelp text="Diferença entre aportes e liquidações. Positivo = mais capital entrando" />
-                </div>
-                <div className="space-y-1">
-                  {dadosCapitalExterno.moedasAtivas.length === 0 ? (
-                    <span className="text-lg font-bold text-muted-foreground font-mono">R$ 0</span>
-                  ) : (
-                    dadosCapitalExterno.moedasAtivas.map((currency, idx) => {
-                      const aportes = dadosCapitalExterno.totais[currency]?.aportes || 0;
-                      const liquidacoes = dadosCapitalExterno.totais[currency]?.liquidacoes || 0;
-                      const liquido = aportes - liquidacoes;
-                      if (aportes === 0 && liquidacoes === 0) return null;
-                      return (
-                        <div key={currency} className={cn(
-                          "font-mono",
-                          idx === 0 ? "text-lg font-bold" : "text-sm",
-                          liquido >= 0 ? "text-emerald-400" : "text-destructive"
-                        )}>
-                          {liquido >= 0 ? "+" : ""}{formatCurrencyValue(liquido, currency)}
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
+              <div className="text-[18px] font-bold text-white tabular-nums">R$ {kpi.value.toLocaleString('pt-BR')}</div>
+              {kpi.isCrypto && (
+                <div className="text-[9px] text-[#4b5563] mt-0.5 italic">≈ convertido p/ BRL</div>
+              )}
+              <div className="absolute bottom-0 left-0 h-[2px] bg-current opacity-30 transition-all duration-700" style={{ width: `${kpi.pct}%`, color: kpi.color }} />
             </div>
+          ))}
+        </div>
 
-            {/* Gráfico dinâmico com barras para cada moeda ativa */}
-            {dadosCapitalExterno.dados.length > 0 ? (
-              <ModernBarChart
-                data={dadosCapitalExterno.dados}
-                categoryKey="periodo"
-                disableAnimations
-                hideYAxisTicks={dadosCapitalExterno.hasMultipleCurrencies}
-                bars={dadosCapitalExterno.moedasAtivas.flatMap((currency) => {
-                  const config = CURRENCY_CONFIG[currency];
-                  const key = currency.toLowerCase();
-                  return [
-                    { 
-                      dataKey: currency === "BRL" ? `aportes_brl` : `aportes_${key}_norm`, 
-                      label: `Aportes ${currency}`,
-                      labelValueKey: currency === "BRL" ? undefined : `aportes_${key}`,
-                      gradientStart: config?.depositGradient[0] || "#22C55E", 
-                      gradientEnd: config?.depositGradient[1] || "#16A34A",
-                      currency: currency as any,
-                    },
-                    { 
-                      dataKey: currency === "BRL" ? `liquidacoes_brl` : `liquidacoes_${key}_norm`, 
-                      label: `Liquidações ${currency}`,
-                      labelValueKey: currency === "BRL" ? undefined : `liquidacoes_${key}`,
-                      gradientStart: config?.saqueGradient[0] || "#F97316", 
-                      gradientEnd: config?.saqueGradient[1] || "#EA580C",
-                      currency: currency as any,
-                    },
-                  ];
-                })}
-                height={300}
-                barSize={24}
-                showLabels={false}
-                customTooltipContent={(payload, label) => {
-                  const data = payload[0]?.payload;
-                  
-                  const currenciesWithData = dadosCapitalExterno.moedasAtivas.filter(currency => {
-                    const key = currency.toLowerCase();
-                    return (data?.[`aportes_${key}`] || 0) > 0 || (data?.[`liquidacoes_${key}`] || 0) > 0;
-                  });
-                  
-                  if (currenciesWithData.length === 0) return <p className="text-sm text-muted-foreground">Sem dados</p>;
-                  
-                  return (
-                    <div className="space-y-0">
-                      <p className="font-medium text-sm mb-3">{label}</p>
-                      {currenciesWithData.map((currency, idx) => {
-                        const key = currency.toLowerCase();
-                        const aportes = data?.[`aportes_${key}`] || 0;
-                        const liquidacoes = data?.[`liquidacoes_${key}`] || 0;
-                        const fluxo = aportes - liquidacoes;
-                        const fluxoPct = aportes > 0 ? (fluxo / aportes) * 100 : (fluxo !== 0 ? (fluxo > 0 ? 100 : -100) : 0);
-                        const config = CURRENCY_CONFIG[currency];
-                        const isBRL = currency === "BRL";
-                        const aportesNorm = data?.[`aportes_${key}_norm`] || 0;
-                        const liquidacoesNorm = data?.[`liquidacoes_${key}_norm`] || 0;
-                        
-                        return (
-                          <div key={currency}>
-                            {idx > 0 && <div className="border-t border-white/10 my-2" />}
-                            <p className={cn("font-semibold text-[11px] mb-1", config?.depositColor || "text-foreground")}>{currency}</p>
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                              <span className="font-mono">Aportes: {formatCurrencyValue(aportes, currency)}</span>
-                              <span className="font-mono">Liquidações: {liquidacoes > 0 ? formatCurrencyValue(liquidacoes, currency) : "—"}</span>
-                            </div>
-                            {!isBRL && (
-                              <div className="flex items-center gap-4 text-[10px] text-muted-foreground/60 mt-0.5">
-                                <span className="font-mono">≈ {formatCurrencyValue(aportesNorm, "BRL")}</span>
-                                <span className="font-mono">{liquidacoesNorm > 0 ? `≈ ${formatCurrencyValue(liquidacoesNorm, "BRL")}` : ""}</span>
-                              </div>
-                            )}
-                            <div className={cn("text-xs font-medium mt-1", fluxo > 0 ? "text-emerald-400" : fluxo < 0 ? "text-destructive" : "text-muted-foreground")}>
-                              <span className="font-mono">Fluxo líquido: {fluxo > 0 ? "+" : ""}{formatCurrencyValue(fluxo, currency)} ({fluxo > 0 ? "+" : ""}{fluxoPct.toFixed(1)}%)</span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                }}
-              />
-            ) : (
-              <div className="flex items-center justify-center h-[200px] text-muted-foreground">
-                Nenhuma movimentação de investidores no período
-              </div>
-            )}
-
-            {dadosCapitalExterno.hasMultipleCurrencies ? (
-              <p className="text-xs text-muted-foreground text-center italic">
-                Escala proporcional normalizada para comparação visual entre moedas. Os valores exibidos são reais; a altura das barras reflete equivalência em BRL.
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground text-center">
-                Capital novo (aportes) vs devolvido (liquidações).
-              </p>
-            )}
-          </TabsContent>
-
-          {/* Aba 2: Fluxo de Caixa (Capital em Operação - Bookmakers) */}
-          {/* forceMount mantém o componente no DOM; data-[state=inactive]:hidden esconde visualmente */}
-          <TabsContent value="fluxo" className="mt-4 space-y-4 data-[state=inactive]:hidden" forceMount>
-            {/* KPIs - Depósitos e Saques com todas as moedas ativas */}
-            <div className="grid grid-cols-2 gap-4">
-              {/* Card Depósitos */}
-              <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
-                <div className="flex items-center gap-2 text-blue-500 mb-1">
-                  <TrendingUp className="h-4 w-4" />
-                  <span className="text-xs font-medium uppercase">Depósitos</span>
-                  <KpiHelp text="Capital enviado às bookmakers no período selecionado" />
-                </div>
-                <div className="space-y-1">
-                  {/* Moeda primária (BRL) */}
-                  <span className="text-xl font-bold text-blue-400 font-mono">
-                    {formatCurrencyValue(dadosCapitalOperacao.totais.BRL.depositos, "BRL")}
-                  </span>
-                  {/* Outras moedas com movimentação */}
-                  {dadosCapitalOperacao.moedasAtivas
-                    .filter(m => m !== "BRL" && dadosCapitalOperacao.totais[m].depositos > 0)
-                    .map(moeda => (
-                      <div key={moeda} className="text-sm font-mono text-muted-foreground">
-                        + {formatCurrencyValue(dadosCapitalOperacao.totais[moeda].depositos, moeda)}
-                      </div>
-                    ))
-                  }
-                </div>
-              </div>
-              
-              {/* Card Saques */}
-              <div className="bg-purple-500/10 rounded-lg p-4 border border-purple-500/20">
-                <div className="flex items-center gap-2 text-purple-500 mb-1">
-                  <TrendingDown className="h-4 w-4" />
-                  <span className="text-xs font-medium uppercase">Saques</span>
-                  <KpiHelp text="Capital retornado das bookmakers para o caixa no período" />
-                </div>
-                <div className="space-y-1">
-                  {/* Moeda primária (BRL) */}
-                  <span className="text-xl font-bold text-purple-400 font-mono">
-                    {formatCurrencyValue(dadosCapitalOperacao.totais.BRL.saques, "BRL")}
-                  </span>
-                  {/* Outras moedas com movimentação */}
-                  {dadosCapitalOperacao.moedasAtivas
-                    .filter(m => m !== "BRL" && dadosCapitalOperacao.totais[m].saques > 0)
-                    .map(moeda => (
-                      <div key={moeda} className="text-sm font-mono text-muted-foreground">
-                        + {formatCurrencyValue(dadosCapitalOperacao.totais[moeda].saques, moeda)}
-                      </div>
-                    ))
-                  }
-                </div>
-              </div>
+        {/* Liquid Flow Bar */}
+        <div className="bg-[#161b27] border border-[#1f2937] rounded-xl p-3 flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            <div className="flex flex-col">
+              <span className="text-[9px] uppercase font-bold text-[#4b5563] mb-0.5">Fluxo BRL</span>
+              <span className={cn("text-[13px] font-bold font-mono", fluxoBRL >= 0 ? "text-[#22c55e]" : "text-[#ef4444]")}>
+                {fluxoBRL >= 0 ? "+" : ""}R$ {Math.abs(fluxoBRL).toLocaleString('pt-BR')}
+              </span>
             </div>
+            <div className="w-[1px] h-6 bg-[#1f2937]" />
+            <div className="flex flex-col">
+              <span className="text-[9px] uppercase font-bold text-[#4b5563] mb-0.5">Fluxo Crypto</span>
+              <span className={cn("text-[13px] font-bold font-mono", fluxoCrypto >= 0 ? "text-[#22d3ee]" : "text-[#ef4444]")}>
+                {fluxoCrypto >= 0 ? "+" : ""}R$ {Math.abs(fluxoCrypto).toLocaleString('pt-BR')}
+              </span>
+            </div>
+          </div>
+          <div className="text-right">
+            <span className="text-[9px] uppercase font-bold text-[#4b5563] block mb-0.5">Saldo Total</span>
+            <span className={cn("text-[18px] font-bold font-mono", saldoTotal >= 0 ? "text-[#22c55e]" : "text-[#ef4444]")}>
+              {saldoTotal >= 0 ? "+" : "−"}R$ {Math.abs(saldoTotal).toLocaleString('pt-BR')}
+            </span>
+          </div>
+        </div>
 
-            {/* Gráfico com barras dinâmicas para cada moeda ativa */}
-            {dadosCapitalOperacao.dados.length > 0 ? (
-              <ModernBarChart
-                data={dadosCapitalOperacao.dados}
-                categoryKey="periodo"
-                disableAnimations
-                hideYAxisTicks={dadosCapitalOperacao.hasMultipleCurrencies}
-                bars={
-                  // Gerar barras dinamicamente baseado nas moedas ativas
-                  dadosCapitalOperacao.moedasAtivas.flatMap(moeda => {
-                    const config = CURRENCY_CONFIG[moeda];
-                    const key = moeda.toLowerCase();
-                    const hasDeposits = dadosCapitalOperacao.totais[moeda].depositos > 0;
-                    const hasSaques = dadosCapitalOperacao.totais[moeda].saques > 0;
-                    
-                    const bars: Array<{
-                      dataKey: string;
-                      label: string;
-                      labelValueKey?: string;
-                      gradientStart: string;
-                      gradientEnd: string;
-                      currency: "BRL" | "USD" | "EUR" | "GBP" | "MXN" | "MYR" | "ARS" | "COP" | "none";
-                    }> = [];
-                    
-                    if (hasDeposits) {
-                      bars.push({
-                        dataKey: moeda === "BRL" ? `depositos_${key}` : `depositos_${key}_norm`,
-                        label: `Depósitos ${moeda}`,
-                        labelValueKey: moeda !== "BRL" ? `depositos_${key}` : undefined,
-                        gradientStart: config.depositGradient[0],
-                        gradientEnd: config.depositGradient[1],
-                        currency: moeda,
-                      });
-                    }
-                    
-                    if (hasSaques) {
-                      bars.push({
-                        dataKey: moeda === "BRL" ? `saques_${key}` : `saques_${key}_norm`,
-                        label: `Saques ${moeda}`,
-                        labelValueKey: moeda !== "BRL" ? `saques_${key}` : undefined,
-                        gradientStart: config.saqueGradient[0],
-                        gradientEnd: config.saqueGradient[1],
-                        currency: moeda,
-                      });
-                    }
-                    
-                    return bars;
-                  })
-                }
-                height={300}
-                barSize={dadosCapitalOperacao.moedasAtivas.length > 2 ? 16 : 24}
-                showLabels={false}
-                customTooltipContent={(payload, label) => {
-                  const data = payload[0]?.payload;
-                  
-                  const currenciesWithData = dadosCapitalOperacao.moedasAtivas.filter(moeda => {
-                    const key = moeda.toLowerCase();
-                    return (data?.[`depositos_${key}`] || 0) > 0 || (data?.[`saques_${key}`] || 0) > 0;
-                  });
-                  
-                  if (currenciesWithData.length === 0) return <p className="text-sm text-muted-foreground">Sem dados</p>;
-                  
-                  return (
-                    <div className="space-y-0">
-                      <p className="font-medium text-sm mb-3">{label}</p>
-                      {currenciesWithData.map((moeda, idx) => {
-                        const key = moeda.toLowerCase();
-                        const depositos = data?.[`depositos_${key}`] || 0;
-                        const saques = data?.[`saques_${key}`] || 0;
-                        const fluxo = depositos - saques;
-                        const fluxoPct = depositos > 0 ? (fluxo / depositos) * 100 : (fluxo !== 0 ? (fluxo > 0 ? 100 : -100) : 0);
-                        const config = CURRENCY_CONFIG[moeda];
-                        const isBRL = moeda === "BRL";
-                        const depositosNorm = data?.[`depositos_${key}_norm`] || 0;
-                        const saquesNorm = data?.[`saques_${key}_norm`] || 0;
-                        
-                        return (
-                          <div key={moeda}>
-                            {idx > 0 && <div className="border-t border-white/10 my-2" />}
-                            <p className={cn("font-semibold text-[11px] mb-1", config?.depositColor || "text-foreground")}>{moeda}</p>
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                              <span className="font-mono">Depósitos: {formatCurrencyValue(depositos, moeda)}</span>
-                              <span className="font-mono">Saques: {saques > 0 ? formatCurrencyValue(saques, moeda) : "—"}</span>
-                            </div>
-                            {!isBRL && (
-                              <div className="flex items-center gap-4 text-[10px] text-muted-foreground/60 mt-0.5">
-                                <span className="font-mono">≈ {formatCurrencyValue(depositosNorm, "BRL")}</span>
-                                <span className="font-mono">{saquesNorm > 0 ? `≈ ${formatCurrencyValue(saquesNorm, "BRL")}` : ""}</span>
-                              </div>
-                            )}
-                            <div className={cn("text-xs font-medium mt-1", fluxo > 0 ? "text-emerald-400" : fluxo < 0 ? "text-destructive" : "text-muted-foreground")}>
-                              <span className="font-mono">Fluxo líquido: {fluxo > 0 ? "+" : ""}{formatCurrencyValue(fluxo, moeda)} ({fluxo > 0 ? "+" : ""}{fluxoPct.toFixed(1)}%)</span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                }}
-              />
-            ) : (
-              <div className="flex items-center justify-center h-[200px] text-muted-foreground">
-                Nenhuma movimentação de bookmakers no período
-              </div>
-            )}
+        {/* Legend */}
+        <div className="flex justify-center gap-6">
+          {[
+            { label: 'Depósitos BRL', color: '#22c55e' },
+            { label: 'Depósitos Crypto', color: '#22d3ee' },
+            { label: 'Saques BRL', color: '#f472b6' },
+            { label: 'Saques Crypto', color: '#818cf8' },
+          ].map((item, i) => (
+            <button
+              key={i}
+              onClick={() => toggleDataset(i)}
+              className={cn(
+                "flex items-center gap-2 transition-opacity",
+                !datasetVisibility[i] && "opacity-30"
+              )}
+            >
+              <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: item.color }} />
+              <span className="text-[11px] font-medium text-[#6b7280]">{item.label}</span>
+            </button>
+          ))}
+        </div>
 
-            {dadosCapitalOperacao.hasMultipleCurrencies ? (
-              <p className="text-xs text-muted-foreground text-center italic">
-                Escala proporcional normalizada para comparação visual entre moedas. Os valores exibidos são reais; a altura das barras reflete equivalência em BRL.
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground text-center">
-                Fluxo financeiro efetivo: depósitos enviados e saques recebidos.
-              </p>
-            )}
-          </TabsContent>
-        </Tabs>
+        {/* Chart Area */}
+        <div className="relative h-[300px] w-full">
+          <canvas ref={chartRef} />
+          <div
+            ref={tooltipRef}
+            id="cashflow-tooltip"
+            className="absolute pointer-events-none opacity-0 transition-opacity duration-150 z-[100] bg-[#12161f] border border-[#2d3748] rounded-xl p-3 min-w-[220px] shadow-2xl"
+          />
+        </div>
+
+        <p className="text-[10px] text-[#374151] italic text-center">
+          "Valores em crypto convertidos para R$ pela cotação de cada dia. A altura das barras reflete valor real em BRL — barras de moedas diferentes são diretamente comparáveis."
+        </p>
       </CardContent>
 
-      <AjusteManualDialog 
-        open={isAjusteOpen}
-        onClose={() => setIsAjusteOpen(false)}
-        onSuccess={() => {}}
-      />
-
-      <ReconciliacaoDialog
-        open={isReconciliacaoOpen}
-        onClose={() => setIsReconciliacaoOpen(false)}
-        onSuccess={() => {}}
-      />
-
-      <ReportarScanDialog
-        open={isScanOpen}
-        onClose={() => setIsScanOpen(false)}
-        onSuccess={() => {}}
-      />
+      <AjusteManualDialog open={isAjusteOpen} onClose={() => setIsAjusteOpen(false)} onSuccess={() => {}} />
+      <ReconciliacaoDialog open={isReconciliacaoOpen} onClose={() => setIsReconciliacaoOpen(false)} onSuccess={() => {}} />
+      <ReportarScanDialog open={isScanOpen} onClose={() => setIsScanOpen(false)} onSuccess={() => {}} />
     </Card>
   );
 }
