@@ -150,19 +150,28 @@ export function FluxoFinanceiroOperacional({
     });
 
     transacoes.forEach(t => {
-      const dStr = t.data_transacao.split('T')[0];
+      // Usar extractCivilDateKey para consistência com o backend (YYYY-MM-DD)
+      const dStr = t.data_transacao.includes('T') 
+        ? t.data_transacao.split('T')[0] 
+        : t.data_transacao.split(' ')[0];
+        
       const ponto = mapa.get(dStr);
       if (ponto) {
         const moeda = t.moeda || 'BRL';
-        const valor = t.tipo_moeda === 'CRYPTO' ? (t.valor_usd || 0) : t.valor;
+        const valor = t.tipo_moeda === 'CRYPTO' ? (t.valor_usd || t.valor || 0) : (t.valor || 0);
         
-        if (t.tipo_transacao === 'DEPOSITO') {
+        // Normalizar tipos: APORTE e APORTE_FINANCEIRO são entradas, LIQUIDACAO é saída
+        const isEntry = t.tipo_transacao === 'DEPOSITO' || t.tipo_transacao === 'APORTE' || t.tipo_transacao === 'APORTE_FINANCEIRO';
+        const isExit = t.tipo_transacao === 'SAQUE' || t.tipo_transacao === 'LIQUIDACAO';
+
+        if (isEntry) {
           ponto.depositos[moeda] = (ponto.depositos[moeda] || 0) + valor;
-        } else if (t.tipo_transacao === 'SAQUE') {
+        } else if (isExit) {
           ponto.saques[moeda] = (ponto.saques[moeda] || 0) + valor;
         }
       }
     });
+
 
     return Array.from(mapa.values());
   }, [transacoes, dataInicio, dataFim, cotacoesAtuais]);
