@@ -839,11 +839,18 @@ export function HistoricoMovimentacoes({
               <SimplePagination
                 currentPage={pagination.currentPage}
                 totalPages={pagination.totalPages}
-                onPageChange={pagination.goToPage}
-                totalItems={transacoesComBusca.length}
-                pageSize={PAGE_SIZE}
+                totalItems={pagination.totalItems}
+                startIndex={pagination.startIndex}
+                endIndex={pagination.endIndex}
+                hasNextPage={pagination.hasNextPage}
+                hasPrevPage={pagination.hasPrevPage}
+                onNextPage={pagination.goToNextPage}
+                onPrevPage={pagination.goToPrevPage}
+                onFirstPage={pagination.goToFirstPage}
+                onLastPage={pagination.goToLastPage}
               />
             </div>
+
           </div>
 
         )}
