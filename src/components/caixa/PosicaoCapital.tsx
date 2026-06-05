@@ -17,6 +17,7 @@ interface CapitalSegment {
   id: string;
   name: string;
   color: string;
+  colorHex: string;
   pct: number;             
   value: number;
   valueFormatted: string;  
@@ -40,6 +41,12 @@ interface PosicaoCapitalProps {
 
 const isDev = process.env.NODE_ENV === 'development';
 
+const DONUT_COLORS: Record<string, string> = {
+  'bookmakers':  '#818cf8',
+  'caixa-op':    '#22d3ee',
+  'wallets':     '#4ade80',
+  'contas-parc': '#f59e0b',
+};
 
 const CURRENCY_COLORS: Record<string, { bg: string, color: string }> = {
   BRL:  { bg: '#0c2a1a', color: '#22c55e' },
@@ -50,6 +57,7 @@ const CURRENCY_COLORS: Record<string, { bg: string, color: string }> = {
   LTC:  { bg: '#1a1f2a', color: '#94a3b8' },
   USD:  { bg: '#0a1a2a', color: '#22d3ee' },
 };
+
 
 function CurrencyTag({ currency }: { currency: string }) {
   const cfg = CURRENCY_COLORS[currency] ?? { bg: '#161b27', color: '#6b7280' };
