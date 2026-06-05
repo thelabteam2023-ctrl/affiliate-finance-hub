@@ -209,31 +209,39 @@ export function PosicaoCapital({
       },
     ];
 
-    // Cálculo dinâmico para evitar discrepâncias manuais
-    const CIRCUMFERENCE = 2 * Math.PI * 52; // Aproximadamente 326.7
-    const totalBRL = rawItems.reduce((acc, item) => 
+    const CIRCUMFERENCE = 2 * Math.PI * 52; // Aproximadamente 326.7256
+
+    // 1. Validar e filtrar segmentos
+    const validRawItems = rawItems.filter(item => {
+      const segmentValue = item.breakdown.reduce((acc, b) => acc + b.amountBRL, 0);
+      if (segmentValue <= 0) {
+        console.warn(`Segmento "${item.id}" omitido: valor ${segmentValue} <= 0`);
+        return false;
+      }
+      if (!item.color) {
+        console.warn(`Segmento "${item.id}" omitido: cor não definida`);
+        return false;
+      }
+      return true;
+    });
+
+    // 2. Calcular total real
+    const totalBRL = validRawItems.reduce((acc, item) => 
       acc + item.breakdown.reduce((bAcc, b) => bAcc + b.amountBRL, 0), 0
     );
 
-    let currentOffset = -90; // Começamos do topo (-90 graus)
-    const items: CapitalSegment[] = rawItems.map(item => {
+    // 3. Gerar segmentos com percentuais precisos
+    let items: CapitalSegment[] = validRawItems.map(item => {
       const segmentValue = item.breakdown.reduce((acc, b) => acc + b.amountBRL, 0);
       const pct = (segmentValue / totalBRL) * 100;
       
-      const dashFilled = (pct / 100) * CIRCUMFERENCE;
-      const dashEmpty = CIRCUMFERENCE - dashFilled;
-      
-      // O offset no SVG stroke-dashoffset funciona invertido em relação à rotação
-      // Calculamos o offset baseando-se no preenchimento acumulado
-      const dashOffset = -((currentOffset + 90) / 360) * CIRCUMFERENCE;
-      
-      const segment: CapitalSegment = {
+      return {
         id: item.id,
         name: item.name,
         color: item.color,
         value: segmentValue,
         valueFormatted: `R$ ${Math.round(segmentValue).toLocaleString('pt-BR')}`,
-        pct: Number(pct.toFixed(1)),
+        pct: pct, // Usamos o valor bruto para precisão no cálculo do SVG
         detail: item.id === 'bookmakers' 
           ? `R$ ${Math.round(item.breakdown[0].amount).toLocaleString('pt-BR')} · ${item.breakdown.length} moedas`
           : item.id === 'caixa-op'
@@ -241,30 +249,43 @@ export function PosicaoCapital({
           : item.id === 'wallets'
           ? `$${Math.round(item.breakdown[0].amount).toLocaleString('pt-BR')} USD`
           : `R$ ${Math.round(segmentValue).toLocaleString('pt-BR')}`,
-        dashFilled,
-        dashEmpty,
-        dashOffset: -( ( (totalBRL - segmentValue) / 2 ) / totalBRL ) * CIRCUMFERENCE, // Placeholder temporário
+        dashFilled: (pct / 100) * CIRCUMFERENCE,
+        dashEmpty: CIRCUMFERENCE - ((pct / 100) * CIRCUMFERENCE),
+        dashOffset: 0,
         breakdown: item.breakdown.map(b => ({
           ...b,
           pctOfSegment: Number(((b.amountBRL / segmentValue) * 100).toFixed(2))
         }))
       };
-
-      return segment;
     });
 
-    // Re-calculamos os offsets corretamente para que os segmentos fiquem encostados
+    // 4. Normalizar percentuais para somar exatamente 100% (ajuste de arredondamento)
+    const somaPct = items.reduce((acc, s) => acc + s.pct, 0);
+    const residuo = 100 - somaPct;
+    if (Math.abs(residuo) > 0.0001 && items.length > 0) {
+      const maior = items.reduce((a, b) => a.pct > b.pct ? a : b);
+      maior.pct += residuo;
+      maior.dashFilled = (maior.pct / 100) * CIRCUMFERENCE;
+      maior.dashEmpty = CIRCUMFERENCE - maior.dashFilled;
+    }
+
+    // 5. Calcular offsets
     let cumulativePct = 0;
-    items.forEach((item, index) => {
-      // O stroke-dashoffset do SVG começa no ponto (1,0) - 3 horas.
-      // Para começar no topo (12 horas), subtraímos 25% (90 graus) da circunferência.
+    items.forEach((item) => {
       const startPct = cumulativePct;
       item.dashOffset = -((startPct / 100) * CIRCUMFERENCE) + (0.25 * CIRCUMFERENCE);
       cumulativePct += item.pct;
     });
 
-    return { items, total: totalBRL };
+    // 6. Arredondar para exibição APENAS no final
+    const finalItems = items.map(it => ({
+      ...it,
+      pct: Number(it.pct.toFixed(2))
+    }));
+
+    return { items: finalItems, total: totalBRL };
   }, []);
+
 
 
   return (
