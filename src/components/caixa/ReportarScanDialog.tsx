@@ -377,7 +377,7 @@ export function ReportarScanDialog({
               disabled={loading || !canSubmit()}
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ShieldAlert className="h-4 w-4 mr-2" />}
-              Confirmar Registro de Perda
+              Confirmar registro de perda
             </Button>
           </div>
         </div>
