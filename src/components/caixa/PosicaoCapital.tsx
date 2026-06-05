@@ -425,13 +425,14 @@ export function PosicaoCapital({
           )}
         </div>
 
-
-          {/* Tooltip do donut */}
+        {/* 3b. Lista de itens de Posição de Capital */}
+        <div className="space-y-1">
+          {/* Tooltip do donut (movido para fora da grid de 2 colunas para não quebrar o layout) */}
           {(activeSegment && !expandedSegment) && (() => {
             const seg = dadosPosicao.items.find(s => s.id === activeSegment);
             if (!seg) return null;
             return (
-              <div className="absolute top-[148px] left-1/2 -translate-x-1/2 z-50 whitespace-nowrap" style={{
+              <div className="absolute top-[210px] left-[100px] -translate-x-1/2 z-50 whitespace-nowrap" style={{
                 padding: '6px 12px',
                 background: '#1a2030',
                 border: '0.5px solid #2d3748',
@@ -449,10 +450,7 @@ export function PosicaoCapital({
               </div>
             );
           })()}
-        </div>
 
-        {/* 3b. Lista de itens de Posição de Capital */}
-        <div className="space-y-1">
           {dadosPosicao.items.map((item, idx) => {
             const isActive = activeSegment === item.id;
             const isExpanded = expandedSegment === item.id;
