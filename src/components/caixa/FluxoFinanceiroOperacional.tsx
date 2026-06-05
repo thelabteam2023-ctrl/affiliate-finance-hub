@@ -150,19 +150,28 @@ export function FluxoFinanceiroOperacional({
     });
 
     transacoes.forEach(t => {
-      const dStr = t.data_transacao.split('T')[0];
+      // Usar extractCivilDateKey para consistência com o backend (YYYY-MM-DD)
+      const dStr = t.data_transacao.includes('T') 
+        ? t.data_transacao.split('T')[0] 
+        : t.data_transacao.split(' ')[0];
+        
       const ponto = mapa.get(dStr);
       if (ponto) {
         const moeda = t.moeda || 'BRL';
-        const valor = t.tipo_moeda === 'CRYPTO' ? (t.valor_usd || 0) : t.valor;
+        const valor = t.tipo_moeda === 'CRYPTO' ? (t.valor_usd || t.valor || 0) : (t.valor || 0);
         
-        if (t.tipo_transacao === 'DEPOSITO') {
+        // Normalizar tipos: APORTE e APORTE_FINANCEIRO são entradas, LIQUIDACAO é saída
+        const isEntry = t.tipo_transacao === 'DEPOSITO' || t.tipo_transacao === 'APORTE' || t.tipo_transacao === 'APORTE_FINANCEIRO';
+        const isExit = t.tipo_transacao === 'SAQUE' || t.tipo_transacao === 'LIQUIDACAO';
+
+        if (isEntry) {
           ponto.depositos[moeda] = (ponto.depositos[moeda] || 0) + valor;
-        } else if (t.tipo_transacao === 'SAQUE') {
+        } else if (isExit) {
           ponto.saques[moeda] = (ponto.saques[moeda] || 0) + valor;
         }
       }
     });
+
 
     return Array.from(mapa.values());
   }, [transacoes, dataInicio, dataFim, cotacoesAtuais]);
@@ -397,7 +406,9 @@ export function FluxoFinanceiroOperacional({
             
             <Popover open={showCustomDatePicker} onOpenChange={setShowCustomDatePicker}>
               <PopoverTrigger asChild>
-                <div className="w-0 h-0 invisible" />
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 flex items-center justify-center text-[#4b5563] hover:text-white">
+                  <CalendarIcon className="h-3.5 w-3.5" />
+                </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-4 bg-[#12161f] border-[#1f2937]" align="end">
                 <div className="space-y-4">
@@ -431,6 +442,8 @@ export function FluxoFinanceiroOperacional({
             </Popover>
           </div>
         </div>
+
+
 
         {/* KPI Grid */}
         <div className="grid grid-cols-4 gap-2">
@@ -519,3 +532,5 @@ export function FluxoFinanceiroOperacional({
     </Card>
   );
 }
+
+
