@@ -1398,7 +1398,7 @@ export default function Caixa() {
         }}
       />
 
-      {/* Dialog Reportar Scan */}
+      {/* Dialog Reportar scan */}
       <ReportarScanDialog
         open={scanDialogOpen}
         onClose={() => setScanDialogOpen(false)}
