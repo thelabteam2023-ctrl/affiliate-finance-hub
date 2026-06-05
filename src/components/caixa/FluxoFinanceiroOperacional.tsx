@@ -374,72 +374,76 @@ export function FluxoFinanceiroOperacional({
   }
 
   return (
-    <Card className="bg-[#0f1219] border-[#1f2937] border-[0.5px] rounded-xl overflow-visible shadow-xl">
-      <CardContent className="p-5 space-y-6">
-        {/* Header & Filters */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <TrendingUp className="h-4 w-4 text-primary" />
+    <div className="space-y-6">
+      <Card className="bg-[#0f1219] border-[#1f2937] border-[0.5px] rounded-xl overflow-visible shadow-xl">
+        <CardContent className="p-5 space-y-6">
+          {/* Header & Filters */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <TrendingUp className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-[15px] font-semibold text-white leading-tight">Análise Financeira</h3>
+                <p className="text-[11px] text-[#4b5563]">Fluxo de caixa multi-moeda</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-[15px] font-semibold text-white leading-tight">Análise Financeira</h3>
-              <p className="text-[11px] text-[#4b5563]">Fluxo de caixa multi-moeda</p>
+
+            <div className="flex items-center gap-1 bg-[#161b27] p-1 rounded-lg border border-[#1f2937]">
+              {["dia", "semana", "mes", "customizado"].map((p) => (
+                <Button
+                  key={p}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handlePeriodoChange(p as Periodo)}
+                  className={cn(
+                    "h-7 px-3 text-[11px] font-medium transition-all rounded-md",
+                    periodo === p ? "bg-[#22c55e] text-white shadow-sm" : "text-[#4b5563] hover:text-[#9ca3af] hover:bg-white/5"
+                  )}
+                >
+                  {p.charAt(0).toUpperCase() + p.slice(1)}
+                </Button>
+              ))}
+              
+              <Popover open={showCustomDatePicker} onOpenChange={setShowCustomDatePicker}>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 flex items-center justify-center text-[#4b5563] hover:text-white">
+                    <CalendarIcon className="h-3.5 w-3.5" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-4 bg-[#12161f] border-[#1f2937]" align="end">
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] uppercase font-bold text-[#4b5563]">Início</label>
+                        <Calendar
+                          mode="single"
+                          selected={customStartDate}
+                          onSelect={setCustomStartDate}
+                          className="bg-[#0f1219] border border-[#1f2937] rounded-md"
+                          locale={ptBR}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] uppercase font-bold text-[#4b5563]">Fim</label>
+                        <Calendar
+                          mode="single"
+                          selected={customEndDate}
+                          onSelect={setCustomEndDate}
+                          className="bg-[#0f1219] border border-[#1f2937] rounded-md"
+                          locale={ptBR}
+                        />
+                      </div>
+                    </div>
+                    <Button onClick={handleCustomDateApply} size="sm" className="w-full bg-[#22c55e] hover:bg-[#16a34a] text-white">
+                      Aplicar Intervalo
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
-          <div className="flex items-center gap-1 bg-[#161b27] p-1 rounded-lg border border-[#1f2937]">
-            {["dia", "semana", "mes", "customizado"].map((p) => (
-              <Button
-                key={p}
-                variant="ghost"
-                size="sm"
-                onClick={() => handlePeriodoChange(p as Periodo)}
-                className={cn(
-                  "h-7 px-3 text-[11px] font-medium transition-all rounded-md",
-                  periodo === p ? "bg-[#22c55e] text-white shadow-sm" : "text-[#4b5563] hover:text-[#9ca3af] hover:bg-white/5"
-                )}
-              >
-                {p.charAt(0).toUpperCase() + p.slice(1)}
-              </Button>
-            ))}
-            
-            <Popover open={showCustomDatePicker} onOpenChange={setShowCustomDatePicker}>
-              <PopoverTrigger asChild>
-                <div className="w-0 h-0 invisible" />
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-4 bg-[#12161f] border-[#1f2937]" align="end">
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-[10px] uppercase font-bold text-[#4b5563]">Início</label>
-                      <Calendar
-                        mode="single"
-                        selected={customStartDate}
-                        onSelect={setCustomStartDate}
-                        className="bg-[#0f1219] border border-[#1f2937] rounded-md"
-                        locale={ptBR}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] uppercase font-bold text-[#4b5563]">Fim</label>
-                      <Calendar
-                        mode="single"
-                        selected={customEndDate}
-                        onSelect={setCustomEndDate}
-                        className="bg-[#0f1219] border border-[#1f2937] rounded-md"
-                        locale={ptBR}
-                      />
-                    </div>
-                  </div>
-                  <Button onClick={handleCustomDateApply} size="sm" className="w-full bg-[#22c55e] hover:bg-[#16a34a] text-white">
-                    Aplicar Intervalo
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
-        </div>
 
         {/* KPI Grid */}
         <div className="grid grid-cols-4 gap-2">
