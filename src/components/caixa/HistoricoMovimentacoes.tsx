@@ -849,7 +849,8 @@ export function HistoricoMovimentacoes({
           </div>
 
         )}
-      </CardContent>
+      </div>
+
 
       {editDateId && (
         <EditarDataTransacaoDialog
