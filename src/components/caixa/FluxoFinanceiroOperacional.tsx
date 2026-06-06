@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { format, isWithinInterval, subDays, subMonths, startOfMonth, parse, eachDayOfInterval } from "date-fns";
+import { format, isWithinInterval, subDays, subMonths, startOfMonth, parse, eachDayOfInterval, getWeek, startOfWeek, endOfWeek, isSameMonth, startOfYear, eachWeekOfInterval, eachMonthOfInterval } from "date-fns";
 import { parseLocalDate } from "@/lib/dateUtils";
 import { ptBR } from "date-fns/locale";
 import { TrendingUp, TrendingDown, ArrowRightLeft, AlertCircle, Building2, Users, CalendarIcon, MoreVertical, Wrench, CheckCircle2, ShieldAlert } from "lucide-react";
@@ -135,32 +135,102 @@ export function FluxoFinanceiroOperacional({
   const pontosGrafico = useMemo(() => {
     if (!dataInicio || !dataFim) return [];
     
-    const dias = eachDayOfInterval({ start: dataInicio, end: dataFim });
+    // Encontrar a data da primeira transação para evitar semanas/meses vazios no início
+    const datasTransacoes = transacoes
+      .map(t => parseLocalDate(t.data_transacao.split('T')[0]))
+      .filter(d => d >= dataInicio && d <= dataFim)
+      .sort((a, b) => a.getTime() - b.getTime());
+
+    const dataRealInicio = datasTransacoes.length > 0 ? datasTransacoes[0] : dataInicio;
+
     const mapa = new Map<string, FluxoPonto>();
 
-    dias.forEach(dia => {
-      const dStr = format(dia, 'yyyy-MM-dd');
-      mapa.set(dStr, {
-        data: dStr,
-        label: format(dia, 'dd/MM'),
-        depositos: {},
-        saques: {},
-        cotacoes: cotacoesAtuais, // Em prod isso viria do histórico
+    if (periodo === "dia" || (periodo === "customizado" && eachDayOfInterval({ start: dataInicio, end: dataFim }).length <= 31)) {
+      const dias = eachDayOfInterval({ start: dataInicio, end: dataFim });
+      dias.forEach(dia => {
+        const dStr = format(dia, 'yyyy-MM-dd');
+        mapa.set(dStr, {
+          data: dStr,
+          label: format(dia, 'dd/MM'),
+          depositos: {},
+          saques: {},
+          cotacoes: cotacoesAtuais,
+        });
       });
-    });
+    } else if (periodo === "semana") {
+      const semanas = eachWeekOfInterval({ start: startOfWeek(dataRealInicio), end: dataFim });
+      semanas.forEach(s => {
+        const key = `W${getWeek(s)}-${format(s, 'yyyy')}`;
+        mapa.set(key, {
+          data: format(s, 'yyyy-MM-dd'),
+          label: `Sem ${getWeek(s)}`,
+          depositos: {},
+          saques: {},
+          cotacoes: cotacoesAtuais,
+        });
+      });
+    } else if (periodo === "mes") {
+      const meses = eachMonthOfInterval({ start: startOfMonth(dataRealInicio), end: dataFim });
+      meses.forEach(m => {
+        const key = format(m, 'MMM-yyyy');
+        mapa.set(key, {
+          data: format(m, 'yyyy-MM-dd'),
+          label: format(m, 'MMMM', { locale: ptBR }),
+          depositos: {},
+          saques: {},
+          cotacoes: cotacoesAtuais,
+        });
+      });
+    } else {
+      // Customizado com longo intervalo -> Agrupar por semana ou mês automaticamente
+      const totalDias = eachDayOfInterval({ start: dataInicio, end: dataFim }).length;
+      if (totalDias > 90) {
+        // Por mês
+        const meses = eachMonthOfInterval({ start: startOfMonth(dataRealInicio), end: dataFim });
+        meses.forEach(m => {
+          const key = format(m, 'MMM-yyyy');
+          mapa.set(key, {
+            data: format(m, 'yyyy-MM-dd'),
+            label: format(m, 'MMM/yy', { locale: ptBR }),
+            depositos: {},
+            saques: {},
+            cotacoes: cotacoesAtuais,
+          });
+        });
+      } else {
+        // Por semana
+        const semanas = eachWeekOfInterval({ start: startOfWeek(dataRealInicio), end: dataFim });
+        semanas.forEach(s => {
+          const key = `W${getWeek(s)}-${format(s, 'yyyy')}`;
+          mapa.set(key, {
+            data: format(s, 'yyyy-MM-dd'),
+            label: `S${getWeek(s)}`,
+            depositos: {},
+            saques: {},
+            cotacoes: cotacoesAtuais,
+          });
+        });
+      }
+    }
 
     transacoes.forEach(t => {
-      // Usar extractCivilDateKey para consistência com o backend (YYYY-MM-DD)
-      const dStr = t.data_transacao.includes('T') 
-        ? t.data_transacao.split('T')[0] 
-        : t.data_transacao.split(' ')[0];
+      const dataT = parseLocalDate(t.data_transacao.split('T')[0]);
+      if (dataT < dataInicio || dataT > dataFim) return;
+
+      let key = "";
+      if (periodo === "dia" || (periodo === "customizado" && eachDayOfInterval({ start: dataInicio, end: dataFim }).length <= 31)) {
+        key = format(dataT, 'yyyy-MM-dd');
+      } else if (periodo === "semana" || (periodo === "customizado" && eachDayOfInterval({ start: dataInicio, end: dataFim }).length <= 90)) {
+        key = `W${getWeek(dataT)}-${format(dataT, 'yyyy')}`;
+      } else {
+        key = format(dataT, 'MMM-yyyy');
+      }
         
-      const ponto = mapa.get(dStr);
+      const ponto = mapa.get(key);
       if (ponto) {
         const moeda = t.moeda || 'BRL';
         const valor = t.tipo_moeda === 'CRYPTO' ? (t.valor_usd || t.valor || 0) : (t.valor || 0);
         
-        // Normalizar tipos: APORTE e APORTE_FINANCEIRO são entradas, LIQUIDACAO é saída
         const isEntry = t.tipo_transacao === 'DEPOSITO' || t.tipo_transacao === 'APORTE' || t.tipo_transacao === 'APORTE_FINANCEIRO';
         const isExit = t.tipo_transacao === 'SAQUE' || t.tipo_transacao === 'LIQUIDACAO';
 
@@ -172,9 +242,8 @@ export function FluxoFinanceiroOperacional({
       }
     });
 
-
     return Array.from(mapa.values());
-  }, [transacoes, dataInicio, dataFim, cotacoesAtuais]);
+  }, [transacoes, dataInicio, dataFim, cotacoesAtuais, periodo]);
 
   const processado = useMemo(() => {
     return pontosGrafico.map(p => {
@@ -272,7 +341,17 @@ export function FluxoFinanceiroOperacional({
               const index = tooltip.dataPoints[0].dataIndex;
               const ponto = processado[index].raw;
               
-              let html = `<div class="text-[12px] font-bold pb-2 border-b border-white/10 mb-2">📅 ${format(parseLocalDate(ponto.data), 'dd/MM/yyyy')}</div>`;
+              let dateLabel = "";
+              if (periodo === "dia") {
+                dateLabel = format(parseLocalDate(ponto.data), 'dd/MM/yyyy');
+              } else if (periodo === "semana") {
+                const s = parseLocalDate(ponto.data);
+                dateLabel = `${format(startOfWeek(s), 'dd/MM')} a ${format(endOfWeek(s), 'dd/MM/yyyy')}`;
+              } else {
+                dateLabel = format(parseLocalDate(ponto.data), 'MMMM yyyy', { locale: ptBR });
+              }
+
+              let html = `<div class="text-[12px] font-bold pb-2 border-b border-white/10 mb-2">📅 ${dateLabel}</div>`;
               
               // BRL Section
               html += `<div class="mb-2">
