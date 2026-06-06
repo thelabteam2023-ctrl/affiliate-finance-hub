@@ -40,7 +40,7 @@ import {
 
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
+import { cn, getFirstLastName } from '@/lib/utils';
 import { PRIORIDADE_DOTS } from './ocorrencia-tokens';
 
 interface Props {
