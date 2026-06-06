@@ -3,6 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { SwapCryptoDialog } from "./SwapCryptoDialog";
 import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
+import { CurrencyBreakdownModal } from "./CurrencyBreakdownModal";
+import { useTabWorkspace } from "@/hooks/useTabWorkspace";
+import { RefreshCw, Plus, TrendingUp, Info } from "lucide-react";
 
 interface WalletInfo {
   wallet_id: string;
