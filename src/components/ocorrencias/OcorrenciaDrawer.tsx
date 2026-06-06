@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Sheet,
   SheetContent,
@@ -37,8 +37,7 @@ import {
   Building2,
 } from 'lucide-react';
 
-import { formatDistanceToNow, format } from 'date-fns';
-import { parseLocalDateTime } from '@/utils/dateUtils';
+import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { PRIORIDADE_DOTS } from './ocorrencia-tokens';
@@ -59,7 +58,7 @@ const STATUS_TRANSICOES: Record<OcorrenciaStatus, OcorrenciaStatus[]> = {
 
 export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
   const { user } = useAuth();
-  const { data: ocorrencia, isLoading } = useOcorrencia(ocorrenciaId);
+  const { data: ocorrencia, isLoading, isError, error, refetch } = useOcorrencia(ocorrenciaId);
   const { data: eventos = [], isLoading: loadingEventos } = useOcorrenciaEventos(ocorrenciaId);
   const { data: members = [] } = useWorkspaceMembers();
   const { mutate: atualizarStatus, isPending: updatingStatus } = useAtualizarStatusOcorrencia();
@@ -120,16 +119,29 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
               <Skeleton className="h-20 w-full" />
             </div>
           </div>
+        ) : isError && open ? (
+          <div className="h-full w-full p-6 flex flex-col items-center justify-center text-center space-y-4">
+            <AlertTriangle className="h-10 w-10 text-destructive" />
+            <div className="space-y-1">
+              <p className="text-foreground font-semibold">Erro ao carregar detalhes</p>
+              <p className="text-muted-foreground text-xs leading-relaxed max-w-[200px]">
+                {(error as Error)?.message || 'Ocorreu um erro inesperado ao buscar as informações.'}
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 w-full max-w-[200px]">
+              <Button size="sm" onClick={() => refetch()}>Tentar novamente</Button>
+              <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>Fechar</Button>
+            </div>
+          </div>
         ) : !ocorrencia && open ? (
           <div className="h-full w-full p-6 flex flex-col items-center justify-center text-center space-y-3">
             <AlertTriangle className="h-10 w-10 text-muted-foreground/50" />
-            <p className="text-muted-foreground text-sm font-medium">Não foi possível carregar os detalhes da ocorrência.</p>
+            <p className="text-muted-foreground text-sm font-medium">Ocorrência não encontrada.</p>
             <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>Fechar painel</Button>
           </div>
         ) : ocorrencia ? (
           <>
             <SheetHeader className="p-6 border-b border-border/40 shrink-0">
-
               <div className="flex items-center gap-2 mb-2">
                 <div className={cn("h-2.5 w-2.5 rounded-full", PRIORIDADE_DOTS[ocorrencia.prioridade])} />
                 <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
@@ -225,10 +237,9 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
                      <div className="flex items-center justify-between p-3 rounded-lg border border-border/40 bg-muted/20">
                         <div className="flex items-center gap-3">
                           <div className="h-8 w-8 rounded-lg bg-background flex items-center justify-center border border-border/40">
-                         {ocorrencia.bookmaker.bookmakers_catalogo?.logo_url ? (
-                           <img src={ocorrencia.bookmaker.bookmakers_catalogo.logo_url} className="h-5 w-5 object-contain" alt="" />
-                         ) : (
-
+                             {ocorrencia.bookmaker.bookmakers_catalogo?.logo_url ? (
+                               <img src={ocorrencia.bookmaker.bookmakers_catalogo.logo_url} className="h-5 w-5 object-contain" alt="" />
+                             ) : (
                                <Building2 className="h-4 w-4 text-primary" />
                              )}
                           </div>
@@ -339,7 +350,6 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
             )}
           </>
         ) : null}
-
       </SheetContent>
     </Sheet>
   );
