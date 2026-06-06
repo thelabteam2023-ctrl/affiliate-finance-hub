@@ -142,7 +142,8 @@ export function useOcorrencia(id: string) {
     queryKey: OCORRENCIAS_KEYS.detail(id),
     queryFn: async () => {
       const { data, error } = await ocorrenciasTable()
-        .select('*')
+        .select('*, bookmaker:bookmakers(id, nome, bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey(logo_url)), requerente:profiles!requerente_id(id, full_name, avatar_url), executor:profiles!executor_id(id, full_name, avatar_url)')
+
         .eq('id', id)
         .eq('workspace_id', workspaceId!)
         .single();
