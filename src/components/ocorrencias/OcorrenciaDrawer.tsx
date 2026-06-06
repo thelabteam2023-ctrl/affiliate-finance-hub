@@ -111,8 +111,13 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
             <Skeleton className="h-40 w-full" />
           </div>
         ) : (
-          <>
-            <SheetHeader className="p-6 border-b border-border/40 shrink-0">
+          </>
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 
 
           <div className="flex items-center gap-2 mb-2">
