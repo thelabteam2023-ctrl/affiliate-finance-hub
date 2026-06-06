@@ -583,7 +583,7 @@ export function FluxoFinanceiroOperacional({
           <div className="flex items-center gap-6">
             <div className="flex flex-col group relative">
               <div className="flex items-center gap-1 mb-0.5">
-                <span className="text-[9px] uppercase font-bold text-[#4b5563]">Fluxo BRL</span>
+                <span className="text-[9px] uppercase font-bold text-[#4b5563]">Saldo de Movimentação BRL</span>
                 <TooltipProvider>
                   <Popover>
                     <PopoverTrigger asChild>
@@ -592,24 +592,28 @@ export function FluxoFinanceiroOperacional({
                       </button>
                     </PopoverTrigger>
                     <PopoverContent className="w-64 bg-[#12161f] border-[#1f2937] p-3 text-[11px] text-[#9ca3af]">
-                      <p className="font-bold text-white mb-1">Entenda o Fluxo BRL</p>
-                      <p>Diferença entre entradas e saídas em Reais (BRL). Se positivo, houve superávit (mais depósitos). Se negativo, houve déficit (mais saques).</p>
+                      <p className="font-bold text-white mb-1">Entenda o Saldo BRL</p>
+                      <p>Este valor reflete a diferença entre o que foi enviado (depósitos) e o que retornou (saques) das casas em Reais. Um saldo negativo indica apenas que houve mais saques do que depósitos no período selecionado.</p>
                     </PopoverContent>
                   </Popover>
                 </TooltipProvider>
               </div>
               <div className="flex items-center gap-2">
-                <span className={cn("text-[13px] font-bold font-mono", fluxoBRL >= 0 ? "text-[#22c55e]" : "text-[#ef4444]")}>
-                  {fluxoBRL >= 0 ? "+" : ""}R$ {Math.abs(fluxoBRL).toLocaleString('pt-BR')}
+                <span className={cn("text-[13px] font-bold font-mono", fluxoBRL >= 0 ? "text-[#22c55e]" : "text-[#f472b6]")}>
+                  {fluxoBRL >= 0 ? "+" : "−"}R$ {Math.abs(fluxoBRL).toLocaleString('pt-BR')}
                 </span>
-                {fluxoBRL < 0 && <span className="text-[9px] text-[#ef4444] font-medium bg-[#ef4444]/10 px-1 rounded">Déficit</span>}
-                {fluxoBRL > 0 && <span className="text-[9px] text-[#22c55e] font-medium bg-[#22c55e]/10 px-1 rounded">Superávit</span>}
+                {fluxoBRL < 0 && <span className="text-[9px] text-[#f472b6] font-medium bg-[#f472b6]/10 px-1.5 py-0.5 rounded flex items-center gap-1">
+                  <ArrowRightLeft className="h-2.5 w-2.5" /> Mais Saques
+                </span>}
+                {fluxoBRL > 0 && <span className="text-[9px] text-[#22c55e] font-medium bg-[#22c55e]/10 px-1.5 py-0.5 rounded flex items-center gap-1">
+                  <ArrowRightLeft className="h-2.5 w-2.5" /> Mais Depósitos
+                </span>}
               </div>
             </div>
             <div className="w-[1px] h-6 bg-[#1f2937]" />
             <div className="flex flex-col">
               <div className="flex items-center gap-1 mb-0.5">
-                <span className="text-[9px] uppercase font-bold text-[#4b5563]">Fluxo Crypto</span>
+                <span className="text-[9px] uppercase font-bold text-[#4b5563]">Saldo de Movimentação Crypto</span>
                 <TooltipProvider>
                   <Popover>
                     <PopoverTrigger asChild>
@@ -618,26 +622,35 @@ export function FluxoFinanceiroOperacional({
                       </button>
                     </PopoverTrigger>
                     <PopoverContent className="w-64 bg-[#12161f] border-[#1f2937] p-3 text-[11px] text-[#9ca3af]">
-                      <p className="font-bold text-white mb-1">Entenda o Fluxo Crypto</p>
-                      <p>Diferença entre o valor de entrada e saída de ativos digitais, convertidos para R$ pela cotação do momento da transação.</p>
+                      <p className="font-bold text-white mb-1">Entenda o Saldo Crypto</p>
+                      <p>Reflete o fluxo de ativos digitais entre o caixa e as casas. Um saldo negativo significa que o volume de retiradas (saques) foi maior que o de envios (depósitos) no período.</p>
                     </PopoverContent>
                   </Popover>
                 </TooltipProvider>
               </div>
               <div className="flex items-center gap-2">
-                <span className={cn("text-[13px] font-bold font-mono", fluxoCrypto >= 0 ? "text-[#22d3ee]" : "text-[#ef4444]")}>
-                  {fluxoCrypto >= 0 ? "+" : ""}R$ {Math.abs(fluxoCrypto).toLocaleString('pt-BR')}
+                <span className={cn("text-[13px] font-bold font-mono", fluxoCrypto >= 0 ? "text-[#22d3ee]" : "text-[#818cf8]")}>
+                  {fluxoCrypto >= 0 ? "+" : "−"}R$ {Math.abs(fluxoCrypto).toLocaleString('pt-BR')}
                 </span>
-                {fluxoCrypto < 0 && <span className="text-[9px] text-[#ef4444] font-medium bg-[#ef4444]/10 px-1 rounded">Déficit</span>}
-                {fluxoCrypto > 0 && <span className="text-[9px] text-[#22d3ee] font-medium bg-[#22d3ee]/10 px-1 rounded">Superávit</span>}
+                {fluxoCrypto < 0 && <span className="text-[9px] text-[#818cf8] font-medium bg-[#818cf8]/10 px-1.5 py-0.5 rounded flex items-center gap-1">
+                  <ArrowRightLeft className="h-2.5 w-2.5" /> Mais Saques
+                </span>}
+                {fluxoCrypto > 0 && <span className="text-[9px] text-[#22d3ee] font-medium bg-[#22d3ee]/10 px-1.5 py-0.5 rounded flex items-center gap-1">
+                  <ArrowRightLeft className="h-2.5 w-2.5" /> Mais Depósitos
+                </span>}
               </div>
             </div>
           </div>
           <div className="text-right">
-            <span className="text-[9px] uppercase font-bold text-[#4b5563] block mb-0.5">Saldo Líquido Período</span>
-            <span className={cn("text-[18px] font-bold font-mono", saldoTotal >= 0 ? "text-[#22c55e]" : "text-[#ef4444]")}>
+            <span className="text-[9px] uppercase font-bold text-[#4b5563] block mb-0.5">Saldo de Fluxo Total</span>
+            <span className={cn("text-[18px] font-bold font-mono", saldoTotal >= 0 ? "text-white" : "text-[#9ca3af]")}>
               {saldoTotal >= 0 ? "+" : "−"}R$ {Math.abs(saldoTotal).toLocaleString('pt-BR')}
             </span>
+            <div className="text-[9px] text-[#4b5563] mt-0.5 italic max-w-[150px] leading-tight ml-auto">
+              {saldoTotal < 0 
+                ? "Saldo negativo indica maior volume de retorno (saques) para o caixa."
+                : "Saldo positivo indica maior volume de envio (depósitos) para as casas."}
+            </div>
           </div>
         </div>
 
