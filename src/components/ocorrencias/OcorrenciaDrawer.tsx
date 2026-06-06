@@ -110,7 +110,16 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
             <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
               {ocorrencia.prioridade}
             </span>
+            {ocorrencia.bookmaker && (
+              <>
+                <div className="h-1 w-1 rounded-full bg-border" />
+                <span className="text-[10px] uppercase font-bold tracking-wider text-primary">
+                  {ocorrencia.bookmaker.nome}
+                </span>
+              </>
+            )}
             {/* SLA Badge removed */}
+
           </div>
           <SheetTitle className="text-xl font-semibold leading-tight mb-4">
             {ocorrencia.titulo}
