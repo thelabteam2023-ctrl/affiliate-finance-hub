@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useCotacoes } from "@/hooks/useCotacoes";
 
 interface BreakdownEntry {
   id: string;              
