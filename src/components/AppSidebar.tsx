@@ -424,6 +424,13 @@ export function AppSidebar() {
                       isComunidadePage ? chatUnreadCount : alertsCount;
     const isToolLink = item.url.startsWith('#');
 
+    // Estilos comuns para itens de menu
+    const getBadgeStyle = (pageUrl: string) => {
+      if (pageUrl === "/") return "bg-green-500/15 text-green-500"; // Central (Verde)
+      if (pageUrl === "/solicitacoes") return "bg-red-500/15 text-red-500"; // Solicitações (Vermelho)
+      return "bg-white/7 text-white/30"; // Outros (Neutro)
+    };
+
     const sidebarItem: SidebarItemType = {
       id: item.url,
       label: item.title,
@@ -450,6 +457,8 @@ export function AppSidebar() {
       );
     }
 
+    const itemIsActive = isActive(item.url);
+
     if (isToolLink) {
       return (
         <SidebarMenuItem key={item.title} data-sidebar-item={item.url}>
@@ -459,9 +468,9 @@ export function AppSidebar() {
                 <SidebarMenuButton asChild>
                   <button 
                     onClick={(e) => handleMenuItemClick(item, e)}
-                    className="flex items-center justify-center h-9 w-9 rounded-md transition-colors hover:bg-primary/10"
+                    className="flex items-center justify-center h-9 w-9 rounded-[7px] transition-all duration-120 hover:bg-white/5"
                   >
-                    <item.icon className="h-4 w-4" />
+                    <item.icon className="h-[15px] w-[15px] opacity-35 group-hover:opacity-60 transition-opacity" />
                   </button>
                 </SidebarMenuButton>
               </TooltipTrigger>
@@ -473,10 +482,10 @@ export function AppSidebar() {
             <SidebarMenuButton asChild>
               <button 
                 onClick={(e) => handleMenuItemClick(item, e)}
-                className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-primary/10 w-full text-left"
+                className="group flex items-center gap-3 px-3 py-2 rounded-[7px] transition-all duration-120 hover:bg-white/5 w-full text-left"
               >
-                <item.icon className="h-4 w-4 shrink-0" />
-                <span className="text-sm flex-1">{item.title}</span>
+                <item.icon className="h-[15px] w-[15px] shrink-0 opacity-35 group-hover:opacity-60 transition-opacity" />
+                <span className="text-[13px] flex-1 text-white/50 group-hover:text-white/80 transition-colors">{item.title}</span>
               </button>
             </SidebarMenuButton>
           )}
@@ -485,25 +494,28 @@ export function AppSidebar() {
     }
 
     return (
-      <SidebarMenuItem key={item.title} data-sidebar-item={item.url} data-sidebar-active={isActive(item.url) ? "true" : "false"}>
+      <SidebarMenuItem key={item.title} data-sidebar-item={item.url} data-sidebar-active={itemIsActive ? "true" : "false"}>
         {isCollapsed ? (
           <Tooltip>
             <TooltipTrigger asChild>
-              <SidebarMenuButton asChild isActive={isActive(item.url)}>
+              <SidebarMenuButton asChild isActive={itemIsActive}>
                 <NavLink 
                   to={item.url} 
                   end 
-                  className="relative flex items-center justify-center h-9 w-9 rounded-md transition-colors hover:bg-primary/10"
-                  activeClassName="bg-primary/10 text-primary"
+                  className={cn(
+                    "relative flex items-center justify-center h-9 w-9 rounded-[7px] transition-all duration-120 hover:bg-white/5",
+                    itemIsActive && "bg-primary/10"
+                  )}
+                  activeClassName="text-primary"
                 >
-                  <item.icon className="h-4 w-4" />
+                  <item.icon className={cn("h-[15px] w-[15px] transition-all", itemIsActive ? "text-primary opacity-100" : "opacity-35 hover:opacity-60")} />
                   {showBadge && (
-                    <Badge 
-                      variant="destructive" 
-                      className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[10px] font-bold flex items-center justify-center"
-                    >
+                    <div className={cn(
+                      "absolute -top-1 -right-1 h-[18px] min-w-[18px] px-1 text-[10px] font-semibold flex items-center justify-center rounded-[5px]",
+                      getBadgeStyle(item.url)
+                    )}>
                       {badgeCount > 99 ? "99+" : badgeCount}
-                    </Badge>
+                    </div>
                   )}
                 </NavLink>
               </SidebarMenuButton>
@@ -514,22 +526,30 @@ export function AppSidebar() {
             </TooltipContent>
           </Tooltip>
         ) : (
-          <SidebarMenuButton asChild isActive={isActive(item.url)}>
+          <SidebarMenuButton asChild isActive={itemIsActive}>
             <NavLink 
               to={item.url} 
               end 
-              className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-primary/10"
-              activeClassName="bg-primary/10 text-primary font-medium"
+              className={cn(
+                "group flex items-center gap-3 px-3 py-2 rounded-[7px] transition-all duration-120 hover:bg-white/5 relative",
+                itemIsActive && "bg-primary/10"
+              )}
+              activeClassName="text-white font-medium"
             >
-              <item.icon className="h-4 w-4 shrink-0" />
-              <span className="text-sm flex-1">{item.title}</span>
+              {itemIsActive && (
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[2.5px] h-3/5 bg-primary rounded-r-full" />
+              )}
+              <item.icon className={cn("h-[15px] w-[15px] shrink-0 transition-all", itemIsActive ? "text-primary opacity-100" : "opacity-35 group-hover:opacity-60")} />
+              <span className={cn("text-[13px] flex-1 transition-colors", itemIsActive ? "text-white font-medium" : "text-white/50 group-hover:text-white/80")}>
+                {item.title}
+              </span>
               {showBadge && (
-                <Badge 
-                  variant="destructive" 
-                  className="h-5 min-w-5 px-1.5 text-[10px] font-bold"
-                >
+                <div className={cn(
+                  "h-[18px] min-w-[18px] px-1.5 text-[10px] font-semibold flex items-center justify-center rounded-[5px]",
+                  getBadgeStyle(item.url)
+                )}>
                   {badgeCount > 99 ? "99+" : badgeCount}
-                </Badge>
+                </div>
               )}
             </NavLink>
           </SidebarMenuButton>
