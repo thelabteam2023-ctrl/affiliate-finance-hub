@@ -338,7 +338,8 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
               />
             )}
           </>
-        )}
+        ) : null}
+
       </SheetContent>
     </Sheet>
   );
