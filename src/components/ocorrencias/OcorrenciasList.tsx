@@ -88,13 +88,6 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
     isRefetching
   } = useOcorrencias(statusFilter ? { status: statusFilter } : undefined);
 
-  // Observability: Log data flow issues
-  useEffect(() => {
-    if (isError) {
-      console.error('[OcorrenciasList] failed to load:', error);
-    }
-  }, [isError, error]);
-
   // Filter by user and type
   const lista = useMemo(() => {
     let base = modoMinhas
@@ -201,7 +194,6 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
                 onOpen={() => {
                   setDetalheId(ocorrencia.id);
                 }}
-
                 bookmakerNome={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id]?.nome : undefined}
                 bookmakerLogoUrl={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id]?.logo_url : undefined}
                 projetoNome={ocorrencia.projeto_id ? projetoMap[ocorrencia.projeto_id] : undefined}
@@ -221,7 +213,6 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
           }
         }}
       />
-
     </div>
   );
 }
