@@ -166,6 +166,9 @@ export function useOcorrencia(id: string) {
     },
 
     enabled: !!id && !!workspaceId,
+    retry: 2,
+    staleTime: 1000 * 30, // 30 seconds
+
   });
 }
 
