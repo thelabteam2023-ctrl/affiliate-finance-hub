@@ -48,6 +48,7 @@ export const InteractiveTooltip = ({
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             onClick={(e) => {
+              // Prevent events from bubbling up (important for Tabs triggers or nested buttons)
               e.preventDefault();
               e.stopPropagation();
               setIsPinned(!isPinned);
@@ -70,7 +71,7 @@ export const InteractiveTooltip = ({
               <span>Fixado</span>
             </div>
           )}
-          <div className="pt-1">
+          <div className="pt-1" onClick={(e) => e.stopPropagation()}>
             {content}
           </div>
         </TooltipContent>
