@@ -199,9 +199,9 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
                 ocorrencia={ocorrencia}
                 currentUserId={user?.id}
                 onOpen={() => {
-                  console.log('[OcorrenciasList] Opening drawer for:', ocorrencia.id);
                   setDetalheId(ocorrencia.id);
                 }}
+
                 bookmakerNome={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id]?.nome : undefined}
                 bookmakerLogoUrl={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id]?.logo_url : undefined}
                 projetoNome={ocorrencia.projeto_id ? projetoMap[ocorrencia.projeto_id] : undefined}
