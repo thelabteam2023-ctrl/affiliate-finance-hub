@@ -147,7 +147,10 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
                 key={ocorrencia.id}
                 ocorrencia={ocorrencia}
                 currentUserId={user?.id}
-                onOpen={() => setDetalheId(ocorrencia.id)}
+                onOpen={() => {
+                  setDetalheId(ocorrencia.id);
+                }}
+
                 bookmakerNome={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id]?.nome : undefined}
                 bookmakerLogoUrl={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id]?.logo_url : undefined}
                 projetoNome={ocorrencia.projeto_id ? projetoMap[ocorrencia.projeto_id] : undefined}
