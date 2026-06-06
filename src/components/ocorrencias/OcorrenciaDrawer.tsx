@@ -71,6 +71,15 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
 
   const memberMap = new Map(members.map((m) => [m.user_id, m]));
 
+  // Ensure state resets when ID changes
+  useEffect(() => {
+    if (open) {
+      setComentario('');
+      setResolucaoOpen(false);
+    }
+  }, [ocorrenciaId, open]);
+
+
   const getMemberName = (userId: string) => {
     const m = memberMap.get(userId);
     return m?.full_name || m?.email || 'Usuário';
