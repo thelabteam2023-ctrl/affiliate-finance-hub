@@ -58,7 +58,7 @@ async function fetchOcorrencias(
   }
 ): Promise<Ocorrencia[]> {
   let query = ocorrenciasTable()
-    .select('*')
+    .select('*, executor:profiles!executor_id(id, full_name, avatar_url), requerente:profiles!requerente_id(id, full_name, avatar_url)')
     .eq('workspace_id', workspaceId)
     .order('created_at', { ascending: false });
 
