@@ -153,18 +153,28 @@ export function ExposicaoCryptoCard({
             const usdValue = getCryptoUSDValue(coin, data.saldo_coin, data.saldo_usd);
             
             return (
-              <div key={coin} className="grid grid-cols-[50px_1fr_auto] gap-2 items-center">
+              <div 
+                key={coin} 
+                className="grid grid-cols-[50px_1fr_auto] gap-2 items-center cursor-pointer hover:bg-white/[0.02] p-1 -mx-1 rounded-md transition-colors group"
+                onClick={() => {
+                  setSelectedCoin(coin);
+                  setIsBreakdownOpen(true);
+                }}
+              >
                 <span 
                   className="text-[10px] font-bold py-0.5 px-1.5 rounded-[4px] text-center"
                   style={{ backgroundColor: style.bg, color: style.text }}
                 >
                   {coin}
                 </span>
-                <span className="text-[11px] text-[var(--text-muted)] tabular-nums">
-                  {data.saldo_coin.toFixed(coin.toUpperCase() === 'BTC' ? 4 : 2)}
+                <span className="text-[11px] text-[var(--text-muted)] tabular-nums group-hover:text-[var(--text-primary)]">
+                  {data.saldo_coin.toLocaleString('pt-BR', { 
+                    minimumFractionDigits: coin.toUpperCase() === 'BTC' ? 4 : 2,
+                    maximumFractionDigits: coin.toUpperCase() === 'BTC' ? 4 : 2 
+                  })}
                 </span>
                 <div className="flex flex-col items-end">
-                  <span className="text-[11px] text-[var(--text-muted)] tabular-nums leading-none">
+                  <span className="text-[11px] text-[var(--text-muted)] tabular-nums leading-none group-hover:text-[var(--text-primary)]">
                     ≈ {formatCurrency(usdValue, "USD")}
                   </span>
                   <span className="text-[10px] text-[var(--text-faint)] tabular-nums mt-0.5">
