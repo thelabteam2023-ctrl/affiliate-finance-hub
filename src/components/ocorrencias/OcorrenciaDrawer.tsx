@@ -188,7 +188,25 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
               <Tag className="h-3.5 w-3.5" />
               Vinculado a
             </h3>
-            <div className="grid grid-cols-1 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+               {ocorrencia.bookmaker && (
+                 <div className="flex items-center justify-between p-3 rounded-lg border border-border/40 bg-muted/20">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-lg bg-background flex items-center justify-center border border-border/40">
+                         {ocorrencia.bookmaker.logo_url ? (
+                           <img src={ocorrencia.bookmaker.logo_url} className="h-5 w-5 object-contain" alt="" />
+                         ) : (
+                           <Building2 className="h-4 w-4 text-primary" />
+                         )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-foreground truncate">{ocorrencia.bookmaker.nome}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase">Casa / Plataforma</p>
+                      </div>
+                    </div>
+                 </div>
+               )}
+
                <div className="flex items-center justify-between p-3 rounded-lg border border-border/40 bg-muted/20">
                   <div className="flex items-center gap-3">
                     <div className="h-8 w-8 rounded-lg bg-background flex items-center justify-center border border-border/40">
@@ -200,13 +218,14 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
                     </div>
                   </div>
                </div>
-               {subMotivoLabel && (
-                  <div className="flex items-center gap-3 p-3 rounded-lg border border-border/40 bg-muted/20">
-                    <Tag className="h-4 w-4 text-primary" />
-                    <p className="text-xs font-medium text-foreground">{subMotivoLabel}</p>
-                  </div>
-               )}
             </div>
+            {subMotivoLabel && (
+              <div className="flex items-center gap-3 p-3 rounded-lg border border-primary/20 bg-primary/5">
+                <Tag className="h-4 w-4 text-primary" />
+                <p className="text-xs font-bold text-primary">{subMotivoLabel}</p>
+              </div>
+            )}
+
           </section>
 
           {/* Timeline Events */}
