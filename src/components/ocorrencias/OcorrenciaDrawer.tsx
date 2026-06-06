@@ -34,7 +34,9 @@ import {
   CheckCircle2,
   TrendingUp,
   RotateCcw,
+  Building2,
 } from 'lucide-react';
+
 import { formatDistanceToNow, format } from 'date-fns';
 import { parseLocalDateTime } from '@/utils/dateUtils';
 import { ptBR } from 'date-fns/locale';
