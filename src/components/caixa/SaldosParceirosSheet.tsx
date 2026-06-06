@@ -1106,7 +1106,7 @@ const formatTime = (date: Date) => {
                                  </InteractiveTooltip>
                                ) : "—"}
                              </div>
-                             <div className="text-[11px] font-mono text-chart-2 text-right cursor-pointer hover:text-primary transition-colors" onClick={(e) => handleOpenCryptoPanel(e, parceiro)}>
+                             <div className="text-[11px] font-mono text-chart-2 text-right cursor-pointer hover:text-primary transition-colors" onClick={(e) => { e.stopPropagation(); handleOpenCryptoPanel(e, parceiro); }}>
                                {cryptoTotalUSD > 0 ? formatCurrency(cryptoTotalUSD, "USD").split(",")[0] : "—"}
                              </div>
                              <div className="text-[11px] font-mono text-chart-4 text-right">
