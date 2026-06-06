@@ -249,28 +249,16 @@ const SidebarTriggerButton = () => {
     <button
       onClick={toggleSidebar}
       className={cn(
-        "absolute right-[-14px] top-1/2 z-50 flex h-7 w-5 -translate-y-1/2 items-center justify-center rounded-r-md border border-l-0 border-white/10 bg-sidebar shadow-[4px_0_8px_rgba(0,0,0,0.2)] transition-all duration-300 group/trigger hover:w-6 hover:right-[-15px]",
-        "after:absolute after:inset-0 after:rounded-r-md after:bg-primary/0 after:transition-colors hover:after:bg-primary/5"
+        "absolute right-[-12px] top-1/2 z-50 flex h-[40px] w-[12px] -translate-y-1/2 items-center justify-center rounded-r-[6px] border border-white/10 border-l-0 bg-sidebar cursor-pointer transition-all duration-200 group/trigger hover:bg-sidebar-accent",
       )}
       aria-label={state === "expanded" ? "Colapsar menu" : "Expandir menu"}
     >
-      <div className="flex flex-col items-center justify-center gap-0.5 opacity-20 group-hover/trigger:opacity-60 transition-opacity">
-        <div className="h-1 w-1 rounded-full bg-white" />
-        <div className="h-1 w-1 rounded-full bg-white" />
-        <div className="h-1 w-1 rounded-full bg-white" />
-      </div>
-      
-      <div className={cn(
-        "absolute left-[-4px] flex h-5 w-5 items-center justify-center rounded-full border border-white/10 bg-sidebar text-white shadow-sm transition-all duration-300 group-hover/trigger:scale-110 group-hover/trigger:text-primary",
-        state === "collapsed" ? "translate-x-1" : "translate-x-0"
-      )}>
-        <ChevronLeft 
-          className={cn(
-            "h-3 w-3 transition-transform duration-300",
-            state === "collapsed" && "rotate-180"
-          )} 
-        />
-      </div>
+      <ChevronLeft 
+        className={cn(
+          "h-3 w-3 text-white/70 transition-transform duration-300 group-hover/trigger:text-white",
+          state === "collapsed" && "rotate-180"
+        )} 
+      />
     </button>
   );
 };
