@@ -40,13 +40,21 @@ export function OcorrenciasModule() {
 
   // Self-monitoring: toast if system state is invalid
   useEffect(() => {
-    if (!workspaceId && !loadingKpis) {
-      console.error('[OcorrenciasModule] Missing workspaceId');
-      toast.error('Sistema em modo limitado: Workspace não identificado.', {
-        description: 'Tente recarregar a página se o problema persistir.'
-      });
-    }
+    const timer = setTimeout(() => {
+      if (!workspaceId && !loadingKpis) {
+        console.error('[OcorrenciasModule] Missing workspaceId after timeout');
+        toast.error('Sistema de identificação pendente.', {
+          description: 'Aguardando sincronização do workspace. Clique para tentar reconectar.',
+          action: {
+            label: 'Reconectar',
+            onClick: () => window.location.reload()
+          }
+        });
+      }
+    }, 5000);
+    return () => clearTimeout(timer);
   }, [workspaceId, loadingKpis]);
+
 
 
   // Status filter for active vs historical
