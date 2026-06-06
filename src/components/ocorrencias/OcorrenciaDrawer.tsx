@@ -96,17 +96,24 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
   const showSkeleton = isLoading && open;
 
 
-  if (!ocorrencia) return null;
-
-  const transicoes = STATUS_TRANSICOES[ocorrencia.status];
-  const subMotivoLabel = ocorrencia.sub_motivo
+  const transicoes = ocorrencia ? STATUS_TRANSICOES[ocorrencia.status] : [];
+  const subMotivoLabel = ocorrencia?.sub_motivo
     ? SUB_MOTIVO_LABELS[ocorrencia.sub_motivo] || ocorrencia.sub_motivo
     : null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-md md:max-w-xl flex flex-col p-0 bg-background border-l border-border/40">
-        <SheetHeader className="p-6 border-b border-border/40 shrink-0">
+        {showSkeleton || !ocorrencia ? (
+          <div className="h-full w-full p-6 space-y-6">
+            <Skeleton className="h-10 w-3/4" />
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-40 w-full" />
+          </div>
+        ) : (
+          <>
+            <SheetHeader className="p-6 border-b border-border/40 shrink-0">
+
           <div className="flex items-center gap-2 mb-2">
             <div className={cn("h-2.5 w-2.5 rounded-full", PRIORIDADE_DOTS[ocorrencia.prioridade])} />
             <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
