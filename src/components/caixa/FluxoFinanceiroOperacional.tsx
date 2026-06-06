@@ -80,6 +80,7 @@ export function FluxoFinanceiroOperacional({
   const [customEndDate, setCustomEndDate] = useState<Date | undefined>(new Date());
   const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
   const [datasetVisibility, setDatasetVisibility] = useState<boolean[]>([true, true, true, true]);
+  const [selectedPointIndex, setSelectedPointIndex] = useState<number | null>(null);
   
   const [isAjusteOpen, setIsAjusteOpen] = useState(false);
   const [isReconciliacaoOpen, setIsReconciliacaoOpen] = useState(false);
@@ -266,7 +267,13 @@ export function FluxoFinanceiroOperacional({
   }, [pontosGrafico]);
 
   const kpis = useMemo(() => {
-    const totals = processado.reduce((acc, p) => ({
+    // If a point is selected (e.g. via click on a bar), show data for that point.
+    // Otherwise show the totals for the entire filtered period.
+    const sourceData = selectedPointIndex !== null && processado[selectedPointIndex] 
+      ? [processado[selectedPointIndex]] 
+      : processado;
+
+    const totals = sourceData.reduce((acc, p) => ({
       depFiat: acc.depFiat + p.depFiat,
       depCrypto: acc.depCrypto + p.depCrypto,
       saqFiat: acc.saqFiat + p.saqFiat,
@@ -281,7 +288,24 @@ export function FluxoFinanceiroOperacional({
       { label: 'Saques BRL', value: totals.saqFiat, color: '#f472b6', pct: (totals.saqFiat / max) * 100 },
       { label: 'Saques Crypto', value: totals.saqCrypto, color: '#818cf8', pct: (totals.saqCrypto / max) * 100, isCrypto: true },
     ];
-  }, [processado]);
+  }, [processado, selectedPointIndex]);
+
+  const kpiTotals = useMemo(() => {
+    const totalDepBRL = processado.reduce((a, b) => a + b.depFiat, 0);
+    const totalSaqBRL = processado.reduce((a, b) => a + b.saqFiat, 0);
+    const totalDepCrypto = processado.reduce((a, b) => a + b.depCrypto, 0);
+    const totalSaqCrypto = processado.reduce((a, b) => a + b.saqCrypto, 0);
+
+    const currentSource = selectedPointIndex !== null && processado[selectedPointIndex]
+      ? processado[selectedPointIndex]
+      : { depFiat: totalDepBRL, saqFiat: totalSaqBRL, depCrypto: totalDepCrypto, saqCrypto: totalSaqCrypto };
+
+    const fluxoBRL = currentSource.depFiat - currentSource.saqFiat;
+    const fluxoCrypto = currentSource.depCrypto - currentSource.saqCrypto;
+    const saldoTotal = fluxoBRL + fluxoCrypto;
+
+    return { fluxoBRL, fluxoCrypto, saldoTotal };
+  }, [processado, selectedPointIndex]);
 
   useEffect(() => {
     if (!chartRef.current || processado.length === 0) return;
@@ -331,6 +355,13 @@ export function FluxoFinanceiroOperacional({
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        onClick: (event, elements) => {
+          if (elements.length > 0) {
+            setSelectedPointIndex(elements[0].index);
+          } else {
+            setSelectedPointIndex(null);
+          }
+        },
         plugins: {
           legend: { display: false },
           tooltip: {
@@ -445,14 +476,7 @@ export function FluxoFinanceiroOperacional({
     setDatasetVisibility(newVisibility);
   };
 
-  const totalDepBRL = processado.reduce((a, b) => a + b.depFiat, 0);
-  const totalSaqBRL = processado.reduce((a, b) => a + b.saqFiat, 0);
-  const totalDepCrypto = processado.reduce((a, b) => a + b.depCrypto, 0);
-  const totalSaqCrypto = processado.reduce((a, b) => a + b.saqCrypto, 0);
-  
-  const fluxoBRL = totalDepBRL - totalSaqBRL;
-  const fluxoCrypto = totalDepCrypto - totalSaqCrypto;
-  const saldoTotal = fluxoBRL + fluxoCrypto;
+  const { fluxoBRL, fluxoCrypto, saldoTotal } = kpiTotals;
 
   function getCurrencySymbol(m: string) {
     if (m === 'USD' || m === 'USDC' || m === 'USDT') return 'US$';
@@ -469,8 +493,12 @@ export function FluxoFinanceiroOperacional({
               <TrendingUp className="h-4 w-4 text-primary" />
             </div>
             <div>
-              <h3 className="text-[15px] font-semibold text-white leading-tight">Análise Financeira</h3>
-              <p className="text-[11px] text-[#4b5563]">Fluxo de caixa multi-moeda</p>
+              <h3 className="text-[15px] font-semibold text-white leading-tight">
+                {selectedPointIndex !== null ? `Análise: ${processado[selectedPointIndex].label}` : "Análise Financeira"}
+              </h3>
+              <p className="text-[11px] text-[#4b5563]">
+                {selectedPointIndex !== null ? "Visualizando período selecionado" : "Fluxo de caixa multi-moeda"}
+              </p>
             </div>
           </div>
 
@@ -553,22 +581,60 @@ export function FluxoFinanceiroOperacional({
         {/* Liquid Flow Bar */}
         <div className="bg-[#161b27] border border-[#1f2937] rounded-xl p-3 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <div className="flex flex-col">
-              <span className="text-[9px] uppercase font-bold text-[#4b5563] mb-0.5">Fluxo BRL</span>
-              <span className={cn("text-[13px] font-bold font-mono", fluxoBRL >= 0 ? "text-[#22c55e]" : "text-[#ef4444]")}>
-                {fluxoBRL >= 0 ? "+" : ""}R$ {Math.abs(fluxoBRL).toLocaleString('pt-BR')}
-              </span>
+            <div className="flex flex-col group relative">
+              <div className="flex items-center gap-1 mb-0.5">
+                <span className="text-[9px] uppercase font-bold text-[#4b5563]">Fluxo BRL</span>
+                <TooltipProvider>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className="p-0.5 hover:bg-white/5 rounded">
+                        <AlertCircle className="h-2.5 w-2.5 text-[#4b5563]" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64 bg-[#12161f] border-[#1f2937] p-3 text-[11px] text-[#9ca3af]">
+                      <p className="font-bold text-white mb-1">Entenda o Fluxo BRL</p>
+                      <p>Diferença entre entradas e saídas em Reais (BRL). Se positivo, houve superávit (mais depósitos). Se negativo, houve déficit (mais saques).</p>
+                    </PopoverContent>
+                  </Popover>
+                </TooltipProvider>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={cn("text-[13px] font-bold font-mono", fluxoBRL >= 0 ? "text-[#22c55e]" : "text-[#ef4444]")}>
+                  {fluxoBRL >= 0 ? "+" : ""}R$ {Math.abs(fluxoBRL).toLocaleString('pt-BR')}
+                </span>
+                {fluxoBRL < 0 && <span className="text-[9px] text-[#ef4444] font-medium bg-[#ef4444]/10 px-1 rounded">Déficit</span>}
+                {fluxoBRL > 0 && <span className="text-[9px] text-[#22c55e] font-medium bg-[#22c55e]/10 px-1 rounded">Superávit</span>}
+              </div>
             </div>
             <div className="w-[1px] h-6 bg-[#1f2937]" />
             <div className="flex flex-col">
-              <span className="text-[9px] uppercase font-bold text-[#4b5563] mb-0.5">Fluxo Crypto</span>
-              <span className={cn("text-[13px] font-bold font-mono", fluxoCrypto >= 0 ? "text-[#22d3ee]" : "text-[#ef4444]")}>
-                {fluxoCrypto >= 0 ? "+" : ""}R$ {Math.abs(fluxoCrypto).toLocaleString('pt-BR')}
-              </span>
+              <div className="flex items-center gap-1 mb-0.5">
+                <span className="text-[9px] uppercase font-bold text-[#4b5563]">Fluxo Crypto</span>
+                <TooltipProvider>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className="p-0.5 hover:bg-white/5 rounded">
+                        <AlertCircle className="h-2.5 w-2.5 text-[#4b5563]" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64 bg-[#12161f] border-[#1f2937] p-3 text-[11px] text-[#9ca3af]">
+                      <p className="font-bold text-white mb-1">Entenda o Fluxo Crypto</p>
+                      <p>Diferença entre o valor de entrada e saída de ativos digitais, convertidos para R$ pela cotação do momento da transação.</p>
+                    </PopoverContent>
+                  </Popover>
+                </TooltipProvider>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={cn("text-[13px] font-bold font-mono", fluxoCrypto >= 0 ? "text-[#22d3ee]" : "text-[#ef4444]")}>
+                  {fluxoCrypto >= 0 ? "+" : ""}R$ {Math.abs(fluxoCrypto).toLocaleString('pt-BR')}
+                </span>
+                {fluxoCrypto < 0 && <span className="text-[9px] text-[#ef4444] font-medium bg-[#ef4444]/10 px-1 rounded">Déficit</span>}
+                {fluxoCrypto > 0 && <span className="text-[9px] text-[#22d3ee] font-medium bg-[#22d3ee]/10 px-1 rounded">Superávit</span>}
+              </div>
             </div>
           </div>
           <div className="text-right">
-            <span className="text-[9px] uppercase font-bold text-[#4b5563] block mb-0.5">Saldo Total</span>
+            <span className="text-[9px] uppercase font-bold text-[#4b5563] block mb-0.5">Saldo Líquido Período</span>
             <span className={cn("text-[18px] font-bold font-mono", saldoTotal >= 0 ? "text-[#22c55e]" : "text-[#ef4444]")}>
               {saldoTotal >= 0 ? "+" : "−"}R$ {Math.abs(saldoTotal).toLocaleString('pt-BR')}
             </span>
