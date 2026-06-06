@@ -72,23 +72,31 @@ export function OcorrenciaItem({
         {/* Right Section: Entity + Responsible + Time + Value */}
         <div className="flex items-center gap-4 shrink-0 text-xs text-muted-foreground">
           {/* Linked Entity */}
-          <div className="hidden sm:flex items-center gap-2 min-w-[120px]">
+          <div className="hidden sm:flex items-center gap-2 min-w-[140px]">
             {bookmakerNome ? (
-              <div className="flex items-center gap-1.5 max-w-[100px]">
-                {bookmakerLogoUrl ? (
-                  <img src={bookmakerLogoUrl} alt="" className="h-4 w-4 rounded-sm object-contain" />
-                ) : (
-                  <Building2 className="h-3.5 w-3.5" />
+              <div className="flex flex-col gap-0.5 max-w-[120px]">
+                <div className="flex items-center gap-1.5">
+                  {bookmakerLogoUrl ? (
+                    <img src={bookmakerLogoUrl} alt="" className="h-3.5 w-3.5 rounded-sm object-contain" />
+                  ) : (
+                    <Building2 className="h-3 w-3" />
+                  )}
+                  <span className="truncate font-medium">{bookmakerNome}</span>
+                </div>
+                {parceiroNome && (
+                  <div className="flex items-center gap-1 pl-5">
+                    <span className="text-[10px] text-muted-foreground/70 truncate">{getFirstLastName(parceiroNome)}</span>
+                  </div>
                 )}
-                <span className="truncate">{bookmakerNome}</span>
               </div>
             ) : projetoNome ? (
-              <div className="flex items-center gap-1.5 max-w-[100px]">
+              <div className="flex items-center gap-1.5 max-w-[120px]">
                 <FolderOpen className="h-3.5 w-3.5" />
-                <span className="truncate">{projetoNome}</span>
+                <span className="truncate font-medium">{projetoNome}</span>
               </div>
             ) : null}
           </div>
+
 
           {/* Responsible */}
           <div className="flex items-center gap-1.5 w-8 justify-center">
