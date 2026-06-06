@@ -130,6 +130,10 @@ export default function CentralOperacoes() {
   const { role, isOperator } = useRole();
   const { user, workspaceId } = useAuth();
   const { data: kpisOcorrencias } = useOcorrenciasKpis();
+  const { data: activeOcorrencias = [] } = useOcorrencias({
+    status: ['aberto', 'em_andamento', 'aguardando_terceiro'],
+  });
+
   
 
   // ==================== REACT QUERY: Cache + Deduplicação ====================
