@@ -40,7 +40,7 @@ import {
 
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
+import { cn, getFirstLastName } from '@/lib/utils';
 import { PRIORIDADE_DOTS } from './ocorrencia-tokens';
 
 interface Props {
@@ -259,26 +259,47 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
               <section className="space-y-4">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                   <User className="h-3.5 w-3.5 text-primary" />
-                  Contexto e Coordenação
+                  Identificação e Responsabilidades
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                    {ocorrencia.bookmaker && (
-                     <div className="flex items-center justify-between p-3 rounded-lg border border-border/40 bg-muted/20">
+                     <div className="flex flex-col gap-3 p-3 rounded-lg border border-border/40 bg-muted/20 sm:col-span-2">
                         <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 rounded-lg bg-background flex items-center justify-center border border-border/40">
+                          <div className="h-10 w-10 rounded-lg bg-background flex items-center justify-center border border-border/40 shrink-0">
                              {ocorrencia.bookmaker.bookmakers_catalogo?.logo_url ? (
-                               <img src={ocorrencia.bookmaker.bookmakers_catalogo.logo_url} className="h-5 w-5 object-contain" alt="" />
+                               <img src={ocorrencia.bookmaker.bookmakers_catalogo.logo_url} className="h-6 w-6 object-contain" alt="" />
                              ) : (
-                               <Building2 className="h-4 w-4 text-primary" />
+                               <Building2 className="h-5 w-5 text-primary" />
                              )}
                           </div>
                           <div className="min-w-0">
-                            <p className="text-xs font-bold text-foreground truncate">{ocorrencia.bookmaker.nome}</p>
-                            <p className="text-[10px] text-muted-foreground uppercase">Casa / Plataforma</p>
+                            <p className="text-sm font-bold text-foreground truncate">{ocorrencia.bookmaker.nome}</p>
+                            <p className="text-[10px] text-muted-foreground uppercase font-semibold">Casa / Plataforma de Origem</p>
                           </div>
                         </div>
+
+                        {(ocorrencia.bookmaker as any).parceiro?.nome && (
+                          <div className="flex items-center gap-2 pt-2 border-t border-border/20">
+                            <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                            <p className="text-xs text-muted-foreground italic">
+                              Vínculo: <span className="text-foreground not-italic font-bold uppercase tracking-tighter">A Glória de {getFirstLastName((ocorrencia.bookmaker as any).parceiro.nome)}</span>
+                            </p>
+                          </div>
+                        )}
                      </div>
                    )}
+
+                   <div className="flex items-center justify-between p-3 rounded-lg border border-border/40 bg-muted/20">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-lg bg-background flex items-center justify-center border border-border/40">
+                           <User className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-foreground truncate">{getMemberName(ocorrencia.executor_id)}</p>
+                          <p className="text-[10px] text-muted-foreground uppercase font-semibold">Coordenação Responsável</p>
+                        </div>
+                      </div>
+                   </div>
 
                    <div className="flex items-center justify-between p-3 rounded-lg border border-border/40 bg-muted/20">
                       <div className="flex items-center gap-3">
@@ -286,22 +307,10 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
                            <User className="h-4 w-4 text-muted-foreground" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-xs font-medium text-foreground truncate">{getMemberName(ocorrencia.executor_id)}</p>
-                          <p className="text-[10px] text-muted-foreground uppercase">Coordenação / Executor</p>
+                          <p className="text-xs font-medium text-foreground truncate">{getMemberName(ocorrencia.requerente_id)}</p>
+                          <p className="text-[10px] text-muted-foreground uppercase">Titular / Requerente</p>
                         </div>
                       </div>
-                   </div>
-                </div>
-
-                <div className="flex items-center justify-between p-3 rounded-lg border border-border/40 bg-muted/20">
-                   <div className="flex items-center gap-3">
-                     <div className="h-8 w-8 rounded-lg bg-background flex items-center justify-center border border-border/40">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                     </div>
-                     <div className="min-w-0">
-                       <p className="text-xs font-medium text-foreground truncate">{getMemberName(ocorrencia.requerente_id)}</p>
-                       <p className="text-[10px] text-muted-foreground uppercase">Titular / Requerente</p>
-                     </div>
                    </div>
                 </div>
 
