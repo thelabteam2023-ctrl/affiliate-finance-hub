@@ -141,15 +141,30 @@ export function useOcorrencia(id: string) {
   return useQuery({
     queryKey: OCORRENCIAS_KEYS.detail(id),
     queryFn: async () => {
-      const { data, error } = await ocorrenciasTable()
-        .select('*, bookmaker:bookmakers(id, nome, bookmaker_catalogo_id, bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey(logo_url)), requerente:profiles!requerente_id(id, full_name, avatar_url), executor:profiles!executor_id(id, full_name, avatar_url)')
+      try {
+        const { data, error } = await ocorrenciasTable()
+          .select('*, bookmaker:bookmakers(id, nome, bookmaker_catalogo_id, bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey(logo_url)), requerente:profiles!requerente_id(id, full_name, avatar_url), executor:profiles!executor_id(id, full_name, avatar_url)')
+          .eq('id', id)
+          .eq('workspace_id', workspaceId!)
+          .maybeSingle();
 
-        .eq('id', id)
-        .eq('workspace_id', workspaceId!)
-        .single();
-      if (error) throw error;
-      return data as Ocorrencia;
+        if (error) {
+          console.error(`[useOcorrencia] Supabase error for ID ${id}:`, error);
+          throw error;
+        }
+
+        if (!data) {
+          console.warn(`[useOcorrencia] No occurrence found for ID ${id} in workspace ${workspaceId}`);
+          return null;
+        }
+
+        return data as Ocorrencia;
+      } catch (err) {
+        console.error(`[useOcorrencia] Failed to fetch occurrence ${id}:`, err);
+        throw err;
+      }
     },
+
     enabled: !!id && !!workspaceId,
   });
 }
