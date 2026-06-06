@@ -179,20 +179,26 @@ export const SidebarFlyoutMenu: React.FC<SidebarFlyoutMenuProps> = ({
               isActive={isActive}
               onClick={handleClick}
               className={cn(
-                "group/flyout w-full transition-all duration-200 relative z-20",
-                isActive && "bg-primary/5 text-primary font-semibold",
-                isPinned && "ring-1 ring-primary/30 bg-primary/10",
-                "px-3 py-2 h-auto min-h-[40px]" // Larger hitbox
+                "group/flyout w-full transition-all duration-120 relative z-20 rounded-[7px] px-3 py-2 h-auto min-h-[40px] hover:bg-white/5",
+                isActive ? "bg-primary/10 text-white font-medium" : "text-white/50 hover:text-white/80"
               )}
               aria-haspopup="true"
               aria-expanded={isActuallyOpen}
             >
-              {item.icon && <item.icon className={cn("h-4 w-4 shrink-0 transition-transform", isActuallyOpen && "scale-110")} />}
+              {isActive && (
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[2.5px] h-3/5 bg-primary rounded-r-full" />
+              )}
+              {item.icon && (
+                <item.icon className={cn(
+                  "h-[15px] w-[15px] shrink-0 transition-all", 
+                  isActive ? "text-primary opacity-100" : "opacity-35 group-hover/flyout:opacity-60"
+                )} />
+              )}
               {!isCollapsed && (
                 <>
-                  <span className="flex-1 text-sm truncate pr-2">{item.label}</span>
+                  <span className="flex-1 text-[13px] truncate pr-2">{item.label}</span>
                   <ChevronRight className={cn(
-                    "h-4 w-4 transition-all duration-200 opacity-50",
+                    "h-4 w-4 transition-all duration-200 opacity-25",
                     isActuallyOpen && "rotate-90 opacity-100"
                   )} />
                 </>
@@ -322,10 +328,15 @@ export const SidebarFlyoutItem: React.FC<SidebarFlyoutItemProps> = ({ item, onIt
   
   const content = (
     <div className="flex items-center gap-2 w-full group/favitem">
-      {item.icon && <item.icon className={cn("h-4 w-4 shrink-0 opacity-60", isActive && "opacity-100 text-primary")} />}
-      <span className={cn("truncate", isActive && "font-semibold text-primary")}>{item.label}</span>
+      {item.icon && <item.icon className={cn("h-[15px] w-[15px] shrink-0 transition-all", isActive ? "text-primary opacity-100" : "opacity-35 group-hover/favitem:opacity-60")} />}
+      <span className={cn("truncate text-[13px] transition-colors", isActive ? "font-medium text-white" : "text-white/50 group-hover/favitem:text-white/80")}>{item.label}</span>
       {item.badgeCount ? (
-        <span className="ml-auto bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+        <span className={cn(
+          "ml-auto h-[18px] min-w-[18px] px-1.5 text-[10px] font-semibold flex items-center justify-center rounded-[5px]",
+          item.href === "/" ? "bg-green-500/15 text-green-500" : 
+          item.href === "/solicitacoes" ? "bg-red-500/15 text-red-500" : 
+          "bg-white/7 text-white/30"
+        )}>
           {item.badgeCount}
         </span>
       ) : null}

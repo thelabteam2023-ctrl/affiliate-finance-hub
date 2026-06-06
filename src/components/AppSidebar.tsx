@@ -13,6 +13,7 @@ import { useChatNotifications } from "@/hooks/useChatNotifications";
 import { useUserWorkspaces } from "@/hooks/useUserWorkspaces";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { openApostaWindow, openApostaMultiplaWindow, openSurebetWindow } from "@/lib/windowHelper";
@@ -58,10 +59,13 @@ function FavoriteShortcutItem({
           <NavLink
             to={fav.page_path}
             end
-            className="flex items-center justify-center h-9 w-9 rounded-md transition-colors hover:bg-primary/10"
-            activeClassName="bg-primary/10 text-primary"
+            className={cn(
+              "flex items-center justify-center h-9 w-9 rounded-[7px] transition-all duration-120 hover:bg-white/5",
+              isActive && "bg-primary/10"
+            )}
+            activeClassName="text-primary"
           >
-            <Icon className="h-4 w-4" />
+            <Icon className={cn("h-[15px] w-[15px] transition-all", isActive ? "text-primary opacity-100" : "opacity-35 hover:opacity-60")} />
           </NavLink>
         </SidebarMenuButton>
       </TooltipTrigger>
@@ -74,11 +78,14 @@ function FavoriteShortcutItem({
       <NavLink
         to={fav.page_path}
         end
-        className="group/fav flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-primary/10"
-        activeClassName="bg-primary/10 text-primary font-medium"
+        className={cn(
+          "group/fav flex items-center gap-3 px-3 py-2 rounded-[7px] transition-all duration-120 hover:bg-white/5",
+          isActive && "bg-primary/10"
+        )}
+        activeClassName="text-white font-medium"
       >
-        <Icon className="h-4 w-4 shrink-0" />
-        <span className="text-sm flex-1 truncate">{fav.page_title}</span>
+        <Icon className={cn("h-[15px] w-[15px] shrink-0 transition-all", isActive ? "text-primary opacity-100" : "opacity-35 group-hover/fav:opacity-60")} />
+        <span className={cn("text-[13px] flex-1 truncate transition-colors", isActive ? "text-white font-medium" : "text-white/50 group-hover/fav:text-white/80")}>{fav.page_title}</span>
         <button
           type="button"
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRemove(); }}
@@ -101,7 +108,12 @@ function FavoriteShortcutItem({
     >
       <RadixCtxMenu>
         <RadixCtxTrigger asChild>
-          <div className="w-full">{button}</div>
+          <div className="w-full relative group">
+            {isActive && (
+              <div className="absolute left-[8px] top-1/2 -translate-y-1/2 w-[2.5px] h-3/5 bg-primary rounded-r-full z-30" />
+            )}
+            {button}
+          </div>
         </RadixCtxTrigger>
         <RadixCtxContent>
           <RadixCtxItem onClick={onRemove} className="text-destructive focus:text-destructive">
@@ -424,6 +436,13 @@ export function AppSidebar() {
                       isComunidadePage ? chatUnreadCount : alertsCount;
     const isToolLink = item.url.startsWith('#');
 
+    // Estilos comuns para itens de menu
+    const getBadgeStyle = (pageUrl: string) => {
+      if (pageUrl === "/") return "bg-green-500/15 text-green-500"; // Central (Verde)
+      if (pageUrl === "/solicitacoes") return "bg-red-500/15 text-red-500"; // Solicitações (Vermelho)
+      return "bg-white/7 text-white/30"; // Outros (Neutro)
+    };
+
     const sidebarItem: SidebarItemType = {
       id: item.url,
       label: item.title,
@@ -450,6 +469,8 @@ export function AppSidebar() {
       );
     }
 
+    const itemIsActive = isActive(item.url);
+
     if (isToolLink) {
       return (
         <SidebarMenuItem key={item.title} data-sidebar-item={item.url}>
@@ -459,9 +480,9 @@ export function AppSidebar() {
                 <SidebarMenuButton asChild>
                   <button 
                     onClick={(e) => handleMenuItemClick(item, e)}
-                    className="flex items-center justify-center h-9 w-9 rounded-md transition-colors hover:bg-primary/10"
+                    className="flex items-center justify-center h-9 w-9 rounded-[7px] transition-all duration-120 hover:bg-white/5"
                   >
-                    <item.icon className="h-4 w-4" />
+                    <item.icon className="h-[15px] w-[15px] opacity-35 group-hover:opacity-60 transition-opacity" />
                   </button>
                 </SidebarMenuButton>
               </TooltipTrigger>
@@ -473,10 +494,10 @@ export function AppSidebar() {
             <SidebarMenuButton asChild>
               <button 
                 onClick={(e) => handleMenuItemClick(item, e)}
-                className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-primary/10 w-full text-left"
+                className="group flex items-center gap-3 px-3 py-2 rounded-[7px] transition-all duration-120 hover:bg-white/5 w-full text-left"
               >
-                <item.icon className="h-4 w-4 shrink-0" />
-                <span className="text-sm flex-1">{item.title}</span>
+                <item.icon className="h-[15px] w-[15px] shrink-0 opacity-35 group-hover:opacity-60 transition-opacity" />
+                <span className="text-[13px] flex-1 text-white/50 group-hover:text-white/80 transition-colors">{item.title}</span>
               </button>
             </SidebarMenuButton>
           )}
@@ -485,25 +506,28 @@ export function AppSidebar() {
     }
 
     return (
-      <SidebarMenuItem key={item.title} data-sidebar-item={item.url} data-sidebar-active={isActive(item.url) ? "true" : "false"}>
+      <SidebarMenuItem key={item.title} data-sidebar-item={item.url} data-sidebar-active={itemIsActive ? "true" : "false"}>
         {isCollapsed ? (
           <Tooltip>
             <TooltipTrigger asChild>
-              <SidebarMenuButton asChild isActive={isActive(item.url)}>
+              <SidebarMenuButton asChild isActive={itemIsActive}>
                 <NavLink 
                   to={item.url} 
                   end 
-                  className="relative flex items-center justify-center h-9 w-9 rounded-md transition-colors hover:bg-primary/10"
-                  activeClassName="bg-primary/10 text-primary"
+                  className={cn(
+                    "relative flex items-center justify-center h-9 w-9 rounded-[7px] transition-all duration-120 hover:bg-white/5",
+                    itemIsActive && "bg-primary/10"
+                  )}
+                  activeClassName="text-primary"
                 >
-                  <item.icon className="h-4 w-4" />
+                  <item.icon className={cn("h-[15px] w-[15px] transition-all", itemIsActive ? "text-primary opacity-100" : "opacity-35 hover:opacity-60")} />
                   {showBadge && (
-                    <Badge 
-                      variant="destructive" 
-                      className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[10px] font-bold flex items-center justify-center"
-                    >
+                    <div className={cn(
+                      "absolute -top-1 -right-1 h-[18px] min-w-[18px] px-1 text-[10px] font-semibold flex items-center justify-center rounded-[5px]",
+                      getBadgeStyle(item.url)
+                    )}>
                       {badgeCount > 99 ? "99+" : badgeCount}
-                    </Badge>
+                    </div>
                   )}
                 </NavLink>
               </SidebarMenuButton>
@@ -514,22 +538,30 @@ export function AppSidebar() {
             </TooltipContent>
           </Tooltip>
         ) : (
-          <SidebarMenuButton asChild isActive={isActive(item.url)}>
+          <SidebarMenuButton asChild isActive={itemIsActive}>
             <NavLink 
               to={item.url} 
               end 
-              className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-primary/10"
-              activeClassName="bg-primary/10 text-primary font-medium"
+              className={cn(
+                "group flex items-center gap-3 px-3 py-2 rounded-[7px] transition-all duration-120 hover:bg-white/5 relative",
+                itemIsActive && "bg-primary/10"
+              )}
+              activeClassName="text-white font-medium"
             >
-              <item.icon className="h-4 w-4 shrink-0" />
-              <span className="text-sm flex-1">{item.title}</span>
+              {itemIsActive && (
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[2.5px] h-3/5 bg-primary rounded-r-full" />
+              )}
+              <item.icon className={cn("h-[15px] w-[15px] shrink-0 transition-all", itemIsActive ? "text-primary opacity-100" : "opacity-35 group-hover:opacity-60")} />
+              <span className={cn("text-[13px] flex-1 transition-colors", itemIsActive ? "text-white font-medium" : "text-white/50 group-hover:text-white/80")}>
+                {item.title}
+              </span>
               {showBadge && (
-                <Badge 
-                  variant="destructive" 
-                  className="h-5 min-w-5 px-1.5 text-[10px] font-bold"
-                >
+                <div className={cn(
+                  "h-[18px] min-w-[18px] px-1.5 text-[10px] font-semibold flex items-center justify-center rounded-[5px]",
+                  getBadgeStyle(item.url)
+                )}>
                   {badgeCount > 99 ? "99+" : badgeCount}
-                </Badge>
+                </div>
               )}
             </NavLink>
           </SidebarMenuButton>
@@ -569,7 +601,7 @@ export function AppSidebar() {
           />
         </div>
 
-        <div className="mx-3 border-t border-border/50 mb-4 shrink-0" />
+        <div className="mx-3 border-t border-white/5 mb-4 shrink-0" />
 
         {/* Scrollable area with overflow indicators */}
         <div className="relative flex-1 min-h-0">
@@ -592,7 +624,7 @@ export function AppSidebar() {
             {hasAnyFavorites && (
               <div className="space-y-1 py-1" data-sidebar-group="atalhos">
                 {!isCollapsed && (
-                  <SidebarGroupLabel className="px-4 text-[10px] uppercase tracking-widest text-muted-foreground/40 font-black mb-1">
+                  <SidebarGroupLabel className="px-4 text-[10px] uppercase tracking-[0.08em] text-white/22 font-semibold mb-1">
                     ATALHOS
                   </SidebarGroupLabel>
                 )}
@@ -643,7 +675,7 @@ export function AppSidebar() {
             )}
 
             {hasAnyFavorites && (
-              <div className="my-2 mx-3 border-t border-border/30" />
+              <div className="my-2 mx-3 border-t border-white/5" />
             )}
 
             {/* Menu Groups */}
@@ -656,7 +688,7 @@ export function AppSidebar() {
                   <SidebarGroup key={group.label} className={index > 0 ? "mt-4" : ""}>
                     {!isCollapsed && (
                       <SidebarGroupLabel 
-                        className="text-[10px] font-semibold tracking-widest text-muted-foreground/40 uppercase mb-2 px-3"
+                        className="text-[10px] font-semibold tracking-[0.08em] text-white/22 uppercase mb-2 px-3"
                       >
                         {group.label}
                       </SidebarGroupLabel>
@@ -685,28 +717,33 @@ export function AppSidebar() {
       </SidebarContent>
 
       {/* User footer */}
-      <SidebarFooter className="border-t border-border/50 p-2">
+      <SidebarFooter className="border-t border-white/5 p-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className={`
               flex items-center gap-3 w-full p-2 rounded-lg 
-              hover:bg-primary/10 transition-colors
+              hover:bg-white/5 transition-all
               ${isCollapsed ? 'justify-center' : ''}
             `}>
-              <Avatar className="h-7 w-7">
-                <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                  {getUserInitials()}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative">
+                <Avatar className="h-7 w-7 rounded-full overflow-hidden border border-white/5">
+                  <AvatarFallback className="bg-primary text-white text-[10px] font-bold">
+                    {getUserInitials()}
+                  </AvatarFallback>
+                </Avatar>
+                {(alertsCount > 0) && (
+                  <span className="absolute -top-0.5 -right-0.5 h-[7px] w-[7px] bg-red-500 rounded-full border border-sidebar" />
+                )}
+              </div>
               {!isCollapsed && (
-                <div className="flex-1 text-left overflow-hidden">
-                  <p className="text-xs font-medium truncate">{user?.email}</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    {publicId && <span>ID: {publicId} • </span>}
-                    <span>{isSystemOwner ? getRoleLabel('system_owner') : getRoleLabel(role)}</span>
+                <div className="flex-1 text-left overflow-hidden pr-2">
+                  <p className="text-[12px] font-medium truncate text-white/55 leading-tight">{user?.email?.split('@')[0] || 'Usuário'}</p>
+                  <p className="text-[11px] text-white/20 leading-tight">
+                    {isSystemOwner ? getRoleLabel('system_owner') : getRoleLabel(role)}
                   </p>
                 </div>
               )}
+              {!isCollapsed && <LogOut className="h-3.5 w-3.5 text-white/20 ml-auto shrink-0" />}
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
