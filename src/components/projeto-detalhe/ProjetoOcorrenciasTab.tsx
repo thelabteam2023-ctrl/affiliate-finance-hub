@@ -299,16 +299,15 @@ export function ProjetoOcorrenciasTab({ projetoId, onDataChange, formatCurrency:
         contextoInicial={{ projeto_id: projetoId }}
       />
 
-      {detalheId && (
-        <OcorrenciaDrawer
-          key={detalheId}
-          ocorrenciaId={detalheId}
-          open={!!detalheId}
-          onOpenChange={(open) => {
-            if (!open) setDetalheId(null);
-          }}
-        />
-      )}
+      <OcorrenciaDrawer
+        key={detalheId || 'empty'}
+        ocorrenciaId={detalheId || ''}
+        open={!!detalheId}
+        onOpenChange={(open) => {
+          if (!open) setDetalheId(null);
+        }}
+      />
+
 
 
     </div>
