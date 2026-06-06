@@ -312,79 +312,90 @@ export function PosicaoCapital({
       </div>
 
       {/* Content Grid */}
-      <div className="grid grid-cols-[160px_1fr] gap-[20px] items-start">
-        {/* 3a. Gráfico Donut (SVG puro) */}
-        <div className="relative w-[140px] h-[140px] mx-auto group/donut">
-          <svg viewBox="0 0 140 140" width="140" height="140" role="img" className="overflow-visible">
+      <div className="grid grid-cols-[176px_1fr] gap-[24px] items-start">
+        {/* 3a. Gráfico Donut (SVG puro com Arcos Manuais) */}
+        <div className="relative w-[154px] h-[154px] mx-auto group/donut">
+          <svg viewBox="0 0 154 154" width="154" height="154" role="img" className="overflow-visible">
             <title>Distribuição de capital por categoria</title>
+            
             {/* Background ring */}
-            <circle cx="70" cy="70" r="52" fill="none" stroke="var(--border-default)" strokeWidth="18" />
+            <circle cx="77" cy="77" r="57" fill="none" stroke="var(--border-default)" strokeWidth="20" />
             
-            {/* Segments */}
-            {dadosPosicao.items.map((item, idx) => {
-              const isActive = activeSegment === item.id;
-              const isOtherActive = activeSegment !== null && !isActive;
-              
-              return (
-                <circle
-                  key={item.id}
-                  cx="70"
-                  cy="70"
-                  r="52"
-                  fill="none"
-                  stroke={item.colorHex}
-                  strokeWidth={isActive ? 22 : 18}
-                  strokeDasharray={`${isMounted ? item.dashFilled : 0} ${2 * Math.PI * 52}`}
-                  strokeDashoffset={item.dashOffset}
+            {/* Segments - Rendered using SVG Paths for precision */}
+            {(() => {
+              let currentAngle = -90; // Start at top
+              const radius = 57;
+              const centerX = 77;
+              const centerY = 77;
+              const gapAngle = 3; // Visual gap between segments in degrees
 
-                  strokeLinecap="butt"
-                  style={{ 
-                    stroke: item.colorHex,
-                    transition: "stroke-dasharray 0.8s ease-out, stroke-width 0.15s ease, opacity 0.15s ease",
-                    transitionDelay: isMounted ? '0s' : `${idx * 0.15}s`,
-                    opacity: isOtherActive ? 0.35 : 1.0
-                  }}
-                />
-              );
-            })}
+              return dadosPosicao.items.map((item, idx) => {
+                const isActive = activeSegment === item.id;
+                const isOtherActive = activeSegment !== null && !isActive;
+                
+                // Calculate angles
+                const segmentAngle = (item.pct / 100) * 360;
+                
+                // If segment is too small, don't show gap or handle carefully
+                const actualGap = segmentAngle > gapAngle ? gapAngle : 0;
+                const startAngle = currentAngle + (actualGap / 2);
+                const endAngle = currentAngle + segmentAngle - (actualGap / 2);
+                
+                // Update tracker for next segment
+                currentAngle += segmentAngle;
 
-            
-            {/* Hit Areas (Invisíveis) */}
-            {dadosPosicao.items.map((item) => (
-              <circle
-                key={item.id + '-hit'}
-                cx="70" cy="70" r="52"
-                fill="none"
-                stroke="transparent"
-                strokeWidth="24"
-                strokeDasharray={`${item.dashFilled} ${2 * Math.PI * 52}`}
-                strokeDashoffset={item.dashOffset}
+                // SVG Arc calculation
+                const startRad = (startAngle * Math.PI) / 180;
+                const endRad = (endAngle * Math.PI) / 180;
+                
+                const x1 = centerX + radius * Math.cos(startRad);
+                const y1 = centerY + radius * Math.sin(startRad);
+                const x2 = centerX + radius * Math.cos(endRad);
+                const y2 = centerY + radius * Math.sin(endRad);
+                
+                const largeArcFlag = segmentAngle - actualGap <= 180 ? 0 : 1;
+                
+                const d = `M ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`;
 
-                style={{ cursor: 'pointer' }}
-                onMouseEnter={() => setActiveSegment(item.id)}
-                onMouseLeave={() => {
-                  if (!expandedSegment) {
-                    setActiveSegment(null);
-                  }
-                }}
-                onClick={() => handleSegmentClick(item.id)}
-              />
-            ))}
+                return (
+                  <path
+                    key={item.id}
+                    d={d}
+                    fill="none"
+                    stroke={item.colorHex}
+                    strokeWidth={isActive ? 24 : 20}
+                    strokeLinecap="butt"
+                    className="cursor-pointer"
+                    style={{ 
+                      transition: "stroke-width 0.2s ease, opacity 0.2s ease, stroke 0.2s ease",
+                      opacity: isOtherActive ? 0.35 : 1.0,
+                      filter: isActive ? 'drop-shadow(0 0 4px rgba(0,0,0,0.2))' : 'none'
+                    }}
+                    onMouseEnter={() => setActiveSegment(item.id)}
+                    onMouseLeave={() => {
+                      if (!expandedSegment) setActiveSegment(null);
+                    }}
+                    onClick={() => handleSegmentClick(item.id)}
+                  />
+                );
+              });
+            })()}
             
             {/* Center mask */}
-            <circle cx="70" cy="70" r="42" fill="var(--bg-card)" />
+            <circle cx="77" cy="77" r="46" fill="var(--bg-card)" />
           </svg>
           
           {/* Absolute Center */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-            <p className="text-[14px] font-medium text-[var(--text-primary)] tabular-nums">177k</p>
-            <p className="text-[10px] text-[var(--text-faint)] mt-px">Total BRL</p>
+            <p className="text-[15px] font-bold text-[var(--text-primary)] tabular-nums">
+              {Math.round(dadosPosicao.total / 1000)}k
+            </p>
+            <p className="text-[10px] text-[var(--text-faint)] mt-px uppercase tracking-wider font-semibold">Total BRL</p>
           </div>
-
         </div>
 
         {/* 3b. Lista de itens de Posição de Capital */}
-        <div className="space-y-1 relative">
+        <div className="space-y-1 relative pt-2">
           {/* Tooltip do donut (centralizado em relação ao donut) */}
           {(activeSegment && !expandedSegment) && (() => {
             const seg = dadosPosicao.items.find(s => s.id === activeSegment);
