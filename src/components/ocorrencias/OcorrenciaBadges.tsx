@@ -17,6 +17,7 @@ import {
   TrendingUp,
   Activity,
 } from 'lucide-react';
+import { TIPO_COLORS } from './ocorrencia-tokens';
 
 export function PrioridadeBadge({ prioridade }: { prioridade: OcorrenciaPrioridade }) {
   const icons: Record<OcorrenciaPrioridade, React.ReactNode> = {
@@ -63,11 +64,18 @@ export function StatusBadge({ status }: { status: OcorrenciaStatus }) {
 
 export function TipoBadge({ tipo }: { tipo: OcorrenciaTipo }) {
   return (
-    <Badge variant="secondary" className="text-[10px] uppercase font-bold tracking-tight bg-muted/50 text-muted-foreground border-none px-2 py-0.5">
+    <Badge 
+      variant="secondary" 
+      className={cn(
+        "text-[10px] uppercase font-black tracking-widest border-none px-2 py-0.5 h-5",
+        TIPO_COLORS[tipo] || "bg-muted/50 text-muted-foreground"
+      )}
+    >
       {TIPO_LABELS[tipo]}
     </Badge>
   );
 }
+
 
 export function SlaBadge({ violado, alertaEm }: { violado: boolean; alertaEm?: string | null }) {
   return null;
