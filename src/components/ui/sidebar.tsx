@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { VariantProps, cva } from "class-variance-authority";
-import { PanelLeft } from "lucide-react";
+import { PanelLeft, ChevronLeft } from "lucide-react";
 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -206,9 +206,10 @@ const Sidebar = React.forwardRef<
       >
         <div
           data-sidebar="sidebar"
-          className="flex h-full w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow"
+          className="flex h-full w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow relative"
         >
           {children}
+          <SidebarTriggerButton />
         </div>
       </div>
     </div>
@@ -240,6 +241,28 @@ const SidebarTrigger = React.forwardRef<React.ElementRef<typeof Button>, React.C
   },
 );
 SidebarTrigger.displayName = "SidebarTrigger";
+
+const SidebarTriggerButton = () => {
+  const { toggleSidebar, state } = useSidebar();
+  
+  return (
+    <button
+      onClick={toggleSidebar}
+      className={cn(
+        "absolute right-[-12px] top-1/2 z-50 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full border border-border/10 bg-sidebar-background shadow-md transition-all hover:bg-accent",
+        "group-data-[state=collapsed]:right-[-12px]"
+      )}
+      aria-label={state === "expanded" ? "Colapsar menu" : "Expandir menu"}
+    >
+      <ChevronLeft 
+        className={cn(
+          "h-4 w-4 transition-transform duration-200",
+          state === "collapsed" && "rotate-180"
+        )} 
+      />
+    </button>
+  );
+};
 
 const SidebarRail = React.forwardRef<HTMLButtonElement, React.ComponentProps<"button">>(
   ({ className, ...props }, ref) => {
