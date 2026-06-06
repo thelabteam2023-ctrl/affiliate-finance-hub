@@ -23,7 +23,7 @@ export function CurrencyBreakdownModal({ isOpen, onClose, category, currency, wo
   const { getCryptoUSDValue, cryptoPrices } = useCotacoes();
 
   const { data: items = [], isLoading } = useQuery({
-    queryKey: ['currency-breakdown', category, currency, workspaceId],
+    queryKey: ['currency-breakdown', category, currency, workspaceId, filterCoin],
     queryFn: async () => {
       if (!workspaceId) return [];
 
