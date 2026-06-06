@@ -205,9 +205,10 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
                      <div className="flex items-center justify-between p-3 rounded-lg border border-border/40 bg-muted/20">
                         <div className="flex items-center gap-3">
                           <div className="h-8 w-8 rounded-lg bg-background flex items-center justify-center border border-border/40">
-                             {ocorrencia.bookmaker.logo_url ? (
-                               <img src={ocorrencia.bookmaker.logo_url} className="h-5 w-5 object-contain" alt="" />
-                             ) : (
+                         {ocorrencia.bookmaker.bookmakers_catalogo?.logo_url ? (
+                           <img src={ocorrencia.bookmaker.bookmakers_catalogo.logo_url} className="h-5 w-5 object-contain" alt="" />
+                         ) : (
+
                                <Building2 className="h-4 w-4 text-primary" />
                              )}
                           </div>
