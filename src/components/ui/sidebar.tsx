@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { VariantProps, cva } from "class-variance-authority";
-import { PanelLeft, ChevronLeft } from "lucide-react";
+import { PanelLeft, ChevronLeft, GripVertical } from "lucide-react";
 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -249,17 +249,28 @@ const SidebarTriggerButton = () => {
     <button
       onClick={toggleSidebar}
       className={cn(
-        "absolute right-[-12px] top-1/2 z-50 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full border border-border/10 bg-sidebar-background shadow-md transition-all hover:bg-accent",
-        "group-data-[state=collapsed]:right-[-12px]"
+        "absolute right-[-14px] top-1/2 z-50 flex h-7 w-5 -translate-y-1/2 items-center justify-center rounded-r-md border border-l-0 border-white/10 bg-sidebar shadow-[4px_0_8px_rgba(0,0,0,0.2)] transition-all duration-300 group/trigger hover:w-6 hover:right-[-15px]",
+        "after:absolute after:inset-0 after:rounded-r-md after:bg-primary/0 after:transition-colors hover:after:bg-primary/5"
       )}
       aria-label={state === "expanded" ? "Colapsar menu" : "Expandir menu"}
     >
-      <ChevronLeft 
-        className={cn(
-          "h-4 w-4 transition-transform duration-200",
-          state === "collapsed" && "rotate-180"
-        )} 
-      />
+      <div className="flex flex-col items-center justify-center gap-0.5 opacity-20 group-hover/trigger:opacity-60 transition-opacity">
+        <div className="h-1 w-1 rounded-full bg-white" />
+        <div className="h-1 w-1 rounded-full bg-white" />
+        <div className="h-1 w-1 rounded-full bg-white" />
+      </div>
+      
+      <div className={cn(
+        "absolute left-[-4px] flex h-5 w-5 items-center justify-center rounded-full border border-white/10 bg-sidebar text-white shadow-sm transition-all duration-300 group-hover/trigger:scale-110 group-hover/trigger:text-primary",
+        state === "collapsed" ? "translate-x-1" : "translate-x-0"
+      )}>
+        <ChevronLeft 
+          className={cn(
+            "h-3 w-3 transition-transform duration-300",
+            state === "collapsed" && "rotate-180"
+          )} 
+        />
+      </div>
     </button>
   );
 };
