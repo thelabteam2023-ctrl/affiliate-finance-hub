@@ -173,7 +173,7 @@ export function useOcorrencia(id: string) {
     queryFn: async () => {
       try {
         const { data, error } = await ocorrenciasTable()
-          .select('*, bookmaker:bookmakers(id, nome, bookmaker_catalogo_id, bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey(logo_url), parceiro:parceiros!bookmakers_parceiro_id_fkey(nome))')
+          .select('*, executor:profiles!executor_id(id, full_name, avatar_url), requerente:profiles!requerente_id(id, full_name, avatar_url), bookmaker:bookmakers(id, nome, bookmaker_catalogo_id, bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey(logo_url), parceiro:parceiros!bookmakers_parceiro_id_fkey(nome))')
 
           .eq('id', id)
           .eq('workspace_id', workspaceId!)
