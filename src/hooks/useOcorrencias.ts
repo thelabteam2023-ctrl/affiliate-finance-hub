@@ -82,11 +82,12 @@ async function fetchOcorrencias(
     query = query.eq('projeto_id', filters.projetoId);
   }
 
-  const { data, error } = await query;
+  const { data, error, status, statusText } = await query;
   if (error) {
-    console.error(`[fetchOcorrencias] Failed:`, error);
+    console.error(`[fetchOcorrencias] Failed:`, { error, status, statusText });
     throw error;
   }
+  console.log('[fetchOcorrencias] Success, rows:', data?.length);
   return (data || []) as Ocorrencia[];
 }
 
