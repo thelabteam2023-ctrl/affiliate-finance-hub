@@ -56,10 +56,16 @@ export function CurrencyBreakdownModal({ isOpen, onClose, category, currency, wo
       } else if (category === "Wallets Parceiros" || (category === "Caixa Operacional" && currency === "CRYPTO")) {
         const isCaixa = category === "Caixa Operacional";
         
-        const { data } = await supabase
+        let query = supabase
           .from("v_saldo_parceiro_wallets")
           .select("exchange, saldo_coin, saldo_usd, parceiro_nome, parceiro_id, wallet_id, endereco, coin")
           .eq("workspace_id", workspaceId);
+        
+        if (filterCoin) {
+          query = query.eq("coin", filterCoin);
+        }
+        
+        const { data } = await query;
         
         const { data: partners } = await supabase
           .from("parceiros")
