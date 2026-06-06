@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
+
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
@@ -17,6 +19,16 @@ import type {
 const ocorrenciasTable = () => (supabase as any).from('ocorrencias');
 const eventosTable = () => (supabase as any).from('ocorrencias_eventos');
 const observadoresTable = () => (supabase as any).from('ocorrencias_observadores');
+
+// ── Observability & Monitoring ──────────────────────────────────────────
+const logAuthStatus = (tag: string, workspaceId: string | null, userId: string | null) => {
+  if (!workspaceId || !userId) {
+    console.error(`[Ocorrencias][${tag}] Auth context missing: workspaceId=${workspaceId}, userId=${userId}`);
+  } else {
+    console.log(`[Ocorrencias][${tag}] Context verified: workspaceId=${workspaceId}`);
+  }
+};
+
 
 // ============================================================
 // QUERY KEYS
@@ -70,9 +82,13 @@ async function fetchOcorrencias(
   }
 
   const { data, error } = await query;
-  if (error) throw error;
+  if (error) {
+    console.error(`[fetchOcorrencias] Failed:`, error);
+    throw error;
+  }
   return (data || []) as Ocorrencia[];
 }
+
 
 // ============================================================
 // HOOK: lista de ocorrências
@@ -80,13 +96,21 @@ async function fetchOcorrencias(
 export function useOcorrencias(
   filters?: Parameters<typeof fetchOcorrencias>[1]
 ) {
-  const { workspaceId } = useAuth();
+  const { workspaceId, user } = useAuth();
+  
+  useEffect(() => {
+    logAuthStatus('useOcorrencias', workspaceId, user?.id || null);
+  }, [workspaceId, user?.id]);
+
   return useQuery({
     queryKey: OCORRENCIAS_KEYS.list(workspaceId || '', filters as Record<string, unknown>),
     queryFn: () => fetchOcorrencias(workspaceId!, filters),
     enabled: !!workspaceId,
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30000),
   });
 }
+
 
 // ============================================================
 // HOOK: KPIs da visão geral
@@ -137,20 +161,45 @@ export function useOcorrenciasKpis() {
 // HOOK: detalhe de uma ocorrência
 // ============================================================
 export function useOcorrencia(id: string) {
-  const { workspaceId } = useAuth();
+  const { workspaceId, user } = useAuth();
+  
+  useEffect(() => {
+    if (id) logAuthStatus(`useOcorrencia:${id}`, workspaceId, user?.id || null);
+  }, [id, workspaceId, user?.id]);
+
   return useQuery({
+
     queryKey: OCORRENCIAS_KEYS.detail(id),
     queryFn: async () => {
-      const { data, error } = await ocorrenciasTable()
-        .select('*, bookmaker:bookmakers(id, nome, bookmaker_catalogo_id, bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey(logo_url)), requerente:profiles!requerente_id(id, full_name, avatar_url), executor:profiles!executor_id(id, full_name, avatar_url)')
+      try {
+        const { data, error } = await ocorrenciasTable()
+          .select('*, bookmaker:bookmakers(id, nome, bookmaker_catalogo_id, bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey(logo_url)), requerente:profiles!requerente_id(id, full_name, avatar_url), executor:profiles!executor_id(id, full_name, avatar_url)')
+          .eq('id', id)
+          .eq('workspace_id', workspaceId!)
+          .maybeSingle();
 
-        .eq('id', id)
-        .eq('workspace_id', workspaceId!)
-        .single();
-      if (error) throw error;
-      return data as Ocorrencia;
+        if (error) {
+          console.error(`[useOcorrencia] Supabase error for ID ${id}:`, error);
+          throw error;
+        }
+
+
+        if (!data) {
+          console.warn(`[useOcorrencia] No occurrence found for ID ${id} in workspace ${workspaceId}`);
+          return null;
+        }
+
+        return data as Ocorrencia;
+      } catch (err) {
+        console.error(`[useOcorrencia] Failed to fetch occurrence ${id}:`, err);
+        throw err;
+      }
     },
+
     enabled: !!id && !!workspaceId,
+    retry: 2,
+    staleTime: 1000 * 30, // 30 seconds
+
   });
 }
 

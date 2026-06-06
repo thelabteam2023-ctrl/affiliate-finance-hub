@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -19,11 +19,15 @@ import {
   DollarSign,
   ArrowRight,
   Timer,
+  AlertCircle,
 } from 'lucide-react';
 import { TIPO_LABELS } from '@/types/ocorrencias';
 import type { OcorrenciaTipo, OcorrenciaStatus } from '@/types/ocorrencias';
 import { getCurrencySymbol } from '@/types/currency';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
+
 
 type FilterTab = 'todas' | 'minhas' | 'historico' | 'estatisticas';
 
@@ -31,7 +35,27 @@ export function OcorrenciasModule() {
   const [novaOpen, setNovaOpen] = useState(false);
   const [filterTab, setFilterTab] = useState<FilterTab>('todas');
   const [tipoFilter, setTipoFilter] = useState<OcorrenciaTipo | null>(null);
-  const { data: kpis, isLoading: loadingKpis } = useOcorrenciasKpis();
+  const { user, workspaceId } = useAuth();
+  const { data: kpis, isLoading: loadingKpis, isError: kpiError } = useOcorrenciasKpis();
+
+  // Self-monitoring: toast if system state is invalid
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!workspaceId && !loadingKpis) {
+        console.error('[OcorrenciasModule] Missing workspaceId after timeout');
+        toast.error('Sistema de identificação pendente.', {
+          description: 'Aguardando sincronização do workspace. Clique para tentar reconectar.',
+          action: {
+            label: 'Reconectar',
+            onClick: () => window.location.reload()
+          }
+        });
+      }
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [workspaceId, loadingKpis]);
+
+
 
   // Status filter for active vs historical
   const statusFilter: OcorrenciaStatus[] | undefined =
@@ -83,8 +107,13 @@ export function OcorrenciasModule() {
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-4">
               <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Atenção Necessária</span>
-              <AlertTriangle className="h-4 w-4 text-blue-500" />
+              {kpiError ? (
+                <AlertCircle className="h-4 w-4 text-destructive" />
+              ) : (
+                <AlertTriangle className="h-4 w-4 text-blue-500" />
+              )}
             </div>
+
             <div className="flex gap-6">
               <div>
                 <p className="text-3xl font-bold text-foreground">{kpis?.urgentes ?? 0}</p>

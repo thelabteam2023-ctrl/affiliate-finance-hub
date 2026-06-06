@@ -1,14 +1,15 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useOcorrencias } from '@/hooks/useOcorrencias';
 import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { OcorrenciaItem } from './OcorrenciaItem';
 import { OcorrenciaDrawer } from './OcorrenciaDrawer';
 import type { OcorrenciaStatus, OcorrenciaTipo, OcorrenciaPrioridade } from '@/types/ocorrencias';
-import { Inbox } from 'lucide-react';
+import { Inbox, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 interface Props {
   statusFilter?: OcorrenciaStatus[];
@@ -22,10 +23,16 @@ function useBookmakerInfo(ids: string[]) {
     queryKey: ['bookmaker-info', ids],
     queryFn: async () => {
       if (ids.length === 0) return {};
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('bookmakers')
         .select('id, nome, parceiro_id, bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url), parceiros!bookmakers_parceiro_id_fkey (nome)')
         .in('id', ids);
+      
+      if (error) {
+        console.error('[OcorrenciasList] Error fetching bookmaker info:', error);
+        return {};
+      }
+
       const map: Record<string, { nome: string; logo_url: string | null; parceiroNome: string | null }> = {};
       data?.forEach((b: any) => {
         map[b.id] = {
@@ -45,10 +52,16 @@ function useProjetoNames(ids: string[]) {
     queryKey: ['projeto-names', ids],
     queryFn: async () => {
       if (ids.length === 0) return {};
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('projetos')
         .select('id, nome')
         .in('id', ids);
+
+      if (error) {
+        console.error('[OcorrenciasList] Error fetching project names:', error);
+        return {};
+      }
+
       const map: Record<string, string> = {};
       data?.forEach((p) => { map[p.id] = p.nome; });
       return map;
@@ -58,22 +71,36 @@ function useProjetoNames(ids: string[]) {
 }
 
 export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMessage }: Props) {
-  const { user } = useAuth();
+  const { user, workspaceId } = useAuth();
   const [detalheId, setDetalheId] = useState<string | null>(null);
 
-  const filters = statusFilter ? { status: statusFilter } : undefined;
-  const { data: ocorrencias = [], isLoading } = useOcorrencias(filters);
+  const filters = useMemo(() => ({
+    status: statusFilter,
+    workspaceId
+  }), [statusFilter, workspaceId]);
+
+  const { 
+    data: ocorrencias = [], 
+    isLoading, 
+    isError, 
+    error, 
+    refetch,
+    isRefetching
+  } = useOcorrencias(statusFilter ? { status: statusFilter } : undefined);
 
   // Filter by user and type
-  let lista = modoMinhas
-    ? ocorrencias.filter(
-        (o) => o.executor_id === user?.id || o.requerente_id === user?.id
-      )
-    : ocorrencias;
+  const lista = useMemo(() => {
+    let base = modoMinhas
+      ? ocorrencias.filter(
+          (o) => o.executor_id === user?.id || o.requerente_id === user?.id
+        )
+      : ocorrencias;
 
-  if (tipoFilter) {
-    lista = lista.filter((o) => o.tipo === tipoFilter);
-  }
+    if (tipoFilter) {
+      base = base.filter((o) => o.tipo === tipoFilter);
+    }
+    return base;
+  }, [ocorrencias, modoMinhas, user?.id, tipoFilter]);
 
   // Collect entity IDs for batch fetching
   const bookmakerIds = useMemo(
@@ -107,12 +134,31 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
     (p) => groupedByPrioridade[p].length > 0
   );
 
-  if (isLoading) {
+  if (isLoading || (isRefetching && !ocorrencias.length)) {
     return (
-      <div className="space-y-2">
+      <div className="space-y-4">
         {[1, 2, 3, 4, 5].map((i) => (
-          <Skeleton key={i} className="h-14 w-full" />
+          <Skeleton key={i} className="h-16 w-full rounded-lg" />
         ))}
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center bg-destructive/5 rounded-xl border border-dashed border-destructive/30 px-6">
+        <AlertCircle className="h-10 w-10 text-destructive mb-4" />
+        <h3 className="text-lg font-semibold text-destructive mb-2">Erro no carregamento</h3>
+        <p className="text-sm text-muted-foreground mb-6 max-w-md">
+          Não foi possível conectar ao servidor para buscar as ocorrências. 
+          Verifique sua conexão ou tente novamente.
+        </p>
+        <Button 
+          onClick={() => refetch()}
+          className="gap-2"
+        >
+          Tentar novamente
+        </Button>
       </div>
     );
   }
@@ -132,7 +178,6 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
     <div className="space-y-6">
       {activePrioridades.map((prioridade) => (
         <div key={prioridade} className="space-y-2">
-          {/* Priority Separator */}
           <div className="flex items-center gap-3 px-1 py-1">
              <span className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60">
                 {prioridade} — {groupedByPrioridade[prioridade].length}
@@ -140,7 +185,6 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
              <div className="h-px flex-1 bg-border/30" />
           </div>
 
-          {/* List of items */}
           <div className="space-y-1">
             {groupedByPrioridade[prioridade].map((ocorrencia) => (
               <OcorrenciaItem
@@ -150,7 +194,6 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
                 onOpen={() => {
                   setDetalheId(ocorrencia.id);
                 }}
-
                 bookmakerNome={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id]?.nome : undefined}
                 bookmakerLogoUrl={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id]?.logo_url : undefined}
                 projetoNome={ocorrencia.projeto_id ? projetoMap[ocorrencia.projeto_id] : undefined}
@@ -163,14 +206,13 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
 
       <OcorrenciaDrawer
         ocorrenciaId={detalheId || ''}
-
         open={!!detalheId}
         onOpenChange={(open) => {
-          if (!open) setDetalheId(null);
+          if (!open) {
+            setDetalheId(null);
+          }
         }}
       />
-
-
     </div>
   );
 }
