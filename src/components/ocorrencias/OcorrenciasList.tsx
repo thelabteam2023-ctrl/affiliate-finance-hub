@@ -162,8 +162,8 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
       ))}
 
       <OcorrenciaDrawer
-        key={detalheId || 'empty'}
         ocorrenciaId={detalheId || ''}
+
         open={!!detalheId}
         onOpenChange={(open) => {
           if (!open) setDetalheId(null);
