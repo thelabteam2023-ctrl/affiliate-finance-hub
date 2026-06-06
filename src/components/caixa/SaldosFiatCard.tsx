@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
+import { Plus, Calendar } from "lucide-react";
 
 interface ContaFiat {
   id: string;
@@ -74,12 +75,14 @@ export function SaldosFiatCard({ caixaParceiroId, formatCurrency, onDataChanged 
             )}
           </div>
           <div className="flex items-center gap-3">
-            <i 
-              className="ti ti-plus text-[13px] cursor-pointer hover:text-[var(--accent-fiat)] transition-colors" 
-              aria-label="Adicionar Conta"
+            <button 
+              className="p-1 hover:bg-white/5 rounded-md text-[var(--text-faint)] hover:text-[var(--accent-fiat)] transition-colors"
               onClick={fetchParceiroCompleto}
-            ></i>
-            <i className="ti ti-calendar text-[13px] cursor-pointer opacity-50" aria-label="Calendário"></i>
+              title="Adicionar Conta"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+            <Calendar className="w-3.5 h-3.5 text-[var(--text-faint)] opacity-50" />
           </div>
         </div>
 
