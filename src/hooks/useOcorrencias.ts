@@ -80,9 +80,13 @@ async function fetchOcorrencias(
   }
 
   const { data, error } = await query;
-  if (error) throw error;
+  if (error) {
+    console.error(`[fetchOcorrencias] Failed:`, error);
+    throw error;
+  }
   return (data || []) as Ocorrencia[];
 }
+
 
 // ============================================================
 // HOOK: lista de ocorrências
