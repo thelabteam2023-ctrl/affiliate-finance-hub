@@ -63,7 +63,7 @@ export interface Ocorrencia {
   // Joins
   requerente?: { id: string; full_name: string; avatar_url?: string };
   executor?: { id: string; full_name: string; avatar_url?: string };
-  bookmaker?: { id: string; nome: string; logo_url?: string };
+  bookmaker?: { id: string; nome: string; logo_url?: string; bookmakers_catalogo?: { logo_url: string | null } };
   projeto?: { id: string; nome: string };
   parceiro?: { id: string; nome: string };
 }
