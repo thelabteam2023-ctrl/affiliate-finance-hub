@@ -158,16 +158,15 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
         </div>
       ))}
 
-      {detalheId && (
-        <OcorrenciaDrawer
-          key={detalheId}
-          ocorrenciaId={detalheId}
-          open={!!detalheId}
-          onOpenChange={(open) => {
-            if (!open) setDetalheId(null);
-          }}
-        />
-      )}
+      <OcorrenciaDrawer
+        key={detalheId || 'empty'}
+        ocorrenciaId={detalheId || ''}
+        open={!!detalheId}
+        onOpenChange={(open) => {
+          if (!open) setDetalheId(null);
+        }}
+      />
+
 
     </div>
   );
