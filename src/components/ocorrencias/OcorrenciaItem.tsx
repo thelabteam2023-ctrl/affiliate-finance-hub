@@ -16,6 +16,8 @@ import { ptBR } from 'date-fns/locale';
 import { cn, getFirstLastName } from '@/lib/utils';
 import type { Ocorrencia } from '@/types/ocorrencias';
 import { PRIORIDADE_DOTS } from './ocorrencia-tokens';
+import { TipoBadge } from './OcorrenciaBadges';
+
 
 interface Props {
   ocorrencia: Ocorrencia;
