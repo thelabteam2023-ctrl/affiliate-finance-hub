@@ -59,10 +59,13 @@ function FavoriteShortcutItem({
           <NavLink
             to={fav.page_path}
             end
-            className="flex items-center justify-center h-9 w-9 rounded-md transition-colors hover:bg-primary/10"
-            activeClassName="bg-primary/10 text-primary"
+            className={cn(
+              "flex items-center justify-center h-9 w-9 rounded-[7px] transition-all duration-120 hover:bg-white/5",
+              isActive && "bg-primary/10"
+            )}
+            activeClassName="text-primary"
           >
-            <Icon className="h-4 w-4" />
+            <Icon className={cn("h-[15px] w-[15px] transition-all", isActive ? "text-primary opacity-100" : "opacity-35 hover:opacity-60")} />
           </NavLink>
         </SidebarMenuButton>
       </TooltipTrigger>
@@ -75,11 +78,14 @@ function FavoriteShortcutItem({
       <NavLink
         to={fav.page_path}
         end
-        className="group/fav flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-primary/10"
-        activeClassName="bg-primary/10 text-primary font-medium"
+        className={cn(
+          "group/fav flex items-center gap-3 px-3 py-2 rounded-[7px] transition-all duration-120 hover:bg-white/5",
+          isActive && "bg-primary/10"
+        )}
+        activeClassName="text-white font-medium"
       >
-        <Icon className="h-4 w-4 shrink-0" />
-        <span className="text-sm flex-1 truncate">{fav.page_title}</span>
+        <Icon className={cn("h-[15px] w-[15px] shrink-0 transition-all", isActive ? "text-primary opacity-100" : "opacity-35 group-hover/fav:opacity-60")} />
+        <span className={cn("text-[13px] flex-1 truncate transition-colors", isActive ? "text-white font-medium" : "text-white/50 group-hover/fav:text-white/80")}>{fav.page_title}</span>
         <button
           type="button"
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRemove(); }}
