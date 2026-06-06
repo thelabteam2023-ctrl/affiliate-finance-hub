@@ -134,7 +134,10 @@ export function ProjetoOcorrenciasTab({ projetoId, onDataChange, formatCurrency:
       key={ocorrencia.id}
       ocorrencia={ocorrencia}
       currentUserId={user?.id}
-      onOpen={() => setDetalheId(ocorrencia.id)}
+      onOpen={() => {
+        setDetalheId(ocorrencia.id);
+      }}
+
       bookmakerNome={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id]?.nome : undefined}
       bookmakerLogoUrl={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id]?.logo_url : undefined}
       parceiroNome={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id]?.parceiroNome ?? undefined : undefined}
