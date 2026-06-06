@@ -62,10 +62,9 @@ export function OcorrenciaItem({
               <h4 className="text-sm font-medium text-foreground truncate">
                 {ocorrencia.titulo}
               </h4>
-              <Badge variant="secondary" className="text-[10px] h-4.5 px-1.5 font-normal bg-muted/50 text-muted-foreground border-none">
-                {ocorrencia.tipo.replace('_', ' ')}
-              </Badge>
+              <TipoBadge tipo={ocorrencia.tipo} />
             </div>
+
           </div>
         </div>
 
