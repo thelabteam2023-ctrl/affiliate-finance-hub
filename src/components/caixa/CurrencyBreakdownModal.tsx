@@ -18,7 +18,7 @@ interface CurrencyBreakdownModalProps {
   filterCoin?: string | null;
 }
 
-export function CurrencyBreakdownModal({ isOpen, onClose, category, currency, workspaceId }: CurrencyBreakdownModalProps) {
+export function CurrencyBreakdownModal({ isOpen, onClose, category, currency, workspaceId, filterCoin }: CurrencyBreakdownModalProps) {
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const { getCryptoUSDValue, cryptoPrices } = useCotacoes();
 
