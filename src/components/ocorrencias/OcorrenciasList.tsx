@@ -160,11 +160,15 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
 
       {detalheId && (
         <OcorrenciaDrawer
+          key={detalheId}
           ocorrenciaId={detalheId}
           open={!!detalheId}
-          onOpenChange={(open) => !open && setDetalheId(null)}
+          onOpenChange={(open) => {
+            if (!open) setDetalheId(null);
+          }}
         />
       )}
+
     </div>
   );
 }
