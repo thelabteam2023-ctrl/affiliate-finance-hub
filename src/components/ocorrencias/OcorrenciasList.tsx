@@ -217,11 +217,11 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
         open={!!detalheId}
         onOpenChange={(open) => {
           if (!open) {
-            console.log('[OcorrenciasList] Closing drawer');
             setDetalheId(null);
           }
         }}
       />
+
     </div>
   );
 }
