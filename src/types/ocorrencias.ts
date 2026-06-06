@@ -97,11 +97,12 @@ export interface OcorrenciaObservador {
 // Labels e cores
 
 export const TIPO_LABELS: Record<OcorrenciaTipo, string> = {
-  movimentacao_financeira: 'Movimentação Financeira',
+  movimentacao_financeira: 'MOVIMENTAÇÃO FINANCEIRA',
   kyc: 'KYC',
-  bloqueio_bancario: 'Problemas Bancários',
-  bloqueio_contas: 'Problemas Sportbooks',
+  bloqueio_bancario: 'BLOQUEIO BANCÁRIO',
+  bloqueio_contas: 'BLOQUEIO CONTAS',
 };
+
 
 export const PRIORIDADE_LABELS: Record<OcorrenciaPrioridade, string> = {
   baixa: 'Baixa',
