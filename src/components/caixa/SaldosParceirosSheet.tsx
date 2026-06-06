@@ -186,7 +186,7 @@ const BookmakerListByMoeda = ({
   pendentes: ParceiroSaldoAgrupado["pendentes_bookmakers"];
 }) => {
    const [ascending, setAscending] = useState(false);
-   const saldosFiltrados = useMemo(() => saldos.filter((s) => s.saldo_operavel > 0.5), [saldos]);
+   const saldosFiltrados = useMemo(() => saldos.filter((s) => Math.abs(s.saldo_operavel) > 0.01), [saldos]);
    const bookmakersPorMoeda = useMemo(() => saldosFiltrados.reduce<Record<string, typeof saldosFiltrados>>((acc, s) => {
      const moeda = s.moeda || "USD";
      if (!acc[moeda]) acc[moeda] = [];
