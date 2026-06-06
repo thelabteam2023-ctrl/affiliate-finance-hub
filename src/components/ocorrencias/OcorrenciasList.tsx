@@ -61,19 +61,22 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
   const { user } = useAuth();
   const [detalheId, setDetalheId] = useState<string | null>(null);
 
-  const filters = statusFilter ? { status: statusFilter } : undefined;
-  const { data: ocorrencias = [], isLoading } = useOcorrencias(filters);
+  const filters = useMemo(() => statusFilter ? { status: statusFilter } : undefined, [statusFilter]);
+  const { data: ocorrencias = [], isLoading, isError, error, refetch } = useOcorrencias(filters);
 
   // Filter by user and type
-  let lista = modoMinhas
-    ? ocorrencias.filter(
-        (o) => o.executor_id === user?.id || o.requerente_id === user?.id
-      )
-    : ocorrencias;
+  const lista = useMemo(() => {
+    let base = modoMinhas
+      ? ocorrencias.filter(
+          (o) => o.executor_id === user?.id || o.requerente_id === user?.id
+        )
+      : ocorrencias;
 
-  if (tipoFilter) {
-    lista = lista.filter((o) => o.tipo === tipoFilter);
-  }
+    if (tipoFilter) {
+      base = base.filter((o) => o.tipo === tipoFilter);
+    }
+    return base;
+  }, [ocorrencias, modoMinhas, user?.id, tipoFilter]);
 
   // Collect entity IDs for batch fetching
   const bookmakerIds = useMemo(
@@ -117,6 +120,23 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
     );
   }
 
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center bg-destructive/5 rounded-xl border border-dashed border-destructive/30">
+        <Inbox className="h-10 w-10 text-destructive/30 mb-3" />
+        <p className="text-sm text-destructive font-medium mb-4">
+          Erro ao carregar ocorrências: {(error as Error)?.message || 'Erro desconhecido'}
+        </p>
+        <button 
+          onClick={() => refetch()}
+          className="text-xs px-4 py-2 bg-destructive text-white rounded-md hover:bg-destructive/90"
+        >
+          Tentar novamente
+        </button>
+      </div>
+    );
+  }
+
   if (lista.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center bg-muted/10 rounded-xl border border-dashed border-border/60">
@@ -150,7 +170,6 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
                 onOpen={() => {
                   setDetalheId(ocorrencia.id);
                 }}
-
                 bookmakerNome={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id]?.nome : undefined}
                 bookmakerLogoUrl={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id]?.logo_url : undefined}
                 projetoNome={ocorrencia.projeto_id ? projetoMap[ocorrencia.projeto_id] : undefined}
@@ -163,14 +182,11 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
 
       <OcorrenciaDrawer
         ocorrenciaId={detalheId || ''}
-
         open={!!detalheId}
         onOpenChange={(open) => {
           if (!open) setDetalheId(null);
         }}
       />
-
-
     </div>
   );
 }
