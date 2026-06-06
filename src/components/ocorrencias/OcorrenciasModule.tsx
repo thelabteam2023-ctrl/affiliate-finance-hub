@@ -67,9 +67,11 @@ export function OcorrenciasModule() {
 
 
   // Get active occurrences for type breakdown
-  const { data: activeOcorrencias = [] } = useOcorrencias({
-    status: ['aberto', 'em_andamento', 'aguardando_terceiro'],
-  });
+  const activeFilters = useMemo(() => ({
+    status: ['aberto', 'em_andamento', 'aguardando_terceiro'] as OcorrenciaStatus[],
+  }), []);
+  const { data: activeOcorrencias = [] } = useOcorrencias(activeFilters);
+
 
   // Breakdown by type
   const tipoBreakdown = useMemo(() => {
