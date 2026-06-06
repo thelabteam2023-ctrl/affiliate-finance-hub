@@ -156,7 +156,7 @@ const BookmakerListByMoeda = ({
               <span className="text-[10px] text-primary shrink-0" title="Inclui bônus/freebet">🎁</span>
             )}
           </div>
-          <span className="text-[13px] font-mono font-medium text-chart-4 whitespace-nowrap tabular-nums leading-tight mt-0.5">
+          <span className={`text-[13px] font-mono font-medium whitespace-nowrap tabular-nums leading-tight mt-0.5 ${s.saldo_operavel < 0 ? 'text-destructive' : 'text-chart-4'}`}>
             {CURRENCY_SYMBOLS[s.moeda] || s.moeda} {s.saldo_operavel.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
           </span>
         </div>
@@ -186,7 +186,7 @@ const BookmakerListByMoeda = ({
   pendentes: ParceiroSaldoAgrupado["pendentes_bookmakers"];
 }) => {
    const [ascending, setAscending] = useState(false);
-   const saldosFiltrados = useMemo(() => saldos.filter((s) => s.saldo_operavel > 0.5), [saldos]);
+   const saldosFiltrados = useMemo(() => saldos.filter((s) => Math.abs(s.saldo_operavel) > 0.01), [saldos]);
    const bookmakersPorMoeda = useMemo(() => saldosFiltrados.reduce<Record<string, typeof saldosFiltrados>>((acc, s) => {
      const moeda = s.moeda || "USD";
      if (!acc[moeda]) acc[moeda] = [];
@@ -653,7 +653,7 @@ import { useRef, MouseEvent as ReactMouseEvent } from "react";
         const saldoOperavel = saldoReal + saldoFreebet;
         
         // Only add if has meaningful balance
-        if (saldoOperavel > 0.50) {
+        if (Math.abs(saldoOperavel) > 0.01) {
           parceiro.saldos_bookmakers.push({
             nome: bk.nome,
             saldo_operavel: saldoOperavel,
