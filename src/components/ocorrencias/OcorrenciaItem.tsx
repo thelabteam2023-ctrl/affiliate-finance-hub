@@ -47,9 +47,10 @@ export function OcorrenciaItem({
         "group cursor-pointer hover:bg-muted/30 transition-all border-border/40 relative overflow-hidden",
         isSlaViolado && "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:bg-red-500"
       )}
-
       onClick={onOpen}
     >
+
+
       <CardContent className="p-3 flex items-center justify-between gap-4">
         {/* Left Section: Dot + Title + Type */}
         <div className="flex items-center gap-3 flex-1 min-w-0">
