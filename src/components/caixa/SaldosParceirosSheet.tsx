@@ -653,7 +653,7 @@ import { useRef, MouseEvent as ReactMouseEvent } from "react";
         const saldoOperavel = saldoReal + saldoFreebet;
         
         // Only add if has meaningful balance
-        if (saldoOperavel > 0.50) {
+        if (Math.abs(saldoOperavel) > 0.01) {
           parceiro.saldos_bookmakers.push({
             nome: bk.nome,
             saldo_operavel: saldoOperavel,
