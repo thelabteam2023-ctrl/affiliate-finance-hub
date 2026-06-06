@@ -75,8 +75,8 @@ export function FluxoFinanceiroOperacional({
   setDataInicio,
   setDataFim,
 }: FluxoFinanceiroOperacionalProps) {
-  const [periodo, setPeriodo] = useState<Periodo>("dia");
-  const [customStartDate, setCustomStartDate] = useState<Date | undefined>(subDays(new Date(), 30));
+  const [periodo, setPeriodo] = useState<Periodo>("semana");
+  const [customStartDate, setCustomStartDate] = useState<Date | undefined>(subDays(new Date(), 84));
   const [customEndDate, setCustomEndDate] = useState<Date | undefined>(new Date());
   const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
   const [datasetVisibility, setDatasetVisibility] = useState<boolean[]>([true, true, true, true]);
