@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
+import { SwapCryptoDialog } from "./SwapCryptoDialog";
+import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
 
 interface WalletInfo {
   wallet_id: string;
@@ -25,6 +27,9 @@ export function ExposicaoCryptoCard({
   onDataChanged,
 }: ExposicaoCryptoCardProps) {
   const [wallets, setWallets] = useState<WalletInfo[]>([]);
+  const [isSwapDialogOpen, setIsSwapDialogOpen] = useState(false);
+  const [isParceiroDialogOpen, setIsParceiroDialogOpen] = useState(false);
+  const [parceiroCompleto, setParceiroCompleto] = useState<any>(null);
 
   const fetchWallets = useCallback(async () => {
     if (!caixaParceiroId) return;
@@ -42,6 +47,24 @@ export function ExposicaoCryptoCard({
     });
     setWallets(Object.values(grouped));
   }, [caixaParceiroId]);
+
+  const fetchParceiroCompleto = async () => {
+    if (!caixaParceiroId) return;
+    const { data } = await supabase
+      .from("parceiros")
+      .select(`
+        *,
+        contas_bancarias (*),
+        wallets_crypto (*)
+      `)
+      .eq("id", caixaParceiroId)
+      .single();
+    
+    if (data) {
+      setParceiroCompleto(data);
+      setIsParceiroDialogOpen(true);
+    }
+  };
 
   useEffect(() => { fetchWallets(); }, [fetchWallets]);
 
@@ -66,64 +89,97 @@ export function ExposicaoCryptoCard({
   };
 
   return (
-    <Card className="bg-transparent border-[0.5px] border-[var(--border-default)] rounded-[12px] p-[16px_18px] relative overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent-crypto)]" aria-hidden="true"></div>
-          <span className="text-[11px] font-medium tracking-[0.06em] uppercase text-[var(--text-faint)]">
-            Caixa Crypto
-          </span>
-          {wallets.length > 0 && (
-            <span className="bg-[var(--border-default)] text-[var(--text-muted)] text-[9px] px-1.5 py-0.5 rounded-[4px] font-medium">
-              {wallets.length}
+    <>
+      <Card className="bg-transparent border-[0.5px] border-[var(--border-default)] rounded-[12px] p-[16px_18px] relative overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent-crypto)]" aria-hidden="true"></div>
+            <span className="text-[11px] font-medium tracking-[0.06em] uppercase text-[var(--text-faint)]">
+              Caixa Crypto
             </span>
-          )}
-        </div>
-        <div className="flex items-center gap-3 opacity-50">
-          <i className="ti ti-arrows-exchange text-[13px] cursor-pointer"></i>
-          <i className="ti ti-plus text-[13px] cursor-pointer"></i>
-          <i className="ti ti-trending-up text-[13px] cursor-pointer"></i>
-        </div>
-      </div>
-
-      {/* Body */}
-      <div className="mb-2.5">
-        <p className="text-[22px] font-medium text-[var(--accent-crypto)] tabular-nums">
-          {formatCurrency(totalUSD, "USD")}
-        </p>
-      </div>
-
-      {/* Coin List */}
-      <div className="space-y-1.5 mt-2">
-        {coinEntries.map(([coin, data]) => {
-          const style = getCoinStyle(coin);
-          const price = cryptoPrices[coin.toUpperCase()] || 0;
-          const usdValue = getCryptoUSDValue(coin, data.saldo_coin, data.saldo_usd);
-          
-          return (
-            <div key={coin} className="grid grid-cols-[50px_1fr_auto] gap-2 items-center">
-              <span 
-                className="text-[10px] font-bold py-0.5 px-1.5 rounded-[4px] text-center"
-                style={{ backgroundColor: style.bg, color: style.text }}
-              >
-                {coin}
+            {wallets.length > 0 && (
+              <span className="bg-[var(--border-default)] text-[var(--text-muted)] text-[9px] px-1.5 py-0.5 rounded-[4px] font-medium">
+                {wallets.length}
               </span>
-              <span className="text-[11px] text-[var(--text-muted)] tabular-nums">
-                {data.saldo_coin.toFixed(coin.toUpperCase() === 'BTC' ? 4 : 2)}
-              </span>
-              <div className="flex flex-col items-end">
-                <span className="text-[11px] text-[var(--text-muted)] tabular-nums leading-none">
-                  ≈ {formatCurrency(usdValue, "USD")}
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            <i 
+              className="ti ti-arrows-exchange text-[13px] cursor-pointer hover:text-[var(--accent-crypto)] transition-colors"
+              onClick={() => setIsSwapDialogOpen(true)}
+              aria-label="Trocar Moedas (Swap)"
+            ></i>
+            <i 
+              className="ti ti-plus text-[13px] cursor-pointer hover:text-[var(--accent-crypto)] transition-colors"
+              onClick={fetchParceiroCompleto}
+              aria-label="Adicionar Wallet"
+            ></i>
+            <i className="ti ti-trending-up text-[13px] cursor-pointer opacity-50" aria-label="Ver Tendência"></i>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="mb-2.5">
+          <p className="text-[22px] font-medium text-[var(--accent-crypto)] tabular-nums">
+            {formatCurrency(totalUSD, "USD")}
+          </p>
+        </div>
+
+        {/* Coin List */}
+        <div className="space-y-1.5 mt-2">
+          {coinEntries.map(([coin, data]) => {
+            const style = getCoinStyle(coin);
+            const price = cryptoPrices[coin.toUpperCase()] || 0;
+            const usdValue = getCryptoUSDValue(coin, data.saldo_coin, data.saldo_usd);
+            
+            return (
+              <div key={coin} className="grid grid-cols-[50px_1fr_auto] gap-2 items-center">
+                <span 
+                  className="text-[10px] font-bold py-0.5 px-1.5 rounded-[4px] text-center"
+                  style={{ backgroundColor: style.bg, color: style.text }}
+                >
+                  {coin}
                 </span>
-                <span className="text-[10px] text-[var(--text-faint)] tabular-nums mt-0.5">
-                  ${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <span className="text-[11px] text-[var(--text-muted)] tabular-nums">
+                  {data.saldo_coin.toFixed(coin.toUpperCase() === 'BTC' ? 4 : 2)}
                 </span>
+                <div className="flex flex-col items-end">
+                  <span className="text-[11px] text-[var(--text-muted)] tabular-nums leading-none">
+                    ≈ {formatCurrency(usdValue, "USD")}
+                  </span>
+                  <span className="text-[10px] text-[var(--text-faint)] tabular-nums mt-0.5">
+                    ${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
-    </Card>
+            );
+          })}
+        </div>
+      </Card>
+
+      <SwapCryptoDialog
+        open={isSwapDialogOpen}
+        onClose={() => setIsSwapDialogOpen(false)}
+        onSuccess={() => {
+          onDataChanged();
+          fetchWallets();
+        }}
+        caixaParceiroId={caixaParceiroId}
+      />
+
+      <ParceiroDialog
+        open={isParceiroDialogOpen}
+        onClose={() => {
+          setIsParceiroDialogOpen(false);
+          setParceiroCompleto(null);
+          onDataChanged();
+          fetchWallets();
+        }}
+        parceiro={parceiroCompleto}
+        initialTab="crypto"
+      />
+    </>
   );
 }
+
