@@ -17,12 +17,14 @@ import {
   CheckCircle2,
   BarChart3,
   DollarSign,
+  ArrowRight,
+  Timer,
 } from 'lucide-react';
 import { TIPO_LABELS } from '@/types/ocorrencias';
 import type { OcorrenciaTipo, OcorrenciaStatus } from '@/types/ocorrencias';
 import { getCurrencySymbol } from '@/types/currency';
+import { cn } from '@/lib/utils';
 
-type ViewMode = 'list' | 'board';
 type FilterTab = 'todas' | 'minhas' | 'historico' | 'estatisticas';
 
 export function OcorrenciasModule() {
@@ -54,157 +56,175 @@ export function OcorrenciasModule() {
   const riscoByMoeda = kpis?.riscoByMoeda ?? {};
   const hasRisco = Object.keys(riscoByMoeda).length > 0;
 
-  const kpiCards = [
-    {
-      label: 'Pendentes',
-      value: (kpis?.abertas_total ?? 0) - (kpis?.urgentes ?? 0),
-      icon: <Clock className="h-5 w-5 text-yellow-400" />,
-      color: 'text-yellow-400',
-    },
-    {
-      label: 'Urgentes',
-      value: kpis?.urgentes ?? 0,
-      icon: <Zap className="h-5 w-5 text-red-400" />,
-      color: 'text-red-400',
-    },
-    {
-      label: 'Aguardando Terceiro',
-      value: kpis?.aguardando_terceiro ?? 0,
-      icon: <Users className="h-5 w-5 text-purple-400" />,
-      color: 'text-purple-400',
-    },
-    {
-      label: 'SLA Vencido',
-      value: kpis?.atrasadas_sla ?? 0,
-      icon: <AlertTriangle className="h-5 w-5 text-orange-400" />,
-      color: 'text-orange-400',
-    },
-  ];
-
   return (
-    <div className="space-y-5">
+    <div className="space-y-8 animate-in fade-in duration-500">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-orange-400" />
+          <h2 className="text-2xl font-bold tracking-tight text-foreground">
             Ocorrências Operacionais
           </h2>
-          <p className="text-sm text-muted-foreground">
-            Monitore e resolva incidentes em tempo real
+          <p className="text-sm text-muted-foreground mt-1">
+            Central de comando para gestão de incidentes e disputas.
           </p>
         </div>
-        <Button onClick={() => setNovaOpen(true)} className="gap-2">
+        <Button onClick={() => setNovaOpen(true)} className="gap-2 shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90">
           <Plus className="h-4 w-4" />
           Nova Ocorrência
         </Button>
       </div>
 
-      {/* KPI Strip */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        {loadingKpis
-          ? [1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-20" />)
-          : <>
-              {kpiCards.map((card) => (
-                <Card key={card.label} className={card.value > 0 ? '' : 'opacity-60'}>
-                  <CardContent className="p-3 flex items-center gap-3">
-                    {card.icon}
-                    <div>
-                      <p className={`text-2xl font-bold ${card.color}`}>{card.value}</p>
-                      <p className="text-xs text-muted-foreground">{card.label}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-              {/* Valor em Disputa - multi-currency */}
-              <Card className={hasRisco ? '' : 'opacity-60'}>
-                <CardContent className="p-3 flex items-center gap-3">
-                  <DollarSign className="h-5 w-5 text-red-400" />
-                  <div>
-                    {hasRisco ? (
-                      <div className="flex flex-col gap-0.5">
-                        {Object.entries(riscoByMoeda).map(([moeda, valor]) => (
-                          <p key={moeda} className="text-lg font-bold text-red-400 leading-tight">
-                            {getCurrencySymbol(moeda)}{' '}
-                            {Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </p>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-2xl font-bold text-red-400">0</p>
-                    )}
-                    <p className="text-xs text-muted-foreground">Valor em Disputa</p>
+      {/* KPI Section - Reorganized */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Card: Atenção Necessária */}
+        <Card className="bg-muted/30 border-border/40 overflow-hidden relative">
+          <div className="absolute top-0 left-0 w-1 h-full bg-red-500" />
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Atenção Necessária</span>
+              <AlertTriangle className="h-4 w-4 text-red-500" />
+            </div>
+            <div className="flex gap-6">
+              <div>
+                <p className="text-3xl font-bold text-foreground">{kpis?.urgentes ?? 0}</p>
+                <p className="text-[10px] uppercase font-medium text-muted-foreground">Urgentes</p>
+              </div>
+              <div className="w-px h-10 bg-border/60 self-center" />
+              <div>
+                <p className="text-3xl font-bold text-red-500">{kpis?.atrasadas_sla ?? 0}</p>
+                <p className="text-[10px] uppercase font-medium text-muted-foreground">SLA Vencido</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Card: Em Andamento */}
+        <Card className="bg-muted/30 border-border/40 overflow-hidden relative">
+           <div className="absolute top-0 left-0 w-1 h-full bg-amber-500" />
+           <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Em Andamento</span>
+              <Timer className="h-4 w-4 text-amber-500" />
+            </div>
+            <div className="flex gap-6">
+              <div>
+                <p className="text-3xl font-bold text-foreground">{(kpis?.abertas_total ?? 0) - (kpis?.urgentes ?? 0)}</p>
+                <p className="text-[10px] uppercase font-medium text-muted-foreground">Pendentes</p>
+              </div>
+              <div className="w-px h-10 bg-border/60 self-center" />
+              <div>
+                <p className="text-3xl font-bold text-foreground">{kpis?.aguardando_terceiro ?? 0}</p>
+                <p className="text-[10px] uppercase font-medium text-muted-foreground">Aguardando</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Card: Valor em Disputa - Standalone & Prominent */}
+        <Card className="bg-red-500/5 border-red-500/20 overflow-hidden relative group">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-red-500/80">Valor em Disputa</span>
+              <DollarSign className="h-4 w-4 text-red-500" />
+            </div>
+            <div className="space-y-1">
+              {hasRisco ? (
+                Object.entries(riscoByMoeda).map(([moeda, valor]) => (
+                  <div key={moeda} className="flex items-baseline gap-1">
+                    <span className="text-2xl font-black text-foreground">{getCurrencySymbol(moeda)}</span>
+                    <span className="text-2xl font-black text-foreground">
+                      {Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
                   </div>
-                </CardContent>
-              </Card>
-            </>
-        }
+                ))
+              ) : (
+                <p className="text-2xl font-black text-foreground">0,00</p>
+              )}
+            </div>
+            <div className="mt-4 flex items-center gap-1 text-[10px] text-red-500 font-bold uppercase group-hover:gap-2 transition-all cursor-pointer">
+               Ver detalhes financeiros <ArrowRight className="h-3 w-3" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Type breakdown chips */}
-      {Object.keys(tipoBreakdown).length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Por tipo:</span>
-          <Badge
-            variant={tipoFilter === null ? 'default' : 'outline'}
-            className="cursor-pointer text-xs"
-            onClick={() => setTipoFilter(null)}
-          >
-            Todos ({activeOcorrencias.length})
-          </Badge>
-          {Object.entries(tipoBreakdown).map(([tipo, count]) => (
-            <Badge
-              key={tipo}
-              variant={tipoFilter === tipo ? 'default' : 'outline'}
-              className="cursor-pointer text-xs"
-              onClick={() => setTipoFilter(tipoFilter === tipo ? null : (tipo as OcorrenciaTipo))}
-            >
-              {TIPO_LABELS[tipo as OcorrenciaTipo]} ({count})
-            </Badge>
-          ))}
+      {/* Main Content Area */}
+      <div className="space-y-4">
+        {/* Navigation & Secondary Filters */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-border/40">
+          <div className="flex items-center gap-1">
+            {([
+              { key: 'todas', label: 'Todas', icon: <Inbox className="h-4 w-4" /> },
+              { key: 'minhas', label: 'Minhas', icon: <Users className="h-4 w-4" /> },
+              { key: 'historico', label: 'Histórico', icon: <CheckCircle2 className="h-4 w-4" /> },
+              { key: 'estatisticas', label: 'Estatísticas', icon: <BarChart3 className="h-4 w-4" /> },
+            ] as const).map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setFilterTab(tab.key)}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 text-sm font-semibold transition-all rounded-md",
+                  filterTab === tab.key
+                    ? "bg-muted text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                )}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Type breakdown chips */}
+          {filterTab !== 'estatisticas' && Object.keys(tipoBreakdown).length > 0 && (
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+              <Badge
+                variant={tipoFilter === null ? 'default' : 'outline'}
+                className={cn(
+                  "cursor-pointer text-[10px] uppercase font-bold tracking-tight px-3 py-1 border-none",
+                  tipoFilter === null ? "bg-primary" : "bg-muted/50 text-muted-foreground"
+                )}
+                onClick={() => setTipoFilter(null)}
+              >
+                Todos
+              </Badge>
+              {Object.entries(tipoBreakdown).map(([tipo, count]) => (
+                <Badge
+                  key={tipo}
+                  variant={tipoFilter === tipo ? 'default' : 'outline'}
+                  className={cn(
+                    "cursor-pointer text-[10px] uppercase font-bold tracking-tight px-3 py-1 border-none",
+                    tipoFilter === tipo ? "bg-primary" : "bg-muted/50 text-muted-foreground"
+                  )}
+                  onClick={() => setTipoFilter(tipoFilter === tipo ? null : (tipo as OcorrenciaTipo))}
+                >
+                  {TIPO_LABELS[tipo as OcorrenciaTipo]}
+                </Badge>
+              ))}
+            </div>
+          )}
         </div>
-      )}
 
-      {/* Filter tabs */}
-      <div className="flex items-center gap-1 border-b border-border pb-0">
-        {([
-          { key: 'todas', label: 'Pendentes', icon: <Inbox className="h-3.5 w-3.5" /> },
-          { key: 'minhas', label: 'Responsável', icon: <Users className="h-3.5 w-3.5" /> },
-          { key: 'historico', label: 'Histórico', icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
-          { key: 'estatisticas', label: 'Estatísticas', icon: <BarChart3 className="h-3.5 w-3.5" /> },
-        ] as const).map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setFilterTab(tab.key)}
-            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
-              filterTab === tab.key
-                ? 'border-primary text-foreground'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {tab.icon}
-            {tab.label}
-          </button>
-        ))}
+        {/* Content */}
+        <div className="min-h-[400px]">
+          {filterTab === 'estatisticas' ? (
+            <IncidentesEstatisticasTab />
+          ) : (
+            <OcorrenciasList
+              statusFilter={statusFilter}
+              modoMinhas={filterTab === 'minhas'}
+              tipoFilter={tipoFilter}
+              emptyMessage={
+                filterTab === 'historico'
+                  ? 'Nenhuma ocorrência finalizada encontrada.'
+                  : filterTab === 'minhas'
+                  ? 'Nenhuma ocorrência atribuída a você.'
+                  : 'Zero ocorrências ativas. Bom trabalho! ✨'
+              }
+            />
+          )}
+        </div>
       </div>
-
-      {/* Content */}
-      {filterTab === 'estatisticas' ? (
-        <IncidentesEstatisticasTab />
-      ) : (
-        <OcorrenciasList
-          statusFilter={statusFilter}
-          modoMinhas={filterTab === 'minhas'}
-          tipoFilter={tipoFilter}
-          emptyMessage={
-            filterTab === 'historico'
-              ? 'Nenhuma ocorrência resolvida ou cancelada.'
-              : filterTab === 'minhas'
-              ? 'Você não possui ocorrências ativas.'
-              : 'Nenhuma ocorrência em aberto. Tudo em dia! 🎉'
-          }
-        />
-      )}
 
       <NovaOcorrenciaDialog open={novaOpen} onOpenChange={setNovaOpen} />
     </div>

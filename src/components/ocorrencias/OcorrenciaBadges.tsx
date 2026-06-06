@@ -5,8 +5,6 @@ import {
   PRIORIDADE_LABELS,
   STATUS_LABELS,
   TIPO_LABELS,
-  PRIORIDADE_COLORS,
-  STATUS_COLORS,
 } from '@/types/ocorrencias';
 import {
   AlertTriangle,
@@ -28,12 +26,19 @@ export function PrioridadeBadge({ prioridade }: { prioridade: OcorrenciaPriorida
     urgente: <Zap className="h-3 w-3" />,
   };
 
+  const colors: Record<OcorrenciaPrioridade, string> = {
+    baixa: 'text-slate-500 bg-slate-500/10 border-slate-500/20',
+    media: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+    alta: 'text-orange-500 bg-orange-500/10 border-orange-500/20',
+    urgente: 'text-red-500 bg-red-500/10 border-red-500/20',
+  };
+
   return (
     <Badge
       variant="outline"
-      className={cn('gap-1 text-xs font-medium', PRIORIDADE_COLORS[prioridade])}
+      className={cn('gap-1.5 text-[10px] uppercase font-bold tracking-tight px-2 py-0.5 border-none', colors[prioridade])}
     >
-      {icons[prioridade]}
+      <div className={cn("h-1.5 w-1.5 rounded-full bg-current")} />
       {PRIORIDADE_LABELS[prioridade]}
     </Badge>
   );
@@ -49,43 +54,40 @@ export function StatusBadge({ status }: { status: OcorrenciaStatus }) {
   };
 
   return (
-    <Badge
-      variant="outline"
-      className={cn('gap-1 text-xs font-medium', STATUS_COLORS[status])}
-    >
+    <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
       {icons[status]}
-      {STATUS_LABELS[status]}
-    </Badge>
+      <span className="capitalize">{STATUS_LABELS[status].toLowerCase()}</span>
+    </div>
   );
 }
 
 export function TipoBadge({ tipo }: { tipo: OcorrenciaTipo }) {
   return (
-    <Badge variant="secondary" className="text-xs">
+    <Badge variant="secondary" className="text-[10px] uppercase font-bold tracking-tight bg-muted/50 text-muted-foreground border-none px-2 py-0.5">
       {TIPO_LABELS[tipo]}
     </Badge>
   );
 }
 
 export function SlaBadge({ violado, alertaEm }: { violado: boolean; alertaEm?: string | null }) {
-  if (!alertaEm) return null;
+  if (!alertaEm && !violado) return null;
 
   const agora = new Date();
-  const alerta = new Date(alertaEm);
-  const horasRestantes = (alerta.getTime() - agora.getTime()) / (1000 * 60 * 60);
+  const alerta = alertaEm ? new Date(alertaEm) : null;
+  const horasRestantes = alerta ? (alerta.getTime() - agora.getTime()) / (1000 * 60 * 60) : 0;
 
-  if (violado || horasRestantes < 0) {
+  if (violado || (alerta && horasRestantes < 0)) {
     return (
-      <Badge variant="outline" className="gap-1 text-xs text-red-400 border-red-400/50">
+      <Badge variant="destructive" className="gap-1 text-[10px] font-bold uppercase tracking-tighter px-2 py-0.5 h-auto">
         <AlertTriangle className="h-3 w-3" />
         SLA Vencido
       </Badge>
     );
   }
 
-  if (horasRestantes < 4) {
+  if (alerta && horasRestantes < 4) {
     return (
-      <Badge variant="outline" className="gap-1 text-xs text-orange-400 border-orange-400/50">
+      <Badge variant="outline" className="gap-1 text-[10px] font-bold uppercase tracking-tight text-orange-400 border-orange-400/30 px-2 py-0.5 h-auto">
         <Clock className="h-3 w-3" />
         {Math.ceil(horasRestantes)}h restante
       </Badge>
@@ -94,3 +96,4 @@ export function SlaBadge({ violado, alertaEm }: { violado: boolean; alertaEm?: s
 
   return null;
 }
+

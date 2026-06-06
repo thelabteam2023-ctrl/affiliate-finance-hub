@@ -1,13 +1,11 @@
 import { useState, useMemo } from 'react';
-import { useOcorrencias, useAtualizarStatusOcorrencia } from '@/hooks/useOcorrencias';
+import { useOcorrencias } from '@/hooks/useOcorrencias';
 import { useAuth } from '@/hooks/useAuth';
-import { useRole } from '@/hooks/useRole';
 import { Skeleton } from '@/components/ui/skeleton';
-import { OcorrenciaCollapseCard } from './OcorrenciaCollapseCard';
-import { OcorrenciaDetalheDialog } from './OcorrenciaDetalheDialog';
+import { OcorrenciaItem } from './OcorrenciaItem';
+import { OcorrenciaDrawer } from './OcorrenciaDrawer';
 import type { OcorrenciaStatus, OcorrenciaTipo, OcorrenciaPrioridade } from '@/types/ocorrencias';
-import { PRIORIDADE_LABELS, PRIORIDADE_COLORS, PRIORIDADE_BG } from '@/types/ocorrencias';
-import { Inbox, Zap, AlertTriangle, ArrowUp, ArrowDown } from 'lucide-react';
+import { Inbox } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
@@ -19,7 +17,6 @@ interface Props {
   emptyMessage?: string;
 }
 
-/** Fetch bookmaker names, logos, and parceiro (owner) names for a set of IDs */
 function useBookmakerInfo(ids: string[]) {
   return useQuery({
     queryKey: ['bookmaker-info', ids],
@@ -43,7 +40,6 @@ function useBookmakerInfo(ids: string[]) {
   });
 }
 
-/** Fetch projeto names */
 function useProjetoNames(ids: string[]) {
   return useQuery({
     queryKey: ['projeto-names', ids],
@@ -63,9 +59,7 @@ function useProjetoNames(ids: string[]) {
 
 export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMessage }: Props) {
   const { user } = useAuth();
-  const { isOwnerOrAdmin } = useRole();
   const [detalheId, setDetalheId] = useState<string | null>(null);
-  const { mutate: atualizarStatus } = useAtualizarStatusOcorrencia();
 
   const filters = statusFilter ? { status: statusFilter } : undefined;
   const { data: ocorrencias = [], isLoading } = useOcorrencias(filters);
@@ -94,15 +88,7 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
   const { data: bookmakerMap = {} } = useBookmakerInfo(bookmakerIds);
   const { data: projetoMap = {} } = useProjetoNames(projetoIds);
 
-  // Group by priority for kanban columns
   const PRIORIDADE_ORDER: OcorrenciaPrioridade[] = ['urgente', 'alta', 'media', 'baixa'];
-
-  const PRIORIDADE_ICONS: Record<OcorrenciaPrioridade, React.ReactNode> = {
-    urgente: <Zap className="h-4 w-4" />,
-    alta: <AlertTriangle className="h-4 w-4" />,
-    media: <ArrowUp className="h-4 w-4" />,
-    baixa: <ArrowDown className="h-4 w-4" />,
-  };
 
   const groupedByPrioridade = useMemo(() => {
     const groups: Record<OcorrenciaPrioridade, typeof lista> = {
@@ -123,9 +109,9 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
 
   if (isLoading) {
     return (
-      <div className="space-y-3">
-        {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-24" />
+      <div className="space-y-2">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <Skeleton key={i} className="h-14 w-full" />
         ))}
       </div>
     );
@@ -133,80 +119,52 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
 
   if (lista.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <Inbox className="h-12 w-12 text-muted-foreground/40 mb-4" />
-        <p className="text-muted-foreground">
+      <div className="flex flex-col items-center justify-center py-20 text-center bg-muted/10 rounded-xl border border-dashed border-border/60">
+        <Inbox className="h-10 w-10 text-muted-foreground/30 mb-3" />
+        <p className="text-sm text-muted-foreground font-medium">
           {emptyMessage || 'Nenhuma ocorrência encontrada'}
         </p>
       </div>
     );
   }
 
-  const renderCard = (ocorrencia: typeof lista[0]) => (
-    <OcorrenciaCollapseCard
-      key={ocorrencia.id}
-      ocorrencia={ocorrencia}
-      currentUserId={user?.id}
-      isAdmin={isOwnerOrAdmin}
-      onVerDetalhe={() => setDetalheId(ocorrencia.id)}
-      onAtualizarStatus={(novoStatus) =>
-        atualizarStatus({
-          id: ocorrencia.id,
-          novoStatus,
-          statusAnterior: ocorrencia.status,
-        })
-      }
-      bookmakerNome={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id]?.nome : undefined}
-      bookmakerLogoUrl={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id]?.logo_url : undefined}
-      projetoNome={ocorrencia.projeto_id ? projetoMap[ocorrencia.projeto_id] : undefined}
-      parceiroNome={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id]?.parceiroNome ?? undefined : undefined}
-    />
-  );
-
   return (
-    <>
-      <div
-        className={cn(
-          'grid gap-4',
-          activePrioridades.length === 1 && 'grid-cols-1',
-          activePrioridades.length === 2 && 'grid-cols-1 md:grid-cols-2',
-          activePrioridades.length === 3 && 'grid-cols-1 md:grid-cols-3',
-          activePrioridades.length >= 4 && 'grid-cols-1 md:grid-cols-2 xl:grid-cols-4'
-        )}
-      >
-        {activePrioridades.map((prioridade) => (
-          <div key={prioridade} className="flex flex-col gap-2">
-            {/* Column header */}
-            <div
-              className={cn(
-                'flex items-center gap-2 px-3 py-2 rounded-lg border',
-                PRIORIDADE_BG[prioridade],
-                PRIORIDADE_COLORS[prioridade]
-              )}
-            >
-              {PRIORIDADE_ICONS[prioridade]}
-              <span className="font-semibold text-sm">
-                {PRIORIDADE_LABELS[prioridade]}
-              </span>
-              <span className="ml-auto text-xs opacity-70 font-medium">
-                {groupedByPrioridade[prioridade].length}
-              </span>
-            </div>
-            {/* Cards */}
-            <div className="space-y-2">
-              {groupedByPrioridade[prioridade].map(renderCard)}
-            </div>
+    <div className="space-y-6">
+      {activePrioridades.map((prioridade) => (
+        <div key={prioridade} className="space-y-2">
+          {/* Priority Separator */}
+          <div className="flex items-center gap-3 px-1 py-1">
+             <span className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60">
+                {prioridade} — {groupedByPrioridade[prioridade].length}
+             </span>
+             <div className="h-px flex-1 bg-border/30" />
           </div>
-        ))}
-      </div>
+
+          {/* List of items */}
+          <div className="space-y-1">
+            {groupedByPrioridade[prioridade].map((ocorrencia) => (
+              <OcorrenciaItem
+                key={ocorrencia.id}
+                ocorrencia={ocorrencia}
+                currentUserId={user?.id}
+                onOpen={() => setDetalheId(ocorrencia.id)}
+                bookmakerNome={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id]?.nome : undefined}
+                bookmakerLogoUrl={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id]?.logo_url : undefined}
+                projetoNome={ocorrencia.projeto_id ? projetoMap[ocorrencia.projeto_id] : undefined}
+                parceiroNome={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id]?.parceiroNome ?? undefined : undefined}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
 
       {detalheId && (
-        <OcorrenciaDetalheDialog
+        <OcorrenciaDrawer
           ocorrenciaId={detalheId}
           open={!!detalheId}
           onOpenChange={(open) => !open && setDetalheId(null)}
         />
       )}
-    </>
+    </div>
   );
 }

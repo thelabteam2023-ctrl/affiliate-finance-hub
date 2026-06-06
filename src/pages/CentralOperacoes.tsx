@@ -21,7 +21,8 @@ import { useTopBar } from "@/contexts/TopBarContext";
 import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { OcorrenciasModule } from "@/components/ocorrencias/OcorrenciasModule";
-import { useOcorrenciasKpis } from "@/hooks/useOcorrencias";
+import { useOcorrenciasKpis, useOcorrencias } from "@/hooks/useOcorrencias";
+
 import { formatCurrency as formatCurrencyUtil } from "@/utils/formatCurrency";
 import { supabase } from "@/integrations/supabase/client";
 import { getFirstLastName } from "@/lib/utils";
@@ -130,6 +131,10 @@ export default function CentralOperacoes() {
   const { role, isOperator } = useRole();
   const { user, workspaceId } = useAuth();
   const { data: kpisOcorrencias } = useOcorrenciasKpis();
+  const { data: activeOcorrencias = [] } = useOcorrencias({
+    status: ['aberto', 'em_andamento', 'aguardando_terceiro'],
+  });
+
   
 
   // ==================== REACT QUERY: Cache + Deduplicação ====================
@@ -816,8 +821,9 @@ export default function CentralOperacoes() {
           </TabsTrigger>
           <TabsTrigger value="ocorrencias" className="relative text-xs md:text-sm">
             Ocorrências
-            {(kpisOcorrencias?.abertas_total ?? 0) > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">{kpisOcorrencias!.abertas_total}</span>}
+            {activeOcorrencias.length > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">{activeOcorrencias.length}</span>}
           </TabsTrigger>
+
           <TabsTrigger value="alertas" disabled className="opacity-50 text-xs md:text-sm">Alertas<span className="ml-1 text-[10px] text-muted-foreground hidden sm:inline">(em breve)</span></TabsTrigger>
         </TabsList>
 

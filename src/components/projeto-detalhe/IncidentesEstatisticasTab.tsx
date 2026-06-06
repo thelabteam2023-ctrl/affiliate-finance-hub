@@ -322,11 +322,12 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
 
   const prioridadeOrder: OcorrenciaPrioridade[] = ['urgente', 'alta', 'media', 'baixa'];
   const prioridadeColors: Record<string, string> = {
-    urgente: 'bg-red-500', alta: 'bg-orange-500', media: 'bg-blue-500', baixa: 'bg-muted-foreground',
+    urgente: 'bg-red-500', alta: 'bg-orange-500', media: 'bg-amber-500', baixa: 'bg-slate-400',
   };
   const statusColors: Record<string, string> = {
     aberto: 'text-yellow-400', em_andamento: 'text-blue-400', resolvido: 'text-emerald-400', cancelado: 'text-muted-foreground',
   };
+
 
   return (
     <div className="space-y-4 p-4 overflow-y-auto">
