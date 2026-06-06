@@ -94,13 +94,21 @@ async function fetchOcorrencias(
 export function useOcorrencias(
   filters?: Parameters<typeof fetchOcorrencias>[1]
 ) {
-  const { workspaceId } = useAuth();
+  const { workspaceId, user } = useAuth();
+  
+  useEffect(() => {
+    logAuthStatus('useOcorrencias', workspaceId, user?.id || null);
+  }, [workspaceId, user?.id]);
+
   return useQuery({
     queryKey: OCORRENCIAS_KEYS.list(workspaceId || '', filters as Record<string, unknown>),
     queryFn: () => fetchOcorrencias(workspaceId!, filters),
     enabled: !!workspaceId,
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30000),
   });
 }
+
 
 // ============================================================
 // HOOK: KPIs da visão geral
