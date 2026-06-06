@@ -658,7 +658,7 @@ export function FluxoFinanceiroOperacional({
             </div>
           </div>
           <div className="text-right">
-            <span className="text-[9px] uppercase font-bold text-[#4b5563] block mb-0.5">Saldo de Fluxo Total</span>
+            <span className="text-[9px] uppercase font-bold text-[#4b5563] block mb-0.5">Saldo de Fluxo Total ({periodLabel})</span>
             <span className={cn("text-[18px] font-bold font-mono", saldoTotal >= 0 ? "text-white" : "text-[#9ca3af]")}>
               {saldoTotal >= 0 ? "+" : "−"}R$ {Math.abs(saldoTotal).toLocaleString('pt-BR')}
             </span>
