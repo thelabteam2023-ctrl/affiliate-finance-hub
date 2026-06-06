@@ -296,7 +296,8 @@ export function FluxoFinanceiroOperacional({
     const totalDepCrypto = processado.reduce((a, b) => a + b.depCrypto, 0);
     const totalSaqCrypto = processado.reduce((a, b) => a + b.saqCrypto, 0);
 
-    const currentSource = selectedPointIndex !== null && processado[selectedPointIndex]
+    const isPointSelected = selectedPointIndex !== null && processado[selectedPointIndex];
+    const currentSource = isPointSelected
       ? processado[selectedPointIndex]
       : { depFiat: totalDepBRL, saqFiat: totalSaqBRL, depCrypto: totalDepCrypto, saqCrypto: totalSaqCrypto };
 
@@ -304,8 +305,23 @@ export function FluxoFinanceiroOperacional({
     const fluxoCrypto = currentSource.depCrypto - currentSource.saqCrypto;
     const saldoTotal = fluxoBRL + fluxoCrypto;
 
-    return { fluxoBRL, fluxoCrypto, saldoTotal };
-  }, [processado, selectedPointIndex]);
+    let periodLabel = "";
+    if (isPointSelected) {
+      const ponto = processado[selectedPointIndex].raw;
+      if (periodo === "dia") {
+        periodLabel = format(parseLocalDate(ponto.data), 'dd/MM/yyyy');
+      } else if (periodo === "semana") {
+        const s = parseLocalDate(ponto.data);
+        periodLabel = `${format(startOfWeek(s), 'dd/MM')} a ${format(endOfWeek(s), 'dd/MM/yyyy')}`;
+      } else {
+        periodLabel = format(parseLocalDate(ponto.data), 'MMMM yyyy', { locale: ptBR });
+      }
+    } else if (dataInicio && dataFim) {
+      periodLabel = `${format(dataInicio, 'dd/MM/yyyy')} a ${format(dataFim, 'dd/MM/yyyy')}`;
+    }
+
+    return { fluxoBRL, fluxoCrypto, saldoTotal, periodLabel };
+  }, [processado, selectedPointIndex, periodo, dataInicio, dataFim]);
 
   useEffect(() => {
     if (!chartRef.current || processado.length === 0) return;
@@ -476,7 +492,7 @@ export function FluxoFinanceiroOperacional({
     setDatasetVisibility(newVisibility);
   };
 
-  const { fluxoBRL, fluxoCrypto, saldoTotal } = kpiTotals;
+  const { fluxoBRL, fluxoCrypto, saldoTotal, periodLabel } = kpiTotals;
 
   function getCurrencySymbol(m: string) {
     if (m === 'USD' || m === 'USDC' || m === 'USDT') return 'US$';
@@ -642,7 +658,7 @@ export function FluxoFinanceiroOperacional({
             </div>
           </div>
           <div className="text-right">
-            <span className="text-[9px] uppercase font-bold text-[#4b5563] block mb-0.5">Saldo de Fluxo Total</span>
+            <span className="text-[9px] uppercase font-bold text-[#4b5563] block mb-0.5">Saldo de Fluxo Total ({periodLabel})</span>
             <span className={cn("text-[18px] font-bold font-mono", saldoTotal >= 0 ? "text-white" : "text-[#9ca3af]")}>
               {saldoTotal >= 0 ? "+" : "−"}R$ {Math.abs(saldoTotal).toLocaleString('pt-BR')}
             </span>
