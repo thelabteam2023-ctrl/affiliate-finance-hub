@@ -58,6 +58,19 @@ async function fetchOcorrencias(
   }
 ): Promise<Ocorrencia[]> {
   console.log('[fetchOcorrencias] Fetching for workspace:', workspaceId);
+  
+  // Test query without joins first to rule out profile access issues
+  const { data: rawData, error: rawError } = await ocorrenciasTable()
+    .select('id')
+    .eq('workspace_id', workspaceId)
+    .limit(1);
+    
+  if (rawError) {
+    console.error('[fetchOcorrencias] RAW test query failed:', rawError);
+  } else {
+    console.log('[fetchOcorrencias] RAW test query success, row found:', !!rawData?.length);
+  }
+
   let query = ocorrenciasTable()
     .select('*, executor:profiles!executor_id(id, full_name, avatar_url), requerente:profiles!requerente_id(id, full_name, avatar_url)')
     .eq('workspace_id', workspaceId)
