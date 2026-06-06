@@ -108,7 +108,7 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
             <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
               {ocorrencia.prioridade}
             </span>
-            <SlaBadge violado={ocorrencia.sla_violado} alertaEm={ocorrencia.sla_alerta_em} />
+            {/* SLA Badge removed */}
           </div>
           <SheetTitle className="text-xl font-semibold leading-tight mb-4">
             {ocorrencia.titulo}
