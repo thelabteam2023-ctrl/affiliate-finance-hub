@@ -1090,7 +1090,7 @@ const formatTime = (date: Date) => {
                                     </Button>
                                   )}
                                  {(hasBookmakerBalance || parceiro.pendentes_bookmakers.length > 0) && (
-                                   <InteractiveTooltip containerRef={scrollContainerRef} className="w-full" content={<BookmakerDetailsContent saldos={parceiro.saldos_bookmakers} pendentes={parceiro.pendentes_bookmakers} />}>
+                                   <InteractiveTooltip side="bottom" align="center" containerRef={scrollContainerRef} className="w-full" content={<BookmakerDetailsContent saldos={parceiro.saldos_bookmakers} pendentes={parceiro.pendentes_bookmakers} />}>
                                      <Button variant="ghost" size="sm" className="w-full justify-between h-8 px-2 bg-muted/10 hover:bg-muted/20 text-[11px] font-medium border border-border/10">
                                        <div className="flex items-center gap-1.5"><Wallet className="h-3 w-3 text-chart-4" /><span>Casas</span></div>
                                        <div className="flex items-center gap-1 font-mono text-chart-4">
