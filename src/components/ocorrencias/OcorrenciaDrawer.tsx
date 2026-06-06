@@ -322,8 +322,10 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
               });
             }}
           />
+          </>
         )}
       </SheetContent>
+
     </Sheet>
   );
 }
