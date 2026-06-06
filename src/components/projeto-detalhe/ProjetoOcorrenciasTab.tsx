@@ -303,8 +303,8 @@ export function ProjetoOcorrenciasTab({ projetoId, onDataChange, formatCurrency:
       />
 
       <OcorrenciaDrawer
-        key={detalheId || 'empty'}
         ocorrenciaId={detalheId || ''}
+
         open={!!detalheId}
         onOpenChange={(open) => {
           if (!open) setDetalheId(null);
