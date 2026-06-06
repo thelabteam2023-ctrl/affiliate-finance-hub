@@ -821,8 +821,9 @@ export default function CentralOperacoes() {
           </TabsTrigger>
           <TabsTrigger value="ocorrencias" className="relative text-xs md:text-sm">
             Ocorrências
-            {(kpisOcorrencias?.abertas_total ?? 0) > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">{kpisOcorrencias!.abertas_total}</span>}
+            {activeOcorrencias.length > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">{activeOcorrencias.length}</span>}
           </TabsTrigger>
+
           <TabsTrigger value="alertas" disabled className="opacity-50 text-xs md:text-sm">Alertas<span className="ml-1 text-[10px] text-muted-foreground hidden sm:inline">(em breve)</span></TabsTrigger>
         </TabsList>
 
