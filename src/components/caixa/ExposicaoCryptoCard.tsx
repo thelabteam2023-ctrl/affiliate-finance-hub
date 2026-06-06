@@ -111,17 +111,30 @@ export function ExposicaoCryptoCard({
             )}
           </div>
           <div className="flex items-center gap-3">
-            <i 
-              className="ti ti-arrows-exchange text-[13px] cursor-pointer hover:text-[var(--accent-crypto)] transition-colors"
+            <button 
+              className="p-1 hover:bg-white/5 rounded-md text-[var(--text-faint)] hover:text-[var(--accent-crypto)] transition-colors"
               onClick={() => setIsSwapDialogOpen(true)}
-              aria-label="Trocar Moedas (Swap)"
-            ></i>
-            <i 
-              className="ti ti-plus text-[13px] cursor-pointer hover:text-[var(--accent-crypto)] transition-colors"
+              title="Trocar Moedas (Swap)"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
+            <button 
+              className="p-1 hover:bg-white/5 rounded-md text-[var(--text-faint)] hover:text-[var(--accent-crypto)] transition-colors"
               onClick={fetchParceiroCompleto}
-              aria-label="Adicionar Wallet"
-            ></i>
-            <i className="ti ti-trending-up text-[13px] cursor-pointer opacity-50" aria-label="Ver Tendência"></i>
+              title="Adicionar Wallet"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+            <button 
+              className="p-1 hover:bg-white/5 rounded-md text-[var(--text-faint)] hover:text-[var(--accent-crypto)] transition-colors"
+              onClick={() => {
+                setSelectedCoin(null);
+                setIsBreakdownOpen(true);
+              }}
+              title="Ver Wallets"
+            >
+              <Info className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
 
