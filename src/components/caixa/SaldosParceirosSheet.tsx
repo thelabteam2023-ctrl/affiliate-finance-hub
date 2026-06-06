@@ -1068,7 +1068,7 @@ const formatTime = (date: Date) => {
                                </div>
                                <div className="space-y-2">
                                  {primaryFiat && (
-                                   <InteractiveTooltip containerRef={scrollContainerRef} className="w-full" content={<FiatHoverContent saldos={parceiro.saldos_fiat} />}>
+                                   <InteractiveTooltip side="bottom" align="center" containerRef={scrollContainerRef} className="w-full" content={<FiatHoverContent saldos={parceiro.saldos_fiat} />}>
                                      <Button variant="ghost" size="sm" className="w-full justify-between h-8 px-2 bg-muted/10 hover:bg-muted/20 text-[11px] font-medium border border-border/10">
                                        <div className="flex items-center gap-1.5"><Landmark className="h-3 w-3 text-chart-1" /><span>Bancos</span></div>
                                        <div className="flex items-center gap-1 font-mono text-chart-1">{formatCurrency(primaryFiat[1], primaryFiat[0])}{fiatEntries.length > 1 && <span className="text-[9px] text-muted-foreground">+{fiatEntries.length - 1}</span>}</div>
