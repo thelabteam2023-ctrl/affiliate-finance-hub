@@ -301,11 +301,15 @@ export function ProjetoOcorrenciasTab({ projetoId, onDataChange, formatCurrency:
 
       {detalheId && (
         <OcorrenciaDrawer
+          key={detalheId}
           ocorrenciaId={detalheId}
           open={!!detalheId}
-          onOpenChange={(open) => !open && setDetalheId(null)}
+          onOpenChange={(open) => {
+            if (!open) setDetalheId(null);
+          }}
         />
       )}
+
 
     </div>
   );
