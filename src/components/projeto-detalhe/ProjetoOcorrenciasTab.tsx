@@ -9,15 +9,16 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { KpiSummaryBar } from '@/components/ui/kpi-summary-bar';
-import { OcorrenciaCollapseCard } from '@/components/ocorrencias/OcorrenciaCollapseCard';
-import { OcorrenciaDetalheDialog } from '@/components/ocorrencias/OcorrenciaDetalheDialog';
+import { OcorrenciaItem } from '@/components/ocorrencias/OcorrenciaItem';
+import { OcorrenciaDrawer } from '@/components/ocorrencias/OcorrenciaDrawer';
 import { NovaOcorrenciaDialog } from '@/components/ocorrencias/NovaOcorrenciaDialog';
 import type { OcorrenciaStatus, OcorrenciaPrioridade } from '@/types/ocorrencias';
-import { PRIORIDADE_LABELS, PRIORIDADE_COLORS, PRIORIDADE_BG } from '@/types/ocorrencias';
+import { PRIORIDADE_LABELS } from '@/types/ocorrencias';
 import { Plus, Inbox, Zap, AlertTriangle, ArrowUp, ArrowDown, ShieldAlert, CheckCircle, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { IncidentesEstatisticasTab } from './IncidentesEstatisticasTab';
+
 
 interface ProjetoOcorrenciasTabProps {
   projetoId: string;
@@ -129,24 +130,17 @@ export function ProjetoOcorrenciasTab({ projetoId, onDataChange, formatCurrency:
   const isLoading = loadingAbertas || loadingHistorico;
 
   const renderCard = (ocorrencia: typeof listaAtual[0]) => (
-    <OcorrenciaCollapseCard
+    <OcorrenciaItem
       key={ocorrencia.id}
       ocorrencia={ocorrencia}
       currentUserId={user?.id}
-      isAdmin={isOwnerOrAdmin}
-      onVerDetalhe={() => setDetalheId(ocorrencia.id)}
-      onAtualizarStatus={(novoStatus) =>
-        atualizarStatus({
-          id: ocorrencia.id,
-          novoStatus,
-          statusAnterior: ocorrencia.status,
-        })
-      }
+      onOpen={() => setDetalheId(ocorrencia.id)}
       bookmakerNome={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id]?.nome : undefined}
       bookmakerLogoUrl={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id]?.logo_url : undefined}
       parceiroNome={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id]?.parceiroNome ?? undefined : undefined}
     />
   );
+
 
   if (isLoading) {
     return (
@@ -248,29 +242,23 @@ export function ProjetoOcorrenciasTab({ projetoId, onDataChange, formatCurrency:
               <p className="text-muted-foreground">Nenhuma ocorrência pendente neste projeto.</p>
             </div>
           ) : (
-            <div
-              className={cn(
-                'grid gap-4',
-                activePrioridades.length === 1 && 'grid-cols-1',
-                activePrioridades.length === 2 && 'grid-cols-1 md:grid-cols-2',
-                activePrioridades.length === 3 && 'grid-cols-1 md:grid-cols-3',
-                activePrioridades.length >= 4 && 'grid-cols-1 md:grid-cols-2 xl:grid-cols-4',
-              )}
-            >
+            <div className="space-y-6">
               {activePrioridades.map((prioridade) => (
-                <div key={prioridade} className="flex flex-col gap-2">
-                  <div className={cn('flex items-center gap-2 px-3 py-2 rounded-lg border', PRIORIDADE_BG[prioridade], PRIORIDADE_COLORS[prioridade])}>
-                    {PRIORIDADE_ICONS[prioridade]}
-                    <span className="font-semibold text-sm">{PRIORIDADE_LABELS[prioridade]}</span>
-                    <span className="ml-auto text-xs opacity-70 font-medium">{groupedByPrioridade[prioridade].length}</span>
+                <div key={prioridade} className="space-y-2">
+                  <div className="flex items-center gap-3 px-1 py-1">
+                    <span className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60">
+                       {prioridade} — {groupedByPrioridade[prioridade].length}
+                    </span>
+                    <div className="h-px flex-1 bg-border/30" />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     {groupedByPrioridade[prioridade].map(renderCard)}
                   </div>
                 </div>
               ))}
             </div>
           )}
+
         </TabsContent>
 
         <TabsContent value="historico" className="mt-4">
@@ -280,29 +268,23 @@ export function ProjetoOcorrenciasTab({ projetoId, onDataChange, formatCurrency:
               <p className="text-muted-foreground">Nenhuma ocorrência encerrada neste projeto.</p>
             </div>
           ) : (
-            <div
-              className={cn(
-                'grid gap-4',
-                activePrioridades.length === 1 && 'grid-cols-1',
-                activePrioridades.length === 2 && 'grid-cols-1 md:grid-cols-2',
-                activePrioridades.length === 3 && 'grid-cols-1 md:grid-cols-3',
-                activePrioridades.length >= 4 && 'grid-cols-1 md:grid-cols-2 xl:grid-cols-4',
-              )}
-            >
+            <div className="space-y-6">
               {activePrioridades.map((prioridade) => (
-                <div key={prioridade} className="flex flex-col gap-2">
-                  <div className={cn('flex items-center gap-2 px-3 py-2 rounded-lg border', PRIORIDADE_BG[prioridade], PRIORIDADE_COLORS[prioridade])}>
-                    {PRIORIDADE_ICONS[prioridade]}
-                    <span className="font-semibold text-sm">{PRIORIDADE_LABELS[prioridade]}</span>
-                    <span className="ml-auto text-xs opacity-70 font-medium">{groupedByPrioridade[prioridade].length}</span>
+                <div key={prioridade} className="space-y-2">
+                  <div className="flex items-center gap-3 px-1 py-1">
+                    <span className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60">
+                       {prioridade} — {groupedByPrioridade[prioridade].length}
+                    </span>
+                    <div className="h-px flex-1 bg-border/30" />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     {groupedByPrioridade[prioridade].map(renderCard)}
                   </div>
                 </div>
               ))}
             </div>
           )}
+
         </TabsContent>
 
         <TabsContent value="estatisticas" className="mt-4">
@@ -318,12 +300,13 @@ export function ProjetoOcorrenciasTab({ projetoId, onDataChange, formatCurrency:
       />
 
       {detalheId && (
-        <OcorrenciaDetalheDialog
+        <OcorrenciaDrawer
           ocorrenciaId={detalheId}
           open={!!detalheId}
           onOpenChange={(open) => !open && setDetalheId(null)}
         />
       )}
+
     </div>
   );
 }
