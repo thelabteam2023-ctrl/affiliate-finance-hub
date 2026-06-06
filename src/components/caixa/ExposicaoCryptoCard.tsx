@@ -208,6 +208,15 @@ export function ExposicaoCryptoCard({
         parceiro={parceiroCompleto}
         initialTab="crypto"
       />
+
+      <CurrencyBreakdownModal
+        isOpen={isBreakdownOpen}
+        onClose={() => setIsBreakdownOpen(false)}
+        category="Caixa Operacional"
+        currency="CRYPTO"
+        workspaceId={workspaceId}
+        filterCoin={selectedCoin}
+      />
     </>
   );
 }
