@@ -328,10 +328,15 @@ export const SidebarFlyoutItem: React.FC<SidebarFlyoutItemProps> = ({ item, onIt
   
   const content = (
     <div className="flex items-center gap-2 w-full group/favitem">
-      {item.icon && <item.icon className={cn("h-4 w-4 shrink-0 opacity-60", isActive && "opacity-100 text-primary")} />}
-      <span className={cn("truncate", isActive && "font-semibold text-primary")}>{item.label}</span>
+      {item.icon && <item.icon className={cn("h-[15px] w-[15px] shrink-0 transition-all", isActive ? "text-primary opacity-100" : "opacity-35 group-hover/favitem:opacity-60")} />}
+      <span className={cn("truncate text-[13px] transition-colors", isActive ? "font-medium text-white" : "text-white/50 group-hover/favitem:text-white/80")}>{item.label}</span>
       {item.badgeCount ? (
-        <span className="ml-auto bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+        <span className={cn(
+          "ml-auto h-[18px] min-w-[18px] px-1.5 text-[10px] font-semibold flex items-center justify-center rounded-[5px]",
+          item.href === "/" ? "bg-green-500/15 text-green-500" : 
+          item.href === "/solicitacoes" ? "bg-red-500/15 text-red-500" : 
+          "bg-white/7 text-white/30"
+        )}>
           {item.badgeCount}
         </span>
       ) : null}
