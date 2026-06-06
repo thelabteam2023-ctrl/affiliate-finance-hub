@@ -101,15 +101,35 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-md md:max-w-xl flex flex-col p-0 bg-background border-l border-border/40">
-        {showSkeleton || !ocorrencia ? (
+        {showSkeleton ? (
           <div className="h-full w-full p-6 space-y-6">
-            <Skeleton className="h-10 w-3/4" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-8 w-full" />
+            </div>
+            <div className="flex gap-2">
+              <Skeleton className="h-8 w-8 rounded-full" />
+              <Skeleton className="h-8 w-8 rounded-full" />
+              <div className="h-4 w-px bg-border mx-2" />
+              <Skeleton className="h-5 w-20" />
+              <Skeleton className="h-5 w-20" />
+            </div>
             <Skeleton className="h-24 w-full" />
             <Skeleton className="h-40 w-full" />
+            <div className="mt-auto pt-6">
+              <Skeleton className="h-20 w-full" />
+            </div>
           </div>
-        ) : (
+        ) : !ocorrencia && open ? (
+          <div className="h-full w-full p-6 flex flex-col items-center justify-center text-center space-y-3">
+            <AlertTriangle className="h-10 w-10 text-muted-foreground/50" />
+            <p className="text-muted-foreground text-sm font-medium">Não foi possível carregar os detalhes da ocorrência.</p>
+            <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>Fechar painel</Button>
+          </div>
+        ) : ocorrencia ? (
           <>
             <SheetHeader className="p-6 border-b border-border/40 shrink-0">
+
               <div className="flex items-center gap-2 mb-2">
                 <div className={cn("h-2.5 w-2.5 rounded-full", PRIORIDADE_DOTS[ocorrencia.prioridade])} />
                 <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
