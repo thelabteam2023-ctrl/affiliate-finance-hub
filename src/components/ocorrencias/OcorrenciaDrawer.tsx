@@ -293,14 +293,14 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
                    </div>
                 </div>
 
-                <div className="flex items-center justify-between p-3 rounded-lg border border-border/40 bg-primary/5">
+                <div className="flex items-center justify-between p-3 rounded-lg border border-border/40 bg-muted/20">
                    <div className="flex items-center gap-3">
-                     <div className="h-8 w-8 rounded-lg bg-background flex items-center justify-center border border-primary/20">
-                        <User className="h-4 w-4 text-primary" />
+                     <div className="h-8 w-8 rounded-lg bg-background flex items-center justify-center border border-border/40">
+                        <User className="h-4 w-4 text-muted-foreground" />
                      </div>
                      <div className="min-w-0">
-                       <p className="text-xs font-bold text-foreground truncate">A Glória de {getMemberName(ocorrencia.requerente_id)}</p>
-                       <p className="text-[10px] text-primary uppercase font-bold">Titular da Conta</p>
+                       <p className="text-xs font-medium text-foreground truncate">{getMemberName(ocorrencia.requerente_id)}</p>
+                       <p className="text-[10px] text-muted-foreground uppercase">Titular / Requerente</p>
                      </div>
                    </div>
                 </div>
