@@ -164,39 +164,39 @@ export function WorkspaceSwitcher({
           role="combobox"
           aria-expanded={open}
           className={cn(
-            "justify-between hover:bg-accent/50 transition-colors relative",
-            isCollapsed ? "h-8 w-8 p-0" : "w-full h-auto px-2 py-1.5"
+            "justify-between hover:bg-white/5 transition-all relative border border-white/5 rounded-lg",
+            isCollapsed ? "h-8 w-8 p-0" : "w-full h-auto px-2 py-1.5 bg-white/4"
           )}
           disabled={loading || switching}
         >
           {isCollapsed ? (
             <div className="relative">
-              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10">
-                <Building2 className="h-4 w-4 text-primary" />
+              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary shrink-0">
+                <Building2 className="h-4 w-4 text-white" />
               </div>
               {hasPendingInvites && (
-                <span className="absolute -top-1 -right-1 h-3 w-3 bg-orange-500 rounded-full animate-pulse" />
+                <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full border-2 border-sidebar animate-pulse" />
               )}
             </div>
           ) : (
             <>
               <div className="flex items-center gap-2 flex-1 min-w-0">
-                <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 shrink-0 relative">
-                  <Building2 className="h-4 w-4 text-primary" />
+                <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary shrink-0 relative">
+                  <Building2 className="h-4 w-4 text-white" />
                   {hasPendingInvites && (
-                    <span className="absolute -top-1 -right-1 h-2.5 w-2.5 bg-orange-500 rounded-full animate-pulse" />
+                    <span className="absolute -top-1 -right-1 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-sidebar animate-pulse" />
                   )}
                 </div>
-                <div className="flex-1 text-center min-w-0">
-                  <p className="text-sm font-medium break-words">
+                <div className="flex-1 text-left min-w-0 pl-1">
+                  <p className="text-[12px] font-medium truncate leading-tight">
                     {currentWorkspace?.workspace_name || "Selecionar..."}
                   </p>
-                  <p className="text-[10px] text-muted-foreground">
+                  <p className="text-[11px] text-white/30 leading-tight">
                     {currentWorkspace ? getRoleLabel(currentWorkspace.role) : ""}
                   </p>
                 </div>
               </div>
-              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-25" />
             </>
           )}
         </Button>
