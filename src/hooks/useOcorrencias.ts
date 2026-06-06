@@ -57,6 +57,20 @@ async function fetchOcorrencias(
     projetoId?: string;
   }
 ): Promise<Ocorrencia[]> {
+  console.log('[fetchOcorrencias] Fetching for workspace:', workspaceId);
+  
+  // Test query without joins first to rule out profile access issues
+  const { data: rawData, error: rawError } = await ocorrenciasTable()
+    .select('id')
+    .eq('workspace_id', workspaceId)
+    .limit(1);
+    
+  if (rawError) {
+    console.error('[fetchOcorrencias] RAW test query failed:', rawError);
+  } else {
+    console.log('[fetchOcorrencias] RAW test query success, row found:', !!rawData?.length);
+  }
+
   let query = ocorrenciasTable()
     .select('*, executor:profiles!executor_id(id, full_name, avatar_url), requerente:profiles!requerente_id(id, full_name, avatar_url)')
     .eq('workspace_id', workspaceId)
@@ -81,11 +95,12 @@ async function fetchOcorrencias(
     query = query.eq('projeto_id', filters.projetoId);
   }
 
-  const { data, error } = await query;
+  const { data, error, status, statusText } = await query;
   if (error) {
-    console.error(`[fetchOcorrencias] Failed:`, error);
+    console.error(`[fetchOcorrencias] Failed:`, { error, status, statusText });
     throw error;
   }
+  console.log('[fetchOcorrencias] Success, rows:', data?.length);
   return (data || []) as Ocorrencia[];
 }
 
