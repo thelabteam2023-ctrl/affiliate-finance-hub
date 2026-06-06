@@ -121,7 +121,7 @@ export default function Caixa() {
   const locationState = location.state as LocationState | null;
   
   // Ler aba inicial da URL (?tab=conciliacao)
-  const initialTab = searchParams.get("tab") || "analise";
+  const initialTab = searchParams.get("tab") || "historico";
   
   // Workspace reactivo para isolamento multi-tenant
   const { workspaceId } = useTabWorkspace();

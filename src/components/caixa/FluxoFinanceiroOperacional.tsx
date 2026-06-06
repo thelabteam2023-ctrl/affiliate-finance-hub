@@ -100,6 +100,13 @@ export function FluxoFinanceiroOperacional({
     LTC_BRL: cryptoPrices.LTC || 0,
   }), [cotacaoUSD, cryptoPrices]);
 
+  useEffect(() => {
+    // Inicializar as datas conforme o período padrão (semana) ao montar o componente
+    const now = new Date();
+    setDataInicio?.(subDays(now, 84));
+    setDataFim?.(now);
+  }, []);
+
   const handlePeriodoChange = (newPeriodo: Periodo) => {
     setPeriodo(newPeriodo);
     const now = new Date();
