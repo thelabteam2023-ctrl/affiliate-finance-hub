@@ -91,10 +91,11 @@ export function OcorrenciasModule() {
               </div>
               <div className="w-px h-10 bg-border/60 self-center" />
               <div>
-                <p className="text-3xl font-bold text-red-500">{kpis?.atrasadas_sla ?? 0}</p>
-                <p className="text-[10px] uppercase font-medium text-muted-foreground">SLA Vencido</p>
+                <p className="text-3xl font-bold text-foreground">{(kpis?.abertas_total ?? 0)}</p>
+                <p className="text-[10px] uppercase font-medium text-muted-foreground">Total Abertas</p>
               </div>
             </div>
+
           </CardContent>
         </Card>
 

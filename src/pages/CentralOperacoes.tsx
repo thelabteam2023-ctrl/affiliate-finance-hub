@@ -243,12 +243,13 @@ export default function CentralOperacoes() {
   // Conciliação direta modal
   const [conciliacaoDirectOpen, setConciliacaoDirectOpen] = useState(false);
   const [conciliacaoDirectBookmaker, setConciliacaoDirectBookmaker] = useState<{ id: string; nome: string }>({ id: "", nome: "" });
-  const [mainTab, setMainTabState] = useState<'financeiro' | 'contas' | 'ocorrencias' | 'alertas'>(() => {
+  const [mainTab, setMainTabState] = useState<'financeiro' | 'contas' | 'ocorrencias'>(() => {
     const saved = localStorage.getItem('central-operacoes-main-tab');
     if (role === 'operator') return 'financeiro';
-    if (saved === 'financeiro' || saved === 'contas' || saved === 'ocorrencias' || saved === 'alertas') return saved;
+    if (saved === 'financeiro' || saved === 'contas' || saved === 'ocorrencias') return saved;
     return 'financeiro';
   });
+
   const setMainTab = (tab: typeof mainTab) => {
     if (isOperator) return;
     setMainTabState(tab);
@@ -824,7 +825,8 @@ export default function CentralOperacoes() {
             {activeOcorrencias.length > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">{activeOcorrencias.length}</span>}
           </TabsTrigger>
 
-          <TabsTrigger value="alertas" disabled className="opacity-50 text-xs md:text-sm">Alertas<span className="ml-1 text-[10px] text-muted-foreground hidden sm:inline">(em breve)</span></TabsTrigger>
+          {/* Alertas tab removed */}
+
         </TabsList>
 
         <TabsContent value="financeiro" className="mt-3 md:mt-4 space-y-3 md:space-y-4">

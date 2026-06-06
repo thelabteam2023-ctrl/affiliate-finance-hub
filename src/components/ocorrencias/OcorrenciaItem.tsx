@@ -37,7 +37,7 @@ export function OcorrenciaItem({
   parceiroNome,
 }: Props) {
   const isExecutor = ocorrencia.executor_id === currentUserId;
-  const isSlaViolado = ocorrencia.sla_violado;
+  const isSlaViolado = false; // SLA extinguido
 
   return (
     <Card 
@@ -45,6 +45,7 @@ export function OcorrenciaItem({
         "group cursor-pointer hover:bg-muted/30 transition-all border-border/40 relative overflow-hidden",
         isSlaViolado && "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:bg-red-500"
       )}
+
       onClick={onOpen}
     >
       <CardContent className="p-3 flex items-center justify-between gap-4">
@@ -62,14 +63,10 @@ export function OcorrenciaItem({
               <Badge variant="secondary" className="text-[10px] h-4.5 px-1.5 font-normal bg-muted/50 text-muted-foreground border-none">
                 {ocorrencia.tipo.replace('_', ' ')}
               </Badge>
-              {isSlaViolado && (
-                <Badge variant="destructive" className="text-[10px] h-4.5 px-1.5 font-bold uppercase tracking-tighter">
-                  SLA Vencido
-                </Badge>
-              )}
             </div>
           </div>
         </div>
+
 
         {/* Right Section: Entity + Responsible + Time + Value */}
         <div className="flex items-center gap-4 shrink-0 text-xs text-muted-foreground">

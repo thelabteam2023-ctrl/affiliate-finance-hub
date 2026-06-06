@@ -70,30 +70,7 @@ export function TipoBadge({ tipo }: { tipo: OcorrenciaTipo }) {
 }
 
 export function SlaBadge({ violado, alertaEm }: { violado: boolean; alertaEm?: string | null }) {
-  if (!alertaEm && !violado) return null;
-
-  const agora = new Date();
-  const alerta = alertaEm ? new Date(alertaEm) : null;
-  const horasRestantes = alerta ? (alerta.getTime() - agora.getTime()) / (1000 * 60 * 60) : 0;
-
-  if (violado || (alerta && horasRestantes < 0)) {
-    return (
-      <Badge variant="destructive" className="gap-1 text-[10px] font-bold uppercase tracking-tighter px-2 py-0.5 h-auto">
-        <AlertTriangle className="h-3 w-3" />
-        SLA Vencido
-      </Badge>
-    );
-  }
-
-  if (alerta && horasRestantes < 4) {
-    return (
-      <Badge variant="outline" className="gap-1 text-[10px] font-bold uppercase tracking-tight text-orange-400 border-orange-400/30 px-2 py-0.5 h-auto">
-        <Clock className="h-3 w-3" />
-        {Math.ceil(horasRestantes)}h restante
-      </Badge>
-    );
-  }
-
   return null;
 }
+
 
