@@ -395,7 +395,7 @@ export function PosicaoCapital({
         </div>
 
         {/* 3b. Lista de itens de Posição de Capital */}
-        <div className="space-y-1 relative">
+        <div className="space-y-1 relative pt-2">
           {/* Tooltip do donut (centralizado em relação ao donut) */}
           {(activeSegment && !expandedSegment) && (() => {
             const seg = dadosPosicao.items.find(s => s.id === activeSegment);
