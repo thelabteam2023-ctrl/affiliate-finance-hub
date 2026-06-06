@@ -492,7 +492,7 @@ export function FluxoFinanceiroOperacional({
     setDatasetVisibility(newVisibility);
   };
 
-  const { fluxoBRL, fluxoCrypto, saldoTotal } = kpiTotals;
+  const { fluxoBRL, fluxoCrypto, saldoTotal, periodLabel } = kpiTotals;
 
   function getCurrencySymbol(m: string) {
     if (m === 'USD' || m === 'USDC' || m === 'USDT') return 'US$';
