@@ -18,6 +18,16 @@ const ocorrenciasTable = () => (supabase as any).from('ocorrencias');
 const eventosTable = () => (supabase as any).from('ocorrencias_eventos');
 const observadoresTable = () => (supabase as any).from('ocorrencias_observadores');
 
+// ── Observability & Monitoring ──────────────────────────────────────────
+const logAuthStatus = (tag: string, workspaceId: string | null, userId: string | null) => {
+  if (!workspaceId || !userId) {
+    console.error(`[Ocorrencias][${tag}] Auth context missing: workspaceId=${workspaceId}, userId=${userId}`);
+  } else {
+    console.log(`[Ocorrencias][${tag}] Context verified: workspaceId=${workspaceId}`);
+  }
+};
+
+
 // ============================================================
 // QUERY KEYS
 // ============================================================
