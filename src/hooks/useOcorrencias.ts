@@ -183,6 +183,7 @@ export function useOcorrencia(id: string) {
           throw error;
         }
 
+
         if (!data) {
           console.warn(`[useOcorrencia] No occurrence found for ID ${id} in workspace ${workspaceId}`);
           return null;
