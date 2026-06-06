@@ -1210,7 +1210,7 @@ export default function Caixa() {
 
             {/* 2c. Card "Saldo em Bancos" */}
             <Card
-              className="bg-[var(--bg-card)] border-[0.5px] border-[var(--border-default)] rounded-[12px] p-[16px_18px] relative overflow-hidden cursor-pointer hover:border-[var(--border-hover)] transition-colors group"
+              className="bg-transparent border-[0.5px] border-[var(--border-default)] rounded-[12px] p-[16px_18px] relative overflow-hidden cursor-pointer hover:border-[var(--border-hover)] transition-colors group"
               onClick={() => setSaldoBancosModalOpen(true)}
             >
               <div className="flex items-center gap-2 mb-3">
