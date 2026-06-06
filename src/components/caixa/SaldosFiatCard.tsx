@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
 
 interface ContaFiat {
   id: string;
@@ -19,12 +19,32 @@ interface SaldosFiatCardProps {
 
 export function SaldosFiatCard({ caixaParceiroId, formatCurrency, onDataChanged }: SaldosFiatCardProps) {
   const [contas, setContas] = useState<ContaFiat[]>([]);
+  const [isParceiroDialogOpen, setIsParceiroDialogOpen] = useState(false);
+  const [parceiroCompleto, setParceiroCompleto] = useState<any>(null);
 
   const fetchContas = useCallback(async () => {
     if (!caixaParceiroId) return;
     const { data } = await supabase.from("v_saldo_parceiro_contas").select("*").eq("parceiro_id", caixaParceiroId);
     setContas((data || []).map((c: any) => ({ ...c, id: c.conta_id })) as ContaFiat[]);
   }, [caixaParceiroId]);
+
+  const fetchParceiroCompleto = async () => {
+    if (!caixaParceiroId) return;
+    const { data } = await supabase
+      .from("parceiros")
+      .select(`
+        *,
+        contas_bancarias (*),
+        wallets_crypto (*)
+      `)
+      .eq("id", caixaParceiroId)
+      .single();
+    
+    if (data) {
+      setParceiroCompleto(data);
+      setIsParceiroDialogOpen(true);
+    }
+  };
 
   useEffect(() => { fetchContas(); }, [fetchContas]);
 
@@ -38,40 +58,59 @@ export function SaldosFiatCard({ caixaParceiroId, formatCurrency, onDataChanged 
   const primarySaldo = saldosPorMoeda["BRL"] || 0;
 
   return (
-    <Card className="bg-transparent border-[0.5px] border-[var(--border-default)] rounded-[12px] p-[16px_18px] relative overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent-fiat)]" aria-hidden="true"></div>
-          <span className="text-[11px] font-medium tracking-[0.06em] uppercase text-[var(--text-faint)]">
-            Caixa FIAT
-          </span>
-          {contas.length > 0 && (
-            <span className="bg-[var(--border-default)] text-[var(--text-muted)] text-[9px] px-1.5 py-0.5 rounded-[4px] font-medium">
-              {contas.length}
+    <>
+      <Card className="bg-transparent border-[0.5px] border-[var(--border-default)] rounded-[12px] p-[16px_18px] relative overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent-fiat)]" aria-hidden="true"></div>
+            <span className="text-[11px] font-medium tracking-[0.06em] uppercase text-[var(--text-faint)]">
+              Caixa FIAT
             </span>
-          )}
+            {contas.length > 0 && (
+              <span className="bg-[var(--border-default)] text-[var(--text-muted)] text-[9px] px-1.5 py-0.5 rounded-[4px] font-medium">
+                {contas.length}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            <i 
+              className="ti ti-plus text-[13px] cursor-pointer hover:text-[var(--accent-fiat)] transition-colors" 
+              aria-label="Adicionar Conta"
+              onClick={fetchParceiroCompleto}
+            ></i>
+            <i className="ti ti-calendar text-[13px] cursor-pointer opacity-50" aria-label="Calendário"></i>
+          </div>
         </div>
-        <div className="flex items-center gap-3 opacity-50">
-          <i className="ti ti-plus text-[13px] cursor-pointer" aria-label="Adicionar"></i>
-          <i className="ti ti-calendar text-[13px] cursor-pointer" aria-label="Calendário"></i>
+
+        {/* Body */}
+        <div>
+          <p className="text-[28px] font-medium text-[var(--text-primary)] tabular-nums leading-tight">
+            {formatCurrency(primarySaldo, "BRL")}
+          </p>
+          <p className="text-[12px] text-[var(--text-muted)] mt-1">
+            BRL · Conta principal
+          </p>
         </div>
-      </div>
 
-      {/* Body */}
-      <div>
-        <p className="text-[28px] font-medium text-[var(--text-primary)] tabular-nums leading-tight">
-          {formatCurrency(primarySaldo, "BRL")}
-        </p>
-        <p className="text-[12px] text-[var(--text-muted)] mt-1">
-          BRL · Conta principal
-        </p>
-      </div>
+        {/* Watermark */}
+        <div className="absolute bottom-2 right-4 text-[9px] font-bold tracking-[0.06em] text-[var(--border-default)] select-none uppercase">
+          BRL
+        </div>
+      </Card>
 
-      {/* Watermark */}
-      <div className="absolute bottom-2 right-4 text-[9px] font-bold tracking-[0.06em] text-[var(--border-default)] select-none uppercase">
-        BRL
-      </div>
-    </Card>
+      <ParceiroDialog
+        open={isParceiroDialogOpen}
+        onClose={() => {
+          setIsParceiroDialogOpen(false);
+          setParceiroCompleto(null);
+          onDataChanged();
+          fetchContas();
+        }}
+        parceiro={parceiroCompleto}
+        initialTab="bancos"
+      />
+    </>
   );
 }
+
