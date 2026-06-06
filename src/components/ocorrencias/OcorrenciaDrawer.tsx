@@ -114,6 +114,7 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
           <>
             <SheetHeader className="p-6 border-b border-border/40 shrink-0">
 
+
           <div className="flex items-center gap-2 mb-2">
             <div className={cn("h-2.5 w-2.5 rounded-full", PRIORIDADE_DOTS[ocorrencia.prioridade])} />
             <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
