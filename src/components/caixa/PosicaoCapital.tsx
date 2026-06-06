@@ -57,6 +57,20 @@ const CURRENCY_COLORS: Record<string, { bg: string, color: string }> = {
   BTC:  { bg: '#1a1a0a', color: '#eab308' },
   LTC:  { bg: '#1a1f2a', color: '#94a3b8' },
   USD:  { bg: '#0a1a2a', color: '#22d3ee' },
+  EUR:  { bg: '#1a1a2a', color: '#818cf8' },
+  MYR:  { bg: '#2a1a0a', color: '#f59e0b' },
+};
+
+const CURRENCY_LABELS: Record<string, string> = {
+  BRL: 'Real Brasileiro',
+  USD: 'Dólar Americano',
+  EUR: 'Euro',
+  MYR: 'Ringgit Malaio',
+  USDT: 'Dólar (USDT)',
+  USDC: 'Dólar (USDC)',
+  BTC: 'Bitcoin',
+  ETH: 'Ethereum',
+  LTC: 'Litecoin',
 };
 
 
