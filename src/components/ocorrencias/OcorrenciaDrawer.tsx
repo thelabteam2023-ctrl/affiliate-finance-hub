@@ -35,6 +35,7 @@ import {
   TrendingUp,
   RotateCcw,
   Building2,
+  RefreshCw,
 } from 'lucide-react';
 
 import { formatDistanceToNow } from 'date-fns';
@@ -57,8 +58,19 @@ const STATUS_TRANSICOES: Record<OcorrenciaStatus, OcorrenciaStatus[]> = {
 };
 
 export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
-  const { user } = useAuth();
-  const { data: ocorrencia, isLoading, isError, error, refetch } = useOcorrencia(ocorrenciaId);
+  const { user, workspaceId } = useAuth();
+  
+  // Monitoring hook
+  const { 
+    data: ocorrencia, 
+    isLoading, 
+    isError, 
+    error, 
+    refetch, 
+    isRefetching,
+    failureCount 
+  } = useOcorrencia(ocorrenciaId);
+
   const { data: eventos = [], isLoading: loadingEventos } = useOcorrenciaEventos(ocorrenciaId);
   const { data: members = [] } = useWorkspaceMembers();
   const { mutate: atualizarStatus, isPending: updatingStatus } = useAtualizarStatusOcorrencia();
@@ -69,6 +81,13 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
   const [resolucaoOpen, setResolucaoOpen] = useState(false);
 
   const memberMap = new Map(members.map((m) => [m.user_id, m]));
+
+  // Auto-correction / Observability: Log when load fails
+  useEffect(() => {
+    if (isError && open) {
+      console.error(`[OcorrenciaDrawer] Failure loading ${ocorrenciaId}. Failure count: ${failureCount}`, error);
+    }
+  }, [isError, open, ocorrenciaId, failureCount, error]);
 
   // Ensure state resets when ID changes
   useEffect(() => {
@@ -91,7 +110,7 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
     );
   };
 
-  const showSkeleton = isLoading && open;
+  const showSkeleton = (isLoading || isRefetching) && open && !ocorrencia;
   const transicoes = ocorrencia ? STATUS_TRANSICOES[ocorrencia.status] : [];
   const subMotivoLabel = ocorrencia?.sub_motivo
     ? SUB_MOTIVO_LABELS[ocorrencia.sub_motivo] || ocorrencia.sub_motivo
@@ -121,22 +140,32 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
           </div>
         ) : isError && open ? (
           <div className="h-full w-full p-6 flex flex-col items-center justify-center text-center space-y-4">
-            <AlertTriangle className="h-10 w-10 text-destructive" />
-            <div className="space-y-1">
-              <p className="text-foreground font-semibold">Erro ao carregar detalhes</p>
-              <p className="text-muted-foreground text-xs leading-relaxed max-w-[200px]">
-                {(error as Error)?.message || 'Ocorreu um erro inesperado ao buscar as informações.'}
-              </p>
+            <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center mb-2">
+              <AlertTriangle className="h-8 w-8 text-destructive" />
             </div>
-            <div className="flex flex-col gap-2 w-full max-w-[200px]">
-              <Button size="sm" onClick={() => refetch()}>Tentar novamente</Button>
-              <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>Fechar</Button>
+            <div className="space-y-1">
+              <h3 className="text-lg font-semibold text-foreground">Falha no carregamento</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed max-w-[280px]">
+                Ocorreu um erro ao carregar os detalhes desta ocorrência. Isso pode ser um problema de permissão ou conexão.
+              </p>
+              <div className="bg-muted p-2 rounded text-[10px] font-mono text-left overflow-auto max-w-[300px] mt-4">
+                Error: {(error as any)?.message || 'Supabase Query Error'}
+                <br />
+                WS: {workspaceId || 'None'}
+              </div>
+            </div>
+            <div className="flex flex-col gap-2 w-full max-w-[200px] pt-4">
+              <Button size="sm" onClick={() => refetch()} className="gap-2">
+                <RefreshCw className={cn("h-4 w-4", isRefetching && "animate-spin")} />
+                Tentar novamente
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>Fechar painel</Button>
             </div>
           </div>
         ) : !ocorrencia && open ? (
           <div className="h-full w-full p-6 flex flex-col items-center justify-center text-center space-y-3">
             <AlertTriangle className="h-10 w-10 text-muted-foreground/50" />
-            <p className="text-muted-foreground text-sm font-medium">Ocorrência não encontrada.</p>
+            <p className="text-muted-foreground text-sm font-medium">Ocorrência não encontrada ou excluída.</p>
             <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>Fechar painel</Button>
           </div>
         ) : ocorrencia ? (
