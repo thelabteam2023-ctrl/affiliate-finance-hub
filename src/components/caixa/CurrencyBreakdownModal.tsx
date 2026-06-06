@@ -15,6 +15,7 @@ interface CurrencyBreakdownModalProps {
   category: string;
   currency: string;
   workspaceId: string | null;
+  filterCoin?: string | null;
 }
 
 export function CurrencyBreakdownModal({ isOpen, onClose, category, currency, workspaceId }: CurrencyBreakdownModalProps) {
