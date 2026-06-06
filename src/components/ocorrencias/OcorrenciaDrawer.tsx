@@ -93,15 +93,8 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
     );
   };
 
-  if (isLoading && open) {
-    return (
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className="sm:max-w-md md:max-w-xl">
-          <Skeleton className="h-full w-full" />
-        </SheetContent>
-      </Sheet>
-    );
-  }
+  const showSkeleton = isLoading && open;
+
 
   if (!ocorrencia) return null;
 
