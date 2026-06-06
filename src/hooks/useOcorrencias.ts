@@ -57,22 +57,8 @@ async function fetchOcorrencias(
     projetoId?: string;
   }
 ): Promise<Ocorrencia[]> {
-  console.log('[fetchOcorrencias] Fetching for workspace:', workspaceId);
-  
-  // Test query without joins first to rule out profile access issues
-  const { data: rawData, error: rawError } = await ocorrenciasTable()
-    .select('id')
-    .eq('workspace_id', workspaceId)
-    .limit(1);
-    
-  if (rawError) {
-    console.error('[fetchOcorrencias] RAW test query failed:', rawError);
-  } else {
-    console.log('[fetchOcorrencias] RAW test query success, row found:', !!rawData?.length);
-  }
-
   let query = ocorrenciasTable()
-    .select('*, executor:profiles!executor_id(id, full_name, avatar_url), requerente:profiles!requerente_id(id, full_name, avatar_url)')
+    .select('*')
     .eq('workspace_id', workspaceId)
     .order('created_at', { ascending: false });
 
@@ -95,12 +81,11 @@ async function fetchOcorrencias(
     query = query.eq('projeto_id', filters.projetoId);
   }
 
-  const { data, error, status, statusText } = await query;
+  const { data, error } = await query;
   if (error) {
-    console.error(`[fetchOcorrencias] Failed:`, { error, status, statusText });
+    console.error(`[fetchOcorrencias] Failed:`, error);
     throw error;
   }
-  console.log('[fetchOcorrencias] Success, rows:', data?.length);
   return (data || []) as Ocorrencia[];
 }
 
@@ -188,7 +173,7 @@ export function useOcorrencia(id: string) {
     queryFn: async () => {
       try {
         const { data, error } = await ocorrenciasTable()
-          .select('*, executor:profiles!executor_id(id, full_name, avatar_url), requerente:profiles!requerente_id(id, full_name, avatar_url), bookmaker:bookmakers(id, nome, bookmaker_catalogo_id, bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey(logo_url), parceiro:parceiros!bookmakers_parceiro_id_fkey(nome))')
+          .select('*, bookmaker:bookmakers(id, nome, bookmaker_catalogo_id, bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey(logo_url))')
 
           .eq('id', id)
           .eq('workspace_id', workspaceId!)
