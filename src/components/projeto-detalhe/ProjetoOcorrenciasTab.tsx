@@ -65,16 +65,19 @@ export function ProjetoOcorrenciasTab({ projetoId, onDataChange, formatCurrency:
   const { mutate: atualizarStatus } = useAtualizarStatusOcorrencia();
 
   // Ocorrências abertas do projeto
-  const { data: abertas = [], isLoading: loadingAbertas } = useOcorrencias({
+  const abertasFilters = useMemo(() => ({
     projetoId,
-    status: ['aberto', 'em_andamento', 'aguardando_terceiro'],
-  });
+    status: ['aberto', 'em_andamento', 'aguardando_terceiro'] as OcorrenciaStatus[],
+  }), [projetoId]);
+  const { data: abertas = [], isLoading: loadingAbertas } = useOcorrencias(abertasFilters);
 
   // Ocorrências encerradas do projeto
-  const { data: historico = [], isLoading: loadingHistorico } = useOcorrencias({
+  const historicoFilters = useMemo(() => ({
     projetoId,
-    status: ['resolvido', 'cancelado'],
-  });
+    status: ['resolvido', 'cancelado'] as OcorrenciaStatus[],
+  }), [projetoId]);
+  const { data: historico = [], isLoading: loadingHistorico } = useOcorrencias(historicoFilters);
+
 
   const todas = [...abertas, ...historico];
 

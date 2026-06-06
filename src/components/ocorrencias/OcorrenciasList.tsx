@@ -134,6 +134,15 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
     (p) => groupedByPrioridade[p].length > 0
   );
 
+  if (!workspaceId) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center bg-muted/5 rounded-xl border border-dashed">
+        <AlertCircle className="h-8 w-8 text-muted-foreground/40 mb-3" />
+        <p className="text-sm text-muted-foreground">Aguardando contexto do workspace...</p>
+      </div>
+    );
+  }
+
   if (isLoading || (isRefetching && !ocorrencias.length)) {
     return (
       <div className="space-y-4">
@@ -143,6 +152,7 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
       </div>
     );
   }
+
 
   if (isError) {
     return (

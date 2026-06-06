@@ -110,7 +110,7 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
     );
   };
 
-  const showSkeleton = (isLoading || isRefetching) && open && !ocorrencia;
+  const showSkeleton = (isLoading || isRefetching) && open && !ocorrencia && !!workspaceId;
   const transicoes = ocorrencia ? STATUS_TRANSICOES[ocorrencia.status] : [];
   const subMotivoLabel = ocorrencia?.sub_motivo
     ? SUB_MOTIVO_LABELS[ocorrencia.sub_motivo] || ocorrencia.sub_motivo

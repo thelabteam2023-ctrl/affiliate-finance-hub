@@ -58,15 +58,20 @@ export function OcorrenciasModule() {
 
 
   // Status filter for active vs historical
-  const statusFilter: OcorrenciaStatus[] | undefined =
+  const statusFilter: OcorrenciaStatus[] | undefined = useMemo(() => 
     filterTab === 'historico'
       ? ['resolvido', 'cancelado']
-      : ['aberto', 'em_andamento', 'aguardando_terceiro'];
+      : ['aberto', 'em_andamento', 'aguardando_terceiro'],
+    [filterTab]
+  );
+
 
   // Get active occurrences for type breakdown
-  const { data: activeOcorrencias = [] } = useOcorrencias({
-    status: ['aberto', 'em_andamento', 'aguardando_terceiro'],
-  });
+  const activeFilters = useMemo(() => ({
+    status: ['aberto', 'em_andamento', 'aguardando_terceiro'] as OcorrenciaStatus[],
+  }), []);
+  const { data: activeOcorrencias = [] } = useOcorrencias(activeFilters);
+
 
   // Breakdown by type
   const tipoBreakdown = useMemo(() => {
