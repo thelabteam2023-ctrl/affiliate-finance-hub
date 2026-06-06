@@ -128,6 +128,8 @@ export function PosicaoCapital({
   const [isMounted, setIsMounted] = useState(false);
   const [activeSegment, setActiveSegment] = useState<string | null>(null);
   const [expandedSegment, setExpandedSegment] = useState<string | null>(null);
+  
+  const { convertToBRL, convertUSDtoBRL } = useCotacoes();
 
   useEffect(() => {
     const timer = setTimeout(() => setIsMounted(true), 100);
@@ -146,117 +148,94 @@ export function PosicaoCapital({
   };
 
   const dadosPosicao = useMemo(() => {
-    // Definimos os valores base de cada segmento
-    const rawItems = [
-      { 
-        id: 'bookmakers', 
-        name: "Bookmakers", 
-        color: "var(--seg-bookmakers)", 
-        breakdown: [
-          {
-            id: 'brl',
-            label: 'Real Brasileiro',
-            currency: 'BRL',
-            amount: 30197,
-            amountFormatted: 'R$ 30.197,00',
-            amountBRL: 30197,
-            amountBRLFormatted: '30.197,00',
-          },
-          {
-            id: 'usdc',
-            label: 'Dólar (USDC)',
-            currency: 'USDC',
-            amount: 13800,
-            amountFormatted: 'US$ 13.800,00',
-            amountBRL: 69248,
-            amountBRLFormatted: '69.248,00',
-          }
-        ]
-      },
-      { 
-        id: 'caixa-op', 
-        name: "Caixa Operacional", 
-        color: "var(--seg-caixa-op)", 
-        breakdown: [
-          {
-            id: 'caixa-fiat',
-            label: 'Conta Principal (FIAT)',
-            currency: 'BRL',
-            amount: 4.20,
-            amountFormatted: 'R$ 4,20',
-            amountBRL: 4.20,
-            amountBRLFormatted: '4,20',
-          },
-          {
-            id: 'caixa-crypto',
-            label: 'Exposição Crypto (Total)',
-            currency: 'USD',
-            amount: 7137.92,
-            amountFormatted: 'US$ 7.137,92',
-            amountBRL: 36865.80,
-            amountBRLFormatted: '36.865,80',
-          }
-        ]
-      },
-      { 
-        id: 'wallets', 
-        name: "Wallets Parceiros", 
-        color: "var(--seg-wallets)", 
-        breakdown: [
-          {
-            id: 'wallets-total',
-            label: 'Carteiras de Parceiros',
-            currency: 'USD',
-            amount: 7083,
-            amountFormatted: 'US$ 7.083,00',
-            amountBRL: 36584,
-            amountBRLFormatted: '36.584,00',
-          }
-        ]
-      },
-      { 
-        id: 'contas-parc', 
-        name: "Contas Parceiros", 
-        color: "var(--seg-contas-parc)", 
-        breakdown: [
-          {
-            id: 'banco-parc',
-            label: 'Saldos Bancários (Parceiros)',
-            currency: 'BRL',
-            amount: 4405,
-            amountFormatted: 'R$ 4.405,00',
-            amountBRL: 4405,
-            amountBRLFormatted: '4.405,00',
-          }
-        ]
-      },
-    ];
+    // 1. Processar Bookmakers
+    const bookmakersBreakdown = saldosBookmakers.map(s => {
+      const amountBRL = convertToBRL(s.saldo, s.moeda);
+      return {
+        id: `bm-${s.moeda.toLowerCase()}`,
+        label: CURRENCY_LABELS[s.moeda] || `Saldo em ${s.moeda}`,
+        currency: s.moeda,
+        amount: s.saldo,
+        amountFormatted: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: s.moeda }).format(s.saldo),
+        amountBRL: amountBRL,
+        amountBRLFormatted: amountBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      };
+    }).sort((a, b) => b.amountBRL - a.amountBRL);
 
-    const CIRCUMFERENCE = 2 * Math.PI * 52; // Aproximadamente 326.7256
-
-    // 1. Validar e filtrar segmentos
-    const validRawItems = rawItems.filter(item => {
-      const segmentValue = item.breakdown.reduce((acc, b) => acc + b.amountBRL, 0);
-      if (segmentValue <= 0) {
-        console.warn(`Segmento "${item.id}" omitido: valor ${segmentValue} <= 0`);
-        return false;
-      }
-      if (!item.color) {
-        console.warn(`Segmento "${item.id}" omitido: cor não definida`);
-        return false;
-      }
-      return true;
+    // 2. Processar Caixa Operacional
+    const fiatBreakdown = saldosFiat.map(s => {
+      const amountBRL = convertToBRL(s.saldo, s.moeda);
+      return {
+        id: `fiat-${s.moeda.toLowerCase()}`,
+        label: s.moeda === 'BRL' ? 'Conta Principal (FIAT)' : `Conta ${s.moeda}`,
+        currency: s.moeda,
+        amount: s.saldo,
+        amountFormatted: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: s.moeda }).format(s.saldo),
+        amountBRL: amountBRL,
+        amountBRLFormatted: amountBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      };
     });
 
-    // 2. Calcular total real
+    const cryptoBreakdown = saldoCaixaCrypto > 0 ? [{
+      id: 'caixa-crypto',
+      label: 'Exposição Crypto (Total)',
+      currency: 'USD',
+      amount: saldoCaixaCrypto,
+      amountFormatted: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(saldoCaixaCrypto),
+      amountBRL: convertUSDtoBRL(saldoCaixaCrypto),
+      amountBRLFormatted: convertUSDtoBRL(saldoCaixaCrypto).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+    }] : [];
+
+    const caixaOpBreakdown = [...fiatBreakdown, ...cryptoBreakdown].sort((a, b) => b.amountBRL - a.amountBRL);
+
+    // 3. Processar Wallets Parceiros
+    const walletsBreakdown = saldoWalletsParceiros > 0 ? [{
+      id: 'wallets-total',
+      label: 'Carteiras de Parceiros',
+      currency: 'USD',
+      amount: saldoWalletsParceiros,
+      amountFormatted: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(saldoWalletsParceiros),
+      amountBRL: convertUSDtoBRL(saldoWalletsParceiros),
+      amountBRLFormatted: convertUSDtoBRL(saldoWalletsParceiros).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+    }] : [];
+
+    // 4. Processar Contas Parceiros
+    const contasParcBreakdown = saldosContasParceiros.map(s => {
+      const amountBRL = convertToBRL(s.saldo, s.moeda);
+      return {
+        id: `cp-${s.moeda.toLowerCase()}`,
+        label: `Saldos Bancários (${s.moeda})`,
+        currency: s.moeda,
+        amount: s.saldo,
+        amountFormatted: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: s.moeda }).format(s.saldo),
+        amountBRL: amountBRL,
+        amountBRLFormatted: amountBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      };
+    }).sort((a, b) => b.amountBRL - a.amountBRL);
+
+    // 5. Unificar Segmentos
+    const rawItems = [
+      { id: 'bookmakers', name: "Bookmakers", color: "var(--seg-bookmakers)", breakdown: bookmakersBreakdown },
+      { id: 'caixa-op', name: "Caixa Operacional", color: "var(--seg-caixa-op)", breakdown: caixaOpBreakdown },
+      { id: 'wallets', name: "Wallets Parceiros", color: "var(--seg-wallets)", breakdown: walletsBreakdown },
+      { id: 'contas-parc', name: "Contas Parceiros", color: "var(--seg-contas-parc)", breakdown: contasParcBreakdown },
+    ];
+
+    const CIRCUMFERENCE = 2 * Math.PI * 52;
+
+    // Filtrar segmentos com valor > 0
+    const validRawItems = rawItems.filter(item => {
+      const segmentValue = item.breakdown.reduce((acc, b) => acc + b.amountBRL, 0);
+      return segmentValue > 0;
+    });
+
     const totalBRL = validRawItems.reduce((acc, item) => 
       acc + item.breakdown.reduce((bAcc, b) => bAcc + b.amountBRL, 0), 0
     );
 
-    // 3. Gerar segmentos com percentuais precisos
     let items: CapitalSegment[] = validRawItems.map(item => {
       const segmentValue = item.breakdown.reduce((acc, b) => acc + b.amountBRL, 0);
-      const pct = (segmentValue / totalBRL) * 100;
+      const pct = totalBRL > 0 ? (segmentValue / totalBRL) * 100 : 0;
       
       return {
         id: item.id,
@@ -267,38 +246,36 @@ export function PosicaoCapital({
         valueFormatted: `R$ ${Math.round(segmentValue).toLocaleString('pt-BR')}`,
         pct: pct, 
         detail: item.id === 'bookmakers' 
-          ? `R$ ${Math.round(item.breakdown[0].amount).toLocaleString('pt-BR')} · ${item.breakdown.length} moedas`
+          ? `R$ ${Math.round(segmentValue).toLocaleString('pt-BR')} · ${item.breakdown.length} moedas`
           : item.id === 'caixa-op'
-          ? `R$ ${Math.round(item.breakdown[0].amount).toLocaleString('pt-BR')} · ${item.breakdown.length} moedas`
+          ? `R$ ${Math.round(segmentValue).toLocaleString('pt-BR')} · ${item.breakdown.length} moedas`
           : item.id === 'wallets'
-          ? `$${Math.round(item.breakdown[0].amount).toLocaleString('pt-BR')} USD`
+          ? `$${Math.round(item.breakdown[0]?.amount || 0).toLocaleString('pt-BR')} USD`
           : `R$ ${Math.round(segmentValue).toLocaleString('pt-BR')}`,
         dashFilled: (pct / 100) * CIRCUMFERENCE,
         dashEmpty: CIRCUMFERENCE - ((pct / 100) * CIRCUMFERENCE),
         dashOffset: 0,
         breakdown: item.breakdown.map(b => ({
           ...b,
-          pctOfSegment: Number(((b.amountBRL / segmentValue) * 100).toFixed(2))
+          pctOfSegment: segmentValue > 0 ? Number(((b.amountBRL / segmentValue) * 100).toFixed(2)) : 0
         }))
       };
     });
 
-    // 4. Normalizar para exatos 100% (distribuindo o resíduo no maior segmento)
-    if (items.length > 0) {
+    // Normalizar para 100%
+    if (items.length > 0 && totalBRL > 0) {
       const currentSum = items.reduce((acc, s) => acc + s.pct, 0);
       const diff = 100 - currentSum;
-      
       const largest = items.reduce((a, b) => a.pct > b.pct ? a : b);
       largest.pct += diff;
       
-      // Recalcular dash values com o percentual normalizado
       items.forEach(s => {
         s.dashFilled = (s.pct / 100) * CIRCUMFERENCE;
         s.dashEmpty = CIRCUMFERENCE - s.dashFilled;
       });
     }
 
-    // 5. Calcular offsets
+    // Calcular offsets
     let cumulativePct = 0;
     items.forEach((item) => {
       const startPct = cumulativePct;
@@ -307,7 +284,7 @@ export function PosicaoCapital({
     });
 
     return { items, total: totalBRL };
-  }, []);
+  }, [saldosFiat, saldoCaixaCrypto, saldosBookmakers, saldosBroker, saldosContasParceiros, saldoWalletsParceiros, convertToBRL, convertUSDtoBRL]);
 
 
 
