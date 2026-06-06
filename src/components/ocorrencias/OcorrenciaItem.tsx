@@ -49,88 +49,82 @@ export function OcorrenciaItem({
       )}
       onClick={onOpen}
     >
+
+
       <CardContent className="p-3 flex items-center justify-between gap-4">
-        {/* Left Section: Dot + Info */}
-        <div className="flex items-start gap-3 flex-1 min-w-0">
+        {/* Left Section: Dot + Title + Type */}
+        <div className="flex items-center gap-3 flex-1 min-w-0">
           <div 
-            className={cn("h-2.5 w-2.5 rounded-full shrink-0 mt-1.5", PRIORIDADE_DOTS[ocorrencia.prioridade])} 
+            className={cn("h-2.5 w-2.5 rounded-full shrink-0", PRIORIDADE_DOTS[ocorrencia.prioridade])} 
             title={`Prioridade: ${ocorrencia.prioridade}`}
           />
-          <div className="flex-1 min-w-0 space-y-1">
-            {/* Context Line: House Logo + Name + Owner */}
-            <div className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-tight text-muted-foreground/80">
-              {bookmakerNome && (
-                <div className="flex items-center gap-1.5 bg-muted/40 px-1.5 py-0.5 rounded border border-border/20">
-                  {bookmakerLogoUrl ? (
-                    <img src={bookmakerLogoUrl} alt="" className="h-3 w-3 rounded-sm object-contain" />
-                  ) : (
-                    <Building2 className="h-3 w-3" />
-                  )}
-                  <span className="text-primary truncate max-w-[100px]">{bookmakerNome}</span>
-                </div>
-              )}
-              {parceiroNome && (
-                <div className="flex items-center gap-1.5">
-                  <div className="h-1 w-1 rounded-full bg-border" />
-                  <span className="truncate">A Glória de <span className="text-foreground/90">{getFirstLastName(parceiroNome)}</span></span>
-                </div>
-              )}
-              {projetoNome && !bookmakerNome && (
-                <div className="flex items-center gap-1.5">
-                  <FolderOpen className="h-3 w-3" />
-                  <span className="truncate">{projetoNome}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Title Line */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <h4 className="text-sm font-semibold text-foreground truncate">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h4 className="text-sm font-medium text-foreground truncate">
                 {ocorrencia.titulo}
               </h4>
               <TipoBadge tipo={ocorrencia.tipo} />
             </div>
+
           </div>
         </div>
 
-        {/* Right Section: Coordinator + Time + Value */}
-        <div className="flex items-center gap-6 shrink-0 text-xs text-muted-foreground">
-          {/* Coordinator Section */}
-          <div className="hidden md:flex flex-col items-end gap-0.5 min-w-[100px]">
-             <span className="text-[10px] uppercase font-bold tracking-tighter opacity-50">Coordenação</span>
-             <div className="flex items-center gap-2">
-                <span className="font-medium text-foreground/80 truncate max-w-[80px]">
-                  {ocorrencia.executor?.full_name ? getFirstLastName(ocorrencia.executor.full_name) : 'Sem executor'}
-                </span>
-                <div className={cn(
-                  "h-6 w-6 rounded-full flex items-center justify-center border transition-colors shrink-0",
-                  isExecutor ? "bg-primary/20 border-primary/30 text-primary" : "bg-muted border-border"
-                )}>
-                  {isExecutor ? (
-                    <User className="h-3.5 w-3.5" />
+
+        {/* Right Section: Entity + Responsible + Time + Value */}
+        <div className="flex items-center gap-4 shrink-0 text-xs text-muted-foreground">
+          {/* Linked Entity */}
+          <div className="hidden sm:flex items-center gap-2 min-w-[140px]">
+            {bookmakerNome ? (
+              <div className="flex flex-col gap-0.5 max-w-[120px]">
+                <div className="flex items-center gap-1.5">
+                  {bookmakerLogoUrl ? (
+                    <img src={bookmakerLogoUrl} alt="" className="h-3.5 w-3.5 rounded-sm object-contain" />
                   ) : (
-                    <span className="text-[10px] font-bold">
-                      {ocorrencia.executor?.full_name?.charAt(0) || '?'}
-                    </span>
+                    <Building2 className="h-3 w-3" />
                   )}
+                  <span className="truncate font-medium">{bookmakerNome}</span>
                 </div>
-             </div>
+                {parceiroNome && (
+                  <div className="flex items-center gap-1 pl-5">
+                    <span className="text-[10px] text-muted-foreground/70 truncate">{getFirstLastName(parceiroNome)}</span>
+                  </div>
+                )}
+              </div>
+            ) : projetoNome ? (
+              <div className="flex items-center gap-1.5 max-w-[120px]">
+                <FolderOpen className="h-3.5 w-3.5" />
+                <span className="truncate font-medium">{projetoNome}</span>
+              </div>
+            ) : null}
           </div>
 
-          {/* Time Section */}
-          <div className="flex flex-col items-end gap-0.5 w-[70px]">
-            <span className="text-[10px] uppercase font-bold tracking-tighter opacity-50">Atualizado</span>
-            <div className="flex items-center gap-1.5">
-              <Clock className="h-3 w-3 opacity-60" />
-              <span className="whitespace-nowrap font-medium">{formatDistanceToNow(new Date(ocorrencia.created_at), { addSuffix: true, locale: ptBR, includeSeconds: false }).replace('aproximadamente ', '').replace('há ', '')}</span>
+
+          {/* Responsible */}
+          <div className="flex items-center gap-1.5 w-8 justify-center">
+            <div className={cn(
+              "h-6 w-6 rounded-full flex items-center justify-center border transition-colors",
+              isExecutor ? "bg-primary/20 border-primary/30 text-primary" : "bg-muted border-border"
+            )}>
+              {isExecutor ? (
+                <User className="h-3.5 w-3.5" />
+              ) : (
+                <span className="text-[10px] font-bold">
+                  {ocorrencia.executor?.full_name?.charAt(0) || '?'}
+                </span>
+              )}
             </div>
           </div>
 
-          {/* Value Section */}
-          <div className="w-[85px] flex flex-col items-end gap-0.5">
-            <span className="text-[10px] uppercase font-bold tracking-tighter opacity-50">Risco</span>
+          {/* Time */}
+          <div className="flex items-center gap-1.5 w-[80px] justify-end">
+            <Clock className="h-3.5 w-3.5 opacity-60" />
+            <span>{formatDistanceToNow(new Date(ocorrencia.created_at), { addSuffix: true, locale: ptBR, includeSeconds: false }).replace('aproximadamente ', '').replace('há ', '')}</span>
+          </div>
+
+          {/* Value Indicator */}
+          <div className="w-[80px] flex justify-end">
             {(ocorrencia as any).valor_risco > 0 ? (
-              <div className="flex items-center gap-1 font-bold text-red-500/90">
+              <div className="flex items-center gap-1 font-semibold text-red-500/90">
                 <DollarSign className="h-3 w-3" />
                 <span>
                   {getCurrencySymbol((ocorrencia as any).moeda || 'BRL')}
@@ -138,7 +132,7 @@ export function OcorrenciaItem({
                 </span>
               </div>
             ) : (
-              <span className="opacity-20 font-bold">—</span>
+              <span className="opacity-20">—</span>
             )}
           </div>
         </div>
