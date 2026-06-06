@@ -78,11 +78,12 @@ export function OcorrenciasModule() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Card: Atenção Necessária */}
         <Card className="bg-muted/30 border-border/40 overflow-hidden relative">
-          <div className="absolute top-0 left-0 w-1 h-full bg-red-500" />
+          <div className="absolute top-0 left-0 w-1 h-full bg-blue-500" />
+
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-4">
               <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Atenção Necessária</span>
-              <AlertTriangle className="h-4 w-4 text-red-500" />
+              <AlertTriangle className="h-4 w-4 text-blue-500" />
             </div>
             <div className="flex gap-6">
               <div>
@@ -91,10 +92,11 @@ export function OcorrenciasModule() {
               </div>
               <div className="w-px h-10 bg-border/60 self-center" />
               <div>
-                <p className="text-3xl font-bold text-red-500">{kpis?.atrasadas_sla ?? 0}</p>
-                <p className="text-[10px] uppercase font-medium text-muted-foreground">SLA Vencido</p>
+                <p className="text-3xl font-bold text-foreground">{(kpis?.abertas_total ?? 0)}</p>
+                <p className="text-[10px] uppercase font-medium text-muted-foreground">Total Abertas</p>
               </div>
             </div>
+
           </CardContent>
         </Card>
 
