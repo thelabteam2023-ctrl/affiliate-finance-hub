@@ -590,7 +590,7 @@ export function AppSidebar() {
           />
         </div>
 
-        <div className="mx-3 border-t border-border/50 mb-4 shrink-0" />
+        <div className="mx-3 border-t border-white/5 mb-4 shrink-0" />
 
         {/* Scrollable area with overflow indicators */}
         <div className="relative flex-1 min-h-0">
@@ -613,7 +613,7 @@ export function AppSidebar() {
             {hasAnyFavorites && (
               <div className="space-y-1 py-1" data-sidebar-group="atalhos">
                 {!isCollapsed && (
-                  <SidebarGroupLabel className="px-4 text-[10px] uppercase tracking-widest text-muted-foreground/40 font-black mb-1">
+                  <SidebarGroupLabel className="px-4 text-[10px] uppercase tracking-[0.08em] text-white/22 font-semibold mb-1">
                     ATALHOS
                   </SidebarGroupLabel>
                 )}
@@ -664,7 +664,7 @@ export function AppSidebar() {
             )}
 
             {hasAnyFavorites && (
-              <div className="my-2 mx-3 border-t border-border/30" />
+              <div className="my-2 mx-3 border-t border-white/5" />
             )}
 
             {/* Menu Groups */}
@@ -677,7 +677,7 @@ export function AppSidebar() {
                   <SidebarGroup key={group.label} className={index > 0 ? "mt-4" : ""}>
                     {!isCollapsed && (
                       <SidebarGroupLabel 
-                        className="text-[10px] font-semibold tracking-widest text-muted-foreground/40 uppercase mb-2 px-3"
+                        className="text-[10px] font-semibold tracking-[0.08em] text-white/22 uppercase mb-2 px-3"
                       >
                         {group.label}
                       </SidebarGroupLabel>
@@ -706,28 +706,33 @@ export function AppSidebar() {
       </SidebarContent>
 
       {/* User footer */}
-      <SidebarFooter className="border-t border-border/50 p-2">
+      <SidebarFooter className="border-t border-white/5 p-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className={`
               flex items-center gap-3 w-full p-2 rounded-lg 
-              hover:bg-primary/10 transition-colors
+              hover:bg-white/5 transition-all
               ${isCollapsed ? 'justify-center' : ''}
             `}>
-              <Avatar className="h-7 w-7">
-                <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                  {getUserInitials()}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative">
+                <Avatar className="h-7 w-7 rounded-full overflow-hidden border border-white/5">
+                  <AvatarFallback className="bg-primary text-white text-[10px] font-bold">
+                    {getUserInitials()}
+                  </AvatarFallback>
+                </Avatar>
+                {(alertsCount > 0) && (
+                  <span className="absolute -top-0.5 -right-0.5 h-[7px] w-[7px] bg-red-500 rounded-full border border-sidebar" />
+                )}
+              </div>
               {!isCollapsed && (
-                <div className="flex-1 text-left overflow-hidden">
-                  <p className="text-xs font-medium truncate">{user?.email}</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    {publicId && <span>ID: {publicId} • </span>}
-                    <span>{isSystemOwner ? getRoleLabel('system_owner') : getRoleLabel(role)}</span>
+                <div className="flex-1 text-left overflow-hidden pr-2">
+                  <p className="text-[12px] font-medium truncate text-white/55 leading-tight">{user?.email?.split('@')[0] || 'Usuário'}</p>
+                  <p className="text-[11px] text-white/20 leading-tight">
+                    {isSystemOwner ? getRoleLabel('system_owner') : getRoleLabel(role)}
                   </p>
                 </div>
               )}
+              {!isCollapsed && <LogOut className="h-3.5 w-3.5 text-white/20 ml-auto shrink-0" />}
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
