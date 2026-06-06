@@ -33,6 +33,9 @@ export function ExposicaoCryptoCard({
   const [isSwapDialogOpen, setIsSwapDialogOpen] = useState(false);
   const [isParceiroDialogOpen, setIsParceiroDialogOpen] = useState(false);
   const [parceiroCompleto, setParceiroCompleto] = useState<any>(null);
+  const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
+  const [selectedCoin, setSelectedCoin] = useState<string | null>(null);
+  const { workspaceId } = useTabWorkspace();
 
   const fetchWallets = useCallback(async () => {
     if (!caixaParceiroId) return;
