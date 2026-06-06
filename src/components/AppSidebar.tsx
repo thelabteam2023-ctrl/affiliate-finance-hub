@@ -102,7 +102,12 @@ function FavoriteShortcutItem({
     >
       <RadixCtxMenu>
         <RadixCtxTrigger asChild>
-          <div className="w-full">{button}</div>
+          <div className="w-full relative group">
+            {isActive && (
+              <div className="absolute left-[8px] top-1/2 -translate-y-1/2 w-[2.5px] h-3/5 bg-primary rounded-r-full z-30" />
+            )}
+            {button}
+          </div>
         </RadixCtxTrigger>
         <RadixCtxContent>
           <RadixCtxItem onClick={onRemove} className="text-destructive focus:text-destructive">
