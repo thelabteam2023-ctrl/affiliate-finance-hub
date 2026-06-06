@@ -161,8 +161,14 @@ export function useOcorrenciasKpis() {
 // HOOK: detalhe de uma ocorrência
 // ============================================================
 export function useOcorrencia(id: string) {
-  const { workspaceId } = useAuth();
+  const { workspaceId, user } = useAuth();
+  
+  useEffect(() => {
+    if (id) logAuthStatus(`useOcorrencia:${id}`, workspaceId, user?.id || null);
+  }, [id, workspaceId, user?.id]);
+
   return useQuery({
+
     queryKey: OCORRENCIAS_KEYS.detail(id),
     queryFn: async () => {
       try {
