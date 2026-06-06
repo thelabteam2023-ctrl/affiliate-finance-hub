@@ -35,7 +35,19 @@ export function OcorrenciasModule() {
   const [novaOpen, setNovaOpen] = useState(false);
   const [filterTab, setFilterTab] = useState<FilterTab>('todas');
   const [tipoFilter, setTipoFilter] = useState<OcorrenciaTipo | null>(null);
-  const { data: kpis, isLoading: loadingKpis } = useOcorrenciasKpis();
+  const { user, workspaceId } = useAuth();
+  const { data: kpis, isLoading: loadingKpis, isError: kpiError } = useOcorrenciasKpis();
+
+  // Self-monitoring: toast if system state is invalid
+  useEffect(() => {
+    if (!workspaceId && !loadingKpis) {
+      console.error('[OcorrenciasModule] Missing workspaceId');
+      toast.error('Sistema em modo limitado: Workspace não identificado.', {
+        description: 'Tente recarregar a página se o problema persistir.'
+      });
+    }
+  }, [workspaceId, loadingKpis]);
+
 
   // Status filter for active vs historical
   const statusFilter: OcorrenciaStatus[] | undefined =
