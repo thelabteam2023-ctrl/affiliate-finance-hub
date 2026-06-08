@@ -157,28 +157,38 @@ export function OcorrenciasModule() {
         </Card>
 
         {/* Card: Valor em Disputa - Standalone & Prominent */}
-        <Card className="bg-red-500/5 border-red-500/20 overflow-hidden relative group">
+        <Card className="bg-red-500/5 border-red-500/20 overflow-hidden relative group transition-all hover:shadow-md hover:border-red-500/30">
           <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-red-500/80">Valor em Disputa</span>
-              <DollarSign className="h-4 w-4 text-red-500" />
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="h-7 w-7 rounded-lg bg-red-500/10 flex items-center justify-center border border-red-500/10">
+                  <DollarSign className="h-4 w-4 text-red-500" />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-red-500/80">Valor em Disputa</span>
+              </div>
+              <Badge variant="outline" className="text-[9px] font-bold border-red-500/30 text-red-500 bg-red-500/5">EXPOSIÇÃO ATIVA</Badge>
             </div>
-            <div className="space-y-1">
+            
+            <div className="space-y-2">
               {hasRisco ? (
                 Object.entries(riscoByMoeda).map(([moeda, valor]) => (
-                  <div key={moeda} className="flex items-baseline gap-1">
-                    <span className="text-2xl font-black text-foreground">{getCurrencySymbol(moeda)}</span>
-                    <span className="text-2xl font-black text-foreground">
+                  <div key={moeda} className="flex items-baseline gap-2">
+                    <span className="text-sm font-medium text-muted-foreground">{moeda}</span>
+                    <span className="text-3xl font-black text-foreground tracking-tight">
                       {Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
                 ))
               ) : (
-                <p className="text-2xl font-black text-foreground">0,00</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-sm font-medium text-muted-foreground">BRL</span>
+                  <p className="text-3xl font-black text-foreground tracking-tight">0,00</p>
+                </div>
               )}
             </div>
-            <div className="mt-4 flex items-center gap-1 text-[10px] text-red-500 font-bold uppercase group-hover:gap-2 transition-all cursor-pointer">
-               Ver detalhes financeiros <ArrowRight className="h-3 w-3" />
+
+            <div className="absolute -bottom-2 -right-2 opacity-5">
+              <DollarSign className="h-24 w-24 text-red-500" />
             </div>
           </CardContent>
         </Card>
