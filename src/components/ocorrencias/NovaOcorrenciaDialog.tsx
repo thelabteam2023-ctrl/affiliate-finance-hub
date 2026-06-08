@@ -296,7 +296,8 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                       )}
                     />
                   </div>
-                {contextoEntidade === 'banco' && (
+                )}
+
                   <div className="space-y-4">
                     <FormItem>
                       <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Parceiro / Titular</FormLabel>
