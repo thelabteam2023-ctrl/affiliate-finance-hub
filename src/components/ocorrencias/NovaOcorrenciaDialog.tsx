@@ -251,163 +251,162 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="px-6 py-2">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 px-6 py-4">
             {step === 1 && (
               <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="tipo"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Tipo</FormLabel>
-                        <Select onValueChange={(v) => {
-                          field.onChange(v);
-                          form.setValue('entidade_id', '');
-                          if (v === 'bloqueio_bancario') form.setValue('contexto_entidade', 'banco');
-                          else if (v === 'bloqueio_contas') form.setValue('contexto_entidade', 'bookmaker');
-                        }} value={field.value}>
-                          <FormControl><SelectTrigger className="h-11"><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl>
-                          <SelectContent>
-                            {Object.entries(TIPO_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="contexto_entidade"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Contexto</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} disabled={['bloqueio_bancario', 'bloqueio_contas'].includes(tipoSelecionado)}>
-                          <FormControl><SelectTrigger className="h-11"><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl>
-                          <SelectContent>
-                            <SelectItem value="bookmaker">Bookmaker</SelectItem>
-                            <SelectItem value="banco">Banco</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                {contextoEntidade === 'bookmaker' && (
-                  <div className="space-y-4">
-                    <FormItem>
-                      <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Casa</FormLabel>
-                      <Popover open={casaPopoverOpen} onOpenChange={setCasaPopoverOpen}>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className="w-full h-11 justify-between font-normal">
-                            {selectedCasa || "Selecione a plataforma"} <ChevronsUpDown className="h-4 w-4 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)]">
-                          <Command>
-                            <CommandInput placeholder="Buscar casa..." />
-                            <CommandList>
-                              <CommandEmpty>Nenhuma casa encontrada.</CommandEmpty>
-                              <CommandGroup>
-                                {casasUnicas.map(casa => (
-                                  <CommandItem key={casa} onSelect={() => { setSelectedCasa(casa); setCasaPopoverOpen(false); form.setValue('entidade_id', ''); }}>
-                                    <Check className={cn("mr-2 h-4 w-4", selectedCasa === casa ? "opacity-100" : "opacity-0")} />
-                                    {casasUnicasMap[casa] && <img src={casasUnicasMap[casa]!} className="h-4 w-4 mr-2 rounded-sm" />}
-                                    {casa}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                    </FormItem>
-
+                <div className="space-y-4 p-4 rounded-xl border border-border/50 bg-muted/20">
+                  <h4 className="flex items-center gap-2 text-sm font-bold text-foreground mb-4">
+                    <Layout className="h-4 w-4 text-primary" />
+                    Classificação Inicial
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
-                      name="entidade_id"
+                      name="tipo"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Vínculo / Titular</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value} disabled={!selectedCasa}>
-                            <FormControl><SelectTrigger className="h-11"><SelectValue placeholder="Selecione o vínculo" /></SelectTrigger></FormControl>
+                          <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Tipo de Ocorrência</FormLabel>
+                          <Select onValueChange={(v) => {
+                            field.onChange(v);
+                            form.setValue('entidade_id', '');
+                            if (v === 'bloqueio_bancario') form.setValue('contexto_entidade', 'banco');
+                            else if (v === 'bloqueio_contas') form.setValue('contexto_entidade', 'bookmaker');
+                          }} value={field.value}>
+                            <FormControl><SelectTrigger className="h-10 bg-background"><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl>
                             <SelectContent>
-                              {vinculosDaCasa.map(v => (
-                                <SelectItem key={v.id} value={v.id}>
-                                  {v.parceiros?.nome} {v.instance_identifier ? `(${v.instance_identifier})` : ''}
-                                </SelectItem>
-                              ))}
+                              {Object.entries(TIPO_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="contexto_entidade"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Contexto</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value} disabled={['bloqueio_bancario', 'bloqueio_contas'].includes(tipoSelecionado)}>
+                            <FormControl><SelectTrigger className="h-10 bg-background"><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl>
+                            <SelectContent>
+                              <SelectItem value="bookmaker">Bookmaker</SelectItem>
+                              <SelectItem value="banco">Banco</SelectItem>
                             </SelectContent>
                           </Select>
                         </FormItem>
                       )}
                     />
                   </div>
-                )}
+                </div>
 
-                {contextoEntidade === 'banco' && (
-                  <div className="space-y-4">
-                    <FormItem>
-                      <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Parceiro / Titular</FormLabel>
-                      <Popover open={bancoPopoverOpen} onOpenChange={setBancoPopoverOpen}>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className="w-full h-11 justify-between font-normal text-left truncate">
-                            {selectedParceiroId 
-                              ? (parceiros.find(p => p.id === selectedParceiroId)?.nome || "Selecione o parceiro") 
-                              : "Selecione o parceiro"} 
-                            <ChevronsUpDown className="h-4 w-4 opacity-50 ml-2" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)]">
-                          <Command>
-                            <CommandInput placeholder="Buscar parceiro..." />
-                            <CommandList>
-                              <CommandEmpty>Nenhum parceiro encontrado.</CommandEmpty>
-                              <CommandGroup>
-                                {parceiros.map(p => (
-                                  <CommandItem key={p.id} onSelect={() => { 
-                                    setSelectedParceiroId(p.id); 
-                                    setBancoPopoverOpen(false); 
-                                    form.setValue('entidade_id', ''); 
-                                  }}>
-                                    <Check className={cn("mr-2 h-4 w-4", selectedParceiroId === p.id ? "opacity-100" : "opacity-0")} />
-                                    {p.nome}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                    </FormItem>
-
-                    <FormField
-                      control={form.control}
-                      name="entidade_id"
-                      render={({ field }) => (
+                {contextoEntidade && (
+                  <div className="space-y-4 p-4 rounded-xl border border-border/50 bg-muted/20 animate-in fade-in duration-300">
+                    <h4 className="flex items-center gap-2 text-sm font-bold text-foreground mb-4">
+                      <Building2 className="h-4 w-4 text-primary" />
+                      Entidade Relacionada
+                    </h4>
+                    {contextoEntidade === 'bookmaker' ? (
+                      <>
                         <FormItem>
-                          <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Conta ou Wallet</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value} disabled={!selectedParceiroId}>
-                            <FormControl><SelectTrigger className="h-11"><SelectValue placeholder="Selecione a conta/wallet" /></SelectTrigger></FormControl>
-                            <SelectContent>
-                              {contasEWallets.map(c => (
-                                <SelectItem key={c.id} value={c.id}>
-                                  <div className="flex items-center gap-2">
-                                    {c.tipo === 'banco' ? <Building2 className="h-3 w-3" /> : <Layers className="h-3 w-3" />}
-                                    <span>{c.label}</span>
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
+                          <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Casa / Plataforma</FormLabel>
+                          <Popover open={casaPopoverOpen} onOpenChange={setCasaPopoverOpen}>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="w-full h-10 justify-between bg-background border-input font-normal hover:bg-background">
+                                {selectedCasa || "Selecione a casa..."} 
+                                <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="p-0 w-[440px]">
+                              <Command>
+                                <CommandInput placeholder="Buscar casa..." />
+                                <CommandList>
+                                  <CommandEmpty>Nenhuma casa encontrada.</CommandEmpty>
+                                  <CommandGroup>
+                                    {casasUnicas.map(casa => (
+                                      <CommandItem key={casa} onSelect={() => { setSelectedCasa(casa); setCasaPopoverOpen(false); form.setValue('entidade_id', ''); }}>
+                                        <Check className={cn("mr-2 h-4 w-4", selectedCasa === casa ? "opacity-100" : "opacity-0")} />
+                                        {casa}
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
                         </FormItem>
-                      )}
-                    />
+                        <FormField
+                          control={form.control}
+                          name="entidade_id"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Vínculo / Titular</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value} disabled={!selectedCasa}>
+                                <FormControl><SelectTrigger className="h-10 bg-background"><SelectValue placeholder="Selecione o vínculo..." /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                  {vinculosDaCasa.map(v => (
+                                    <SelectItem key={v.id} value={v.id}>
+                                      {v.parceiros?.nome} {v.instance_identifier ? `(${v.instance_identifier})` : ''}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </FormItem>
+                          )}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <FormItem>
+                          <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Parceiro</FormLabel>
+                          <Popover open={bancoPopoverOpen} onOpenChange={setBancoPopoverOpen}>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="w-full h-10 justify-between bg-background border-input font-normal hover:bg-background">
+                                {selectedParceiroId ? (parceiros.find(p => p.id === selectedParceiroId)?.nome || "Selecione o parceiro") : "Selecione o parceiro..."}
+                                <ChevronsUpDown className="h-4 w-4 opacity-50 ml-2" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="p-0 w-[440px]">
+                              <Command>
+                                <CommandInput placeholder="Buscar parceiro..." />
+                                <CommandList>
+                                  <CommandEmpty>Nenhum parceiro encontrado.</CommandEmpty>
+                                  <CommandGroup>
+                                    {parceiros.map(p => (
+                                      <CommandItem key={p.id} onSelect={() => { setSelectedParceiroId(p.id); setBancoPopoverOpen(false); form.setValue('entidade_id', ''); }}>
+                                        <Check className={cn("mr-2 h-4 w-4", selectedParceiroId === p.id ? "opacity-100" : "opacity-0")} />
+                                        {p.nome}
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                        </FormItem>
+                        <FormField
+                          control={form.control}
+                          name="entidade_id"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Conta ou Wallet</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value} disabled={!selectedParceiroId}>
+                                <FormControl><SelectTrigger className="h-10 bg-background"><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                  {contasEWallets.map(c => (
+                                    <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </FormItem>
+                          )}
+                        />
+                      </>
+                    )}
                   </div>
                 )}
               </div>
             )}
+
 
 
             {step === 2 && (
