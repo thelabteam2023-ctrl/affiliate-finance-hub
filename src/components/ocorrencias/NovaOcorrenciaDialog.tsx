@@ -452,16 +452,59 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                     name="valor_risco"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Valor em disputa</FormLabel>
+                        <div className="flex items-center justify-between mb-2">
+                          <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Valor em disputa</FormLabel>
+                          {selectedBookmaker && (
+                            <div className="text-[10px] font-bold">
+                              Saldo: <span className="text-foreground">{selectedBookmaker.moeda} {Number(selectedBookmaker.saldo_atual).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                          )}
+                        </div>
                         <FormControl>
                           <div className="relative">
-                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input type="number" step="0.01" className="pl-9 h-11" {...field} />
+                            <DollarSign className={cn(
+                              "absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4",
+                              isValueExceedingBalance ? "text-destructive" : "text-muted-foreground"
+                            )} />
+                            <Input 
+                              type="number" 
+                              step="0.01" 
+                              className={cn(
+                                "pl-9 h-11",
+                                isValueExceedingBalance && "border-destructive focus-visible:ring-destructive"
+                              )} 
+                              {...field} 
+                            />
                           </div>
                         </FormControl>
+                        {selectedBookmaker && valorRisco > 0 && (
+                          <div className="mt-2 space-y-1.5">
+                            <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
+                              <span className="text-muted-foreground">Exposição do Saldo</span>
+                              <span className={cn(isValueExceedingBalance ? "text-destructive" : "text-primary")}>
+                                {exposurePercentage.toFixed(1)}%
+                              </span>
+                            </div>
+                            <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                              <div 
+                                className={cn(
+                                  "h-full transition-all duration-500",
+                                  isValueExceedingBalance ? "bg-destructive" : "bg-primary"
+                                )} 
+                                style={{ width: `${Math.min(exposurePercentage, 100)}%` }}
+                              />
+                            </div>
+                            {isValueExceedingBalance && (
+                              <p className="text-[10px] font-bold text-destructive uppercase flex items-center gap-1 mt-1">
+                                <AlertTriangle className="h-3 w-3" /> Valor excede o saldo disponível
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </FormItem>
                     )}
                   />
+
                 </div>
               </div>
             )}
