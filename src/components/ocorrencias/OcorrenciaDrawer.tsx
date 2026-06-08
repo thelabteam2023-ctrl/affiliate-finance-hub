@@ -310,46 +310,47 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
                 <div className="flex flex-col gap-3">
                    {ocorrencia.bookmaker && (
                      <div className="flex flex-col rounded-xl border border-border/40 bg-muted/20 overflow-hidden">
-                        <div className="p-4 bg-muted/30 flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-lg bg-background flex items-center justify-center border border-border/40 shrink-0">
-                             {ocorrencia.bookmaker.bookmakers_catalogo?.logo_url ? (
-                               <img src={ocorrencia.bookmaker.bookmakers_catalogo.logo_url} className="h-6 w-6 object-contain" alt="" />
-                             ) : (
-                               <Building2 className="h-5 w-5 text-primary" />
-                             )}
+                        <div className="p-3 bg-muted/30 flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="h-8 w-8 rounded-lg bg-background flex items-center justify-center border border-border/40 shrink-0">
+                               {ocorrencia.bookmaker.bookmakers_catalogo?.logo_url ? (
+                                 <img src={ocorrencia.bookmaker.bookmakers_catalogo.logo_url} className="h-5 w-5 object-contain" alt="" />
+                               ) : (
+                                 <Building2 className="h-4 w-4 text-primary" />
+                               )}
+                            </div>
+                            <p className="text-sm font-black text-foreground truncate uppercase tracking-tight">{ocorrencia.bookmaker.nome}</p>
                           </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-base font-black text-foreground truncate uppercase tracking-tight">{ocorrencia.bookmaker.nome}</p>
+                          <div className="flex items-center gap-2 shrink-0">
+                             <span className="text-[9px] text-muted-foreground uppercase font-bold">Por:</span>
+                             <span className="text-[9px] font-black text-foreground uppercase">{getMemberName(ocorrencia.requerente_id)}</span>
+                             <Badge variant="outline" className="text-[8px] font-black bg-background/40 py-0 h-3.5 border-border/40 uppercase px-1">Labest</Badge>
                           </div>
                         </div>
 
-                        <div className="p-4 grid grid-cols-2 gap-6">
-                          <div className="space-y-1.5">
-                            <p className="text-[10px] text-primary/70 uppercase font-black tracking-widest">Titular</p>
-                            <div className="flex items-center gap-2">
-                              <User className="h-3.5 w-3.5 text-primary/60" />
-                              <p className="text-sm font-bold text-foreground truncate">
+                        <div className="p-3 grid grid-cols-2 gap-4 border-t border-border/40">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                              <User className="h-3.5 w-3.5 text-primary" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-[9px] text-primary/70 uppercase font-black tracking-widest leading-none mb-0.5">Titular</p>
+                              <p className="text-xs font-bold text-foreground truncate">
                                 {(ocorrencia.bookmaker as any).parceiros?.nome || "Não informado"}
                               </p>
                             </div>
                           </div>
-                          <div className="space-y-1.5">
-                            <p className="text-[10px] text-primary/70 uppercase font-black tracking-widest">Projeto</p>
-                            <div className="flex items-center gap-2">
-                              <Tag className="h-3.5 w-3.5 text-primary/60" />
-                              <p className="text-sm font-bold text-foreground truncate">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                              <Tag className="h-3.5 w-3.5 text-primary" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-[9px] text-primary/70 uppercase font-black tracking-widest leading-none mb-0.5">Projeto</p>
+                              <p className="text-xs font-bold text-foreground truncate">
                                 {ocorrencia.projeto?.nome || "Operação Geral"}
                               </p>
                             </div>
                           </div>
-                        </div>
-
-                        <div className="px-4 py-2 border-t border-border/40 bg-muted/40 flex items-center justify-between">
-                           <div className="flex items-center gap-2">
-                              <span className="text-[10px] text-muted-foreground uppercase font-bold">Aberto por:</span>
-                              <span className="text-[10px] font-black text-foreground uppercase">{getMemberName(ocorrencia.requerente_id)}</span>
-                           </div>
-                           <Badge variant="outline" className="text-[9px] font-black bg-background/50 py-0 h-4 border-border/50 uppercase">Labest</Badge>
                         </div>
                      </div>
                    )}
