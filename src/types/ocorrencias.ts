@@ -56,6 +56,11 @@ export interface Ocorrencia {
   sla_alerta_em?: string | null;
   sla_violado: boolean;
   contexto_metadata?: Record<string, unknown> | null;
+  valor_risco: number;
+  moeda: string;
+  resultado_financeiro?: 'ganho' | 'perda' | null;
+  valor_perda?: number;
+  perda_registrada_ledger?: boolean;
   created_at: string;
   updated_at: string;
   resolved_at?: string | null;
@@ -63,10 +68,11 @@ export interface Ocorrencia {
   // Joins
   requerente?: { id: string; full_name: string; avatar_url?: string };
   executor?: { id: string; full_name: string; avatar_url?: string };
-  bookmaker?: { id: string; nome: string; logo_url?: string; bookmakers_catalogo?: { logo_url: string | null } };
+  bookmaker?: { id: string; nome: string; logo_url?: string; saldo_atual?: number; bookmakers_catalogo?: { logo_url: string | null } };
   projeto?: { id: string; nome: string };
   parceiro?: { id: string; nome: string };
 }
+
 
 export interface OcorrenciaEvento {
   id: string;
