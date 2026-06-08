@@ -206,6 +206,20 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
                 <div className="h-4 w-px bg-border" />
                 <StatusBadge status={ocorrencia.status} />
                 <TipoBadge tipo={ocorrencia.tipo} />
+                
+                <div className="flex-1" />
+                
+                {['aberto', 'em_andamento', 'aguardando_terceiro'].includes(ocorrencia.status) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2 text-muted-foreground hover:text-primary gap-2"
+                    onClick={() => setEditarOpen(true)}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Editar</span>
+                  </Button>
+                )}
               </div>
             </SheetHeader>
 
