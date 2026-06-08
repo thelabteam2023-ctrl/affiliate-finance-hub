@@ -865,19 +865,109 @@ export function HistoricoMovimentacoes({
                         )}
                       </div>
 
-                      {/* Coluna 3: Valores e Meta */}
-                      <div className="text-right flex flex-col items-end">
-                        <span className="text-[14px] font-medium text-[var(--text-primary)] tabular-nums">
-                          {formatCurrencyDynamic(Math.abs(getValorEfetivo(tx)), getMoedaEfetiva(tx))}
-                        </span>
-                        <span className="text-[10px] text-[var(--text-faint)] mt-px tabular-nums">
-                          {(() => {
-                            const dk = extractCivilDateKey(tx.data_transacao);
-                            if (!dk) return '-';
-                            const [y, m, d] = dk.split('-');
-                            return `${d}/${m}/${y}`;
-                          })()}
-                        </span>
+                      {/* Coluna 3: Valores, Status e Ações */}
+                      <div className="text-right flex flex-col items-end gap-1.5">
+                        <div className="flex flex-col items-end">
+                          <span className="text-[14px] font-medium text-[var(--text-primary)] tabular-nums">
+                            {formatCurrencyDynamic(Math.abs(getValorEfetivo(tx)), getMoedaEfetiva(tx))}
+                          </span>
+                          <span className="text-[10px] text-[var(--text-faint)] mt-px tabular-nums">
+                            {(() => {
+                              const dk = extractCivilDateKey(tx.data_transacao);
+                              if (!dk) return '-';
+                              const [y, m, d] = dk.split('-');
+                              return `${d}/${m}/${y}`;
+                            })()}
+                          </span>
+                        </div>
+
+                        {/* Status e Ação de Confirmação */}
+                        <div className="flex items-center gap-2">
+                          {tx.status === "PENDENTE" && txType === "SAQUE" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2 text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20 gap-1 animate-pulse"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onConfirmarSaque?.(tx);
+                              }}
+                            >
+                              <CheckCircle2 className="h-3 w-3" />
+                              Confirmar Saque
+                            </Button>
+                          )}
+                          
+                          {getStatusBadge(tx.status)}
+
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem 
+                                className="text-xs gap-2"
+                                onClick={() => {
+                                  setEditDateId(tx.id);
+                                  setEditDateValue(tx.data_transacao);
+                                }}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                                Editar Data
+                              </DropdownMenuItem>
+                              
+                              {tx.status === "CONFIRMADO" && txType === "SAQUE" && (
+                                <DropdownMenuItem 
+                                  className="text-xs gap-2"
+                                  onClick={() => {
+                                    setEditConfirmado({
+                                      id: tx.id,
+                                      dataConfirmacao: tx.data_confirmacao || tx.data_transacao,
+                                      valorConfirmado: tx.valor_confirmado,
+                                      moeda: getMoedaEfetiva(tx),
+                                      tipoCrypto: tx.tipo_moeda === "CRYPTO",
+                                      coin: tx.coin
+                                    });
+                                  }}
+                                >
+                                  <CheckCircle2 className="h-3.5 w-3.5" />
+                                  Editar Confirmação
+                                </DropdownMenuItem>
+                              )}
+
+                              <DropdownMenuItem 
+                                className="text-xs gap-2"
+                                onClick={() => setEditTagsTx(tx)}
+                              >
+                                <TagIcon className="h-3.5 w-3.5" />
+                                Gerenciar Tags
+                              </DropdownMenuItem>
+
+                              <DropdownMenuSeparator />
+                              
+                              <DropdownMenuItem 
+                                className="text-xs gap-2 text-amber-500 focus:text-amber-500"
+                                disabled={!canRevert(tx, role)}
+                                onClick={() => setReverterTx(tx)}
+                              >
+                                <Undo2 className="h-3.5 w-3.5" />
+                                Reverter Transação
+                              </DropdownMenuItem>
+
+                              <DropdownMenuItem 
+                                className="text-xs gap-2 text-red-500 focus:text-red-500"
+                                disabled={!canDelete(tx, role)}
+                                onClick={() => setExcluirTx(tx)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Excluir Registro
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+
                         <span className="text-[9px] text-[var(--text-ghost)] mt-0.5 uppercase tracking-wider">
                           por {usuariosMap[tx.user_id] || "SISTEMA"}
                         </span>
