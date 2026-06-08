@@ -51,7 +51,13 @@ import {
   DollarSign,
   Briefcase,
   Layers,
+  Circle,
+  Hash,
+  FileText,
+  Clock,
+  Layout,
 } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
