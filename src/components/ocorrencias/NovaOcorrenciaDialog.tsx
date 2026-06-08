@@ -298,6 +298,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                   </div>
                 )}
 
+                {contextoEntidade === 'banco' && (
                   <div className="space-y-4">
                     <FormItem>
                       <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Parceiro / Titular</FormLabel>
@@ -360,6 +361,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                 )}
               </div>
             )}
+
 
             {step === 2 && (
               <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
