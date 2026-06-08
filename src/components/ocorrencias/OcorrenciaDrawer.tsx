@@ -21,6 +21,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers';
 import { StatusBadge, TipoBadge } from './OcorrenciaBadges';
 import { ResolucaoFinanceiraDialog } from './ResolucaoFinanceiraDialog';
+import { EditarOcorrenciaDialog } from './EditarOcorrenciaDialog';
 import type { OcorrenciaStatus, OcorrenciaEvento } from '@/types/ocorrencias';
 import { STATUS_LABELS, EVENTO_TIPO_LABELS, SUB_MOTIVO_LABELS } from '@/types/ocorrencias';
 import {
@@ -38,6 +39,7 @@ import {
   Building2,
   RefreshCw,
   DollarSign,
+  Pencil,
 } from 'lucide-react';
 
 import { formatDistanceToNow } from 'date-fns';
@@ -81,6 +83,7 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
   const { mutate: adicionarComentario, isPending: addingComment } = useAdicionarComentario();
   const [comentario, setComentario] = useState('');
   const [resolucaoOpen, setResolucaoOpen] = useState(false);
+  const [editarOpen, setEditarOpen] = useState(false);
 
   const memberMap = new Map(members.map((m) => [m.user_id, m]));
 
@@ -442,6 +445,14 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
               />
             )}
 
+            {/* Edit dialog */}
+            {ocorrencia && (
+              <EditarOcorrenciaDialog
+                open={editarOpen}
+                onOpenChange={setEditarOpen}
+                ocorrencia={ocorrencia}
+              />
+            )}
           </>
         ) : null}
       </SheetContent>
