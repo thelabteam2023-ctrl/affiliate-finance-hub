@@ -563,14 +563,27 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
            )}
            <div className="ml-auto flex items-center gap-3">
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
-              <Button 
-                type="button" 
-                onClick={nextStep} 
-                className="gap-2 px-6"
-                disabled={step === 1 && isValueExceedingBalance}
-              >
-                Próximo <ChevronRight className="h-4 w-4" />
-              </Button>
+              {step < 3 ? (
+                <Button 
+                  type="button" 
+                  onClick={nextStep} 
+                  className="gap-2 px-6"
+                  disabled={step === 2 && isValueExceedingBalance}
+                >
+                  Próximo <ChevronRight className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button 
+                  type="button" 
+                  onClick={form.handleSubmit(onSubmit)} 
+                  disabled={!executorId || isPending} 
+                  className="gap-2 px-6 shadow-lg shadow-primary/20"
+                >
+                   {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                   Criar Ocorrência
+                </Button>
+              )}
+
 
            </div>
         </DialogFooter>
