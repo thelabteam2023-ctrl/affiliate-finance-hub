@@ -136,7 +136,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
     queryFn: async () => {
       let query = supabase
         .from('bookmakers')
-        .select('id, nome, parceiro_id, moeda, parceiros!bookmakers_parceiro_id_fkey (nome), bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)')
+        .select('id, nome, parceiro_id, moeda, saldo_atual, parceiros!bookmakers_parceiro_id_fkey (nome), bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)')
         .eq('workspace_id', workspaceId!)
         .order('nome');
       if (contextoInicial?.projeto_id) query = query.eq('projeto_id', contextoInicial.projeto_id);
