@@ -128,17 +128,21 @@ export function EditarOcorrenciaDialog({ open, onOpenChange, ocorrencia }: Props
   const subMotivos = SUB_MOTIVOS[tipoSelecionado] || [];
 
   const onSubmit = async (data: FormData) => {
-    await editar({
-      id: ocorrencia.id,
-      titulo: data.titulo,
-      descricao: data.descricao,
-      tipo: data.tipo,
-      sub_motivo: data.sub_motivo || null,
-      prioridade: data.prioridade,
-      valor_risco: data.valor_risco || 0,
-      data_ocorrencia: data.data_ocorrencia ? format(data.data_ocorrencia, 'yyyy-MM-dd') : undefined,
-    });
-    onOpenChange(false);
+    try {
+      await editar({
+        id: ocorrencia.id,
+        titulo: data.titulo,
+        descricao: data.descricao,
+        tipo: data.tipo,
+        sub_motivo: data.sub_motivo || null,
+        prioridade: data.prioridade,
+        valor_risco: data.valor_risco || 0,
+        data_ocorrencia: data.data_ocorrencia ? format(data.data_ocorrencia, 'yyyy-MM-dd') : undefined,
+      });
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Submit error:', error);
+    }
   };
 
   return (

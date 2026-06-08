@@ -374,7 +374,16 @@ export function useAtualizarStatusOcorrencia() {
         if (ocorrencia?.perda_registrada_ledger && ocorrencia.valor_perda > 0) {
           const valorPerda = ocorrencia.valor_perda;
 
-           // Remover de projeto_perdas usando ocorrencia_id (link confiável)
+          // Force correct enum values if they are stored incorrectly or mapped wrong
+          if (ocorrencia.resultado_financeiro === 'perda' || (ocorrencia.resultado_financeiro as string) === 'perda_confirmada') {
+             // Correct the mapping if it was saved with a legacy or incorrect string
+             const mappedResult = (ocorrencia.resultado_financeiro as string) === 'perda' ? 'perda_confirmada' : ocorrencia.resultado_financeiro;
+             if (mappedResult !== ocorrencia.resultado_financeiro) {
+                await ocorrenciasTable().update({ resultado_financeiro: 'perda_confirmada' }).eq('id', id);
+             }
+          }
+
+          // Remover de projeto_perdas usando ocorrencia_id (link confiável)
           if (ocorrencia.projeto_id) {
             await (supabase as any)
               .from('projeto_perdas')
@@ -523,9 +532,12 @@ export function useEditarOcorrencia() {
       qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.all(workspaceId!) });
       qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.detail(vars.id) });
       qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.eventos(vars.id) });
-      toast.success('Ocorrência atualizada com sucesso');
+      toast.success('Ocorrência editada com sucesso');
     },
-    onError: () => toast.error('Erro ao editar ocorrência'),
+    onError: (error) => {
+      console.error('Erro ao editar ocorrência:', error);
+      toast.error('Erro ao editar ocorrência');
+    },
   });
 }
 
