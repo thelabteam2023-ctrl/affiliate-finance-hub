@@ -185,8 +185,6 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
 
   const { data: contasEWallets = [] } = useParceiroContas(selectedParceiroId);
 
-  const tipoSelecionado = form.watch('tipo');
-  const contextoEntidade = form.watch('contexto_entidade');
   const subMotivos = tipoSelecionado === 'movimentacao_financeira'
     ? (SUB_MOTIVOS_MOVIMENTACAO[contextoEntidade] || [])
     : (SUB_MOTIVOS[tipoSelecionado] || []);
