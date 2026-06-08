@@ -185,17 +185,17 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {activePrioridades.map((prioridade) => (
-        <div key={prioridade} className="space-y-2">
-          <div className="flex items-center gap-3 px-1 py-1">
-             <span className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60">
-                {prioridade} — {groupedByPrioridade[prioridade].length}
+        <div key={prioridade} className="space-y-1.5">
+          <div className="flex items-center gap-3 px-1">
+             <span className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/40">
+                {prioridade} ({groupedByPrioridade[prioridade].length})
              </span>
-             <div className="h-px flex-1 bg-border/30" />
+             <div className="h-px flex-1 bg-border/20" />
           </div>
 
-          <div className="grid grid-cols-1 gap-2">
+          <div className="grid grid-cols-1 gap-1">
             {groupedByPrioridade[prioridade].map((ocorrencia) => (
               <OcorrenciaItem
                 key={ocorrencia.id}
@@ -213,6 +213,7 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
           </div>
         </div>
       ))}
+
 
       <OcorrenciaDrawer
         ocorrenciaId={detalheId || ''}
