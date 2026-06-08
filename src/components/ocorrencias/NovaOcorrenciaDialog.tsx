@@ -281,13 +281,13 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                             </FormControl>
                             <SelectContent className="max-h-[300px]">
                               {Object.entries(TIPO_LABELS).map(([v, l]) => (
-                                <SelectItem key={v} value={v} className="py-3">
-                                  <div className="flex flex-col gap-0.5">
-                                    <span className="font-semibold text-sm">{l}</span>
-                                    {v === 'movimentacao_financeira' && <span className="text-[10px] text-muted-foreground">Saques, depósitos, estornos e atrasos</span>}
-                                    {v === 'kyc' && <span className="text-[10px] text-muted-foreground">Verificação de identidade e documentos</span>}
-                                    {v === 'bloqueio_bancario' && <span className="text-[10px] text-muted-foreground">Bloqueios em contas e PIX</span>}
-                                    {v === 'bloqueio_contas' && <span className="text-[10px] text-muted-foreground">Suspensão e encerramento de contas</span>}
+                                <SelectItem key={v} value={v} className="py-2.5 cursor-pointer">
+                                  <div className="flex flex-col gap-0.5 items-start">
+                                    <span className="font-semibold text-sm leading-none">{l}</span>
+                                    {v === 'movimentacao_financeira' && <span className="text-[10px] text-muted-foreground leading-tight">Saques, depósitos, estornos e atrasos</span>}
+                                    {v === 'kyc' && <span className="text-[10px] text-muted-foreground leading-tight">Verificação de identidade e documentos</span>}
+                                    {v === 'bloqueio_bancario' && <span className="text-[10px] text-muted-foreground leading-tight">Bloqueios em contas e PIX</span>}
+                                    {v === 'bloqueio_contas' && <span className="text-[10px] text-muted-foreground leading-tight">Suspensão e encerramento de contas</span>}
                                   </div>
                                 </SelectItem>
                               ))}
