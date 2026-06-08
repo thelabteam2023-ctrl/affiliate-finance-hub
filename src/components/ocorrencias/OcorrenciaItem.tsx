@@ -69,23 +69,29 @@ export function OcorrenciaItem({
         {/* Right Section: Entity, Time, Value */}
         <div className="flex items-center gap-6 shrink-0 text-xs">
           {/* Entity Info - Compact */}
-          <div className="hidden lg:flex items-center gap-2 min-w-[140px] max-w-[200px] text-muted-foreground">
+          <div className="hidden lg:flex items-center gap-2 min-w-[200px] max-w-[240px] text-muted-foreground">
             {bookmakerNome ? (
-              <div className="flex items-center gap-1.5 truncate">
-                {bookmakerLogoUrl ? (
-                  <img src={bookmakerLogoUrl} alt="" className="h-3 w-3 rounded-sm object-contain" />
-                ) : (
-                  <Building2 className="h-3 w-3" />
-                )}
-                <span className="font-medium truncate">{bookmakerNome}</span>
-                {parceiroNome && (
-                  <span className="text-[10px] opacity-50 truncate">({getFirstLastName(parceiroNome)})</span>
-                )}
+              <div className="flex items-center gap-2 truncate w-full">
+                <div className="h-6 w-6 rounded flex items-center justify-center bg-muted/50 shrink-0 border border-border/20">
+                  {bookmakerLogoUrl ? (
+                    <img src={bookmakerLogoUrl} alt="" className="h-4 w-4 object-contain" />
+                  ) : (
+                    <Building2 className="h-3.5 w-3.5 opacity-40" />
+                  )}
+                </div>
+                <div className="flex flex-col min-w-0 leading-tight">
+                  <span className="font-bold text-foreground/80 truncate text-[11px] uppercase tracking-tight">{bookmakerNome}</span>
+                  {parceiroNome && (
+                    <span className="text-[9px] opacity-50 truncate">{getFirstLastName(parceiroNome)}</span>
+                  )}
+                </div>
               </div>
             ) : projetoNome ? (
-              <div className="flex items-center gap-1.5 truncate">
-                <FolderOpen className="h-3 w-3" />
-                <span className="font-medium truncate">{projetoNome}</span>
+              <div className="flex items-center gap-2 truncate w-full">
+                <div className="h-6 w-6 rounded flex items-center justify-center bg-muted/50 shrink-0 border border-border/20">
+                  <FolderOpen className="h-3.5 w-3.5 opacity-40" />
+                </div>
+                <span className="font-bold text-foreground/80 truncate text-[11px] uppercase tracking-tight">{projetoNome}</span>
               </div>
             ) : null}
           </div>
