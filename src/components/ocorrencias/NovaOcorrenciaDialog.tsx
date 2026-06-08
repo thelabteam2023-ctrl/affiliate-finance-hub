@@ -305,8 +305,8 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                           <Select onValueChange={field.onChange} value={field.value} disabled={['bloqueio_bancario', 'bloqueio_contas'].includes(tipoSelecionado)}>
                             <FormControl><SelectTrigger className="h-10 bg-background"><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl>
                             <SelectContent>
-                              <SelectItem value="bookmaker">Bookmaker / Casa</SelectItem>
-                              <SelectItem value="banco">Banco / Parceiro</SelectItem>
+                              <SelectItem value="bookmaker">Bookmaker</SelectItem>
+                              <SelectItem value="banco">Banco</SelectItem>
                             </SelectContent>
                           </Select>
                         </FormItem>
