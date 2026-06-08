@@ -508,47 +508,60 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
 
             {step === 3 && (
               <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                <div className="p-4 bg-muted/30 rounded-lg border border-border/40 space-y-3">
-                   <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
-                         <Briefcase className="h-5 w-5 text-primary" />
+                <div className="p-5 bg-primary/5 rounded-xl border border-primary/10 space-y-4">
+                   <div className="flex items-start gap-4">
+                      <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
+                         <Briefcase className="h-6 w-6 text-primary" />
                       </div>
-                      <div>
-                         <p className="text-sm font-bold">{form.getValues('titulo')}</p>
-                         <p className="text-xs text-muted-foreground">Revise os detalhes antes de atribuir.</p>
+                      <div className="min-w-0">
+                         <p className="text-base font-bold text-foreground truncate">{form.getValues('titulo')}</p>
+                         <p className="text-sm text-muted-foreground leading-relaxed mt-1">Defina o responsável operacional para iniciar o atendimento desta ocorrência.</p>
                       </div>
                    </div>
                 </div>
 
                 <div className="space-y-4">
-                  <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Atribuir a Responsável</FormLabel>
-                  <div className="grid grid-cols-1 gap-2">
+                  <div className="flex items-center justify-between">
+                    <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Selecionar Responsável</FormLabel>
+                    <Badge variant="outline" className="text-[10px] font-bold">{members.length} membros disponíveis</Badge>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 max-h-[280px] overflow-y-auto pr-2 custom-scrollbar">
                     {members.map(m => (
                       <button
                         key={m.user_id}
                         type="button"
                         onClick={() => setExecutorId(m.user_id)}
                         className={cn(
-                          "flex items-center justify-between p-3 rounded-md border transition-all text-left",
-                          executorId === m.user_id ? "bg-primary/10 border-primary ring-1 ring-primary" : "bg-background border-border hover:bg-muted/50"
+                          "flex items-center justify-between p-3 rounded-xl border transition-all text-left group",
+                          executorId === m.user_id 
+                            ? "bg-primary/10 border-primary shadow-[0_0_0_1px_inset_rgba(var(--primary),0.1)]" 
+                            : "bg-background border-border hover:border-primary/30 hover:bg-primary/5"
                         )}
                       >
                         <div className="flex items-center gap-3">
-                           <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold">
+                           <div className={cn(
+                             "h-9 w-9 rounded-lg flex items-center justify-center text-xs font-bold border transition-colors",
+                             executorId === m.user_id ? "bg-primary text-primary-foreground border-primary" : "bg-muted border-border group-hover:border-primary/20"
+                           )}>
                               {m.full_name?.charAt(0) || m.email?.charAt(0)}
                            </div>
                            <div>
-                              <p className="text-sm font-medium">{m.full_name || m.email}</p>
-                              <p className="text-[10px] text-muted-foreground uppercase">{m.role}</p>
+                              <p className="text-sm font-bold text-foreground">{m.full_name || m.email}</p>
+                              <p className="text-[10px] text-muted-foreground uppercase font-medium tracking-tight">{m.role}</p>
                            </div>
                         </div>
-                        {executorId === m.user_id && <Check className="h-4 w-4 text-primary" />}
+                        {executorId === m.user_id && (
+                          <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+                            <Check className="h-3.5 w-3.5 text-primary-foreground" />
+                          </div>
+                        )}
                       </button>
                     ))}
                   </div>
                 </div>
               </div>
             )}
+
           </form>
         </Form>
 
