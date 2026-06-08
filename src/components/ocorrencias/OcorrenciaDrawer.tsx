@@ -6,6 +6,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -36,6 +37,7 @@ import {
   RotateCcw,
   Building2,
   RefreshCw,
+  DollarSign,
 } from 'lucide-react';
 
 import { formatDistanceToNow } from 'date-fns';
