@@ -195,7 +195,7 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
              <div className="h-px flex-1 bg-border/30" />
           </div>
 
-          <div className="space-y-1">
+          <div className="grid grid-cols-1 gap-2">
             {groupedByPrioridade[prioridade].map((ocorrencia) => (
               <OcorrenciaItem
                 key={ocorrencia.id}

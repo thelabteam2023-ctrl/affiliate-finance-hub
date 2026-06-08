@@ -54,13 +54,28 @@ export function StatusBadge({ status }: { status: OcorrenciaStatus }) {
     cancelado: <XCircle className="h-3 w-3" />,
   };
 
+  const colors: Record<OcorrenciaStatus, string> = {
+    aberto: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+    em_andamento: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+    aguardando_terceiro: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
+    resolvido: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
+    cancelado: 'bg-slate-500/10 text-slate-600 border-slate-500/20',
+  };
+
   return (
-    <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+    <Badge
+      variant="outline"
+      className={cn(
+        'gap-1.5 text-[10px] uppercase font-black tracking-widest px-2 py-0.5 border',
+        colors[status]
+      )}
+    >
       {icons[status]}
-      <span className="capitalize">{STATUS_LABELS[status].toLowerCase()}</span>
-    </div>
+      {STATUS_LABELS[status]}
+    </Badge>
   );
 }
+
 
 export function TipoBadge({ tipo }: { tipo: OcorrenciaTipo }) {
   return (

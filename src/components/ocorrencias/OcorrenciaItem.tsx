@@ -16,7 +16,8 @@ import { ptBR } from 'date-fns/locale';
 import { cn, getFirstLastName } from '@/lib/utils';
 import type { Ocorrencia } from '@/types/ocorrencias';
 import { PRIORIDADE_DOTS } from './ocorrencia-tokens';
-import { TipoBadge } from './OcorrenciaBadges';
+import { TipoBadge, StatusBadge } from './OcorrenciaBadges';
+
 
 
 interface Props {
@@ -39,104 +40,99 @@ export function OcorrenciaItem({
   parceiroNome,
 }: Props) {
   const isExecutor = ocorrencia.executor_id === currentUserId;
-  const isSlaViolado = false; // SLA extinguido
 
   return (
     <Card 
       className={cn(
-        "group cursor-pointer hover:bg-muted/30 transition-all border-border/40 relative overflow-hidden",
-        isSlaViolado && "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:bg-red-500"
+        "group cursor-pointer hover:bg-muted/30 transition-all border-border/40 relative overflow-hidden bg-background",
       )}
       onClick={onOpen}
     >
-
-
-      <CardContent className="p-3 flex items-center justify-between gap-4">
-        {/* Left Section: Dot + Title + Type */}
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div 
-            className={cn("h-2.5 w-2.5 rounded-full shrink-0", PRIORIDADE_DOTS[ocorrencia.prioridade])} 
-            title={`Prioridade: ${ocorrencia.prioridade}`}
-          />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h4 className="text-sm font-medium text-foreground truncate">
-                {ocorrencia.titulo}
-              </h4>
-              <TipoBadge tipo={ocorrencia.tipo} />
+      <CardContent className="p-4 flex items-center justify-between gap-6">
+        {/* Left: Main info (Title, Type, Value) */}
+        <div className="flex-1 min-w-0 space-y-2">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <div 
+                  className={cn("h-2.5 w-2.5 rounded-full shrink-0", PRIORIDADE_DOTS[ocorrencia.prioridade])} 
+                  title={`Prioridade: ${ocorrencia.prioridade}`}
+                />
+                <h4 className="text-base font-bold text-foreground truncate group-hover:text-primary transition-colors">
+                  {ocorrencia.titulo}
+                </h4>
+              </div>
+              
+              <div className="flex items-center gap-2 flex-wrap">
+                <TipoBadge tipo={ocorrencia.tipo} />
+                <span className="text-muted-foreground/30">•</span>
+                <StatusBadge status={ocorrencia.status} />
+              </div>
             </div>
 
-          </div>
-        </div>
-
-
-        {/* Right Section: Entity + Responsible + Time + Value */}
-        <div className="flex items-center gap-4 shrink-0 text-xs text-muted-foreground">
-          {/* Linked Entity */}
-          <div className="hidden sm:flex items-center gap-2 min-w-[140px]">
-            {bookmakerNome ? (
-              <div className="flex flex-col gap-0.5 max-w-[120px]">
-                <div className="flex items-center gap-1.5">
-                  {bookmakerLogoUrl ? (
-                    <img src={bookmakerLogoUrl} alt="" className="h-3.5 w-3.5 rounded-sm object-contain" />
-                  ) : (
-                    <Building2 className="h-3 w-3" />
-                  )}
-                  <span className="truncate font-medium">{bookmakerNome}</span>
-                </div>
-                {parceiroNome && (
-                  <div className="flex items-center gap-1 pl-5">
-                    <span className="text-[10px] text-muted-foreground/70 truncate">{getFirstLastName(parceiroNome)}</span>
+            <div className="text-right shrink-0">
+              {(ocorrencia as any).valor_risco > 0 ? (
+                <div className="flex flex-col items-end">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-red-500/60 mb-0.5">Disputa</span>
+                  <div className="flex items-center gap-1 font-black text-lg text-red-500 leading-none">
+                    <span className="text-sm opacity-70">{getCurrencySymbol((ocorrencia as any).moeda || 'BRL')}</span>
+                    <span>{Number((ocorrencia as any).valor_risco).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                   </div>
-                )}
-              </div>
-            ) : projetoNome ? (
-              <div className="flex items-center gap-1.5 max-w-[120px]">
-                <FolderOpen className="h-3.5 w-3.5" />
-                <span className="truncate font-medium">{projetoNome}</span>
-              </div>
-            ) : null}
-          </div>
-
-
-          {/* Responsible */}
-          <div className="flex items-center gap-1.5 w-8 justify-center">
-            <div className={cn(
-              "h-6 w-6 rounded-full flex items-center justify-center border transition-colors",
-              isExecutor ? "bg-primary/20 border-primary/30 text-primary" : "bg-muted border-border"
-            )}>
-              {isExecutor ? (
-                <User className="h-3.5 w-3.5" />
+                </div>
               ) : (
-                <span className="text-[10px] font-bold">
-                  {ocorrencia.executor?.full_name?.charAt(0) || '?'}
-                </span>
+                <div className="flex flex-col items-end opacity-20">
+                   <span className="text-[10px] font-black uppercase tracking-widest mb-0.5">Sem Valor</span>
+                   <span className="text-lg font-black">—</span>
+                </div>
               )}
             </div>
           </div>
 
-          {/* Time */}
-          <div className="flex items-center gap-1.5 w-[80px] justify-end">
-            <Clock className="h-3.5 w-3.5 opacity-60" />
-            <span>{formatDistanceToNow(new Date(ocorrencia.created_at), { addSuffix: true, locale: ptBR, includeSeconds: false }).replace('aproximadamente ', '').replace('há ', '')}</span>
-          </div>
+          <div className="flex items-center gap-4 text-xs text-muted-foreground border-t border-border/20 pt-2.5 mt-2.5">
+            {/* Entity Info */}
+            <div className="flex items-center gap-3">
+              {bookmakerNome ? (
+                <div className="flex items-center gap-2 bg-muted/30 px-2 py-1 rounded border border-border/30">
+                  {bookmakerLogoUrl ? (
+                    <img src={bookmakerLogoUrl} alt="" className="h-3.5 w-3.5 rounded-sm object-contain" />
+                  ) : (
+                    <Building2 className="h-3.5 w-3.5" />
+                  )}
+                  <span className="font-bold text-foreground/80">{bookmakerNome}</span>
+                  {parceiroNome && (
+                    <>
+                      <span className="text-muted-foreground/30">|</span>
+                      <span className="text-[11px]">{getFirstLastName(parceiroNome)}</span>
+                    </>
+                  )}
+                </div>
+              ) : projetoNome ? (
+                <div className="flex items-center gap-2 bg-muted/30 px-2 py-1 rounded border border-border/30">
+                  <FolderOpen className="h-3.5 w-3.5" />
+                  <span className="font-bold text-foreground/80">{projetoNome}</span>
+                </div>
+              ) : null}
+            </div>
 
-          {/* Value Indicator */}
-          <div className="w-[80px] flex justify-end">
-            {(ocorrencia as any).valor_risco > 0 ? (
-              <div className="flex items-center gap-1 font-semibold text-red-500/90">
-                <DollarSign className="h-3 w-3" />
-                <span>
-                  {getCurrencySymbol((ocorrencia as any).moeda || 'BRL')}
-                  {Number((ocorrencia as any).valor_risco).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
-                </span>
+            <div className="flex-1" />
+
+            {/* Timestamps */}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1.5 opacity-80" title="Criado em">
+                <Clock className="h-3.5 w-3.5" />
+                <span className="font-medium">{formatDistanceToNow(new Date(ocorrencia.created_at), { addSuffix: true, locale: ptBR, includeSeconds: false })}</span>
               </div>
-            ) : (
-              <span className="opacity-20">—</span>
-            )}
+              
+              {isExecutor && (
+                <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-[10px] uppercase font-black px-2 py-0">
+                  Atribuído a você
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
       </CardContent>
     </Card>
   );
 }
+
