@@ -287,10 +287,7 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
                         s === 'cancelado' ? 'Cancelar' : STATUS_LABELS[s]}
                   </Button>
                 ))}
-                <Button variant="outline" size="sm" className="h-9 px-4 text-xs font-medium gap-2">
-                  <TrendingUp className="h-3.5 w-3.5" />
-                  Escalar
-                </Button>
+                {/* Button Escalation removed per review */}
               </div>
 
               {/* Details Section */}
@@ -312,31 +309,54 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                    {ocorrencia.bookmaker && (
-                     <div className="flex items-center justify-between p-3 rounded-lg border border-border/40 bg-muted/20">
+                     <div className="flex flex-col gap-3 p-4 rounded-xl border border-border/40 bg-muted/20">
                         <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 rounded-lg bg-background flex items-center justify-center border border-border/40">
+                          <div className="h-10 w-10 rounded-lg bg-background flex items-center justify-center border border-border/40 shrink-0">
                              {ocorrencia.bookmaker.bookmakers_catalogo?.logo_url ? (
-                               <img src={ocorrencia.bookmaker.bookmakers_catalogo.logo_url} className="h-5 w-5 object-contain" alt="" />
+                               <img src={ocorrencia.bookmaker.bookmakers_catalogo.logo_url} className="h-6 w-6 object-contain" alt="" />
                              ) : (
-                               <Building2 className="h-4 w-4 text-primary" />
+                               <Building2 className="h-5 w-5 text-primary" />
                              )}
                           </div>
-                          <div className="min-w-0">
-                            <p className="text-xs font-bold text-foreground truncate">{ocorrencia.bookmaker.nome}</p>
-                            <p className="text-[10px] text-muted-foreground uppercase">Casa / Plataforma</p>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-bold text-foreground truncate">{ocorrencia.bookmaker.nome}</p>
+                            <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider">Bookmaker / Plataforma</p>
+                          </div>
+                        </div>
+
+                        <div className="h-px bg-border/40 w-full" />
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider">Titular do Vínculo</p>
+                            <div className="flex items-center gap-2">
+                              <User className="h-3 w-3 text-muted-foreground" />
+                              <p className="text-xs font-bold text-foreground truncate">
+                                {(ocorrencia.bookmaker as any).parceiros?.nome || "Não informado"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider">Projeto / Organização</p>
+                            <div className="flex items-center gap-2">
+                              <Tag className="h-3 w-3 text-muted-foreground" />
+                              <p className="text-xs font-bold text-foreground truncate">
+                                {ocorrencia.projeto?.nome || "Operação Geral"}
+                              </p>
+                            </div>
                           </div>
                         </div>
                      </div>
                    )}
 
-                   <div className="flex items-center justify-between p-3 rounded-lg border border-border/40 bg-muted/20">
+                   <div className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-muted/20">
                       <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-lg bg-background flex items-center justify-center border border-border/40">
-                           <User className="h-4 w-4 text-muted-foreground" />
+                        <div className="h-10 w-10 rounded-lg bg-background flex items-center justify-center border border-border/40">
+                           <User className="h-5 w-5 text-muted-foreground" />
                         </div>
                         <div>
-                          <p className="text-xs font-medium text-foreground">{getMemberName(ocorrencia.requerente_id)}</p>
-                          <p className="text-[10px] text-muted-foreground uppercase">Titular/Requerente</p>
+                          <p className="text-sm font-bold text-foreground">{getMemberName(ocorrencia.requerente_id)}</p>
+                          <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider">Requerente da Demanda</p>
                         </div>
                       </div>
                    </div>
