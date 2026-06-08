@@ -411,108 +411,100 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
 
             {step === 2 && (
               <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                <FormField
-                  control={form.control}
-                  name="titulo"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Título</FormLabel>
-                      <FormControl><Input placeholder="Ex: Saque bloqueado na Betano" className="h-11" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="descricao"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Descrição detalhada</FormLabel>
-                      <FormControl><Textarea placeholder="Descreva o que aconteceu..." className="min-h-[100px]" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-4 p-4 rounded-xl border border-border/50 bg-muted/20">
+                  <h4 className="flex items-center gap-2 text-sm font-bold text-foreground mb-4">
+                    <FileText className="h-4 w-4 text-primary" />
+                    Detalhamento do Incidente
+                  </h4>
                   <FormField
                     control={form.control}
-                    name="prioridade"
+                    name="titulo"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Prioridade</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl><SelectTrigger className="h-11"><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl>
-                          <SelectContent>
-                            <SelectItem value="baixa">Baixa</SelectItem>
-                            <SelectItem value="media">Média</SelectItem>
-                            <SelectItem value="alta">Alta</SelectItem>
-                            <SelectItem value="urgente">Urgente</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Título</FormLabel>
+                        <FormControl><Input placeholder="Ex: Saque bloqueado na Betano" className="h-10 bg-background" {...field} /></FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
                   <FormField
                     control={form.control}
-                    name="valor_risco"
+                    name="descricao"
                     render={({ field }) => (
                       <FormItem>
-                        <div className="flex items-center justify-between mb-2">
-                          <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Valor em disputa</FormLabel>
-                          {selectedBookmaker && (
-                            <div className="text-[10px] font-bold">
-                              Saldo: <span className="text-foreground">{selectedBookmaker.moeda} {Number(selectedBookmaker.saldo_atual).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                            </div>
-                          )}
-                        </div>
-                        <FormControl>
-                          <div className="relative">
-                            <DollarSign className={cn(
-                              "absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4",
-                              isValueExceedingBalance ? "text-destructive" : "text-muted-foreground"
-                            )} />
-                            <Input 
-                              type="number" 
-                              step="0.01" 
-                              className={cn(
-                                "pl-9 h-11",
-                                isValueExceedingBalance && "border-destructive focus-visible:ring-destructive"
-                              )} 
-                              {...field} 
-                            />
-                          </div>
-                        </FormControl>
-                        {selectedBookmaker && valorRisco > 0 && (
-                          <div className="mt-2 space-y-1.5">
-                            <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
-                              <span className="text-muted-foreground">Exposição do Saldo</span>
-                              <span className={cn(isValueExceedingBalance ? "text-destructive" : "text-primary")}>
-                                {exposurePercentage.toFixed(1)}%
-                              </span>
-                            </div>
-                            <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                              <div 
-                                className={cn(
-                                  "h-full transition-all duration-500",
-                                  isValueExceedingBalance ? "bg-destructive" : "bg-primary"
-                                )} 
-                                style={{ width: `${Math.min(exposurePercentage, 100)}%` }}
-                              />
-                            </div>
-                            {isValueExceedingBalance && (
-                              <p className="text-[10px] font-bold text-destructive uppercase flex items-center gap-1 mt-1">
-                                <AlertTriangle className="h-3 w-3" /> Valor excede o saldo disponível
-                              </p>
+                        <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Descrição detalhada</FormLabel>
+                        <FormControl><Textarea placeholder="Descreva o que aconteceu..." className="min-h-[80px] bg-background resize-none" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="space-y-4 p-4 rounded-xl border border-border/50 bg-muted/20">
+                  <h4 className="flex items-center gap-2 text-sm font-bold text-foreground mb-4">
+                    <DollarSign className="h-4 w-4 text-primary" />
+                    Financeiro e Urgência
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="prioridade"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Prioridade</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl><SelectTrigger className="h-10 bg-background"><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl>
+                            <SelectContent>
+                              <SelectItem value="baixa">Baixa</SelectItem>
+                              <SelectItem value="media">Média</SelectItem>
+                              <SelectItem value="alta">Alta</SelectItem>
+                              <SelectItem value="urgente">Urgente</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="valor_risco"
+                      render={({ field }) => (
+                        <FormItem>
+                          <div className="flex items-center justify-between mb-2">
+                            <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground mb-0">Disputa</FormLabel>
+                            {selectedBookmaker && (
+                              <div className="text-[10px] font-bold opacity-60">
+                                Saldo: {selectedBookmaker.moeda} {Number(selectedBookmaker.saldo_atual).toLocaleString('pt-BR')}
+                              </div>
                             )}
                           </div>
-                        )}
-                      </FormItem>
-                    )}
-                  />
-
+                          <FormControl>
+                            <div className="relative">
+                              <DollarSign className={cn(
+                                "absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4",
+                                isValueExceedingBalance ? "text-destructive" : "text-muted-foreground"
+                              )} />
+                              <Input type="number" step="0.01" className={cn("pl-9 h-10 bg-background", isValueExceedingBalance && "border-destructive text-destructive")} {...field} />
+                            </div>
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  {selectedBookmaker && valorRisco > 0 && (
+                    <div className="pt-2">
+                       <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider mb-1.5">
+                          <span className="text-muted-foreground">Exposição do Saldo</span>
+                          <span className={cn(isValueExceedingBalance ? "text-destructive" : "text-primary")}>{exposurePercentage.toFixed(1)}%</span>
+                       </div>
+                       <div className="h-1.5 w-full bg-background rounded-full overflow-hidden border border-border/20">
+                          <div className={cn("h-full transition-all duration-500", isValueExceedingBalance ? "bg-destructive" : "bg-primary")} style={{ width: `${Math.min(exposurePercentage, 100)}%` }} />
+                       </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
+
 
             {step === 3 && (
               <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
