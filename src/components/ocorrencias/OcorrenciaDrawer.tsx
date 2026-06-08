@@ -21,6 +21,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers';
 import { StatusBadge, TipoBadge } from './OcorrenciaBadges';
 import { ResolucaoFinanceiraDialog } from './ResolucaoFinanceiraDialog';
+import { EditarOcorrenciaDialog } from './EditarOcorrenciaDialog';
 import type { OcorrenciaStatus, OcorrenciaEvento } from '@/types/ocorrencias';
 import { STATUS_LABELS, EVENTO_TIPO_LABELS, SUB_MOTIVO_LABELS } from '@/types/ocorrencias';
 import {
@@ -38,6 +39,7 @@ import {
   Building2,
   RefreshCw,
   DollarSign,
+  Pencil,
 } from 'lucide-react';
 
 import { formatDistanceToNow } from 'date-fns';
@@ -81,6 +83,7 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
   const { mutate: adicionarComentario, isPending: addingComment } = useAdicionarComentario();
   const [comentario, setComentario] = useState('');
   const [resolucaoOpen, setResolucaoOpen] = useState(false);
+  const [editarOpen, setEditarOpen] = useState(false);
 
   const memberMap = new Map(members.map((m) => [m.user_id, m]));
 
@@ -203,6 +206,20 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
                 <div className="h-4 w-px bg-border" />
                 <StatusBadge status={ocorrencia.status} />
                 <TipoBadge tipo={ocorrencia.tipo} />
+                
+                <div className="flex-1" />
+                
+                {['aberto', 'em_andamento', 'aguardando_terceiro'].includes(ocorrencia.status) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2 text-muted-foreground hover:text-primary gap-2"
+                    onClick={() => setEditarOpen(true)}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Editar</span>
+                  </Button>
+                )}
               </div>
             </SheetHeader>
 
@@ -442,6 +459,14 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
               />
             )}
 
+            {/* Edit dialog */}
+            {ocorrencia && (
+              <EditarOcorrenciaDialog
+                open={editarOpen}
+                onOpenChange={setEditarOpen}
+                ocorrencia={ocorrencia}
+              />
+            )}
           </>
         ) : null}
       </SheetContent>
