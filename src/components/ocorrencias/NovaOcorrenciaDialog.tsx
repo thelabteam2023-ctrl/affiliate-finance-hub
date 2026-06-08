@@ -239,7 +239,13 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
       2: ['titulo', 'descricao', 'prioridade', 'valor_risco'],
     };
     const isValid = await form.trigger(fieldsByStep[step]);
-    if (isValid) setStep(prev => prev + 1);
+    if (isValid) {
+      if (step === 2 && isValueExceedingBalance) {
+        toast.error('O valor em disputa não pode exceder o saldo disponível na casa.');
+        return;
+      }
+      setStep(prev => prev + 1);
+    }
   };
 
   return (
