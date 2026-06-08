@@ -111,6 +111,25 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
     },
   });
 
+  const selectedEntidadeId = form.watch('entidade_id');
+  const valorRisco = form.watch('valor_risco');
+
+  const selectedBookmaker = useMemo(() => {
+    if (contextoEntidade !== 'bookmaker') return null;
+    return bookmakers.find(bk => bk.id === selectedEntidadeId);
+  }, [contextoEntidade, selectedEntidadeId, bookmakers]);
+
+  const exposurePercentage = useMemo(() => {
+    if (!selectedBookmaker?.saldo_atual || !valorRisco) return 0;
+    return (valorRisco / Number(selectedBookmaker.saldo_atual)) * 100;
+  }, [selectedBookmaker, valorRisco]);
+
+  const isValueExceedingBalance = useMemo(() => {
+    if (!selectedBookmaker) return false;
+    return valorRisco > Number(selectedBookmaker.saldo_atual || 0);
+  }, [selectedBookmaker, valorRisco]);
+
+
   // Reset form and state when dialog opens or closes
   useEffect(() => {
     if (open) {
