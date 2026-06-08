@@ -307,10 +307,10 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
                   <Tag className="h-3.5 w-3.5" />
                   Vinculado a
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex flex-col gap-3">
                    {ocorrencia.bookmaker && (
-                     <div className="flex flex-col gap-3 p-4 rounded-xl border border-border/40 bg-muted/20">
-                        <div className="flex items-center gap-3">
+                     <div className="flex flex-col rounded-xl border border-border/40 bg-muted/20 overflow-hidden">
+                        <div className="p-4 bg-muted/30 flex items-center gap-3">
                           <div className="h-10 w-10 rounded-lg bg-background flex items-center justify-center border border-border/40 shrink-0">
                              {ocorrencia.bookmaker.bookmakers_catalogo?.logo_url ? (
                                <img src={ocorrencia.bookmaker.bookmakers_catalogo.logo_url} className="h-6 w-6 object-contain" alt="" />
@@ -319,47 +319,40 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
                              )}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-bold text-foreground truncate">{ocorrencia.bookmaker.nome}</p>
-                            <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider">Bookmaker / Plataforma</p>
+                            <p className="text-base font-black text-foreground truncate uppercase tracking-tight">{ocorrencia.bookmaker.nome}</p>
                           </div>
                         </div>
 
-                        <div className="h-px bg-border/40 w-full" />
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider">Titular do Vínculo</p>
+                        <div className="p-4 grid grid-cols-2 gap-6">
+                          <div className="space-y-1.5">
+                            <p className="text-[10px] text-primary/70 uppercase font-black tracking-widest">Titular</p>
                             <div className="flex items-center gap-2">
-                              <User className="h-3 w-3 text-muted-foreground" />
-                              <p className="text-xs font-bold text-foreground truncate">
+                              <User className="h-3.5 w-3.5 text-primary/60" />
+                              <p className="text-sm font-bold text-foreground truncate">
                                 {(ocorrencia.bookmaker as any).parceiros?.nome || "Não informado"}
                               </p>
                             </div>
                           </div>
-                          <div className="space-y-1">
-                            <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider">Projeto / Organização</p>
+                          <div className="space-y-1.5">
+                            <p className="text-[10px] text-primary/70 uppercase font-black tracking-widest">Projeto</p>
                             <div className="flex items-center gap-2">
-                              <Tag className="h-3 w-3 text-muted-foreground" />
-                              <p className="text-xs font-bold text-foreground truncate">
+                              <Tag className="h-3.5 w-3.5 text-primary/60" />
+                              <p className="text-sm font-bold text-foreground truncate">
                                 {ocorrencia.projeto?.nome || "Operação Geral"}
                               </p>
                             </div>
                           </div>
                         </div>
+
+                        <div className="px-4 py-2 border-t border-border/40 bg-muted/40 flex items-center justify-between">
+                           <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-muted-foreground uppercase font-bold">Aberto por:</span>
+                              <span className="text-[10px] font-black text-foreground uppercase">{getMemberName(ocorrencia.requerente_id)}</span>
+                           </div>
+                           <Badge variant="outline" className="text-[9px] font-black bg-background/50 py-0 h-4 border-border/50 uppercase">Labest</Badge>
+                        </div>
                      </div>
                    )}
-
-                   <div className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-muted/20">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-lg bg-background flex items-center justify-center border border-border/40">
-                           <User className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-foreground">{getMemberName(ocorrencia.requerente_id)}</p>
-                          <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider">Requerente da Demanda</p>
-                        </div>
-                      </div>
-                   </div>
                 </div>
                 {subMotivoLabel && (
                   <div className="flex items-center gap-3 p-3 rounded-lg border border-primary/20 bg-primary/5">
