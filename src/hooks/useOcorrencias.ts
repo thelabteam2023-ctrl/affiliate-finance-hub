@@ -178,6 +178,8 @@ export function useOcorrencia(id: string) {
             bookmaker:bookmakers(
               id, 
               nome, 
+              moeda,
+              saldo_atual,
               bookmaker_catalogo_id, 
               parceiro_id,
               parceiros!bookmakers_parceiro_id_fkey(nome),

@@ -62,6 +62,7 @@ import {
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { toast } from 'sonner';
 
 const schema = z.object({
   titulo: z.string().min(5, 'Título deve ter pelo menos 5 caracteres').max(200),
@@ -239,7 +240,13 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
       2: ['titulo', 'descricao', 'prioridade', 'valor_risco'],
     };
     const isValid = await form.trigger(fieldsByStep[step]);
-    if (isValid) setStep(prev => prev + 1);
+    if (isValid) {
+      if (step === 2 && isValueExceedingBalance) {
+        toast.error('O valor em disputa não pode exceder o saldo disponível na casa.');
+        return;
+      }
+      setStep(prev => prev + 1);
+    }
   };
 
   return (

@@ -242,8 +242,8 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
                           <p className="text-sm font-medium text-muted-foreground">Exposição Financeira</p>
                         </div>
                       </div>
-                      <Badge variant="outline" className="bg-background/50 border-primary/20 text-primary font-bold text-[10px] py-0 px-2 h-5">
-                        DISPUTA ATIVA
+                      <Badge variant="outline" className="bg-background/50 border-primary/20 text-primary font-bold text-[10px] py-0 px-2 h-5 uppercase tracking-tight">
+                        {(ocorrencia as any).bookmaker?.saldo_atual ? `Saldo: ${(ocorrencia as any).bookmaker.moeda} ${Number((ocorrencia as any).bookmaker.saldo_atual).toLocaleString('pt-BR')}` : 'DISPUTA ATIVA'}
                       </Badge>
                     </div>
 
