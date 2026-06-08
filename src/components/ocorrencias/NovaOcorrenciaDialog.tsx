@@ -51,7 +51,13 @@ import {
   DollarSign,
   Briefcase,
   Layers,
+  Circle,
+  Hash,
+  FileText,
+  Clock,
+  Layout,
 } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
@@ -245,348 +251,355 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="px-6 py-2">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 px-6 py-4">
             {step === 1 && (
               <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="tipo"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Tipo</FormLabel>
-                        <Select onValueChange={(v) => {
-                          field.onChange(v);
-                          form.setValue('entidade_id', '');
-                          if (v === 'bloqueio_bancario') form.setValue('contexto_entidade', 'banco');
-                          else if (v === 'bloqueio_contas') form.setValue('contexto_entidade', 'bookmaker');
-                        }} value={field.value}>
-                          <FormControl><SelectTrigger className="h-11"><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl>
-                          <SelectContent>
-                            {Object.entries(TIPO_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="contexto_entidade"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Contexto</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} disabled={['bloqueio_bancario', 'bloqueio_contas'].includes(tipoSelecionado)}>
-                          <FormControl><SelectTrigger className="h-11"><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl>
-                          <SelectContent>
-                            <SelectItem value="bookmaker">Bookmaker</SelectItem>
-                            <SelectItem value="banco">Banco</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                {contextoEntidade === 'bookmaker' && (
-                  <div className="space-y-4">
-                    <FormItem>
-                      <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Casa</FormLabel>
-                      <Popover open={casaPopoverOpen} onOpenChange={setCasaPopoverOpen}>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className="w-full h-11 justify-between font-normal">
-                            {selectedCasa || "Selecione a plataforma"} <ChevronsUpDown className="h-4 w-4 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)]">
-                          <Command>
-                            <CommandInput placeholder="Buscar casa..." />
-                            <CommandList>
-                              <CommandEmpty>Nenhuma casa encontrada.</CommandEmpty>
-                              <CommandGroup>
-                                {casasUnicas.map(casa => (
-                                  <CommandItem key={casa} onSelect={() => { setSelectedCasa(casa); setCasaPopoverOpen(false); form.setValue('entidade_id', ''); }}>
-                                    <Check className={cn("mr-2 h-4 w-4", selectedCasa === casa ? "opacity-100" : "opacity-0")} />
-                                    {casasUnicasMap[casa] && <img src={casasUnicasMap[casa]!} className="h-4 w-4 mr-2 rounded-sm" />}
-                                    {casa}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                    </FormItem>
-
+                <div className="space-y-4 p-4 rounded-xl border border-border/50 bg-muted/20">
+                  <h4 className="flex items-center gap-2 text-sm font-bold text-foreground mb-4">
+                    <Layout className="h-4 w-4 text-primary" />
+                    Classificação Inicial
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
-                      name="entidade_id"
+                      name="tipo"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Vínculo / Titular</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value} disabled={!selectedCasa}>
-                            <FormControl><SelectTrigger className="h-11"><SelectValue placeholder="Selecione o vínculo" /></SelectTrigger></FormControl>
+                          <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Tipo de Ocorrência</FormLabel>
+                          <Select onValueChange={(v) => {
+                            field.onChange(v);
+                            form.setValue('entidade_id', '');
+                            if (v === 'bloqueio_bancario') form.setValue('contexto_entidade', 'banco');
+                            else if (v === 'bloqueio_contas') form.setValue('contexto_entidade', 'bookmaker');
+                          }} value={field.value}>
+                            <FormControl><SelectTrigger className="h-10 bg-background"><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl>
                             <SelectContent>
-                              {vinculosDaCasa.map(v => (
-                                <SelectItem key={v.id} value={v.id}>
-                                  {v.parceiros?.nome} {v.instance_identifier ? `(${v.instance_identifier})` : ''}
-                                </SelectItem>
-                              ))}
+                              {Object.entries(TIPO_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="contexto_entidade"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Contexto</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value} disabled={['bloqueio_bancario', 'bloqueio_contas'].includes(tipoSelecionado)}>
+                            <FormControl><SelectTrigger className="h-10 bg-background"><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl>
+                            <SelectContent>
+                              <SelectItem value="bookmaker">Bookmaker</SelectItem>
+                              <SelectItem value="banco">Banco</SelectItem>
                             </SelectContent>
                           </Select>
                         </FormItem>
                       )}
                     />
                   </div>
-                )}
+                </div>
 
-                {contextoEntidade === 'banco' && (
-                  <div className="space-y-4">
-                    <FormItem>
-                      <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Parceiro / Titular</FormLabel>
-                      <Popover open={bancoPopoverOpen} onOpenChange={setBancoPopoverOpen}>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className="w-full h-11 justify-between font-normal text-left truncate">
-                            {selectedParceiroId 
-                              ? (parceiros.find(p => p.id === selectedParceiroId)?.nome || "Selecione o parceiro") 
-                              : "Selecione o parceiro"} 
-                            <ChevronsUpDown className="h-4 w-4 opacity-50 ml-2" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)]">
-                          <Command>
-                            <CommandInput placeholder="Buscar parceiro..." />
-                            <CommandList>
-                              <CommandEmpty>Nenhum parceiro encontrado.</CommandEmpty>
-                              <CommandGroup>
-                                {parceiros.map(p => (
-                                  <CommandItem key={p.id} onSelect={() => { 
-                                    setSelectedParceiroId(p.id); 
-                                    setBancoPopoverOpen(false); 
-                                    form.setValue('entidade_id', ''); 
-                                  }}>
-                                    <Check className={cn("mr-2 h-4 w-4", selectedParceiroId === p.id ? "opacity-100" : "opacity-0")} />
-                                    {p.nome}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                    </FormItem>
-
-                    <FormField
-                      control={form.control}
-                      name="entidade_id"
-                      render={({ field }) => (
+                {contextoEntidade && (
+                  <div className="space-y-4 p-4 rounded-xl border border-border/50 bg-muted/20 animate-in fade-in duration-300">
+                    <h4 className="flex items-center gap-2 text-sm font-bold text-foreground mb-4">
+                      <Building2 className="h-4 w-4 text-primary" />
+                      Entidade Relacionada
+                    </h4>
+                    {contextoEntidade === 'bookmaker' ? (
+                      <>
                         <FormItem>
-                          <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Conta ou Wallet</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value} disabled={!selectedParceiroId}>
-                            <FormControl><SelectTrigger className="h-11"><SelectValue placeholder="Selecione a conta/wallet" /></SelectTrigger></FormControl>
-                            <SelectContent>
-                              {contasEWallets.map(c => (
-                                <SelectItem key={c.id} value={c.id}>
-                                  <div className="flex items-center gap-2">
-                                    {c.tipo === 'banco' ? <Building2 className="h-3 w-3" /> : <Layers className="h-3 w-3" />}
-                                    <span>{c.label}</span>
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
+                          <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Casa / Plataforma</FormLabel>
+                          <Popover open={casaPopoverOpen} onOpenChange={setCasaPopoverOpen}>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="w-full h-10 justify-between bg-background border-input font-normal hover:bg-background">
+                                {selectedCasa || "Selecione a casa..."} 
+                                <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="p-0 w-[440px]">
+                              <Command>
+                                <CommandInput placeholder="Buscar casa..." />
+                                <CommandList>
+                                  <CommandEmpty>Nenhuma casa encontrada.</CommandEmpty>
+                                  <CommandGroup>
+                                    {casasUnicas.map(casa => (
+                                      <CommandItem key={casa} onSelect={() => { setSelectedCasa(casa); setCasaPopoverOpen(false); form.setValue('entidade_id', ''); }}>
+                                        <Check className={cn("mr-2 h-4 w-4", selectedCasa === casa ? "opacity-100" : "opacity-0")} />
+                                        {casa}
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
                         </FormItem>
-                      )}
-                    />
+                        <FormField
+                          control={form.control}
+                          name="entidade_id"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Vínculo / Titular</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value} disabled={!selectedCasa}>
+                                <FormControl><SelectTrigger className="h-10 bg-background"><SelectValue placeholder="Selecione o vínculo..." /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                  {vinculosDaCasa.map(v => (
+                                    <SelectItem key={v.id} value={v.id}>
+                                      {v.parceiros?.nome} {v.instance_identifier ? `(${v.instance_identifier})` : ''}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </FormItem>
+                          )}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <FormItem>
+                          <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Parceiro</FormLabel>
+                          <Popover open={bancoPopoverOpen} onOpenChange={setBancoPopoverOpen}>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="w-full h-10 justify-between bg-background border-input font-normal hover:bg-background">
+                                {selectedParceiroId ? (parceiros.find(p => p.id === selectedParceiroId)?.nome || "Selecione o parceiro") : "Selecione o parceiro..."}
+                                <ChevronsUpDown className="h-4 w-4 opacity-50 ml-2" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="p-0 w-[440px]">
+                              <Command>
+                                <CommandInput placeholder="Buscar parceiro..." />
+                                <CommandList>
+                                  <CommandEmpty>Nenhum parceiro encontrado.</CommandEmpty>
+                                  <CommandGroup>
+                                    {parceiros.map(p => (
+                                      <CommandItem key={p.id} onSelect={() => { setSelectedParceiroId(p.id); setBancoPopoverOpen(false); form.setValue('entidade_id', ''); }}>
+                                        <Check className={cn("mr-2 h-4 w-4", selectedParceiroId === p.id ? "opacity-100" : "opacity-0")} />
+                                        {p.nome}
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                        </FormItem>
+                        <FormField
+                          control={form.control}
+                          name="entidade_id"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Conta ou Wallet</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value} disabled={!selectedParceiroId}>
+                                <FormControl><SelectTrigger className="h-10 bg-background"><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                  {contasEWallets.map(c => (
+                                    <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </FormItem>
+                          )}
+                        />
+                      </>
+                    )}
                   </div>
                 )}
               </div>
             )}
+
 
 
             {step === 2 && (
               <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                <FormField
-                  control={form.control}
-                  name="titulo"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Título</FormLabel>
-                      <FormControl><Input placeholder="Ex: Saque bloqueado na Betano" className="h-11" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="descricao"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Descrição detalhada</FormLabel>
-                      <FormControl><Textarea placeholder="Descreva o que aconteceu..." className="min-h-[100px]" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-4 p-4 rounded-xl border border-border/50 bg-muted/20">
+                  <h4 className="flex items-center gap-2 text-sm font-bold text-foreground mb-4">
+                    <FileText className="h-4 w-4 text-primary" />
+                    Detalhamento do Incidente
+                  </h4>
                   <FormField
                     control={form.control}
-                    name="prioridade"
+                    name="titulo"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Prioridade</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl><SelectTrigger className="h-11"><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl>
-                          <SelectContent>
-                            <SelectItem value="baixa">Baixa</SelectItem>
-                            <SelectItem value="media">Média</SelectItem>
-                            <SelectItem value="alta">Alta</SelectItem>
-                            <SelectItem value="urgente">Urgente</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Título</FormLabel>
+                        <FormControl><Input placeholder="Ex: Saque bloqueado na Betano" className="h-10 bg-background" {...field} /></FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
                   <FormField
                     control={form.control}
-                    name="valor_risco"
+                    name="descricao"
                     render={({ field }) => (
                       <FormItem>
-                        <div className="flex items-center justify-between mb-2">
-                          <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Valor em disputa</FormLabel>
-                          {selectedBookmaker && (
-                            <div className="text-[10px] font-bold">
-                              Saldo: <span className="text-foreground">{selectedBookmaker.moeda} {Number(selectedBookmaker.saldo_atual).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                            </div>
-                          )}
-                        </div>
-                        <FormControl>
-                          <div className="relative">
-                            <DollarSign className={cn(
-                              "absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4",
-                              isValueExceedingBalance ? "text-destructive" : "text-muted-foreground"
-                            )} />
-                            <Input 
-                              type="number" 
-                              step="0.01" 
-                              className={cn(
-                                "pl-9 h-11",
-                                isValueExceedingBalance && "border-destructive focus-visible:ring-destructive"
-                              )} 
-                              {...field} 
-                            />
-                          </div>
-                        </FormControl>
-                        {selectedBookmaker && valorRisco > 0 && (
-                          <div className="mt-2 space-y-1.5">
-                            <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
-                              <span className="text-muted-foreground">Exposição do Saldo</span>
-                              <span className={cn(isValueExceedingBalance ? "text-destructive" : "text-primary")}>
-                                {exposurePercentage.toFixed(1)}%
-                              </span>
-                            </div>
-                            <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                              <div 
-                                className={cn(
-                                  "h-full transition-all duration-500",
-                                  isValueExceedingBalance ? "bg-destructive" : "bg-primary"
-                                )} 
-                                style={{ width: `${Math.min(exposurePercentage, 100)}%` }}
-                              />
-                            </div>
-                            {isValueExceedingBalance && (
-                              <p className="text-[10px] font-bold text-destructive uppercase flex items-center gap-1 mt-1">
-                                <AlertTriangle className="h-3 w-3" /> Valor excede o saldo disponível
-                              </p>
+                        <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Descrição detalhada</FormLabel>
+                        <FormControl><Textarea placeholder="Descreva o que aconteceu..." className="min-h-[80px] bg-background resize-none" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="space-y-4 p-4 rounded-xl border border-border/50 bg-muted/20">
+                  <h4 className="flex items-center gap-2 text-sm font-bold text-foreground mb-4">
+                    <DollarSign className="h-4 w-4 text-primary" />
+                    Financeiro e Urgência
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="prioridade"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Prioridade</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl><SelectTrigger className="h-10 bg-background"><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl>
+                            <SelectContent>
+                              <SelectItem value="baixa">Baixa</SelectItem>
+                              <SelectItem value="media">Média</SelectItem>
+                              <SelectItem value="alta">Alta</SelectItem>
+                              <SelectItem value="urgente">Urgente</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="valor_risco"
+                      render={({ field }) => (
+                        <FormItem>
+                          <div className="flex items-center justify-between mb-2">
+                            <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground mb-0">Disputa</FormLabel>
+                            {selectedBookmaker && (
+                              <div className="text-[10px] font-bold opacity-60">
+                                Saldo: {selectedBookmaker.moeda} {Number(selectedBookmaker.saldo_atual).toLocaleString('pt-BR')}
+                              </div>
                             )}
                           </div>
-                        )}
-                      </FormItem>
-                    )}
-                  />
-
+                          <FormControl>
+                            <div className="relative">
+                              <DollarSign className={cn(
+                                "absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4",
+                                isValueExceedingBalance ? "text-destructive" : "text-muted-foreground"
+                              )} />
+                              <Input type="number" step="0.01" className={cn("pl-9 h-10 bg-background", isValueExceedingBalance && "border-destructive text-destructive")} {...field} />
+                            </div>
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  {selectedBookmaker && valorRisco > 0 && (
+                    <div className="pt-2">
+                       <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider mb-1.5">
+                          <span className="text-muted-foreground">Exposição do Saldo</span>
+                          <span className={cn(isValueExceedingBalance ? "text-destructive" : "text-primary")}>{exposurePercentage.toFixed(1)}%</span>
+                       </div>
+                       <div className="h-1.5 w-full bg-background rounded-full overflow-hidden border border-border/20">
+                          <div className={cn("h-full transition-all duration-500", isValueExceedingBalance ? "bg-destructive" : "bg-primary")} style={{ width: `${Math.min(exposurePercentage, 100)}%` }} />
+                       </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
+
             {step === 3 && (
               <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                <div className="p-4 bg-muted/30 rounded-lg border border-border/40 space-y-3">
-                   <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
-                         <Briefcase className="h-5 w-5 text-primary" />
+                <div className="p-5 bg-primary/5 rounded-xl border border-primary/10 space-y-4">
+                   <div className="flex items-start gap-4">
+                      <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
+                         <Briefcase className="h-6 w-6 text-primary" />
                       </div>
-                      <div>
-                         <p className="text-sm font-bold">{form.getValues('titulo')}</p>
-                         <p className="text-xs text-muted-foreground">Revise os detalhes antes de atribuir.</p>
+                      <div className="min-w-0">
+                         <p className="text-base font-bold text-foreground truncate">{form.getValues('titulo')}</p>
+                         <p className="text-sm text-muted-foreground leading-relaxed mt-1">Defina o responsável operacional para iniciar o atendimento desta ocorrência.</p>
                       </div>
                    </div>
                 </div>
 
                 <div className="space-y-4">
-                  <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Atribuir a Responsável</FormLabel>
-                  <div className="grid grid-cols-1 gap-2">
+                  <div className="flex items-center justify-between">
+                    <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Selecionar Responsável</FormLabel>
+                    <Badge variant="outline" className="text-[10px] font-bold">{members.length} membros disponíveis</Badge>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 max-h-[280px] overflow-y-auto pr-2 custom-scrollbar">
                     {members.map(m => (
                       <button
                         key={m.user_id}
                         type="button"
                         onClick={() => setExecutorId(m.user_id)}
                         className={cn(
-                          "flex items-center justify-between p-3 rounded-md border transition-all text-left",
-                          executorId === m.user_id ? "bg-primary/10 border-primary ring-1 ring-primary" : "bg-background border-border hover:bg-muted/50"
+                          "flex items-center justify-between p-3 rounded-xl border transition-all text-left group",
+                          executorId === m.user_id 
+                            ? "bg-primary/10 border-primary shadow-[0_0_0_1px_inset_rgba(var(--primary),0.1)]" 
+                            : "bg-background border-border hover:border-primary/30 hover:bg-primary/5"
                         )}
                       >
                         <div className="flex items-center gap-3">
-                           <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold">
+                           <div className={cn(
+                             "h-9 w-9 rounded-lg flex items-center justify-center text-xs font-bold border transition-colors",
+                             executorId === m.user_id ? "bg-primary text-primary-foreground border-primary" : "bg-muted border-border group-hover:border-primary/20"
+                           )}>
                               {m.full_name?.charAt(0) || m.email?.charAt(0)}
                            </div>
                            <div>
-                              <p className="text-sm font-medium">{m.full_name || m.email}</p>
-                              <p className="text-[10px] text-muted-foreground uppercase">{m.role}</p>
+                              <p className="text-sm font-bold text-foreground">{m.full_name || m.email}</p>
+                              <p className="text-[10px] text-muted-foreground uppercase font-medium tracking-tight">{m.role}</p>
                            </div>
                         </div>
-                        {executorId === m.user_id && <Check className="h-4 w-4 text-primary" />}
+                        {executorId === m.user_id && (
+                          <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+                            <Check className="h-3.5 w-3.5 text-primary-foreground" />
+                          </div>
+                        )}
                       </button>
                     ))}
                   </div>
                 </div>
               </div>
             )}
+
           </form>
         </Form>
 
-        <DialogFooter className="p-6 pt-2 flex items-center justify-between gap-3 bg-muted/5">
-           {step > 1 && (
-             <Button type="button" variant="ghost" onClick={() => setStep(prev => prev - 1)} className="gap-2">
-                <ChevronLeft className="h-4 w-4" /> Voltar
-             </Button>
-           )}
-           <div className="ml-auto flex items-center gap-3">
-              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
-              {step < 3 ? (
-                <Button 
-                  type="button" 
-                  onClick={nextStep} 
-                  className="gap-2 px-6"
-                  disabled={step === 2 && isValueExceedingBalance}
-                >
-                  Próximo <ChevronRight className="h-4 w-4" />
-                </Button>
-              ) : (
-                <Button 
-                  type="button" 
-                  onClick={form.handleSubmit(onSubmit)} 
-                  disabled={!executorId || isPending} 
-                  className="gap-2 px-6 shadow-lg shadow-primary/20"
-                >
-                   {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                   Criar Ocorrência
-                </Button>
-              )}
-
-
+        <DialogFooter className="p-6 border-t border-border/40 bg-muted/5">
+           <div className="flex w-full items-center justify-between">
+             {step > 1 ? (
+               <Button type="button" variant="outline" onClick={() => setStep(prev => prev - 1)} className="gap-2 px-5 font-bold text-xs uppercase tracking-wider">
+                  <ChevronLeft className="h-4 w-4" /> Voltar
+               </Button>
+             ) : (
+               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="font-bold text-xs uppercase tracking-wider">Cancelar</Button>
+             )}
+             
+             <div className="flex items-center gap-3">
+                {step < 3 ? (
+                  <Button 
+                    type="button" 
+                    onClick={nextStep} 
+                    className="gap-2 px-8 font-bold text-xs uppercase tracking-wider shadow-lg shadow-primary/20"
+                    disabled={step === 2 && isValueExceedingBalance}
+                  >
+                    Próximo <ChevronRight className="h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button 
+                    type="button" 
+                    onClick={form.handleSubmit(onSubmit)} 
+                    disabled={!executorId || isPending} 
+                    className="gap-2 px-8 font-bold text-xs uppercase tracking-wider shadow-lg shadow-primary/20"
+                  >
+                     {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                     Criar Ocorrência
+                  </Button>
+                )}
+             </div>
            </div>
         </DialogFooter>
+
       </DialogContent>
     </Dialog>
   );
