@@ -56,10 +56,12 @@ import {
   FileText,
   Clock,
   Layout,
+  Info,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const schema = z.object({
   titulo: z.string().min(5, 'Título deve ter pelo menos 5 caracteres').max(200),
@@ -259,7 +261,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                     <Layout className="h-4 w-4 text-primary" />
                     Classificação Inicial
                   </h4>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4">
                     <FormField
                       control={form.control}
                       name="tipo"
@@ -272,9 +274,23 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                             if (v === 'bloqueio_bancario') form.setValue('contexto_entidade', 'banco');
                             else if (v === 'bloqueio_contas') form.setValue('contexto_entidade', 'bookmaker');
                           }} value={field.value}>
-                            <FormControl><SelectTrigger className="h-10 bg-background"><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl>
-                            <SelectContent>
-                              {Object.entries(TIPO_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
+                            <FormControl>
+                              <SelectTrigger className="h-11 bg-background">
+                                <SelectValue placeholder="Selecione o tipo..." />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="max-h-[300px]">
+                              {Object.entries(TIPO_LABELS).map(([v, l]) => (
+                                <SelectItem key={v} value={v} className="py-3">
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className="font-semibold text-sm">{l}</span>
+                                    {v === 'movimentacao_financeira' && <span className="text-[10px] text-muted-foreground">Saques, depósitos, estornos e atrasos</span>}
+                                    {v === 'kyc' && <span className="text-[10px] text-muted-foreground">Verificação de identidade e documentos</span>}
+                                    {v === 'bloqueio_bancario' && <span className="text-[10px] text-muted-foreground">Bloqueios em contas e PIX</span>}
+                                    {v === 'bloqueio_contas' && <span className="text-[10px] text-muted-foreground">Suspensão e encerramento de contas</span>}
+                                  </div>
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </FormItem>
@@ -289,8 +305,8 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                           <Select onValueChange={field.onChange} value={field.value} disabled={['bloqueio_bancario', 'bloqueio_contas'].includes(tipoSelecionado)}>
                             <FormControl><SelectTrigger className="h-10 bg-background"><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl>
                             <SelectContent>
-                              <SelectItem value="bookmaker">Bookmaker</SelectItem>
-                              <SelectItem value="banco">Banco</SelectItem>
+                              <SelectItem value="bookmaker">Bookmaker / Casa</SelectItem>
+                              <SelectItem value="banco">Banco / Parceiro</SelectItem>
                             </SelectContent>
                           </Select>
                         </FormItem>
@@ -311,21 +327,51 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                           <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Casa / Plataforma</FormLabel>
                           <Popover open={casaPopoverOpen} onOpenChange={setCasaPopoverOpen}>
                             <PopoverTrigger asChild>
-                              <Button variant="outline" className="w-full h-10 justify-between bg-background border-input font-normal hover:bg-background">
-                                {selectedCasa || "Selecione a casa..."} 
-                                <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                              <Button variant="outline" className="w-full h-11 justify-between bg-background border-input font-normal hover:bg-background">
+                                <div className="flex items-center gap-2 truncate">
+                                  {selectedCasa ? (
+                                    <>
+                                      <Avatar className="h-5 w-5 rounded-sm shrink-0">
+                                        <AvatarImage src={casasUnicasMap[selectedCasa] || undefined} />
+                                        <AvatarFallback className="rounded-sm bg-primary/10 text-[8px] font-bold">
+                                          {selectedCasa.substring(0, 2).toUpperCase()}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <span className="truncate">{selectedCasa}</span>
+                                    </>
+                                  ) : (
+                                    <span className="text-muted-foreground">Selecione a casa...</span>
+                                  )}
+                                </div>
+                                <ChevronsUpDown className="h-4 w-4 opacity-50 shrink-0" />
                               </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="p-0 w-[440px]">
+                            <PopoverContent className="p-0 w-[440px]" align="start">
                               <Command>
                                 <CommandInput placeholder="Buscar casa..." />
                                 <CommandList>
                                   <CommandEmpty>Nenhuma casa encontrada.</CommandEmpty>
                                   <CommandGroup>
                                     {casasUnicas.map(casa => (
-                                      <CommandItem key={casa} onSelect={() => { setSelectedCasa(casa); setCasaPopoverOpen(false); form.setValue('entidade_id', ''); }}>
-                                        <Check className={cn("mr-2 h-4 w-4", selectedCasa === casa ? "opacity-100" : "opacity-0")} />
-                                        {casa}
+                                      <CommandItem 
+                                        key={casa} 
+                                        className="flex items-center gap-2 py-3"
+                                        onSelect={() => { 
+                                          setSelectedCasa(casa); 
+                                          setCasaPopoverOpen(false); 
+                                          form.setValue('entidade_id', ''); 
+                                        }}
+                                      >
+                                        <div className="flex items-center flex-1 gap-2">
+                                          <Avatar className="h-6 w-6 rounded-sm shrink-0 border border-border/50">
+                                            <AvatarImage src={casasUnicasMap[casa] || undefined} />
+                                            <AvatarFallback className="rounded-sm bg-primary/10 text-[9px] font-bold">
+                                              {casa.substring(0, 2).toUpperCase()}
+                                            </AvatarFallback>
+                                          </Avatar>
+                                          <span className="font-medium">{casa}</span>
+                                        </div>
+                                        <Check className={cn("h-4 w-4", selectedCasa === casa ? "opacity-100" : "opacity-0")} />
                                       </CommandItem>
                                     ))}
                                   </CommandGroup>
@@ -360,21 +406,45 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                           <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground">Parceiro</FormLabel>
                           <Popover open={bancoPopoverOpen} onOpenChange={setBancoPopoverOpen}>
                             <PopoverTrigger asChild>
-                              <Button variant="outline" className="w-full h-10 justify-between bg-background border-input font-normal hover:bg-background">
-                                {selectedParceiroId ? (parceiros.find(p => p.id === selectedParceiroId)?.nome || "Selecione o parceiro") : "Selecione o parceiro..."}
-                                <ChevronsUpDown className="h-4 w-4 opacity-50 ml-2" />
+                              <Button variant="outline" className="w-full h-11 justify-between bg-background border-input font-normal hover:bg-background">
+                                <div className="flex items-center gap-2 truncate">
+                                  {selectedParceiroId ? (
+                                    <>
+                                      <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                        <User className="h-3 w-3 text-primary" />
+                                      </div>
+                                      <span className="truncate">{parceiros.find(p => p.id === selectedParceiroId)?.nome || "Selecione o parceiro"}</span>
+                                    </>
+                                  ) : (
+                                    <span className="text-muted-foreground">Selecione o parceiro...</span>
+                                  )}
+                                </div>
+                                <ChevronsUpDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
                               </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="p-0 w-[440px]">
+                            <PopoverContent className="p-0 w-[440px]" align="start">
                               <Command>
                                 <CommandInput placeholder="Buscar parceiro..." />
                                 <CommandList>
                                   <CommandEmpty>Nenhum parceiro encontrado.</CommandEmpty>
                                   <CommandGroup>
                                     {parceiros.map(p => (
-                                      <CommandItem key={p.id} onSelect={() => { setSelectedParceiroId(p.id); setBancoPopoverOpen(false); form.setValue('entidade_id', ''); }}>
-                                        <Check className={cn("mr-2 h-4 w-4", selectedParceiroId === p.id ? "opacity-100" : "opacity-0")} />
-                                        {p.nome}
+                                      <CommandItem 
+                                        key={p.id} 
+                                        className="flex items-center gap-2 py-3"
+                                        onSelect={() => { 
+                                          setSelectedParceiroId(p.id); 
+                                          setBancoPopoverOpen(false); 
+                                          form.setValue('entidade_id', ''); 
+                                        }}
+                                      >
+                                        <div className="flex items-center flex-1 gap-2">
+                                          <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                            <User className="h-3.5 w-3.5 text-primary" />
+                                          </div>
+                                          <span className="font-medium">{p.nome}</span>
+                                        </div>
+                                        <Check className={cn("h-4 w-4", selectedParceiroId === p.id ? "opacity-100" : "opacity-0")} />
                                       </CommandItem>
                                     ))}
                                   </CommandGroup>
