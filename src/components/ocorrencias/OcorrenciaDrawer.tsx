@@ -447,11 +447,11 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
                 projeto_id={(ocorrencia as any).projeto_id}
                 ocorrencia_id={ocorrencia.id}
                 onConfirmar={async (resultado, valorPerda, dataResolucao) => {
-                  const resultadoMapeado = resultado === 'sem_impacto' ? 'ganho' : 'perda';
+                  // Mapear resultado para o enum do banco: 'sem_impacto', 'perda_confirmada', 'perda_parcial'
                   await resolverComFinanceiro({
                     id: ocorrencia.id,
                     statusAnterior: ocorrencia.status,
-                    resultadoFinanceiro: resultadoMapeado as any,
+                    resultadoFinanceiro: resultado,
                     valorPerda,
                     resolvedAt: dataResolucao.toISOString(),
                   });

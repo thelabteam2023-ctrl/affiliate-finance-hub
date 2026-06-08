@@ -383,6 +383,13 @@ export function useAtualizarStatusOcorrencia() {
               .eq('projeto_id', ocorrencia.projeto_id);
           }
 
+          // Force correct enum values if they are stored incorrectly or mapped wrong
+          const resultadoMapeado = ocorrencia.resultado_financeiro === 'perda' ? 'perda_confirmada' : ocorrencia.resultado_financeiro;
+          
+          if (ocorrencia.resultado_financeiro === 'perda') {
+             await ocorrenciasTable().update({ resultado_financeiro: 'perda_confirmada' }).eq('id', id);
+          }
+
           // Verificar se bookmaker ainda está no projeto antes de estornar saldo
           if (ocorrencia.bookmaker_id) {
             const { data: bkInfo } = await (supabase as any)
