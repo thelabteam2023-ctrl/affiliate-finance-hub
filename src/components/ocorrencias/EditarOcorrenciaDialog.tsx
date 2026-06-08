@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -31,10 +31,13 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useEditarOcorrencia } from '@/hooks/useOcorrencias';
 import { TIPO_LABELS, PRIORIDADE_LABELS, SUB_MOTIVOS } from '@/types/ocorrencias';
 import type { Ocorrencia, OcorrenciaTipo, OcorrenciaPrioridade } from '@/types/ocorrencias';
-import { Loader2, Pencil, CalendarIcon } from 'lucide-react';
+import { Loader2, Pencil, CalendarIcon, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 const schema = z.object({
   titulo: z.string().min(5, 'Título deve ter pelo menos 5 caracteres').max(200),
@@ -61,6 +64,7 @@ interface Props {
 
 export function EditarOcorrenciaDialog({ open, onOpenChange, ocorrencia }: Props) {
   const { mutateAsync: editar, isPending } = useEditarOcorrencia();
+  const { workspaceId } = useAuth();
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -76,6 +80,32 @@ export function EditarOcorrenciaDialog({ open, onOpenChange, ocorrencia }: Props
         : new Date(ocorrencia.created_at),
     },
   });
+
+  const { data: bookmakerInfo } = useQuery({
+    queryKey: ['bookmaker-balance', ocorrencia.bookmaker_id],
+    queryFn: async () => {
+      if (!ocorrencia.bookmaker_id) return null;
+      const { data } = await supabase
+        .from('bookmakers')
+        .select('id, moeda, saldo_atual')
+        .eq('id', ocorrencia.bookmaker_id)
+        .single();
+      return data;
+    },
+    enabled: open && !!ocorrencia.bookmaker_id,
+  });
+
+  const valorRisco = form.watch('valor_risco');
+
+  const exposurePercentage = useMemo(() => {
+    if (!bookmakerInfo?.saldo_atual || !valorRisco) return 0;
+    return (valorRisco / Number(bookmakerInfo.saldo_atual)) * 100;
+  }, [bookmakerInfo, valorRisco]);
+
+  const isValueExceedingBalance = useMemo(() => {
+    if (!bookmakerInfo) return false;
+    return (valorRisco || 0) > Number(bookmakerInfo.saldo_atual || 0);
+  }, [bookmakerInfo, valorRisco]);
 
   // Reset when ocorrencia changes
   useEffect(() => {
@@ -287,21 +317,46 @@ export function EditarOcorrenciaDialog({ open, onOpenChange, ocorrencia }: Props
               name="valor_risco"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Valor em disputa (opcional)</FormLabel>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <FormLabel className="text-[11px] font-bold uppercase text-muted-foreground mb-0">Valor em disputa</FormLabel>
+                    {bookmakerInfo && (
+                      <div className="text-[10px] font-bold opacity-60">
+                        Saldo: {bookmakerInfo.moeda} {Number(bookmakerInfo.saldo_atual).toLocaleString('pt-BR')}
+                      </div>
+                    )}
+                  </div>
                   <FormControl>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="0,00"
-                      className="font-mono"
-                      {...field}
-                    />
+                    <div className="relative">
+                      <DollarSign className={cn(
+                        "absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4",
+                        isValueExceedingBalance ? "text-destructive" : "text-muted-foreground"
+                      )} />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0,00"
+                        className={cn("pl-9 h-10 bg-background font-mono", isValueExceedingBalance && "border-destructive text-destructive")}
+                        {...field}
+                      />
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
+            {bookmakerInfo && (valorRisco || 0) > 0 && (
+              <div className="pt-1 pb-2">
+                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider mb-1.5">
+                  <span className="text-muted-foreground">Exposição do Saldo</span>
+                  <span className={cn(isValueExceedingBalance ? "text-destructive" : "text-primary")}>{exposurePercentage.toFixed(1)}%</span>
+                </div>
+                <div className="h-1.5 w-full bg-background rounded-full overflow-hidden border border-border/20">
+                  <div className={cn("h-full transition-all duration-500", isValueExceedingBalance ? "bg-destructive" : "bg-primary")} style={{ width: `${Math.min(exposurePercentage, 100)}%` }} />
+                </div>
+              </div>
+            )}
 
             {/* Actions */}
             <div className="flex justify-end gap-2 pt-2">
