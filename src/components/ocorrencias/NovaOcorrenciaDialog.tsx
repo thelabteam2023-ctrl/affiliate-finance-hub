@@ -111,8 +111,25 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
     },
   });
 
+  const { data: bookmakers = [] } = useQuery({
+    queryKey: ['ocorrencia-bookmakers', workspaceId, contextoInicial?.projeto_id],
+    queryFn: async () => {
+      let query = supabase
+        .from('bookmakers')
+        .select('id, nome, parceiro_id, moeda, saldo_atual, parceiros!bookmakers_parceiro_id_fkey (nome), bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)')
+        .eq('workspace_id', workspaceId!)
+        .order('nome');
+      if (contextoInicial?.projeto_id) query = query.eq('projeto_id', contextoInicial.projeto_id);
+      const { data } = await query;
+      return data || [];
+    },
+    enabled: !!workspaceId && open,
+  });
+
   const selectedEntidadeId = form.watch('entidade_id');
   const valorRisco = form.watch('valor_risco');
+  const tipoSelecionado = form.watch('tipo');
+  const contextoEntidade = form.watch('contexto_entidade');
 
   const selectedBookmaker = useMemo(() => {
     if (contextoEntidade !== 'bookmaker') return null;
@@ -128,6 +145,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
     if (!selectedBookmaker) return false;
     return valorRisco > Number(selectedBookmaker.saldo_atual || 0);
   }, [selectedBookmaker, valorRisco]);
+
 
 
   // Reset form and state when dialog opens or closes
