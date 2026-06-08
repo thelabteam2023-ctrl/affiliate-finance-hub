@@ -367,16 +367,18 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
                 projeto_id={(ocorrencia as any).projeto_id}
                 ocorrencia_id={ocorrencia.id}
                 onConfirmar={async (resultado, valorPerda, dataResolucao) => {
+                  const resultadoMapeado = resultado === 'sem_impacto' ? 'ganho' : 'perda';
                   await resolverComFinanceiro({
                     id: ocorrencia.id,
                     statusAnterior: ocorrencia.status,
-                    resultadoFinanceiro: resultado,
+                    resultadoFinanceiro: resultadoMapeado as any,
                     valorPerda,
                     resolvedAt: dataResolucao.toISOString(),
                   });
                 }}
               />
             )}
+
           </>
         ) : null}
       </SheetContent>

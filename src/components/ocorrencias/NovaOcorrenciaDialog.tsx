@@ -111,6 +111,43 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
     },
   });
 
+  const { data: bookmakers = [] } = useQuery({
+    queryKey: ['ocorrencia-bookmakers', workspaceId, contextoInicial?.projeto_id],
+    queryFn: async () => {
+      let query = supabase
+        .from('bookmakers')
+        .select('id, nome, parceiro_id, moeda, saldo_atual, parceiros!bookmakers_parceiro_id_fkey (nome), bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)')
+        .eq('workspace_id', workspaceId!)
+        .order('nome');
+      if (contextoInicial?.projeto_id) query = query.eq('projeto_id', contextoInicial.projeto_id);
+      const { data } = await query;
+      return data || [];
+    },
+    enabled: !!workspaceId && open,
+  });
+
+  const selectedEntidadeId = form.watch('entidade_id');
+  const valorRisco = form.watch('valor_risco');
+  const tipoSelecionado = form.watch('tipo');
+  const contextoEntidade = form.watch('contexto_entidade');
+
+  const selectedBookmaker = useMemo(() => {
+    if (contextoEntidade !== 'bookmaker') return null;
+    return bookmakers.find(bk => bk.id === selectedEntidadeId);
+  }, [contextoEntidade, selectedEntidadeId, bookmakers]);
+
+  const exposurePercentage = useMemo(() => {
+    if (!selectedBookmaker?.saldo_atual || !valorRisco) return 0;
+    return (valorRisco / Number(selectedBookmaker.saldo_atual)) * 100;
+  }, [selectedBookmaker, valorRisco]);
+
+  const isValueExceedingBalance = useMemo(() => {
+    if (!selectedBookmaker) return false;
+    return valorRisco > Number(selectedBookmaker.saldo_atual || 0);
+  }, [selectedBookmaker, valorRisco]);
+
+
+
   // Reset form and state when dialog opens or closes
   useEffect(() => {
     if (open) {
@@ -131,20 +168,6 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
     }
   }, [open, contextoInicial, form]);
 
-  const { data: bookmakers = [] } = useQuery({
-    queryKey: ['ocorrencia-bookmakers', workspaceId, contextoInicial?.projeto_id],
-    queryFn: async () => {
-      let query = supabase
-        .from('bookmakers')
-        .select('id, nome, parceiro_id, moeda, parceiros!bookmakers_parceiro_id_fkey (nome), bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)')
-        .eq('workspace_id', workspaceId!)
-        .order('nome');
-      if (contextoInicial?.projeto_id) query = query.eq('projeto_id', contextoInicial.projeto_id);
-      const { data } = await query;
-      return data || [];
-    },
-    enabled: !!workspaceId && open,
-  });
 
   const { data: parceiros = [] } = useQuery({
     queryKey: ['ocorrencia-parceiros', workspaceId],
@@ -162,8 +185,6 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
 
   const { data: contasEWallets = [] } = useParceiroContas(selectedParceiroId);
 
-  const tipoSelecionado = form.watch('tipo');
-  const contextoEntidade = form.watch('contexto_entidade');
   const subMotivos = tipoSelecionado === 'movimentacao_financeira'
     ? (SUB_MOTIVOS_MOVIMENTACAO[contextoEntidade] || [])
     : (SUB_MOTIVOS[tipoSelecionado] || []);
@@ -431,16 +452,59 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                     name="valor_risco"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Valor em disputa</FormLabel>
+                        <div className="flex items-center justify-between mb-2">
+                          <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Valor em disputa</FormLabel>
+                          {selectedBookmaker && (
+                            <div className="text-[10px] font-bold">
+                              Saldo: <span className="text-foreground">{selectedBookmaker.moeda} {Number(selectedBookmaker.saldo_atual).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                          )}
+                        </div>
                         <FormControl>
                           <div className="relative">
-                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input type="number" step="0.01" className="pl-9 h-11" {...field} />
+                            <DollarSign className={cn(
+                              "absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4",
+                              isValueExceedingBalance ? "text-destructive" : "text-muted-foreground"
+                            )} />
+                            <Input 
+                              type="number" 
+                              step="0.01" 
+                              className={cn(
+                                "pl-9 h-11",
+                                isValueExceedingBalance && "border-destructive focus-visible:ring-destructive"
+                              )} 
+                              {...field} 
+                            />
                           </div>
                         </FormControl>
+                        {selectedBookmaker && valorRisco > 0 && (
+                          <div className="mt-2 space-y-1.5">
+                            <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
+                              <span className="text-muted-foreground">Exposição do Saldo</span>
+                              <span className={cn(isValueExceedingBalance ? "text-destructive" : "text-primary")}>
+                                {exposurePercentage.toFixed(1)}%
+                              </span>
+                            </div>
+                            <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                              <div 
+                                className={cn(
+                                  "h-full transition-all duration-500",
+                                  isValueExceedingBalance ? "bg-destructive" : "bg-primary"
+                                )} 
+                                style={{ width: `${Math.min(exposurePercentage, 100)}%` }}
+                              />
+                            </div>
+                            {isValueExceedingBalance && (
+                              <p className="text-[10px] font-bold text-destructive uppercase flex items-center gap-1 mt-1">
+                                <AlertTriangle className="h-3 w-3" /> Valor excede o saldo disponível
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </FormItem>
                     )}
                   />
+
                 </div>
               </div>
             )}
@@ -500,13 +564,27 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
            <div className="ml-auto flex items-center gap-3">
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
               {step < 3 ? (
-                <Button type="button" onClick={nextStep} className="gap-2 px-6">Próximo <ChevronRight className="h-4 w-4" /></Button>
+                <Button 
+                  type="button" 
+                  onClick={nextStep} 
+                  className="gap-2 px-6"
+                  disabled={step === 2 && isValueExceedingBalance}
+                >
+                  Próximo <ChevronRight className="h-4 w-4" />
+                </Button>
               ) : (
-                <Button type="button" onClick={form.handleSubmit(onSubmit)} disabled={!executorId || isPending} className="gap-2 px-6 shadow-lg shadow-primary/20">
+                <Button 
+                  type="button" 
+                  onClick={form.handleSubmit(onSubmit)} 
+                  disabled={!executorId || isPending} 
+                  className="gap-2 px-6 shadow-lg shadow-primary/20"
+                >
                    {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                    Criar Ocorrência
                 </Button>
               )}
+
+
            </div>
         </DialogFooter>
       </DialogContent>
