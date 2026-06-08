@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -110,6 +110,26 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
       valor_risco: 0,
     },
   });
+
+  // Reset form and state when dialog opens or closes
+  useEffect(() => {
+    if (open) {
+      setStep(1);
+      form.reset({
+        titulo: contextoInicial?.titulo || '',
+        descricao: '',
+        tipo: contextoInicial?.tipo || 'movimentacao_financeira',
+        sub_motivo: '',
+        contexto_entidade: undefined as any,
+        entidade_id: '',
+        prioridade: 'media',
+        valor_risco: 0,
+      });
+      setSelectedCasa('');
+      setSelectedParceiroId(null);
+      setExecutorId('');
+    }
+  }, [open, contextoInicial, form]);
 
   const { data: bookmakers = [] } = useQuery({
     queryKey: ['ocorrencia-bookmakers', workspaceId, contextoInicial?.projeto_id],
