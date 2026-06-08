@@ -205,6 +205,53 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
             </SheetHeader>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
+              {/* Financial Risk Card */}
+              {ocorrencia.valor_risco > 0 && (
+                <div className="relative group overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-background to-background p-5 shadow-sm transition-all hover:shadow-md hover:border-primary/30">
+                  <div className="absolute top-0 right-0 p-3 opacity-10">
+                    <DollarSign className="h-16 w-16 text-primary" />
+                  </div>
+                  
+                  <div className="relative space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center border border-primary/20">
+                          <DollarSign className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-primary/60">Valor em Disputa</p>
+                          <p className="text-sm font-medium text-muted-foreground">Exposição Financeira</p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="bg-background/50 border-primary/20 text-primary font-bold text-[10px] py-0 px-2 h-5">
+                        DISPUTA ATIVA
+                      </Badge>
+                    </div>
+
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-lg font-medium text-muted-foreground">{ocorrencia.moeda || 'BRL'}</span>
+                      <span className="text-4xl font-black tracking-tight text-foreground leading-none">
+                        {Number(ocorrencia.valor_risco).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+
+                    {ocorrencia.status !== 'resolvido' && ocorrencia.status !== 'cancelado' && (
+                      <div className="pt-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="w-full h-8 text-[11px] font-bold uppercase tracking-wider gap-2 hover:bg-primary/5 hover:text-primary border border-dashed border-primary/20"
+                          onClick={() => setResolucaoOpen(true)}
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          Resolver Disputa
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Actions Bar */}
               <div className="flex items-center gap-2 flex-wrap">
                 {transicoes.map((s) => (
