@@ -133,24 +133,24 @@ const getStatusBadge = (status: string) => {
   switch (status) {
     case "PENDENTE":
       return (
-        <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 gap-1">
-          <Clock className="h-3 w-3" />
-          Pendente
-        </Badge>
+        <span className="inline-flex items-center gap-1.5 text-[10px] font-medium text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20 shadow-[0_0_8px_rgba(245,158,11,0.05)]">
+          <span className="w-1 h-1 rounded-full bg-amber-500 animate-pulse" />
+          Aguardando
+        </span>
       );
     case "CONFIRMADO":
       return (
-        <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 gap-1">
-          <CheckCircle2 className="h-3 w-3" />
-          Confirmado
-        </Badge>
+        <span className="inline-flex items-center gap-1.5 text-[10px] font-medium text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+          <CheckCircle2 className="h-2.5 w-2.5" />
+          Concluído
+        </span>
       );
     case "RECUSADO":
       return (
-        <Badge className="bg-red-500/20 text-red-400 border-red-500/30 gap-1">
-          <XCircle className="h-3 w-3" />
+        <span className="inline-flex items-center gap-1.5 text-[10px] font-medium text-red-500 bg-red-500/10 px-2 py-0.5 rounded-full border border-red-500/20">
+          <XCircle className="h-2.5 w-2.5" />
           Recusado
-        </Badge>
+        </span>
       );
     default:
       return null;
@@ -866,61 +866,47 @@ export function HistoricoMovimentacoes({
                       </div>
 
                       {/* Coluna 3: Valores, Status e Ações */}
-                      <div className="text-right flex flex-col items-end gap-1.5">
-                        <div className="flex flex-col items-end">
-                          <span className="text-[14px] font-medium text-[var(--text-primary)] tabular-nums">
-                            {formatCurrencyDynamic(Math.abs(getValorEfetivo(tx)), getMoedaEfetiva(tx))}
-                          </span>
-                          <span className="text-[10px] text-[var(--text-faint)] mt-px tabular-nums">
-                            {(() => {
-                              const dk = extractCivilDateKey(tx.data_transacao);
-                              if (!dk) return '-';
-                              const [y, m, d] = dk.split('-');
-                              return `${d}/${m}/${y}`;
-                            })()}
-                          </span>
-                        </div>
-
-                        {/* Status e Ação de Confirmação */}
-                        <div className="flex items-center gap-2">
-                          {tx.status === "PENDENTE" && txType === "SAQUE" && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-7 px-2 text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20 gap-1 animate-pulse"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onConfirmarSaque?.(tx);
-                              }}
-                            >
-                              <CheckCircle2 className="h-3 w-3" />
-                              Confirmar Saque
-                            </Button>
-                          )}
-                          
-                          {getStatusBadge(tx.status)}
+                      <div className="text-right flex flex-col items-end min-w-[140px]">
+                        <div className="flex items-center gap-2 group-hover:translate-x-[-4px] transition-transform duration-200">
+                          <div className="flex flex-col items-end">
+                            <span className="text-[15px] font-semibold text-[var(--text-primary)] tabular-nums tracking-tight">
+                              {formatCurrencyDynamic(Math.abs(getValorEfetivo(tx)), getMoedaEfetiva(tx))}
+                            </span>
+                            <span className="text-[10px] text-[var(--text-faint)] tabular-nums opacity-80">
+                              {(() => {
+                                const dk = extractCivilDateKey(tx.data_transacao);
+                                if (!dk) return '-';
+                                const [y, m, d] = dk.split('-');
+                                return `${d}/${m}/${y}`;
+                              })()}
+                            </span>
+                          </div>
 
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
-                                <MoreVertical className="h-4 w-4" />
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6 text-muted-foreground/40 hover:text-foreground hover:bg-white/5 rounded-md transition-colors"
+                              >
+                                <MoreVertical className="h-3.5 w-3.5" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuContent align="end" className="w-48 bg-[#1a1f26] border-[#2a2f36] shadow-2xl">
                               <DropdownMenuItem 
-                                className="text-xs gap-2"
+                                className="text-xs gap-2 py-2 hover:bg-white/5 cursor-pointer"
                                 onClick={() => {
                                   setEditDateId(tx.id);
                                   setEditDateValue(tx.data_transacao);
                                 }}
                               >
-                                <Pencil className="h-3.5 w-3.5" />
+                                <Pencil className="h-3.5 w-3.5 text-blue-400" />
                                 Editar Data
                               </DropdownMenuItem>
                               
                               {tx.status === "CONFIRMADO" && txType === "SAQUE" && (
                                 <DropdownMenuItem 
-                                  className="text-xs gap-2"
+                                  className="text-xs gap-2 py-2 hover:bg-white/5 cursor-pointer"
                                   onClick={() => {
                                     setEditConfirmado({
                                       id: tx.id,
@@ -932,23 +918,23 @@ export function HistoricoMovimentacoes({
                                     });
                                   }}
                                 >
-                                  <CheckCircle2 className="h-3.5 w-3.5" />
+                                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
                                   Editar Confirmação
                                 </DropdownMenuItem>
                               )}
 
                               <DropdownMenuItem 
-                                className="text-xs gap-2"
+                                className="text-xs gap-2 py-2 hover:bg-white/5 cursor-pointer"
                                 onClick={() => setEditTagsTx(tx)}
                               >
-                                <TagIcon className="h-3.5 w-3.5" />
+                                <TagIcon className="h-3.5 w-3.5 text-purple-400" />
                                 Gerenciar Tags
                               </DropdownMenuItem>
 
-                              <DropdownMenuSeparator />
+                              <DropdownMenuSeparator className="bg-[#2a2f36]" />
                               
                               <DropdownMenuItem 
-                                className="text-xs gap-2 text-amber-500 focus:text-amber-500"
+                                className="text-xs gap-2 py-2 text-amber-500 focus:text-amber-500 hover:bg-amber-500/5 cursor-pointer"
                                 disabled={!canRevert(tx, role)}
                                 onClick={() => setReverterTx(tx)}
                               >
@@ -957,7 +943,7 @@ export function HistoricoMovimentacoes({
                               </DropdownMenuItem>
 
                               <DropdownMenuItem 
-                                className="text-xs gap-2 text-red-500 focus:text-red-500"
+                                className="text-xs gap-2 py-2 text-red-500 focus:text-red-500 hover:bg-red-500/5 cursor-pointer"
                                 disabled={!canDelete(tx, role)}
                                 onClick={() => setExcluirTx(tx)}
                               >
@@ -968,9 +954,28 @@ export function HistoricoMovimentacoes({
                           </DropdownMenu>
                         </div>
 
-                        <span className="text-[9px] text-[var(--text-ghost)] mt-0.5 uppercase tracking-wider">
-                          por {usuariosMap[tx.user_id] || "SISTEMA"}
-                        </span>
+                        <div className="flex items-center gap-2 mt-2">
+                          {tx.status === "PENDENTE" && txType === "SAQUE" && (
+                            <Button
+                              size="sm"
+                              className="h-6 px-3 text-[10px] font-bold bg-emerald-500 text-[#0c2a1a] hover:bg-emerald-400 border-none shadow-[0_2px_10px_rgba(16,185,129,0.2)] transition-all hover:scale-[1.02] active:scale-[0.98]"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onConfirmarSaque?.(tx);
+                              }}
+                            >
+                              Confirmar Saque
+                            </Button>
+                          )}
+                          
+                          {getStatusBadge(tx.status)}
+                        </div>
+
+                        <div className="flex items-center gap-1 mt-1.5 opacity-40 group-hover:opacity-70 transition-opacity">
+                          <span className="text-[9px] font-medium text-[var(--text-ghost)] uppercase tracking-widest">
+                            por {usuariosMap[tx.user_id] || "SISTEMA"}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   );
