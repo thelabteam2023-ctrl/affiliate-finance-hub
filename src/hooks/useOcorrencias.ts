@@ -367,7 +367,7 @@ export function useAtualizarStatusOcorrencia() {
       // Precisamos estornar a perda antes de cancelar
       if (novoStatus === 'cancelado') {
         const { data: ocorrencia } = await ocorrenciasTable()
-          .select('valor_perda, perda_registrada_ledger, bookmaker_id, moeda, titulo, projeto_id, sub_motivo')
+          .select('valor_perda, perda_registrada_ledger, bookmaker_id, moeda, titulo, projeto_id, sub_motivo, resultado_financeiro')
           .eq('id', id)
           .single();
 
@@ -381,6 +381,11 @@ export function useAtualizarStatusOcorrencia() {
               .delete()
               .eq('ocorrencia_id', id)
               .eq('projeto_id', ocorrencia.projeto_id);
+          }
+
+          // Force correct enum values if they are stored incorrectly or mapped wrong
+          if (ocorrencia.resultado_financeiro === 'perda') {
+             await ocorrenciasTable().update({ resultado_financeiro: 'perda_confirmada' }).eq('id', id);
           }
 
           // Force correct enum values if they are stored incorrectly or mapped wrong
