@@ -565,38 +565,41 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
           </form>
         </Form>
 
-        <DialogFooter className="p-6 pt-2 flex items-center justify-between gap-3 bg-muted/5">
-           {step > 1 && (
-             <Button type="button" variant="ghost" onClick={() => setStep(prev => prev - 1)} className="gap-2">
-                <ChevronLeft className="h-4 w-4" /> Voltar
-             </Button>
-           )}
-           <div className="ml-auto flex items-center gap-3">
-              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
-              {step < 3 ? (
-                <Button 
-                  type="button" 
-                  onClick={nextStep} 
-                  className="gap-2 px-6"
-                  disabled={step === 2 && isValueExceedingBalance}
-                >
-                  Próximo <ChevronRight className="h-4 w-4" />
-                </Button>
-              ) : (
-                <Button 
-                  type="button" 
-                  onClick={form.handleSubmit(onSubmit)} 
-                  disabled={!executorId || isPending} 
-                  className="gap-2 px-6 shadow-lg shadow-primary/20"
-                >
-                   {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                   Criar Ocorrência
-                </Button>
-              )}
-
-
+        <DialogFooter className="p-6 border-t border-border/40 bg-muted/5">
+           <div className="flex w-full items-center justify-between">
+             {step > 1 ? (
+               <Button type="button" variant="outline" onClick={() => setStep(prev => prev - 1)} className="gap-2 px-5 font-bold text-xs uppercase tracking-wider">
+                  <ChevronLeft className="h-4 w-4" /> Voltar
+               </Button>
+             ) : (
+               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="font-bold text-xs uppercase tracking-wider">Cancelar</Button>
+             )}
+             
+             <div className="flex items-center gap-3">
+                {step < 3 ? (
+                  <Button 
+                    type="button" 
+                    onClick={nextStep} 
+                    className="gap-2 px-8 font-bold text-xs uppercase tracking-wider shadow-lg shadow-primary/20"
+                    disabled={step === 2 && isValueExceedingBalance}
+                  >
+                    Próximo <ChevronRight className="h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button 
+                    type="button" 
+                    onClick={form.handleSubmit(onSubmit)} 
+                    disabled={!executorId || isPending} 
+                    className="gap-2 px-8 font-bold text-xs uppercase tracking-wider shadow-lg shadow-primary/20"
+                  >
+                     {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                     Criar Ocorrência
+                  </Button>
+                )}
+             </div>
            </div>
         </DialogFooter>
+
       </DialogContent>
     </Dialog>
   );
