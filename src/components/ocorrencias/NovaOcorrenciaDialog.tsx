@@ -297,8 +297,71 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                     />
                   </div>
                 )}
+
+                {contextoEntidade === 'banco' && (
+                  <div className="space-y-4">
+                    <FormItem>
+                      <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Parceiro / Titular</FormLabel>
+                      <Popover open={bancoPopoverOpen} onOpenChange={setBancoPopoverOpen}>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="w-full h-11 justify-between font-normal text-left truncate">
+                            {selectedParceiroId 
+                              ? (parceiros.find(p => p.id === selectedParceiroId)?.nome || "Selecione o parceiro") 
+                              : "Selecione o parceiro"} 
+                            <ChevronsUpDown className="h-4 w-4 opacity-50 ml-2" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)]">
+                          <Command>
+                            <CommandInput placeholder="Buscar parceiro..." />
+                            <CommandList>
+                              <CommandEmpty>Nenhum parceiro encontrado.</CommandEmpty>
+                              <CommandGroup>
+                                {parceiros.map(p => (
+                                  <CommandItem key={p.id} onSelect={() => { 
+                                    setSelectedParceiroId(p.id); 
+                                    setBancoPopoverOpen(false); 
+                                    form.setValue('entidade_id', ''); 
+                                  }}>
+                                    <Check className={cn("mr-2 h-4 w-4", selectedParceiroId === p.id ? "opacity-100" : "opacity-0")} />
+                                    {p.nome}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </FormItem>
+
+                    <FormField
+                      control={form.control}
+                      name="entidade_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Conta ou Wallet</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value} disabled={!selectedParceiroId}>
+                            <FormControl><SelectTrigger className="h-11"><SelectValue placeholder="Selecione a conta/wallet" /></SelectTrigger></FormControl>
+                            <SelectContent>
+                              {contasEWallets.map(c => (
+                                <SelectItem key={c.id} value={c.id}>
+                                  <div className="flex items-center gap-2">
+                                    {c.tipo === 'banco' ? <Building2 className="h-3 w-3" /> : <Layers className="h-3 w-3" />}
+                                    <span>{c.label}</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
               </div>
             )}
+
 
             {step === 2 && (
               <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
