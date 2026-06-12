@@ -655,17 +655,76 @@ export function HistoricoMovimentacoes({
           <div className="text-right">
             {/* Métricas agregadas resumidas */}
             {(filtroTipo.length > 0 || (filtroParceiro && filtroParceiro !== "TODOS") || (filtroProjeto && filtroProjeto !== "TODOS")) && metricas.moedas.length > 0 && (
-              <div className="flex flex-col items-end gap-0.5">
-                {metricas.moedas.slice(0, 1).map(({ moeda, total, confirmado }) => (
-                  <div key={moeda} className="flex flex-col items-end">
+              <div className="flex items-start justify-end gap-5">
+                {/* Fiat block — only when fiat present */}
+                {metricas.fiat.moedas.length > 0 && (
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">
+                      Fiat{metricas.fiat.isMixed ? " (em BRL)" : ""}
+                    </span>
                     <span className="text-[14px] font-medium text-[var(--text-primary)] tabular-nums">
-                      {formatCurrencyDynamic(total, moeda)}
+                      {formatCurrencyDynamic(metricas.fiat.total, metricas.fiat.displayMoeda)}
                     </span>
                     <span className="text-[10px] text-[var(--accent-success)] tabular-nums">
-                      Creditado: {formatCurrencyDynamic(confirmado, moeda)}
+                      Creditado: {formatCurrencyDynamic(metricas.fiat.confirmado, metricas.fiat.displayMoeda)}
                     </span>
                   </div>
-                ))}
+                )}
+
+                {/* Crypto block — only when crypto present */}
+                {metricas.crypto.moedas.length > 0 && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex flex-col items-end cursor-help">
+                          <span className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">
+                            Cripto (em USD)
+                            {metricas.crypto.semCotacao.length > 0 && (
+                              <span className="ml-1 text-amber-400">~</span>
+                            )}
+                          </span>
+                          <span className="text-[14px] font-medium text-[var(--text-primary)] tabular-nums">
+                            {formatCurrencyDynamic(metricas.crypto.totalUSD, "USD")}
+                          </span>
+                          <span className="text-[10px] text-[var(--accent-success)] tabular-nums">
+                            Creditado: {formatCurrencyDynamic(metricas.crypto.confirmadoUSD, "USD")}
+                          </span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" align="end" className="max-w-xs">
+                        <div className="space-y-1.5 text-xs">
+                          <div className="font-semibold border-b border-border pb-1 mb-1">
+                            Detalhamento por ativo
+                          </div>
+                          {metricas.crypto.moedas.map((m: any) => (
+                            <div key={m.moeda} className="flex justify-between gap-3">
+                              <span className="text-muted-foreground">
+                                {m.moeda}
+                                {!m.hasPrice && <span className="ml-1 text-amber-400">~</span>}
+                              </span>
+                              <span className="tabular-nums">
+                                {m.total.toLocaleString("pt-BR", { maximumFractionDigits: 8 })}
+                                {m.hasPrice && (
+                                  <span className="ml-2 text-[10px] text-muted-foreground">
+                                    ≈ {formatCurrencyDynamic(m.usdTotal, "USD")}
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                          ))}
+                          {metricas.crypto.semCotacao.length > 0 && (
+                            <div className="text-[10px] text-amber-400 border-t border-border pt-1 mt-1">
+                              ~ Sem cotação USD disponível — não somado ao total.
+                            </div>
+                          )}
+                          <div className="text-[10px] text-muted-foreground border-t border-border pt-1 mt-1">
+                            Estimativa — valores nativos preservados em cada movimentação.
+                          </div>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
               </div>
             )}
           </div>
