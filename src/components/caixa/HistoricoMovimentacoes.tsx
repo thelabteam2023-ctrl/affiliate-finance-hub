@@ -1,7 +1,6 @@
 import { useMemo, useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrencyDynamic, getValorEfetivo, getMoedaEfetiva } from "@/hooks/useMultiCurrencyFormat";
-import { isCryptoCurrency } from "@/types/currency";
 import { useExchangeRates } from "@/contexts/ExchangeRatesContext";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
