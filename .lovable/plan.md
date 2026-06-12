@@ -1,64 +1,74 @@
-# Resumo Financeiro Multi-Moeda — Histórico do Caixa Operacional
+# Snapshot de Cripto no Resumo do Histórico — Auditoria + Ajuste
 
-## Diagnóstico
+## Status atual (já existe snapshot)
 
-`src/components/caixa/HistoricoMovimentacoes.tsx` (linhas 522-563) já agrega por moeda via `getMoedaEfetiva` / `getValorEfetivo`. A renderização (linha 599) faz `.slice(0, 1)` e mostra apenas a primeira moeda — por isso cripto desaparece do cabeçalho. Nenhuma mudança de schema/RPC é necessária.
+O `cash_ledger` **já persiste o snapshot** no momento da movimentação:
 
-Padrão já adotado no projeto (mem `crypto-valuation-and-consolidation-standard`): **todo criptoativo é avaliado em USD** (stablecoins 1:1; demais via `get-crypto-prices`). Vamos reaproveitar isso.
+| Coluna | Função |
+|---|---|
+| `coin` | ativo nativo (BTC, ETH, USDT…) |
+| `qtd_coin` | quantidade nativa |
+| `valor_usd` | **valor congelado em USD na hora da transação** |
+| `valor_usd_referencia` | mesmo valor (usado por relatórios) |
+| `cotacao_origem_usd` | preço USD/coin no momento (snapshot) |
+| `cotacao_snapshot_at` | timestamp do snapshot |
 
-## Solução — Duas visões consolidadas no cabeçalho
+Amostra confirma: aportes em BTC, USDT, USDC já gravam `valor_usd` ≠ recalculado por cotação live. **O snapshot está garantido em backend.**
 
-O cabeçalho passa a exibir **dois blocos lado a lado** (ou empilhados em telas estreitas), sempre que houver mais de uma moeda no resultado filtrado:
+## Problema na implementação que acabei de fazer
 
-```
-Fiat                       Cripto (em USD)
-R$ 5.829,87                $ 12.602,28
-Creditado: R$ 5.829,87     Creditado: $ 12.450,00
-```
+`getValorEfetivo` / `getMoedaEfetiva` (em `useMultiCurrencyFormat.ts`) já entregam, para CRYPTO:
+- `valor = valor_usd` (snapshot)
+- `moeda = "USD"` (ou `moeda_destino` em cross-currency)
 
-- **Bloco Fiat**: total na moeda de consolidação do workspace/projeto (BRL ou USD). Múltiplas fiat (BRL, EUR, MXN…) são convertidas via `convertToConsolidation` (Cotação de Trabalho → fallback PTAX/FastForex). 1 só fiat → exibe na moeda original sem conversão.
-- **Bloco Cripto (em USD)**: soma de todos os criptoativos avaliados em USD:
-  - Stablecoins (`USDT`, `USDC`) → 1:1.
-  - Demais cripto (`BTC`, `ETH`, `SOL`, `BNB`…) → preço USD via `get-crypto-prices` (já cacheado no contexto).
-  - Sem cotação disponível → ativo é excluído da soma e marcado no detalhamento com `~` + tooltip "sem cotação".
-- Cada bloco mostra **total** + linha "Creditado" (mesma lógica de status atual).
+Consequência: o bucket "Cripto (em USD)" que adicionei **fica vazio** — cripto cai no bucket Fiat já convertida via snapshot. Pior: para o pouco que cairia no bucket Cripto, eu chamava `getCryptoUSDValue(moeda, total)` com **preço live**, o que faria o aporte flutuar — exatamente o que você quer evitar.
 
-Quando só existir fiat OU só cripto no filtro, exibe apenas o bloco correspondente (sem placeholder vazio). Quando existir apenas 1 moeda, comportamento atual é preservado.
+Ou seja: o snapshot existe, mas o resumo ainda não respeita a separação Fiat vs Cripto que você pediu, e parte do código usaria preço live em vez do snapshot.
 
-## Detalhamento por ativo (popover)
+## Ajuste proposto (frontend apenas)
 
-Um chip discreto `Detalhar moedas` ao lado dos blocos abre Popover com:
-- **Fiat**: cada moeda em valor nativo (total + creditado).
-- **Cripto**: cada ativo em quantidade nativa + equivalente USD usado na soma.
-- Rodapé: fonte das cotações (Trabalho/PTAX para fiat; `get-crypto-prices` + timestamp para cripto) e aviso "Estimativa — não substitui valores nativos para fins contábeis".
+Reescrever `metricas` em `src/components/caixa/HistoricoMovimentacoes.tsx` para **classificar pela transação original**, não pela moeda efetiva:
+
+1. **Classificação**: `t.tipo_moeda === "CRYPTO"` → bucket Cripto. Caso contrário → bucket Fiat.
+2. **Bucket Cripto (em USD, snapshot)**:
+   - Soma usa **sempre** `valor_usd ?? valor_usd_referencia ?? 0` (snapshot do ledger).
+   - Detalhamento por `coin` (BTC, ETH, USDT…) com:
+     - quantidade nativa (`qtd_coin` ou `valor` quando `coin` confere)
+     - equivalente em USD via snapshot (`valor_usd`)
+     - `cotacao_snapshot_at` no tooltip (para auditoria)
+   - **Nunca** chamar `getCryptoUSDValue` (live) no cálculo do total — apenas como fallback informativo quando uma linha legada não tenha `valor_usd` (e marcada com `~` "valor estimado, sem snapshot").
+3. **Bucket Fiat**:
+   - Agrega por `moeda` real da transação (BRL, USD, EUR…), ignorando `valor_usd` quando `tipo_moeda='FIAT'`.
+   - Display: 1 moeda → nativa; múltiplas → convertidas para BRL via `convertToBRL` (cotações vivas) **apenas para visualização**.
+4. **Status**: lógica de "Creditado" inalterada (status `CONFIRMADO`).
+5. Remover do componente o uso de `getCryptoUSDValue` no caminho de soma.
+
+## Política de snapshot (consolidação)
+
+- **Cripto sempre lê o snapshot do ledger** (`valor_usd`) — aporte nunca flutua.
+- Conversão live só entra na **agregação multi-fiat** (BRL+EUR+USD) que é estritamente visual.
+- Tooltip "Detalhar moedas" passa a mostrar `Snapshot @ DD/MM HH:mm · cotação X` por ativo cripto, deixando explícito ao auditor que aquele USD veio do momento da transação.
+- Linhas legadas sem `valor_usd` (raras) são listadas separadamente com aviso "sem snapshot — estimativa live".
 
 ## Anti-inconsistência contábil
 
-- Conversão é **apenas visual no cabeçalho**. Nada é persistido, nada vai para ledger.
-- Valores nativos dos cards (linhas do histórico) ficam inalterados.
-- Cripto sempre consolidado em **USD** (nunca convertido para BRL no bloco cripto) — alinhado a `crypto-valuation-and-consolidation-standard`. Conversão cripto→BRL fica fora do escopo deste cabeçalho.
+- Zero mudança em ledger, RPC ou schema.
+- Valores nativos das movimentações continuam intocados.
+- Resumo passa a refletir exatamente o valor que o sistema registrou na hora do aporte, alinhado a `crypto-valuation-and-consolidation-standard` e ao padrão de `cotacao-snapshot-per-operation-standard`.
 
-## Performance
+## Arquivos a editar
 
-- Agregação O(n) sobre `transacoesComBusca` já memoizada.
-- Preços cripto vêm do contexto/cache existente — sem requests adicionais por render.
-- Conversão fiat usa hooks já montados (`useExchangeRates`, `useProjetoCurrency`).
-
-## Detalhes técnicos
-
-Arquivos a editar:
 - `src/components/caixa/HistoricoMovimentacoes.tsx`
-  - Estender `metricas` para retornar `{ fiat: { porMoeda, totalConsolidado, creditadoConsolidado, moedaConsolidada }, crypto: { porAtivo, totalUSD, creditadoUSD, semCotacao[] } }`.
-  - Substituir bloco do cabeçalho (linhas 595-611) pelos dois blocos + chip de detalhamento.
-- Novo: `src/components/caixa/HistoricoResumoMultiMoeda.tsx` (renderiza Fiat | Cripto + Popover de detalhamento).
-- Reutilizar: `useExchangeRates`, `useProjetoCurrency`, `formatCurrencyDynamic`, `isCryptoCurrency`, `isStablecoin`, hook/contexto de preços cripto já existente (mesmo que abastece `get-crypto-prices`).
+  - Reescrever bloco `metricas` (classificação por `tipo_moeda`, soma cripto pelo snapshot `valor_usd`).
+  - Atualizar tooltip do bloco Cripto para exibir `coin`, quantidade nativa, USD do snapshot e `cotacao_snapshot_at`.
+  - Manter import de `useExchangeRates` apenas para `convertToBRL` (multi-fiat). Remover `getCryptoUSDValue` do caminho de soma.
 
-Sem migração SQL. Sem alteração nos cards de transação.
+Sem migration. Sem alteração em outros componentes.
 
 ## Critérios de aceite
 
-- Filtro com aportes BRL + USDT + BTC → cabeçalho mostra `R$ X` (Fiat) e `$ Y` (Cripto em USD).
-- Filtro só BRL → visual atual preservado.
-- Filtro só cripto → exibe apenas bloco Cripto.
-- Cripto sem cotação → não entra no total, aparece com `~` no popover.
-- Nenhuma soma mistura ativos diferentes; cripto nunca soma com fiat.
+- Aporte de 0.0345 BTC feito quando BTC=$63.696 mantém `$ 2.196,52` no resumo mesmo que o preço de BTC mude amanhã.
+- Aporte USDT/USDC continua 1:1.
+- Filtro com BRL + BTC + USDT mostra Fiat (R$ X) e Cripto em USD (snapshot) lado a lado.
+- Tooltip expõe `cotacao_snapshot_at` por ativo.
+- Linha legada sem `valor_usd` aparece com `~` no detalhamento e não polui o total principal.
