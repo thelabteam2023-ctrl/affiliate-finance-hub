@@ -740,28 +740,35 @@ export function HistoricoMovimentacoes({
                             Detalhamento por ativo
                           </div>
                           {metricas.crypto.moedas.map((m: any) => (
-                            <div key={m.moeda} className="flex justify-between gap-3">
-                              <span className="text-muted-foreground">
-                                {m.moeda}
-                                {!m.hasPrice && <span className="ml-1 text-amber-400">~</span>}
-                              </span>
-                              <span className="tabular-nums">
-                                {m.total.toLocaleString("pt-BR", { maximumFractionDigits: 8 })}
-                                {m.hasPrice && (
+                            <div key={m.coin} className="flex flex-col gap-0.5">
+                              <div className="flex justify-between gap-3">
+                                <span className="text-muted-foreground">
+                                  {m.coin}
+                                  {m.semSnapshotUsd > 0 && (
+                                    <span className="ml-1 text-amber-400">~</span>
+                                  )}
+                                </span>
+                                <span className="tabular-nums">
+                                  {m.qtdTotal.toLocaleString("pt-BR", { maximumFractionDigits: 8 })}
                                   <span className="ml-2 text-[10px] text-muted-foreground">
                                     ≈ {formatCurrencyDynamic(m.usdTotal, "USD")}
                                   </span>
-                                )}
-                              </span>
+                                </span>
+                              </div>
+                              {m.ultimoSnapshotAt && (
+                                <div className="text-[9px] text-muted-foreground text-right">
+                                  Snapshot @ {format(parseLocalDateTime(m.ultimoSnapshotAt) ?? new Date(m.ultimoSnapshotAt), "dd/MM HH:mm")}
+                                </div>
+                              )}
                             </div>
                           ))}
                           {metricas.crypto.semCotacao.length > 0 && (
                             <div className="text-[10px] text-amber-400 border-t border-border pt-1 mt-1">
-                              ~ Sem cotação USD disponível — não somado ao total.
+                              ~ Linha sem snapshot USD — estimativa pode divergir.
                             </div>
                           )}
                           <div className="text-[10px] text-muted-foreground border-t border-border pt-1 mt-1">
-                            Estimativa — valores nativos preservados em cada movimentação.
+                            Total em USD calculado pelo snapshot do momento de cada movimentação (não flutua).
                           </div>
                         </div>
                       </TooltipContent>
