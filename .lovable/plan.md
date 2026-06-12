@@ -1,74 +1,58 @@
-# Snapshot de Cripto no Resumo do Histórico — Auditoria + Ajuste
+## Objetivo
 
-## Status atual (já existe snapshot)
+Quando o filtro de **Tags** estiver ativo no Histórico do Caixa Operacional, exibir um bloco dedicado de **"Total da Tag"** no cabeçalho, ao lado dos blocos Fiat/Cripto já existentes, mostrando o somatório das movimentações que carregam aquela(s) tag(s).
 
-O `cash_ledger` **já persiste o snapshot** no momento da movimentação:
+Hoje os blocos Fiat e Cripto já refletem o filtro (porque consomem `transacoesComBusca`), mas o usuário não tem leitura imediata de "quanto soma a tag X". Em casos como o print (uma transferência USD $550 + um depósito R$500 com a mesma tag), não há um número único que represente o aporte total da tag.
 
-| Coluna | Função |
-|---|---|
-| `coin` | ativo nativo (BTC, ETH, USDT…) |
-| `qtd_coin` | quantidade nativa |
-| `valor_usd` | **valor congelado em USD na hora da transação** |
-| `valor_usd_referencia` | mesmo valor (usado por relatórios) |
-| `cotacao_origem_usd` | preço USD/coin no momento (snapshot) |
-| `cotacao_snapshot_at` | timestamp do snapshot |
+## Mudanças (apenas frontend — `src/components/caixa/HistoricoMovimentacoes.tsx`)
 
-Amostra confirma: aportes em BTC, USDT, USDC já gravam `valor_usd` ≠ recalculado por cotação live. **O snapshot está garantido em backend.**
+### 1. Detectar filtro de tags ativo
+Ler o estado do filtro de tags já existente (`filtroTags` / `tagsSelecionadas` — confirmar nome ao abrir o arquivo). Considerar ativo quando `length > 0`.
 
-## Problema na implementação que acabei de fazer
+### 2. Novo bloco no cabeçalho: "Tag: NOME"
+Renderizado **somente** quando há tag(s) selecionada(s). Posicionado à esquerda dos blocos Fiat/Cripto, com separador vertical sutil.
 
-`getValorEfetivo` / `getMoedaEfetiva` (em `useMultiCurrencyFormat.ts`) já entregam, para CRYPTO:
-- `valor = valor_usd` (snapshot)
-- `moeda = "USD"` (ou `moeda_destino` em cross-currency)
+Estrutura:
+- **Label superior:** `TAG: <NOME>` (ou `TAGS (n)` se múltiplas, com tooltip listando)
+- **Valor principal:** total consolidado em BRL (regra abaixo)
+- **Linha secundária:** `Cripto (USD): $ X` quando houver movimentações cripto na seleção
+- **Tooltip:** breakdown por moeda nativa + por coin cripto (snapshot USD), reaproveitando a lógica já existente
 
-Consequência: o bucket "Cripto (em USD)" que adicionei **fica vazio** — cripto cai no bucket Fiat já convertida via snapshot. Pior: para o pouco que cairia no bucket Cripto, eu chamava `getCryptoUSDValue(moeda, total)` com **preço live**, o que faria o aporte flutuar — exatamente o que você quer evitar.
+### 3. Regra de cálculo (reaproveita `metricas`)
+A agregação reaproveita as estruturas já calculadas em `metricas` (fiat por moeda + cripto por coin com snapshot USD). Como `transacoesComBusca` já inclui o filtro de tags, o `metricas` atual já é o conjunto correto. Apenas precisamos:
 
-Ou seja: o snapshot existe, mas o resumo ainda não respeita a separação Fiat vs Cripto que você pediu, e parte do código usaria preço live em vez do snapshot.
+- **Fiat consolidado em BRL:** soma `convertToBRL(valor, moeda)` para cada bucket fiat. Conversão live é aceitável aqui porque é leitura informativa de "aporte total" — o valor nativo de cada lançamento permanece preservado no card.
+- **Cripto consolidado em USD:** soma `usdTotal` (snapshot) de cada `CryptoAgg`. **Nunca** recalcular com preço live (segue a regra `historico-caixa-crypto-snapshot-standard`).
+- Os dois totais ficam separados (BRL e USD), porque misturar exigiria mais uma conversão FX e ofuscaria a leitura.
 
-## Ajuste proposto (frontend apenas)
+### 4. Comportamento sem tag selecionada
+Bloco oculto. Cabeçalho continua idêntico ao atual (Fiat + Cripto).
 
-Reescrever `metricas` em `src/components/caixa/HistoricoMovimentacoes.tsx` para **classificar pela transação original**, não pela moeda efetiva:
+### 5. Múltiplas tags
+- 1 tag: `TAG: PRIMEIRO INVESTIMENTO ITALO`
+- N tags: `TAGS (N): <primeira>, +N-1` com tooltip completo
+- Lógica AND ou OR segue exatamente a já implementada no filtro (não muda regra de filtragem)
 
-1. **Classificação**: `t.tipo_moeda === "CRYPTO"` → bucket Cripto. Caso contrário → bucket Fiat.
-2. **Bucket Cripto (em USD, snapshot)**:
-   - Soma usa **sempre** `valor_usd ?? valor_usd_referencia ?? 0` (snapshot do ledger).
-   - Detalhamento por `coin` (BTC, ETH, USDT…) com:
-     - quantidade nativa (`qtd_coin` ou `valor` quando `coin` confere)
-     - equivalente em USD via snapshot (`valor_usd`)
-     - `cotacao_snapshot_at` no tooltip (para auditoria)
-   - **Nunca** chamar `getCryptoUSDValue` (live) no cálculo do total — apenas como fallback informativo quando uma linha legada não tenha `valor_usd` (e marcada com `~` "valor estimado, sem snapshot").
-3. **Bucket Fiat**:
-   - Agrega por `moeda` real da transação (BRL, USD, EUR…), ignorando `valor_usd` quando `tipo_moeda='FIAT'`.
-   - Display: 1 moeda → nativa; múltiplas → convertidas para BRL via `convertToBRL` (cotações vivas) **apenas para visualização**.
-4. **Status**: lógica de "Creditado" inalterada (status `CONFIRMADO`).
-5. Remover do componente o uso de `getCryptoUSDValue` no caminho de soma.
+## Layout sugerido (cabeçalho)
 
-## Política de snapshot (consolidação)
+```text
+┌───────────────────────────┬──────────────────┬───────────────────────┐
+│ TAG: PRIMEIRO INVEST ITALO│ FIAT (em BRL)    │ CRIPTO (em USD)       │
+│ R$ 3.235,00               │ R$ 500,00        │ $ 0,00                │
+│ + Cripto: $ 0,00          │ Creditado: ...   │ Creditado: ...        │
+│ Creditado: ...            │                  │                       │
+└───────────────────────────┴──────────────────┴───────────────────────┘
+```
+(USD 550 convertido a ~R$5,00 + R$500 = R$3.235 ilustrativo)
 
-- **Cripto sempre lê o snapshot do ledger** (`valor_usd`) — aporte nunca flutua.
-- Conversão live só entra na **agregação multi-fiat** (BRL+EUR+USD) que é estritamente visual.
-- Tooltip "Detalhar moedas" passa a mostrar `Snapshot @ DD/MM HH:mm · cotação X` por ativo cripto, deixando explícito ao auditor que aquele USD veio do momento da transação.
-- Linhas legadas sem `valor_usd` (raras) são listadas separadamente com aviso "sem snapshot — estimativa live".
-
-## Anti-inconsistência contábil
-
-- Zero mudança em ledger, RPC ou schema.
-- Valores nativos das movimentações continuam intocados.
-- Resumo passa a refletir exatamente o valor que o sistema registrou na hora do aporte, alinhado a `crypto-valuation-and-consolidation-standard` e ao padrão de `cotacao-snapshot-per-operation-standard`.
-
-## Arquivos a editar
-
-- `src/components/caixa/HistoricoMovimentacoes.tsx`
-  - Reescrever bloco `metricas` (classificação por `tipo_moeda`, soma cripto pelo snapshot `valor_usd`).
-  - Atualizar tooltip do bloco Cripto para exibir `coin`, quantidade nativa, USD do snapshot e `cotacao_snapshot_at`.
-  - Manter import de `useExchangeRates` apenas para `convertToBRL` (multi-fiat). Remover `getCryptoUSDValue` do caminho de soma.
-
-Sem migration. Sem alteração em outros componentes.
+## Fora de escopo
+- Nenhuma alteração de schema, RPC, migração ou outros componentes.
+- Sem mudança na lógica de filtragem por tag — apenas exibição agregada.
+- Sem persistência de "valor da tag" no banco (continua derivado).
 
 ## Critérios de aceite
-
-- Aporte de 0.0345 BTC feito quando BTC=$63.696 mantém `$ 2.196,52` no resumo mesmo que o preço de BTC mude amanhã.
-- Aporte USDT/USDC continua 1:1.
-- Filtro com BRL + BTC + USDT mostra Fiat (R$ X) e Cripto em USD (snapshot) lado a lado.
-- Tooltip expõe `cotacao_snapshot_at` por ativo.
-- Linha legada sem `valor_usd` aparece com `~` no detalhamento e não polui o total principal.
+1. Selecionar 1 tag → aparece bloco "TAG: NOME" com total consolidado em BRL + linha cripto em USD se aplicável.
+2. Tag com lançamentos USD + BRL exibe um valor BRL único (FX live) e mantém valores nativos nos cards.
+3. Tag com lançamento cripto exibe USD via snapshot (`cash_ledger.valor_usd`) — não flutua com preço live.
+4. Limpar a tag → bloco some, cabeçalho volta ao estado Fiat+Cripto.
+5. Múltiplas tags → label compacto + tooltip listando todas; somatório respeita o modo (AND/OR) já vigente no filtro.
