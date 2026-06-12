@@ -329,6 +329,7 @@ export function HistoricoMovimentacoes({
   onConfirmarSaque,
 }: HistoricoMovimentacoesProps) {
   const { getLogoUrl } = useBookmakerLogoMap();
+  const { getCryptoUSDValue, convertToBRL } = useExchangeRates();
   const [termoBusca, setTermoBusca] = useState("");
   const [editDateId, setEditDateId] = useState<string | null>(null);
   const [editDateValue, setEditDateValue] = useState<string>("");
