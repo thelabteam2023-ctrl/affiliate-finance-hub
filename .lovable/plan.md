@@ -1,111 +1,64 @@
-# Auditoria multi-tenant: isolamento por workspace em Parceiros
+# Resumo Financeiro Multi-Moeda — Histórico do Caixa Operacional
 
-## 1. Causa raiz (confirmada no banco)
+## Diagnóstico
 
-O erro **"Este endereço de wallet já está cadastrado para outro parceiro"** não vem do frontend nem de um índice UNIQUE — vem de uma **trigger BEFORE INSERT/UPDATE** em `wallets_crypto`:
+`src/components/caixa/HistoricoMovimentacoes.tsx` (linhas 522-563) já agrega por moeda via `getMoedaEfetiva` / `getValorEfetivo`. A renderização (linha 599) faz `.slice(0, 1)` e mostra apenas a primeira moeda — por isso cripto desaparece do cabeçalho. Nenhuma mudança de schema/RPC é necessária.
 
-- `validate_wallet_endereco_unique_trigger` → função `public.validate_wallet_endereco_unique()`
-- E sua irmã, `validate_pix_key_unique_trigger` em `contas_bancarias` → `public.validate_pix_key_unique()`
+Padrão já adotado no projeto (mem `crypto-valuation-and-consolidation-standard`): **todo criptoativo é avaliado em USD** (stablecoins 1:1; demais via `get-crypto-prices`). Vamos reaproveitar isso.
 
-Ambas escopam a unicidade por **`parceiros.user_id`** (dono da conta), e não por **`workspace_id`**. Quando o mesmo usuário é dono de múltiplos workspaces e replica um parceiro de um workspace para outro, o mesmo `user_id` aparece nos dois lados → a trigger encontra "duplicata" e bloqueia o salvamento. Esse é exatamente o sintoma reportado.
+## Solução — Duas visões consolidadas no cabeçalho
 
-Trecho atual da trigger de wallet:
+O cabeçalho passa a exibir **dois blocos lado a lado** (ou empilhados em telas estreitas), sempre que houver mais de uma moeda no resultado filtrado:
 
-```sql
-SELECT user_id INTO v_user_id FROM public.parceiros WHERE id = NEW.parceiro_id;
-...
-WHERE w.endereco = NEW.endereco
-  AND p.user_id = v_user_id          -- ❌ escopo errado em multi-tenant
-  AND w.id != COALESCE(NEW.id, ...);
+```
+Fiat                       Cripto (em USD)
+R$ 5.829,87                $ 12.602,28
+Creditado: R$ 5.829,87     Creditado: $ 12.450,00
 ```
 
-A trigger de PIX (`validate_pix_key_unique`) tem exatamente o mesmo problema.
+- **Bloco Fiat**: total na moeda de consolidação do workspace/projeto (BRL ou USD). Múltiplas fiat (BRL, EUR, MXN…) são convertidas via `convertToConsolidation` (Cotação de Trabalho → fallback PTAX/FastForex). 1 só fiat → exibe na moeda original sem conversão.
+- **Bloco Cripto (em USD)**: soma de todos os criptoativos avaliados em USD:
+  - Stablecoins (`USDT`, `USDC`) → 1:1.
+  - Demais cripto (`BTC`, `ETH`, `SOL`, `BNB`…) → preço USD via `get-crypto-prices` (já cacheado no contexto).
+  - Sem cotação disponível → ativo é excluído da soma e marcado no detalhamento com `~` + tooltip "sem cotação".
+- Cada bloco mostra **total** + linha "Creditado" (mesma lógica de status atual).
 
-## 2. Demais constraints UNIQUE revisadas
+Quando só existir fiat OU só cripto no filtro, exibe apenas o bloco correspondente (sem placeholder vazio). Quando existir apenas 1 moeda, comportamento atual é preservado.
 
-Levantei todos os UNIQUE/índices únicos do schema `public`. **O restante já está correto**:
+## Detalhamento por ativo (popover)
 
-- `parceiros (cpf, workspace_id)` ✅
-- `investidores (cpf, workspace_id)` ✅
-- `operadores (cpf, workspace_id)` ✅
-- `indicadores_referral (workspace_id, cpf)` ✅
-- `bookmaker_grupos (workspace_id, nome)` ✅
-- `fluxo_colunas (user_id, workspace_id, nome)` ✅
-- demais tabelas compostas com `workspace_id` ✅
+Um chip discreto `Detalhar moedas` ao lado dos blocos abre Popover com:
+- **Fiat**: cada moeda em valor nativo (total + creditado).
+- **Cripto**: cada ativo em quantidade nativa + equivalente USD usado na soma.
+- Rodapé: fonte das cotações (Trabalho/PTAX para fiat; `get-crypto-prices` + timestamp para cripto) e aviso "Estimativa — não substitui valores nativos para fins contábeis".
 
-Não existe UNIQUE global em `wallets_crypto.endereco`, `contas_bancarias.pix_key`, `parceiros.email`, `telefone` ou `fornecedores.documento` — então o único vetor de violação de isolamento hoje são as duas triggers acima.
+## Anti-inconsistência contábil
 
-## 3. Impacto operacional
+- Conversão é **apenas visual no cabeçalho**. Nada é persistido, nada vai para ledger.
+- Valores nativos dos cards (linhas do histórico) ficam inalterados.
+- Cripto sempre consolidado em **USD** (nunca convertido para BRL no bloco cripto) — alinhado a `crypto-valuation-and-consolidation-standard`. Conversão cripto→BRL fica fora do escopo deste cabeçalho.
 
-- Bloqueia replicação legítima de parceiros entre workspaces do mesmo owner (cenário reportado).
-- Vaza informação cruzada (a mensagem revela que existe registro em outro workspace).
-- Em workspaces compartilhados por múltiplos membros, a checagem por `user_id` (owner) também pode liberar duplicatas dentro do mesmo workspace se o owner mudar — inconsistência dos dois lados.
+## Performance
 
-## 4. Correção proposta
+- Agregação O(n) sobre `transacoesComBusca` já memoizada.
+- Preços cripto vêm do contexto/cache existente — sem requests adicionais por render.
+- Conversão fiat usa hooks já montados (`useExchangeRates`, `useProjetoCurrency`).
 
-Reescrever ambas as triggers para escopar por `workspace_id` do parceiro, ignorando `user_id`. Mantém o bloqueio dentro do workspace (regra de negócio desejada) e libera entre workspaces.
+## Detalhes técnicos
 
-Esboço da nova função (a migration final fará o mesmo para PIX):
+Arquivos a editar:
+- `src/components/caixa/HistoricoMovimentacoes.tsx`
+  - Estender `metricas` para retornar `{ fiat: { porMoeda, totalConsolidado, creditadoConsolidado, moedaConsolidada }, crypto: { porAtivo, totalUSD, creditadoUSD, semCotacao[] } }`.
+  - Substituir bloco do cabeçalho (linhas 595-611) pelos dois blocos + chip de detalhamento.
+- Novo: `src/components/caixa/HistoricoResumoMultiMoeda.tsx` (renderiza Fiat | Cripto + Popover de detalhamento).
+- Reutilizar: `useExchangeRates`, `useProjetoCurrency`, `formatCurrencyDynamic`, `isCryptoCurrency`, `isStablecoin`, hook/contexto de preços cripto já existente (mesmo que abastece `get-crypto-prices`).
 
-```sql
-CREATE OR REPLACE FUNCTION public.validate_wallet_endereco_unique()
-RETURNS trigger
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
-AS $$
-DECLARE v_ws uuid; v_exists boolean;
-BEGIN
-  SELECT workspace_id INTO v_ws FROM public.parceiros WHERE id = NEW.parceiro_id;
-  IF v_ws IS NULL THEN RETURN NEW; END IF;
+Sem migração SQL. Sem alteração nos cards de transação.
 
-  SELECT EXISTS(
-    SELECT 1
-    FROM public.wallets_crypto w
-    JOIN public.parceiros p ON p.id = w.parceiro_id
-    WHERE w.endereco   = NEW.endereco
-      AND p.workspace_id = v_ws                       -- ✅ escopo por tenant
-      AND w.id <> COALESCE(NEW.id, '00000000-0000-0000-0000-000000000000'::uuid)
-  ) INTO v_exists;
+## Critérios de aceite
 
-  IF v_exists THEN
-    RAISE EXCEPTION 'Este endereço de wallet já está cadastrado para outro parceiro neste workspace'
-      USING ERRCODE = '23505';
-  END IF;
-  RETURN NEW;
-END $$;
-```
-
-Mesma transformação para `validate_pix_key_unique` (trocar `p.user_id = v_user_id` por `p.workspace_id = v_ws`).
-
-Opcional (reforço de banco): criar índices únicos parciais para tornar a regra declarativa também:
-
-```sql
-CREATE UNIQUE INDEX wallets_crypto_endereco_workspace_unique
-  ON public.wallets_crypto (endereco, (SELECT workspace_id FROM parceiros WHERE id = parceiro_id));
--- (Postgres não permite subselect em índice; alternativa é desnormalizar workspace_id na própria tabela)
-```
-
-Como Postgres não suporta subselect em índices, a forma robusta é **adicionar a coluna `workspace_id` denormalizada** em `wallets_crypto` e `contas_bancarias` (preenchida por trigger a partir do parceiro) e criar UNIQUE `(workspace_id, endereco)` / `(workspace_id, pix_key)`. Isso é opcional; a correção da trigger já resolve o bug imediato.
-
-## 5. Migrations necessárias
-
-1. **Crítica (resolve o bug):** `CREATE OR REPLACE FUNCTION` das duas funções acima. Nenhuma alteração de schema, nenhum risco de bloqueio.
-2. **Opcional (defense-in-depth):** adicionar `workspace_id uuid` em `wallets_crypto` e `contas_bancarias` + backfill + trigger de preenchimento + índices UNIQUE compostos. Pode ficar para uma segunda rodada.
-
-## 6. Frontend
-
-Nenhuma mudança obrigatória. As mensagens em `ParceiroDialog.tsx` (linhas 897, 901, 1308) continuam válidas — apenas passarão a refletir conflito real dentro do workspace.
-
-## 7. Testes de regressão recomendados
-
-- Inserir mesma `endereco` de wallet em dois workspaces distintos (mesmo owner) → deve passar.
-- Inserir mesma `endereco` no mesmo workspace em parceiros diferentes → deve falhar com 23505.
-- UPDATE da própria wallet sem alterar endereço → deve passar.
-- Mesmos três cenários para `pix_key` em `contas_bancarias`.
-- Smoke test: editar parceiro existente sem tocar em wallets/PIX → salvar com sucesso.
-
-## 8. Riscos arquiteturais residuais
-
-- Mensagens de erro de unicidade não devem revelar existência cross-workspace (já tratado ao escopar por workspace).
-- Recomenda-se padronizar: toda nova validação de unicidade deve usar `(workspace_id, campo)`. Adicionar isso ao memory de arquitetura após implementação.
-
-Posso seguir para o modo build e aplicar a migration crítica (item 5.1)?
+- Filtro com aportes BRL + USDT + BTC → cabeçalho mostra `R$ X` (Fiat) e `$ Y` (Cripto em USD).
+- Filtro só BRL → visual atual preservado.
+- Filtro só cripto → exibe apenas bloco Cripto.
+- Cripto sem cotação → não entra no total, aparece com `~` no popover.
+- Nenhuma soma mistura ativos diferentes; cripto nunca soma com fiat.
