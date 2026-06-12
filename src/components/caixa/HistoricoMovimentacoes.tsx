@@ -696,8 +696,91 @@ export function HistoricoMovimentacoes({
           </div>
           <div className="text-right">
             {/* Métricas agregadas resumidas */}
-            {(filtroTipo.length > 0 || (filtroParceiro && filtroParceiro !== "TODOS") || (filtroProjeto && filtroProjeto !== "TODOS")) && metricas.moedas.length > 0 && (
+            {(filtroTipo.length > 0 || (filtroParceiro && filtroParceiro !== "TODOS") || (filtroProjeto && filtroProjeto !== "TODOS") || filtroTags.length > 0) && metricas.moedas.length > 0 && (
               <div className="flex items-start justify-end gap-5">
+                {/* Tag total block — only when tag filter is active */}
+                {filtroTags.length > 0 && (metricas.fiat.moedas.length > 0 || metricas.crypto.moedas.length > 0) && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex flex-col items-end cursor-help pr-5 mr-1 border-r border-border/40">
+                          <span className="text-[10px] uppercase tracking-wide text-purple-300 flex items-center gap-1 max-w-[220px] truncate">
+                            {filtroTags.length === 1 ? (
+                              <>Tag: <span className="font-semibold truncate">{filtroTags[0]}</span></>
+                            ) : (
+                              <>Tags ({filtroTags.length})</>
+                            )}
+                          </span>
+                          {metricas.fiat.moedas.length > 0 && (
+                            <span className="text-[14px] font-medium text-[var(--text-primary)] tabular-nums">
+                              {formatCurrencyDynamic(metricas.fiat.total, metricas.fiat.displayMoeda)}
+                              {metricas.fiat.isMixed && (
+                                <span className="ml-1 text-[10px] text-[var(--text-tertiary)]">em BRL</span>
+                              )}
+                            </span>
+                          )}
+                          {metricas.crypto.moedas.length > 0 && (
+                            <span className="text-[11px] font-medium text-[var(--text-secondary)] tabular-nums">
+                              + Cripto: {formatCurrencyDynamic(metricas.crypto.totalUSD, "USD")}
+                              {metricas.crypto.semCotacao.length > 0 && (
+                                <span className="ml-1 text-amber-400">~</span>
+                              )}
+                            </span>
+                          )}
+                          <span className="text-[10px] text-[var(--accent-success)] tabular-nums">
+                            Creditado: {formatCurrencyDynamic(metricas.fiat.confirmado, metricas.fiat.displayMoeda)}
+                            {metricas.crypto.moedas.length > 0 && (
+                              <> + {formatCurrencyDynamic(metricas.crypto.confirmadoUSD, "USD")}</>
+                            )}
+                          </span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" align="end" className="max-w-xs">
+                        <div className="space-y-1.5 text-xs">
+                          <div className="font-semibold border-b border-border pb-1 mb-1">
+                            {filtroTags.length === 1 ? "Total da tag" : "Total das tags selecionadas"}
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {filtroTags.map((tag) => (
+                              <span key={tag} className={cn("px-1.5 py-0.5 rounded text-[10px] font-medium border", getTagColor(tag))}>
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                          {metricas.fiat.moedas.length > 0 && (
+                            <div className="border-t border-border pt-1 mt-1">
+                              <div className="text-[10px] text-muted-foreground mb-0.5">Fiat por moeda</div>
+                              {metricas.fiat.moedas.map((m: any) => (
+                                <div key={m.moeda} className="flex justify-between gap-3">
+                                  <span className="text-muted-foreground">{m.moeda}</span>
+                                  <span className="tabular-nums">{formatCurrencyDynamic(m.total, m.moeda)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {metricas.crypto.moedas.length > 0 && (
+                            <div className="border-t border-border pt-1 mt-1">
+                              <div className="text-[10px] text-muted-foreground mb-0.5">Cripto (snapshot USD)</div>
+                              {metricas.crypto.moedas.map((m: any) => (
+                                <div key={m.coin} className="flex justify-between gap-3">
+                                  <span className="text-muted-foreground">
+                                    {m.coin}
+                                    {m.semSnapshotUsd > 0 && <span className="ml-1 text-amber-400">~</span>}
+                                  </span>
+                                  <span className="tabular-nums">{formatCurrencyDynamic(m.usdTotal, "USD")}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          <div className="text-[10px] text-muted-foreground border-t border-border pt-1 mt-1">
+                            Soma baseada nas movimentações filtradas pela(s) tag(s). Cripto pelo snapshot do ledger (não flutua).
+                          </div>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+
                 {/* Fiat block — only when fiat present */}
                 {metricas.fiat.moedas.length > 0 && (
                   <div className="flex flex-col items-end">
