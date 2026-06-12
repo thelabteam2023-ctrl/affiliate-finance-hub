@@ -562,8 +562,65 @@ export function HistoricoMovimentacoes({
 
     const hasPendente = moedas.some(m => m.pendente > 0);
 
-    return { count, moedas, hasPendente };
-  }, [transacoesComBusca]);
+    // Split fiat vs crypto for dual consolidated views
+    const fiatMoedas = moedas.filter(m => !isCryptoCurrency(m.moeda));
+    const cryptoMoedas = moedas.filter(m => isCryptoCurrency(m.moeda));
+
+    // Fiat consolidation: if all entries share the same fiat currency, keep it native.
+    // If multiple fiat currencies coexist, consolidate everything to BRL using live rates.
+    let fiatDisplayMoeda = "BRL";
+    let fiatTotalConsolidado = 0;
+    let fiatConfirmadoConsolidado = 0;
+    if (fiatMoedas.length === 1) {
+      fiatDisplayMoeda = fiatMoedas[0].moeda;
+      fiatTotalConsolidado = fiatMoedas[0].total;
+      fiatConfirmadoConsolidado = fiatMoedas[0].confirmado;
+    } else if (fiatMoedas.length > 1) {
+      fiatDisplayMoeda = "BRL";
+      for (const m of fiatMoedas) {
+        fiatTotalConsolidado += convertToBRL(m.total, m.moeda);
+        fiatConfirmadoConsolidado += convertToBRL(m.confirmado, m.moeda);
+      }
+    }
+
+    // Crypto consolidation: every crypto asset is valued in USD.
+    // Stablecoins (USDT/USDC) → 1:1. Others use live USD price (getCryptoUSDValue).
+    // Assets without a price are excluded from the sum and listed in `cryptoSemCotacao`.
+    let cryptoTotalUSD = 0;
+    let cryptoConfirmadoUSD = 0;
+    const cryptoSemCotacao: string[] = [];
+    const cryptoDetalhes = cryptoMoedas.map(m => {
+      const usdTotal = getCryptoUSDValue(m.moeda, m.total);
+      const usdConfirmado = getCryptoUSDValue(m.moeda, m.confirmado);
+      const hasPrice = usdTotal > 0 || ["USDT", "USDC"].includes(m.moeda.toUpperCase());
+      if (hasPrice) {
+        cryptoTotalUSD += usdTotal;
+        cryptoConfirmadoUSD += usdConfirmado;
+      } else {
+        cryptoSemCotacao.push(m.moeda);
+      }
+      return { ...m, usdTotal, usdConfirmado, hasPrice };
+    });
+
+    return {
+      count,
+      moedas,
+      hasPendente,
+      fiat: {
+        moedas: fiatMoedas,
+        displayMoeda: fiatDisplayMoeda,
+        total: fiatTotalConsolidado,
+        confirmado: fiatConfirmadoConsolidado,
+        isMixed: fiatMoedas.length > 1,
+      },
+      crypto: {
+        moedas: cryptoDetalhes,
+        totalUSD: cryptoTotalUSD,
+        confirmadoUSD: cryptoConfirmadoUSD,
+        semCotacao: cryptoSemCotacao,
+      },
+    };
+  }, [transacoesComBusca, convertToBRL, getCryptoUSDValue]);
   
   const handlePeriodChange = useCallback((filter: DashboardPeriodFilter) => {
     setPeriodFilter(filter);
