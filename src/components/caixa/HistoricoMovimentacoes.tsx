@@ -524,50 +524,88 @@ export function HistoricoMovimentacoes({
   
   // Financial aggregation metrics with status breakdown
   const metricas = useMemo(() => {
-    const totalPorMoeda: Record<string, number> = {};
-    const confirmadoPorMoeda: Record<string, number> = {};
-    const pendentePorMoeda: Record<string, number> = {};
+    // Fiat: aggregate by native moeda (BRL, USD, EUR…) using raw `valor`.
+    // Crypto: aggregate per `coin` using ledger SNAPSHOT (`valor_usd`) so o aporte
+    // nunca flutua com o preço live. Quantidade nativa também é somada por coin.
+    const fiatTotal: Record<string, number> = {};
+    const fiatConfirmado: Record<string, number> = {};
+    const fiatPendente: Record<string, number> = {};
+
+    type CryptoAgg = {
+      coin: string;
+      qtdTotal: number;
+      qtdConfirmada: number;
+      usdTotal: number;
+      usdConfirmado: number;
+      semSnapshotUsd: number;        // entradas legadas sem valor_usd
+      ultimoSnapshotAt: string | null;
+    };
+    const cryptoAgg: Record<string, CryptoAgg> = {};
     let count = 0;
 
     transacoesComBusca.forEach((t: any) => {
       const status = (t.status || "").toUpperCase();
-      // Exclude cancelled/rejected/reversed
       if (status === "RECUSADO" || status === "CANCELADO" || status === "ESTORNADO") return;
-
-      const valor = Math.abs(getValorEfetivo(t));
-      const moeda = getMoedaEfetiva(t);
-      totalPorMoeda[moeda] = (totalPorMoeda[moeda] || 0) + valor;
       count++;
 
-      if (status === "CONFIRMADO") {
-        confirmadoPorMoeda[moeda] = (confirmadoPorMoeda[moeda] || 0) + valor;
+      const isCrypto = t.tipo_moeda === "CRYPTO";
+
+      if (isCrypto) {
+        const coin = (t.coin || t.moeda || "?").toUpperCase();
+        const qtd = Math.abs(Number(t.qtd_coin ?? t.valor ?? 0));
+        // Snapshot: valor_usd é congelado na inserção. valor_usd_referencia é alias.
+        const usdSnapshotRaw = t.valor_usd ?? t.valor_usd_referencia ?? null;
+        const hasSnapshot = usdSnapshotRaw !== null && usdSnapshotRaw !== undefined;
+        const usd = Math.abs(Number(usdSnapshotRaw ?? 0));
+
+        const agg = cryptoAgg[coin] ?? {
+          coin,
+          qtdTotal: 0,
+          qtdConfirmada: 0,
+          usdTotal: 0,
+          usdConfirmado: 0,
+          semSnapshotUsd: 0,
+          ultimoSnapshotAt: null,
+        };
+        agg.qtdTotal += qtd;
+        agg.usdTotal += usd;
+        if (status === "CONFIRMADO") {
+          agg.qtdConfirmada += qtd;
+          agg.usdConfirmado += usd;
+        }
+        if (!hasSnapshot) agg.semSnapshotUsd += qtd;
+        const snapAt = t.cotacao_snapshot_at || t.data_transacao || t.created_at || null;
+        if (snapAt && (!agg.ultimoSnapshotAt || snapAt > agg.ultimoSnapshotAt)) {
+          agg.ultimoSnapshotAt = snapAt;
+        }
+        cryptoAgg[coin] = agg;
       } else {
-        // PENDENTE and any other non-final status
-        pendentePorMoeda[moeda] = (pendentePorMoeda[moeda] || 0) + valor;
+        const moeda = (t.moeda || "BRL").toUpperCase();
+        const valor = Math.abs(Number(t.valor ?? 0));
+        fiatTotal[moeda] = (fiatTotal[moeda] || 0) + valor;
+        if (status === "CONFIRMADO") {
+          fiatConfirmado[moeda] = (fiatConfirmado[moeda] || 0) + valor;
+        } else {
+          fiatPendente[moeda] = (fiatPendente[moeda] || 0) + valor;
+        }
       }
     });
 
-    const allMoedas = [...new Set([
-      ...Object.keys(totalPorMoeda),
-      ...Object.keys(confirmadoPorMoeda),
-      ...Object.keys(pendentePorMoeda),
-    ])].sort((a, b) => (totalPorMoeda[b] || 0) - (totalPorMoeda[a] || 0));
+    const fiatMoedasAll = [...new Set([
+      ...Object.keys(fiatTotal),
+      ...Object.keys(fiatConfirmado),
+      ...Object.keys(fiatPendente),
+    ])].sort((a, b) => (fiatTotal[b] || 0) - (fiatTotal[a] || 0));
 
-    const moedas = allMoedas.map(moeda => ({
+    const fiatMoedas = fiatMoedasAll.map(moeda => ({
       moeda,
-      total: totalPorMoeda[moeda] || 0,
-      confirmado: confirmadoPorMoeda[moeda] || 0,
-      pendente: pendentePorMoeda[moeda] || 0,
+      total: fiatTotal[moeda] || 0,
+      confirmado: fiatConfirmado[moeda] || 0,
+      pendente: fiatPendente[moeda] || 0,
     }));
 
-    const hasPendente = moedas.some(m => m.pendente > 0);
-
-    // Split fiat vs crypto for dual consolidated views
-    const fiatMoedas = moedas.filter(m => !isCryptoCurrency(m.moeda));
-    const cryptoMoedas = moedas.filter(m => isCryptoCurrency(m.moeda));
-
-    // Fiat consolidation: if all entries share the same fiat currency, keep it native.
-    // If multiple fiat currencies coexist, consolidate everything to BRL using live rates.
+    // Fiat display: 1 moeda → nativa; múltiplas → consolidação visual em BRL
+    // usando cotações live (apenas para exibição agregada).
     let fiatDisplayMoeda = "BRL";
     let fiatTotalConsolidado = 0;
     let fiatConfirmadoConsolidado = 0;
@@ -576,35 +614,30 @@ export function HistoricoMovimentacoes({
       fiatTotalConsolidado = fiatMoedas[0].total;
       fiatConfirmadoConsolidado = fiatMoedas[0].confirmado;
     } else if (fiatMoedas.length > 1) {
-      fiatDisplayMoeda = "BRL";
       for (const m of fiatMoedas) {
         fiatTotalConsolidado += convertToBRL(m.total, m.moeda);
         fiatConfirmadoConsolidado += convertToBRL(m.confirmado, m.moeda);
       }
     }
 
-    // Crypto consolidation: every crypto asset is valued in USD.
-    // Stablecoins (USDT/USDC) → 1:1. Others use live USD price (getCryptoUSDValue).
-    // Assets without a price are excluded from the sum and listed in `cryptoSemCotacao`.
+    // Crypto: total em USD via SNAPSHOT do ledger (não flutua).
+    const cryptoDetalhes = Object.values(cryptoAgg)
+      .sort((a, b) => b.usdTotal - a.usdTotal);
     let cryptoTotalUSD = 0;
     let cryptoConfirmadoUSD = 0;
-    const cryptoSemCotacao: string[] = [];
-    const cryptoDetalhes = cryptoMoedas.map(m => {
-      const usdTotal = getCryptoUSDValue(m.moeda, m.total);
-      const usdConfirmado = getCryptoUSDValue(m.moeda, m.confirmado);
-      const hasPrice = usdTotal > 0 || ["USDT", "USDC"].includes(m.moeda.toUpperCase());
-      if (hasPrice) {
-        cryptoTotalUSD += usdTotal;
-        cryptoConfirmadoUSD += usdConfirmado;
-      } else {
-        cryptoSemCotacao.push(m.moeda);
-      }
-      return { ...m, usdTotal, usdConfirmado, hasPrice };
-    });
+    const cryptoSemSnapshot: string[] = [];
+    for (const c of cryptoDetalhes) {
+      cryptoTotalUSD += c.usdTotal;
+      cryptoConfirmadoUSD += c.usdConfirmado;
+      if (c.semSnapshotUsd > 0) cryptoSemSnapshot.push(c.coin);
+    }
+
+    const hasPendente =
+      fiatMoedas.some(m => m.pendente > 0) ||
+      Object.values(cryptoAgg).some(c => c.qtdTotal > c.qtdConfirmada + 0.00000001);
 
     return {
       count,
-      moedas,
       hasPendente,
       fiat: {
         moedas: fiatMoedas,
@@ -617,10 +650,20 @@ export function HistoricoMovimentacoes({
         moedas: cryptoDetalhes,
         totalUSD: cryptoTotalUSD,
         confirmadoUSD: cryptoConfirmadoUSD,
-        semCotacao: cryptoSemCotacao,
+        semCotacao: cryptoSemSnapshot,
       },
+      // mantido para outras métricas/condicionais existentes
+      moedas: [
+        ...fiatMoedas,
+        ...cryptoDetalhes.map(c => ({
+          moeda: c.coin,
+          total: c.qtdTotal,
+          confirmado: c.qtdConfirmada,
+          pendente: c.qtdTotal - c.qtdConfirmada,
+        })),
+      ],
     };
-  }, [transacoesComBusca, convertToBRL, getCryptoUSDValue]);
+  }, [transacoesComBusca, convertToBRL]);
   
   const handlePeriodChange = useCallback((filter: DashboardPeriodFilter) => {
     setPeriodFilter(filter);
