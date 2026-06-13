@@ -29,6 +29,7 @@ import { CaixaTransacaoDialog } from "@/components/caixa/CaixaTransacaoDialog";
 import { CaixaTabsContainer } from "@/components/caixa/CaixaTabsContainer";
 import { SaldosParceirosSheet } from "@/components/caixa/SaldosParceirosSheet";
 import { PosicaoCapital } from "@/components/caixa/PosicaoCapital";
+import { useCapitalEmDisputa } from "@/hooks/useCapitalEmDisputa";
 import { ConfirmarSaqueDialog } from "@/components/caixa/ConfirmarSaqueDialog";
 import { AjusteManualDialog } from "@/components/caixa/AjusteManualDialog";
 import { ReconciliacaoDialog } from "@/components/caixa/ReconciliacaoDialog";
@@ -125,6 +126,7 @@ export default function Caixa() {
   
   // Workspace reactivo para isolamento multi-tenant
   const { workspaceId } = useTabWorkspace();
+  const { bySegment: capitalEmDisputa } = useCapitalEmDisputa();
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [transacoes, setTransacoes] = useState<Transacao[]>([]);
@@ -1246,6 +1248,7 @@ export default function Caixa() {
             saldosContasParceiros={saldosContasParceiros}
             saldoWalletsParceiros={saldoWalletsParceiros}
             cotacaoUSD={cotacaoUSD}
+            capitalEmDisputa={capitalEmDisputa}
             onViewPerdas={() => {
               // Mudança de estado interna sem recarregar a página (SPA behavior)
               setFiltroTipo(["PERDA_OPERACIONAL"]);

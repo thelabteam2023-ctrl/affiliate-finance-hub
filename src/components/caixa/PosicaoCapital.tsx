@@ -27,6 +27,9 @@ interface CapitalSegment {
   dashEmpty: number;
   dashOffset: number;
   breakdown: BreakdownEntry[];
+  valorDisputa: number;
+  valorDisponivel: number;
+  pctDisputa: number; // % do próprio segmento em disputa (0-100)
 }
 
 interface PosicaoCapitalProps {
@@ -38,6 +41,7 @@ interface PosicaoCapitalProps {
   saldoWalletsParceiros: number;
   cotacaoUSD: number;
   onViewPerdas?: () => void;
+  capitalEmDisputa?: Record<string, number>;
 }
 
 const isDev = process.env.NODE_ENV === 'development';
@@ -124,6 +128,7 @@ export function PosicaoCapital({
   saldoWalletsParceiros,
   cotacaoUSD,
   onViewPerdas,
+  capitalEmDisputa,
 }: PosicaoCapitalProps) {
   const [isMounted, setIsMounted] = useState(false);
   const [activeSegment, setActiveSegment] = useState<string | null>(null);
@@ -236,7 +241,11 @@ export function PosicaoCapital({
     let items: CapitalSegment[] = validRawItems.map(item => {
       const segmentValue = item.breakdown.reduce((acc, b) => acc + b.amountBRL, 0);
       const pct = totalBRL > 0 ? (segmentValue / totalBRL) * 100 : 0;
-      
+      const rawDisputa = Math.max(0, capitalEmDisputa?.[item.id] ?? 0);
+      const valorDisputa = Math.min(rawDisputa, segmentValue);
+      const valorDisponivel = Math.max(0, segmentValue - valorDisputa);
+      const pctDisputa = segmentValue > 0 ? (valorDisputa / segmentValue) * 100 : 0;
+
       return {
         id: item.id,
         name: item.name,
@@ -258,7 +267,10 @@ export function PosicaoCapital({
         breakdown: item.breakdown.map(b => ({
           ...b,
           pctOfSegment: segmentValue > 0 ? Number(((b.amountBRL / segmentValue) * 100).toFixed(2)) : 0
-        }))
+        })),
+        valorDisputa,
+        valorDisponivel,
+        pctDisputa,
       };
     });
 
@@ -284,7 +296,7 @@ export function PosicaoCapital({
     });
 
     return { items, total: totalBRL };
-  }, [saldosFiat, saldoCaixaCrypto, saldosBookmakers, saldosBroker, saldosContasParceiros, saldoWalletsParceiros, convertToBRL, convertUSDtoBRL]);
+  }, [saldosFiat, saldoCaixaCrypto, saldosBookmakers, saldosBroker, saldosContasParceiros, saldoWalletsParceiros, convertToBRL, convertUSDtoBRL, capitalEmDisputa]);
 
 
 
@@ -372,6 +384,45 @@ export function PosicaoCapital({
                 );
               });
             })()}
+
+            {/* Overlay: Capital em Disputa (arco amber dentro de cada segmento) */}
+            {(() => {
+              let currentAngle = -90;
+              const radius = 57;
+              const centerX = 77;
+              const centerY = 77;
+              const gapAngle = 3;
+              return dadosPosicao.items.map((item) => {
+                const segmentAngle = (item.pct / 100) * 360;
+                const actualGap = segmentAngle > gapAngle ? gapAngle : 0;
+                const startAngle = currentAngle + (actualGap / 2);
+                const segUsable = segmentAngle - actualGap;
+                currentAngle += segmentAngle;
+
+                if (item.pctDisputa <= 0 || segUsable <= 0) return null;
+                const disputaAngle = segUsable * (item.pctDisputa / 100);
+                const endAngle = startAngle + disputaAngle;
+                const startRad = (startAngle * Math.PI) / 180;
+                const endRad = (endAngle * Math.PI) / 180;
+                const x1 = centerX + radius * Math.cos(startRad);
+                const y1 = centerY + radius * Math.sin(startRad);
+                const x2 = centerX + radius * Math.cos(endRad);
+                const y2 = centerY + radius * Math.sin(endRad);
+                const largeArcFlag = disputaAngle <= 180 ? 0 : 1;
+                const d = `M ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`;
+                return (
+                  <path
+                    key={`disputa-${item.id}`}
+                    d={d}
+                    fill="none"
+                    stroke="#f59e0b"
+                    strokeWidth={4}
+                    strokeLinecap="butt"
+                    style={{ opacity: 0.9, pointerEvents: "none" }}
+                  />
+                );
+              });
+            })()}
             
             {/* Center mask */}
             <circle cx="77" cy="77" r="46" fill="var(--bg-card)" />
@@ -409,6 +460,11 @@ export function PosicaoCapital({
                 <span className="text-[var(--text-muted)] ml-2">
                   {seg.pct.toFixed(2)}% · {seg.valueFormatted}
                 </span>
+                {seg.valorDisputa > 0 && (
+                  <span className="ml-2" style={{ color: "#f59e0b" }}>
+                    · R$ {Math.round(seg.valorDisputa).toLocaleString("pt-BR")} em disputa ({seg.pctDisputa.toFixed(2)}%)
+                  </span>
+                )}
               </div>
             );
           })()}
@@ -451,18 +507,35 @@ export function PosicaoCapital({
                   <div>
                     <p className={`text-[12px] font-medium transition-colors ${isActive ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`}>{item.name}</p>
                     <p className="text-[10px] text-[var(--text-faint)] mt-px">{item.detail}</p>
-                    
-                    {/* Progress Bar */}
-                    <div className="h-[2px] w-full bg-[var(--border-default)] rounded-[1px] mt-1.5 overflow-hidden">
-                      <div 
-                        className="h-full rounded-[1px] transition-all duration-700 ease-out"
-                        style={{ 
-                          backgroundColor: item.color, 
-                          width: isMounted ? `${item.pct}%` : "0%",
+                    {item.valorDisputa > 0 && (
+                      <p className="text-[10px] mt-px" style={{ color: "#f59e0b" }}>
+                        Disponível R$ {Math.round(item.valorDisponivel).toLocaleString('pt-BR')} · Em disputa R$ {Math.round(item.valorDisputa).toLocaleString('pt-BR')}
+                      </p>
+                    )}
+
+                    {/* Progress Bar (com zona de disputa) */}
+                    <div className="h-[3px] w-full bg-[var(--border-default)] rounded-[1px] mt-1.5 overflow-hidden flex">
+                      <div
+                        className="h-full transition-all duration-700 ease-out"
+                        style={{
+                          backgroundColor: item.color,
+                          width: isMounted ? `${item.pct * (1 - item.pctDisputa / 100)}%` : "0%",
                           transitionDelay: isMounted ? '0s' : `${idx * 0.1}s`,
                           opacity: isActive ? 1.0 : 0.6
                         }}
-                      ></div>
+                      />
+                      {item.pctDisputa > 0 && (
+                        <div
+                          className="h-full transition-all duration-700 ease-out"
+                          style={{
+                            width: isMounted ? `${item.pct * (item.pctDisputa / 100)}%` : "0%",
+                            transitionDelay: isMounted ? '0s' : `${idx * 0.1}s`,
+                            backgroundImage:
+                              "repeating-linear-gradient(45deg, #f59e0b 0, #f59e0b 3px, rgba(245,158,11,0.45) 3px, rgba(245,158,11,0.45) 6px)",
+                            opacity: isActive ? 1.0 : 0.85,
+                          }}
+                        />
+                      )}
                     </div>
                   </div>
 
@@ -474,7 +547,11 @@ export function PosicaoCapital({
                     }}>
                       {item.valueFormatted}
                     </p>
-
+                    {item.valorDisputa > 0 && (
+                      <p className="text-[10px] tabular-nums mt-0.5" style={{ color: "#f59e0b" }}>
+                        {item.pctDisputa.toFixed(2)}% em disputa
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-center pl-1">
@@ -498,6 +575,33 @@ export function PosicaoCapital({
                     className="mt-1 mb-2 mx-[10px] rounded-r-lg overflow-hidden"
                   >
                     <div className="p-3 border-l border-white/5 bg-white/[0.02]">
+                      {item.valorDisputa > 0 && (
+                        <div className="mb-3 px-2 py-2 rounded-md border border-amber-500/30 bg-amber-500/5">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-[var(--text-muted)]">Capital Total</span>
+                            <span className="text-[var(--text-primary)] tabular-nums font-medium">{item.valueFormatted}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-[11px] mt-1">
+                            <span className="text-[var(--text-muted)]">Disponível</span>
+                            <span className="tabular-nums font-medium" style={{ color: item.color }}>
+                              R$ {Math.round(item.valorDisponivel).toLocaleString('pt-BR')}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-[11px] mt-1">
+                            <span className="text-amber-500">Em Disputa</span>
+                            <span className="tabular-nums font-medium text-amber-500">
+                              R$ {Math.round(item.valorDisputa).toLocaleString('pt-BR')}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-[10px] mt-1 pt-1 border-t border-amber-500/20">
+                            <span className="text-[var(--text-faint)] uppercase tracking-wider">Exposição</span>
+                            <span className="tabular-nums text-amber-500 font-semibold">
+                              {item.pctDisputa.toFixed(2)}%
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
                       <div className="flex items-center justify-between mb-3 px-2">
                         <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
                           Composição de {item.name}
