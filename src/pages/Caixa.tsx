@@ -1248,6 +1248,7 @@ export default function Caixa() {
             saldosContasParceiros={saldosContasParceiros}
             saldoWalletsParceiros={saldoWalletsParceiros}
             cotacaoUSD={cotacaoUSD}
+            capitalEmDisputa={capitalEmDisputa}
             onViewPerdas={() => {
               // Mudança de estado interna sem recarregar a página (SPA behavior)
               setFiltroTipo(["PERDA_OPERACIONAL"]);
