@@ -500,6 +500,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
+      // Descartar qualquer sessão/token residual ANTES de autenticar.
+      // Evita que tokens expirados ou flags de expiração de uma sessão
+      // anterior contaminem o novo login (causando "Sessão Expirada"
+      // logo após informar credenciais válidas).
+      try {
+        await supabase.auth.signOut({ scope: 'local' });
+      } catch (e) {
+        console.warn(`[Auth][${tabId}] Pré-signOut local falhou (ignorado):`, e);
+      }
+      try {
+        localStorage.removeItem('inactivity_last_activity');
+      } catch {}
+
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (!error && data.user) {
@@ -555,6 +568,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     queryClient.clear();
     clearTabWorkspaceId();
+    // Limpa a chave de inatividade para não contaminar próximo login.
+    try { localStorage.removeItem('inactivity_last_activity'); } catch {}
     await supabase.auth.signOut();
     dispatch({ type: 'SIGNED_OUT' });
   };
