@@ -126,6 +126,7 @@ export default function Caixa() {
   
   // Workspace reactivo para isolamento multi-tenant
   const { workspaceId } = useTabWorkspace();
+  const { bySegment: capitalEmDisputa } = useCapitalEmDisputa();
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [transacoes, setTransacoes] = useState<Transacao[]>([]);
