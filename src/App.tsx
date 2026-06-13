@@ -127,6 +127,30 @@ function PageLoader() {
 // Layout component for authenticated routes with inactivity monitoring
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const { minutesUntilTimeout, showingWarning, resetActivity } = useInactivityTimeout();
+
+  return (
+    <AuthenticatedLayoutInner
+      minutesUntilTimeout={minutesUntilTimeout}
+      showingWarning={showingWarning}
+      resetActivity={resetActivity}
+    >
+      {children}
+    </AuthenticatedLayoutInner>
+  );
+}
+
+// Inner component so we can use hooks below SidebarProvider context indirectly
+function AuthenticatedLayoutInner({
+  children,
+  minutesUntilTimeout,
+  showingWarning,
+  resetActivity,
+}: {
+  children: React.ReactNode;
+  minutesUntilTimeout: number | null;
+  showingWarning: boolean;
+  resetActivity: () => void;
+}) {
   const [isNotesOpen, setIsNotesOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const location = useLocation();
