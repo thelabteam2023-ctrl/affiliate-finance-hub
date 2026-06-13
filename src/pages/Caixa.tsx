@@ -29,6 +29,7 @@ import { CaixaTransacaoDialog } from "@/components/caixa/CaixaTransacaoDialog";
 import { CaixaTabsContainer } from "@/components/caixa/CaixaTabsContainer";
 import { SaldosParceirosSheet } from "@/components/caixa/SaldosParceirosSheet";
 import { PosicaoCapital } from "@/components/caixa/PosicaoCapital";
+import { useCapitalEmDisputa } from "@/hooks/useCapitalEmDisputa";
 import { ConfirmarSaqueDialog } from "@/components/caixa/ConfirmarSaqueDialog";
 import { AjusteManualDialog } from "@/components/caixa/AjusteManualDialog";
 import { ReconciliacaoDialog } from "@/components/caixa/ReconciliacaoDialog";
