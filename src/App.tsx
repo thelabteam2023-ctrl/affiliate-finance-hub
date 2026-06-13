@@ -243,7 +243,10 @@ function TopBarHeader() {
  * e operações de drag-and-drop.
  */
 function SidebarAutoCollapse({ mainRef }: { mainRef: React.RefObject<HTMLElement> }) {
-  const { open, setOpen, isMobile } = useSidebar();
+  const { open, setOpen, isMobile, setOpenMobile } = useSidebar();
+
+  // Swipe da borda esquerda abre a sidebar em mobile
+  useEdgeSwipeToOpenSidebar(isMobile, React.useCallback(() => setOpenMobile(true), [setOpenMobile]));
 
   useEffect(() => {
     if (!open || isMobile) return;
