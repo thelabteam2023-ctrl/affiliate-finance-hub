@@ -64,7 +64,7 @@ export function RecuperacaoCapitalCard({ projetoId }: RecuperacaoCapitalCardProp
   const Icon = isAcima ? Sparkles : isRecuperado ? CheckCircle2 : TrendingUp;
 
   const mensagem = isAcima
-    ? `Projeto operando acima do capital investido (+${formatCurrency(excedente)} de lucro líquido acumulado).`
+    ? `Projeto operando acima do capital investido. Lucro Realizado: +${formatCurrency(excedente)}.`
     : isRecuperado
       ? "Capital totalmente recuperado."
       : `Faltam ${formatCurrency(pendente)} para recuperar integralmente o capital.`;
@@ -132,7 +132,7 @@ export function RecuperacaoCapitalCard({ projetoId }: RecuperacaoCapitalCardProp
           </div>
           <div className="flex flex-col">
             <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-              {isAcima ? "Excedente (lucro)" : "Pendente"}
+              {isAcima ? "Lucro Realizado" : "Pendente"}
             </span>
             <span
               className={cn(
@@ -140,10 +140,26 @@ export function RecuperacaoCapitalCard({ projetoId }: RecuperacaoCapitalCardProp
                 isAcima ? "text-emerald-500" : isRecuperado ? "text-muted-foreground" : "text-foreground"
               )}
             >
-              {formatCurrency(isAcima ? excedente : pendente)}
+              {isAcima ? `+${formatCurrency(excedente)}` : formatCurrency(pendente)}
             </span>
           </div>
         </div>
+
+        {/* Destaque do Lucro Realizado quando em lucro */}
+        {isAcima && (
+          <div className="mb-3 rounded-md border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-xs">
+              <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
+              <span className="font-medium text-foreground">Lucro Realizado</span>
+              <span className="text-muted-foreground">
+                (Recuperado − Aportado)
+              </span>
+            </div>
+            <span className="text-sm font-bold font-mono tabular-nums text-emerald-500">
+              +{formatCurrency(excedente)}
+            </span>
+          </div>
+        )}
 
         {/* Mensagem complementar */}
         <p className="text-xs text-muted-foreground leading-relaxed">{mensagem}</p>
