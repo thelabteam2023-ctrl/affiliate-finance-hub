@@ -230,6 +230,53 @@ function TopBarHeader() {
   );
 }
 
+/**
+ * Auto-collapse: clique fora da sidebar (dentro do <main>) ou ESC recolhem a sidebar
+ * quando expandida. Ignora portais (modais, dropdowns, popovers, context menus, tooltips)
+ * e operações de drag-and-drop.
+ */
+function SidebarAutoCollapse({ mainRef }: { mainRef: React.RefObject<HTMLElement> }) {
+  const { open, setOpen, isMobile } = useSidebar();
+
+  useEffect(() => {
+    if (!open || isMobile) return;
+    const el = mainRef.current;
+    if (!el) return;
+
+    const shouldIgnore = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) return false;
+      // Drag em andamento (dnd-kit / HTML5) — não recolher
+      if (document.body.hasAttribute("data-dragging") || document.querySelector("[data-dnd-kit-overlay]")) return true;
+      // Elementos opt-out explícito
+      return !!target.closest(
+        '[data-no-sidebar-collapse],[role="dialog"],[data-radix-popper-content-wrapper],[data-radix-portal]'
+      );
+    };
+
+    const onMouseDown = (e: MouseEvent) => {
+      if (e.button !== 0) return;
+      if (shouldIgnore(e.target)) return;
+      setOpen(false);
+    };
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      // Se há modal/popover aberto, deixa o ESC nativo fechar primeiro
+      if (document.querySelector('[role="dialog"][data-state="open"], [data-radix-popper-content-wrapper]')) return;
+      setOpen(false);
+    };
+
+    el.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      el.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open, isMobile, setOpen, mainRef]);
+
+  return null;
+}
+
 /** Global floating button for Notes */
 function FloatingNotesButton({ onClick, isOpen }: { onClick: () => void, isOpen: boolean }) {
   const { user } = useAuth();
