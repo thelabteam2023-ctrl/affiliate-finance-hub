@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useProjetoRecuperacaoCapital } from "@/hooks/useProjetoRecuperacaoCapital";
-import { useProjectCurrencyFormat } from "@/hooks/useProjectCurrencyFormat";
+import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 
 interface RecuperacaoCapitalCardProps {
   projetoId: string;
@@ -18,7 +18,7 @@ interface RecuperacaoCapitalCardProps {
  */
 export function RecuperacaoCapitalCard({ projetoId }: RecuperacaoCapitalCardProps) {
   const { data, isLoading } = useProjetoRecuperacaoCapital(projetoId);
-  const { formatCurrency } = useProjectCurrencyFormat(projetoId);
+  const { formatCurrency } = useProjetoCurrency(projetoId);
 
   if (isLoading) {
     return (
