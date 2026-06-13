@@ -17,7 +17,7 @@ import { ExchangeRatesProvider } from "@/contexts/ExchangeRatesContext";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { PermissionsProvider } from "@/contexts/PermissionsContext";
 import { PresenceProvider } from "@/contexts/PresenceContext";
@@ -154,6 +154,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
         <AppSidebar />
         
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          <SidebarAutoCollapse mainRef={mainRef} />
           {/* Header com trigger da sidebar + conteúdo contextual */}
           <TopBarHeader />
 
