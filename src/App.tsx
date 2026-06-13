@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import type { ComponentType } from "react";
 import { ThemeProvider } from "next-themes";
 import { TopBarProvider, useTopBar } from "@/contexts/TopBarContext";
@@ -18,6 +18,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import { useEdgeSwipeToOpenSidebar } from "@/hooks/useEdgeSwipeToOpenSidebar";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { PermissionsProvider } from "@/contexts/PermissionsContext";
 import { PresenceProvider } from "@/contexts/PresenceContext";
@@ -246,7 +247,7 @@ function SidebarAutoCollapse({ mainRef }: { mainRef: React.RefObject<HTMLElement
   const { open, setOpen, isMobile, setOpenMobile } = useSidebar();
 
   // Swipe da borda esquerda abre a sidebar em mobile
-  useEdgeSwipeToOpenSidebar(isMobile, React.useCallback(() => setOpenMobile(true), [setOpenMobile]));
+  useEdgeSwipeToOpenSidebar(isMobile, useCallback(() => setOpenMobile(true), [setOpenMobile]));
 
   useEffect(() => {
     if (!open || isMobile) return;
