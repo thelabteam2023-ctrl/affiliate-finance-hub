@@ -577,7 +577,19 @@ export function AppSidebar() {
       collapsible="icon"
       data-sidebar-expanded={!isCollapsed ? "true" : "false"}
     >
-      <SidebarContent className="relative py-4 flex flex-col overflow-hidden">
+      <SidebarContent
+        className={cn(
+          "relative py-4 flex flex-col overflow-hidden",
+          isCollapsed && "cursor-pointer"
+        )}
+        onClick={(e) => {
+          if (!isCollapsed) return;
+          const target = e.target as HTMLElement;
+          // Só expande quando o clique cai em wrapper neutro (não em botão/link/input)
+          if (target.closest('button,a,input,select,textarea,[role="button"],[role="menuitem"],[data-sidebar="menu-button"]')) return;
+          toggleSidebar();
+        }}
+      >
         {/* Logo/Brand Section — clique alterna expandir/recolher */}
         <Tooltip>
           <TooltipTrigger asChild>
