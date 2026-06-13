@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import type { ComponentType } from "react";
 import { ThemeProvider } from "next-themes";
 import { TopBarProvider, useTopBar } from "@/contexts/TopBarContext";
@@ -18,6 +18,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import { useEdgeSwipeToOpenSidebar } from "@/hooks/useEdgeSwipeToOpenSidebar";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { PermissionsProvider } from "@/contexts/PermissionsContext";
 import { PresenceProvider } from "@/contexts/PresenceContext";
@@ -219,9 +220,16 @@ function AuthenticatedLayoutInner({
 /** TopBar renderiza trigger + conteúdo contextual injetado pela página */
 function TopBarHeader() {
   const { content } = useTopBar();
+  const { isMobile } = useSidebar();
   return (
     <header className="shrink-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="relative flex h-12 items-center px-3">
+        {isMobile && (
+          <SidebarTrigger
+            aria-label="Abrir menu"
+            className="relative z-10 h-10 w-10 shrink-0 -ml-1"
+          />
+        )}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="pointer-events-auto [&_span.font-semibold]:text-base">{content}</div>
         </div>
@@ -236,7 +244,10 @@ function TopBarHeader() {
  * e operações de drag-and-drop.
  */
 function SidebarAutoCollapse({ mainRef }: { mainRef: React.RefObject<HTMLElement> }) {
-  const { open, setOpen, isMobile } = useSidebar();
+  const { open, setOpen, isMobile, setOpenMobile } = useSidebar();
+
+  // Swipe da borda esquerda abre a sidebar em mobile
+  useEdgeSwipeToOpenSidebar(isMobile, useCallback(() => setOpenMobile(true), [setOpenMobile]));
 
   useEffect(() => {
     if (!open || isMobile) return;

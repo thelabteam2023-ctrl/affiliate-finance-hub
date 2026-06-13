@@ -260,7 +260,7 @@ const menuGroups: MenuGroup[] = [
 const allMenuItems = menuGroups.flatMap(g => g.items);
 
 export function AppSidebar() {
-  const { state, toggleSidebar } = useSidebar();
+  const { state, toggleSidebar, isMobile, openMobile, setOpenMobile } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
    const { user, signOut, role, isSystemOwner, publicId, workspaceId } = useAuth();
@@ -287,6 +287,14 @@ export function AppSidebar() {
   const [projectDefaultTabs, setProjectDefaultTabs] = useState<Record<string, string>>({});
   
   const isCollapsed = state === "collapsed";
+
+  // Auto-fechar a sidebar mobile ao navegar entre rotas
+  useEffect(() => {
+    if (isMobile && openMobile) {
+      setOpenMobile(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, location.search]);
   const isActive = (path: string) => currentPath === path;
 
   // Scroll overflow detection for collapsed sidebar
