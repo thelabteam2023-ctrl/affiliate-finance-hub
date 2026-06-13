@@ -260,7 +260,7 @@ const menuGroups: MenuGroup[] = [
 const allMenuItems = menuGroups.flatMap(g => g.items);
 
 export function AppSidebar() {
-  const { state } = useSidebar();
+  const { state, toggleSidebar } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
    const { user, signOut, role, isSystemOwner, publicId, workspaceId } = useAuth();
