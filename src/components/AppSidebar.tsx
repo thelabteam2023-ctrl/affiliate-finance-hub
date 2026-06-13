@@ -260,7 +260,7 @@ const menuGroups: MenuGroup[] = [
 const allMenuItems = menuGroups.flatMap(g => g.items);
 
 export function AppSidebar() {
-  const { state } = useSidebar();
+  const { state, toggleSidebar } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
    const { user, signOut, role, isSystemOwner, publicId, workspaceId } = useAuth();
@@ -578,14 +578,27 @@ export function AppSidebar() {
       data-sidebar-expanded={!isCollapsed ? "true" : "false"}
     >
       <SidebarContent className="relative py-4 flex flex-col overflow-hidden">
-        {/* Logo/Brand Section */}
-        <div className="flex items-center justify-center px-3 pb-4 bg-transparent shrink-0">
-          {isCollapsed ? (
-            <img src="/favicon-sidebar.png" alt="LABBET" className="h-12 w-12 shrink-0 object-contain" />
-          ) : (
-            <img src="/logo-horizontal.png" alt="LABBET" className="h-9 bg-transparent" />
-          )}
-        </div>
+        {/* Logo/Brand Section — clique alterna expandir/recolher */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              aria-label={isCollapsed ? "Expandir menu" : "Recolher menu"}
+              aria-expanded={!isCollapsed}
+              className="group flex items-center justify-center px-3 pb-4 bg-transparent shrink-0 cursor-pointer rounded-md outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring hover:bg-sidebar-accent/30 transition-colors"
+            >
+              {isCollapsed ? (
+                <img src="/favicon-sidebar.png" alt="LABBET" className="h-12 w-12 shrink-0 object-contain" />
+              ) : (
+                <img src="/logo-horizontal.png" alt="LABBET" className="h-9 bg-transparent" />
+              )}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right" sideOffset={8}>
+            {isCollapsed ? "Expandir menu" : "Recolher menu"}
+          </TooltipContent>
+        </Tooltip>
 
         {/* Workspace Switcher */}
         <div className={`px-2 pb-4 shrink-0 ${isCollapsed ? 'px-1' : ''}`}>

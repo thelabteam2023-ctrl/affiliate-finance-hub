@@ -17,7 +17,7 @@ import { ExchangeRatesProvider } from "@/contexts/ExchangeRatesContext";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { PermissionsProvider } from "@/contexts/PermissionsContext";
 import { PresenceProvider } from "@/contexts/PresenceContext";
@@ -127,6 +127,30 @@ function PageLoader() {
 // Layout component for authenticated routes with inactivity monitoring
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const { minutesUntilTimeout, showingWarning, resetActivity } = useInactivityTimeout();
+
+  return (
+    <AuthenticatedLayoutInner
+      minutesUntilTimeout={minutesUntilTimeout}
+      showingWarning={showingWarning}
+      resetActivity={resetActivity}
+    >
+      {children}
+    </AuthenticatedLayoutInner>
+  );
+}
+
+// Inner component so we can use hooks below SidebarProvider context indirectly
+function AuthenticatedLayoutInner({
+  children,
+  minutesUntilTimeout,
+  showingWarning,
+  resetActivity,
+}: {
+  children: React.ReactNode;
+  minutesUntilTimeout: number | null;
+  showingWarning: boolean;
+  resetActivity: () => void;
+}) {
   const [isNotesOpen, setIsNotesOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const location = useLocation();
@@ -154,6 +178,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
         <AppSidebar />
         
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          <SidebarAutoCollapse mainRef={mainRef} />
           {/* Header com trigger da sidebar + conteúdo contextual */}
           <TopBarHeader />
 
@@ -203,6 +228,53 @@ function TopBarHeader() {
       </div>
     </header>
   );
+}
+
+/**
+ * Auto-collapse: clique fora da sidebar (dentro do <main>) ou ESC recolhem a sidebar
+ * quando expandida. Ignora portais (modais, dropdowns, popovers, context menus, tooltips)
+ * e operações de drag-and-drop.
+ */
+function SidebarAutoCollapse({ mainRef }: { mainRef: React.RefObject<HTMLElement> }) {
+  const { open, setOpen, isMobile } = useSidebar();
+
+  useEffect(() => {
+    if (!open || isMobile) return;
+    const el = mainRef.current;
+    if (!el) return;
+
+    const shouldIgnore = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) return false;
+      // Drag em andamento (dnd-kit / HTML5) — não recolher
+      if (document.body.hasAttribute("data-dragging") || document.querySelector("[data-dnd-kit-overlay]")) return true;
+      // Elementos opt-out explícito
+      return !!target.closest(
+        '[data-no-sidebar-collapse],[role="dialog"],[data-radix-popper-content-wrapper],[data-radix-portal]'
+      );
+    };
+
+    const onMouseDown = (e: MouseEvent) => {
+      if (e.button !== 0) return;
+      if (shouldIgnore(e.target)) return;
+      setOpen(false);
+    };
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      // Se há modal/popover aberto, deixa o ESC nativo fechar primeiro
+      if (document.querySelector('[role="dialog"][data-state="open"], [data-radix-popper-content-wrapper]')) return;
+      setOpen(false);
+    };
+
+    el.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      el.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open, isMobile, setOpen, mainRef]);
+
+  return null;
 }
 
 /** Global floating button for Notes */
