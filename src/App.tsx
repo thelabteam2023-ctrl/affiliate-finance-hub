@@ -219,9 +219,16 @@ function AuthenticatedLayoutInner({
 /** TopBar renderiza trigger + conteúdo contextual injetado pela página */
 function TopBarHeader() {
   const { content } = useTopBar();
+  const { isMobile } = useSidebar();
   return (
     <header className="shrink-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="relative flex h-12 items-center px-3">
+        {isMobile && (
+          <SidebarTrigger
+            aria-label="Abrir menu"
+            className="relative z-10 h-10 w-10 shrink-0 -ml-1"
+          />
+        )}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="pointer-events-auto [&_span.font-semibold]:text-base">{content}</div>
         </div>
