@@ -1,58 +1,69 @@
+# Recuperação de Capital em Vínculos → Extrato
+
 ## Objetivo
+Exibir no topo da aba **Vínculos → Extrato** um card com barra de progresso de recuperação do capital aportado, replicando 1:1 a lógica usada hoje na seção "Break Even" do `ProjetoFinancialMetricsCard`.
 
-Quando o filtro de **Tags** estiver ativo no Histórico do Caixa Operacional, exibir um bloco dedicado de **"Total da Tag"** no cabeçalho, ao lado dos blocos Fiat/Cripto já existentes, mostrando o somatório das movimentações que carregam aquela(s) tag(s).
+## Fórmula (paridade com Indicadores Financeiros)
+- **Capital Investido** = `depositosTotal` (soma de todos os `DEPOSITO` confirmados do projeto, na moeda de consolidação)
+- **Capital Recuperado** = `saquesRecebidos` (soma de todos os `SAQUE` confirmados, exclui pendentes)
+- **Percentual** = `min(100, recuperado / investido × 100)`
+- **Pendente** = `max(0, investido − recuperado)`
+- **Excedente** (quando recuperado > investido) = `recuperado − investido`, exibido como "Lucro líquido acumulado"
 
-Hoje os blocos Fiat e Cripto já refletem o filtro (porque consomem `transacoesComBusca`), mas o usuário não tem leitura imediata de "quanto soma a tag X". Em casos como o print (uma transferência USD $550 + um depósito R$500 com a mesma tag), não há um número único que represente o aporte total da tag.
+Cashback, giros, ajustes e ganho FX **não entram** na recuperação (continuam apenas em "Extras", como hoje).
 
-## Mudanças (apenas frontend — `src/components/caixa/HistoricoMovimentacoes.tsx`)
+## Escopo de dados
+- Sempre **acumulado total do projeto** — não respeita filtros de período/busca/tipo aplicados no Extrato.
+- Workspace-isolated (filtro `workspace_id` obrigatório).
+- Atualiza automaticamente quando aportes/saques mudam (via React Query cache invalidation já existente).
 
-### 1. Detectar filtro de tags ativo
-Ler o estado do filtro de tags já existente (`filtroTags` / `tagsSelecionadas` — confirmar nome ao abrir o arquivo). Considerar ativo quando `length > 0`.
+## Arquitetura
 
-### 2. Novo bloco no cabeçalho: "Tag: NOME"
-Renderizado **somente** quando há tag(s) selecionada(s). Posicionado à esquerda dos blocos Fiat/Cripto, com separador vertical sutil.
+### 1. Extrair hook compartilhado
+Hoje o cálculo está embutido em `ProjetoFinancialMetricsCard.tsx` (linhas 52–223). Para garantir paridade absoluta e evitar drift:
 
-Estrutura:
-- **Label superior:** `TAG: <NOME>` (ou `TAGS (n)` se múltiplas, com tooltip listando)
-- **Valor principal:** total consolidado em BRL (regra abaixo)
-- **Linha secundária:** `Cripto (USD): $ X` quando houver movimentações cripto na seleção
-- **Tooltip:** breakdown por moeda nativa + por coin cripto (snapshot USD), reaproveitando a lógica já existente
+- Criar `src/hooks/useProjetoRecuperacaoCapital.ts` que faz a mesma query mínima necessária:
+  - `depositos`: `cash_ledger` onde `tipo_transacao = 'DEPOSITO'` e status confirmado
+  - `saques`: `cash_ledger` onde `tipo_transacao = 'SAQUE'` e status confirmado
+  - Filtrado por `projeto_id` e `workspace_id`
+- Retorna `{ investido, recuperado, percentual, pendente, excedente, isLoading }` já consolidado na moeda do projeto via `useProjetoCurrency` (Cotação de Trabalho).
+- Refatorar `ProjetoFinancialMetricsCard` para também consumir esse hook (mantém comportamento atual; reduz duplicação).
 
-### 3. Regra de cálculo (reaproveita `metricas`)
-A agregação reaproveita as estruturas já calculadas em `metricas` (fiat por moeda + cripto por coin com snapshot USD). Como `transacoesComBusca` já inclui o filtro de tags, o `metricas` atual já é o conjunto correto. Apenas precisamos:
+### 2. Novo componente de UI
+`src/components/projeto-detalhe/RecuperacaoCapitalCard.tsx`:
+- Card compacto (mesma família visual do `ProjetoFinancialMetricsCard`).
+- Header: ícone `TrendingUp` + título "Recuperação de Capital".
+- 3 KPIs em linha: Investido / Recuperado / Pendente (ou Excedente).
+- Barra `<Progress />` do shadcn, capada em 100%.
+- Cor: âmbar < 100%, esmeralda = 100%, esmeralda + badge "Lucro acumulado" > 100%.
+- Mensagem complementar dinâmica:
+  - `pct < 100`: "Faltam **R$ X** para recuperar integralmente o capital."
+  - `pct == 100`: "Capital totalmente recuperado."
+  - `pct > 100`: "Projeto operando acima do capital investido (+R$ Y de lucro acumulado)."
+- Skeleton enquanto `isLoading`.
 
-- **Fiat consolidado em BRL:** soma `convertToBRL(valor, moeda)` para cada bucket fiat. Conversão live é aceitável aqui porque é leitura informativa de "aporte total" — o valor nativo de cada lançamento permanece preservado no card.
-- **Cripto consolidado em USD:** soma `usdTotal` (snapshot) de cada `CryptoAgg`. **Nunca** recalcular com preço live (segue a regra `historico-caixa-crypto-snapshot-standard`).
-- Os dois totais ficam separados (BRL e USD), porque misturar exigiria mais uma conversão FX e ofuscaria a leitura.
+### 3. Integração
+Em `src/components/projeto-detalhe/ExtratoProjetoTab.tsx`, montar o card **acima da lista de transações e dos filtros**, dentro do mesmo container `Card` ou logo antes dele.
 
-### 4. Comportamento sem tag selecionada
-Bloco oculto. Cabeçalho continua idêntico ao atual (Fiat + Cripto).
+## Acessibilidade / formatação
+- Valores via `useProjectCurrencyFormat` (mesma formatação do extrato).
+- `aria-valuenow` / `aria-valuemax` na barra.
+- Responsivo: KPIs empilham em mobile (`grid grid-cols-1 sm:grid-cols-3`).
 
-### 5. Múltiplas tags
-- 1 tag: `TAG: PRIMEIRO INVESTIMENTO ITALO`
-- N tags: `TAGS (N): <primeira>, +N-1` com tooltip completo
-- Lógica AND ou OR segue exatamente a já implementada no filtro (não muda regra de filtragem)
+## Não-objetivos
+- Não alterar a lógica nem o visual do `ProjetoFinancialMetricsCard` (apenas extrair função de cálculo).
+- Não adicionar toggles de período no novo card.
+- Sem migrações de banco, sem novas RPCs.
 
-## Layout sugerido (cabeçalho)
-
-```text
-┌───────────────────────────┬──────────────────┬───────────────────────┐
-│ TAG: PRIMEIRO INVEST ITALO│ FIAT (em BRL)    │ CRIPTO (em USD)       │
-│ R$ 3.235,00               │ R$ 500,00        │ $ 0,00                │
-│ + Cripto: $ 0,00          │ Creditado: ...   │ Creditado: ...        │
-│ Creditado: ...            │                  │                       │
-└───────────────────────────┴──────────────────┴───────────────────────┘
-```
-(USD 550 convertido a ~R$5,00 + R$500 = R$3.235 ilustrativo)
-
-## Fora de escopo
-- Nenhuma alteração de schema, RPC, migração ou outros componentes.
-- Sem mudança na lógica de filtragem por tag — apenas exibição agregada.
-- Sem persistência de "valor da tag" no banco (continua derivado).
+## Arquivos
+- **Novo:** `src/hooks/useProjetoRecuperacaoCapital.ts`
+- **Novo:** `src/components/projeto-detalhe/RecuperacaoCapitalCard.tsx`
+- **Editado:** `src/components/projeto-detalhe/ExtratoProjetoTab.tsx` (montar o card no topo)
+- **Editado (opcional, refactor):** `src/components/projeto-detalhe/ProjetoFinancialMetricsCard.tsx` para consumir o hook compartilhado
 
 ## Critérios de aceite
-1. Selecionar 1 tag → aparece bloco "TAG: NOME" com total consolidado em BRL + linha cripto em USD se aplicável.
-2. Tag com lançamentos USD + BRL exibe um valor BRL único (FX live) e mantém valores nativos nos cards.
-3. Tag com lançamento cripto exibe USD via snapshot (`cash_ledger.valor_usd`) — não flutua com preço live.
-4. Limpar a tag → bloco some, cabeçalho volta ao estado Fiat+Cripto.
-5. Múltiplas tags → label compacto + tooltip listando todas; somatório respeita o modo (AND/OR) já vigente no filtro.
+1. Card aparece no topo de Vínculos → Extrato em todos os projetos.
+2. Valores batem exatamente com o tooltip do "Break Even" do card de Indicadores Financeiros.
+3. Barra capada em 100%; excedente vira "Lucro acumulado".
+4. Atualiza ao adicionar/editar/remover depósitos ou saques sem refresh manual.
+5. Não se altera com filtros do extrato.

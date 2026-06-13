@@ -53,6 +53,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { CURRENCY_SYMBOLS, type SupportedCurrency } from "@/types/currency";
+import { RecuperacaoCapitalCard } from "./RecuperacaoCapitalCard";
 
 interface ExtratoProjetoTabProps {
   projetoId: string;
@@ -835,6 +836,9 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
 
   return (
     <div className="space-y-4">
+      {/* Recuperação de Capital — sempre acumulado total, não respeita filtros */}
+      <RecuperacaoCapitalCard projetoId={projetoId} />
+
       {/* KPI Cards */}
       {/* Mobile: 2 colunas, com Resultado de Caixa em destaque (col-span-2) */}
       {/* Tablet: 3 colunas. Desktop: 5 colunas em linha única */}
