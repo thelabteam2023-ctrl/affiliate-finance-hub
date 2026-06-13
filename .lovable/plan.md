@@ -1,69 +1,60 @@
-# Recuperação de Capital em Vínculos → Extrato
-
 ## Objetivo
-Exibir no topo da aba **Vínculos → Extrato** um card com barra de progresso de recuperação do capital aportado, replicando 1:1 a lógica usada hoje na seção "Break Even" do `ProjetoFinancialMetricsCard`.
+Evoluir o componente `PosicaoCapital` (já usado em `/caixa`) para exibir, dentro de cada barra de segmento, a parcela do capital comprometida com ocorrências operacionais abertas — sem criar dashboard novo, sem alterar o total patrimonial e sem dupla contagem.
 
-## Fórmula (paridade com Indicadores Financeiros)
-- **Capital Investido** = `depositosTotal` (soma de todos os `DEPOSITO` confirmados do projeto, na moeda de consolidação)
-- **Capital Recuperado** = `saquesRecebidos` (soma de todos os `SAQUE` confirmados, exclui pendentes)
-- **Percentual** = `min(100, recuperado / investido × 100)`
-- **Pendente** = `max(0, investido − recuperado)`
-- **Excedente** (quando recuperado > investido) = `recuperado − investido`, exibido como "Lucro líquido acumulado"
+## Fonte de dados — Capital em Disputa
+Tabela `ocorrencias` com `status IN ('aberto','em_andamento')`. A coluna `valor_risco` (na `moeda` da ocorrência) é a exposição patrimonial. Capital já perdido (status `resolvido` com `valor_perda`) NÃO entra — ele já saiu do saldo via ledger.
 
-Cashback, giros, ajustes e ganho FX **não entram** na recuperação (continuam apenas em "Extras", como hoje).
+Mapeamento ocorrência → segmento da Posição de Capital:
 
-## Escopo de dados
-- Sempre **acumulado total do projeto** — não respeita filtros de período/busca/tipo aplicados no Extrato.
-- Workspace-isolated (filtro `workspace_id` obrigatório).
-- Atualiza automaticamente quando aportes/saques mudam (via React Query cache invalidation já existente).
+| Campo na ocorrência                                  | Segmento                                  |
+| ---------------------------------------------------- | ----------------------------------------- |
+| `bookmaker_id IS NOT NULL`                           | Bookmakers                                |
+| `wallet_id IS NOT NULL`                              | Wallets Parceiros                         |
+| `conta_bancaria_id` cujo `parceiro_id IS NULL`       | Caixa Operacional                         |
+| `conta_bancaria_id` cujo `parceiro_id IS NOT NULL`   | Contas Parceiros                          |
+| Nenhum dos acima (ex: só `projeto_id`)               | Não atribuído (ignorado na barra)         |
 
-## Arquitetura
+Conversão para BRL via `useCotacoes.convertToBRL(valor_risco, moeda)` — mesma engine já usada no componente. Cap final por segmento: `min(valorDisputaBRL, segmentValueBRL)` para evitar disputa > total.
 
-### 1. Extrair hook compartilhado
-Hoje o cálculo está embutido em `ProjetoFinancialMetricsCard.tsx` (linhas 52–223). Para garantir paridade absoluta e evitar drift:
+## Mudanças
 
-- Criar `src/hooks/useProjetoRecuperacaoCapital.ts` que faz a mesma query mínima necessária:
-  - `depositos`: `cash_ledger` onde `tipo_transacao = 'DEPOSITO'` e status confirmado
-  - `saques`: `cash_ledger` onde `tipo_transacao = 'SAQUE'` e status confirmado
-  - Filtrado por `projeto_id` e `workspace_id`
-- Retorna `{ investido, recuperado, percentual, pendente, excedente, isLoading }` já consolidado na moeda do projeto via `useProjetoCurrency` (Cotação de Trabalho).
-- Refatorar `ProjetoFinancialMetricsCard` para também consumir esse hook (mantém comportamento atual; reduz duplicação).
+### 1. Novo hook `src/hooks/useCapitalEmDisputa.ts`
+- Query única em `ocorrencias` filtrando `workspace_id` e status aberto/em_andamento, selecionando `id, valor_risco, moeda, bookmaker_id, wallet_id, conta_bancaria_id`.
+- Resolve `parceiro_id` das `contas_bancarias` referenciadas (segunda query `IN (...)`).
+- Retorna `{ bySegment: { bookmakers, 'caixa-op', wallets, 'contas-parc' }, byEntity: { bookmakerId→BRL, walletId→BRL, contaId→BRL }, loading }` — tudo já em BRL.
+- `staleTime: 30_000`, `gcTime: 60_000`.
 
-### 2. Novo componente de UI
-`src/components/projeto-detalhe/RecuperacaoCapitalCard.tsx`:
-- Card compacto (mesma família visual do `ProjetoFinancialMetricsCard`).
-- Header: ícone `TrendingUp` + título "Recuperação de Capital".
-- 3 KPIs em linha: Investido / Recuperado / Pendente (ou Excedente).
-- Barra `<Progress />` do shadcn, capada em 100%.
-- Cor: âmbar < 100%, esmeralda = 100%, esmeralda + badge "Lucro acumulado" > 100%.
-- Mensagem complementar dinâmica:
-  - `pct < 100`: "Faltam **R$ X** para recuperar integralmente o capital."
-  - `pct == 100`: "Capital totalmente recuperado."
-  - `pct > 100`: "Projeto operando acima do capital investido (+R$ Y de lucro acumulado)."
-- Skeleton enquanto `isLoading`.
+### 2. `src/pages/Caixa.tsx`
+- Consumir `useCapitalEmDisputa()` e passar `capitalEmDisputa={bySegment}` para `<PosicaoCapital />`.
 
-### 3. Integração
-Em `src/components/projeto-detalhe/ExtratoProjetoTab.tsx`, montar o card **acima da lista de transações e dos filtros**, dentro do mesmo container `Card` ou logo antes dele.
+### 3. `src/components/caixa/PosicaoCapital.tsx`
+- Aceitar nova prop opcional `capitalEmDisputa?: Record<string, number>` (BRL por `segment.id`).
+- Em `dadosPosicao`, anexar a cada `CapitalSegment`:
+  - `valorDisputa = min(capitalEmDisputa[id] ?? 0, value)`
+  - `valorDisponivel = value - valorDisputa`
+  - `pctDisputa = (valorDisputa / value) * 100`
+- **Barra de progresso (linha do item)**: dividir em duas partes lado a lado — preenchimento sólido na cor do segmento (largura = `pctDisponivel` da própria barra) + sobreposição em `amber-500` com padrão listrado/hachura (largura = `pctDisputa` da própria barra). Largura total da barra continua sendo `item.pct` do patrimônio.
+- **Textos sob o nome do segmento (`detail`)**: quando `valorDisputa > 0`, exibir segunda linha pequena: `Disponível R$ X · Em disputa R$ Y`.
+- **Coluna direita**: abaixo do `pct.toFixed(2)%` existente, quando `valorDisputa > 0`, exibir `pctDisputa.toFixed(2)% em disputa` em `text-amber-500 text-[10px]`.
+- **Donut central**: adicionar uma camada interna fina (raio menor, ex. `r=46` com `strokeWidth=4`) desenhada apenas para a fração `pctDisputa` dentro de cada arco do segmento, em `#f59e0b` com `opacity 0.85`. Usa o mesmo cálculo de ângulos já existente, mas o comprimento do arco é proporcional a `valorDisputa/value` dentro do trecho do segmento.
+- **Tooltip do donut (`activeSegment`)**: quando o segmento tem disputa, anexar `· R$ Y em disputa (Z%)` ao texto atual.
+- **Painel inline expandido**: acima da lista de breakdown adicionar um bloco compacto com 4 linhas — Capital Total, Disponível, Em Disputa (amber), Exposição `pctDisputa%`. Não alterar a lista de moedas existente.
+- Manter cap de barra interna em 100% do segmento; nunca somar disputa ao total geral nem ao `dadosPosicao.total`.
 
-## Acessibilidade / formatação
-- Valores via `useProjectCurrencyFormat` (mesma formatação do extrato).
-- `aria-valuenow` / `aria-valuemax` na barra.
-- Responsivo: KPIs empilham em mobile (`grid grid-cols-1 sm:grid-cols-3`).
-
-## Não-objetivos
-- Não alterar a lógica nem o visual do `ProjetoFinancialMetricsCard` (apenas extrair função de cálculo).
-- Não adicionar toggles de período no novo card.
-- Sem migrações de banco, sem novas RPCs.
+## Comportamento garantido
+- `R$` total da Posição de Capital permanece idêntico.
+- Segmentos sem ocorrências abertas renderizam exatamente como hoje (sem zona amber, sem segunda linha).
+- Capital já perdido continua fora da barra (sai naturalmente via saldos do ledger).
+- Atualização automática quando ocorrências mudam de status (cache invalidado pelo `staleTime`; sem retrofit).
 
 ## Arquivos
-- **Novo:** `src/hooks/useProjetoRecuperacaoCapital.ts`
-- **Novo:** `src/components/projeto-detalhe/RecuperacaoCapitalCard.tsx`
-- **Editado:** `src/components/projeto-detalhe/ExtratoProjetoTab.tsx` (montar o card no topo)
-- **Editado (opcional, refactor):** `src/components/projeto-detalhe/ProjetoFinancialMetricsCard.tsx` para consumir o hook compartilhado
+- Novo: `src/hooks/useCapitalEmDisputa.ts`
+- Editado: `src/components/caixa/PosicaoCapital.tsx`
+- Editado: `src/pages/Caixa.tsx` (apenas hook + prop)
 
 ## Critérios de aceite
-1. Card aparece no topo de Vínculos → Extrato em todos os projetos.
-2. Valores batem exatamente com o tooltip do "Break Even" do card de Indicadores Financeiros.
-3. Barra capada em 100%; excedente vira "Lucro acumulado".
-4. Atualiza ao adicionar/editar/remover depósitos ou saques sem refresh manual.
-5. Não se altera com filtros do extrato.
+1. Em `/caixa`, segmentos com ocorrências abertas mostram zona amber proporcional na barra horizontal.
+2. Tooltip e painel expandido exibem Capital Total, Disponível, Em Disputa e Exposição %.
+3. Ocorrências `resolvido` não contam.
+4. `valor_risco` em moeda estrangeira é convertido para BRL pelo mesmo `convertToBRL` usado no resto do card.
+5. Total patrimonial no header do card permanece inalterado vs. produção atual.
