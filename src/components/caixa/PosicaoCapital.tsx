@@ -384,6 +384,45 @@ export function PosicaoCapital({
                 );
               });
             })()}
+
+            {/* Overlay: Capital em Disputa (arco amber dentro de cada segmento) */}
+            {(() => {
+              let currentAngle = -90;
+              const radius = 57;
+              const centerX = 77;
+              const centerY = 77;
+              const gapAngle = 3;
+              return dadosPosicao.items.map((item) => {
+                const segmentAngle = (item.pct / 100) * 360;
+                const actualGap = segmentAngle > gapAngle ? gapAngle : 0;
+                const startAngle = currentAngle + (actualGap / 2);
+                const segUsable = segmentAngle - actualGap;
+                currentAngle += segmentAngle;
+
+                if (item.pctDisputa <= 0 || segUsable <= 0) return null;
+                const disputaAngle = segUsable * (item.pctDisputa / 100);
+                const endAngle = startAngle + disputaAngle;
+                const startRad = (startAngle * Math.PI) / 180;
+                const endRad = (endAngle * Math.PI) / 180;
+                const x1 = centerX + radius * Math.cos(startRad);
+                const y1 = centerY + radius * Math.sin(startRad);
+                const x2 = centerX + radius * Math.cos(endRad);
+                const y2 = centerY + radius * Math.sin(endRad);
+                const largeArcFlag = disputaAngle <= 180 ? 0 : 1;
+                const d = `M ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`;
+                return (
+                  <path
+                    key={`disputa-${item.id}`}
+                    d={d}
+                    fill="none"
+                    stroke="#f59e0b"
+                    strokeWidth={4}
+                    strokeLinecap="butt"
+                    style={{ opacity: 0.9, pointerEvents: "none" }}
+                  />
+                );
+              });
+            })()}
             
             {/* Center mask */}
             <circle cx="77" cy="77" r="46" fill="var(--bg-card)" />
