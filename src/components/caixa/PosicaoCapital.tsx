@@ -27,6 +27,9 @@ interface CapitalSegment {
   dashEmpty: number;
   dashOffset: number;
   breakdown: BreakdownEntry[];
+  valorDisputa: number;
+  valorDisponivel: number;
+  pctDisputa: number; // % do próprio segmento em disputa (0-100)
 }
 
 interface PosicaoCapitalProps {
@@ -38,6 +41,7 @@ interface PosicaoCapitalProps {
   saldoWalletsParceiros: number;
   cotacaoUSD: number;
   onViewPerdas?: () => void;
+  capitalEmDisputa?: Record<string, number>;
 }
 
 const isDev = process.env.NODE_ENV === 'development';
@@ -124,6 +128,7 @@ export function PosicaoCapital({
   saldoWalletsParceiros,
   cotacaoUSD,
   onViewPerdas,
+  capitalEmDisputa,
 }: PosicaoCapitalProps) {
   const [isMounted, setIsMounted] = useState(false);
   const [activeSegment, setActiveSegment] = useState<string | null>(null);
@@ -236,7 +241,11 @@ export function PosicaoCapital({
     let items: CapitalSegment[] = validRawItems.map(item => {
       const segmentValue = item.breakdown.reduce((acc, b) => acc + b.amountBRL, 0);
       const pct = totalBRL > 0 ? (segmentValue / totalBRL) * 100 : 0;
-      
+      const rawDisputa = Math.max(0, capitalEmDisputa?.[item.id] ?? 0);
+      const valorDisputa = Math.min(rawDisputa, segmentValue);
+      const valorDisponivel = Math.max(0, segmentValue - valorDisputa);
+      const pctDisputa = segmentValue > 0 ? (valorDisputa / segmentValue) * 100 : 0;
+
       return {
         id: item.id,
         name: item.name,
@@ -258,7 +267,10 @@ export function PosicaoCapital({
         breakdown: item.breakdown.map(b => ({
           ...b,
           pctOfSegment: segmentValue > 0 ? Number(((b.amountBRL / segmentValue) * 100).toFixed(2)) : 0
-        }))
+        })),
+        valorDisputa,
+        valorDisponivel,
+        pctDisputa,
       };
     });
 
@@ -284,7 +296,7 @@ export function PosicaoCapital({
     });
 
     return { items, total: totalBRL };
-  }, [saldosFiat, saldoCaixaCrypto, saldosBookmakers, saldosBroker, saldosContasParceiros, saldoWalletsParceiros, convertToBRL, convertUSDtoBRL]);
+  }, [saldosFiat, saldoCaixaCrypto, saldosBookmakers, saldosBroker, saldosContasParceiros, saldoWalletsParceiros, convertToBRL, convertUSDtoBRL, capitalEmDisputa]);
 
 
 
