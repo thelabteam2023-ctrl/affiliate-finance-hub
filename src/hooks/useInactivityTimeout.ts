@@ -276,25 +276,45 @@ export function useInactivityTimeout(): UseInactivityTimeoutReturn {
     if (!user?.id) return;
     
     const userId = user.id;
-    
-    // Tentar recuperar última atividade do localStorage (sync multi-aba)
+
+    // CRITICAL: reset COMPLETO de estado de expiração ao montar para este usuário.
+    // Garante que um login subsequente após expiração não herde flags antigas
+    // (isExpiredRef/toastFiredRef) que bloqueariam atividade ou re-disparariam o toast.
+    isExpiredRef.current = false;
+    toastFiredRef.current = false;
+    warningShownRef.current = false;
+    lastBackendUpdateRef.current = 0;
+
+    // Tentar recuperar última atividade do localStorage (sync multi-aba),
+    // MAS apenas se for recente — evita reaproveitar timestamp velho de
+    // sessão anterior que já expirou. Se for antigo (>= timeout), descarta.
     let initialActivity = new Date();
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const data = JSON.parse(stored);
         if (data.userId === userId && data.timestamp) {
-          initialActivity = new Date(data.timestamp);
+          const ageMs = Date.now() - Number(data.timestamp);
+          if (ageMs >= 0 && ageMs < INACTIVITY_TIMEOUT_MS) {
+            initialActivity = new Date(data.timestamp);
+          } else {
+            // Timestamp residual de sessão antiga — limpar para não contaminar.
+            try { localStorage.removeItem(STORAGE_KEY); } catch {}
+          }
         }
       }
     } catch (e) {
       console.error('[Inactivity] Erro ao ler localStorage:', e);
     }
-    
+
     setLastActivity(initialActivity);
-    isExpiredRef.current = false;
-    toastFiredRef.current = false;
-    warningShownRef.current = false;
+    // Persistir o novo "agora" para que outras abas se sincronizem.
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        timestamp: initialActivity.getTime(),
+        userId,
+      }));
+    } catch {}
     
     // Adicionar listeners para eventos de atividade
     const handleActivity = () => registerActivity();
