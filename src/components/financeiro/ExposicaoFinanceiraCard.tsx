@@ -6,7 +6,6 @@ import {
   Wallet,
   Wallet2,
   ShieldAlert,
-  Lock,
   ChevronRight,
   User,
 } from "lucide-react";
