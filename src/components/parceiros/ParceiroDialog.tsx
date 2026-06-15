@@ -385,10 +385,11 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
           const { data: { user } } = await supabase.auth.getUser();
           if (!user) return;
 
+          if (!workspaceId) return;
           let query = supabase
             .from("parceiros")
             .select("id")
-            .eq("user_id", user.id)
+            .eq("workspace_id", workspaceId)
             .eq("cpf", cleanCpf);
 
           // Exclude current parceiro if editing
@@ -443,10 +444,11 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
+        if (!workspaceId) return;
         let query = supabase
           .from("parceiros")
           .select("id")
-          .eq("user_id", user.id)
+          .eq("workspace_id", workspaceId)
           .eq("telefone", cleanTelefone);
 
         // Exclude current parceiro if editing
@@ -1016,12 +1018,13 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Check if address already exists for this tenant
+      // Check if address already exists in this workspace
+      if (!workspaceId) return;
       let query = supabase
         .from("wallets_crypto")
-        .select("id, parceiro_id, parceiros!inner(user_id)")
+        .select("id, parceiro_id, parceiros!inner(workspace_id)")
         .eq("endereco", endereco)
-        .eq("parceiros.user_id", user.id);
+        .eq("parceiros.workspace_id", workspaceId);
 
       // Exclude current wallet if editing
       if (walletId) {

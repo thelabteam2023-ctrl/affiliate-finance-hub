@@ -1,58 +1,46 @@
+## Objetivo
 
-# Otimização do Travamento na Calculadora de Edge Probabilístico
+Garantir que CPF, endereço de wallet cripto e chave PIX/conta bancária sejam **únicos apenas dentro do mesmo workspace** — nunca globalmente nem por `user_id`. Cada workspace é um ambiente operacional independente.
 
-## Diagnóstico — onde está o travamento
+## Diagnóstico
 
-Tracei o ciclo de render disparado ao digitar **Freebet** ou **Banca da Exchange**. Encontrei quatro `useMemo` pesados que recomputam em cada tecla:
+Auditei as restrições de unicidade nas três tabelas envolvidas:
 
-| useMemo | Custo | Reage a Freebet? | Reage a Banca? |
-|---|---|---|---|
-| `optimalConfig` (linha 396) | **10.001 chamadas** de `calculateMetrics` por render | ✅ | ✅ |
-| `monteCarloSim` (linha 418) | **100.000 trajetórias × até 1.000 passos** (até 100 M iterações) | ✅ (via `metrics`) | ✅ |
-| `longTermSim` (linha 506) | **100.000 ciclos** simulados | ✅ (via `metrics`) | ✅ |
-| `heatmapData` (linha 541) | 30 cálculos | ✅ | ✅ |
+**Banco de dados (já correto, workspace-scoped):**
+- `parceiros_cpf_workspace_unique` → UNIQUE (cpf, workspace_id) ✔
+- Trigger `validate_wallet_endereco_unique` em `wallets_crypto` → escopo `workspace_id` via JOIN com `parceiros` ✔
+- Trigger `validate_pix_key_unique` em `contas_bancarias` → escopo `workspace_id` via JOIN com `parceiros` ✔
+- Nenhum índice UNIQUE global em `wallets_crypto.endereco` ou `contas_bancarias.pix_key`.
 
-Cada `calculateMetrics` ainda gera sub-cenários `O(2^N)` para visualização (lin. 153). Multiplicando, uma única tecla no campo Freebet dispara **dezenas de milhões de operações síncronas** que bloqueiam a main thread → o "computador trava" que você descreveu.
+**Frontend (incorreto — escopo por `user_id`, não por `workspace_id`):**
+Em `src/components/parceiros/ParceiroDialog.tsx`:
+- Linha 391: checagem de CPF duplicado filtra por `user_id` (bloqueia entre workspaces do mesmo dono).
+- Linha 449: checagem de telefone duplicado, idem.
+- Linha 1024: checagem de endereço de wallet usa `parceiros.user_id` (bloqueia mesmo dono em outro workspace).
 
-`goldenCombinationsByExtraction` não depende de freebet/banca (já está OK).
+Resultado: o owner do workspace é bloqueado ao recadastrar um CPF/telefone/wallet que ele já possui em outro workspace seu, mesmo o DB permitindo. O erro do screenshot vem dessa validação client-side (ou da trigger em outro caso, que permanece correta — bloqueia só dentro do mesmo workspace).
 
-## Plano de correção (4 frentes, sem mudar a matemática)
+## Mudanças
 
-### 1. Debounce dos inputs pesados
-Criar `useDebouncedValue` (250 ms) e usar os **valores debounçados** apenas como dependência dos cálculos pesados (`optimalConfig`, `monteCarloSim`, `longTermSim`, `heatmapData`). A UI continua atualizando o campo imediatamente — só os cálculos esperam você parar de digitar.
+### 1. `src/components/parceiros/ParceiroDialog.tsx`
+Substituir os 3 filtros `.eq("user_id", user.id)` (e `parceiros.user_id`) pelo `workspaceId` ativo (já disponível no componente via `useTabWorkspace`/contexto — confirmar e importar se necessário):
 
-```ts
-const debouncedFreebet  = useDebouncedValue(freebet, 250);
-const debouncedBankroll = useDebouncedValue(bankroll, 250);
-```
+- **CPF (linha 388-392):** `.eq("workspace_id", workspaceId).eq("cpf", cleanCpf)`
+- **Telefone (linha 446-450):** `.eq("workspace_id", workspaceId).eq("telefone", cleanTelefone)`
+- **Wallet endereço (linha 1020-1024):** trocar o `parceiros!inner(user_id)` por `parceiros!inner(workspace_id)` com `.eq("parceiros.workspace_id", workspaceId)`.
 
-### 2. Reduzir iterações para níveis razoáveis sem perder precisão estatística
-- `optimalConfig`: **10.001 → 200 passos** (resolução de 0,175 % no alvo de extração — imperceptível). Adicionalmente, remover `freebet` das deps: a escolha do alvo ótimo depende apenas do **ratio `bankroll/freebet`**, não dos valores absolutos. Reduz ~98 % do custo.
-- `monteCarloSim`: **100.000 trajetórias → 5.000**. Erro estatístico do "risk of ruin" cai de ~0,1 pp para ~0,7 pp — aceitável para um KPI mostrado com 1 casa decimal. Mantém a CDF pré-calculada (já está boa).
-- `longTermSim`: **100.000 → 2.000 ciclos** (gráfico só plota até `cycle ≤ 1000` mesmo — 100k é desperdício puro).
-- `heatmapData`: já é pequeno; só passa a usar valores debounçados.
+Cada bloco também passa a abortar (com mensagem clara) se `workspaceId` estiver indisponível, em vez de cair em validação global silenciosa.
 
-### 3. Cache do `calculateMetrics` no escopo do `useMemo`
-Dentro de `optimalConfig` e `heatmapData`, memoizar por chave `legs|target|comm|freebet` num `Map` local — evita recomputar para combinações repetidas no mesmo loop.
+### 2. Triggers de banco — manter como estão
+Já estão corretamente escopados ao workspace. Nenhuma migration necessária.
 
-### 4. Sinalização visual de "calculando"
-Adicionar `useTransition` (React 18) ou um pequeno spinner no card de cada KPI pesado, para que o usuário entenda que o número está sendo recalculado em background.
+### 3. Auditoria complementar (read-only, sem código)
+Conferir que não existem outros pontos no app fazendo `.eq("user_id", ...)` em `parceiros`, `wallets_crypto` ou `contas_bancarias` para validação de duplicata. A varredura inicial mostrou apenas os 3 casos acima como bloqueadores; demais ocorrências (linhas 668, 1085 e `BancoSelect.tsx:79`) são apenas para preenchimento de `user_id` em inserts e permanecem.
 
-## Validação
+### 4. Sem alteração de regra dentro do mesmo workspace
+A unicidade **dentro do workspace** (mesmo CPF/wallet/PIX em parceiros diferentes do mesmo workspace) continua bloqueada pelos triggers — esse é o comportamento desejado. O ajuste é exclusivamente para liberar o **mesmo registro em workspaces diferentes**.
 
-- Antes: digitar "1100" no campo Freebet (4 teclas) → ~4 × 100 M ops ≈ trava de vários segundos.
-- Depois: cada tecla atualiza só o input (< 1 ms); 250 ms após parar, os pesados rodam **uma vez** com ~5 k trajetórias + 200 calcs de target → < 100 ms total.
-
-Rodar `bunx vitest run src/lib/__tests__/hedge-probabilistico-engine.test.ts` para garantir que nada matemático mudou (não vou tocar no engine).
-
-## Escopo protegido (não muda)
-- `src/lib/hedge-probabilistico-engine.ts` (matemática intacta).
-- `src/lib/extracao-engine.ts`.
-- Toggle ROI Máx / Equilíbrio de Perdas já entregue.
-- Biblioteca de Ouro Dinâmica (já estava OK).
-
-## Arquivos editados
-- `src/components/ferramentas/CalculadoraHedgeProbabilisticaContent.tsx` (debounce + reduções + cache).
-- `src/hooks/useDebouncedValue.ts` (novo, ~10 linhas).
-
-Posso aplicar?
+## Resultado esperado
+- Mesma pessoa (CPF), mesma wallet e mesma chave PIX podem ser cadastradas independentemente em cada workspace.
+- Isolamento operacional preservado: saldos, ledger, auditoria continuam por `workspace_id`.
+- Erro "Este endereço de wallet já está cadastrado para outro parceiro" passa a aparecer apenas quando o conflito é real dentro do mesmo workspace.
