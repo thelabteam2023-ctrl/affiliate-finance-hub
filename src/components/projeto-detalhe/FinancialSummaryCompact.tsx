@@ -5,6 +5,7 @@ import { useProjetoDashboardData, buildBookmakerMoedaMap } from "@/hooks/useProj
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { FinancialMetricsPopover } from "./FinancialMetricsPopover";
 import { DollarSign } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { calcularMetricasPeriodo } from "@/services/calcularMetricasPeriodo";
 import { format } from "date-fns";
@@ -82,7 +83,16 @@ export function FinancialSummaryCompact({ projetoId, dateRange }: FinancialSumma
       <PopoverTrigger asChild>
         <button className="flex items-center gap-2 rounded-lg border border-border/50 bg-muted/30 px-3 py-1.5 hover:bg-muted/60 transition-colors cursor-pointer group">
           <div className="flex flex-col items-center">
-            <span className="text-[10px] text-muted-foreground leading-tight">{metrics.lucro >= 0 ? "Lucro" : "Prejuízo"}</span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-[10px] text-muted-foreground leading-tight border-b border-dotted border-muted-foreground/40 cursor-help">
+                  {metrics.lucro >= 0 ? "Lucro Realizado" : "Prejuízo Realizado"}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-[260px] text-xs">
+                Dinheiro que efetivamente retornou ao caixa: Saques − Depósitos. Não inclui saldo ainda preso em casa.
+              </TooltipContent>
+            </Tooltip>
             <span className={`text-sm font-bold leading-tight tabular-nums ${lucroColor}`}>
               {formatCurrency(metrics.lucro)}
             </span>
