@@ -7,6 +7,34 @@ import { useCapitalEmDisputa, type CapitalDisputaSegmentId } from "@/hooks/useCa
 
 export type ExposicaoSegmentId = CapitalDisputaSegmentId | "perdas" | "irrecuperavel";
 
+/**
+ * Remove prefixos em colchetes do título (ex: "[SCAN CASA]", "[SCAN PARCEIRO]")
+ * e devolve uma categoria inferida quando aplicável. Capitaliza a primeira letra.
+ */
+function limparTituloPerda(raw: string): {
+  titulo: string;
+  categoria: "casa" | "parceiro" | "banco" | "wallet" | "outro" | null;
+} {
+  let titulo = (raw || "").trim();
+  let categoria: "casa" | "parceiro" | "banco" | "wallet" | "outro" | null = null;
+  const match = titulo.match(/^\[([^\]]+)\]\s*/);
+  if (match) {
+    const tag = match[1].toUpperCase();
+    titulo = titulo.slice(match[0].length).trim();
+    if (tag.includes("CASA")) categoria = "casa";
+    else if (tag.includes("PARCEIRO")) categoria = "parceiro";
+    else if (tag.includes("BANCO")) categoria = "banco";
+    else if (tag.includes("WALLET") || tag.includes("CRYPTO")) categoria = "wallet";
+  }
+  // Capitaliza só a primeira letra (preserva siglas no resto)
+  if (titulo.length > 0) {
+    titulo = titulo.charAt(0).toUpperCase() + titulo.slice(1);
+  } else {
+    titulo = "(sem descrição)";
+  }
+  return { titulo, categoria };
+}
+
 export interface OcorrenciaDetalhe {
   id: string;
   titulo: string;
@@ -33,6 +61,8 @@ export interface PerdaDetalhe {
   descricao: string;
   origem_label?: string | null;
   origem_titular?: string | null;
+  categoria: "casa" | "parceiro" | "banco" | "wallet" | "outro";
+  bookmaker_nome?: string | null;
 }
 
 export interface IrrecuperavelDetalhe {
@@ -285,27 +315,37 @@ export function useExposicaoFinanceira({ dataInicio, dataFim }: Params): Exposic
       if (valor <= 0) continue;
       let label: string | null = null;
       let titular: string | null = null;
+      let categoria: PerdaDetalhe["categoria"] = "outro";
+      let bookmakerNome: string | null = null;
       if (l.origem_bookmaker_id && bmMap[l.origem_bookmaker_id]) {
         label = bmMap[l.origem_bookmaker_id].nome;
         const pid = bmMap[l.origem_bookmaker_id].parceiro_id;
         titular = pid ? parceiroMap[pid] : null;
+        categoria = "casa";
+        bookmakerNome = label;
       } else if (l.origem_conta_bancaria_id && contaMap[l.origem_conta_bancaria_id]) {
         const c = contaMap[l.origem_conta_bancaria_id];
         label = c.banco;
         titular = c.titular;
+        categoria = c.parceiro_id ? "parceiro" : "banco";
       } else if (l.origem_wallet_id && walletMap[l.origem_wallet_id]) {
         const w = walletMap[l.origem_wallet_id];
         label = `${w.exchange} · ${w.coin}`;
+        categoria = "wallet";
       }
+      const { titulo: descricaoLimpa, categoria: catFromTitulo } = limparTituloPerda(l.descricao || "Perda operacional");
+      if (catFromTitulo) categoria = catFromTitulo;
       detalhes.perdas.push({
         id: l.id,
         fonte: "ledger",
         data: l.data_transacao,
         valor,
         moeda: l.moeda || "BRL",
-        descricao: l.descricao || "Perda operacional",
+        descricao: descricaoLimpa,
         origem_label: label,
         origem_titular: titular,
+        categoria,
+        bookmaker_nome: bookmakerNome,
       });
     }
     // Perdas: ocorrências (apenas as que ainda NÃO viraram ledger, p/ evitar dupla contagem)
@@ -317,27 +357,37 @@ export function useExposicaoFinanceira({ dataInicio, dataFim }: Params): Exposic
       if (valor <= 0) continue;
       let label: string | null = null;
       let titular: string | null = null;
+      let categoria: PerdaDetalhe["categoria"] = "outro";
+      let bookmakerNome: string | null = null;
       if (o.bookmaker_id && bmMap[o.bookmaker_id]) {
         label = bmMap[o.bookmaker_id].nome;
         const pid = bmMap[o.bookmaker_id].parceiro_id;
         titular = pid ? parceiroMap[pid] : null;
+        categoria = "casa";
+        bookmakerNome = label;
       } else if (o.conta_bancaria_id && contaMap[o.conta_bancaria_id]) {
         const c = contaMap[o.conta_bancaria_id];
         label = c.banco;
         titular = c.titular;
+        categoria = c.parceiro_id ? "parceiro" : "banco";
       } else if (o.wallet_id && walletMap[o.wallet_id]) {
         const w = walletMap[o.wallet_id];
         label = `${w.exchange} · ${w.coin}`;
+        categoria = "wallet";
       }
+      const { titulo: descricaoLimpa, categoria: catFromTitulo } = limparTituloPerda(o.titulo || "Ocorrência com perda");
+      if (catFromTitulo) categoria = catFromTitulo;
       detalhes.perdas.push({
         id: o.id,
         fonte: "ocorrencia",
         data: o.resolved_at?.slice(0, 10) || o.data_ocorrencia,
         valor,
         moeda: o.moeda || "BRL",
-        descricao: o.titulo || "Ocorrência com perda",
+        descricao: descricaoLimpa,
         origem_label: label,
         origem_titular: titular,
+        categoria,
+        bookmaker_nome: bookmakerNome,
       });
     }
 

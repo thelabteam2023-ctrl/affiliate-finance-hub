@@ -8,7 +8,10 @@ import {
   ShieldAlert,
   Lock,
   ChevronRight,
+  User,
 } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Sheet,
@@ -25,6 +28,59 @@ import {
   type IrrecuperavelDetalhe,
 } from "@/hooks/useExposicaoFinanceira";
 import { cn } from "@/lib/utils";
+import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
+
+function formatDataBR(value?: string | null): string {
+  if (!value) return "—";
+  try {
+    const d = value.length <= 10 ? parseISO(`${value}T00:00:00`) : parseISO(value);
+    if (Number.isNaN(d.getTime())) return "—";
+    return format(d, "dd/MM/yyyy", { locale: ptBR });
+  } catch {
+    return "—";
+  }
+}
+
+const CATEGORIA_META: Record<
+  PerdaDetalhe["categoria"],
+  { label: string; icon: typeof Building2; dot: string; iconBg: string; iconColor: string }
+> = {
+  casa: {
+    label: "Casa de Apostas",
+    icon: Building2,
+    dot: "bg-emerald-500",
+    iconBg: "bg-emerald-500/10",
+    iconColor: "text-emerald-500",
+  },
+  parceiro: {
+    label: "Parceiro",
+    icon: User,
+    dot: "bg-blue-500",
+    iconBg: "bg-blue-500/10",
+    iconColor: "text-blue-500",
+  },
+  banco: {
+    label: "Banco / Processador",
+    icon: Landmark,
+    dot: "bg-amber-500",
+    iconBg: "bg-amber-500/10",
+    iconColor: "text-amber-500",
+  },
+  wallet: {
+    label: "Wallet Crypto",
+    icon: Wallet2,
+    dot: "bg-violet-500",
+    iconBg: "bg-violet-500/10",
+    iconColor: "text-violet-500",
+  },
+  outro: {
+    label: "Outro",
+    icon: AlertTriangle,
+    dot: "bg-muted-foreground/60",
+    iconBg: "bg-muted",
+    iconColor: "text-muted-foreground",
+  },
+};
 
 interface Props {
   dataInicio: string | null;
@@ -362,33 +418,93 @@ function PerdasList({
   items: PerdaDetalhe[];
   formatCurrency: (v: number, c?: string) => string;
 }) {
+  const { getLogoUrl } = useBookmakerLogoMap();
   if (items.length === 0) return <EmptyList msg="Nenhuma perda confirmada no período." />;
+
+  const total = items.reduce((acc, p) => acc + p.valor, 0);
+
   return (
-    <div className="space-y-2">
-      {items.map(p => (
-        <div key={p.id} className="rounded-md border border-border/60 p-3 space-y-1">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <div className="text-sm font-medium truncate">{p.descricao}</div>
-              <div className="text-[11px] text-muted-foreground">
-                {p.origem_label ?? "Origem desconhecida"}
-                {p.origem_titular ? ` · Titular: ${p.origem_titular}` : ""}
+    <div className="space-y-3">
+      <div className="flex items-baseline justify-between text-[11px] text-muted-foreground px-1">
+        <span>
+          {items.length} perda{items.length === 1 ? "" : "s"} confirmada{items.length === 1 ? "" : "s"}
+        </span>
+        <span className="font-medium text-red-500/90 tabular-nums">{formatCurrency(total)}</span>
+      </div>
+      <div className="space-y-2">
+        {items.map((p) => {
+          const meta = CATEGORIA_META[p.categoria];
+          const Icon = meta.icon;
+          const logo =
+            p.categoria === "casa" && p.bookmaker_nome ? getLogoUrl(p.bookmaker_nome) : null;
+          return (
+            <div
+              key={p.id}
+              className="group rounded-lg border border-border/50 bg-card/40 px-3 py-2.5 hover:bg-muted/40 hover:border-border transition-colors"
+            >
+              <div className="flex items-start gap-3">
+                <div
+                  className={cn(
+                    "shrink-0 h-9 w-9 rounded-md flex items-center justify-center overflow-hidden ring-1 ring-border/60",
+                    !logo && meta.iconBg
+                  )}
+                >
+                  {logo ? (
+                    <img
+                      src={logo}
+                      alt={p.bookmaker_nome ?? ""}
+                      className="h-full w-full object-contain"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <Icon className={cn("h-4 w-4", meta.iconColor)} />
+                  )}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-foreground line-clamp-2 leading-snug">
+                        {p.descricao}
+                      </div>
+                      <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground flex-wrap">
+                        <span className={cn("inline-block h-1.5 w-1.5 rounded-full", meta.dot)} />
+                        <span className="font-medium text-foreground/70">{meta.label}</span>
+                        {p.origem_label && (
+                          <>
+                            <span className="opacity-50">·</span>
+                            <span className="truncate">{p.origem_label}</span>
+                          </>
+                        )}
+                        {p.origem_titular && (
+                          <>
+                            <span className="opacity-50">·</span>
+                            <span className="truncate">Titular: {p.origem_titular}</span>
+                          </>
+                        )}
+                      </div>
+                      <div className="mt-1 text-[11px] text-muted-foreground/80">
+                        {formatDataBR(p.data)}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-sm font-semibold text-red-500 tabular-nums">
+                        {formatCurrency(p.valor)}
+                      </div>
+                      {p.moeda !== "BRL" && (
+                        <div className="text-[10px] text-muted-foreground tabular-nums">
+                          {p.moeda}{" "}
+                          {p.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="text-right shrink-0">
-              <div className="text-sm font-semibold text-red-600 dark:text-red-400">
-                {formatCurrency(p.valor)}
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-            <Badge variant="outline" className="h-4 text-[10px]">
-              {p.fonte === "ledger" ? "Lançamento" : "Ocorrência"}
-            </Badge>
-            <span className="ml-auto">{p.data}</span>
-          </div>
-        </div>
-      ))}
+          );
+        })}
+      </div>
     </div>
   );
 }

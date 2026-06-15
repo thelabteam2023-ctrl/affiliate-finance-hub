@@ -1,58 +1,74 @@
-# Plano: Clareza do Período nos Indicadores do Financeiro
+# Plano: Redesign da lista "Perdas confirmadas no período"
 
-## Problema
-O filtro global ("Mês Anterior", "Mês Atual", "Ano", "Tudo", "Personalizado") fica no topo da página, mas dentro de cards como **Composição de Custos**, **Exposição & Perdas**, **Posição de Capital** e os **KPIs do header**, não há indicação de qual janela temporal está sendo exibida. O usuário precisa rolar de volta e inferir mentalmente — e em métricas de "estoque" (Patrimônio, Posição de Capital) o período sequer se aplica.
+## Problemas atuais (vistos no print)
+1. **Data em formato cru ISO** com timezone: `2026-06-05T00:00:00+00:00` — ilegível.
+2. **Prefixos em colchetes** `[SCAN CASA]`, `[SCAN PARCEIRO]` no meio do título, misturando categoria + descrição.
+3. **Badge "Lançamento"** sem utilidade — todo registro listado já é lançamento confirmado.
+4. **Sem logo** das casas de apostas / bancos, mesmo havendo dados disponíveis (`bookmakers_catalogo.logo_url`).
+5. **Hierarquia visual fraca**: título, origem e titular competem; valor em vermelho não tem ancoragem visual.
+6. **Texto da descrição truncado** sem ressalva, e descrição às vezes redundante com a origem.
 
-## Princípios
-1. Cada card deve declarar **explicitamente** sua janela temporal (rótulo + datas resolvidas).
-2. Distinguir visualmente métricas de **fluxo** (sensíveis ao período) das de **estoque/saldo atual** (snapshot "agora").
-3. Reutilizar o componente já aprovado no Caixa Operacional sempre que possível, sem reescrever lógica de cálculo.
+## Premissas de redesign
+- Reaproveitar o padrão visual do projeto (mesmas tokens `--text-primary`, `--bg-card`, `--accent-danger`, badges shadcn discretos).
+- Tipar a perda em **categoria semântica** (Casa / Parceiro / Banco / Wallet / Outro) inferida na transformação dos dados, não no título.
+- Garantir parsing seguro de datas que podem vir como `YYYY-MM-DD` puro ou ISO completo.
 
 ## Etapas
 
-### 1. Utilitário central de rótulo de período
-Em `src/types/dashboardFilters.ts`, adicionar `getDashboardPeriodDescription(filter, customRange)` que devolve:
-- `label` curto: "Mês Atual", "Mês Anterior", "Ano de 2026", "Tudo", "01/06 – 15/06/2026"
-- `rangeLabel` formatado: "01/06/2026 → 15/06/2026" (ou "Sem limite" para `tudo`)
-- `scope`: `"periodo" | "atual"` (para diferenciar fluxo de estoque)
+### 1. Enriquecer `PerdaDetalhe` em `useExposicaoFinanceira.ts`
+Adicionar campos calculados ao montar a lista (sem mexer no fetch):
+- `categoria: "casa" | "parceiro" | "banco" | "wallet" | "outro"` — derivado de `origem_tipo`/origem do ledger ou do `sub_motivo` da ocorrência. Quando o título contém `[SCAN CASA]`/`[SCAN PARCEIRO]`, **remover o prefixo** e usar como `categoria`.
+- `descricao_limpa: string` — título sem o prefixo em colchetes, trim, primeira letra maiúscula.
+- `bookmaker_nome: string | null` e `bookmaker_id: string | null` — promover para uso de logo.
+- `data` continua como string vinda do banco; o componente é responsável pela formatação.
 
-### 2. Novo componente `PeriodScopeBadge`
-`src/components/financeiro/PeriodScopeBadge.tsx` — badge compacto reutilizável:
-- Pílula no canto direito do header do card, ex.: `📅 Mês Atual · 01–15/06/2026`
-- Tooltip com a descrição completa ("Janela: 01/06/2026 a 15/06/2026 — alterada pelo filtro do topo")
-- Variante `scope="atual"` para cards de saldo: `🕒 Posição atual` (sem datas, com tooltip "Saldo em tempo real, não afetado pelo filtro de período")
+### 2. Novo helper de data
+Em `src/lib/format.ts` (ou inline no card): `formatDataBR(value)` que aceita `YYYY-MM-DD` e ISO completo, devolve `dd/MM/yyyy` em pt-BR via `date-fns/format` + `parseISO`. Fallback gracioso para `—`.
 
-### 3. Aplicação card a card (`src/pages/Financeiro.tsx`)
-| Card | Tipo | Badge |
-|---|---|---|
-| Patrimônio Total | estoque | "Posição atual" |
-| Lucro Operacional | fluxo | período ativo |
-| Margem Operacional | fluxo | período ativo |
-| Posição de Capital (donut) | estoque + sobreposição | "Posição atual" + nota "Capital em disputa: tempo real" |
-| Exposição & Perdas | misto | "Posição atual" para "Em Disputa" e "Saldo Irrecuperável"; "Período ativo" na seção "Perdas Confirmadas" |
-| Composição de Custos | fluxo | período ativo + comparativo "vs período anterior equivalente" no subtítulo |
+### 3. Redesenhar `PerdasList` em `ExposicaoFinanceiraCard.tsx`
+Estrutura proposta de cada linha (3 colunas: avatar | conteúdo | valor):
 
-### 4. Banner contextual no topo da Visão Financeira
-Logo abaixo do `DashboardPeriodFilterBar`, adicionar uma linha discreta:
-> *"Exibindo dados de **Mês Atual** · 01/06/2026 → 15/06/2026. Cards de saldo (Patrimônio, Posição de Capital, Em Disputa) sempre refletem a posição atual."*
+```text
+┌──────────────────────────────────────────────────────────────┐
+│ [logo]  Impossibilitado de sacar — saldo anterior            │
+│  44px   ● Casa de Apostas · BET PIX 365                      │
+│         05/06/2026                                R$ 235,00 │
+└──────────────────────────────────────────────────────────────┘
+```
 
-Isso resolve a ambiguidade global e evita repetição visual excessiva nos cards.
+- **Avatar 36–40 px**: `<img src={logoUrl}>` quando casa de apostas com match em `useBookmakerLogoMap`; senão um ícone semântico em círculo (`Building2` para casa, `Landmark` para banco, `Wallet2` para wallet, `User` para parceiro) com cor de fundo `bg-muted/60`.
+- **Título** (`descricao_limpa`) em `text-sm text-foreground font-medium`, sem truncate brutal — `line-clamp-2`.
+- **Linha de metadados**: bullet `●` com cor da categoria + `<Badge variant="secondary" className="h-4 text-[10px]">` para a categoria semântica (Casa de Apostas / Parceiro / Banco / Wallet / Outro), seguida de `· {origem_label}` e `· Titular: …` quando houver. Badge "Lançamento" **removido**.
+- **Data** em `text-[11px] text-muted-foreground` abaixo dos metadados, formato `dd/MM/yyyy`.
+- **Valor** alinhado à direita, `text-base font-semibold text-red-500 tabular-nums`. Se moeda ≠ BRL, segunda linha pequena com valor original (já existe padrão no card).
+- **Hover**: `hover:bg-muted/40` + sutil `translate-x-0.5`.
 
-### 5. Ajustes pontuais nos sub-componentes
-- `ComposicaoCustosCard`: trocar o atual subtítulo genérico por `<PeriodScopeBadge>` + texto "comparado a <período anterior equivalente>".
-- `ExposicaoFinanceiraCard`: cada uma das 3 seções internas ganha um mini-rótulo ("Posição atual" / "No período" / "Posição atual").
-- `HeaderKpiCard`: aceitar prop opcional `periodBadge?: ReactNode` renderizada ao lado do `hint`.
+### 4. Espaçamento e padding
+Cards de perda dentro do `<Sheet>` passam de `p-3` para `p-3 px-3.5`, gap entre cards `gap-2` → `gap-2.5`, divisor sutil opcional (`border-border/40`).
 
-## Detalhes técnicos
-- Sem mudanças em hooks de dados ou RPCs — apenas camada de apresentação.
-- `getDashboardPeriodDescription` formata datas com `date-fns/format` (`dd/MM/yyyy`, pt-BR).
-- `PeriodScopeBadge` usa shadcn `Badge` + `Tooltip`, paleta `bg-muted/40 text-muted-foreground`.
-- Nenhum card de estoque deve consumir `dataInicio/dataFim` indevidamente; auditar props passadas.
+### 5. Mapeamento de categorias
+Tabela usada por badge e cor do bullet:
+| Categoria | Label | Cor bullet | Ícone fallback |
+|---|---|---|---|
+| casa | Casa de Apostas | `text-emerald-500` | Building2 |
+| parceiro | Parceiro | `text-blue-500` | User |
+| banco | Banco / Processador | `text-amber-500` | Landmark |
+| wallet | Wallet Crypto | `text-violet-500` | Wallet2 |
+| outro | Outro | `text-muted-foreground` | AlertTriangle |
+
+### 6. Empty state e plural
+- "Nenhuma perda confirmada no período selecionado." (já existe — manter).
+- Contagem no header do drawer: `{n} perda{n>1?'s':''} · Total {formatCurrency}` para dar âncora numérica.
 
 ## Fora de escopo
-- Trocar a semântica dos KPIs (já feito em etapa anterior).
-- Alterar cálculos de "período anterior" da Composição de Custos.
-- Mudar o filtro global em si.
+- Alterar o cálculo do total ou as fontes A/B/C (ledger + ocorrência).
+- Mexer nas outras seções do drawer (Em Disputa, Saldo Irrecuperável) — entram em iteração seguinte se necessário.
+- Filtros/ordenação dentro do drawer.
+
+## Detalhes técnicos
+- `useBookmakerLogoMap().getLogoUrl(bookmaker_nome)` já normaliza nomes — usar direto.
+- `date-fns/format(parseISO(d), "dd/MM/yyyy", { locale: ptBR })` com try/catch.
+- Sem novas queries: tudo já está no payload de `useExposicaoFinanceira` + cache do logo map.
 
 ## Resultado esperado
-Em qualquer card, o usuário lê em <2s qual janela temporal está sendo aplicada e entende quando uma métrica é "agora" versus "no período selecionado".
+Drawer fica legível, escaneável em 2 segundos: logo identifica visualmente a casa, badge nomeia a categoria sem precisar ler o título, data em formato BR, valor permanece como âncora visual, ruído eliminado.
