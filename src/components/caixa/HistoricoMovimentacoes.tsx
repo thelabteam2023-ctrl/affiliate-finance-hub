@@ -1096,7 +1096,7 @@ export function HistoricoMovimentacoes({
                   return (
                     <div 
                       key={tx.id} 
-                      className="grid grid-cols-[auto_1fr_auto] gap-[12px] items-center py-[12px] border-b border-[#131920] last:border-0 group"
+                      className={`grid grid-cols-[auto_1fr_auto] gap-[12px] items-center py-[12px] border-b border-[#131920] last:border-0 group ${isReverted ? 'opacity-60' : ''}`}
                     >
                       {/* Coluna 1: Ícone */}
                       <TransactionIcon type={txType} transacao={{
