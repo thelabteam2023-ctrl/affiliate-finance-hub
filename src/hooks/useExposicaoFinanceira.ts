@@ -346,6 +346,8 @@ export function useExposicaoFinanceira({ dataInicio, dataFim }: Params): Exposic
       }
       const { titulo: descricaoLimpa, categoria: catFromTitulo } = limparTituloPerda(l.descricao || "Perda operacional");
       if (catFromTitulo) categoria = catFromTitulo;
+      const rawDesc = String(l.descricao || "");
+      const isScan = /^\s*\[SCAN\s+(CASA|PARCEIRO)\]/i.test(rawDesc);
       detalhes.perdas.push({
         id: l.id,
         fonte: "ledger",
@@ -357,6 +359,7 @@ export function useExposicaoFinanceira({ dataInicio, dataFim }: Params): Exposic
         origem_titular: titular,
         categoria,
         bookmaker_nome: bookmakerNome,
+        is_scan: isScan,
       });
     }
     // Perdas: ocorrências (apenas as que ainda NÃO viraram ledger, p/ evitar dupla contagem)
