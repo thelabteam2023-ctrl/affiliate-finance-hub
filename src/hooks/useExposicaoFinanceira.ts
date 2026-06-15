@@ -7,6 +7,34 @@ import { useCapitalEmDisputa, type CapitalDisputaSegmentId } from "@/hooks/useCa
 
 export type ExposicaoSegmentId = CapitalDisputaSegmentId | "perdas" | "irrecuperavel";
 
+/**
+ * Remove prefixos em colchetes do título (ex: "[SCAN CASA]", "[SCAN PARCEIRO]")
+ * e devolve uma categoria inferida quando aplicável. Capitaliza a primeira letra.
+ */
+function limparTituloPerda(raw: string): {
+  titulo: string;
+  categoria: "casa" | "parceiro" | "banco" | "wallet" | "outro" | null;
+} {
+  let titulo = (raw || "").trim();
+  let categoria: "casa" | "parceiro" | "banco" | "wallet" | "outro" | null = null;
+  const match = titulo.match(/^\[([^\]]+)\]\s*/);
+  if (match) {
+    const tag = match[1].toUpperCase();
+    titulo = titulo.slice(match[0].length).trim();
+    if (tag.includes("CASA")) categoria = "casa";
+    else if (tag.includes("PARCEIRO")) categoria = "parceiro";
+    else if (tag.includes("BANCO")) categoria = "banco";
+    else if (tag.includes("WALLET") || tag.includes("CRYPTO")) categoria = "wallet";
+  }
+  // Capitaliza só a primeira letra (preserva siglas no resto)
+  if (titulo.length > 0) {
+    titulo = titulo.charAt(0).toUpperCase() + titulo.slice(1);
+  } else {
+    titulo = "(sem descrição)";
+  }
+  return { titulo, categoria };
+}
+
 export interface OcorrenciaDetalhe {
   id: string;
   titulo: string;
