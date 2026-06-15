@@ -39,6 +39,14 @@ function formatDataBR(value?: string | null): string {
   }
 }
 
+function toTitleCase(value?: string | null): string {
+  if (!value) return "";
+  return value
+    .toLowerCase()
+    .replace(/\b([a-záàâãéèêíïóôõöúçñ])/gi, (m) => m.toUpperCase())
+    .replace(/\b(De|Da|Do|Das|Dos|E)\b/g, (m) => m.toLowerCase());
+}
+
 const CATEGORIA_META: Record<
   PerdaDetalhe["categoria"],
   { label: string; icon: typeof Building2; dot: string; iconBg: string; iconColor: string }
@@ -107,7 +115,7 @@ export function ExposicaoFinanceiraCard({
   lucroOperacional,
   formatCurrency,
   periodBadge,
-  realtimeBadge,
+  realtimeBadge: _realtimeBadge,
 }: Props) {
   const exp = useExposicaoFinanceira({ dataInicio, dataFim });
   const [drill, setDrill] = useState<DrillKey>(null);
@@ -146,6 +154,9 @@ export function ExposicaoFinanceiraCard({
     },
   ];
 
+  const activeSegs = segs.filter((s) => s.value > 0);
+  const showDisputaSummary = activeSegs.length >= 2;
+
   return (
     <Card className="h-full">
       <CardHeader className="pb-3">
@@ -169,11 +180,12 @@ export function ExposicaoFinanceiraCard({
         {/* SEÇÃO 1: Em disputa */}
         <section className="space-y-2">
           <div className="flex items-center justify-between">
-            <h4 className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold flex items-center gap-1.5">
+            <h4 className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
               Em disputa
-              {realtimeBadge}
             </h4>
-            <span className="text-xs font-medium">{formatCurrency(exp.totalEmDisputa)}</span>
+            {showDisputaSummary && (
+              <span className="text-xs font-medium">{formatCurrency(exp.totalEmDisputa)}</span>
+            )}
           </div>
           {exp.loading ? (
             <div className="text-xs text-muted-foreground">Carregando…</div>
@@ -284,7 +296,7 @@ function DrillDrawer({
   if (drill === "disputa-bookmakers") {
     title = "Em disputa · Casas de Apostas";
     description = "Ocorrências abertas com valor em risco nas bookmakers";
-    body = <OcorrenciasList items={exp.detalhes.disputaBookmakers} formatCurrency={formatCurrency} />;
+    body = <DisputaBookmakerList items={exp.detalhes.disputaBookmakers} formatCurrency={formatCurrency} />;
   } else if (drill === "disputa-contas-parc") {
     title = "Em disputa · Bancos / Processadores";
     description = "Ocorrências em aberto vinculadas a contas de parceiros";
@@ -370,6 +382,96 @@ function OcorrenciasList({
 }
 
 function PerdasList({
+  items,
+  formatCurrency,
+}: {
+  items: PerdaDetalhe[];
+  formatCurrency: (v: number, c?: string) => string;
+}) {
+  // (preserved below)
+  return PerdasListImpl({ items, formatCurrency });
+}
+
+function DisputaBookmakerList({
+  items,
+  formatCurrency,
+}: {
+  items: OcorrenciaDetalhe[];
+  formatCurrency: (v: number, c?: string) => string;
+}) {
+  const { getLogoUrl } = useBookmakerLogoMap();
+  if (items.length === 0) return <EmptyList msg="Nenhuma ocorrência neste segmento." />;
+
+  return (
+    <div className="space-y-2">
+      {items.map((o) => {
+        const logo = o.bookmaker_nome ? getLogoUrl(o.bookmaker_nome) : null;
+        const titularLabel = toTitleCase(o.parceiro_nome);
+        const tituloLabel = toTitleCase(o.titulo);
+        return (
+          <div
+            key={o.id}
+            className="group rounded-lg border border-border/50 bg-card/40 px-3 py-2.5 hover:bg-muted/40 hover:border-border transition-colors"
+            title={o.sub_motivo ?? undefined}
+          >
+            <div className="flex items-start gap-3">
+              <div
+                className={cn(
+                  "shrink-0 h-10 w-10 rounded-md flex items-center justify-center overflow-hidden ring-1 ring-border/60",
+                  !logo && "bg-emerald-500/10"
+                )}
+              >
+                {logo ? (
+                  <img
+                    src={logo}
+                    alt={o.bookmaker_nome ?? ""}
+                    className="h-full w-full object-contain"
+                    loading="lazy"
+                  />
+                ) : (
+                  <Building2 className="h-4 w-4 text-emerald-500" />
+                )}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-foreground truncate">
+                      {o.bookmaker_nome ?? "—"}
+                    </div>
+                    {titularLabel && (
+                      <div className="text-[12px] text-muted-foreground truncate">
+                        {titularLabel}
+                      </div>
+                    )}
+                    <div className="mt-1 text-[11px] text-muted-foreground/80 truncate">
+                      {tituloLabel}
+                      <span className="opacity-50"> · </span>
+                      {formatDataBR(o.data_ocorrencia)}
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="text-sm font-semibold text-amber-600 dark:text-amber-400 tabular-nums">
+                      {formatCurrency(o.valor)}
+                    </div>
+                    {o.moeda !== "BRL" && (
+                      <div className="text-[10px] text-muted-foreground tabular-nums">
+                        {o.moeda}{" "}
+                        {o.valor_original.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function PerdasListImpl({
   items,
   formatCurrency,
 }: {
