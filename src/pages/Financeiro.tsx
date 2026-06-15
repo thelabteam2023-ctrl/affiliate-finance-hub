@@ -28,10 +28,10 @@ import {
 } from "@/components/ui/tooltip";
 import { KpiExplanationDialog, KpiType } from "@/components/financeiro/KpiExplanationDialog";
 import { ComposicaoCustosCard } from "@/components/financeiro/ComposicaoCustosCard";
-import { MapaPatrimonioCard } from "@/components/financeiro/MapaPatrimonioCard";
 import { HeaderKpiCard } from "@/components/financeiro/HeaderKpiCard";
-import { CapitalComprometidoCard } from "@/components/financeiro/CapitalComprometidoCard";
-import { ScanPeriodoCard } from "@/components/financeiro/ScanPeriodoCard";
+import { ExposicaoFinanceiraCard } from "@/components/financeiro/ExposicaoFinanceiraCard";
+import { PosicaoCapital } from "@/components/caixa/PosicaoCapital";
+import { useCapitalEmDisputa } from "@/hooks/useCapitalEmDisputa";
 import { Wallet, TrendingUp, Percent, Gauge, ArrowLeftRight, Receipt, Users as UsersIcon, Timer } from "lucide-react";
 import { ParticipacaoInvestidoresTab } from "@/components/financeiro/ParticipacaoInvestidoresTab";
 import { MultiCurrencyWarningBanner } from "@/components/financeiro/MultiCurrencyIndicator";
@@ -122,7 +122,46 @@ export default function Financeiro() {
     convertUnified,
   });
 
-  const openKpiHelp = (type: KpiType) => { setKpiType(type); setKpiDialogOpen(true); };
+  // Capital em disputa (para sobreposição no donut da Posição de Capital)
+  const { bySegment: capitalEmDisputa } = useCapitalEmDisputa();
+
+  // Adaptadores para reutilizar <PosicaoCapital /> dentro do Financeiro
+  const posicaoCapitalProps = useMemo(() => {
+    const aggByMoeda = (rows: Array<{ moeda?: string | null; saldo: number }>) => {
+      const m: Record<string, number> = {};
+      rows.forEach(r => {
+        const moeda = (r.moeda || "BRL").toUpperCase();
+        m[moeda] = (m[moeda] || 0) + Math.max(0, Number(r.saldo) || 0);
+      });
+      return Object.entries(m).map(([moeda, saldo]) => ({ moeda, saldo }));
+    };
+    const saldosFiat = (finData.caixaFiat || []).map((f: any) => ({
+      moeda: f.moeda || "BRL",
+      saldo: Math.max(0, Number(f.saldo) || 0),
+    }));
+    const saldosBookmakers = aggByMoeda(
+      (finData.bookmakersSaldos || []).map((b: any) => ({ moeda: b.moeda, saldo: b.saldo_atual || 0 }))
+    );
+    const saldosContasParceiros = aggByMoeda(
+      (finData.contasParceiros || []).map((c: any) => ({ moeda: c.moeda, saldo: c.saldo || 0 }))
+    );
+    const saldoCaixaCrypto = (finData.caixaCrypto || []).reduce(
+      (acc: number, c: any) => acc + getCryptoUSDValue(c.coin, c.saldo_coin, c.saldo_usd),
+      0
+    );
+    const saldoWalletsParceiros = (finData.walletsParceiros || []).reduce(
+      (acc: number, w: any) => acc + Math.max(0, Number(w.saldo_usd) || 0),
+      0
+    );
+    return {
+      saldosFiat,
+      saldoCaixaCrypto,
+      saldosBookmakers,
+      saldosBroker: [] as Array<{ moeda: string; saldo: number }>,
+      saldosContasParceiros,
+      saldoWalletsParceiros,
+    };
+  }, [finData, getCryptoUSDValue]);
 
   // Inject title into global TopBar
   useEffect(() => {
@@ -245,40 +284,23 @@ export default function Financeiro() {
             );
           })()}
 
-          {/* LINHA 2: Visão Patrimonial + Capital Comprometido */}
+          {/* LINHA 2: Posição de Capital (reaproveitada do Caixa Operacional) + Exposição & Perdas */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
             <div className="lg:col-span-2">
-              <MapaPatrimonioCard
-              caixaOperacional={calc.saldos.capitalOperacional}
-              saldoBookmakers={calc.saldos.saldoBookmakers}
-              saldoBookmakersBRL={calc.saldos.saldoBookmakersBRL}
-              saldoBookmakersUSD={calc.saldos.saldoBookmakersUSD}
-              contasParceiros={calc.saldos.totalContasParceiros}
-              walletsCrypto={calc.saldos.totalWalletsParceiros}
-              formatCurrency={calc.formatCurrency}
-              bookmakersPorProjeto={calc.bookmakersPorProjeto}
-              contasPorBanco={calc.contasPorBanco}
-              walletsPorExchange={calc.walletsPorExchange}
-              caixaDetalhes={calc.caixaDetalhes}
-              cotacaoUSD={cotacaoUSD}
-            />
+              <PosicaoCapital
+                saldosFiat={posicaoCapitalProps.saldosFiat}
+                saldoCaixaCrypto={posicaoCapitalProps.saldoCaixaCrypto}
+                saldosBookmakers={posicaoCapitalProps.saldosBookmakers}
+                saldosBroker={posicaoCapitalProps.saldosBroker}
+                saldosContasParceiros={posicaoCapitalProps.saldosContasParceiros}
+                saldoWalletsParceiros={posicaoCapitalProps.saldoWalletsParceiros}
+                cotacaoUSD={cotacaoUSD}
+                capitalEmDisputa={capitalEmDisputa}
+              />
             </div>
-            <CapitalComprometidoCard
-              patrimonioTotal={
-                calc.saldos.capitalOperacional +
-                calc.saldos.saldoBookmakers +
-                calc.saldos.totalContasParceiros +
-                calc.saldos.totalWalletsParceiros
-              }
-              formatCurrency={calc.formatCurrency}
-            />
-          </div>
-
-          {/* LINHA 3: Risco e Performance */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-            <ScanPeriodoCard
-              totalScanPeriodo={calc.movimentacao.totalScanPeriodo}
-              countScanPeriodo={calc.movimentacao.countScanPeriodo}
+            <ExposicaoFinanceiraCard
+              dataInicio={dataInicio || null}
+              dataFim={dataFim || null}
               patrimonioTotal={
                 calc.saldos.capitalOperacional +
                 calc.saldos.saldoBookmakers +
@@ -288,6 +310,10 @@ export default function Financeiro() {
               lucroOperacional={lucroOperacionalApostas}
               formatCurrency={calc.formatCurrency}
             />
+          </div>
+
+          {/* LINHA 3: Composição de Custos (largura total) */}
+          <div className="grid grid-cols-1 gap-4 md:gap-6">
             <ComposicaoCustosCard
               categorias={calc.composicaoCustos}
               totalAtual={calc.costs.custoSustentacao}
