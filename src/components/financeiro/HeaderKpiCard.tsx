@@ -10,6 +10,8 @@ interface HeaderKpiCardProps {
   tone?: "default" | "positive" | "negative" | "warning";
   /** Pílula opcional no canto direito do header (ex: PeriodScopeBadge) */
   periodBadge?: ReactNode;
+  /** Linha secundária (ex: métrica de apoio como Lucro Operacional teórico) */
+  secondary?: ReactNode;
 }
 
 const TONE: Record<NonNullable<HeaderKpiCardProps["tone"]>, string> = {
@@ -19,7 +21,7 @@ const TONE: Record<NonNullable<HeaderKpiCardProps["tone"]>, string> = {
   warning: "text-amber-600 dark:text-amber-400",
 };
 
-export function HeaderKpiCard({ label, value, hint, icon, tone = "default", periodBadge }: HeaderKpiCardProps) {
+export function HeaderKpiCard({ label, value, hint, icon, tone = "default", periodBadge, secondary }: HeaderKpiCardProps) {
   return (
     <Card className="p-4 flex flex-col gap-1 min-h-[96px]">
       <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -31,6 +33,7 @@ export function HeaderKpiCard({ label, value, hint, icon, tone = "default", peri
       </div>
       <div className={cn("text-xl md:text-2xl font-bold leading-tight", TONE[tone])}>{value}</div>
       {hint ? <div className="text-[11px] text-muted-foreground">{hint}</div> : null}
+      {secondary ? <div className="mt-1 pt-1 border-t border-border/40">{secondary}</div> : null}
     </Card>
   );
 }
