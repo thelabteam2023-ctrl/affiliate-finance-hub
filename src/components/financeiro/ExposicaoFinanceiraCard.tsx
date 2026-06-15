@@ -8,7 +8,10 @@ import {
   ShieldAlert,
   Lock,
   ChevronRight,
+  User,
 } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Sheet,
@@ -25,6 +28,59 @@ import {
   type IrrecuperavelDetalhe,
 } from "@/hooks/useExposicaoFinanceira";
 import { cn } from "@/lib/utils";
+import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
+
+function formatDataBR(value?: string | null): string {
+  if (!value) return "—";
+  try {
+    const d = value.length <= 10 ? parseISO(`${value}T00:00:00`) : parseISO(value);
+    if (Number.isNaN(d.getTime())) return "—";
+    return format(d, "dd/MM/yyyy", { locale: ptBR });
+  } catch {
+    return "—";
+  }
+}
+
+const CATEGORIA_META: Record<
+  PerdaDetalhe["categoria"],
+  { label: string; icon: typeof Building2; dot: string; iconBg: string; iconColor: string }
+> = {
+  casa: {
+    label: "Casa de Apostas",
+    icon: Building2,
+    dot: "bg-emerald-500",
+    iconBg: "bg-emerald-500/10",
+    iconColor: "text-emerald-500",
+  },
+  parceiro: {
+    label: "Parceiro",
+    icon: User,
+    dot: "bg-blue-500",
+    iconBg: "bg-blue-500/10",
+    iconColor: "text-blue-500",
+  },
+  banco: {
+    label: "Banco / Processador",
+    icon: Landmark,
+    dot: "bg-amber-500",
+    iconBg: "bg-amber-500/10",
+    iconColor: "text-amber-500",
+  },
+  wallet: {
+    label: "Wallet Crypto",
+    icon: Wallet2,
+    dot: "bg-violet-500",
+    iconBg: "bg-violet-500/10",
+    iconColor: "text-violet-500",
+  },
+  outro: {
+    label: "Outro",
+    icon: AlertTriangle,
+    dot: "bg-muted-foreground/60",
+    iconBg: "bg-muted",
+    iconColor: "text-muted-foreground",
+  },
+};
 
 interface Props {
   dataInicio: string | null;
