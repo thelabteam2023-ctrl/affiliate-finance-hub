@@ -1147,11 +1147,6 @@ export function HistoricoMovimentacoes({
                                 )}
                               </div>
                             )}
-                            {tx.id && (
-                              <span className="text-[9px] text-[var(--text-faint)] font-mono uppercase tracking-wider">
-                                #{tx.id.slice(0, 8)}
-                              </span>
-                            )}
                           </div>
                         )}
                       </div>
