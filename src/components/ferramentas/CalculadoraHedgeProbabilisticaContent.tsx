@@ -142,6 +142,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
    const [simMode, setSimMode] = useState<'accumulative' | 'capped'>('accumulative');
    const [bankrollCeilingMultiplier, setBankrollCeilingMultiplier] = useState(5);
    const [activeTab, setActiveTab] = useState('calculadora');
+   const [seqN, setSeqN] = useState<number>(10);
 
    const ODDS_RULESETS = useMemo(() => [
      { id: "150_05", label: "1.50 → 5", minOdd: 1.5, maxOdd: 5, description: "Curto alcance, alta densidade.", variance: "Baixa", efficiency: "Máxima" },
@@ -555,8 +556,9 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
         s => !s.canonicalPath.includes('lost')
       )?.probability ?? 0;
       const probLayWinCycle = 1 - probAllWonBack;
-      const prob10Greens = Math.pow(probLayWinCycle, 10);
-      const prob10Reds = Math.pow(probAllWonBack, 10);
+      const safeN = Math.max(1, Math.min(100, Math.floor(seqN || 1)));
+      const probNGreens = Math.pow(probLayWinCycle, safeN);
+      const probNReds = Math.pow(probAllWonBack, safeN);
 
       // 2. Desvio Padrão da Operação (Variação de lucro/prejuízo)
       const mean = metrics.totalEV;
@@ -585,14 +587,15 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
       const probProfit100 = 1 - (0.5 * (1 + Math.tanh(0.79788456 * (z + 0.035677408 * Math.pow(z, 3)))));
 
       return {
-        prob10Greens,
-        prob10Reds,
+        probNGreens,
+        probNReds,
+        seqN: safeN,
         stdDev,
         recoveryFactor,
         kelly: Math.max(0, kelly),
         probProfit100
       };
-    }, [metrics, monteCarloSim.winRate]);
+    }, [metrics, monteCarloSim.winRate, seqN]);
 
     const finalScore = useMemo(() => {
       const roi = metrics.totalROI;
@@ -1300,29 +1303,48 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                        </div>
                                      </div>
 
+                                     <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-background/40 border border-border/40">
+                                       <Label htmlFor="seq-n-input" className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">
+                                         Ocorrências consecutivas (N)
+                                         <CardInfoTooltip
+                                           title="Sequência Personalizada"
+                                           description="Defina quantas vezes consecutivas você quer simular a recorrência do cenário (Bolsa/Casa) com base na taxa implícita das odds atuais."
+                                         />
+                                       </Label>
+                                       <Input
+                                         id="seq-n-input"
+                                         type="number"
+                                         min={1}
+                                         max={100}
+                                         value={seqN}
+                                         onChange={(e) => setSeqN(Number(e.target.value) || 1)}
+                                         className="h-7 w-20 text-xs font-mono text-center"
+                                       />
+                                     </div>
+
                                      <div className="grid grid-cols-2 gap-2">
                                        <div className="p-2.5 rounded-lg bg-background/40 border border-border/40 space-y-1">
                                          <div className="flex justify-between items-center text-[9px] uppercase font-bold text-muted-foreground">
-                                           <span>Seq. 10 Bolsa</span>
+                                           <span>Seq. {advancedStats.seqN} Bolsa</span>
                                            <CardInfoTooltip
-                                             title="Sequência 10 Greens (Bolsa)"
-                                             description="Probabilidade de 10 ciclos seguidos vencerem na Bolsa (Lay). Mede a fluidez da transferência casa-bolsa."
+                                             title={`Sequência ${advancedStats.seqN} Greens (Bolsa)`}
+                                             description={`Probabilidade de ${advancedStats.seqN} ciclos seguidos vencerem na Bolsa (Lay), com base na taxa implícita das odds atuais. Ajuste N no campo acima.`}
                                            />
                                          </div>
                                          <p className="text-base font-bold font-mono text-emerald-400">
-                                           {fmtPct(advancedStats.prob10Greens * 100)}
+                                           {fmtPct(advancedStats.probNGreens * 100)}
                                          </p>
                                        </div>
                                        <div className="p-2.5 rounded-lg bg-background/40 border border-border/40 space-y-1">
                                          <div className="flex justify-between items-center text-[9px] uppercase font-bold text-muted-foreground">
-                                           <span>Seq. 10 Casa</span>
+                                           <span>Seq. {advancedStats.seqN} Casa</span>
                                            <CardInfoTooltip
-                                             title="Sequência 10 Casa (Back)"
-                                             description="Probabilidade de 10 ciclos seguidos baterem integralmente na Casa (Back). Cenário raro em odds de extração."
+                                             title={`Sequência ${advancedStats.seqN} Casa (Back)`}
+                                             description={`Probabilidade de ${advancedStats.seqN} ciclos seguidos baterem integralmente na Casa (Back). Cenário raro em odds de extração.`}
                                            />
                                          </div>
                                          <p className="text-base font-bold font-mono text-orange-400">
-                                           {(advancedStats.prob10Reds * 100).toFixed(6)}%
+                                           {(advancedStats.probNReds * 100).toFixed(6)}%
                                          </p>
                                        </div>
                                      </div>
