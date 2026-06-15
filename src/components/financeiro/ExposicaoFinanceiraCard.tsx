@@ -388,6 +388,96 @@ function PerdasList({
   items: PerdaDetalhe[];
   formatCurrency: (v: number, c?: string) => string;
 }) {
+  // (preserved below)
+  return PerdasListImpl({ items, formatCurrency });
+}
+
+function DisputaBookmakerList({
+  items,
+  formatCurrency,
+}: {
+  items: OcorrenciaDetalhe[];
+  formatCurrency: (v: number, c?: string) => string;
+}) {
+  const { getLogoUrl } = useBookmakerLogoMap();
+  if (items.length === 0) return <EmptyList msg="Nenhuma ocorrência neste segmento." />;
+
+  return (
+    <div className="space-y-2">
+      {items.map((o) => {
+        const logo = o.bookmaker_nome ? getLogoUrl(o.bookmaker_nome) : null;
+        const titularLabel = toTitleCase(o.parceiro_nome);
+        const tituloLabel = toTitleCase(o.titulo);
+        return (
+          <div
+            key={o.id}
+            className="group rounded-lg border border-border/50 bg-card/40 px-3 py-2.5 hover:bg-muted/40 hover:border-border transition-colors"
+            title={o.sub_motivo ?? undefined}
+          >
+            <div className="flex items-start gap-3">
+              <div
+                className={cn(
+                  "shrink-0 h-10 w-10 rounded-md flex items-center justify-center overflow-hidden ring-1 ring-border/60",
+                  !logo && "bg-emerald-500/10"
+                )}
+              >
+                {logo ? (
+                  <img
+                    src={logo}
+                    alt={o.bookmaker_nome ?? ""}
+                    className="h-full w-full object-contain"
+                    loading="lazy"
+                  />
+                ) : (
+                  <Building2 className="h-4 w-4 text-emerald-500" />
+                )}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-foreground truncate">
+                      {o.bookmaker_nome ?? "—"}
+                    </div>
+                    {titularLabel && (
+                      <div className="text-[12px] text-muted-foreground truncate">
+                        {titularLabel}
+                      </div>
+                    )}
+                    <div className="mt-1 text-[11px] text-muted-foreground/80 truncate">
+                      {tituloLabel}
+                      <span className="opacity-50"> · </span>
+                      {formatDataBR(o.data_ocorrencia)}
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="text-sm font-semibold text-amber-600 dark:text-amber-400 tabular-nums">
+                      {formatCurrency(o.valor)}
+                    </div>
+                    {o.moeda !== "BRL" && (
+                      <div className="text-[10px] text-muted-foreground tabular-nums">
+                        {o.moeda}{" "}
+                        {o.valor_original.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function PerdasListImpl({
+  items,
+  formatCurrency,
+}: {
+  items: PerdaDetalhe[];
+  formatCurrency: (v: number, c?: string) => string;
+}) {
   const { getLogoUrl } = useBookmakerLogoMap();
   if (items.length === 0) return <EmptyList msg="Nenhuma perda confirmada no período." />;
 
