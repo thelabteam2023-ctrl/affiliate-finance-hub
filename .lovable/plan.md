@@ -1,77 +1,58 @@
 
-# Equilíbrio de Perdas (Loss-Balanced Hedge)
+# Otimização do Travamento na Calculadora de Edge Probabilístico
 
-## Contexto
+## Diagnóstico — onde está o travamento
 
-Hoje, no modo **ROI Max**, a calculadora maximiza o lucro no cenário em que todas as backs vencem (won → won → ...), mas concentra todo o prejuízo no pior cenário (geralmente "todas back vencem" quando a freebet é pequena e as odds altas, como o `-R$ 3.328,09` do seu print).
+Tracei o ciclo de render disparado ao digitar **Freebet** ou **Banca da Exchange**. Encontrei quatro `useMemo` pesados que recomputam em cada tecla:
 
-A pergunta é: **dá pra distribuir essa perda?** Sim. É matematicamente possível recalibrar as lay stakes para que **todos os cenários de fracasso (ou todos os cenários, inclusive o "all-win") tenham o mesmo resultado financeiro** — trocando lucro máximo por previsibilidade.
+| useMemo | Custo | Reage a Freebet? | Reage a Banca? |
+|---|---|---|---|
+| `optimalConfig` (linha 396) | **10.001 chamadas** de `calculateMetrics` por render | ✅ | ✅ |
+| `monteCarloSim` (linha 418) | **100.000 trajetórias × até 1.000 passos** (até 100 M iterações) | ✅ (via `metrics`) | ✅ |
+| `longTermSim` (linha 506) | **100.000 ciclos** simulados | ✅ (via `metrics`) | ✅ |
+| `heatmapData` (linha 541) | 30 cálculos | ✅ | ✅ |
 
-## O que vou construir
+Cada `calculateMetrics` ainda gera sub-cenários `O(2^N)` para visualização (lin. 153). Multiplicando, uma única tecla no campo Freebet dispara **dezenas de milhões de operações síncronas** que bloqueiam a main thread → o "computador trava" que você descreveu.
 
-Um **novo modo de cálculo** na Biblioteca de Ouro / Detalhamento da Proteção, selecionável via toggle:
+`goldenCombinationsByExtraction` não depende de freebet/banca (já está OK).
 
-```text
-[ ROI Max ]  [ Equilíbrio Total ]  [ Mín. Perda ]
+## Plano de correção (4 frentes, sem mudar a matemática)
+
+### 1. Debounce dos inputs pesados
+Criar `useDebouncedValue` (250 ms) e usar os **valores debounçados** apenas como dependência dos cálculos pesados (`optimalConfig`, `monteCarloSim`, `longTermSim`, `heatmapData`). A UI continua atualizando o campo imediatamente — só os cálculos esperam você parar de digitar.
+
+```ts
+const debouncedFreebet  = useDebouncedValue(freebet, 250);
+const debouncedBankroll = useDebouncedValue(bankroll, 250);
 ```
 
-### 1. ROI Max (atual — mantido)
-Comportamento atual: meta de extração fixa por perna, lucro grande se todas back vencem, prejuízo grande no cenário "tudo back".
+### 2. Reduzir iterações para níveis razoáveis sem perder precisão estatística
+- `optimalConfig`: **10.001 → 200 passos** (resolução de 0,175 % no alvo de extração — imperceptível). Adicionalmente, remover `freebet` das deps: a escolha do alvo ótimo depende apenas do **ratio `bankroll/freebet`**, não dos valores absolutos. Reduz ~98 % do custo.
+- `monteCarloSim`: **100.000 trajetórias → 5.000**. Erro estatístico do "risk of ruin" cai de ~0,1 pp para ~0,7 pp — aceitável para um KPI mostrado com 1 casa decimal. Mantém a CDF pré-calculada (já está boa).
+- `longTermSim`: **100.000 → 2.000 ciclos** (gráfico só plota até `cycle ≤ 1000` mesmo — 100k é desperdício puro).
+- `heatmapData`: já é pequeno; só passa a usar valores debounçados.
 
-### 2. Equilíbrio Total (novo — flat outcome)
-Resolve o sistema linear onde **todos os N+1 cenários retornam o mesmo valor X**:
-- Cenário 1 (lost na perna 1) = X
-- Cenário 2 (won → lost) = X
-- ...
-- Cenário N+1 (all won) = X
+### 3. Cache do `calculateMetrics` no escopo do `useMemo`
+Dentro de `optimalConfig` e `heatmapData`, memoizar por chave `legs|target|comm|freebet` num `Map` local — evita recomputar para combinações repetidas no mesmo loop.
 
-Resultado: **operação 100% determinística**, mesmo resultado independente do que acontecer. X pode ser positivo (lucro garantido pequeno) ou negativo (perda controlada), dependendo das odds e comissão. É o equivalente a uma surebet sintética usando a freebet.
+### 4. Sinalização visual de "calculando"
+Adicionar `useTransition` (React 18) ou um pequeno spinner no card de cada KPI pesado, para que o usuário entenda que o número está sendo recalculado em background.
 
-### 3. Mín. Perda (novo — minimax)
-Maximiza o **pior cenário** (minimax). Diferente do Equilíbrio Total, permite que cenários bons fiquem acima do piso, mas garante que o pior caso seja o melhor possível. Usado quando o Equilíbrio Total dá EV muito negativo e o usuário aceita variância nos cenários bons em troca de menos perda no pior.
+## Validação
 
-## UX
+- Antes: digitar "1100" no campo Freebet (4 teclas) → ~4 × 100 M ops ≈ trava de vários segundos.
+- Depois: cada tecla atualiza só o input (< 1 ms); 250 ms após parar, os pesados rodam **uma vez** com ~5 k trajetórias + 200 calcs de target → < 100 ms total.
 
-No modal `Detalhamento da Proteção`:
-
-1. Adicionar **toggle de 3 opções** no topo (ROI Max / Equilíbrio / Mín. Perda).
-2. Recalcular tabelas "Distribuição por Perna" e "Retorno por Cenário" ao trocar modo.
-3. Mostrar badge no card de Biblioteca de Ouro indicando o modo ativo.
-4. No rodapé "Impacto da Taxa de Extração", trocar `META LÍQUIDA POR PERNA` por `RESULTADO GARANTIDO` quando em modo Equilíbrio.
-
-## Detalhes técnicos
-
-**Arquivo principal:** `src/lib/hedge-probabilistico-engine.ts`
-
-Adicionar dois métodos novos ao `HedgeProbabilisticoEngine`:
-
-- `calculateBalancedMetrics(legs, freebet, commission)` — resolve sistema linear N+1 equações / N incógnitas (lay stakes) para igualar todos os cenários. Sistema é triangular: cenário "lost na perna k" depende apenas de lay₁..lay_k. Resolve iterativamente:
-  1. Defina X (incógnita). 
-  2. lay₁ tal que cenário "lost@1" = X.
-  3. lay₂ tal que cenário "won@1, lost@2" = X (usa lay₁ já resolvido).
-  4. ...
-  5. lay_N tal que cenário "all-won" = X. Isto fixa X.
-  
-  Forma fechada: cada perna k tem `layStake_k = (X + Σ_{i<k} resp_i) / (1 - comm)` e responsabilidade `resp_k = layStake_k * (layOdd_k - 1)`. A equação final "all-won" fecha o sistema: `freebet * Π(backOdd) - Σ resp_k = X`. Resolver para X.
-
-- `calculateMinLossMetrics(legs, freebet, commission)` — minimax via busca binária no valor do piso (ou LP simplificado), respeitando que lay_k ≥ 0.
-
-**Arquivo UI:** `src/components/ferramentas/CalculadoraHedgeProbabilisticaContent.tsx`
-
-- Adicionar `useState<'roi-max' | 'balanced' | 'min-loss'>('roi-max')` no modal de detalhamento.
-- Trocar a chamada de `calculateMetrics` por um dispatcher conforme o modo.
-- Toggle visual usando `Tabs` ou `ToggleGroup` do shadcn (já no projeto).
-
-**Testes:** estender `src/lib/__tests__/hedge-probabilistico-engine.test.ts`:
-- Equilíbrio: verificar que `scenarios.every(s => s.result ≈ X)`.
-- Min-Loss: verificar que `min(scenarios.result)` ≥ resultado do ROI Max no pior cenário.
+Rodar `bunx vitest run src/lib/__tests__/hedge-probabilistico-engine.test.ts` para garantir que nada matemático mudou (não vou tocar no engine).
 
 ## Escopo protegido (não muda)
-- Engine de Extração Determinística (`extracao-engine.ts`).
-- Lógica de ROI Max atual e seus testes.
-- Surebet engine, ledger, RPCs, banco.
+- `src/lib/hedge-probabilistico-engine.ts` (matemática intacta).
+- `src/lib/extracao-engine.ts`.
+- Toggle ROI Máx / Equilíbrio de Perdas já entregue.
+- Biblioteca de Ouro Dinâmica (já estava OK).
 
-## Estimativa
-~120 linhas no engine + ~40 linhas no modal + 2 testes novos. Sem migrações, sem mudanças de schema.
+## Arquivos editados
+- `src/components/ferramentas/CalculadoraHedgeProbabilisticaContent.tsx` (debounce + reduções + cache).
+- `src/hooks/useDebouncedValue.ts` (novo, ~10 linhas).
 
-Posso prosseguir?
+Posso aplicar?
