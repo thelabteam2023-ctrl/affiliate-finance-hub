@@ -187,7 +187,7 @@ export function useExposicaoFinanceira({ dataInicio, dataFim }: Params): Exposic
         if (l.origem_wallet_id) walletIds.add(l.origem_wallet_id);
       }
 
-      const [bmInfoRes, contasInfoRes, walletsInfoRes, parceirosInfoRes] = await Promise.all([
+      const [bmInfoRes, contasInfoRes, walletsInfoRes] = await Promise.all([
         bookmakerIds.size
           ? supabase
               .from("bookmakers")
@@ -206,10 +206,17 @@ export function useExposicaoFinanceira({ dataInicio, dataFim }: Params): Exposic
               .select("id, exchange, coin, parceiro_id")
               .in("id", Array.from(walletIds))
           : Promise.resolve({ data: [] as any[] }),
-        parceiroIds.size
-          ? supabase.from("parceiros").select("id, nome").in("id", Array.from(parceiroIds))
-          : Promise.resolve({ data: [] as any[] }),
       ]);
+
+      // Agora que temos parceiro_id vindo de bookmakers/contas/wallets,
+      // amplia o set e busca parceiros UMA vez com a lista completa.
+      (bmInfoRes.data ?? []).forEach((b: any) => b.parceiro_id && parceiroIds.add(b.parceiro_id));
+      (contasInfoRes.data ?? []).forEach((c: any) => c.parceiro_id && parceiroIds.add(c.parceiro_id));
+      (walletsInfoRes.data ?? []).forEach((w: any) => w.parceiro_id && parceiroIds.add(w.parceiro_id));
+
+      const parceirosInfoRes = parceiroIds.size
+        ? await supabase.from("parceiros").select("id, nome").in("id", Array.from(parceiroIds))
+        : { data: [] as any[] };
 
       const bmMap: Record<string, { nome: string; parceiro_id: string | null }> = {};
       (bmInfoRes.data ?? []).forEach((b: any) => {
