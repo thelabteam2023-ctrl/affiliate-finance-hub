@@ -107,7 +107,7 @@ export function ExposicaoFinanceiraCard({
   lucroOperacional,
   formatCurrency,
   periodBadge,
-  realtimeBadge,
+  realtimeBadge: _realtimeBadge,
 }: Props) {
   const exp = useExposicaoFinanceira({ dataInicio, dataFim });
   const [drill, setDrill] = useState<DrillKey>(null);
