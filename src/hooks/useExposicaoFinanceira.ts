@@ -65,6 +65,8 @@ export interface PerdaDetalhe {
   origem_titular?: string | null;
   categoria: "casa" | "parceiro" | "banco" | "wallet" | "outro";
   bookmaker_nome?: string | null;
+  /** Marcador derivado: true quando a perda veio de um SCAN (casa ou parceiro). */
+  is_scan?: boolean;
 }
 
 export interface IrrecuperavelDetalhe {
