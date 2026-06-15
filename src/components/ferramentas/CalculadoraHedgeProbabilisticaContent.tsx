@@ -1914,6 +1914,18 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                                applyGoldenCombo([idealOdd]);
                                              }}
                                            >
+                                              <button
+                                                type="button"
+                                                title="Ver detalhamento da proteção"
+                                                className="absolute top-1 right-1 p-1 rounded-md bg-background/80 border border-primary/40 text-primary hover:bg-primary/20 transition-all z-10"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  const idealOdd = Number((1 / (1 - targetExtraction)).toFixed(2));
+                                                  setComboDetail({ name: '1 Perna (Padrão)', legs: [idealOdd], type: 'Hedge Simples', description: 'Hedge clássico de perna única para extração imediata.' });
+                                                }}
+                                              >
+                                                <Eye className="h-3 w-3" />
+                                              </button>
                                              <div>
                                                <div className="flex justify-between items-start mb-1">
                                                  <Badge variant="outline" className="text-[8px] h-4 uppercase text-blue-400 border-blue-400/30">
