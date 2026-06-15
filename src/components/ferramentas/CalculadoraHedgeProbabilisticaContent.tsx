@@ -1303,6 +1303,25 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                        </div>
                                      </div>
 
+                                     <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-background/40 border border-border/40">
+                                       <Label htmlFor="seq-n-input" className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">
+                                         Ocorrências consecutivas (N)
+                                         <CardInfoTooltip
+                                           title="Sequência Personalizada"
+                                           description="Defina quantas vezes consecutivas você quer simular a recorrência do cenário (Bolsa/Casa) com base na taxa implícita das odds atuais."
+                                         />
+                                       </Label>
+                                       <Input
+                                         id="seq-n-input"
+                                         type="number"
+                                         min={1}
+                                         max={100}
+                                         value={seqN}
+                                         onChange={(e) => setSeqN(Number(e.target.value) || 1)}
+                                         className="h-7 w-20 text-xs font-mono text-center"
+                                       />
+                                     </div>
+
                                      <div className="grid grid-cols-2 gap-2">
                                        <div className="p-2.5 rounded-lg bg-background/40 border border-border/40 space-y-1">
                                          <div className="flex justify-between items-center text-[9px] uppercase font-bold text-muted-foreground">
