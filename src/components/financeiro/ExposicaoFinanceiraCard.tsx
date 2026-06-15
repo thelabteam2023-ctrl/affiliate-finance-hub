@@ -6,7 +6,6 @@ import {
   Wallet,
   Wallet2,
   ShieldAlert,
-  Lock,
   ChevronRight,
   User,
 } from "lucide-react";
@@ -25,7 +24,6 @@ import {
   useExposicaoFinanceira,
   type OcorrenciaDetalhe,
   type PerdaDetalhe,
-  type IrrecuperavelDetalhe,
 } from "@/hooks/useExposicaoFinanceira";
 import { cn } from "@/lib/utils";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
@@ -100,7 +98,6 @@ type DrillKey =
   | "disputa-wallets"
   | "disputa-caixa"
   | "perdas"
-  | "irrecuperavel"
   | null;
 
 export function ExposicaoFinanceiraCard({
@@ -255,41 +252,6 @@ export function ExposicaoFinanceiraCard({
             </div>
           </button>
         </section>
-
-        {/* SEÇÃO 3: Saldo irrecuperável */}
-        <section className="space-y-2 pt-3 border-t border-border/50">
-          <div className="flex items-center justify-between">
-            <h4 className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold flex items-center gap-1.5">
-              <Lock className="h-3.5 w-3.5 text-purple-500" />
-              Saldo irrecuperável (estoque)
-              {realtimeBadge}
-            </h4>
-          </div>
-          <button
-            onClick={() => exp.countIrrecuperavel > 0 && setDrill("irrecuperavel")}
-            disabled={exp.countIrrecuperavel === 0}
-            className={cn(
-              "w-full text-left rounded-md transition-colors p-2 -mx-2 group",
-              exp.countIrrecuperavel > 0 && "hover:bg-muted/60 cursor-pointer"
-            )}
-          >
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-lg font-semibold text-purple-600 dark:text-purple-400">
-                  {formatCurrency(exp.totalIrrecuperavel)}
-                </div>
-                <div className="text-[11px] text-muted-foreground">
-                  {exp.countIrrecuperavel === 0
-                    ? "Nenhuma casa com saldo travado"
-                    : `${exp.countIrrecuperavel} casa${exp.countIrrecuperavel === 1 ? "" : "s"} com saldo bloqueado sem previsão de saque`}
-                </div>
-              </div>
-              {exp.countIrrecuperavel > 0 && (
-                <ChevronRight className="h-4 w-4 opacity-40 group-hover:opacity-100 transition" />
-              )}
-            </div>
-          </button>
-        </section>
       </CardContent>
 
       <DrillDrawer
@@ -339,10 +301,6 @@ function DrillDrawer({
     title = "Perdas confirmadas no período";
     description = "Inclui perdas operacionais lançadas (scan/fraude) e ocorrências resolvidas com perda";
     body = <PerdasList items={exp.detalhes.perdas} formatCurrency={formatCurrency} />;
-  } else if (drill === "irrecuperavel") {
-    title = "Saldo irrecuperável";
-    description = "Capital travado em bookmakers sem previsão de saque";
-    body = <IrrecList items={exp.detalhes.irrecuperavel} formatCurrency={formatCurrency} />;
   }
 
   return (
@@ -470,6 +428,11 @@ function PerdasList({
                       <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground flex-wrap">
                         <span className={cn("inline-block h-1.5 w-1.5 rounded-full", meta.dot)} />
                         <span className="font-medium text-foreground/70">{meta.label}</span>
+                        {p.is_scan && (
+                          <span className="inline-flex items-center px-1.5 py-px rounded text-[10px] font-semibold uppercase tracking-wide bg-red-500/10 text-red-400 ring-1 ring-red-500/20">
+                            Scan
+                          </span>
+                        )}
                         {p.origem_label && (
                           <>
                             <span className="opacity-50">·</span>
@@ -505,43 +468,6 @@ function PerdasList({
           );
         })}
       </div>
-    </div>
-  );
-}
-
-function IrrecList({
-  items,
-  formatCurrency,
-}: {
-  items: IrrecuperavelDetalhe[];
-  formatCurrency: (v: number, c?: string) => string;
-}) {
-  if (items.length === 0) return <EmptyList msg="Nenhuma casa com saldo bloqueado." />;
-  return (
-    <div className="space-y-2">
-      {items.map(i => (
-        <div key={i.id} className="rounded-md border border-border/60 p-3 space-y-1">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <div className="text-sm font-medium truncate">{i.bookmaker_nome}</div>
-              <div className="text-[11px] text-muted-foreground">
-                {i.projeto_nome ?? "—"}
-                {i.parceiro_nome ? ` · Titular: ${i.parceiro_nome}` : ""}
-              </div>
-            </div>
-            <div className="text-right shrink-0">
-              <div className="text-sm font-semibold text-purple-600 dark:text-purple-400">
-                {formatCurrency(i.valor)}
-              </div>
-              {i.moeda !== "BRL" && (
-                <div className="text-[10px] text-muted-foreground">
-                  {i.moeda} {i.valor_original.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      ))}
     </div>
   );
 }

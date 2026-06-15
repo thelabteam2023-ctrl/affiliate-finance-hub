@@ -421,14 +421,8 @@ export function useAtualizarStatusOcorrencia() {
                 });
               }
 
-              // Reverter saldo_irrecuperavel se aplicável
-              if (ocorrencia.sub_motivo === 'saldo_irrecuperavel') {
-                const novoIrrecuperavel = Math.max(0, Number(bkInfo.saldo_irrecuperavel || 0) - valorPerda);
-                await (supabase as any)
-                  .from('bookmakers')
-                  .update({ saldo_irrecuperavel: novoIrrecuperavel })
-                  .eq('id', ocorrencia.bookmaker_id);
-              }
+              // Acumulador `saldo_irrecuperavel` foi DESCONTINUADO (unificado com SCAN_CASA).
+              // A reversão da perda já é feita pelo ledger acima — nenhum side-effect adicional necessário.
             }
           }
         }
@@ -663,13 +657,8 @@ export function useResolverOcorrenciaComFinanceiro() {
               });
           }
 
-          // Se o sub-motivo for saldo_irrecuperavel E a bookmaker ainda está vinculada
-          if (ocorrencia.sub_motivo === 'saldo_irrecuperavel' && ocorrencia.bookmaker_id && bookmakerStillLinked) {
-            await (supabase as any)
-              .from('bookmakers')
-              .update({ saldo_irrecuperavel: bkSaldoIrrecuperavel + valorPerda })
-              .eq('id', ocorrencia.bookmaker_id);
-          }
+          // Acumulador `saldo_irrecuperavel` DESCONTINUADO — perdas de scan vivem
+          // exclusivamente no cash_ledger + projeto_perdas.
         }
       }
     },
@@ -745,14 +734,7 @@ export function useReabrirOcorrencia() {
             bkProjetoId = ocorrencia.projeto_id || bkInfo.projeto_id || undefined;
             bookmakerStillLinked = bkInfo.projeto_id === ocorrencia.projeto_id;
 
-            // Se era saldo_irrecuperavel E bookmaker ainda vinculada, reverter o acúmulo
-            if (ocorrencia.sub_motivo === 'saldo_irrecuperavel' && bookmakerStillLinked) {
-              const novoIrrecuperavel = Math.max(0, Number(bkInfo.saldo_irrecuperavel || 0) - valorPerda);
-              await (supabase as any)
-                .from('bookmakers')
-                .update({ saldo_irrecuperavel: novoIrrecuperavel })
-                .eq('id', ocorrencia.bookmaker_id);
-            }
+            // Acumulador `saldo_irrecuperavel` DESCONTINUADO — nada a reverter aqui.
           }
         }
 

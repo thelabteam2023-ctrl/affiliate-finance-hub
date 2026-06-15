@@ -65,6 +65,8 @@ export interface PerdaDetalhe {
   origem_titular?: string | null;
   categoria: "casa" | "parceiro" | "banco" | "wallet" | "outro";
   bookmaker_nome?: string | null;
+  /** Marcador derivado: true quando a perda veio de um SCAN (casa ou parceiro). */
+  is_scan?: boolean;
 }
 
 export interface IrrecuperavelDetalhe {
@@ -344,6 +346,8 @@ export function useExposicaoFinanceira({ dataInicio, dataFim }: Params): Exposic
       }
       const { titulo: descricaoLimpa, categoria: catFromTitulo } = limparTituloPerda(l.descricao || "Perda operacional");
       if (catFromTitulo) categoria = catFromTitulo;
+      const rawDesc = String(l.descricao || "");
+      const isScan = /^\s*\[SCAN\s+(CASA|PARCEIRO)\]/i.test(rawDesc);
       detalhes.perdas.push({
         id: l.id,
         fonte: "ledger",
@@ -355,6 +359,7 @@ export function useExposicaoFinanceira({ dataInicio, dataFim }: Params): Exposic
         origem_titular: titular,
         categoria,
         bookmaker_nome: bookmakerNome,
+        is_scan: isScan,
       });
     }
     // Perdas: ocorrências (apenas as que ainda NÃO viraram ledger, p/ evitar dupla contagem)
@@ -386,6 +391,12 @@ export function useExposicaoFinanceira({ dataInicio, dataFim }: Params): Exposic
       }
       const { titulo: descricaoLimpa, categoria: catFromTitulo } = limparTituloPerda(o.titulo || "Ocorrência com perda");
       if (catFromTitulo) categoria = catFromTitulo;
+      const subMotivo = String(o.sub_motivo || "").toLowerCase();
+      const isScan =
+        subMotivo === "scan_casa" ||
+        subMotivo === "scan_parceiro" ||
+        subMotivo === "saldo_irrecuperavel" || // legado: ocorrência antiga = scan da casa
+        /^\s*\[SCAN\s+(CASA|PARCEIRO)\]/i.test(String(o.titulo || ""));
       detalhes.perdas.push({
         id: o.id,
         fonte: "ocorrencia",
@@ -397,6 +408,7 @@ export function useExposicaoFinanceira({ dataInicio, dataFim }: Params): Exposic
         origem_titular: titular,
         categoria,
         bookmaker_nome: bookmakerNome,
+        is_scan: isScan,
       });
     }
 
