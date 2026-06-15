@@ -27,6 +27,13 @@ import {
 } from "@/hooks/useExposicaoFinanceira";
 import { cn } from "@/lib/utils";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Info } from "lucide-react";
 
 function formatDataBR(value?: string | null): string {
   if (!value) return "—";
@@ -122,9 +129,8 @@ export function ExposicaoFinanceiraCard({
 
   const pctDisputaPatrimonio =
     patrimonioTotal > 0 ? (exp.totalEmDisputa / patrimonioTotal) * 100 : 0;
-  const pctPerdasPatrimonio =
-    patrimonioTotal > 0 ? (exp.totalPerdasPeriodo / patrimonioTotal) * 100 : 0;
-  void lucroOperacional;
+  const pctPerdasLucro =
+    lucroOperacional > 0 ? (exp.totalPerdasPeriodo / lucroOperacional) * 100 : 0;
 
   const segs = [
     {
@@ -167,11 +173,20 @@ export function ExposicaoFinanceiraCard({
           </CardTitle>
           {periodBadge}
         </div>
+        <TooltipProvider delayDuration={150}>
         <div className="grid grid-cols-2 gap-3 pt-3">
           <div>
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">
-              Em disputa
-            </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold inline-flex items-center gap-1 cursor-help">
+                  Em disputa
+                  <Info className="h-3 w-3 opacity-50" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-[240px] text-xs">
+                Posição atual de capital exposto, comparada ao patrimônio atual.
+              </TooltipContent>
+            </Tooltip>
             <div className="text-xl font-bold text-amber-600 dark:text-amber-400 tabular-nums mt-0.5">
               {formatCurrency(exp.totalEmDisputa)}
             </div>
@@ -182,19 +197,35 @@ export function ExposicaoFinanceiraCard({
             </div>
           </div>
           <div className="border-l border-border/50 pl-3">
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">
-              Perdas no período
-            </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold inline-flex items-center gap-1 cursor-help">
+                  Perdas no período
+                  <Info className="h-3 w-3 opacity-50" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-[260px] text-xs">
+                Valor absoluto consumado no período selecionado. O comparativo
+                usa o lucro operacional do mesmo recorte — evitamos comparar
+                com o patrimônio atual porque ele é dinâmico e distorceria
+                perdas históricas.
+              </TooltipContent>
+            </Tooltip>
             <div className="text-xl font-bold text-red-600 dark:text-red-400 tabular-nums mt-0.5">
               {formatCurrency(exp.totalPerdasPeriodo)}
             </div>
             <div className="text-[11px] text-muted-foreground mt-0.5">
-              {pctPerdasPatrimonio > 0
-                ? `${pctPerdasPatrimonio.toFixed(1)}% do patrimônio`
-                : "—"}
+              {exp.countPerdas === 0
+                ? "—"
+                : `${exp.countPerdas} ocorrência${exp.countPerdas === 1 ? "" : "s"}${
+                    lucroOperacional > 0
+                      ? ` · ${pctPerdasLucro.toFixed(1)}% do lucro op.`
+                      : ""
+                  }`}
             </div>
           </div>
         </div>
+        </TooltipProvider>
       </CardHeader>
 
       <CardContent className="space-y-5">
