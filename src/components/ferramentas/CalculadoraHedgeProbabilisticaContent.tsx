@@ -1917,7 +1917,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                               <button
                                                 type="button"
                                                 title="Ver detalhamento da proteção"
-                                                className="absolute top-1 right-1 p-1 rounded-md bg-background/80 border border-primary/40 text-primary hover:bg-primary/20 transition-all z-10"
+                                                className="absolute bottom-1 right-1 p-1 rounded-md bg-background/80 border border-primary/40 text-primary hover:bg-primary/20 transition-all z-10"
                                                 onClick={(e) => {
                                                   e.stopPropagation();
                                                   const idealOdd = Number((1 / (1 - targetExtraction)).toFixed(2));
@@ -1960,7 +1960,7 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                             <button
                                               type="button"
                                               title="Ver detalhamento da proteção"
-                                              className="absolute top-1 right-1 p-1 rounded-md bg-background/80 border border-primary/40 text-primary hover:bg-primary/20 transition-all z-10"
+                                              className="absolute bottom-1 right-1 p-1 rounded-md bg-background/80 border border-primary/40 text-primary hover:bg-primary/20 transition-all z-10"
                                               onClick={(e) => {
                                                 e.stopPropagation();
                                                 setComboDetail({ name: combo.name, legs: combo.legs, type: combo.type, description: combo.description });
