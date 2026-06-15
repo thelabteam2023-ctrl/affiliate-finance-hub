@@ -1,76 +1,90 @@
-# Plano: corrigir "Saldo anterior" e titular ausente no drawer de Perdas
+# Plano: Unificar "Saldo Irrecuperável" e "Scan" em um único conceito (Ocorrência de Scan)
 
-## Investigação
+## Diagnóstico — por que hoje existe redundância
 
-### 1. De onde vem o texto "Saldo anterior: 235.00"
-Consultando o banco diretamente, a `cash_ledger.descricao` real é:
+Hoje o mesmo evento operacional ("a casa baniu/limitou a conta e o saldo travou") é registrado por **três caminhos diferentes**, sem comunicação entre si:
 
-```
-[SCAN CASA] Impossibilitado de sacar | Saldo anterior: 235.00
-```
+| Fluxo | Origem | O que grava | Marca a ocorrência como scan? |
+|---|---|---|---|
+| `ReportarScanDialog` (Caixa) | manual no Caixa | `cash_ledger` com descrição `[SCAN CASA]` / `[SCAN PARCEIRO]`, tipo `PERDA_OPERACIONAL` | **Não cria ocorrência** |
+| `RegistrarPerdaRapidaDialog` (Parceiros) | botão "Registrar perda" | cria **ocorrência** + acumula em `bookmakers.saldo_irrecuperavel` | sub_motivo `saldo_irrecuperavel` (texto interno, sem UI clara) |
+| Ocorrência aberta resolvida com perda | módulo de Ocorrências | gera `cash_ledger`; se `sub_motivo='saldo_irrecuperavel'`, **também** soma em `bookmakers.saldo_irrecuperavel` | igual acima |
 
-O sufixo `| Saldo anterior: X` é gravado pelo fluxo de **SCAN de casa** (perda operacional disparada quando uma bookmaker é marcada como saldo travado/perda). Serve como **marcador técnico** registrando qual era o saldo da conta no momento exato da baixa — útil em auditoria, mas:
+Consequências:
+- O auditor que olha "Perdas confirmadas" vê o lançamento via ledger, mas **não consegue clicar e abrir a ocorrência** — o ledger não guarda o `ocorrencia_id`.
+- O campo `bookmakers.saldo_irrecuperavel` virou um *memo* que sobrevive depois de a perda já ter sido reconhecida no ledger → conta duas vezes para o usuário leigo (sai do patrimônio via perda + ainda figura em "estoque irrecuperável").
+- O `ReportarScanDialog` do Caixa não cria ocorrência nenhuma — então uma casa "scaneada" pelo caixa não dispara fluxo de tentativa de recuperação, sem rastro de quem reportou, sem SLA.
+- `sub_motivo='saldo_irrecuperavel'` é uma string interna não exposta ao usuário; mesmo se a ocorrência aparece, não tem badge "Scan".
 
-- **Redundante na UI**: o card já exibe o valor da perda em destaque (`R$ 235,00`), que coincide com esse "Saldo anterior" na maioria dos casos.
-- **Ruidoso**: o usuário lê duas vezes o mesmo número.
-- **Foge do padrão**: as demais perdas (ocorrências, parceiros) não têm esse anexo.
+A leitura correta: **"saldo irrecuperável" é apenas o efeito de um Scan da casa**. Não é uma categoria independente — é uma classe de ocorrência. A solução é tratar Scan como tipo de ocorrência de primeira classe e descontinuar o acumulador.
 
-**Decisão:** manter o dado no banco (não tocar no ledger nem no SCAN), mas **remover o sufixo só na apresentação**. O auditor que precisar ver a descrição original ainda a tem no `cash_ledger`.
+## Modelo proposto
 
-### 2. Por que o titular (ex.: Ariane) não aparece nas Casas de Apostas
-Bug real em `src/hooks/useExposicaoFinanceira.ts`:
+### 1. Ocorrência ganha a classificação canônica de Scan
+Hoje a tabela `ocorrencias` já tem `tipo`, `sub_motivo`, `resultado_financeiro`. Padronizar:
 
-- O `parceiroIds` (linha ~144) é alimentado **apenas** por `o.parceiro_id` direto das ocorrências.
-- O `parceiro_id` que liga **bookmaker → titular** chega depois, dentro de `bmMap`, **após** a query de `parceiros` já ter rodado em paralelo.
-- Resultado: `parceiroMap` não contém o dono da casa → `titular` resolve para `null` → o drawer não renderiza "Titular: …".
+- **`sub_motivo`** passa a usar dois valores oficiais novos: `SCAN_CASA` e `SCAN_PARCEIRO` (em maiúsculas, para destacar de `documento_pendente`, `conta_suspensa` etc. que são minúsculos hoje).
+- Manter o legado `saldo_irrecuperavel` como **alias na leitura** (mapeia para `SCAN_CASA`) por compatibilidade dos registros antigos.
+- Resolução **sempre** com `resultado_financeiro='perda_confirmada'` quando o operador confirma o scan; isso aciona a criação automática do `cash_ledger` que já existe.
 
-Para contas bancárias funciona porque o `parceiro_id` veio inline na resposta de `contas_bancarias` e o map é montado depois, mas mesmo lá o nome só aparece quando o parceiro foi referenciado por uma ocorrência. **Mesmo bug**.
+### 2. Caixa: Reportar Scan vira atalho que cria a ocorrência
+`ReportarScanDialog.tsx`:
+- Hoje grava diretamente no `cash_ledger`.
+- Passa a **criar uma ocorrência** (`tipo='SCAN'` ou tipo existente equivalente, `sub_motivo='SCAN_CASA'/'SCAN_PARCEIRO'`, `valor_perda`, `bookmaker_id`/`conta_bancaria_id`, `parceiro_id`) e **resolver imediatamente** com `resultado_financeiro='perda_confirmada'`.
+- O ledger é gerado pelo mesmo trigger/handler que já existe para ocorrências resolvidas → uma única porta de entrada para perdas de scan.
+- O ledger passa a guardar `ocorrencia_id` (campo já existente em `cash_ledger` pelo padrão atual; se não existir, é um JSON pequeno em `meta`/`contexto_metadata`).
 
-## Implementação
+### 3. Parceiros: Registrar Perda Rápida usa o mesmo fluxo
+`RegistrarPerdaRapidaDialog.tsx`:
+- Já cria ocorrência. Trocar `categoria/sub_motivo` para `SCAN_CASA` (ou `SCAN_PARCEIRO` se for via conta bancária do parceiro).
+- **Remover** o passo que escreve em `bookmakers.saldo_irrecuperavel`.
 
-### A. Cleanup da descrição em `limparTituloPerda`
-Em `src/hooks/useExposicaoFinanceira.ts`, ampliar a função:
+### 4. `useOcorrencias.ts` deixa de acumular `saldo_irrecuperavel`
+- Remover os três blocos que fazem `update({ saldo_irrecuperavel: ... })` na resolução, edição e reversão (linhas 425, 670, 753 atuais).
+- A perda já é reconhecida pelo `cash_ledger` — não precisa de acumulador paralelo.
 
-```ts
-titulo = titulo.replace(/\s*\|\s*Saldo anterior:?\s*[-\d.,]+\s*$/i, "").trim();
-```
+### 5. Coluna `bookmakers.saldo_irrecuperavel` é **depreciada** (não dropada agora)
+- Mantida no schema para não quebrar leitores (`useProjetoResultado`, `useProjetoDashboardData`, `GestaoProjetos`).
+- Os leitores deixam de exibir o número como "estoque" — passam a calcular, quando útil, a soma das **ocorrências de scan abertas/recentes** daquela casa via `ocorrencias`.
+- Drop físico fica para uma migration futura, depois de validar que ninguém depende mais do campo.
 
-Aplicar **depois** do strip do prefixo `[SCAN CASA]`. Cobre `| Saldo anterior: 235.00`, `| Saldo anterior 235,00`, com ou sem ponto final.
+### 6. UI da aba Financeiro
+- **Remover** a seção "Saldo irrecuperável (estoque)" do `ExposicaoFinanceiraCard`.
+- "Perdas confirmadas no período" passa a ser a única vitrine de scans (já vem do ledger), agora com badge **"Scan"** quando o ledger tem `ocorrencia_id` cuja ocorrência tem `sub_motivo IN ('SCAN_CASA','SCAN_PARCEIRO')`.
+- Card de uma casa "scaneada" no kanban / dashboard de projetos pode exibir um chip "🚫 Scaneada" quando existir ocorrência ativa de `SCAN_CASA` apontando para o bookmaker — leitura derivada, sem acumulador.
 
-### B. Fix do titular ausente
-Refatorar o fetch de `parceiros` para ser **sequencial após** os fetches de bookmakers/contas/wallets:
+### 7. Marcador visual "Casa scaneada"
+- Hook leve `useBookmakerScanStatus(bookmakerId)` que devolve `{ isScanned: boolean, dataUltimoScan?: string, valorTotalScans: number }` consultando `ocorrencias` com `sub_motivo IN ('SCAN_CASA')` e `resultado_financeiro='perda_confirmada'`.
+- Usar em GestaoProjetos / dashboard do projeto / drawer de perdas.
 
-1. Manter as 4 queries paralelas atuais (ocorrências abertas, ocorrências de perda, bookmakers irrecuperáveis, ledger).
-2. Buscar `bmInfoRes`, `contasInfoRes`, `walletsInfoRes` em paralelo (como hoje).
-3. **Só então** coletar `parceiroIds` somando: parceiros das ocorrências + `bmInfo.parceiro_id` + `contasInfo.parceiro_id` + `walletsInfo.parceiro_id`.
-4. Disparar `parceirosInfoRes` com esse set completo.
+## Fases de implementação
 
-Custo: uma micro-latência extra (mais um round-trip), mas o payload final fica correto e elimina a necessidade de joins aninhados frágeis.
+### Fase 1 — Padronização lógica (sem migration, baixo risco)
+1. Atualizar `RegistrarPerdaRapidaDialog` para gravar `sub_motivo='SCAN_CASA'` e **parar** de acumular `saldo_irrecuperavel`.
+2. Atualizar `useOcorrencias` para parar de tocar em `saldo_irrecuperavel` (manter leitura legada).
+3. Atualizar `useExposicaoFinanceira`: identificar perda como scan quando `descricao` começa com `[SCAN ` ou o `sub_motivo` é `SCAN_*` (incluindo legado `saldo_irrecuperavel`).
+4. `PerdasList`: adicionar pequeno badge "Scan" ao lado do "Casa de Apostas".
 
-Como o `titular` já é resolvido em `bmMap[id].parceiro_id ? parceiroMap[pid] : null`, o fix se propaga automaticamente para:
-- `detalhes.disputaBookmakers` (drawer "Em disputa · Casas")
-- `detalhes.perdas` categoria `casa` (drawer "Perdas confirmadas")
-- `detalhes.disputaWallets` e `disputaContasParceiros` também ganham consistência.
+### Fase 2 — Unificar Caixa
+5. Refatorar `ReportarScanDialog` para criar+resolver uma ocorrência em vez de inserir no ledger direto. Mensagem de sucesso muda para "Scan registrado · ocorrência aberta".
+6. Backfill **opcional**: nada precisa ser feito retroativamente — perdas antigas no ledger com `[SCAN CASA]` continuam exibindo como scan pela regex de detecção.
 
-### C. UI: garantir que "Titular" apareça
-Nenhuma mudança visual necessária — a `PerdasList` já renderiza `Titular: {p.origem_titular}` quando presente. Após o fix B, a linha aparece automaticamente.
+### Fase 3 — Remover card "Saldo irrecuperável" do Financeiro
+7. Tirar a seção do `ExposicaoFinanceiraCard` (já validado: zero registros com valor > 0 hoje no workspace).
+8. Manter `totalIrrecuperavel` no payload do hook para outros consumidores; o card simplesmente não renderiza mais.
+
+### Fase 4 — Limpeza (futura, opcional)
+9. Migration para dropar `bookmakers.saldo_irrecuperavel` quando nenhum leitor depender mais — fora do escopo desta entrega.
 
 ## Fora de escopo
-- Não alterar o SCAN nem o ledger.
-- Não mexer no fluxo de ocorrências, valores, totais ou conversão de moeda.
-- Não criar tabelas nem migrations.
+- Não criar migrations agora.
+- Não alterar lógica do `cash_ledger`, triggers de saldo, RPCs financeiros.
+- Não tocar em `useProjetoResultado`/`GestaoProjetos` na Fase 1 — eles continuam lendo a coluna até a Fase 4.
 
-## Resultado esperado no card da BET PIX 365
-**Antes**
-```
-Impossibilitado de sacar | Saldo anterior: 235.00
-● Casa de Apostas · BET PIX 365
-04/06/2026                        R$ 235,00
-```
+## Resultado esperado
+- **Um único conceito**: Scan da Casa = Ocorrência com `sub_motivo='SCAN_CASA'` resolvida como perda. Toda a contabilidade passa pelo ledger, com rastro pra ocorrência original.
+- Aba Financeiro fica enxuta: Patrimônio · Posição · Lucro · Margem · Custos · **Exposição (Em disputa + Perdas confirmadas)**. Sem "estoque irrecuperável" duplicando informação.
+- Operador reporta scan no Caixa **ou** nos Parceiros — mesma estrutura, mesmo destino, mesma auditoria.
 
-**Depois**
-```
-Impossibilitado de sacar
-● Casa de Apostas · BET PIX 365 · Titular: Ariane
-04/06/2026                        R$ 235,00
-```
+## Pergunta de decisão
+Antes de implementar a Fase 2, confirme: o `ReportarScanDialog` do Caixa deve **sempre** abrir uma ocorrência (recomendo sim, para ter rastro/auditoria), ou você prefere mantê-lo como lançamento rápido direto no ledger e só padronizar a leitura/badge? A diferença prática é ganho de governança vs. um clique a mais.
