@@ -27,14 +27,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { KpiExplanationDialog, KpiType } from "@/components/financeiro/KpiExplanationDialog";
-import { RentabilidadeCaptacaoCard } from "@/components/financeiro/RentabilidadeCaptacaoCard";
-import {
-  ComposicaoCustosCard,
-} from "@/components/financeiro/ComposicaoCustosCard";
-import { MovimentacaoCapitalCard } from "@/components/financeiro/MovimentacaoCapitalCard";
-import { CustoSustentacaoCard } from "@/components/financeiro/CustoSustentacaoCard";
-import { EquilibrioOperacionalCard } from "@/components/financeiro/EquilibrioOperacionalCard";
+import { ComposicaoCustosCard } from "@/components/financeiro/ComposicaoCustosCard";
 import { MapaPatrimonioCard } from "@/components/financeiro/MapaPatrimonioCard";
+import { HeaderKpiCard } from "@/components/financeiro/HeaderKpiCard";
+import { CapitalComprometidoCard } from "@/components/financeiro/CapitalComprometidoCard";
+import { ScanPeriodoCard } from "@/components/financeiro/ScanPeriodoCard";
+import { Wallet, TrendingUp, Percent, Gauge, ArrowLeftRight, Receipt, Users as UsersIcon, Timer } from "lucide-react";
 import { ParticipacaoInvestidoresTab } from "@/components/financeiro/ParticipacaoInvestidoresTab";
 import { MultiCurrencyWarningBanner } from "@/components/financeiro/MultiCurrencyIndicator";
 import { FinanceiroDespesasTab } from "@/components/financeiro/FinanceiroDespesasTab";
@@ -194,9 +192,63 @@ export default function Financeiro() {
         </div>
 
         <TabsContent value="overview" className="space-y-4 md:space-y-6">
-          {/* LINHA 1: Visão Patrimonial */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-            <MapaPatrimonioCard
+          {/* LINHA 1: Header KPIs */}
+          {(() => {
+            const patrimonioTotal =
+              calc.saldos.capitalOperacional +
+              calc.saldos.saldoBookmakers +
+              calc.saldos.totalContasParceiros +
+              calc.saldos.totalWalletsParceiros;
+            const custoSust = calc.costs.custoSustentacao;
+            const margemOp =
+              lucroOperacionalApostas + custoSust > 0
+                ? (lucroOperacionalApostas / (lucroOperacionalApostas + custoSust)) * 100
+                : 0;
+            const capitalBase = capitalMedioPeriodo.capitalMedio > 0
+              ? capitalMedioPeriodo.capitalMedio
+              : calc.saldos.saldoBookmakers;
+            const roic = capitalBase > 0 ? (lucroOperacionalApostas / capitalBase) * 100 : 0;
+            return (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+                <HeaderKpiCard
+                  label="Patrimônio Total"
+                  value={calc.formatCurrency(patrimonioTotal)}
+                  hint="Soma consolidada (BRL) de todos os segmentos"
+                  icon={<Wallet className="h-4 w-4" />}
+                />
+                <HeaderKpiCard
+                  label="Lucro Operacional"
+                  value={calc.formatCurrency(lucroOperacionalApostas)}
+                  hint="Resultado das apostas no período"
+                  icon={<TrendingUp className="h-4 w-4" />}
+                  tone={lucroOperacionalApostas >= 0 ? "positive" : "negative"}
+                />
+                <HeaderKpiCard
+                  label="Margem Operacional"
+                  value={`${margemOp.toFixed(1)}%`}
+                  hint="Lucro Op. / (Lucro Op. + Custo de Sustentação)"
+                  icon={<Percent className="h-4 w-4" />}
+                  tone={margemOp >= 50 ? "positive" : margemOp > 0 ? "warning" : "negative"}
+                />
+                <HeaderKpiCard
+                  label="ROIC"
+                  value={`${roic.toFixed(2)}%`}
+                  hint={
+                    capitalMedioPeriodo.capitalMedio > 0
+                      ? "Lucro Op. / Capital médio do período"
+                      : "Lucro Op. / Capital atual em bookmakers (fallback)"
+                  }
+                  icon={<Gauge className="h-4 w-4" />}
+                  tone={roic > 0 ? "positive" : "negative"}
+                />
+              </div>
+            );
+          })()}
+
+          {/* LINHA 2: Visão Patrimonial + Capital Comprometido */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+            <div className="lg:col-span-2">
+              <MapaPatrimonioCard
               caixaOperacional={calc.saldos.capitalOperacional}
               saldoBookmakers={calc.saldos.saldoBookmakers}
               saldoBookmakersBRL={calc.saldos.saldoBookmakersBRL}
@@ -209,6 +261,32 @@ export default function Financeiro() {
               walletsPorExchange={calc.walletsPorExchange}
               caixaDetalhes={calc.caixaDetalhes}
               cotacaoUSD={cotacaoUSD}
+            />
+            </div>
+            <CapitalComprometidoCard
+              patrimonioTotal={
+                calc.saldos.capitalOperacional +
+                calc.saldos.saldoBookmakers +
+                calc.saldos.totalContasParceiros +
+                calc.saldos.totalWalletsParceiros
+              }
+              formatCurrency={calc.formatCurrency}
+            />
+          </div>
+
+          {/* LINHA 3: Risco e Performance */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+            <ScanPeriodoCard
+              totalScanPeriodo={calc.movimentacao.totalScanPeriodo}
+              countScanPeriodo={calc.movimentacao.countScanPeriodo}
+              patrimonioTotal={
+                calc.saldos.capitalOperacional +
+                calc.saldos.saldoBookmakers +
+                calc.saldos.totalContasParceiros +
+                calc.saldos.totalWalletsParceiros
+              }
+              lucroOperacional={lucroOperacionalApostas}
+              formatCurrency={calc.formatCurrency}
             />
             <ComposicaoCustosCard
               categorias={calc.composicaoCustos}
@@ -223,41 +301,43 @@ export default function Financeiro() {
             />
           </div>
 
-          {/* LINHA 2: Métricas Operacionais */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            <EquilibrioOperacionalCard
-              lucroOperacional={lucroOperacionalApostas}
-              custoSustentacao={calc.costs.custoSustentacao}
-              formatCurrency={calc.formatCurrency}
-              hasMultiCurrency={calc.saldos.hasBookmakersUSD || calc.saldos.totalCryptoUSD > 0}
-              cotacaoUSD={cotacaoUSD}
+          {/* LINHA 4: Mini-KPIs auxiliares */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+            <HeaderKpiCard
+              label="Fluxo Líq. Bookmakers"
+              value={calc.formatCurrency(
+                calc.movimentacao.saquesBookmakersPeriodo - calc.movimentacao.depositosBookmakersPeriodo
+              )}
+              hint="Saques − Depósitos (BRL) no período"
+              icon={<ArrowLeftRight className="h-4 w-4" />}
+              tone={
+                calc.movimentacao.saquesBookmakersPeriodo - calc.movimentacao.depositosBookmakersPeriodo >= 0
+                  ? "positive"
+                  : "warning"
+              }
             />
-            <MovimentacaoCapitalCard
-              depositosBookmakers={calc.movimentacao.depositosBookmakersPeriodo}
-              saquesBookmakers={calc.movimentacao.saquesBookmakersPeriodo}
-              capitalEmOperacao={calc.saldos.saldoBookmakers}
-              capitalEmOperacaoBRL={calc.saldos.saldoBookmakersBRL}
-              capitalEmOperacaoUSD={calc.saldos.saldoBookmakersUSD}
-              formatCurrency={calc.formatCurrency}
+            <HeaderKpiCard
+              label="Custo Total"
+              value={calc.formatCurrency(calc.costs.custoSustentacao)}
+              hint="Soma de toda a Composição de Custos"
+              icon={<Receipt className="h-4 w-4" />}
             />
-          </div>
-
-          {/* LINHA 3: Custos e Rentabilidade */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-            <CustoSustentacaoCard
-              custosOperacionais={calc.costs.totalCustosOperacionais}
-              despesasAdministrativas={calc.costs.totalDespesasAdmin}
-              pagamentosOperadores={calc.costs.totalPagamentosOperadores}
-              formatCurrency={calc.formatCurrency}
-              operadoresDetalhes={calc.operadoresDetalhes}
+            <HeaderKpiCard
+              label="Despesa RH"
+              value={calc.formatCurrency(calc.costs.totalDespesasRH)}
+              hint="Folha e encargos no período"
+              icon={<UsersIcon className="h-4 w-4" />}
             />
-            <RentabilidadeCaptacaoCard
-              totalLucroParceiros={calc.totalLucroParceiros}
-              totalCustosAquisicao={calc.costs.totalCustosOperacionais}
-              totalParceirosAtivos={calc.totalParceirosAtivos}
-              diasMedioAquisicao={calc.diasMedioAquisicao}
-              lucroOperacional={lucroOperacionalApostas}
-              formatCurrency={calc.formatCurrency}
+            <HeaderKpiCard
+              label="Payback Aquisição"
+              value={(() => {
+                const lucroMensal = lucroOperacionalApostas; // já filtrado pelo período
+                if (lucroMensal <= 0 || calc.costs.totalCustosOperacionais <= 0) return "—";
+                const meses = calc.costs.totalCustosOperacionais / lucroMensal;
+                return `${meses.toFixed(1)} mês${meses >= 2 ? "es" : ""}`;
+              })()}
+              hint="Custos de aquisição / Lucro do período"
+              icon={<Timer className="h-4 w-4" />}
             />
           </div>
         </TabsContent>
