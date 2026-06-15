@@ -13,7 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
     CheckCircle2, Lightbulb, BookOpen, FlaskConical, BrainCircuit,
     ShieldAlert, Coins, Sparkles, Wand2, Dna, LineChart, History,
      Trophy, Star, ArrowRight, RefreshCcw, GripVertical, GripHorizontal,
-     Sliders, Settings2, ShieldCheck, ZapOff, Infinity as InfinityIcon
+     Sliders, Settings2, ShieldCheck, ZapOff, Infinity as InfinityIcon, Eye
  } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
  import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -184,6 +184,17 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
   ]);
   const [expanded, setExpanded] = useState<AggregatedScenario | null>(null);
   const [showHelp, setShowHelp] = useState(false);
+  const [comboDetail, setComboDetail] = useState<{ name: string; legs: number[]; type?: string; description?: string } | null>(null);
+
+  const comboDetailMetrics = useMemo(() => {
+    if (!comboDetail) return null;
+    const legsInput = comboDetail.legs.map((o, i) => ({
+      name: `Evento ${i + 1}`,
+      backOdd: o,
+      layOdd: Number((o * (1 + oddSpread / 100)).toFixed(2)),
+    }));
+    return HedgeProbabilisticoEngine.calculateMetrics(legsInput, freebet, commission / 100, targetExtraction);
+  }, [comboDetail, freebet, commission, targetExtraction, oddSpread]);
 
   const goldenCombinationsByExtraction = useMemo(() => {
     const targets = Array.from(new Set([0.65, 0.70, 0.75, Number(targetExtraction.toFixed(2))])).sort();
@@ -1931,9 +1942,20 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                            {(goldenCombinationsByExtraction[targetExtraction.toFixed(2)] || goldenCombinationsByExtraction["0.70"] || []).map((combo, idx) => (
                                              <div 
                                                key={idx} 
-                                            className="p-3 rounded-lg bg-muted/20 border border-border/50 hover:border-primary/50 transition-all cursor-pointer group flex flex-col justify-between"
+                                            className="p-3 rounded-lg bg-muted/20 border border-border/50 hover:border-primary/50 transition-all cursor-pointer group flex flex-col justify-between relative"
                                             onClick={() => applyGoldenCombo(combo.legs)}
                                           >
+                                            <button
+                                              type="button"
+                                              title="Ver detalhamento da proteção"
+                                              className="absolute top-2 right-2 p-1 rounded-md bg-background/60 border border-border/40 opacity-0 group-hover:opacity-100 hover:bg-primary/20 hover:text-primary transition-all z-10"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setComboDetail({ name: combo.name, legs: combo.legs, type: combo.type, description: combo.description });
+                                              }}
+                                            >
+                                              <Eye className="h-3 w-3" />
+                                            </button>
                                             <div>
                                               <div className="flex justify-between items-start mb-1">
                                                 <Badge variant="outline" className={`text-[8px] h-4 uppercase ${combo.type === 'Eficiência de Capital' ? 'text-blue-400 border-blue-400/30' : 'text-emerald-400 border-emerald-400/30'}`}>
@@ -1977,7 +1999,141 @@ Para corrigir, reduza a Meta de Extração no slider.`}
               )
             }
           </div>
-         <Dialog open={!!expanded} onOpenChange={(o) => !o && setExpanded(null)}>
+        <Dialog open={!!comboDetail} onOpenChange={(o) => !o && setComboDetail(null)}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader className="mb-2">
+              <DialogTitle className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-primary" />
+                Detalhamento da Proteção — {comboDetail?.name}
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                Distribuição financeira completa para Freebet de <strong className="text-primary">R$ {fmt(freebet)}</strong>,
+                extração-alvo <strong className="text-primary">{fmtPct(targetExtraction * 100)}</strong>,
+                comissão <strong>{commission.toFixed(2)}%</strong> e banca de Exchange <strong>R$ {fmt(bankroll)}</strong>.
+              </DialogDescription>
+            </DialogHeader>
+
+            {comboDetailMetrics && comboDetail && (
+              <div className="space-y-4">
+                {/* KPIs gerais */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <div className="p-2 rounded-md bg-muted/30 border border-border/50">
+                    <p className="text-[9px] uppercase text-muted-foreground">Entrada (Freebet)</p>
+                    <p className="text-sm font-bold font-mono">R$ {fmt(freebet)}</p>
+                  </div>
+                  <div className="p-2 rounded-md bg-muted/30 border border-border/50">
+                    <p className="text-[9px] uppercase text-muted-foreground">Hedge Total (Lays)</p>
+                    <p className="text-sm font-bold font-mono text-blue-400">
+                      R$ {fmt(comboDetailMetrics.legs.reduce((s, l) => s + l.layStake, 0))}
+                    </p>
+                  </div>
+                  <div className="p-2 rounded-md bg-muted/30 border border-border/50">
+                    <p className="text-[9px] uppercase text-muted-foreground">Exposição Máx. (Exchange)</p>
+                    <p className="text-sm font-bold font-mono text-orange-400">R$ {fmt(comboDetailMetrics.maxResponsibility)}</p>
+                    <p className="text-[9px] text-muted-foreground">
+                      {bankroll > 0 ? fmtPct((comboDetailMetrics.maxResponsibility / bankroll) * 100) : '—'} da banca
+                    </p>
+                  </div>
+                  <div className="p-2 rounded-md bg-muted/30 border border-border/50">
+                    <p className="text-[9px] uppercase text-muted-foreground">EV / ROI</p>
+                    <p className="text-sm font-bold font-mono text-emerald-400">R$ {fmt(comboDetailMetrics.totalEV)}</p>
+                    <p className="text-[9px] text-muted-foreground">{fmtPct(comboDetailMetrics.totalROI)} sobre freebet</p>
+                  </div>
+                </div>
+
+                {/* Tabela de pernas */}
+                <div>
+                  <p className="text-[10px] uppercase text-muted-foreground font-semibold mb-1">Distribuição por Perna</p>
+                  <div className="border rounded-md overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-[10px]">#</TableHead>
+                          <TableHead className="text-[10px]">Back Odd</TableHead>
+                          <TableHead className="text-[10px]">Lay Odd</TableHead>
+                          <TableHead className="text-[10px] text-right">Lay Stake</TableHead>
+                          <TableHead className="text-[10px] text-right">Responsab.</TableHead>
+                          <TableHead className="text-[10px] text-right">Exposição Acum.</TableHead>
+                          <TableHead className="text-[10px] text-right">Prob. Back</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {comboDetailMetrics.legs.map((l, i) => (
+                          <TableRow key={i}>
+                            <TableCell className="text-[11px] font-mono">{i + 1}</TableCell>
+                            <TableCell className="text-[11px] font-mono">{l.backOdd.toFixed(2)}</TableCell>
+                            <TableCell className="text-[11px] font-mono">{l.layOdd.toFixed(2)}</TableCell>
+                            <TableCell className="text-[11px] font-mono text-right text-blue-400">R$ {fmt(l.layStake)}</TableCell>
+                            <TableCell className="text-[11px] font-mono text-right text-orange-400">R$ {fmt(l.responsibility)}</TableCell>
+                            <TableCell className="text-[11px] font-mono text-right">R$ {fmt(l.totalExposure)}</TableCell>
+                            <TableCell className="text-[11px] font-mono text-right">{fmtPct(l.probability * 100)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+
+                {/* Cenários */}
+                <div>
+                  <p className="text-[10px] uppercase text-muted-foreground font-semibold mb-1">Retorno por Cenário</p>
+                  <div className="border rounded-md overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-[10px]">Cenário</TableHead>
+                          <TableHead className="text-[10px] text-right">Probabilidade</TableHead>
+                          <TableHead className="text-[10px] text-right">Exposição</TableHead>
+                          <TableHead className="text-[10px] text-right">Resultado</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {comboDetailMetrics.aggregatedScenarios.map((s, i) => (
+                          <TableRow key={i}>
+                            <TableCell className="text-[11px] font-mono">{s.description}</TableCell>
+                            <TableCell className="text-[11px] font-mono text-right">{fmtPct(s.probability * 100)}</TableCell>
+                            <TableCell className="text-[11px] font-mono text-right text-orange-400">R$ {fmt(s.maxExposure)}</TableCell>
+                            <TableCell className={`text-[11px] font-mono text-right ${s.result >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                              R$ {fmt(s.result)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+
+                {/* Impacto da extração */}
+                <div className="p-3 rounded-md bg-muted/20 border border-border/50">
+                  <p className="text-[10px] uppercase text-muted-foreground font-semibold mb-2">Impacto da Taxa de Extração ({fmtPct(targetExtraction * 100)})</p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-[11px]">
+                    <div>
+                      <p className="text-muted-foreground text-[9px] uppercase">Meta Líquida por Perna</p>
+                      <p className="font-mono">R$ {fmt(freebet * targetExtraction)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-[9px] uppercase">Lucro se Todas Back (Win)</p>
+                      <p className="font-mono text-emerald-400">R$ {fmt(comboDetailMetrics.allWonProfit)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-[9px] uppercase">Custo Cascata Acumulado</p>
+                      <p className="font-mono text-orange-400">R$ {fmt(comboDetailMetrics.cumulativeCascadeCost)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-1">
+                  <Button variant="outline" size="sm" onClick={() => setComboDetail(null)}>Fechar</Button>
+                  <Button size="sm" onClick={() => { if (comboDetail) { applyGoldenCombo(comboDetail.legs); setComboDetail(null); } }}>
+                    Aplicar na Calculadora
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!expanded} onOpenChange={(o) => !o && setExpanded(null)}>
           <DialogContent className="max-w-2xl">
             <DialogHeader className="mb-4">
               <DialogTitle className="flex items-center gap-2">
