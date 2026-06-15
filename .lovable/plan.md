@@ -1,60 +1,69 @@
-## Objetivo
-Evoluir o componente `PosicaoCapital` (já usado em `/caixa`) para exibir, dentro de cada barra de segmento, a parcela do capital comprometida com ocorrências operacionais abertas — sem criar dashboard novo, sem alterar o total patrimonial e sem dupla contagem.
+# Exibir Titular da Conta na Origem do Histórico do Caixa Operacional
 
-## Fonte de dados — Capital em Disputa
-Tabela `ocorrencias` com `status IN ('aberto','em_andamento')`. A coluna `valor_risco` (na `moeda` da ocorrência) é a exposição patrimonial. Capital já perdido (status `resolvido` com `valor_perda`) NÃO entra — ele já saiu do saldo via ledger.
+## Diagnóstico
 
-Mapeamento ocorrência → segmento da Posição de Capital:
+Hoje o histórico mostra apenas o **nome da instituição** (ex.: "PagSeguro Internet S.A." ou "BetPix365") porque o componente `HistoricoMovimentacoes` consome apenas `getOrigemLabel(tx)`, que devolve só o campo `primary`.
 
-| Campo na ocorrência                                  | Segmento                                  |
-| ---------------------------------------------------- | ----------------------------------------- |
-| `bookmaker_id IS NOT NULL`                           | Bookmakers                                |
-| `wallet_id IS NOT NULL`                              | Wallets Parceiros                         |
-| `conta_bancaria_id` cujo `parceiro_id IS NULL`       | Caixa Operacional                         |
-| `conta_bancaria_id` cujo `parceiro_id IS NOT NULL`   | Contas Parceiros                          |
-| Nenhum dos acima (ex: só `projeto_id`)               | Não atribuído (ignorado na barra)         |
+A boa notícia: a função `getOrigemInfo(tx)` em `src/pages/Caixa.tsx` **já calcula** o titular/parceiro no campo `secondary` para todos os casos relevantes:
 
-Conversão para BRL via `useCotacoes.convertToBRL(valor_risco, moeda)` — mesma engine já usada no componente. Cap final por segmento: `min(valorDisputaBRL, segmentValueBRL)` para evitar disputa > total.
+- `BOOKMAKER` → `secondary = parceiros[bookmaker.parceiro_id]` (titular da casa)
+- `PARCEIRO_CONTA` → `secondary = conta.titular` (titular do banco)
+- `PARCEIRO_WALLET` → `secondary = parceiros[wallet.parceiro_id]` (titular da wallet)
+- `AJUSTE_SALDO` e `SWAP_*` também já devolvem `secondary`
+
+E `getOrigemInfo` já está sendo passado pela cadeia de props:
+`Caixa.tsx` → `CaixaTabsContainer` → `HistoricoMovimentacoes` (prop opcional já declarada).
+
+Logo, o trabalho é **puramente de UI no `HistoricoMovimentacoes.tsx`**: passar a consumir `getOrigemInfo` (e por simetria `getDestinoInfo`) e renderizar o `secondary` como rótulo "Titular: …". Nenhuma alteração de schema, RPC, lógica financeira ou backfill.
 
 ## Mudanças
 
-### 1. Novo hook `src/hooks/useCapitalEmDisputa.ts`
-- Query única em `ocorrencias` filtrando `workspace_id` e status aberto/em_andamento, selecionando `id, valor_risco, moeda, bookmaker_id, wallet_id, conta_bancaria_id`.
-- Resolve `parceiro_id` das `contas_bancarias` referenciadas (segunda query `IN (...)`).
-- Retorna `{ bySegment: { bookmakers, 'caixa-op', wallets, 'contas-parc' }, byEntity: { bookmakerId→BRL, walletId→BRL, contaId→BRL }, loading }` — tudo já em BRL.
-- `staleTime: 30_000`, `gcTime: 60_000`.
+### 1. `src/components/caixa/HistoricoMovimentacoes.tsx`
 
-### 2. `src/pages/Caixa.tsx`
-- Consumir `useCapitalEmDisputa()` e passar `capitalEmDisputa={bySegment}` para `<PosicaoCapital />`.
+Substituir o uso de `getOrigemLabel` / `getDestinoLabel` por wrappers locais que leem `info.primary` e `info.secondary` quando `getOrigemInfo` / `getDestinoInfo` estão disponíveis (fallback para os labels atuais).
 
-### 3. `src/components/caixa/PosicaoCapital.tsx`
-- Aceitar nova prop opcional `capitalEmDisputa?: Record<string, number>` (BRL por `segment.id`).
-- Em `dadosPosicao`, anexar a cada `CapitalSegment`:
-  - `valorDisputa = min(capitalEmDisputa[id] ?? 0, value)`
-  - `valorDisponivel = value - valorDisputa`
-  - `pctDisputa = (valorDisputa / value) * 100`
-- **Barra de progresso (linha do item)**: dividir em duas partes lado a lado — preenchimento sólido na cor do segmento (largura = `pctDisponivel` da própria barra) + sobreposição em `amber-500` com padrão listrado/hachura (largura = `pctDisputa` da própria barra). Largura total da barra continua sendo `item.pct` do patrimônio.
-- **Textos sob o nome do segmento (`detail`)**: quando `valorDisputa > 0`, exibir segunda linha pequena: `Disponível R$ X · Em disputa R$ Y`.
-- **Coluna direita**: abaixo do `pct.toFixed(2)%` existente, quando `valorDisputa > 0`, exibir `pctDisputa.toFixed(2)% em disputa` em `text-amber-500 text-[10px]`.
-- **Donut central**: adicionar uma camada interna fina (raio menor, ex. `r=46` com `strokeWidth=4`) desenhada apenas para a fração `pctDisputa` dentro de cada arco do segmento, em `#f59e0b` com `opacity 0.85`. Usa o mesmo cálculo de ângulos já existente, mas o comprimento do arco é proporcional a `valorDisputa/value` dentro do trecho do segmento.
-- **Tooltip do donut (`activeSegment`)**: quando o segmento tem disputa, anexar `· R$ Y em disputa (Z%)` ao texto atual.
-- **Painel inline expandido**: acima da lista de breakdown adicionar um bloco compacto com 4 linhas — Capital Total, Disponível, Em Disputa (amber), Exposição `pctDisputa%`. Não alterar a lista de moedas existente.
-- Manter cap de barra interna em 100% do segmento; nunca somar disputa ao total geral nem ao `dadosPosicao.total`.
+a) **Linha do fluxo "Origem → Destino" (linha 1107)**
+   - Renderizar `Origem (Titular)` → `Destino (Titular)`, com o titular em fonte menor / muted ao lado, ex.:
+     ```
+     BetPix365 · Maria Santos  →  PagSeguro · João Silva
+     ```
+   - Implementação: pequeno helper `renderEndpoint(info)` que retorna `<span>{primary}{secondary && <em className="text-faint">· {secondary}</em>}</span>`.
 
-## Comportamento garantido
-- `R$` total da Posição de Capital permanece idêntico.
-- Segmentos sem ocorrências abertas renderizam exatamente como hoje (sem zona amber, sem segunda linha).
-- Capital já perdido continua fora da barra (sai naturalmente via saldos do ledger).
-- Atualização automática quando ocorrências mudam de status (cache invalidado pelo `staleTime`; sem retrofit).
+b) **Chip "Origem:" do bloco Scan (linhas 1119–1127)**
+   - Atualmente: `Origem: {scanOrigemPrimary}`.
+   - Passar a usar `scanOrigemInfo = getOrigemInfo(tx)` e renderizar:
+     ```
+     Origem: PagSeguro Internet S.A.
+     Titular: João Silva
+     ```
+     Ou, mais compacto numa única chip: `Origem: PagSeguro · Titular: João Silva`.
+   - Atualizar `title` (tooltip) para incluir o titular.
+   - Critério `scanOrigemValid` continua igual (baseado em `primary !== 'Origem'`).
 
-## Arquivos
-- Novo: `src/hooks/useCapitalEmDisputa.ts`
-- Editado: `src/components/caixa/PosicaoCapital.tsx`
-- Editado: `src/pages/Caixa.tsx` (apenas hook + prop)
+c) **Compatibilidade**
+   - `getOrigemInfo` / `getDestinoInfo` já são props opcionais. Manter fallback:
+     ```ts
+     const origemInfo = getOrigemInfo ? getOrigemInfo(tx) : { primary: getOrigemLabel(tx) };
+     ```
+   - Nenhum outro consumidor precisa mudar.
 
-## Critérios de aceite
-1. Em `/caixa`, segmentos com ocorrências abertas mostram zona amber proporcional na barra horizontal.
-2. Tooltip e painel expandido exibem Capital Total, Disponível, Em Disputa e Exposição %.
-3. Ocorrências `resolvido` não contam.
-4. `valor_risco` em moeda estrangeira é convertido para BRL pelo mesmo `convertToBRL` usado no resto do card.
-5. Total patrimonial no header do card permanece inalterado vs. produção atual.
+### 2. Verificação
+
+- Abrir Caixa Operacional → Histórico → registro de Scan com origem em conta bancária (R$ 262,54) e outro com origem em bookmaker (R$ 235,00) → confirmar que ambos exibem **Titular: …**.
+- Conferir registros normais (Depósito / Saque) onde origem ou destino sejam contas bancárias com múltiplos titulares no mesmo banco → confirmar diferenciação visual.
+
+## Fora do escopo
+
+- Nenhum backfill: os dados já existem (`parceiro_id` em bookmakers/wallets e `titular` em `contas_bancarias`).
+- Nenhuma mudança em outras telas (Projeto, Parceiros) — se desejado depois, o mesmo padrão se aplica trocando `Label` por `Info`.
+- Nenhuma alteração em lógica financeira, saldo, ledger ou RPCs.
+
+## Diagrama do fluxo de dados (já existente)
+
+```text
+cash_ledger.origem_*  ──►  getOrigemInfo (Caixa.tsx)
+                              │  primary  = banco / bookmaker / wallet
+                              │  secondary = titular / parceiro
+                              ▼
+                    HistoricoMovimentacoes  ──►  UI (novo render)
+```

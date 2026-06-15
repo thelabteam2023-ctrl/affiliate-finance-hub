@@ -1085,7 +1085,10 @@ export function HistoricoMovimentacoes({
                 {pagination.paginatedItems.map((tx: any) => {
                   const txType = tx.tipo_transacao;
                   const isScan = txType === 'PERDA_OPERACIONAL' || txType === 'SCAN';
-                  const scanOrigemPrimary = isScan ? getOrigemLabel(tx) : '';
+                  const origemInfo = getOrigemInfo ? getOrigemInfo(tx) : { primary: getOrigemLabel(tx) } as LabelInfo;
+                  const destinoInfo = getDestinoInfo ? getDestinoInfo(tx) : { primary: getDestinoLabel(tx) } as LabelInfo;
+                  const scanOrigemPrimary = isScan ? origemInfo.primary : '';
+                  const scanOrigemTitular = isScan ? origemInfo.secondary : undefined;
                   const scanOrigemValid = isScan && scanOrigemPrimary && scanOrigemPrimary !== 'Origem';
                   
                   return (
@@ -1104,7 +1107,21 @@ export function HistoricoMovimentacoes({
                         <TransactionBadge type={txType} label={getTipoLabel(txType, tx)} />
                         <div className="flex items-center gap-2">
                           <span className="text-[12px] font-medium text-[var(--text-secondary)] truncate">
-                            {isScan ? tx.descricao?.replace(/\[SCAN.*?\]\s*/i, '') : `${getOrigemLabel(tx)} → ${getDestinoLabel(tx)}`}
+                            {isScan
+                              ? tx.descricao?.replace(/\[SCAN.*?\]\s*/i, '')
+                              : (
+                                <>
+                                  {origemInfo.primary}
+                                  {origemInfo.secondary && (
+                                    <span className="text-[var(--text-faint)] font-normal"> · {origemInfo.secondary}</span>
+                                  )}
+                                  {' → '}
+                                  {destinoInfo.primary}
+                                  {destinoInfo.secondary && (
+                                    <span className="text-[var(--text-faint)] font-normal"> · {destinoInfo.secondary}</span>
+                                  )}
+                                </>
+                              )}
                           </span>
                         </div>
                         <div className="text-[11px] text-[var(--text-faint)] truncate mt-px">
@@ -1119,10 +1136,13 @@ export function HistoricoMovimentacoes({
                             {scanOrigemValid && (
                               <div
                                 className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[4px] bg-[#10161f] text-[var(--text-secondary)] text-[9px] font-medium border border-white/10"
-                                title={`Origem: ${scanOrigemPrimary}${tx.id ? ` · ID ${tx.id.slice(0, 8)}` : ''}`}
+                                title={`Origem: ${scanOrigemPrimary}${scanOrigemTitular ? ` · Titular: ${scanOrigemTitular}` : ''}${tx.id ? ` · ID ${tx.id.slice(0, 8)}` : ''}`}
                               >
                                 <i className="ti ti-arrow-up-right" style={{ fontSize: 9 }}></i>
                                 Origem: {scanOrigemPrimary}
+                                {scanOrigemTitular && (
+                                  <span className="text-[var(--text-faint)] font-normal"> · Titular: {scanOrigemTitular}</span>
+                                )}
                               </div>
                             )}
                             {tx.id && (
