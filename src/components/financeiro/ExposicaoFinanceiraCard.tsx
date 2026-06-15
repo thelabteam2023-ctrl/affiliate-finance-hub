@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { ReactNode, useState } from "react";
 import {
   AlertTriangle,
   Building2,
@@ -32,6 +32,10 @@ interface Props {
   patrimonioTotal: number;
   lucroOperacional: number;
   formatCurrency: (value: number, currency?: string) => string;
+  /** Badge "Período ativo" (passado pelo container) */
+  periodBadge?: ReactNode;
+  /** Badge "Posição atual" (passado pelo container) */
+  realtimeBadge?: ReactNode;
 }
 
 type DrillKey =
@@ -49,6 +53,8 @@ export function ExposicaoFinanceiraCard({
   patrimonioTotal,
   lucroOperacional,
   formatCurrency,
+  periodBadge,
+  realtimeBadge,
 }: Props) {
   const exp = useExposicaoFinanceira({ dataInicio, dataFim });
   const [drill, setDrill] = useState<DrillKey>(null);
@@ -90,7 +96,7 @@ export function ExposicaoFinanceiraCard({
   return (
     <Card className="h-full">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-2">
+        <CardTitle className="text-base flex items-center gap-2 flex-wrap">
           <AlertTriangle className="h-4 w-4 text-amber-500" />
           Exposição &amp; Perdas
         </CardTitle>
@@ -110,8 +116,9 @@ export function ExposicaoFinanceiraCard({
         {/* SEÇÃO 1: Em disputa */}
         <section className="space-y-2">
           <div className="flex items-center justify-between">
-            <h4 className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
+            <h4 className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold flex items-center gap-1.5">
               Em disputa
+              {realtimeBadge}
             </h4>
             <span className="text-xs font-medium">{formatCurrency(exp.totalEmDisputa)}</span>
           </div>
@@ -165,6 +172,7 @@ export function ExposicaoFinanceiraCard({
             <h4 className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold flex items-center gap-1.5">
               <ShieldAlert className="h-3.5 w-3.5 text-red-500" />
               Perdas confirmadas no período
+              {periodBadge}
             </h4>
           </div>
           <button
@@ -198,6 +206,7 @@ export function ExposicaoFinanceiraCard({
             <h4 className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold flex items-center gap-1.5">
               <Lock className="h-3.5 w-3.5 text-purple-500" />
               Saldo irrecuperável (estoque)
+              {realtimeBadge}
             </h4>
           </div>
           <button
