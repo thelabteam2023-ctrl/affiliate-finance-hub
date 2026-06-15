@@ -428,6 +428,11 @@ function PerdasList({
                       <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground flex-wrap">
                         <span className={cn("inline-block h-1.5 w-1.5 rounded-full", meta.dot)} />
                         <span className="font-medium text-foreground/70">{meta.label}</span>
+                        {p.is_scan && (
+                          <span className="inline-flex items-center px-1.5 py-px rounded text-[10px] font-semibold uppercase tracking-wide bg-red-500/10 text-red-400 ring-1 ring-red-500/20">
+                            Scan
+                          </span>
+                        )}
                         {p.origem_label && (
                           <>
                             <span className="opacity-50">·</span>
