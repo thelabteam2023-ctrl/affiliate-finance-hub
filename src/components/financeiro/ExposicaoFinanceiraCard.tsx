@@ -254,41 +254,6 @@ export function ExposicaoFinanceiraCard({
             </div>
           </button>
         </section>
-
-        {/* SEÇÃO 3: Saldo irrecuperável */}
-        <section className="space-y-2 pt-3 border-t border-border/50">
-          <div className="flex items-center justify-between">
-            <h4 className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold flex items-center gap-1.5">
-              <Lock className="h-3.5 w-3.5 text-purple-500" />
-              Saldo irrecuperável (estoque)
-              {realtimeBadge}
-            </h4>
-          </div>
-          <button
-            onClick={() => exp.countIrrecuperavel > 0 && setDrill("irrecuperavel")}
-            disabled={exp.countIrrecuperavel === 0}
-            className={cn(
-              "w-full text-left rounded-md transition-colors p-2 -mx-2 group",
-              exp.countIrrecuperavel > 0 && "hover:bg-muted/60 cursor-pointer"
-            )}
-          >
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-lg font-semibold text-purple-600 dark:text-purple-400">
-                  {formatCurrency(exp.totalIrrecuperavel)}
-                </div>
-                <div className="text-[11px] text-muted-foreground">
-                  {exp.countIrrecuperavel === 0
-                    ? "Nenhuma casa com saldo travado"
-                    : `${exp.countIrrecuperavel} casa${exp.countIrrecuperavel === 1 ? "" : "s"} com saldo bloqueado sem previsão de saque`}
-                </div>
-              </div>
-              {exp.countIrrecuperavel > 0 && (
-                <ChevronRight className="h-4 w-4 opacity-40 group-hover:opacity-100 transition" />
-              )}
-            </div>
-          </button>
-        </section>
       </CardContent>
 
       <DrillDrawer
