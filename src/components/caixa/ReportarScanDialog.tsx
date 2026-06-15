@@ -186,11 +186,21 @@ export function ReportarScanDialog({
     if (!motivo.trim() || !valor || parseFloat(valor) <= 0) return false;
     if (tipoOrigem === "CASA_APOSTA" && !bookmakerId) return false;
     if (tipoOrigem === "PARCEIRO_CONTA" && !contaId) return false;
+    if (parseFloat(valor) > saldoAtual + 0.001) return false;
     return true;
   };
 
   const handleSubmit = async () => {
     if (!canSubmit()) return;
+    const valorNumCheck = parseFloat(valor);
+    if (valorNumCheck > saldoAtual + 0.001) {
+      toast({
+        title: "Valor excede o saldo disponível",
+        description: `O prejuízo (${getCurrencySymbol(moeda)} ${valorNumCheck.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) não pode ser superior ao saldo atual (${getCurrencySymbol(moeda)} ${saldoAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}). Operação bloqueada para evitar saldo negativo.`,
+        variant: "destructive",
+      });
+      return;
+    }
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -327,11 +337,20 @@ export function ReportarScanDialog({
             </div>
           )}
 
-          {saldoAtual > 0 && (
+          {(bookmakerId || contaId) && (
             <Alert className="bg-muted/50 border-none py-2">
               <Info className="h-4 w-4" />
               <AlertDescription className="text-xs">
                 Saldo atual no sistema: <span className="font-mono font-medium">{getCurrencySymbol(moeda)} {saldoAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {valor && parseFloat(valor) > saldoAtual + 0.001 && (bookmakerId || contaId) && (
+            <Alert variant="destructive" className="py-2">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription className="text-xs">
+                O valor informado excede o saldo disponível. A operação não pode gerar saldo negativo.
               </AlertDescription>
             </Alert>
           )}
