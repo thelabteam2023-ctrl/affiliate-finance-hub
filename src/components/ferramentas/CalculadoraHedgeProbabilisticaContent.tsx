@@ -2034,6 +2034,34 @@ Para corrigir, reduza a Meta de Extração no slider.`}
 
             {comboDetailMetrics && comboDetail && (
               <div className="space-y-4">
+                {/* Mode selector — Equilíbrio de Perdas */}
+                <div className="flex flex-col gap-1 p-2 rounded-md bg-muted/20 border border-border/50">
+                  <p className="text-[9px] uppercase text-muted-foreground font-semibold">Estratégia de Distribuição</p>
+                  <div className="flex gap-1">
+                    <Button
+                      size="sm"
+                      variant={comboDetailMode === 'roi-max' ? 'default' : 'outline'}
+                      className="flex-1 h-8 text-[11px]"
+                      onClick={() => setComboDetailMode('roi-max')}
+                    >
+                      ROI Máx (atual)
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={comboDetailMode === 'balanced' ? 'default' : 'outline'}
+                      className="flex-1 h-8 text-[11px]"
+                      onClick={() => setComboDetailMode('balanced')}
+                    >
+                      Equilíbrio de Perdas
+                    </Button>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground leading-tight mt-1">
+                    {comboDetailMode === 'roi-max'
+                      ? 'Maximiza o lucro quando todas as backs vencem. Concentra o pior prejuízo no cenário “tudo back”.'
+                      : 'Recalibra as lay stakes para que TODOS os cenários (inclusive “tudo back”) tenham o MESMO resultado financeiro — operação determinística, sem cauda de perda.'}
+                  </p>
+                </div>
+
                 {/* KPIs gerais */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   <div className="p-2 rounded-md bg-muted/30 border border-border/50">
@@ -2127,8 +2155,12 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                   <p className="text-[10px] uppercase text-muted-foreground font-semibold mb-2">Impacto da Taxa de Extração ({fmtPct(targetExtraction * 100)})</p>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-[11px]">
                     <div>
-                      <p className="text-muted-foreground text-[9px] uppercase">Meta Líquida por Perna</p>
-                      <p className="font-mono">R$ {fmt(freebet * targetExtraction)}</p>
+                      <p className="text-muted-foreground text-[9px] uppercase">
+                        {comboDetailMode === 'balanced' ? 'Resultado Garantido' : 'Meta Líquida por Perna'}
+                      </p>
+                      <p className={`font-mono ${comboDetailMode === 'balanced' ? (comboDetailMetrics.allWonProfit >= 0 ? 'text-emerald-400' : 'text-red-400') : ''}`}>
+                        R$ {fmt(comboDetailMode === 'balanced' ? comboDetailMetrics.allWonProfit : freebet * targetExtraction)}
+                      </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground text-[9px] uppercase">Lucro se Todas Back (Win)</p>
