@@ -25,6 +25,7 @@ import {
 } from '@/lib/hedge-probabilistico-engine';
 import { CardInfoTooltip } from '@/components/ui/card-info-tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
