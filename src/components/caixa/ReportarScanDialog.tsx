@@ -337,11 +337,20 @@ export function ReportarScanDialog({
             </div>
           )}
 
-          {saldoAtual > 0 && (
+          {(bookmakerId || contaId) && (
             <Alert className="bg-muted/50 border-none py-2">
               <Info className="h-4 w-4" />
               <AlertDescription className="text-xs">
                 Saldo atual no sistema: <span className="font-mono font-medium">{getCurrencySymbol(moeda)} {saldoAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {valor && parseFloat(valor) > saldoAtual + 0.001 && (bookmakerId || contaId) && (
+            <Alert variant="destructive" className="py-2">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription className="text-xs">
+                O valor informado excede o saldo disponível. A operação não pode gerar saldo negativo.
               </AlertDescription>
             </Alert>
           )}
