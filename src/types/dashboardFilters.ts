@@ -176,11 +176,12 @@ export function getDashboardPeriodDescription(
 
   if (filter === "mes" || filter === "anterior") {
     monthName = format(range.start, "LLLL 'de' yyyy", { locale: ptBR });
-    shortLabel = filter === "mes" ? `Mês atual · ${monthName}` : `Mês anterior · ${monthName}`;
+    // Exibe apenas o nome do mês — ex: "junho de 2026"
+    shortLabel = monthName;
   } else if (filter === "ano") {
     shortLabel = `Ano de ${format(range.start, "yyyy")}`;
   } else if (filter === "custom") {
-    shortLabel = `Personalizado · ${fmt(range.start)} → ${fmt(range.end)}`;
+    shortLabel = `${fmt(range.start)} → ${fmt(range.end)}`;
   }
 
   return {
