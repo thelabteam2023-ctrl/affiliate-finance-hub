@@ -69,7 +69,7 @@ export function PeriodScopeBadge({
           <Badge
             variant="outline"
             className={cn(
-              "h-5 gap-1 px-1.5 text-[10px] font-normal text-muted-foreground bg-muted/40 border-border/60",
+              "h-5 gap-1 px-1.5 text-[10px] font-normal uppercase tracking-wide text-muted-foreground bg-muted/40 border-border/60",
               className
             )}
           >
