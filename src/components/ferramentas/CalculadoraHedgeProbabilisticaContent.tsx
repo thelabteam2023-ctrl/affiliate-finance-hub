@@ -2121,7 +2121,14 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                           <div className="p-2 rounded bg-background/40 border border-border/50">
                             <p className="text-[9px] uppercase text-muted-foreground">{comboDetailSequences}× consecutivas</p>
                             <p className={`text-sm font-bold font-mono ${pSeq >= 0.05 ? 'text-emerald-400' : pSeq >= 0.005 ? 'text-orange-400' : 'text-red-400'}`}>
-                              {pSeq < 0.0001 ? `${(pSeq * 100).toExponential(2)}%` : fmtPct(pSeq * 100)}
+                              {(() => {
+                                const pct = pSeq * 100;
+                                if (pct === 0) return '0%';
+                                if (pct >= 1) return fmtPct(pct);
+                                if (pct >= 0.01) return `${pct.toFixed(3)}%`;
+                                if (pct >= 0.0001) return `${pct.toFixed(5)}%`;
+                                return `< 0,0001%`;
+                              })()}
                             </p>
                             <p className="text-[9px] text-muted-foreground">1 em {pSeq > 0 ? Math.round(1 / pSeq).toLocaleString('pt-BR') : '∞'} tentativas</p>
                           </div>
@@ -2148,7 +2155,14 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                       <TableCell className="text-[11px] font-mono text-right">{l.backOdd.toFixed(2)}</TableCell>
                                       <TableCell className="text-[11px] font-mono text-right">{fmtPct(p1 * 100)}</TableCell>
                                       <TableCell className="text-[11px] font-mono text-right">
-                                        {pN < 0.0001 ? `${(pN * 100).toExponential(2)}%` : fmtPct(pN * 100)}
+                                        {(() => {
+                                          const pct = pN * 100;
+                                          if (pct === 0) return '0%';
+                                          if (pct >= 1) return fmtPct(pct);
+                                          if (pct >= 0.01) return `${pct.toFixed(3)}%`;
+                                          if (pct >= 0.0001) return `${pct.toFixed(5)}%`;
+                                          return `< 0,0001%`;
+                                        })()}
                                       </TableCell>
                                       <TableCell className="text-[11px] font-mono text-right text-muted-foreground">
                                         1 / {pN > 0 ? Math.round(1 / pN).toLocaleString('pt-BR') : '∞'}
