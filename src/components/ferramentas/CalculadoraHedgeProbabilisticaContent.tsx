@@ -2087,6 +2087,87 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                   </p>
                 </div>
 
+                {/* Probabilidade de sequências consecutivas na bolsa */}
+                <div className="flex flex-col gap-2 p-2 rounded-md bg-muted/20 border border-border/50">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[9px] uppercase text-muted-foreground font-semibold">
+                      Probabilidade de Sequências Consecutivas
+                    </p>
+                    <div className="flex items-center gap-1">
+                      <Label htmlFor="combo-detail-seq" className="text-[10px] text-muted-foreground">N =</Label>
+                      <Input
+                        id="combo-detail-seq"
+                        type="number"
+                        min={1}
+                        max={50}
+                        value={comboDetailSequences}
+                        onChange={(e) => setComboDetailSequences(Math.max(1, Math.min(50, parseInt(e.target.value) || 1)))}
+                        className="h-7 w-16 text-[11px] font-mono text-center"
+                      />
+                    </div>
+                  </div>
+                  {(() => {
+                    const pAllWon = comboDetailMetrics.legs.reduce((acc, l) => acc * (1 / l.backOdd), 1);
+                    const pSeq = Math.pow(pAllWon, comboDetailSequences);
+                    const oddsLabel = comboDetailMetrics.legs.map(l => l.backOdd.toFixed(2)).join(' × ');
+                    return (
+                      <>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="p-2 rounded bg-background/40 border border-border/50">
+                            <p className="text-[9px] uppercase text-muted-foreground">Operação inteira (1×)</p>
+                            <p className="text-sm font-bold font-mono text-blue-400">{fmtPct(pAllWon * 100)}</p>
+                            <p className="text-[9px] text-muted-foreground">P(todas back ganham) = 1 / ({oddsLabel})</p>
+                          </div>
+                          <div className="p-2 rounded bg-background/40 border border-border/50">
+                            <p className="text-[9px] uppercase text-muted-foreground">{comboDetailSequences}× consecutivas</p>
+                            <p className={`text-sm font-bold font-mono ${pSeq >= 0.05 ? 'text-emerald-400' : pSeq >= 0.005 ? 'text-orange-400' : 'text-red-400'}`}>
+                              {pSeq < 0.0001 ? `${(pSeq * 100).toExponential(2)}%` : fmtPct(pSeq * 100)}
+                            </p>
+                            <p className="text-[9px] text-muted-foreground">1 em {pSeq > 0 ? Math.round(1 / pSeq).toLocaleString('pt-BR') : '∞'} tentativas</p>
+                          </div>
+                        </div>
+                        {comboDetailMetrics.legs.length > 1 && (
+                          <div className="border rounded-md overflow-hidden">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead className="text-[10px]">Perna</TableHead>
+                                  <TableHead className="text-[10px] text-right">Back Odd</TableHead>
+                                  <TableHead className="text-[10px] text-right">P(1×)</TableHead>
+                                  <TableHead className="text-[10px] text-right">P({comboDetailSequences}×)</TableHead>
+                                  <TableHead className="text-[10px] text-right">1 em N</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {comboDetailMetrics.legs.map((l, i) => {
+                                  const p1 = 1 / l.backOdd;
+                                  const pN = Math.pow(p1, comboDetailSequences);
+                                  return (
+                                    <TableRow key={i}>
+                                      <TableCell className="text-[11px] font-mono">{i + 1}</TableCell>
+                                      <TableCell className="text-[11px] font-mono text-right">{l.backOdd.toFixed(2)}</TableCell>
+                                      <TableCell className="text-[11px] font-mono text-right">{fmtPct(p1 * 100)}</TableCell>
+                                      <TableCell className="text-[11px] font-mono text-right">
+                                        {pN < 0.0001 ? `${(pN * 100).toExponential(2)}%` : fmtPct(pN * 100)}
+                                      </TableCell>
+                                      <TableCell className="text-[11px] font-mono text-right text-muted-foreground">
+                                        1 / {pN > 0 ? Math.round(1 / pN).toLocaleString('pt-BR') : '∞'}
+                                      </TableCell>
+                                    </TableRow>
+                                  );
+                                })}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        )}
+                        <p className="text-[10px] text-muted-foreground leading-tight">
+                          Probabilidade implícita de a mesma condição se repetir <strong>{comboDetailSequences} vez(es) consecutivamente</strong> na bolsa, assumindo eventos independentes (P = (1/odd)<sup>N</sup>).
+                        </p>
+                      </>
+                    );
+                  })()}
+                </div>
+
                 {/* KPIs gerais */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   <div className="p-2 rounded-md bg-muted/30 border border-border/50">
