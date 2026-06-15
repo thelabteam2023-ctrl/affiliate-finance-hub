@@ -24,7 +24,6 @@ import {
   useExposicaoFinanceira,
   type OcorrenciaDetalhe,
   type PerdaDetalhe,
-  type IrrecuperavelDetalhe,
 } from "@/hooks/useExposicaoFinanceira";
 import { cn } from "@/lib/utils";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
