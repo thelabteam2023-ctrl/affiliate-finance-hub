@@ -1,62 +1,81 @@
-## Diagnóstico
+## Diagnóstico — você está certo
 
-Hoje o KPI do topo do card "Exposição & Perdas" mostra `R$ 18.740,32` — esse valor é `totalConsolidado` = `Em disputa + Perdas confirmadas no período`. A porcentagem `11,3% do patrimônio total` também é calculada sobre esse total somado. Isso mistura dois conceitos com semânticas distintas:
+Hoje o cálculo é:
 
-- **Em disputa** = capital ainda exposto, recuperável (posição atual, tempo real).
-- **Perdas confirmadas no período** = capital já reconhecido como perda no recorte temporal.
+```
+pctDisputaPatrimonio  = totalEmDisputa / patrimonioTotal  (HOJE)
+pctPerdasPatrimonio   = totalPerdasPeriodo (período X) / patrimonioTotal (HOJE)
+```
 
-Somar os dois no header esconde a informação útil e torna a porcentagem ambígua.
+**Problemas conceituais:**
 
-Além disso, o badge "Junho de 2026" aparece dentro da seção "Perdas confirmadas no período", deslocado do contexto geral. Ele deveria identificar o **período do card inteiro** (consistência com outros cards do dashboard que mostram o período no cabeçalho).
+1. **"Perdas no período" vs "patrimônio de hoje"** — comparar uma perda confirmada em março/2026 com o patrimônio de junho/2026 distorce o indicador. Se o patrimônio dobrar, a mesma perda histórica "encolhe" sem nada ter mudado no passado.
+2. **"Em disputa" vs "patrimônio"** — "Em disputa" é uma posição em tempo real, então comparar com patrimônio de hoje **faz sentido** (ambos são "agora").
+3. **Período retroativo** — quando o usuário troca o filtro para "Maio/2026", o patrimônio mostrado continua sendo o de hoje, não o que existia em maio.
+
+Conclusão: a porcentagem da **perda do período** precisa do **patrimônio do período**. A porcentagem do **em disputa** continua válida com patrimônio atual (ambos são snapshots de "agora").
+
+## Por que não usar `capital_snapshots` direto
+
+A tabela `capital_snapshots` existe, mas hoje só guarda capital **de bookmakers** (`capital_bookmakers_total_brl`). O patrimônio total do card "Exposição & Perdas" vem de **4 fontes** somadas no `Financeiro.tsx`:
+
+```
+patrimonioTotal = capitalOperacional + saldoBookmakers + totalContasParceiros + totalWalletsParceiros
+```
+
+Snapshot atual cobre só ~1/4 da fórmula. Reaproveitar exigiria estender o snapshot — fora do escopo de um ajuste de KPI.
 
 ## Proposta
 
-### 1. Header do card — eliminar o total somado
+### Opção A (recomendada) — Snapshot calculado on-demand do fim do período
 
-Substituir o número único grande no topo por **duas métricas paralelas**:
+Em vez de criar tabela nova, **calcular o patrimônio no `dataFim` do filtro** reconstruindo cada componente a partir do ledger:
 
-```text
-Exposição & Perdas                        [JUNHO DE 2026]
-─────────────────────────────────────────────────────────
-EM DISPUTA                  PERDAS NO PERÍODO
-R$ 18.242,78                R$ 497,54
-11,0% do patrimônio          0,3% do patrimônio
-```
+- `capitalOperacional(dataFim)` = `cash_ledger` agrupado por moeda até `dataFim`, convertido com cotação histórica (PTAX da data).
+- `saldoBookmakers(dataFim)` = soma de eventos `bookmaker_balance_audit` ou reconstrução via `cash_ledger` com `bookmaker_id`/categorias de movimentação até `dataFim`.
+- `totalContasParceiros(dataFim)` e `totalWalletsParceiros(dataFim)` = mesma técnica via ledger filtrado.
 
-- **Coluna A — Em disputa**: `exp.totalEmDisputa` + `pctDisputaPatrimonio = totalEmDisputa / patrimonioTotal`.
-- **Coluna B — Perdas no período**: `exp.totalPerdasPeriodo` + `pctPerdasPatrimonio = totalPerdasPeriodo / patrimonioTotal`.
-- Cores: âmbar para "Em disputa" (recuperável), vermelho para "Perdas" (consumado) — mantém a paleta já em uso.
-- Remover `pctLucro` (% do lucro op.) da seção Perdas, agora redundante.
-- Remover o uso de `totalConsolidado` no header (mantém no hook por compatibilidade).
+**Custo:** alto — exige um RPC dedicado (`fn_patrimonio_at_date(workspace_id, date)`) que replica a lógica do `useFinanceiro` em SQL com FX histórico. Risco de divergência se não compartilhar a fonte canônica.
 
-### 2. Período no cabeçalho — padronizar como nos demais cards
+### Opção B (pragmática, recomendada para este turno) — Etiquetar a porcentagem como "atual" e mostrar perdas absolutas
 
-- **Mover** `periodBadge` (`JUNHO DE 2026`) da seção "Perdas confirmadas no período" para a linha do título `CardTitle`, ao lado de "Exposição & Perdas".
-- A seção interna "Perdas confirmadas no período" deixa de carregar badge — o período já está implícito no cabeçalho.
-- Padrão visual: badge sempre em **MAIÚSCULAS** (`uppercase` + `tracking-wide`), igual a outros cards.
+Reconhecer no UI que a porcentagem de Perdas é **referência atual**, não histórica:
 
-### 3. Corpo do card — seções viram drill-downs sem repetir totais
+1. **Manter** os números absolutos (`Em disputa: R$ X` e `Perdas: R$ Y`).
+2. **Em disputa**: continuar com `% do patrimônio atual` — semanticamente válido.
+3. **Perdas no período**: **remover** a porcentagem de patrimônio e exibir, no lugar, um indicador mais fiel ao recorte temporal — por exemplo:
+   - `R$ 497,54` (valor absoluto, principal)
+   - `2 ocorrências · 0,3% do lucro op. do período`
+   - O denominador "lucro operacional do período" **já é do mesmo período** (vem de `lucroOperacional` que já é filtrado por `dataInicio/dataFim`), então a comparação fica honesta.
+4. **Tooltip explicativo** no badge "EM DISPUTA": "Posição atual sobre patrimônio atual".
+5. **Tooltip explicativo** no badge "PERDAS NO PERÍODO": "Valor absoluto consumado no período. Comparativo usa lucro operacional do mesmo recorte."
 
-- Seção **Em disputa** continua mostrando segmentos (Casas, Bancos, Wallets, Caixa) com barra de progresso e drill, **mas sem o total no header da seção** (já está no KPI superior). Mantém regra atual de ocultar resumo redundante.
-- Seção **Perdas confirmadas no período** vira só o trigger de drill: linha clicável "Ver X ocorrências →", sem repetir o valor (já no KPI superior).
+### Opção C (futuro) — Snapshot diário completo do patrimônio
 
-### 4. Auditoria de consistência de badges em outros cards (opcional, baixo custo)
+Criar tabela `patrimonio_snapshots` (workspace, snapshot_date, patrimonio_total_brl, breakdown JSONB) populada por job diário ou trigger no fechamento de ciclo. A partir daí o card pega o snapshot mais próximo do `dataFim` do filtro. Robusto, mas exige:
+- Migração (tabela + grants + RLS + índice).
+- Job/edge function diária.
+- Backfill histórico (que pode não ter dados precisos).
+- Fora do escopo deste ajuste de UI/KPI.
 
-- Varrer cards do `Financeiro.tsx` que recebem `periodBadge` e garantir que estão em UPPERCASE. Hoje o `periodBadge` é gerado no container; se já vier em maiúsculas, nada a fazer. Verificar e ajustar apenas o componente que renderiza o badge se necessário (1 ponto).
+## Recomendação final
 
-## Arquivos a alterar
+**Implementar Opção B agora** (1 arquivo, sem migration) e deixar a Opção C como item de backlog quando o usuário pedir histórico completo.
+
+Mudanças na Opção B:
 
 - `src/components/financeiro/ExposicaoFinanceiraCard.tsx`
-  - Reescrever `CardHeader`: título + `periodBadge` na linha do título, grid 2 colunas com Em Disputa / Perdas no Período + suas porcentagens individuais.
-  - Remover o número grande `totalConsolidado` e seu `pctPatrimonio` único.
-  - Seção "Em disputa" no body: remover linha-resumo de total (já está no header).
-  - Seção "Perdas confirmadas no período" no body: remover `periodBadge` daqui e o número grande de perdas (já no header). Manter apenas o trigger clicável que abre o drawer.
-- Não tocar em `useExposicaoFinanceira` (dados já existem: `totalEmDisputa`, `totalPerdasPeriodo`, `countPerdas`).
-- Não tocar em `src/pages/Financeiro.tsx` — `periodBadge` continua sendo passado da mesma forma.
+  - Coluna "Em disputa": manter `% do patrimônio` + tooltip "atual".
+  - Coluna "Perdas no período": substituir `% do patrimônio` por `% do lucro op. do período` (já temos `lucroOperacional` como prop) + `N ocorrências`.
+  - Adicionar `Tooltip` em ambas as labels para deixar o contexto explícito.
+  - Manter `patrimonioTotal` na prop (usado pela coluna A).
 
 ## Fora de escopo
 
-- Não mexer no cálculo de `totalConsolidado` no hook (outros consumidores podem usar).
-- Não mexer nas listas de drill (já redesenhadas no turno anterior).
-- Não criar migrations.
-- Auditoria visual exaustiva dos outros cards do Financeiro fica para um turno dedicado se o usuário pedir.
+- Não criar `patrimonio_snapshots`.
+- Não tocar em hook/RPC.
+- Não tocar no `Financeiro.tsx`.
+
+## Pergunta de decisão
+
+Confirma a Opção B? Ou prefere que eu já planeje a Opção C com tabela e job de snapshot diário do patrimônio?
