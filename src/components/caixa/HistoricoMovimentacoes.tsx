@@ -1085,6 +1085,8 @@ export function HistoricoMovimentacoes({
                 {pagination.paginatedItems.map((tx: any) => {
                   const txType = tx.tipo_transacao;
                   const isScan = txType === 'PERDA_OPERACIONAL' || txType === 'SCAN';
+                  const isReverted = !!tx.reversed_at;
+                  const isMirror = typeof tx.descricao === 'string' && tx.descricao.startsWith('ESTORNO:');
                   const origemInfo = getOrigemInfo ? getOrigemInfo(tx) : { primary: getOrigemLabel(tx) } as LabelInfo;
                   const destinoInfo = getDestinoInfo ? getDestinoInfo(tx) : { primary: getDestinoLabel(tx) } as LabelInfo;
                   const scanOrigemPrimary = isScan ? origemInfo.primary : '';
@@ -1094,7 +1096,7 @@ export function HistoricoMovimentacoes({
                   return (
                     <div 
                       key={tx.id} 
-                      className="grid grid-cols-[auto_1fr_auto] gap-[12px] items-center py-[12px] border-b border-[#131920] last:border-0 group"
+                      className={`grid grid-cols-[auto_1fr_auto] gap-[12px] items-center py-[12px] border-b border-[#131920] last:border-0 group ${isReverted ? 'opacity-60' : ''}`}
                     >
                       {/* Coluna 1: Ícone */}
                       <TransactionIcon type={txType} transacao={{
@@ -1257,7 +1259,27 @@ export function HistoricoMovimentacoes({
                             </Button>
                           )}
                           
-                          {getStatusBadge(tx.status)}
+                          {isReverted ? (
+                            <Badge
+                              variant="outline"
+                              className="h-5 gap-1 border-amber-500/40 bg-amber-500/10 px-1.5 text-[10px] font-semibold text-amber-400"
+                              title={`Revertida em ${new Date(tx.reversed_at).toLocaleString('pt-BR')}`}
+                            >
+                              <Undo2 className="h-2.5 w-2.5" />
+                              Revertida
+                            </Badge>
+                          ) : isMirror ? (
+                            <Badge
+                              variant="outline"
+                              className="h-5 gap-1 border-sky-500/40 bg-sky-500/10 px-1.5 text-[10px] font-semibold text-sky-400"
+                              title="Lançamento de estorno (espelho)"
+                            >
+                              <Undo2 className="h-2.5 w-2.5" />
+                              Estorno
+                            </Badge>
+                          ) : (
+                            getStatusBadge(tx.status)
+                          )}
                         </div>
 
                         <div className="flex items-center gap-1 mt-1.5 opacity-40 group-hover:opacity-70 transition-opacity">
