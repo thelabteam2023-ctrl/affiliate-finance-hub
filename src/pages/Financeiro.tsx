@@ -232,10 +232,6 @@ export default function Financeiro() {
             )}
             .
           </span>
-          <span className="opacity-80">
-            Cards de saldo (Patrimônio, Posição de Capital, Em Disputa, Saldo Irrecuperável)
-            sempre refletem a <span className="font-medium">posição atual</span>.
-          </span>
         </div>
       )}
 
