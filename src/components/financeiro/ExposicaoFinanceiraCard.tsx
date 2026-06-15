@@ -99,7 +99,6 @@ type DrillKey =
   | "disputa-wallets"
   | "disputa-caixa"
   | "perdas"
-  | "irrecuperavel"
   | null;
 
 export function ExposicaoFinanceiraCard({
