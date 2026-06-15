@@ -187,6 +187,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
   const [showHelp, setShowHelp] = useState(false);
   const [comboDetail, setComboDetail] = useState<{ name: string; legs: number[]; type?: string; description?: string } | null>(null);
   const [comboDetailMode, setComboDetailMode] = useState<'roi-max' | 'balanced'>('roi-max');
+  const [comboDetailSequences, setComboDetailSequences] = useState<number>(5);
 
   // Debounced copies used as deps for heavy useMemos — keeps typing in
   // Freebet/Banca da Exchange snappy by delaying recompute until input settles.
