@@ -146,6 +146,9 @@ export function ExposicaoFinanceiraCard({
     },
   ];
 
+  const activeSegs = segs.filter((s) => s.value > 0);
+  const showDisputaSummary = activeSegs.length >= 2;
+
   return (
     <Card className="h-full">
       <CardHeader className="pb-3">
@@ -169,11 +172,12 @@ export function ExposicaoFinanceiraCard({
         {/* SEÇÃO 1: Em disputa */}
         <section className="space-y-2">
           <div className="flex items-center justify-between">
-            <h4 className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold flex items-center gap-1.5">
+            <h4 className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
               Em disputa
-              {realtimeBadge}
             </h4>
-            <span className="text-xs font-medium">{formatCurrency(exp.totalEmDisputa)}</span>
+            {showDisputaSummary && (
+              <span className="text-xs font-medium">{formatCurrency(exp.totalEmDisputa)}</span>
+            )}
           </div>
           {exp.loading ? (
             <div className="text-xs text-muted-foreground">Carregando…</div>
@@ -284,7 +288,7 @@ function DrillDrawer({
   if (drill === "disputa-bookmakers") {
     title = "Em disputa · Casas de Apostas";
     description = "Ocorrências abertas com valor em risco nas bookmakers";
-    body = <OcorrenciasList items={exp.detalhes.disputaBookmakers} formatCurrency={formatCurrency} />;
+    body = <DisputaBookmakerList items={exp.detalhes.disputaBookmakers} formatCurrency={formatCurrency} />;
   } else if (drill === "disputa-contas-parc") {
     title = "Em disputa · Bancos / Processadores";
     description = "Ocorrências em aberto vinculadas a contas de parceiros";
