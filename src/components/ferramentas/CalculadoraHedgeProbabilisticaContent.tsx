@@ -13,7 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
     CheckCircle2, Lightbulb, BookOpen, FlaskConical, BrainCircuit,
     ShieldAlert, Coins, Sparkles, Wand2, Dna, LineChart, History,
      Trophy, Star, ArrowRight, RefreshCcw, GripVertical, GripHorizontal,
-     Sliders, Settings2, ShieldCheck, ZapOff, Infinity as InfinityIcon
+     Sliders, Settings2, ShieldCheck, ZapOff, Infinity as InfinityIcon, Eye
  } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
  import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -184,6 +184,17 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
   ]);
   const [expanded, setExpanded] = useState<AggregatedScenario | null>(null);
   const [showHelp, setShowHelp] = useState(false);
+  const [comboDetail, setComboDetail] = useState<{ name: string; legs: number[]; type?: string; description?: string } | null>(null);
+
+  const comboDetailMetrics = useMemo(() => {
+    if (!comboDetail) return null;
+    const legsInput = comboDetail.legs.map((o, i) => ({
+      name: `Evento ${i + 1}`,
+      backOdd: o,
+      layOdd: Number((o * (1 + oddSpread / 100)).toFixed(2)),
+    }));
+    return HedgeProbabilisticoEngine.calculateMetrics(legsInput, freebet, commission / 100, targetExtraction);
+  }, [comboDetail, freebet, commission, targetExtraction, oddSpread]);
 
   const goldenCombinationsByExtraction = useMemo(() => {
     const targets = Array.from(new Set([0.65, 0.70, 0.75, Number(targetExtraction.toFixed(2))])).sort();
