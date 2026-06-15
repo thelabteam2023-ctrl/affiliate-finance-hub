@@ -186,11 +186,21 @@ export function ReportarScanDialog({
     if (!motivo.trim() || !valor || parseFloat(valor) <= 0) return false;
     if (tipoOrigem === "CASA_APOSTA" && !bookmakerId) return false;
     if (tipoOrigem === "PARCEIRO_CONTA" && !contaId) return false;
+    if (parseFloat(valor) > saldoAtual + 0.001) return false;
     return true;
   };
 
   const handleSubmit = async () => {
     if (!canSubmit()) return;
+    const valorNumCheck = parseFloat(valor);
+    if (valorNumCheck > saldoAtual + 0.001) {
+      toast({
+        title: "Valor excede o saldo disponível",
+        description: `O prejuízo (${getCurrencySymbol(moeda)} ${valorNumCheck.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) não pode ser superior ao saldo atual (${getCurrencySymbol(moeda)} ${saldoAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}). Operação bloqueada para evitar saldo negativo.`,
+        variant: "destructive",
+      });
+      return;
+    }
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
