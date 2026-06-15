@@ -285,7 +285,6 @@ export default function Financeiro() {
                   value={calc.formatCurrency(patrimonioTotal)}
                   hint="Soma consolidada (BRL) de todos os segmentos"
                   icon={<Wallet className="h-4 w-4" />}
-                  periodBadge={realtimeBadge}
                 />
                 <HeaderKpiCard
                   label="Lucro Operacional"
