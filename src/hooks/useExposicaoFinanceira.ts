@@ -126,7 +126,7 @@ export function useExposicaoFinanceira({ dataInicio, dataFim }: Params): Exposic
           .gt("saldo_irrecuperavel", 0),
         supabase
           .from("cash_ledger")
-          .select("id, valor, moeda, data_transacao, descricao, conta_bancaria_id, wallet_id, bookmaker_id")
+          .select("id, valor, moeda, data_transacao, descricao, origem_tipo, origem_bookmaker_id, origem_conta_bancaria_id, origem_wallet_id")
           .eq("workspace_id", workspaceId!)
           .eq("status", "CONFIRMADO")
           .eq("tipo_transacao", "PERDA_OPERACIONAL")
@@ -150,9 +150,9 @@ export function useExposicaoFinanceira({ dataInicio, dataFim }: Params): Exposic
         if (o.parceiro_id) parceiroIds.add(o.parceiro_id);
       }
       for (const l of allLedger) {
-        if (l.bookmaker_id) bookmakerIds.add(l.bookmaker_id);
-        if (l.conta_bancaria_id) contaIds.add(l.conta_bancaria_id);
-        if (l.wallet_id) walletIds.add(l.wallet_id);
+        if (l.origem_bookmaker_id) bookmakerIds.add(l.origem_bookmaker_id);
+        if (l.origem_conta_bancaria_id) contaIds.add(l.origem_conta_bancaria_id);
+        if (l.origem_wallet_id) walletIds.add(l.origem_wallet_id);
       }
 
       const [bmInfoRes, contasInfoRes, walletsInfoRes, parceirosInfoRes] = await Promise.all([
@@ -285,16 +285,16 @@ export function useExposicaoFinanceira({ dataInicio, dataFim }: Params): Exposic
       if (valor <= 0) continue;
       let label: string | null = null;
       let titular: string | null = null;
-      if (l.bookmaker_id && bmMap[l.bookmaker_id]) {
-        label = bmMap[l.bookmaker_id].nome;
-        const pid = bmMap[l.bookmaker_id].parceiro_id;
+      if (l.origem_bookmaker_id && bmMap[l.origem_bookmaker_id]) {
+        label = bmMap[l.origem_bookmaker_id].nome;
+        const pid = bmMap[l.origem_bookmaker_id].parceiro_id;
         titular = pid ? parceiroMap[pid] : null;
-      } else if (l.conta_bancaria_id && contaMap[l.conta_bancaria_id]) {
-        const c = contaMap[l.conta_bancaria_id];
+      } else if (l.origem_conta_bancaria_id && contaMap[l.origem_conta_bancaria_id]) {
+        const c = contaMap[l.origem_conta_bancaria_id];
         label = c.banco;
         titular = c.titular;
-      } else if (l.wallet_id && walletMap[l.wallet_id]) {
-        const w = walletMap[l.wallet_id];
+      } else if (l.origem_wallet_id && walletMap[l.origem_wallet_id]) {
+        const w = walletMap[l.origem_wallet_id];
         label = `${w.exchange} · ${w.coin}`;
       }
       detalhes.perdas.push({
