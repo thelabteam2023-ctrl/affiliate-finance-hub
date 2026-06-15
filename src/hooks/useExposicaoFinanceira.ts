@@ -164,6 +164,7 @@ export function useExposicaoFinanceira({ dataInicio, dataFim }: Params): Exposic
           .eq("workspace_id", workspaceId!)
           .eq("status", "CONFIRMADO")
           .eq("tipo_transacao", "PERDA_OPERACIONAL")
+          .is("reversed_at", null)
           .gte("data_transacao", inicioISO)
           .lte("data_transacao", fimISO),
       ]);
