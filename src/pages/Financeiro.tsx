@@ -32,7 +32,7 @@ import { HeaderKpiCard } from "@/components/financeiro/HeaderKpiCard";
 import { ExposicaoFinanceiraCard } from "@/components/financeiro/ExposicaoFinanceiraCard";
 import { PosicaoCapital } from "@/components/caixa/PosicaoCapital";
 import { useCapitalEmDisputa } from "@/hooks/useCapitalEmDisputa";
-import { Wallet, TrendingUp, Percent, Gauge, ArrowLeftRight, Receipt, Users as UsersIcon, Timer } from "lucide-react";
+import { Wallet, TrendingUp, Percent } from "lucide-react";
 import { ParticipacaoInvestidoresTab } from "@/components/financeiro/ParticipacaoInvestidoresTab";
 import { MultiCurrencyWarningBanner } from "@/components/financeiro/MultiCurrencyIndicator";
 import { FinanceiroDespesasTab } from "@/components/financeiro/FinanceiroDespesasTab";
@@ -243,12 +243,8 @@ export default function Financeiro() {
               lucroOperacionalApostas + custoSust > 0
                 ? (lucroOperacionalApostas / (lucroOperacionalApostas + custoSust)) * 100
                 : 0;
-            const capitalBase = capitalMedioPeriodo.capitalMedio > 0
-              ? capitalMedioPeriodo.capitalMedio
-              : calc.saldos.saldoBookmakers;
-            const roic = capitalBase > 0 ? (lucroOperacionalApostas / capitalBase) * 100 : 0;
             return (
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
                 <HeaderKpiCard
                   label="Patrimônio Total"
                   value={calc.formatCurrency(patrimonioTotal)}
@@ -268,17 +264,6 @@ export default function Financeiro() {
                   hint="Lucro Op. / (Lucro Op. + Custo de Sustentação)"
                   icon={<Percent className="h-4 w-4" />}
                   tone={margemOp >= 50 ? "positive" : margemOp > 0 ? "warning" : "negative"}
-                />
-                <HeaderKpiCard
-                  label="ROIC"
-                  value={`${roic.toFixed(2)}%`}
-                  hint={
-                    capitalMedioPeriodo.capitalMedio > 0
-                      ? "Lucro Op. / Capital médio do período"
-                      : "Lucro Op. / Capital atual em bookmakers (fallback)"
-                  }
-                  icon={<Gauge className="h-4 w-4" />}
-                  tone={roic > 0 ? "positive" : "negative"}
                 />
               </div>
             );
@@ -327,45 +312,6 @@ export default function Financeiro() {
             />
           </div>
 
-          {/* LINHA 4: Mini-KPIs auxiliares */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-            <HeaderKpiCard
-              label="Fluxo Líq. Bookmakers"
-              value={calc.formatCurrency(
-                calc.movimentacao.saquesBookmakersPeriodo - calc.movimentacao.depositosBookmakersPeriodo
-              )}
-              hint="Saques − Depósitos (BRL) no período"
-              icon={<ArrowLeftRight className="h-4 w-4" />}
-              tone={
-                calc.movimentacao.saquesBookmakersPeriodo - calc.movimentacao.depositosBookmakersPeriodo >= 0
-                  ? "positive"
-                  : "warning"
-              }
-            />
-            <HeaderKpiCard
-              label="Custo Total"
-              value={calc.formatCurrency(calc.costs.custoSustentacao)}
-              hint="Soma de toda a Composição de Custos"
-              icon={<Receipt className="h-4 w-4" />}
-            />
-            <HeaderKpiCard
-              label="Despesa RH"
-              value={calc.formatCurrency(calc.costs.totalDespesasRH)}
-              hint="Folha e encargos no período"
-              icon={<UsersIcon className="h-4 w-4" />}
-            />
-            <HeaderKpiCard
-              label="Payback Aquisição"
-              value={(() => {
-                const lucroMensal = lucroOperacionalApostas; // já filtrado pelo período
-                if (lucroMensal <= 0 || calc.costs.totalCustosOperacionais <= 0) return "—";
-                const meses = calc.costs.totalCustosOperacionais / lucroMensal;
-                return `${meses.toFixed(1)} mês${meses >= 2 ? "es" : ""}`;
-              })()}
-              hint="Custos de aquisição / Lucro do período"
-              icon={<Timer className="h-4 w-4" />}
-            />
-          </div>
         </TabsContent>
 
         <TabsContent value="despesas">
