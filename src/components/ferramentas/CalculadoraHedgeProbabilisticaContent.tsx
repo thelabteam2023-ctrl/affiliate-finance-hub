@@ -185,6 +185,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
   const [expanded, setExpanded] = useState<AggregatedScenario | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [comboDetail, setComboDetail] = useState<{ name: string; legs: number[]; type?: string; description?: string } | null>(null);
+  const [comboDetailMode, setComboDetailMode] = useState<'roi-max' | 'balanced'>('roi-max');
 
   const comboDetailMetrics = useMemo(() => {
     if (!comboDetail) return null;
@@ -193,8 +194,14 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
       backOdd: o,
       layOdd: Number((o * (1 + oddSpread / 100)).toFixed(2)),
     }));
-    return HedgeProbabilisticoEngine.calculateMetrics(legsInput, freebet, commission / 100, targetExtraction);
-  }, [comboDetail, freebet, commission, targetExtraction, oddSpread]);
+    return HedgeProbabilisticoEngine.calculateByMode(
+      comboDetailMode,
+      legsInput,
+      freebet,
+      commission / 100,
+      targetExtraction,
+    );
+  }, [comboDetail, comboDetailMode, freebet, commission, targetExtraction, oddSpread]);
 
   const goldenCombinationsByExtraction = useMemo(() => {
     const targets = Array.from(new Set([0.65, 0.70, 0.75, Number(targetExtraction.toFixed(2))])).sort();
