@@ -287,27 +287,37 @@ export function useExposicaoFinanceira({ dataInicio, dataFim }: Params): Exposic
       if (valor <= 0) continue;
       let label: string | null = null;
       let titular: string | null = null;
+      let categoria: PerdaDetalhe["categoria"] = "outro";
+      let bookmakerNome: string | null = null;
       if (l.origem_bookmaker_id && bmMap[l.origem_bookmaker_id]) {
         label = bmMap[l.origem_bookmaker_id].nome;
         const pid = bmMap[l.origem_bookmaker_id].parceiro_id;
         titular = pid ? parceiroMap[pid] : null;
+        categoria = "casa";
+        bookmakerNome = label;
       } else if (l.origem_conta_bancaria_id && contaMap[l.origem_conta_bancaria_id]) {
         const c = contaMap[l.origem_conta_bancaria_id];
         label = c.banco;
         titular = c.titular;
+        categoria = c.parceiro_id ? "parceiro" : "banco";
       } else if (l.origem_wallet_id && walletMap[l.origem_wallet_id]) {
         const w = walletMap[l.origem_wallet_id];
         label = `${w.exchange} · ${w.coin}`;
+        categoria = "wallet";
       }
+      const { titulo: descricaoLimpa, categoria: catFromTitulo } = limparTituloPerda(l.descricao || "Perda operacional");
+      if (catFromTitulo) categoria = catFromTitulo;
       detalhes.perdas.push({
         id: l.id,
         fonte: "ledger",
         data: l.data_transacao,
         valor,
         moeda: l.moeda || "BRL",
-        descricao: l.descricao || "Perda operacional",
+        descricao: descricaoLimpa,
         origem_label: label,
         origem_titular: titular,
+        categoria,
+        bookmaker_nome: bookmakerNome,
       });
     }
     // Perdas: ocorrências (apenas as que ainda NÃO viraram ledger, p/ evitar dupla contagem)
@@ -319,27 +329,37 @@ export function useExposicaoFinanceira({ dataInicio, dataFim }: Params): Exposic
       if (valor <= 0) continue;
       let label: string | null = null;
       let titular: string | null = null;
+      let categoria: PerdaDetalhe["categoria"] = "outro";
+      let bookmakerNome: string | null = null;
       if (o.bookmaker_id && bmMap[o.bookmaker_id]) {
         label = bmMap[o.bookmaker_id].nome;
         const pid = bmMap[o.bookmaker_id].parceiro_id;
         titular = pid ? parceiroMap[pid] : null;
+        categoria = "casa";
+        bookmakerNome = label;
       } else if (o.conta_bancaria_id && contaMap[o.conta_bancaria_id]) {
         const c = contaMap[o.conta_bancaria_id];
         label = c.banco;
         titular = c.titular;
+        categoria = c.parceiro_id ? "parceiro" : "banco";
       } else if (o.wallet_id && walletMap[o.wallet_id]) {
         const w = walletMap[o.wallet_id];
         label = `${w.exchange} · ${w.coin}`;
+        categoria = "wallet";
       }
+      const { titulo: descricaoLimpa, categoria: catFromTitulo } = limparTituloPerda(o.titulo || "Ocorrência com perda");
+      if (catFromTitulo) categoria = catFromTitulo;
       detalhes.perdas.push({
         id: o.id,
         fonte: "ocorrencia",
         data: o.resolved_at?.slice(0, 10) || o.data_ocorrencia,
         valor,
         moeda: o.moeda || "BRL",
-        descricao: o.titulo || "Ocorrência com perda",
+        descricao: descricaoLimpa,
         origem_label: label,
         origem_titular: titular,
+        categoria,
+        bookmaker_nome: bookmakerNome,
       });
     }
 
