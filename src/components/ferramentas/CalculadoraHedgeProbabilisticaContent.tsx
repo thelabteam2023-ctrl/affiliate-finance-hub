@@ -1942,9 +1942,20 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                            {(goldenCombinationsByExtraction[targetExtraction.toFixed(2)] || goldenCombinationsByExtraction["0.70"] || []).map((combo, idx) => (
                                              <div 
                                                key={idx} 
-                                            className="p-3 rounded-lg bg-muted/20 border border-border/50 hover:border-primary/50 transition-all cursor-pointer group flex flex-col justify-between"
+                                            className="p-3 rounded-lg bg-muted/20 border border-border/50 hover:border-primary/50 transition-all cursor-pointer group flex flex-col justify-between relative"
                                             onClick={() => applyGoldenCombo(combo.legs)}
                                           >
+                                            <button
+                                              type="button"
+                                              title="Ver detalhamento da proteção"
+                                              className="absolute top-2 right-2 p-1 rounded-md bg-background/60 border border-border/40 opacity-0 group-hover:opacity-100 hover:bg-primary/20 hover:text-primary transition-all z-10"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setComboDetail({ name: combo.name, legs: combo.legs, type: combo.type, description: combo.description });
+                                              }}
+                                            >
+                                              <Eye className="h-3 w-3" />
+                                            </button>
                                             <div>
                                               <div className="flex justify-between items-start mb-1">
                                                 <Badge variant="outline" className={`text-[8px] h-4 uppercase ${combo.type === 'Eficiência de Capital' ? 'text-blue-400 border-blue-400/30' : 'text-emerald-400 border-emerald-400/30'}`}>
