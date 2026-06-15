@@ -657,13 +657,8 @@ export function useResolverOcorrenciaComFinanceiro() {
               });
           }
 
-          // Se o sub-motivo for saldo_irrecuperavel E a bookmaker ainda está vinculada
-          if (ocorrencia.sub_motivo === 'saldo_irrecuperavel' && ocorrencia.bookmaker_id && bookmakerStillLinked) {
-            await (supabase as any)
-              .from('bookmakers')
-              .update({ saldo_irrecuperavel: bkSaldoIrrecuperavel + valorPerda })
-              .eq('id', ocorrencia.bookmaker_id);
-          }
+          // Acumulador `saldo_irrecuperavel` DESCONTINUADO — perdas de scan vivem
+          // exclusivamente no cash_ledger + projeto_perdas.
         }
       }
     },
