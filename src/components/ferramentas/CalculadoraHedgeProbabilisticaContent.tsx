@@ -2107,12 +2107,18 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                     </div>
                   </div>
                   {(() => {
-                    const pAllWon = comboDetailMetrics.legs.reduce((acc, l) => acc * (1 / l.backOdd), 1);
+                    // Usa a MESMA fonte canônica da "Estatística de Operação" (advancedStats):
+                    // probAllWonBack = cenário em que NENHUMA perna bateu no Lay (ciclo todo back).
+                    // probLayWinCycle = 1 - probAllWonBack = bolsa venceu o ciclo (bateu Lay em alguma perna).
+                    const probAllWonBack = comboDetailMetrics.aggregatedScenarios.find(
+                      s => !s.canonicalPath.includes('lost')
+                    )?.probability ?? comboDetailMetrics.legs.reduce((acc, l) => acc * (1 / l.backOdd), 1);
+                    const pAllWon = probAllWonBack;
                     const pSeq = Math.pow(pAllWon, comboDetailSequences);
                     const oddsLabel = comboDetailMetrics.legs.map(l => l.backOdd.toFixed(2)).join(' × ');
                     const expectedWins = pAllWon * comboDetailSequences;
                     const nLegs = comboDetailMetrics.legs.length;
-                    const pBolsa = 1 - pAllWon; // pelo menos 1 perna back perde => bolsa vence a operação
+                    const pBolsa = 1 - pAllWon; // bolsa vence o ciclo (Lay bate em alguma perna)
                     const pBolsaSeq = Math.pow(pBolsa, comboDetailSequences);
                     const expectedBolsa = pBolsa * comboDetailSequences;
                     const fmtSmallPct = (pct: number) => {
