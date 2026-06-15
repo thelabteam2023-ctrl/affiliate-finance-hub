@@ -12,7 +12,11 @@ import { useWorkspaceLucroOperacional } from "@/hooks/useWorkspaceLucroOperacion
 import { useCapitalMedioPeriodo } from "@/hooks/useCapitalMedioPeriodo";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardPeriodFilterBar } from "@/components/shared/DashboardPeriodFilterBar";
-import { DashboardPeriodFilter, getDashboardDateRangeAsStrings } from "@/types/dashboardFilters";
+import {
+  DashboardPeriodFilter,
+  getDashboardDateRangeAsStrings,
+  getDashboardPeriodDescription,
+} from "@/types/dashboardFilters";
 import { useTopBar } from "@/contexts/TopBarContext";
 import {
   Loader2,
@@ -29,6 +33,7 @@ import {
 import { KpiExplanationDialog, KpiType } from "@/components/financeiro/KpiExplanationDialog";
 import { ComposicaoCustosCard } from "@/components/financeiro/ComposicaoCustosCard";
 import { HeaderKpiCard } from "@/components/financeiro/HeaderKpiCard";
+import { PeriodScopeBadge } from "@/components/financeiro/PeriodScopeBadge";
 import { ExposicaoFinanceiraCard } from "@/components/financeiro/ExposicaoFinanceiraCard";
 import { PosicaoCapital } from "@/components/caixa/PosicaoCapital";
 import { useCapitalEmDisputa } from "@/hooks/useCapitalEmDisputa";
@@ -125,6 +130,16 @@ export default function Financeiro() {
   // Capital em disputa (para sobreposição no donut da Posição de Capital)
   const { bySegment: capitalEmDisputa } = useCapitalEmDisputa();
 
+  // Descrição do período ativo (para banner contextual)
+  const periodDesc = useMemo(
+    () => getDashboardPeriodDescription(periodoPreset, customRange),
+    [periodoPreset, customRange]
+  );
+  const periodBadge = (
+    <PeriodScopeBadge scope="periodo" filter={periodoPreset} customRange={customRange} />
+  );
+  const realtimeBadge = <PeriodScopeBadge scope="atual" />;
+
   // Adaptadores para reutilizar <PosicaoCapital /> dentro do Financeiro
   const posicaoCapitalProps = useMemo(() => {
     const aggByMoeda = (rows: Array<{ moeda?: string | null; saldo: number }>) => {
@@ -204,6 +219,26 @@ export default function Financeiro() {
         onCustomRangeChange={setCustomRange}
       />
 
+      {activeFinanceiroTab === "overview" && (
+        <div className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span>
+            Exibindo dados de{" "}
+            <span className="font-semibold text-foreground">{periodDesc.shortLabel}</span>
+            {!periodDesc.isAllTime && (
+              <>
+                {" "}
+                · <span className="font-medium text-foreground">{periodDesc.rangeLabel}</span>
+              </>
+            )}
+            .
+          </span>
+          <span className="opacity-80">
+            Cards de saldo (Patrimônio, Posição de Capital, Em Disputa, Saldo Irrecuperável)
+            sempre refletem a <span className="font-medium">posição atual</span>.
+          </span>
+        </div>
+      )}
+
       <Tabs value={activeFinanceiroTab} onValueChange={setActiveFinanceiroTab} className="space-y-4 md:space-y-6">
         {/* Sticky tab bar - mobile optimized */}
         <div className="sticky top-0 z-30 -mx-3 px-3 md:-mx-6 md:px-6 py-2 bg-background/95 backdrop-blur-sm border-b border-border/50">
@@ -250,6 +285,7 @@ export default function Financeiro() {
                   value={calc.formatCurrency(patrimonioTotal)}
                   hint="Soma consolidada (BRL) de todos os segmentos"
                   icon={<Wallet className="h-4 w-4" />}
+                  periodBadge={realtimeBadge}
                 />
                 <HeaderKpiCard
                   label="Lucro Operacional"
@@ -257,6 +293,7 @@ export default function Financeiro() {
                   hint="Resultado das apostas no período"
                   icon={<TrendingUp className="h-4 w-4" />}
                   tone={lucroOperacionalApostas >= 0 ? "positive" : "negative"}
+                  periodBadge={periodBadge}
                 />
                 <HeaderKpiCard
                   label="Margem Operacional"
@@ -264,6 +301,7 @@ export default function Financeiro() {
                   hint="Lucro Op. / (Lucro Op. + Custo de Sustentação)"
                   icon={<Percent className="h-4 w-4" />}
                   tone={margemOp >= 50 ? "positive" : margemOp > 0 ? "warning" : "negative"}
+                  periodBadge={periodBadge}
                 />
               </div>
             );
@@ -294,6 +332,8 @@ export default function Financeiro() {
               }
               lucroOperacional={lucroOperacionalApostas}
               formatCurrency={calc.formatCurrency}
+              periodBadge={periodBadge}
+              realtimeBadge={realtimeBadge}
             />
           </div>
 
@@ -309,6 +349,7 @@ export default function Financeiro() {
               bonusDetalhes={calc.bonusDetalhes}
               infraestruturaDetalhes={calc.infraestruturaDetalhes}
               operadoresDetalhes={calc.operadoresDetalhes}
+              periodBadge={periodBadge}
             />
           </div>
 

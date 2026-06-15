@@ -9,7 +9,8 @@
  * Filtros: Mês atual | Anterior | Tudo + Calendário para período customizado
  */
 
-import { startOfMonth, endOfDay, subMonths, startOfYear, endOfMonth } from "date-fns";
+import { startOfMonth, endOfDay, subMonths, startOfYear, endOfMonth, format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { toZonedTime } from "date-fns-tz";
 
 export const OPERATIONAL_TIMEZONE = "America/Sao_Paulo";
@@ -141,4 +142,51 @@ export function getDashboardDateRangeAsStrings(
 export function getDashboardPeriodLabel(filter: DashboardPeriodFilter): string {
   const option = DASHBOARD_PERIOD_OPTIONS.find(o => o.value === filter);
   return option?.label ?? filter;
+}
+
+/**
+ * Descrição completa do período ativo, usada por badges/banners nos dashboards.
+ * - shortLabel: "Mês atual", "Mês anterior", "Ano de 2026", "Tudo", "Personalizado"
+ * - rangeLabel: "01/06/2026 → 15/06/2026" (ou "Sem limite" para 'tudo')
+ * - monthName: nome do mês para "anterior" e "mes" (ex: "junho/2026")
+ */
+export function getDashboardPeriodDescription(
+  filter: DashboardPeriodFilter,
+  customRange?: { start: Date; end: Date }
+): {
+  shortLabel: string;
+  rangeLabel: string;
+  monthName: string | null;
+  isAllTime: boolean;
+} {
+  const range = getDashboardDateRange(filter, customRange);
+  const fmt = (d: Date) => format(d, "dd/MM/yyyy", { locale: ptBR });
+
+  if (filter === "tudo" || !range.start || !range.end) {
+    return {
+      shortLabel: "Todo histórico",
+      rangeLabel: "Sem limite de data",
+      monthName: null,
+      isAllTime: true,
+    };
+  }
+
+  let shortLabel = getDashboardPeriodLabel(filter);
+  let monthName: string | null = null;
+
+  if (filter === "mes" || filter === "anterior") {
+    monthName = format(range.start, "LLLL 'de' yyyy", { locale: ptBR });
+    shortLabel = filter === "mes" ? `Mês atual · ${monthName}` : `Mês anterior · ${monthName}`;
+  } else if (filter === "ano") {
+    shortLabel = `Ano de ${format(range.start, "yyyy")}`;
+  } else if (filter === "custom") {
+    shortLabel = `Personalizado · ${fmt(range.start)} → ${fmt(range.end)}`;
+  }
+
+  return {
+    shortLabel,
+    rangeLabel: `${fmt(range.start)} → ${fmt(range.end)}`,
+    monthName,
+    isAllTime: false,
+  };
 }

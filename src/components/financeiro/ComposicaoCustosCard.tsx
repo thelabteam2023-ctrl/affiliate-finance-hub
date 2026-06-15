@@ -1,3 +1,4 @@
+import { ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, TrendingUp, TrendingDown, Minus, HelpCircle, ChevronRight, Coins } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -62,6 +63,8 @@ interface ComposicaoCustosCardProps {
   bonusDetalhes?: BonusDetalhe[];
   infraestruturaDetalhes?: InfraestruturaDetalhe[];
   operadoresDetalhes?: OperadorDetalhe[];
+  /** Badge opcional indicando o período aplicado */
+  periodBadge?: ReactNode;
 }
 
 interface DetalheItemProps {
@@ -129,6 +132,7 @@ export function ComposicaoCustosCard({
   bonusDetalhes = [],
   infraestruturaDetalhes = [],
   operadoresDetalhes = [],
+  periodBadge,
 }: ComposicaoCustosCardProps) {
   const variacaoTotal = totalAnterior > 0 
     ? ((totalAtual - totalAnterior) / totalAnterior) * 100
@@ -268,6 +272,7 @@ export function ComposicaoCustosCard({
           <CardTitle className="text-base flex items-center gap-2">
             <PieChart className="h-4 w-4 text-primary" />
             Composição de Custos
+            {periodBadge}
             <TooltipProvider>
               <Tooltip delayDuration={300}>
                 <TooltipTrigger asChild>
