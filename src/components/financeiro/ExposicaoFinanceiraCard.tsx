@@ -39,6 +39,14 @@ function formatDataBR(value?: string | null): string {
   }
 }
 
+function toTitleCase(value?: string | null): string {
+  if (!value) return "";
+  return value
+    .toLowerCase()
+    .replace(/\b([a-záàâãéèêíïóôõöúçñ])/gi, (m) => m.toUpperCase())
+    .replace(/\b(De|Da|Do|Das|Dos|E)\b/g, (m) => m.toLowerCase());
+}
+
 const CATEGORIA_META: Record<
   PerdaDetalhe["categoria"],
   { label: string; icon: typeof Building2; dot: string; iconBg: string; iconColor: string }
