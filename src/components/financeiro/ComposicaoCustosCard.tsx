@@ -1,8 +1,7 @@
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, TrendingUp, TrendingDown, Minus, HelpCircle, ChevronRight, Coins } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ModernDonutChart } from "@/components/ui/modern-donut-chart";
 import {
   Tooltip,
   TooltipContent,
@@ -157,6 +156,9 @@ export function ComposicaoCustosCard({
     color: cat.color || colors[i % colors.length],
   }));
 
+  const [activeSegment, setActiveSegment] = useState<string | null>(null);
+  const totalK = Math.round(totalAtual / 1000);
+
   // Função para obter detalhes por categoria
   const getDetalhesForCategoria = (name: string): { items: { nome: string; valor: number; hasCrypto?: boolean; valorUSD?: number }[]; total: number; color: string } => {
     const cat = categorias.find(c => c.name === name);
@@ -307,44 +309,140 @@ export function ComposicaoCustosCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4 overflow-hidden">
-        {/* Donut Chart */}
-        <div className="h-[180px] overflow-hidden">
-          <ModernDonutChart
-            data={donutData}
-            height={180}
-            innerRadius={55}
-            outerRadius={75}
-            showLabels={false}
-            centerValue={formatCurrency(totalAtual)}
-            centerLabel="Total"
-            formatValue={formatCurrency}
-          />
-        </div>
+        {/* Donut + Lista (padrão Posição de Capital) */}
+        <div className="grid grid-cols-1 sm:grid-cols-[176px_1fr] gap-[24px] items-start">
+          {/* Donut Chart - SVG puro */}
+          <div className="relative w-[154px] h-[154px] mx-auto group/donut">
+            <svg viewBox="0 0 154 154" width="154" height="154" role="img" className="overflow-visible">
+              <title>Distribuição de custos por categoria</title>
+              <circle cx="77" cy="77" r="57" fill="none" stroke="var(--border-default)" strokeWidth="20" />
+              {(() => {
+                let currentAngle = -90;
+                const radius = 57;
+                const centerX = 77;
+                const centerY = 77;
+                const gapAngle = 3;
+                return donutData.map((item) => {
+                  if (totalAtual <= 0) return null;
+                  const pct = (item.value / totalAtual) * 100;
+                  const isActive = activeSegment === item.name;
+                  const isOtherActive = activeSegment !== null && !isActive;
+                  const segmentAngle = (pct / 100) * 360;
+                  const actualGap = segmentAngle > gapAngle ? gapAngle : 0;
+                  const startAngle = currentAngle + (actualGap / 2);
+                  const endAngle = currentAngle + segmentAngle - (actualGap / 2);
+                  currentAngle += segmentAngle;
+                  const startRad = (startAngle * Math.PI) / 180;
+                  const endRad = (endAngle * Math.PI) / 180;
+                  const x1 = centerX + radius * Math.cos(startRad);
+                  const y1 = centerY + radius * Math.sin(startRad);
+                  const x2 = centerX + radius * Math.cos(endRad);
+                  const y2 = centerY + radius * Math.sin(endRad);
+                  const largeArcFlag = segmentAngle - actualGap <= 180 ? 0 : 1;
+                  const d = `M ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`;
+                  return (
+                    <path
+                      key={item.name}
+                      d={d}
+                      fill="none"
+                      stroke={item.color}
+                      strokeWidth={isActive ? 24 : 20}
+                      strokeLinecap="butt"
+                      className="cursor-pointer"
+                      style={{
+                        transition: "stroke-width 0.2s ease, opacity 0.2s ease, stroke 0.2s ease",
+                        opacity: isOtherActive ? 0.35 : 1.0,
+                        filter: isActive ? "drop-shadow(0 0 4px rgba(0,0,0,0.2))" : "none",
+                      }}
+                      onMouseEnter={() => setActiveSegment(item.name)}
+                      onMouseLeave={() => setActiveSegment(null)}
+                    />
+                  );
+                });
+              })()}
+              <circle cx="77" cy="77" r="46" fill="var(--bg-card)" />
+            </svg>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
+              <p className="text-[15px] font-bold text-[var(--text-primary)] tabular-nums">
+                {totalK}k
+              </p>
+              <p className="text-[10px] text-[var(--text-faint)] mt-px uppercase tracking-wider font-semibold">
+                Total BRL
+              </p>
+            </div>
+          </div>
 
-        {/* Legend with values and drill-down */}
-        <div className="space-y-2">
-          {sortedCategorias.map((cat, index) => {
+          {/* Lista de categorias - padrão PosicaoCapital */}
+          <div className="space-y-1 relative pt-2">
+            {sortedCategorias.map((cat, index) => {
             const percent = totalAtual > 0 ? (cat.value / totalAtual) * 100 : 0;
             const color = cat.color || colors[index % colors.length];
             const detalhes = getDetalhesForCategoria(cat.name);
             const temDetalhes = hasDetalhes(cat.name);
-            
+            const isActive = activeSegment === cat.name;
+            const isOtherActive = activeSegment !== null && !isActive;
+
             return (
-              <div key={cat.name} className="flex items-center gap-3">
-                <div 
-                  className="w-3 h-3 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: color }}
+              <div
+                key={cat.name}
+                onMouseEnter={() => setActiveSegment(cat.name)}
+                onMouseLeave={() => setActiveSegment(null)}
+                style={{
+                  background: isActive ? "var(--bg-hover)" : "transparent",
+                  borderColor: isActive ? `${color}44` : "transparent",
+                  transform: isActive ? "translateX(2px)" : "none",
+                  transition:
+                    "background 0.15s, border-color 0.15s, transform 0.15s, opacity 0.15s",
+                  opacity: isOtherActive ? 0.45 : 1.0,
+                }}
+                className="grid grid-cols-[8px_1fr_auto_auto] gap-[10px] p-[8px_10px] rounded-[8px] border group"
+              >
+                <div
+                  className="rounded-[2px] mt-1"
+                  style={{
+                    backgroundColor: color,
+                    width: isActive ? 10 : 8,
+                    height: isActive ? 10 : 8,
+                    transition: "width 0.15s, height 0.15s",
+                  }}
                 />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1">
-                      <span className="text-sm truncate">{cat.name}</span>
-                      {temDetalhes && (
-                        <Popover>
+                <div>
+                  <p
+                    className={`text-[12px] font-medium transition-colors ${
+                      isActive ? "text-[var(--text-primary)]" : "text-[var(--text-secondary)]"
+                    }`}
+                  >
+                    {cat.name}
+                  </p>
+                  <div className="h-[3px] w-full bg-[var(--border-default)] rounded-[1px] mt-1.5 overflow-hidden">
+                    <div
+                      className="h-full transition-all duration-700 ease-out"
+                      style={{
+                        width: `${percent}%`,
+                        backgroundColor: color,
+                        opacity: isActive ? 1.0 : 0.6,
+                      }}
+                    />
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-[11px] text-[var(--text-muted)] tabular-nums mb-px">
+                    {percent.toFixed(2)}%
+                  </p>
+                  <p
+                    className="font-medium tabular-nums transition-all"
+                    style={{ color, fontSize: isActive ? 14 : 13 }}
+                  >
+                    {formatCurrency(cat.value)}
+                  </p>
+                </div>
+                <div className="flex items-center justify-center pl-1">
+                  {temDetalhes ? (
+                    <Popover>
                           <PopoverTrigger asChild>
-                            <button className="text-muted-foreground hover:text-foreground transition-colors p-0.5">
-                              <ChevronRight className="h-3.5 w-3.5" />
-                            </button>
+                        <button className="text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors">
+                          <ChevronRight className="h-3 w-3" />
+                        </button>
                           </PopoverTrigger>
                           <PopoverContent 
                             side="right" 
@@ -388,25 +486,12 @@ export function ComposicaoCustosCard({
                             </div>
                           </PopoverContent>
                         </Popover>
-                      )}
-                    </div>
-                    <span className="text-sm font-bold ml-2">{formatCurrency(cat.value)}</span>
-                  </div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div 
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{ width: `${percent}%`, backgroundColor: color }}
-                      />
-                    </div>
-                    <span className="text-[10px] text-muted-foreground w-10 text-right">
-                      {percent.toFixed(0)}%
-                    </span>
-                  </div>
+                  ) : null}
                 </div>
               </div>
             );
           })}
+          </div>
         </div>
 
         {/* Comparativo */}
