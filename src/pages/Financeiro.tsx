@@ -34,7 +34,6 @@ import {
 import { MovimentacaoCapitalCard } from "@/components/financeiro/MovimentacaoCapitalCard";
 import { CustoSustentacaoCard } from "@/components/financeiro/CustoSustentacaoCard";
 import { EquilibrioOperacionalCard } from "@/components/financeiro/EquilibrioOperacionalCard";
-import { EficienciaCapitalCard } from "@/components/financeiro/EficienciaCapitalCard";
 import { MapaPatrimonioCard } from "@/components/financeiro/MapaPatrimonioCard";
 import { ParticipacaoInvestidoresTab } from "@/components/financeiro/ParticipacaoInvestidoresTab";
 import { MultiCurrencyWarningBanner } from "@/components/financeiro/MultiCurrencyIndicator";
@@ -232,19 +231,6 @@ export default function Financeiro() {
               formatCurrency={calc.formatCurrency}
               hasMultiCurrency={calc.saldos.hasBookmakersUSD || calc.saldos.totalCryptoUSD > 0}
               cotacaoUSD={cotacaoUSD}
-            />
-            <EficienciaCapitalCard
-              lucroOperacional={lucroOperacionalApostas}
-              capitalEmBookmakers={calc.saldos.saldoBookmakers}
-              formatCurrency={calc.formatCurrency}
-              hasMultiCurrency={calc.saldos.hasBookmakersUSD}
-              capitalBRL={calc.saldos.saldoBookmakersBRL}
-              capitalUSD={calc.saldos.saldoBookmakersUSD}
-              cotacaoUSD={cotacaoUSD}
-              capitalMedio={capitalMedioPeriodo.capitalMedio}
-              capitalMedioIsFallback={capitalMedioPeriodo.isFallback}
-              snapshotsCount={capitalMedioPeriodo.snapshotsCount}
-              volumeApostado={capitalMedioPeriodo.volumeApostado}
             />
             <MovimentacaoCapitalCard
               depositosBookmakers={calc.movimentacao.depositosBookmakersPeriodo}
