@@ -303,10 +303,6 @@ function DrillDrawer({
     title = "Perdas confirmadas no período";
     description = "Inclui perdas operacionais lançadas (scan/fraude) e ocorrências resolvidas com perda";
     body = <PerdasList items={exp.detalhes.perdas} formatCurrency={formatCurrency} />;
-  } else if (drill === "irrecuperavel") {
-    title = "Saldo irrecuperável";
-    description = "Capital travado em bookmakers sem previsão de saque";
-    body = <IrrecList items={exp.detalhes.irrecuperavel} formatCurrency={formatCurrency} />;
   }
 
   return (
