@@ -219,21 +219,6 @@ export default function Financeiro() {
         onCustomRangeChange={setCustomRange}
       />
 
-      {activeFinanceiroTab === "overview" && (
-        <div className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span>
-            Exibindo dados de{" "}
-            <span className="font-semibold text-foreground">{periodDesc.shortLabel}</span>
-            {!periodDesc.isAllTime && (
-              <>
-                {" "}
-                · <span className="font-medium text-foreground">{periodDesc.rangeLabel}</span>
-              </>
-            )}
-            .
-          </span>
-        </div>
-      )}
 
       <Tabs value={activeFinanceiroTab} onValueChange={setActiveFinanceiroTab} className="space-y-4 md:space-y-6">
         {/* Sticky tab bar - mobile optimized */}
