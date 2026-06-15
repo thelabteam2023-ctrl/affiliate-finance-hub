@@ -1,120 +1,77 @@
-# Plano: Lucro Realizado como Métrica Principal da Visão Financeira
 
-## 1. Contexto e Decisão Conceitual
+# Equilíbrio de Perdas (Loss-Balanced Hedge)
 
-Hoje a plataforma exibe **Lucro Operacional** (resultado teórico: apostas liquidadas + cashback + giros + bônus − perdas + ajustes + cambial + promocionais) como KPI de destaque em diversas telas. Esse número inclui valores que ainda estão **presos em saldo de casa**, **pendentes de saque**, **em trânsito** ou **bloqueados** — ou seja, não representam dinheiro efetivamente recuperado para o caixa.
+## Contexto
 
-O **Lucro Realizado** já existe e segue a fórmula canônica documentada em `mem://finance/lucro-real-payment-standard`:
+Hoje, no modo **ROI Max**, a calculadora maximiza o lucro no cenário em que todas as backs vencem (won → won → ...), mas concentra todo o prejuízo no pior cenário (geralmente "todas back vencem" quando a freebet é pequena e as odds altas, como o `-R$ 3.328,09` do seu print).
 
+A pergunta é: **dá pra distribuir essa perda?** Sim. É matematicamente possível recalibrar as lay stakes para que **todos os cenários de fracasso (ou todos os cenários, inclusive o "all-win") tenham o mesmo resultado financeiro** — trocando lucro máximo por previsibilidade.
+
+## O que vou construir
+
+Um **novo modo de cálculo** na Biblioteca de Ouro / Detalhamento da Proteção, selecionável via toggle:
+
+```text
+[ ROI Max ]  [ Equilíbrio Total ]  [ Mín. Perda ]
 ```
-LUCRO_REALIZADO = (Saques + Saques Virtuais) − (Depósitos + Depósitos Virtuais)
-```
 
-Ele responde à pergunta correta para o gestor: **"quanto dinheiro de fato voltou para a operação?"**.
+### 1. ROI Max (atual — mantido)
+Comportamento atual: meta de extração fixa por perna, lucro grande se todas back vencem, prejuízo grande no cenário "tudo back".
 
-**Decisão proposta:** promover **Lucro Realizado a métrica primária** na visão financeira (cards, kanban, dashboards, header), mantendo Lucro Operacional como **métrica secundária / de apoio operacional** (eficiência teórica da operação, ainda útil para comparar casas e estratégias).
+### 2. Equilíbrio Total (novo — flat outcome)
+Resolve o sistema linear onde **todos os N+1 cenários retornam o mesmo valor X**:
+- Cenário 1 (lost na perna 1) = X
+- Cenário 2 (won → lost) = X
+- ...
+- Cenário N+1 (all won) = X
 
-Não vamos **remover** Lucro Operacional — ele continua sendo a referência da camada de Performance (Apostas, Bônus, Ciclos). A mudança é de **hierarquia visual e narrativa**.
+Resultado: **operação 100% determinística**, mesmo resultado independente do que acontecer. X pode ser positivo (lucro garantido pequeno) ou negativo (perda controlada), dependendo das odds e comissão. É o equivalente a uma surebet sintética usando a freebet.
 
----
+### 3. Mín. Perda (novo — minimax)
+Maximiza o **pior cenário** (minimax). Diferente do Equilíbrio Total, permite que cenários bons fiquem acima do piso, mas garante que o pior caso seja o melhor possível. Usado quando o Equilíbrio Total dá EV muito negativo e o usuário aceita variância nos cenários bons em troca de menos perda no pior.
 
-## 2. Princípios da Mudança
+## UX
 
-1. **Não alterar fórmulas existentes.** Lucro Realizado e Lucro Operacional continuam calculados pelas mesmas fontes canônicas atuais (`fetchProjetosLucroCanonico` para Realizado, `fetchProjetosLucroOperacionalKpi` para Operacional).
-2. **Hierarquia visual clara:** Realizado = número grande/colorido principal; Operacional = subtexto/popover/badge.
-3. **Lucro Potencial** (saldo nas casas + saques pendentes − depósitos) ganha destaque como ponte entre os dois: "o que ainda pode virar Realizado".
-4. **Configuração por projeto** (`projetos.metrica_lucro_ciclo`) continua respeitada nos ciclos. Default global do header passa a ser **Realizado**.
-5. **Nenhuma migration de dados**, nenhuma mudança em RPC. Trabalho 100% de frontend/UX.
+No modal `Detalhamento da Proteção`:
 
----
+1. Adicionar **toggle de 3 opções** no topo (ROI Max / Equilíbrio / Mín. Perda).
+2. Recalcular tabelas "Distribuição por Perna" e "Retorno por Cenário" ao trocar modo.
+3. Mostrar badge no card de Biblioteca de Ouro indicando o modo ativo.
+4. No rodapé "Impacto da Taxa de Extração", trocar `META LÍQUIDA POR PERNA` por `RESULTADO GARANTIDO` quando em modo Equilíbrio.
 
-## 3. Telas Afetadas e Mudanças
+## Detalhes técnicos
 
-### 3.1 Header do Projeto — `FinancialSummaryCompact.tsx`
-**Hoje:** já mostra Lucro Realizado como número grande (correto). Mantém.
-**Ação:** adicionar tooltip/legenda explicando "Dinheiro efetivamente retornado ao caixa" e mostrar Lucro Operacional como linha secundária menor abaixo do ROI.
+**Arquivo principal:** `src/lib/hedge-probabilistico-engine.ts`
 
-### 3.2 Card Kanban de Projetos — `GestaoProjetos.tsx`
-**Hoje:** card mostra Lucro Operacional canônico como destaque.
-**Mudança:**
-- **Número principal:** Lucro Realizado (`fetchProjetosLucroCanonico.lucroRealizado`, já disponível).
-- **Linha secundária:** "Operacional: R$ X" em cinza/menor.
-- **Badge "Potencial":** mostra `lucroPotencial` se ≠ realizado, sinalizando capital ainda preso.
+Adicionar dois métodos novos ao `HedgeProbabilisticoEngine`:
 
-### 3.3 Dashboard Financeiro (`Financeiro.tsx` / `ProjetoFinancialMetricsCard.tsx`)
-**Hoje:** Lucro Operacional e Realizado coexistem em cards separados.
-**Mudança:**
-- Reordenar: card **Lucro Realizado** vira o primeiro/maior.
-- Card **Lucro Potencial** segundo.
-- Card **Lucro Operacional** terceiro, com label "Resultado teórico da operação".
-- Texto de ajuda em cada card explicando o que representa.
+- `calculateBalancedMetrics(legs, freebet, commission)` — resolve sistema linear N+1 equações / N incógnitas (lay stakes) para igualar todos os cenários. Sistema é triangular: cenário "lost na perna k" depende apenas de lay₁..lay_k. Resolve iterativamente:
+  1. Defina X (incógnita). 
+  2. lay₁ tal que cenário "lost@1" = X.
+  3. lay₂ tal que cenário "won@1, lost@2" = X (usa lay₁ já resolvido).
+  4. ...
+  5. lay_N tal que cenário "all-won" = X. Isto fixa X.
+  
+  Forma fechada: cada perna k tem `layStake_k = (X + Σ_{i<k} resp_i) / (1 - comm)` e responsabilidade `resp_k = layStake_k * (layOdd_k - 1)`. A equação final "all-won" fecha o sistema: `freebet * Π(backOdd) - Σ resp_k = X`. Resolver para X.
 
-### 3.4 Workspace / Visão Consolidada — `useWorkspaceLucroOperacional.ts`
-**Hoje:** hook agrega Lucro Operacional do workspace.
-**Mudança:** criar `useWorkspaceLucroRealizado` análogo, agregando `lucroRealizado` de `fetchProjetosLucroCanonico` por projeto. Componentes do dashboard de workspace passam a consumir ambos, exibindo Realizado em destaque.
+- `calculateMinLossMetrics(legs, freebet, commission)` — minimax via busca binária no valor do piso (ou LP simplificado), respeitando que lay_k ≥ 0.
 
-### 3.5 Popover de Indicadores — `FinancialMetricsPopover.tsx`
-**Mudança:** reorganizar seções na ordem:
-1. **Lucro Realizado** (destaque)
-2. **Lucro Potencial** (capital ainda preso)
-3. **Patrimônio Total**
-4. **Lucro Operacional** (com rótulo "teórico")
-5. **ROI Realizado** e **ROI Operacional** lado a lado.
+**Arquivo UI:** `src/components/ferramentas/CalculadoraHedgeProbabilisticaContent.tsx`
 
-### 3.6 Ciclos — sem mudança de fórmula
-Mantém `projetos.metrica_lucro_ciclo` (operacional|realizado). Adiciona apenas legenda visual no card de ciclo indicando qual métrica está ativa, e botão rápido para alternar a visualização (sem trocar config).
+- Adicionar `useState<'roi-max' | 'balanced' | 'min-loss'>('roi-max')` no modal de detalhamento.
+- Trocar a chamada de `calculateMetrics` por um dispatcher conforme o modo.
+- Toggle visual usando `Tabs` ou `ToggleGroup` do shadcn (já no projeto).
 
----
+**Testes:** estender `src/lib/__tests__/hedge-probabilistico-engine.test.ts`:
+- Equilíbrio: verificar que `scenarios.every(s => s.result ≈ X)`.
+- Min-Loss: verificar que `min(scenarios.result)` ≥ resultado do ROI Max no pior cenário.
 
-## 4. UX / Comunicação
+## Escopo protegido (não muda)
+- Engine de Extração Determinística (`extracao-engine.ts`).
+- Lógica de ROI Max atual e seus testes.
+- Surebet engine, ledger, RPCs, banco.
 
-- **Glossário inline** (tooltip/info ícone) em todos os pontos onde os termos aparecem:
-  - *Lucro Realizado:* "Dinheiro que efetivamente retornou ao caixa (Saques − Depósitos)."
-  - *Lucro Potencial:* "Quanto vira lucro se todo o saldo nas casas fosse sacado hoje."
-  - *Lucro Operacional:* "Resultado teórico da operação (apostas + cashback + bônus − perdas). Inclui valores ainda presos em casa."
-- **Banner único** no primeiro acesso após deploy explicando a mudança de hierarquia.
-- **Cores semânticas mantidas** (emerald/red). Sem hardcode.
+## Estimativa
+~120 linhas no engine + ~40 linhas no modal + 2 testes novos. Sem migrações, sem mudanças de schema.
 
----
-
-## 5. Detalhes Técnicos
-
-**Arquivos editados (frontend apenas):**
-- `src/components/projeto-detalhe/FinancialSummaryCompact.tsx` — adicionar linha secundária Operacional + tooltip.
-- `src/pages/GestaoProjetos.tsx` — trocar número principal do card kanban para `lucro_realizado` (já vem em `fetchProjetosLucroCanonico`); operacional vira subtexto.
-- `src/components/projeto-detalhe/ProjetoFinancialMetricsCard.tsx` — reordenar cards.
-- `src/components/projeto-detalhe/FinancialMetricsPopover.tsx` — reordenar seções.
-- `src/hooks/useWorkspaceLucroOperacional.ts` — manter; criar irmão `src/hooks/useWorkspaceLucroRealizado.ts` agregando via `fetchProjetosLucroCanonico`.
-- `src/pages/Financeiro.tsx` (e cards de workspace) — consumir hook novo, reordenar exibição.
-- Pequenos componentes de glossário/tooltip reutilizáveis em `src/components/ui/`.
-
-**Não tocar:**
-- RPCs (`get_projetos_lucro_operacional`, `get_projeto_dashboard_data`, `get_projeto_apostas_resumo`).
-- Tabela `projetos` / campo `metrica_lucro_ciclo`.
-- `fetchProjetosLucroCanonico` e `fetchProjetosLucroOperacionalKpi` (já são as fontes únicas).
-- Camada de Performance (Apostas/Bônus/Ciclos) — continua usando Operacional como definido.
-
-**Memórias a atualizar após implementação:**
-- Criar `mem://finance/lucro-realizado-metrica-primaria-standard` definindo Realizado como métrica de destaque na Visão Financeira e Operacional como apoio.
-- Atualizar `mem://index.md` Core: "Visão Financeira destaca Lucro Realizado; Operacional é métrica secundária/teórica."
-
----
-
-## 6. Critérios de Aceite
-
-1. Card kanban de projeto mostra Lucro Realizado como número principal; Operacional aparece menor abaixo.
-2. Header do projeto e popover financeiro têm Realizado em primeiro lugar, com tooltip explicativo.
-3. Dashboard Financeiro reordenado: Realizado → Potencial → Operacional.
-4. Workspace consolidado expõe ambos, com Realizado em destaque.
-5. Nenhuma fórmula muda; valores absolutos atuais permanecem idênticos (apenas hierarquia visual e rótulos mudam).
-6. Tooltips/glossário presentes em todos os pontos onde os termos aparecem.
-7. Ciclos continuam respeitando `metrica_lucro_ciclo`.
-
----
-
-## 7. Fora de Escopo
-
-- Mudanças em fórmula, RPC ou schema.
-- Remoção do Lucro Operacional.
-- Reescrever cálculos de Performance (Apostas/Bônus).
-- Auditoria das IC-1..IC-7 levantadas anteriormente (item separado, já documentado).
+Posso prosseguir?

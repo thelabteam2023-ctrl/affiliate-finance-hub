@@ -57,6 +57,8 @@ export interface AggregatedScenario {
   totalBackOdd: number;
  }
 
+export type HedgeMode = 'roi-max' | 'balanced';
+
 /**
  * Advanced Engine for Probabilistic Hedge Calculations
  */
@@ -255,5 +257,170 @@ export class HedgeProbabilisticoEngine {
       allWonProfit,
       totalBackOdd
      };
+   }
+
+   /**
+    * BALANCED MODE — Loss-Balanced Hedge.
+    * Solves the linear system so that ALL N+1 canonical scenarios return the
+    * same value X (a flat outcome). Trades the high "all-back-won" profit of
+    * ROI-Max for a deterministic result regardless of which leg fails.
+    *
+    * Math (with c = commission, L_k = layOdd_k):
+    *   layStake_k = (X + S_k) / (1 - c),  resp_k = layStake_k * (L_k - 1)
+    *   where S_k = sum_{i<k} resp_i.
+    * Let a_k = (L_k - 1) / (1 - c). Then S_{k+1} = S_k * (1 + a_k) + a_k * X.
+    * Closing equation (all-won): freebet * (Π backOdd - 1) - S_{N+1} = X.
+    * Solving: X = freebet * (totalBackOdd - 1) / (1 + B_{N+1}),
+    * where B is the X-coefficient accumulator of S_k.
+    */
+   static calculateBalancedMetrics(
+     legs: LegInput[],
+     freebet: number,
+     commission: number
+   ): HedgeResult {
+     const N = legs.length;
+     const totalBackOdd = legs.reduce((acc, l) => acc * l.backOdd, 1);
+
+     // Build B coefficient (A stays 0 since S_1 = 0).
+     let B = 0;
+     for (let k = 0; k < N; k++) {
+       const a = (legs[k].layOdd - 1) / (1 - commission);
+       B = B * (1 + a) + a;
+     }
+     const X = (freebet * (totalBackOdd - 1)) / (1 + B);
+
+     // Materialize legs with computed lay stakes.
+     const calculatedLegs: CalculatedLeg[] = [];
+     let cumulativeResponsibility = 0;
+     for (let k = 0; k < N; k++) {
+       const leg = legs[k];
+       const layStake = (X + cumulativeResponsibility) / (1 - commission);
+       const responsibility = layStake * (leg.layOdd - 1);
+       const cumBefore = cumulativeResponsibility;
+       calculatedLegs.push({
+         backOdd: leg.backOdd,
+         layOdd: leg.layOdd,
+         layStake,
+         responsibility,
+         cumulativeResponsibility: cumBefore,
+         totalExposure: cumBefore + responsibility,
+         probability: 1 / leg.backOdd,
+         ev: 0,
+         extractionRate: freebet > 0 ? X / freebet : 0,
+       });
+       cumulativeResponsibility += responsibility;
+     }
+
+     // Build canonical scenarios — every one of them returns X by construction.
+     const aggregated: AggregatedScenario[] = [];
+     const pathSoFar: ('won' | 'lost')[] = [];
+     let probSuccess = 1;
+     let cumResp = 0;
+     for (let i = 0; i < N; i++) {
+       const leg = calculatedLegs[i];
+       const pWin = 1 / leg.backOdd;
+       const pLoss = 1 - pWin;
+       const path: ('won' | 'lost')[] = [...pathSoFar, 'lost'];
+       const prob = probSuccess * pLoss;
+       const result = (leg.layStake * (1 - commission)) - cumResp;
+       const maxExposure = cumResp + leg.responsibility;
+
+       const subScenarios: Scenario[] = [];
+       const remaining = N - (i + 1);
+       const numSub = Math.pow(2, remaining);
+       for (let kk = 0; kk < numSub; kk++) {
+         const fullPath: ('won' | 'lost')[] = [...path];
+         for (let l = 0; l < remaining; l++) {
+           fullPath.push(((kk >> (remaining - 1 - l)) & 1) ? 'won' : 'lost');
+         }
+         subScenarios.push({
+           path: fullPath,
+           probability: prob / numSub,
+           result,
+           maxExposure,
+           description: fullPath.join(' → '),
+         });
+       }
+
+       aggregated.push({
+         canonicalPath: path,
+         description: path.join(' → '),
+         probability: prob,
+         result,
+         maxExposure,
+         subScenarios,
+       });
+
+       probSuccess *= pWin;
+       cumResp += leg.responsibility;
+       pathSoFar.push('won');
+     }
+
+     const allWonResult = (freebet * (totalBackOdd - 1)) - cumResp;
+     aggregated.push({
+       canonicalPath: pathSoFar,
+       description: pathSoFar.join(' → '),
+       probability: probSuccess,
+       result: allWonResult,
+       maxExposure: cumResp,
+       subScenarios: [{
+         path: pathSoFar,
+         probability: probSuccess,
+         result: allWonResult,
+         maxExposure: cumResp,
+         description: pathSoFar.join(' → '),
+       }],
+     });
+
+     const aggregatedScenarios = aggregated.sort((a, b) => b.probability - a.probability);
+     const scenarios = aggregatedScenarios.flatMap(as => as.subScenarios);
+
+     let totalEV = 0;
+     let maxResp = 0;
+     let maxDrawdown = 0;
+     scenarios.forEach(s => {
+       totalEV += s.result * s.probability;
+       maxResp = Math.max(maxResp, s.maxExposure);
+       if (s.result < 0) maxDrawdown = Math.max(maxDrawdown, Math.abs(s.result));
+     });
+
+     const totalROI = freebet > 0 ? (totalEV / freebet) * 100 : 0;
+     let score: 'excellent' | 'good' | 'risky' | 'critical';
+     if (X >= 0) score = 'excellent';
+     else if (X >= -freebet * 0.5) score = 'good';
+     else if (X >= -freebet * 1.5) score = 'risky';
+     else score = 'critical';
+
+     return {
+       legs: calculatedLegs,
+       scenarios,
+       aggregatedScenarios,
+       totalEV,
+       totalROI,
+       maxResponsibility: maxResp,
+       maxDrawdown,
+       capitalRequired: maxResp,
+       score,
+       scoreReason: `Resultado garantido R$ ${X.toFixed(2)} em todos os cenários.`,
+       cumulativeCascadeCost: cumResp,
+       allWonProfit: allWonResult,
+       totalBackOdd,
+     };
+   }
+
+   /**
+    * Mode dispatcher — picks ROI-Max or Balanced (Equilíbrio de Perdas).
+    */
+   static calculateByMode(
+     mode: HedgeMode,
+     legs: LegInput[],
+     freebet: number,
+     commission: number,
+     targetExtraction: number
+   ): HedgeResult {
+     if (mode === 'balanced') {
+       return this.calculateBalancedMetrics(legs, freebet, commission);
+     }
+     return this.calculateMetrics(legs, freebet, commission, targetExtraction);
    }
 }
