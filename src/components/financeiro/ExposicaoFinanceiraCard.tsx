@@ -157,9 +157,6 @@ export function ExposicaoFinanceiraCard({
     },
   ];
 
-  const activeSegs = segs.filter((s) => s.value > 0);
-  const showDisputaSummary = activeSegs.length >= 2;
-
   return (
     <Card className="h-full">
       <CardHeader className="pb-3">
