@@ -1085,6 +1085,8 @@ export function HistoricoMovimentacoes({
                 {pagination.paginatedItems.map((tx: any) => {
                   const txType = tx.tipo_transacao;
                   const isScan = txType === 'PERDA_OPERACIONAL' || txType === 'SCAN';
+                  const scanOrigemPrimary = isScan ? getOrigemLabel(tx) : '';
+                  const scanOrigemValid = isScan && scanOrigemPrimary && scanOrigemPrimary !== 'Origem';
                   
                   return (
                     <div 
@@ -1109,9 +1111,25 @@ export function HistoricoMovimentacoes({
                           {isScan ? "Prejuízo operacional por fraude/scam" : (tx.descricao || "Sem descrição")}
                         </div>
                         {isScan && (
-                          <div className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-[4px] bg-[#201010] text-[#ef4444] text-[9px] font-medium border border-[#ef4444]/20">
-                            <i className="ti ti-alert-triangle" style={{ fontSize: 9 }}></i>
-                            Perda de Capital
+                          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                            <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[4px] bg-[#201010] text-[#ef4444] text-[9px] font-medium border border-[#ef4444]/20">
+                              <i className="ti ti-alert-triangle" style={{ fontSize: 9 }}></i>
+                              Perda de Capital
+                            </div>
+                            {scanOrigemValid && (
+                              <div
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[4px] bg-[#10161f] text-[var(--text-secondary)] text-[9px] font-medium border border-white/10"
+                                title={`Origem: ${scanOrigemPrimary}${tx.id ? ` · ID ${tx.id.slice(0, 8)}` : ''}`}
+                              >
+                                <i className="ti ti-arrow-up-right" style={{ fontSize: 9 }}></i>
+                                Origem: {scanOrigemPrimary}
+                              </div>
+                            )}
+                            {tx.id && (
+                              <span className="text-[9px] text-[var(--text-faint)] font-mono uppercase tracking-wider">
+                                #{tx.id.slice(0, 8)}
+                              </span>
+                            )}
                           </div>
                         )}
                       </div>
