@@ -2112,6 +2112,16 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                     const oddsLabel = comboDetailMetrics.legs.map(l => l.backOdd.toFixed(2)).join(' × ');
                     const expectedWins = pAllWon * comboDetailSequences;
                     const nLegs = comboDetailMetrics.legs.length;
+                    const pBolsa = 1 - pAllWon; // pelo menos 1 perna back perde => bolsa vence a operação
+                    const pBolsaSeq = Math.pow(pBolsa, comboDetailSequences);
+                    const expectedBolsa = pBolsa * comboDetailSequences;
+                    const fmtSmallPct = (pct: number) => {
+                      if (pct === 0) return '0%';
+                      if (pct >= 1) return fmtPct(pct);
+                      if (pct >= 0.01) return `${pct.toFixed(3)}%`;
+                      if (pct >= 0.0001) return `${pct.toFixed(5)}%`;
+                      return '< 0,0001%';
+                    };
                     return (
                       <>
                         <div className="grid grid-cols-2 gap-2">
@@ -2131,10 +2141,25 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                             </p>
                           </div>
                         </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="p-2 rounded bg-orange-500/5 border border-orange-500/30">
+                            <p className="text-[9px] uppercase text-muted-foreground">Chance da BOLSA vencer em 1 operação</p>
+                            <p className="text-sm font-bold font-mono text-orange-400">{fmtPct(pBolsa * 100)}</p>
+                            <p className="text-[9px] text-muted-foreground">A bolsa vence sempre que <strong>pelo menos 1 perna back perde</strong>. Fórmula: 1 − P(todas back vencem) = 1 − {fmtPct(pAllWon * 100)}. Em média, acontece <strong>1 a cada {pBolsa > 0 ? (1 / pBolsa).toFixed(2) : '∞'}</strong> operações.</p>
+                          </div>
+                          <div className="p-2 rounded bg-red-500/5 border border-red-500/30">
+                            <p className="text-[9px] uppercase text-muted-foreground">Chance da BOLSA vencer {comboDetailSequences}× CONSECUTIVAS</p>
+                            <p className="text-sm font-bold font-mono text-red-400">{fmtSmallPct(pBolsaSeq * 100)}</p>
+                            <p className="text-[9px] text-muted-foreground">
+                              P(bolsa)<sup>{comboDetailSequences}</sup> = {fmtPct(pBolsa * 100)}<sup>{comboDetailSequences}</sup>. Em média, acontece <strong>1 a cada {pBolsaSeq > 0 ? Math.round(1 / pBolsaSeq).toLocaleString('pt-BR') : '∞'}</strong> sequências de {comboDetailSequences} operações. Valor esperado de bolsas vencidas em {comboDetailSequences} operações: <strong>≈ {expectedBolsa.toFixed(2)}</strong>.
+                            </p>
+                          </div>
+                        </div>
                         <div className="p-2 rounded bg-blue-500/5 border border-blue-500/20">
                           <p className="text-[10px] text-muted-foreground leading-snug">
                             <strong className="text-blue-400">Interpretação:</strong> a operação é tratada como <em>uma única aposta combinada</em> (dupla com {nLegs} pernas) — só vence back quando TODAS as {nLegs} pernas back vencem ao mesmo tempo. Em <strong>{comboDetailSequences}</strong> operações dessa dupla, espera-se em média <strong>{expectedWins >= 1 ? expectedWins.toFixed(2) : expectedWins.toFixed(4)}</strong> vitória(s) back simultânea(s).
-                            <br />Bônus — chance de a dupla vencer <em>todas as {comboDetailSequences} vezes consecutivamente</em>: <strong>{(() => { const pct = pSeq * 100; if (pct === 0) return '0%'; if (pct >= 1) return fmtPct(pct); if (pct >= 0.01) return `${pct.toFixed(3)}%`; if (pct >= 0.0001) return `${pct.toFixed(5)}%`; return '< 0,0001%'; })()}</strong> (≈ 1 em {pSeq > 0 ? Math.round(1 / pSeq).toLocaleString('pt-BR') : '∞'}).
+                            <br />Bônus — chance da dupla vencer back <em>todas as {comboDetailSequences} vezes consecutivamente</em>: <strong>{fmtSmallPct(pSeq * 100)}</strong> (≈ 1 em {pSeq > 0 ? Math.round(1 / pSeq).toLocaleString('pt-BR') : '∞'}).
+                            <br /><strong className="text-orange-400">Bolsa consecutiva:</strong> a probabilidade da <em>bolsa vencer {comboDetailSequences} vezes seguidas</em> (ou seja, em todas as {comboDetailSequences} operações pelo menos 1 perna back falha) é <strong>{fmtSmallPct(pBolsaSeq * 100)}</strong>.
                           </p>
                         </div>
                       </>
