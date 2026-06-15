@@ -1,74 +1,76 @@
-# Plano: Redesign da lista "Perdas confirmadas no período"
+# Plano: corrigir "Saldo anterior" e titular ausente no drawer de Perdas
 
-## Problemas atuais (vistos no print)
-1. **Data em formato cru ISO** com timezone: `2026-06-05T00:00:00+00:00` — ilegível.
-2. **Prefixos em colchetes** `[SCAN CASA]`, `[SCAN PARCEIRO]` no meio do título, misturando categoria + descrição.
-3. **Badge "Lançamento"** sem utilidade — todo registro listado já é lançamento confirmado.
-4. **Sem logo** das casas de apostas / bancos, mesmo havendo dados disponíveis (`bookmakers_catalogo.logo_url`).
-5. **Hierarquia visual fraca**: título, origem e titular competem; valor em vermelho não tem ancoragem visual.
-6. **Texto da descrição truncado** sem ressalva, e descrição às vezes redundante com a origem.
+## Investigação
 
-## Premissas de redesign
-- Reaproveitar o padrão visual do projeto (mesmas tokens `--text-primary`, `--bg-card`, `--accent-danger`, badges shadcn discretos).
-- Tipar a perda em **categoria semântica** (Casa / Parceiro / Banco / Wallet / Outro) inferida na transformação dos dados, não no título.
-- Garantir parsing seguro de datas que podem vir como `YYYY-MM-DD` puro ou ISO completo.
+### 1. De onde vem o texto "Saldo anterior: 235.00"
+Consultando o banco diretamente, a `cash_ledger.descricao` real é:
 
-## Etapas
-
-### 1. Enriquecer `PerdaDetalhe` em `useExposicaoFinanceira.ts`
-Adicionar campos calculados ao montar a lista (sem mexer no fetch):
-- `categoria: "casa" | "parceiro" | "banco" | "wallet" | "outro"` — derivado de `origem_tipo`/origem do ledger ou do `sub_motivo` da ocorrência. Quando o título contém `[SCAN CASA]`/`[SCAN PARCEIRO]`, **remover o prefixo** e usar como `categoria`.
-- `descricao_limpa: string` — título sem o prefixo em colchetes, trim, primeira letra maiúscula.
-- `bookmaker_nome: string | null` e `bookmaker_id: string | null` — promover para uso de logo.
-- `data` continua como string vinda do banco; o componente é responsável pela formatação.
-
-### 2. Novo helper de data
-Em `src/lib/format.ts` (ou inline no card): `formatDataBR(value)` que aceita `YYYY-MM-DD` e ISO completo, devolve `dd/MM/yyyy` em pt-BR via `date-fns/format` + `parseISO`. Fallback gracioso para `—`.
-
-### 3. Redesenhar `PerdasList` em `ExposicaoFinanceiraCard.tsx`
-Estrutura proposta de cada linha (3 colunas: avatar | conteúdo | valor):
-
-```text
-┌──────────────────────────────────────────────────────────────┐
-│ [logo]  Impossibilitado de sacar — saldo anterior            │
-│  44px   ● Casa de Apostas · BET PIX 365                      │
-│         05/06/2026                                R$ 235,00 │
-└──────────────────────────────────────────────────────────────┘
+```
+[SCAN CASA] Impossibilitado de sacar | Saldo anterior: 235.00
 ```
 
-- **Avatar 36–40 px**: `<img src={logoUrl}>` quando casa de apostas com match em `useBookmakerLogoMap`; senão um ícone semântico em círculo (`Building2` para casa, `Landmark` para banco, `Wallet2` para wallet, `User` para parceiro) com cor de fundo `bg-muted/60`.
-- **Título** (`descricao_limpa`) em `text-sm text-foreground font-medium`, sem truncate brutal — `line-clamp-2`.
-- **Linha de metadados**: bullet `●` com cor da categoria + `<Badge variant="secondary" className="h-4 text-[10px]">` para a categoria semântica (Casa de Apostas / Parceiro / Banco / Wallet / Outro), seguida de `· {origem_label}` e `· Titular: …` quando houver. Badge "Lançamento" **removido**.
-- **Data** em `text-[11px] text-muted-foreground` abaixo dos metadados, formato `dd/MM/yyyy`.
-- **Valor** alinhado à direita, `text-base font-semibold text-red-500 tabular-nums`. Se moeda ≠ BRL, segunda linha pequena com valor original (já existe padrão no card).
-- **Hover**: `hover:bg-muted/40` + sutil `translate-x-0.5`.
+O sufixo `| Saldo anterior: X` é gravado pelo fluxo de **SCAN de casa** (perda operacional disparada quando uma bookmaker é marcada como saldo travado/perda). Serve como **marcador técnico** registrando qual era o saldo da conta no momento exato da baixa — útil em auditoria, mas:
 
-### 4. Espaçamento e padding
-Cards de perda dentro do `<Sheet>` passam de `p-3` para `p-3 px-3.5`, gap entre cards `gap-2` → `gap-2.5`, divisor sutil opcional (`border-border/40`).
+- **Redundante na UI**: o card já exibe o valor da perda em destaque (`R$ 235,00`), que coincide com esse "Saldo anterior" na maioria dos casos.
+- **Ruidoso**: o usuário lê duas vezes o mesmo número.
+- **Foge do padrão**: as demais perdas (ocorrências, parceiros) não têm esse anexo.
 
-### 5. Mapeamento de categorias
-Tabela usada por badge e cor do bullet:
-| Categoria | Label | Cor bullet | Ícone fallback |
-|---|---|---|---|
-| casa | Casa de Apostas | `text-emerald-500` | Building2 |
-| parceiro | Parceiro | `text-blue-500` | User |
-| banco | Banco / Processador | `text-amber-500` | Landmark |
-| wallet | Wallet Crypto | `text-violet-500` | Wallet2 |
-| outro | Outro | `text-muted-foreground` | AlertTriangle |
+**Decisão:** manter o dado no banco (não tocar no ledger nem no SCAN), mas **remover o sufixo só na apresentação**. O auditor que precisar ver a descrição original ainda a tem no `cash_ledger`.
 
-### 6. Empty state e plural
-- "Nenhuma perda confirmada no período selecionado." (já existe — manter).
-- Contagem no header do drawer: `{n} perda{n>1?'s':''} · Total {formatCurrency}` para dar âncora numérica.
+### 2. Por que o titular (ex.: Ariane) não aparece nas Casas de Apostas
+Bug real em `src/hooks/useExposicaoFinanceira.ts`:
+
+- O `parceiroIds` (linha ~144) é alimentado **apenas** por `o.parceiro_id` direto das ocorrências.
+- O `parceiro_id` que liga **bookmaker → titular** chega depois, dentro de `bmMap`, **após** a query de `parceiros` já ter rodado em paralelo.
+- Resultado: `parceiroMap` não contém o dono da casa → `titular` resolve para `null` → o drawer não renderiza "Titular: …".
+
+Para contas bancárias funciona porque o `parceiro_id` veio inline na resposta de `contas_bancarias` e o map é montado depois, mas mesmo lá o nome só aparece quando o parceiro foi referenciado por uma ocorrência. **Mesmo bug**.
+
+## Implementação
+
+### A. Cleanup da descrição em `limparTituloPerda`
+Em `src/hooks/useExposicaoFinanceira.ts`, ampliar a função:
+
+```ts
+titulo = titulo.replace(/\s*\|\s*Saldo anterior:?\s*[-\d.,]+\s*$/i, "").trim();
+```
+
+Aplicar **depois** do strip do prefixo `[SCAN CASA]`. Cobre `| Saldo anterior: 235.00`, `| Saldo anterior 235,00`, com ou sem ponto final.
+
+### B. Fix do titular ausente
+Refatorar o fetch de `parceiros` para ser **sequencial após** os fetches de bookmakers/contas/wallets:
+
+1. Manter as 4 queries paralelas atuais (ocorrências abertas, ocorrências de perda, bookmakers irrecuperáveis, ledger).
+2. Buscar `bmInfoRes`, `contasInfoRes`, `walletsInfoRes` em paralelo (como hoje).
+3. **Só então** coletar `parceiroIds` somando: parceiros das ocorrências + `bmInfo.parceiro_id` + `contasInfo.parceiro_id` + `walletsInfo.parceiro_id`.
+4. Disparar `parceirosInfoRes` com esse set completo.
+
+Custo: uma micro-latência extra (mais um round-trip), mas o payload final fica correto e elimina a necessidade de joins aninhados frágeis.
+
+Como o `titular` já é resolvido em `bmMap[id].parceiro_id ? parceiroMap[pid] : null`, o fix se propaga automaticamente para:
+- `detalhes.disputaBookmakers` (drawer "Em disputa · Casas")
+- `detalhes.perdas` categoria `casa` (drawer "Perdas confirmadas")
+- `detalhes.disputaWallets` e `disputaContasParceiros` também ganham consistência.
+
+### C. UI: garantir que "Titular" apareça
+Nenhuma mudança visual necessária — a `PerdasList` já renderiza `Titular: {p.origem_titular}` quando presente. Após o fix B, a linha aparece automaticamente.
 
 ## Fora de escopo
-- Alterar o cálculo do total ou as fontes A/B/C (ledger + ocorrência).
-- Mexer nas outras seções do drawer (Em Disputa, Saldo Irrecuperável) — entram em iteração seguinte se necessário.
-- Filtros/ordenação dentro do drawer.
+- Não alterar o SCAN nem o ledger.
+- Não mexer no fluxo de ocorrências, valores, totais ou conversão de moeda.
+- Não criar tabelas nem migrations.
 
-## Detalhes técnicos
-- `useBookmakerLogoMap().getLogoUrl(bookmaker_nome)` já normaliza nomes — usar direto.
-- `date-fns/format(parseISO(d), "dd/MM/yyyy", { locale: ptBR })` com try/catch.
-- Sem novas queries: tudo já está no payload de `useExposicaoFinanceira` + cache do logo map.
+## Resultado esperado no card da BET PIX 365
+**Antes**
+```
+Impossibilitado de sacar | Saldo anterior: 235.00
+● Casa de Apostas · BET PIX 365
+04/06/2026                        R$ 235,00
+```
 
-## Resultado esperado
-Drawer fica legível, escaneável em 2 segundos: logo identifica visualmente a casa, badge nomeia a categoria sem precisar ler o título, data em formato BR, valor permanece como âncora visual, ruído eliminado.
+**Depois**
+```
+Impossibilitado de sacar
+● Casa de Apostas · BET PIX 365 · Titular: Ariane
+04/06/2026                        R$ 235,00
+```

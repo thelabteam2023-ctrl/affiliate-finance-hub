@@ -32,6 +32,8 @@ function limparTituloPerda(raw: string): {
   } else {
     titulo = "(sem descrição)";
   }
+  // Remove sufixo técnico "| Saldo anterior: X" gravado pelo SCAN
+  titulo = titulo.replace(/\s*\|\s*Saldo anterior:?\s*[-\d.,]+\s*\.?\s*$/i, "").trim();
   return { titulo, categoria };
 }
 
