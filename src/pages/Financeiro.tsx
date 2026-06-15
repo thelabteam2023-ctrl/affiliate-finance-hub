@@ -274,12 +274,27 @@ export default function Financeiro() {
                   icon={<Wallet className="h-4 w-4" />}
                 />
                 <HeaderKpiCard
-                  label="Lucro Operacional"
-                  value={calc.formatCurrency(lucroOperacionalApostas)}
-                  hint="Resultado das apostas no período"
+                  label={lucroRealizado >= 0 ? "Lucro Realizado" : "Prejuízo Realizado"}
+                  value={calc.formatCurrency(lucroRealizado)}
+                  hint="Saques − Depósitos efetivos (dinheiro de volta ao caixa)"
                   icon={<TrendingUp className="h-4 w-4" />}
-                  tone={lucroOperacionalApostas >= 0 ? "positive" : "negative"}
-                  periodBadge={periodBadge}
+                  tone={lucroRealizado >= 0 ? "positive" : "negative"}
+                  secondary={
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-muted-foreground">
+                        Lucro Operacional <span className="opacity-60">(teórico)</span>
+                      </span>
+                      <span
+                        className={`font-semibold tabular-nums ${
+                          lucroOperacionalApostas >= 0
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-red-600 dark:text-red-400"
+                        }`}
+                      >
+                        {calc.formatCurrency(lucroOperacionalApostas)}
+                      </span>
+                    </div>
+                  }
                 />
                 <HeaderKpiCard
                   label="Margem Operacional"
