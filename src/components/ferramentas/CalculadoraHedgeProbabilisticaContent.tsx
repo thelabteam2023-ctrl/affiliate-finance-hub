@@ -2114,12 +2114,12 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                       <>
                         <div className="grid grid-cols-2 gap-2">
                           <div className="p-2 rounded bg-background/40 border border-border/50">
-                            <p className="text-[9px] uppercase text-muted-foreground">Operação inteira (1×)</p>
+                            <p className="text-[9px] uppercase text-muted-foreground">Chance de a operação inteira dar back (1×)</p>
                             <p className="text-sm font-bold font-mono text-blue-400">{fmtPct(pAllWon * 100)}</p>
-                            <p className="text-[9px] text-muted-foreground">P(todas back ganham) = 1 / ({oddsLabel})</p>
+                            <p className="text-[9px] text-muted-foreground">Probabilidade de TODAS as pernas back vencerem ao mesmo tempo. Fórmula: 1 / ({oddsLabel}). Em média, acontece <strong>1 a cada {pAllWon > 0 ? Math.round(1 / pAllWon).toLocaleString('pt-BR') : '∞'}</strong> operações.</p>
                           </div>
                           <div className="p-2 rounded bg-background/40 border border-border/50">
-                            <p className="text-[9px] uppercase text-muted-foreground">{comboDetailSequences}× consecutivas</p>
+                            <p className="text-[9px] uppercase text-muted-foreground">Chance de acontecer {comboDetailSequences}× seguidas</p>
                             <p className={`text-sm font-bold font-mono ${pSeq >= 0.05 ? 'text-emerald-400' : pSeq >= 0.005 ? 'text-orange-400' : 'text-red-400'}`}>
                               {(() => {
                                 const pct = pSeq * 100;
@@ -2130,8 +2130,16 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                 return `< 0,0001%`;
                               })()}
                             </p>
-                            <p className="text-[9px] text-muted-foreground">1 em {pSeq > 0 ? Math.round(1 / pSeq).toLocaleString('pt-BR') : '∞'} tentativas</p>
+                            <p className="text-[9px] text-muted-foreground">Em média, a operação inteira venceria back <strong>{comboDetailSequences} vezes seguidas</strong> a cada <strong>{pSeq > 0 ? Math.round(1 / pSeq).toLocaleString('pt-BR') : '∞'}</strong> tentativas.</p>
                           </div>
+                        </div>
+                        <div className="p-2 rounded bg-blue-500/5 border border-blue-500/20">
+                          <p className="text-[10px] text-muted-foreground leading-snug">
+                            <strong className="text-blue-400">Como ler a tabela abaixo:</strong> cada linha analisa <em>uma perna</em> isoladamente (ignorando as outras).
+                            <br /><strong>P(1×)</strong> = chance dessa perna back ganhar em <em>uma</em> aposta (= 1 ÷ odd).
+                            <br /><strong>P({comboDetailSequences}×)</strong> = chance dela ganhar <em>{comboDetailSequences} vezes seguidas</em> (= P(1×) elevado a {comboDetailSequences}).
+                            <br /><strong>1 em N</strong> = frequência esperada: em média, ocorre <em>1 vez a cada N</em> sequências de {comboDetailSequences} apostas. Exemplo: "1 / 64" significa que, em média, é preciso fazer 64 sequências de {comboDetailSequences} apostas para ver essa perna ganhar {comboDetailSequences} vezes seguidas uma vez.
+                          </p>
                         </div>
                         {comboDetailMetrics.legs.length > 1 && (
                           <div className="border rounded-md overflow-hidden">
