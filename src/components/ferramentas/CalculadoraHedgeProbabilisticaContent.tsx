@@ -142,6 +142,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
    const [simMode, setSimMode] = useState<'accumulative' | 'capped'>('accumulative');
    const [bankrollCeilingMultiplier, setBankrollCeilingMultiplier] = useState(5);
    const [activeTab, setActiveTab] = useState('calculadora');
+   const [seqN, setSeqN] = useState<number>(10);
 
    const ODDS_RULESETS = useMemo(() => [
      { id: "150_05", label: "1.50 → 5", minOdd: 1.5, maxOdd: 5, description: "Curto alcance, alta densidade.", variance: "Baixa", efficiency: "Máxima" },
