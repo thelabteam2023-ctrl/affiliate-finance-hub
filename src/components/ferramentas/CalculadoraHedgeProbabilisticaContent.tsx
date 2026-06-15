@@ -450,7 +450,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
        const samples: { outcome: number; type: 'lay' | 'back' }[] = [];
       
       // Pré-calcula a CDF dos cenários para performance
-      const cdf = metrics.aggregatedScenarios.map((s, i, arr) => ({
+      const cdf = heavyMetrics.aggregatedScenarios.map((s, i, arr) => ({
         ...s,
         upper: arr.slice(0, i + 1).reduce((sum, current) => sum + current.probability, 0)
       }));
@@ -467,7 +467,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
           
           // Verifica se pode pagar a exposição do próximo bilhete
           // A exposição máxima é necessária ANTES de saber o resultado do bilhete
-          if (currentBank < metrics.maxResponsibility) {
+          if (currentBank < heavyMetrics.maxResponsibility) {
             totalBankruptcies++;
             if (step < 10) bankruptciesIn10++;
             broken = true;
@@ -502,7 +502,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
         }
       }
 
-      const winRate = metrics.aggregatedScenarios
+      const winRate = heavyMetrics.aggregatedScenarios
         .filter(s => s.result > 0)
         .reduce((acc, s) => acc + s.probability, 0);
       
@@ -510,11 +510,11 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
       const sortedSteps = [...doubleupSteps].sort((a, b) => a - b);
       const medianSteps = sortedSteps.length > 0 
         ? sortedSteps[Math.floor(sortedSteps.length / 2)] 
-        : Math.ceil(debouncedBankroll / Math.max(0.01, metrics.totalEV));
+        : Math.ceil(debouncedBankroll / Math.max(0.01, heavyMetrics.totalEV));
 
       return {
         trials: numTraj,
-        avgResult: metrics.totalEV,
+        avgResult: heavyMetrics.totalEV,
         winRate,
         bankruptcies: totalBankruptcies,
         riskOfRuin: (totalBankruptcies / numTraj) * 100,
@@ -523,7 +523,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
         medianSteps,
         samples
       };
-    }, [metrics, debouncedBankroll, simMode, bankrollCeilingMultiplier]);
+    }, [heavyMetrics, debouncedBankroll, simMode, bankrollCeilingMultiplier]);
 
     const longTermSim = useMemo(() => {
       // Reduzido de 100.000 → 2.000 ciclos. O gráfico só plota até cycle ≤ 1000,
@@ -534,7 +534,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
       const ceiling = simMode === 'capped' ? debouncedBankroll * bankrollCeilingMultiplier : Infinity;
       
       let currentBank = debouncedBankroll;
-      const cdf = metrics.aggregatedScenarios.map((s, i, arr) => ({
+      const cdf = heavyMetrics.aggregatedScenarios.map((s, i, arr) => ({
         ...s,
         upper: arr.slice(0, i + 1).reduce((sum, current) => sum + current.probability, 0)
       }));
@@ -542,7 +542,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
       trajectory.push({ cycle: 0, balance: currentBank });
 
       for (let i = 1; i <= cycles; i++) {
-        if (currentBank < metrics.maxResponsibility || currentBank <= 0) {
+        if (currentBank < heavyMetrics.maxResponsibility || currentBank <= 0) {
           currentBank = 0;
           if (i % step === 0 && i <= 1000) trajectory.push({ cycle: i, balance: 0 });
           continue;
@@ -559,7 +559,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
       }
 
       return trajectory;
-    }, [metrics, debouncedBankroll, simMode, bankrollCeilingMultiplier]);
+    }, [heavyMetrics, debouncedBankroll, simMode, bankrollCeilingMultiplier]);
     const riskOfRuin = monteCarloSim.riskOfRuin;
 
     const heatmapData = useMemo(() => {
