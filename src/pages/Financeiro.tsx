@@ -130,11 +130,6 @@ export default function Financeiro() {
   // Capital em disputa (para sobreposição no donut da Posição de Capital)
   const { bySegment: capitalEmDisputa } = useCapitalEmDisputa();
 
-  // Descrição do período ativo (para banner contextual)
-  const periodDesc = useMemo(
-    () => getDashboardPeriodDescription(periodoPreset, customRange),
-    [periodoPreset, customRange]
-  );
   const periodBadge = (
     <PeriodScopeBadge scope="periodo" filter={periodoPreset} customRange={customRange} />
   );
