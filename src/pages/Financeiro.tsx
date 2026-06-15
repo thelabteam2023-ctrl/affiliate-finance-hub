@@ -15,7 +15,6 @@ import { DashboardPeriodFilterBar } from "@/components/shared/DashboardPeriodFil
 import {
   DashboardPeriodFilter,
   getDashboardDateRangeAsStrings,
-  getDashboardPeriodDescription,
 } from "@/types/dashboardFilters";
 import { useTopBar } from "@/contexts/TopBarContext";
 import {
