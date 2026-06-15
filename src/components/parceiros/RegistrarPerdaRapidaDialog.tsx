@@ -58,32 +58,27 @@ export function RegistrarPerdaRapidaDialog({
 
       const { data: bkInfo } = await supabase
         .from("bookmakers")
-        .select("workspace_id, saldo_irrecuperavel, projeto_id")
+        .select("workspace_id, projeto_id")
         .eq("id", bookmakerId)
         .single();
 
       if (!bkInfo) throw new Error("Bookmaker não encontrada");
 
-      // 1. Registrar perda no ledger (debita saldo)
+      // Registrar SCAN da casa via ledger (debita saldo).
+      // A categoria padronizada SCAN_CASA permite que a UI exiba o badge "Scan"
+      // e o relatório de Perdas Confirmadas trate este lançamento de forma uniforme.
       await registrarPerdaOperacionalViaLedger({
         bookmakerId,
         valor: parsedValor,
         moeda,
         workspaceId: bkInfo.workspace_id,
         userId: userData.user.id,
-        descricao: `Saldo irrecuperável: ${motivo}`,
-        categoria: "saldo_irrecuperavel",
+        descricao: `[SCAN CASA] ${motivo}`,
+        categoria: "SCAN_CASA",
         projetoIdSnapshot: bkInfo.projeto_id || undefined,
       });
 
-      // 2. Acumular no campo saldo_irrecuperavel
-      const currentIrrec = Number(bkInfo.saldo_irrecuperavel || 0);
-      await supabase
-        .from("bookmakers")
-        .update({ saldo_irrecuperavel: currentIrrec + parsedValor })
-        .eq("id", bookmakerId);
-
-      toast.success(`Perda de ${symbol} ${parsedValor.toFixed(2)} registrada em ${bookmakerNome}`);
+      toast.success(`Scan registrado: ${symbol} ${parsedValor.toFixed(2)} em ${bookmakerNome}`);
       setValor("");
       setMotivo("");
       onOpenChange(false);
