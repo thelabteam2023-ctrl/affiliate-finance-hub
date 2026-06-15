@@ -556,8 +556,9 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
         s => !s.canonicalPath.includes('lost')
       )?.probability ?? 0;
       const probLayWinCycle = 1 - probAllWonBack;
-      const prob10Greens = Math.pow(probLayWinCycle, 10);
-      const prob10Reds = Math.pow(probAllWonBack, 10);
+      const safeN = Math.max(1, Math.min(100, Math.floor(seqN || 1)));
+      const probNGreens = Math.pow(probLayWinCycle, safeN);
+      const probNReds = Math.pow(probAllWonBack, safeN);
 
       // 2. Desvio Padrão da Operação (Variação de lucro/prejuízo)
       const mean = metrics.totalEV;
@@ -586,14 +587,15 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
       const probProfit100 = 1 - (0.5 * (1 + Math.tanh(0.79788456 * (z + 0.035677408 * Math.pow(z, 3)))));
 
       return {
-        prob10Greens,
-        prob10Reds,
+        probNGreens,
+        probNReds,
+        seqN: safeN,
         stdDev,
         recoveryFactor,
         kelly: Math.max(0, kelly),
         probProfit100
       };
-    }, [metrics, monteCarloSim.winRate]);
+    }, [metrics, monteCarloSim.winRate, seqN]);
 
     const finalScore = useMemo(() => {
       const roi = metrics.totalROI;
