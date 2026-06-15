@@ -1306,26 +1306,26 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                                      <div className="grid grid-cols-2 gap-2">
                                        <div className="p-2.5 rounded-lg bg-background/40 border border-border/40 space-y-1">
                                          <div className="flex justify-between items-center text-[9px] uppercase font-bold text-muted-foreground">
-                                           <span>Seq. 10 Bolsa</span>
+                                           <span>Seq. {advancedStats.seqN} Bolsa</span>
                                            <CardInfoTooltip
-                                             title="Sequência 10 Greens (Bolsa)"
-                                             description="Probabilidade de 10 ciclos seguidos vencerem na Bolsa (Lay). Mede a fluidez da transferência casa-bolsa."
+                                             title={`Sequência ${advancedStats.seqN} Greens (Bolsa)`}
+                                             description={`Probabilidade de ${advancedStats.seqN} ciclos seguidos vencerem na Bolsa (Lay), com base na taxa implícita das odds atuais. Ajuste N no campo acima.`}
                                            />
                                          </div>
                                          <p className="text-base font-bold font-mono text-emerald-400">
-                                           {fmtPct(advancedStats.prob10Greens * 100)}
+                                           {fmtPct(advancedStats.probNGreens * 100)}
                                          </p>
                                        </div>
                                        <div className="p-2.5 rounded-lg bg-background/40 border border-border/40 space-y-1">
                                          <div className="flex justify-between items-center text-[9px] uppercase font-bold text-muted-foreground">
-                                           <span>Seq. 10 Casa</span>
+                                           <span>Seq. {advancedStats.seqN} Casa</span>
                                            <CardInfoTooltip
-                                             title="Sequência 10 Casa (Back)"
-                                             description="Probabilidade de 10 ciclos seguidos baterem integralmente na Casa (Back). Cenário raro em odds de extração."
+                                             title={`Sequência ${advancedStats.seqN} Casa (Back)`}
+                                             description={`Probabilidade de ${advancedStats.seqN} ciclos seguidos baterem integralmente na Casa (Back). Cenário raro em odds de extração.`}
                                            />
                                          </div>
                                          <p className="text-base font-bold font-mono text-orange-400">
-                                           {(advancedStats.prob10Reds * 100).toFixed(6)}%
+                                           {(advancedStats.probNReds * 100).toFixed(6)}%
                                          </p>
                                        </div>
                                      </div>
