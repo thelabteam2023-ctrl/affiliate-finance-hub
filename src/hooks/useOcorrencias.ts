@@ -421,14 +421,8 @@ export function useAtualizarStatusOcorrencia() {
                 });
               }
 
-              // Reverter saldo_irrecuperavel se aplicável
-              if (ocorrencia.sub_motivo === 'saldo_irrecuperavel') {
-                const novoIrrecuperavel = Math.max(0, Number(bkInfo.saldo_irrecuperavel || 0) - valorPerda);
-                await (supabase as any)
-                  .from('bookmakers')
-                  .update({ saldo_irrecuperavel: novoIrrecuperavel })
-                  .eq('id', ocorrencia.bookmaker_id);
-              }
+              // Acumulador `saldo_irrecuperavel` foi DESCONTINUADO (unificado com SCAN_CASA).
+              // A reversão da perda já é feita pelo ledger acima — nenhum side-effect adicional necessário.
             }
           }
         }
