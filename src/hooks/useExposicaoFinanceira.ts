@@ -33,6 +33,8 @@ export interface PerdaDetalhe {
   descricao: string;
   origem_label?: string | null;
   origem_titular?: string | null;
+  categoria: "casa" | "parceiro" | "banco" | "wallet" | "outro";
+  bookmaker_nome?: string | null;
 }
 
 export interface IrrecuperavelDetalhe {
