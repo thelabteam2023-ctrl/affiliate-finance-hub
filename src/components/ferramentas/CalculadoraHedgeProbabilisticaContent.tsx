@@ -383,6 +383,18 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
      );
    }, [legs, freebet, commission, targetExtraction]);
 
+   // Versão "lag" dos metrics, usada apenas pelas simulações pesadas
+   // (Monte Carlo / longo prazo). Evita que cada tecla em Freebet/Comissão
+   // dispare 5k × 1000 = 5M iterações imediatamente.
+   const heavyMetrics: HedgeResult = useMemo(() => {
+     return HedgeProbabilisticoEngine.calculateMetrics(
+       legs,
+       debouncedFreebet,
+       debouncedCommission / 100,
+       targetExtraction
+     );
+   }, [legs, debouncedFreebet, debouncedCommission, targetExtraction]);
+
    const addLeg = () => {
      const maxLegs = activeRulesetId === 'custom' ? customRules.maxLegs : 6;
      if (legs.length >= maxLegs) return;
