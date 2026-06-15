@@ -187,7 +187,12 @@ export function useFinanceiroCalculations({
     const { filteredLedger } = filtered;
     const depositosBookmakersPeriodo = filteredLedger.filter((l: any) => l.moeda === "BRL" && l.tipo_transacao === "DEPOSITO").reduce((acc: number, l: any) => acc + l.valor, 0);
     const saquesBookmakersPeriodo = filteredLedger.filter((l: any) => l.moeda === "BRL" && l.tipo_transacao === "SAQUE").reduce((acc: number, l: any) => acc + l.valor, 0);
-    return { depositosBookmakersPeriodo, saquesBookmakersPeriodo };
+    // Scan / Perda Operacional no período (consolidado em BRL)
+    const totalScanPeriodo = filteredLedger
+      .filter((l: any) => l.tipo_transacao === "PERDA_OPERACIONAL")
+      .reduce((acc: number, l: any) => acc + convertToBRL(Number(l.valor || 0), l.moeda || "BRL"), 0);
+    const countScanPeriodo = filteredLedger.filter((l: any) => l.tipo_transacao === "PERDA_OPERACIONAL").length;
+    return { depositosBookmakersPeriodo, saquesBookmakersPeriodo, totalScanPeriodo, countScanPeriodo };
   }, [filtered]);
 
   // Composição de custos
