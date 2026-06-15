@@ -9,6 +9,7 @@ import { useCotacoes } from "@/hooks/useCotacoes";
 import { useMultiCurrencyConversion } from "@/hooks/useMultiCurrencyConversion";
 import { useCurrencySnapshot } from "@/hooks/useCurrencySnapshot";
 import { useWorkspaceLucroOperacional } from "@/hooks/useWorkspaceLucroOperacional";
+import { useWorkspaceLucroRealizado } from "@/hooks/useWorkspaceLucroRealizado";
 import { useCapitalMedioPeriodo } from "@/hooks/useCapitalMedioPeriodo";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardPeriodFilterBar } from "@/components/shared/DashboardPeriodFilterBar";
@@ -89,6 +90,17 @@ export default function Financeiro() {
   });
   const lucroOperacionalApostas = lucroOperacionalData?.lucroTotal ?? 0;
   const hasMultiCurrencyApostas = lucroOperacionalData?.hasMultiCurrency ?? false;
+
+  // Lucro Realizado (métrica primária — Saques − Depósitos efetivos)
+  const { lucroRealizado } = useWorkspaceLucroRealizado({
+    cotacaoUSD,
+    cotacaoEUR,
+    cotacaoGBP,
+    cotacaoMYR,
+    cotacaoMXN,
+    cotacaoARS,
+    cotacaoCOP,
+  });
 
   // Capital médio
   const capitalMedioPeriodo = useCapitalMedioPeriodo({ dataInicio: dataInicio || null, dataFim: dataFim || null, capitalAtual: 0 });
