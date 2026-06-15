@@ -207,44 +207,64 @@ export function ProjetoKanbanCard({
         </div>
       </div>
 
-      {/* Lucro Operacional - Hero Metric */}
-      <div className="mx-4 mb-3 rounded-lg bg-muted/20 border border-border/30 p-3">
-        <div className="flex items-center justify-center gap-2 mb-1">
-          {lucroOpDisplay?.isPositive || lucroOpDisplay?.isZero
-            ? <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
-            : <TrendingDown className="h-3.5 w-3.5 text-red-500" />
-          }
-          <span className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">
-            Lucro Operacional
-          </span>
-        </div>
-        <div className="text-center">
-          <span className={cn("text-xl font-bold tracking-tight", lucroOpDisplay?.colorClass)}>
-            {lucroOpDisplay?.isPositive ? '+' : lucroOperacional < 0 ? '-' : ''}{formatByMoeda(lucroOperacional, moedaConsolidacao)}
-          </span>
-        </div>
-      </div>
-
-      {/* Lucro Realizado */}
-      <div className="mx-4 mb-3">
-        <Popover>
-          <PopoverTrigger asChild>
-            <button className="flex items-center justify-center gap-2 py-2 bg-muted/15 border border-border/20 rounded-lg w-full hover:bg-muted/30 transition-colors cursor-pointer">
+      {/* Lucro Realizado — Hero Metric (dinheiro que efetivamente retornou ao caixa) */}
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className="mx-4 mb-3 rounded-lg bg-muted/20 border border-border/30 p-3 w-[calc(100%-2rem)] hover:bg-muted/30 transition-colors cursor-pointer text-left"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-center gap-2 mb-1">
               {lucroRealizadoDisplay?.isPositive || lucroRealizadoDisplay?.isZero
-                ? <TrendingUp className={cn("h-3.5 w-3.5", lucroRealizadoDisplay?.colorClass || 'text-muted-foreground')} />
-                : <TrendingDown className={cn("h-3.5 w-3.5", lucroRealizadoDisplay?.colorClass || 'text-muted-foreground')} />
+                ? <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
+                : <TrendingDown className="h-3.5 w-3.5 text-red-500" />
               }
-              <span className="text-[11px] text-muted-foreground">Realizado:</span>
-              <span className={cn("text-sm font-semibold", lucroRealizadoDisplay?.colorClass)}>
-                {lucroRealizado > 0 ? '+' : ''}{formatByMoeda(lucroRealizado, moedaConsolidacao)}
-              </span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium border-b border-dotted border-muted-foreground/40 cursor-help">
+                    Lucro Realizado
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-[260px] text-xs z-[100]">
+                  Dinheiro que efetivamente retornou ao caixa: Saques − Depósitos (inclui virtuais de migração).
+                </TooltipContent>
+              </Tooltip>
               <Info className="h-3 w-3 text-muted-foreground/40" />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent side="bottom" align="center" className="p-0 w-auto z-[100]" sideOffset={8}>
-            <FinancialMetricsPopover projetoId={projeto.id} />
-          </PopoverContent>
-        </Popover>
+            </div>
+            <div className="text-center">
+              <span className={cn("text-xl font-bold tracking-tight", lucroRealizadoDisplay?.colorClass)}>
+                {lucroRealizadoDisplay?.isPositive ? '+' : lucroRealizado < 0 ? '-' : ''}{formatByMoeda(lucroRealizado, moedaConsolidacao)}
+              </span>
+            </div>
+          </button>
+        </PopoverTrigger>
+        <PopoverContent side="bottom" align="center" className="p-0 w-auto z-[100]" sideOffset={8}>
+          <FinancialMetricsPopover projetoId={projeto.id} />
+        </PopoverContent>
+      </Popover>
+
+      {/* Lucro Operacional — secundário (resultado teórico, inclui saldo ainda preso em casa) */}
+      <div className="mx-4 mb-3">
+        <div className="flex items-center justify-center gap-2 py-2 bg-muted/15 border border-border/20 rounded-lg w-full">
+          {lucroOpDisplay?.isPositive || lucroOpDisplay?.isZero
+            ? <TrendingUp className={cn("h-3.5 w-3.5", lucroOpDisplay?.colorClass || 'text-muted-foreground')} />
+            : <TrendingDown className={cn("h-3.5 w-3.5", lucroOpDisplay?.colorClass || 'text-muted-foreground')} />
+          }
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="text-[11px] text-muted-foreground border-b border-dotted border-muted-foreground/40 cursor-help">
+                Operacional (teórico):
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-[260px] text-xs z-[100]">
+              Resultado teórico da operação (apostas + cashback + bônus − perdas). Inclui valores ainda presos em saldo de casa, não convertidos em caixa.
+            </TooltipContent>
+          </Tooltip>
+          <span className={cn("text-sm font-semibold", lucroOpDisplay?.colorClass)}>
+            {lucroOperacional > 0 ? '+' : ''}{formatByMoeda(lucroOperacional, moedaConsolidacao)}
+          </span>
+        </div>
       </div>
 
       {/* Footer Actions */}
