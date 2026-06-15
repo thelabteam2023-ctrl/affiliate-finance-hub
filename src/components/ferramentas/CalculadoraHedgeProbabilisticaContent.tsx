@@ -25,6 +25,7 @@ import {
 } from '@/lib/hedge-probabilistico-engine';
 import { CardInfoTooltip } from '@/components/ui/card-info-tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
@@ -186,6 +187,12 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
   const [showHelp, setShowHelp] = useState(false);
   const [comboDetail, setComboDetail] = useState<{ name: string; legs: number[]; type?: string; description?: string } | null>(null);
   const [comboDetailMode, setComboDetailMode] = useState<'roi-max' | 'balanced'>('roi-max');
+
+  // Debounced copies used as deps for heavy useMemos — keeps typing in
+  // Freebet/Banca da Exchange snappy by delaying recompute until input settles.
+  const debouncedFreebet = useDebouncedValue(freebet, 250);
+  const debouncedBankroll = useDebouncedValue(bankroll, 250);
+  const debouncedCommission = useDebouncedValue(commission, 250);
 
   const comboDetailMetrics = useMemo(() => {
     if (!comboDetail) return null;
@@ -376,6 +383,18 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
      );
    }, [legs, freebet, commission, targetExtraction]);
 
+   // Versão "lag" dos metrics, usada apenas pelas simulações pesadas
+   // (Monte Carlo / longo prazo). Evita que cada tecla em Freebet/Comissão
+   // dispare 5k × 1000 = 5M iterações imediatamente.
+   const heavyMetrics: HedgeResult = useMemo(() => {
+     return HedgeProbabilisticoEngine.calculateMetrics(
+       legs,
+       debouncedFreebet,
+       debouncedCommission / 100,
+       targetExtraction
+     );
+   }, [legs, debouncedFreebet, debouncedCommission, targetExtraction]);
+
    const addLeg = () => {
      const maxLegs = activeRulesetId === 'custom' ? customRules.maxLegs : 6;
      if (legs.length >= maxLegs) return;
@@ -396,16 +415,17 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
     const optimalConfig = useMemo(() => {
       let bestEV = -Infinity;
       let bestTarget = 0.7;
-      // Análise Sólida de Background: 10.000 variações testadas
+      // Varredura de 200 alvos entre 60% e 95% (resolução 0.175%, imperceptível).
+      // Antes: 10.001 chamadas a cada tecla — bloqueio de UI confirmado.
       const minTarget = 0.60;
       const maxTarget = 0.95;
-      const steps = 10000;
+      const steps = 200;
       const stepSize = (maxTarget - minTarget) / steps;
 
       for (let i = 0; i <= steps; i++) {
         const t = minTarget + (i * stepSize);
-        const m = HedgeProbabilisticoEngine.calculateMetrics(legs, freebet, commission / 100, t);
-        if (m.allWonProfit > 0 && m.maxResponsibility <= bankroll) {
+        const m = HedgeProbabilisticoEngine.calculateMetrics(legs, debouncedFreebet, debouncedCommission / 100, t);
+        if (m.allWonProfit > 0 && m.maxResponsibility <= debouncedBankroll) {
           if (m.totalEV > bestEV) {
             bestEV = m.totalEV;
             bestTarget = t;
@@ -413,12 +433,14 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
         }
       }
       return { target: bestTarget, ev: bestEV };
-    }, [legs, freebet, commission, bankroll]);
+    }, [legs, debouncedFreebet, debouncedCommission, debouncedBankroll]);
 
     const monteCarloSim = useMemo(() => {
-      const numTraj = 100000;
+      // Reduzido de 100.000 → 5.000 trajetórias (erro do "risk of ruin" cai de
+      // ~0.1pp para ~0.7pp — aceitável dado que o KPI exibe 1 casa decimal).
+      const numTraj = 5000;
       const maxSteps = 1000; // Máximo de bilhetes por trajetória
-      const ceiling = simMode === 'capped' ? bankroll * bankrollCeilingMultiplier : Infinity;
+      const ceiling = simMode === 'capped' ? debouncedBankroll * bankrollCeilingMultiplier : Infinity;
       
       let totalBankruptcies = 0;
       let bankruptciesIn10 = 0;
@@ -428,13 +450,13 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
        const samples: { outcome: number; type: 'lay' | 'back' }[] = [];
       
       // Pré-calcula a CDF dos cenários para performance
-      const cdf = metrics.aggregatedScenarios.map((s, i, arr) => ({
+      const cdf = heavyMetrics.aggregatedScenarios.map((s, i, arr) => ({
         ...s,
         upper: arr.slice(0, i + 1).reduce((sum, current) => sum + current.probability, 0)
       }));
 
       for (let t = 0; t < numTraj; t++) {
-        let currentBank = bankroll;
+        let currentBank = debouncedBankroll;
         let broken = false;
         
         for (let step = 0; step < maxSteps; step++) {
@@ -445,7 +467,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
           
           // Verifica se pode pagar a exposição do próximo bilhete
           // A exposição máxima é necessária ANTES de saber o resultado do bilhete
-          if (currentBank < metrics.maxResponsibility) {
+          if (currentBank < heavyMetrics.maxResponsibility) {
             totalBankruptcies++;
             if (step < 10) bankruptciesIn10++;
             broken = true;
@@ -465,7 +487,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
            }
           if (t === 0) cumulativeOutcome += outcome;
 
-          if (currentBank >= bankroll * 2) {
+          if (currentBank >= debouncedBankroll * 2) {
             totalDoubleups++;
             doubleupSteps.push(step + 1);
             break;
@@ -480,7 +502,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
         }
       }
 
-      const winRate = metrics.aggregatedScenarios
+      const winRate = heavyMetrics.aggregatedScenarios
         .filter(s => s.result > 0)
         .reduce((acc, s) => acc + s.probability, 0);
       
@@ -488,11 +510,11 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
       const sortedSteps = [...doubleupSteps].sort((a, b) => a - b);
       const medianSteps = sortedSteps.length > 0 
         ? sortedSteps[Math.floor(sortedSteps.length / 2)] 
-        : Math.ceil(bankroll / Math.max(0.01, metrics.totalEV));
+        : Math.ceil(debouncedBankroll / Math.max(0.01, heavyMetrics.totalEV));
 
       return {
         trials: numTraj,
-        avgResult: metrics.totalEV,
+        avgResult: heavyMetrics.totalEV,
         winRate,
         bankruptcies: totalBankruptcies,
         riskOfRuin: (totalBankruptcies / numTraj) * 100,
@@ -501,16 +523,18 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
         medianSteps,
         samples
       };
-    }, [metrics, bankroll, simMode, bankrollCeilingMultiplier]);
+    }, [heavyMetrics, debouncedBankroll, simMode, bankrollCeilingMultiplier]);
 
     const longTermSim = useMemo(() => {
-      const cycles = 100000;
+      // Reduzido de 100.000 → 2.000 ciclos. O gráfico só plota até cycle ≤ 1000,
+      // então 100k era 99% desperdício puro de CPU.
+      const cycles = 2000;
       const step = 5;
       const trajectory = [];
-      const ceiling = simMode === 'capped' ? bankroll * bankrollCeilingMultiplier : Infinity;
+      const ceiling = simMode === 'capped' ? debouncedBankroll * bankrollCeilingMultiplier : Infinity;
       
-      let currentBank = bankroll;
-      const cdf = metrics.aggregatedScenarios.map((s, i, arr) => ({
+      let currentBank = debouncedBankroll;
+      const cdf = heavyMetrics.aggregatedScenarios.map((s, i, arr) => ({
         ...s,
         upper: arr.slice(0, i + 1).reduce((sum, current) => sum + current.probability, 0)
       }));
@@ -518,7 +542,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
       trajectory.push({ cycle: 0, balance: currentBank });
 
       for (let i = 1; i <= cycles; i++) {
-        if (currentBank < metrics.maxResponsibility || currentBank <= 0) {
+        if (currentBank < heavyMetrics.maxResponsibility || currentBank <= 0) {
           currentBank = 0;
           if (i % step === 0 && i <= 1000) trajectory.push({ cycle: i, balance: 0 });
           continue;
@@ -535,7 +559,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
       }
 
       return trajectory;
-    }, [metrics, bankroll, simMode, bankrollCeilingMultiplier]);
+    }, [heavyMetrics, debouncedBankroll, simMode, bankrollCeilingMultiplier]);
     const riskOfRuin = monteCarloSim.riskOfRuin;
 
     const heatmapData = useMemo(() => {
@@ -546,7 +570,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
       extractionTargets.forEach(target => {
         oddsRange.forEach(odd => {
           const testLegs = legs.map(l => ({ ...l, backOdd: odd, layOdd: odd }));
-          const m = HedgeProbabilisticoEngine.calculateMetrics(testLegs, freebet, commission / 100, target);
+          const m = HedgeProbabilisticoEngine.calculateMetrics(testLegs, debouncedFreebet, debouncedCommission / 100, target);
           
           const roe = m.maxResponsibility > 0 ? (m.totalEV / m.maxResponsibility) : 0;
           const score = m.allWonProfit > 0 ? (roe * 100) : -10;
@@ -556,7 +580,7 @@ const fmtPct = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits:
             odd,
             score,
             roi: m.totalROI,
-            isValid: m.allWonProfit > 0 && m.maxResponsibility <= bankroll
+            isValid: m.allWonProfit > 0 && m.maxResponsibility <= debouncedBankroll
           });
         });
       });
