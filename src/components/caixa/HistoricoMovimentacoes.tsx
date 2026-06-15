@@ -1158,6 +1158,14 @@ export function HistoricoMovimentacoes({
                             <span className="text-[15px] font-semibold text-[var(--text-primary)] tabular-nums tracking-tight">
                               {formatCurrencyDynamic(Math.abs(getValorEfetivo(tx)), getMoedaEfetiva(tx))}
                             </span>
+                            {tx.tipo_moeda === "CRYPTO" && (tx.coin || tx.qtd_coin) && (
+                              <span className="text-[10px] text-[var(--text-secondary)] tabular-nums opacity-90">
+                                {Number(Math.abs(Number(tx.qtd_coin ?? 0))).toLocaleString("pt-BR", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 8,
+                                })} {(tx.coin || "").toUpperCase()}
+                              </span>
+                            )}
                             <span className="text-[10px] text-[var(--text-faint)] tabular-nums opacity-80">
                               {(() => {
                                 const dk = extractCivilDateKey(tx.data_transacao);
