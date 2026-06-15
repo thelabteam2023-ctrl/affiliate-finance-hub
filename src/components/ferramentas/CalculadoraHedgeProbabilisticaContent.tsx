@@ -2110,81 +2110,33 @@ Para corrigir, reduza a Meta de Extração no slider.`}
                     const pAllWon = comboDetailMetrics.legs.reduce((acc, l) => acc * (1 / l.backOdd), 1);
                     const pSeq = Math.pow(pAllWon, comboDetailSequences);
                     const oddsLabel = comboDetailMetrics.legs.map(l => l.backOdd.toFixed(2)).join(' × ');
+                    const expectedWins = pAllWon * comboDetailSequences;
+                    const nLegs = comboDetailMetrics.legs.length;
                     return (
                       <>
                         <div className="grid grid-cols-2 gap-2">
                           <div className="p-2 rounded bg-background/40 border border-border/50">
-                            <p className="text-[9px] uppercase text-muted-foreground">Chance de a operação inteira dar back (1×)</p>
+                            <p className="text-[9px] uppercase text-muted-foreground">Chance da dupla ({nLegs} pernas) vencer back em 1 operação</p>
                             <p className="text-sm font-bold font-mono text-blue-400">{fmtPct(pAllWon * 100)}</p>
-                            <p className="text-[9px] text-muted-foreground">Probabilidade de TODAS as pernas back vencerem ao mesmo tempo. Fórmula: 1 / ({oddsLabel}). Em média, acontece <strong>1 a cada {pAllWon > 0 ? Math.round(1 / pAllWon).toLocaleString('pt-BR') : '∞'}</strong> operações.</p>
+                            <p className="text-[9px] text-muted-foreground">Tratando como UMA aposta combinada: probabilidade de TODAS as {nLegs} pernas back vencerem simultaneamente. Fórmula: 1 / ({oddsLabel}). Em média, acontece <strong>1 a cada {pAllWon > 0 ? Math.round(1 / pAllWon).toLocaleString('pt-BR') : '∞'}</strong> operações.</p>
                           </div>
                           <div className="p-2 rounded bg-background/40 border border-border/50">
-                            <p className="text-[9px] uppercase text-muted-foreground">Chance de acontecer {comboDetailSequences}× seguidas</p>
-                            <p className={`text-sm font-bold font-mono ${pSeq >= 0.05 ? 'text-emerald-400' : pSeq >= 0.005 ? 'text-orange-400' : 'text-red-400'}`}>
-                              {(() => {
-                                const pct = pSeq * 100;
-                                if (pct === 0) return '0%';
-                                if (pct >= 1) return fmtPct(pct);
-                                if (pct >= 0.01) return `${pct.toFixed(3)}%`;
-                                if (pct >= 0.0001) return `${pct.toFixed(5)}%`;
-                                return `< 0,0001%`;
-                              })()}
+                            <p className="text-[9px] uppercase text-muted-foreground">Quantas vezes a dupla vencerá em {comboDetailSequences} operações</p>
+                            <p className="text-sm font-bold font-mono text-emerald-400">
+                              ≈ {expectedWins >= 1 ? expectedWins.toFixed(2) : expectedWins.toFixed(4)} <span className="text-[10px] text-muted-foreground">vez(es)</span>
                             </p>
-                            <p className="text-[9px] text-muted-foreground">Em média, a operação inteira venceria back <strong>{comboDetailSequences} vezes seguidas</strong> a cada <strong>{pSeq > 0 ? Math.round(1 / pSeq).toLocaleString('pt-BR') : '∞'}</strong> tentativas.</p>
+                            <p className="text-[9px] text-muted-foreground">
+                              Valor esperado = N × P = {comboDetailSequences} × {fmtPct(pAllWon * 100)} = <strong>{expectedWins >= 1 ? expectedWins.toFixed(2) : expectedWins.toFixed(4)}</strong> ocorrência(s) da dupla vencendo back em {comboDetailSequences} operações.
+                              {expectedWins < 1 && pAllWon > 0 && <> Equivale a esperar <strong>{Math.round(1 / pAllWon).toLocaleString('pt-BR')}</strong> operações para ver 1 vitória da dupla.</>}
+                            </p>
                           </div>
                         </div>
                         <div className="p-2 rounded bg-blue-500/5 border border-blue-500/20">
                           <p className="text-[10px] text-muted-foreground leading-snug">
-                            <strong className="text-blue-400">Como ler a tabela abaixo:</strong> cada linha analisa <em>uma perna</em> isoladamente (ignorando as outras).
-                            <br /><strong>P(1×)</strong> = chance dessa perna back ganhar em <em>uma</em> aposta (= 1 ÷ odd).
-                            <br /><strong>P({comboDetailSequences}×)</strong> = chance dela ganhar <em>{comboDetailSequences} vezes seguidas</em> (= P(1×) elevado a {comboDetailSequences}).
-                            <br /><strong>1 em N</strong> = frequência esperada: em média, ocorre <em>1 vez a cada N</em> sequências de {comboDetailSequences} apostas. Exemplo: "1 / 64" significa que, em média, é preciso fazer 64 sequências de {comboDetailSequences} apostas para ver essa perna ganhar {comboDetailSequences} vezes seguidas uma vez.
+                            <strong className="text-blue-400">Interpretação:</strong> a operação é tratada como <em>uma única aposta combinada</em> (dupla com {nLegs} pernas) — só vence back quando TODAS as {nLegs} pernas back vencem ao mesmo tempo. Em <strong>{comboDetailSequences}</strong> operações dessa dupla, espera-se em média <strong>{expectedWins >= 1 ? expectedWins.toFixed(2) : expectedWins.toFixed(4)}</strong> vitória(s) back simultânea(s).
+                            <br />Bônus — chance de a dupla vencer <em>todas as {comboDetailSequences} vezes consecutivamente</em>: <strong>{(() => { const pct = pSeq * 100; if (pct === 0) return '0%'; if (pct >= 1) return fmtPct(pct); if (pct >= 0.01) return `${pct.toFixed(3)}%`; if (pct >= 0.0001) return `${pct.toFixed(5)}%`; return '< 0,0001%'; })()}</strong> (≈ 1 em {pSeq > 0 ? Math.round(1 / pSeq).toLocaleString('pt-BR') : '∞'}).
                           </p>
                         </div>
-                        {comboDetailMetrics.legs.length > 1 && (
-                          <div className="border rounded-md overflow-hidden">
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead className="text-[10px]">Perna</TableHead>
-                                  <TableHead className="text-[10px] text-right">Back Odd</TableHead>
-                                  <TableHead className="text-[10px] text-right">P(1×)</TableHead>
-                                  <TableHead className="text-[10px] text-right">P({comboDetailSequences}×)</TableHead>
-                                  <TableHead className="text-[10px] text-right">1 em N</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {comboDetailMetrics.legs.map((l, i) => {
-                                  const p1 = 1 / l.backOdd;
-                                  const pN = Math.pow(p1, comboDetailSequences);
-                                  return (
-                                    <TableRow key={i}>
-                                      <TableCell className="text-[11px] font-mono">{i + 1}</TableCell>
-                                      <TableCell className="text-[11px] font-mono text-right">{l.backOdd.toFixed(2)}</TableCell>
-                                      <TableCell className="text-[11px] font-mono text-right">{fmtPct(p1 * 100)}</TableCell>
-                                      <TableCell className="text-[11px] font-mono text-right">
-                                        {(() => {
-                                          const pct = pN * 100;
-                                          if (pct === 0) return '0%';
-                                          if (pct >= 1) return fmtPct(pct);
-                                          if (pct >= 0.01) return `${pct.toFixed(3)}%`;
-                                          if (pct >= 0.0001) return `${pct.toFixed(5)}%`;
-                                          return `< 0,0001%`;
-                                        })()}
-                                      </TableCell>
-                                      <TableCell className="text-[11px] font-mono text-right text-muted-foreground">
-                                        1 / {pN > 0 ? Math.round(1 / pN).toLocaleString('pt-BR') : '∞'}
-                                      </TableCell>
-                                    </TableRow>
-                                  );
-                                })}
-                              </TableBody>
-                            </Table>
-                          </div>
-                        )}
-                        <p className="text-[10px] text-muted-foreground leading-tight">
-                          Probabilidade implícita de a mesma condição se repetir <strong>{comboDetailSequences} vez(es) consecutivamente</strong> na bolsa, assumindo eventos independentes (P = (1/odd)<sup>N</sup>).
-                        </p>
                       </>
                     );
                   })()}
