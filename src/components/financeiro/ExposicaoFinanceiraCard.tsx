@@ -120,8 +120,11 @@ export function ExposicaoFinanceiraCard({
   const exp = useExposicaoFinanceira({ dataInicio, dataFim });
   const [drill, setDrill] = useState<DrillKey>(null);
 
-  const pctPatrimonio = patrimonioTotal > 0 ? (exp.totalConsolidado / patrimonioTotal) * 100 : 0;
-  const pctLucro = lucroOperacional > 0 ? (exp.totalPerdasPeriodo / lucroOperacional) * 100 : 0;
+  const pctDisputaPatrimonio =
+    patrimonioTotal > 0 ? (exp.totalEmDisputa / patrimonioTotal) * 100 : 0;
+  const pctPerdasPatrimonio =
+    patrimonioTotal > 0 ? (exp.totalPerdasPeriodo / patrimonioTotal) * 100 : 0;
+  void lucroOperacional;
 
   const segs = [
     {
@@ -160,18 +163,39 @@ export function ExposicaoFinanceiraCard({
   return (
     <Card className="h-full">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-2 flex-wrap">
-          <AlertTriangle className="h-4 w-4 text-amber-500" />
-          Exposição &amp; Perdas
-        </CardTitle>
-        <div className="pt-2">
-          <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-            {formatCurrency(exp.totalConsolidado)}
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <CardTitle className="text-base flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            Exposição &amp; Perdas
+          </CardTitle>
+          {periodBadge}
+        </div>
+        <div className="grid grid-cols-2 gap-3 pt-3">
+          <div>
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">
+              Em disputa
+            </div>
+            <div className="text-xl font-bold text-amber-600 dark:text-amber-400 tabular-nums mt-0.5">
+              {formatCurrency(exp.totalEmDisputa)}
+            </div>
+            <div className="text-[11px] text-muted-foreground mt-0.5">
+              {pctDisputaPatrimonio > 0
+                ? `${pctDisputaPatrimonio.toFixed(1)}% do patrimônio`
+                : "—"}
+            </div>
           </div>
-          <div className="text-xs text-muted-foreground mt-1">
-            {pctPatrimonio > 0
-              ? `${pctPatrimonio.toFixed(1)}% do patrimônio total`
-              : "Sem exposição registrada"}
+          <div className="border-l border-border/50 pl-3">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">
+              Perdas no período
+            </div>
+            <div className="text-xl font-bold text-red-600 dark:text-red-400 tabular-nums mt-0.5">
+              {formatCurrency(exp.totalPerdasPeriodo)}
+            </div>
+            <div className="text-[11px] text-muted-foreground mt-0.5">
+              {pctPerdasPatrimonio > 0
+                ? `${pctPerdasPatrimonio.toFixed(1)}% do patrimônio`
+                : "—"}
+            </div>
           </div>
         </div>
       </CardHeader>
@@ -179,14 +203,9 @@ export function ExposicaoFinanceiraCard({
       <CardContent className="space-y-5">
         {/* SEÇÃO 1: Em disputa */}
         <section className="space-y-2">
-          <div className="flex items-center justify-between">
-            <h4 className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
-              Em disputa
-            </h4>
-            {showDisputaSummary && (
-              <span className="text-xs font-medium">{formatCurrency(exp.totalEmDisputa)}</span>
-            )}
-          </div>
+          <h4 className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
+            Em disputa por segmento
+          </h4>
           {exp.loading ? (
             <div className="text-xs text-muted-foreground">Carregando…</div>
           ) : segs.every(s => s.value === 0) ? (
@@ -233,35 +252,26 @@ export function ExposicaoFinanceiraCard({
 
         {/* SEÇÃO 2: Perdas confirmadas no período */}
         <section className="space-y-2 pt-3 border-t border-border/50">
-          <div className="flex items-center justify-between">
-            <h4 className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold flex items-center gap-1.5">
-              <ShieldAlert className="h-3.5 w-3.5 text-red-500" />
-              Perdas confirmadas no período
-              {periodBadge}
-            </h4>
-          </div>
+          <h4 className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold flex items-center gap-1.5">
+            <ShieldAlert className="h-3.5 w-3.5 text-red-500" />
+            Perdas confirmadas
+          </h4>
           <button
             onClick={() => exp.countPerdas > 0 && setDrill("perdas")}
             disabled={exp.countPerdas === 0}
             className={cn(
-              "w-full text-left rounded-md transition-colors p-2 -mx-2 group",
+              "w-full text-left rounded-md transition-colors p-2 -mx-2 group flex items-center justify-between gap-3",
               exp.countPerdas > 0 && "hover:bg-muted/60 cursor-pointer"
             )}
           >
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-lg font-semibold text-red-600 dark:text-red-400">
-                  {formatCurrency(exp.totalPerdasPeriodo)}
-                </div>
-                <div className="text-[11px] text-muted-foreground">
-                  {exp.countPerdas} ocorrência{exp.countPerdas === 1 ? "" : "s"} ·{" "}
-                  {lucroOperacional > 0 ? `${pctLucro.toFixed(1)}% do lucro op.` : "—"}
-                </div>
-              </div>
-              {exp.countPerdas > 0 && (
-                <ChevronRight className="h-4 w-4 opacity-40 group-hover:opacity-100 transition" />
-              )}
-            </div>
+            <span className="text-xs text-muted-foreground">
+              {exp.countPerdas === 0
+                ? "Nenhuma perda confirmada no período."
+                : `Ver ${exp.countPerdas} ocorrência${exp.countPerdas === 1 ? "" : "s"}`}
+            </span>
+            {exp.countPerdas > 0 && (
+              <ChevronRight className="h-4 w-4 opacity-40 group-hover:opacity-100 transition" />
+            )}
           </button>
         </section>
       </CardContent>
