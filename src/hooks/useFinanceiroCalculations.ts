@@ -285,7 +285,7 @@ export function useFinanceiroCalculations({
         subcategoriaLabel = d.categoria.replace("Recursos Humanos - ", "");
       }
       
-      const key = `RH - ${operadorNome} (${subcategoriaLabel})`;
+      const key = `${operadorNome} · ${subcategoriaLabel}`;
       if (!agrupado[key]) agrupado[key] = { operadorNome: key, valor: 0 };
       agrupado[key].valor += d.valor;
     });
