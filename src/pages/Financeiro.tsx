@@ -308,7 +308,15 @@ export default function Financeiro() {
                   <HeaderKpiCard
                     label="Fluxo Líquido"
                     value={calc.formatCurrency(lucroRealizado)}
-                    tooltip="Saques menos depósitos efetivos confirmados dentro do período filtrado. Mede o caixa que efetivamente entrou ou saiu da operação."
+                    tooltip={
+                      <>
+                        Considera apenas movimentações dos <strong>projetos</strong>
+                        {" "}(saques menos depósitos efetivos confirmados) dentro do
+                        período filtrado. Mede o caixa que de fato entrou ou saiu da
+                        operação dos projetos — não inclui transferências internas,
+                        custos administrativos nem patrimônio parado.
+                      </>
+                    }
                     icon={<TrendingUp className="h-4 w-4" />}
                     tone={lucroRealizado >= 0 ? "positive" : "negative"}
                     secondary={
