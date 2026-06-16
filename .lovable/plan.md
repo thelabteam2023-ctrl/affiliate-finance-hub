@@ -1,69 +1,77 @@
-## Objetivo
+## Diagnóstico dos KPIs atuais
 
-Criar um novo indicador que mostre **quanto sobrou da operação após pagar todos os custos** no período filtrado — complementando o "Fluxo Líquido" (caixa entrado/saído) e o "Lucro Operacional" (teórico das apostas).
+Olhando o print:
 
-## Nomenclatura escolhida
+1. **Títulos redundantes** — "(período)" repete a informação que já está no badge "Todo histórico / Mês atual". Polui o cabeçalho.
+2. **Textos descritivos longos abaixo do valor** ("Saques − Depósitos efetivos confirmados dentro do período selecionado (data_transacao)", "Fluxo Líquido do período menos todos os custos da operação") — essa explicação técnica deveria viver em tooltip, não como subtítulo permanente. Quebra a hierarquia visual e parece "comentário de programador".
+3. **Linha secundária inconsistente** — "Lucro Operacional (teórico) R$ 7.822,25" e "Custos do período −R$ 73.201,24" estão no mesmo nível visual da explicação, dificultando ler qual é dado e qual é texto.
+4. **Badge "TODO HISTÓRICO"** ocupa muito espaço dentro do header do card, competindo com o título.
+5. **Ícone genérico** (Wallet/TrendingUp/Coins/Percent) repetido com pouco peso visual — não ajuda a diferenciar os 4 cards rapidamente.
+6. **Margem Operacional sem linha secundária** quebra a simetria do grid.
+7. **Cor da label** em uppercase + tracking wide está bem, mas a fonte do valor monetário poderia ter mais peso tipográfico (tabular-nums já existe, falta hierarquia).
 
-**"Resultado Líquido (período)"**
+## Diretriz de redesign
 
-Racional rápido sobre as alternativas sugeridas:
-- ❌ *Lucro Líquido* / *Lucro Real Líquido* — confunde com "Lucro Real" (que já existe e tem fórmula contábil específica: Saques − Depósitos).
-- ❌ *Resultado Operacional Líquido* — sugere subtração só de custos operacionais, mas vamos descontar tudo (admin + RH + comissões + bônus + operadores).
-- ❌ *Lucro Disponível* / *Pós-Despesas* — pouco padronizado.
-- ✅ **Resultado Líquido** — termo neutro, casa com "Fluxo Líquido" já presente no card, e deixa claro que é "depois de todos os custos".
+Mais respiro, menos texto fixo, toda explicação no hover. Cada card vira: **rótulo curto → valor → 1 linha de contexto numérico** (não verbal). O badge de período some do card (já existe no filtro global no topo da página).
 
-## Fórmula
+### Microcopy proposta
 
+| Antes | Depois |
+|---|---|
+| "PATRIMÔNIO TOTAL" / "Soma consolidada (BRL) de todos os segmentos" | **"Patrimônio"** + tooltip *"Soma consolidada (BRL) de caixa, bookmakers, contas e wallets."* |
+| "FLUXO LÍQUIDO (PERÍODO)" / "Saques − Depósitos efetivos confirmados…" | **"Fluxo Líquido"** + tooltip *"Saques − Depósitos efetivos no período filtrado."* Linha secundária mostra "Lucro Op. teórico · R$ 7.822" |
+| "RESULTADO LÍQUIDO (PERÍODO)" / "Fluxo Líquido do período menos…" | **"Resultado Líquido"** + tooltip *"Fluxo Líquido − todos os custos (aquisição, comissões, bônus, admin, operadores)."* Linha secundária mostra "Custos · −R$ 73.201" |
+| "MARGEM OPERACIONAL" / "Lucro Op. / (Lucro Op. + Custo de Sustentação)" | **"Margem Op."** + tooltip com a fórmula. Linha secundária mostra "Lucro Op. · R$ 7.822 · Custo · R$ 73.201" para não ficar vazia |
+
+### Hierarquia visual nova de cada card
+
+```text
+┌──────────────────────────────────────┐
+│ Patrimônio                    [ⓘ]   │  ← label sm + tooltip discreto
+│                                       │
+│ R$ 167.236,00                         │  ← valor: 2xl, tabular, tone
+│                                       │
+│ ─────────────────────────────────     │
+│ Δ +R$ 12.430 (30d) ▲                  │  ← linha secundária só com NÚMERO,
+└──────────────────────────────────────┘     ícone sutil, sem prosa
 ```
-Resultado Líquido = Fluxo Líquido (período) − Custo de Sustentação (período)
 
-onde Custo de Sustentação =
-    Custos de Aquisição
-  + Comissões
-  + Bônus
-  + Despesas Administrativas / Infraestrutura
-  + Pagamentos a Operadores (RH)
-```
+- Remover o badge "Todo histórico" de dentro do card (já fica no filtro de período do topo).
+- Tooltip via `Info` 12px à direita do label — discreto, descobrível, não compete.
+- Linha secundária sempre numérica + ícone de tendência, nunca frase descritiva.
+- Valor com `font-variant-numeric: tabular-nums` (já existe) + tamanho `text-3xl` em desktop, `text-2xl` em mobile, para mais presença.
+- Tone (cor) apenas no número principal e na variação; texto secundário permanece em `text-muted-foreground`.
 
-Ambos os termos já são calculados e filtrados pelo mesmo recorte de período em `useFinanceiroCalculations`:
-- `lucroRealizado` (de `useWorkspaceLucroRealizado`) → minuendo
-- `calc.costs.custoSustentacao` → subtraendo
+## Mudanças concretas no código
 
-Nada novo de backend, nenhuma migration.
+### 1. `src/components/financeiro/HeaderKpiCard.tsx`
+- Remover prop `hint` (a frase descritiva embaixo do valor) — substituir por **`tooltip?: ReactNode`** que será mostrado no `Info` icon.
+- Aceitar `label: ReactNode` (já feito) e renderizar com `Info` discreto à direita.
+- Remover prop `periodBadge` deste card (badge passa a viver apenas no header global da página).
+- Aumentar `text-xl md:text-2xl` → `text-2xl md:text-3xl`.
+- Padronizar `secondary` para um slot numérico de 1 linha com `justify-between` + ícone opcional de trend (`TrendingUp` / `TrendingDown`).
 
-## Mudanças
+### 2. `src/pages/Financeiro.tsx` (bloco LINHA 1)
+- Reescrever os 4 `HeaderKpiCard` com a microcopy nova.
+- Mover `periodBadge` para fora do grid de KPIs — exibir uma única vez acima do grid, alinhado à direita, junto do filtro de período (ou remover totalmente se já existe acima).
+- Patrimônio: adicionar `secondary` com variação 30d se já houver `capital_snapshots` disponível; senão, ocultar a linha secundária para esse card específico.
+- Margem Operacional: adicionar `secondary` com "Lucro Op. · valor / Custo · valor" para simetria.
 
-### 1. `src/pages/Financeiro.tsx`
-- Calcular `resultadoLiquido = lucroRealizado - calc.costs.custoSustentacao` dentro do bloco IIFE da Linha 1 (logo após `custoSust`).
-- Trocar o grid de KPIs do header de `md:grid-cols-3` para `md:grid-cols-2 xl:grid-cols-4` e inserir um novo `HeaderKpiCard`:
-  - label: **"Resultado Líquido (período)"**
-  - value: `calc.formatCurrency(resultadoLiquido)`
-  - tone: `positive` se ≥ 0, senão `negative`
-  - icon: `<Wallet />` ou `<TrendingUp />` (reutilizar já importado)
-  - `periodBadge={periodBadge}`
-  - `secondary`: linha "Custos do período" com `−${formatCurrency(custoSust)}` em vermelho discreto, para evidenciar a subtração.
-  - hint/tooltip: "Fluxo Líquido do período menos todos os custos (aquisição, comissões, bônus, administrativos e operadores)."
-
-### 2. Tooltip explicativo
-Adicionar `Info` icon com `TooltipProvider/Tooltip` no card novo, deixando explícito que **não é** o mesmo que Lucro Operacional (teórico) nem Lucro Real (contábil), e sim o efeito caixa pós-custos no recorte filtrado.
-
-### 3. Teste de regressão
-Em `src/components/__tests__/` (ou novo arquivo `Financeiro.resultadoLiquido.test.tsx`), validar apenas a função pura:
-```ts
-expect(calcResultadoLiquido(10000, 5000)).toBe(5000);
-expect(calcResultadoLiquido(-2000, 3000)).toBe(-5000);
-```
-Extrair `calcResultadoLiquido(fluxo, custos) = fluxo - custos` para um util em `src/lib/finance/resultadoLiquido.ts` e usar no Financeiro — garante reuso e facilita o teste.
+### 3. Tokens / estilo
+- Não criar cores novas. Reaproveitar `text-emerald-600/400`, `text-red-600/400`, `text-muted-foreground`, `border-border/40`.
+- Reduzir `min-h-[96px]` → `min-h-[120px]` para acomodar respiro novo sem squish.
+- Aumentar `p-4` → `p-5` no card.
 
 ## Fora de escopo
-- Quebrar custo em "operacional vs administrativo vs imposto" no card (composição já existe no `ComposicaoCustosCard` abaixo).
-- Adicionar coluna de impostos separada (não há modelo de impostos hoje no banco).
-- Mudar `lucroRealizado`, `custoSustentacao` ou qualquer regra de período.
-- Persistir snapshot do indicador (é derivado, sempre recalculável).
+- Adicionar mini-sparkline (precisaria de série temporal nova).
+- Trocar fonte do projeto.
+- Refatorar o badge global de período (só removemos do card).
+- Mudar fórmulas / fonte de dados — apenas apresentação.
 
-## Validação visual
-1. Selecionar um mês com despesas conhecidas → conferir `Resultado Líquido = Fluxo Líquido − soma da Composição de Custos` exibida logo abaixo.
-2. Período sem custos → `Resultado Líquido === Fluxo Líquido`.
-3. Período só com custos (sem saque/aporte) → `Resultado Líquido` fica negativo igual a `−custoSustentacao`.
+## Validação
+1. Hover em cada `Info` → tooltip claro em linguagem de negócio (nunca menciona nome de coluna como `data_transacao`).
+2. Cards alinhados em altura mesmo quando a linha secundária está ausente (Patrimônio sem variação).
+3. Em mobile (`md` quebrado), grid vira 1 coluna sem texto secundário transbordando.
+4. Sem badge "Todo histórico" duplicado dentro dos cards.
 
 Posso aplicar?

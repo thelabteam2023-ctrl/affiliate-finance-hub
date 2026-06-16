@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useFinanceiroData } from "@/hooks/useFinanceiroData";
 import { useFinanceiroCalculations } from "@/hooks/useFinanceiroCalculations";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { useMultiCurrencyConversion } from "@/hooks/useMultiCurrencyConversion";
@@ -28,7 +29,6 @@ import {
 import {
   Tooltip as ShadcnTooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { KpiExplanationDialog, KpiType } from "@/components/financeiro/KpiExplanationDialog";
@@ -38,7 +38,7 @@ import { PeriodScopeBadge } from "@/components/financeiro/PeriodScopeBadge";
 import { ExposicaoFinanceiraCard } from "@/components/financeiro/ExposicaoFinanceiraCard";
 import { PosicaoCapital } from "@/components/caixa/PosicaoCapital";
 import { useCapitalEmDisputa } from "@/hooks/useCapitalEmDisputa";
-import { Wallet, TrendingUp, Percent, Coins, Info } from "lucide-react";
+import { Wallet, TrendingUp, Percent, Coins } from "lucide-react";
 import { ParticipacaoInvestidoresTab } from "@/components/financeiro/ParticipacaoInvestidoresTab";
 import { MultiCurrencyWarningBanner } from "@/components/financeiro/MultiCurrencyIndicator";
 import { FinanceiroDespesasTab } from "@/components/financeiro/FinanceiroDespesasTab";
@@ -270,84 +270,91 @@ export default function Financeiro() {
                 ? (lucroOperacionalApostas / (lucroOperacionalApostas + custoSust)) * 100
                 : 0;
             const resultadoLiquido = calcResultadoLiquido(lucroRealizado, custoSust);
+
+            const SecondaryRow = ({
+              label,
+              value,
+              tone = "default",
+            }: {
+              label: string;
+              value: string;
+              tone?: "default" | "positive" | "negative";
+            }) => (
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-muted-foreground">{label}</span>
+                <span
+                  className={cn(
+                    "font-semibold tabular-nums",
+                    tone === "positive" && "text-emerald-600 dark:text-emerald-400",
+                    tone === "negative" && "text-red-600 dark:text-red-400",
+                    tone === "default" && "text-foreground/80",
+                  )}
+                >
+                  {value}
+                </span>
+              </div>
+            );
+
             return (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
-                <HeaderKpiCard
-                  label="Patrimônio Total"
-                  value={calc.formatCurrency(patrimonioTotal)}
-                  hint="Soma consolidada (BRL) de todos os segmentos"
-                  icon={<Wallet className="h-4 w-4" />}
-                />
-                <HeaderKpiCard
-                  label={
-                    lucroRealizado >= 0
-                      ? "Fluxo Líquido (período)"
-                      : "Fluxo Líquido (período)"
-                  }
-                  value={calc.formatCurrency(lucroRealizado)}
-                  hint="Saques − Depósitos efetivos confirmados dentro do período selecionado (data_transacao)."
-                  icon={<TrendingUp className="h-4 w-4" />}
-                  tone={lucroRealizado >= 0 ? "positive" : "negative"}
-                  periodBadge={periodBadge}
-                  secondary={
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-muted-foreground">
-                        Lucro Operacional <span className="opacity-60">(teórico)</span>
-                      </span>
-                      <span
-                        className={`font-semibold tabular-nums ${
-                          lucroOperacionalApostas >= 0
-                            ? "text-emerald-600 dark:text-emerald-400"
-                            : "text-red-600 dark:text-red-400"
-                        }`}
-                      >
-                        {calc.formatCurrency(lucroOperacionalApostas)}
-                      </span>
-                    </div>
-                  }
-                />
-                <HeaderKpiCard
-                  label={
-                    <TooltipProvider delayDuration={150}>
-                      <ShadcnTooltip>
-                        <TooltipTrigger asChild>
-                          <span className="inline-flex items-center gap-1 cursor-help">
-                            Resultado Líquido (período)
-                            <Info className="h-3 w-3 opacity-50" />
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-[280px] text-xs normal-case tracking-normal">
-                          <strong>Fluxo Líquido − Custo de Sustentação</strong> do mesmo
-                          período. Mostra quanto efetivamente sobrou após pagar todos os
-                          custos (aquisição, comissões, bônus, despesas administrativas
-                          e operadores). Não confundir com Lucro Operacional (teórico)
-                          nem com Lucro Real bruto.
-                        </TooltipContent>
-                      </ShadcnTooltip>
-                    </TooltipProvider>
-                  }
-                  value={calc.formatCurrency(resultadoLiquido)}
-                  hint="Fluxo Líquido do período menos todos os custos da operação."
-                  icon={<Coins className="h-4 w-4" />}
-                  tone={resultadoLiquido >= 0 ? "positive" : "negative"}
-                  periodBadge={periodBadge}
-                  secondary={
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-muted-foreground">Custos do período</span>
-                      <span className="font-semibold tabular-nums text-red-600 dark:text-red-400">
-                        −{calc.formatCurrency(custoSust)}
-                      </span>
-                    </div>
-                  }
-                />
-                <HeaderKpiCard
-                  label="Margem Operacional"
-                  value={`${margemOp.toFixed(1)}%`}
-                  hint="Lucro Op. / (Lucro Op. + Custo de Sustentação)"
-                  icon={<Percent className="h-4 w-4" />}
-                  tone={margemOp >= 50 ? "positive" : margemOp > 0 ? "warning" : "negative"}
-                  periodBadge={periodBadge}
-                />
+              <div className="space-y-3">
+                <div className="flex items-center justify-end">{periodBadge}</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
+                  <HeaderKpiCard
+                    label="Patrimônio"
+                    value={calc.formatCurrency(patrimonioTotal)}
+                    tooltip="Soma consolidada em BRL de caixa operacional, saldos em bookmakers, contas de parceiros e wallets cripto."
+                    icon={<Wallet className="h-4 w-4" />}
+                  />
+                  <HeaderKpiCard
+                    label="Fluxo Líquido"
+                    value={calc.formatCurrency(lucroRealizado)}
+                    tooltip="Saques menos depósitos efetivos confirmados dentro do período filtrado. Mede o caixa que efetivamente entrou ou saiu da operação."
+                    icon={<TrendingUp className="h-4 w-4" />}
+                    tone={lucroRealizado >= 0 ? "positive" : "negative"}
+                    secondary={
+                      <SecondaryRow
+                        label="Lucro Op. teórico"
+                        value={calc.formatCurrency(lucroOperacionalApostas)}
+                        tone={lucroOperacionalApostas >= 0 ? "positive" : "negative"}
+                      />
+                    }
+                  />
+                  <HeaderKpiCard
+                    label="Resultado Líquido"
+                    value={calc.formatCurrency(resultadoLiquido)}
+                    tooltip={
+                      <>
+                        <strong>Fluxo Líquido − Custo de Sustentação</strong> do período.
+                        Mostra quanto efetivamente sobrou após pagar todos os custos
+                        (aquisição, comissões, bônus, despesas administrativas e
+                        operadores). Não se confunde com Lucro Operacional teórico nem
+                        com Lucro Real bruto.
+                      </>
+                    }
+                    icon={<Coins className="h-4 w-4" />}
+                    tone={resultadoLiquido >= 0 ? "positive" : "negative"}
+                    secondary={
+                      <SecondaryRow
+                        label="Custos"
+                        value={`−${calc.formatCurrency(custoSust)}`}
+                        tone="negative"
+                      />
+                    }
+                  />
+                  <HeaderKpiCard
+                    label="Margem Op."
+                    value={`${margemOp.toFixed(1)}%`}
+                    tooltip="Lucro Operacional ÷ (Lucro Operacional + Custo de Sustentação). Indica a eficiência teórica da operação antes de fluxo de caixa."
+                    icon={<Percent className="h-4 w-4" />}
+                    tone={margemOp >= 50 ? "positive" : margemOp > 0 ? "warning" : "negative"}
+                    secondary={
+                      <SecondaryRow
+                        label="Lucro Op. / Custo"
+                        value={`${calc.formatCurrency(lucroOperacionalApostas)} / ${calc.formatCurrency(custoSust)}`}
+                      />
+                    }
+                  />
+                </div>
               </div>
             );
           })()}
