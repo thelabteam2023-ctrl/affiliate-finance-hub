@@ -4,7 +4,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useFinanceiroData } from "@/hooks/useFinanceiroData";
 import { useFinanceiroCalculations } from "@/hooks/useFinanceiroCalculations";
-import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { useMultiCurrencyConversion } from "@/hooks/useMultiCurrencyConversion";
@@ -17,6 +16,7 @@ import { DashboardPeriodFilterBar } from "@/components/shared/DashboardPeriodFil
 import {
   DashboardPeriodFilter,
   getDashboardDateRangeAsStrings,
+  getDashboardPeriodDescription,
 } from "@/types/dashboardFilters";
 import { useTopBar } from "@/contexts/TopBarContext";
 import {
@@ -33,11 +33,11 @@ import {
 } from "@/components/ui/tooltip";
 import { KpiExplanationDialog, KpiType } from "@/components/financeiro/KpiExplanationDialog";
 import { ComposicaoCustosCard } from "@/components/financeiro/ComposicaoCustosCard";
-import { HeaderKpiCard } from "@/components/financeiro/HeaderKpiCard";
 import { PeriodScopeBadge } from "@/components/financeiro/PeriodScopeBadge";
 import { ExposicaoFinanceiraCard } from "@/components/financeiro/ExposicaoFinanceiraCard";
 import { PosicaoCapital } from "@/components/caixa/PosicaoCapital";
 import { useCapitalEmDisputa } from "@/hooks/useCapitalEmDisputa";
+import { useExposicaoFinanceira } from "@/hooks/useExposicaoFinanceira";
 import { Wallet, TrendingUp, Percent, Coins } from "lucide-react";
 import { ParticipacaoInvestidoresTab } from "@/components/financeiro/ParticipacaoInvestidoresTab";
 import { MultiCurrencyWarningBanner } from "@/components/financeiro/MultiCurrencyIndicator";
@@ -47,6 +47,8 @@ import { calcResultadoLiquido } from "@/lib/finance/resultadoLiquido";
 import { calcMargemOperacional } from "@/lib/finance/margemOperacional";
 import { FluxoLiquidoDetalheDialog } from "@/components/financeiro/FluxoLiquidoDetalheDialog";
 import { CustosDetalheDialog } from "@/components/financeiro/CustosDetalheDialog";
+import { KpiRail, type KpiRailItem } from "@/components/financeiro/KpiRail";
+import { AlertStrip } from "@/components/financeiro/AlertStrip";
 
 export default function Financeiro() {
   const navigate = useNavigate();
@@ -150,6 +152,19 @@ export default function Financeiro() {
 
   // Capital em disputa (para sobreposição no donut da Posição de Capital)
   const { bySegment: capitalEmDisputa } = useCapitalEmDisputa();
+
+  // Exposição (para o AlertStrip)
+  const exposicao = useExposicaoFinanceira({
+    dataInicio: dataInicio || null,
+    dataFim: dataFim || null,
+  });
+
+  // Label de período para o KpiRail
+  const periodLabel = useMemo(() => {
+    const d = getDashboardPeriodDescription(periodoPreset, customRange);
+    if (d.monthName) return d.monthName.replace(/^./, (c) => c.toUpperCase());
+    return d.shortLabel;
+  }, [periodoPreset, customRange]);
 
   const periodBadge = (
     <PeriodScopeBadge scope="periodo" filter={periodoPreset} customRange={customRange} />
@@ -262,8 +277,7 @@ export default function Financeiro() {
           </TabsList>
         </div>
 
-        <TabsContent value="overview" className="space-y-4 md:space-y-6">
-          {/* LINHA 1: Header KPIs */}
+        <TabsContent value="overview" className="space-y-0">
           {(() => {
             const patrimonioTotal =
               calc.saldos.capitalOperacional +
@@ -273,169 +287,134 @@ export default function Financeiro() {
             const custoSust = calc.costs.custoSustentacao;
             const resultadoLiquido = calcResultadoLiquido(lucroRealizado, custoSust);
             const margemOp = calcMargemOperacional(lucroRealizado, custoSust);
-            const margemTone: "positive" | "warning" | "negative" | "default" =
+            const margemTone =
               margemOp === null
                 ? "default"
-                : margemOp >= 30
+                : margemOp >= 70
                   ? "positive"
-                  : margemOp > 0
+                  : margemOp >= 50
                     ? "warning"
                     : "negative";
 
-            const SecondaryRow = ({
-              label,
-              value,
-              tone = "default",
-            }: {
-              label: string;
-              value: string;
-              tone?: "default" | "positive" | "negative";
-            }) => (
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-muted-foreground">{label}</span>
-                <span
-                  className={cn(
-                    "font-semibold tabular-nums",
-                    tone === "positive" && "text-emerald-600 dark:text-emerald-400",
-                    tone === "negative" && "text-red-600 dark:text-red-400",
-                    tone === "default" && "text-foreground/80",
-                  )}
-                >
-                  {value}
-                </span>
-              </div>
-            );
+            const kpiItems: KpiRailItem[] = [
+              {
+                id: "patrimonio",
+                label: "Patrimônio",
+                value: calc.formatCurrency(patrimonioTotal),
+                icon: <Wallet className="h-3 w-3" />,
+                valueTone: "default",
+                activeTone: "none",
+                tooltip: (
+                  <div className="space-y-2 max-w-[260px]">
+                    <p>Todo o capital posicionado na operação hoje, somado em reais.</p>
+                    <div className="rounded-md bg-muted/60 px-2 py-1.5 font-mono text-[11px]">
+                      Caixa + Bookmakers + Parceiros + Cripto
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                id: "fluxo",
+                label: "Fluxo Líquido",
+                value: calc.formatCurrency(lucroRealizado),
+                icon: <TrendingUp className="h-3 w-3" />,
+                valueTone: lucroRealizado >= 0 ? "positive" : "negative",
+                activeTone: lucroRealizado >= 0 ? "positive" : "negative",
+                onClick: () => setFluxoDetalheOpen(true),
+                tooltip: (
+                  <div className="space-y-2 max-w-[260px]">
+                    <p>Caixa que de fato saiu dos projetos no período.</p>
+                    <div className="rounded-md bg-muted/60 px-2 py-1.5 font-mono text-[11px]">
+                      Saques − Depósitos
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                id: "resultado",
+                label: "Resultado Líquido",
+                value: calc.formatCurrency(resultadoLiquido),
+                icon: <Coins className="h-3 w-3" />,
+                valueTone: resultadoLiquido >= 0 ? "positive" : "negative",
+                activeTone: resultadoLiquido >= 0 ? "positive" : "negative",
+                onClick: () => setCustosDetalheOpen(true),
+                tooltip: (
+                  <div className="space-y-2 max-w-[260px]">
+                    <p>O que sobrou depois de pagar todos os custos do período.</p>
+                    <div className="rounded-md bg-muted/60 px-2 py-1.5 font-mono text-[11px]">
+                      Fluxo Líquido − Custos
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                id: "margem",
+                label: "Margem Operacional",
+                value: margemOp === null ? "—" : `${margemOp.toFixed(1)}%`,
+                icon: <Percent className="h-3 w-3" />,
+                valueTone: margemTone as any,
+                activeTone: margemTone === "warning" ? "warning" : "none",
+                tooltip: (
+                  <div className="space-y-2 max-w-[260px]">
+                    <p>De cada R$ 1 movimentado, quanto sobrou depois dos custos.</p>
+                    <p className="text-muted-foreground">≥70% saudável · 50–69% atenção · &lt;50% crítico.</p>
+                  </div>
+                ),
+              },
+            ];
 
             return (
-              <div className="space-y-3">
-                <div className="flex items-center justify-end">{periodBadge}</div>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
-                  <HeaderKpiCard
-                    label="Patrimônio"
-                    value={calc.formatCurrency(patrimonioTotal)}
-                    tooltip={
-                      <div className="space-y-2 max-w-[280px]">
-                        <p>
-                          Todo o capital posicionado na operação hoje, somado em reais.
-                        </p>
-                        <div className="rounded-md bg-muted/60 px-2 py-1.5 font-mono text-[11px] text-foreground/90">
-                          Caixa + Bookmakers + Parceiros + Cripto
-                        </div>
-                      </div>
-                    }
-                    icon={<Wallet className="h-4 w-4" />}
+              <div className="flex flex-col lg:flex-row gap-0 lg:gap-0 items-stretch">
+                <KpiRail periodLabel={periodLabel} items={kpiItems} />
+
+                <div className="flex-1 min-w-0 flex flex-col">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 p-4 md:p-5">
+                    <div className="lg:col-span-2">
+                      <PosicaoCapital
+                        saldosFiat={posicaoCapitalProps.saldosFiat}
+                        saldoCaixaCrypto={posicaoCapitalProps.saldoCaixaCrypto}
+                        saldosBookmakers={posicaoCapitalProps.saldosBookmakers}
+                        saldosBroker={posicaoCapitalProps.saldosBroker}
+                        saldosContasParceiros={posicaoCapitalProps.saldosContasParceiros}
+                        saldoWalletsParceiros={posicaoCapitalProps.saldoWalletsParceiros}
+                        cotacaoUSD={cotacaoUSD}
+                        capitalEmDisputa={capitalEmDisputa}
+                      />
+                    </div>
+                    <ExposicaoFinanceiraCard
+                      dataInicio={dataInicio || null}
+                      dataFim={dataFim || null}
+                      formatCurrency={calc.formatCurrency}
+                      periodBadge={periodBadge}
+                      realtimeBadge={realtimeBadge}
+                    />
+                  </div>
+
+                  <AlertStrip
+                    emDisputa={exposicao.totalEmDisputa}
+                    perdasConfirmadas={exposicao.totalPerdasPeriodo}
+                    qtdOcorrencias={exposicao.countPerdas}
+                    formatCurrency={calc.formatCurrency}
                   />
-                  <HeaderKpiCard
-                    label="Fluxo Líquido"
-                    value={calc.formatCurrency(lucroRealizado)}
-                    tooltip={
-                      <div className="space-y-2 max-w-[280px]">
-                        <p>
-                          O caixa que de fato saiu dos projetos no período — quanto
-                          você retirou a mais do que precisou repor.
-                        </p>
-                        <p className="text-muted-foreground">
-                          Positivo: a operação está devolvendo dinheiro. Negativo:
-                          você colocou mais do que tirou.
-                        </p>
-                        <div className="rounded-md bg-muted/60 px-2 py-1.5 font-mono text-[11px] text-foreground/90">
-                          Saques dos projetos − Depósitos nos projetos
-                        </div>
-                      </div>
-                    }
-                    icon={<TrendingUp className="h-4 w-4" />}
-                    tone={lucroRealizado >= 0 ? "positive" : "negative"}
-                    onDetailClick={() => setFluxoDetalheOpen(true)}
-                    detailLabel="Comparar com teórico"
-                  />
-                  <HeaderKpiCard
-                    label="Resultado Líquido"
-                    value={calc.formatCurrency(resultadoLiquido)}
-                    tooltip={
-                      <div className="space-y-2 max-w-[280px]">
-                        <p>
-                          O que sobrou no bolso depois de pagar todos os custos do
-                          período: operadores, comissões, bônus e infraestrutura.
-                        </p>
-                        <p className="text-muted-foreground">
-                          É o lucro real do período — o que aumentou seu patrimônio
-                          de fato.
-                        </p>
-                        <div className="rounded-md bg-muted/60 px-2 py-1.5 font-mono text-[11px] text-foreground/90">
-                          Fluxo Líquido − Custos do período
-                        </div>
-                      </div>
-                    }
-                    icon={<Coins className="h-4 w-4" />}
-                    tone={resultadoLiquido >= 0 ? "positive" : "negative"}
-                    onDetailClick={() => setCustosDetalheOpen(true)}
-                    detailLabel="Ver custos"
-                  />
-                  <HeaderKpiCard
-                    label="Margem Operacional"
-                    value={margemOp === null ? "—" : `${margemOp.toFixed(1)}%`}
-                    tooltip={
-                      <div className="space-y-2 max-w-[280px]">
-                        <p>
-                          De cada R$ 1 movimentado na operação, quanto sobrou para
-                          você depois dos custos. Quanto maior, mais eficiente foi o
-                          período.
-                        </p>
-                        <p className="text-muted-foreground">
-                          Acima de 30% é saudável. Negativo significa que os custos
-                          comeram tudo que entrou.
-                        </p>
-                        <div className="rounded-md bg-muted/60 px-2 py-1.5 font-mono text-[11px] text-foreground/90">
-                          Fluxo Líquido ÷ (Fluxo Líquido + Custos)
-                        </div>
-                      </div>
-                    }
-                    icon={<Percent className="h-4 w-4" />}
-                    tone={margemTone}
-                  />
+
+                  <div ref={composicaoCustosRef} className="p-4 md:p-5 scroll-mt-24">
+                    <ComposicaoCustosCard
+                      categorias={calc.composicaoCustos}
+                      totalAtual={calc.costs.custoSustentacao}
+                      totalAnterior={calc.totalCustosAnterior}
+                      formatCurrency={calc.formatCurrency}
+                      custosAquisicaoDetalhes={calc.custosAquisicaoDetalhes}
+                      comissoesDetalhes={calc.comissoesDetalhes}
+                      bonusDetalhes={calc.bonusDetalhes}
+                      infraestruturaDetalhes={calc.infraestruturaDetalhes}
+                      operadoresDetalhes={calc.operadoresDetalhes}
+                      periodBadge={periodBadge}
+                    />
+                  </div>
                 </div>
               </div>
             );
           })()}
-
-          {/* LINHA 2: Posição de Capital (reaproveitada do Caixa Operacional) + Exposição & Perdas */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-            <div className="lg:col-span-2">
-              <PosicaoCapital
-                saldosFiat={posicaoCapitalProps.saldosFiat}
-                saldoCaixaCrypto={posicaoCapitalProps.saldoCaixaCrypto}
-                saldosBookmakers={posicaoCapitalProps.saldosBookmakers}
-                saldosBroker={posicaoCapitalProps.saldosBroker}
-                saldosContasParceiros={posicaoCapitalProps.saldosContasParceiros}
-                saldoWalletsParceiros={posicaoCapitalProps.saldoWalletsParceiros}
-                cotacaoUSD={cotacaoUSD}
-                capitalEmDisputa={capitalEmDisputa}
-              />
-            </div>
-            <ExposicaoFinanceiraCard
-              dataInicio={dataInicio || null}
-              dataFim={dataFim || null}
-              formatCurrency={calc.formatCurrency}
-              periodBadge={periodBadge}
-              realtimeBadge={realtimeBadge}
-            />
-          </div>
-
-          {/* LINHA 3: Composição de Custos (largura total) */}
-          <div ref={composicaoCustosRef} className="grid grid-cols-1 gap-4 md:gap-6 scroll-mt-24">
-            <ComposicaoCustosCard
-              categorias={calc.composicaoCustos}
-              totalAtual={calc.costs.custoSustentacao}
-              totalAnterior={calc.totalCustosAnterior}
-              formatCurrency={calc.formatCurrency}
-              custosAquisicaoDetalhes={calc.custosAquisicaoDetalhes}
-              comissoesDetalhes={calc.comissoesDetalhes}
-              bonusDetalhes={calc.bonusDetalhes}
-              infraestruturaDetalhes={calc.infraestruturaDetalhes}
-              operadoresDetalhes={calc.operadoresDetalhes}
-              periodBadge={periodBadge}
-            />
-          </div>
 
           <FluxoLiquidoDetalheDialog
             open={fluxoDetalheOpen}
