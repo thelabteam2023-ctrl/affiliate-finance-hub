@@ -50,7 +50,7 @@ import { KpiRail, type KpiRailItem } from "@/components/financeiro/KpiRail";
 import { useFinanceiroMensal } from "@/hooks/useFinanceiroMensal";
 import { GraficoMensalDialog } from "@/components/financeiro/GraficoMensalDialog";
 import { Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { LineChart } from "lucide-react";
 
 export default function Financeiro() {
   const navigate = useNavigate();
@@ -255,19 +255,6 @@ export default function Financeiro() {
         onCustomRangeChange={setCustomRange}
       />
 
-      <div className="flex justify-end">
-        <Button
-          size="sm"
-          variant="default"
-          onClick={() => setGraficoMensalOpen(true)}
-          className="gap-2"
-        >
-          <Sparkles className="h-4 w-4" />
-          Gerar Gráfico Mensal
-        </Button>
-      </div>
-
-
       <Tabs value={activeFinanceiroTab} onValueChange={setActiveFinanceiroTab} className="space-y-4 md:space-y-6">
         {/* Sticky tab bar - mobile optimized */}
         <div className="sticky top-0 z-30 -mx-3 px-3 md:-mx-6 md:px-6 py-2 bg-background/95 backdrop-blur-sm border-b border-border/50">
@@ -382,7 +369,25 @@ export default function Financeiro() {
 
             return (
               <div className="flex flex-col lg:flex-row gap-0 lg:gap-0 items-stretch">
-                <KpiRail periodLabel={periodLabel} items={kpiItems} />
+                <KpiRail
+                  periodLabel={periodLabel}
+                  items={kpiItems}
+                  footer={
+                    <button
+                      type="button"
+                      onClick={() => setGraficoMensalOpen(true)}
+                      className="group w-full flex items-center gap-2 rounded-md px-2 py-2 text-[11px] font-medium text-muted-foreground/80 hover:text-foreground hover:bg-foreground/[0.04] transition-all duration-200 border border-transparent hover:border-border/40"
+                      title="Abrir análise mês a mês"
+                    >
+                      <span className="relative flex h-6 w-6 items-center justify-center rounded-md bg-foreground/[0.04] group-hover:bg-primary/10 transition-colors">
+                        <LineChart className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                        <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-500/80 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </span>
+                      <span className="flex-1 text-left tracking-tight">Análise Temporal</span>
+                      <Sparkles className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity" />
+                    </button>
+                  }
+                />
 
                 <div className="flex-1 min-w-0 flex flex-col">
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 p-4 md:p-5">
