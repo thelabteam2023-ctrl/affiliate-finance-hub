@@ -56,6 +56,7 @@ export function useCentralAlertsCount() {
             .from("operadores")
             .select("id")
             .eq("auth_user_id", user.id)
+            .eq("workspace_id", workspaceId)
             .single();
 
           if (operadorData) {

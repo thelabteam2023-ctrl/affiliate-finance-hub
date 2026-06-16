@@ -16361,6 +16361,14 @@ export type Database = {
         Returns: string
       }
       end_user_session: { Args: { p_user_id: string }; Returns: number }
+      ensure_operador_for_user: {
+        Args: {
+          _auth_user_id: string
+          _fallback_nome?: string
+          _workspace_id: string
+        }
+        Returns: string
+      }
       estornar_freebet: {
         Args: {
           p_bookmaker_id: string
