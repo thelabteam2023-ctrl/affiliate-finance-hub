@@ -308,25 +308,23 @@ export default function Financeiro() {
                 />
                 <HeaderKpiCard
                   label={
-                    (
-                      <TooltipProvider delayDuration={150}>
-                        <ShadcnTooltip>
-                          <TooltipTrigger asChild>
-                            <span className="inline-flex items-center gap-1 cursor-help">
-                              Resultado Líquido (período)
-                              <Info className="h-3 w-3 opacity-50" />
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="max-w-[280px] text-xs">
-                            <strong>Fluxo Líquido − Custo de Sustentação</strong> do mesmo
-                            período. Mostra quanto efetivamente sobrou após pagar todos os
-                            custos (aquisição, comissões, bônus, despesas administrativas
-                            e operadores). Não confundir com Lucro Operacional (teórico)
-                            nem com Lucro Real bruto.
-                          </TooltipContent>
-                        </ShadcnTooltip>
-                      </TooltipProvider>
-                    ) as unknown as string
+                    <TooltipProvider delayDuration={150}>
+                      <ShadcnTooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex items-center gap-1 cursor-help">
+                            Resultado Líquido (período)
+                            <Info className="h-3 w-3 opacity-50" />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-[280px] text-xs normal-case tracking-normal">
+                          <strong>Fluxo Líquido − Custo de Sustentação</strong> do mesmo
+                          período. Mostra quanto efetivamente sobrou após pagar todos os
+                          custos (aquisição, comissões, bônus, despesas administrativas
+                          e operadores). Não confundir com Lucro Operacional (teórico)
+                          nem com Lucro Real bruto.
+                        </TooltipContent>
+                      </ShadcnTooltip>
+                    </TooltipProvider>
                   }
                   value={calc.formatCurrency(resultadoLiquido)}
                   hint="Fluxo Líquido do período menos todos os custos da operação."
