@@ -332,13 +332,6 @@ export default function Financeiro() {
             <ExposicaoFinanceiraCard
               dataInicio={dataInicio || null}
               dataFim={dataFim || null}
-              patrimonioTotal={
-                calc.saldos.capitalOperacional +
-                calc.saldos.saldoBookmakers +
-                calc.saldos.totalContasParceiros +
-                calc.saldos.totalWalletsParceiros
-              }
-              fluxoLiquidoPeriodo={lucroRealizado}
               formatCurrency={calc.formatCurrency}
               periodBadge={periodBadge}
               realtimeBadge={realtimeBadge}
