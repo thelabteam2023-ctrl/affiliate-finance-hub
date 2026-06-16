@@ -25,6 +25,7 @@ export interface KpiRailItem {
 interface KpiRailProps {
   periodLabel: string;
   items: KpiRailItem[];
+  footer?: ReactNode;
 }
 
 const VALUE_TONE: Record<NonNullable<KpiRailItem["valueTone"]>, string> = {
@@ -41,7 +42,7 @@ const ACTIVE_TONE: Record<NonNullable<KpiRailItem["activeTone"]>, string> = {
   negative: "border-l-red-500 bg-red-500/[0.04]",
 };
 
-export function KpiRail({ periodLabel, items }: KpiRailProps) {
+export function KpiRail({ periodLabel, items, footer }: KpiRailProps) {
   return (
     <aside
       className={cn(
@@ -109,6 +110,11 @@ export function KpiRail({ periodLabel, items }: KpiRailProps) {
           );
         })}
       </div>
+      {footer ? (
+        <div className="px-3.5 pt-3 pb-3 lg:border-t lg:border-border/20">
+          {footer}
+        </div>
+      ) : null}
     </aside>
   );
 }
