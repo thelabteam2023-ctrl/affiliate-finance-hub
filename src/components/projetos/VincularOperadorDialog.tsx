@@ -201,7 +201,7 @@ export function VincularOperadorDialog({
             auth_user_id: formData.selected_user_id,
             workspace_id: workspaceId,
             user_id: session.session.user.id,
-            nome: selectedUser?.display_name || "Operador",
+            nome: selectedUser?.full_name || selectedUser?.display_name || selectedUser?.email || "Sem nome",
             email: selectedUser?.email,
             cpf: selectedUser?.cpf,
             status: "ATIVO",
