@@ -308,21 +308,36 @@ export default function Financeiro() {
                   <HeaderKpiCard
                     label="Patrimônio"
                     value={calc.formatCurrency(patrimonioTotal)}
-                    tooltip="Soma consolidada em BRL de caixa operacional, saldos em bookmakers, contas de parceiros e wallets cripto."
+                    tooltip={
+                      <div className="space-y-2 max-w-[280px]">
+                        <p>
+                          Tudo o que você tem hoje, somado em reais. É a foto atual do
+                          dinheiro disponível na operação.
+                        </p>
+                        <div className="rounded-md bg-muted/60 px-2 py-1.5 font-mono text-[11px] text-foreground/90">
+                          Caixa + Bookmakers + Parceiros + Cripto
+                        </div>
+                      </div>
+                    }
                     icon={<Wallet className="h-4 w-4" />}
                   />
                   <HeaderKpiCard
                     label="Fluxo Líquido"
                     value={calc.formatCurrency(lucroRealizado)}
                     tooltip={
-                      <>
-                        Considera apenas movimentações dos <strong>projetos</strong>
-                        {" "}(saques menos depósitos efetivos confirmados) dentro do
-                        período filtrado. Mede o caixa que de fato entrou ou saiu da
-                        operação dos projetos — não inclui transferências internas,
-                        custos administrativos nem patrimônio parado.{" "}
-                        <strong>É a base da Margem Operacional.</strong>
-                      </>
+                      <div className="space-y-2 max-w-[280px]">
+                        <p>
+                          O caixa que de fato saiu dos projetos no período — quanto
+                          você retirou a mais do que precisou repor.
+                        </p>
+                        <p className="text-muted-foreground">
+                          Positivo: a operação está devolvendo dinheiro. Negativo:
+                          você colocou mais do que tirou.
+                        </p>
+                        <div className="rounded-md bg-muted/60 px-2 py-1.5 font-mono text-[11px] text-foreground/90">
+                          Saques dos projetos − Depósitos nos projetos
+                        </div>
+                      </div>
                     }
                     icon={<TrendingUp className="h-4 w-4" />}
                     tone={lucroRealizado >= 0 ? "positive" : "negative"}
@@ -338,13 +353,19 @@ export default function Financeiro() {
                     label="Resultado Líquido"
                     value={calc.formatCurrency(resultadoLiquido)}
                     tooltip={
-                      <>
-                        <strong>Fluxo Líquido − Custo de Sustentação</strong> do período.
-                        Mostra quanto efetivamente sobrou após pagar todos os custos
-                        (aquisição, comissões, bônus, despesas administrativas e
-                        operadores). Não se confunde com Lucro Operacional teórico nem
-                        com Lucro Real bruto.
-                      </>
+                      <div className="space-y-2 max-w-[280px]">
+                        <p>
+                          O que sobrou no bolso depois de pagar todos os custos do
+                          período: operadores, comissões, bônus e infraestrutura.
+                        </p>
+                        <p className="text-muted-foreground">
+                          É o lucro real do período — o que aumentou seu patrimônio
+                          de fato.
+                        </p>
+                        <div className="rounded-md bg-muted/60 px-2 py-1.5 font-mono text-[11px] text-foreground/90">
+                          Fluxo Líquido − Custos do período
+                        </div>
+                      </div>
                     }
                     icon={<Coins className="h-4 w-4" />}
                     tone={resultadoLiquido >= 0 ? "positive" : "negative"}
@@ -357,9 +378,24 @@ export default function Financeiro() {
                     }
                   />
                   <HeaderKpiCard
-                    label="Margem Op."
+                    label="Margem Operacional"
                     value={margemOp === null ? "—" : `${margemOp.toFixed(1)}%`}
-                    tooltip="Fluxo Líquido ÷ (Fluxo Líquido + Custo de Sustentação). Mede quanto do caixa efetivamente sacado dos projetos sobrou após pagar todos os custos do período. Não usa lucro teórico — só dinheiro que de fato saiu da operação."
+                    tooltip={
+                      <div className="space-y-2 max-w-[280px]">
+                        <p>
+                          De cada R$ 1 movimentado na operação, quanto sobrou para
+                          você depois dos custos. Quanto maior, mais eficiente foi o
+                          período.
+                        </p>
+                        <p className="text-muted-foreground">
+                          Acima de 30% é saudável. Negativo significa que os custos
+                          comeram tudo que entrou.
+                        </p>
+                        <div className="rounded-md bg-muted/60 px-2 py-1.5 font-mono text-[11px] text-foreground/90">
+                          Fluxo Líquido ÷ (Fluxo Líquido + Custos)
+                        </div>
+                      </div>
+                    }
                     icon={<Percent className="h-4 w-4" />}
                     tone={margemTone}
                     secondary={
