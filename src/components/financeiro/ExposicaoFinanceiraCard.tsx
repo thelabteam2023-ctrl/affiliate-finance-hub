@@ -98,9 +98,6 @@ const CATEGORIA_META: Record<
 interface Props {
   dataInicio: string | null;
   dataFim: string | null;
-  patrimonioTotal: number;
-  /** Fluxo Líquido do período (Saques − Depósitos efetivos no intervalo). Usado como base do % de perdas. */
-  fluxoLiquidoPeriodo: number;
   formatCurrency: (value: number, currency?: string) => string;
   /** Badge "Período ativo" (passado pelo container) */
   periodBadge?: ReactNode;
@@ -119,23 +116,12 @@ type DrillKey =
 export function ExposicaoFinanceiraCard({
   dataInicio,
   dataFim,
-  patrimonioTotal,
-  fluxoLiquidoPeriodo,
   formatCurrency,
   periodBadge,
   realtimeBadge: _realtimeBadge,
 }: Props) {
   const exp = useExposicaoFinanceira({ dataInicio, dataFim });
   const [drill, setDrill] = useState<DrillKey>(null);
-
-  const pctDisputaPatrimonio =
-    patrimonioTotal > 0 ? (exp.totalEmDisputa / patrimonioTotal) * 100 : 0;
-  const fluxoAbs = Math.abs(fluxoLiquidoPeriodo);
-  const pctPerdasFluxo =
-    fluxoAbs > 0 ? (exp.totalPerdasPeriodo / fluxoAbs) * 100 : null;
-  const pctPerdasPatrimonio =
-    patrimonioTotal > 0 ? (exp.totalPerdasPeriodo / patrimonioTotal) * 100 : null;
-  const fluxoNegativo = fluxoLiquidoPeriodo < 0;
 
   const segs = [
     {
@@ -189,16 +175,11 @@ export function ExposicaoFinanceiraCard({
                 </div>
               </TooltipTrigger>
               <TooltipContent side="top" className="max-w-[240px] text-xs">
-                Posição atual de capital exposto, comparada ao patrimônio atual.
+                Posição atual de capital exposto (valor absoluto em risco no momento).
               </TooltipContent>
             </Tooltip>
             <div className="text-xl font-bold text-amber-600 dark:text-amber-400 tabular-nums mt-0.5">
               {formatCurrency(exp.totalEmDisputa)}
-            </div>
-            <div className="text-[11px] text-muted-foreground mt-0.5">
-              {pctDisputaPatrimonio > 0
-                ? `${pctDisputaPatrimonio.toFixed(1)}% do patrimônio`
-                : "—"}
             </div>
           </div>
           <div className="border-l border-border/50 pl-3">
@@ -210,12 +191,8 @@ export function ExposicaoFinanceiraCard({
                 </div>
               </TooltipTrigger>
               <TooltipContent side="top" className="max-w-[260px] text-xs">
-                Valor absoluto consumado no período selecionado. O comparativo
-                usa o <strong>Fluxo Líquido</strong> do mesmo recorte (Saques −
-                Depósitos efetivos) — mostra que fatia do dinheiro que efetivamente
-                entrou/saiu do caixa as perdas representaram. Quando o fluxo é
-                negativo, usamos o módulo (magnitude do movimento), e nunca o
-                Lucro Operacional teórico.
+                Valor absoluto de perdas consumadas no período selecionado
+                (perdas operacionais lançadas + ocorrências resolvidas com perda).
               </TooltipContent>
             </Tooltip>
             <div className="text-xl font-bold text-red-600 dark:text-red-400 tabular-nums mt-0.5">
@@ -224,20 +201,8 @@ export function ExposicaoFinanceiraCard({
             <div className="text-[11px] text-muted-foreground mt-0.5">
               {exp.countPerdas === 0
                 ? "—"
-                : (
-                  <>
-                    {exp.countPerdas} ocorrência{exp.countPerdas === 1 ? "" : "s"}
-                    {pctPerdasFluxo !== null
-                      ? ` · ${pctPerdasFluxo.toFixed(1)}% do fluxo líquido${fluxoNegativo ? " (abs.)" : ""}`
-                      : ""}
-                  </>
-                )}
+                : `${exp.countPerdas} ocorrência${exp.countPerdas === 1 ? "" : "s"}`}
             </div>
-            {exp.countPerdas > 0 && pctPerdasPatrimonio !== null && (
-              <div className="text-[10px] text-muted-foreground/70 mt-0.5">
-                {pctPerdasPatrimonio.toFixed(2)}% do patrimônio atual
-              </div>
-            )}
           </div>
         </div>
         </TooltipProvider>
