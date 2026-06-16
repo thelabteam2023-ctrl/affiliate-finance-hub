@@ -344,7 +344,7 @@ export function ProjectCreationWizard({
           .from("operadores")
           .insert({
             auth_user_id: formData.operador_user_id,
-            nome: profile?.full_name || "Operador",
+            nome: profile?.full_name || profile?.email || "Sem nome",
             email: profile?.email,
             cpf: profile?.cpf,
             status: "ATIVO",
