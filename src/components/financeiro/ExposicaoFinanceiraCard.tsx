@@ -99,7 +99,8 @@ interface Props {
   dataInicio: string | null;
   dataFim: string | null;
   patrimonioTotal: number;
-  lucroOperacional: number;
+  /** Fluxo Líquido do período (Saques − Depósitos efetivos no intervalo). Usado como base do % de perdas. */
+  fluxoLiquidoPeriodo: number;
   formatCurrency: (value: number, currency?: string) => string;
   /** Badge "Período ativo" (passado pelo container) */
   periodBadge?: ReactNode;
@@ -119,7 +120,7 @@ export function ExposicaoFinanceiraCard({
   dataInicio,
   dataFim,
   patrimonioTotal,
-  lucroOperacional,
+  fluxoLiquidoPeriodo,
   formatCurrency,
   periodBadge,
   realtimeBadge: _realtimeBadge,
@@ -129,8 +130,12 @@ export function ExposicaoFinanceiraCard({
 
   const pctDisputaPatrimonio =
     patrimonioTotal > 0 ? (exp.totalEmDisputa / patrimonioTotal) * 100 : 0;
-  const pctPerdasLucro =
-    lucroOperacional > 0 ? (exp.totalPerdasPeriodo / lucroOperacional) * 100 : 0;
+  const fluxoAbs = Math.abs(fluxoLiquidoPeriodo);
+  const pctPerdasFluxo =
+    fluxoAbs > 0 ? (exp.totalPerdasPeriodo / fluxoAbs) * 100 : null;
+  const pctPerdasPatrimonio =
+    patrimonioTotal > 0 ? (exp.totalPerdasPeriodo / patrimonioTotal) * 100 : null;
+  const fluxoNegativo = fluxoLiquidoPeriodo < 0;
 
   const segs = [
     {
