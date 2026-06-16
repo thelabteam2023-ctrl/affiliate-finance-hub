@@ -37,7 +37,6 @@ import { PeriodScopeBadge } from "@/components/financeiro/PeriodScopeBadge";
 import { ExposicaoFinanceiraCard } from "@/components/financeiro/ExposicaoFinanceiraCard";
 import { PosicaoCapital } from "@/components/caixa/PosicaoCapital";
 import { useCapitalEmDisputa } from "@/hooks/useCapitalEmDisputa";
-import { useExposicaoFinanceira } from "@/hooks/useExposicaoFinanceira";
 import { Wallet, TrendingUp, Percent, Coins } from "lucide-react";
 import { ParticipacaoInvestidoresTab } from "@/components/financeiro/ParticipacaoInvestidoresTab";
 import { MultiCurrencyWarningBanner } from "@/components/financeiro/MultiCurrencyIndicator";
@@ -48,7 +47,6 @@ import { calcMargemOperacional } from "@/lib/finance/margemOperacional";
 import { FluxoLiquidoDetalheDialog } from "@/components/financeiro/FluxoLiquidoDetalheDialog";
 import { CustosDetalheDialog } from "@/components/financeiro/CustosDetalheDialog";
 import { KpiRail, type KpiRailItem } from "@/components/financeiro/KpiRail";
-import { AlertStrip } from "@/components/financeiro/AlertStrip";
 
 export default function Financeiro() {
   const navigate = useNavigate();
@@ -152,12 +150,6 @@ export default function Financeiro() {
 
   // Capital em disputa (para sobreposição no donut da Posição de Capital)
   const { bySegment: capitalEmDisputa } = useCapitalEmDisputa();
-
-  // Exposição (para o AlertStrip)
-  const exposicao = useExposicaoFinanceira({
-    dataInicio: dataInicio || null,
-    dataFim: dataFim || null,
-  });
 
   // Label de período para o KpiRail
   const periodLabel = useMemo(() => {
@@ -389,13 +381,6 @@ export default function Financeiro() {
                       realtimeBadge={realtimeBadge}
                     />
                   </div>
-
-                  <AlertStrip
-                    emDisputa={exposicao.totalEmDisputa}
-                    perdasConfirmadas={exposicao.totalPerdasPeriodo}
-                    qtdOcorrencias={exposicao.countPerdas}
-                    formatCurrency={calc.formatCurrency}
-                  />
 
                   <div ref={composicaoCustosRef} className="p-4 md:p-5 scroll-mt-24">
                     <ComposicaoCustosCard
