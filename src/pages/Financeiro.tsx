@@ -28,6 +28,7 @@ import {
 import {
   Tooltip as ShadcnTooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { KpiExplanationDialog, KpiType } from "@/components/financeiro/KpiExplanationDialog";
@@ -43,12 +44,6 @@ import { MultiCurrencyWarningBanner } from "@/components/financeiro/MultiCurrenc
 import { FinanceiroDespesasTab } from "@/components/financeiro/FinanceiroDespesasTab";
 import { FinanceiroHistoricoTab } from "@/components/financeiro/FinanceiroHistoricoTab";
 import { calcResultadoLiquido } from "@/lib/finance/resultadoLiquido";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 export default function Financeiro() {
   const navigate = useNavigate();
