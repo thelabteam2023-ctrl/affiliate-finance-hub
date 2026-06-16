@@ -454,6 +454,7 @@ export function useFinanceiroCalculations({
 
   return {
     formatCurrency,
+    convertToBRL,
     saldos,
     costs,
     movimentacao,
