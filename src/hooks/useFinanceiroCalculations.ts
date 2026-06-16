@@ -1,5 +1,5 @@
 import { useMemo, useCallback } from "react";
-import { format, subMonths, subWeeks, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isWithinInterval, getWeek } from "date-fns";
+import { format, subMonths, subWeeks, startOfMonth, endOfMonth, startOfDay, endOfDay, startOfWeek, endOfWeek, isWithinInterval, getWeek, differenceInCalendarDays, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { parseLocalDate } from "@/lib/dateUtils";
 import type { FinanceiroData } from "@/hooks/useFinanceiroData";
@@ -83,8 +83,9 @@ export function useFinanceiroCalculations({
       const dateValue = item[dateField] as string | undefined;
       if (!dateValue) return true;
       const itemDate = parseLocalDate(dateValue);
-      const start = dataInicio ? startOfMonth(parseLocalDate(dataInicio)) : new Date(0);
-      const end = dataFim ? endOfMonth(parseLocalDate(dataFim)) : new Date();
+      // FIX: respeitar o intervalo real do filtro (era expandido para o mês inteiro)
+      const start = dataInicio ? startOfDay(parseLocalDate(dataInicio)) : new Date(0);
+      const end = dataFim ? endOfDay(parseLocalDate(dataFim)) : new Date();
       return isWithinInterval(itemDate, { start, end });
     });
   }, [dataInicio, dataFim]);
@@ -340,15 +341,45 @@ export function useFinanceiroCalculations({
     return detalhes;
   }, [saldos.saldoBRL, saldos.saldoUSD, caixaCrypto, cotacaoUSD, getCryptoUSDValue]);
 
-  // Previous month costs
+  // Custos do período ANTERIOR (mesma duração do filtro ativo, terminando em dataInicio-1)
+  // Reusa exatamente a mesma composição de 5 famílias do período atual.
+  // Se não há filtro ("Tudo"), retorna 0 e o badge fica neutro.
   const totalCustosAnterior = useMemo(() => {
-    const mesAnterior = subMonths(new Date(), 1);
-    const keyAnterior = format(mesAnterior, "yyyy-MM");
-    const custosAnt = despesas.filter((d: any) => d.data_movimentacao && format(parseLocalDate(d.data_movimentacao), "yyyy-MM") === keyAnterior).reduce((acc: number, d: any) => acc + d.valor, 0);
-    const despesasAdmAnt = despesasAdmin.filter((d: any) => d.data_despesa && format(parseLocalDate(d.data_despesa), "yyyy-MM") === keyAnterior).reduce((acc: number, d: any) => acc + d.valor, 0);
-    const opAnt = pagamentosOperador.filter((p: any) => p.data_pagamento && format(parseLocalDate(p.data_pagamento), "yyyy-MM") === keyAnterior).reduce((acc: number, p: any) => acc + p.valor, 0);
-    return custosAnt + despesasAdmAnt + opAnt;
-  }, [despesas, despesasAdmin, pagamentosOperador]);
+    if (!dataInicio || !dataFim) return 0;
+    const start = startOfDay(parseLocalDate(dataInicio));
+    const end = endOfDay(parseLocalDate(dataFim));
+    const durationDays = differenceInCalendarDays(end, start) + 1;
+    const prevEnd = endOfDay(subDays(start, 1));
+    const prevStart = startOfDay(subDays(prevEnd, durationDays - 1));
+
+    const inPrev = (raw?: string) => {
+      if (!raw) return false;
+      const d = parseLocalDate(raw);
+      return isWithinInterval(d, { start: prevStart, end: prevEnd });
+    };
+
+    // Mesmas 5 famílias da composição atual
+    const cacAnt = despesas
+      .filter((d: any) => (d.tipo === "PAGTO_PARCEIRO" || d.tipo === "PAGTO_FORNECEDOR") && inPrev(d.data_movimentacao))
+      .reduce((acc: number, d: any) => acc + d.valor, 0);
+    const comissoesAnt = despesas
+      .filter((d: any) => d.tipo === "COMISSAO_INDICADOR" && inPrev(d.data_movimentacao))
+      .reduce((acc: number, d: any) => acc + d.valor, 0);
+    const bonusAnt = despesas
+      .filter((d: any) => d.tipo === "BONUS_INDICADOR" && inPrev(d.data_movimentacao))
+      .reduce((acc: number, d: any) => acc + d.valor, 0);
+    const infraAnt = despesasAdmin
+      .filter((d: any) => d.grupo !== "RECURSOS_HUMANOS" && inPrev(d.data_despesa))
+      .reduce((acc: number, d: any) => acc + d.valor, 0);
+    const rhAnt = despesasAdmin
+      .filter((d: any) => d.grupo === "RECURSOS_HUMANOS" && inPrev(d.data_despesa))
+      .reduce((acc: number, d: any) => acc + d.valor, 0);
+    const opAnt = pagamentosOperador
+      .filter((p: any) => inPrev(p.data_pagamento))
+      .reduce((acc: number, p: any) => acc + p.valor, 0);
+
+    return cacAnt + comissoesAnt + bonusAnt + infraAnt + rhAnt + opAnt;
+  }, [despesas, despesasAdmin, pagamentosOperador, dataInicio, dataFim]);
 
   // Compromissos pendentes
   const compromissosPendentesData = useMemo(() => {
