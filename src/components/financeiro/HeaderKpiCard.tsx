@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Info, ChevronRight } from "lucide-react";
+import { Info } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
@@ -92,12 +92,6 @@ export function HeaderKpiCard({
 
       <div className="mt-auto pt-2 border-t border-border/40 min-h-[20px] flex items-center justify-between gap-2">
         <div className="flex-1 min-w-0">{secondary ?? null}</div>
-        {clickable ? (
-          <span className="inline-flex items-center gap-0.5 text-[11px] text-muted-foreground group-hover:text-foreground">
-            {detailLabel}
-            <ChevronRight className="h-3 w-3" />
-          </span>
-        ) : null}
       </div>
     </Card>
   );
