@@ -475,7 +475,7 @@ export function ProjectPostCreateWizard({
             auth_user_id: opSelectedUserId,
             workspace_id: workspaceId,
             user_id: session.session.user.id,
-            nome: selectedUser?.display_name || "Operador",
+            nome: selectedUser?.display_name || selectedUser?.email || "Sem nome",
             email: selectedUser?.email,
             cpf: selectedUser?.cpf,
             status: "ATIVO",
