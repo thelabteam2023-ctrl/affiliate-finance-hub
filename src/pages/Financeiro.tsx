@@ -276,11 +276,16 @@ export default function Financeiro() {
                   icon={<Wallet className="h-4 w-4" />}
                 />
                 <HeaderKpiCard
-                  label={lucroRealizado >= 0 ? "Lucro Realizado" : "Prejuízo Realizado"}
+                  label={
+                    lucroRealizado >= 0
+                      ? "Fluxo Líquido (período)"
+                      : "Fluxo Líquido (período)"
+                  }
                   value={calc.formatCurrency(lucroRealizado)}
-                  hint="Saques − Depósitos efetivos (dinheiro de volta ao caixa)"
+                  hint="Saques − Depósitos efetivos confirmados dentro do período selecionado (data_transacao)."
                   icon={<TrendingUp className="h-4 w-4" />}
                   tone={lucroRealizado >= 0 ? "positive" : "negative"}
+                  periodBadge={periodBadge}
                   secondary={
                     <div className="flex items-center justify-between text-[11px]">
                       <span className="text-muted-foreground">
