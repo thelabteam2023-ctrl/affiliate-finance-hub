@@ -380,22 +380,29 @@ export function ComposicaoCustosCard({
             const temDetalhes = hasDetalhes(cat.name);
             const isActive = activeSegment === cat.name;
             const isOtherActive = activeSegment !== null && !isActive;
+            const isExpanded = expandedSegment === cat.name;
 
             return (
-              <div
-                key={cat.name}
-                onMouseEnter={() => setActiveSegment(cat.name)}
-                onMouseLeave={() => setActiveSegment(null)}
-                style={{
-                  background: isActive ? "var(--bg-hover)" : "transparent",
-                  borderColor: isActive ? `${color}44` : "transparent",
-                  transform: isActive ? "translateX(2px)" : "none",
-                  transition:
-                    "background 0.15s, border-color 0.15s, transform 0.15s, opacity 0.15s",
-                  opacity: isOtherActive ? 0.45 : 1.0,
-                }}
-                className="grid grid-cols-[8px_1fr_auto_auto] gap-[10px] p-[8px_10px] rounded-[8px] border group"
-              >
+              <div key={cat.name} className="flex flex-col">
+                <div
+                  onMouseEnter={() => setActiveSegment(cat.name)}
+                  onMouseLeave={() => {
+                    if (!expandedSegment) setActiveSegment(null);
+                  }}
+                  onClick={() => temDetalhes && handleToggle(cat.name)}
+                  style={{
+                    background: isActive ? "var(--bg-hover)" : "transparent",
+                    borderColor: isActive ? `${color}44` : "transparent",
+                    transform: isActive ? "translateX(2px)" : "none",
+                    transition:
+                      "background 0.15s, border-color 0.15s, transform 0.15s, opacity 0.15s",
+                    opacity: isOtherActive ? 0.45 : 1.0,
+                  }}
+                  className={cn(
+                    "grid grid-cols-[8px_1fr_auto_auto] gap-[10px] p-[8px_10px] rounded-[8px] border group",
+                    temDetalhes && "cursor-pointer"
+                  )}
+                >
                 <div
                   className="rounded-[2px] mt-1"
                   style={{
@@ -437,56 +444,59 @@ export function ComposicaoCustosCard({
                 </div>
                 <div className="flex items-center justify-center pl-1">
                   {temDetalhes ? (
-                    <Popover>
-                          <PopoverTrigger asChild>
-                        <button className="text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors">
-                          <ChevronRight className="h-3 w-3" />
-                        </button>
-                          </PopoverTrigger>
-                          <PopoverContent 
-                            side="right" 
-                            align="start" 
-                            className="w-72 p-3"
-                          >
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between border-b border-border/50 pb-2">
-                                <h4 className="text-sm font-semibold">{cat.name}</h4>
-                                <span className="text-xs text-muted-foreground">
-                                  {detalhes.items.length} {detalhes.items.length === 1 ? "item" : "itens"}
-                                </span>
-                              </div>
-                              
-                              <div className="max-h-[200px] overflow-y-auto space-y-0.5">
-                                {detalhes.items.slice(0, 10).map((item, idx) => (
-                                  <DetalheItem
-                                    key={idx}
-                                    nome={item.nome}
-                                    valor={item.valor}
-                                    total={detalhes.total}
-                                    formatCurrency={formatCurrency}
-                                    color={detalhes.color}
-                                    hasCrypto={item.hasCrypto}
-                                    valorUSD={item.valorUSD}
-                                  />
-                                ))}
-                                {detalhes.items.length > 10 && (
-                                  <p className="text-[10px] text-muted-foreground text-center pt-1">
-                                    +{detalhes.items.length - 10} itens não exibidos
-                                  </p>
-                                )}
-                              </div>
-                              
-                              <div className="pt-2 border-t border-border/50">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-xs font-medium">Total</span>
-                                  <span className="text-sm font-bold">{formatCurrency(detalhes.total)}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </PopoverContent>
-                        </Popover>
+                    <ChevronRight
+                      className={cn(
+                        "h-3 w-3 text-[var(--text-faint)] transition-transform",
+                        isExpanded && "rotate-90"
+                      )}
+                    />
                   ) : null}
                 </div>
+                </div>
+
+                {isExpanded && temDetalhes && (
+                  <div
+                    style={{
+                      animation: "expand-down 0.2s ease-out forwards",
+                      background: "rgba(22, 27, 39, 0.4)",
+                      borderLeft: `2px solid ${color}`,
+                    }}
+                    className="mt-1 mb-2 mx-[10px] rounded-r-lg overflow-hidden"
+                  >
+                    <div className="p-3 border-l border-white/5 bg-white/[0.02]">
+                      <div className="flex items-center justify-between mb-3 px-2">
+                        <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                          Composição de {cat.name}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {detalhes.items.length} {detalhes.items.length === 1 ? "item" : "itens"}
+                        </span>
+                      </div>
+
+                      <div className="space-y-0.5 max-h-[260px] overflow-y-auto">
+                        {detalhes.items.map((item, idx) => (
+                          <DetalheItem
+                            key={idx}
+                            nome={item.nome}
+                            valor={item.valor}
+                            total={detalhes.total}
+                            formatCurrency={formatCurrency}
+                            color={detalhes.color}
+                            hasCrypto={item.hasCrypto}
+                            valorUSD={item.valorUSD}
+                          />
+                        ))}
+                      </div>
+
+                      <div className="mt-3 pt-2 border-t border-white/5 flex items-center justify-between px-2">
+                        <span className="text-[11px] font-medium text-[var(--text-faint)]">Total</span>
+                        <span className="text-[12px] font-semibold text-[var(--text-primary)] tabular-nums">
+                          {formatCurrency(detalhes.total)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
