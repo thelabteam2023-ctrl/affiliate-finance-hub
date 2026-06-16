@@ -46,6 +46,9 @@ interface FetchProjetosLucroCanonicoParams {
     ARS: number;
     COP: number;
   };
+  /** Filtro opcional de período (YYYY-MM-DD). Quando informado, restringe APENAS o cálculo de `lucroRealizado` ao intervalo, via `data_transacao`. O `consolidado` (Lucro Operacional) permanece lifetime por design. */
+  dataInicio?: string | null;
+  dataFim?: string | null;
 }
 
 interface ProjetoCurrencyConfig {
@@ -180,6 +183,8 @@ async function fetchDashboardData(projetoId: string): Promise<ProjetoDashboardRa
 export async function fetchProjetosLucroCanonico({
   projetoIds,
   cotacoesOficiais,
+  dataInicio = null,
+  dataFim = null,
 }: FetchProjetosLucroCanonicoParams): Promise<Record<string, LucroCanonicoResultado>> {
   if (projetoIds.length === 0) return {};
 
@@ -230,22 +235,31 @@ export async function fetchProjetosLucroCanonico({
   // Alinhado EXATAMENTE ao FinancialMetricsPopover:
   // saques confirmados - depósitos efetivos, onde DEPOSITO_VIRTUAL de baseline
   // é excluído e só MIGRACAO entra no fluxo.
-  const [depositosRes, saquesRes] = await Promise.all([
-    supabase
-      .from("cash_ledger")
-      .select("valor, moeda, projeto_id_snapshot, tipo_transacao, origem_tipo")
-      .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
-      .eq("status", "CONFIRMADO")
-      .in("projeto_id_snapshot", projetoIds)
-      .limit(50000),
-    supabase
-      .from("cash_ledger")
-      .select("valor, valor_confirmado, moeda, projeto_id_snapshot")
-      .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
-      .eq("status", "CONFIRMADO")
-      .in("projeto_id_snapshot", projetoIds)
-      .limit(50000),
-  ]);
+  let depositosQuery = supabase
+    .from("cash_ledger")
+    .select("valor, moeda, projeto_id_snapshot, tipo_transacao, origem_tipo")
+    .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
+    .eq("status", "CONFIRMADO")
+    .in("projeto_id_snapshot", projetoIds)
+    .limit(50000);
+  let saquesQuery = supabase
+    .from("cash_ledger")
+    .select("valor, valor_confirmado, moeda, projeto_id_snapshot")
+    .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
+    .eq("status", "CONFIRMADO")
+    .in("projeto_id_snapshot", projetoIds)
+    .limit(50000);
+
+  if (dataInicio) {
+    depositosQuery = depositosQuery.gte("data_transacao", dataInicio);
+    saquesQuery = saquesQuery.gte("data_transacao", dataInicio);
+  }
+  if (dataFim) {
+    depositosQuery = depositosQuery.lte("data_transacao", dataFim);
+    saquesQuery = saquesQuery.lte("data_transacao", dataFim);
+  }
+
+  const [depositosRes, saquesRes] = await Promise.all([depositosQuery, saquesQuery]);
 
   const depositosEfetivosByProjeto: Record<string, { valor: number; moeda: string }[]> = {};
   (depositosRes.data || []).forEach((d: any) => {

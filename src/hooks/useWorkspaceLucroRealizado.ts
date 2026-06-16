@@ -10,16 +10,16 @@ interface Params {
   cotacaoMXN?: number;
   cotacaoARS?: number;
   cotacaoCOP?: number;
+  /** Filtro opcional (YYYY-MM-DD). Quando informado, calcula o Fluxo Líquido APENAS dentro do intervalo. */
+  dataInicio?: string | null;
+  dataFim?: string | null;
 }
 
 /**
- * Lucro Realizado consolidado do workspace (Saques − Depósitos efetivos),
- * delegando à engine canônica `fetchProjetosLucroCanonico` para garantir paridade
- * absoluta com os cards de projeto (Visão Financeira).
+ * Lucro Realizado consolidado do workspace (Saques − Depósitos efetivos).
  *
- * Observação: o cálculo é acumulado (lifetime) por projeto — mesmo comportamento
- * de `FinancialMetricsPopover` / `ProjetoKanbanCard`. Não respeita o filtro de
- * período do dashboard, por design (Realizado é uma posição, não um fluxo do mês).
+ * - Sem `dataInicio`/`dataFim` → comportamento lifetime (paridade com cards de projeto).
+ * - Com `dataInicio`/`dataFim` → Fluxo Líquido do período (filtra `cash_ledger.data_transacao`).
  */
 export function useWorkspaceLucroRealizado({
   cotacaoUSD,
@@ -29,6 +29,8 @@ export function useWorkspaceLucroRealizado({
   cotacaoMXN = 0,
   cotacaoARS = 0,
   cotacaoCOP = 0,
+  dataInicio = null,
+  dataFim = null,
 }: Params) {
   const [lucroRealizado, setLucroRealizado] = useState<number>(0);
   const [loading, setLoading] = useState(true);
@@ -56,6 +58,8 @@ export function useWorkspaceLucroRealizado({
           ARS: cotacaoARS,
           COP: cotacaoCOP,
         },
+        dataInicio,
+        dataFim,
       });
       const total = Object.values(resultado).reduce(
         (acc, r) => acc + (Number(r.lucroRealizado) || 0),
@@ -68,7 +72,7 @@ export function useWorkspaceLucroRealizado({
     } finally {
       setLoading(false);
     }
-  }, [cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP]);
+  }, [cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP, dataInicio, dataFim]);
 
   useEffect(() => {
     refresh();
