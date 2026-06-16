@@ -50,7 +50,7 @@ import { KpiRail, type KpiRailItem } from "@/components/financeiro/KpiRail";
 import { useFinanceiroMensal } from "@/hooks/useFinanceiroMensal";
 import { GraficoMensalDialog } from "@/components/financeiro/GraficoMensalDialog";
 import { Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { LineChart } from "lucide-react";
 
 export default function Financeiro() {
   const navigate = useNavigate();
