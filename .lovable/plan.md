@@ -1,64 +1,93 @@
-## Decisão confirmada
+# Plano: Gráfico Mensal Lucro vs Custo + Relatório
 
-- **Composição de Custos** continua mostrando as 5 famílias (CAC, Comissões, Bônus, Infra, Operadores) — está correta para a visão executiva.
-- **Aba Despesas Administrativas** continua escopada só a `despesas_administrativas` — está correta para gestão operacional.
-- **Não vamos misturar**. Só corrigir os bugs reais.
+## 1. O que o gráfico deve mostrar (recomendação)
+
+**Tipo:** Composed Chart (Recharts) — barras + linhas combinadas, mês a mês (últimos 12 meses por padrão, ajustável).
+
+**Séries (eixo Y esquerdo — R$):**
+- **Barras empilhadas de custo** (stack "custos"): CAC, Comissões, Bônus, Infraestrutura, RH, Operadores — mesmas 5+1 famílias da Composição de Custos, mantendo a paridade de escopo já decidida.
+- **Barra agrupada (lado a lado das barras de custo):** **Fluxo Líquido** (Saques − Depósitos do mês) — verde.
+- **Linha 1:** **Resultado Líquido** (Fluxo Líquido − Custo Total) — destaque (cor primária, grossa, com dots).
+- **Linha 2 (tracejada):** **Lucro Operacional** (teórico das apostas) — referência secundária.
+
+**Eixo Y direito (%):**
+- **Linha:** **Margem Operacional** (Resultado Líquido ÷ (Fluxo Líquido + Custo) × 100) — usa `calcMargemOperacional` existente.
+
+**Interatividade:**
+- Tooltip rico mostrando todas as séries do mês + delta vs mês anterior.
+- Legenda clicável (toggle de séries).
+- Brush no rodapé para zoom temporal quando >6 meses.
+- Toggle de período: 6m / 12m / 24m / "Tudo".
+- Animação de entrada (framer-motion no card; Recharts `isAnimationActive`).
+
+## 2. UI
+
+**Local:** aba "Despesas/Financeiro" (mesma que hoje mostra Composição de Custos e Resumo Admin), no topo, dois botões:
+- `[Gerar Gráfico]` (Sparkline icon) — abre Dialog/Sheet fullscreen com o gráfico.
+- `[Salvar Relatório]` (Download icon) — dropdown: **PDF** ou **Excel (.xlsx)**.
+
+Dialog do gráfico:
+- Header: título + seletor de período + botão exportar.
+- Gráfico principal (Composed).
+- Abaixo: tabela compacta mês a mês com totais (Fluxo Líquido, Custos por família, Resultado Líquido, Margem %).
+- Cards de resumo no topo: Média mensal de Resultado Líquido, Melhor mês, Pior mês, Margem média.
+
+## 3. Dados — agregação mensal
+
+Novo hook `useFinanceiroMensal(meses: number)` em `src/hooks/useFinanceiroMensal.ts`:
+- Reusa as mesmas fontes do `useFinanceiroCalculations` (despesas, despesasAdmin, pagamentosOperador, cash_ledger para Fluxo Líquido / Lucro Real).
+- Agrupa por mês (`format(data, "yyyy-MM")`) respeitando timezone São Paulo.
+- Para cada mês retorna:
+  ```
+  { mes, cac, comissoes, bonus, infra, rh, operadores, custoTotal,
+    fluxoLiquido, lucroOperacional, resultadoLiquido, margemOperacional }
+  ```
+- Filtra por `workspace_id` (memória de isolamento já vigente).
+- Respeita as 5 famílias já canonizadas (sem mudar escopo).
+
+## 4. Relatório (Salvar)
+
+**PDF** (`jspdf` + `jspdf-autotable` — já no projeto se possível, senão `bun add`):
+- Capa: workspace, período, geração em.
+- Resumo executivo (cards convertidos em tabela).
+- Tabela mês a mês.
+- Imagem do gráfico (capturada via `html-to-image` do node do Recharts).
+- Rodapé com paginação.
+
+**XLSX** (usa skill xlsx — openpyxl não roda no browser; faremos com **`xlsx` / SheetJS** no client):
+- Aba 1 "Resumo Mensal": colunas mês, fluxo, custos (6), custo total, resultado líquido, margem.
+- Aba 2 "Composição Custos": detalhe por família por mês.
+- Formatação BRL e %; totais por coluna; linha de média.
+
+Nome do arquivo: `relatorio-financeiro-{workspace}-{yyyyMM}-{yyyyMM}.{pdf|xlsx}`.
+
+## 5. Arquivos a criar/alterar
+
+Criar:
+- `src/hooks/useFinanceiroMensal.ts` — agregação mensal.
+- `src/components/financeiro/GraficoMensalDialog.tsx` — Dialog com Composed Chart + tabela.
+- `src/components/financeiro/RelatorioMensalActions.tsx` — botões "Gerar Gráfico" e "Salvar Relatório" (dropdown PDF/XLSX).
+- `src/lib/financeiro/exportRelatorioPDF.ts`
+- `src/lib/financeiro/exportRelatorioXLSX.ts`
+
+Alterar:
+- Página/aba financeira (onde vive Composição de Custos) — montar `<RelatorioMensalActions />` no header.
+
+Dependências (se faltarem): `jspdf`, `jspdf-autotable`, `xlsx`, `html-to-image`.
+
+## 6. Validação
+
+- Soma dos custos mensais do gráfico = Composição de Custos quando filtro = mês cheio.
+- Fluxo Líquido mensal = Lucro Real do mesmo período no Indicadores Financeiros.
+- Margem Operacional = `calcMargemOperacional` (sem reimplementar).
+- Exportações PDF/XLSX abrem sem erro e batem com a tela.
+
+## 7. Fora do escopo
+
+- Nenhuma mudança em RPCs/migrations.
+- Não altera escopo de Composição vs Admin (mantido).
+- Não muda KPIs existentes.
 
 ---
 
-## Bugs a corrigir
-
-### Bug 1 — `filterByPeriod` expande qualquer intervalo para mês cheio (CRÍTICO)
-
-**Arquivo:** `src/hooks/useFinanceiroCalculations.ts`, linhas 81–89.
-
-```ts
-const start = dataInicio ? startOfMonth(parseLocalDate(dataInicio)) : new Date(0);
-const end   = dataFim   ? endOfMonth(parseLocalDate(dataFim))     : new Date();
-```
-
-**Impacto:** Quando o usuário escolhe "Mês atual" (01→hoje), "1 dia", "7 dias" ou um custom curto, o filtro silenciosamente expande para o **mês inteiro** (inclusive datas futuras do mês corrente). Isso afeta TODOS os cálculos do `useFinanceiroCalculations`:
-- Composição de Custos (5 categorias)
-- Movimentação de capital (depósitos/saques/scan)
-- Drill-downs (Custos Aquisição, Comissões, Bônus, Infraestrutura, Operadores)
-
-**Correção:** trocar para `startOfDay`/`endOfDay`, respeitando o intervalo real recebido do filtro do dashboard. Sem mudar nenhuma fonte de dados nem nenhuma agregação.
-
-```ts
-const start = dataInicio ? startOfDay(parseLocalDate(dataInicio)) : new Date(0);
-const end   = dataFim   ? endOfDay(parseLocalDate(dataFim))     : new Date();
-```
-
-### Bug 2 — `totalCustosAnterior` ignora o filtro do usuário e força "mês anterior do calendário civil"
-
-**Arquivo:** `src/hooks/useFinanceiroCalculations.ts`, linhas 344–351.
-
-Hoje, o cálculo de "vs anterior" sempre compara contra o mês civil anterior (`subMonths(new Date(), 1)`), independente do filtro selecionado. Resultado: se o usuário está vendo "Ano" ou "Tudo" ou um custom, o `% vs anterior` no header da Composição não faz sentido.
-
-**Correção:** calcular o período anterior como uma janela do mesmo tamanho do filtro ativo, terminando logo antes de `dataInicio`. Para `tudo`/sem filtro, esconder o badge "vs anterior" (ou exibir "—").
-
-### Bug 3 — `totalCustosAnterior` só soma `despesas + despesasAdmin + pagamentosOperador` (faltam categorias)
-
-Mesmo bloco (linhas 347–350): o anterior soma 3 fontes, mas a Composição atual soma 5 famílias derivadas dessas mesmas fontes. O resultado bate por coincidência (porque CAC/Comissões/Bônus saem todas de `despesas`), mas é frágil — se um dia adicionarmos uma nova família (ex.: retenção), o "vs anterior" diverge.
-
-**Correção:** reusar o mesmo somatório de `composicaoCustos` aplicado à janela anterior, em vez de duplicar a lógica.
-
----
-
-## Escopo do que NÃO muda
-
-- Composição de Custos continua com as 5 famílias.
-- Aba Despesas Administrativas continua só com `despesas_administrativas`.
-- Nenhuma alteração de UI, layout, copy ou tooltip.
-- Nenhuma migration de banco.
-- Nenhuma mudança em RPC, ledger ou cálculo canônico.
-
-## Validação após o fix
-
-1. Selecionar "Mês atual" → Composição deve mostrar 01→hoje (sem incluir o resto do mês).
-2. Selecionar "7 dias" → Composição deve refletir só os últimos 7 dias.
-3. Selecionar um custom de 3 dias → idem.
-4. Selecionar "Tudo" → badge "vs anterior" some/neutro.
-5. Comparar manualmente Infraestrutura (Composição) vs total da aba Admin filtrando o mesmo período — devem bater para a parcela Infra+RH.
-
-Posso aplicar as 3 correções?
+Posso prosseguir com a implementação? Se sim, qual formato prioritário de relatório — **PDF**, **XLSX**, ou ambos já no primeiro release?
