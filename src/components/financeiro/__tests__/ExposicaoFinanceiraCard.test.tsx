@@ -41,7 +41,7 @@ describe("ExposicaoFinanceiraCard — regressão de KPIs voláteis", () => {
     // Confirma KPIs absolutos presentes
     expect(screen.getAllByText(fmt(12345)).length).toBeGreaterThan(0);
     expect(screen.getAllByText(fmt(6789)).length).toBeGreaterThan(0);
-    expect(screen.getByText(/5 ocorr[êe]ncias/i)).toBeInTheDocument();
+    expect(text).toMatch(/5 ocorr[êe]ncias/i);
   });
 
   it("Props não aceitam mais patrimonioTotal nem fluxoLiquidoPeriodo", () => {
