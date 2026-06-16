@@ -428,7 +428,7 @@ export default function Financeiro() {
           </div>
 
           {/* LINHA 3: Composição de Custos (largura total) */}
-          <div className="grid grid-cols-1 gap-4 md:gap-6">
+          <div ref={composicaoCustosRef} className="grid grid-cols-1 gap-4 md:gap-6 scroll-mt-24">
             <ComposicaoCustosCard
               categorias={calc.composicaoCustos}
               totalAtual={calc.costs.custoSustentacao}
@@ -442,6 +442,29 @@ export default function Financeiro() {
               periodBadge={periodBadge}
             />
           </div>
+
+          <FluxoLiquidoDetalheDialog
+            open={fluxoDetalheOpen}
+            onOpenChange={setFluxoDetalheOpen}
+            fluxoLiquido={lucroRealizado}
+            lucroOperacionalTeorico={lucroOperacionalApostas}
+            formatCurrency={calc.formatCurrency}
+            periodBadge={periodBadge}
+          />
+          <CustosDetalheDialog
+            open={custosDetalheOpen}
+            onOpenChange={setCustosDetalheOpen}
+            categorias={calc.composicaoCustos}
+            totalCustos={calc.costs.custoSustentacao}
+            formatCurrency={calc.formatCurrency}
+            periodBadge={periodBadge}
+            onVerCompleto={() => {
+              composicaoCustosRef.current?.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+              });
+            }}
+          />
 
         </TabsContent>
 
