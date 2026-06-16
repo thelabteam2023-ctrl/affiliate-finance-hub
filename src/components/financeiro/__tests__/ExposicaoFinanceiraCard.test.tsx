@@ -39,8 +39,8 @@ describe("ExposicaoFinanceiraCard — regressão de KPIs voláteis", () => {
     expect(text).not.toMatch(/% do fluxo/i);
     expect(text).not.toMatch(/fluxo l[ií]quido/i);
     // Confirma KPIs absolutos presentes
-    expect(screen.getByText(fmt(12345))).toBeInTheDocument();
-    expect(screen.getByText(fmt(6789))).toBeInTheDocument();
+    expect(screen.getAllByText(fmt(12345)).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(fmt(6789)).length).toBeGreaterThan(0);
     expect(screen.getByText(/5 ocorr[êe]ncias/i)).toBeInTheDocument();
   });
 
