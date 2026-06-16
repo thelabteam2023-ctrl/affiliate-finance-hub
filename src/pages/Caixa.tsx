@@ -328,7 +328,8 @@ export default function Caixa() {
       // Fetch operadores for operator payment traceability
       const { data: operadoresData } = await supabase
         .from("operadores")
-        .select("id, nome");
+        .select("id, nome")
+        .eq("workspace_id", workspaceId);
 
       // Fetch projetos for project filter
       const { data: projetosData } = await supabase
