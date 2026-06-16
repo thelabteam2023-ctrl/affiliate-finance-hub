@@ -152,6 +152,10 @@ export function ComposicaoCustosCard({
   }));
 
   const [activeSegment, setActiveSegment] = useState<string | null>(null);
+  const [expandedSegment, setExpandedSegment] = useState<string | null>(null);
+  const handleToggle = (name: string) => {
+    setExpandedSegment(prev => (prev === name ? null : name));
+  };
   const totalK = Math.round(totalAtual / 1000);
 
   // Função para obter detalhes por categoria
