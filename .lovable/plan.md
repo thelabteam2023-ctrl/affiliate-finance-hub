@@ -1,68 +1,74 @@
 ## Objetivo
 
-Reescrever as tooltips dos 4 KPIs do Financeiro (**Patrimônio**, **Fluxo Líquido**, **Resultado Líquido**, **Margem Operacional**) em linguagem de usuário leigo: frase curta de significado + linha visual da fórmula. Trocar também o label "Margem Op." por "Margem Operacional".
+Limpar visualmente os 4 KPIs do Financeiro removendo as linhas secundárias ruidosas (`Lucro Op. teórico` e `Custos`) e oferecendo, em seu lugar, **detalhamentos sob demanda** acessíveis por clique no próprio card. Manter a estética minimalista atual sem adicionar peso visual.
 
-## Princípios da nova copy
+## Diretrizes de design
 
-1. **Primeira linha = o que é**, em uma frase humana (≤ 18 palavras).
-2. **Segunda linha = como ler**, dando o cenário positivo (ex.: "quanto maior, melhor").
-3. **Bloco fórmula** em destaque visual: caixinha com fundo `bg-muted/50`, fonte `font-mono text-[11px]`, símbolo `=` em vez de prosa.
-4. Sem jargão técnico (`patrimônio parado`, `transferências internas`, `lucro teórico`, `efetivamente confirmado`).
-5. Sem repetir o nome do KPI dentro da tooltip.
+- O card continua sendo uma "foto" simples: label + valor + tone.
+- Affordance discreta: rodapé com link textual `Ver detalhamento →` em `text-[11px] text-muted-foreground hover:text-foreground`, alinhado à direita. Sem ícone novo, sem botão sólido.
+- Clique no link (ou em qualquer ponto do card) abre um `Dialog` (shadcn) com a comparação/breakdown.
+- Cards sem detalhamento (Patrimônio, Margem Operacional) continuam estáticos — sem affordance.
+- Remover toda referência ao termo abreviado "Lucro Op. teórico" → usar "Lucro Operacional Teórico" por extenso em qualquer lugar visível.
 
-## Conteúdo final das tooltips
+## Mudanças funcionais
 
-**Patrimônio**
-> Tudo o que você tem hoje somado em reais: caixa, contas em casas, parceiros e cripto. É a foto atual do dinheiro disponível na operação.
->
-> `Caixa + Bookmakers + Parceiros + Cripto`
+### 1. `src/components/financeiro/HeaderKpiCard.tsx`
+- Adicionar prop opcional `onDetailClick?: () => void`.
+- Quando presente, renderizar um rodapé `<button>` discreto com o texto `Ver detalhamento →` (sem alterar `min-h`, encaixado abaixo da divisória já existente).
+- Quando ausente, o slot fica vazio (compatível com cards estáticos).
+- Hover do card inteiro fica clicável (cursor-pointer) só quando `onDetailClick` existe.
 
-**Fluxo Líquido**
-> O caixa que de fato saiu da operação dos projetos no período — quanto você retirou a mais do que precisou repor.
->
-> Positivo: a operação está devolvendo dinheiro. Negativo: precisou colocar mais do que tirou.
->
-> `Saques dos projetos − Depósitos nos projetos`
+### 2. Novo componente `src/components/financeiro/FluxoLiquidoDetalheDialog.tsx`
+Dialog que compara, lado a lado em duas colunas:
 
-**Resultado Líquido**
-> O que sobrou no bolso depois de pagar todos os custos do período (operadores, comissões, bônus, infra, etc.).
->
-> É o lucro real do mês — o que aumentou seu patrimônio de fato.
->
-> `Fluxo Líquido − Custos do período`
+| Coluna esquerda — "Caixa Real" | Coluna direita — "Resultado Teórico" |
+| ------------------------------ | ------------------------------------ |
+| **Fluxo Líquido** (valor)      | **Lucro Operacional Teórico** (valor)|
+| Caixa que de fato saiu dos projetos | Lucro contábil das apostas liquidadas |
 
-**Margem Operacional** (label trocado de "Margem Op.")
-> De cada R$ 1 movimentado na operação, quanto sobrou para você depois dos custos. Quanto maior, mais eficiente o período.
->
-> Acima de 30% é saudável. Negativo significa que os custos comeram tudo que entrou.
->
-> `Fluxo Líquido ÷ (Fluxo Líquido + Custos)`
+Abaixo, bloco curto: **Diferença = Lucro Teórico − Fluxo Líquido**, com leitura explicativa:
+- Se positivo: "Há R$ X já produzidos pela operação que ainda não foram realizados em caixa. Esse valor está represado em saldos de bookmakers, parceiros e wallets."
+- Se negativo/zero: "Você já realizou em caixa todo o lucro teórico do período (e mais)."
 
-## Mudanças no código
+Props: `open`, `onOpenChange`, `fluxoLiquido`, `lucroOperacionalTeorico`, `formatCurrency`, `periodLabel`.
 
-**Arquivo único:** `src/pages/Financeiro.tsx`
+### 3. Novo componente `src/components/financeiro/CustosDetalheDialog.tsx`
+Dialog que reaproveita a quebra de categorias **já calculada** em `calc.costs` (passada hoje para `ComposicaoCustosCard`).
 
-1. Trocar `label="Margem Op."` → `label="Margem Operacional"`.
-2. Substituir os 4 valores de `tooltip` pelos blocos acima, usando JSX com estrutura padronizada:
-   ```tsx
-   <div className="space-y-2 max-w-[280px]">
-     <p>{frase 1}</p>
-     <p className="text-muted-foreground">{frase 2}</p>
-     <div className="rounded-md bg-muted/60 px-2 py-1.5 font-mono text-[11px] text-foreground/90">
-       {fórmula}
-     </div>
-   </div>
-   ```
-3. Remover a frase *"É a base da Margem Operacional."* do tooltip do Fluxo Líquido (deixa de ser nota de implementação).
-4. Atualizar a referência `SecondaryRow label="Lucro Op. teórico"` → manter (continua sendo informação numérica útil, não é tooltip).
+Layout:
+- Header com total: `Custos do período · R$ XXX`.
+- Lista compacta (uma linha por categoria): Operadores · Comissões · Bônus · Infra · Aquisição, cada uma com valor + barra fina de proporção (`bg-muted` + fill `bg-primary/70`).
+- Rodapé pequeno: link `Ver detalhamento completo` que rola/foca o `ComposicaoCustosCard` já existente na parte inferior (via `scrollIntoView` + outline temporário).
+
+Props: `open`, `onOpenChange`, `totalCustos`, `categorias` (extraídas de `calc.costs.*` — usar a mesma forma que `ComposicaoCustosCard` consome).
+
+### 4. `src/pages/Financeiro.tsx`
+- Adicionar dois estados locais: `fluxoDetalheOpen`, `custosDetalheOpen`.
+- Remover as `SecondaryRow` de Fluxo Líquido e Resultado Líquido.
+- Passar `onDetailClick={() => setFluxoDetalheOpen(true)}` no card de Fluxo Líquido.
+- Passar `onDetailClick={() => setCustosDetalheOpen(true)}` no card de Resultado Líquido.
+- Montar os dois `Dialog`s no fim do bloco (irmãos do grid).
+- A `SecondaryRow` interna ao IIFE pode ser removida (não tem mais uso) — fica o `cn` import.
+
+### 5. Limpeza textual
+- Procurar e ajustar quaisquer rótulos `"Lucro Op."` / `"Lucro Op. teórico"` ainda visíveis (grep no `src/pages/Financeiro.tsx` e em `src/components/financeiro/`). Substituir por `"Lucro Operacional"` ou `"Lucro Operacional Teórico"` quando o termo aparecer em UI.
+
+## O que NÃO muda
+
+- Fórmulas, hooks, RPCs, threshold de cor, layout do grid (4 colunas).
+- O `ComposicaoCustosCard` na parte inferior continua sendo a visão "longa" — o dialog é o atalho rápido.
+- Card de Patrimônio e Margem Operacional permanecem sem detalhamento (não há comparação útil a fazer).
 
 ## Validação
 
-- `bunx vitest run` (sem regressão — tooltips são puramente visuais, sem teste atrelado).
-- Hover manual em cada card para conferir wrap em 280px e legibilidade.
+- `bunx vitest run` (sem novos testes — UI puramente apresentacional).
+- Conferir manualmente:
+  - Card Fluxo Líquido: hover muda cursor, clique abre dialog com 2 colunas.
+  - Card Resultado Líquido: clique abre breakdown de custos.
+  - Cards Patrimônio / Margem: continuam sem affordance.
 
 ## Fora de escopo
 
-- Mudar fórmulas, dados, threshold de cor ou layout dos cards.
-- Adicionar ícone/badge novo dentro do tooltip.
-- Refatorar `HeaderKpiCard`.
+- Refatorar `ComposicaoCustosCard` (continua sendo a fonte rica).
+- Adicionar gráficos novos.
+- Modificar a barra de período ou o badge global.

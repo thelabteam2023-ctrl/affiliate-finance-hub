@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useTabWorkspace } from "@/hooks/useTabWorkspace";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,6 +45,8 @@ import { FinanceiroDespesasTab } from "@/components/financeiro/FinanceiroDespesa
 import { FinanceiroHistoricoTab } from "@/components/financeiro/FinanceiroHistoricoTab";
 import { calcResultadoLiquido } from "@/lib/finance/resultadoLiquido";
 import { calcMargemOperacional } from "@/lib/finance/margemOperacional";
+import { FluxoLiquidoDetalheDialog } from "@/components/financeiro/FluxoLiquidoDetalheDialog";
+import { CustosDetalheDialog } from "@/components/financeiro/CustosDetalheDialog";
 
 export default function Financeiro() {
   const navigate = useNavigate();
@@ -117,6 +119,9 @@ export default function Financeiro() {
   // Tab
   const tabFromUrl = searchParams.get("tab");
   const [activeFinanceiroTab, setActiveFinanceiroTab] = useState(tabFromUrl || "overview");
+  const [fluxoDetalheOpen, setFluxoDetalheOpen] = useState(false);
+  const [custosDetalheOpen, setCustosDetalheOpen] = useState(false);
+  const composicaoCustosRef = useRef<HTMLDivElement | null>(null);
   const investidorFiltroId = searchParams.get("investidor");
 
   // Auth check
@@ -340,13 +345,8 @@ export default function Financeiro() {
                     }
                     icon={<TrendingUp className="h-4 w-4" />}
                     tone={lucroRealizado >= 0 ? "positive" : "negative"}
-                    secondary={
-                      <SecondaryRow
-                        label="Lucro Op. teórico"
-                        value={calc.formatCurrency(lucroOperacionalApostas)}
-                        tone={lucroOperacionalApostas >= 0 ? "positive" : "negative"}
-                      />
-                    }
+                    onDetailClick={() => setFluxoDetalheOpen(true)}
+                    detailLabel="Comparar com teórico"
                   />
                   <HeaderKpiCard
                     label="Resultado Líquido"
@@ -368,13 +368,8 @@ export default function Financeiro() {
                     }
                     icon={<Coins className="h-4 w-4" />}
                     tone={resultadoLiquido >= 0 ? "positive" : "negative"}
-                    secondary={
-                      <SecondaryRow
-                        label="Custos"
-                        value={`−${calc.formatCurrency(custoSust)}`}
-                        tone="negative"
-                      />
-                    }
+                    onDetailClick={() => setCustosDetalheOpen(true)}
+                    detailLabel="Ver custos"
                   />
                   <HeaderKpiCard
                     label="Margem Operacional"
@@ -433,7 +428,7 @@ export default function Financeiro() {
           </div>
 
           {/* LINHA 3: Composição de Custos (largura total) */}
-          <div className="grid grid-cols-1 gap-4 md:gap-6">
+          <div ref={composicaoCustosRef} className="grid grid-cols-1 gap-4 md:gap-6 scroll-mt-24">
             <ComposicaoCustosCard
               categorias={calc.composicaoCustos}
               totalAtual={calc.costs.custoSustentacao}
@@ -447,6 +442,29 @@ export default function Financeiro() {
               periodBadge={periodBadge}
             />
           </div>
+
+          <FluxoLiquidoDetalheDialog
+            open={fluxoDetalheOpen}
+            onOpenChange={setFluxoDetalheOpen}
+            fluxoLiquido={lucroRealizado}
+            lucroOperacionalTeorico={lucroOperacionalApostas}
+            formatCurrency={calc.formatCurrency}
+            periodBadge={periodBadge}
+          />
+          <CustosDetalheDialog
+            open={custosDetalheOpen}
+            onOpenChange={setCustosDetalheOpen}
+            categorias={calc.composicaoCustos}
+            totalCustos={calc.costs.custoSustentacao}
+            formatCurrency={calc.formatCurrency}
+            periodBadge={periodBadge}
+            onVerCompleto={() => {
+              composicaoCustosRef.current?.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+              });
+            }}
+          />
 
         </TabsContent>
 
