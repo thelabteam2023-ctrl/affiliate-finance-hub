@@ -49,8 +49,6 @@ import { FluxoLiquidoDetalheDialog } from "@/components/financeiro/FluxoLiquidoD
 import { CustosDetalheDialog } from "@/components/financeiro/CustosDetalheDialog";
 import { KpiRail, type KpiRailItem } from "@/components/financeiro/KpiRail";
 import { AlertStrip } from "@/components/financeiro/AlertStrip";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 
 export default function Financeiro() {
   const navigate = useNavigate();
