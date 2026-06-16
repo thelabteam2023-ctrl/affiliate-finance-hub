@@ -4,7 +4,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useFinanceiroData } from "@/hooks/useFinanceiroData";
 import { useFinanceiroCalculations } from "@/hooks/useFinanceiroCalculations";
-import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { useMultiCurrencyConversion } from "@/hooks/useMultiCurrencyConversion";
@@ -34,7 +33,6 @@ import {
 } from "@/components/ui/tooltip";
 import { KpiExplanationDialog, KpiType } from "@/components/financeiro/KpiExplanationDialog";
 import { ComposicaoCustosCard } from "@/components/financeiro/ComposicaoCustosCard";
-import { HeaderKpiCard } from "@/components/financeiro/HeaderKpiCard";
 import { PeriodScopeBadge } from "@/components/financeiro/PeriodScopeBadge";
 import { ExposicaoFinanceiraCard } from "@/components/financeiro/ExposicaoFinanceiraCard";
 import { PosicaoCapital } from "@/components/caixa/PosicaoCapital";
