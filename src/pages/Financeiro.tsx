@@ -345,13 +345,8 @@ export default function Financeiro() {
                     }
                     icon={<TrendingUp className="h-4 w-4" />}
                     tone={lucroRealizado >= 0 ? "positive" : "negative"}
-                    secondary={
-                      <SecondaryRow
-                        label="Lucro Op. teórico"
-                        value={calc.formatCurrency(lucroOperacionalApostas)}
-                        tone={lucroOperacionalApostas >= 0 ? "positive" : "negative"}
-                      />
-                    }
+                    onDetailClick={() => setFluxoDetalheOpen(true)}
+                    detailLabel="Comparar com teórico"
                   />
                   <HeaderKpiCard
                     label="Resultado Líquido"
@@ -373,13 +368,8 @@ export default function Financeiro() {
                     }
                     icon={<Coins className="h-4 w-4" />}
                     tone={resultadoLiquido >= 0 ? "positive" : "negative"}
-                    secondary={
-                      <SecondaryRow
-                        label="Custos"
-                        value={`−${calc.formatCurrency(custoSust)}`}
-                        tone="negative"
-                      />
-                    }
+                    onDetailClick={() => setCustosDetalheOpen(true)}
+                    detailLabel="Ver custos"
                   />
                   <HeaderKpiCard
                     label="Margem Operacional"
