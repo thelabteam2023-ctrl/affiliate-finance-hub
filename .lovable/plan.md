@@ -1,62 +1,64 @@
-## Contexto
+## Decisão confirmada
 
-O mesmo usuário (ex.: MARCIO, `auth_user_id=58d961f5...`) pode atuar como operador em **N workspaces**. O modelo atual já cobre isso:
+- **Composição de Custos** continua mostrando as 5 famílias (CAC, Comissões, Bônus, Infra, Operadores) — está correta para a visão executiva.
+- **Aba Despesas Administrativas** continua escopada só a `despesas_administrativas` — está correta para gestão operacional.
+- **Não vamos misturar**. Só corrigir os bugs reais.
 
-- Tabela `operadores` tem uma linha **por workspace** (id de operador diferente, mesmo `auth_user_id`):
-  - MARCIO no workspace `41718476...` → `operador_id=4baa422e...`
-  - MARCIO no workspace `feee9758...` → `operador_id=84e44c29...`
-- Cada `operador.id` é local ao seu `workspace_id`. Lançamentos (`despesas_administrativas`, `pagamentos_operador`, `operador_projetos`, etc.) referenciam o **operador_id**, não o `auth_user_id`.
+---
 
-Conclusão: o ID do operador **muda** por workspace; o `auth_user_id` é o elo comum (somente identidade da pessoa). Já existe isolamento natural. Os problemas residuais são:
+## Bugs a corrigir
 
-1. **UI/seleção de operador** pode listar/escolher um operador de outro workspace (causa do bug original que vimos: despesa do MARCIO apontava para o `operador_id` do workspace errado).
-2. **Falta de blindagem em outras tabelas com `operador_id`** (já cobrimos `despesas_administrativas` e `pagamentos_operador` na migration anterior).
-3. **Auto-provisionamento**: quando um `auth_user_id` aparece em um workspace novo, precisamos garantir que exista a linha em `operadores` daquele workspace antes de qualquer lançamento — nunca reusar `operador_id` de outro workspace.
+### Bug 1 — `filterByPeriod` expande qualquer intervalo para mês cheio (CRÍTICO)
 
-## Plano
+**Arquivo:** `src/hooks/useFinanceiroCalculations.ts`, linhas 81–89.
 
-### 1. Blindagem de banco (defesa em profundidade)
-Estender o trigger `enforce_operador_workspace_match()` (já criado) para TODAS as tabelas com FK para `operadores.id`:
+```ts
+const start = dataInicio ? startOfMonth(parseLocalDate(dataInicio)) : new Date(0);
+const end   = dataFim   ? endOfMonth(parseLocalDate(dataFim))     : new Date();
+```
 
-- `operador_projetos`
-- `entregas`
-- `apostas_unificada` (se referenciar operador)
-- `apostas_pernas` (idem)
-- `pagamentos_propostos`
-- qualquer outra surgida no levantamento
+**Impacto:** Quando o usuário escolhe "Mês atual" (01→hoje), "1 dia", "7 dias" ou um custom curto, o filtro silenciosamente expande para o **mês inteiro** (inclusive datas futuras do mês corrente). Isso afeta TODOS os cálculos do `useFinanceiroCalculations`:
+- Composição de Custos (5 categorias)
+- Movimentação de capital (depósitos/saques/scan)
+- Drill-downs (Custos Aquisição, Comissões, Bônus, Infraestrutura, Operadores)
 
-Cada tabela ganha trigger `BEFORE INSERT OR UPDATE OF operador_id, workspace_id` chamando a mesma função. Erro claro se workspaces divergem.
+**Correção:** trocar para `startOfDay`/`endOfDay`, respeitando o intervalo real recebido do filtro do dashboard. Sem mudar nenhuma fonte de dados nem nenhuma agregação.
 
-### 2. View canônica `operadores_do_workspace`
-Padronizar leitura no frontend via uma única query (ou hook) que **sempre** filtra `operadores.workspace_id = currentWorkspaceId`. Eliminar selects diretos sem filtro.
+```ts
+const start = dataInicio ? startOfDay(parseLocalDate(dataInicio)) : new Date(0);
+const end   = dataFim   ? endOfDay(parseLocalDate(dataFim))     : new Date();
+```
 
-### 3. Hook `useOperadoresWorkspace(workspaceId)`
-Garantir que todo seletor (`<Select operadores>`) consuma este hook. Auditar componentes que hoje fazem `from('operadores').select()` cru e migrar.
+### Bug 2 — `totalCustosAnterior` ignora o filtro do usuário e força "mês anterior do calendário civil"
 
-### 4. Auto-provisionamento determinístico
-RPC `ensure_operador_for_user(_auth_user_id uuid, _workspace_id uuid)`:
-- Retorna `operador_id` existente daquela combinação `(auth_user_id, workspace_id)`.
-- Se não existir, cria com `nome = display_name || email`, `status=ATIVO`, `tipo_contrato` default.
-- Usar em: `VincularOperadorDialog`, `ProjectPostCreateWizard`, `ProjectCreationWizard` — em vez de inserir manualmente.
+**Arquivo:** `src/hooks/useFinanceiroCalculations.ts`, linhas 344–351.
 
-### 5. Constraint de unicidade
-`UNIQUE (workspace_id, auth_user_id) WHERE auth_user_id IS NOT NULL` em `operadores` para impedir duplicatas no mesmo workspace.
+Hoje, o cálculo de "vs anterior" sempre compara contra o mês civil anterior (`subMonths(new Date(), 1)`), independente do filtro selecionado. Resultado: se o usuário está vendo "Ano" ou "Tudo" ou um custom, o `% vs anterior` no header da Composição não faz sentido.
 
-### 6. Auditoria de dados existentes
-Rodar relatório (read-only) listando lançamentos em qualquer tabela cujo `operador_id.workspace_id ≠ tabela.workspace_id`. Reportar antes de corrigir. Não fazer retrofix em massa (política anti-retrofix).
+**Correção:** calcular o período anterior como uma janela do mesmo tamanho do filtro ativo, terminando logo antes de `dataInicio`. Para `tudo`/sem filtro, esconder o badge "vs anterior" (ou exibir "—").
 
-### 7. Documentação / memória
-Salvar memória `mem://architecture/security/operador-multi-workspace-isolation-standard` com as regras: 1 linha de `operadores` por `(auth_user_id, workspace_id)`; FKs sempre validadas por trigger; seletores sempre filtrados.
+### Bug 3 — `totalCustosAnterior` só soma `despesas + despesasAdmin + pagamentosOperador` (faltam categorias)
 
-## Entregáveis (ordem)
+Mesmo bloco (linhas 347–350): o anterior soma 3 fontes, mas a Composição atual soma 5 famílias derivadas dessas mesmas fontes. O resultado bate por coincidência (porque CAC/Comissões/Bônus saem todas de `despesas`), mas é frágil — se um dia adicionarmos uma nova família (ex.: retenção), o "vs anterior" diverge.
 
-1. Migration: trigger replicado nas demais tabelas + UNIQUE constraint + RPC `ensure_operador_for_user`.
-2. Refactor frontend: hook `useOperadoresWorkspace` + adoção nos 3 wizards/seletores.
-3. Relatório de auditoria (SELECT) — sem alterações de dados.
-4. Memória persistente.
+**Correção:** reusar o mesmo somatório de `composicaoCustos` aplicado à janela anterior, em vez de duplicar a lógica.
 
-## Fora de escopo
-- Mass-fix de lançamentos legados (será tratado pontualmente após o relatório).
-- Mudar `operador_id` para chave composta (quebraria muito código).
+---
 
-Quer que eu prossiga com o passo 1 (migration) ou prefere começar pelo relatório de auditoria?
+## Escopo do que NÃO muda
+
+- Composição de Custos continua com as 5 famílias.
+- Aba Despesas Administrativas continua só com `despesas_administrativas`.
+- Nenhuma alteração de UI, layout, copy ou tooltip.
+- Nenhuma migration de banco.
+- Nenhuma mudança em RPC, ledger ou cálculo canônico.
+
+## Validação após o fix
+
+1. Selecionar "Mês atual" → Composição deve mostrar 01→hoje (sem incluir o resto do mês).
+2. Selecionar "7 dias" → Composição deve refletir só os últimos 7 dias.
+3. Selecionar um custom de 3 dias → idem.
+4. Selecionar "Tudo" → badge "vs anterior" some/neutro.
+5. Comparar manualmente Infraestrutura (Composição) vs total da aba Admin filtrando o mesmo período — devem bater para a parcela Infra+RH.
+
+Posso aplicar as 3 correções?
