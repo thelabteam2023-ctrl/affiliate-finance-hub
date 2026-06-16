@@ -1,46 +1,83 @@
-## Objetivo
+## Diagnóstico do cálculo atual
 
-Garantir que CPF, endereço de wallet cripto e chave PIX/conta bancária sejam **únicos apenas dentro do mesmo workspace** — nunca globalmente nem por `user_id`. Cada workspace é um ambiente operacional independente.
+O percentual "33,7% do lucro op." aparece no card **Exposição & Perdas** (`src/components/financeiro/ExposicaoFinanceiraCard.tsx`, linhas 132–133, 220–224).
 
-## Diagnóstico
+Fórmula em uso hoje:
 
-Auditei as restrições de unicidade nas três tabelas envolvidas:
+```
+pctPerdasLucro = (totalPerdasPeriodo / lucroOperacional) * 100
+```
 
-**Banco de dados (já correto, workspace-scoped):**
-- `parceiros_cpf_workspace_unique` → UNIQUE (cpf, workspace_id) ✔
-- Trigger `validate_wallet_endereco_unique` em `wallets_crypto` → escopo `workspace_id` via JOIN com `parceiros` ✔
-- Trigger `validate_pix_key_unique` em `contas_bancarias` → escopo `workspace_id` via JOIN com `parceiros` ✔
-- Nenhum índice UNIQUE global em `wallets_crypto.endereco` ou `contas_bancarias.pix_key`.
+- **Numerador** — `exp.totalPerdasPeriodo`: soma das perdas confirmadas no `cash_ledger` (tipo `PERDA_OPERACIONAL` + ocorrências fechadas como perda) dentro do filtro de período, calculada em `useExposicaoFinanceira({ dataInicio, dataFim })`.
+- **Denominador** — `lucroOperacional`: vem de `Financeiro.tsx` (`lucroOperacionalApostas`), produzido pelo `useWorkspaceLucroOperacional` — é o lucro **teórico** das apostas (já liquidadas, mas sem considerar saques/depósitos reais). É filtrado pelo mesmo período.
+- **Contagem** — `exp.countPerdas`: número de ocorrências confirmadas no período.
 
-**Frontend (incorreto — escopo por `user_id`, não por `workspace_id`):**
-Em `src/components/parceiros/ParceiroDialog.tsx`:
-- Linha 391: checagem de CPF duplicado filtra por `user_id` (bloqueia entre workspaces do mesmo dono).
-- Linha 449: checagem de telefone duplicado, idem.
-- Linha 1024: checagem de endereço de wallet usa `parceiros.user_id` (bloqueia mesmo dono em outro workspace).
+## Por que a base atual é frágil
 
-Resultado: o owner do workspace é bloqueado ao recadastrar um CPF/telefone/wallet que ele já possui em outro workspace seu, mesmo o DB permitindo. O erro do screenshot vem dessa validação client-side (ou da trigger em outro caso, que permanece correta — bloqueia só dentro do mesmo workspace).
+1. **Mistura natureza teórica × realizada**: o numerador é uma perda já consumada em caixa, o denominador é um resultado teórico de apostas. Comparar os dois cria um percentual sem leitura financeira clara.
+2. **Distorce com lucro operacional baixo ou negativo**: se o lucro operacional do período for ~0, o % explode; se for negativo, o card simplesmente esconde o percentual (`> 0` guard).
+3. **Não responde "que fatia da operação realizada do mês as perdas comeram"** — que é a pergunta natural do usuário.
 
-## Mudanças
+## Mudança proposta
 
-### 1. `src/components/parceiros/ParceiroDialog.tsx`
-Substituir os 3 filtros `.eq("user_id", user.id)` (e `parceiros.user_id`) pelo `workspaceId` ativo (já disponível no componente via `useTabWorkspace`/contexto — confirmar e importar se necessário):
+Trocar a base de comparação para o **Fluxo Líquido do período** (Saques − Depósitos efetivos no intervalo) — a métrica já implementada via `useWorkspaceLucroRealizado` com `dataInicio/dataFim`. Exibir, em paralelo, **% do Patrimônio** como referência estrutural estável (já existe na seção "Em disputa").
 
-- **CPF (linha 388-392):** `.eq("workspace_id", workspaceId).eq("cpf", cleanCpf)`
-- **Telefone (linha 446-450):** `.eq("workspace_id", workspaceId).eq("telefone", cleanTelefone)`
-- **Wallet endereço (linha 1020-1024):** trocar o `parceiros!inner(user_id)` por `parceiros!inner(workspace_id)` com `.eq("parceiros.workspace_id", workspaceId)`.
+### Nova regra
 
-Cada bloco também passa a abortar (com mensagem clara) se `workspaceId` estiver indisponível, em vez de cair em validação global silenciosa.
+```
+fluxoLiquidoPeriodo = useWorkspaceLucroRealizado({ dataInicio, dataFim }).lucroRealizado
 
-### 2. Triggers de banco — manter como estão
-Já estão corretamente escopados ao workspace. Nenhuma migration necessária.
+// Base preferencial: módulo do Fluxo Líquido (evita explodir/esconder quando negativo)
+baseComparacao = Math.abs(fluxoLiquidoPeriodo)
 
-### 3. Auditoria complementar (read-only, sem código)
-Conferir que não existem outros pontos no app fazendo `.eq("user_id", ...)` em `parceiros`, `wallets_crypto` ou `contas_bancarias` para validação de duplicata. A varredura inicial mostrou apenas os 3 casos acima como bloqueadores; demais ocorrências (linhas 668, 1085 e `BancoSelect.tsx:79`) são apenas para preenchimento de `user_id` em inserts e permanecem.
+pctPerdasFluxo = baseComparacao > 0
+  ? (totalPerdasPeriodo / baseComparacao) * 100
+  : null   // mostra "—" e dica explicando
 
-### 4. Sem alteração de regra dentro do mesmo workspace
-A unicidade **dentro do workspace** (mesmo CPF/wallet/PIX em parceiros diferentes do mesmo workspace) continua bloqueada pelos triggers — esse é o comportamento desejado. O ajuste é exclusivamente para liberar o **mesmo registro em workspaces diferentes**.
+// Fallback secundário sempre exibido em tooltip: % do patrimônio atual
+pctPerdasPatrimonio = patrimonioTotal > 0
+  ? (totalPerdasPeriodo / patrimonioTotal) * 100
+  : null
+```
 
-## Resultado esperado
-- Mesma pessoa (CPF), mesma wallet e mesma chave PIX podem ser cadastradas independentemente em cada workspace.
-- Isolamento operacional preservado: saldos, ledger, auditoria continuam por `workspace_id`.
-- Erro "Este endereço de wallet já está cadastrado para outro parceiro" passa a aparecer apenas quando o conflito é real dentro do mesmo workspace.
+### Leitura do número
+
+- `pctPerdasFluxo`: "as perdas confirmadas representaram X% do dinheiro líquido que entrou/saiu da operação no período".
+- Tooltip explica que usar o módulo é proposital: quando o período foi de prejuízo realizado, a perda é dimensionada em relação à magnitude do movimento, não ao sinal.
+
+### Tratamento de borda
+
+| Caso                       | Comportamento                                                    |
+| -------------------------- | ---------------------------------------------------------------- |
+| Sem perdas no período      | "Nenhuma perda confirmada no período" (igual hoje)               |
+| Fluxo Líquido = 0          | Mostra apenas valor absoluto + % do patrimônio + dica            |
+| Fluxo Líquido < 0          | Usa `Math.abs` e prefixa "% do fluxo líquido (mov. abs.)"        |
+| Patrimônio = 0             | Omite a referência de patrimônio                                 |
+
+## Arquivos a alterar
+
+### 1. `src/components/financeiro/ExposicaoFinanceiraCard.tsx`
+- Trocar a prop `lucroOperacional: number` por `fluxoLiquidoPeriodo: number` (mantendo `patrimonioTotal`).
+- Substituir o cálculo `pctPerdasLucro` por `pctPerdasFluxo` usando `Math.abs(fluxoLiquidoPeriodo)`.
+- Atualizar o subtexto "X ocorrências · Y% do lucro op." para "X ocorrências · Y% do fluxo líquido".
+- Ajustar o `TooltipContent` (linhas 207–212) explicando a nova base e por que o lucro operacional teórico foi descartado.
+- Acrescentar segunda linha discreta com "Z% do patrimônio" quando aplicável.
+
+### 2. `src/pages/Financeiro.tsx`
+- Onde o card é renderizado, passar `fluxoLiquidoPeriodo={lucroRealizado}` (já calculado pelo hook `useWorkspaceLucroRealizado` com `dataInicio/dataFim` na implementação anterior) no lugar de `lucroOperacional={...}`.
+
+### 3. Nenhuma mudança em hooks/serviços
+- `useExposicaoFinanceira` continua sendo a fonte de `totalPerdasPeriodo` / `countPerdas`.
+- `useWorkspaceLucroRealizado` já aceita `dataInicio/dataFim` — sem alterações.
+
+## Fora de escopo
+
+- Não tocar em `useFinanceiroCalculations.ts` nem no `ScanPeriodoCard.tsx` (componente atualmente não renderizado).
+- Não alterar a fórmula do Lucro Operacional, da Margem ou de qualquer outro KPI do header.
+- Sem migrations / mudanças no banco.
+
+## Validação
+
+1. Preview: aplicar filtros "mês atual", "últimos 30 dias", "mês anterior" e conferir que o `%` muda junto com o Fluxo Líquido exibido no header `Fluxo Líquido (período)`.
+2. Período sem fluxo (filtro futuro): card mostra valor absoluto + "—" no %, sem quebrar.
+3. Período com prejuízo realizado: % é positivo (usa `abs`) e o tooltip explica a leitura.

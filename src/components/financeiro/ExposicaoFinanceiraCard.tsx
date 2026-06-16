@@ -99,7 +99,8 @@ interface Props {
   dataInicio: string | null;
   dataFim: string | null;
   patrimonioTotal: number;
-  lucroOperacional: number;
+  /** Fluxo Líquido do período (Saques − Depósitos efetivos no intervalo). Usado como base do % de perdas. */
+  fluxoLiquidoPeriodo: number;
   formatCurrency: (value: number, currency?: string) => string;
   /** Badge "Período ativo" (passado pelo container) */
   periodBadge?: ReactNode;
@@ -119,7 +120,7 @@ export function ExposicaoFinanceiraCard({
   dataInicio,
   dataFim,
   patrimonioTotal,
-  lucroOperacional,
+  fluxoLiquidoPeriodo,
   formatCurrency,
   periodBadge,
   realtimeBadge: _realtimeBadge,
@@ -129,8 +130,12 @@ export function ExposicaoFinanceiraCard({
 
   const pctDisputaPatrimonio =
     patrimonioTotal > 0 ? (exp.totalEmDisputa / patrimonioTotal) * 100 : 0;
-  const pctPerdasLucro =
-    lucroOperacional > 0 ? (exp.totalPerdasPeriodo / lucroOperacional) * 100 : 0;
+  const fluxoAbs = Math.abs(fluxoLiquidoPeriodo);
+  const pctPerdasFluxo =
+    fluxoAbs > 0 ? (exp.totalPerdasPeriodo / fluxoAbs) * 100 : null;
+  const pctPerdasPatrimonio =
+    patrimonioTotal > 0 ? (exp.totalPerdasPeriodo / patrimonioTotal) * 100 : null;
+  const fluxoNegativo = fluxoLiquidoPeriodo < 0;
 
   const segs = [
     {
@@ -206,9 +211,11 @@ export function ExposicaoFinanceiraCard({
               </TooltipTrigger>
               <TooltipContent side="top" className="max-w-[260px] text-xs">
                 Valor absoluto consumado no período selecionado. O comparativo
-                usa o lucro operacional do mesmo recorte — evitamos comparar
-                com o patrimônio atual porque ele é dinâmico e distorceria
-                perdas históricas.
+                usa o <strong>Fluxo Líquido</strong> do mesmo recorte (Saques −
+                Depósitos efetivos) — mostra que fatia do dinheiro que efetivamente
+                entrou/saiu do caixa as perdas representaram. Quando o fluxo é
+                negativo, usamos o módulo (magnitude do movimento), e nunca o
+                Lucro Operacional teórico.
               </TooltipContent>
             </Tooltip>
             <div className="text-xl font-bold text-red-600 dark:text-red-400 tabular-nums mt-0.5">
@@ -217,12 +224,20 @@ export function ExposicaoFinanceiraCard({
             <div className="text-[11px] text-muted-foreground mt-0.5">
               {exp.countPerdas === 0
                 ? "—"
-                : `${exp.countPerdas} ocorrência${exp.countPerdas === 1 ? "" : "s"}${
-                    lucroOperacional > 0
-                      ? ` · ${pctPerdasLucro.toFixed(1)}% do lucro op.`
-                      : ""
-                  }`}
+                : (
+                  <>
+                    {exp.countPerdas} ocorrência{exp.countPerdas === 1 ? "" : "s"}
+                    {pctPerdasFluxo !== null
+                      ? ` · ${pctPerdasFluxo.toFixed(1)}% do fluxo líquido${fluxoNegativo ? " (abs.)" : ""}`
+                      : ""}
+                  </>
+                )}
             </div>
+            {exp.countPerdas > 0 && pctPerdasPatrimonio !== null && (
+              <div className="text-[10px] text-muted-foreground/70 mt-0.5">
+                {pctPerdasPatrimonio.toFixed(2)}% do patrimônio atual
+              </div>
+            )}
           </div>
         </div>
         </TooltipProvider>

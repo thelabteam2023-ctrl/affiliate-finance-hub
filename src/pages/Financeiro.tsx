@@ -338,7 +338,7 @@ export default function Financeiro() {
                 calc.saldos.totalContasParceiros +
                 calc.saldos.totalWalletsParceiros
               }
-              lucroOperacional={lucroOperacionalApostas}
+              fluxoLiquidoPeriodo={lucroRealizado}
               formatCurrency={calc.formatCurrency}
               periodBadge={periodBadge}
               realtimeBadge={realtimeBadge}
