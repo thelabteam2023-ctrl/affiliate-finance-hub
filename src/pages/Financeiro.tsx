@@ -47,6 +47,10 @@ import { calcMargemOperacional } from "@/lib/finance/margemOperacional";
 import { FluxoLiquidoDetalheDialog } from "@/components/financeiro/FluxoLiquidoDetalheDialog";
 import { CustosDetalheDialog } from "@/components/financeiro/CustosDetalheDialog";
 import { KpiRail, type KpiRailItem } from "@/components/financeiro/KpiRail";
+import { useFinanceiroMensal } from "@/hooks/useFinanceiroMensal";
+import { GraficoMensalDialog } from "@/components/financeiro/GraficoMensalDialog";
+import { Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function Financeiro() {
   const navigate = useNavigate();
@@ -121,6 +125,8 @@ export default function Financeiro() {
   const [activeFinanceiroTab, setActiveFinanceiroTab] = useState(tabFromUrl || "overview");
   const [fluxoDetalheOpen, setFluxoDetalheOpen] = useState(false);
   const [custosDetalheOpen, setCustosDetalheOpen] = useState(false);
+  const [graficoMensalOpen, setGraficoMensalOpen] = useState(false);
+  const [janelaMeses, setJanelaMeses] = useState(12);
   const composicaoCustosRef = useRef<HTMLDivElement | null>(null);
   const investidorFiltroId = searchParams.get("investidor");
 
@@ -146,6 +152,13 @@ export default function Financeiro() {
     getCryptoUSDValue,
     convertFromBRL,
     convertUnified,
+  });
+
+  // Dados mensais (12/24m) — independentes do filtro de período (relatório histórico)
+  const mesesFinanceiro = useFinanceiroMensal({
+    finData,
+    meses: janelaMeses,
+    convertToBRL: calc.convertToBRL,
   });
 
   // Capital em disputa (para sobreposição no donut da Posição de Capital)
@@ -241,6 +254,18 @@ export default function Financeiro() {
         customRange={customRange}
         onCustomRangeChange={setCustomRange}
       />
+
+      <div className="flex justify-end">
+        <Button
+          size="sm"
+          variant="default"
+          onClick={() => setGraficoMensalOpen(true)}
+          className="gap-2"
+        >
+          <Sparkles className="h-4 w-4" />
+          Gerar Gráfico Mensal
+        </Button>
+      </div>
 
 
       <Tabs value={activeFinanceiroTab} onValueChange={setActiveFinanceiroTab} className="space-y-4 md:space-y-6">
@@ -461,6 +486,15 @@ export default function Financeiro() {
       </Tabs>
 
       <KpiExplanationDialog open={kpiDialogOpen} onOpenChange={setKpiDialogOpen} kpiType={kpiType} />
+
+      <GraficoMensalDialog
+        open={graficoMensalOpen}
+        onOpenChange={setGraficoMensalOpen}
+        meses={mesesFinanceiro}
+        workspaceNome={workspaceId || "workspace"}
+        janelaMeses={janelaMeses}
+        onJanelaChange={setJanelaMeses}
+      />
     </div>
   );
 }
