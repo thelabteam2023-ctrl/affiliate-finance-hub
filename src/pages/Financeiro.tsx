@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useTabWorkspace } from "@/hooks/useTabWorkspace";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,6 +45,8 @@ import { FinanceiroDespesasTab } from "@/components/financeiro/FinanceiroDespesa
 import { FinanceiroHistoricoTab } from "@/components/financeiro/FinanceiroHistoricoTab";
 import { calcResultadoLiquido } from "@/lib/finance/resultadoLiquido";
 import { calcMargemOperacional } from "@/lib/finance/margemOperacional";
+import { FluxoLiquidoDetalheDialog } from "@/components/financeiro/FluxoLiquidoDetalheDialog";
+import { CustosDetalheDialog } from "@/components/financeiro/CustosDetalheDialog";
 
 export default function Financeiro() {
   const navigate = useNavigate();
@@ -117,6 +119,9 @@ export default function Financeiro() {
   // Tab
   const tabFromUrl = searchParams.get("tab");
   const [activeFinanceiroTab, setActiveFinanceiroTab] = useState(tabFromUrl || "overview");
+  const [fluxoDetalheOpen, setFluxoDetalheOpen] = useState(false);
+  const [custosDetalheOpen, setCustosDetalheOpen] = useState(false);
+  const composicaoCustosRef = useRef<HTMLDivElement | null>(null);
   const investidorFiltroId = searchParams.get("investidor");
 
   // Auth check
