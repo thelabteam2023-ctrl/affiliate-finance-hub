@@ -17,6 +17,7 @@ import { DashboardPeriodFilterBar } from "@/components/shared/DashboardPeriodFil
 import {
   DashboardPeriodFilter,
   getDashboardDateRangeAsStrings,
+  getDashboardPeriodDescription,
 } from "@/types/dashboardFilters";
 import { useTopBar } from "@/contexts/TopBarContext";
 import {
@@ -164,21 +165,9 @@ export default function Financeiro() {
 
   // Label de período para o KpiRail
   const periodLabel = useMemo(() => {
-    const PRESET_LABELS: Record<DashboardPeriodFilter, string> = {
-      mes: "Mês atual",
-      mes_anterior: "Mês anterior",
-      ano: "Ano",
-      tudo: "Tudo",
-      personalizado: "Período",
-    } as any;
-    if (periodoPreset === "personalizado" && customRange) {
-      return `${format(customRange.start, "dd/MM/yy")} – ${format(customRange.end, "dd/MM/yy")}`;
-    }
-    if (periodoPreset === "mes") {
-      return format(new Date(), "MMMM 'de' yyyy", { locale: ptBR })
-        .replace(/^./, (c) => c.toUpperCase());
-    }
-    return PRESET_LABELS[periodoPreset] ?? "Período";
+    const d = getDashboardPeriodDescription(periodoPreset, customRange);
+    if (d.monthName) return d.monthName.replace(/^./, (c) => c.toUpperCase());
+    return d.shortLabel;
   }, [periodoPreset, customRange]);
 
   const periodBadge = (
