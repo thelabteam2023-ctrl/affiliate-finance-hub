@@ -156,6 +156,31 @@ export default function Financeiro() {
   // Capital em disputa (para sobreposição no donut da Posição de Capital)
   const { bySegment: capitalEmDisputa } = useCapitalEmDisputa();
 
+  // Exposição (para o AlertStrip)
+  const exposicao = useExposicaoFinanceira({
+    dataInicio: dataInicio || null,
+    dataFim: dataFim || null,
+  });
+
+  // Label de período para o KpiRail
+  const periodLabel = useMemo(() => {
+    const PRESET_LABELS: Record<DashboardPeriodFilter, string> = {
+      mes: "Mês atual",
+      mes_anterior: "Mês anterior",
+      ano: "Ano",
+      tudo: "Tudo",
+      personalizado: "Período",
+    } as any;
+    if (periodoPreset === "personalizado" && customRange) {
+      return `${format(customRange.start, "dd/MM/yy")} – ${format(customRange.end, "dd/MM/yy")}`;
+    }
+    if (periodoPreset === "mes") {
+      return format(new Date(), "MMMM 'de' yyyy", { locale: ptBR })
+        .replace(/^./, (c) => c.toUpperCase());
+    }
+    return PRESET_LABELS[periodoPreset] ?? "Período";
+  }, [periodoPreset, customRange]);
+
   const periodBadge = (
     <PeriodScopeBadge scope="periodo" filter={periodoPreset} customRange={customRange} />
   );
