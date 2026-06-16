@@ -100,6 +100,8 @@ export default function Financeiro() {
     cotacaoMXN,
     cotacaoARS,
     cotacaoCOP,
+    dataInicio: dataInicio || null,
+    dataFim: dataFim || null,
   });
 
   // Capital médio
