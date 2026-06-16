@@ -38,6 +38,7 @@ import { PeriodScopeBadge } from "@/components/financeiro/PeriodScopeBadge";
 import { ExposicaoFinanceiraCard } from "@/components/financeiro/ExposicaoFinanceiraCard";
 import { PosicaoCapital } from "@/components/caixa/PosicaoCapital";
 import { useCapitalEmDisputa } from "@/hooks/useCapitalEmDisputa";
+import { useExposicaoFinanceira } from "@/hooks/useExposicaoFinanceira";
 import { Wallet, TrendingUp, Percent, Coins } from "lucide-react";
 import { ParticipacaoInvestidoresTab } from "@/components/financeiro/ParticipacaoInvestidoresTab";
 import { MultiCurrencyWarningBanner } from "@/components/financeiro/MultiCurrencyIndicator";
@@ -47,6 +48,10 @@ import { calcResultadoLiquido } from "@/lib/finance/resultadoLiquido";
 import { calcMargemOperacional } from "@/lib/finance/margemOperacional";
 import { FluxoLiquidoDetalheDialog } from "@/components/financeiro/FluxoLiquidoDetalheDialog";
 import { CustosDetalheDialog } from "@/components/financeiro/CustosDetalheDialog";
+import { KpiRail, type KpiRailItem } from "@/components/financeiro/KpiRail";
+import { AlertStrip } from "@/components/financeiro/AlertStrip";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export default function Financeiro() {
   const navigate = useNavigate();
