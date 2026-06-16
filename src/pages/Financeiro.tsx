@@ -44,6 +44,7 @@ import { MultiCurrencyWarningBanner } from "@/components/financeiro/MultiCurrenc
 import { FinanceiroDespesasTab } from "@/components/financeiro/FinanceiroDespesasTab";
 import { FinanceiroHistoricoTab } from "@/components/financeiro/FinanceiroHistoricoTab";
 import { calcResultadoLiquido } from "@/lib/finance/resultadoLiquido";
+import { calcMargemOperacional } from "@/lib/finance/margemOperacional";
 
 export default function Financeiro() {
   const navigate = useNavigate();
@@ -265,11 +266,16 @@ export default function Financeiro() {
               calc.saldos.totalContasParceiros +
               calc.saldos.totalWalletsParceiros;
             const custoSust = calc.costs.custoSustentacao;
-            const margemOp =
-              lucroOperacionalApostas + custoSust > 0
-                ? (lucroOperacionalApostas / (lucroOperacionalApostas + custoSust)) * 100
-                : 0;
             const resultadoLiquido = calcResultadoLiquido(lucroRealizado, custoSust);
+            const margemOp = calcMargemOperacional(lucroRealizado, custoSust);
+            const margemTone: "positive" | "warning" | "negative" | "default" =
+              margemOp === null
+                ? "default"
+                : margemOp >= 30
+                  ? "positive"
+                  : margemOp > 0
+                    ? "warning"
+                    : "negative";
 
             const SecondaryRow = ({
               label,
@@ -314,7 +320,8 @@ export default function Financeiro() {
                         {" "}(saques menos depósitos efetivos confirmados) dentro do
                         período filtrado. Mede o caixa que de fato entrou ou saiu da
                         operação dos projetos — não inclui transferências internas,
-                        custos administrativos nem patrimônio parado.
+                        custos administrativos nem patrimônio parado.{" "}
+                        <strong>É a base da Margem Operacional.</strong>
                       </>
                     }
                     icon={<TrendingUp className="h-4 w-4" />}
@@ -351,14 +358,14 @@ export default function Financeiro() {
                   />
                   <HeaderKpiCard
                     label="Margem Op."
-                    value={`${margemOp.toFixed(1)}%`}
-                    tooltip="Lucro Operacional ÷ (Lucro Operacional + Custo de Sustentação). Indica a eficiência teórica da operação antes de fluxo de caixa."
+                    value={margemOp === null ? "—" : `${margemOp.toFixed(1)}%`}
+                    tooltip="Fluxo Líquido ÷ (Fluxo Líquido + Custo de Sustentação). Mede quanto do caixa efetivamente sacado dos projetos sobrou após pagar todos os custos do período. Não usa lucro teórico — só dinheiro que de fato saiu da operação."
                     icon={<Percent className="h-4 w-4" />}
-                    tone={margemOp >= 50 ? "positive" : margemOp > 0 ? "warning" : "negative"}
+                    tone={margemTone}
                     secondary={
                       <SecondaryRow
-                        label="Lucro Op. / Custo"
-                        value={`${calc.formatCurrency(lucroOperacionalApostas)} / ${calc.formatCurrency(custoSust)}`}
+                        label="Fluxo / Custo"
+                        value={`${calc.formatCurrency(lucroRealizado)} / ${calc.formatCurrency(custoSust)}`}
                       />
                     }
                   />
