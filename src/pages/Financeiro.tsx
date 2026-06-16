@@ -28,7 +28,6 @@ import {
 import {
   Tooltip as ShadcnTooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { KpiExplanationDialog, KpiType } from "@/components/financeiro/KpiExplanationDialog";
@@ -38,7 +37,7 @@ import { PeriodScopeBadge } from "@/components/financeiro/PeriodScopeBadge";
 import { ExposicaoFinanceiraCard } from "@/components/financeiro/ExposicaoFinanceiraCard";
 import { PosicaoCapital } from "@/components/caixa/PosicaoCapital";
 import { useCapitalEmDisputa } from "@/hooks/useCapitalEmDisputa";
-import { Wallet, TrendingUp, Percent, Coins, Info } from "lucide-react";
+import { Wallet, TrendingUp, Percent, Coins } from "lucide-react";
 import { ParticipacaoInvestidoresTab } from "@/components/financeiro/ParticipacaoInvestidoresTab";
 import { MultiCurrencyWarningBanner } from "@/components/financeiro/MultiCurrencyIndicator";
 import { FinanceiroDespesasTab } from "@/components/financeiro/FinanceiroDespesasTab";
