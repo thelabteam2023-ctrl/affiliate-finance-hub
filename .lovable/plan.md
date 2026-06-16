@@ -1,101 +1,62 @@
-# Refatorar Composição de Custos: Popover → Colapsável Inline
+## Contexto
 
-## Objetivo
-Replicar exatamente o padrão da **Posição de Capital** (`src/components/caixa/PosicaoCapital.tsx`) na **Composição de Custos** (`src/components/financeiro/ComposicaoCustosCard.tsx`). Hoje, ao clicar na seta lateral (▸) de uma categoria como "Operadores", abre um **Popover lateral flutuante**. Queremos substituir por um **painel colapsável inline** que se expande abaixo da linha clicada, mostrando a composição (ex.: lista de operadores).
+O mesmo usuário (ex.: MARCIO, `auth_user_id=58d961f5...`) pode atuar como operador em **N workspaces**. O modelo atual já cobre isso:
 
-## Comportamento alvo (igual ao PosicaoCapital)
-- A linha inteira da categoria fica clicável (não só a seta).
-- Clicar alterna `expandedSegment`: abre uma única categoria por vez (clicar de novo fecha).
-- A seta `ChevronRight` gira 90° quando expandida (`rotate-90`).
-- O painel expandido aparece logo abaixo da linha, com:
-  - Borda lateral colorida (`borderLeft: 2px solid <color>`).
-  - Header com label "Composição de {categoria}".
-  - Lista de itens (nome + valor + % do segmento + barra de progresso).
-  - Linha "Total" no rodapé.
-- Donut e linha sincronizam estado de hover/active (já existe `activeSegment` — manter).
+- Tabela `operadores` tem uma linha **por workspace** (id de operador diferente, mesmo `auth_user_id`):
+  - MARCIO no workspace `41718476...` → `operador_id=4baa422e...`
+  - MARCIO no workspace `feee9758...` → `operador_id=84e44c29...`
+- Cada `operador.id` é local ao seu `workspace_id`. Lançamentos (`despesas_administrativas`, `pagamentos_operador`, `operador_projetos`, etc.) referenciam o **operador_id**, não o `auth_user_id`.
 
-## Mudanças no arquivo `src/components/financeiro/ComposicaoCustosCard.tsx`
+Conclusão: o ID do operador **muda** por workspace; o `auth_user_id` é o elo comum (somente identidade da pessoa). Já existe isolamento natural. Os problemas residuais são:
 
-### 1. State novo
-Adicionar `const [expandedSegment, setExpandedSegment] = useState<string | null>(null);` ao lado do `activeSegment`.
+1. **UI/seleção de operador** pode listar/escolher um operador de outro workspace (causa do bug original que vimos: despesa do MARCIO apontava para o `operador_id` do workspace errado).
+2. **Falta de blindagem em outras tabelas com `operador_id`** (já cobrimos `despesas_administrativas` e `pagamentos_operador` na migration anterior).
+3. **Auto-provisionamento**: quando um `auth_user_id` aparece em um workspace novo, precisamos garantir que exista a linha em `operadores` daquele workspace antes de qualquer lançamento — nunca reusar `operador_id` de outro workspace.
 
-### 2. Handler
-```ts
-const handleToggle = (name: string) => {
-  setExpandedSegment(prev => prev === name ? null : name);
-};
-```
+## Plano
 
-### 3. Remover imports não usados
-- Remover `Popover, PopoverContent, PopoverTrigger` de `@/components/ui/popover`.
-- Manter `ChevronRight` (será reusado com rotação).
+### 1. Blindagem de banco (defesa em profundidade)
+Estender o trigger `enforce_operador_workspace_match()` (já criado) para TODAS as tabelas com FK para `operadores.id`:
 
-### 4. Refatorar a linha de categoria (`sortedCategorias.map(...)`)
-- Envolver o `<div>` atual num wrapper `<div className="flex flex-col">` para acomodar o painel inline embaixo.
-- Adicionar `onClick={() => temDetalhes && handleToggle(cat.name)}` no div da linha (e `cursor-pointer` quando `temDetalhes`).
-- A seta `ChevronRight` agora apenas indica estado: aplicar `cn("h-3 w-3 transition-transform", isExpanded && "rotate-90")`.
-- Remover totalmente o bloco `<Popover>...</Popover>`.
+- `operador_projetos`
+- `entregas`
+- `apostas_unificada` (se referenciar operador)
+- `apostas_pernas` (idem)
+- `pagamentos_propostos`
+- qualquer outra surgida no levantamento
 
-### 5. Painel inline (após a linha)
-Renderizar quando `isExpanded && temDetalhes`:
-```tsx
-{isExpanded && (
-  <div
-    style={{
-      animation: 'expand-down 0.2s ease-out forwards',
-      background: 'rgba(22, 27, 39, 0.4)',
-      borderLeft: `2px solid ${color}`,
-    }}
-    className="mt-1 mb-2 mx-[10px] rounded-r-lg overflow-hidden"
-  >
-    <div className="p-3 border-l border-white/5 bg-white/[0.02]">
-      <div className="flex items-center justify-between mb-3 px-2">
-        <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
-          Composição de {cat.name}
-        </span>
-        <span className="text-[10px] text-muted-foreground">
-          {detalhes.items.length} {detalhes.items.length === 1 ? "item" : "itens"}
-        </span>
-      </div>
+Cada tabela ganha trigger `BEFORE INSERT OR UPDATE OF operador_id, workspace_id` chamando a mesma função. Erro claro se workspaces divergem.
 
-      <div className="space-y-0.5 max-h-[260px] overflow-y-auto">
-        {detalhes.items.map((item, idx) => (
-          <DetalheItem
-            key={idx}
-            nome={item.nome}
-            valor={item.valor}
-            total={detalhes.total}
-            formatCurrency={formatCurrency}
-            color={detalhes.color}
-            hasCrypto={item.hasCrypto}
-            valorUSD={item.valorUSD}
-          />
-        ))}
-      </div>
+### 2. View canônica `operadores_do_workspace`
+Padronizar leitura no frontend via uma única query (ou hook) que **sempre** filtra `operadores.workspace_id = currentWorkspaceId`. Eliminar selects diretos sem filtro.
 
-      <div className="mt-3 pt-2 border-t border-white/5 flex items-center justify-between px-2">
-        <span className="text-[11px] font-medium text-[var(--text-faint)]">Total</span>
-        <span className="text-[12px] font-semibold text-[var(--text-primary)] tabular-nums">
-          {formatCurrency(detalhes.total)}
-        </span>
-      </div>
-    </div>
-  </div>
-)}
-```
-- Reusa o `DetalheItem` que já existe no arquivo (sem duplicar lógica).
-- Mantém os agrupamentos preservados em `getDetalhesForCategoria` (Operadores tradicionais + RH ficam juntos, ordenados por valor — comportamento já existente).
+### 3. Hook `useOperadoresWorkspace(workspaceId)`
+Garantir que todo seletor (`<Select operadores>`) consuma este hook. Auditar componentes que hoje fazem `from('operadores').select()` cru e migrar.
 
-### 6. Animação `expand-down`
-Verificar se o keyframe `expand-down` já está definido globalmente (é usado em PosicaoCapital). Se não houver, ele já funciona porque está no CSS global; nenhuma ação extra necessária. Caso esteja faltando no projeto, o painel ainda aparece (sem animação), mas o keyframe está presente porque PosicaoCapital o usa em produção.
+### 4. Auto-provisionamento determinístico
+RPC `ensure_operador_for_user(_auth_user_id uuid, _workspace_id uuid)`:
+- Retorna `operador_id` existente daquela combinação `(auth_user_id, workspace_id)`.
+- Se não existir, cria com `nome = display_name || email`, `status=ATIVO`, `tipo_contrato` default.
+- Usar em: `VincularOperadorDialog`, `ProjectPostCreateWizard`, `ProjectCreationWizard` — em vez de inserir manualmente.
 
-## Não muda
-- `CustoSustentacaoCard.tsx`: o usuário se refere ao card **Composição de Custos** (screenshot mostra "Composição de Custos" com Operadores, Infraestrutura), não ao Custo de Sustentação. Esse arquivo fica intocado.
-- Lógica de cálculo (`getDetalhesForCategoria`, `hasDetalhes`) permanece igual.
-- Donut SVG, comparativo "Período Atual / Anterior", agrupamentos e cores: sem mudanças.
-- `Financeiro.tsx`: sem mudanças (props do card permanecem).
+### 5. Constraint de unicidade
+`UNIQUE (workspace_id, auth_user_id) WHERE auth_user_id IS NOT NULL` em `operadores` para impedir duplicatas no mesmo workspace.
 
-## Validação
-- Build TS limpo.
-- Visualmente: clicar na linha "Operadores" expande inline (não abre Popover lateral). Seta rotaciona. Clicar novamente fecha. Apenas uma categoria expandida por vez.
-- Donut + linha continuam sincronizados em hover.
+### 6. Auditoria de dados existentes
+Rodar relatório (read-only) listando lançamentos em qualquer tabela cujo `operador_id.workspace_id ≠ tabela.workspace_id`. Reportar antes de corrigir. Não fazer retrofix em massa (política anti-retrofix).
+
+### 7. Documentação / memória
+Salvar memória `mem://architecture/security/operador-multi-workspace-isolation-standard` com as regras: 1 linha de `operadores` por `(auth_user_id, workspace_id)`; FKs sempre validadas por trigger; seletores sempre filtrados.
+
+## Entregáveis (ordem)
+
+1. Migration: trigger replicado nas demais tabelas + UNIQUE constraint + RPC `ensure_operador_for_user`.
+2. Refactor frontend: hook `useOperadoresWorkspace` + adoção nos 3 wizards/seletores.
+3. Relatório de auditoria (SELECT) — sem alterações de dados.
+4. Memória persistente.
+
+## Fora de escopo
+- Mass-fix de lançamentos legados (será tratado pontualmente após o relatório).
+- Mudar `operador_id` para chave composta (quebraria muito código).
+
+Quer que eu prossiga com o passo 1 (migration) ou prefere começar pelo relatório de auditoria?
