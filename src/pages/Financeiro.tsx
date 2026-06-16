@@ -44,6 +44,7 @@ import { MultiCurrencyWarningBanner } from "@/components/financeiro/MultiCurrenc
 import { FinanceiroDespesasTab } from "@/components/financeiro/FinanceiroDespesasTab";
 import { FinanceiroHistoricoTab } from "@/components/financeiro/FinanceiroHistoricoTab";
 import { calcResultadoLiquido } from "@/lib/finance/resultadoLiquido";
+import { calcMargemOperacional } from "@/lib/finance/margemOperacional";
 
 export default function Financeiro() {
   const navigate = useNavigate();
