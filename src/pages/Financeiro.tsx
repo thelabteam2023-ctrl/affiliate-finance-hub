@@ -311,8 +311,7 @@ export default function Financeiro() {
                     tooltip={
                       <div className="space-y-2 max-w-[280px]">
                         <p>
-                          Tudo o que você tem hoje, somado em reais. É a foto atual do
-                          dinheiro disponível na operação.
+                          Todo o capital posicionado na operação hoje, somado em reais.
                         </p>
                         <div className="rounded-md bg-muted/60 px-2 py-1.5 font-mono text-[11px] text-foreground/90">
                           Caixa + Bookmakers + Parceiros + Cripto
