@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 interface HeaderKpiCardProps {
-  label: string;
+  label: ReactNode;
   value: string;
   hint?: string;
   icon?: ReactNode;

@@ -28,6 +28,7 @@ import {
 import {
   Tooltip as ShadcnTooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { KpiExplanationDialog, KpiType } from "@/components/financeiro/KpiExplanationDialog";
@@ -37,11 +38,12 @@ import { PeriodScopeBadge } from "@/components/financeiro/PeriodScopeBadge";
 import { ExposicaoFinanceiraCard } from "@/components/financeiro/ExposicaoFinanceiraCard";
 import { PosicaoCapital } from "@/components/caixa/PosicaoCapital";
 import { useCapitalEmDisputa } from "@/hooks/useCapitalEmDisputa";
-import { Wallet, TrendingUp, Percent } from "lucide-react";
+import { Wallet, TrendingUp, Percent, Coins, Info } from "lucide-react";
 import { ParticipacaoInvestidoresTab } from "@/components/financeiro/ParticipacaoInvestidoresTab";
 import { MultiCurrencyWarningBanner } from "@/components/financeiro/MultiCurrencyIndicator";
 import { FinanceiroDespesasTab } from "@/components/financeiro/FinanceiroDespesasTab";
 import { FinanceiroHistoricoTab } from "@/components/financeiro/FinanceiroHistoricoTab";
+import { calcResultadoLiquido } from "@/lib/finance/resultadoLiquido";
 
 export default function Financeiro() {
   const navigate = useNavigate();
@@ -267,8 +269,9 @@ export default function Financeiro() {
               lucroOperacionalApostas + custoSust > 0
                 ? (lucroOperacionalApostas / (lucroOperacionalApostas + custoSust)) * 100
                 : 0;
+            const resultadoLiquido = calcResultadoLiquido(lucroRealizado, custoSust);
             return (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
                 <HeaderKpiCard
                   label="Patrimônio Total"
                   value={calc.formatCurrency(patrimonioTotal)}
@@ -299,6 +302,40 @@ export default function Financeiro() {
                         }`}
                       >
                         {calc.formatCurrency(lucroOperacionalApostas)}
+                      </span>
+                    </div>
+                  }
+                />
+                <HeaderKpiCard
+                  label={
+                    <TooltipProvider delayDuration={150}>
+                      <ShadcnTooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex items-center gap-1 cursor-help">
+                            Resultado Líquido (período)
+                            <Info className="h-3 w-3 opacity-50" />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-[280px] text-xs normal-case tracking-normal">
+                          <strong>Fluxo Líquido − Custo de Sustentação</strong> do mesmo
+                          período. Mostra quanto efetivamente sobrou após pagar todos os
+                          custos (aquisição, comissões, bônus, despesas administrativas
+                          e operadores). Não confundir com Lucro Operacional (teórico)
+                          nem com Lucro Real bruto.
+                        </TooltipContent>
+                      </ShadcnTooltip>
+                    </TooltipProvider>
+                  }
+                  value={calc.formatCurrency(resultadoLiquido)}
+                  hint="Fluxo Líquido do período menos todos os custos da operação."
+                  icon={<Coins className="h-4 w-4" />}
+                  tone={resultadoLiquido >= 0 ? "positive" : "negative"}
+                  periodBadge={periodBadge}
+                  secondary={
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-muted-foreground">Custos do período</span>
+                      <span className="font-semibold tabular-nums text-red-600 dark:text-red-400">
+                        −{calc.formatCurrency(custoSust)}
                       </span>
                     </div>
                   }
