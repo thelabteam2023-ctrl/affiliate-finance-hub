@@ -310,7 +310,7 @@ export default function Financeiro() {
                   label={
                     (
                       <TooltipProvider delayDuration={150}>
-                        <Tooltip>
+                        <ShadcnTooltip>
                           <TooltipTrigger asChild>
                             <span className="inline-flex items-center gap-1 cursor-help">
                               Resultado Líquido (período)
@@ -324,7 +324,7 @@ export default function Financeiro() {
                             e operadores). Não confundir com Lucro Operacional (teórico)
                             nem com Lucro Real bruto.
                           </TooltipContent>
-                        </Tooltip>
+                        </ShadcnTooltip>
                       </TooltipProvider>
                     ) as unknown as string
                   }
