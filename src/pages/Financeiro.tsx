@@ -392,12 +392,6 @@ export default function Financeiro() {
                     }
                     icon={<Percent className="h-4 w-4" />}
                     tone={margemTone}
-                    secondary={
-                      <SecondaryRow
-                        label="Fluxo / Custo"
-                        value={`${calc.formatCurrency(lucroRealizado)} / ${calc.formatCurrency(custoSust)}`}
-                      />
-                    }
                   />
                 </div>
               </div>
