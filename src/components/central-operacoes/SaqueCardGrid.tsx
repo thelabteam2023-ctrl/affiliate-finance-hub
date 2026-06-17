@@ -19,7 +19,13 @@ function formatVal(valor: number, moeda: string) {
 }
 
 function timeAgo(dateStr: string): string {
+  // dateStr pode ser timestamp real (created_at) ou data civil (YYYY-MM-DD).
+  // Datas civis viram meia-noite UTC = 21:00 BRT do dia anterior, causando
+  // o falso "19h atrás" logo após a criação. Tratamos isso retornando "agora".
+  const isCivilDate = /^\d{4}-\d{2}-\d{2}$/.test(dateStr);
+  if (isCivilDate) return "hoje";
   const diff = Date.now() - new Date(dateStr).getTime();
+  if (diff < 60_000) return "agora";
   const mins = Math.floor(diff / 60000);
   if (mins < 60) return `${mins}min`;
   const hours = Math.floor(mins / 60);
@@ -120,7 +126,7 @@ export function SaqueCardGrid({ saques, onConfirmar }: SaqueCardGridProps) {
                 )}
                 <span className="text-[9px] text-muted-foreground/50 flex items-center gap-0.5 flex-shrink-0">
                   <Clock className="h-2.5 w-2.5" />
-                  {timeAgo(saque.data_transacao)}
+                  {timeAgo(saque.created_at || saque.data_transacao)}
                 </span>
               </div>
               <Button
