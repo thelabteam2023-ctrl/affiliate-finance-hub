@@ -186,6 +186,22 @@ export function GraficoMensalDialog({
     if (!props?.active || !props?.label) return null;
     const m = mesByName.get(props.label);
     if (!m) return null;
+    // Evita corte da tooltip nas bordas: ancora à direita quando o ponto está
+    // na metade direita do gráfico (mesmo comportamento usado pelo Recharts
+    // quando `allowEscapeViewBox` está ligado, mas controlado por nós).
+    const cx = props?.coordinate?.x ?? 0;
+    const vbWidth = props?.viewBox?.width ?? 0;
+    const vbLeft = props?.viewBox?.x ?? 0;
+    const flip = vbWidth > 0 && cx - vbLeft > vbWidth * 0.6;
+    const wrap = (node: React.ReactNode) => (
+      <div
+        style={{
+          transform: flip ? "translate(calc(-100% - 16px), 0)" : "translate(8px, 0)",
+        }}
+      >
+        {node}
+      </div>
+    );
     if (modo === "lucro") {
       const accIdx = chartData.findIndex(d => d.name === props.label);
       const acumulado = accIdx >= 0 ? (chartData[accIdx] as any)["Acumulado"] : 0;
@@ -195,7 +211,7 @@ export function GraficoMensalDialog({
       if (isOn("Acumulado"))         segs.push({ key: "acc", label: "Lucro Op. Acumulado", value: acumulado, color: COLORS.lucroAcum, formatted: fmtBRLfull(acumulado) });
       const tone: "positive" | "negative" | "neutral" =
         m.lucroOperacional > 0 ? "positive" : m.lucroOperacional < 0 ? "negative" : "neutral";
-      return (
+      return wrap(
         <ChartRichTooltip
           variant="stackedBar"
           title={m.mesNomeLongo}
@@ -218,7 +234,7 @@ export function GraficoMensalDialog({
       m.margemOperacional === null ? "—" : `${m.margemOperacional.toFixed(1)}%`;
     const tone: "positive" | "negative" | "neutral" =
       m.resultadoLiquido > 0 ? "positive" : m.resultadoLiquido < 0 ? "negative" : "neutral";
-    return (
+    return wrap(
       <ChartRichTooltip
         variant="stackedBar"
         title={m.mesNomeLongo}
