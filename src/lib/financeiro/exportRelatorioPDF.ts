@@ -40,7 +40,7 @@ export async function exportRelatorioPDF(
 
   // Tabela
   const head = [[
-    "Mês", "Fluxo Líq.", "CAC", "Comiss.", "Bônus", "Infra", "Operad.", "Custo Total", "Result. Líq.", "Margem"
+    "Mês", "Fluxo Líq.", "CAC", "Comiss.", "Bônus", "Infra", "Operad.", "Particip.", "Custo Total", "Result. Líq.", "Margem"
   ]];
   const body = meses.map(m => [
     m.isBaseline ? `${m.mesLabel} (baseline)` : m.mesLabel,
@@ -50,6 +50,7 @@ export async function exportRelatorioPDF(
     fmtBRL(m.bonus),
     fmtBRL(m.infra),
     fmtBRL(m.operadores),
+    fmtBRL(m.participacoes),
     fmtBRL(m.custoTotal),
     fmtBRL(m.resultadoLiquido),
     m.margemOperacional === null ? "—" : `${m.margemOperacional.toFixed(1)}%`,
