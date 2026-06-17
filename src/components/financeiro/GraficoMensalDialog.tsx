@@ -537,16 +537,16 @@ export function GraficoMensalDialog({
                   })()}
                 {modo === "custos" && (
                   <>
-                    {isOn("CAC") &&        <Bar isAnimationActive={false} yAxisId="left" dataKey="CAC"        stackId="custos" fill={COLORS.cac} />}
-                    {isOn("Comissões") &&  <Bar isAnimationActive={false} yAxisId="left" dataKey="Comissões"  stackId="custos" fill={COLORS.comissoes} />}
-                    {isOn("Bônus") &&      <Bar isAnimationActive={false} yAxisId="left" dataKey="Bônus"      stackId="custos" fill={COLORS.bonus} />}
-                    {isOn("Infra") &&      <Bar isAnimationActive={false} yAxisId="left" dataKey="Infra"      stackId="custos" fill={COLORS.infra} />}
-                    {isOn("Operadores") && <Bar isAnimationActive={false} yAxisId="left" dataKey="Operadores" stackId="custos" fill={COLORS.operadores} />}
+                    {isOn("CAC") &&        <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="CAC"        stackId="custos" fill={COLORS.cac} />}
+                    {isOn("Comissões") &&  <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Comissões"  stackId="custos" fill={COLORS.comissoes} />}
+                    {isOn("Bônus") &&      <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Bônus"      stackId="custos" fill={COLORS.bonus} />}
+                    {isOn("Infra") &&      <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Infra"      stackId="custos" fill={COLORS.infra} />}
+                    {isOn("Operadores") && <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Operadores" stackId="custos" fill={COLORS.operadores} />}
                     {isOn("Participações") && (
-                      <Bar isAnimationActive={false} yAxisId="left" dataKey="Participações" stackId="custos" fill={COLORS.participacoes} radius={[6, 6, 0, 0]} />
+                      <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Participações" stackId="custos" fill={COLORS.participacoes} radius={[6, 6, 0, 0]} />
                     )}
                     {isOn("Fluxo Líquido") && (
-                      <Bar isAnimationActive={false} yAxisId="left" dataKey="Fluxo Líquido" radius={[6, 6, 0, 0]}>
+                      <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Fluxo Líquido" radius={[6, 6, 0, 0]}>
                         {chartData.map((d, i) => (
                           <Cell
                             key={`fl-${i}`}
@@ -556,7 +556,7 @@ export function GraficoMensalDialog({
                       </Bar>
                     )}
                     {isOn("Resultado Líq. (custos)") && (
-                      <Line isAnimationActive={false}
+                      <Line isAnimationActive={animateOnce}
                         yAxisId="left"
                         type="monotone"
                         dataKey="Resultado Líquido"
@@ -567,7 +567,7 @@ export function GraficoMensalDialog({
                       />
                     )}
                     {isOn("Margem %") && (
-                      <Line isAnimationActive={false}
+                      <Line isAnimationActive={animateOnce}
                         yAxisId="right"
                         type="monotone"
                         dataKey="Margem %"
@@ -589,7 +589,7 @@ export function GraficoMensalDialog({
                       strokeDasharray="2 4"
                     />
                     {isOn("Lucro Operacional") && (
-                      <Line isAnimationActive={false}
+                      <Line isAnimationActive={animateOnce}
                         yAxisId="left"
                         type="monotone"
                         dataKey="Lucro Operacional"
@@ -600,7 +600,7 @@ export function GraficoMensalDialog({
                       />
                     )}
                     {isOn("Resultado Líquido") && (
-                      <Line isAnimationActive={false}
+                      <Line isAnimationActive={animateOnce}
                         yAxisId="left"
                         type="monotone"
                         dataKey="Resultado Líquido"
@@ -611,7 +611,7 @@ export function GraficoMensalDialog({
                       />
                     )}
                     {isOn("Acumulado") && (
-                      <Line isAnimationActive={false}
+                      <Line isAnimationActive={animateOnce}
                         yAxisId="left"
                         type="monotone"
                         dataKey="Acumulado"
