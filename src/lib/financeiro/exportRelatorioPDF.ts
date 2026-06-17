@@ -43,7 +43,7 @@ export async function exportRelatorioPDF(
     "Mês", "Fluxo Líq.", "CAC", "Comiss.", "Bônus", "Infra", "Operad.", "Custo Total", "Result. Líq.", "Margem"
   ]];
   const body = meses.map(m => [
-    m.mesLabel,
+    m.isBaseline ? `${m.mesLabel} (baseline)` : m.mesLabel,
     fmtBRL(m.fluxoLiquido),
     fmtBRL(m.cac),
     fmtBRL(m.comissoes),

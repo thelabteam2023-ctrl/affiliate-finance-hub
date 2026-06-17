@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { format, startOfMonth, subMonths, parseISO } from "date-fns";
+import { format, startOfMonth, subMonths, parseISO, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { parseLocalDate } from "@/lib/dateUtils";
 import type { FinanceiroData } from "@/hooks/useFinanceiroData";
@@ -19,12 +19,14 @@ export interface MesFinanceiro {
   lucroOperacional: number; // apostas (lucro_prejuizo)
   resultadoLiquido: number; // fluxoLiquido - custoTotal
   margemOperacional: number | null;
+  isBaseline: boolean;      // mês anterior ao 1º real, zerado, apenas referência visual
 }
 
 interface Params {
   finData: FinanceiroData;
   meses: number; // janela em meses (ex: 12)
   convertToBRL?: (valor: number, moeda: string) => number;
+  incluirBaseline?: boolean; // default: true — prepende 1 mês zerado antes do 1º real
 }
 
 const toKey = (raw?: string | null) => {
@@ -37,21 +39,60 @@ const toKey = (raw?: string | null) => {
   }
 };
 
-const empty = (): Omit<MesFinanceiro, "mesKey" | "mesLabel" | "mesNomeLongo"> => ({
+const empty = () => ({
   cac: 0, comissoes: 0, bonus: 0, infra: 0, rh: 0, operadores: 0, custoTotal: 0,
-  fluxoLiquido: 0, lucroOperacional: 0, resultadoLiquido: 0, margemOperacional: null,
+  fluxoLiquido: 0, lucroOperacional: 0, resultadoLiquido: 0, margemOperacional: null as number | null,
 });
 
-export function useFinanceiroMensal({ finData, meses, convertToBRL }: Params) {
+export function useFinanceiroMensal({ finData, meses, convertToBRL, incluirBaseline = true }: Params) {
   return useMemo<MesFinanceiro[]>(() => {
     const conv = convertToBRL || ((v: number) => v);
-    // Build window of N months ending current month
+    // Build window: from max(primeiroMesReal, hoje-(N-1)) → hoje
     const now = startOfMonth(new Date());
+    const nowKey = format(now, "yyyy-MM");
+    const limiteMinKey = format(subMonths(now, meses - 1), "yyyy-MM");
+
+    // Descobre o primeiro mês com QUALQUER registro nas 5 fontes
+    let primeiroMesReal: string | null = null;
+    const considerar = (raw?: string | null) => {
+      const k = toKey(raw);
+      if (!k) return;
+      if (k > nowKey) return; // ignora datas futuras
+      if (!primeiroMesReal || k < primeiroMesReal) primeiroMesReal = k;
+    };
+    (finData.despesas || []).forEach((d: any) => {
+      const tipo = d.tipo;
+      if (tipo === "PAGTO_PARCEIRO" || tipo === "PAGTO_FORNECEDOR" ||
+          tipo === "COMISSAO_INDICADOR" || tipo === "BONUS_INDICADOR") {
+        considerar(d.data_movimentacao);
+      }
+    });
+    (finData.despesasAdmin || []).forEach((d: any) => considerar(d.data_despesa));
+    (finData.pagamentosOperador || []).forEach((p: any) => considerar(p.data_pagamento));
+    (finData.cashLedger || []).forEach((l: any) => {
+      if (l.tipo_transacao === "SAQUE" || l.tipo_transacao === "DEPOSITO") considerar(l.data_transacao);
+    });
+    (finData.apostasHistorico || []).forEach((a: any) => considerar(a.data_aposta));
+
+    const inicioKey = primeiroMesReal && primeiroMesReal > limiteMinKey ? primeiroMesReal : limiteMinKey;
+
+    // Gera todos os meses entre inicioKey..nowKey
     const windowKeys: string[] = [];
-    for (let i = meses - 1; i >= 0; i--) {
-      const d = subMonths(now, i);
-      windowKeys.push(format(d, "yyyy-MM"));
+    let cursor = parseISO(`${inicioKey}-01`);
+    const end = parseISO(`${nowKey}-01`);
+    while (cursor <= end) {
+      windowKeys.push(format(cursor, "yyyy-MM"));
+      cursor = addMonths(cursor, 1);
     }
+
+    // Baseline opcional: 1 mês anterior ao inicioKey, zerado
+    let baselineKey: string | null = null;
+    if (incluirBaseline && windowKeys.length > 0) {
+      const prev = subMonths(parseISO(`${windowKeys[0]}-01`), 1);
+      baselineKey = format(prev, "yyyy-MM");
+      windowKeys.unshift(baselineKey);
+    }
+
     const map: Record<string, ReturnType<typeof empty>> = {};
     windowKeys.forEach(k => { map[k] = empty(); });
 
@@ -123,7 +164,8 @@ export function useFinanceiroMensal({ finData, meses, convertToBRL }: Params) {
         lucroOperacional: m.lucroOperacional,
         resultadoLiquido: resultado,
         margemOperacional: margem,
+        isBaseline: baselineKey !== null && k === baselineKey,
       };
     });
-  }, [finData, meses, convertToBRL]);
+  }, [finData, meses, convertToBRL, incluirBaseline]);
 }
