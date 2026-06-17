@@ -15,6 +15,7 @@ export function exportRelatorioXLSX(meses: MesFinanceiro[], workspaceNome: strin
     "Bônus",
     "Infraestrutura",
     "Operadores",
+    "Participações",
     "Custo Total",
     "Resultado Líquido",
     "Margem Operacional (%)",
@@ -28,6 +29,7 @@ export function exportRelatorioXLSX(meses: MesFinanceiro[], workspaceNome: strin
     m.bonus,
     m.infra,
     m.operadores,
+    m.participacoes,
     m.custoTotal,
     m.resultadoLiquido,
     m.margemOperacional === null ? "—" : Number(m.margemOperacional.toFixed(2)),
@@ -50,6 +52,7 @@ export function exportRelatorioXLSX(meses: MesFinanceiro[], workspaceNome: strin
     sum("bonus"),
     sum("infra"),
     sum("operadores"),
+    sum("participacoes"),
     sum("custoTotal"),
     sum("resultadoLiquido"),
     avgMargem === null ? "—" : Number(avgMargem.toFixed(2)),
@@ -59,7 +62,7 @@ export function exportRelatorioXLSX(meses: MesFinanceiro[], workspaceNome: strin
   const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
   ws["!cols"] = [
     { wch: 18 }, { wch: 18 }, { wch: 14 }, { wch: 14 }, { wch: 14 },
-    { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 18 }, { wch: 14 }, { wch: 20 },
+    { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 18 }, { wch: 14 }, { wch: 20 },
   ];
   XLSX.utils.book_append_sheet(wb, ws, "Resumo Mensal");
 
