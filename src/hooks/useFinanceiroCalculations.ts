@@ -409,49 +409,6 @@ export function useFinanceiroCalculations({
     return Math.max(1, Math.round(diasPorParceria.reduce((a: number, d: number) => a + d, 0) / diasPorParceria.length));
   }, [custos]);
 
-  // Histórico mensal
-  const historicoMensal = useMemo(() => {
-    const months: Record<string, { mes: string; label: string; lucroApostas: number; custosOperacionais: number; despesasAdmin: number; participacoes: number; patrimonio: number }> = {};
-    for (let i = 11; i >= 0; i--) {
-      const date = subMonths(new Date(), i);
-      const key = format(date, "yyyy-MM");
-      months[key] = { mes: key, label: format(date, "MMM/yy", { locale: ptBR }), lucroApostas: 0, custosOperacionais: 0, despesasAdmin: 0, participacoes: 0, patrimonio: 0 };
-    }
-    apostasHistorico.forEach((aposta: any) => {
-      if (aposta.data_aposta && aposta.lucro_prejuizo !== null) {
-        const key = format(parseLocalDate(aposta.data_aposta), "yyyy-MM");
-        if (months[key]) months[key].lucroApostas += aposta.lucro_prejuizo;
-      }
-    });
-    despesas.forEach((d: any) => {
-      if (d.data_movimentacao) { const key = format(parseLocalDate(d.data_movimentacao), "yyyy-MM"); if (months[key]) months[key].custosOperacionais += d.valor || 0; }
-    });
-    pagamentosOperador.forEach((p: any) => {
-      if (p.data_pagamento) { const key = format(parseLocalDate(p.data_pagamento), "yyyy-MM"); if (months[key]) months[key].custosOperacionais += p.valor || 0; }
-    });
-    despesasAdmin.forEach((d: any) => {
-      if (d.data_despesa) { const key = format(parseLocalDate(d.data_despesa), "yyyy-MM"); if (months[key]) months[key].despesasAdmin += d.valor || 0; }
-    });
-    participacoesPagas.forEach((p: any) => {
-      if (p.data_pagamento) { const key = format(parseLocalDate(p.data_pagamento), "yyyy-MM"); if (months[key]) months[key].participacoes += p.valor_participacao || 0; }
-    });
-    let patrimonioAcumulado = 0;
-    const arr = Object.values(months);
-    arr.forEach((m, i) => {
-      const lucroLiquido = m.lucroApostas - m.custosOperacionais - m.despesasAdmin - m.participacoes;
-      patrimonioAcumulado += lucroLiquido;
-      arr[i].patrimonio = patrimonioAcumulado;
-    });
-    return arr.map(m => ({
-      ...m,
-      resultado: m.lucroApostas,
-      custos: m.custosOperacionais,
-      despesas: m.despesasAdmin,
-      lucroLiquido: m.lucroApostas - m.custosOperacionais - m.despesasAdmin - m.participacoes,
-      totalCustos: m.custosOperacionais + m.despesasAdmin + m.participacoes,
-    }));
-  }, [apostasHistorico, despesas, despesasAdmin, pagamentosOperador, participacoesPagas]);
-
   return {
     formatCurrency,
     convertToBRL,
@@ -472,7 +429,6 @@ export function useFinanceiroCalculations({
     compromissosPendentesData,
     totalLucroParceiros,
     diasMedioAquisicao,
-    historicoMensal,
     totalParceirosAtivos,
     despesasAdmin: [
       ...filtered.filteredDespesasAdmin,
