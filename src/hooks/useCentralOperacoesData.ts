@@ -174,6 +174,7 @@ export interface SaquePendenteConfirmacao {
    wallet_moedas?: string[];
    projeto_id_snapshot?: string | null;
    valor_usd?: number;
+   created_at?: string;
  }
 
 export interface AlertaLucroParceiro {
