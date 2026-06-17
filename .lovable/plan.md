@@ -1,93 +1,74 @@
-# Plano: Gráfico Mensal Lucro vs Custo + Relatório
+# Janela Mensal Dinâmica + Baseline
 
-## 1. O que o gráfico deve mostrar (recomendação)
+## Objetivo
 
-**Tipo:** Composed Chart (Recharts) — barras + linhas combinadas, mês a mês (últimos 12 meses por padrão, ajustável).
+Eliminar meses zerados no início do gráfico da Análise Temporal. A janela passa a iniciar no **primeiro mês com qualquer registro real**, respeitando o limite máximo da janela escolhida (6/12/24 meses) e nunca passando do mês atual. Opcionalmente, incluir 1 mês anterior zerado como "baseline" visual.
 
-**Séries (eixo Y esquerdo — R$):**
-- **Barras empilhadas de custo** (stack "custos"): CAC, Comissões, Bônus, Infraestrutura, RH, Operadores — mesmas 5+1 famílias da Composição de Custos, mantendo a paridade de escopo já decidida.
-- **Barra agrupada (lado a lado das barras de custo):** **Fluxo Líquido** (Saques − Depósitos do mês) — verde.
-- **Linha 1:** **Resultado Líquido** (Fluxo Líquido − Custo Total) — destaque (cor primária, grossa, com dots).
-- **Linha 2 (tracejada):** **Lucro Operacional** (teórico das apostas) — referência secundária.
+## Regras da nova janela
 
-**Eixo Y direito (%):**
-- **Linha:** **Margem Operacional** (Resultado Líquido ÷ (Fluxo Líquido + Custo) × 100) — usa `calcMargemOperacional` existente.
+Sejam:
+- `hoje` = início do mês atual
+- `N` = janela escolhida (6, 12, 24)
+- `primeiroMesReal` = menor `yyyy-MM` entre TODOS estes registros do workspace:
+  - `movimentacoes_indicacao.data_movimentacao` (CAC, Comissões, Bônus)
+  - `despesas_administrativas.data_despesa` (Infra, RH)
+  - `pagamentos_operador.data_pagamento` (Operadores)
+  - `cash_ledger.data_transacao` com tipo SAQUE/DEPOSITO (Fluxo Líquido)
+  - `apostas_unificada.data_aposta` (Lucro Operacional)
 
-**Interatividade:**
-- Tooltip rico mostrando todas as séries do mês + delta vs mês anterior.
-- Legenda clicável (toggle de séries).
-- Brush no rodapé para zoom temporal quando >6 meses.
-- Toggle de período: 6m / 12m / 24m / "Tudo".
-- Animação de entrada (framer-motion no card; Recharts `isAnimationActive`).
+Definições:
+```
+limiteMinJanela = hoje − (N − 1) meses
+inicio          = max(primeiroMesReal, limiteMinJanela)
+fim             = hoje
+```
 
-## 2. UI
+Comportamento:
+- Se a operação começou **dentro da janela** (ex.: janela 12m, 1º registro Abr/26) → começa em Abr/26, não em Jul/25.
+- Se a operação começou **antes da janela** (ex.: 1º registro Jan/24, janela 6m) → começa em `hoje − 5m` (comportamento atual preservado para janelas curtas em operações antigas).
+- Se **não houver nenhum registro** → janela vazia, fallback para o mês atual apenas.
 
-**Local:** aba "Despesas/Financeiro" (mesma que hoje mostra Composição de Custos e Resumo Admin), no topo, dois botões:
-- `[Gerar Gráfico]` (Sparkline icon) — abre Dialog/Sheet fullscreen com o gráfico.
-- `[Salvar Relatório]` (Download icon) — dropdown: **PDF** ou **Excel (.xlsx)**.
+## Baseline opcional
 
-Dialog do gráfico:
-- Header: título + seletor de período + botão exportar.
-- Gráfico principal (Composed).
-- Abaixo: tabela compacta mês a mês com totais (Fluxo Líquido, Custos por família, Resultado Líquido, Margem %).
-- Cards de resumo no topo: Média mensal de Resultado Líquido, Melhor mês, Pior mês, Margem média.
+Flag `incluirBaseline: boolean` (default `true`):
+- Quando `true` e existe `inicio > primeiroMesReal` impossível (já está no piso real), adiciona **1 mês anterior** ao `inicio` com todos os valores zerados, apenas como "ponto de partida visual" no gráfico.
+- Não adiciona baseline se isso ultrapassasse o piso natural do calendário (sem mês negativo) — sempre seguro.
+- Baseline NÃO entra nos cards de resumo (média, melhor/pior mês), só no chart e na tabela com badge "baseline".
 
-## 3. Dados — agregação mensal
+## Mudanças de arquivo
 
-Novo hook `useFinanceiroMensal(meses: number)` em `src/hooks/useFinanceiroMensal.ts`:
-- Reusa as mesmas fontes do `useFinanceiroCalculations` (despesas, despesasAdmin, pagamentosOperador, cash_ledger para Fluxo Líquido / Lucro Real).
-- Agrupa por mês (`format(data, "yyyy-MM")`) respeitando timezone São Paulo.
-- Para cada mês retorna:
-  ```
-  { mes, cac, comissoes, bonus, infra, rh, operadores, custoTotal,
-    fluxoLiquido, lucroOperacional, resultadoLiquido, margemOperacional }
-  ```
-- Filtra por `workspace_id` (memória de isolamento já vigente).
-- Respeita as 5 famílias já canonizadas (sem mudar escopo).
+### `src/hooks/useFinanceiroMensal.ts`
+1. Calcular `primeiroMesReal` varrendo as 5 fontes uma única vez antes de montar `windowKeys`.
+2. Substituir loop fixo por:
+   ```ts
+   const limiteMin = format(subMonths(now, meses - 1), "yyyy-MM");
+   const inicioKey = primeiroMesReal && primeiroMesReal > limiteMin ? primeiroMesReal : limiteMin;
+   // gerar todos os meses entre inicioKey..nowKey
+   ```
+3. Se `incluirBaseline`, prepender 1 mês anterior ao `inicioKey`.
+4. Adicionar campo `isBaseline: boolean` em `MesFinanceiro`.
+5. Aceitar params adicionais: `{ incluirBaseline?: boolean }` (default true).
 
-## 4. Relatório (Salvar)
+### `src/components/financeiro/GraficoMensalDialog.tsx`
+1. Filtrar `isBaseline` no cálculo de `resumo` (média, melhor, pior) — baseline não conta.
+2. Na tabela, linha baseline com cor `text-muted-foreground` e sufixo "(baseline)".
+3. No tooltip do chart, indicar quando o ponto é baseline.
+4. Adicionar pequeno `Switch` no header do dialog: "Mostrar mês anterior como referência" (controla `incluirBaseline`).
 
-**PDF** (`jspdf` + `jspdf-autotable` — já no projeto se possível, senão `bun add`):
-- Capa: workspace, período, geração em.
-- Resumo executivo (cards convertidos em tabela).
-- Tabela mês a mês.
-- Imagem do gráfico (capturada via `html-to-image` do node do Recharts).
-- Rodapé com paginação.
+### Exportações (PDF/XLSX)
+- `exportRelatorioPDF.ts` e `exportRelatorioXLSX.ts`: filtrar `isBaseline` das somas/médias e marcar a linha como "(baseline)" na tabela exportada.
 
-**XLSX** (usa skill xlsx — openpyxl não roda no browser; faremos com **`xlsx` / SheetJS** no client):
-- Aba 1 "Resumo Mensal": colunas mês, fluxo, custos (6), custo total, resultado líquido, margem.
-- Aba 2 "Composição Custos": detalhe por família por mês.
-- Formatação BRL e %; totais por coluna; linha de média.
+## Fora do escopo
 
-Nome do arquivo: `relatorio-financeiro-{workspace}-{yyyyMM}-{yyyyMM}.{pdf|xlsx}`.
+- Não muda fórmulas (Fluxo Líquido, Custos, Resultado Líquido, Margem permanecem idênticos).
+- Não filtra por projeto (continua workspace-wide).
+- Não toca em RPCs nem migrations.
 
-## 5. Arquivos a criar/alterar
+## Validação
 
-Criar:
-- `src/hooks/useFinanceiroMensal.ts` — agregação mensal.
-- `src/components/financeiro/GraficoMensalDialog.tsx` — Dialog com Composed Chart + tabela.
-- `src/components/financeiro/RelatorioMensalActions.tsx` — botões "Gerar Gráfico" e "Salvar Relatório" (dropdown PDF/XLSX).
-- `src/lib/financeiro/exportRelatorioPDF.ts`
-- `src/lib/financeiro/exportRelatorioXLSX.ts`
+- Workspace com 1º registro em Abr/26 + janela 12m → chart começa em Mar/26 (baseline) ou Abr/26 (sem baseline).
+- Workspace com 1º registro em Jan/24 + janela 6m → chart começa em (hoje − 5m), inalterado.
+- Workspace vazio → apenas mês atual zerado.
+- Soma de custos do 1º mês real bate com Composição de Custos filtrada no mesmo mês.
 
-Alterar:
-- Página/aba financeira (onde vive Composição de Custos) — montar `<RelatorioMensalActions />` no header.
-
-Dependências (se faltarem): `jspdf`, `jspdf-autotable`, `xlsx`, `html-to-image`.
-
-## 6. Validação
-
-- Soma dos custos mensais do gráfico = Composição de Custos quando filtro = mês cheio.
-- Fluxo Líquido mensal = Lucro Real do mesmo período no Indicadores Financeiros.
-- Margem Operacional = `calcMargemOperacional` (sem reimplementar).
-- Exportações PDF/XLSX abrem sem erro e batem com a tela.
-
-## 7. Fora do escopo
-
-- Nenhuma mudança em RPCs/migrations.
-- Não altera escopo de Composição vs Admin (mantido).
-- Não muda KPIs existentes.
-
----
-
-Posso prosseguir com a implementação? Se sim, qual formato prioritário de relatório — **PDF**, **XLSX**, ou ambos já no primeiro release?
+Confirma para implementar?
