@@ -6,14 +6,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Loader2, Users, CheckCircle2, Clock, TrendingUp, Plus, Gift,
-  Hourglass, X, Filter, ChevronDown, ChevronUp, DollarSign,
+  Loader2, Users, CheckCircle2, Plus, Gift, Hourglass, X,
+  Filter, ChevronDown, ChevronUp, TrendingUp, Download, Inbox,
 } from "lucide-react";
 import { format } from "date-fns";
 import { parseLocalDate } from "@/lib/dateUtils";
 import { ptBR } from "date-fns/locale";
 import { PagamentoParticipacaoDialog } from "@/components/projetos/PagamentoParticipacaoDialog";
 import { ParticipacaoManualDialog } from "./ParticipacaoManualDialog";
+import { useCotacoes } from "@/hooks/useCotacoes";
+import { getMoedaSymbol } from "@/types/projeto";
 import {
   Select,
   SelectContent,
@@ -37,7 +39,7 @@ interface Participacao {
   observacoes: string | null;
   tipo_participacao?: string;
   participacao_referencia_id?: string | null;
-  projetos?: { nome: string; status?: string } | null;
+  projetos?: { nome: string; status?: string; moeda_consolidacao?: string | null } | null;
   investidores?: { nome: string } | null;
   projeto_ciclos?: {
     numero_ciclo: number;
@@ -61,16 +63,15 @@ interface ParticipacaoInvestidoresTabProps {
 export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh, investidorFiltroId }: ParticipacaoInvestidoresTabProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { convertToBRL } = useCotacoes();
   const [loading, setLoading] = useState(true);
   const [participacoes, setParticipacoes] = useState<Participacao[]>([]);
   const [pagamentoDialogOpen, setPagamentoDialogOpen] = useState(false);
   const [selectedParticipacao, setSelectedParticipacao] = useState<Participacao | null>(null);
   const [manualDialogOpen, setManualDialogOpen] = useState(false);
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    aguardando: true,
-    pendentes: true,
-    pagas: false,
-  });
+  const [view, setView] = useState<"pendentes" | "historico">("pendentes");
+  const [expandedInvestidores, setExpandedInvestidores] = useState<Record<string, boolean>>({});
+  const [tipoFilter, setTipoFilter] = useState<string>("todos");
 
   const [investidores, setInvestidores] = useState<Investidor[]>([]);
   const [filtroInvestidor, setFiltroInvestidor] = useState<string | null>(investidorFiltroId || null);
@@ -93,7 +94,7 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh, investi
         .from("participacao_ciclos")
         .select(`
           *,
-          projetos(nome, status),
+          projetos(nome, status, moeda_consolidacao),
           investidores(nome),
           projeto_ciclos(numero_ciclo, status, data_inicio, data_fim_prevista)
         `)
@@ -126,6 +127,14 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh, investi
       setLoading(false);
     }
   };
+
+  // Helpers
+  const getMoeda = (p: Participacao) => (p.projetos?.moeda_consolidacao || "BRL").toUpperCase();
+  const toBRL = (p: Participacao) => convertToBRL(Number(p.valor_participacao) || 0, getMoeda(p));
+  const fmtBRL = (v: number) =>
+    `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const fmtNative = (v: number, moeda: string) =>
+    `${getMoedaSymbol(moeda)} ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const getTipoBadge = (tipo?: string) => {
     switch (tipo) {
@@ -187,37 +196,97 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh, investi
     onRefresh?.();
   };
 
-  const toggleSection = (section: string) => {
-    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  const toggleInvestidor = (id: string) => {
+    setExpandedInvestidores(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
   // Filters
   const participacoesFiltradas = useMemo(() => {
-    if (!filtroInvestidor) return participacoes;
-    return participacoes.filter(p => p.investidor_id === filtroInvestidor);
-  }, [participacoes, filtroInvestidor]);
+    let arr = participacoes;
+    if (filtroInvestidor) arr = arr.filter(p => p.investidor_id === filtroInvestidor);
+    if (tipoFilter !== "todos") {
+      if (tipoFilter === "NORMAL") arr = arr.filter(p => !p.tipo_participacao || p.tipo_participacao === "NORMAL");
+      else arr = arr.filter(p => p.tipo_participacao === tipoFilter);
+    }
+    return arr;
+  }, [participacoes, filtroInvestidor, tipoFilter]);
 
-  const aguardando = participacoesFiltradas.filter(p =>
+  // Classificação semântica (status agregado)
+  const isAguardando = (p: Participacao) =>
     p.status === "AGUARDANDO_CICLO" ||
-    (p.status === "A_PAGAR" && p.projeto_ciclos?.status === "EM_ANDAMENTO")
-  );
-  const pendentes = participacoesFiltradas.filter(p =>
-    p.status === "A_PAGAR" &&
-    p.projeto_ciclos?.status !== "EM_ANDAMENTO"
-  );
-  const pagas = participacoesFiltradas.filter(p => p.status === "PAGO");
-  const reconhecidas = participacoesFiltradas.filter(p => p.status === "RECONHECIDO");
-  const historico = [...pagas, ...reconhecidas].sort((a, b) => 
-    new Date(b.data_apuracao).getTime() - new Date(a.data_apuracao).getTime()
-  );
+    (p.status === "A_PAGAR" && p.projeto_ciclos?.status === "EM_ANDAMENTO");
+  const isPronto = (p: Participacao) =>
+    p.status === "A_PAGAR" && p.projeto_ciclos?.status !== "EM_ANDAMENTO";
+  const isPago = (p: Participacao) => p.status === "PAGO";
 
-  const totalAguardando = aguardando.reduce((acc, p) => acc + p.valor_participacao, 0);
-  const totalPendente = pendentes.reduce((acc, p) => acc + p.valor_participacao, 0);
-  const totalPago = pagas.reduce((acc, p) => acc + p.valor_participacao, 0);
-  const totalReconhecido = reconhecidas.reduce((acc, p) => acc + p.valor_participacao, 0);
+  const pendentes = participacoesFiltradas.filter(p => isAguardando(p) || isPronto(p));
+  const pagas = participacoesFiltradas.filter(isPago);
 
-  const getBaseCalculoLabel = (_base: string) => {
-    return "Lucro Líquido";
+  // Totais consolidados em BRL (multimoeda corrigida)
+  const totalPendenteBRL = pendentes.reduce((acc, p) => acc + toBRL(p), 0);
+  const totalProntoBRL = pendentes.filter(isPronto).reduce((acc, p) => acc + toBRL(p), 0);
+  const totalAguardandoBRL = pendentes.filter(isAguardando).reduce((acc, p) => acc + toBRL(p), 0);
+
+  const now = new Date();
+  const mesAtualKey = format(now, "yyyy-MM");
+  const pagasMesAtual = pagas.filter(p => {
+    if (!p.data_pagamento) return false;
+    try { return format(parseLocalDate(p.data_pagamento), "yyyy-MM") === mesAtualKey; } catch { return false; }
+  });
+  const totalPagoMesBRL = pagasMesAtual.reduce((acc, p) => acc + toBRL(p), 0);
+  const totalPagoTudoBRL = pagas.reduce((acc, p) => acc + toBRL(p), 0);
+
+  // Agrupamento por investidor (apenas pendências)
+  const pendentesPorInvestidor = useMemo(() => {
+    const map = new Map<string, { nome: string; itens: Participacao[]; totalBRL: number }>();
+    pendentes.forEach(p => {
+      const id = p.investidor_id;
+      const nome = p.investidores?.nome || "—";
+      if (!map.has(id)) map.set(id, { nome, itens: [], totalBRL: 0 });
+      const g = map.get(id)!;
+      g.itens.push(p);
+      g.totalBRL += toBRL(p);
+    });
+    return Array.from(map.entries())
+      .map(([id, g]) => ({ id, ...g }))
+      .sort((a, b) => b.totalBRL - a.totalBRL);
+  }, [pendentes, convertToBRL]);
+
+  const getBaseCalculoLabel = (base: string) =>
+    base === "LUCRO_BRUTO" ? "Lucro Bruto" : "Lucro Líquido";
+
+  // Export CSV
+  const exportCSV = () => {
+    const rows = view === "pendentes" ? pendentes : pagas;
+    const header = [
+      "Investidor", "Projeto", "Ciclo", "Data Apuração", "Data Pagamento",
+      "Moeda", "Valor Original", "Valor BRL", "Base", "%", "Tipo", "Status",
+    ];
+    const lines = rows.map(p => {
+      const moeda = getMoeda(p);
+      return [
+        p.investidores?.nome || "",
+        p.projetos?.nome || "",
+        p.projeto_ciclos?.numero_ciclo ?? "",
+        p.data_apuracao ? format(parseLocalDate(p.data_apuracao), "yyyy-MM-dd") : "",
+        p.data_pagamento ? format(parseLocalDate(p.data_pagamento), "yyyy-MM-dd") : "",
+        moeda,
+        (Number(p.valor_participacao) || 0).toFixed(2),
+        toBRL(p).toFixed(2),
+        getBaseCalculoLabel(p.base_calculo),
+        `${p.percentual_aplicado}%`,
+        p.tipo_participacao || "NORMAL",
+        p.status,
+      ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(",");
+    });
+    const csv = [header.join(","), ...lines].join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `participacoes-${view}-${format(now, "yyyyMMdd-HHmm")}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   if (loading) {
@@ -232,7 +301,7 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh, investi
     <div className="space-y-5">
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Filter className="h-4 w-4 text-muted-foreground" />
           <Select
             value={filtroInvestidor || "todos"}
@@ -241,7 +310,7 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh, investi
               else setFiltroInvestidor(value);
             }}
           >
-            <SelectTrigger className="w-[280px] h-9 text-sm">
+            <SelectTrigger className="w-[240px] h-9 text-sm">
               <SelectValue placeholder="Filtrar investidor" />
             </SelectTrigger>
             <SelectContent className="min-w-[280px] max-h-[320px]">
@@ -258,136 +327,190 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh, investi
               ))}
             </SelectContent>
           </Select>
-          {filtroInvestidor && (
-            <Button variant="ghost" size="sm" onClick={handleLimparFiltro} className="h-8 px-2 text-muted-foreground">
-              <X className="h-3.5 w-3.5" />
+          <Select value={tipoFilter} onValueChange={setTipoFilter}>
+            <SelectTrigger className="w-[150px] h-9 text-sm">
+              <SelectValue placeholder="Tipo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os tipos</SelectItem>
+              <SelectItem value="NORMAL">Normal</SelectItem>
+              <SelectItem value="BONUS">Bônus</SelectItem>
+              <SelectItem value="AJUSTE_POSITIVO">Ajuste positivo</SelectItem>
+            </SelectContent>
+          </Select>
+          {(filtroInvestidor || tipoFilter !== "todos") && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { handleLimparFiltro(); setTipoFilter("todos"); }}
+              className="h-8 px-2 text-muted-foreground"
+            >
+              <X className="h-3.5 w-3.5 mr-1" /> Limpar
             </Button>
           )}
         </div>
-        <Button onClick={() => setManualDialogOpen(true)} size="sm" className="h-8">
-          <Plus className="h-3.5 w-3.5 mr-1.5" />
-          Nova Participação
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={exportCSV} className="h-8">
+            <Download className="h-3.5 w-3.5 mr-1.5" /> Exportar CSV
+          </Button>
+          <Button onClick={() => setManualDialogOpen(true)} size="sm" className="h-8">
+            <Plus className="h-3.5 w-3.5 mr-1.5" /> Nova Participação
+          </Button>
+        </div>
       </div>
 
-      {/* ── KPI Strip ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KPICard
-          icon={<Hourglass className="h-4 w-4" />}
-          label="Aguardando"
-          value={formatCurrency(totalAguardando)}
-          count={aguardando.length}
-          color="blue"
-        />
-        <KPICard
-          icon={<Clock className="h-4 w-4" />}
-          label="Pronto p/ Pagar"
-          value={formatCurrency(totalPendente)}
-          count={pendentes.length}
-          color="amber"
-        />
-        <KPICard
-          icon={<CheckCircle2 className="h-4 w-4" />}
-          label="Pago"
-          value={formatCurrency(totalPago + totalReconhecido)}
-          count={historico.length}
-          color="emerald"
-        />
-        <KPICard
-          icon={<TrendingUp className="h-4 w-4" />}
-          label="Total Ativo"
-          value={formatCurrency(totalAguardando + totalPendente + totalPago)}
-          count={participacoesFiltradas.length}
-          color="primary"
-        />
+      {/* ── KPI Strip (2 cards consolidados em BRL) ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Hourglass className="h-4 w-4 text-amber-400" />
+              <span className="text-xs text-muted-foreground">Pendente (consolidado em BRL)</span>
+            </div>
+            <Badge variant="secondary" className="text-[10px]">{pendentes.length}</Badge>
+          </div>
+          <p className="text-2xl font-bold text-amber-400 tabular-nums">{fmtBRL(totalPendenteBRL)}</p>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            {fmtBRL(totalProntoBRL)} prontos p/ pagar
+            <span className="text-muted-foreground/40"> · </span>
+            {fmtBRL(totalAguardandoBRL)} aguardando ciclo
+          </p>
+        </div>
+        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+              <span className="text-xs text-muted-foreground">Pago este mês</span>
+            </div>
+            <Badge variant="secondary" className="text-[10px]">{pagasMesAtual.length}</Badge>
+          </div>
+          <p className="text-2xl font-bold text-emerald-400 tabular-nums">{fmtBRL(totalPagoMesBRL)}</p>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            Total histórico: {fmtBRL(totalPagoTudoBRL)} ({pagas.length} pagamentos)
+          </p>
+        </div>
       </div>
 
-      {/* ── Aguardando Fechamento ── */}
-      <CollapsibleSection
-        title="Aguardando Fechamento"
-        count={aguardando.length}
-        icon={<Hourglass className="h-4 w-4 text-blue-400" />}
-        expanded={expandedSections.aguardando}
-        onToggle={() => toggleSection("aguardando")}
-        accentColor="blue"
-      >
-        {aguardando.length === 0 ? (
-          <EmptyState text="Nenhuma participação aguardando fechamento" />
-        ) : (
-          <div className="space-y-2">
-            {aguardando.map((p) => (
-              <ParticipacaoRow
-                key={p.id}
-                p={p}
-                formatCurrency={formatCurrency}
-                getBaseCalculoLabel={getBaseCalculoLabel}
-                getTipoBadge={getTipoBadge}
-                accentColor="blue"
-              />
-            ))}
-          </div>
-        )}
-      </CollapsibleSection>
+      {/* ── Segmented control: Pendências / Histórico ── */}
+      <div className="inline-flex items-center gap-1 rounded-lg border border-border bg-muted/30 p-1">
+        <button
+          onClick={() => setView("pendentes")}
+          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+            view === "pendentes" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Pendências ({pendentes.length})
+        </button>
+        <button
+          onClick={() => setView("historico")}
+          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+            view === "historico" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Histórico ({pagas.length})
+        </button>
+      </div>
 
-      {/* ── Prontas para Pagamento ── */}
-      <CollapsibleSection
-        title="Prontas para Pagamento"
-        count={pendentes.length}
-        icon={<DollarSign className="h-4 w-4 text-amber-400" />}
-        expanded={expandedSections.pendentes}
-        onToggle={() => toggleSection("pendentes")}
-        accentColor="amber"
-      >
-        {pendentes.length === 0 ? (
-          <EmptyState text="Nenhuma participação pendente" />
+      {/* ── Conteúdo ── */}
+      {view === "pendentes" ? (
+        pendentesPorInvestidor.length === 0 ? (
+          <EmptyState
+            icon={<Inbox className="h-10 w-10 text-muted-foreground/40" />}
+            title="Nenhuma participação pendente"
+            subtitle="Quando um ciclo for fechado, as participações dos investidores aparecerão aqui."
+          />
         ) : (
           <div className="space-y-2">
-            {pendentes.map((p) => (
-              <ParticipacaoRow
-                key={p.id}
-                p={p}
-                formatCurrency={formatCurrency}
-                getBaseCalculoLabel={getBaseCalculoLabel}
-                getTipoBadge={getTipoBadge}
-                accentColor="amber"
-                action={
-                  <Button size="sm" className="h-7 text-xs px-3" onClick={() => handlePagar(p)}>
-                    Pagar
-                  </Button>
-                }
-              />
-            ))}
+            {pendentesPorInvestidor.map((g) => {
+              const expanded = expandedInvestidores[g.id] !== false; // default open
+              const prontosDoGrupo = g.itens.filter(isPronto);
+              return (
+                <Card key={g.id} className="overflow-hidden">
+                  <button
+                    onClick={() => toggleInvestidor(g.id)}
+                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary shrink-0">
+                        {g.nome.slice(0, 2).toUpperCase()}
+                      </div>
+                      <div className="min-w-0 text-left">
+                        <p className="text-sm font-medium truncate">{g.nome}</p>
+                        <p className="text-[11px] text-muted-foreground">{g.itens.length} ciclo(s) pendente(s)</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-amber-400 tabular-nums">{fmtBRL(g.totalBRL)}</p>
+                        {prontosDoGrupo.length > 0 && (
+                          <p className="text-[10px] text-muted-foreground">{prontosDoGrupo.length} pronto(s) p/ pagar</p>
+                        )}
+                      </div>
+                      {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                    </div>
+                  </button>
+                  {expanded && (
+                    <CardContent className="pt-0 pb-3 px-3 space-y-2">
+                      {g.itens.map((p) => (
+                        <ParticipacaoRow
+                          key={p.id}
+                          p={p}
+                          moeda={getMoeda(p)}
+                          valorBRL={toBRL(p)}
+                          fmtBRL={fmtBRL}
+                          fmtNative={fmtNative}
+                          getBaseCalculoLabel={getBaseCalculoLabel}
+                          getTipoBadge={getTipoBadge}
+                          isAguardando={isAguardando(p)}
+                          action={isPronto(p) ? (
+                            <Button size="sm" className="h-7 text-xs px-3" onClick={() => handlePagar(p)}>
+                              Pagar
+                            </Button>
+                          ) : (
+                            <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/30 text-[10px]">
+                              Aguardando ciclo
+                            </Badge>
+                          )}
+                        />
+                      ))}
+                    </CardContent>
+                  )}
+                </Card>
+              );
+            })}
           </div>
-        )}
-      </CollapsibleSection>
-
-      {/* ── Histórico ── */}
-      <CollapsibleSection
-        title="Histórico de Pagamentos"
-        count={historico.length}
-        icon={<CheckCircle2 className="h-4 w-4 text-emerald-400" />}
-        expanded={expandedSections.pagas}
-        onToggle={() => toggleSection("pagas")}
-        accentColor="emerald"
-      >
-        {historico.length === 0 ? (
-          <EmptyState text="Nenhum pagamento realizado" />
+        )
+      ) : (
+        pagas.length === 0 ? (
+          <EmptyState
+            icon={<CheckCircle2 className="h-10 w-10 text-muted-foreground/40" />}
+            title="Nenhum pagamento realizado"
+            subtitle="Os pagamentos concluídos aparecerão aqui ordenados por data."
+          />
         ) : (
-          <div className="space-y-2">
-            {historico.map((p) => (
-              <ParticipacaoRow
-                key={p.id}
-                p={p}
-                formatCurrency={formatCurrency}
-                getBaseCalculoLabel={getBaseCalculoLabel}
-                getTipoBadge={getTipoBadge}
-                accentColor="emerald"
-                showDate="pagamento"
-              />
-            ))}
-          </div>
-        )}
-      </CollapsibleSection>
+          <Card>
+            <CardContent className="p-3 space-y-2">
+              {pagas
+                .slice()
+                .sort((a, b) => new Date(b.data_pagamento || b.data_apuracao).getTime() - new Date(a.data_pagamento || a.data_apuracao).getTime())
+                .map((p) => (
+                  <ParticipacaoRow
+                    key={p.id}
+                    p={p}
+                    moeda={getMoeda(p)}
+                    valorBRL={toBRL(p)}
+                    fmtBRL={fmtBRL}
+                    fmtNative={fmtNative}
+                    getBaseCalculoLabel={getBaseCalculoLabel}
+                    getTipoBadge={getTipoBadge}
+                    showDate="pagamento"
+                    isAguardando={false}
+                  />
+                ))}
+            </CardContent>
+          </Card>
+        )
+      )}
 
       {/* Dialogs */}
       {selectedParticipacao && (
@@ -423,111 +546,38 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh, investi
 
 /* ── Sub-components ── */
 
-function KPICard({
-  icon,
-  label,
-  value,
-  count,
-  color,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  count: number;
-  color: "blue" | "amber" | "emerald" | "primary";
-}) {
-  const colorMap = {
-    blue: { bg: "bg-blue-500/8", text: "text-blue-400", icon: "text-blue-400" },
-    amber: { bg: "bg-amber-500/8", text: "text-amber-400", icon: "text-amber-400" },
-    emerald: { bg: "bg-emerald-500/8", text: "text-emerald-400", icon: "text-emerald-400" },
-    primary: { bg: "bg-primary/8", text: "text-foreground", icon: "text-primary" },
-  };
-  const c = colorMap[color];
-
-  return (
-    <div className={`rounded-xl border border-border/50 ${c.bg} p-3`}>
-      <div className="flex items-center gap-2 mb-1.5">
-        <span className={c.icon}>{icon}</span>
-        <span className="text-xs text-muted-foreground">{label}</span>
-      </div>
-      <p className={`text-lg font-bold ${c.text}`}>{value}</p>
-      <p className="text-[11px] text-muted-foreground mt-0.5">{count} participação(ões)</p>
-    </div>
-  );
-}
-
-function CollapsibleSection({
-  title,
-  count,
-  icon,
-  expanded,
-  onToggle,
-  accentColor,
-  children,
-}: {
-  title: string;
-  count: number;
-  icon: React.ReactNode;
-  expanded: boolean;
-  onToggle: () => void;
-  accentColor: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <Card className="overflow-hidden">
-      <button
-        onClick={onToggle}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors"
-      >
-        <div className="flex items-center gap-2">
-          {icon}
-          <span className="text-sm font-medium">{title}</span>
-          <Badge variant="secondary" className="text-xs h-5 px-1.5">{count}</Badge>
-        </div>
-        {expanded ? (
-          <ChevronUp className="h-4 w-4 text-muted-foreground" />
-        ) : (
-          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-        )}
-      </button>
-      {expanded && (
-        <CardContent className="pt-0 pb-3 px-3">
-          {children}
-        </CardContent>
-      )}
-    </Card>
-  );
-}
-
 function ParticipacaoRow({
   p,
-  formatCurrency,
+  moeda,
+  valorBRL,
+  fmtBRL,
+  fmtNative,
   getBaseCalculoLabel,
   getTipoBadge,
-  accentColor,
   action,
   showDate,
+  isAguardando,
 }: {
   p: Participacao;
-  formatCurrency: (v: number) => string;
+  moeda: string;
+  valorBRL: number;
+  fmtBRL: (v: number) => string;
+  fmtNative: (v: number, moeda: string) => string;
   getBaseCalculoLabel: (base: string) => string;
   getTipoBadge: (tipo?: string) => React.ReactNode;
-  accentColor: string;
   action?: React.ReactNode;
   showDate?: "pagamento";
+  isAguardando: boolean;
 }) {
-  const colorMap: Record<string, string> = {
-    blue: "text-blue-400",
-    amber: "text-amber-400",
-    emerald: "text-emerald-400",
-  };
-  const valueColor = colorMap[accentColor] || "text-foreground";
+  const valueColor = showDate === "pagamento"
+    ? "text-emerald-400"
+    : isAguardando ? "text-blue-400" : "text-amber-400";
 
   const dateStr = showDate === "pagamento" && p.data_pagamento
     ? format(parseLocalDate(p.data_pagamento), "dd/MM/yyyy", { locale: ptBR })
     : format(parseLocalDate(p.data_apuracao), "dd/MM/yyyy", { locale: ptBR });
 
-  const statusLabel = p.status === "RECONHECIDO" ? "Reconhecido" : p.status === "PAGO" ? "Pago" : null;
+  const isMultimoeda = moeda !== "BRL";
 
   return (
     <div className="flex items-center justify-between gap-3 rounded-lg border border-border/40 bg-muted/10 px-3 py-2.5 hover:bg-muted/20 transition-colors">
@@ -535,25 +585,20 @@ function ParticipacaoRow({
       <div className="flex items-center gap-3 min-w-0 flex-1">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-medium truncate">{p.investidores?.nome || "—"}</span>
+            <span className="text-sm font-medium truncate">{p.projetos?.nome || "—"}</span>
             {getTipoBadge(p.tipo_participacao)}
+            {isMultimoeda && (
+              <Badge variant="outline" className="text-[9px] h-4 px-1 bg-muted/40 border-border/60">{moeda}</Badge>
+            )}
           </div>
           <div className="flex items-center gap-1.5 mt-0.5 text-xs text-muted-foreground flex-wrap">
-            <span className="truncate">{p.projetos?.nome || "—"}</span>
-            <span className="text-muted-foreground/40">•</span>
             <span>Ciclo #{p.projeto_ciclos?.numero_ciclo || "—"}</span>
             <span className="text-muted-foreground/40">•</span>
             <span>{dateStr}</span>
-            {showDate === "pagamento" && statusLabel && (
-              <>
-                <span className="text-muted-foreground/40">•</span>
-                <Badge variant="outline" className={`text-[10px] h-4 px-1.5 ${
-                  p.status === "PAGO" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" : 
-                  "bg-blue-500/10 text-blue-400 border-blue-500/30"
-                }`}>
-                  {statusLabel}
-                </Badge>
-              </>
+            {showDate === "pagamento" && (
+              <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+                Pago
+              </Badge>
             )}
           </div>
         </div>
@@ -565,7 +610,7 @@ function ParticipacaoRow({
           <p className="text-[10px] uppercase tracking-wide text-muted-foreground/70">
             {getBaseCalculoLabel(p.base_calculo)}
           </p>
-          <p className="text-sm tabular-nums">{formatCurrency(p.lucro_base)}</p>
+          <p className="text-sm tabular-nums">{fmtNative(p.lucro_base, moeda)}</p>
         </div>
         <div className="text-center min-w-[48px]">
           <p className="text-[10px] uppercase tracking-wide text-muted-foreground/70">%</p>
@@ -575,13 +620,13 @@ function ParticipacaoRow({
 
       {/* Right: Value + Action */}
       <div className="flex items-center gap-2 shrink-0">
-        <div className="text-right min-w-[120px]">
+        <div className="text-right min-w-[130px]">
           <p className={`text-sm font-bold tabular-nums ${valueColor}`}>
-            {formatCurrency(p.valor_participacao)}
+            {fmtNative(p.valor_participacao, moeda)}
           </p>
-          <p className="text-[10px] text-muted-foreground tabular-nums md:hidden">
-            {p.percentual_aplicado}% de {formatCurrency(p.lucro_base)}
-          </p>
+          {isMultimoeda && (
+            <p className="text-[10px] text-muted-foreground tabular-nums">≈ {fmtBRL(valorBRL)}</p>
+          )}
         </div>
         {action}
       </div>
@@ -589,10 +634,12 @@ function ParticipacaoRow({
   );
 }
 
-function EmptyState({ text }: { text: string }) {
+function EmptyState({ icon, title, subtitle }: { icon: React.ReactNode; title: string; subtitle?: string }) {
   return (
-    <div className="text-center py-6 text-sm text-muted-foreground">
-      {text}
+    <div className="flex flex-col items-center justify-center py-12 px-4 text-center border border-dashed border-border rounded-xl bg-muted/10">
+      <div className="mb-3">{icon}</div>
+      <p className="text-sm font-medium text-foreground">{title}</p>
+      {subtitle && <p className="text-xs text-muted-foreground mt-1 max-w-md">{subtitle}</p>}
     </div>
   );
 }
