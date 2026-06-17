@@ -40,6 +40,7 @@ const COLORS = {
   bonus: "hsl(38, 92%, 50%)",
   infra: "hsl(262, 83%, 58%)",
   operadores: "hsl(189, 94%, 43%)",
+  participacoes: "hsl(330, 78%, 58%)",
   fluxo: "hsl(142, 76%, 36%)",
   resultado: "hsl(0, 0%, 9%)",
   margem: "hsl(280, 65%, 55%)",
@@ -79,6 +80,7 @@ export function GraficoMensalDialog({
     Bônus: m.bonus,
     Infra: m.infra,
     Operadores: m.operadores,
+    Participações: m.participacoes,
     "Fluxo Líquido": m.fluxoLiquido,
     "Resultado Líquido": m.resultadoLiquido,
     "Margem %": m.margemOperacional,
@@ -221,7 +223,8 @@ export function GraficoMensalDialog({
                 <Bar yAxisId="left" dataKey="Comissões" stackId="custos" fill={COLORS.comissoes} />
                 <Bar yAxisId="left" dataKey="Bônus" stackId="custos" fill={COLORS.bonus} />
                 <Bar yAxisId="left" dataKey="Infra" stackId="custos" fill={COLORS.infra} />
-                <Bar yAxisId="left" dataKey="Operadores" stackId="custos" fill={COLORS.operadores} radius={[4, 4, 0, 0]} />
+                <Bar yAxisId="left" dataKey="Operadores" stackId="custos" fill={COLORS.operadores} />
+                <Bar yAxisId="left" dataKey="Participações" stackId="custos" fill={COLORS.participacoes} radius={[4, 4, 0, 0]} />
                 {/* Fluxo Líquido lado a lado */}
                 <Bar yAxisId="left" dataKey="Fluxo Líquido" fill="url(#fluxoGrad)" radius={[4, 4, 0, 0]} />
                 {/* Linhas */}
@@ -261,6 +264,7 @@ export function GraficoMensalDialog({
                 <th className="text-right py-2 px-2">Bônus</th>
                 <th className="text-right py-2 px-2">Infra</th>
                 <th className="text-right py-2 px-2">Operad.</th>
+                <th className="text-right py-2 px-2">Particip.</th>
                 <th className="text-right py-2 px-2">Custo Total</th>
                 <th className="text-right py-2 px-2">Result. Líq.</th>
                 <th className="text-right py-2 pl-2">Margem</th>
@@ -279,6 +283,7 @@ export function GraficoMensalDialog({
                   <td className="text-right px-2">{fmtBRLfull(m.bonus)}</td>
                   <td className="text-right px-2">{fmtBRLfull(m.infra)}</td>
                   <td className="text-right px-2">{fmtBRLfull(m.operadores)}</td>
+                  <td className="text-right px-2">{fmtBRLfull(m.participacoes)}</td>
                   <td className="text-right px-2">{fmtBRLfull(m.custoTotal)}</td>
                   <td className={`text-right px-2 font-medium ${m.resultadoLiquido >= 0 ? "text-emerald-600" : "text-red-600"}`}>
                     {fmtBRLfull(m.resultadoLiquido)}

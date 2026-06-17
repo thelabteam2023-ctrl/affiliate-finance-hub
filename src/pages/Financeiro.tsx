@@ -22,7 +22,6 @@ import { useTopBar } from "@/contexts/TopBarContext";
 import {
   Loader2,
   BarChart3,
-  History,
   Building2,
   Users,
 } from "lucide-react";
@@ -41,7 +40,6 @@ import { Wallet, TrendingUp, Percent, Coins } from "lucide-react";
 import { ParticipacaoInvestidoresTab } from "@/components/financeiro/ParticipacaoInvestidoresTab";
 import { MultiCurrencyWarningBanner } from "@/components/financeiro/MultiCurrencyIndicator";
 import { FinanceiroDespesasTab } from "@/components/financeiro/FinanceiroDespesasTab";
-import { FinanceiroHistoricoTab } from "@/components/financeiro/FinanceiroHistoricoTab";
 import { calcResultadoLiquido } from "@/lib/finance/resultadoLiquido";
 import { calcMargemOperacional } from "@/lib/finance/margemOperacional";
 import { FluxoLiquidoDetalheDialog } from "@/components/financeiro/FluxoLiquidoDetalheDialog";
@@ -275,11 +273,6 @@ export default function Financeiro() {
               <Users className="h-4 w-4 shrink-0" />
               Participações
             </TabsTrigger>
-            <TabsTrigger value="historico" className="flex items-center gap-1.5 md:gap-2 min-w-0 px-2.5 md:px-4 text-xs md:text-sm">
-              <History className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline">Histórico Mensal</span>
-              <span className="sm:hidden">Histórico</span>
-            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -484,12 +477,6 @@ export default function Financeiro() {
           />
         </TabsContent>
 
-        <TabsContent value="historico">
-          <FinanceiroHistoricoTab
-            historicoMensal={calc.historicoMensal}
-            formatCurrency={calc.formatCurrency}
-          />
-        </TabsContent>
       </Tabs>
 
       <KpiExplanationDialog open={kpiDialogOpen} onOpenChange={setKpiDialogOpen} kpiType={kpiType} />
