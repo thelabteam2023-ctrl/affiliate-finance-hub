@@ -32,6 +32,11 @@ export interface LucroCanonicoResultado {
    * Usa o MESMO converter Oficial (FastForex) do FinancialMetricsCard para garantir paridade.
    */
   lucroRealizado: number;
+  /**
+   * Lucro Realizado convertido para BRL via cotações OFICIAIS.
+   * Necessário para somas a nível de workspace (multi-moeda) — ver `useWorkspaceLucroRealizado`.
+   */
+  lucroRealizadoBRL: number;
 }
 
 interface FetchProjetosLucroCanonicoParams {
@@ -201,7 +206,7 @@ export async function fetchProjetosLucroCanonico({
   for (const { id, raw } of dashboards) {
     const cfg = configs.get(id);
     if (!raw || !cfg) {
-      result[id] = { consolidado: 0, porMoeda: {}, moedaConsolidacao: cfg?.moeda_consolidacao || "BRL", lucroRealizado: 0 };
+      result[id] = { consolidado: 0, porMoeda: {}, moedaConsolidacao: cfg?.moeda_consolidacao || "BRL", lucroRealizado: 0, lucroRealizadoBRL: 0 };
       continue;
     }
 
@@ -228,7 +233,15 @@ export async function fetchProjetosLucroCanonico({
       convertOficial
     );
 
-    result[id] = { consolidado, porMoeda, moedaConsolidacao, lucroRealizado: 0, _convertOficial: convertOficial } as any;
+    result[id] = {
+      consolidado,
+      porMoeda,
+      moedaConsolidacao,
+      lucroRealizado: 0,
+      lucroRealizadoBRL: 0,
+      _convertOficial: convertOficial,
+      _moedaConsolidacao: moedaConsolidacao,
+    } as any;
   }
 
   // === LUCRO REALIZADO (Fluxo Líquido Ajustado) ===
@@ -283,10 +296,14 @@ export async function fetchProjetosLucroCanonico({
     (saquesByProjeto[pid] ||= []).push({ valor: v, moeda: (s.moeda || "BRL").toUpperCase() });
   });
 
+  // Conversor para BRL usando cotações OFICIAIS — usado para agregar workspace multi-moeda.
+  const convertToBRL = buildConverter("BRL", cotacoesOficiais);
+
   for (const projetoId of projetoIds) {
     const r = result[projetoId] as any;
     if (!r || !r._convertOficial) continue;
     const convertOficial = r._convertOficial as (v: number, m: string) => number;
+    const moedaProjeto = (r._moedaConsolidacao as string) || "BRL";
     const totalSaques = (saquesByProjeto[projetoId] || []).reduce(
       (acc, s) => acc + convertOficial(s.valor, s.moeda),
       0
@@ -296,7 +313,10 @@ export async function fetchProjetosLucroCanonico({
       0
     );
     r.lucroRealizado = totalSaques - totalDepositosEfetivos;
+    // Converte da moeda do projeto para BRL (no-op quando o projeto já é BRL).
+    r.lucroRealizadoBRL = convertToBRL(r.lucroRealizado, moedaProjeto);
     delete r._convertOficial;
+    delete r._moedaConsolidacao;
   }
 
   return result;
