@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Brush, Cell, ReferenceArea, ReferenceLine,
@@ -123,6 +123,15 @@ export function GraficoMensalDialog({
   const [hoveredMonth, setHoveredMonth] = useState<string | null>(null);
   const [modo, setModo] = useState<Modo>("custos");
   const [visibleByMode, setVisibleByMode] = useState<Record<Modo, string[]>>(() => loadVisible());
+  // Anima apenas na abertura do diálogo / troca de modo; depois congela para evitar
+  // re-construção visual a cada hover.
+  const [animateOnce, setAnimateOnce] = useState(false);
+  useEffect(() => {
+    if (!open) { setAnimateOnce(false); return; }
+    setAnimateOnce(true);
+    const t = setTimeout(() => setAnimateOnce(false), 900);
+    return () => clearTimeout(t);
+  }, [open, modo]);
   const visibleSet = useMemo(() => new Set(visibleByMode[modo]), [visibleByMode, modo]);
   const isOn = (id: string) => visibleSet.has(id);
   const toggleSeries = (id: string) => {
