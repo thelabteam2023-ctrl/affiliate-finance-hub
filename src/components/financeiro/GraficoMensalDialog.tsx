@@ -11,6 +11,8 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import type { MesFinanceiro } from "@/hooks/useFinanceiroMensal";
 import { exportRelatorioPDF } from "@/lib/financeiro/exportRelatorioPDF";
 import { exportRelatorioXLSX } from "@/lib/financeiro/exportRelatorioXLSX";
@@ -23,6 +25,8 @@ interface Props {
   workspaceNome: string;
   janelaMeses: number;
   onJanelaChange: (n: number) => void;
+  incluirBaseline: boolean;
+  onIncluirBaselineChange: (v: boolean) => void;
 }
 
 const fmtBRL = (v: number) =>
@@ -43,22 +47,24 @@ const COLORS = {
 
 export function GraficoMensalDialog({
   open, onOpenChange, meses, workspaceNome, janelaMeses, onJanelaChange,
+  incluirBaseline, onIncluirBaselineChange,
 }: Props) {
   const chartRef = useRef<HTMLDivElement | null>(null);
   const { toast } = useToast();
   const [exporting, setExporting] = useState(false);
 
   const resumo = useMemo(() => {
-    if (!meses.length) return null;
-    const resultados = meses.map(m => m.resultadoLiquido);
-    const margens = meses.map(m => m.margemOperacional).filter((v): v is number => v !== null);
+    const reais = meses.filter(m => !m.isBaseline);
+    if (!reais.length) return null;
+    const resultados = reais.map(m => m.resultadoLiquido);
+    const margens = reais.map(m => m.margemOperacional).filter((v): v is number => v !== null);
     const totalResultado = resultados.reduce((a, b) => a + b, 0);
-    const totalCusto = meses.reduce((a, m) => a + m.custoTotal, 0);
-    const totalFluxo = meses.reduce((a, m) => a + m.fluxoLiquido, 0);
-    const melhor = meses.reduce((a, b) => (b.resultadoLiquido > a.resultadoLiquido ? b : a));
-    const pior = meses.reduce((a, b) => (b.resultadoLiquido < a.resultadoLiquido ? b : a));
+    const totalCusto = reais.reduce((a, m) => a + m.custoTotal, 0);
+    const totalFluxo = reais.reduce((a, m) => a + m.fluxoLiquido, 0);
+    const melhor = reais.reduce((a, b) => (b.resultadoLiquido > a.resultadoLiquido ? b : a));
+    const pior = reais.reduce((a, b) => (b.resultadoLiquido < a.resultadoLiquido ? b : a));
     return {
-      mediaResultado: totalResultado / meses.length,
+      mediaResultado: totalResultado / reais.length,
       mediaMargem: margens.length ? margens.reduce((a, b) => a + b, 0) / margens.length : null,
       totalCusto, totalFluxo, totalResultado,
       melhorMes: melhor, piorMes: pior,
@@ -66,7 +72,8 @@ export function GraficoMensalDialog({
   }, [meses]);
 
   const chartData = useMemo(() => meses.map(m => ({
-    name: m.mesLabel,
+    name: m.isBaseline ? `${m.mesLabel} •` : m.mesLabel,
+    isBaseline: m.isBaseline,
     CAC: m.cac,
     Comissões: m.comissoes,
     Bônus: m.bonus,
@@ -107,6 +114,16 @@ export function GraficoMensalDialog({
               Lucro × Custo · Visão Mensal
             </DialogTitle>
             <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 px-2 border-r pr-3 mr-1">
+                <Switch
+                  id="baseline-toggle"
+                  checked={incluirBaseline}
+                  onCheckedChange={onIncluirBaselineChange}
+                />
+                <Label htmlFor="baseline-toggle" className="text-xs cursor-pointer">
+                  Mês de referência
+                </Label>
+              </div>
               <ToggleGroup
                 type="single"
                 value={String(janelaMeses)}
@@ -251,8 +268,11 @@ export function GraficoMensalDialog({
             </thead>
             <tbody>
               {meses.map(m => (
-                <tr key={m.mesKey} className="border-b hover:bg-muted/50">
-                  <td className="py-2 pr-3 font-medium">{m.mesNomeLongo}</td>
+                <tr key={m.mesKey} className={`border-b hover:bg-muted/50 ${m.isBaseline ? "text-muted-foreground italic" : ""}`}>
+                  <td className="py-2 pr-3 font-medium">
+                    {m.mesNomeLongo}
+                    {m.isBaseline && <span className="ml-1 text-[10px] uppercase tracking-wide">(baseline)</span>}
+                  </td>
                   <td className="text-right px-2">{fmtBRLfull(m.fluxoLiquido)}</td>
                   <td className="text-right px-2">{fmtBRLfull(m.cac)}</td>
                   <td className="text-right px-2">{fmtBRLfull(m.comissoes)}</td>
