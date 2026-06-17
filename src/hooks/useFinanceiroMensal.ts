@@ -39,9 +39,9 @@ const toKey = (raw?: string | null) => {
   }
 };
 
-const empty = (): Omit<MesFinanceiro, "mesKey" | "mesLabel" | "mesNomeLongo"> => ({
+const empty = () => ({
   cac: 0, comissoes: 0, bonus: 0, infra: 0, rh: 0, operadores: 0, custoTotal: 0,
-  fluxoLiquido: 0, lucroOperacional: 0, resultadoLiquido: 0, margemOperacional: null,
+  fluxoLiquido: 0, lucroOperacional: 0, resultadoLiquido: 0, margemOperacional: null as number | null,
 });
 
 export function useFinanceiroMensal({ finData, meses, convertToBRL, incluirBaseline = true }: Params) {
