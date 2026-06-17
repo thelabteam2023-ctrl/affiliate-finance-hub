@@ -70,7 +70,13 @@ export function useFinanceiroMensal({ finData, meses, convertToBRL, incluirBasel
     (finData.despesasAdmin || []).forEach((d: any) => considerar(d.data_despesa));
     (finData.pagamentosOperador || []).forEach((p: any) => considerar(p.data_pagamento));
     (finData.cashLedger || []).forEach((l: any) => {
-      if (l.tipo_transacao === "SAQUE" || l.tipo_transacao === "DEPOSITO") considerar(l.data_transacao);
+      const tt = l.tipo_transacao;
+      const isSaque = tt === "SAQUE" || tt === "SAQUE_VIRTUAL";
+      const isDepositoReal = tt === "DEPOSITO";
+      const isDepositoVirtualMigracao = tt === "DEPOSITO_VIRTUAL" && l.origem_tipo === "MIGRACAO";
+      if ((isSaque || isDepositoReal || isDepositoVirtualMigracao) && l.projeto_id_snapshot) {
+        considerar(l.data_transacao);
+      }
     });
     (finData.apostasHistorico || []).forEach((a: any) => considerar(a.data_aposta));
 
@@ -126,11 +132,23 @@ export function useFinanceiroMensal({ finData, meses, convertToBRL, incluirBasel
     });
 
     // cash_ledger — Fluxo Líquido (Saques − Depósitos), consolidado em BRL
+    // Alinhado ao padrão Lucro Real (memória `lucro-real-payment-standard`):
+    //   (SAQUE + SAQUE_VIRTUAL) − (DEPOSITO + DEPOSITO_VIRTUAL[MIGRACAO])
+    //   status=CONFIRMADO (já garantido pelo loader) e apenas linhas com projeto_id_snapshot.
     (finData.cashLedger || []).forEach((l: any) => {
+      const tt = l.tipo_transacao;
+      // Só contabiliza linhas vinculadas a projetos do workspace (paridade com KPI).
+      if (!l.projeto_id_snapshot) return;
       const k = toKey(l.data_transacao);
-      const valorBRL = conv(Number(l.valor) || 0, (l.moeda || "BRL").toUpperCase());
-      if (l.tipo_transacao === "SAQUE") bump(k, m => { m.fluxoLiquido += valorBRL; });
-      else if (l.tipo_transacao === "DEPOSITO") bump(k, m => { m.fluxoLiquido -= valorBRL; });
+      const moeda = (l.moeda || "BRL").toUpperCase();
+      if (tt === "SAQUE" || tt === "SAQUE_VIRTUAL") {
+        const raw = Number(l.valor_confirmado ?? l.valor) || 0;
+        const valorBRL = conv(raw, moeda);
+        bump(k, m => { m.fluxoLiquido += valorBRL; });
+      } else if (tt === "DEPOSITO" || (tt === "DEPOSITO_VIRTUAL" && l.origem_tipo === "MIGRACAO")) {
+        const valorBRL = conv(Number(l.valor) || 0, moeda);
+        bump(k, m => { m.fluxoLiquido -= valorBRL; });
+      }
     });
 
     // apostas — Lucro Operacional teórico
