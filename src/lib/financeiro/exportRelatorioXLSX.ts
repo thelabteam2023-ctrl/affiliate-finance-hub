@@ -21,7 +21,7 @@ export function exportRelatorioXLSX(meses: MesFinanceiro[], workspaceNome: strin
     "Lucro Operacional (apostas)",
   ];
   const rows = meses.map(m => [
-    m.mesNomeLongo,
+    m.isBaseline ? `${m.mesNomeLongo} (baseline)` : m.mesNomeLongo,
     m.fluxoLiquido,
     m.cac,
     m.comissoes,
@@ -35,10 +35,11 @@ export function exportRelatorioXLSX(meses: MesFinanceiro[], workspaceNome: strin
   ]);
 
   // Totais
+  const mesesReais = meses.filter(m => !m.isBaseline);
   const sum = (k: keyof MesFinanceiro) =>
-    meses.reduce((acc, m) => acc + (Number(m[k]) || 0), 0);
+    mesesReais.reduce((acc, m) => acc + (Number(m[k]) || 0), 0);
   const avgMargem = (() => {
-    const vals = meses.map(m => m.margemOperacional).filter((v): v is number => v !== null);
+    const vals = mesesReais.map(m => m.margemOperacional).filter((v): v is number => v !== null);
     return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
   })();
   rows.push([
@@ -65,7 +66,8 @@ export function exportRelatorioXLSX(meses: MesFinanceiro[], workspaceNome: strin
   // Aba 2: composição de custos por mês
   const compHeader = ["Mês", "CAC", "Comissões", "Bônus", "Infraestrutura", "RH", "Operadores (pagto)"];
   const compRows = meses.map(m => [
-    m.mesNomeLongo, m.cac, m.comissoes, m.bonus, m.infra, m.rh, m.operadores - m.rh,
+    m.isBaseline ? `${m.mesNomeLongo} (baseline)` : m.mesNomeLongo,
+    m.cac, m.comissoes, m.bonus, m.infra, m.rh, m.operadores - m.rh,
   ]);
   const ws2 = XLSX.utils.aoa_to_sheet([compHeader, ...compRows]);
   ws2["!cols"] = new Array(compHeader.length).fill({ wch: 18 });
