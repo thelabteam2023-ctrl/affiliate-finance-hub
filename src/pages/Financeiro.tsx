@@ -41,7 +41,6 @@ import { Wallet, TrendingUp, Percent, Coins } from "lucide-react";
 import { ParticipacaoInvestidoresTab } from "@/components/financeiro/ParticipacaoInvestidoresTab";
 import { MultiCurrencyWarningBanner } from "@/components/financeiro/MultiCurrencyIndicator";
 import { FinanceiroDespesasTab } from "@/components/financeiro/FinanceiroDespesasTab";
-import { FinanceiroHistoricoTab } from "@/components/financeiro/FinanceiroHistoricoTab";
 import { calcResultadoLiquido } from "@/lib/finance/resultadoLiquido";
 import { calcMargemOperacional } from "@/lib/finance/margemOperacional";
 import { FluxoLiquidoDetalheDialog } from "@/components/financeiro/FluxoLiquidoDetalheDialog";
