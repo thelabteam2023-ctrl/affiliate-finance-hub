@@ -16,6 +16,8 @@ import { ReportarScanDialog } from "./ReportarScanDialog";
 import { cn } from "@/lib/utils";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import Chart from "chart.js/auto";
+import { createRoot, type Root } from "react-dom/client";
+import { ChartRichTooltip, type RichTooltipSegment } from "@/components/charts/ChartRichTooltip";
 
 interface Cotacoes {
   USD_BRL: number;
@@ -89,6 +91,16 @@ export function FluxoFinanceiroOperacional({
   const chartRef = useRef<HTMLCanvasElement>(null);
   const chartInstance = useRef<Chart | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const tooltipRoot = useRef<Root | null>(null);
+
+  useEffect(() => {
+    return () => {
+      // Defer unmount to next tick to avoid React 18 race on rapid remounts
+      const root = tooltipRoot.current;
+      tooltipRoot.current = null;
+      if (root) setTimeout(() => root.unmount(), 0);
+    };
+  }, []);
 
   const { cotacaoUSD, cryptoPrices } = useCotacoes(["USDC", "USDT", "ETH", "BTC", "LTC"]);
 
@@ -405,49 +417,59 @@ export function FluxoFinanceiroOperacional({
                 dateLabel = format(parseLocalDate(ponto.data), 'MMMM yyyy', { locale: ptBR });
               }
 
-              let html = `<div class="text-[12px] font-bold pb-2 border-b border-white/10 mb-2">📅 ${dateLabel}</div>`;
-              
-              // BRL Section
-              html += `<div class="mb-2">
-                <div class="text-[9px] uppercase font-bold text-[#22c55e] bg-[#0c2a1a] px-1.5 py-0.5 rounded w-fit mb-1">BRL</div>
-                <div class="flex justify-between text-[11px] mb-0.5">
-                  <span class="text-[#9ca3af]">↓ Depósitos</span>
-                  <span class="text-[#22c55e] font-mono">R$ ${(ponto.depositos['BRL'] || 0).toLocaleString('pt-BR')}</span>
-                </div>
-                <div class="flex justify-between text-[11px]">
-                  <span class="text-[#9ca3af]">↑ Saques</span>
-                  <span class="text-[#f472b6] font-mono">R$ ${(ponto.saques['BRL'] || 0).toLocaleString('pt-BR')}</span>
-                </div>
-              </div>`;
+              // Build segments (Depósito BRL, Depósitos Crypto, Saque BRL, Saques Crypto), all in BRL equivalent
+              const depBRL = ponto.depositos['BRL'] || 0;
+              const saqBRL = ponto.saques['BRL'] || 0;
+              const cryptos = Array.from(
+                new Set(
+                  Object.keys(ponto.depositos)
+                    .concat(Object.keys(ponto.saques))
+                    .filter(m => m !== 'BRL')
+                )
+              );
+              const depCryptoBRL = cryptos.reduce(
+                (a, m) => a + converterParaBRL(ponto.depositos[m] || 0, m, ponto.cotacoes),
+                0
+              );
+              const saqCryptoBRL = cryptos.reduce(
+                (a, m) => a + converterParaBRL(ponto.saques[m] || 0, m, ponto.cotacoes),
+                0
+              );
 
-              // Crypto Section
-              const moedasCrypto = Object.keys(ponto.depositos).concat(Object.keys(ponto.saques)).filter(m => m !== 'BRL');
-              const uniqueMoedas = Array.from(new Set(moedasCrypto));
+              const fmtR = (v: number) =>
+                v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
 
-              if (uniqueMoedas.length > 0) {
-                html += `<div class="pt-2 border-t border-white/5">
-                  <div class="text-[9px] uppercase font-bold text-[#22d3ee] bg-[#0a1a2a] px-1.5 py-0.5 rounded w-fit mb-1">Crypto</div>`;
-                
-                uniqueMoedas.forEach(m => {
-                  const dep = ponto.depositos[m] || 0;
-                  const saq = ponto.saques[m] || 0;
-                  if (dep > 0) {
-                    html += `<div class="flex justify-between text-[11px] mb-0.5">
-                      <span class="text-[#9ca3af]">↓ Dep ${m}</span>
-                      <span class="text-white font-mono">${m === 'BRL' ? '' : getCurrencySymbol(m)} ${dep.toLocaleString('pt-BR')} <span class="text-[#6b7280]">≈R$ ${converterParaBRL(dep, m, ponto.cotacoes).toLocaleString('pt-BR')}</span></span>
-                    </div>`;
-                  }
-                  if (saq > 0) {
-                    html += `<div class="flex justify-between text-[11px]">
-                      <span class="text-[#9ca3af]">↑ Saq ${m}</span>
-                      <span class="text-white font-mono">${m === 'BRL' ? '' : getCurrencySymbol(m)} ${saq.toLocaleString('pt-BR')} <span class="text-[#6b7280]">≈R$ ${converterParaBRL(saq, m, ponto.cotacoes).toLocaleString('pt-BR')}</span></span>
-                    </div>`;
-                  }
-                });
-                html += `</div>`;
+              const segments: RichTooltipSegment[] = [
+                { key: 'dep-brl',    label: 'Depósitos BRL',    value: depBRL,        color: 'hsl(var(--status-emerald))', formatted: fmtR(depBRL) },
+                { key: 'dep-crypto', label: 'Depósitos Crypto', value: depCryptoBRL,  color: 'hsl(var(--status-cyan))',    formatted: fmtR(depCryptoBRL) },
+                { key: 'saq-brl',    label: 'Saques BRL',       value: saqBRL,        color: 'hsl(var(--status-orange))',  formatted: fmtR(saqBRL) },
+                { key: 'saq-crypto', label: 'Saques Crypto',    value: saqCryptoBRL,  color: 'hsl(var(--status-red))',     formatted: fmtR(saqCryptoBRL) },
+              ].filter(s => s.value > 0);
+
+              const totalIO = segments.reduce((a, s) => a + s.value, 0);
+              const liquido = (depBRL + depCryptoBRL) - (saqBRL + saqCryptoBRL);
+
+              if (!tooltipRoot.current) {
+                tooltipRoot.current = createRoot(tooltipEl);
               }
-
-              tooltipEl.innerHTML = html;
+              tooltipRoot.current.render(
+                <ChartRichTooltip
+                  variant="donut"
+                  title={dateLabel}
+                  segments={segments}
+                  total={totalIO}
+                  totalLabel="Movim."
+                  totalFormatted={fmtR(totalIO)}
+                  footerRows={[
+                    {
+                      label: 'Fluxo Líquido',
+                      value: fmtR(liquido),
+                      tone: liquido >= 0 ? 'positive' : 'negative',
+                    },
+                  ]}
+                  note="Valores em crypto convertidos para R$ pela cotação de cada dia"
+                />
+              );
               tooltipEl.style.opacity = '1';
 
               const position = chart.canvas.getBoundingClientRect();
@@ -698,7 +720,7 @@ export function FluxoFinanceiroOperacional({
           <div
             ref={tooltipRef}
             id="cashflow-tooltip"
-            className="absolute pointer-events-none opacity-0 transition-opacity duration-150 z-[100] bg-[#12161f] border border-[#2d3748] rounded-xl p-3 min-w-[220px] shadow-2xl"
+            className="absolute pointer-events-none opacity-0 transition-opacity duration-150 z-[100]"
           />
         </div>
 

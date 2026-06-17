@@ -80,6 +80,9 @@ All colors MUST be HSL.
     --interactive-selected-bg: 142 76% 36% / 0.12;
     --interactive-hover-bg: 210 16% 93%;
     --interactive-focus-ring: 142 76% 36% / 0.4;
+
+    /* Segment color: Participações (shared light/dark) */
+    --seg-particip: 330 78% 50%;
   }
 
   /* ═══ DARK THEME ═══ */
@@ -186,6 +189,7 @@ All colors MUST be HSL.
     --seg-caixa-op:    #22d3ee;
     --seg-wallets:     #4ade80;
     --seg-contas-parc: #f59e0b;
+    --seg-particip:    330 78% 60%;
   }
 
   body[data-editor-disabled] .editor-toolbar,

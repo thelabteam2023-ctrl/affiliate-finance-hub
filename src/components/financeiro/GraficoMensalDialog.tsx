@@ -1,11 +1,10 @@
 import { useMemo, useRef, useState } from "react";
 import {
-  ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, Brush,
+  ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, Brush, Cell, ReferenceArea,
 } from "recharts";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Download, FileSpreadsheet, FileText, Sparkles } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -17,6 +16,12 @@ import type { MesFinanceiro } from "@/hooks/useFinanceiroMensal";
 import { exportRelatorioPDF } from "@/lib/financeiro/exportRelatorioPDF";
 import { exportRelatorioXLSX } from "@/lib/financeiro/exportRelatorioXLSX";
 import { useToast } from "@/hooks/use-toast";
+import { MonthlyKpiCard } from "./MonthlyKpiCard";
+import {
+  ChartRichTooltip,
+  type RichTooltipSegment,
+} from "@/components/charts/ChartRichTooltip";
+import { cn } from "@/lib/utils";
 
 interface Props {
   open: boolean;
@@ -34,17 +39,28 @@ const fmtBRL = (v: number) =>
 const fmtBRLfull = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+// Semantic design tokens (see src/index.css)
 const COLORS = {
-  cac: "hsl(217, 91%, 60%)",
-  comissoes: "hsl(142, 71%, 45%)",
-  bonus: "hsl(38, 92%, 50%)",
-  infra: "hsl(262, 83%, 58%)",
-  operadores: "hsl(189, 94%, 43%)",
-  participacoes: "hsl(330, 78%, 58%)",
-  fluxo: "hsl(142, 76%, 36%)",
-  resultado: "hsl(0, 0%, 9%)",
-  margem: "hsl(280, 65%, 55%)",
+  cac:           "hsl(var(--status-blue))",
+  comissoes:     "hsl(var(--status-emerald))",
+  bonus:         "hsl(var(--status-orange))",
+  infra:         "hsl(var(--status-purple))",
+  operadores:    "hsl(var(--status-cyan))",
+  participacoes: "hsl(var(--seg-particip))",
+  fluxoPos:      "hsl(var(--status-emerald))",
+  fluxoNeg:      "hsl(var(--status-red))",
+  resultado:     "hsl(var(--foreground))",
+  margem:        "hsl(var(--status-purple))",
 };
+
+const COST_KEYS: Array<{ key: keyof MesFinanceiro; label: string; color: string }> = [
+  { key: "cac",           label: "CAC",           color: COLORS.cac },
+  { key: "comissoes",     label: "Comissões",     color: COLORS.comissoes },
+  { key: "bonus",         label: "Bônus",         color: COLORS.bonus },
+  { key: "infra",         label: "Infra",         color: COLORS.infra },
+  { key: "operadores",    label: "Operadores",    color: COLORS.operadores },
+  { key: "participacoes", label: "Participações", color: COLORS.participacoes },
+];
 
 export function GraficoMensalDialog({
   open, onOpenChange, meses, workspaceNome, janelaMeses, onJanelaChange,
@@ -53,6 +69,7 @@ export function GraficoMensalDialog({
   const chartRef = useRef<HTMLDivElement | null>(null);
   const { toast } = useToast();
   const [exporting, setExporting] = useState(false);
+  const [hoveredMonth, setHoveredMonth] = useState<string | null>(null);
 
   const resumo = useMemo(() => {
     const reais = meses.filter(m => !m.isBaseline);
@@ -74,6 +91,7 @@ export function GraficoMensalDialog({
 
   const chartData = useMemo(() => meses.map(m => ({
     name: m.isBaseline ? `${m.mesLabel} •` : m.mesLabel,
+    mesKey: m.mesKey,
     isBaseline: m.isBaseline,
     CAC: m.cac,
     Comissões: m.comissoes,
@@ -85,6 +103,53 @@ export function GraficoMensalDialog({
     "Resultado Líquido": m.resultadoLiquido,
     "Margem %": m.margemOperacional,
   })), [meses]);
+
+  const mesByName = useMemo(() => {
+    const map = new Map<string, MesFinanceiro>();
+    meses.forEach((m, i) => map.set(chartData[i].name, m));
+    return map;
+  }, [meses, chartData]);
+
+  const renderTooltip = (props: any) => {
+    if (!props?.active || !props?.label) return null;
+    const m = mesByName.get(props.label);
+    if (!m) return null;
+    const segments: RichTooltipSegment[] = COST_KEYS.map(c => ({
+      key: String(c.key),
+      label: c.label,
+      value: Number((m as any)[c.key]) || 0,
+      color: c.color,
+      formatted: fmtBRLfull(Number((m as any)[c.key]) || 0),
+    }));
+    const margemTxt =
+      m.margemOperacional === null ? "—" : `${m.margemOperacional.toFixed(1)}%`;
+    const tone: "positive" | "negative" | "neutral" =
+      m.resultadoLiquido > 0 ? "positive" : m.resultadoLiquido < 0 ? "negative" : "neutral";
+    return (
+      <ChartRichTooltip
+        variant="stackedBar"
+        title={m.mesNomeLongo}
+        badge={{ label: margemTxt, tone }}
+        segments={segments}
+        total={m.custoTotal}
+        totalLabel="Custo total"
+        totalFormatted={fmtBRLfull(m.custoTotal)}
+        footerRows={[
+          { label: "Custo total", value: fmtBRLfull(m.custoTotal), tone: "neutral" },
+          {
+            label: "Fluxo Líquido",
+            value: fmtBRLfull(m.fluxoLiquido),
+            tone: m.fluxoLiquido >= 0 ? "positive" : "negative",
+          },
+          {
+            label: "Resultado Líquido",
+            value: fmtBRLfull(m.resultadoLiquido),
+            tone: m.resultadoLiquido >= 0 ? "positive" : "negative",
+          },
+        ]}
+      />
+    );
+  };
 
   const handleExportPDF = async () => {
     try {
@@ -158,83 +223,169 @@ export function GraficoMensalDialog({
 
         {/* Cards resumo */}
         {resumo && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Card className="p-3">
-              <div className="text-[11px] text-muted-foreground">Resultado médio/mês</div>
-              <div className={`text-lg font-semibold ${resumo.mediaResultado >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-                {fmtBRL(resumo.mediaResultado)}
-              </div>
-            </Card>
-            <Card className="p-3">
-              <div className="text-[11px] text-muted-foreground">Margem média</div>
-              <div className="text-lg font-semibold">
-                {resumo.mediaMargem === null ? "—" : `${resumo.mediaMargem.toFixed(1)}%`}
-              </div>
-            </Card>
-            <Card className="p-3">
-              <div className="text-[11px] text-muted-foreground">Melhor mês</div>
-              <div className="text-sm font-medium">{resumo.melhorMes.mesNomeLongo}</div>
-              <div className="text-xs text-emerald-600">{fmtBRL(resumo.melhorMes.resultadoLiquido)}</div>
-            </Card>
-            <Card className="p-3">
-              <div className="text-[11px] text-muted-foreground">Pior mês</div>
-              <div className="text-sm font-medium">{resumo.piorMes.mesNomeLongo}</div>
-              <div className="text-xs text-red-600">{fmtBRL(resumo.piorMes.resultadoLiquido)}</div>
-            </Card>
+          <div
+            key={janelaMeses}
+            className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-in fade-in-0 duration-200"
+          >
+            <MonthlyKpiCard
+              label="Resultado médio/mês"
+              value={fmtBRL(resumo.mediaResultado)}
+              caption={`últimos ${janelaMeses} meses`}
+              valueTone={resumo.mediaResultado >= 0 ? "positive" : "negative"}
+            />
+            <MonthlyKpiCard
+              label="Margem média"
+              value={resumo.mediaMargem === null ? "—" : `${resumo.mediaMargem.toFixed(1)}%`}
+              caption="sobre fluxo + custos"
+            />
+            <MonthlyKpiCard
+              label="Melhor mês"
+              value={fmtBRL(resumo.melhorMes.resultadoLiquido)}
+              caption={resumo.melhorMes.mesNomeLongo}
+              variant="positive"
+              valueTone="positive"
+            />
+            <MonthlyKpiCard
+              label="Pior mês"
+              value={fmtBRL(resumo.piorMes.resultadoLiquido)}
+              caption={resumo.piorMes.mesNomeLongo}
+              variant="alert"
+              valueTone="negative"
+            />
           </div>
         )}
 
+        {/* Legenda customizada */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-1 pt-1 text-[11px] text-muted-foreground">
+          {COST_KEYS.map(c => (
+            <div key={String(c.key)} className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full" style={{ background: c.color }} />
+              {c.label}
+            </div>
+          ))}
+          <div className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-[hsl(var(--status-emerald))]" />
+            Fluxo Líquido
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="inline-block h-[2px] w-4 rounded-full bg-[hsl(var(--status-purple))]" />
+            Margem %
+          </div>
+        </div>
+
         {/* Gráfico */}
-        <div ref={chartRef} className="bg-card rounded-lg p-4 border">
+        <div
+          ref={chartRef}
+          className="bg-card rounded-xl p-4 border border-border/80 shadow-[0_4px_24px_hsl(0_0%_0%/0.18)]"
+        >
           <div style={{ width: "100%", height: 420 }}>
             <ResponsiveContainer>
-              <ComposedChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+              <ComposedChart
+                data={chartData}
+                margin={{ top: 10, right: 24, left: 0, bottom: 0 }}
+                barCategoryGap="22%"
+                barGap={4}
+                onMouseMove={(e: any) => {
+                  if (e?.activeLabel) {
+                    const m = mesByName.get(e.activeLabel);
+                    setHoveredMonth(m?.mesKey ?? null);
+                  }
+                }}
+                onMouseLeave={() => setHoveredMonth(null)}
+              >
                 <defs>
-                  <linearGradient id="fluxoGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={COLORS.fluxo} stopOpacity={0.95} />
-                    <stop offset="100%" stopColor={COLORS.fluxo} stopOpacity={0.55} />
-                  </linearGradient>
+                  <filter id="margemGlow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="2.4" result="blur" />
+                    <feMerge>
+                      <feMergeNode in="blur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                <CartesianGrid
+                  vertical={false}
+                  stroke="hsl(var(--border) / 0.4)"
+                  strokeDasharray="0"
+                />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                  tickLine={false}
+                  axisLine={{ stroke: "hsl(var(--border) / 0.5)" }}
+                />
                 <YAxis
                   yAxisId="left"
                   tickFormatter={fmtBRL}
-                  tick={{ fontSize: 11 }}
+                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                  tickLine={false}
+                  axisLine={false}
                   width={80}
                 />
                 <YAxis
                   yAxisId="right"
                   orientation="right"
                   tickFormatter={v => `${v}%`}
-                  tick={{ fontSize: 11 }}
+                  tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground) / 0.7)" }}
+                  tickLine={false}
+                  axisLine={false}
                   width={40}
                 />
                 <Tooltip
-                  formatter={(value: any, name: string) => {
-                    if (name === "Margem %") return value === null ? "—" : `${Number(value).toFixed(1)}%`;
-                    return fmtBRLfull(Number(value) || 0);
-                  }}
-                  contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8 }}
+                  cursor={{ fill: "hsl(var(--primary) / 0.05)" }}
+                  content={renderTooltip}
+                  allowEscapeViewBox={{ x: true, y: true }}
+                  wrapperStyle={{ outline: "none", zIndex: 50 }}
                 />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
+                {/* Highlight when hover comes from table */}
+                {hoveredMonth &&
+                  (() => {
+                    const idx = meses.findIndex(m => m.mesKey === hoveredMonth);
+                    if (idx < 0) return null;
+                    const name = chartData[idx].name;
+                    return (
+                      <ReferenceArea
+                        yAxisId="left"
+                        x1={name}
+                        x2={name}
+                        strokeOpacity={0}
+                        fill="hsl(var(--primary) / 0.08)"
+                      />
+                    );
+                  })()}
                 {/* Custos empilhados */}
                 <Bar yAxisId="left" dataKey="CAC" stackId="custos" fill={COLORS.cac} />
                 <Bar yAxisId="left" dataKey="Comissões" stackId="custos" fill={COLORS.comissoes} />
                 <Bar yAxisId="left" dataKey="Bônus" stackId="custos" fill={COLORS.bonus} />
                 <Bar yAxisId="left" dataKey="Infra" stackId="custos" fill={COLORS.infra} />
                 <Bar yAxisId="left" dataKey="Operadores" stackId="custos" fill={COLORS.operadores} />
-                <Bar yAxisId="left" dataKey="Participações" stackId="custos" fill={COLORS.participacoes} radius={[4, 4, 0, 0]} />
-                {/* Fluxo Líquido lado a lado */}
-                <Bar yAxisId="left" dataKey="Fluxo Líquido" fill="url(#fluxoGrad)" radius={[4, 4, 0, 0]} />
+                <Bar
+                  yAxisId="left"
+                  dataKey="Participações"
+                  stackId="custos"
+                  fill={COLORS.participacoes}
+                  radius={[6, 6, 0, 0]}
+                />
+                {/* Fluxo Líquido lado a lado, cor por sinal */}
+                <Bar yAxisId="left" dataKey="Fluxo Líquido" radius={[6, 6, 0, 0]}>
+                  {chartData.map((d, i) => (
+                    <Cell
+                      key={`fl-${i}`}
+                      fill={
+                        (d["Fluxo Líquido"] as number) >= 0
+                          ? COLORS.fluxoPos
+                          : COLORS.fluxoNeg
+                      }
+                    />
+                  ))}
+                </Bar>
                 {/* Linhas */}
                 <Line
                   yAxisId="left"
                   type="monotone"
                   dataKey="Resultado Líquido"
                   stroke={COLORS.resultado}
-                  strokeWidth={2.5}
-                  dot={{ r: 3 }}
+                  strokeWidth={2.25}
+                  dot={{ r: 2.5, fill: COLORS.resultado, strokeWidth: 0 }}
                   activeDot={{ r: 5 }}
                 />
                 <Line
@@ -243,20 +394,29 @@ export function GraficoMensalDialog({
                   dataKey="Margem %"
                   stroke={COLORS.margem}
                   strokeWidth={2}
-                  strokeDasharray="4 4"
-                  dot={{ r: 2 }}
+                  strokeDasharray="5 5"
+                  dot={{ r: 3, fill: COLORS.margem, strokeWidth: 0 }}
+                  filter="url(#margemGlow)"
                 />
-                {chartData.length > 6 && <Brush dataKey="name" height={20} stroke="hsl(var(--primary))" />}
+                {chartData.length > 6 && (
+                  <Brush
+                    dataKey="name"
+                    height={18}
+                    stroke="hsl(var(--primary) / 0.4)"
+                    fill="hsl(var(--card))"
+                    travellerWidth={8}
+                  />
+                )}
               </ComposedChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Tabela */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-lg border border-border/70">
           <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b text-muted-foreground">
+            <thead className="sticky top-0 z-10 bg-card">
+              <tr className="border-b border-border/70 text-muted-foreground">
                 <th className="text-left py-2 pr-3">Mês</th>
                 <th className="text-right py-2 px-2">Fluxo Líq.</th>
                 <th className="text-right py-2 px-2">CAC</th>
@@ -272,7 +432,17 @@ export function GraficoMensalDialog({
             </thead>
             <tbody>
               {meses.map(m => (
-                <tr key={m.mesKey} className={`border-b hover:bg-muted/50 ${m.isBaseline ? "text-muted-foreground italic" : ""}`}>
+                <tr
+                  key={m.mesKey}
+                  data-month={m.mesKey}
+                  onMouseEnter={() => setHoveredMonth(m.mesKey)}
+                  onMouseLeave={() => setHoveredMonth(null)}
+                  className={cn(
+                    "border-b border-border/60 transition-colors duration-150 cursor-default",
+                    hoveredMonth === m.mesKey ? "bg-muted/50" : "hover:bg-muted/30",
+                    m.isBaseline && "text-muted-foreground italic opacity-70"
+                  )}
+                >
                   <td className="py-2 pr-3 font-medium">
                     {m.mesNomeLongo}
                     {m.isBaseline && <span className="ml-1 text-[10px] uppercase tracking-wide">(baseline)</span>}
@@ -285,7 +455,14 @@ export function GraficoMensalDialog({
                   <td className="text-right px-2">{fmtBRLfull(m.operadores)}</td>
                   <td className="text-right px-2">{fmtBRLfull(m.participacoes)}</td>
                   <td className="text-right px-2">{fmtBRLfull(m.custoTotal)}</td>
-                  <td className={`text-right px-2 font-medium ${m.resultadoLiquido >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                  <td
+                    className={cn(
+                      "text-right px-2 font-medium tabular-nums",
+                      m.resultadoLiquido >= 0
+                        ? "text-[hsl(var(--status-emerald))]"
+                        : "text-[hsl(var(--status-red))]"
+                    )}
+                  >
                     {fmtBRLfull(m.resultadoLiquido)}
                   </td>
                   <td className="text-right pl-2">
