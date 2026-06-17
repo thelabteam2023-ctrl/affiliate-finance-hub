@@ -19,6 +19,7 @@ export interface MesFinanceiro {
   lucroOperacional: number; // apostas (lucro_prejuizo)
   resultadoLiquido: number; // fluxoLiquido - custoTotal
   margemOperacional: number | null;
+  participacoes: number;    // distribuição paga a investidores (participacao_ciclos)
   isBaseline: boolean;      // mês anterior ao 1º real, zerado, apenas referência visual
 }
 
@@ -42,6 +43,7 @@ const toKey = (raw?: string | null) => {
 const empty = () => ({
   cac: 0, comissoes: 0, bonus: 0, infra: 0, rh: 0, operadores: 0, custoTotal: 0,
   fluxoLiquido: 0, lucroOperacional: 0, resultadoLiquido: 0, margemOperacional: null as number | null,
+  participacoes: 0,
 });
 
 export function useFinanceiroMensal({ finData, meses, convertToBRL, incluirBaseline = true }: Params) {
@@ -79,6 +81,7 @@ export function useFinanceiroMensal({ finData, meses, convertToBRL, incluirBasel
       }
     });
     (finData.apostasHistorico || []).forEach((a: any) => considerar(a.data_aposta));
+    (finData.participacoesPagas || []).forEach((p: any) => considerar(p.data_pagamento));
 
     const inicioKey = primeiroMesReal && primeiroMesReal > limiteMinKey ? primeiroMesReal : limiteMinKey;
 
@@ -131,6 +134,13 @@ export function useFinanceiroMensal({ finData, meses, convertToBRL, incluirBasel
       bump(k, m => { m.operadores += v; });
     });
 
+    // participações pagas (distribuição a investidores) — assumido em BRL
+    (finData.participacoesPagas || []).forEach((p: any) => {
+      const k = toKey(p.data_pagamento);
+      const v = Number(p.valor_participacao) || 0;
+      bump(k, m => { m.participacoes += v; });
+    });
+
     // cash_ledger — Fluxo Líquido (Saques − Depósitos), consolidado em BRL
     // Alinhado ao padrão Lucro Real (memória `lucro-real-payment-standard`):
     //   (SAQUE + SAQUE_VIRTUAL) − (DEPOSITO + DEPOSITO_VIRTUAL[MIGRACAO])
@@ -162,7 +172,7 @@ export function useFinanceiroMensal({ finData, meses, convertToBRL, incluirBasel
     return windowKeys.map(k => {
       const m = map[k];
       const operadoresTotal = m.operadores + m.rh;
-      const custoTotal = m.cac + m.comissoes + m.bonus + m.infra + operadoresTotal;
+      const custoTotal = m.cac + m.comissoes + m.bonus + m.infra + operadoresTotal + m.participacoes;
       const resultado = m.fluxoLiquido - custoTotal;
       const base = m.fluxoLiquido + custoTotal;
       const margem = base > 0 ? (resultado / base) * 100 : null;
@@ -182,6 +192,7 @@ export function useFinanceiroMensal({ finData, meses, convertToBRL, incluirBasel
         lucroOperacional: m.lucroOperacional,
         resultadoLiquido: resultado,
         margemOperacional: margem,
+        participacoes: m.participacoes,
         isBaseline: baselineKey !== null && k === baselineKey,
       };
     });
