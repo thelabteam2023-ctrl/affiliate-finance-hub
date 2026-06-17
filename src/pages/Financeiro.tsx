@@ -127,6 +127,7 @@ export default function Financeiro() {
   const [custosDetalheOpen, setCustosDetalheOpen] = useState(false);
   const [graficoMensalOpen, setGraficoMensalOpen] = useState(false);
   const [janelaMeses, setJanelaMeses] = useState(12);
+  const [incluirBaseline, setIncluirBaseline] = useState(true);
   const composicaoCustosRef = useRef<HTMLDivElement | null>(null);
   const investidorFiltroId = searchParams.get("investidor");
 
@@ -159,6 +160,7 @@ export default function Financeiro() {
     finData,
     meses: janelaMeses,
     convertToBRL: calc.convertToBRL,
+    incluirBaseline,
   });
 
   // Capital em disputa (para sobreposição no donut da Posição de Capital)
@@ -499,6 +501,8 @@ export default function Financeiro() {
         workspaceNome={workspaceId || "workspace"}
         janelaMeses={janelaMeses}
         onJanelaChange={setJanelaMeses}
+        incluirBaseline={incluirBaseline}
+        onIncluirBaselineChange={setIncluirBaseline}
       />
     </div>
   );
