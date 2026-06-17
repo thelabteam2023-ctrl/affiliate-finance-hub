@@ -86,6 +86,7 @@ const ALL_SERIES: SeriesDef[] = [
   { id: "Operadores",         label: "Operadores",         color: COLORS.operadores,    shape: "bar",        group: "Custos",       modos: ["custos"] },
   { id: "Participações",      label: "Participações",      color: COLORS.participacoes, shape: "bar",        group: "Custos",       modos: ["custos"] },
   { id: "Fluxo Líquido",      label: "Fluxo Líquido",      color: COLORS.fluxoPos,      shape: "bar",        group: "Indicadores",  modos: ["custos"], hint: "Saques − Depósitos" },
+  { id: "Resultado Líq. (custos)", label: "Resultado Líquido", color: COLORS.resultado, shape: "line",      group: "Indicadores",  modos: ["custos"], hint: "Fluxo Líquido − Custo Total" },
   { id: "Margem %",           label: "Margem %",           color: COLORS.margem,        shape: "lineDashed", group: "Indicadores",  modos: ["custos"], hint: "Eixo direito" },
   { id: "Lucro Operacional",  label: "Lucro Operacional",  color: COLORS.lucroOp,       shape: "line",       group: "Lucro",        modos: ["lucro"], hint: "Apostas (lucro/prejuízo) por mês" },
   { id: "Resultado Líquido",  label: "Resultado Líquido",  color: COLORS.resultado,     shape: "line",       group: "Lucro",        modos: ["lucro"], hint: "Fluxo Líquido − Custo Total" },
@@ -93,7 +94,7 @@ const ALL_SERIES: SeriesDef[] = [
 ];
 
 const DEFAULTS_BY_MODO: Record<Modo, string[]> = {
-  custos: ["CAC","Comissões","Bônus","Infra","Operadores","Participações","Fluxo Líquido","Margem %"],
+  custos: ["CAC","Comissões","Bônus","Infra","Operadores","Participações","Fluxo Líquido","Resultado Líq. (custos)","Margem %"],
   lucro:  ["Lucro Operacional","Resultado Líquido"],
 };
 const LS_KEY = "labbet:grafico-mensal:visible-series:v1";
@@ -529,17 +530,17 @@ export function GraficoMensalDialog({
                         ))}
                       </Bar>
                     )}
-                    <Line
-                      yAxisId="left"
-                      type="monotone"
-                      dataKey="Resultado Líquido"
-                      stroke={COLORS.resultado}
-                      strokeWidth={2.25}
-                      dot={{ r: 2.5, fill: COLORS.resultado, strokeWidth: 0 }}
-                      activeDot={{ r: 5 }}
-                      hide={false}
-                      legendType="none"
-                    />
+                    {isOn("Resultado Líq. (custos)") && (
+                      <Line
+                        yAxisId="left"
+                        type="monotone"
+                        dataKey="Resultado Líquido"
+                        stroke={COLORS.resultado}
+                        strokeWidth={2.25}
+                        dot={{ r: 2.5, fill: COLORS.resultado, strokeWidth: 0 }}
+                        activeDot={{ r: 5 }}
+                      />
+                    )}
                     {isOn("Margem %") && (
                       <Line
                         yAxisId="right"
