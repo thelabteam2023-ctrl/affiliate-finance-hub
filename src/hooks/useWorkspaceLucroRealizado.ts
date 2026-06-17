@@ -62,7 +62,7 @@ export function useWorkspaceLucroRealizado({
         dataFim,
       });
       const total = Object.values(resultado).reduce(
-        (acc, r) => acc + (Number(r.lucroRealizado) || 0),
+        (acc, r) => acc + (Number(r.lucroRealizadoBRL) || 0),
         0
       );
       setLucroRealizado(total);

@@ -1,74 +1,60 @@
-# Janela Mensal Dinâmica + Baseline
+## Diagnóstico — bug confirmado
 
-## Objetivo
+O KPI **Fluxo Líquido** da Visão Financeira (-R$ 2.878,04) é a soma de `lucroRealizado` de todos os projetos, calculada em `useWorkspaceLucroRealizado` → `fetchProjetosLucroCanonico`.
 
-Eliminar meses zerados no início do gráfico da Análise Temporal. A janela passa a iniciar no **primeiro mês com qualquer registro real**, respeitando o limite máximo da janela escolhida (6/12/24 meses) e nunca passando do mês atual. Opcionalmente, incluir 1 mês anterior zerado como "baseline" visual.
+O problema está em `src/services/fetchProjetosLucroCanonico.ts`:
 
-## Regras da nova janela
+- Para cada projeto, `lucroRealizado` é calculado usando `convertOficial = buildConverter(moedaConsolidacao, cotacoesOficiais)`.
+- `moedaConsolidacao` é a **moeda do projeto** (USD para Marcio/Italo, BRL para outros).
+- Portanto cada `lucroRealizado` fica expresso na moeda do projeto: Marcio = `-$1.236,88` (USD), Italo = `-$1.641,16` (USD), etc.
+- Em `useWorkspaceLucroRealizado` (linha 64-67), há um simples `reduce(acc + r.lucroRealizado, 0)` — somando USD e BRL como se fossem o mesmo número e exibindo o resultado com prefixo "R$".
 
-Sejam:
-- `hoje` = início do mês atual
-- `N` = janela escolhida (6, 12, 24)
-- `primeiroMesReal` = menor `yyyy-MM` entre TODOS estes registros do workspace:
-  - `movimentacoes_indicacao.data_movimentacao` (CAC, Comissões, Bônus)
-  - `despesas_administrativas.data_despesa` (Infra, RH)
-  - `pagamentos_operador.data_pagamento` (Operadores)
-  - `cash_ledger.data_transacao` com tipo SAQUE/DEPOSITO (Fluxo Líquido)
-  - `apostas_unificada.data_aposta` (Lucro Operacional)
+A conta bate: somando os USDs dos projetos dá exatamente $-2.878,04, que o KPI mostra como "R$ -2.878,04". Já a Análise Temporal lê o `cash_ledger` direto convertendo cada linha de USD→BRL via PTAX (R$ 5,09), resultando em ~-R$ 14.634 — esse é o número correto.
 
-Definições:
-```
-limiteMinJanela = hoje − (N − 1) meses
-inicio          = max(primeiroMesReal, limiteMinJanela)
-fim             = hoje
-```
+## Correção
 
-Comportamento:
-- Se a operação começou **dentro da janela** (ex.: janela 12m, 1º registro Abr/26) → começa em Abr/26, não em Jul/25.
-- Se a operação começou **antes da janela** (ex.: 1º registro Jan/24, janela 6m) → começa em `hoje − 5m` (comportamento atual preservado para janelas curtas em operações antigas).
-- Se **não houver nenhum registro** → janela vazia, fallback para o mês atual apenas.
+Converter o `lucroRealizado` de cada projeto da **sua moeda de consolidação** para **BRL** antes de somar.
 
-## Baseline opcional
+### Arquivo 1 — `src/services/fetchProjetosLucroCanonico.ts`
 
-Flag `incluirBaseline: boolean` (default `true`):
-- Quando `true` e existe `inicio > primeiroMesReal` impossível (já está no piso real), adiciona **1 mês anterior** ao `inicio` com todos os valores zerados, apenas como "ponto de partida visual" no gráfico.
-- Não adiciona baseline se isso ultrapassasse o piso natural do calendário (sem mês negativo) — sempre seguro.
-- Baseline NÃO entra nos cards de resumo (média, melhor/pior mês), só no chart e na tabela com badge "baseline".
+- Acrescentar ao tipo `LucroCanonicoResultado` o campo `lucroRealizadoBRL: number`.
+- Dentro do loop de cálculo do Lucro Realizado (linhas 286-300), construir um **conversor adicional para BRL** baseado nas cotações oficiais e converter `r.lucroRealizado` (na moeda do projeto) para BRL:
+  ```ts
+  const convertBRL = buildConverter("BRL", cotacoesOficiais);
+  r.lucroRealizadoBRL = convertBRL(r.lucroRealizado, cfg.moeda_consolidacao);
+  ```
+- O `lucroRealizado` original (na moeda do projeto) permanece intacto para não quebrar consumidores que exibem o número por-projeto.
 
-## Mudanças de arquivo
+### Arquivo 2 — `src/hooks/useWorkspaceLucroRealizado.ts`
 
-### `src/hooks/useFinanceiroMensal.ts`
-1. Calcular `primeiroMesReal` varrendo as 5 fontes uma única vez antes de montar `windowKeys`.
-2. Substituir loop fixo por:
-   ```ts
-   const limiteMin = format(subMonths(now, meses - 1), "yyyy-MM");
-   const inicioKey = primeiroMesReal && primeiroMesReal > limiteMin ? primeiroMesReal : limiteMin;
-   // gerar todos os meses entre inicioKey..nowKey
-   ```
-3. Se `incluirBaseline`, prepender 1 mês anterior ao `inicioKey`.
-4. Adicionar campo `isBaseline: boolean` em `MesFinanceiro`.
-5. Aceitar params adicionais: `{ incluirBaseline?: boolean }` (default true).
-
-### `src/components/financeiro/GraficoMensalDialog.tsx`
-1. Filtrar `isBaseline` no cálculo de `resumo` (média, melhor, pior) — baseline não conta.
-2. Na tabela, linha baseline com cor `text-muted-foreground` e sufixo "(baseline)".
-3. No tooltip do chart, indicar quando o ponto é baseline.
-4. Adicionar pequeno `Switch` no header do dialog: "Mostrar mês anterior como referência" (controla `incluirBaseline`).
-
-### Exportações (PDF/XLSX)
-- `exportRelatorioPDF.ts` e `exportRelatorioXLSX.ts`: filtrar `isBaseline` das somas/médias e marcar a linha como "(baseline)" na tabela exportada.
+- Trocar o `reduce` para somar `r.lucroRealizadoBRL` em vez de `r.lucroRealizado` (linhas 64-67):
+  ```ts
+  const total = Object.values(resultado).reduce(
+    (acc, r) => acc + (Number(r.lucroRealizadoBRL) || 0),
+    0
+  );
+  ```
+- O retorno continua sendo `lucroRealizado` (renomear para `lucroRealizadoBRL` no consumer não é necessário — o número agora simplesmente está em BRL, que é o que a UI já assume).
 
 ## Fora do escopo
 
-- Não muda fórmulas (Fluxo Líquido, Custos, Resultado Líquido, Margem permanecem idênticos).
-- Não filtra por projeto (continua workspace-wide).
-- Não toca em RPCs nem migrations.
+- Não tocar nos cards de projeto (Marcio mostra `-$1.236,88` na moeda do projeto, está correto).
+- Não tocar na Análise Temporal (já consolida em BRL corretamente).
+- Não tocar em `useFinanceiroCalculations` — as linhas 189-190 que filtram `moeda === "BRL"` não alimentam o KPI Fluxo Líquido (só `totalScanPeriodo`/`countScanPeriodo`); podem ficar para uma limpeza futura.
 
-## Validação
+## Validação esperada
 
-- Workspace com 1º registro em Abr/26 + janela 12m → chart começa em Mar/26 (baseline) ou Abr/26 (sem baseline).
-- Workspace com 1º registro em Jan/24 + janela 6m → chart começa em (hoje − 5m), inalterado.
-- Workspace vazio → apenas mês atual zerado.
-- Soma de custos do 1º mês real bate com Composição de Custos filtrada no mesmo mês.
+Após a correção, o KPI Fluxo Líquido na Visão Financeira deve passar de **-R$ 2.878,04** para algo próximo de **-R$ 14.634,55** (mesmo número da Análise Temporal de jun/26 — usando PTAX ≈ 5,09), confirmando a paridade entre as duas visões.
 
-Confirma para implementar?
+## Diagrama do fluxo de dados
+
+```text
+projetos (Marcio USD, Italo USD, ...)
+  └─ fetchProjetosLucroCanonico
+       ├─ lucroRealizado   (na moeda do projeto)      ← mantido p/ cards
+       └─ lucroRealizadoBRL (convertOficial → BRL)    ← NOVO
+            └─ useWorkspaceLucroRealizado.reduce
+                 └─ KPI "Fluxo Líquido" (BRL)
+```
+
+Quer que eu aplique?
