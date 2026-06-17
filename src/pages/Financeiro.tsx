@@ -22,7 +22,6 @@ import { useTopBar } from "@/contexts/TopBarContext";
 import {
   Loader2,
   BarChart3,
-  History,
   Building2,
   Users,
 } from "lucide-react";
