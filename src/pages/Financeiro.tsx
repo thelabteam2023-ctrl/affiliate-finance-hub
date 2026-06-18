@@ -49,6 +49,8 @@ import { useFinanceiroMensal } from "@/hooks/useFinanceiroMensal";
 import { GraficoMensalDialog } from "@/components/financeiro/GraficoMensalDialog";
 import { Sparkles } from "lucide-react";
 import { LineChart } from "lucide-react";
+import { useResumoOperacional } from "@/hooks/useResumoOperacional";
+import { ResumoOperacionalDialog } from "@/components/financeiro/ResumoOperacionalDialog";
 
 export default function Financeiro() {
   const navigate = useNavigate();
@@ -126,6 +128,7 @@ export default function Financeiro() {
   const [graficoMensalOpen, setGraficoMensalOpen] = useState(false);
   const [janelaMeses, setJanelaMeses] = useState(12);
   const [incluirBaseline, setIncluirBaseline] = useState(true);
+  const [resumoOpOpen, setResumoOpOpen] = useState(false);
   const composicaoCustosRef = useRef<HTMLDivElement | null>(null);
   const investidorFiltroId = searchParams.get("investidor");
 
@@ -168,6 +171,26 @@ export default function Financeiro() {
       ARS: cotacaoARS,
       COP: cotacaoCOP,
     },
+  });
+
+  // Cotações para conversão de perdas em ocorrências (mesma fonte oficial)
+  const cotacoesParaResumo = useMemo(() => {
+    const m: Record<string, number> = { BRL: 1 };
+    if (cotacaoUSD > 0) m.USD = cotacaoUSD;
+    if (cotacaoEUR > 0) m.EUR = cotacaoEUR;
+    if (cotacaoGBP > 0) m.GBP = cotacaoGBP;
+    if (cotacaoMYR > 0) m.MYR = cotacaoMYR;
+    if (cotacaoMXN > 0) m.MXN = cotacaoMXN;
+    if (cotacaoARS > 0) m.ARS = cotacaoARS;
+    if (cotacaoCOP > 0) m.COP = cotacaoCOP;
+    return m;
+  }, [cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP]);
+
+  const resumoOp = useResumoOperacional({
+    mesesFinanceiro,
+    workspaceId: workspaceId || null,
+    cotacoes: cotacoesParaResumo,
+    janelaLabel: incluirBaseline ? `Últimos ${janelaMeses}m (+ baseline)` : `Últimos ${janelaMeses}m`,
   });
 
   // Capital em disputa (para sobreposição no donut da Posição de Capital)
