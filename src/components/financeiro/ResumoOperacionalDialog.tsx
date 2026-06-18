@@ -3,7 +3,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, TrendingUp, TrendingDown, AlertTriangle, Wallet, Receipt, Target } from "lucide-react";
-import ReactMarkdown from "react-markdown";
 import type { ResumoOperacionalResult } from "@/hooks/useResumoOperacional";
 
 interface Props {
@@ -160,8 +159,8 @@ export function ResumoOperacionalDialog({ open, onOpenChange, result }: Props) {
             )}
 
             {texto && (
-              <div className="prose prose-sm dark:prose-invert max-w-none rounded-lg border border-border bg-muted/30 p-4">
-                <ReactMarkdown>{texto}</ReactMarkdown>
+              <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm leading-relaxed whitespace-pre-line">
+                {texto}
               </div>
             )}
 
