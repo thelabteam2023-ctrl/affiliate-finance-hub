@@ -197,9 +197,9 @@ export function GraficoMensalDialog({
   }, [meses]);
 
   const chartData = useMemo(() => {
-    let accFluxo = 0;
+    let accResultado = 0;
     return meses.map(m => {
-      accFluxo += m.fluxoLiquido || 0;
+      accResultado += m.resultadoLiquido || 0;
       return {
         name: m.isBaseline ? `${m.mesLabel} •` : m.mesLabel,
         mesKey: m.mesKey,
@@ -212,12 +212,26 @@ export function GraficoMensalDialog({
         Participações: m.participacoes,
         "Fluxo Líquido": m.fluxoLiquido,
         "Resultado Líquido": m.resultadoLiquido,
-        "Margem %": m.margemOperacional,
         "Custo Total": m.custoTotal,
-        "Fluxo Acumulado": accFluxo,
+        "Resultado Acumulado": accResultado,
       };
     });
   }, [meses]);
+
+  const accAxis = useMemo(() => {
+    const vals = chartData.map((d: any) => Number(d["Resultado Acumulado"]) || 0);
+    if (!vals.length) return { min: -1, max: 1, zeroOffset: 0.5 };
+    const rawMin = Math.min(0, ...vals);
+    const rawMax = Math.max(0, ...vals);
+    const span = (rawMax - rawMin) || 1;
+    const pad = span * 0.1;
+    const min = rawMin < 0 ? rawMin - pad : 0;
+    const max = rawMax > 0 ? rawMax + pad : 0;
+    const range = (max - min) || 1;
+    // SVG linearGradient: offset 0 = top (max), 1 = bottom (min). Zero sits at max/range.
+    const zeroOffset = Math.min(1, Math.max(0, max / range));
+    return { min, max, zeroOffset };
+  }, [chartData]);
 
   const mesByName = useMemo(() => {
     const map = new Map<string, MesFinanceiro>();
@@ -229,9 +243,6 @@ export function GraficoMensalDialog({
     if (!props?.active || !props?.label) return null;
     const m = mesByName.get(props.label);
     if (!m) return null;
-    // Evita corte da tooltip nas bordas: ancora à direita quando o ponto está
-    // na metade direita do gráfico (mesmo comportamento usado pelo Recharts
-    // quando `allowEscapeViewBox` está ligado, mas controlado por nós).
     const cx = props?.coordinate?.x ?? 0;
     const vbWidth = props?.viewBox?.width ?? 0;
     const vbLeft = props?.viewBox?.x ?? 0;
@@ -245,53 +256,24 @@ export function GraficoMensalDialog({
         {node}
       </div>
     );
-    if (modo === "resultado") {
-      const margemTxt = m.margemOperacional === null ? "—" : `${m.margemOperacional.toFixed(1)}%`;
-      const tone: "positive" | "negative" | "neutral" =
-        m.resultadoLiquido > 0 ? "positive" : m.resultadoLiquido < 0 ? "negative" : "neutral";
-      return wrap(
-        <ChartRichTooltip
-          variant="stackedBar"
-          title={m.mesNomeLongo}
-          badge={{ label: margemTxt, tone }}
-          segments={[
-            { key: "rl",  label: "Resultado Líquido", value: m.resultadoLiquido, color: COLORS.resultado, formatted: fmtBRLfull(m.resultadoLiquido) },
-            { key: "fl",  label: "Fluxo Líquido",     value: m.fluxoLiquido,     color: COLORS.fluxoPos,  formatted: fmtBRLfull(m.fluxoLiquido) },
-            { key: "ct",  label: "Custo Total",       value: m.custoTotal,       color: COLORS.custoTotal,formatted: fmtBRLfull(m.custoTotal) },
-          ]}
-          total={m.resultadoLiquido}
-          totalLabel="Resultado do mês"
-          totalFormatted={fmtBRLfull(m.resultadoLiquido)}
-        />
-      );
-    }
-    if (modo === "fluxo") {
-      const idx = chartData.findIndex(d => d.name === props.label);
-      const acumulado = idx >= 0 ? (chartData[idx] as any)["Fluxo Acumulado"] : 0;
-      const tone: "positive" | "negative" | "neutral" =
-        m.fluxoLiquido > 0 ? "positive" : m.fluxoLiquido < 0 ? "negative" : "neutral";
-      return wrap(
-        <ChartRichTooltip
-          variant="stackedBar"
-          title={m.mesNomeLongo}
-          badge={{ label: m.fluxoLiquido >= 0 ? "Entrada líq." : "Saída líq.", tone }}
-          segments={[
-            { key: "fl",  label: "Fluxo Líquido",   value: m.fluxoLiquido, color: COLORS.fluxoPos,  formatted: fmtBRLfull(m.fluxoLiquido) },
-            { key: "acc", label: "Fluxo Acumulado", value: acumulado,      color: COLORS.resultado, formatted: fmtBRLfull(acumulado) },
-          ]}
-          total={m.fluxoLiquido}
-          totalLabel="Fluxo do mês"
-          totalFormatted={fmtBRLfull(m.fluxoLiquido)}
-        />
-      );
-    }
-    const segments: RichTooltipSegment[] = COST_KEYS.map(c => ({
-      key: String(c.key),
-      label: c.label,
-      value: Number((m as any)[c.key]) || 0,
-      color: c.color,
-      formatted: fmtBRLfull(Number((m as any)[c.key]) || 0),
-    }));
+    const idx = chartData.findIndex(d => d.name === props.label);
+    const acumulado = idx >= 0 ? Number((chartData[idx] as any)["Resultado Acumulado"]) || 0 : 0;
+    const valueByLayer: Record<LayerId, number> = {
+      cac: m.cac, comissoes: m.comissoes, bonus: m.bonus,
+      infra: m.infra, operadores: m.operadores, participacoes: m.participacoes,
+      fluxoLiquido: m.fluxoLiquido,
+      resultadoLiquido: m.resultadoLiquido,
+      resultadoAcumulado: acumulado,
+    };
+    const segments: RichTooltipSegment[] = LAYERS
+      .filter(l => isOn(l.id))
+      .map(l => ({
+        key: l.id,
+        label: l.label,
+        value: valueByLayer[l.id],
+        color: l.color,
+        formatted: fmtBRLfull(valueByLayer[l.id]),
+      }));
     const margemTxt =
       m.margemOperacional === null ? "—" : `${m.margemOperacional.toFixed(1)}%`;
     const tone: "positive" | "negative" | "neutral" =
@@ -302,9 +284,9 @@ export function GraficoMensalDialog({
         title={m.mesNomeLongo}
         badge={{ label: margemTxt, tone }}
         segments={segments}
-        total={m.custoTotal}
-        totalLabel="Custo total"
-        totalFormatted={fmtBRLfull(m.custoTotal)}
+        total={m.resultadoLiquido}
+        totalLabel="Resultado do mês"
+        totalFormatted={fmtBRLfull(m.resultadoLiquido)}
         footerRows={[
           { label: "Custo total", value: fmtBRLfull(m.custoTotal), tone: "neutral" },
           {
@@ -313,9 +295,9 @@ export function GraficoMensalDialog({
             tone: m.fluxoLiquido >= 0 ? "positive" : "negative",
           },
           {
-            label: "Resultado Líquido",
-            value: fmtBRLfull(m.resultadoLiquido),
-            tone: m.resultadoLiquido >= 0 ? "positive" : "negative",
+            label: "Resultado Acumulado",
+            value: fmtBRLfull(acumulado),
+            tone: acumulado >= 0 ? "positive" : "negative",
           },
         ]}
       />
