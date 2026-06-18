@@ -62,57 +62,49 @@ const COST_KEYS: Array<{ key: keyof MesFinanceiro; label: string; color: string 
   { key: "participacoes", label: "Participações", color: COLORS.participacoes },
 ];
 
-type Modo = "custos" | "resultado" | "fluxo";
-type SeriesShape = "bar" | "line" | "lineDashed";
-interface SeriesDef {
-  id: string;
+type LayerId =
+  | "cac" | "comissoes" | "bonus" | "infra" | "operadores" | "participacoes"
+  | "fluxoLiquido" | "resultadoLiquido" | "resultadoAcumulado";
+
+type LayerKind = "barStack" | "barStandalone" | "line" | "areaConditional";
+interface LayerDef {
+  id: LayerId;
   label: string;
   color: string;
-  shape: SeriesShape;
-  group: "Custos" | "Indicadores" | "Resultado" | "Fluxo";
-  modos: Modo[];
+  dataKey: string;
+  kind: LayerKind;
   hint?: string;
 }
 
-const ALL_SERIES: SeriesDef[] = [
-  { id: "CAC",                label: "CAC",                color: COLORS.cac,           shape: "bar",        group: "Custos",       modos: ["custos"] },
-  { id: "Comissões",          label: "Comissões",          color: COLORS.comissoes,     shape: "bar",        group: "Custos",       modos: ["custos"] },
-  { id: "Bônus",              label: "Bônus",              color: COLORS.bonus,         shape: "bar",        group: "Custos",       modos: ["custos"] },
-  { id: "Infra",              label: "Infra",              color: COLORS.infra,         shape: "bar",        group: "Custos",       modos: ["custos"] },
-  { id: "Operadores",         label: "Operadores",         color: COLORS.operadores,    shape: "bar",        group: "Custos",       modos: ["custos"] },
-  { id: "Participações",      label: "Participações",      color: COLORS.participacoes, shape: "bar",        group: "Custos",       modos: ["custos"] },
-  { id: "Fluxo Líquido",      label: "Fluxo Líquido",      color: COLORS.fluxoPos,      shape: "bar",        group: "Indicadores",  modos: ["custos"], hint: "Saques − Depósitos" },
-  { id: "Resultado Líq. (custos)", label: "Resultado Líquido", color: COLORS.resultado, shape: "line",      group: "Indicadores",  modos: ["custos"], hint: "Fluxo Líquido − Custo Total" },
-  { id: "Margem %",           label: "Margem %",           color: COLORS.margem,        shape: "lineDashed", group: "Indicadores",  modos: ["custos"], hint: "Eixo direito" },
-  // Modo "resultado" — foco em Resultado Líquido
-  { id: "Custo Total (ctx)",  label: "Custo Total",        color: COLORS.custoTotal,    shape: "bar",        group: "Resultado",    modos: ["resultado"], hint: "Contexto (barra leve)" },
-  { id: "Resultado Líq. (res)", label: "Resultado Líquido", color: COLORS.resultado,    shape: "line",       group: "Resultado",    modos: ["resultado"], hint: "Fluxo Líquido − Custo Total" },
-  { id: "Margem % (res)",     label: "Margem %",           color: COLORS.margem,        shape: "lineDashed", group: "Resultado",    modos: ["resultado"], hint: "Eixo direito" },
-  // Modo "fluxo" — foco em Fluxo Líquido
-  { id: "Fluxo Líquido (flx)", label: "Fluxo Líquido",     color: COLORS.fluxoPos,      shape: "bar",        group: "Fluxo",        modos: ["fluxo"], hint: "Saques − Depósitos" },
-  { id: "Fluxo Acumulado",    label: "Fluxo Acumulado",    color: COLORS.resultado,     shape: "lineDashed", group: "Fluxo",        modos: ["fluxo"], hint: "Soma running do Fluxo Líquido" },
+const LAYERS: LayerDef[] = [
+  { id: "cac",                label: "CAC",                 color: COLORS.cac,           dataKey: "CAC",                kind: "barStack" },
+  { id: "comissoes",          label: "Comissões",           color: COLORS.comissoes,     dataKey: "Comissões",          kind: "barStack" },
+  { id: "bonus",              label: "Bônus",               color: COLORS.bonus,         dataKey: "Bônus",              kind: "barStack" },
+  { id: "infra",              label: "Infra",               color: COLORS.infra,         dataKey: "Infra",              kind: "barStack" },
+  { id: "operadores",         label: "Operadores",          color: COLORS.operadores,    dataKey: "Operadores",         kind: "barStack" },
+  { id: "participacoes",      label: "Participações",       color: COLORS.participacoes, dataKey: "Participações",      kind: "barStack" },
+  { id: "fluxoLiquido",       label: "Fluxo Líquido",       color: COLORS.fluxoPos,      dataKey: "Fluxo Líquido",      kind: "barStandalone", hint: "Saques − Depósitos · verde se ≥ 0, vermelho se < 0" },
+  { id: "resultadoLiquido",   label: "Resultado Líquido",   color: COLORS.resultado,     dataKey: "Resultado Líquido",  kind: "line",          hint: "Fluxo Líquido − Custo Total" },
+  { id: "resultadoAcumulado", label: "Resultado Acumulado", color: COLORS.fluxoPos,      dataKey: "Resultado Acumulado",kind: "areaConditional", hint: "Running sum do Resultado Líquido · eixo direito" },
 ];
 
-const DEFAULTS_BY_MODO: Record<Modo, string[]> = {
-  custos:    ["CAC","Comissões","Bônus","Infra","Operadores","Participações","Fluxo Líquido","Resultado Líq. (custos)","Margem %"],
-  resultado: ["Custo Total (ctx)","Resultado Líq. (res)","Margem % (res)"],
-  fluxo:     ["Fluxo Líquido (flx)","Fluxo Acumulado"],
-};
-const LS_KEY = "labbet:grafico-mensal:visible-series:v2";
+const DEFAULT_ACTIVE: LayerId[] = [
+  "cac","comissoes","bonus","infra","operadores",
+  "fluxoLiquido","resultadoLiquido","resultadoAcumulado",
+];
+const LS_KEY = "labbet:grafico-mensal:layers:v1";
 
-function loadVisible(): Record<Modo, string[]> {
+function loadActiveLayers(): Set<LayerId> {
   try {
     const raw = localStorage.getItem(LS_KEY);
     if (raw) {
-      const p = JSON.parse(raw);
-      return {
-        custos:    Array.isArray(p?.custos)    ? p.custos    : DEFAULTS_BY_MODO.custos,
-        resultado: Array.isArray(p?.resultado) ? p.resultado : DEFAULTS_BY_MODO.resultado,
-        fluxo:     Array.isArray(p?.fluxo)     ? p.fluxo     : DEFAULTS_BY_MODO.fluxo,
-      };
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) {
+        return new Set(arr.filter((x: any): x is LayerId => LAYERS.some(l => l.id === x)));
+      }
     }
   } catch { /* ignore */ }
-  return { ...DEFAULTS_BY_MODO };
+  return new Set(DEFAULT_ACTIVE);
 }
 
 // Pill-style segmented switch (padrão visual do módulo Parceiros)
@@ -166,9 +158,8 @@ export function GraficoMensalDialog({
   const { toast } = useToast();
   const [exporting, setExporting] = useState(false);
   const [hoveredMonth, setHoveredMonth] = useState<string | null>(null);
-  const [modo, setModo] = useState<Modo>("custos");
-  const [visibleByMode, setVisibleByMode] = useState<Record<Modo, string[]>>(() => loadVisible());
-  // Anima apenas na abertura do diálogo / troca de modo; depois congela para evitar
+  const [activeLayers, setActiveLayers] = useState<Set<LayerId>>(() => loadActiveLayers());
+  // Anima apenas na abertura do diálogo; depois congela para evitar
   // re-construção visual a cada hover.
   const [animateOnce, setAnimateOnce] = useState(false);
   useEffect(() => {
@@ -176,15 +167,13 @@ export function GraficoMensalDialog({
     setAnimateOnce(true);
     const t = setTimeout(() => setAnimateOnce(false), 900);
     return () => clearTimeout(t);
-  }, [open, modo]);
-  const visibleSet = useMemo(() => new Set(visibleByMode[modo]), [visibleByMode, modo]);
-  const isOn = (id: string) => visibleSet.has(id);
-  const toggleSeries = (id: string) => {
-    setVisibleByMode(prev => {
-      const cur = new Set(prev[modo]);
-      if (cur.has(id)) cur.delete(id); else cur.add(id);
-      const next = { ...prev, [modo]: Array.from(cur) };
-      try { localStorage.setItem(LS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+  }, [open]);
+  const isOn = (id: LayerId) => activeLayers.has(id);
+  const toggleLayer = (id: LayerId) => {
+    setActiveLayers(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      try { localStorage.setItem(LS_KEY, JSON.stringify(Array.from(next))); } catch { /* ignore */ }
       return next;
     });
   };
