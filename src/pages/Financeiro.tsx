@@ -159,6 +159,15 @@ export default function Financeiro() {
     meses: janelaMeses,
     convertToBRL: calc.convertToBRL,
     incluirBaseline,
+    cotacoesOficiais: {
+      USD: cotacaoUSD,
+      EUR: cotacaoEUR,
+      GBP: cotacaoGBP,
+      MYR: cotacaoMYR,
+      MXN: cotacaoMXN,
+      ARS: cotacaoARS,
+      COP: cotacaoCOP,
+    },
   });
 
   // Capital em disputa (para sobreposição no donut da Posição de Capital)
