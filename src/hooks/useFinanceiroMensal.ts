@@ -3,6 +3,9 @@ import { format, startOfMonth, subMonths, parseISO, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { parseLocalDate } from "@/lib/dateUtils";
 import type { FinanceiroData } from "@/hooks/useFinanceiroData";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { fetchProjetosLucroCanonico } from "@/services/fetchProjetosLucroCanonico";
 
 export interface MesFinanceiro {
   mesKey: string;           // "2025-03"
@@ -28,6 +31,21 @@ interface Params {
   meses: number; // janela em meses (ex: 12)
   convertToBRL?: (valor: number, moeda: string) => number;
   incluirBaseline?: boolean; // default: true — prepende 1 mês zerado antes do 1º real
+  /**
+   * Cotações OFICIAIS (FastForex/PTAX) usadas para alinhar o Fluxo Líquido mensal
+   * à MESMA engine canônica do dashboard (`fetchProjetosLucroCanonico`).
+   * Quando ausente, o hook faz fallback à leitura cru de `cash_ledger`
+   * (modo legado, mantido só por compatibilidade).
+   */
+  cotacoesOficiais?: {
+    USD: number;
+    EUR?: number;
+    GBP?: number;
+    MYR?: number;
+    MXN?: number;
+    ARS?: number;
+    COP?: number;
+  };
 }
 
 const toKey = (raw?: string | null) => {
