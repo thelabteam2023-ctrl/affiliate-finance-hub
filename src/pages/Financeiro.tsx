@@ -51,6 +51,7 @@ import { GraficoMensalDialog } from "@/components/financeiro/GraficoMensalDialog
 import { Sparkles } from "lucide-react";
 import { LineChart } from "lucide-react";
 import { useResumoOperacional } from "@/hooks/useResumoOperacional";
+import type { ResumoRange } from "@/hooks/useResumoOperacional";
 import { ResumoOperacionalDialog } from "@/components/financeiro/ResumoOperacionalDialog";
 
 export default function Financeiro() {
@@ -174,32 +175,41 @@ export default function Financeiro() {
     },
   });
 
-  // Janela do Resumo Operacional = mesma da Análise Temporal (não-baseline)
-  const resumoWindow = useMemo(() => {
+  // Range default do Resumo Operacional = janela da Análise Temporal (não-baseline)
+  const resumoDefaultRange = useMemo(() => {
     const ms = mesesFinanceiro.filter((m) => !m.isBaseline);
     const first = ms[0]?.mesKey ?? null;
     const last = ms[ms.length - 1]?.mesKey ?? null;
-    const ini = first ? `${first}-01` : null;
-    let fim: string | null = null;
+    const ini = first ? `${first}-01` : "2000-01-01";
+    let fim = new Date().toISOString().slice(0, 10);
     if (last) {
       const [y, mo] = last.split("-").map(Number);
       const d = new Date(Date.UTC(y, mo, 0));
       fim = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
     }
-    return { dataInicio: ini, dataFim: fim };
-  }, [mesesFinanceiro]);
+    return {
+      tipo: "janela_temporal" as const,
+      label: incluirBaseline ? `Últimos ${janelaMeses}m (+ baseline)` : `Últimos ${janelaMeses}m`,
+      dataInicio: ini,
+      dataFim: fim,
+    };
+  }, [mesesFinanceiro, janelaMeses, incluirBaseline]);
 
-  // Engine canônica de Exposição & Perdas (usada também pelo card) — mesma janela do Resumo IA
+  // Range escolhido pelo usuário (null = usa default)
+  const [resumoRange, setResumoRange] = useState<ResumoRange | null>(null);
+  const resumoEffectiveRange: ResumoRange = resumoRange ?? resumoDefaultRange;
+
+  // Engine canônica de Exposição & Perdas (perdas filtradas; disputa = snapshot)
   const exposicaoResumo = useExposicaoFinanceira({
-    dataInicio: resumoWindow.dataInicio,
-    dataFim: resumoWindow.dataFim,
+    dataInicio: resumoEffectiveRange.dataInicio,
+    dataFim: resumoEffectiveRange.dataFim,
   });
 
   const resumoOp = useResumoOperacional({
     mesesFinanceiro,
     workspaceId: workspaceId || null,
     exposicao: exposicaoResumo,
-    janelaLabel: incluirBaseline ? `Últimos ${janelaMeses}m (+ baseline)` : `Últimos ${janelaMeses}m`,
+    range: resumoEffectiveRange,
   });
 
   // Capital em disputa (para sobreposição no donut da Posição de Capital)
@@ -556,6 +566,9 @@ export default function Financeiro() {
         open={resumoOpOpen}
         onOpenChange={setResumoOpOpen}
         result={resumoOp}
+        range={resumoEffectiveRange}
+        defaultRange={resumoDefaultRange}
+        onRangeChange={setResumoRange}
       />
     </div>
   );
