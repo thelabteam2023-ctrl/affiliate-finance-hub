@@ -222,7 +222,7 @@ export function ResumoOperacionalDialog({
           </DialogTitle>
           <DialogDescription>
             {periodo
-              ? `${periodo.label} · ${periodo.dataInicio} → ${periodo.dataFim}`
+              ? `${periodo.label} · ${format(parseISO(periodo.dataInicio), "dd/MM/yyyy")} → ${format(parseISO(periodo.dataFim), "dd/MM/yyyy")}`
               : "Selecione um período e gere o resumo. A IA analisa apenas o intervalo escolhido."}
           </DialogDescription>
         </DialogHeader>
