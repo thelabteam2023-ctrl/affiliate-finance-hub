@@ -1,18 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  ComposedChart, Bar, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Brush, Cell, ReferenceArea, ReferenceLine,
 } from "recharts";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, FileSpreadsheet, FileText, Sparkles, Settings2 } from "lucide-react";
+import { Download, FileSpreadsheet, FileText, Sparkles } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Checkbox } from "@/components/ui/checkbox";
 import type { MesFinanceiro } from "@/hooks/useFinanceiroMensal";
 import { exportRelatorioPDF } from "@/lib/financeiro/exportRelatorioPDF";
 import { exportRelatorioXLSX } from "@/lib/financeiro/exportRelatorioXLSX";
@@ -64,57 +62,49 @@ const COST_KEYS: Array<{ key: keyof MesFinanceiro; label: string; color: string 
   { key: "participacoes", label: "Participações", color: COLORS.participacoes },
 ];
 
-type Modo = "custos" | "resultado" | "fluxo";
-type SeriesShape = "bar" | "line" | "lineDashed";
-interface SeriesDef {
-  id: string;
+type LayerId =
+  | "cac" | "comissoes" | "bonus" | "infra" | "operadores" | "participacoes"
+  | "fluxoLiquido" | "resultadoLiquido" | "resultadoAcumulado";
+
+type LayerKind = "barStack" | "barStandalone" | "line" | "areaConditional";
+interface LayerDef {
+  id: LayerId;
   label: string;
   color: string;
-  shape: SeriesShape;
-  group: "Custos" | "Indicadores" | "Resultado" | "Fluxo";
-  modos: Modo[];
+  dataKey: string;
+  kind: LayerKind;
   hint?: string;
 }
 
-const ALL_SERIES: SeriesDef[] = [
-  { id: "CAC",                label: "CAC",                color: COLORS.cac,           shape: "bar",        group: "Custos",       modos: ["custos"] },
-  { id: "Comissões",          label: "Comissões",          color: COLORS.comissoes,     shape: "bar",        group: "Custos",       modos: ["custos"] },
-  { id: "Bônus",              label: "Bônus",              color: COLORS.bonus,         shape: "bar",        group: "Custos",       modos: ["custos"] },
-  { id: "Infra",              label: "Infra",              color: COLORS.infra,         shape: "bar",        group: "Custos",       modos: ["custos"] },
-  { id: "Operadores",         label: "Operadores",         color: COLORS.operadores,    shape: "bar",        group: "Custos",       modos: ["custos"] },
-  { id: "Participações",      label: "Participações",      color: COLORS.participacoes, shape: "bar",        group: "Custos",       modos: ["custos"] },
-  { id: "Fluxo Líquido",      label: "Fluxo Líquido",      color: COLORS.fluxoPos,      shape: "bar",        group: "Indicadores",  modos: ["custos"], hint: "Saques − Depósitos" },
-  { id: "Resultado Líq. (custos)", label: "Resultado Líquido", color: COLORS.resultado, shape: "line",      group: "Indicadores",  modos: ["custos"], hint: "Fluxo Líquido − Custo Total" },
-  { id: "Margem %",           label: "Margem %",           color: COLORS.margem,        shape: "lineDashed", group: "Indicadores",  modos: ["custos"], hint: "Eixo direito" },
-  // Modo "resultado" — foco em Resultado Líquido
-  { id: "Custo Total (ctx)",  label: "Custo Total",        color: COLORS.custoTotal,    shape: "bar",        group: "Resultado",    modos: ["resultado"], hint: "Contexto (barra leve)" },
-  { id: "Resultado Líq. (res)", label: "Resultado Líquido", color: COLORS.resultado,    shape: "line",       group: "Resultado",    modos: ["resultado"], hint: "Fluxo Líquido − Custo Total" },
-  { id: "Margem % (res)",     label: "Margem %",           color: COLORS.margem,        shape: "lineDashed", group: "Resultado",    modos: ["resultado"], hint: "Eixo direito" },
-  // Modo "fluxo" — foco em Fluxo Líquido
-  { id: "Fluxo Líquido (flx)", label: "Fluxo Líquido",     color: COLORS.fluxoPos,      shape: "bar",        group: "Fluxo",        modos: ["fluxo"], hint: "Saques − Depósitos" },
-  { id: "Fluxo Acumulado",    label: "Fluxo Acumulado",    color: COLORS.resultado,     shape: "lineDashed", group: "Fluxo",        modos: ["fluxo"], hint: "Soma running do Fluxo Líquido" },
+const LAYERS: LayerDef[] = [
+  { id: "cac",                label: "CAC",                 color: COLORS.cac,           dataKey: "CAC",                kind: "barStack" },
+  { id: "comissoes",          label: "Comissões",           color: COLORS.comissoes,     dataKey: "Comissões",          kind: "barStack" },
+  { id: "bonus",              label: "Bônus",               color: COLORS.bonus,         dataKey: "Bônus",              kind: "barStack" },
+  { id: "infra",              label: "Infra",               color: COLORS.infra,         dataKey: "Infra",              kind: "barStack" },
+  { id: "operadores",         label: "Operadores",          color: COLORS.operadores,    dataKey: "Operadores",         kind: "barStack" },
+  { id: "participacoes",      label: "Participações",       color: COLORS.participacoes, dataKey: "Participações",      kind: "barStack" },
+  { id: "fluxoLiquido",       label: "Fluxo Líquido",       color: COLORS.fluxoPos,      dataKey: "Fluxo Líquido",      kind: "barStandalone", hint: "Saques − Depósitos · verde se ≥ 0, vermelho se < 0" },
+  { id: "resultadoLiquido",   label: "Resultado Líquido",   color: COLORS.resultado,     dataKey: "Resultado Líquido",  kind: "line",          hint: "Fluxo Líquido − Custo Total" },
+  { id: "resultadoAcumulado", label: "Resultado Acumulado", color: COLORS.fluxoPos,      dataKey: "Resultado Acumulado",kind: "areaConditional", hint: "Running sum do Resultado Líquido · eixo direito" },
 ];
 
-const DEFAULTS_BY_MODO: Record<Modo, string[]> = {
-  custos:    ["CAC","Comissões","Bônus","Infra","Operadores","Participações","Fluxo Líquido","Resultado Líq. (custos)","Margem %"],
-  resultado: ["Custo Total (ctx)","Resultado Líq. (res)","Margem % (res)"],
-  fluxo:     ["Fluxo Líquido (flx)","Fluxo Acumulado"],
-};
-const LS_KEY = "labbet:grafico-mensal:visible-series:v2";
+const DEFAULT_ACTIVE: LayerId[] = [
+  "cac","comissoes","bonus","infra","operadores",
+  "fluxoLiquido","resultadoLiquido","resultadoAcumulado",
+];
+const LS_KEY = "labbet:grafico-mensal:layers:v1";
 
-function loadVisible(): Record<Modo, string[]> {
+function loadActiveLayers(): Set<LayerId> {
   try {
     const raw = localStorage.getItem(LS_KEY);
     if (raw) {
-      const p = JSON.parse(raw);
-      return {
-        custos:    Array.isArray(p?.custos)    ? p.custos    : DEFAULTS_BY_MODO.custos,
-        resultado: Array.isArray(p?.resultado) ? p.resultado : DEFAULTS_BY_MODO.resultado,
-        fluxo:     Array.isArray(p?.fluxo)     ? p.fluxo     : DEFAULTS_BY_MODO.fluxo,
-      };
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) {
+        return new Set(arr.filter((x: any): x is LayerId => LAYERS.some(l => l.id === x)));
+      }
     }
   } catch { /* ignore */ }
-  return { ...DEFAULTS_BY_MODO };
+  return new Set(DEFAULT_ACTIVE);
 }
 
 // Pill-style segmented switch (padrão visual do módulo Parceiros)
@@ -168,9 +158,8 @@ export function GraficoMensalDialog({
   const { toast } = useToast();
   const [exporting, setExporting] = useState(false);
   const [hoveredMonth, setHoveredMonth] = useState<string | null>(null);
-  const [modo, setModo] = useState<Modo>("custos");
-  const [visibleByMode, setVisibleByMode] = useState<Record<Modo, string[]>>(() => loadVisible());
-  // Anima apenas na abertura do diálogo / troca de modo; depois congela para evitar
+  const [activeLayers, setActiveLayers] = useState<Set<LayerId>>(() => loadActiveLayers());
+  // Anima apenas na abertura do diálogo; depois congela para evitar
   // re-construção visual a cada hover.
   const [animateOnce, setAnimateOnce] = useState(false);
   useEffect(() => {
@@ -178,15 +167,13 @@ export function GraficoMensalDialog({
     setAnimateOnce(true);
     const t = setTimeout(() => setAnimateOnce(false), 900);
     return () => clearTimeout(t);
-  }, [open, modo]);
-  const visibleSet = useMemo(() => new Set(visibleByMode[modo]), [visibleByMode, modo]);
-  const isOn = (id: string) => visibleSet.has(id);
-  const toggleSeries = (id: string) => {
-    setVisibleByMode(prev => {
-      const cur = new Set(prev[modo]);
-      if (cur.has(id)) cur.delete(id); else cur.add(id);
-      const next = { ...prev, [modo]: Array.from(cur) };
-      try { localStorage.setItem(LS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+  }, [open]);
+  const isOn = (id: LayerId) => activeLayers.has(id);
+  const toggleLayer = (id: LayerId) => {
+    setActiveLayers(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      try { localStorage.setItem(LS_KEY, JSON.stringify(Array.from(next))); } catch { /* ignore */ }
       return next;
     });
   };
@@ -210,9 +197,9 @@ export function GraficoMensalDialog({
   }, [meses]);
 
   const chartData = useMemo(() => {
-    let accFluxo = 0;
+    let accResultado = 0;
     return meses.map(m => {
-      accFluxo += m.fluxoLiquido || 0;
+      accResultado += m.resultadoLiquido || 0;
       return {
         name: m.isBaseline ? `${m.mesLabel} •` : m.mesLabel,
         mesKey: m.mesKey,
@@ -225,12 +212,26 @@ export function GraficoMensalDialog({
         Participações: m.participacoes,
         "Fluxo Líquido": m.fluxoLiquido,
         "Resultado Líquido": m.resultadoLiquido,
-        "Margem %": m.margemOperacional,
         "Custo Total": m.custoTotal,
-        "Fluxo Acumulado": accFluxo,
+        "Resultado Acumulado": accResultado,
       };
     });
   }, [meses]);
+
+  const accAxis = useMemo(() => {
+    const vals = chartData.map((d: any) => Number(d["Resultado Acumulado"]) || 0);
+    if (!vals.length) return { min: -1, max: 1, zeroOffset: 0.5 };
+    const rawMin = Math.min(0, ...vals);
+    const rawMax = Math.max(0, ...vals);
+    const span = (rawMax - rawMin) || 1;
+    const pad = span * 0.1;
+    const min = rawMin < 0 ? rawMin - pad : 0;
+    const max = rawMax > 0 ? rawMax + pad : 0;
+    const range = (max - min) || 1;
+    // SVG linearGradient: offset 0 = top (max), 1 = bottom (min). Zero sits at max/range.
+    const zeroOffset = Math.min(1, Math.max(0, max / range));
+    return { min, max, zeroOffset };
+  }, [chartData]);
 
   const mesByName = useMemo(() => {
     const map = new Map<string, MesFinanceiro>();
@@ -242,9 +243,6 @@ export function GraficoMensalDialog({
     if (!props?.active || !props?.label) return null;
     const m = mesByName.get(props.label);
     if (!m) return null;
-    // Evita corte da tooltip nas bordas: ancora à direita quando o ponto está
-    // na metade direita do gráfico (mesmo comportamento usado pelo Recharts
-    // quando `allowEscapeViewBox` está ligado, mas controlado por nós).
     const cx = props?.coordinate?.x ?? 0;
     const vbWidth = props?.viewBox?.width ?? 0;
     const vbLeft = props?.viewBox?.x ?? 0;
@@ -258,53 +256,24 @@ export function GraficoMensalDialog({
         {node}
       </div>
     );
-    if (modo === "resultado") {
-      const margemTxt = m.margemOperacional === null ? "—" : `${m.margemOperacional.toFixed(1)}%`;
-      const tone: "positive" | "negative" | "neutral" =
-        m.resultadoLiquido > 0 ? "positive" : m.resultadoLiquido < 0 ? "negative" : "neutral";
-      return wrap(
-        <ChartRichTooltip
-          variant="stackedBar"
-          title={m.mesNomeLongo}
-          badge={{ label: margemTxt, tone }}
-          segments={[
-            { key: "rl",  label: "Resultado Líquido", value: m.resultadoLiquido, color: COLORS.resultado, formatted: fmtBRLfull(m.resultadoLiquido) },
-            { key: "fl",  label: "Fluxo Líquido",     value: m.fluxoLiquido,     color: COLORS.fluxoPos,  formatted: fmtBRLfull(m.fluxoLiquido) },
-            { key: "ct",  label: "Custo Total",       value: m.custoTotal,       color: COLORS.custoTotal,formatted: fmtBRLfull(m.custoTotal) },
-          ]}
-          total={m.resultadoLiquido}
-          totalLabel="Resultado do mês"
-          totalFormatted={fmtBRLfull(m.resultadoLiquido)}
-        />
-      );
-    }
-    if (modo === "fluxo") {
-      const idx = chartData.findIndex(d => d.name === props.label);
-      const acumulado = idx >= 0 ? (chartData[idx] as any)["Fluxo Acumulado"] : 0;
-      const tone: "positive" | "negative" | "neutral" =
-        m.fluxoLiquido > 0 ? "positive" : m.fluxoLiquido < 0 ? "negative" : "neutral";
-      return wrap(
-        <ChartRichTooltip
-          variant="stackedBar"
-          title={m.mesNomeLongo}
-          badge={{ label: m.fluxoLiquido >= 0 ? "Entrada líq." : "Saída líq.", tone }}
-          segments={[
-            { key: "fl",  label: "Fluxo Líquido",   value: m.fluxoLiquido, color: COLORS.fluxoPos,  formatted: fmtBRLfull(m.fluxoLiquido) },
-            { key: "acc", label: "Fluxo Acumulado", value: acumulado,      color: COLORS.resultado, formatted: fmtBRLfull(acumulado) },
-          ]}
-          total={m.fluxoLiquido}
-          totalLabel="Fluxo do mês"
-          totalFormatted={fmtBRLfull(m.fluxoLiquido)}
-        />
-      );
-    }
-    const segments: RichTooltipSegment[] = COST_KEYS.map(c => ({
-      key: String(c.key),
-      label: c.label,
-      value: Number((m as any)[c.key]) || 0,
-      color: c.color,
-      formatted: fmtBRLfull(Number((m as any)[c.key]) || 0),
-    }));
+    const idx = chartData.findIndex(d => d.name === props.label);
+    const acumulado = idx >= 0 ? Number((chartData[idx] as any)["Resultado Acumulado"]) || 0 : 0;
+    const valueByLayer: Record<LayerId, number> = {
+      cac: m.cac, comissoes: m.comissoes, bonus: m.bonus,
+      infra: m.infra, operadores: m.operadores, participacoes: m.participacoes,
+      fluxoLiquido: m.fluxoLiquido,
+      resultadoLiquido: m.resultadoLiquido,
+      resultadoAcumulado: acumulado,
+    };
+    const segments: RichTooltipSegment[] = LAYERS
+      .filter(l => isOn(l.id))
+      .map(l => ({
+        key: l.id,
+        label: l.label,
+        value: valueByLayer[l.id],
+        color: l.color,
+        formatted: fmtBRLfull(valueByLayer[l.id]),
+      }));
     const margemTxt =
       m.margemOperacional === null ? "—" : `${m.margemOperacional.toFixed(1)}%`;
     const tone: "positive" | "negative" | "neutral" =
@@ -315,9 +284,9 @@ export function GraficoMensalDialog({
         title={m.mesNomeLongo}
         badge={{ label: margemTxt, tone }}
         segments={segments}
-        total={m.custoTotal}
-        totalLabel="Custo total"
-        totalFormatted={fmtBRLfull(m.custoTotal)}
+        total={m.resultadoLiquido}
+        totalLabel="Resultado do mês"
+        totalFormatted={fmtBRLfull(m.resultadoLiquido)}
         footerRows={[
           { label: "Custo total", value: fmtBRLfull(m.custoTotal), tone: "neutral" },
           {
@@ -326,9 +295,9 @@ export function GraficoMensalDialog({
             tone: m.fluxoLiquido >= 0 ? "positive" : "negative",
           },
           {
-            label: "Resultado Líquido",
-            value: fmtBRLfull(m.resultadoLiquido),
-            tone: m.resultadoLiquido >= 0 ? "positive" : "negative",
+            label: "Resultado Acumulado",
+            value: fmtBRLfull(acumulado),
+            tone: acumulado >= 0 ? "positive" : "negative",
           },
         ]}
       />
@@ -365,58 +334,6 @@ export function GraficoMensalDialog({
               Lucro × Custo · Visão Mensal
             </DialogTitle>
             <div className="flex items-center gap-2">
-              <PillSwitch<Modo>
-                value={modo}
-                onChange={v => setModo(v)}
-                options={[
-                  { value: "custos",    label: "Custos × Fluxo" },
-                  { value: "resultado", label: "Resultado Líquido" },
-                  { value: "fluxo",     label: "Fluxo Líquido" },
-                ]}
-              />
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button size="sm" variant="outline" title="Configurar séries visíveis">
-                    <Settings2 className="h-4 w-4 mr-1" /> Séries
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent align="end" className="w-72 p-3">
-                  <div className="text-xs font-medium text-muted-foreground mb-2">
-                    Séries visíveis · {modo === "custos" ? "Custos × Fluxo" : modo === "resultado" ? "Resultado Líquido" : "Fluxo Líquido"}
-                  </div>
-                  {(["Custos","Indicadores","Resultado","Fluxo"] as const).map(group => {
-                    const items = ALL_SERIES.filter(s => s.modos.includes(modo) && s.group === group);
-                    if (!items.length) return null;
-                    return (
-                      <div key={group} className="mb-2 last:mb-0">
-                        <div className="text-[10px] uppercase tracking-wide text-muted-foreground/70 mb-1">{group}</div>
-                        <div className="flex flex-col gap-1.5">
-                          {items.map(s => (
-                            <label key={s.id} className="flex items-center gap-2 text-xs cursor-pointer">
-                              <Checkbox
-                                checked={isOn(s.id)}
-                                onCheckedChange={() => toggleSeries(s.id)}
-                              />
-                              <span
-                                className={cn(
-                                  s.shape === "bar" ? "h-2 w-2 rounded-[2px]" : "h-[2px] w-3.5 rounded-full",
-                                  s.shape === "lineDashed" && "border-t border-dashed bg-transparent"
-                                )}
-                                style={
-                                  s.shape === "lineDashed"
-                                    ? { borderColor: s.color, height: 0 }
-                                    : { background: s.color }
-                                }
-                              />
-                              <span className="flex-1">{s.label}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </PopoverContent>
-              </Popover>
               <div className="flex items-center gap-2 px-2 border-r pr-3 mr-1">
                 <Switch
                   id="baseline-toggle"
@@ -491,34 +408,49 @@ export function GraficoMensalDialog({
         )}
 
         {/* Legenda customizada */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-1 pt-1 text-[11px] text-muted-foreground">
-          {ALL_SERIES.filter(s => s.modos.includes(modo) && isOn(s.id)).map(s => (
-            <div
-              key={s.id}
-              className="flex items-center gap-1.5"
-              title={s.hint}
-            >
-              {s.shape === "bar" ? (
-                <span className="h-2 w-2 rounded-[2px]" style={{ background: s.color }} />
-              ) : s.shape === "line" ? (
-                <span className="inline-block h-[2px] w-4 rounded-full" style={{ background: s.color }} />
+        {/* Legenda interativa — cada chip liga/desliga a camada correspondente */}
+        <div className="flex flex-wrap items-center gap-1.5 px-1 pt-1">
+          {LAYERS.map(l => {
+            const active = isOn(l.id);
+            const swatch =
+              l.kind === "areaConditional" ? (
+                <span
+                  className="h-2.5 w-2.5 rounded-[3px] shrink-0"
+                  style={{
+                    background: `linear-gradient(180deg, ${COLORS.fluxoPos} 0%, ${COLORS.fluxoPos} 50%, ${COLORS.fluxoNeg} 50%, ${COLORS.fluxoNeg} 100%)`,
+                    opacity: active ? 1 : 0.35,
+                  }}
+                />
+              ) : l.kind === "line" ? (
+                <span
+                  className="inline-block h-[2px] w-4 rounded-full shrink-0"
+                  style={{ background: l.color, opacity: active ? 1 : 0.35 }}
+                />
               ) : (
                 <span
-                  className="inline-block w-4 border-t border-dashed"
-                  style={{ borderColor: s.color, height: 0 }}
+                  className="h-2.5 w-2.5 rounded-[3px] shrink-0"
+                  style={{ background: l.color, opacity: active ? 1 : 0.35 }}
                 />
-              )}
-              <span>{s.label}</span>
-              {s.id === "Fluxo Líquido" && (
-                <span className="text-muted-foreground/60">
-                  · verde se ≥ 0, vermelho se &lt; 0
-                </span>
-              )}
-              {s.id === "Margem %" && (
-                <span className="text-muted-foreground/60">· eixo direito</span>
-              )}
-            </div>
-          ))}
+              );
+            return (
+              <button
+                key={l.id}
+                type="button"
+                onClick={() => toggleLayer(l.id)}
+                title={l.hint}
+                aria-pressed={active}
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-2 h-6 rounded-md text-[11px] transition-colors border",
+                  active
+                    ? "bg-muted/60 border-border text-foreground"
+                    : "bg-transparent border-border/40 text-muted-foreground/70 hover:bg-muted/40 hover:text-foreground",
+                )}
+              >
+                {swatch}
+                <span>{l.label}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Gráfico */}
@@ -526,6 +458,14 @@ export function GraficoMensalDialog({
           ref={chartRef}
           className="bg-card rounded-xl p-4 border border-border/80 shadow-[0_4px_24px_hsl(0_0%_0%/0.18)]"
         >
+          {activeLayers.size === 0 ? (
+            <div
+              style={{ width: "100%", height: 420 }}
+              className="flex items-center justify-center text-xs text-muted-foreground"
+            >
+              Nenhuma série selecionada — ative uma camada acima.
+            </div>
+          ) : (
           <div style={{ width: "100%", height: 420 }}>
             <ResponsiveContainer>
               <ComposedChart
@@ -542,13 +482,14 @@ export function GraficoMensalDialog({
                 onMouseLeave={() => setHoveredMonth(null)}
               >
                 <defs>
-                  <filter id="margemGlow" x="-20%" y="-20%" width="140%" height="140%">
-                    <feGaussianBlur stdDeviation="2.4" result="blur" />
-                    <feMerge>
-                      <feMergeNode in="blur" />
-                      <feMergeNode in="SourceGraphic" />
-                    </feMerge>
-                  </filter>
+                  <linearGradient id="rl-acum-fill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset={accAxis.zeroOffset} stopColor="hsl(var(--status-emerald))" stopOpacity={0.35} />
+                    <stop offset={accAxis.zeroOffset} stopColor="hsl(var(--status-red))" stopOpacity={0.35} />
+                  </linearGradient>
+                  <linearGradient id="rl-acum-stroke" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset={accAxis.zeroOffset} stopColor="hsl(var(--status-emerald))" stopOpacity={1} />
+                    <stop offset={accAxis.zeroOffset} stopColor="hsl(var(--status-red))" stopOpacity={1} />
+                  </linearGradient>
                 </defs>
                 <CartesianGrid
                   vertical={false}
@@ -572,11 +513,12 @@ export function GraficoMensalDialog({
                 <YAxis
                   yAxisId="right"
                   orientation="right"
-                  tickFormatter={v => `${v}%`}
+                  domain={[accAxis.min, accAxis.max]}
+                  tickFormatter={fmtBRL}
                   tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground) / 0.7)" }}
                   tickLine={false}
                   axisLine={false}
-                  width={40}
+                  width={70}
                 />
                 <Tooltip
                   cursor={{ fill: "hsl(var(--primary) / 0.05)" }}
@@ -600,107 +542,48 @@ export function GraficoMensalDialog({
                       />
                     );
                   })()}
-                {modo === "custos" && (
-                  <>
-                    {isOn("CAC") &&        <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="CAC"        stackId="custos" fill={COLORS.cac} />}
-                    {isOn("Comissões") &&  <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Comissões"  stackId="custos" fill={COLORS.comissoes} />}
-                    {isOn("Bônus") &&      <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Bônus"      stackId="custos" fill={COLORS.bonus} />}
-                    {isOn("Infra") &&      <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Infra"      stackId="custos" fill={COLORS.infra} />}
-                    {isOn("Operadores") && <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Operadores" stackId="custos" fill={COLORS.operadores} />}
-                    {isOn("Participações") && (
-                      <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Participações" stackId="custos" fill={COLORS.participacoes} radius={[6, 6, 0, 0]} />
-                    )}
-                    {isOn("Fluxo Líquido") && (
-                      <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Fluxo Líquido" radius={[6, 6, 0, 0]}>
-                        {chartData.map((d, i) => (
-                          <Cell
-                            key={`fl-${i}`}
-                            fill={(d["Fluxo Líquido"] as number) >= 0 ? COLORS.fluxoPos : COLORS.fluxoNeg}
-                          />
-                        ))}
-                      </Bar>
-                    )}
-                    {isOn("Resultado Líq. (custos)") && (
-                      <Line isAnimationActive={animateOnce}
-                        yAxisId="left"
-                        type="monotone"
-                        dataKey="Resultado Líquido"
-                        stroke={COLORS.resultado}
-                        strokeWidth={2.25}
-                        dot={{ r: 2.5, fill: COLORS.resultado, strokeWidth: 0 }}
-                        activeDot={{ r: 5 }}
-                      />
-                    )}
-                    {isOn("Margem %") && (
-                      <Line isAnimationActive={animateOnce}
-                        yAxisId="right"
-                        type="monotone"
-                        dataKey="Margem %"
-                        stroke={COLORS.margem}
-                        strokeWidth={2}
-                        strokeDasharray="5 5"
-                        dot={{ r: 3, fill: COLORS.margem, strokeWidth: 0 }}
-                        filter="url(#margemGlow)"
-                      />
-                    )}
-                  </>
+                <ReferenceLine yAxisId="left" y={0} stroke="hsl(var(--border))" strokeDasharray="2 4" />
+                {isOn("cac") &&        <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="CAC"        stackId="custos" fill={COLORS.cac} />}
+                {isOn("comissoes") &&  <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Comissões"  stackId="custos" fill={COLORS.comissoes} />}
+                {isOn("bonus") &&      <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Bônus"      stackId="custos" fill={COLORS.bonus} />}
+                {isOn("infra") &&      <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Infra"      stackId="custos" fill={COLORS.infra} />}
+                {isOn("operadores") && <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Operadores" stackId="custos" fill={COLORS.operadores} />}
+                {isOn("participacoes") && (
+                  <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Participações" stackId="custos" fill={COLORS.participacoes} radius={[6, 6, 0, 0]} />
                 )}
-                {modo === "resultado" && (
-                  <>
-                    <ReferenceLine yAxisId="left" y={0} stroke="hsl(var(--border))" strokeDasharray="2 4" />
-                    {isOn("Custo Total (ctx)") && (
-                      <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Custo Total" fill={COLORS.custoTotal} radius={[6, 6, 0, 0]} />
-                    )}
-                    {isOn("Resultado Líq. (res)") && (
-                      <Line isAnimationActive={animateOnce}
-                        yAxisId="left"
-                        type="monotone"
-                        dataKey="Resultado Líquido"
-                        stroke={COLORS.resultado}
-                        strokeWidth={2.5}
-                        dot={{ r: 3, fill: COLORS.resultado, strokeWidth: 0 }}
-                        activeDot={{ r: 5 }}
+                {isOn("fluxoLiquido") && (
+                  <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Fluxo Líquido" radius={[6, 6, 0, 0]}>
+                    {chartData.map((d, i) => (
+                      <Cell
+                        key={`fl-${i}`}
+                        fill={(d["Fluxo Líquido"] as number) >= 0 ? COLORS.fluxoPos : COLORS.fluxoNeg}
                       />
-                    )}
-                    {isOn("Margem % (res)") && (
-                      <Line isAnimationActive={animateOnce}
-                        yAxisId="right"
-                        type="monotone"
-                        dataKey="Margem %"
-                        stroke={COLORS.margem}
-                        strokeWidth={2}
-                        strokeDasharray="5 5"
-                        dot={{ r: 3, fill: COLORS.margem, strokeWidth: 0 }}
-                        filter="url(#margemGlow)"
-                      />
-                    )}
-                  </>
+                    ))}
+                  </Bar>
                 )}
-                {modo === "fluxo" && (
-                  <>
-                    <ReferenceLine yAxisId="left" y={0} stroke="hsl(var(--border))" strokeDasharray="2 4" />
-                    {isOn("Fluxo Líquido (flx)") && (
-                      <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Fluxo Líquido" radius={[6, 6, 0, 0]}>
-                        {chartData.map((d, i) => (
-                          <Cell
-                            key={`flx-${i}`}
-                            fill={(d["Fluxo Líquido"] as number) >= 0 ? COLORS.fluxoPos : COLORS.fluxoNeg}
-                          />
-                        ))}
-                      </Bar>
-                    )}
-                    {isOn("Fluxo Acumulado") && (
-                      <Line isAnimationActive={animateOnce}
-                        yAxisId="left"
-                        type="monotone"
-                        dataKey="Fluxo Acumulado"
-                        stroke={COLORS.resultado}
-                        strokeWidth={2}
-                        strokeDasharray="5 5"
-                        dot={false}
-                      />
-                    )}
-                  </>
+                {isOn("resultadoAcumulado") && (
+                  <Area
+                    isAnimationActive={animateOnce}
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="Resultado Acumulado"
+                    fill="url(#rl-acum-fill)"
+                    stroke="url(#rl-acum-stroke)"
+                    strokeWidth={2}
+                    baseValue={0}
+                    activeDot={{ r: 4 }}
+                  />
+                )}
+                {isOn("resultadoLiquido") && (
+                  <Line isAnimationActive={animateOnce}
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="Resultado Líquido"
+                    stroke={COLORS.resultado}
+                    strokeWidth={2.25}
+                    dot={{ r: 2.5, fill: COLORS.resultado, strokeWidth: 0 }}
+                    activeDot={{ r: 5 }}
+                  />
                 )}
                 {chartData.length > 6 && (
                   <Brush
@@ -714,6 +597,7 @@ export function GraficoMensalDialog({
               </ComposedChart>
             </ResponsiveContainer>
           </div>
+          )}
         </div>
 
         {/* Tabela */}
