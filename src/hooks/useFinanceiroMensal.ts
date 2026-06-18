@@ -3,6 +3,9 @@ import { format, startOfMonth, subMonths, parseISO, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { parseLocalDate } from "@/lib/dateUtils";
 import type { FinanceiroData } from "@/hooks/useFinanceiroData";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { fetchProjetosLucroCanonico } from "@/services/fetchProjetosLucroCanonico";
 
 export interface MesFinanceiro {
   mesKey: string;           // "2025-03"
@@ -28,6 +31,21 @@ interface Params {
   meses: number; // janela em meses (ex: 12)
   convertToBRL?: (valor: number, moeda: string) => number;
   incluirBaseline?: boolean; // default: true — prepende 1 mês zerado antes do 1º real
+  /**
+   * Cotações OFICIAIS (FastForex/PTAX) usadas para alinhar o Fluxo Líquido mensal
+   * à MESMA engine canônica do dashboard (`fetchProjetosLucroCanonico`).
+   * Quando ausente, o hook faz fallback à leitura cru de `cash_ledger`
+   * (modo legado, mantido só por compatibilidade).
+   */
+  cotacoesOficiais?: {
+    USD: number;
+    EUR?: number;
+    GBP?: number;
+    MYR?: number;
+    MXN?: number;
+    ARS?: number;
+    COP?: number;
+  };
 }
 
 const toKey = (raw?: string | null) => {
@@ -46,7 +64,95 @@ const empty = () => ({
   participacoes: 0,
 });
 
-export function useFinanceiroMensal({ finData, meses, convertToBRL, incluirBaseline = true }: Params) {
+export function useFinanceiroMensal({ finData, meses, convertToBRL, incluirBaseline = true, cotacoesOficiais }: Params) {
+  // === FLUXO LÍQUIDO CANÔNICO (paridade total com a Visão Financeira) ===
+  // Quando `cotacoesOficiais` é fornecido, calcula o Fluxo Líquido de CADA MÊS
+  // chamando `fetchProjetosLucroCanonico` (mesma engine de `useWorkspaceLucroRealizado`).
+  // Isso garante: ciclo de projeto, baseline neutralizado, anti-double-count de
+  // DEPOSITO_VIRTUAL MIGRACAO, e cotações OFICIAIS — exatamente como o KPI do dashboard.
+  const fluxoCanonicoQuery = useQuery({
+    queryKey: [
+      "financeiro-mensal-fluxo-canonico",
+      meses,
+      incluirBaseline,
+      cotacoesOficiais?.USD,
+      cotacoesOficiais?.EUR,
+      cotacoesOficiais?.GBP,
+      cotacoesOficiais?.MYR,
+      cotacoesOficiais?.MXN,
+      cotacoesOficiais?.ARS,
+      cotacoesOficiais?.COP,
+    ],
+    enabled: !!cotacoesOficiais && (cotacoesOficiais.USD || 0) > 0,
+    staleTime: 30_000,
+    queryFn: async (): Promise<Record<string, number>> => {
+      const now = startOfMonth(new Date());
+      const nowKey = format(now, "yyyy-MM");
+      const inicioJanela = subMonths(now, meses - 1);
+      const startKey = incluirBaseline
+        ? format(subMonths(inicioJanela, 1), "yyyy-MM")
+        : format(inicioJanela, "yyyy-MM");
+
+      // Enumera meses
+      const monthKeys: string[] = [];
+      let cursor = parseISO(`${startKey}-01`);
+      const end = parseISO(`${nowKey}-01`);
+      while (cursor <= end) {
+        monthKeys.push(format(cursor, "yyyy-MM"));
+        cursor = addMonths(cursor, 1);
+      }
+
+      // Projetos do workspace
+      const { data: projs, error: pErr } = await supabase.from("projetos").select("id");
+      if (pErr) throw pErr;
+      const ids = (projs || []).map((p: any) => p.id);
+      if (ids.length === 0) {
+        return Object.fromEntries(monthKeys.map(k => [k, 0]));
+      }
+
+      const cot = {
+        USD: cotacoesOficiais!.USD,
+        EUR: cotacoesOficiais!.EUR || 0,
+        GBP: cotacoesOficiais!.GBP || 0,
+        MYR: cotacoesOficiais!.MYR || 0,
+        MXN: cotacoesOficiais!.MXN || 0,
+        ARS: cotacoesOficiais!.ARS || 0,
+        COP: cotacoesOficiais!.COP || 0,
+      };
+
+      // Busca cada mês em paralelo
+      const entries = await Promise.all(
+        monthKeys.map(async (mk) => {
+          const base = parseISO(`${mk}-01`);
+          const ini = format(startOfMonth(base), "yyyy-MM-dd");
+          // último dia do mês: primeiro dia do próximo mês - 1
+          const fimDate = addMonths(startOfMonth(base), 1);
+          fimDate.setDate(fimDate.getDate() - 1);
+          const fim = format(fimDate, "yyyy-MM-dd");
+          try {
+            const res = await fetchProjetosLucroCanonico({
+              projetoIds: ids,
+              cotacoesOficiais: cot,
+              dataInicio: ini,
+              dataFim: fim,
+            });
+            const total = Object.values(res).reduce(
+              (acc, r) => acc + (Number(r.lucroRealizadoBRL) || 0),
+              0
+            );
+            return [mk, total] as const;
+          } catch (e) {
+            console.error("[useFinanceiroMensal] mes", mk, e);
+            return [mk, 0] as const;
+          }
+        })
+      );
+      return Object.fromEntries(entries);
+    },
+  });
+
+  const fluxoCanonicoByMes = fluxoCanonicoQuery.data;
+
   return useMemo<MesFinanceiro[]>(() => {
     const conv = convertToBRL || ((v: number) => v);
     // Build window: from max(primeiroMesReal, hoje-(N-1)) → hoje
@@ -141,11 +247,11 @@ export function useFinanceiroMensal({ finData, meses, convertToBRL, incluirBasel
       bump(k, m => { m.participacoes += v; });
     });
 
-    // cash_ledger — Fluxo Líquido (Saques − Depósitos), consolidado em BRL
-    // Alinhado ao padrão Lucro Real (memória `lucro-real-payment-standard`):
-    //   (SAQUE + SAQUE_VIRTUAL) − (DEPOSITO + DEPOSITO_VIRTUAL[MIGRACAO])
-    //   status=CONFIRMADO (já garantido pelo loader) e apenas linhas com projeto_id_snapshot.
-    (finData.cashLedger || []).forEach((l: any) => {
+    // FLUXO LÍQUIDO — FALLBACK LEGADO (somente quando cotacoesOficiais não vier).
+    // Quando o caller passa `cotacoesOficiais`, o Fluxo é injetado adiante a partir
+    // de `fluxoCanonicoByMes` (engine canônica = paridade com o dashboard).
+    const usarFallbackCru = !cotacoesOficiais;
+    if (usarFallbackCru) (finData.cashLedger || []).forEach((l: any) => {
       const tt = l.tipo_transacao;
       // Só contabiliza linhas vinculadas a projetos do workspace (paridade com KPI).
       if (!l.projeto_id_snapshot) return;
@@ -173,8 +279,12 @@ export function useFinanceiroMensal({ finData, meses, convertToBRL, incluirBasel
       const m = map[k];
       const operadoresTotal = m.operadores + m.rh;
       const custoTotal = m.cac + m.comissoes + m.bonus + m.infra + operadoresTotal + m.participacoes;
-      const resultado = m.fluxoLiquido - custoTotal;
-      const base = m.fluxoLiquido + custoTotal;
+      // Fluxo canônico tem prioridade absoluta (paridade com Visão Financeira).
+      const fluxoLiquido = fluxoCanonicoByMes && k in fluxoCanonicoByMes
+        ? fluxoCanonicoByMes[k]
+        : m.fluxoLiquido;
+      const resultado = fluxoLiquido - custoTotal;
+      const base = fluxoLiquido + custoTotal;
       const margem = base > 0 ? (resultado / base) * 100 : null;
       const date = parseISO(`${k}-01`);
       return {
@@ -188,7 +298,7 @@ export function useFinanceiroMensal({ finData, meses, convertToBRL, incluirBasel
         rh: m.rh,
         operadores: operadoresTotal,
         custoTotal,
-        fluxoLiquido: m.fluxoLiquido,
+        fluxoLiquido,
         lucroOperacional: m.lucroOperacional,
         resultadoLiquido: resultado,
         margemOperacional: margem,
@@ -196,5 +306,5 @@ export function useFinanceiroMensal({ finData, meses, convertToBRL, incluirBasel
         isBaseline: baselineKey !== null && k === baselineKey,
       };
     });
-  }, [finData, meses, convertToBRL, incluirBaseline]);
+  }, [finData, meses, convertToBRL, incluirBaseline, cotacoesOficiais, fluxoCanonicoByMes]);
 }
