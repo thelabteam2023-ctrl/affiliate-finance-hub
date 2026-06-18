@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { MesFinanceiro } from "@/hooks/useFinanceiroMensal";
+import type { ExposicaoFinanceira } from "@/hooks/useExposicaoFinanceira";
 
 export interface OcorrenciaResumo {
   id: string;
@@ -9,6 +9,8 @@ export interface OcorrenciaResumo {
   tipo: string;
   valorBRL: number;
   moeda: string;
+  is_scan?: boolean;
+  fonte?: "ledger" | "ocorrencia";
 }
 
 export interface ResumoMetricas {
@@ -42,15 +44,16 @@ export interface ResumoOperacionalResult {
 interface Params {
   mesesFinanceiro: MesFinanceiro[];
   workspaceId: string | null;
-  cotacoes: Record<string, number>; // moeda → BRL (ex: { USD: 5.4, EUR: 5.9 })
   janelaLabel: string;
+  /** Engine canônica de Perdas no Período (mesma do card Exposição & Perdas). */
+  exposicao: ExposicaoFinanceira;
 }
 
 export function useResumoOperacional({
   mesesFinanceiro,
   workspaceId,
-  cotacoes,
   janelaLabel,
+  exposicao,
 }: Params): ResumoOperacionalResult {
   const [texto, setTexto] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -70,43 +73,6 @@ export function useResumoOperacional({
         return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
       })()
     : null;
-
-  // Busca ocorrências on-demand (enabled controlado pelo run())
-  const ocorrenciasQuery = useQuery({
-    queryKey: ["resumo-op-ocorrencias", workspaceId, dataInicio, dataFim],
-    enabled: false,
-    queryFn: async () => {
-      if (!workspaceId || !dataInicio || !dataFim) return { rows: [], moedasSemCotacao: 0 };
-      const { data, error } = await supabase
-        .from("ocorrencias")
-        .select("id, titulo, tipo, valor_perda, moeda, data_ocorrencia, resultado_financeiro, status")
-        .eq("workspace_id", workspaceId)
-        .in("resultado_financeiro", ["perda_confirmada", "perda_parcial"])
-        .gte("data_ocorrencia", dataInicio)
-        .lte("data_ocorrencia", dataFim);
-      if (error) throw error;
-      let moedasSemCotacao = 0;
-      const rows: OcorrenciaResumo[] = (data || []).map((o: any) => {
-        const moeda = (o.moeda || "BRL").toUpperCase();
-        const raw = Number(o.valor_perda || 0);
-        let valorBRL = 0;
-        if (moeda === "BRL") valorBRL = raw;
-        else {
-          const taxa = cotacoes[moeda];
-          if (taxa && taxa > 0) valorBRL = raw * taxa;
-          else moedasSemCotacao += raw > 0 ? 1 : 0;
-        }
-        return {
-          id: o.id,
-          titulo: o.titulo || "(sem título)",
-          tipo: String(o.tipo || ""),
-          valorBRL,
-          moeda,
-        };
-      });
-      return { rows, moedasSemCotacao };
-    },
-  });
 
   const run = useCallback(async () => {
     setLoading(true);
@@ -128,20 +94,21 @@ export function useResumoOperacional({
         participacoes: sum("participacoes"),
       };
 
-      // 2. Busca ocorrências
-      let perdasErro = false;
-      let perdasTotal = 0;
-      let moedasSemCotacao = 0;
-      let ocorrencias: OcorrenciaResumo[] = [];
-      try {
-        const result = await ocorrenciasQuery.refetch({ throwOnError: true });
-        ocorrencias = result.data?.rows || [];
-        moedasSemCotacao = result.data?.moedasSemCotacao || 0;
-        perdasTotal = ocorrencias.reduce((acc, o) => acc + o.valorBRL, 0);
-      } catch (e) {
-        perdasErro = true;
-        console.error("[useResumoOperacional] ocorrencias", e);
-      }
+      // 2. Perdas — usa engine canônica (mesma do card Exposição & Perdas):
+      //    inclui PERDA_OPERACIONAL do cash_ledger (SCAN) + ocorrências resolvidas
+      //    com perda ainda não materializadas no ledger. Sem duplicidade.
+      const perdasErro = false;
+      const moedasSemCotacao = 0;
+      const perdasTotal = exposicao.totalPerdasPeriodo;
+      const ocorrencias: OcorrenciaResumo[] = exposicao.detalhes.perdas.map((p) => ({
+        id: p.id,
+        titulo: p.descricao,
+        tipo: p.is_scan ? "scan" : p.fonte,
+        valorBRL: p.valor,
+        moeda: p.moeda,
+        is_scan: !!p.is_scan,
+        fonte: p.fonte,
+      }));
 
       const lucroReal = perdasErro ? null : resultadoLiquido - perdasTotal;
 
@@ -192,7 +159,7 @@ export function useResumoOperacional({
     } finally {
       setLoading(false);
     }
-  }, [meses, ocorrenciasQuery, janelaLabel, dataInicio, dataFim]);
+  }, [meses, exposicao, janelaLabel, dataInicio, dataFim]);
 
   return { metricas, texto, periodo, loading, error, run };
 }

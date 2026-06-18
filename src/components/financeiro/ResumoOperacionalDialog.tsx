@@ -165,9 +165,10 @@ export function ResumoOperacionalDialog({ open, onOpenChange, result }: Props) {
             )}
 
             <p className="text-[10px] text-muted-foreground">
-              Critério de perdas: ocorrências com <code>resultado_financeiro</code> em{" "}
-              <code>perda_confirmada</code> ou <code>perda_parcial</code>, atribuídas pela{" "}
-              <code>data_ocorrencia</code>. Conversão para BRL via cotações oficiais (PTAX/FastForex).
+              Critério de perdas (mesma engine do card Exposição & Perdas):{" "}
+              <code>cash_ledger</code> com <code>PERDA_OPERACIONAL</code> (SCAN casa/parceiro) somado a
+              ocorrências resolvidas como <code>perda_confirmada</code>/<code>perda_parcial</code> ainda
+              não materializadas no ledger. Conversão para BRL via cotações oficiais (PTAX/FastForex).
             </p>
           </div>
         )}

@@ -34,6 +34,7 @@ import { KpiExplanationDialog, KpiType } from "@/components/financeiro/KpiExplan
 import { ComposicaoCustosCard } from "@/components/financeiro/ComposicaoCustosCard";
 import { PeriodScopeBadge } from "@/components/financeiro/PeriodScopeBadge";
 import { ExposicaoFinanceiraCard } from "@/components/financeiro/ExposicaoFinanceiraCard";
+import { useExposicaoFinanceira } from "@/hooks/useExposicaoFinanceira";
 import { PosicaoCapital } from "@/components/caixa/PosicaoCapital";
 import { useCapitalEmDisputa } from "@/hooks/useCapitalEmDisputa";
 import { Wallet, TrendingUp, Percent, Coins } from "lucide-react";
@@ -173,23 +174,31 @@ export default function Financeiro() {
     },
   });
 
-  // Cotações para conversão de perdas em ocorrências (mesma fonte oficial)
-  const cotacoesParaResumo = useMemo(() => {
-    const m: Record<string, number> = { BRL: 1 };
-    if (cotacaoUSD > 0) m.USD = cotacaoUSD;
-    if (cotacaoEUR > 0) m.EUR = cotacaoEUR;
-    if (cotacaoGBP > 0) m.GBP = cotacaoGBP;
-    if (cotacaoMYR > 0) m.MYR = cotacaoMYR;
-    if (cotacaoMXN > 0) m.MXN = cotacaoMXN;
-    if (cotacaoARS > 0) m.ARS = cotacaoARS;
-    if (cotacaoCOP > 0) m.COP = cotacaoCOP;
-    return m;
-  }, [cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP]);
+  // Janela do Resumo Operacional = mesma da Análise Temporal (não-baseline)
+  const resumoWindow = useMemo(() => {
+    const ms = mesesFinanceiro.filter((m) => !m.isBaseline);
+    const first = ms[0]?.mesKey ?? null;
+    const last = ms[ms.length - 1]?.mesKey ?? null;
+    const ini = first ? `${first}-01` : null;
+    let fim: string | null = null;
+    if (last) {
+      const [y, mo] = last.split("-").map(Number);
+      const d = new Date(Date.UTC(y, mo, 0));
+      fim = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+    }
+    return { dataInicio: ini, dataFim: fim };
+  }, [mesesFinanceiro]);
+
+  // Engine canônica de Exposição & Perdas (usada também pelo card) — mesma janela do Resumo IA
+  const exposicaoResumo = useExposicaoFinanceira({
+    dataInicio: resumoWindow.dataInicio,
+    dataFim: resumoWindow.dataFim,
+  });
 
   const resumoOp = useResumoOperacional({
     mesesFinanceiro,
     workspaceId: workspaceId || null,
-    cotacoes: cotacoesParaResumo,
+    exposicao: exposicaoResumo,
     janelaLabel: incluirBaseline ? `Últimos ${janelaMeses}m (+ baseline)` : `Últimos ${janelaMeses}m`,
   });
 
