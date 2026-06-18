@@ -334,58 +334,6 @@ export function GraficoMensalDialog({
               Lucro × Custo · Visão Mensal
             </DialogTitle>
             <div className="flex items-center gap-2">
-              <PillSwitch<Modo>
-                value={modo}
-                onChange={v => setModo(v)}
-                options={[
-                  { value: "custos",    label: "Custos × Fluxo" },
-                  { value: "resultado", label: "Resultado Líquido" },
-                  { value: "fluxo",     label: "Fluxo Líquido" },
-                ]}
-              />
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button size="sm" variant="outline" title="Configurar séries visíveis">
-                    <Settings2 className="h-4 w-4 mr-1" /> Séries
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent align="end" className="w-72 p-3">
-                  <div className="text-xs font-medium text-muted-foreground mb-2">
-                    Séries visíveis · {modo === "custos" ? "Custos × Fluxo" : modo === "resultado" ? "Resultado Líquido" : "Fluxo Líquido"}
-                  </div>
-                  {(["Custos","Indicadores","Resultado","Fluxo"] as const).map(group => {
-                    const items = ALL_SERIES.filter(s => s.modos.includes(modo) && s.group === group);
-                    if (!items.length) return null;
-                    return (
-                      <div key={group} className="mb-2 last:mb-0">
-                        <div className="text-[10px] uppercase tracking-wide text-muted-foreground/70 mb-1">{group}</div>
-                        <div className="flex flex-col gap-1.5">
-                          {items.map(s => (
-                            <label key={s.id} className="flex items-center gap-2 text-xs cursor-pointer">
-                              <Checkbox
-                                checked={isOn(s.id)}
-                                onCheckedChange={() => toggleSeries(s.id)}
-                              />
-                              <span
-                                className={cn(
-                                  s.shape === "bar" ? "h-2 w-2 rounded-[2px]" : "h-[2px] w-3.5 rounded-full",
-                                  s.shape === "lineDashed" && "border-t border-dashed bg-transparent"
-                                )}
-                                style={
-                                  s.shape === "lineDashed"
-                                    ? { borderColor: s.color, height: 0 }
-                                    : { background: s.color }
-                                }
-                              />
-                              <span className="flex-1">{s.label}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </PopoverContent>
-              </Popover>
               <div className="flex items-center gap-2 px-2 border-r pr-3 mr-1">
                 <Switch
                   id="baseline-toggle"
@@ -460,34 +408,49 @@ export function GraficoMensalDialog({
         )}
 
         {/* Legenda customizada */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-1 pt-1 text-[11px] text-muted-foreground">
-          {ALL_SERIES.filter(s => s.modos.includes(modo) && isOn(s.id)).map(s => (
-            <div
-              key={s.id}
-              className="flex items-center gap-1.5"
-              title={s.hint}
-            >
-              {s.shape === "bar" ? (
-                <span className="h-2 w-2 rounded-[2px]" style={{ background: s.color }} />
-              ) : s.shape === "line" ? (
-                <span className="inline-block h-[2px] w-4 rounded-full" style={{ background: s.color }} />
+        {/* Legenda interativa — cada chip liga/desliga a camada correspondente */}
+        <div className="flex flex-wrap items-center gap-1.5 px-1 pt-1">
+          {LAYERS.map(l => {
+            const active = isOn(l.id);
+            const swatch =
+              l.kind === "areaConditional" ? (
+                <span
+                  className="h-2.5 w-2.5 rounded-[3px] shrink-0"
+                  style={{
+                    background: `linear-gradient(180deg, ${COLORS.fluxoPos} 0%, ${COLORS.fluxoPos} 50%, ${COLORS.fluxoNeg} 50%, ${COLORS.fluxoNeg} 100%)`,
+                    opacity: active ? 1 : 0.35,
+                  }}
+                />
+              ) : l.kind === "line" ? (
+                <span
+                  className="inline-block h-[2px] w-4 rounded-full shrink-0"
+                  style={{ background: l.color, opacity: active ? 1 : 0.35 }}
+                />
               ) : (
                 <span
-                  className="inline-block w-4 border-t border-dashed"
-                  style={{ borderColor: s.color, height: 0 }}
+                  className="h-2.5 w-2.5 rounded-[3px] shrink-0"
+                  style={{ background: l.color, opacity: active ? 1 : 0.35 }}
                 />
-              )}
-              <span>{s.label}</span>
-              {s.id === "Fluxo Líquido" && (
-                <span className="text-muted-foreground/60">
-                  · verde se ≥ 0, vermelho se &lt; 0
-                </span>
-              )}
-              {s.id === "Margem %" && (
-                <span className="text-muted-foreground/60">· eixo direito</span>
-              )}
-            </div>
-          ))}
+              );
+            return (
+              <button
+                key={l.id}
+                type="button"
+                onClick={() => toggleLayer(l.id)}
+                title={l.hint}
+                aria-pressed={active}
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-2 h-6 rounded-md text-[11px] transition-colors border",
+                  active
+                    ? "bg-muted/60 border-border text-foreground"
+                    : "bg-transparent border-border/40 text-muted-foreground/70 hover:bg-muted/40 hover:text-foreground",
+                )}
+              >
+                {swatch}
+                <span>{l.label}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Gráfico */}
@@ -495,6 +458,14 @@ export function GraficoMensalDialog({
           ref={chartRef}
           className="bg-card rounded-xl p-4 border border-border/80 shadow-[0_4px_24px_hsl(0_0%_0%/0.18)]"
         >
+          {activeLayers.size === 0 ? (
+            <div
+              style={{ width: "100%", height: 420 }}
+              className="flex items-center justify-center text-xs text-muted-foreground"
+            >
+              Nenhuma série selecionada — ative uma camada acima.
+            </div>
+          ) : (
           <div style={{ width: "100%", height: 420 }}>
             <ResponsiveContainer>
               <ComposedChart
@@ -511,13 +482,14 @@ export function GraficoMensalDialog({
                 onMouseLeave={() => setHoveredMonth(null)}
               >
                 <defs>
-                  <filter id="margemGlow" x="-20%" y="-20%" width="140%" height="140%">
-                    <feGaussianBlur stdDeviation="2.4" result="blur" />
-                    <feMerge>
-                      <feMergeNode in="blur" />
-                      <feMergeNode in="SourceGraphic" />
-                    </feMerge>
-                  </filter>
+                  <linearGradient id="rl-acum-fill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset={accAxis.zeroOffset} stopColor="hsl(var(--status-emerald))" stopOpacity={0.35} />
+                    <stop offset={accAxis.zeroOffset} stopColor="hsl(var(--status-red))" stopOpacity={0.35} />
+                  </linearGradient>
+                  <linearGradient id="rl-acum-stroke" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset={accAxis.zeroOffset} stopColor="hsl(var(--status-emerald))" stopOpacity={1} />
+                    <stop offset={accAxis.zeroOffset} stopColor="hsl(var(--status-red))" stopOpacity={1} />
+                  </linearGradient>
                 </defs>
                 <CartesianGrid
                   vertical={false}
@@ -541,11 +513,12 @@ export function GraficoMensalDialog({
                 <YAxis
                   yAxisId="right"
                   orientation="right"
-                  tickFormatter={v => `${v}%`}
+                  domain={[accAxis.min, accAxis.max]}
+                  tickFormatter={fmtBRL}
                   tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground) / 0.7)" }}
                   tickLine={false}
                   axisLine={false}
-                  width={40}
+                  width={70}
                 />
                 <Tooltip
                   cursor={{ fill: "hsl(var(--primary) / 0.05)" }}
@@ -569,107 +542,48 @@ export function GraficoMensalDialog({
                       />
                     );
                   })()}
-                {modo === "custos" && (
-                  <>
-                    {isOn("CAC") &&        <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="CAC"        stackId="custos" fill={COLORS.cac} />}
-                    {isOn("Comissões") &&  <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Comissões"  stackId="custos" fill={COLORS.comissoes} />}
-                    {isOn("Bônus") &&      <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Bônus"      stackId="custos" fill={COLORS.bonus} />}
-                    {isOn("Infra") &&      <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Infra"      stackId="custos" fill={COLORS.infra} />}
-                    {isOn("Operadores") && <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Operadores" stackId="custos" fill={COLORS.operadores} />}
-                    {isOn("Participações") && (
-                      <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Participações" stackId="custos" fill={COLORS.participacoes} radius={[6, 6, 0, 0]} />
-                    )}
-                    {isOn("Fluxo Líquido") && (
-                      <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Fluxo Líquido" radius={[6, 6, 0, 0]}>
-                        {chartData.map((d, i) => (
-                          <Cell
-                            key={`fl-${i}`}
-                            fill={(d["Fluxo Líquido"] as number) >= 0 ? COLORS.fluxoPos : COLORS.fluxoNeg}
-                          />
-                        ))}
-                      </Bar>
-                    )}
-                    {isOn("Resultado Líq. (custos)") && (
-                      <Line isAnimationActive={animateOnce}
-                        yAxisId="left"
-                        type="monotone"
-                        dataKey="Resultado Líquido"
-                        stroke={COLORS.resultado}
-                        strokeWidth={2.25}
-                        dot={{ r: 2.5, fill: COLORS.resultado, strokeWidth: 0 }}
-                        activeDot={{ r: 5 }}
-                      />
-                    )}
-                    {isOn("Margem %") && (
-                      <Line isAnimationActive={animateOnce}
-                        yAxisId="right"
-                        type="monotone"
-                        dataKey="Margem %"
-                        stroke={COLORS.margem}
-                        strokeWidth={2}
-                        strokeDasharray="5 5"
-                        dot={{ r: 3, fill: COLORS.margem, strokeWidth: 0 }}
-                        filter="url(#margemGlow)"
-                      />
-                    )}
-                  </>
+                <ReferenceLine yAxisId="left" y={0} stroke="hsl(var(--border))" strokeDasharray="2 4" />
+                {isOn("cac") &&        <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="CAC"        stackId="custos" fill={COLORS.cac} />}
+                {isOn("comissoes") &&  <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Comissões"  stackId="custos" fill={COLORS.comissoes} />}
+                {isOn("bonus") &&      <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Bônus"      stackId="custos" fill={COLORS.bonus} />}
+                {isOn("infra") &&      <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Infra"      stackId="custos" fill={COLORS.infra} />}
+                {isOn("operadores") && <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Operadores" stackId="custos" fill={COLORS.operadores} />}
+                {isOn("participacoes") && (
+                  <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Participações" stackId="custos" fill={COLORS.participacoes} radius={[6, 6, 0, 0]} />
                 )}
-                {modo === "resultado" && (
-                  <>
-                    <ReferenceLine yAxisId="left" y={0} stroke="hsl(var(--border))" strokeDasharray="2 4" />
-                    {isOn("Custo Total (ctx)") && (
-                      <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Custo Total" fill={COLORS.custoTotal} radius={[6, 6, 0, 0]} />
-                    )}
-                    {isOn("Resultado Líq. (res)") && (
-                      <Line isAnimationActive={animateOnce}
-                        yAxisId="left"
-                        type="monotone"
-                        dataKey="Resultado Líquido"
-                        stroke={COLORS.resultado}
-                        strokeWidth={2.5}
-                        dot={{ r: 3, fill: COLORS.resultado, strokeWidth: 0 }}
-                        activeDot={{ r: 5 }}
+                {isOn("fluxoLiquido") && (
+                  <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Fluxo Líquido" radius={[6, 6, 0, 0]}>
+                    {chartData.map((d, i) => (
+                      <Cell
+                        key={`fl-${i}`}
+                        fill={(d["Fluxo Líquido"] as number) >= 0 ? COLORS.fluxoPos : COLORS.fluxoNeg}
                       />
-                    )}
-                    {isOn("Margem % (res)") && (
-                      <Line isAnimationActive={animateOnce}
-                        yAxisId="right"
-                        type="monotone"
-                        dataKey="Margem %"
-                        stroke={COLORS.margem}
-                        strokeWidth={2}
-                        strokeDasharray="5 5"
-                        dot={{ r: 3, fill: COLORS.margem, strokeWidth: 0 }}
-                        filter="url(#margemGlow)"
-                      />
-                    )}
-                  </>
+                    ))}
+                  </Bar>
                 )}
-                {modo === "fluxo" && (
-                  <>
-                    <ReferenceLine yAxisId="left" y={0} stroke="hsl(var(--border))" strokeDasharray="2 4" />
-                    {isOn("Fluxo Líquido (flx)") && (
-                      <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Fluxo Líquido" radius={[6, 6, 0, 0]}>
-                        {chartData.map((d, i) => (
-                          <Cell
-                            key={`flx-${i}`}
-                            fill={(d["Fluxo Líquido"] as number) >= 0 ? COLORS.fluxoPos : COLORS.fluxoNeg}
-                          />
-                        ))}
-                      </Bar>
-                    )}
-                    {isOn("Fluxo Acumulado") && (
-                      <Line isAnimationActive={animateOnce}
-                        yAxisId="left"
-                        type="monotone"
-                        dataKey="Fluxo Acumulado"
-                        stroke={COLORS.resultado}
-                        strokeWidth={2}
-                        strokeDasharray="5 5"
-                        dot={false}
-                      />
-                    )}
-                  </>
+                {isOn("resultadoAcumulado") && (
+                  <Area
+                    isAnimationActive={animateOnce}
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="Resultado Acumulado"
+                    fill="url(#rl-acum-fill)"
+                    stroke="url(#rl-acum-stroke)"
+                    strokeWidth={2}
+                    baseValue={0}
+                    activeDot={{ r: 4 }}
+                  />
+                )}
+                {isOn("resultadoLiquido") && (
+                  <Line isAnimationActive={animateOnce}
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="Resultado Líquido"
+                    stroke={COLORS.resultado}
+                    strokeWidth={2.25}
+                    dot={{ r: 2.5, fill: COLORS.resultado, strokeWidth: 0 }}
+                    activeDot={{ r: 5 }}
+                  />
                 )}
                 {chartData.length > 6 && (
                   <Brush
@@ -683,6 +597,7 @@ export function GraficoMensalDialog({
               </ComposedChart>
             </ResponsiveContainer>
           </div>
+          )}
         </div>
 
         {/* Tabela */}
