@@ -610,8 +610,8 @@ export function ReconciliacaoDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
+      <DialogContent className="max-w-lg w-[calc(100%-1rem)] sm:w-full max-h-[92vh] overflow-y-auto p-4 sm:p-6 gap-3 sm:gap-4">
+        <DialogHeader className="space-y-1">
           <DialogTitle className="flex items-center gap-2">
             <Scale className="h-5 w-5 text-primary" />
             Reconciliação de Saldo
@@ -863,11 +863,11 @@ export function ReconciliacaoDialog({
             </div>
 
             {/* Actions */}
-            <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={handleClose} disabled={loading}>
+            <div className="sticky bottom-0 -mx-4 sm:-mx-6 -mb-4 sm:-mb-6 mt-2 px-4 sm:px-6 py-3 bg-background/95 backdrop-blur border-t border-border/50 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+              <Button variant="outline" onClick={handleClose} disabled={loading} className="w-full sm:w-auto">
                 Cancelar
               </Button>
-              <Button onClick={handleSubmit} disabled={loading || !canSubmit()}>
+              <Button onClick={handleSubmit} disabled={loading || !canSubmit()} className="w-full sm:w-auto">
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Registrar Reconciliação
               </Button>
