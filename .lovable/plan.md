@@ -1,112 +1,122 @@
-# Paridade Total — Visão Financeira ⇄ Análise Temporal
+# Plano de Testes Controlados — Paridade Visão Financeira ⇄ Análise Temporal
 
-## Diagnóstico
+## Princípio inviolável
 
-Hoje as duas telas usam **pipelines diferentes** para calcular as mesmas métricas, e por isso divergem:
+**Zero efeito colateral em dados reais.** Todos os testes rodam em **Vitest + jsdom** com **mocks completos** do cliente Supabase e da engine canônica. Nenhuma chamada HTTP sai da máquina, nenhuma linha do banco é lida ou escrita, nenhum workspace real é tocado. Os "dados" são fixtures TypeScript hard-coded dentro dos arquivos de teste.
 
-| Métrica | Visão Financeira (dashboard) | Análise Temporal (gráfico) |
-|---|---|---|
-| Fluxo Líquido | `useWorkspaceLucroRealizado` → `fetchProjetosLucroCanonico` (por projeto, com ciclo, baseline neutralizado, PTAX snapshot, anti-double-count de `DEPOSITO_VIRTUAL MIGRACAO`) | `useFinanceiroMensal` lê `cash_ledger` cru, soma tudo, **cotação live**, sem ciclo, sem baseline, sem anti-double-count |
-| Custo Total | `useFinanceiroCalculations` (despesas + admin + operadores+RH + participações) | `useFinanceiroMensal` (mesma fonte, mesma regra) ✅ **já bate** |
-| Resultado Líquido | Fluxo (canônico) − Custo | Fluxo (cru) − Custo → **diverge** |
-| Margem | derivada do Resultado canônico | derivada do Resultado cru |
-| Posição de Capital | snapshots/realtime canônicos | n/a no gráfico |
+## Stack
 
-Conclusão: o **Custo já está alinhado**. A divergência inteira está no **Fluxo Líquido** (e por consequência Resultado e Margem). A correção é mover `useFinanceiroMensal` para a **mesma engine canônica** que o dashboard.
+- Vitest (já configurado em `vitest.config.ts`)
+- `@testing-library/react` para o smoke test do hook
+- `vi.mock()` para isolar `@/integrations/supabase/client` e `@/services/fetchProjetosLucroCanonico`
+- Nenhuma dependência nova
 
-## Princípio
+## Arquivos a criar
 
-> **Uma única fonte de verdade financeira por workspace: `fetchProjetosLucroCanonico`.**
-> Toda tela que mostre Fluxo Líquido / Resultado Líquido / Margem / Posição de Capital consome essa engine — direto ou via hook que a encapsula. Nada lê `cash_ledger` cru para esses KPIs.
-
-## Escopo
-
-### Em escopo
-- Refatorar `src/hooks/useFinanceiroMensal.ts` para derivar Fluxo Líquido **mês a mês** chamando `fetchProjetosLucroCanonico` com janela `[primeiroDia(mes), ultimoDia(mes)]` para cada mês da janela visível, somando `lucroRealizadoBRL` (que já é Fluxo Canônico) por projeto.
-- Manter Custo Total como está (já está alinhado).
-- Recalcular Resultado Líquido = Fluxo Canônico − Custo Total e Margem a partir dele.
-- Adicionar cache memoizado (React Query) para as chamadas mensais — chave `["financeiro-mensal-canonico", workspaceId, janelaMeses, mesReferencia]`.
-- Garantir que o gráfico, KPIs do topo do modal, e a tabela mensal consumam o mesmo dado refatorado.
-- Validar paridade com `useWorkspaceLucroRealizado` em janelas equivalentes (mês corrente, mês anterior, YTD).
-
-### Fora de escopo
-- Nenhuma mudança visual no `GraficoMensalDialog` (chips, camadas, área condicional permanecem como estão).
-- Nenhuma mudança em `useFinanceiroCalculations`, `fetchProjetosLucroCanonico`, RPCs, schema do banco, ledger.
-- Nenhuma alteração em exports PDF/XLSX (eles continuarão recebendo os mesmos campos, agora com valores canônicos).
-- Não tocar em Posição de Capital (já é canônica) — só auditar que os componentes que aparecem na Visão Financeira lêem das fontes canônicas existentes.
-
-## Mudanças técnicas
-
-### 1. `src/hooks/useFinanceiroMensal.ts` — refatoração
-
-Substituir a leitura de `finData.cashLedger` por:
-
-```ts
-// Para cada mês na janela visível:
-const meses = enumerarMeses(inicioKey, nowKey);
-const promises = meses.map(mesKey => {
-  const inicio = startOfMonth(parseISO(`${mesKey}-01`));
-  const fim    = endOfMonth(parseISO(`${mesKey}-01`));
-  return fetchProjetosLucroCanonico({
-    workspaceId,
-    dataInicio: inicio.toISOString(),
-    dataFim:    fim.toISOString(),
-    projetoIds: undefined, // todos do workspace
-  }).then(rows => ({
-    mesKey,
-    fluxoLiquido: rows.reduce((s, r) => s + (r.lucroRealizadoBRL || 0), 0),
-  }));
-});
+```text
+src/hooks/__tests__/
+  useFinanceiroMensal.parity.test.ts         (núcleo: paridade canônica)
+  useFinanceiroMensal.fallback.test.ts       (modo legado sem cotações)
+  useFinanceiroMensal.pendentes.test.ts      (status filter)
+  useFinanceiroMensal.edges.test.ts          (sem projetos, multi-moeda, baseline)
+src/test/fixtures/
+  financeiroMensal.fixtures.ts               (factories: makeFinData, makeCanonicoResult)
 ```
 
-Custo Total continua sendo agregado a partir de `finData.despesas / despesasAdmin / pagamentosOperador / participacoesPagas` (já bate com o dashboard).
+Todos isolados em `__tests__/` — não impactam build de produção (Vite ignora por padrão e `tsconfig` já contempla via `vitest/globals`).
 
-`useFinanceiroMensal` passa a ser `async` por baixo: encapsular num `useQuery` interno com chave `["financeiro-mensal-canonico", workspaceId, janelaMeses, mesReferencia, incluirBaseline]`, `staleTime: 30s`.
+## Cenários de teste (controlados)
 
-Assinatura externa preservada (retorna `MesFinanceiro[]`) — consumidores não mudam.
+### 1. `useFinanceiroMensal.parity.test.ts` — Paridade canônica
 
-### 2. Auditoria de consumidores
+Mocka `fetchProjetosLucroCanonico` para retornar valores determinísticos por mês. Valida:
 
-Listar e validar que estes componentes usam exclusivamente a engine canônica (direto ou via `useFinanceiroMensal` / `useWorkspaceLucroRealizado`):
+- Para cada mês `k` na janela, `result[k].fluxoLiquido === Σ(lucroRealizadoBRL dos projetos)` retornado pelo mock.
+- `resultadoLiquido === fluxoLiquido − custoTotal` **exato** (sem arredondamento intermediário).
+- `margemOperacional === (resultadoLiquido / (fluxoLiquido + custoTotal)) * 100` quando base > 0; `null` caso contrário.
+- Custo Total continua sendo derivado de `finData` (não é tocado pela refatoração).
 
-- `DashboardFinanceiro` (cards de KPI: Resultado Líquido, Fluxo, Custo, Margem)
-- `GraficoMensalDialog` (chart + KPIs do topo + tabela mensal)
-- `ComposicaoCustoCard` — já usa `useFinanceiroCalculations` (custos), sem fluxo → ok
-- `PosicaoCapitalCard` — auditar; deve ler de `useWorkspaceCapital` / canonical sources, não `cash_ledger` cru
-- Qualquer outro card na aba "Visão Financeira" que mostre Fluxo/Resultado
+**Caso de regressão Abril**: fixture com fluxo canônico = 9.403,71 → resultado deve dar exatamente esse valor, não 17.490,18.
 
-Para cada um, abrir, confirmar a fonte, e — se estiver lendo `cash_ledger` cru — migrar para `useWorkspaceLucroRealizado` ou hook canônico equivalente.
+### 2. `useFinanceiroMensal.fallback.test.ts` — Modo legado
 
-### 3. Teste de paridade
+Sem `cotacoesOficiais`, o hook deve cair no fallback `cash_ledger`:
 
-Criar checklist manual (não automated test) executado após a refatoração:
+- Mock de `finData.cashLedger` com 1 SAQUE + 1 DEPOSITO + 1 DEPOSITO_VIRTUAL BASELINE + 1 DEPOSITO_VIRTUAL MIGRACAO.
+- Esperado: BASELINE **ignorado**, MIGRACAO **subtraído**, SAQUE somado.
+- `fetchProjetosLucroCanonico` **não pode ser chamado** (`expect(mock).not.toHaveBeenCalled()`).
 
-1. Abrir Visão Financeira → anotar Fluxo Líquido / Resultado / Margem do mês corrente.
-2. Abrir Análise Temporal → mês corrente no gráfico deve mostrar **exatamente os mesmos valores** (até a última casa decimal).
-3. Repetir para mês anterior, 3 meses atrás, e total YTD.
-4. Caso de teste do incidente: Abril → ambos devem mostrar R$ 9.403,71 (não mais R$ 17.490,18 no gráfico).
+### 3. `useFinanceiroMensal.pendentes.test.ts` — Status filter (documentação executável)
 
-### 4. Performance
+Como o filtro `status=CONFIRMADO` vive dentro de `fetchProjetosLucroCanonico` (que está mockado), este teste valida a **contratualidade**: o mock simula a engine retornando **apenas confirmados**. O teste então confirma:
 
-N meses (até 24) × 1 RPC `fetchProjetosLucroCanonico` cada = até 24 chamadas paralelas. A engine canônica já é otimizada e cacheada por React Query (chave compartilhada com Visão Geral em janelas comuns). Aceitável; reavaliar se latência > 1.5s.
+- Linhas PENDENTE jogadas no fallback `cashLedger` **com `cotacoesOficiais` ausente** devem ser filtradas? → **Atenção**: o fallback atual NÃO filtra status. Este teste vai *documentar* o comportamento e, se necessário, abrimos issue para alinhar.
+- Quando `cotacoesOficiais` presente, o fallback é desligado e o filtro fica garantido pela engine canônica. ✅
 
-## Riscos & mitigações
+### 4. `useFinanceiroMensal.edges.test.ts` — Edge cases
 
-| Risco | Mitigação |
-|---|---|
-| `fetchProjetosLucroCanonico` não aceita janela `[inicio,fim]` por mês isoladamente | Verificar assinatura antes de codar; se necessário, adicionar parâmetros opcionais `dataInicio/dataFim` (mudança aditiva, sem quebrar callers existentes) |
-| Baseline visual do gráfico (`isBaseline`) precisa continuar zerado | Manter lógica de baseline no wrapper; só o cálculo de Fluxo muda |
-| Latência acumulada de 24 chamadas | React Query em paralelo + staleTime de 30s; chaves estáveis para cache hit |
-| Exports PDF/XLSX referenciam campos antigos | Nenhum nome de campo muda (`fluxoLiquido`, `resultadoLiquido`, `margemOperacional`); só os valores ficam canônicos |
+- **Workspace sem projetos** → Supabase mock retorna `[]`; fluxo de todos os meses = 0; sem crash.
+- **USD = 0** (cotação ainda carregando) → query desabilitada; hook retorna fluxo = 0; nunca chama a engine.
+- **Multi-moeda**: fixture canônica devolve `lucroRealizadoBRL` já convertido; o hook **não** re-converte. Teste garante que `convertToBRL` recebido nas props **não é aplicado** sobre o fluxo canônico.
+- **Mês sem atividade** → fluxo 0, custo 0, resultado 0, margem `null` (não `NaN`, não `Infinity`).
+- **Janela 6m / 12m / 24m** → tamanho do array retornado bate com `meses` (+1 se `incluirBaseline`).
+- **Baseline** → primeiro mês marcado `isBaseline: true`, com fluxo zerado independentemente do mock.
 
-## Workspace e segurança
+### 5. Snapshot de contrato (opcional)
 
-`workspaceId` continua sendo obtido implicitamente via hooks atuais (`useFinanceiroData` → token). `fetchProjetosLucroCanonico` já filtra `.eq("workspace_id", workspaceId)` internamente. Nenhuma nova superfície exposta.
+Snapshot mínimo do shape de `MesFinanceiro` para detectar mudanças acidentais de campo (quebraria PDF/XLSX exports).
 
-## Validação final
+## Estrutura de mocks (template)
 
-- [ ] Visão Financeira e Análise Temporal mostram os mesmos números em todos os meses.
-- [ ] Caso Abril resolvido (paridade exata).
-- [ ] Posição de Capital e Composição de Custo continuam idênticas ao que eram (só auditadas).
-- [ ] Tempo de abertura do modal Análise Temporal ≤ 1.5s na primeira carga.
-- [ ] Nenhum console error / nenhuma regressão em outros consumidores de `useFinanceiroMensal`.
+```ts
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: {
+    from: vi.fn(() => ({
+      select: vi.fn().mockResolvedValue({ data: [{ id: "p1" }, { id: "p2" }], error: null }),
+    })),
+  },
+}));
+
+vi.mock("@/services/fetchProjetosLucroCanonico", () => ({
+  fetchProjetosLucroCanonico: vi.fn(async ({ dataInicio }) => {
+    // Devolve fluxo por mês determinístico a partir de dataInicio
+    return {
+      p1: { lucroRealizadoBRL: FIXTURE[dataInicio] ?? 0, /* ... */ },
+      p2: { lucroRealizadoBRL: 0, /* ... */ },
+    };
+  }),
+}));
+```
+
+`renderHook` envolto em `QueryClientProvider` com `QueryClient` fresh por teste (`retry: false`, `gcTime: 0`) para isolamento total.
+
+## Garantias de segurança (checklist anti-vazamento)
+
+- [ ] Nenhum import direto de variáveis de ambiente reais (`VITE_SUPABASE_URL` etc.) nos testes.
+- [ ] `vi.mock` declarado **no topo** do arquivo, antes de qualquer import do código produtivo (hoisting garantido pelo Vitest).
+- [ ] `beforeEach(() => vi.clearAllMocks())` em todos os arquivos.
+- [ ] Nenhum teste roda `await supabase.from(...)` real — sempre via mock.
+- [ ] Sem migrations, sem `supabase--insert`, sem chamadas a edge functions.
+- [ ] Rodam offline (`network: false` implícito por jsdom + mocks).
+
+## Execução
+
+```bash
+bunx vitest run src/hooks/__tests__/useFinanceiroMensal.*.test.ts
+```
+
+Resultado esperado: todos verdes em < 2s. Falhas indicam regressão real na engine de paridade.
+
+## Fora de escopo
+
+- Testes E2E (Playwright/Cypress) tocando preview real — fora do princípio de isolamento.
+- Testes contra `fetchProjetosLucroCanonico` real — esse serviço já tem cobertura própria; aqui ele é **fronteira mockada**.
+- Validação visual do gráfico (`GraficoMensalDialog`) — separado, não bloqueia paridade numérica.
+- Mudança em qualquer arquivo de produção.
+
+## Critério de aceite
+
+1. `bunx vitest run` passa 100% verde.
+2. Nenhuma chamada de rede registrada (auditável via `vi.fn` spies).
+3. Cobertura mínima dos 4 cenários (paridade, fallback, edges, contrato).
+4. Caso Abril (R$ 9.403,71) explicitamente verificado em fixture.
