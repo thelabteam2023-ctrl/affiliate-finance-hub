@@ -1,122 +1,168 @@
-# Plano de Testes Controlados — Paridade Visão Financeira ⇄ Análise Temporal
+# Resumo Operacional (Agente de IA) — Plano de implementação
 
-## Princípio inviolável
+## 1. Auditoria das fórmulas existentes (FONTE DA VERDADE)
 
-**Zero efeito colateral em dados reais.** Todos os testes rodam em **Vitest + jsdom** com **mocks completos** do cliente Supabase e da engine canônica. Nenhuma chamada HTTP sai da máquina, nenhuma linha do banco é lida ou escrita, nenhum workspace real é tocado. Os "dados" são fixtures TypeScript hard-coded dentro dos arquivos de teste.
+Antes de qualquer código, congelar e documentar exatamente o que o sistema já calcula. Resultado da auditoria do código atual:
 
-## Stack
+### 1.1 Fluxo Líquido / Custos / Resultado Líquido
+Definidos em `src/hooks/useFinanceiroMensal.ts` (linhas 10–27, 67+) e consumidos por `src/pages/Financeiro.tsx`:
 
-- Vitest (já configurado em `vitest.config.ts`)
-- `@testing-library/react` para o smoke test do hook
-- `vi.mock()` para isolar `@/integrations/supabase/client` e `@/services/fetchProjetosLucroCanonico`
-- Nenhuma dependência nova
+- **`fluxoLiquido`** — motor canônico `fetchProjetosLucroCanonico` (paridade com Visão Financeira):
+  `Σ(SAQUE + SAQUE_VIRTUAL).valor_confirmado − Σ(DEPOSITO + DEPOSITO_VIRTUAL[origem=MIGRACAO]).valor`, filtro `status='CONFIRMADO'`, convertido em BRL via cotações OFICIAIS (PTAX/FastForex). **Fallback legado**: leitura crua de `cash_ledger` se `cotacoesOficiais` ausente.
+- **`custoTotal`** = `cac + comissoes + bonus + infra + rh + operadores + participacoes`, com mesma agregação por mês usada nos cards de Composição de Custos.
+- **`resultadoLiquido`** = `fluxoLiquido − custoTotal` (exatamente o número plotado no gráfico de Análise Temporal e no KPI Rail).
+- **Janela**: respeita `meses` (6/12/24) e `dataInicio`/`dataFim` já calculados em `Financeiro.tsx`.
 
-## Arquivos a criar
+→ **Regra**: o agente **NÃO recalcula** nada disso. Recebe os valores já produzidos pelo `useFinanceiroMensal` agregados na janela ativa (soma dos meses dentro do período visível).
+
+### 1.2 Ocorrências (disputa/scam) — schema real
+Tabela `public.ocorrencias` (colunas confirmadas no DB):
+- `workspace_id uuid` (RLS já filtra)
+- `tipo` enum
+- `status` enum
+- `resultado_financeiro` enum: `'perda_confirmada' | 'perda_parcial' | 'sem_impacto' | NULL`
+- `valor_perda numeric`, `moeda text`
+- `data_ocorrencia date`, `resolved_at timestamptz`
+
+Critério já em uso no sistema (`src/hooks/useExposicaoFinanceira.ts:153`, `src/components/projeto-detalhe/ProjetoOcorrenciasTab.tsx:94`, `IncidentesEstatisticasTab.tsx:291`):
+```
+resultado_financeiro IN ('perda_confirmada','perda_parcial')
+```
+→ **Reaproveitamos esse exato critério**. Não criamos taxonomia nova.
+
+### 1.3 Ambiguidades a sinalizar (não silenciar)
+1. **Campo `tipo`**: o prompt fala em "disputa/scam", mas hoje o sistema NÃO filtra perdas por `tipo`; usa apenas `resultado_financeiro`. Isso significa que **toda perda confirmada/parcial** (não só disputa/scam) entrará na soma — coerente com o restante do sistema, mas precisa estar documentado na UI (tooltip do card "Perdas").
+2. **Atribuição temporal**: usar `data_ocorrencia` (consistente com `useExposicaoFinanceira`), não `resolved_at`. Documentar.
+3. **Conversão de moeda**: `valor_perda` está em `moeda`; converter para BRL usando as MESMAS `cotacoesOficiais` já passadas ao `useFinanceiroMensal` (não cotação live), garantindo paridade.
+4. **Resultado Líquido NÃO inclui perdas hoje** — esse é justamente o gap que o recurso expõe. Documentar no resumo do agente.
+
+## 2. Arquitetura
 
 ```text
-src/hooks/__tests__/
-  useFinanceiroMensal.parity.test.ts         (núcleo: paridade canônica)
-  useFinanceiroMensal.fallback.test.ts       (modo legado sem cotações)
-  useFinanceiroMensal.pendentes.test.ts      (status filter)
-  useFinanceiroMensal.edges.test.ts          (sem projetos, multi-moeda, baseline)
-src/test/fixtures/
-  financeiroMensal.fixtures.ts               (factories: makeFinData, makeCanonicoResult)
+Financeiro.tsx (Análise Temporal)
+   └── <ResumoOperacionalButton />          ← novo, sob o botão "Análise Temporal"
+           │ onClick
+           ▼
+   useResumoOperacional(janela)             ← novo hook
+           │ 1. agrega fluxoLiquido/custoTotal/resultadoLiquido da janela (useFinanceiroMensal)
+           │ 2. busca ocorrências (perda_confirmada|perda_parcial) no range
+           │ 3. converte perdas → BRL via cotacoesOficiais
+           │ 4. monta payload determinístico
+           ▼
+   supabase.functions.invoke('resumo-operacional', { body: payload })
+           ▼
+   Edge Function `resumo-operacional`
+           - auth.getUser() → workspace_id (NUNCA do body)
+           - Lovable AI Gateway (google/gemini-3-flash-preview)
+           - prompt com números EXATOS + instruções de tom
+           - retorna { texto, meta }
+           ▼
+   <ResumoOperacionalDialog />              ← modal com cards + texto
 ```
 
-Todos isolados em `__tests__/` — não impactam build de produção (Vite ignora por padrão e `tsconfig` já contempla via `vitest/globals`).
+## 3. Camada de dados (cliente)
 
-## Cenários de teste (controlados)
+**Novo hook** `src/hooks/useResumoOperacional.ts`:
+- Input: `{ finData, meses, cotacoesOficiais, dataInicio, dataFim }` (mesmas props já disponíveis em `Financeiro.tsx`).
+- Reutiliza `useFinanceiroMensal` e soma os meses dentro de `[dataInicio, dataFim]`:
+  - `fluxoLiquidoPeriodo`, `custoTotalPeriodo`, `custosPorCategoria` (cac/comissoes/bonus/infra/rh/operadores/participacoes), `resultadoLiquidoPeriodo`.
+- Query React Query separada `["ocorrencias-perdas-periodo", workspaceId, dataInicio, dataFim]`:
+  ```ts
+  supabase.from('ocorrencias')
+    .select('id, titulo, tipo, valor_perda, moeda, data_ocorrencia, resultado_financeiro, status')
+    .eq('workspace_id', workspaceId)
+    .in('resultado_financeiro', ['perda_confirmada','perda_parcial'])
+    .gte('data_ocorrencia', dataInicio).lte('data_ocorrencia', dataFim)
+  ```
+- Converte cada `valor_perda` para BRL com `cotacoesOficiais[moeda]` (fallback 1 só para BRL; se moeda exótica sem cotação, retorna `errorFlag: "moeda_sem_cotacao"` — NUNCA assume zero).
+- Computa: `perdasTotalBRL`, `lucroReal = resultadoLiquidoPeriodo − perdasTotalBRL`, `ocorrenciasResumo[]` (id, titulo, valorBRL).
+- Retorna `{ status: 'idle' | 'loading' | 'ready' | 'error', payload, error }`.
+- `enabled: false` por padrão; o botão chama `refetch()` para executar sob demanda.
 
-### 1. `useFinanceiroMensal.parity.test.ts` — Paridade canônica
+## 4. Componente UI
 
-Mocka `fetchProjetosLucroCanonico` para retornar valores determinísticos por mês. Valida:
+**`src/components/financeiro/ResumoOperacionalButton.tsx`**
+- Botão estilo "ghost com ícone Sparkles", inserido no `footer` do `KpiRail` em `Financeiro.tsx` logo abaixo do botão "Análise Temporal" (linhas 379–393).
+- onClick → dispara `useResumoOperacional.refetch()` e abre `<ResumoOperacionalDialog />`.
 
-- Para cada mês `k` na janela, `result[k].fluxoLiquido === Σ(lucroRealizadoBRL dos projetos)` retornado pelo mock.
-- `resultadoLiquido === fluxoLiquido − custoTotal` **exato** (sem arredondamento intermediário).
-- `margemOperacional === (resultadoLiquido / (fluxoLiquido + custoTotal)) * 100` quando base > 0; `null` caso contrário.
-- Custo Total continua sendo derivado de `finData` (não é tocado pela refatoração).
+**`src/components/financeiro/ResumoOperacionalDialog.tsx`**
+- Dialog (shadcn) com:
+  - Header com janela (ex.: "Últimos 12 meses · Mar/25 → Fev/26").
+  - **Skeleton** enquanto `status='loading'` (hook + edge function).
+  - **Cards numéricos** (grid 5 colunas em desktop, 2 em mobile), na ordem do prompt:
+    1. Fluxo Líquido
+    2. Custos Operacionais (total) — popover com breakdown por categoria
+    3. Resultado Líquido (badge "como exibido no gráfico")
+    4. Perdas por Disputa/Scam (total)
+    5. **Lucro Real** — card destacado (border-primary, tipografia maior)
+  - **Texto narrativo** abaixo (resposta do agente) em `<ReactMarkdown>` (prose).
+  - Rodapé: link "Ver ocorrências do período" abre o módulo Ocorrências já filtrado.
 
-**Caso de regressão Abril**: fixture com fluxo canônico = 9.403,71 → resultado deve dar exatamente esse valor, não 17.490,18.
+**Casos de borda renderizados explicitamente**:
+- `perdasTotal === 0` → card Perdas com "—" e texto do agente afirma "Não foram registradas disputas/scams no período. Lucro Real coincide com o Resultado Líquido."
+- Erro ao buscar ocorrências → card Perdas exibe **alerta vermelho** "Não foi possível confirmar ocorrências do período" e Lucro Real exibe "Indisponível" (NUNCA fallback silencioso para 0).
+- `moeda_sem_cotacao` → card Perdas com badge amarelo "Conversão parcial — N ocorrências sem cotação" e a soma exibida exclui essas linhas, sinalizando isso no texto.
 
-### 2. `useFinanceiroMensal.fallback.test.ts` — Modo legado
+## 5. Edge Function
 
-Sem `cotacoesOficiais`, o hook deve cair no fallback `cash_ledger`:
+**`supabase/functions/resumo-operacional/index.ts`** (verify_jwt automático):
+- Lê JWT → `supabase.auth.getUser()` → `userId`. Resolve `workspace_id` via `workspace_members` (mesmo padrão dos outros endpoints).
+- Valida body com Zod:
+  ```ts
+  z.object({
+    periodo: z.object({ label: z.string(), dataInicio: z.string(), dataFim: z.string() }),
+    metricas: z.object({
+      fluxoLiquido: z.number(), custoTotal: z.number(), resultadoLiquido: z.number(),
+      custosPorCategoria: z.record(z.number()),
+      perdasTotal: z.number(), perdasErro: z.boolean().optional(),
+      lucroReal: z.number().nullable(),
+      ocorrencias: z.array(z.object({ titulo: z.string(), valorBRL: z.number(), tipo: z.string() }))
+    })
+  })
+  ```
+- **NÃO confia em workspace_id do body** — apenas usa o do token (já validado).
+- Chama Lovable AI Gateway (`google/gemini-3-flash-preview`, sem streaming — texto curto) via `createLovableAiGatewayProvider` + `generateText`. CORS via `npm:@supabase/supabase-js@2/cors`.
+- System prompt fixo:
+  > "Você é um analista financeiro. Receberá métricas já calculadas. NÃO recalcule, NÃO arredonde, NÃO invente categorias. Produza 3–6 frases em PT-BR explicando: Fluxo Líquido proveniente dos projetos; que o Resultado Líquido já desconta custos; impacto explícito (ou ausência) das disputas/scams; conclusão com Lucro Real. Tom direto, sem floreio."
+- User prompt: JSON serializado das métricas + lista resumida de ocorrências (máx 10, truncar com "…e N outras").
+- Retorna `{ texto: string, modelo: 'google/gemini-3-flash-preview', tokens: number }`.
+- Trata `429` (rate limit) e `402` (créditos) com mensagens claras.
 
-- Mock de `finData.cashLedger` com 1 SAQUE + 1 DEPOSITO + 1 DEPOSITO_VIRTUAL BASELINE + 1 DEPOSITO_VIRTUAL MIGRACAO.
-- Esperado: BASELINE **ignorado**, MIGRACAO **subtraído**, SAQUE somado.
-- `fetchProjetosLucroCanonico` **não pode ser chamado** (`expect(mock).not.toHaveBeenCalled()`).
+## 6. Posicionamento exato no `Financeiro.tsx`
+Editar `KpiRail.footer` (linha 379–393) para receber **dois** botões empilhados: o existente ("Análise Temporal") e o novo ("Resumo Operacional ✨"), com mesma estética. Sem alterar layout dos cards de KPI.
 
-### 3. `useFinanceiroMensal.pendentes.test.ts` — Status filter (documentação executável)
+## 7. Restrições obrigatórias (checklist do prompt)
+- [x] `workspace_id` vem do JWT na edge function (`supabase.auth.getUser()`).
+- [x] Reutiliza dados existentes: `useFinanceiroMensal` + `ocorrencias` (`resultado_financeiro` já em uso).
+- [x] Taxonomia inalterada: `perda_confirmada | perda_parcial` (mesmo critério de `useExposicaoFinanceira`).
+- [x] Valores monetários transmitidos como `number` sem arredondamento; formatação só na UI (Intl).
+- [x] Zero ocorrências → texto explícito.
+- [x] Erro de fetch → card vermelho + Lucro Real "Indisponível"; nunca assume 0.
+- [x] Sem categorias novas; sem recálculo paralelo de Resultado Líquido.
 
-Como o filtro `status=CONFIRMADO` vive dentro de `fetchProjetosLucroCanonico` (que está mockado), este teste valida a **contratualidade**: o mock simula a engine retornando **apenas confirmados**. O teste então confirma:
+## 8. Arquivos a criar / editar
+**Criar**
+- `src/hooks/useResumoOperacional.ts`
+- `src/components/financeiro/ResumoOperacionalButton.tsx`
+- `src/components/financeiro/ResumoOperacionalDialog.tsx`
+- `supabase/functions/resumo-operacional/index.ts`
+- `supabase/functions/_shared/ai-gateway.ts` (se ainda não existir — helper Lovable AI)
 
-- Linhas PENDENTE jogadas no fallback `cashLedger` **com `cotacoesOficiais` ausente** devem ser filtradas? → **Atenção**: o fallback atual NÃO filtra status. Este teste vai *documentar* o comportamento e, se necessário, abrimos issue para alinhar.
-- Quando `cotacoesOficiais` presente, o fallback é desligado e o filtro fica garantido pela engine canônica. ✅
+**Editar**
+- `src/pages/Financeiro.tsx` — adicionar 2º botão no footer do `KpiRail` + montar `<ResumoOperacionalDialog />`.
+- `.lovable/plan.md` — registrar auditoria (seção 1) como ata permanente.
 
-### 4. `useFinanceiroMensal.edges.test.ts` — Edge cases
+## 9. Fora de escopo
+- Alterar a fórmula oficial de `resultadoLiquido` no resto do sistema.
+- Criar nova classificação de ocorrências.
+- Persistir resumos gerados (cada clique chama o agente; cache React Query de 5min por janela).
+- Streaming token-a-token (resposta curta — `generateText` basta).
 
-- **Workspace sem projetos** → Supabase mock retorna `[]`; fluxo de todos os meses = 0; sem crash.
-- **USD = 0** (cotação ainda carregando) → query desabilitada; hook retorna fluxo = 0; nunca chama a engine.
-- **Multi-moeda**: fixture canônica devolve `lucroRealizadoBRL` já convertido; o hook **não** re-converte. Teste garante que `convertToBRL` recebido nas props **não é aplicado** sobre o fluxo canônico.
-- **Mês sem atividade** → fluxo 0, custo 0, resultado 0, margem `null` (não `NaN`, não `Infinity`).
-- **Janela 6m / 12m / 24m** → tamanho do array retornado bate com `meses` (+1 se `incluirBaseline`).
-- **Baseline** → primeiro mês marcado `isBaseline: true`, com fluxo zerado independentemente do mock.
+## 10. Validação manual mínima
+1. Abrir Financeiro → janela 12m → clicar "Resumo Operacional" → conferir que os 4 cards numéricos batem com KPI Rail + Gráfico Mensal.
+2. Criar ocorrência teste com `resultado_financeiro='perda_confirmada'`, `valor_perda=5000`, `data_ocorrencia` dentro da janela → Lucro Real = Resultado Líquido − 5000.
+3. Resolver/limpar todas as ocorrências do período → texto deve dizer "Não foram registradas disputas/scams".
+4. Derrubar a query de ocorrências (simular RLS bloqueado) → card vermelho, Lucro Real = "Indisponível".
 
-### 5. Snapshot de contrato (opcional)
-
-Snapshot mínimo do shape de `MesFinanceiro` para detectar mudanças acidentais de campo (quebraria PDF/XLSX exports).
-
-## Estrutura de mocks (template)
-
-```ts
-vi.mock("@/integrations/supabase/client", () => ({
-  supabase: {
-    from: vi.fn(() => ({
-      select: vi.fn().mockResolvedValue({ data: [{ id: "p1" }, { id: "p2" }], error: null }),
-    })),
-  },
-}));
-
-vi.mock("@/services/fetchProjetosLucroCanonico", () => ({
-  fetchProjetosLucroCanonico: vi.fn(async ({ dataInicio }) => {
-    // Devolve fluxo por mês determinístico a partir de dataInicio
-    return {
-      p1: { lucroRealizadoBRL: FIXTURE[dataInicio] ?? 0, /* ... */ },
-      p2: { lucroRealizadoBRL: 0, /* ... */ },
-    };
-  }),
-}));
-```
-
-`renderHook` envolto em `QueryClientProvider` com `QueryClient` fresh por teste (`retry: false`, `gcTime: 0`) para isolamento total.
-
-## Garantias de segurança (checklist anti-vazamento)
-
-- [ ] Nenhum import direto de variáveis de ambiente reais (`VITE_SUPABASE_URL` etc.) nos testes.
-- [ ] `vi.mock` declarado **no topo** do arquivo, antes de qualquer import do código produtivo (hoisting garantido pelo Vitest).
-- [ ] `beforeEach(() => vi.clearAllMocks())` em todos os arquivos.
-- [ ] Nenhum teste roda `await supabase.from(...)` real — sempre via mock.
-- [ ] Sem migrations, sem `supabase--insert`, sem chamadas a edge functions.
-- [ ] Rodam offline (`network: false` implícito por jsdom + mocks).
-
-## Execução
-
-```bash
-bunx vitest run src/hooks/__tests__/useFinanceiroMensal.*.test.ts
-```
-
-Resultado esperado: todos verdes em < 2s. Falhas indicam regressão real na engine de paridade.
-
-## Fora de escopo
-
-- Testes E2E (Playwright/Cypress) tocando preview real — fora do princípio de isolamento.
-- Testes contra `fetchProjetosLucroCanonico` real — esse serviço já tem cobertura própria; aqui ele é **fronteira mockada**.
-- Validação visual do gráfico (`GraficoMensalDialog`) — separado, não bloqueia paridade numérica.
-- Mudança em qualquer arquivo de produção.
-
-## Critério de aceite
-
-1. `bunx vitest run` passa 100% verde.
-2. Nenhuma chamada de rede registrada (auditável via `vi.fn` spies).
-3. Cobertura mínima dos 4 cenários (paridade, fallback, edges, contrato).
-4. Caso Abril (R$ 9.403,71) explicitamente verificado em fixture.
+## Aprovação
+Posso seguir com a implementação nesta ordem (1. edge function → 2. hook → 3. dialog → 4. botão)?

@@ -49,6 +49,8 @@ import { useFinanceiroMensal } from "@/hooks/useFinanceiroMensal";
 import { GraficoMensalDialog } from "@/components/financeiro/GraficoMensalDialog";
 import { Sparkles } from "lucide-react";
 import { LineChart } from "lucide-react";
+import { useResumoOperacional } from "@/hooks/useResumoOperacional";
+import { ResumoOperacionalDialog } from "@/components/financeiro/ResumoOperacionalDialog";
 
 export default function Financeiro() {
   const navigate = useNavigate();
@@ -126,6 +128,7 @@ export default function Financeiro() {
   const [graficoMensalOpen, setGraficoMensalOpen] = useState(false);
   const [janelaMeses, setJanelaMeses] = useState(12);
   const [incluirBaseline, setIncluirBaseline] = useState(true);
+  const [resumoOpOpen, setResumoOpOpen] = useState(false);
   const composicaoCustosRef = useRef<HTMLDivElement | null>(null);
   const investidorFiltroId = searchParams.get("investidor");
 
@@ -168,6 +171,26 @@ export default function Financeiro() {
       ARS: cotacaoARS,
       COP: cotacaoCOP,
     },
+  });
+
+  // Cotações para conversão de perdas em ocorrências (mesma fonte oficial)
+  const cotacoesParaResumo = useMemo(() => {
+    const m: Record<string, number> = { BRL: 1 };
+    if (cotacaoUSD > 0) m.USD = cotacaoUSD;
+    if (cotacaoEUR > 0) m.EUR = cotacaoEUR;
+    if (cotacaoGBP > 0) m.GBP = cotacaoGBP;
+    if (cotacaoMYR > 0) m.MYR = cotacaoMYR;
+    if (cotacaoMXN > 0) m.MXN = cotacaoMXN;
+    if (cotacaoARS > 0) m.ARS = cotacaoARS;
+    if (cotacaoCOP > 0) m.COP = cotacaoCOP;
+    return m;
+  }, [cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP]);
+
+  const resumoOp = useResumoOperacional({
+    mesesFinanceiro,
+    workspaceId: workspaceId || null,
+    cotacoes: cotacoesParaResumo,
+    janelaLabel: incluirBaseline ? `Últimos ${janelaMeses}m (+ baseline)` : `Últimos ${janelaMeses}m`,
   });
 
   // Capital em disputa (para sobreposição no donut da Posição de Capital)
@@ -377,19 +400,38 @@ export default function Financeiro() {
                   periodLabel={periodLabel}
                   items={kpiItems}
                   footer={
-                    <button
-                      type="button"
-                      onClick={() => setGraficoMensalOpen(true)}
-                      className="group w-full flex items-center gap-2 rounded-md px-2 py-2 text-[11px] font-medium text-muted-foreground/80 hover:text-foreground hover:bg-foreground/[0.04] transition-all duration-200 border border-transparent hover:border-border/40"
-                      title="Abrir análise mês a mês"
-                    >
-                      <span className="relative flex h-6 w-6 items-center justify-center rounded-md bg-foreground/[0.04] group-hover:bg-primary/10 transition-colors">
-                        <LineChart className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
-                        <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-500/80 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </span>
-                      <span className="flex-1 text-left tracking-tight">Análise Temporal</span>
-                      <Sparkles className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity" />
-                    </button>
+                    <div className="flex flex-col gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setGraficoMensalOpen(true)}
+                        className="group w-full flex items-center gap-2 rounded-md px-2 py-2 text-[11px] font-medium text-muted-foreground/80 hover:text-foreground hover:bg-foreground/[0.04] transition-all duration-200 border border-transparent hover:border-border/40"
+                        title="Abrir análise mês a mês"
+                      >
+                        <span className="relative flex h-6 w-6 items-center justify-center rounded-md bg-foreground/[0.04] group-hover:bg-primary/10 transition-colors">
+                          <LineChart className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                          <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-500/80 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </span>
+                        <span className="flex-1 text-left tracking-tight">Análise Temporal</span>
+                        <Sparkles className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setResumoOpOpen(true);
+                          resumoOp.run();
+                        }}
+                        disabled={resumoOp.loading || mesesFinanceiro.length === 0}
+                        className="group w-full flex items-center gap-2 rounded-md px-2 py-2 text-[11px] font-medium text-muted-foreground/80 hover:text-foreground hover:bg-foreground/[0.04] transition-all duration-200 border border-transparent hover:border-primary/30 disabled:opacity-50"
+                        title="Gerar resumo operacional do período via IA (inclui perdas por disputa/scam)"
+                      >
+                        <span className="relative flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                          <Sparkles className="h-3.5 w-3.5 text-primary" />
+                        </span>
+                        <span className="flex-1 text-left tracking-tight">
+                          {resumoOp.loading ? "Gerando resumo..." : "Resumo Operacional (IA)"}
+                        </span>
+                      </button>
+                    </div>
                   }
                 />
 
@@ -499,6 +541,12 @@ export default function Financeiro() {
         onJanelaChange={setJanelaMeses}
         incluirBaseline={incluirBaseline}
         onIncluirBaselineChange={setIncluirBaseline}
+      />
+
+      <ResumoOperacionalDialog
+        open={resumoOpOpen}
+        onOpenChange={setResumoOpOpen}
+        result={resumoOp}
       />
     </div>
   );
