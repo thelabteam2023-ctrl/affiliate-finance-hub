@@ -51,6 +51,7 @@ import { GraficoMensalDialog } from "@/components/financeiro/GraficoMensalDialog
 import { Sparkles } from "lucide-react";
 import { LineChart } from "lucide-react";
 import { useResumoOperacional } from "@/hooks/useResumoOperacional";
+import type { ResumoRange } from "@/hooks/useResumoOperacional";
 import { ResumoOperacionalDialog } from "@/components/financeiro/ResumoOperacionalDialog";
 
 export default function Financeiro() {
