@@ -565,6 +565,9 @@ export default function Financeiro() {
         open={resumoOpOpen}
         onOpenChange={setResumoOpOpen}
         result={resumoOp}
+        range={resumoEffectiveRange}
+        defaultRange={resumoDefaultRange}
+        onRangeChange={setResumoRange}
       />
     </div>
   );
