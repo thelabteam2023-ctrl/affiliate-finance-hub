@@ -1,0 +1,198 @@
+import { useCallback, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import type { MesFinanceiro } from "@/hooks/useFinanceiroMensal";
+
+export interface OcorrenciaResumo {
+  id: string;
+  titulo: string;
+  tipo: string;
+  valorBRL: number;
+  moeda: string;
+}
+
+export interface ResumoMetricas {
+  fluxoLiquido: number;
+  custoTotal: number;
+  resultadoLiquido: number;
+  custosPorCategoria: {
+    cac: number;
+    comissoes: number;
+    bonus: number;
+    infra: number;
+    operadores: number;
+    participacoes: number;
+  };
+  perdasTotal: number;
+  perdasErro: boolean;
+  moedasSemCotacao: number;
+  lucroReal: number | null;
+  ocorrencias: OcorrenciaResumo[];
+}
+
+export interface ResumoOperacionalResult {
+  metricas: ResumoMetricas | null;
+  texto: string | null;
+  periodo: { label: string; dataInicio: string; dataFim: string } | null;
+  loading: boolean;
+  error: string | null;
+  run: () => Promise<void>;
+}
+
+interface Params {
+  mesesFinanceiro: MesFinanceiro[];
+  workspaceId: string | null;
+  cotacoes: Record<string, number>; // moeda → BRL (ex: { USD: 5.4, EUR: 5.9 })
+  janelaLabel: string;
+}
+
+export function useResumoOperacional({
+  mesesFinanceiro,
+  workspaceId,
+  cotacoes,
+  janelaLabel,
+}: Params): ResumoOperacionalResult {
+  const [texto, setTexto] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [periodo, setPeriodo] = useState<{ label: string; dataInicio: string; dataFim: string } | null>(null);
+  const [metricas, setMetricas] = useState<ResumoMetricas | null>(null);
+
+  // Janela = meses não-baseline
+  const meses = mesesFinanceiro.filter((m) => !m.isBaseline);
+  const firstKey = meses[0]?.mesKey ?? null;
+  const lastKey = meses[meses.length - 1]?.mesKey ?? null;
+  const dataInicio = firstKey ? `${firstKey}-01` : null;
+  const dataFim = lastKey
+    ? (() => {
+        const [y, mo] = lastKey.split("-").map(Number);
+        const d = new Date(Date.UTC(y, mo, 0));
+        return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+      })()
+    : null;
+
+  // Busca ocorrências on-demand (enabled controlado pelo run())
+  const ocorrenciasQuery = useQuery({
+    queryKey: ["resumo-op-ocorrencias", workspaceId, dataInicio, dataFim],
+    enabled: false,
+    queryFn: async () => {
+      if (!workspaceId || !dataInicio || !dataFim) return { rows: [], moedasSemCotacao: 0 };
+      const { data, error } = await supabase
+        .from("ocorrencias")
+        .select("id, titulo, tipo, valor_perda, moeda, data_ocorrencia, resultado_financeiro, status")
+        .eq("workspace_id", workspaceId)
+        .in("resultado_financeiro", ["perda_confirmada", "perda_parcial"])
+        .gte("data_ocorrencia", dataInicio)
+        .lte("data_ocorrencia", dataFim);
+      if (error) throw error;
+      let moedasSemCotacao = 0;
+      const rows: OcorrenciaResumo[] = (data || []).map((o: any) => {
+        const moeda = (o.moeda || "BRL").toUpperCase();
+        const raw = Number(o.valor_perda || 0);
+        let valorBRL = 0;
+        if (moeda === "BRL") valorBRL = raw;
+        else {
+          const taxa = cotacoes[moeda];
+          if (taxa && taxa > 0) valorBRL = raw * taxa;
+          else moedasSemCotacao += raw > 0 ? 1 : 0;
+        }
+        return {
+          id: o.id,
+          titulo: o.titulo || "(sem título)",
+          tipo: String(o.tipo || ""),
+          valorBRL,
+          moeda,
+        };
+      });
+      return { rows, moedasSemCotacao };
+    },
+  });
+
+  const run = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    setTexto(null);
+    try {
+      // 1. Agrega métricas do período (não-baseline)
+      const sum = (k: keyof MesFinanceiro) =>
+        meses.reduce((acc, m) => acc + (Number((m as any)[k]) || 0), 0);
+      const fluxoLiquido = sum("fluxoLiquido");
+      const custoTotal = sum("custoTotal");
+      const resultadoLiquido = sum("resultadoLiquido");
+      const custosPorCategoria = {
+        cac: sum("cac"),
+        comissoes: sum("comissoes"),
+        bonus: sum("bonus"),
+        infra: sum("infra"),
+        operadores: sum("operadores"),
+        participacoes: sum("participacoes"),
+      };
+
+      // 2. Busca ocorrências
+      let perdasErro = false;
+      let perdasTotal = 0;
+      let moedasSemCotacao = 0;
+      let ocorrencias: OcorrenciaResumo[] = [];
+      try {
+        const result = await ocorrenciasQuery.refetch({ throwOnError: true });
+        ocorrencias = result.data?.rows || [];
+        moedasSemCotacao = result.data?.moedasSemCotacao || 0;
+        perdasTotal = ocorrencias.reduce((acc, o) => acc + o.valorBRL, 0);
+      } catch (e) {
+        perdasErro = true;
+        console.error("[useResumoOperacional] ocorrencias", e);
+      }
+
+      const lucroReal = perdasErro ? null : resultadoLiquido - perdasTotal;
+
+      const met: ResumoMetricas = {
+        fluxoLiquido,
+        custoTotal,
+        resultadoLiquido,
+        custosPorCategoria,
+        perdasTotal,
+        perdasErro,
+        moedasSemCotacao,
+        lucroReal,
+        ocorrencias,
+      };
+      setMetricas(met);
+      const per = {
+        label: janelaLabel,
+        dataInicio: dataInicio || "",
+        dataFim: dataFim || "",
+      };
+      setPeriodo(per);
+
+      // 3. Chama edge function
+      const { data, error: fnErr } = await supabase.functions.invoke("resumo-operacional", {
+        body: {
+          periodo: per,
+          metricas: {
+            fluxoLiquido: met.fluxoLiquido,
+            custoTotal: met.custoTotal,
+            resultadoLiquido: met.resultadoLiquido,
+            custosPorCategoria: met.custosPorCategoria,
+            perdasTotal: met.perdasTotal,
+            perdasErro: met.perdasErro,
+            moedasSemCotacao: met.moedasSemCotacao,
+            lucroReal: met.lucroReal,
+            ocorrencias: met.ocorrencias.map((o) => ({
+              titulo: o.titulo,
+              tipo: o.tipo,
+              valorBRL: o.valorBRL,
+            })),
+          },
+        },
+      });
+      if (fnErr) throw fnErr;
+      setTexto((data as any)?.texto || "(resposta vazia)");
+    } catch (e: any) {
+      setError(e?.message || String(e));
+    } finally {
+      setLoading(false);
+    }
+  }, [meses, ocorrenciasQuery, janelaLabel, dataInicio, dataFim]);
+
+  return { metricas, texto, periodo, loading, error, run };
+}
