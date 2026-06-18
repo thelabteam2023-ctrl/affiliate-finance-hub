@@ -196,8 +196,8 @@ export default function Financeiro() {
   }, [mesesFinanceiro, janelaMeses, incluirBaseline]);
 
   // Range escolhido pelo usuário (null = usa default)
-  const [resumoRange, setResumoRange] = useState<typeof resumoDefaultRange | null>(null);
-  const resumoEffectiveRange = resumoRange ?? resumoDefaultRange;
+  const [resumoRange, setResumoRange] = useState<ResumoRange | null>(null);
+  const resumoEffectiveRange: ResumoRange = resumoRange ?? resumoDefaultRange;
 
   // Engine canônica de Exposição & Perdas (perdas filtradas; disputa = snapshot)
   const exposicaoResumo = useExposicaoFinanceira({
