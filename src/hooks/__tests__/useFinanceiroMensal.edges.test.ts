@@ -3,12 +3,9 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 
+const selectMock = vi.fn().mockResolvedValue({ data: [], error: null });
 vi.mock("@/integrations/supabase/client", () => ({
-  supabase: {
-    from: vi.fn(() => ({
-      select: vi.fn().mockResolvedValue({ data: [], error: null }),
-    })),
-  },
+  supabase: { from: () => ({ select: (...a: any[]) => selectMock(...a) }) },
 }));
 
 const fetchMock = vi.fn();
@@ -92,6 +89,7 @@ describe("useFinanceiroMensal — edge cases", () => {
   });
 
   it("hook NÃO re-converte o fluxo canônico (já vem em BRL)", async () => {
+    selectMock.mockResolvedValueOnce({ data: [{ id: "p1" }], error: null });
     fetchMock.mockResolvedValue({ p1: makeCanonico(1000) });
 
     // convertToBRL multiplicando por 10 — se fosse aplicado ao fluxo canônico, daria 10000
