@@ -1,18 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  ComposedChart, Bar, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Brush, Cell, ReferenceArea, ReferenceLine,
 } from "recharts";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, FileSpreadsheet, FileText, Sparkles, Settings2 } from "lucide-react";
+import { Download, FileSpreadsheet, FileText, Sparkles } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Checkbox } from "@/components/ui/checkbox";
 import type { MesFinanceiro } from "@/hooks/useFinanceiroMensal";
 import { exportRelatorioPDF } from "@/lib/financeiro/exportRelatorioPDF";
 import { exportRelatorioXLSX } from "@/lib/financeiro/exportRelatorioXLSX";
