@@ -5,10 +5,11 @@ import { CalendarIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
+import { KpiRail, type KpiRailItem } from "@/components/financeiro/KpiRail";
 import { cn } from "@/lib/utils";
 import {
   Sparkles,
@@ -46,55 +47,45 @@ const fmtBRL = (v: number | null | undefined) =>
     ? "—"
     : new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
-function Card({
-  label,
-  value,
-  icon: Icon,
-  tone = "neutral",
-  highlight = false,
-  badge,
-  warn,
-  sub,
-}: {
-  label: string;
-  value: string;
-  icon: React.ComponentType<{ className?: string }>;
-  tone?: "neutral" | "positive" | "negative" | "warning";
-  highlight?: boolean;
-  badge?: string;
-  warn?: string;
-  sub?: string;
-}) {
-  const toneClasses =
-    tone === "positive"
-      ? "text-emerald-600 dark:text-emerald-400"
-      : tone === "negative"
-        ? "text-red-600 dark:text-red-400"
-        : tone === "warning"
-          ? "text-amber-600 dark:text-amber-400"
-          : "text-foreground";
-  return (
-    <div
-      className={`rounded-lg border p-3 flex flex-col gap-1 ${
-        highlight ? "border-primary bg-primary/5" : "border-border bg-card"
-      }`}
-    >
-      <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">
-        <Icon className="h-3 w-3" />
-        <span className="flex-1">{label}</span>
-        {badge && (
-          <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">
-            {badge}
-          </Badge>
-        )}
-      </div>
-      <div className={`font-semibold tabular-nums ${highlight ? "text-lg" : "text-sm"} ${toneClasses}`}>
-        {value}
-      </div>
-      {sub && <div className="text-[10px] text-muted-foreground leading-tight">{sub}</div>}
-      {warn && <div className="text-[10px] text-amber-600 dark:text-amber-400">{warn}</div>}
-    </div>
-  );
+/** Parse texto do agente em tópicos. Não muda o backend; só apresentação. */
+interface Topico {
+  titulo: string;
+  corpo: string;
+  destaque: boolean;
+}
+function parseTopicos(texto: string): Topico[] {
+  if (!texto?.trim()) return [];
+  const linhas = texto.replace(/\r/g, "").split(/\n+/).map((l) => l.trim()).filter(Boolean);
+  const blocos: string[] = [];
+  let buf: string[] = [];
+  const isInicio = (l: string) =>
+    /^([-*•]|\d+[.)])\s+/.test(l) || /^\*\*[^*]+\*\*/.test(l) || /^[A-ZÁÉÍÓÚÂÊÔÃÕÇ][^.:]{2,40}:/.test(l);
+  for (const l of linhas) {
+    if (isInicio(l) && buf.length) {
+      blocos.push(buf.join(" "));
+      buf = [];
+    }
+    buf.push(l);
+  }
+  if (buf.length) blocos.push(buf.join(" "));
+  const limpos = blocos.map((b) => b.replace(/^([-*•]|\d+[.)])\s+/, "").trim());
+  if (!limpos.length) return [{ titulo: "Resumo", corpo: texto.trim(), destaque: false }];
+  return limpos.map((b) => {
+    let titulo = "Resumo";
+    let corpo = b;
+    const negrito = b.match(/^\*\*([^*]+)\*\*\s*[:\-—]?\s*(.*)$/);
+    const colon = b.match(/^([^:]{2,60}):\s*(.*)$/);
+    if (negrito) {
+      titulo = negrito[1].trim();
+      corpo = negrito[2].trim();
+    } else if (colon) {
+      titulo = colon[1].replace(/\*\*/g, "").trim();
+      corpo = colon[2].trim();
+    }
+    const tl = titulo.toLowerCase();
+    const destaque = tl.includes("lucro real") && !tl.includes("worst");
+    return { titulo, corpo: corpo || b, destaque };
+  });
 }
 
 function todayISO(): string {
@@ -212,9 +203,130 @@ export function ResumoOperacionalDialog({
 
   const jaGerou = !!metricas;
 
+  // KPI Rails (resultado + exposição)
+  const periodLabelRail = periodo
+    ? `${periodo.label} · ${format(parseISO(periodo.dataInicio)!, "dd/MM/yyyy")} → ${format(parseISO(periodo.dataFim)!, "dd/MM/yyyy")}`
+    : range.label;
+
+  const itemsResultado: KpiRailItem[] = useMemo(() => {
+    if (!metricas) {
+      return [
+        { id: "fl", label: "Fluxo Líquido", value: "—", icon: <Wallet className="h-3 w-3" />, loading },
+        { id: "co", label: "Custos Op.", value: "—", icon: <Receipt className="h-3 w-3" />, loading },
+        { id: "rl", label: "Resultado Líquido", value: "—", icon: <TrendingUp className="h-3 w-3" />, loading },
+        { id: "pd", label: "Perdas (Scam)", value: "—", icon: <TrendingDown className="h-3 w-3" />, loading },
+        { id: "lr", label: "Lucro Real", value: "—", icon: <Target className="h-3 w-3" />, loading },
+      ];
+    }
+    return [
+      {
+        id: "fl",
+        label: "Fluxo Líquido",
+        value: fmtBRL(metricas.fluxoLiquido),
+        icon: <Wallet className="h-3 w-3" />,
+        valueTone: metricas.fluxoLiquido >= 0 ? "positive" : "negative",
+      },
+      {
+        id: "co",
+        label: "Custos Op.",
+        value: fmtBRL(metricas.custoTotal),
+        icon: <Receipt className="h-3 w-3" />,
+        valueTone: "negative",
+      },
+      {
+        id: "rl",
+        label: "Resultado Líquido",
+        value: fmtBRL(metricas.resultadoLiquido),
+        icon: <TrendingUp className="h-3 w-3" />,
+        valueTone: metricas.resultadoLiquido >= 0 ? "positive" : "negative",
+      },
+      {
+        id: "pd",
+        label: "Perdas (Disputa/Scam)",
+        value: metricas.perdasErro ? "Indisponível" : fmtBRL(metricas.perdasTotal),
+        icon: <TrendingDown className="h-3 w-3" />,
+        valueTone: metricas.perdasErro ? "warning" : metricas.perdasTotal > 0 ? "negative" : "default",
+      },
+      {
+        id: "lr",
+        label: "Lucro Real",
+        value: metricas.lucroReal == null ? "Indisponível" : fmtBRL(metricas.lucroReal),
+        icon: <Target className="h-3 w-3" />,
+        valueTone:
+          metricas.lucroReal == null ? "warning" : metricas.lucroReal >= 0 ? "positive" : "negative",
+        activeTone:
+          metricas.lucroReal == null
+            ? "warning"
+            : metricas.lucroReal >= 0
+              ? "positive"
+              : "negative",
+        tooltip: "Lucro Real = Resultado Líquido − Perdas confirmadas (Disputa/Scam) no período.",
+      },
+    ];
+  }, [metricas, loading]);
+
+  const itemsExposicao: KpiRailItem[] = useMemo(() => {
+    if (!metricas) {
+      return [
+        { id: "ed", label: "Em Disputa", value: "—", icon: <ShieldAlert className="h-3 w-3" />, loading },
+        { id: "ir", label: "Irrecuperável", value: "—", icon: <Lock className="h-3 w-3" />, loading },
+        { id: "wc", label: "Lucro Real (worst)", value: "—", icon: <ShieldX className="h-3 w-3" />, loading },
+      ];
+    }
+    const ep = metricas.exposicaoPendente;
+    return [
+      {
+        id: "ed",
+        label: "Em Disputa",
+        value: fmtBRL(ep.emDisputa),
+        icon: <ShieldAlert className="h-3 w-3" />,
+        valueTone: ep.emDisputa > 0 ? "warning" : "default",
+        tooltip:
+          ep.countDisputa > 0 ? (
+            <div className="space-y-0.5">
+              <div>{ep.countDisputa} ocorrência(s) em aberto</div>
+              <div>Casas: {fmtBRL(ep.bySegment.bookmakers)}</div>
+              <div>Wallets: {fmtBRL(ep.bySegment.wallets)}</div>
+              <div>Contas Parc.: {fmtBRL(ep.bySegment.contasParc)}</div>
+              <div>Caixa Op.: {fmtBRL(ep.bySegment.caixaOp)}</div>
+            </div>
+          ) : (
+            "Nenhuma disputa em aberto."
+          ),
+      },
+      {
+        id: "ir",
+        label: "Irrecuperável",
+        value: fmtBRL(ep.irrecuperavel),
+        icon: <Lock className="h-3 w-3" />,
+        valueTone: ep.irrecuperavel > 0 ? "negative" : "default",
+        tooltip:
+          ep.countIrrecuperavel > 0
+            ? `${ep.countIrrecuperavel} casa(s) com saldo travado.`
+            : "Sem saldos irrecuperáveis.",
+      },
+      {
+        id: "wc",
+        label: "Lucro Real (worst)",
+        value: metricas.lucroRealWorstCase == null ? "—" : fmtBRL(metricas.lucroRealWorstCase),
+        icon: <ShieldX className="h-3 w-3" />,
+        valueTone:
+          metricas.lucroRealWorstCase == null
+            ? "default"
+            : metricas.lucroRealWorstCase >= 0
+              ? "positive"
+              : "negative",
+        tooltip:
+          "Cenário em que 100% das disputas viram perda + irrecuperável já considerado. Referência de risco, não resultado contábil.",
+      },
+    ];
+  }, [metricas, loading]);
+
+  const topicos = useMemo(() => (texto ? parseTopicos(texto) : []), [texto]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" />
@@ -312,17 +424,6 @@ export function ResumoOperacionalDialog({
           </div>
         </div>
 
-        {loading && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-20 rounded-lg" />
-              ))}
-            </div>
-            <Skeleton className="h-24 w-full" />
-          </div>
-        )}
-
         {error && !loading && (
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
@@ -337,138 +438,109 @@ export function ResumoOperacionalDialog({
           </div>
         )}
 
-        {!loading && metricas && (
-          <div className="space-y-4">
-            {metricas.janelaInsuficiente && (
-              <Alert variant="default" className="border-amber-500/50">
-                <AlertTriangle className="h-4 w-4 text-amber-500" />
-                <AlertDescription className="text-xs">
-                  O período escolhido excede a janela carregada pela Análise Temporal. Os totais
-                  podem estar truncados — aumente a janela (preset 24m ou maior) na Análise Temporal
-                  antes de gerar novamente.
-                </AlertDescription>
-              </Alert>
-            )}
-
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-              <Card
-                label="Fluxo Líquido"
-                value={fmtBRL(metricas.fluxoLiquido)}
-                icon={Wallet}
-                tone={metricas.fluxoLiquido >= 0 ? "positive" : "negative"}
-              />
-              <Card
-                label="Custos Operacionais"
-                value={fmtBRL(metricas.custoTotal)}
-                icon={Receipt}
-                tone="negative"
-              />
-              <Card
-                label="Resultado Líquido"
-                value={fmtBRL(metricas.resultadoLiquido)}
-                icon={TrendingUp}
-                tone={metricas.resultadoLiquido >= 0 ? "positive" : "negative"}
-                badge="gráfico"
-              />
-              <Card
-                label="Perdas (Disputa/Scam)"
-                value={metricas.perdasErro ? "Indisponível" : fmtBRL(metricas.perdasTotal)}
-                icon={TrendingDown}
-                tone={metricas.perdasErro ? "warning" : metricas.perdasTotal > 0 ? "negative" : "neutral"}
-                warn={
-                  metricas.moedasSemCotacao > 0
-                    ? `${metricas.moedasSemCotacao} ocorr. sem cotação`
-                    : undefined
+        {(loading || metricas) && (
+          <div className="flex flex-col lg:flex-row gap-4">
+            {/* Rail lateral */}
+            <aside className="lg:w-[188px] lg:flex-shrink-0 border border-border/40 rounded-lg overflow-hidden bg-card/40">
+              <KpiRail periodLabel={periodLabelRail} items={itemsResultado} />
+              <Separator className="bg-border/30" />
+              <div className="px-3.5 pt-2.5 pb-1 text-[9px] uppercase tracking-[0.08em] text-muted-foreground/70">
+                Exposição em aberto
+              </div>
+              <KpiRail
+                periodLabel="Snapshot atual"
+                items={itemsExposicao}
+                footer={
+                  <p className="text-[10px] leading-snug text-muted-foreground">
+                    Disputa e irrecuperável refletem o snapshot atual, independente do período
+                    selecionado.
+                  </p>
                 }
               />
-              <Card
-                label="Lucro Real"
-                value={metricas.lucroReal == null ? "Indisponível" : fmtBRL(metricas.lucroReal)}
-                icon={Target}
-                tone={
-                  metricas.lucroReal == null
-                    ? "warning"
-                    : metricas.lucroReal >= 0
-                      ? "positive"
-                      : "negative"
-                }
-                highlight
-              />
+            </aside>
+
+            {/* Conteúdo principal */}
+            <div className="flex-1 min-w-0 space-y-4">
+              {metricas?.janelaInsuficiente && (
+                <Alert variant="default" className="border-amber-500/50">
+                  <AlertTriangle className="h-4 w-4 text-amber-500" />
+                  <AlertDescription className="text-xs">
+                    O período escolhido excede a janela carregada pela Análise Temporal. Os totais
+                    podem estar truncados — aumente a janela (preset 24m ou maior) na Análise
+                    Temporal antes de gerar novamente.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {metricas?.perdasErro && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    Não foi possível confirmar ocorrências do período. O Lucro Real não é exibido
+                    para evitar uma leitura otimista incorreta — verifique o módulo Ocorrências.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {loading && (
+                <div className="space-y-3">
+                  <Skeleton className="h-14 w-full rounded-md" />
+                  <Skeleton className="h-14 w-full rounded-md" />
+                  <Skeleton className="h-14 w-full rounded-md" />
+                  <Skeleton className="h-14 w-full rounded-md" />
+                </div>
+              )}
+
+              {!loading && topicos.length > 0 && (
+                <ol className="space-y-3 list-none pl-0">
+                  {topicos.map((t, i) => (
+                    <li
+                      key={i}
+                      className={cn(
+                        "border-l-2 pl-3 py-1",
+                        t.destaque ? "border-primary" : "border-border/40",
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "text-xs uppercase tracking-wide mb-1",
+                          t.destaque
+                            ? "text-primary font-semibold"
+                            : "text-muted-foreground font-medium",
+                        )}
+                      >
+                        {t.titulo}
+                      </div>
+                      <div
+                        className={cn(
+                          "text-sm leading-relaxed text-foreground/90",
+                          t.destaque && "font-medium text-foreground",
+                        )}
+                      >
+                        {t.corpo}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              )}
+
+              {!loading && metricas && !texto && (
+                <div className="rounded-lg border border-dashed border-border p-4 text-xs text-muted-foreground">
+                  Métricas carregadas. Aguardando texto do agente — clique em{" "}
+                  <strong>Regenerar</strong> se persistir.
+                </div>
+              )}
+
+              <p className="text-[10px] text-muted-foreground pt-2 border-t border-border/30">
+                <Layers className="inline h-3 w-3 mr-1" />
+                Perdas (mesma engine do card Exposição &amp; Perdas): <code>cash_ledger</code>{" "}
+                <code>PERDA_OPERACIONAL</code> (SCAN) + ocorrências resolvidas como{" "}
+                <code>perda_confirmada</code>/<code>perda_parcial</code> ainda não materializadas
+                no ledger. Em Disputa = ocorrências com status
+                aberto/em_andamento/aguardando_terceiro. Irrecuperável = saldo travado atual em
+                casas de aposta. Conversão BRL via PTAX/FastForex.
+              </p>
             </div>
-
-            {/* Exposição pendente (snapshot) */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">
-                <ShieldAlert className="h-3 w-3" />
-                Exposição Pendente (snapshot atual)
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                <Card
-                  label="Em Disputa"
-                  value={fmtBRL(metricas.exposicaoPendente.emDisputa)}
-                  icon={ShieldAlert}
-                  tone={metricas.exposicaoPendente.emDisputa > 0 ? "warning" : "neutral"}
-                  sub={
-                    metricas.exposicaoPendente.countDisputa > 0
-                      ? `${metricas.exposicaoPendente.countDisputa} ocorrência(s) · Casas ${fmtBRL(metricas.exposicaoPendente.bySegment.bookmakers)} · Wallets ${fmtBRL(metricas.exposicaoPendente.bySegment.wallets)}`
-                      : "Nenhuma disputa em aberto"
-                  }
-                />
-                <Card
-                  label="Irrecuperável"
-                  value={fmtBRL(metricas.exposicaoPendente.irrecuperavel)}
-                  icon={Lock}
-                  tone={metricas.exposicaoPendente.irrecuperavel > 0 ? "negative" : "neutral"}
-                  sub={
-                    metricas.exposicaoPendente.countIrrecuperavel > 0
-                      ? `${metricas.exposicaoPendente.countIrrecuperavel} casa(s) com saldo travado`
-                      : "Sem saldos irrecuperáveis"
-                  }
-                />
-                <Card
-                  label="Lucro Real (worst-case)"
-                  value={
-                    metricas.lucroRealWorstCase == null
-                      ? "—"
-                      : fmtBRL(metricas.lucroRealWorstCase)
-                  }
-                  icon={ShieldX}
-                  tone={
-                    metricas.lucroRealWorstCase == null
-                      ? "neutral"
-                      : metricas.lucroRealWorstCase >= 0
-                        ? "positive"
-                        : "negative"
-                  }
-                  sub="Cenário em que 100% das disputas viram perda. Referência de risco, não resultado contábil."
-                />
-              </div>
-            </div>
-
-            {metricas.perdasErro && (
-              <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  Não foi possível confirmar ocorrências do período. O Lucro Real não é exibido para
-                  evitar uma leitura otimista incorreta — verifique o módulo Ocorrências.
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {texto && (
-              <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm leading-relaxed whitespace-pre-line">
-                {texto}
-              </div>
-            )}
-
-            <p className="text-[10px] text-muted-foreground">
-              <Layers className="inline h-3 w-3 mr-1" />
-              Perdas (mesma engine do card Exposição & Perdas): <code>cash_ledger</code>{" "}
-              <code>PERDA_OPERACIONAL</code> (SCAN) + ocorrências resolvidas como{" "}
-              <code>perda_confirmada</code>/<code>perda_parcial</code> ainda não materializadas no
-              ledger. Em Disputa = ocorrências com status aberto/em_andamento/aguardando_terceiro.
-              Irrecuperável = saldo travado atual em casas de aposta. Conversão BRL via PTAX/FastForex.
-            </p>
           </div>
         )}
       </DialogContent>
