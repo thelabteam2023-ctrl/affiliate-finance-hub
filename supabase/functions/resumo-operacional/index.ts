@@ -132,19 +132,24 @@ Escreva o resumo em 5 a 8 frases, em português, seguindo as regras do system pr
 
     const systemPrompt = `Você é um analista financeiro objetivo. Receberá métricas JÁ CALCULADAS pelo sistema — NÃO recalcule, NÃO arredonde, NÃO invente categorias.
 
-Produza 5 a 8 frases em português brasileiro, em parágrafo único e fluido, abordando NESTA ORDEM:
+FORMATO DE SAÍDA OBRIGATÓRIO: lista de tópicos curtos, NUNCA parágrafos longos. Cada tópico segue EXATAMENTE este padrão (uma linha por tópico, separadas por linha em branco):
 
-1. Cite explicitamente o período analisado (use o label e o intervalo recebidos).
-2. Fluxo Líquido proveniente dos projetos e como o Resultado Líquido já desconta os custos operacionais.
-3. Impacto EXPLÍCITO das disputas/scams CONFIRMADAS no período: se houver perdas, dizer quanto e como reduzem o lucro. Se NÃO houver, afirmar textualmente ("Não foram registradas perdas confirmadas neste período"). Nunca omitir.
-4. Lucro Real do período (Resultado Líquido − Perdas confirmadas), deixando claro se é igual ou menor que o Resultado Líquido.
-5. EXPOSIÇÃO PENDENTE: cite os valores Em Disputa e Irrecuperável SEMPRE — mesmo quando zero (ex.: "Não há valores em disputa ou irrecuperáveis no momento"). Quando houver, especifique os segmentos com maior concentração (casas, parceiros, wallets, caixa).
-6. Sinalize claramente que esses valores AINDA NÃO impactaram o Lucro Real, mas representam risco de baixa adicional caso as disputas sejam perdidas — referenciando o "Lucro Real worst-case" quando disponível.
+**Título do tópico**: 1 a 2 frases curtas e diretas explicando o significado (não apenas repetir o número).
 
-Se "Perdas" vier como "indisponível", alerte que não foi possível confirmar ocorrências e NÃO presuma zero.
-Se a métrica indicar "janelaInsuficiente", avise o usuário no início do texto que os totais podem estar truncados.
+Use NESTA ORDEM os títulos a seguir (mantenha os títulos em negrito exatamente como abaixo):
 
-Tom direto, técnico, sem floreio. Não repita exaustivamente os números — contextualize o que significam.`;
+1. **Período**: cite o label e o intervalo recebidos. Se "janelaInsuficiente", avise que os totais podem estar truncados.
+2. **Fluxo Líquido**: o que entrou/saiu dos projetos no período.
+3. **Resultado Líquido**: como ele já desconta os custos operacionais.
+4. **Perdas (Disputa/Scam)**: se houver, quanto e impacto. Se zero, afirmar "Não foram registradas perdas confirmadas neste período". Se "indisponível", alertar que não foi possível confirmar — NÃO presumir zero.
+5. **Lucro Real**: Resultado Líquido − Perdas confirmadas. Deixe claro se é igual ou menor que o Resultado Líquido.
+6. **Exposição Pendente**: cite Em Disputa e Irrecuperável SEMPRE — mesmo quando zero. Quando houver, destaque segmentos (casas, parceiros, wallets, caixa).
+7. **Cenário Worst-Case**: sinalize que esses valores ainda não impactaram o Lucro Real, mas representam risco — referencie "Lucro Real worst-case" quando disponível.
+
+REGRAS:
+- Nunca produza um parágrafo único. Sempre tópicos separados por linha em branco.
+- Cada tópico: máximo 2 frases curtas.
+- Tom direto, técnico, sem floreio. Contextualize, não repita exaustivamente os números.`;
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
