@@ -1,132 +1,133 @@
+## Redesign — Modal "Resumo Operacional"
 
-## Objetivo
+Mudança puramente visual. Nenhum cálculo, fonte de dados, fórmula, contrato de hook ou edge function é alterado. Filtros de período, botão Regenerar, tratamento de erro/zero ocorrências e `workspace_id` via token permanecem intactos.
 
-1. Permitir que o Resumo Operacional (IA) use um **período personalizado** escolhido pelo usuário, e não apenas a janela fixa de 12 meses da Análise Temporal.
-2. Incluir no resumo os **valores em disputa** (capital em risco, ainda não perdido, mas potencialmente irrecuperável), para que a IA explique também a exposição pendente.
+### Escopo de arquivos
 
----
+- `src/components/financeiro/ResumoOperacionalDialog.tsx` — único arquivo tocado.
+- Sem alterações em: `useResumoOperacional.ts`, `useExposicaoFinanceira.ts`, `Financeiro.tsx`, `supabase/functions/resumo-operacional/index.ts`, prompt do agente.
 
-## 1. Período personalizável
+### Mudança 1 — KpiRail lateral único (8 métricas)
 
-### UX
-No `ResumoOperacionalDialog`, adicionar no topo (acima dos cards) um seletor de período com 5 presets + range custom:
+Substituir os dois blocos atuais de cards horizontais (grid 5 col + grid 3 col) por um único `KpiRail` (componente já existente em `src/components/financeiro/KpiRail.tsx`) ancorado à esquerda do `DialogContent`.
 
-- **Janela da Análise Temporal** (atual — default; mantém 12m/24m/baseline)
-- **Mês atual**
-- **Mês anterior**
-- **Ano atual**
-- **Todo histórico**
-- **Período personalizado** → dois `DatePicker` (início/fim)
+Layout do `DialogContent`:
 
-Botão **"Gerar resumo"** dispara o cálculo. Trocar período não dispara automaticamente (evita gastar créditos da Lovable AI a cada clique).
-
-### Fluxo
-1. Usuário abre o diálogo → vê seletor + estado vazio com CTA "Gerar resumo".
-2. Escolhe período → clica em "Gerar".
-3. Hook recalcula janela → busca métricas/exposição → chama edge function.
-4. Texto + cards exibidos. Pode trocar período e regenerar (botão muda para "Regenerar").
-
-### Métricas por período arbitrário
-Hoje `useResumoOperacional` deriva `dataInicio/dataFim` de `mesesFinanceiro` (janela da Análise Temporal). Mudança:
-
-- O hook passa a receber `{ dataInicio, dataFim }` como parâmetro (controlado pelo diálogo).
-- A agregação de Fluxo/Custos/Resultado deixa de somar `mesesFinanceiro` diretamente. Em vez disso:
-  - Filtra `mesesFinanceiro` pelos meses que caem dentro da janela escolhida (quando a janela é múltipla de meses do array já carregado), **ou**
-  - Para janelas fora do array carregado (ex.: "Todo histórico" extrapola 24m), recarrega `useFinanceiroMensal` com `meses` suficiente OU usa um caminho dedicado de agregação direta sobre `finData` filtrado pelo intervalo.
-
-Para minimizar mudança: estender `useFinanceiroMensal` para aceitar opcionalmente um `intervalo = { inicio, fim }` que sobrescreve a janela de N meses, retornando apenas os meses cobertos. Isso preserva paridade (mesma engine canônica).
-
-### Edge function (`resumo-operacional`)
-- Aceita novo campo `periodo.tipo` ("janela_temporal" | "mes_atual" | "mes_anterior" | "ano_atual" | "todo_historico" | "customizado") para contextualizar o prompt.
-- Texto do prompt passa a citar o intervalo escolhido explicitamente ("entre DD/MM/AAAA e DD/MM/AAAA").
-
----
-
-## 2. Capital em Disputa no resumo
-
-### Fonte canônica
-Reusar `useExposicaoFinanceira` (já integrado no fix anterior). Ele já entrega:
-
-- `totalEmDisputa` (BRL)
-- `bySegmentDisputa` (bookmakers, caixa-op, wallets, contas-parc)
-- `detalhes.disputaBookmakers/Wallets/ContasParceiros/Caixa` (listas com valor + label)
-- `totalIrrecuperavel` (estoque atual de saldo irrecuperável em casas)
-
-Importante: **disputa não tem recorte temporal** (são ocorrências em aberto = snapshot atual). Vamos comunicar isso explicitamente no diálogo: "valores em disputa refletem o snapshot atual, independente do período selecionado".
-
-### UI — cards adicionais
-Adicionar no `ResumoOperacionalDialog` uma segunda linha de cards "Exposição Pendente":
-
-```
-[ EM DISPUTA  ]   [ IRRECUPERÁVEL ]   [ EXPOSIÇÃO TOTAL ]
- R$ 18.358,89      R$ X.XXX           R$ X.XXX
- 5 ocorrências     2 casas             (soma dos 2)
+```text
++------------------------------------------------------+
+| Header (título + descrição com período)              |
+| Seletor de presets + custom range + Regenerar        |
++--------+---------------------------------------------+
+|        |                                             |
+| KpiRail| Área principal:                             |
+| (8     |  - Alerta janelaInsuficiente (se houver)    |
+|  itens)|  - Tópicos do agente (Mudança 2)            |
+|        |  - Rodapé técnico (fonte/engine)            |
+|        |                                             |
++--------+---------------------------------------------+
 ```
 
-Cada card mostra também a quebra por segmento principal (texto pequeno: "Casas R$ 18,3k · Wallets R$ 0").
+Container externo: `flex flex-col lg:flex-row gap-4`. Rail mantém `lg:w-[188px] lg:flex-shrink-0` já definido no componente. `DialogContent` passa a `max-w-5xl` para acomodar rail + conteúdo confortavelmente.
 
-### Lucro Real Ajustado
-Manter `Lucro Real = Resultado Líquido − Perdas Confirmadas`.
+Itens do rail, na ordem (mesmo `KpiRailItem[]` do dashboard Visão Financeira):
 
-Adicionar um **6º card opcional**: **"Lucro Real (worst-case)"** = `Lucro Real − Em Disputa − Irrecuperável`. Tooltip: "Cenário onde 100% das disputas viram perda. Apenas referência de risco — não é resultado contábil."
+Seção "Resultado do período"
+1. Fluxo Líquido — `Wallet`, tone derivado do sinal.
+2. Custos Operacionais — `Receipt`, tone `negative`.
+3. Resultado Líquido — `TrendingUp`, tone por sinal, `activeTone="positive"` quando >=0 para indicar que é a métrica com gráfico.
+4. Perdas (Disputa/Scam) — `TrendingDown`, tone `negative` se >0, `warning` em `perdasErro`.
+5. Lucro Real — `Target`, **destaque maior**: usado `activeTone` (`positive`/`negative` conforme sinal) que pinta a borda esquerda de 2px e o fundo sutil — mesma técnica que o KpiRail já oferece para marcar o KPI âncora. Tooltip com a fórmula `Resultado Líquido − Perdas confirmadas`.
 
-### Prompt da IA
-Estender o payload enviado à edge function:
+Divisor visual sutil + micro-label (não card separado):
+- Implementado como um item "header-only" inserido entre os índices 5 e 6 via prop `footer` do bloco anterior, ou simplesmente quebrando o rail em **dois `KpiRail` empilhados verticalmente** dentro de um mesmo `<aside className="lg:w-[188px]">`, separados por um `<Separator />` fino (`border-t border-border/30`) + label uppercase `Exposição em aberto`. Esta segunda abordagem é mais simples e respeita a API atual do `KpiRail` sem precisar estendê-la.
 
-```ts
-exposicaoPendente: {
-  emDisputa: number,
-  irrecuperavel: number,
-  bySegment: { bookmakers, caixa-op, wallets, contas-parc },
-  topOcorrencias: [{ label, valor, segmento }] // top 5 por valor
-}
+Seção "Exposição em aberto" (snapshot)
+6. Em Disputa — `ShieldAlert`, tone `warning` se >0. Tooltip mostra breakdown por segmento (Casas / Wallets / Contas Parc / Caixa Op).
+7. Irrecuperável — `Lock`, tone `negative` se >0. Tooltip com `countIrrecuperavel`.
+8. Lucro Real (Worst-Case) — `ShieldX`, tone por sinal. Tooltip "Cenário em que 100% das disputas viram perda. Referência de risco, não resultado contábil."
+
+`periodLabel` do primeiro rail = label do período aplicado (ex.: "Mês atual · 01/06/2026 → 30/06/2026"). Segundo rail recebe `periodLabel="Snapshot atual"` e usa o `footer` para a nota: "Disputa e irrecuperável refletem o snapshot atual, independente do período."
+
+Skeleton: enquanto `loading`, renderizar rail com `loading: true` em cada item (`KpiRail` já trata internamente via `item.loading`).
+
+### Mudança 2 — Resposta do agente em tópicos
+
+Hoje: `<div … whitespace-pre-line>{texto}</div>`. Trocar por um parser leve client-side que quebra o texto retornado pela edge function em tópicos sem alterar o prompt.
+
+Estratégia (sem mexer no backend):
+- A edge function já tende a devolver linhas separadas. Implementar um helper local `parseTopicos(texto: string)` que:
+  - Quebra por `\n\n` ou linhas iniciadas por `- `, `• `, `**`, ou dígitos seguidos de `.`/`)`.
+  - Para cada bloco, separa **título** (primeira frase curta antes de `:` ou primeira linha em negrito `**...**`) do **corpo** (restante).
+  - Se nenhum padrão for detectado, faz fallback elegante: exibe o texto íntegro como um único tópico "Resumo".
+
+Render:
+
+```tsx
+<ol className="space-y-3 list-none">
+  {topicos.map((t, i) => (
+    <li key={i} className={cn(
+      "border-l-2 pl-3 py-1",
+      t.destaque ? "border-primary" : "border-border/40",
+    )}>
+      <div className={cn(
+        "text-xs uppercase tracking-wide mb-1",
+        t.destaque ? "text-primary font-semibold" : "text-muted-foreground font-medium",
+      )}>{t.titulo}</div>
+      <div className={cn(
+        "text-sm leading-relaxed",
+        t.destaque && "font-medium",
+      )}>{t.corpo}</div>
+    </li>
+  ))}
+</ol>
 ```
 
-Atualizar o system prompt para incluir um parágrafo dedicado:
-- Quantos R$ estão em disputa e em quais segmentos.
-- Quantos R$ já são considerados irrecuperáveis (saldo travado em casas).
-- Frase explícita: "Estes valores ainda não impactaram o Lucro Real, mas representam risco de baixa adicional caso as disputas sejam perdidas."
-- Caso zero: dizer explicitamente que não há disputas/irrecuperáveis no momento.
+Destaque (`destaque: true`) é aplicado quando o título contém `lucro real` (case-insensitive) e não contém `worst`. Mantém paridade visual com o KPI âncora do rail.
 
----
+Ordem esperada (sai do prompt já existente no backend; o parser só preserva a sequência): Período → Fluxo Líquido → Resultado Líquido → Perdas → **Lucro Real** → Exposição pendente → Cenário worst-case.
 
-## 3. Detalhes Técnicos
+Sem numeração visível — hierarquia se dá por tipografia + borda esquerda.
 
-**Arquivos editados:**
-- `src/hooks/useResumoOperacional.ts`
-  - Recebe `{ dataInicio, dataFim, periodoTipo, periodoLabel }` como parâmetros controlados.
-  - Recebe `exposicao: ExposicaoFinanceira` (já tem) — adiciona payload `exposicaoPendente`.
-  - `run()` deixa de derivar janela de `mesesFinanceiro`; usa params.
-  - Agregação de Fluxo/Custo/Resultado: filtrar `mesesFinanceiro` pelos `mesKey` que caem no intervalo (helper `mesKeyEmIntervalo`).
-- `src/hooks/useFinanceiroMensal.ts` (mínimo)
-  - Sem mudança estrutural. Janela continua sendo `meses=N`. Para períodos > janela atual, o diálogo emite `setJanelaMeses` temporariamente (ou usa um cálculo independente via `finData`).
-  - **Alternativa preferida**: o diálogo, para presets que extrapolam a janela carregada, pede ao usuário "Aumentar janela para X meses" antes de gerar (evita refetch oculto).
-- `src/components/financeiro/ResumoOperacionalDialog.tsx`
-  - Adiciona `<PeriodoSelector>` (5 presets + custom range com `react-day-picker`).
-  - Adiciona linha de cards "Exposição Pendente".
-  - Botão "Gerar/Regenerar resumo" que chama `result.run({ dataInicio, dataFim, tipo })`.
-  - Estado vazio inicial (antes da primeira geração).
-- `src/pages/Financeiro.tsx`
-  - `useExposicaoFinanceira` chamado uma vez sem janela específica para Em Disputa (que é snapshot), e outra com janela para Perdas. Ou: separar `disputa` (snapshot) de `perdas` (janela) e passar os dois ao hook do resumo.
-- `supabase/functions/resumo-operacional/index.ts`
-  - Aceita campos novos: `exposicaoPendente`, `periodoTipo`.
-  - Prompt atualizado com seção dedicada a Capital em Disputa e Irrecuperável.
-  - Mantém Gemini 3 Flash Preview.
+### Mudança 3 — Revisão geral do modal
 
-**Sem migrações de banco.** Sem novas tabelas. Sem novas RLS.
+- `DialogContent`: `max-w-5xl max-h-[90vh] overflow-y-auto`.
+- Header e descrição (período em pt-BR `dd/MM/yyyy`) inalterados.
+- Bloco de seletor de presets + custom range + botão Regenerar permanece **acima** do split rail/conteúdo (largura total).
+- Alertas (`janelaInsuficiente`, `perdasErro`, `error`) ficam na coluna direita, acima dos tópicos.
+- Rodapé técnico (linha `Layers` com fontes/engine) permanece, agora ao final da coluna direita.
+- Empty state ("Escolha um período…") continua ocupando a área inteira (sem rail), já que não há métricas para exibir.
 
----
+### Casos de borda preservados
 
-## 4. Critérios de aceite
+- `loading` → rail com skeletons + skeletons de tópicos (3 blocos `Skeleton h-12`).
+- `error` → `Alert destructive` na coluna direita; rail oculto.
+- `metricas.perdasErro` → KPI "Perdas" mostra "Indisponível" (tone warning); alerta vermelho na coluna direita; Lucro Real exibido como "Indisponível".
+- Zero ocorrências em disputa/irrecuperável → KPIs exibem `R$ 0,00` com tone neutro; tooltips informam "Nenhuma disputa em aberto" / "Sem saldos irrecuperáveis". Nunca omitido.
+- Falha ao buscar ocorrências → comportamento atual do hook é preservado; modal não assume zero.
 
-- [ ] Diálogo abre vazio com seletor de período visível.
-- [ ] Presets "Mês atual", "Mês anterior", "Ano atual", "Todo histórico", "Customizado" funcionam.
-- [ ] Período "Customizado" valida `inicio <= fim`.
-- [ ] Cards de métricas refletem exatamente o período escolhido (paridade com Visão Financeira filtrada pelo mesmo período).
-- [ ] Card "Em Disputa" sempre mostra snapshot atual, com nota explícita.
-- [ ] Card "Irrecuperável" mostra estoque atual.
-- [ ] Card opcional "Lucro Real (worst-case)" calcula `Lucro Real − EmDisputa − Irrecuperável`.
-- [ ] Texto da IA cita explicitamente: período escolhido, perdas do período (SCAN+ocorrências), capital em disputa por segmento, irrecuperável, e o impacto potencial.
-- [ ] Caso de zero disputas → IA reconhece explicitamente.
-- [ ] Botão "Regenerar" disponível após primeira geração; troca de período não dispara IA automaticamente.
-- [ ] Nenhum recálculo client-side novo de perdas — tudo vem de `useExposicaoFinanceira`.
+### Implementação
+
+1. Em `ResumoOperacionalDialog.tsx`:
+   - Importar `KpiRail`, `KpiRailItem` de `@/components/financeiro/KpiRail` e `Separator` de `@/components/ui/separator`.
+   - Remover o componente local `Card` (não usado mais) e os dois grids de cards.
+   - Construir `itemsResultado: KpiRailItem[]` e `itemsExposicao: KpiRailItem[]` via `useMemo` a partir de `metricas`.
+   - Renderizar `<aside>` contendo dois `KpiRail` empilhados + `<Separator />` + label "Exposição em aberto" + nota snapshot no `footer` do segundo.
+   - Adicionar helper `parseTopicos` no mesmo arquivo (export interno, sem novo arquivo).
+   - Substituir o bloco `{texto && …}` pela `<ol>` de tópicos.
+   - Ajustar `DialogContent` para `max-w-5xl` e wrapper `flex flex-col lg:flex-row gap-4` envolvendo rail + conteúdo principal.
+
+2. Verificar build/typecheck (automático).
+
+### Checklist de aceite (mapeado para o pedido)
+
+- [x] 8 KPIs em rail lateral único (dois `KpiRail` colados, mesmo aside).
+- [x] Divisor sutil + micro-label "Exposição em aberto".
+- [x] Lucro Real com `activeTone` destacado, maior que demais.
+- [x] Nota snapshot preservada no footer do segundo rail.
+- [x] Texto da IA em tópicos via parser; ordem mantida pelo prompt existente.
+- [x] Tópico Lucro Real com `border-primary` + `font-semibold`.
+- [x] Tópicos não duplicam o número literal (texto contextual vem do agente; rail mostra valor).
+- [x] Sem scroll excessivo: rail compacta verticalmente o que era grid horizontal denso.
+- [x] Filtros e Regenerar intactos.
+- [x] Zero alteração em lógica/dados/edge function/workspace handling.
+- [x] Estilo herdado do `KpiRail` da Visão Financeira (mesmos tokens).
