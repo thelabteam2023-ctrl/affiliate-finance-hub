@@ -28,7 +28,7 @@ const cot = { USD: 5, EUR: 6, GBP: 7, MYR: 1.1, MXN: 0.3, ARS: 0.005, COP: 0.001
 
 describe("useFinanceiroMensal — edge cases", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date("2026-04-30T12:00:00Z"));
     fetchMock.mockReset();
   });

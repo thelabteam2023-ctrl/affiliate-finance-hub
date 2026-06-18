@@ -34,7 +34,7 @@ const cotacoes = { USD: 5, EUR: 6, GBP: 7, MYR: 1.1, MXN: 0.3, ARS: 0.005, COP: 
 
 describe("useFinanceiroMensal — paridade canônica", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    vi.useFakeTimers({ toFake: ['Date'] });
     // Fixa o "agora" em 30/abr/2026 para janelas determinísticas
     vi.setSystemTime(new Date("2026-04-30T12:00:00Z"));
     fetchMock.mockReset();

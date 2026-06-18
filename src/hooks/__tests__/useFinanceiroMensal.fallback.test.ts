@@ -26,7 +26,7 @@ function wrapper({ children }: { children: React.ReactNode }) {
 
 describe("useFinanceiroMensal — fallback legado (sem cotacoesOficiais)", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date("2026-04-30T12:00:00Z"));
     fetchMock.mockReset();
   });
