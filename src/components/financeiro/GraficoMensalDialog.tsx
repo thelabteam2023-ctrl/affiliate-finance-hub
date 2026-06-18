@@ -9,7 +9,6 @@ import { Download, FileSpreadsheet, FileText, Sparkles, Settings2 } from "lucide
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -53,8 +52,7 @@ const COLORS = {
   fluxoNeg:      "hsl(var(--status-red))",
   resultado:     "hsl(var(--foreground))",
   margem:        "hsl(var(--status-purple))",
-  lucroOp:       "hsl(var(--status-emerald))",
-  lucroAcum:     "hsl(var(--muted-foreground))",
+  custoTotal:    "hsl(var(--muted-foreground) / 0.45)",
 };
 
 const COST_KEYS: Array<{ key: keyof MesFinanceiro; label: string; color: string }> = [
@@ -66,14 +64,14 @@ const COST_KEYS: Array<{ key: keyof MesFinanceiro; label: string; color: string 
   { key: "participacoes", label: "Participações", color: COLORS.participacoes },
 ];
 
-type Modo = "custos" | "lucro";
+type Modo = "custos" | "resultado" | "fluxo";
 type SeriesShape = "bar" | "line" | "lineDashed";
 interface SeriesDef {
   id: string;
   label: string;
   color: string;
   shape: SeriesShape;
-  group: "Custos" | "Indicadores" | "Lucro";
+  group: "Custos" | "Indicadores" | "Resultado" | "Fluxo";
   modos: Modo[];
   hint?: string;
 }
@@ -88,16 +86,21 @@ const ALL_SERIES: SeriesDef[] = [
   { id: "Fluxo Líquido",      label: "Fluxo Líquido",      color: COLORS.fluxoPos,      shape: "bar",        group: "Indicadores",  modos: ["custos"], hint: "Saques − Depósitos" },
   { id: "Resultado Líq. (custos)", label: "Resultado Líquido", color: COLORS.resultado, shape: "line",      group: "Indicadores",  modos: ["custos"], hint: "Fluxo Líquido − Custo Total" },
   { id: "Margem %",           label: "Margem %",           color: COLORS.margem,        shape: "lineDashed", group: "Indicadores",  modos: ["custos"], hint: "Eixo direito" },
-  { id: "Lucro Operacional",  label: "Lucro Operacional",  color: COLORS.lucroOp,       shape: "line",       group: "Lucro",        modos: ["lucro"], hint: "Apostas (lucro/prejuízo) por mês" },
-  { id: "Resultado Líquido",  label: "Resultado Líquido",  color: COLORS.resultado,     shape: "line",       group: "Lucro",        modos: ["lucro"], hint: "Fluxo Líquido − Custo Total" },
-  { id: "Acumulado",          label: "Lucro Op. Acumulado", color: COLORS.lucroAcum,    shape: "lineDashed", group: "Lucro",        modos: ["lucro"], hint: "Soma running do Lucro Operacional" },
+  // Modo "resultado" — foco em Resultado Líquido
+  { id: "Custo Total (ctx)",  label: "Custo Total",        color: COLORS.custoTotal,    shape: "bar",        group: "Resultado",    modos: ["resultado"], hint: "Contexto (barra leve)" },
+  { id: "Resultado Líq. (res)", label: "Resultado Líquido", color: COLORS.resultado,    shape: "line",       group: "Resultado",    modos: ["resultado"], hint: "Fluxo Líquido − Custo Total" },
+  { id: "Margem % (res)",     label: "Margem %",           color: COLORS.margem,        shape: "lineDashed", group: "Resultado",    modos: ["resultado"], hint: "Eixo direito" },
+  // Modo "fluxo" — foco em Fluxo Líquido
+  { id: "Fluxo Líquido (flx)", label: "Fluxo Líquido",     color: COLORS.fluxoPos,      shape: "bar",        group: "Fluxo",        modos: ["fluxo"], hint: "Saques − Depósitos" },
+  { id: "Fluxo Acumulado",    label: "Fluxo Acumulado",    color: COLORS.resultado,     shape: "lineDashed", group: "Fluxo",        modos: ["fluxo"], hint: "Soma running do Fluxo Líquido" },
 ];
 
 const DEFAULTS_BY_MODO: Record<Modo, string[]> = {
-  custos: ["CAC","Comissões","Bônus","Infra","Operadores","Participações","Fluxo Líquido","Resultado Líq. (custos)","Margem %"],
-  lucro:  ["Lucro Operacional","Resultado Líquido"],
+  custos:    ["CAC","Comissões","Bônus","Infra","Operadores","Participações","Fluxo Líquido","Resultado Líq. (custos)","Margem %"],
+  resultado: ["Custo Total (ctx)","Resultado Líq. (res)","Margem % (res)"],
+  fluxo:     ["Fluxo Líquido (flx)","Fluxo Acumulado"],
 };
-const LS_KEY = "labbet:grafico-mensal:visible-series:v1";
+const LS_KEY = "labbet:grafico-mensal:visible-series:v2";
 
 function loadVisible(): Record<Modo, string[]> {
   try {
@@ -105,12 +108,56 @@ function loadVisible(): Record<Modo, string[]> {
     if (raw) {
       const p = JSON.parse(raw);
       return {
-        custos: Array.isArray(p?.custos) ? p.custos : DEFAULTS_BY_MODO.custos,
-        lucro:  Array.isArray(p?.lucro)  ? p.lucro  : DEFAULTS_BY_MODO.lucro,
+        custos:    Array.isArray(p?.custos)    ? p.custos    : DEFAULTS_BY_MODO.custos,
+        resultado: Array.isArray(p?.resultado) ? p.resultado : DEFAULTS_BY_MODO.resultado,
+        fluxo:     Array.isArray(p?.fluxo)     ? p.fluxo     : DEFAULTS_BY_MODO.fluxo,
       };
     }
   } catch { /* ignore */ }
   return { ...DEFAULTS_BY_MODO };
+}
+
+// Pill-style segmented switch (padrão visual do módulo Parceiros)
+function PillSwitch<T extends string>({
+  value,
+  onChange,
+  options,
+  className,
+}: {
+  value: T;
+  onChange: (v: T) => void;
+  options: Array<{ value: T; label: React.ReactNode }>;
+  className?: string;
+}) {
+  return (
+    <div
+      role="tablist"
+      className={cn(
+        "inline-flex items-center gap-1 rounded-lg border border-border/60 bg-muted/40 p-1",
+        className,
+      )}
+    >
+      {options.map(opt => {
+        const active = opt.value === value;
+        return (
+          <button
+            key={String(opt.value)}
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(opt.value)}
+            className={cn(
+              "px-3 h-7 text-xs font-medium rounded-md transition-colors whitespace-nowrap",
+              active
+                ? "bg-[hsl(var(--status-emerald))] text-white shadow-sm"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+            )}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 export function GraficoMensalDialog({
@@ -163,9 +210,9 @@ export function GraficoMensalDialog({
   }, [meses]);
 
   const chartData = useMemo(() => {
-    let acc = 0;
+    let accFluxo = 0;
     return meses.map(m => {
-      acc += m.lucroOperacional || 0;
+      accFluxo += m.fluxoLiquido || 0;
       return {
         name: m.isBaseline ? `${m.mesLabel} •` : m.mesLabel,
         mesKey: m.mesKey,
@@ -179,8 +226,8 @@ export function GraficoMensalDialog({
         "Fluxo Líquido": m.fluxoLiquido,
         "Resultado Líquido": m.resultadoLiquido,
         "Margem %": m.margemOperacional,
-        "Lucro Operacional": m.lucroOperacional,
-        "Acumulado": acc,
+        "Custo Total": m.custoTotal,
+        "Fluxo Acumulado": accFluxo,
       };
     });
   }, [meses]);
@@ -211,24 +258,43 @@ export function GraficoMensalDialog({
         {node}
       </div>
     );
-    if (modo === "lucro") {
-      const accIdx = chartData.findIndex(d => d.name === props.label);
-      const acumulado = accIdx >= 0 ? (chartData[accIdx] as any)["Acumulado"] : 0;
-      const segs: RichTooltipSegment[] = [];
-      if (isOn("Lucro Operacional")) segs.push({ key: "lop", label: "Lucro Operacional", value: m.lucroOperacional, color: COLORS.lucroOp, formatted: fmtBRLfull(m.lucroOperacional) });
-      if (isOn("Resultado Líquido")) segs.push({ key: "rl",  label: "Resultado Líquido", value: m.resultadoLiquido, color: COLORS.resultado, formatted: fmtBRLfull(m.resultadoLiquido) });
-      if (isOn("Acumulado"))         segs.push({ key: "acc", label: "Lucro Op. Acumulado", value: acumulado, color: COLORS.lucroAcum, formatted: fmtBRLfull(acumulado) });
+    if (modo === "resultado") {
+      const margemTxt = m.margemOperacional === null ? "—" : `${m.margemOperacional.toFixed(1)}%`;
       const tone: "positive" | "negative" | "neutral" =
-        m.lucroOperacional > 0 ? "positive" : m.lucroOperacional < 0 ? "negative" : "neutral";
+        m.resultadoLiquido > 0 ? "positive" : m.resultadoLiquido < 0 ? "negative" : "neutral";
       return wrap(
         <ChartRichTooltip
           variant="stackedBar"
           title={m.mesNomeLongo}
-          badge={{ label: m.lucroOperacional >= 0 ? "Lucro" : "Prejuízo", tone }}
-          segments={segs}
-          total={m.lucroOperacional}
-          totalLabel="Lucro do mês"
-          totalFormatted={fmtBRLfull(m.lucroOperacional)}
+          badge={{ label: margemTxt, tone }}
+          segments={[
+            { key: "rl",  label: "Resultado Líquido", value: m.resultadoLiquido, color: COLORS.resultado, formatted: fmtBRLfull(m.resultadoLiquido) },
+            { key: "fl",  label: "Fluxo Líquido",     value: m.fluxoLiquido,     color: COLORS.fluxoPos,  formatted: fmtBRLfull(m.fluxoLiquido) },
+            { key: "ct",  label: "Custo Total",       value: m.custoTotal,       color: COLORS.custoTotal,formatted: fmtBRLfull(m.custoTotal) },
+          ]}
+          total={m.resultadoLiquido}
+          totalLabel="Resultado do mês"
+          totalFormatted={fmtBRLfull(m.resultadoLiquido)}
+        />
+      );
+    }
+    if (modo === "fluxo") {
+      const idx = chartData.findIndex(d => d.name === props.label);
+      const acumulado = idx >= 0 ? (chartData[idx] as any)["Fluxo Acumulado"] : 0;
+      const tone: "positive" | "negative" | "neutral" =
+        m.fluxoLiquido > 0 ? "positive" : m.fluxoLiquido < 0 ? "negative" : "neutral";
+      return wrap(
+        <ChartRichTooltip
+          variant="stackedBar"
+          title={m.mesNomeLongo}
+          badge={{ label: m.fluxoLiquido >= 0 ? "Entrada líq." : "Saída líq.", tone }}
+          segments={[
+            { key: "fl",  label: "Fluxo Líquido",   value: m.fluxoLiquido, color: COLORS.fluxoPos,  formatted: fmtBRLfull(m.fluxoLiquido) },
+            { key: "acc", label: "Fluxo Acumulado", value: acumulado,      color: COLORS.resultado, formatted: fmtBRLfull(acumulado) },
+          ]}
+          total={m.fluxoLiquido}
+          totalLabel="Fluxo do mês"
+          totalFormatted={fmtBRLfull(m.fluxoLiquido)}
         />
       );
     }
@@ -299,15 +365,15 @@ export function GraficoMensalDialog({
               Lucro × Custo · Visão Mensal
             </DialogTitle>
             <div className="flex items-center gap-2">
-              <ToggleGroup
-                type="single"
+              <PillSwitch<Modo>
                 value={modo}
-                onValueChange={v => v && setModo(v as Modo)}
-                size="sm"
-              >
-                <ToggleGroupItem value="custos">Custos × Fluxo</ToggleGroupItem>
-                <ToggleGroupItem value="lucro">Lucro Op.</ToggleGroupItem>
-              </ToggleGroup>
+                onChange={v => setModo(v)}
+                options={[
+                  { value: "custos",    label: "Custos × Fluxo" },
+                  { value: "resultado", label: "Resultado Líquido" },
+                  { value: "fluxo",     label: "Fluxo Líquido" },
+                ]}
+              />
               <Popover>
                 <PopoverTrigger asChild>
                   <Button size="sm" variant="outline" title="Configurar séries visíveis">
@@ -316,9 +382,9 @@ export function GraficoMensalDialog({
                 </PopoverTrigger>
                 <PopoverContent align="end" className="w-72 p-3">
                   <div className="text-xs font-medium text-muted-foreground mb-2">
-                    Séries visíveis · {modo === "custos" ? "Custos × Fluxo" : "Lucro Operacional"}
+                    Séries visíveis · {modo === "custos" ? "Custos × Fluxo" : modo === "resultado" ? "Resultado Líquido" : "Fluxo Líquido"}
                   </div>
-                  {(["Custos","Indicadores","Lucro"] as const).map(group => {
+                  {(["Custos","Indicadores","Resultado","Fluxo"] as const).map(group => {
                     const items = ALL_SERIES.filter(s => s.modos.includes(modo) && s.group === group);
                     if (!items.length) return null;
                     return (
@@ -361,16 +427,15 @@ export function GraficoMensalDialog({
                   Mês de referência
                 </Label>
               </div>
-              <ToggleGroup
-                type="single"
+              <PillSwitch<string>
                 value={String(janelaMeses)}
-                onValueChange={v => v && onJanelaChange(Number(v))}
-                size="sm"
-              >
-                <ToggleGroupItem value="6">6m</ToggleGroupItem>
-                <ToggleGroupItem value="12">12m</ToggleGroupItem>
-                <ToggleGroupItem value="24">24m</ToggleGroupItem>
-              </ToggleGroup>
+                onChange={v => onJanelaChange(Number(v))}
+                options={[
+                  { value: "6",  label: "6m" },
+                  { value: "12", label: "12m" },
+                  { value: "24", label: "24m" },
+                ]}
+              />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button size="sm" variant="outline" disabled={exporting}>
@@ -580,43 +645,57 @@ export function GraficoMensalDialog({
                     )}
                   </>
                 )}
-                {modo === "lucro" && (
+                {modo === "resultado" && (
                   <>
-                    <ReferenceLine
-                      yAxisId="left"
-                      y={0}
-                      stroke="hsl(var(--border))"
-                      strokeDasharray="2 4"
-                    />
-                    {isOn("Lucro Operacional") && (
-                      <Line isAnimationActive={animateOnce}
-                        yAxisId="left"
-                        type="monotone"
-                        dataKey="Lucro Operacional"
-                        stroke={COLORS.lucroOp}
-                        strokeWidth={2.5}
-                        dot={{ r: 3, fill: COLORS.lucroOp, strokeWidth: 0 }}
-                        activeDot={{ r: 5 }}
-                      />
+                    <ReferenceLine yAxisId="left" y={0} stroke="hsl(var(--border))" strokeDasharray="2 4" />
+                    {isOn("Custo Total (ctx)") && (
+                      <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Custo Total" fill={COLORS.custoTotal} radius={[6, 6, 0, 0]} />
                     )}
-                    {isOn("Resultado Líquido") && (
+                    {isOn("Resultado Líq. (res)") && (
                       <Line isAnimationActive={animateOnce}
                         yAxisId="left"
                         type="monotone"
                         dataKey="Resultado Líquido"
                         stroke={COLORS.resultado}
-                        strokeWidth={2}
-                        dot={{ r: 2.5, fill: COLORS.resultado, strokeWidth: 0 }}
+                        strokeWidth={2.5}
+                        dot={{ r: 3, fill: COLORS.resultado, strokeWidth: 0 }}
                         activeDot={{ r: 5 }}
                       />
                     )}
-                    {isOn("Acumulado") && (
+                    {isOn("Margem % (res)") && (
+                      <Line isAnimationActive={animateOnce}
+                        yAxisId="right"
+                        type="monotone"
+                        dataKey="Margem %"
+                        stroke={COLORS.margem}
+                        strokeWidth={2}
+                        strokeDasharray="5 5"
+                        dot={{ r: 3, fill: COLORS.margem, strokeWidth: 0 }}
+                        filter="url(#margemGlow)"
+                      />
+                    )}
+                  </>
+                )}
+                {modo === "fluxo" && (
+                  <>
+                    <ReferenceLine yAxisId="left" y={0} stroke="hsl(var(--border))" strokeDasharray="2 4" />
+                    {isOn("Fluxo Líquido (flx)") && (
+                      <Bar isAnimationActive={animateOnce} yAxisId="left" dataKey="Fluxo Líquido" radius={[6, 6, 0, 0]}>
+                        {chartData.map((d, i) => (
+                          <Cell
+                            key={`flx-${i}`}
+                            fill={(d["Fluxo Líquido"] as number) >= 0 ? COLORS.fluxoPos : COLORS.fluxoNeg}
+                          />
+                        ))}
+                      </Bar>
+                    )}
+                    {isOn("Fluxo Acumulado") && (
                       <Line isAnimationActive={animateOnce}
                         yAxisId="left"
                         type="monotone"
-                        dataKey="Acumulado"
-                        stroke={COLORS.lucroAcum}
-                        strokeWidth={1.75}
+                        dataKey="Fluxo Acumulado"
+                        stroke={COLORS.resultado}
+                        strokeWidth={2}
                         strokeDasharray="5 5"
                         dot={false}
                       />
