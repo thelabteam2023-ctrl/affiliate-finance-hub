@@ -34,6 +34,7 @@ import { KpiExplanationDialog, KpiType } from "@/components/financeiro/KpiExplan
 import { ComposicaoCustosCard } from "@/components/financeiro/ComposicaoCustosCard";
 import { PeriodScopeBadge } from "@/components/financeiro/PeriodScopeBadge";
 import { ExposicaoFinanceiraCard } from "@/components/financeiro/ExposicaoFinanceiraCard";
+import { useExposicaoFinanceira } from "@/hooks/useExposicaoFinanceira";
 import { PosicaoCapital } from "@/components/caixa/PosicaoCapital";
 import { useCapitalEmDisputa } from "@/hooks/useCapitalEmDisputa";
 import { Wallet, TrendingUp, Percent, Coins } from "lucide-react";
