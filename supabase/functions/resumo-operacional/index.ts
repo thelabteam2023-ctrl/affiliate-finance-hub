@@ -7,8 +7,22 @@ interface OcorrenciaResumo {
   valorBRL: number;
 }
 
+interface ExposicaoPendente {
+  emDisputa: number;
+  irrecuperavel: number;
+  countDisputa: number;
+  countIrrecuperavel: number;
+  bySegment: {
+    bookmakers: number;
+    caixaOp: number;
+    wallets: number;
+    contasParc: number;
+  };
+  topOcorrencias: Array<{ label: string; valor: number; segmento: string }>;
+}
+
 interface RequestBody {
-  periodo: { label: string; dataInicio: string; dataFim: string };
+  periodo: { label: string; dataInicio: string; dataFim: string; tipo?: string };
   metricas: {
     fluxoLiquido: number;
     custoTotal: number;
@@ -19,6 +33,9 @@ interface RequestBody {
     moedasSemCotacao?: number;
     lucroReal: number | null;
     ocorrencias: OcorrenciaResumo[];
+    exposicaoPendente?: ExposicaoPendente;
+    lucroRealWorstCase?: number | null;
+    janelaInsuficiente?: boolean;
   };
 }
 
@@ -71,39 +88,63 @@ Deno.serve(async (req) => {
     const m = body.metricas;
     const ocorrenciasSlice = m.ocorrencias.slice(0, 10);
     const ocorrenciasExtras = Math.max(0, m.ocorrencias.length - ocorrenciasSlice.length);
+    const ep = m.exposicaoPendente;
+    const temExposicao =
+      !!ep && (ep.emDisputa > 0 || ep.irrecuperavel > 0 || ep.countDisputa > 0 || ep.countIrrecuperavel > 0);
+
+    const exposicaoBlock = ep
+      ? `
+EXPOSIÇÃO PENDENTE (snapshot atual — NÃO depende do período):
+- Em Disputa (ocorrências em aberto): ${fmt(ep.emDisputa)} em ${ep.countDisputa} ocorrência(s)
+  · Casas de Aposta: ${fmt(ep.bySegment.bookmakers)}
+  · Contas Parceiros: ${fmt(ep.bySegment.contasParc)}
+  · Wallets Crypto: ${fmt(ep.bySegment.wallets)}
+  · Caixa Operacional: ${fmt(ep.bySegment.caixaOp)}
+- Saldo Irrecuperável (travado em casas): ${fmt(ep.irrecuperavel)} em ${ep.countIrrecuperavel} casa(s)
+- Lucro Real worst-case (se 100% das disputas virarem perda): ${m.lucroRealWorstCase == null ? "indisponível" : fmt(m.lucroRealWorstCase)}
+${ep.topOcorrencias.length ? `\nMaiores valores em disputa:\n${ep.topOcorrencias.map((o) => `  - ${o.label} [${o.segmento}]: ${fmt(o.valor)}`).join("\n")}` : ""}
+`.trim()
+      : "EXPOSIÇÃO PENDENTE: nenhuma disputa em aberto e nenhum saldo irrecuperável no momento.";
 
     const userPrompt = `
-Período: ${body.periodo.label} (${body.periodo.dataInicio} → ${body.periodo.dataFim})
+Período analisado: ${body.periodo.label} (${body.periodo.dataInicio} → ${body.periodo.dataFim})
+${m.janelaInsuficiente ? "\nATENÇÃO: o período escolhido excede a janela carregada — os totais podem estar truncados.\n" : ""}
 
-Métricas já calculadas pelo sistema (NÃO recalcular, NÃO arredondar):
+Métricas do período (JÁ calculadas — NÃO recalcular, NÃO arredondar):
 - Fluxo Líquido: ${fmt(m.fluxoLiquido)}
 - Custos Operacionais (total): ${fmt(m.custoTotal)}
-- Resultado Líquido (já exibido no gráfico): ${fmt(m.resultadoLiquido)}
+- Resultado Líquido (gráfico): ${fmt(m.resultadoLiquido)}
 - Perdas por Disputa/Scam${m.perdasErro ? " (FALHA ao consultar)" : ""}: ${m.perdasErro ? "indisponível" : fmt(m.perdasTotal)}
-- Lucro Real (Resultado Líquido − Perdas): ${m.lucroReal === null ? "indisponível" : fmt(m.lucroReal)}
+- Lucro Real (Resultado Líquido − Perdas confirmadas): ${m.lucroReal === null ? "indisponível" : fmt(m.lucroReal)}
 ${m.moedasSemCotacao ? `\nAtenção: ${m.moedasSemCotacao} ocorrência(s) sem cotação foram excluídas da soma.` : ""}
 
 Custos por categoria:
 ${Object.entries(m.custosPorCategoria).map(([k, v]) => `  - ${k}: ${fmt(v)}`).join("\n")}
 
-Ocorrências do período (${m.ocorrencias.length} total):
+Ocorrências de perda do período (${m.ocorrencias.length} total):
 ${ocorrenciasSlice.map((o) => `  - ${o.titulo} [${o.tipo}]: ${fmt(o.valorBRL)}`).join("\n") || "  (nenhuma)"}
 ${ocorrenciasExtras > 0 ? `  …e ${ocorrenciasExtras} outra(s).` : ""}
 
-Escreva o resumo em 3 a 6 frases, em português, seguindo as regras do system prompt.
+${exposicaoBlock}
+
+Escreva o resumo em 5 a 8 frases, em português, seguindo as regras do system prompt.
 `.trim();
 
     const systemPrompt = `Você é um analista financeiro objetivo. Receberá métricas JÁ CALCULADAS pelo sistema — NÃO recalcule, NÃO arredonde, NÃO invente categorias.
 
-Produza 3 a 6 frases em português brasileiro explicando:
-1. O Fluxo Líquido proveniente dos projetos no período.
-2. Que o Resultado Líquido já desconta os custos operacionais.
-3. Impacto EXPLÍCITO das disputas/scams: se houver perdas, dizer quanto e como reduzem o lucro. Se NÃO houver, afirmar isso textualmente ("Não foram registradas disputas/scams neste período") — nunca omitir.
-4. Concluir com o Lucro Real, deixando claro se é igual ou menor que o Resultado Líquido.
+Produza 5 a 8 frases em português brasileiro, em parágrafo único e fluido, abordando NESTA ORDEM:
 
-Se o campo "Perdas" vier como "indisponível", alerte que não foi possível confirmar ocorrências e NÃO presuma zero.
+1. Cite explicitamente o período analisado (use o label e o intervalo recebidos).
+2. Fluxo Líquido proveniente dos projetos e como o Resultado Líquido já desconta os custos operacionais.
+3. Impacto EXPLÍCITO das disputas/scams CONFIRMADAS no período: se houver perdas, dizer quanto e como reduzem o lucro. Se NÃO houver, afirmar textualmente ("Não foram registradas perdas confirmadas neste período"). Nunca omitir.
+4. Lucro Real do período (Resultado Líquido − Perdas confirmadas), deixando claro se é igual ou menor que o Resultado Líquido.
+5. EXPOSIÇÃO PENDENTE: cite os valores Em Disputa e Irrecuperável SEMPRE — mesmo quando zero (ex.: "Não há valores em disputa ou irrecuperáveis no momento"). Quando houver, especifique os segmentos com maior concentração (casas, parceiros, wallets, caixa).
+6. Sinalize claramente que esses valores AINDA NÃO impactaram o Lucro Real, mas representam risco de baixa adicional caso as disputas sejam perdidas — referenciando o "Lucro Real worst-case" quando disponível.
 
-Tom direto, sem floreio. Não repita os números palavra por palavra dos cards — contextualize o que significam.`;
+Se "Perdas" vier como "indisponível", alerte que não foi possível confirmar ocorrências e NÃO presuma zero.
+Se a métrica indicar "janelaInsuficiente", avise o usuário no início do texto que os totais podem estar truncados.
+
+Tom direto, técnico, sem floreio. Não repita exaustivamente os números — contextualize o que significam.`;
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
