@@ -1,120 +1,112 @@
+# Paridade Total — Visão Financeira ⇄ Análise Temporal
 
-# Unificação do Gráfico "Lucro × Custo · Visão Mensal"
+## Diagnóstico
 
-## Problema
+Hoje as duas telas usam **pipelines diferentes** para calcular as mesmas métricas, e por isso divergem:
 
-Hoje o `GraficoMensalDialog` tem 3 modos mutuamente exclusivos (`custos` / `resultado` / `fluxo`) que mostram fatias do mesmo dado. O usuário precisa alternar abas para compor a leitura. Vamos consolidar tudo em **um único gráfico** com **camadas independentes (multi-toggle)** e adicionar uma nova série de **Resultado Acumulado** como área com fill condicional verde/vermelho.
+| Métrica | Visão Financeira (dashboard) | Análise Temporal (gráfico) |
+|---|---|---|
+| Fluxo Líquido | `useWorkspaceLucroRealizado` → `fetchProjetosLucroCanonico` (por projeto, com ciclo, baseline neutralizado, PTAX snapshot, anti-double-count de `DEPOSITO_VIRTUAL MIGRACAO`) | `useFinanceiroMensal` lê `cash_ledger` cru, soma tudo, **cotação live**, sem ciclo, sem baseline, sem anti-double-count |
+| Custo Total | `useFinanceiroCalculations` (despesas + admin + operadores+RH + participações) | `useFinanceiroMensal` (mesma fonte, mesma regra) ✅ **já bate** |
+| Resultado Líquido | Fluxo (canônico) − Custo | Fluxo (cru) − Custo → **diverge** |
+| Margem | derivada do Resultado canônico | derivada do Resultado cru |
+| Posição de Capital | snapshots/realtime canônicos | n/a no gráfico |
+
+Conclusão: o **Custo já está alinhado**. A divergência inteira está no **Fluxo Líquido** (e por consequência Resultado e Margem). A correção é mover `useFinanceiroMensal` para a **mesma engine canônica** que o dashboard.
+
+## Princípio
+
+> **Uma única fonte de verdade financeira por workspace: `fetchProjetosLucroCanonico`.**
+> Toda tela que mostre Fluxo Líquido / Resultado Líquido / Margem / Posição de Capital consome essa engine — direto ou via hook que a encapsula. Nada lê `cash_ledger` cru para esses KPIs.
 
 ## Escopo
 
-Arquivo único: `src/components/financeiro/GraficoMensalDialog.tsx`. Sem mudanças em hooks/data — todas as séries já vêm de `useFinanceiroMensal` (`cac`, `comissoes`, `bonus`, `infra`, `operadores`, `participacoes`, `fluxoLiquido`, `resultadoLiquido`). `Resultado Acumulado` é derivado client-side (running sum sobre a janela visível).
+### Em escopo
+- Refatorar `src/hooks/useFinanceiroMensal.ts` para derivar Fluxo Líquido **mês a mês** chamando `fetchProjetosLucroCanonico` com janela `[primeiroDia(mes), ultimoDia(mes)]` para cada mês da janela visível, somando `lucroRealizadoBRL` (que já é Fluxo Canônico) por projeto.
+- Manter Custo Total como está (já está alinhado).
+- Recalcular Resultado Líquido = Fluxo Canônico − Custo Total e Margem a partir dele.
+- Adicionar cache memoizado (React Query) para as chamadas mensais — chave `["financeiro-mensal-canonico", workspaceId, janelaMeses, mesReferencia]`.
+- Garantir que o gráfico, KPIs do topo do modal, e a tabela mensal consumam o mesmo dado refatorado.
+- Validar paridade com `useWorkspaceLucroRealizado` em janelas equivalentes (mês corrente, mês anterior, YTD).
 
-Sem alterações em: `useFinanceiroMensal.ts`, KPIs do topo, exports PDF/XLSX, tabela mensal, filtros de janela (6m/12m/24m) e Mês de referência.
+### Fora de escopo
+- Nenhuma mudança visual no `GraficoMensalDialog` (chips, camadas, área condicional permanecem como estão).
+- Nenhuma mudança em `useFinanceiroCalculations`, `fetchProjetosLucroCanonico`, RPCs, schema do banco, ledger.
+- Nenhuma alteração em exports PDF/XLSX (eles continuarão recebendo os mesmos campos, agora com valores canônicos).
+- Não tocar em Posição de Capital (já é canônica) — só auditar que os componentes que aparecem na Visão Financeira lêem das fontes canônicas existentes.
 
-## Mudanças
+## Mudanças técnicas
 
-### 1. Remover o seletor de modo exclusivo
-- Apagar o `PillSwitch` de modos (`Custos × Fluxo / Resultado Líquido / Fluxo Líquido`).
-- Remover `type Modo`, `modo` state, `DEFAULT_VISIBLE[modo]`, e a propriedade `modos: Modo[]` em `SeriesDef`.
-- Manter o `PillSwitch` de janela (`6m / 12m / 24m`) e o Switch "Mês de referência".
+### 1. `src/hooks/useFinanceiroMensal.ts` — refatoração
 
-### 2. Camadas unificadas (multi-toggle)
-Substituir o atual `Popover` de "Séries" por uma **legenda interativa horizontal** logo abaixo do header, onde cada chip é um toggle independente (checkbox visual: ativo = preenchido com a cor da série, inativo = outline opaco). Itens, na ordem:
+Substituir a leitura de `finData.cashLedger` por:
 
-| Camada | Tipo | Eixo | Default |
-|---|---|---|---|
-| CAC | Bar (stack `custos`) | Esq | on |
-| Comissões | Bar (stack `custos`) | Esq | on |
-| Bônus | Bar (stack `custos`) | Esq | on |
-| Infra | Bar (stack `custos`) | Esq | on |
-| Operadores | Bar (stack `custos`) | Esq | on |
-| Participações | Bar (stack `custos`) | Esq | off |
-| Fluxo Líquido | Bar (standalone, sem stackId) | Esq | on |
-| Resultado Líquido | Line branca | Esq | on |
-| Resultado Acumulado | Area com fill condicional | **Dir** | on |
-
-- Persistir seleção em `localStorage` sob nova chave `grafico-mensal-layers-v1` (descartar `v2` antiga).
-- Estado vazio: se 0 camadas ativas, renderizar placeholder centralizado "Nenhuma série selecionada — ative uma camada acima" no lugar do `ComposedChart`.
-
-### 3. Remover "Margem %"
-- Tirar a `Line` `Margem %` (tracejada roxa, eixo direito) do chart.
-- Remover do `ALL_SERIES`, do tooltip e da legenda.
-- **Manter** o KPI "Margem média" no topo (vem de `resultadoLiquido/...`, não depende do gráfico).
-- O eixo direito (`yAxisId="right"`) passa a ser **exclusivo do Resultado Acumulado**, com domain automático (`['auto','auto']`) e padding.
-
-### 4. Nova série: Resultado Acumulado (área condicional)
-
-Cálculo no `chartData` memo:
-```
-let acc = 0;
-data = meses.map(m => { acc += m.resultadoLiquido; return { ...m, resultadoAcumulado: acc }; });
-```
-Começa do primeiro mês visível da janela (a janela já é controlada por `meses` prop / `janelaMeses`).
-
-Renderização — usar **dois `<Area>` empilhados visualmente com clipPath via SVG `<defs>`** (técnica padrão recharts para fill condicional sem corte abrupto):
-
-```text
-<defs>
-  <linearGradient id="rl-acum-fill" x1="0" y1="0" x2="0" y2="1">
-    <stop offset={zeroOffset} stopColor="hsl(var(--status-emerald))" stopOpacity="0.35"/>
-    <stop offset={zeroOffset} stopColor="hsl(var(--status-red))"     stopOpacity="0.35"/>
-  </linearGradient>
-  <linearGradient id="rl-acum-stroke" ...mesmo padrão, opacity 1, offset igual/>
-</defs>
-<Area yAxisId="right" dataKey="resultadoAcumulado"
-      type="monotone" fill="url(#rl-acum-fill)"
-      stroke="url(#rl-acum-stroke)" strokeWidth={2}
-      baseValue={0} isAnimationActive={false} />
+```ts
+// Para cada mês na janela visível:
+const meses = enumerarMeses(inicioKey, nowKey);
+const promises = meses.map(mesKey => {
+  const inicio = startOfMonth(parseISO(`${mesKey}-01`));
+  const fim    = endOfMonth(parseISO(`${mesKey}-01`));
+  return fetchProjetosLucroCanonico({
+    workspaceId,
+    dataInicio: inicio.toISOString(),
+    dataFim:    fim.toISOString(),
+    projetoIds: undefined, // todos do workspace
+  }).then(rows => ({
+    mesKey,
+    fluxoLiquido: rows.reduce((s, r) => s + (r.lucroRealizadoBRL || 0), 0),
+  }));
+});
 ```
 
-`zeroOffset` calculado em função do domínio do eixo direito:
-```
-zeroOffset = max / (max - min)  // clamp 0..1; quando min>=0 → 0; quando max<=0 → 1
-```
-Isso produz a transição exatamente no cruzamento de zero (interpolação SVG nativa), efeito "lake" verde acima / vermelho abaixo.
+Custo Total continua sendo agregado a partir de `finData.despesas / despesasAdmin / pagamentosOperador / participacoesPagas` (já bate com o dashboard).
 
-Chip da camada exibe **swatch dividido** (mini gradiente verde/vermelho) para sinalizar a natureza condicional.
+`useFinanceiroMensal` passa a ser `async` por baixo: encapsular num `useQuery` interno com chave `["financeiro-mensal-canonico", workspaceId, janelaMeses, mesReferencia, incluirBaseline]`, `staleTime: 30s`.
 
-### 5. Composição final do `ComposedChart`
-Ordem de render (z-index):
-1. `<Bar stackId="custos">` × 6 categorias (cada uma condicional ao toggle correspondente; só agrupam quando >1 ativa — `stackId` é sempre `"custos"`).
-2. `<Bar dataKey="fluxoLiquido">` standalone com `Cell` verde/vermelho (já existe).
-3. `<Area dataKey="resultadoAcumulado" yAxisId="right">` com gradiente condicional.
-4. `<Line dataKey="resultadoLiquido">` branca (em cima de tudo).
+Assinatura externa preservada (retorna `MesFinanceiro[]`) — consumidores não mudam.
 
-Tooltip rico (`ChartRichTooltip`) passa a listar somente as camadas **ativas** — montar `segments` dinamicamente a partir do set de toggles.
+### 2. Auditoria de consumidores
 
-### 6. Header reorganizado
-```text
-[Título]  [janela 6/12/24] [Mês ref toggle] [Export ▼]
-[ chip CAC ] [ chip Comissões ] [ chip Bônus ] [ chip Infra ] [ chip Operadores ] 
-[ chip Participações ] [ chip Fluxo Líquido ] [ chip Resultado Líquido ] [ chip Resultado Acumulado ]
-```
+Listar e validar que estes componentes usam exclusivamente a engine canônica (direto ou via `useFinanceiroMensal` / `useWorkspaceLucroRealizado`):
 
-Chip component (local, sem nova lib):
-- ativo: `bg-[color]/15 border border-[color] text-foreground` + swatch sólido
-- inativo: `bg-transparent border border-border/50 text-muted-foreground` + swatch outline
-- click: toggle no Set de camadas ativas
+- `DashboardFinanceiro` (cards de KPI: Resultado Líquido, Fluxo, Custo, Margem)
+- `GraficoMensalDialog` (chart + KPIs do topo + tabela mensal)
+- `ComposicaoCustoCard` — já usa `useFinanceiroCalculations` (custos), sem fluxo → ok
+- `PosicaoCapitalCard` — auditar; deve ler de `useWorkspaceCapital` / canonical sources, não `cash_ledger` cru
+- Qualquer outro card na aba "Visão Financeira" que mostre Fluxo/Resultado
 
-## Detalhes técnicos
+Para cada um, abrir, confirmar a fonte, e — se estiver lendo `cash_ledger` cru — migrar para `useWorkspaceLucroRealizado` ou hook canônico equivalente.
 
-- **Estado**: `const [active, setActive] = useState<Set<LayerId>>(...)` hidratado do `localStorage`.
-- **`LayerId`** = `"cac" | "comissoes" | "bonus" | "infra" | "operadores" | "participacoes" | "fluxoLiquido" | "resultadoLiquido" | "resultadoAcumulado"`.
-- **Cores**: reaproveitar `COLORS` existente; tokens `--status-emerald`/`--status-red` para a área acumulada.
-- **Domínio eixo direito**: `const [accMin, accMax] = useMemo(...)` sobre `chartData.resultadoAcumulado`, com padding 10% e clamp para `zeroOffset`.
-- **Workspace**: nenhum query novo é introduzido; `workspace_id` continua implícito via hooks existentes (`useFinanceiroData` → token). Nada a alterar.
+### 3. Teste de paridade
 
-## Validação
+Criar checklist manual (não automated test) executado após a refatoração:
 
-1. Abrir o dialog: ver gráfico único com defaults (todas custos exceto Participações, Fluxo, Resultado Líquido e Resultado Acumulado ativos).
-2. Desligar todas as barras de custo: stack some, Fluxo/Resultado/Acumulado permanecem.
-3. Desligar tudo: placeholder "Nenhuma série selecionada".
-4. Alternar janela 6/12/24: Resultado Acumulado recalcula sobre a janela visível.
-5. Forçar período negativo: área fica vermelha abaixo de zero, verde acima, com transição exatamente no zero.
-6. Reload da página: seleção de camadas persiste (localStorage).
-7. KPIs do topo e tabela mensal inalterados; export PDF/XLSX continua funcionando.
+1. Abrir Visão Financeira → anotar Fluxo Líquido / Resultado / Margem do mês corrente.
+2. Abrir Análise Temporal → mês corrente no gráfico deve mostrar **exatamente os mesmos valores** (até a última casa decimal).
+3. Repetir para mês anterior, 3 meses atrás, e total YTD.
+4. Caso de teste do incidente: Abril → ambos devem mostrar R$ 9.403,71 (não mais R$ 17.490,18 no gráfico).
 
-## Fora de escopo
-- Não tocar em `useFinanceiroMensal.ts`, fontes de dados, ou cálculos financeiros.
-- Não alterar paleta global, tema, KPIs, exports ou tabela mensal.
-- Não adicionar dependências.
+### 4. Performance
+
+N meses (até 24) × 1 RPC `fetchProjetosLucroCanonico` cada = até 24 chamadas paralelas. A engine canônica já é otimizada e cacheada por React Query (chave compartilhada com Visão Geral em janelas comuns). Aceitável; reavaliar se latência > 1.5s.
+
+## Riscos & mitigações
+
+| Risco | Mitigação |
+|---|---|
+| `fetchProjetosLucroCanonico` não aceita janela `[inicio,fim]` por mês isoladamente | Verificar assinatura antes de codar; se necessário, adicionar parâmetros opcionais `dataInicio/dataFim` (mudança aditiva, sem quebrar callers existentes) |
+| Baseline visual do gráfico (`isBaseline`) precisa continuar zerado | Manter lógica de baseline no wrapper; só o cálculo de Fluxo muda |
+| Latência acumulada de 24 chamadas | React Query em paralelo + staleTime de 30s; chaves estáveis para cache hit |
+| Exports PDF/XLSX referenciam campos antigos | Nenhum nome de campo muda (`fluxoLiquido`, `resultadoLiquido`, `margemOperacional`); só os valores ficam canônicos |
+
+## Workspace e segurança
+
+`workspaceId` continua sendo obtido implicitamente via hooks atuais (`useFinanceiroData` → token). `fetchProjetosLucroCanonico` já filtra `.eq("workspace_id", workspaceId)` internamente. Nenhuma nova superfície exposta.
+
+## Validação final
+
+- [ ] Visão Financeira e Análise Temporal mostram os mesmos números em todos os meses.
+- [ ] Caso Abril resolvido (paridade exata).
+- [ ] Posição de Capital e Composição de Custo continuam idênticas ao que eram (só auditadas).
+- [ ] Tempo de abertura do modal Análise Temporal ≤ 1.5s na primeira carga.
+- [ ] Nenhum console error / nenhuma regressão em outros consumidores de `useFinanceiroMensal`.
