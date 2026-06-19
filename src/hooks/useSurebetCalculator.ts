@@ -14,6 +14,7 @@ import {
   type SurebetEngineAnalysis,
   type LegScenarioResult,
 } from "@/utils/surebetCurrencyEngine";
+import { buildSurebetObservabilitySnapshot, publishSurebetObservability } from "@/utils/surebetObservability";
 
 declare global {
   interface Window {
@@ -324,6 +325,22 @@ export function useSurebetCalculator({
         timestamp: Date.now(),
       });
       if (window.__CALC_DEBUG__.traces.length > 50) window.__CALC_DEBUG__.traces.shift();
+
+      publishSurebetObservability(buildSurebetObservabilitySnapshot({
+        source: "useSurebetCalculator",
+        legs: odds.map((o) => ({
+          tipo: o.tipo ?? "back",
+          odd: o.odd,
+          stake: o.stake,
+          comissao: o.comissao ?? 0,
+          moeda: getMoedaPerna(o),
+          isReference: o.isReference,
+          isManuallyEdited: o.isManuallyEdited,
+          stakeOrigem: o.stakeOrigem,
+        })),
+        calculatedStakes: result.calculatedStakesLocal,
+        analysis: result,
+      }));
     }
 
     return finalResult;

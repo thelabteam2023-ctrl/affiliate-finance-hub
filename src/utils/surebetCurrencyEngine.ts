@@ -263,25 +263,33 @@ export function calcularStakesEqualizadasMultiCurrency(
   if (ref.stakeLocal <= 0) return fallback;
 
   // ─── Caminho LAY: se qualquer perna for lay, usar solver closed-form back+lay ──
-  // Fórmula: para garantir PnL líquido igual em todos os cenários, com tipos misturados,
-  //   D_i = G_i − L_i  onde
-  //     back: G = (odd-1),   L = -1     → D = odd
-  //     lay : G = -(odd-1),  L = (1-c)  → D = -(odd - c)
-  //   s_k = s_ref × D_ref / D_k  (em moeda da ref → converter para moeda da perna)
-  //   stake exibido = |s_k| (o sinal já está embutido no tipo da perna).
+  // Fórmula: cada cenário representa a POSIÇÃO daquela perna vencendo.
+  //   back vence: +stake×(odd−1); back perde: −stake       → D = odd
+  //   lay vence:  +stake×(1−c);   lay perde: −liability   → D = odd−c
+  //   s_k = s_ref × D_ref / D_k  (em moeda da ref → converter para moeda da perna).
+  // Em lay, a equalização precisa preservar centavos; não usa o arredondamento grosso
+  // do formulário (ex.: passo 1), pois ele destrói a paridade 101,42 do caso referência.
   const hasLay = legs.some(l => l.tipo === 'lay');
   if (hasLay) {
     const Dcoef = (leg: EngineLeg): number => {
       const c = leg.comissao ?? 0;
-      if (leg.tipo === 'lay') return -(leg.odd - c);
+      if (leg.tipo === 'lay') return leg.odd - c;
       return leg.odd; // back default
     };
+    const roundLayStake = (value: number): number => Math.round(value * 100) / 100;
     const Dref = Dcoef(ref);
-    // valor pivot na moeda da ref: |s_ref × Dref|
-    const targetRefLocal = Math.abs(ref.stakeLocal * Dref);
+    // valor pivot na moeda da ref: s_ref × Dref
+    const targetRefLocal = ref.stakeLocal * Dref;
     const targetConsolidated = convertViaBRL(
       targetRefLocal, ref.moeda, consolidationCurrency, brlRates, trace
     );
+
+    trace?.step("lay_equalization_solver", {
+      inputs: { refIndex, refStake: ref.stakeLocal, refOdd: ref.odd, refTipo: ref.tipo ?? 'back', refComissao: ref.comissao ?? 0, Dref },
+      outputs: { targetRefLocal, targetConsolidated },
+      currencyOut: consolidationCurrency,
+      formula: "target = refStake × (back: odd | lay: odd − commission)"
+    });
 
     const stakesLocal = legs.map((leg, i) => {
       if (i === refIndex) return ref.stakeLocal;
@@ -291,12 +299,15 @@ export function calcularStakesEqualizadasMultiCurrency(
       const targetInLegCcy = convertViaBRL(
         targetConsolidated, consolidationCurrency, leg.moeda, brlRates, trace
       );
-      const res = roundFn(Math.abs(targetInLegCcy / Dk));
+      const rawStake = targetInLegCcy / Dk;
+      const res = roundLayStake(Math.abs(rawStake));
       trace?.step("stake_distribution_lay", {
-        inputs: { legIndex: i, Dk, targetInLegCcy, tipo: leg.tipo ?? 'back' },
-        outputs: { stakeLocal: res },
+        inputs: { legIndex: i, Dk, targetInLegCcy, tipo: leg.tipo ?? 'back', odd: leg.odd, comissao: leg.comissao ?? 0 },
+        outputs: { rawStake, stakeLocal: res, liabilityLocal: leg.tipo === 'lay' ? res * Math.max(0, leg.odd - 1) : 0 },
         currencyOut: leg.moeda,
-        rounded: true
+        formula: "stake = target / (back: odd | lay: odd − commission)",
+        rounded: true,
+        precisionLoss: Math.abs(rawStake) - res
       });
       return res;
     });
@@ -437,8 +448,9 @@ export function analisarArbitragem(
     return sum + perLegRealStakeConsolidated[i];
   }, 0);
 
-  // PnL líquido total no cenário "perna winnerIdx tem sua seleção vencedora no book".
-  // Inclui contribuição de todas as pernas (back ganham/perdem; lay perdem liability/ganham stake−c).
+  // PnL líquido total no cenário "posição da perna winnerIdx é vencedora".
+  // Para back, a posição vencedora é a seleção ganhar; para lay, é a seleção perder.
+  // As demais posições são tratadas como perdedoras para manter paridade com calculadoras Back/Lay.
   const computeScenarioPnl = (winnerIdx: number): number => {
     let pnlConsolidado = 0;
     for (let i = 0; i < legs.length; i++) {
@@ -450,11 +462,11 @@ export function analisarArbitragem(
       if (leg.tipo === 'lay') {
         const c = leg.comissao ?? 0;
         if (i === winnerIdx) {
-          // seleção venceu → lay perde liability
-          pnlLocal = -stakeLocal * Math.max(0, leg.odd - 1);
-        } else {
-          // seleção perdeu → lay ganha stake líquido da comissão
+          // posição lay venceu → seleção perdeu → ganha stake líquido da comissão
           pnlLocal = stakeLocal * (1 - c);
+        } else {
+          // posição lay perdeu → seleção venceu → perde liability
+          pnlLocal = -stakeLocal * Math.max(0, leg.odd - 1);
         }
       } else {
         // back
@@ -491,9 +503,9 @@ export function analisarArbitragem(
       };
     }
 
-    // Payout (apenas representação visual da perna vencedora; lay = 0 pois perde nesse cenário)
+    // Payout visual da posição vencedora; em lay, representa o lucro líquido da exchange.
     const payoutLocal = leg.tipo === 'lay'
-      ? 0
+      ? stakeLocal * (1 - (leg.comissao ?? 0))
       : (realLocal * leg.odd) + (fbLocal * (leg.odd - 1));
     const payoutConsolidado = convertViaBRL(payoutLocal, leg.moeda, consolidationCurrency, brlRates, trace);
 
