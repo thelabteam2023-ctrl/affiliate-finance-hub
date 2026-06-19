@@ -21,7 +21,9 @@ interface SurebetTableFooterProps {
   setArredondarAtivado: (value: boolean) => void;
   arredondarValor: string;
   setArredondarValor: (value: string) => void;
-  
+  showComissao?: boolean;
+  setShowComissao?: (value: boolean) => void;
+  hasLayLeg?: boolean;
 }
 
 export function SurebetTableFooter({
@@ -31,12 +33,15 @@ export function SurebetTableFooter({
   setArredondarAtivado,
   arredondarValor,
   setArredondarValor,
-  
+  showComissao = false,
+  setShowComissao,
+  hasLayLeg = false,
 }: SurebetTableFooterProps) {
   const hasRange = analysis.stakeTotal > 0 && Math.abs(analysis.maxLucro - analysis.minLucro) > 0.005;
   const lucroSign = (v: number) => (v >= 0 ? "+" : "");
   const lucroColor = analysis.minLucro >= 0 ? "text-emerald-500" : "text-red-500";
   const roiColor = analysis.minRoi >= 0 ? "text-emerald-500" : "text-red-500";
+  const exposicao = analysis.exposicaoTotal ?? analysis.stakeTotal;
 
   return (
     <div 
@@ -76,6 +81,14 @@ export function SurebetTableFooter({
             }
           </div>
         </div>
+        {hasLayLeg && exposicao > 0 && (
+          <div className="text-center" title="Stake (back) + Responsabilidade (lay)">
+            <div className="text-[10px] text-muted-foreground uppercase">Exposição</div>
+            <div className="text-base md:text-lg font-bold text-foreground">
+              {formatCurrency(exposicao, analysis.moedaDominante)}
+            </div>
+          </div>
+        )}
         <div className="text-center">
           <div className="text-[10px] text-muted-foreground uppercase">ROI</div>
           <div className={`font-bold leading-tight whitespace-nowrap ${roiColor} ${hasRange ? "text-xs md:text-sm" : "text-base md:text-lg"}`}>
@@ -96,6 +109,19 @@ export function SurebetTableFooter({
 
       {/* Controles */}
       <div className="flex items-center gap-4">
+        {/* Mostrar comissões */}
+        {!isEditing && setShowComissao && (
+          <div className="flex items-center gap-2">
+            <Switch
+              id="show-comissao"
+              checked={showComissao}
+              onCheckedChange={setShowComissao}
+            />
+            <Label htmlFor="show-comissao" className="text-xs text-muted-foreground cursor-pointer">
+              Mostrar comissões
+            </Label>
+          </div>
+        )}
         {/* Arredondamento */}
         {!isEditing && (
           <div className="flex items-center gap-2">

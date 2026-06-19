@@ -373,6 +373,7 @@ export type Database = {
       apostas_perna_entradas: {
         Row: {
           bookmaker_id: string
+          comissao: number
           cotacao_snapshot: number | null
           cotacao_snapshot_at: string | null
           created_at: string | null
@@ -385,10 +386,12 @@ export type Database = {
           stake_brl_referencia: number | null
           stake_freebet: number
           stake_real: number
+          tipo: string
           updated_at: string | null
         }
         Insert: {
           bookmaker_id: string
+          comissao?: number
           cotacao_snapshot?: number | null
           cotacao_snapshot_at?: string | null
           created_at?: string | null
@@ -401,10 +404,12 @@ export type Database = {
           stake_brl_referencia?: number | null
           stake_freebet?: number
           stake_real?: number
+          tipo?: string
           updated_at?: string | null
         }
         Update: {
           bookmaker_id?: string
+          comissao?: number
           cotacao_snapshot?: number | null
           cotacao_snapshot_at?: string | null
           created_at?: string | null
@@ -417,6 +422,7 @@ export type Database = {
           stake_brl_referencia?: number | null
           stake_freebet?: number
           stake_real?: number
+          tipo?: string
           updated_at?: string | null
         }
         Relationships: [
@@ -510,6 +516,7 @@ export type Database = {
         Row: {
           aposta_id: string
           bookmaker_id: string
+          comissao: number
           cotacao_snapshot: number | null
           cotacao_snapshot_at: string | null
           created_at: string | null
@@ -528,12 +535,14 @@ export type Database = {
           stake_brl_referencia: number | null
           stake_freebet: number
           stake_real: number
+          tipo: string
           updated_at: string | null
           valor_freebet_gerada: number | null
         }
         Insert: {
           aposta_id: string
           bookmaker_id: string
+          comissao?: number
           cotacao_snapshot?: number | null
           cotacao_snapshot_at?: string | null
           created_at?: string | null
@@ -552,12 +561,14 @@ export type Database = {
           stake_brl_referencia?: number | null
           stake_freebet?: number
           stake_real?: number
+          tipo?: string
           updated_at?: string | null
           valor_freebet_gerada?: number | null
         }
         Update: {
           aposta_id?: string
           bookmaker_id?: string
+          comissao?: number
           cotacao_snapshot?: number | null
           cotacao_snapshot_at?: string | null
           created_at?: string | null
@@ -576,6 +587,7 @@ export type Database = {
           stake_brl_referencia?: number | null
           stake_freebet?: number
           stake_real?: number
+          tipo?: string
           updated_at?: string | null
           valor_freebet_gerada?: number | null
         }

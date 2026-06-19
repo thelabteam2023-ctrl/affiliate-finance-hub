@@ -286,6 +286,10 @@ export function SurebetModalRoot({
   
   const [arredondarAtivado, setArredondarAtivado] = useState(true);
   const [arredondarValor, setArredondarValor] = useState("1");
+  const [showComissao, setShowComissao] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage?.getItem('surebet_show_comissao') === '1';
+  });
   const [saving, setSaving] = useState(false);
   const [deletingPerna, setDeletingPerna] = useState(false);
   
@@ -1000,7 +1004,7 @@ export function SurebetModalRoot({
   // MANIPULAÇÃO DE ODDS
   // ============================================
 
-  const updateOdd = useCallback((index: number, field: keyof OddEntry, value: string | boolean) => {
+  const updateOdd = useCallback((index: number, field: keyof OddEntry, value: string | boolean | number) => {
     setOdds(prev => {
       const newOdds = [...prev];
       newOdds[index] = { ...newOdds[index], [field]: value };
@@ -1025,6 +1029,18 @@ export function SurebetModalRoot({
       if (field === "stake" && !newOdds[index].isReference) {
         newOdds[index].isManuallyEdited = true;
         newOdds[index].stakeOrigem = "manual";
+      }
+
+      // Ao alternar tipo back/lay, forçar recálculo da stake automática
+      if (field === "tipo") {
+        if (!newOdds[index].isReference) {
+          newOdds[index].isManuallyEdited = false;
+          newOdds[index].stakeOrigem = undefined;
+        }
+        // Lay não suporta freebet
+        if (value === 'lay' && newOdds[index].fonteSaldo === 'FREEBET') {
+          newOdds[index].fonteSaldo = 'REAL';
+        }
       }
  
       return newOdds;
@@ -2346,6 +2362,7 @@ export function SurebetModalRoot({
                         hasInsufficientBalance={balanceValidation.insufficientLegs.includes(pernaIndex)}
                         insufficientEntries={balanceValidation.insufficientEntries}
                         error={errosPorPerna[pernaIndex]}
+                        showComissao={showComissao}
                         onResultadoChange={handlePernaResultadoChange}
                         onUpdateOdd={updateOdd}
                         onSetReference={setReferenceIndex}
@@ -2401,7 +2418,12 @@ export function SurebetModalRoot({
               setArredondarAtivado={setArredondarAtivado}
               arredondarValor={arredondarValor}
               setArredondarValor={setArredondarValor}
-              
+              showComissao={showComissao}
+              setShowComissao={(v) => {
+                setShowComissao(v);
+                try { window.localStorage?.setItem('surebet_show_comissao', v ? '1' : '0'); } catch {}
+              }}
+              hasLayLeg={odds.some(o => (o.tipo ?? 'back') === 'lay')}
             />
           </div>
 

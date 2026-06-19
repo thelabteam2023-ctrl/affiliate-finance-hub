@@ -39,6 +39,10 @@ export interface EngineLeg {
   realStakeLocal?: number;
   /** Stake de freebet dentro desta perna (para legs mistas Real+FB) */
   freebetStakeLocal?: number;
+  /** Tipo da perna: 'back' (chance a favor, default) ou 'lay' (chance contra) */
+  tipo?: 'back' | 'lay';
+  /** Comissão da exchange aplicada SOMENTE sobre o lucro de pernas LAY. Ex: 0.028 = 2,8% */
+  comissao?: number;
 }
 
 /** Resultado de análise de uma perna num cenário */
@@ -97,6 +101,9 @@ export interface SurebetEngineAnalysis {
 
   /** Moeda dominante para exibição */
   moedaDominante: SupportedCurrency;
+
+  /** Exposição total consolidada: stake (back) + liability (lay). Igual ao stakeRealTotal para 100% back. */
+  exposicaoTotal?: number;
 }
 
 // ─── Funções puras do engine ─────────────────────────────────
@@ -255,6 +262,52 @@ export function calcularStakesEqualizadasMultiCurrency(
   const ref = legs[refIndex];
   if (ref.stakeLocal <= 0) return fallback;
 
+  // ─── Caminho LAY: se qualquer perna for lay, usar solver closed-form back+lay ──
+  // Fórmula: para garantir PnL líquido igual em todos os cenários, com tipos misturados,
+  //   D_i = G_i − L_i  onde
+  //     back: G = (odd-1),   L = -1     → D = odd
+  //     lay : G = -(odd-1),  L = (1-c)  → D = -(odd - c)
+  //   s_k = s_ref × D_ref / D_k  (em moeda da ref → converter para moeda da perna)
+  //   stake exibido = |s_k| (o sinal já está embutido no tipo da perna).
+  const hasLay = legs.some(l => l.tipo === 'lay');
+  if (hasLay) {
+    const Dcoef = (leg: EngineLeg): number => {
+      const c = leg.comissao ?? 0;
+      if (leg.tipo === 'lay') return -(leg.odd - c);
+      return leg.odd; // back default
+    };
+    const Dref = Dcoef(ref);
+    // valor pivot na moeda da ref: |s_ref × Dref|
+    const targetRefLocal = Math.abs(ref.stakeLocal * Dref);
+    const targetConsolidated = convertViaBRL(
+      targetRefLocal, ref.moeda, consolidationCurrency, brlRates, trace
+    );
+
+    const stakesLocal = legs.map((leg, i) => {
+      if (i === refIndex) return ref.stakeLocal;
+      if (leg.isManuallyEdited || leg.isFromPrint) return leg.stakeLocal;
+      const Dk = Dcoef(leg);
+      if (Dk === 0) return leg.stakeLocal;
+      const targetInLegCcy = convertViaBRL(
+        targetConsolidated, consolidationCurrency, leg.moeda, brlRates, trace
+      );
+      const res = roundFn(Math.abs(targetInLegCcy / Dk));
+      trace?.step("stake_distribution_lay", {
+        inputs: { legIndex: i, Dk, targetInLegCcy, tipo: leg.tipo ?? 'back' },
+        outputs: { stakeLocal: res },
+        currencyOut: leg.moeda,
+        rounded: true
+      });
+      return res;
+    });
+
+    const stakesConsolidated = stakesLocal.map((stake, i) =>
+      convertViaBRL(stake, legs[i].moeda, consolidationCurrency, brlRates, trace)
+    );
+    const stakeTotal = stakesConsolidated.reduce((a, b) => a + b, 0);
+    return { stakesLocal, stakesConsolidated, stakeTotal, isValid: true };
+  }
+
   const getEffectivePayout = (leg: EngineLeg, stakeOverride?: number): number => {
     const stake = stakeOverride ?? leg.stakeLocal;
     const realPart = leg.realStakeLocal ?? (leg.isFreebet ? 0 : stake);
@@ -373,6 +426,51 @@ export function analisarArbitragem(
     (l, i) => l.odd > 1 && stakesLocaisEfetivos[i] > 0 && l.moeda
   ).length;
 
+  // Pré-calcular liability (lay) e exposição por perna em moeda consolidada.
+  const perLegLiabilityConsolidated: number[] = legs.map((leg, i) => {
+    if (leg.tipo !== 'lay') return 0;
+    const liabLocal = (stakesLocaisEfetivos[i] || 0) * Math.max(0, leg.odd - 1);
+    return convertViaBRL(liabLocal, leg.moeda || "BRL", consolidationCurrency, brlRates, trace);
+  });
+  const exposicaoTotal = legs.reduce((sum, leg, i) => {
+    if (leg.tipo === 'lay') return sum + perLegLiabilityConsolidated[i];
+    return sum + perLegRealStakeConsolidated[i];
+  }, 0);
+
+  // PnL líquido total no cenário "perna winnerIdx tem sua seleção vencedora no book".
+  // Inclui contribuição de todas as pernas (back ganham/perdem; lay perdem liability/ganham stake−c).
+  const computeScenarioPnl = (winnerIdx: number): number => {
+    let pnlConsolidado = 0;
+    for (let i = 0; i < legs.length; i++) {
+      const leg = legs[i];
+      const stakeLocal = stakesLocaisEfetivos[i] || 0;
+      const realLocal = perLegRealStakeLocal[i];
+      const fbLocal = perLegFbStakeLocal[i];
+      let pnlLocal = 0;
+      if (leg.tipo === 'lay') {
+        const c = leg.comissao ?? 0;
+        if (i === winnerIdx) {
+          // seleção venceu → lay perde liability
+          pnlLocal = -stakeLocal * Math.max(0, leg.odd - 1);
+        } else {
+          // seleção perdeu → lay ganha stake líquido da comissão
+          pnlLocal = stakeLocal * (1 - c);
+        }
+      } else {
+        // back
+        if (i === winnerIdx) {
+          pnlLocal = realLocal * (leg.odd - 1) + fbLocal * (leg.odd - 1);
+        } else {
+          pnlLocal = -realLocal; // freebet não custa
+        }
+      }
+      pnlConsolidado += convertViaBRL(
+        pnlLocal, leg.moeda || "BRL", consolidationCurrency, brlRates, trace
+      );
+    }
+    return pnlConsolidado;
+  };
+
   const scenarios: LegScenarioResult[] = legs.map((leg, i) => {
     const stakeLocal = stakesLocaisEfetivos[i] || 0;
     const stakeConsolidado = stakesConsolidated[i] || 0;
@@ -393,10 +491,15 @@ export function analisarArbitragem(
       };
     }
 
-    const payoutLocal = (realLocal * leg.odd) + (fbLocal * (leg.odd - 1));
+    // Payout (apenas representação visual da perna vencedora; lay = 0 pois perde nesse cenário)
+    const payoutLocal = leg.tipo === 'lay'
+      ? 0
+      : (realLocal * leg.odd) + (fbLocal * (leg.odd - 1));
     const payoutConsolidado = convertViaBRL(payoutLocal, leg.moeda, consolidationCurrency, brlRates, trace);
-    const lucro = payoutConsolidado - stakeRealTotal;
-    const roiBase = stakeRealTotal > 0 ? stakeRealTotal : stakeTotal;
+
+    // Lucro líquido total do cenário "esta perna vence" (somando contribuição de TODAS as pernas)
+    const lucro = computeScenarioPnl(i);
+    const roiBase = exposicaoTotal > 0 ? exposicaoTotal : (stakeRealTotal > 0 ? stakeRealTotal : stakeTotal);
     const roi = roiBase > 0 ? (lucro / roiBase) * 100 : 0;
 
     trace?.step("payout_projection", {
@@ -421,7 +524,7 @@ export function analisarArbitragem(
   const lucros = scenarios.map(s => s.lucro);
   const minLucro = lucros.length > 0 ? Math.min(...lucros) : 0;
   const maxLucro = lucros.length > 0 ? Math.max(...lucros) : 0;
-  const roiBase = stakeRealTotal > 0 ? stakeRealTotal : stakeTotal;
+  const roiBase = exposicaoTotal > 0 ? exposicaoTotal : (stakeRealTotal > 0 ? stakeRealTotal : stakeTotal);
   const minRoi = roiBase > 0 ? (minLucro / roiBase) * 100 : 0;
   const maxRoi = roiBase > 0 ? (maxLucro / roiBase) * 100 : 0;
 
@@ -448,5 +551,6 @@ export function analisarArbitragem(
     pernasCompletasCount,
     isOperacaoParcial,
     moedaDominante,
+    exposicaoTotal,
   };
 }

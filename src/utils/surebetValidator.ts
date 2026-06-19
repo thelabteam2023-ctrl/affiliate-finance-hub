@@ -47,6 +47,24 @@ export function validateSurebetCard(surebet: any): ValidationResult {
     if (!linhaEfetiva || linhaEfetiva === 'Linha' || linhaEfetiva === '') {
       erros.push(`PERNA_${pernaNum}_LINHA_NAO_HIDRATADA`);
     }
+
+    // Validar tipo (back/lay)
+    const tipo = p.tipo ?? 'back';
+    if (tipo !== 'back' && tipo !== 'lay') {
+      erros.push(`PERNA_${pernaNum}_TIPO_INVALIDO: "${tipo}"`);
+    }
+
+    // Validar comissão (0 a 1)
+    const comissao = parseFloat(String(p.comissao ?? 0));
+    if (isNaN(comissao) || comissao < 0 || comissao > 1) {
+      erros.push(`PERNA_${pernaNum}_COMISSAO_INVALIDA: ${p.comissao}`);
+    }
+
+    // Lay não suporta freebet
+    const fonte = p.fonteSaldo || p.fonte_saldo;
+    if (tipo === 'lay' && fonte === 'FREEBET') {
+      erros.push(`PERNA_${pernaNum}_LAY_NAO_ACEITA_FREEBET`);
+    }
   });
 
   // 3. Validar Stake Total
