@@ -352,6 +352,42 @@ export function SurebetColumnsView({
                   </div>
                 </div>
 
+                {/* Lay: Resp (liability) + Comissão */}
+                {(() => {
+                  const isLay = ((entry as any).tipo ?? 'back') === 'lay';
+                  if (!isLay) return null;
+                  const stakeNum = parseFloat(entry.stake || '0') || 0;
+                  const oddNum = parseFloat(entry.odd || '0') || 0;
+                  const liability = oddNum > 1 ? stakeNum * (oddNum - 1) : 0;
+                  const comissaoPct = ((entry as any).comissao ?? 0) * 100;
+                  return (
+                    <div className="flex items-end gap-1.5">
+                      <div className="flex-1 min-w-0">
+                        <label className="text-[9px] text-red-500 uppercase tracking-wide mb-0.5 block">Resp.</label>
+                        <div className="h-8 px-2 rounded border border-red-500/30 bg-red-500/5 text-[11px] tabular-nums text-center flex items-center justify-center text-red-700 dark:text-red-400">
+                          {formatCurrency(liability, entry.moeda)}
+                        </div>
+                      </div>
+                      <div className="w-[72px] shrink-0">
+                        <label className="text-[9px] text-muted-foreground uppercase tracking-wide mb-0.5 block">Com. %</label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="100"
+                          value={Number.isFinite(comissaoPct) ? String(+comissaoPct.toFixed(4)) : ''}
+                          onChange={(e) => {
+                            const pct = parseFloat(e.target.value) || 0;
+                            onUpdateOdd(pernaIndex, 'comissao' as any, pct / 100);
+                          }}
+                          className="h-8 text-[11px] text-center tabular-nums"
+                          onWheel={(e) => e.currentTarget.blur()}
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Resultado (modo edição) */}
                 {isEditing && (
                   <div className="flex flex-wrap gap-0.5">
