@@ -25,7 +25,9 @@ export function calcSurebetWindowHeight(numPernas: number): number {
   return Math.min(calculated, maxHeight);
 }
 
-const SUREBET_WINDOW_FEATURES = 'width=780,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
+// width >= 820 garante innerWidth > 768 (breakpoint mobile do useIsMobile)
+// após bordas/scrollbar do navegador, evitando que o modal caia no layout de cards.
+const SUREBET_WINDOW_FEATURES = 'width=820,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
 
 /**
  * Abre o formulário de Surebet em uma nova janela.
