@@ -312,6 +312,8 @@ function PernaItem({
   const layPrefix = isLayPerna ? "Lay " : "";
   const oddClass = isLayPerna ? "text-red-400" : "";
   const layTitle = isLayPerna ? "Chance contra (Lay)" : undefined;
+  const stakeLabel = isLayPerna ? "Resp: " : "";
+  const stakeTitle = isLayPerna ? "Responsabilidade (liability)" : undefined;
   
   // formatBookmakerDisplay imported from @/lib/bookmaker-display
   
