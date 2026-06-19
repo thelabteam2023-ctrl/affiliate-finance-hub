@@ -552,7 +552,7 @@ function PernaItem({
               
               {/* Odd + Stake */}
               <div className="flex items-center gap-2 shrink-0">
-                <span className="font-medium text-foreground">@{entry.odd.toFixed(2)}</span>
+                <span className={cn("font-medium text-foreground", (entry as any).tipo === "lay" && "text-red-400")} title={(entry as any).tipo === "lay" ? "Chance contra (Lay)" : undefined}>{(entry as any).tipo === "lay" ? "Lay " : ""}@{entry.odd.toFixed(2)}</span>
                 <span className="text-muted-foreground">{formatPernaValue(entry.stake, entry.moeda)}</span>
               </div>
             </div>
