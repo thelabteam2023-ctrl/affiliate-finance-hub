@@ -1,6 +1,131 @@
-# Plano — "Chance Contra" (Lay) na Calculadora de Arbitragem
+# Plano — Debug e Observabilidade Sistêmica da Equalização Lay
 
-Plano completo, escrito após o diagnóstico das 5 seções já entregue. Nada será codificado até sua aprovação.
+Objetivo atual: diagnosticar sem depender de novos prints, provar por teste automatizado e por telemetria local que a equalização Back/Lay está usando a fórmula correta, e impedir regressão do caminho 100% Back.
+
+---
+
+## Diagnóstico principal certificado
+
+No caso do print:
+- Perna 1: **Back**, odd `2.00`, stake `100,00`.
+- Perna 2: **Lay**, odd `2.00`, comissão `2,8%`.
+- Fórmula correta para stake lay equalizada:
+
+```text
+stakeLay = (stakeBack × oddBack) / (oddLay − comissão)
+stakeLay = (100 × 2.00) / (2.00 − 0.028)
+stakeLay = 200 / 1.972
+stakeLay = 101.419878... ≈ 101,42
+```
+
+Lucros esperados:
+
+```text
+Cenário Back vence / Lay perde:
+  +100 − 101,42 = −1,42
+
+Cenário Back perde / Lay ganha:
+  −100 + (101,42 × 0,972) = −1,42 aprox.
+```
+
+Logo, se a UI mostra `100,00` na perna lay com comissão `2,8%`, a equalização ainda está sendo anulada por uma das camadas abaixo.
+
+---
+
+## Plano de ação aplicado
+
+### 1. Isolar a fórmula canônica no engine
+
+Arquivo: `src/utils/surebetCurrencyEngine.ts`
+
+- Corrigir o coeficiente Lay de equalização para `odd − comissão`.
+- Remover o sinal negativo indevido no divisor da stake Lay.
+- Preservar arredondamento fino em centavos no caminho Lay, mesmo quando o formulário está com arredondamento grosso ligado (`1`, `5`, etc.).
+- Manter intacto o caminho 100% Back.
+
+### 2. Adicionar rastreio matemático do solver
+
+Arquivo: `src/utils/surebetCurrencyEngine.ts`
+
+Adicionar steps no `CalculationTrace`:
+- `lay_equalization_solver`: registra referência, coeficiente, target e moeda.
+- `stake_distribution_lay`: registra `Dk`, stake bruta, stake arredondada, liability e perda de precisão.
+
+### 3. Publicar observabilidade local consultável
+
+Arquivo: `src/utils/surebetObservability.ts`
+
+Criar bridge global:
+
+```js
+window.__SUREBET_OBS__.last
+window.__SUREBET_OBS__.history
+window.__SUREBET_OBS__.export()
+window.__SUREBET_OBS__.clear()
+```
+
+Ela registra:
+- pernas (`tipo`, `odd`, `stake`, `comissao`, `moeda`, `isReference`, `stakeOrigem`);
+- stakes calculadas pelo engine;
+- lucros por cenário;
+- spread entre cenários;
+- warnings automáticos para Lay inválido ou spread inesperado.
+
+### 4. Integrar observabilidade ao hook de cálculo
+
+Arquivo: `src/hooks/useSurebetCalculator.ts`
+
+- Publicar snapshot a cada cálculo.
+- Gerar `console.warn("[SUREBET_OBS]", snapshot)` somente quando houver anomalia.
+- Manter `window.__CALC_DEBUG__` existente para compatibilidade.
+
+### 5. Criar testes automatizados de regressão
+
+Arquivo: `src/utils/__tests__/surebetLayEqualization.test.ts`
+
+Casos obrigatórios:
+- Back 100 @2.00 vs Lay @2.00 comissão 2,8% → stake Lay `≈101,42` e cenários `≈-1,42/-1,42`.
+- 100% Back @2.00/@2.00 → stake `[100,100]`, lucro `0`, ROI `0`, exposição `200`.
+
+---
+
+## Checklist de debug autônomo
+
+1. Abrir a calculadora e reproduzir o setup do print.
+2. Conferir no console:
+
+```js
+window.__SUREBET_OBS__.last
+```
+
+3. Validar campos críticos:
+
+```text
+calculatedStakes[1] ≈ 101.42
+scenarioLucros[0] ≈ -1.42
+scenarioLucros[1] ≈ -1.42
+spread < 0.05
+warnings = []
+```
+
+4. Se a UI ainda mostrar `100,00`, mas `calculatedStakes[1] = 101.42`, o bug está na camada React de aplicação de stake.
+5. Se `calculatedStakes[1] = 100`, o bug está no engine ou no payload (`tipo/comissao`) chegando errado.
+6. Se `warnings` contiver `LAY_EQUALIZATION_SPREAD_*`, o engine calculou, mas os cenários finais não equalizaram.
+
+---
+
+## Critério de aceite
+
+- O caso do print deve exibir stake Lay `≈101,42`, não `100,00`.
+- O lucro garantido deve ficar equalizado em torno de `−1,42 / −1,42`.
+- O caminho 100% Back deve permanecer idêntico ao comportamento anterior.
+- A observabilidade deve permitir exportar o histórico sem interação adicional do usuário.
+
+---
+
+## Histórico anterior — "Chance Contra" (Lay) na Calculadora de Arbitragem
+
+Plano original mantido abaixo como referência de escopo e decisões já aprovadas.
 
 ---
 
