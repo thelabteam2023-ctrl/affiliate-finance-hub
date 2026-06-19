@@ -872,6 +872,8 @@ export function SurebetModalRoot({
           isManuallyEdited: true,
           resultado: mainEntry.resultado || perna.resultado,
           fonteSaldo: (mainEntry.fonte_saldo as 'REAL' | 'FREEBET') || 'REAL',
+          tipo: ((perna.tipo ?? mainEntry.tipo ?? 'back') as 'back' | 'lay'),
+          comissao: Number(perna.comissao ?? mainEntry.comissao ?? 0) || 0,
           additionalEntries: additionalEntries.map((sub: any) => ({
             id: sub.id,
             bookmaker_id: sub.bookmaker_id || "",
@@ -881,6 +883,8 @@ export function SurebetModalRoot({
             selecaoLivre: sub.selecao_livre || "",
             fonteSaldo: (sub.fonte_saldo as 'REAL' | 'FREEBET') || 'REAL',
             pernaId: perna.id, // Referência à perna pai
+            tipo: ((sub.tipo ?? perna.tipo ?? 'back') as 'back' | 'lay'),
+            comissao: Number(sub.comissao ?? perna.comissao ?? 0) || 0,
           })),
         };
       });
@@ -1530,13 +1534,17 @@ export function SurebetModalRoot({
 
       pernasPreenchidas.forEach((perna, idx) => {
         const ordem = idx + 1;
+        const pernaTipo = (perna.tipo ?? 'back') as 'back' | 'lay';
+        const pernaComissao = Number(perna.comissao ?? 0) || 0;
         // Estrutura p_pernas
         pernasRPC.push({
           id: perna.pernaId || null,
           ordem,
           casa_id: perna.bookmaker_id, // Casa principal para compatibilidade legado
           selecao: perna.selecao,
-          selecao_livre: perna.selecaoLivre || null
+          selecao_livre: perna.selecaoLivre || null,
+          tipo: pernaTipo,
+          comissao: pernaComissao
         });
 
         // Estrutura p_entradas para a entrada principal
@@ -1553,7 +1561,9 @@ export function SurebetModalRoot({
           moeda: moedaMain,
           fonte_saldo: perna.fonteSaldo || 'REAL',
           cotacao_snapshot: snapshotMain.cotacao_snapshot,
-          stake_brl_referencia: snapshotMain.valor_brl_referencia
+          stake_brl_referencia: snapshotMain.valor_brl_referencia,
+          tipo: pernaTipo,
+          comissao: pernaComissao
         });
 
         // Entradas adicionais
@@ -1572,7 +1582,9 @@ export function SurebetModalRoot({
               moeda: moedaSub,
               fonte_saldo: sub.fonteSaldo || 'REAL',
               cotacao_snapshot: snapshotSub.cotacao_snapshot,
-              stake_brl_referencia: snapshotSub.valor_brl_referencia
+              stake_brl_referencia: snapshotSub.valor_brl_referencia,
+              tipo: pernaTipo,
+              comissao: pernaComissao
             });
           }
         });
