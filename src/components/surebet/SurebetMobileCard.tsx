@@ -159,13 +159,38 @@ export function SurebetMobileCard({
       {/* Card Header: Perna number + controls */}
       <div className="flex items-center justify-between px-3 py-2 bg-muted/20 border-b border-border/30">
         <div className="flex items-center gap-2">
-          <span className={cn(
-            "inline-flex items-center justify-center w-8 h-8 rounded-lg font-bold text-sm",
-            getPernaColor()
-          )}>
-            {pernaIndex + 1}
-          </span>
-          <span className="text-xs text-muted-foreground">Perna {pernaIndex + 1}</span>
+          {(() => {
+            const tipo = ((entry as any).tipo ?? 'back') as 'back' | 'lay';
+            const isLay = tipo === 'lay';
+            return (
+              <>
+                <button
+                  type="button"
+                  onClick={() => !isEditing && onUpdateOdd(pernaIndex, 'tipo' as any, isLay ? 'back' : 'lay')}
+                  disabled={isEditing}
+                  title={isLay ? 'Chance CONTRA (lay) — toque para alternar' : 'Chance A FAVOR (back) — toque para alternar'}
+                  className={cn(
+                    "relative inline-flex items-center justify-center w-8 h-8 rounded-lg font-bold text-sm transition-colors",
+                    isLay
+                      ? "bg-red-500/20 text-red-600 dark:text-red-400 ring-1 ring-red-500/40"
+                      : getPernaColor(),
+                    !isEditing && "active:scale-95"
+                  )}
+                >
+                  {pernaIndex + 1}
+                  <span className={cn(
+                    "absolute -top-1 -right-1 text-[10px] font-bold leading-none",
+                    isLay ? "text-red-500" : "text-emerald-500/80"
+                  )}>
+                    {isLay ? '−' : '+'}
+                  </span>
+                </button>
+                <span className="text-xs text-muted-foreground">
+                  Perna {pernaIndex + 1}{isLay && <span className="ml-1 text-red-500 font-bold">LAY</span>}
+                </span>
+              </>
+            );
+          })()}
           {entry.selecaoLivre?.trim() && (
             <span className="text-[10px] text-muted-foreground/70">• {entry.selecaoLivre}</span>
           )}
@@ -322,6 +347,42 @@ export function SurebetMobileCard({
             className="h-9 text-xs border-dashed"
           />
         </div>
+
+        {/* Lay: Resp (liability) + Comissão */}
+        {(() => {
+          const isLay = ((entry as any).tipo ?? 'back') === 'lay';
+          if (!isLay) return null;
+          const stakeNum = parseFloat(entry.stake || '0') || 0;
+          const oddNum = parseFloat(entry.odd || '0') || 0;
+          const liability = oddNum > 1 ? stakeNum * (oddNum - 1) : 0;
+          const comissaoPct = ((entry as any).comissao ?? 0) * 100;
+          return (
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] text-red-500 uppercase mb-1 block">Resp.</label>
+                <div className="h-9 px-2 rounded border border-red-500/30 bg-red-500/5 text-xs tabular-nums flex items-center justify-center text-red-700 dark:text-red-400 font-semibold">
+                  {formatCurrency(liability, entry.moeda)}
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Comissão %</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  value={Number.isFinite(comissaoPct) ? String(+comissaoPct.toFixed(4)) : ''}
+                  onChange={(e) => {
+                    const pct = parseFloat(e.target.value) || 0;
+                    onUpdateOdd(pernaIndex, 'comissao' as any, String(pct / 100));
+                  }}
+                  className="h-9 text-xs text-center tabular-nums"
+                  onWheel={(e) => e.currentTarget.blur()}
+                />
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Resultado (modo edição) */}
         {isEditing && (

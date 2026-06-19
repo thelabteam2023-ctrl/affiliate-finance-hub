@@ -152,12 +152,36 @@ export function SurebetColumnsView({
               {/* Header da coluna */}
               <div className="flex items-center justify-between px-3 py-2 bg-muted/30 border-b border-border/30">
                 <div className="flex items-center gap-2">
-                  <span className={cn(
-                    "w-8 h-8 rounded-lg font-bold text-sm flex items-center justify-center",
-                    getPernaColor(pernaIndex, numPernas)
-                  )}>
-                    {pernaIndex + 1}
-                  </span>
+                  {(() => {
+                    const tipo = ((entry as any).tipo ?? 'back') as 'back' | 'lay';
+                    const isLay = tipo === 'lay';
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => !isEditing && onUpdateOdd(pernaIndex, 'tipo' as any, isLay ? 'back' : 'lay')}
+                        title={isLay ? 'Chance CONTRA (lay) — clique para alternar' : 'Chance A FAVOR (back) — clique para alternar'}
+                        disabled={isEditing}
+                        className={cn(
+                          "relative w-8 h-8 rounded-lg font-bold text-sm flex items-center justify-center transition-colors",
+                          isLay
+                            ? "bg-red-500/20 text-red-600 dark:text-red-400 ring-1 ring-red-500/40"
+                            : getPernaColor(pernaIndex, numPernas),
+                          !isEditing && "hover:ring-2 hover:ring-primary/40 cursor-pointer"
+                        )}
+                      >
+                        {pernaIndex + 1}
+                        <span className={cn(
+                          "absolute -top-1 -right-1 text-[10px] font-bold leading-none",
+                          isLay ? "text-red-500" : "text-emerald-500/80"
+                        )}>
+                          {isLay ? '−' : '+'}
+                        </span>
+                      </button>
+                    );
+                  })()}
+                  {((entry as any).tipo ?? 'back') === 'lay' && (
+                    <span className="text-[9px] font-bold text-red-500 uppercase tracking-wide">Lay</span>
+                  )}
                   {entry.selecaoLivre?.trim() && (
                     <span className="text-[10px] text-muted-foreground truncate max-w-[80px]">
                       {entry.selecaoLivre}
@@ -327,6 +351,42 @@ export function SurebetColumnsView({
                     />
                   </div>
                 </div>
+
+                {/* Lay: Resp (liability) + Comissão */}
+                {(() => {
+                  const isLay = ((entry as any).tipo ?? 'back') === 'lay';
+                  if (!isLay) return null;
+                  const stakeNum = parseFloat(entry.stake || '0') || 0;
+                  const oddNum = parseFloat(entry.odd || '0') || 0;
+                  const liability = oddNum > 1 ? stakeNum * (oddNum - 1) : 0;
+                  const comissaoPct = ((entry as any).comissao ?? 0) * 100;
+                  return (
+                    <div className="flex items-end gap-1.5">
+                      <div className="flex-1 min-w-0">
+                        <label className="text-[9px] text-red-500 uppercase tracking-wide mb-0.5 block">Resp.</label>
+                        <div className="h-8 px-2 rounded border border-red-500/30 bg-red-500/5 text-[11px] tabular-nums text-center flex items-center justify-center text-red-700 dark:text-red-400">
+                          {formatCurrency(liability, entry.moeda)}
+                        </div>
+                      </div>
+                      <div className="w-[72px] shrink-0">
+                        <label className="text-[9px] text-muted-foreground uppercase tracking-wide mb-0.5 block">Com. %</label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="100"
+                          value={Number.isFinite(comissaoPct) ? String(+comissaoPct.toFixed(4)) : ''}
+                          onChange={(e) => {
+                            const pct = parseFloat(e.target.value) || 0;
+                            onUpdateOdd(pernaIndex, 'comissao' as any, String(pct / 100));
+                          }}
+                          className="h-8 text-[11px] text-center tabular-nums"
+                          onWheel={(e) => e.currentTarget.blur()}
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Resultado (modo edição) */}
                 {isEditing && (
