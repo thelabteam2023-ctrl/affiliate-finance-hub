@@ -312,6 +312,8 @@ function PernaItem({
   const layPrefix = isLayPerna ? "Lay " : "";
   const oddClass = isLayPerna ? "text-red-400" : "";
   const layTitle = isLayPerna ? "Chance contra (Lay)" : undefined;
+  const stakeLabel = isLayPerna ? "Resp: " : "";
+  const stakeTitle = isLayPerna ? "Responsabilidade (liability)" : undefined;
   
   // formatBookmakerDisplay imported from @/lib/bookmaker-display
   
@@ -371,8 +373,8 @@ function PernaItem({
           
           <div className="flex items-baseline justify-between mt-auto pt-1 border-t border-border/10">
             <span className={cn("text-sm font-bold tabular-nums", oddClass)} title={layTitle}>{layPrefix}@{perna.odd.toFixed(2)}</span>
-            <span className="text-xs text-muted-foreground tabular-nums font-medium">
-              {formatPernaValue(perna.stake, perna.moeda)}
+            <span className={cn("text-xs tabular-nums font-medium", isLayPerna ? "text-red-300" : "text-muted-foreground")} title={stakeTitle}>
+              {stakeLabel}{formatPernaValue(perna.stake, perna.moeda)}
             </span>
           </div>
         </div>
@@ -424,7 +426,7 @@ function PernaItem({
           {/* Odd e Stake à direita - larguras fixas para alinhamento */}
           <div className="flex items-center gap-2 shrink-0">
             <span className={cn("text-sm sm:text-base font-medium whitespace-nowrap w-[70px] text-right tabular-nums", oddClass)} title={layTitle}>{layPrefix}@{perna.odd.toFixed(2)}</span>
-            <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap w-[90px] text-right tabular-nums">{formatPernaValue(perna.stake, perna.moeda)}</span>
+            <span className={cn("text-xs sm:text-sm whitespace-nowrap w-[110px] text-right tabular-nums", isLayPerna ? "text-red-300" : "text-muted-foreground")} title={stakeTitle}>{stakeLabel}{formatPernaValue(perna.stake, perna.moeda)}</span>
           </div>
           
           {/* Result pill per perna */}
@@ -486,16 +488,16 @@ function PernaItem({
           {/* Odd e Stake */}
           <div className="flex items-center gap-2 shrink-0">
             <span className={cn("text-sm font-medium", oddClass)} title={layTitle}>{layPrefix}@{displayOdd.toFixed(2)}</span>
-            <span className="text-xs text-muted-foreground">
+            <span className={cn("text-xs", isLayPerna ? "text-red-300" : "text-muted-foreground")} title={stakeTitle}>
               {(() => {
                 // Check if entries have mixed currencies
                 const entryCurrencies = new Set(perna.entries?.map(e => e.moeda) || []);
                 if (entryCurrencies.size > 1 && convertToConsolidation) {
                   // Convert each entry's stake to consolidation currency
                   const consolidated = perna.entries!.reduce((sum, e) => sum + convertToConsolidation(e.stake, e.moeda), 0);
-                  return formatValue(consolidated);
+                  return `${stakeLabel}${formatValue(consolidated)}`;
                 }
-                return formatPernaValue(displayStake, perna.moeda);
+                return `${stakeLabel}${formatPernaValue(displayStake, perna.moeda)}`;
               })()}
             </span>
           </div>

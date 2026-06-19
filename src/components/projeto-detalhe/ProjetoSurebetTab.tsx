@@ -390,7 +390,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
             supabase
               .from("apostas_pernas")
               .select(`
-                id, aposta_id, bookmaker_id, moeda, selecao, selecao_livre, odd, stake, ordem,
+                id, aposta_id, bookmaker_id, moeda, selecao, selecao_livre, odd, stake, stake_real, stake_freebet, ordem, tipo, comissao,
                 resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada,
                 stake_brl_referencia, lucro_prejuizo_brl_referencia, cotacao_snapshot, fonte_saldo,
                 bookmakers (nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo(logo_url))
@@ -422,6 +422,10 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
             lucro_prejuizo_brl_referencia: p.lucro_prejuizo_brl_referencia,
             cotacao_snapshot: p.cotacao_snapshot,
             fonte_saldo: p.fonte_saldo || null,
+            tipo: p.tipo || 'back',
+            comissao: p.comissao ?? 0,
+            stake_real: p.stake_real ?? undefined,
+            stake_freebet: p.stake_freebet ?? undefined,
           });
         });
       }
