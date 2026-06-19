@@ -448,8 +448,9 @@ export function analisarArbitragem(
     return sum + perLegRealStakeConsolidated[i];
   }, 0);
 
-  // PnL líquido total no cenário "perna winnerIdx tem sua seleção vencedora no book".
-  // Inclui contribuição de todas as pernas (back ganham/perdem; lay perdem liability/ganham stake−c).
+  // PnL líquido total no cenário "posição da perna winnerIdx é vencedora".
+  // Para back, a posição vencedora é a seleção ganhar; para lay, é a seleção perder.
+  // As demais posições são tratadas como perdedoras para manter paridade com calculadoras Back/Lay.
   const computeScenarioPnl = (winnerIdx: number): number => {
     let pnlConsolidado = 0;
     for (let i = 0; i < legs.length; i++) {
@@ -461,11 +462,11 @@ export function analisarArbitragem(
       if (leg.tipo === 'lay') {
         const c = leg.comissao ?? 0;
         if (i === winnerIdx) {
-          // seleção venceu → lay perde liability
-          pnlLocal = -stakeLocal * Math.max(0, leg.odd - 1);
-        } else {
-          // seleção perdeu → lay ganha stake líquido da comissão
+          // posição lay venceu → seleção perdeu → ganha stake líquido da comissão
           pnlLocal = stakeLocal * (1 - c);
+        } else {
+          // posição lay perdeu → seleção venceu → perde liability
+          pnlLocal = -stakeLocal * Math.max(0, leg.odd - 1);
         }
       } else {
         // back
@@ -502,9 +503,9 @@ export function analisarArbitragem(
       };
     }
 
-    // Payout (apenas representação visual da perna vencedora; lay = 0 pois perde nesse cenário)
+    // Payout visual da posição vencedora; em lay, representa o lucro líquido da exchange.
     const payoutLocal = leg.tipo === 'lay'
-      ? 0
+      ? stakeLocal * (1 - (leg.comissao ?? 0))
       : (realLocal * leg.odd) + (fbLocal * (leg.odd - 1));
     const payoutConsolidado = convertViaBRL(payoutLocal, leg.moeda, consolidationCurrency, brlRates, trace);
 
