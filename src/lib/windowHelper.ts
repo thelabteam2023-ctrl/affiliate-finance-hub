@@ -33,7 +33,7 @@ const SUREBET_WINDOW_FEATURES = 'width=820,menubar=no,toolbar=no,location=no,sta
  * Abre o formulário de Surebet em uma nova janela.
  */
 export function openSurebetWindow(params: WindowOpenParams & { numPernas?: number }) {
-  const { projetoId, id, activeTab = 'surebet', numPernas = 3 } = params;
+  const { projetoId, id, activeTab = 'surebet', numPernas = 2 } = params;
   const surebetId = id || 'novo';
   const url = `/janela/surebet/${surebetId}?projetoId=${encodeURIComponent(projetoId)}&tab=${encodeURIComponent(activeTab)}`;
   const height = calcSurebetWindowHeight(numPernas);
