@@ -1534,13 +1534,17 @@ export function SurebetModalRoot({
 
       pernasPreenchidas.forEach((perna, idx) => {
         const ordem = idx + 1;
+        const pernaTipo = (perna.tipo ?? 'back') as 'back' | 'lay';
+        const pernaComissao = Number(perna.comissao ?? 0) || 0;
         // Estrutura p_pernas
         pernasRPC.push({
           id: perna.pernaId || null,
           ordem,
           casa_id: perna.bookmaker_id, // Casa principal para compatibilidade legado
           selecao: perna.selecao,
-          selecao_livre: perna.selecaoLivre || null
+          selecao_livre: perna.selecaoLivre || null,
+          tipo: pernaTipo,
+          comissao: pernaComissao
         });
 
         // Estrutura p_entradas para a entrada principal
@@ -1557,7 +1561,9 @@ export function SurebetModalRoot({
           moeda: moedaMain,
           fonte_saldo: perna.fonteSaldo || 'REAL',
           cotacao_snapshot: snapshotMain.cotacao_snapshot,
-          stake_brl_referencia: snapshotMain.valor_brl_referencia
+          stake_brl_referencia: snapshotMain.valor_brl_referencia,
+          tipo: pernaTipo,
+          comissao: pernaComissao
         });
 
         // Entradas adicionais
@@ -1576,7 +1582,9 @@ export function SurebetModalRoot({
               moeda: moedaSub,
               fonte_saldo: sub.fonteSaldo || 'REAL',
               cotacao_snapshot: snapshotSub.cotacao_snapshot,
-              stake_brl_referencia: snapshotSub.valor_brl_referencia
+              stake_brl_referencia: snapshotSub.valor_brl_referencia,
+              tipo: pernaTipo,
+              comissao: pernaComissao
             });
           }
         });
