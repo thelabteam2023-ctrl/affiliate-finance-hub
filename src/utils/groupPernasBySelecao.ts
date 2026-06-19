@@ -29,6 +29,10 @@ interface RawPerna {
   gerou_freebet?: boolean;
   valor_freebet_gerada?: number | null;
   fonte_saldo?: string | null;
+  tipo?: "back" | "lay" | null;
+  comissao?: number | null;
+  stake_real?: number;
+  stake_freebet?: number;
   // Bookmaker join
   bookmaker?: { nome: string; parceiro?: { nome: string } };
 }
@@ -88,6 +92,10 @@ export function groupPernasBySelecao(
       lucro_prejuizo_brl_referencia: main.lucro_prejuizo_brl_referencia ?? null,
       cotacao_snapshot: main.cotacao_snapshot ?? null,
       fonte_saldo: main.fonte_saldo || undefined,
+      tipo: main.tipo ?? 'back',
+      comissao: main.comissao ?? 0,
+      stake_real: main.stake_real,
+      stake_freebet: main.stake_freebet,
     };
 
     if (hasEntries) {
