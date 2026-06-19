@@ -376,6 +376,9 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
           const bkInfo = a.bookmaker_id ? bookmakerMap.get(a.bookmaker_id) : null;
           return {
             ...a,
+            // Preserva JSONB original (apostas_unificada.pernas) para fallback de hidratação
+            // caso apostas_pernas não tenha sido populado ainda (timing pós-save).
+            _raw_pernas_json: Array.isArray(a.pernas) ? a.pernas : null,
             bookmaker_nome: bkInfo?.nome ?? "Desconhecida",
             parceiro_nome: bkInfo?.parceiroNome ?? undefined,
             instance_identifier: bkInfo?.instanceIdentifier ?? null,
@@ -1306,7 +1309,11 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
             {/* Surebets renderizadas com SurebetCard (motor financeiro unificado) */}
             {apostasArbitragem.map((aposta) => {
               // Group pernas by selecao (same as Surebet tab)
-              const pernasRaw = (aposta.pernas as any[] || []).map((p: any) => ({
+              // Fallback: se apostas_pernas estiver vazio (timing pós-save), usa JSONB salvo na aposta
+              const pernasSrc: any[] = Array.isArray(aposta.pernas) && aposta.pernas.length > 0
+                ? (aposta.pernas as any[])
+                : (Array.isArray((aposta as any)._raw_pernas_json) ? (aposta as any)._raw_pernas_json : []);
+              const pernasRaw = pernasSrc.map((p: any) => ({
                 id: p.id,
                 bookmaker_id: p.bookmaker_id,
                 bookmaker_nome: p.bookmaker_nome || '',
@@ -1330,6 +1337,17 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
               });
               const pernasAgrupadas = groupPernasBySelecao(pernasOrdenadas);
 
+              // Fallback de stake_total: se a aposta_unificada não persistiu, soma das pernas
+              const stakeFromPernas = pernasRaw.reduce(
+                (sum: number, p: any) => sum + (Number(p.stake) || 0),
+                0
+              );
+              const stakeTotalEfetivo =
+                Number(aposta.stake_total) ||
+                Number(aposta.stake) ||
+                stakeFromPernas ||
+                0;
+
               const surebetData = {
                 id: aposta.id,
                 workspace_id: (aposta as any).workspace_id || '',
@@ -1339,7 +1357,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                 modelo: aposta.modelo || '1-2',
                 mercado: aposta.mercado,
                 estrategia: aposta.estrategia,
-                stake_total: aposta.stake_total || aposta.stake || 0,
+                stake_total: stakeTotalEfetivo,
                 spread_calculado: aposta.spread_calculado ?? null,
                 roi_esperado: aposta.roi_esperado ?? null,
                 lucro_esperado: aposta.lucro_esperado ?? null,
