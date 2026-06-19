@@ -348,6 +348,42 @@ export function SurebetMobileCard({
           />
         </div>
 
+        {/* Lay: Resp (liability) + Comissão */}
+        {(() => {
+          const isLay = ((entry as any).tipo ?? 'back') === 'lay';
+          if (!isLay) return null;
+          const stakeNum = parseFloat(entry.stake || '0') || 0;
+          const oddNum = parseFloat(entry.odd || '0') || 0;
+          const liability = oddNum > 1 ? stakeNum * (oddNum - 1) : 0;
+          const comissaoPct = ((entry as any).comissao ?? 0) * 100;
+          return (
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] text-red-500 uppercase mb-1 block">Resp.</label>
+                <div className="h-9 px-2 rounded border border-red-500/30 bg-red-500/5 text-xs tabular-nums flex items-center justify-center text-red-700 dark:text-red-400 font-semibold">
+                  {formatCurrency(liability, entry.moeda)}
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Comissão %</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  value={Number.isFinite(comissaoPct) ? String(+comissaoPct.toFixed(4)) : ''}
+                  onChange={(e) => {
+                    const pct = parseFloat(e.target.value) || 0;
+                    onUpdateOdd(pernaIndex, 'comissao' as any, String(pct / 100));
+                  }}
+                  className="h-9 text-xs text-center tabular-nums"
+                  onWheel={(e) => e.currentTarget.blur()}
+                />
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Resultado (modo edição) */}
         {isEditing && (
           <div>
