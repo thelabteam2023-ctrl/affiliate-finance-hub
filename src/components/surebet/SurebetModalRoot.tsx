@@ -1567,6 +1567,22 @@ export function SurebetModalRoot({
         return entry.bookmaker_id && parseFloat(entry.odd) > 1 && parseFloat(entry.stake) > 0;
       });
 
+      // HARD GUARD pós-filtro: se o número de pernas válidas for menor que o
+      // declarado pelo modelo, NÃO chama a RPC. Evita criar `apostas_unificada`
+      // com `forma_registro=ARBITRAGEM` e zero pernas em `apostas_pernas`.
+      if (pernasPreenchidas.length < numPernas) {
+        console.error('[SurebetModalRoot] ABORT save — pernas válidas insuficientes', {
+          esperado: numPernas,
+          recebido: pernasPreenchidas.length,
+          odds: odds.map(o => ({ bk: o.bookmaker_id, odd: o.odd, stake: o.stake })),
+        });
+        toast.error('Operação inválida', {
+          description: `Apenas ${pernasPreenchidas.length}/${numPernas} pernas têm casa + odd + stake válidos.`,
+        });
+        setSaving(false);
+        return;
+      }
+
       // ================================================================
       // FLATTEN: Expandir additionalEntries em pernas individuais
       // Cada sub-entrada herda selecao da perna pai mas tem seu próprio
