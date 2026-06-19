@@ -1492,7 +1492,37 @@ export function SurebetModalRoot({
       toast.error(`Preencha todas as ${numPernas} pernas (${analysis.pernasCompletasCount} preenchidas)`);
       return;
     }
-    
+
+    // HARD GUARD: nenhuma perna ativa pode ficar sem casa selecionada
+    // (entry com odd>0 ou stake>0 obriga bookmaker_id). Bloqueia ANTES da RPC
+    // para impedir registros fantasma de apostas_unificada sem pernas válidas.
+    const missingCasaLeg: { idx: number; sub?: number } | null = (() => {
+      for (let i = 0; i < odds.length; i++) {
+        const o = odds[i];
+        const hasOdd = parseFloat(o.odd) > 0;
+        const hasStake = parseFloat(o.stake) > 0;
+        if ((hasOdd || hasStake) && !o.bookmaker_id) return { idx: i };
+        const subs = o.additionalEntries || [];
+        for (let j = 0; j < subs.length; j++) {
+          const s = subs[j];
+          const sHasOdd = parseFloat(s.odd) > 0;
+          const sHasStake = parseFloat(s.stake) > 0;
+          if ((sHasOdd || sHasStake) && !s.bookmaker_id) return { idx: i, sub: j };
+        }
+      }
+      return null;
+    })();
+    if (missingCasaLeg) {
+      const where = missingCasaLeg.sub != null
+        ? `Perna ${missingCasaLeg.idx + 1} (casa adicional ${missingCasaLeg.sub + 1})`
+        : `Perna ${missingCasaLeg.idx + 1}`;
+      console.warn('[SurebetModalRoot] BLOCKED save — casa não selecionada', missingCasaLeg, odds);
+      toast.error('Casa obrigatória', {
+        description: `${where}: selecione a casa antes de salvar.`,
+      });
+      return;
+    }
+
     // Validação de Integridade (Hydration Check)
     const validation = validateSurebetCard({
       evento,
