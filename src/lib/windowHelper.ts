@@ -17,17 +17,17 @@ const DEFAULT_WINDOW_FEATURES = 'width=640,height=700,menubar=no,toolbar=no,loca
  * Base fixa (header + campos + resumo + footer) + altura por perna.
  */
 export function calcSurebetWindowHeight(numPernas: number): number {
-  const BASE_HEIGHT = 440; // header (2 lines) + game fields + model tabs + summary + footer (compact)
-  const HEIGHT_PER_LEG = 80; // each leg row height
+  const BASE_HEIGHT = 340; // header + campos jogo + tabs modelo + resumo + footer (compactos)
+  const HEIGHT_PER_LEG = 56; // linha de tabela (compacta) por perna
   const calculated = BASE_HEIGHT + (HEIGHT_PER_LEG * numPernas);
   // Cap at screen height
   const maxHeight = typeof window !== 'undefined' ? window.screen.availHeight - 40 : 900;
   return Math.min(calculated, maxHeight);
 }
 
-// width >= 820 garante innerWidth > 768 (breakpoint mobile do useIsMobile)
-// após bordas/scrollbar do navegador, evitando que o modal caia no layout de cards.
-const SUREBET_WINDOW_FEATURES = 'width=820,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
+// width=1100: tabela de pernas cabe inteira sem scroll horizontal e fica bem
+// acima do breakpoint mobile (768) mesmo após bordas/scrollbar do navegador.
+const SUREBET_WINDOW_FEATURES = 'width=1100,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
 
 /**
  * Abre o formulário de Surebet em uma nova janela.
