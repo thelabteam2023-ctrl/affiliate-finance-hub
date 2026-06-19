@@ -1,339 +1,121 @@
-# Plano — Debug e Observabilidade Sistêmica da Equalização Lay
+# Hidratação de "Chance Contra" (Lay) — Plano de Auditoria e Correção da Camada de Exibição
 
-Objetivo atual: diagnosticar sem depender de novos prints, provar por teste automatizado e por telemetria local que a equalização Back/Lay está usando a fórmula correta, e impedir regressão do caminho 100% Back.
+## Parte 1 — Mapeamento
 
----
+### 1.1 Fonte de dados compartilhada (chave do plano)
 
-## Diagnóstico principal certificado
+Existe **um hook central único** que todos os módulos abaixo usam para ler pernas registradas:
 
-No caso do print:
-- Perna 1: **Back**, odd `2.00`, stake `100,00`.
-- Perna 2: **Lay**, odd `2.00`, comissão `2,8%`.
-- Fórmula correta para stake lay equalizada:
+- `src/hooks/useApostasPernas.ts` → `useApostasPernas / usePernasDeAposta / usePernasProjetoAnalise / fetchPernasByApostaIds`
+- Tipo central: `src/types/apostasPernas.ts` → `ApostaPerna` / `PernaComBookmaker`
+- Mapper central: `mapRowToPerna()` dentro do hook
+- Componente visual compartilhado: `src/components/projeto-detalhe/ApostaPernasResumo.tsx` (interface `Perna`)
 
-```text
-stakeLay = (stakeBack × oddBack) / (oddLay − comissão)
-stakeLay = (100 × 2.00) / (2.00 − 0.028)
-stakeLay = 200 / 1.972
-stakeLay = 101.419878... ≈ 101,42
-```
+**Diagnóstico crítico:** hoje `select("*")` traz fisicamente as colunas `tipo` e `comissao` da tabela `apostas_pernas` (criadas na migration 20260619021644), mas `mapRowToPerna()` **não as projeta** para o objeto `ApostaPerna`, e a interface TS **não as declara**. Resultado: toda a camada de UI recebe `tipo=undefined` e `comissao=undefined`, e silenciosamente cai no comportamento "back, 0%".
 
-Lucros esperados:
+Mesma situação em `src/types/apostasPernas.ts` (interface `ApostaPerna`, `ApostaPernaInsert`, `ApostaPernaUpdate`, helper `pernaArbitragemToInsert`).
 
-```text
-Cenário Back vence / Lay perde:
-  +100 − 101,42 = −1,42
+E em `src/components/projeto-detalhe/ApostaPernasResumo.tsx` (interface `Perna` usada por todas as listagens — não tem `tipo`/`comissao`).
 
-Cenário Back perde / Lay ganha:
-  −100 + (101,42 × 0,972) = −1,42 aprox.
-```
+### 1.2 Módulos consumidores (cards/listagens)
 
-Logo, se a UI mostra `100,00` na perna lay com comissão `2,8%`, a equalização ainda está sendo anulada por uma das camadas abaixo.
+| Módulo | Arquivo do card | Hook/query | Como exibe stake/lucro |
+|---|---|---|---|
+| Surebet (histórico) | `SurebetCard.tsx` | `usePernasDeAposta` via `ProjetoSurebetTab.tsx` | Mistura: usa `lucro_prejuizo` salvo no banco e recalcula cenário a partir de `stake_total / odd` (linhas 800-870). **Recalcula no frontend.** |
+| Apostas gerais | `ApostaCard.tsx` | `usePernasDeAposta` via `ProjetoApostasTab.tsx` | `aposta.lucro_prejuizo` direto + `stake_total`/`odd_final` para display. Recálculo mínimo. |
+| Duplo Green | `ProjetoDuploGreenTab.tsx` (usa `ApostaCard`) | `useApostasPernas` | Mesmo `ApostaCard` — segue herdar correção do helper. |
+| ValueBet | `ProjetoValueBetTab.tsx` (usa `ApostaCard`) | já lê `lay_*` no nível **aposta** (campos legados back/lay do schema antigo) | Cards: helper. KPIs internos: recalcula `lay_stake * (1 - lay_comissao/100)` (linhas 544, 649). **Não é per-perna — é o modelo legado lay-único da aposta; fora do escopo.** |
+| Punter | `ProjetoPunterTab.tsx` | idem ValueBet | idem |
+| Freebets / Extração | `freebets/FreebetApostaCard.tsx`, `FreebetExtracaoView.tsx`, `ProjetoFreebetsTab.tsx` | `usePernasDeAposta` + tipo legado da aposta | `getOperationType` (linha 118) ainda olha campos antigos `lay_odd` no nível aposta. Per-perna: usa helper. |
+| Bônus | `bonus/BonusApostasTab.tsx` (usa `ApostaCard`) | `useApostasPernas` | herda helper |
+| Resumo compartilhado | `ApostaPernasResumo.tsx` (3 variantes: card / list / compact) | recebe `Perna[]` via prop | Só renderiza `odd` e `stake`; **nenhum cálculo financeiro**. Apenas rótulo. |
+| `ResultadoPill.tsx` | renderiza P&L estimado | recebe props da aposta pai (modelo legado back+lay no nível aposta) | Recalcula com `comissao` — **modelo antigo aposta-única**, não consome `tipo` da perna. Fora do escopo. |
+| Timeline | `ferramentas/PernaTimeline.tsx` | recebe perna direto | Exibe odd/stake — só rótulo. |
 
----
+### 1.3 O que aparece errado hoje quando chegar uma perna lay
 
-## Plano de ação aplicado
+1. **Em todos os cards** (Surebet, Duplo Green, Bônus, Apostas gerais): rótulo "Stake R$ X" para uma perna que na verdade comprometeu **liability = stake × (odd − 1)**. O usuário lê "apostei 100" quando na verdade arriscou 200.
+2. **SurebetCard cenários (linhas 800-870)**: o cálculo `payoutLocal = stake * odd` superestima retorno e inverte o cenário vencedor — em lay, a perna "ganha" quando a seleção **perde**, não quando vence.
+3. **ApostaPernasResumo (todas as variantes)**: não diferencia visualmente back/lay, mesmo problema da calculadora antes do fix.
+4. **% de retorno** em qualquer card que faça `lucro/stake`: usa base errada (deveria ser `lucro/liability` para lay).
 
-### 1. Isolar a fórmula canônica no engine
+## Parte 2 — Plano de Correção
 
-Arquivo: `src/utils/surebetCurrencyEngine.ts`
+### Estratégia: corrigir do centro para fora
 
-- Corrigir o coeficiente Lay de equalização para `odd − comissão`.
-- Remover o sinal negativo indevido no divisor da stake Lay.
-- Preservar arredondamento fino em centavos no caminho Lay, mesmo quando o formulário está com arredondamento grosso ligado (`1`, `5`, etc.).
-- Manter intacto o caminho 100% Back.
+**Prioridade 1 — Hidratação (sem isso o resto é inerte)**
 
-### 2. Adicionar rastreio matemático do solver
+1. `src/types/apostasPernas.ts`: adicionar `tipo: 'back' | 'lay'` e `comissao: number` em `ApostaPerna`, `ApostaPernaInsert`, `ApostaPernaUpdate`, e propagar no helper `pernaArbitragemToInsert`.
+2. `src/hooks/useApostasPernas.ts` → `mapRowToPerna`: projetar `tipo` (default `'back'`) e `comissao` (default `0`) a partir da row. Aplicar default robusto para legado (toda perna histórica = back/0).
+3. `src/components/projeto-detalhe/ApostaPernasResumo.tsx`: estender interface `Perna` com `tipo?` e `comissao?`.
 
-Arquivo: `src/utils/surebetCurrencyEngine.ts`
+**Prioridade 2 — Helper compartilhado de derivação financeira (novo, evita duplicação)**
 
-Adicionar steps no `CalculationTrace`:
-- `lay_equalization_solver`: registra referência, coeficiente, target e moeda.
-- `stake_distribution_lay`: registra `Dk`, stake bruta, stake arredondada, liability e perda de precisão.
-
-### 3. Publicar observabilidade local consultável
-
-Arquivo: `src/utils/surebetObservability.ts`
-
-Criar bridge global:
-
-```js
-window.__SUREBET_OBS__.last
-window.__SUREBET_OBS__.history
-window.__SUREBET_OBS__.export()
-window.__SUREBET_OBS__.clear()
-```
-
-Ela registra:
-- pernas (`tipo`, `odd`, `stake`, `comissao`, `moeda`, `isReference`, `stakeOrigem`);
-- stakes calculadas pelo engine;
-- lucros por cenário;
-- spread entre cenários;
-- warnings automáticos para Lay inválido ou spread inesperado.
-
-### 4. Integrar observabilidade ao hook de cálculo
-
-Arquivo: `src/hooks/useSurebetCalculator.ts`
-
-- Publicar snapshot a cada cálculo.
-- Gerar `console.warn("[SUREBET_OBS]", snapshot)` somente quando houver anomalia.
-- Manter `window.__CALC_DEBUG__` existente para compatibilidade.
-
-### 5. Criar testes automatizados de regressão
-
-Arquivo: `src/utils/__tests__/surebetLayEqualization.test.ts`
-
-Casos obrigatórios:
-- Back 100 @2.00 vs Lay @2.00 comissão 2,8% → stake Lay `≈101,42` e cenários `≈-1,42/-1,42`.
-- 100% Back @2.00/@2.00 → stake `[100,100]`, lucro `0`, ROI `0`, exposição `200`.
-
----
-
-## Checklist de debug autônomo
-
-1. Abrir a calculadora e reproduzir o setup do print.
-2. Conferir no console:
-
-```js
-window.__SUREBET_OBS__.last
-```
-
-3. Validar campos críticos:
+Criar `src/utils/pernaLayHelpers.ts` reaproveitando a matemática já validada de `surebetCurrencyEngine.ts`:
 
 ```text
-calculatedStakes[1] ≈ 101.42
-scenarioLucros[0] ≈ -1.42
-scenarioLucros[1] ≈ -1.42
-spread < 0.05
-warnings = []
+isLay(perna)              → tipo === 'lay'
+exposureOf(perna)         → lay ? stake*(odd-1) : stake
+labelExposicao(perna)     → lay ? 'Responsabilidade' : 'Stake'
+lucroSeGanhar(perna)      → lay ? stake*(1-comissao) : stake*(odd-1)
+lucroSePerder(perna)      → lay ? -(stake*(odd-1))  : -stake
+roiBase(perna)            → exposureOf(perna)     // % calculado sempre sobre exposição real
 ```
 
-4. Se a UI ainda mostrar `100,00`, mas `calculatedStakes[1] = 101.42`, o bug está na camada React de aplicação de stake.
-5. Se `calculatedStakes[1] = 100`, o bug está no engine ou no payload (`tipo/comissao`) chegando errado.
-6. Se `warnings` contiver `LAY_EQUALIZATION_SPREAD_*`, o engine calculou, mas os cenários finais não equalizaram.
+Isso vira a fonte única de verdade para qualquer recálculo de UI. Nenhum cálculo lay novo é escrito fora desse helper.
 
----
+**Prioridade 3 — Visual (rótulo + badge)**
 
-## Critério de aceite
+`ApostaPernasResumo.tsx` (3 variantes — card/list/compact): quando `isLay(perna)`:
+- Trocar prefixo `@odd` por `Lay @odd` ou pequeno badge `LAY` (vermelho discreto, mesmo tom já usado na calculadora).
+- Trocar rótulo `Stake X` por `Resp X` mostrando `exposureOf(perna)` (não a stake bruta). Manter stake como tooltip/segunda linha pequena se necessário.
+- Nenhuma outra mudança de layout.
 
-- O caso do print deve exibir stake Lay `≈101,42`, não `100,00`.
-- O lucro garantido deve ficar equalizado em torno de `−1,42 / −1,42`.
-- O caminho 100% Back deve permanecer idêntico ao comportamento anterior.
-- A observabilidade deve permitir exportar o histórico sem interação adicional do usuário.
+**Prioridade 4 — Cards com recálculo (apenas SurebetCard)**
 
----
+`SurebetCard.tsx` linhas 800-870 (cálculo de cenários) e linha 853 em diante (`calcularLucroPerna`):
+- Substituir `payoutLocal = stake * odd` por uso do helper: numa perna lay vencedora, retorno é `stake*(1-comissao)`; numa perna lay perdedora, é `-liability`.
+- O cenário "perna X ganha" tem semântica diferente para lay (a seleção perde) — usar `lucroSeGanhar` por perna em vez de fórmula inline.
+- Manter caminho back-only intocado (mesmo princípio do fix da calculadora: branch novo só se `algumaPernaLay`).
 
-## Histórico anterior — "Chance Contra" (Lay) na Calculadora de Arbitragem
+Os demais cards (ApostaCard, FreebetApostaCard, BonusApostasTab) **não recalculam financeiramente per-perna** — consomem `lucro_prejuizo` já gravado pelas RPCs de liquidação (que já tratam lay nesta fase 2 separada). Para eles, **apenas o rótulo visual de exposição** muda via `ApostaPernasResumo` — sem nenhuma lógica matemática nova.
 
-Plano original mantido abaixo como referência de escopo e decisões já aprovadas.
-
----
-
-## Ambiguidades que preciso confirmar antes de codar
-
-1. **Liability vs saldo.** Na perna `lay`, qual conta debita a `liability = stake × (oddLay − 1)`? A mesma `bookmaker_id` selecionada na linha (tratada como conta de exchange tipo Betfair) ou um novo conceito "exchange"? Proposta: **manter `bookmaker_id` como hoje**; a perna `lay` simplesmente passa a validar `liability` em vez de `stake` contra `saldo_disponivel` da casa. Sem nova entidade.
-2. **Comissão por padrão.** Comissão é por perna (default `0`) e o usuário digita por linha. Não vou criar default por bookmaker nesta etapa. Confirma?
-3. **Sub-entradas (`additionalEntries`).** Sub-entrada herda o `tipo` da perna principal (toda a perna é back **ou** lay; não há mistura dentro da mesma perna)? Proposta: **sim, herda**.
-4. **Freebet em lay.** Lay não aceita freebet (`fonteSaldo === 'FREEBET'` força `tipo='back'`). Confirma?
-5. **Persistência das colunas novas.** OK adicionar `tipo text` e `comissao numeric(7,5)` em `apostas_pernas` **e** em `apostas_perna_entradas` (mesmo herdando), para garantir auditabilidade por entrada. Confirma?
-6. **Toggle "+/−" no badge da perna.** Reaproveitar o número (badge "1", "2"…) como botão clicável que alterna back↔lay, com cor/ícone distinto. Confirma o gesto (clicar no próprio número) em vez de um botão separado?
-
----
-
-## Camadas tocadas e ordem de implementação
+### Resumo de arquivos alterados
 
 ```text
-1. Tipos        → OddEntry, OddFormEntry, EngineLeg, SurebetPerna
-2. Motor        → surebetCurrencyEngine.ts (payout, cenários, equalização)
-                  surebetPipeline.ts (passa tipo/comissao adiante)
-                  useSurebetCalculator.ts (constrói EngineLeg com novos campos)
-3. Validação    → surebetValidator.ts, errosPorPerna, balanceValidation
-4. UI           → SurebetTableRow, SurebetColumnsView, SurebetMobileCard,
-                  SurebetTableFooter (toggle "Mostrar comissões"),
-                  SurebetModalRoot (handlers toggleTipo/setComissao)
-5. Persistência → migração apostas_pernas + apostas_perna_entradas
-                  + adaptações em handleSave/load do SurebetModalRoot
-6. Validação manual → exemplo numérico (100% back vs misto back+lay+comissão)
+Prioridade 1 (hidratação)
+  src/types/apostasPernas.ts
+  src/hooks/useApostasPernas.ts
+  src/components/projeto-detalhe/ApostaPernasResumo.tsx  (interface)
+
+Prioridade 2 (helper)
+  src/utils/pernaLayHelpers.ts                            (novo)
+
+Prioridade 3 (visual)
+  src/components/projeto-detalhe/ApostaPernasResumo.tsx  (render)
+
+Prioridade 4 (recálculo)
+  src/components/projeto-detalhe/SurebetCard.tsx
 ```
 
----
+ValueBet, Punter, Freebets, ResultadoPill: **fora deste escopo** — operam no modelo legado lay-no-nível-da-aposta, que não é o `tipo`/`comissao` per-perna introduzido na calculadora. Ficam para uma fase separada se o usuário quiser unificar os dois modelos.
 
-## 1. Modelo de dados
+### Validação por módulo (antes/depois)
 
-### Tipos TypeScript (apenas adições, nada renomeado)
+Para cada módulo corrigido, mock local de uma perna: `odd=2.00, stake=100, comissao=2.8%, tipo='lay'`.
 
-`useSurebetCalculator.ts` — `OddEntry` e `OddFormEntry`:
-- `tipo: 'back' | 'lay'` (default `'back'`)
-- `comissao: number` (decimal 0–1, default `0`; ex.: `0.028` = 2,8%)
+- Hoje (back default): card mostra "Stake R$ 100,00 @2.00", lucro cenário positivo +R$ 100.
+- Depois: card mostra badge `LAY` + "Resp R$ 100,00 @2.00", lucro cenário se seleção perde = +R$ 97,20; se vence = −R$ 100,00.
 
-`surebetCurrencyEngine.ts` — `EngineLeg`:
-- `tipo: 'back' | 'lay'`
-- `comissao: number`
+Apresentar screenshot/diff por card antes de ir para o próximo.
 
-`SurebetModalRoot.tsx` — `SurebetPerna` (mapeamento DB): mesmos dois campos.
+## O que não muda
 
-### Default em runtime
-Toda função que **lê do banco** ou **hidrata** uma perna aplica fallback: `tipo ?? 'back'`, `comissao ?? 0`. Centralizar em um único helper `normalizePernaShape()` chamado em todos os pontos de hidratação (load do modal, `aplicarCamposNovaEntrada`, rascunhos do localStorage).
+- Layout dos cards (só insere badge LAY + troca rótulo Stake→Resp quando lay).
+- RPCs de liquidação (`liquidar_perna_surebet_v1`, `fn_recalc_pai_surebet`) — fase 2 separada.
+- Modelo legado lay-no-nível-aposta (ValueBet/Punter/Freebets/ResultadoPill).
+- Nenhum dado de teste lay no banco — validação com mock local.
 
----
+## Aprovação
 
-## 2. Motor de cálculo — fórmulas exatas
-
-### Payout líquido por perna em um cenário "perna X vence"
-
-```text
-Para cada perna i:
-  se tipo[i] === 'back':
-    se i é a perna vencedora:  pnl[i] = stake[i] × odd[i] − stake[i]   // = stake × (odd−1)
-    senão:                     pnl[i] = −stake[i]
-  se tipo[i] === 'lay':
-    se i é a perna vencedora (lay perde):  pnl[i] = −liability[i]
-                                            // liability = stake × (oddLay − 1)
-    senão (lay ganha):                      pnl[i] = stake[i] × (1 − comissao[i])
-
-lucroCenarioX = Σ pnl[i]
-```
-
-Tudo após conversão de moeda via `convertViaBRL` (já existente). A consolidação final segue idêntica à atual.
-
-### Capital exposto (denominador do ROI)
-`exposicaoTotal = Σ (tipo[i] === 'back' ? stake[i] : liability[i])`
-ROI = `lucroCenario / exposicaoTotal × 100`. **Compatibilidade:** quando todas back e comissão zero, `exposicaoTotal === stakeRealTotal` ⇒ ROI idêntico ao atual.
-
-### Equalização multi-perna (`calcularStakesEqualizadasMultiCurrency`)
-
-Hoje resolve `targetReturn = refStake × refOdd` e distribui via `stake[i] = targetReturn / odd[i]`. Generalizar para igualar **lucro líquido** por cenário (apenas entre pernas no `directedProfitLegs`):
-
-```text
-Dada a perna de referência (fixa pelo usuário):
-  L = lucro líquido do cenário "referência vence" (fechado pelo refStake)
-
-Para cada outra perna j ∈ direcionadas:
-  No cenário "j vence", queremos lucroCenario_j = L.
-  lucroCenario_j é função linear de stake[j] (todas as outras pernas direcionadas
-  também variam, então o sistema é resolvido iterativamente OU em forma fechada
-  via sistema linear N×N, conforme já é feito hoje para back puro).
-```
-
-Implementação concreta:
-- Manter o pivot atual (`targetReturn` calculado pela perna de referência).
-- Para cada perna `j` direcionada, calcular o `stake[j]` que iguala o **PnL no cenário "j vence"** ao **PnL no cenário "ref vence"**, usando a contribuição correta de back/lay/comissão.
-- Forma fechada (sem iteração) é viável: o sistema é triangular se a referência é fixa — cada `stake[j]` depende apenas dos stakes já resolvidos das pernas anteriores no cenário "j vence". Vamos implementar fechado e cair em fallback iterativo (máx. 6 passos, tolerância 1e−4) se a referência for ambígua.
-
-Snapshot de stakes para pernas **não-direcionadas** (toggle "D" desligado) continua igual: não são tocadas.
-
-### Compatibilidade retroativa (teste obrigatório)
-Adicionar caso em `src/utils/__tests__/surebetBugRepro.test.ts` (ou novo arquivo `surebetLay.test.ts`):
-
-- **Teste A**: input 100% back, comissão 0 → resultados (stakes, lucro, ROI) devem ser **bit-exatos** aos snapshots atuais (gerar snapshot pré-mudança).
-- **Teste B**: 2 pernas — perna 1 back odd 2.0 stake 100, perna 2 lay odd 2.0 comissão 0 → lucro garantido = 0 em ambos cenários.
-- **Teste C**: back+lay+comissão 2,8% (caso da imagem do prompt) → bater valores calculados à mão.
-
----
-
-## 3. Validação
-
-### `surebetValidator.ts`
-- Adicionar regra: `comissao >= 0 && comissao <= 1`.
-- Para pernas `lay`: `odd > 1` (sem teto) e `stake > 0` (já existe; semântica muda mas regra é a mesma).
-- Validar coerência: `tipo === 'lay'` ⇒ `fonteSaldo !== 'FREEBET'` (freebet só em back).
-
-### Saldo em tempo real (`calcularSaldoDisponivel` + `errosPorPerna`)
-- Função `requiredAmount(perna)` central: retorna `stake` se back, `stake × (odd − 1)` se lay.
-- Todos os pontos que hoje comparam `stake` vs saldo passam a comparar `requiredAmount(perna)` vs saldo.
-- Mensagem de erro reflete a natureza: "Liability insuficiente" para lay; "Stake insuficiente" para back.
-
-### `balanceValidation` (granular por entrada)
-- Sub-entradas herdam `tipo` da perna; loop atual de soma por bookmaker passa a somar `requiredAmount` por entrada.
-- Bloqueio do botão "Registrar Operação" permanece com a mesma condição combinada.
-
----
-
-## 4. UI
-
-### `SurebetTableRow.tsx`
-- **Badge da perna ("1", "2"...) vira botão**: clique alterna `tipo`. Visual:
-  - back: badge atual (verde) + sinal `+` discreto.
-  - lay: badge âmbar/vermelho + sinal `−`. Borda da linha esquerda muda de cor.
-- Coluna **Stake**: quando `tipo === 'lay'`, mostra rótulo secundário "Responsabilidade: R$ X" abaixo do input (cálculo `stake × (odd − 1)`), ou tooltip no header da coluna. Não muda o input em si (usuário continua digitando stake, não liability).
-- Nova **coluna "Comissão"** (renderizada condicionalmente via prop `showComissao`): input `%` decimal, default 0, com largura compacta.
-- Coluna **Odd** ganha tooltip discreto explicando "Odd lay" quando `tipo === 'lay'`.
-
-### `SurebetTableFooter.tsx`
-- Adicionar toggle **"Mostrar comissões"** ao lado do toggle "Arredondar" (mesmo padrão visual). Estado `showComissao` sobe para `SurebetModalRoot` via prop drilling existente.
-- "Lucro Garantido" e ROI continuam calculados pelo motor — o range `→` aparece naturalmente quando back+lay introduz spread entre cenários.
-- **Novo KPI ao lado do "Total Apostado"**: "Exposição Total" = `Σ requiredAmount` (só renderiza quando existe ao menos 1 lay; caso contrário fica oculto para não poluir).
-
-### `SurebetColumnsView.tsx` e `SurebetMobileCard.tsx`
-- Mesmas alterações: badge clicável, coluna/linha de comissão condicional, exibição de liability.
-
-### `SurebetModalRoot.tsx`
-- Novos handlers: `toggleTipoPerna(index)`, `setComissaoPerna(index, value)`, `setShowComissao(boolean)`.
-- Estado novo: `showComissao: boolean` (default `false`, persistido em `localStorage` por usuário, chave `surebet_show_comissao`).
-- Ao trocar `tipo`, marcar `isManuallyEdited = false` da perna para que o engine recalcule stake automaticamente na próxima passada.
-
----
-
-## 5. Persistência (migração)
-
-Tabelas: `apostas_pernas` e `apostas_perna_entradas`.
-
-```sql
-ALTER TABLE public.apostas_pernas
-  ADD COLUMN tipo text NOT NULL DEFAULT 'back'
-    CHECK (tipo IN ('back','lay')),
-  ADD COLUMN comissao numeric(7,5) NOT NULL DEFAULT 0
-    CHECK (comissao >= 0 AND comissao <= 1);
-
-ALTER TABLE public.apostas_perna_entradas
-  ADD COLUMN tipo text NOT NULL DEFAULT 'back'
-    CHECK (tipo IN ('back','lay')),
-  ADD COLUMN comissao numeric(7,5) NOT NULL DEFAULT 0
-    CHECK (comissao >= 0 AND comissao <= 1);
-```
-
-- Backfill é automático via `DEFAULT 'back' / 0`.
-- Nenhuma view/RPC existente é alterada nesta etapa (lay não entra em P&L de surebet liquidada até confirmação de uma fase 2; lay só afeta o **planejamento** na calculadora).
-- **Importante:** P&L pós-liquidação de surebets com lay exigirá ajuste nas RPCs `liquidar_perna_surebet_v1` / `fn_recalc_pai_surebet`. Vou marcar isso como **fase 2 separada** e deixar lay restrito à calculadora + persistência inicial nesta fase 1, para evitar tocar o motor de liquidação sem proposta dedicada.
-
-### Frontend após migração
-- `aplicarCamposNovaEntrada` e o handler de save em `SurebetModalRoot` incluem `tipo` e `comissao` no insert.
-- Hidratação no load aplica `normalizePernaShape()`.
-
----
-
-## 6. Validação final (exemplo numérico que vou entregar no fim)
-
-**Caso A — regressão 100% back**
-- 2 pernas BRL, odd 2.10/2.10, stake 500 cada, comissão 0, ambas back.
-- Esperado: idêntico ao atual (`stakeTotal=1000`, `minLucro=50`, `roi=5%`).
-
-**Caso B — back + lay sem comissão**
-- Perna 1 back: stake 100, odd 2.00.
-- Perna 2 lay: stake 100, odd 2.00, comissão 0.
-- Cenário "1 vence": back ganha 100, lay perde 100 → 0. Cenário "1 perde": back perde 100, lay ganha 100 → 0. Esperado: lucro garantido = 0.
-
-**Caso C — back + lay com comissão (matemática completa)**
-- Perna 1 back: stake 100, odd 3.00.
-- Perna 2 lay: odd 1.50, comissão 5%. Resolver `stake[2]` para igualar PnL.
-- Mostrarei stake calculada, liability, PnL nos 2 cenários e ROI sobre exposição total.
-
----
-
-## Resumo do escopo (fronteira de mudança)
-
-| Camada | Arquivos | Mudança |
-|---|---|---|
-| Tipos | `useSurebetCalculator.ts`, `surebetCurrencyEngine.ts`, `SurebetModalRoot.tsx` | + `tipo`, `comissao` |
-| Motor | `surebetCurrencyEngine.ts`, `surebetPipeline.ts` | payout lay, equalização por PnL |
-| Hook | `useSurebetCalculator.ts` | passa novos campos ao engine |
-| Validação | `surebetValidator.ts`, `SurebetModalRoot.tsx` (errosPorPerna, balanceValidation) | usa `requiredAmount` |
-| UI | `SurebetTableRow.tsx`, `SurebetColumnsView.tsx`, `SurebetMobileCard.tsx`, `SurebetTableFooter.tsx`, `SurebetModalRoot.tsx` | badge clicável, coluna comissão, toggle "Mostrar comissões", liability |
-| DB | `apostas_pernas`, `apostas_perna_entradas` | 2 colunas + CHECK |
-| Testes | `src/utils/__tests__/surebetLay.test.ts` (novo) | regressão + back+lay |
-
-**Fora de escopo nesta fase:** liquidação/RPC de surebet com lay, integração de comissão por bookmaker default, P&L histórico de operações lay. Tudo isso fica explicitamente para uma fase 2 (com plano próprio) para não acoplar mudanças críticas de motor financeiro.
-
----
-
-Confirma as 6 ambiguidades acima e aprova o plano? Após o "ok", implemento na ordem: Tipos → Motor → Hook → Validação → UI → Migração → exemplo numérico de verificação.
+Confirmar para eu começar pela Prioridade 1 (hidratação central + helper), validar com mock, e seguir módulo por módulo.
