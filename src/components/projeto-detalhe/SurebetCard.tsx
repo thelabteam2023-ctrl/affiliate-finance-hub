@@ -67,6 +67,10 @@ export interface SurebetPerna {
   moeda?: string;
   /** Fonte do saldo: REAL ou FREEBET */
   fonte_saldo?: string;
+  /** Lado da operação. Default 'back' quando ausente. */
+  tipo?: "back" | "lay" | null;
+  /** Comissão decimal da exchange (lay). Default 0. */
+  comissao?: number | null;
   /** Stake real (não-freebet) da perna — fonte canônica de custo */
   stake_real?: number;
   /** Stake de freebet (SNR) da perna — não é custo, gera lucro líquido stake*(odd-1) */
