@@ -1393,6 +1393,8 @@ export function SurebetModalRoot({
   }, [
     odds.map(o => `${o.odd}-${o.stake}-${o.isManuallyEdited}-${o.bookmaker_id}-${(o.additionalEntries || []).map(e => `${e.odd}:${e.stake}:${e.moeda}`).join('|')}`).join(','),
     odds.map(o => o.isReference).join(','),
+    odds.map(o => `${o.tipo ?? 'back'}:${o.comissao ?? 0}`).join(','),
+    calculatedStakes?.join(','),
     arredondarAtivado,
     arredondarValor,
     isEditing,
