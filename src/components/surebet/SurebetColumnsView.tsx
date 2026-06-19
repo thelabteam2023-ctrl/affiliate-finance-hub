@@ -378,7 +378,7 @@ export function SurebetColumnsView({
                           value={Number.isFinite(comissaoPct) ? String(+comissaoPct.toFixed(4)) : ''}
                           onChange={(e) => {
                             const pct = parseFloat(e.target.value) || 0;
-                            onUpdateOdd(pernaIndex, 'comissao' as any, pct / 100);
+                            onUpdateOdd(pernaIndex, 'comissao' as any, String(pct / 100));
                           }}
                           className="h-8 text-[11px] text-center tabular-nums"
                           onWheel={(e) => e.currentTarget.blur()}
