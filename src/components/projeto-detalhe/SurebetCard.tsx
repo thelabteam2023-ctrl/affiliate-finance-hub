@@ -814,7 +814,58 @@ export function SurebetCard({
 
     if (stakeTotal <= 0) return null;
 
-    // Para cada cenário (cada perna ganhando), calcular o lucro
+    // Se há alguma perna lay, usar solver simétrico por perna (back+lay)
+    const hasLay = surebet.pernas.some(p => p.tipo === "lay");
+
+    if (hasLay) {
+      // Para cada cenário (cada perna sendo a vencedora financeira / GREEN),
+      // somar pl_local de TODAS as pernas (incluindo perdedoras).
+      const cenariosLay = surebet.pernas.map((_, idx) => {
+        let lucroCenario = 0;
+        surebet.pernas!.forEach((p, j) => {
+          const isFB = isPernaFreebet(p);
+          const lay = p.tipo === "lay";
+          const comissao = Number(p.comissao || 0);
+          const stake = p.stake_total || p.stake || 0;
+          const odd = p.odd_media || p.odd || 0;
+          const venceu = j === idx;
+          let plLocal: number;
+          if (venceu) {
+            plLocal = lay
+              ? stake * (1 - comissao)
+              : (isFB ? stake * (odd - 1) : stake * (odd - 1));
+          } else {
+            plLocal = lay
+              ? -(stake * Math.max(0, odd - 1))
+              : (isFB ? 0 : -stake);
+          }
+          const plConv = (isMulticurrency && convertToConsolidation)
+            ? convertToConsolidation(plLocal, p.moeda || "BRL")
+            : plLocal;
+          lucroCenario += plConv;
+        });
+        return lucroCenario;
+      });
+      const piorLucro = Math.min(...cenariosLay);
+      const melhorLucro = Math.max(...cenariosLay);
+      // Base de ROI: exposição real (stake back + liability lay), excluindo freebet
+      let exposicaoTotal = 0;
+      surebet.pernas.forEach(p => {
+        const isFB = isPernaFreebet(p);
+        if (isFB) return;
+        const stake = p.stake_total || p.stake || 0;
+        const odd = p.odd_media || p.odd || 0;
+        const exp = p.tipo === "lay" ? stake * Math.max(0, odd - 1) : stake;
+        exposicaoTotal += (isMulticurrency && convertToConsolidation)
+          ? convertToConsolidation(exp, p.moeda || "BRL")
+          : exp;
+      });
+      const piorRoi = exposicaoTotal > 0 ? (piorLucro / exposicaoTotal) * 100 : 0;
+      const melhorRoi = exposicaoTotal > 0 ? (melhorLucro / exposicaoTotal) * 100 : 0;
+      return { piorLucro, melhorLucro, piorRoi, melhorRoi };
+    }
+
+    // Caminho back-only / freebet (preservado intacto)
     const cenarios = surebet.pernas.map(perna => {
       const isFB = isPernaFreebet(perna);
       let retorno = 0;
@@ -858,6 +909,27 @@ export function SurebetCard({
 
     const stake = perna.stake_total || perna.stake || 0;
     const odd = perna.odd || 0;
+    const lay = perna.tipo === "lay";
+    const comissao = Number(perna.comissao || 0);
+
+    if (lay) {
+      switch (perna.resultado) {
+        case "GREEN":
+          return stake * (1 - comissao);
+        case "MEIO_GREEN":
+          return (stake * (1 - comissao)) / 2;
+        case "RED":
+          return -(stake * Math.max(0, odd - 1));
+        case "MEIO_RED":
+          return -(stake * Math.max(0, odd - 1)) / 2;
+        case "VOID":
+        case "PENDENTE":
+        case null:
+          return 0;
+        default:
+          return null;
+      }
+    }
 
     switch (perna.resultado) {
       case "GREEN":
