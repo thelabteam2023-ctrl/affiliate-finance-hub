@@ -376,6 +376,9 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
           const bkInfo = a.bookmaker_id ? bookmakerMap.get(a.bookmaker_id) : null;
           return {
             ...a,
+            // Preserva JSONB original (apostas_unificada.pernas) para fallback de hidratação
+            // caso apostas_pernas não tenha sido populado ainda (timing pós-save).
+            _raw_pernas_json: Array.isArray(a.pernas) ? a.pernas : null,
             bookmaker_nome: bkInfo?.nome ?? "Desconhecida",
             parceiro_nome: bkInfo?.parceiroNome ?? undefined,
             instance_identifier: bkInfo?.instanceIdentifier ?? null,
