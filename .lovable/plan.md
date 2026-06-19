@@ -1,68 +1,106 @@
-# Plano — Auditoria de Hidratação de Apostas ARBITRAGEM por Aba
+## Diagnóstico
 
-## Contexto
+Pelo print, o card mostra:
+- Título: `0` (linha 1) + `1X2` (linha 2)
+- Bullet: `• Futebol` + badge `SUREBET` + `1-2` + `Pendente`
+- Pernas: ambas `@2.00` / `R$ 100,00` — sem prefixo `Lay`, sem `Resp:`, sem comissão.
 
-Ao registrar uma operação pelo formulário **Arbitragem (Surebet)** estando na aba **Duplo Green**, o card hidratado aparece quebrado: cabeçalho mostra `AXN • Futebol • 1×2 ⚡DG 1-2 ⏱Pendente` mas a linha de rodapé exibe **`Stake: R$ 0,00`** e nenhuma perna (sem Casa/Odd/Stake/Lucro). O mesmo formulário, salvando pela aba **Surebet**, hidrata corretamente. Suspeita: cada aba tem seu próprio loader de pernas/raw_pernas e a aba Duplo Green ficou desatualizada em relação ao contrato esperado por `SurebetCard`.
+Isto revela 3 falhas independentes:
 
-## Objetivo
+### Bug 1 — Perna lay renderizada como back
 
-Mapear, aba por aba, **o que cada loader busca em `apostas_pernas` e como monta o objeto passado ao `SurebetCard`**, identificando divergências que causem hidratação vazia (stake 0, pernas sem casa/odd, sem agrupamento por seleção, sem `raw_pernas`, sem `instance_identifier`/`logo_url`, sem `tipo`/`comissao` da Fase Lay).
+`SurebetCard` já tem o branch `isLayPerna = perna.tipo === "lay"` (linha 311) e renderiza `Lay @odd`. O fato de não aparecer significa que **`perna.tipo` está chegando vazio/`"back"`** no card.
 
-## Achados preliminares (baseline)
+Causa provável: o loader da aba (Surebet/DuploGreen/Apostas/Bonus/ValueBet/Punter) que monta `pernasRaw` para o `SurebetCard` está lendo `apostas_pernas` mas:
+- (a) não inclui `tipo`, `comissao`, `liability` no `select`, ou
+- (b) inclui no `select` mas não copia esses campos no mapeamento para o objeto `SurebetPerna`.
 
-Comparativo já confirmado entre **Surebet** (referência correta) e **Duplo Green** (quebrada):
+Já corrigimos isso em `ProjetoDuploGreenTab.tsx`. Falta auditar as **outras 5 abas** (Surebet, Apostas, Bonus, ValueBet, Punter, Freebets) com o mesmo padrão.
+
+Além disso, o valor exibido (`R$ 100,00` na perna lay em vez de `R$ 101,42`) indica que `stake_total` da perna lay não está sendo persistido com o valor da responsabilidade — provavelmente o motor está gravando `stake = stake informado (100)` em vez de `stake = liability (101.42)` na perna lay. Precisamos confirmar no payload da RPC.
+
+### Bug 2 — Evento e mercado
+
+O campo `evento` foi salvo literalmente como `"0"` e `mercado` como `"1X2"`. Olhando `SurebetCard` linha 1076/1089, o card já renderiza `surebet.evento` e `surebet.mercado` — o problema é **no momento do salvamento**: o `ProjetoDuploGreenTab` (e possivelmente outras abas) está enviando `evento: "0"` para a RPC, provavelmente porque está usando o valor errado do form (ex.: `score` / `linha` em vez de `evento`).
+
+### Bug 3 — "0" sobre o campo Mercado no formulário
+
+Sem reprodução visual confirmada. Investigar apenas após Bugs 1 e 2; se não reproduzir, pedir print focado.
+
+---
+
+## Plano de execução
+
+### Etapa 1 — Auditoria de Lay-fields em todas as abas (Bug 1)
+
+Para cada loader abaixo, garantir que o `select` de `apostas_pernas` inclui `tipo, comissao, liability, stake_total, odd_media, fonte_saldo` **e** que o mapeamento para `pernasRaw` copia esses campos:
 
 ```text
-                                  Surebet  DuploGreen
-groupPernasBySelecao(pernasRaw)     OK        FALTA
-raw_pernas                          OK        FALTA
-stake_total || stake fallback       OK        só stake_total
-instance_identifier na perna        OK        FALTA
-logo_url na perna                   OK        FALTA
-moeda_operacao / stake_consolidado  OK        FALTA
-pl_consolidado / consolidation_*    OK        FALTA
-tipo (back|lay) / comissao          FALTA     FALTA  (ambas, Fase Lay)
+src/components/projeto-detalhe/
+├── ProjetoSurebetTab.tsx       ← REFERÊNCIA (já funciona)
+├── ProjetoDuploGreenTab.tsx    ← já corrigido na rodada anterior
+├── ProjetoApostasTab.tsx       ← AUDITAR
+├── ProjetoBonusTab.tsx         ← AUDITAR
+├── ProjetoValueBetTab.tsx      ← AUDITAR
+├── ProjetoPunterTab.tsx        ← AUDITAR
+└── ProjetoFreebetsTab.tsx      ← AUDITAR
 ```
 
-A combinação `stake_total = 0` + ausência de `raw_pernas`/`groupPernasBySelecao` explica o card vazio mostrado no print: o `SurebetCard` recebe `pernas` cru, não acha agrupamento por seleção válido e o footer cai no fallback `stake_total = 0`.
+Para cada um:
+1. Localizar `from("apostas_pernas").select(...)`.
+2. Garantir colunas: `id, aposta_id, ordem, bookmaker_id, bookmaker_nome, selecao, odd, stake, stake_total, odd_media, moeda, tipo, comissao, liability, fonte_saldo, resultado, lucro_prejuizo, payout, ev_recebido, stake_consolidado, pl_consolidado, cotacao_snapshot`.
+3. No mapeamento que monta `pernasRaw`, propagar `tipo: row.tipo, comissao: row.comissao, liability: row.liability`.
 
-## Investigação por aba
+### Etapa 2 — Validar persistência da liability na perna lay
 
-Para cada aba abaixo, abrir o loader e validar contra o contrato de `SurebetCard` (campos `pernas` agrupadas + `raw_pernas` + totais consolidados + `forma_registro: "ARBITRAGEM"`):
+1. Abrir `SurebetModalRoot.handleSave` e seguir o payload de `pernas` enviado à RPC.
+2. Confirmar: para perna `tipo='lay'`, o que vai em `apostas_pernas.stake_total`? Deve ser `liability` (101.42) — não o `stake` declarado (100). E `apostas_pernas.stake` deve guardar o stake nominal (100) para histórico.
+3. Se incorreto, ajustar o build do payload em `surebetCurrencyEngine` / `SurebetModalRoot` (apenas presentation/payload, sem mexer em RPC).
+4. Atualizar `SurebetCard` para a perna lay exibir `Resp: R$ X` usando `perna.liability ?? perna.stake_total` em vez de `perna.stake`.
 
-1. **Surebet** — `src/components/projeto-detalhe/ProjetoSurebetTab.tsx` (linhas ~383–460). **Referência correta**; nada a alterar nessa etapa.
-2. **Duplo Green** — `src/components/projeto-detalhe/ProjetoDuploGreenTab.tsx` (~400–452). Loader minimalista, sem `groupPernasBySelecao`, sem `raw_pernas`, sem campos de consolidação. **Principal suspeito.**
-3. **Apostas (geral)** — `src/components/projeto-detalhe/ProjetoApostasTab.tsx`. Validar se ARBITRAGEM hidrata via mesma rotina de Surebet ou se tem caminho próprio.
-4. **Bônus** — `src/components/projeto-detalhe/bonus/BonusApostasTab.tsx`. Mesma checagem; bônus pode estar ignorando `tipo`/`comissao`/snapshot e ainda exigir `bonus_id`.
-5. **Value Bet** — `src/components/projeto-detalhe/ProjetoValueBetTab.tsx`. Suporta ARBITRAGEM via formulário também (link `/janela/surebet/novo?tab=valuebet`).
-6. **Punter** — `src/components/projeto-detalhe/ProjetoPunterTab.tsx`. Mesma análise.
-7. **Freebets** — `src/components/projeto-detalhe/freebets/FreebetApostasList.tsx` / `FreebetApostaCard.tsx`. Validar se renderiza ARBITRAGEM via `SurebetCard` ou via componente próprio.
+### Etapa 3 — Evento/Mercado salvos errados (Bug 2)
 
-Para cada loader, registrar em uma tabela: campos selecionados no `select(...)`, transformação aplicada, presença de `groupPernasBySelecao`, presença de `raw_pernas`, `stake_total` fallback, campos de consolidação multi-moeda, e campos da Fase Lay (`tipo`, `comissao`, liability).
+1. No `ProjetoDuploGreenTab` (e demais abas afetadas), procurar o `handleSave` / `mutate` que chama a RPC de criação de surebet/aposta.
+2. Verificar quais campos do form são lidos como `evento` e `mercado`. Provavelmente está sendo passado `placar`/`score`/`linha` no slot de `evento`.
+3. Padronizar para usar exatamente `formData.evento` e `formData.mercado` (mesmo nome usado no `ProjetoSurebetTab`).
+4. Confirmar via Network tab que o payload da RPC contém os strings corretos antes/depois do fix.
 
-## Hipóteses a confirmar
+### Etapa 4 — Bug 3 (investigativo)
 
-- H1: aba Duplo Green não chama `groupPernasBySelecao(pernasRaw)`, então `SurebetCard` não enxerga pernas agrupadas e o footer fica zerado.
-- H2: `stake_total` é gravado como `0` na criação via aba DG (o formulário não persiste `stake_total` para `forma_registro=ARBITRAGEM` quando vindo de `tab=duplogreen`), e o loader não tem fallback para `arb.stake` nem soma das pernas.
-- H3: faltam `raw_pernas` e os campos de consolidação (`stake_consolidado`, `pl_consolidado`, `consolidation_currency`, `moeda_operacao`), então o `SurebetCard` cai no modo "sem dados" e exibe `R$ 0,00`.
-- H4: as pernas não trazem `instance_identifier` nem `logo_url`, o que em outras abas só piora a UI mas aqui pode estar mascarando uma perna sem `bookmaker_nome` válido.
-- H5: nenhuma aba propaga ainda `tipo` (back/lay) e `comissao` no loader — bug latente da Fase Lay que vai aparecer assim que a primeira lay for criada.
+1. Reproduzir cenário (2 pernas, perna 2 lay 2.00 com 2.8% comissão) com DevTools aberto.
+2. Inspecionar área do header buscando elementos numéricos órfãos (badges, contadores de debug).
+3. Se nada for visto, **não chutar** — relatar ao usuário e pedir print com zoom.
 
-## Validação
+### Etapa 5 — Validação visual
 
-- Repetir o fluxo do print: criar via formulário Arbitragem com `tab=duplogreen` e inspecionar (a) registro em `apostas_unificada` (campos `stake_total`, `stake`, `pl_consolidado`) e (b) registros em `apostas_pernas` (ordem, stake, odd, fonte_saldo).
-- Confirmar visualmente que o mesmo `id` renderiza corretamente quando aberto pela aba **Surebet**, isolando o problema ao loader da aba DG.
-- Logar o objeto passado ao `SurebetCard` em DG vs Surebet para comparar shape.
+1. Após Etapas 1–3, criar nova surebet via DuploGreen com o mesmo cenário do print.
+2. Confirmar no card:
+   - Título = evento real (ex.: `Flamengo x Vasco`), subtítulo = `1X2` ou mercado real.
+   - Perna 1: `@2.00 — R$ 100,00`.
+   - Perna 2: `Lay @2.00 — Resp: R$ 101,42` (com cor distinta).
+3. Screenshot antes/depois.
 
-## Entregáveis desta investigação
+---
 
-- Documento com o comparativo final (tabela aba × campos) marcando OK/FALTA.
-- Lista de correções pontuais por aba (apenas leitura/hidratação, sem mexer em RPCs nem no formulário).
-- Recomendação de extrair o mapeamento de pernas ARBITRAGEM para um util único (`mapPernasArbitragem`) consumido por todas as abas, eliminando drift entre loaders.
+## Arquivos prováveis a alterar
 
-## Fora de escopo
+- `src/components/projeto-detalhe/ProjetoApostasTab.tsx`
+- `src/components/projeto-detalhe/ProjetoBonusTab.tsx`
+- `src/components/projeto-detalhe/ProjetoValueBetTab.tsx`
+- `src/components/projeto-detalhe/ProjetoPunterTab.tsx`
+- `src/components/projeto-detalhe/ProjetoFreebetsTab.tsx`
+- `src/components/projeto-detalhe/ProjetoDuploGreenTab.tsx` (mapping de evento/mercado)
+- `src/components/projeto-detalhe/SurebetCard.tsx` (exibir `Resp:` quando lay + usar `liability ?? stake_total`)
+- `src/components/surebet/SurebetModalRoot.tsx` (payload: gravar liability em `stake_total` da perna lay; corrigir slots de evento/mercado se necessário)
 
-- Alterar RPCs (`liquidar_perna_surebet_v1`, `fn_recalc_pai_surebet`).
-- Alterar o formulário de criação/edição (Fase 1 já consolidada).
-- Reescrever o `SurebetCard` ou redesenhar layout além do necessário para acomodar `tipo`/`comissao`.
-- Backfill em produção; validações usam dados mockados/locais quando preciso.
+## Não-objetivos
+
+- Não tocar em RPCs/triggers (anti-retrofix).
+- Não recalcular nada client-side (Surebet P&L Determinism).
+- Não introduzir UPDATEs em `saldo_atual` / `saldo_freebet`.
+
+## Critério de aceite
+
+- Card AXB do print exibe `Lay @2.00` (cor distinta) com `Resp: R$ 101,42` para a perna 2.
+- Título do card mostra evento e mercado reais (não `0` / `1X2` literal).
+- Nenhuma regressão em abas Surebet/Apostas/Bonus/ValueBet/Punter/Freebets.
