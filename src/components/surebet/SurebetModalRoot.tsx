@@ -243,7 +243,7 @@ export function SurebetModalRoot({
   const [mercado, setMercado] = useState("");
   const [dataAposta, setDataAposta] = useState("");
   
-  const [modeloTipo, setModeloTipo] = useState<"2" | "3" | "4+">("3");
+  const [modeloTipo, setModeloTipo] = useState<"2" | "3" | "4+">("2");
   const [numPernasCustom, setNumPernasCustom] = useState<number>(4);
   
   const numPernas = useMemo(() => {
