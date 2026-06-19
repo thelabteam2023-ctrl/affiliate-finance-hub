@@ -2,6 +2,7 @@ import { Badge, SelectionBadge } from "@/components/ui/badge";
 import { Building2 } from "lucide-react";
 import { cn, getFirstLastName } from "@/lib/utils";
 import { formatBookmakerDisplay } from "@/lib/bookmaker-display";
+import { isLay, exposureOf, labelExposicao } from "@/utils/pernaLayHelpers";
 
 export interface Perna {
   bookmaker_id?: string;
@@ -14,6 +15,10 @@ export interface Perna {
   resultado?: string | null;
   operador?: string | null;
   operador_nome?: string | null;
+  /** Lado da operação (default 'back' quando ausente). */
+  tipo?: "back" | "lay" | null;
+  /** Comissão da exchange (decimal, ex.: 0.028). Default 0. */
+  comissao?: number | null;
 }
 
 interface ApostaPernasResumoProps {
