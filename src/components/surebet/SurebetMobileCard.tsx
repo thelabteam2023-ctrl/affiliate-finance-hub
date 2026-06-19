@@ -159,13 +159,38 @@ export function SurebetMobileCard({
       {/* Card Header: Perna number + controls */}
       <div className="flex items-center justify-between px-3 py-2 bg-muted/20 border-b border-border/30">
         <div className="flex items-center gap-2">
-          <span className={cn(
-            "inline-flex items-center justify-center w-8 h-8 rounded-lg font-bold text-sm",
-            getPernaColor()
-          )}>
-            {pernaIndex + 1}
-          </span>
-          <span className="text-xs text-muted-foreground">Perna {pernaIndex + 1}</span>
+          {(() => {
+            const tipo = ((entry as any).tipo ?? 'back') as 'back' | 'lay';
+            const isLay = tipo === 'lay';
+            return (
+              <>
+                <button
+                  type="button"
+                  onClick={() => !isEditing && onUpdateOdd(pernaIndex, 'tipo' as any, isLay ? 'back' : 'lay')}
+                  disabled={isEditing}
+                  title={isLay ? 'Chance CONTRA (lay) — toque para alternar' : 'Chance A FAVOR (back) — toque para alternar'}
+                  className={cn(
+                    "relative inline-flex items-center justify-center w-8 h-8 rounded-lg font-bold text-sm transition-colors",
+                    isLay
+                      ? "bg-red-500/20 text-red-600 dark:text-red-400 ring-1 ring-red-500/40"
+                      : getPernaColor(),
+                    !isEditing && "active:scale-95"
+                  )}
+                >
+                  {pernaIndex + 1}
+                  <span className={cn(
+                    "absolute -top-1 -right-1 text-[10px] font-bold leading-none",
+                    isLay ? "text-red-500" : "text-emerald-500/80"
+                  )}>
+                    {isLay ? '−' : '+'}
+                  </span>
+                </button>
+                <span className="text-xs text-muted-foreground">
+                  Perna {pernaIndex + 1}{isLay && <span className="ml-1 text-red-500 font-bold">LAY</span>}
+                </span>
+              </>
+            );
+          })()}
           {entry.selecaoLivre?.trim() && (
             <span className="text-[10px] text-muted-foreground/70">• {entry.selecaoLivre}</span>
           )}
