@@ -1,133 +1,214 @@
-## Redesign — Modal "Resumo Operacional"
+# Plano — "Chance Contra" (Lay) na Calculadora de Arbitragem
 
-Mudança puramente visual. Nenhum cálculo, fonte de dados, fórmula, contrato de hook ou edge function é alterado. Filtros de período, botão Regenerar, tratamento de erro/zero ocorrências e `workspace_id` via token permanecem intactos.
+Plano completo, escrito após o diagnóstico das 5 seções já entregue. Nada será codificado até sua aprovação.
 
-### Escopo de arquivos
+---
 
-- `src/components/financeiro/ResumoOperacionalDialog.tsx` — único arquivo tocado.
-- Sem alterações em: `useResumoOperacional.ts`, `useExposicaoFinanceira.ts`, `Financeiro.tsx`, `supabase/functions/resumo-operacional/index.ts`, prompt do agente.
+## Ambiguidades que preciso confirmar antes de codar
 
-### Mudança 1 — KpiRail lateral único (8 métricas)
+1. **Liability vs saldo.** Na perna `lay`, qual conta debita a `liability = stake × (oddLay − 1)`? A mesma `bookmaker_id` selecionada na linha (tratada como conta de exchange tipo Betfair) ou um novo conceito "exchange"? Proposta: **manter `bookmaker_id` como hoje**; a perna `lay` simplesmente passa a validar `liability` em vez de `stake` contra `saldo_disponivel` da casa. Sem nova entidade.
+2. **Comissão por padrão.** Comissão é por perna (default `0`) e o usuário digita por linha. Não vou criar default por bookmaker nesta etapa. Confirma?
+3. **Sub-entradas (`additionalEntries`).** Sub-entrada herda o `tipo` da perna principal (toda a perna é back **ou** lay; não há mistura dentro da mesma perna)? Proposta: **sim, herda**.
+4. **Freebet em lay.** Lay não aceita freebet (`fonteSaldo === 'FREEBET'` força `tipo='back'`). Confirma?
+5. **Persistência das colunas novas.** OK adicionar `tipo text` e `comissao numeric(7,5)` em `apostas_pernas` **e** em `apostas_perna_entradas` (mesmo herdando), para garantir auditabilidade por entrada. Confirma?
+6. **Toggle "+/−" no badge da perna.** Reaproveitar o número (badge "1", "2"…) como botão clicável que alterna back↔lay, com cor/ícone distinto. Confirma o gesto (clicar no próprio número) em vez de um botão separado?
 
-Substituir os dois blocos atuais de cards horizontais (grid 5 col + grid 3 col) por um único `KpiRail` (componente já existente em `src/components/financeiro/KpiRail.tsx`) ancorado à esquerda do `DialogContent`.
+---
 
-Layout do `DialogContent`:
+## Camadas tocadas e ordem de implementação
 
 ```text
-+------------------------------------------------------+
-| Header (título + descrição com período)              |
-| Seletor de presets + custom range + Regenerar        |
-+--------+---------------------------------------------+
-|        |                                             |
-| KpiRail| Área principal:                             |
-| (8     |  - Alerta janelaInsuficiente (se houver)    |
-|  itens)|  - Tópicos do agente (Mudança 2)            |
-|        |  - Rodapé técnico (fonte/engine)            |
-|        |                                             |
-+--------+---------------------------------------------+
+1. Tipos        → OddEntry, OddFormEntry, EngineLeg, SurebetPerna
+2. Motor        → surebetCurrencyEngine.ts (payout, cenários, equalização)
+                  surebetPipeline.ts (passa tipo/comissao adiante)
+                  useSurebetCalculator.ts (constrói EngineLeg com novos campos)
+3. Validação    → surebetValidator.ts, errosPorPerna, balanceValidation
+4. UI           → SurebetTableRow, SurebetColumnsView, SurebetMobileCard,
+                  SurebetTableFooter (toggle "Mostrar comissões"),
+                  SurebetModalRoot (handlers toggleTipo/setComissao)
+5. Persistência → migração apostas_pernas + apostas_perna_entradas
+                  + adaptações em handleSave/load do SurebetModalRoot
+6. Validação manual → exemplo numérico (100% back vs misto back+lay+comissão)
 ```
 
-Container externo: `flex flex-col lg:flex-row gap-4`. Rail mantém `lg:w-[188px] lg:flex-shrink-0` já definido no componente. `DialogContent` passa a `max-w-5xl` para acomodar rail + conteúdo confortavelmente.
+---
 
-Itens do rail, na ordem (mesmo `KpiRailItem[]` do dashboard Visão Financeira):
+## 1. Modelo de dados
 
-Seção "Resultado do período"
-1. Fluxo Líquido — `Wallet`, tone derivado do sinal.
-2. Custos Operacionais — `Receipt`, tone `negative`.
-3. Resultado Líquido — `TrendingUp`, tone por sinal, `activeTone="positive"` quando >=0 para indicar que é a métrica com gráfico.
-4. Perdas (Disputa/Scam) — `TrendingDown`, tone `negative` se >0, `warning` em `perdasErro`.
-5. Lucro Real — `Target`, **destaque maior**: usado `activeTone` (`positive`/`negative` conforme sinal) que pinta a borda esquerda de 2px e o fundo sutil — mesma técnica que o KpiRail já oferece para marcar o KPI âncora. Tooltip com a fórmula `Resultado Líquido − Perdas confirmadas`.
+### Tipos TypeScript (apenas adições, nada renomeado)
 
-Divisor visual sutil + micro-label (não card separado):
-- Implementado como um item "header-only" inserido entre os índices 5 e 6 via prop `footer` do bloco anterior, ou simplesmente quebrando o rail em **dois `KpiRail` empilhados verticalmente** dentro de um mesmo `<aside className="lg:w-[188px]">`, separados por um `<Separator />` fino (`border-t border-border/30`) + label uppercase `Exposição em aberto`. Esta segunda abordagem é mais simples e respeita a API atual do `KpiRail` sem precisar estendê-la.
+`useSurebetCalculator.ts` — `OddEntry` e `OddFormEntry`:
+- `tipo: 'back' | 'lay'` (default `'back'`)
+- `comissao: number` (decimal 0–1, default `0`; ex.: `0.028` = 2,8%)
 
-Seção "Exposição em aberto" (snapshot)
-6. Em Disputa — `ShieldAlert`, tone `warning` se >0. Tooltip mostra breakdown por segmento (Casas / Wallets / Contas Parc / Caixa Op).
-7. Irrecuperável — `Lock`, tone `negative` se >0. Tooltip com `countIrrecuperavel`.
-8. Lucro Real (Worst-Case) — `ShieldX`, tone por sinal. Tooltip "Cenário em que 100% das disputas viram perda. Referência de risco, não resultado contábil."
+`surebetCurrencyEngine.ts` — `EngineLeg`:
+- `tipo: 'back' | 'lay'`
+- `comissao: number`
 
-`periodLabel` do primeiro rail = label do período aplicado (ex.: "Mês atual · 01/06/2026 → 30/06/2026"). Segundo rail recebe `periodLabel="Snapshot atual"` e usa o `footer` para a nota: "Disputa e irrecuperável refletem o snapshot atual, independente do período."
+`SurebetModalRoot.tsx` — `SurebetPerna` (mapeamento DB): mesmos dois campos.
 
-Skeleton: enquanto `loading`, renderizar rail com `loading: true` em cada item (`KpiRail` já trata internamente via `item.loading`).
+### Default em runtime
+Toda função que **lê do banco** ou **hidrata** uma perna aplica fallback: `tipo ?? 'back'`, `comissao ?? 0`. Centralizar em um único helper `normalizePernaShape()` chamado em todos os pontos de hidratação (load do modal, `aplicarCamposNovaEntrada`, rascunhos do localStorage).
 
-### Mudança 2 — Resposta do agente em tópicos
+---
 
-Hoje: `<div … whitespace-pre-line>{texto}</div>`. Trocar por um parser leve client-side que quebra o texto retornado pela edge function em tópicos sem alterar o prompt.
+## 2. Motor de cálculo — fórmulas exatas
 
-Estratégia (sem mexer no backend):
-- A edge function já tende a devolver linhas separadas. Implementar um helper local `parseTopicos(texto: string)` que:
-  - Quebra por `\n\n` ou linhas iniciadas por `- `, `• `, `**`, ou dígitos seguidos de `.`/`)`.
-  - Para cada bloco, separa **título** (primeira frase curta antes de `:` ou primeira linha em negrito `**...**`) do **corpo** (restante).
-  - Se nenhum padrão for detectado, faz fallback elegante: exibe o texto íntegro como um único tópico "Resumo".
+### Payout líquido por perna em um cenário "perna X vence"
 
-Render:
+```text
+Para cada perna i:
+  se tipo[i] === 'back':
+    se i é a perna vencedora:  pnl[i] = stake[i] × odd[i] − stake[i]   // = stake × (odd−1)
+    senão:                     pnl[i] = −stake[i]
+  se tipo[i] === 'lay':
+    se i é a perna vencedora (lay perde):  pnl[i] = −liability[i]
+                                            // liability = stake × (oddLay − 1)
+    senão (lay ganha):                      pnl[i] = stake[i] × (1 − comissao[i])
 
-```tsx
-<ol className="space-y-3 list-none">
-  {topicos.map((t, i) => (
-    <li key={i} className={cn(
-      "border-l-2 pl-3 py-1",
-      t.destaque ? "border-primary" : "border-border/40",
-    )}>
-      <div className={cn(
-        "text-xs uppercase tracking-wide mb-1",
-        t.destaque ? "text-primary font-semibold" : "text-muted-foreground font-medium",
-      )}>{t.titulo}</div>
-      <div className={cn(
-        "text-sm leading-relaxed",
-        t.destaque && "font-medium",
-      )}>{t.corpo}</div>
-    </li>
-  ))}
-</ol>
+lucroCenarioX = Σ pnl[i]
 ```
 
-Destaque (`destaque: true`) é aplicado quando o título contém `lucro real` (case-insensitive) e não contém `worst`. Mantém paridade visual com o KPI âncora do rail.
+Tudo após conversão de moeda via `convertViaBRL` (já existente). A consolidação final segue idêntica à atual.
 
-Ordem esperada (sai do prompt já existente no backend; o parser só preserva a sequência): Período → Fluxo Líquido → Resultado Líquido → Perdas → **Lucro Real** → Exposição pendente → Cenário worst-case.
+### Capital exposto (denominador do ROI)
+`exposicaoTotal = Σ (tipo[i] === 'back' ? stake[i] : liability[i])`
+ROI = `lucroCenario / exposicaoTotal × 100`. **Compatibilidade:** quando todas back e comissão zero, `exposicaoTotal === stakeRealTotal` ⇒ ROI idêntico ao atual.
 
-Sem numeração visível — hierarquia se dá por tipografia + borda esquerda.
+### Equalização multi-perna (`calcularStakesEqualizadasMultiCurrency`)
 
-### Mudança 3 — Revisão geral do modal
+Hoje resolve `targetReturn = refStake × refOdd` e distribui via `stake[i] = targetReturn / odd[i]`. Generalizar para igualar **lucro líquido** por cenário (apenas entre pernas no `directedProfitLegs`):
 
-- `DialogContent`: `max-w-5xl max-h-[90vh] overflow-y-auto`.
-- Header e descrição (período em pt-BR `dd/MM/yyyy`) inalterados.
-- Bloco de seletor de presets + custom range + botão Regenerar permanece **acima** do split rail/conteúdo (largura total).
-- Alertas (`janelaInsuficiente`, `perdasErro`, `error`) ficam na coluna direita, acima dos tópicos.
-- Rodapé técnico (linha `Layers` com fontes/engine) permanece, agora ao final da coluna direita.
-- Empty state ("Escolha um período…") continua ocupando a área inteira (sem rail), já que não há métricas para exibir.
+```text
+Dada a perna de referência (fixa pelo usuário):
+  L = lucro líquido do cenário "referência vence" (fechado pelo refStake)
 
-### Casos de borda preservados
+Para cada outra perna j ∈ direcionadas:
+  No cenário "j vence", queremos lucroCenario_j = L.
+  lucroCenario_j é função linear de stake[j] (todas as outras pernas direcionadas
+  também variam, então o sistema é resolvido iterativamente OU em forma fechada
+  via sistema linear N×N, conforme já é feito hoje para back puro).
+```
 
-- `loading` → rail com skeletons + skeletons de tópicos (3 blocos `Skeleton h-12`).
-- `error` → `Alert destructive` na coluna direita; rail oculto.
-- `metricas.perdasErro` → KPI "Perdas" mostra "Indisponível" (tone warning); alerta vermelho na coluna direita; Lucro Real exibido como "Indisponível".
-- Zero ocorrências em disputa/irrecuperável → KPIs exibem `R$ 0,00` com tone neutro; tooltips informam "Nenhuma disputa em aberto" / "Sem saldos irrecuperáveis". Nunca omitido.
-- Falha ao buscar ocorrências → comportamento atual do hook é preservado; modal não assume zero.
+Implementação concreta:
+- Manter o pivot atual (`targetReturn` calculado pela perna de referência).
+- Para cada perna `j` direcionada, calcular o `stake[j]` que iguala o **PnL no cenário "j vence"** ao **PnL no cenário "ref vence"**, usando a contribuição correta de back/lay/comissão.
+- Forma fechada (sem iteração) é viável: o sistema é triangular se a referência é fixa — cada `stake[j]` depende apenas dos stakes já resolvidos das pernas anteriores no cenário "j vence". Vamos implementar fechado e cair em fallback iterativo (máx. 6 passos, tolerância 1e−4) se a referência for ambígua.
 
-### Implementação
+Snapshot de stakes para pernas **não-direcionadas** (toggle "D" desligado) continua igual: não são tocadas.
 
-1. Em `ResumoOperacionalDialog.tsx`:
-   - Importar `KpiRail`, `KpiRailItem` de `@/components/financeiro/KpiRail` e `Separator` de `@/components/ui/separator`.
-   - Remover o componente local `Card` (não usado mais) e os dois grids de cards.
-   - Construir `itemsResultado: KpiRailItem[]` e `itemsExposicao: KpiRailItem[]` via `useMemo` a partir de `metricas`.
-   - Renderizar `<aside>` contendo dois `KpiRail` empilhados + `<Separator />` + label "Exposição em aberto" + nota snapshot no `footer` do segundo.
-   - Adicionar helper `parseTopicos` no mesmo arquivo (export interno, sem novo arquivo).
-   - Substituir o bloco `{texto && …}` pela `<ol>` de tópicos.
-   - Ajustar `DialogContent` para `max-w-5xl` e wrapper `flex flex-col lg:flex-row gap-4` envolvendo rail + conteúdo principal.
+### Compatibilidade retroativa (teste obrigatório)
+Adicionar caso em `src/utils/__tests__/surebetBugRepro.test.ts` (ou novo arquivo `surebetLay.test.ts`):
 
-2. Verificar build/typecheck (automático).
+- **Teste A**: input 100% back, comissão 0 → resultados (stakes, lucro, ROI) devem ser **bit-exatos** aos snapshots atuais (gerar snapshot pré-mudança).
+- **Teste B**: 2 pernas — perna 1 back odd 2.0 stake 100, perna 2 lay odd 2.0 comissão 0 → lucro garantido = 0 em ambos cenários.
+- **Teste C**: back+lay+comissão 2,8% (caso da imagem do prompt) → bater valores calculados à mão.
 
-### Checklist de aceite (mapeado para o pedido)
+---
 
-- [x] 8 KPIs em rail lateral único (dois `KpiRail` colados, mesmo aside).
-- [x] Divisor sutil + micro-label "Exposição em aberto".
-- [x] Lucro Real com `activeTone` destacado, maior que demais.
-- [x] Nota snapshot preservada no footer do segundo rail.
-- [x] Texto da IA em tópicos via parser; ordem mantida pelo prompt existente.
-- [x] Tópico Lucro Real com `border-primary` + `font-semibold`.
-- [x] Tópicos não duplicam o número literal (texto contextual vem do agente; rail mostra valor).
-- [x] Sem scroll excessivo: rail compacta verticalmente o que era grid horizontal denso.
-- [x] Filtros e Regenerar intactos.
-- [x] Zero alteração em lógica/dados/edge function/workspace handling.
-- [x] Estilo herdado do `KpiRail` da Visão Financeira (mesmos tokens).
+## 3. Validação
+
+### `surebetValidator.ts`
+- Adicionar regra: `comissao >= 0 && comissao <= 1`.
+- Para pernas `lay`: `odd > 1` (sem teto) e `stake > 0` (já existe; semântica muda mas regra é a mesma).
+- Validar coerência: `tipo === 'lay'` ⇒ `fonteSaldo !== 'FREEBET'` (freebet só em back).
+
+### Saldo em tempo real (`calcularSaldoDisponivel` + `errosPorPerna`)
+- Função `requiredAmount(perna)` central: retorna `stake` se back, `stake × (odd − 1)` se lay.
+- Todos os pontos que hoje comparam `stake` vs saldo passam a comparar `requiredAmount(perna)` vs saldo.
+- Mensagem de erro reflete a natureza: "Liability insuficiente" para lay; "Stake insuficiente" para back.
+
+### `balanceValidation` (granular por entrada)
+- Sub-entradas herdam `tipo` da perna; loop atual de soma por bookmaker passa a somar `requiredAmount` por entrada.
+- Bloqueio do botão "Registrar Operação" permanece com a mesma condição combinada.
+
+---
+
+## 4. UI
+
+### `SurebetTableRow.tsx`
+- **Badge da perna ("1", "2"...) vira botão**: clique alterna `tipo`. Visual:
+  - back: badge atual (verde) + sinal `+` discreto.
+  - lay: badge âmbar/vermelho + sinal `−`. Borda da linha esquerda muda de cor.
+- Coluna **Stake**: quando `tipo === 'lay'`, mostra rótulo secundário "Responsabilidade: R$ X" abaixo do input (cálculo `stake × (odd − 1)`), ou tooltip no header da coluna. Não muda o input em si (usuário continua digitando stake, não liability).
+- Nova **coluna "Comissão"** (renderizada condicionalmente via prop `showComissao`): input `%` decimal, default 0, com largura compacta.
+- Coluna **Odd** ganha tooltip discreto explicando "Odd lay" quando `tipo === 'lay'`.
+
+### `SurebetTableFooter.tsx`
+- Adicionar toggle **"Mostrar comissões"** ao lado do toggle "Arredondar" (mesmo padrão visual). Estado `showComissao` sobe para `SurebetModalRoot` via prop drilling existente.
+- "Lucro Garantido" e ROI continuam calculados pelo motor — o range `→` aparece naturalmente quando back+lay introduz spread entre cenários.
+- **Novo KPI ao lado do "Total Apostado"**: "Exposição Total" = `Σ requiredAmount` (só renderiza quando existe ao menos 1 lay; caso contrário fica oculto para não poluir).
+
+### `SurebetColumnsView.tsx` e `SurebetMobileCard.tsx`
+- Mesmas alterações: badge clicável, coluna/linha de comissão condicional, exibição de liability.
+
+### `SurebetModalRoot.tsx`
+- Novos handlers: `toggleTipoPerna(index)`, `setComissaoPerna(index, value)`, `setShowComissao(boolean)`.
+- Estado novo: `showComissao: boolean` (default `false`, persistido em `localStorage` por usuário, chave `surebet_show_comissao`).
+- Ao trocar `tipo`, marcar `isManuallyEdited = false` da perna para que o engine recalcule stake automaticamente na próxima passada.
+
+---
+
+## 5. Persistência (migração)
+
+Tabelas: `apostas_pernas` e `apostas_perna_entradas`.
+
+```sql
+ALTER TABLE public.apostas_pernas
+  ADD COLUMN tipo text NOT NULL DEFAULT 'back'
+    CHECK (tipo IN ('back','lay')),
+  ADD COLUMN comissao numeric(7,5) NOT NULL DEFAULT 0
+    CHECK (comissao >= 0 AND comissao <= 1);
+
+ALTER TABLE public.apostas_perna_entradas
+  ADD COLUMN tipo text NOT NULL DEFAULT 'back'
+    CHECK (tipo IN ('back','lay')),
+  ADD COLUMN comissao numeric(7,5) NOT NULL DEFAULT 0
+    CHECK (comissao >= 0 AND comissao <= 1);
+```
+
+- Backfill é automático via `DEFAULT 'back' / 0`.
+- Nenhuma view/RPC existente é alterada nesta etapa (lay não entra em P&L de surebet liquidada até confirmação de uma fase 2; lay só afeta o **planejamento** na calculadora).
+- **Importante:** P&L pós-liquidação de surebets com lay exigirá ajuste nas RPCs `liquidar_perna_surebet_v1` / `fn_recalc_pai_surebet`. Vou marcar isso como **fase 2 separada** e deixar lay restrito à calculadora + persistência inicial nesta fase 1, para evitar tocar o motor de liquidação sem proposta dedicada.
+
+### Frontend após migração
+- `aplicarCamposNovaEntrada` e o handler de save em `SurebetModalRoot` incluem `tipo` e `comissao` no insert.
+- Hidratação no load aplica `normalizePernaShape()`.
+
+---
+
+## 6. Validação final (exemplo numérico que vou entregar no fim)
+
+**Caso A — regressão 100% back**
+- 2 pernas BRL, odd 2.10/2.10, stake 500 cada, comissão 0, ambas back.
+- Esperado: idêntico ao atual (`stakeTotal=1000`, `minLucro=50`, `roi=5%`).
+
+**Caso B — back + lay sem comissão**
+- Perna 1 back: stake 100, odd 2.00.
+- Perna 2 lay: stake 100, odd 2.00, comissão 0.
+- Cenário "1 vence": back ganha 100, lay perde 100 → 0. Cenário "1 perde": back perde 100, lay ganha 100 → 0. Esperado: lucro garantido = 0.
+
+**Caso C — back + lay com comissão (matemática completa)**
+- Perna 1 back: stake 100, odd 3.00.
+- Perna 2 lay: odd 1.50, comissão 5%. Resolver `stake[2]` para igualar PnL.
+- Mostrarei stake calculada, liability, PnL nos 2 cenários e ROI sobre exposição total.
+
+---
+
+## Resumo do escopo (fronteira de mudança)
+
+| Camada | Arquivos | Mudança |
+|---|---|---|
+| Tipos | `useSurebetCalculator.ts`, `surebetCurrencyEngine.ts`, `SurebetModalRoot.tsx` | + `tipo`, `comissao` |
+| Motor | `surebetCurrencyEngine.ts`, `surebetPipeline.ts` | payout lay, equalização por PnL |
+| Hook | `useSurebetCalculator.ts` | passa novos campos ao engine |
+| Validação | `surebetValidator.ts`, `SurebetModalRoot.tsx` (errosPorPerna, balanceValidation) | usa `requiredAmount` |
+| UI | `SurebetTableRow.tsx`, `SurebetColumnsView.tsx`, `SurebetMobileCard.tsx`, `SurebetTableFooter.tsx`, `SurebetModalRoot.tsx` | badge clicável, coluna comissão, toggle "Mostrar comissões", liability |
+| DB | `apostas_pernas`, `apostas_perna_entradas` | 2 colunas + CHECK |
+| Testes | `src/utils/__tests__/surebetLay.test.ts` (novo) | regressão + back+lay |
+
+**Fora de escopo nesta fase:** liquidação/RPC de surebet com lay, integração de comissão por bookmaker default, P&L histórico de operações lay. Tudo isso fica explicitamente para uma fase 2 (com plano próprio) para não acoplar mudanças críticas de motor financeiro.
+
+---
+
+Confirma as 6 ambiguidades acima e aprova o plano? Após o "ok", implemento na ordem: Tipos → Motor → Hook → Validação → UI → Migração → exemplo numérico de verificação.

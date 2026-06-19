@@ -80,9 +80,11 @@ interface SurebetTableRowProps {
   insufficientEntries?: Map<string, boolean>;
    /** Erro de validação em tempo real para esta perna */
    error?: string;
+  /** Mostrar input de comissão (toggle no footer ou auto quando lay) */
+  showComissao?: boolean;
   /** Callback para alterar resultado da perna (modo edição) */
   onResultadoChange?: (index: number, resultado: PernaResultado) => void;
-  onUpdateOdd: (index: number, field: keyof OddEntry, value: string | boolean) => void;
+  onUpdateOdd: (index: number, field: keyof OddEntry, value: string | boolean | number) => void;
   onSetReference: (index: number) => void;
   onToggleDirected: (index: number) => void;
   onAddEntry: (index: number) => void;
@@ -111,6 +113,7 @@ export function SurebetTableRow({
   hasInsufficientBalance = false,
   insufficientEntries,
   error,
+  showComissao = false,
   onResultadoChange,
   onUpdateOdd,
   onSetReference,
@@ -212,9 +215,38 @@ export function SurebetTableRow({
         
         {/* Perna Label */}
         <td rowSpan={mainRowSpan} className="px-2 text-center align-middle" style={{ height: '78px' }}>
-          <div className={`inline-flex items-center justify-center w-9 h-9 rounded-lg font-bold text-sm ${getPernaColor()}`}>
-            {pernaIndex + 1}
-          </div>
+          {(() => {
+            const tipo = (entry.tipo ?? 'back') as 'back' | 'lay';
+            const isLay = tipo === 'lay';
+            return (
+              <button
+                type="button"
+                onClick={() => !isEditing && onUpdateOdd(pernaIndex, 'tipo' as any, isLay ? 'back' : 'lay')}
+                title={isLay ? 'Chance CONTRA (lay) — clique para alternar p/ a favor' : 'Chance A FAVOR (back) — clique para alternar p/ contra'}
+                className={cn(
+                  "inline-flex items-center justify-center w-9 h-9 rounded-lg font-bold text-sm transition-colors",
+                  isLay
+                    ? "bg-red-500/20 text-red-600 dark:text-red-400 ring-1 ring-red-500/40"
+                    : getPernaColor(),
+                  !isEditing && "hover:ring-2 hover:ring-primary/40 cursor-pointer"
+                )}
+                disabled={isEditing}
+              >
+                <span className="relative">
+                  {pernaIndex + 1}
+                  <span className={cn(
+                    "absolute -top-2 -right-3 text-[10px] font-bold leading-none",
+                    isLay ? "text-red-500" : "text-emerald-500/80"
+                  )}>
+                    {isLay ? '−' : '+'}
+                  </span>
+                </span>
+              </button>
+            );
+          })()}
+          {(entry.tipo ?? 'back') === 'lay' && (
+            <div className="text-[9px] font-medium text-red-500 mt-0.5 uppercase tracking-wide">Lay</div>
+          )}
           {entry.selecaoLivre?.trim() && (
             <div className="text-[10px] text-muted-foreground truncate max-w-[60px] mt-0.5">
               {entry.selecaoLivre}
@@ -292,6 +324,12 @@ export function SurebetTableRow({
           {(() => {
             const mainInsufficient = insufficientEntries?.get(`main-${pernaIndex}`) || false;
             const hasFBAvailable = (selectedBookmaker?.saldo_freebet ?? 0) > 0;
+            const tipo = (entry.tipo ?? 'back') as 'back' | 'lay';
+            const isLay = tipo === 'lay';
+            const stakeNum = parseFloat(entry.stake) || 0;
+            const oddNum = parseFloat(entry.odd) || 0;
+            const liability = isLay && oddNum > 1 ? stakeNum * (oddNum - 1) : 0;
+            const comissaoPct = ((entry.comissao ?? 0) * 100);
             return (
               <div className="flex flex-col items-center gap-0.5">
                 <div className="flex items-center gap-1">
@@ -303,13 +341,14 @@ export function SurebetTableRow({
                     className={cn(
                       "h-8 text-xs text-center tabular-nums",
                       entry.fonteSaldo === 'FREEBET' ? "w-[72px]" : "w-[90px]",
-                      mainInsufficient ? "border-destructive focus-visible:ring-destructive/50" : ""
+                      mainInsufficient ? "border-destructive focus-visible:ring-destructive/50" : "",
+                      isLay ? "border-red-500/40" : ""
                     )}
                     data-field-type="stake"
                     onKeyDown={(e) => onFieldKeyDown(e as any, 'stake')}
                   />
                   {/* FB Toggle — só aparece se a casa tem saldo de freebet */}
-                  {(hasFBAvailable || entry.fonteSaldo === 'FREEBET') && (
+                  {!isLay && (hasFBAvailable || entry.fonteSaldo === 'FREEBET') && (
                     <button
                       type="button"
                       onClick={() => onUpdateOdd(pernaIndex, "fonteSaldo" as any, entry.fonteSaldo === 'FREEBET' ? 'REAL' : 'FREEBET')}
@@ -325,6 +364,31 @@ export function SurebetTableRow({
                     </button>
                   )}
                 </div>
+                {isLay && liability > 0 && (
+                  <div className="text-[9px] text-red-500/90 font-medium leading-tight">
+                    Resp: {formatCurrency(liability, entry.moeda)}
+                  </div>
+                )}
+                {(isLay || showComissao) && (
+                  <div className="flex items-center gap-1 mt-0.5" title="Comissão da exchange (% sobre lucro do lay)">
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      value={Number.isFinite(comissaoPct) ? String(+comissaoPct.toFixed(4)) : ''}
+                      placeholder="0"
+                      onChange={(e) => {
+                        const v = parseFloat(e.target.value);
+                        const dec = Number.isFinite(v) ? Math.max(0, Math.min(100, v)) / 100 : 0;
+                        onUpdateOdd(pernaIndex, 'comissao' as any, dec);
+                      }}
+                      className="h-6 w-14 text-[10px] text-center px-1 tabular-nums"
+                      onWheel={(e) => e.currentTarget.blur()}
+                    />
+                    <span className="text-[9px] text-muted-foreground">% com.</span>
+                  </div>
+                )}
                 {(error || (mainInsufficient && selectedBookmaker)) && (
                   <div className="text-[9px] text-destructive font-medium leading-tight text-center max-w-[120px]">
                     {error ? (

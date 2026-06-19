@@ -61,6 +61,10 @@ export interface OddEntry {
   /** UUID da perna no banco (apostas_pernas.id). Undefined para pernas novas. */
   pernaId?: string;
   additionalEntries?: OddFormEntry[];
+  /** Tipo da perna: 'back' (chance a favor) ou 'lay' (chance contra). Default 'back'. */
+  tipo?: 'back' | 'lay';
+  /** Comissão da exchange (0–1) aplicada sobre o lucro de pernas LAY. Default 0. */
+  comissao?: number;
 }
 
 export interface OddFormEntry {
@@ -73,6 +77,10 @@ export interface OddFormEntry {
   fonteSaldo?: 'REAL' | 'FREEBET';
   /** UUID da perna no banco (apostas_pernas.id). Undefined para pernas novas. */
   pernaId?: string;
+  /** Tipo da entrada (herda da perna). Default 'back'. */
+  tipo?: 'back' | 'lay';
+  /** Comissão (0–1). Default 0. */
+  comissao?: number;
 }
 
 interface BookmakerInfo {
@@ -253,6 +261,8 @@ export function useSurebetCalculator({
         isFreebet: o.fonteSaldo === 'FREEBET' && !o.additionalEntries?.length,
         realStakeLocal: split.realStakeLocal,
         freebetStakeLocal: split.freebetStakeLocal,
+        tipo: o.tipo ?? 'back',
+        comissao: o.comissao ?? 0,
       };
     });
 
