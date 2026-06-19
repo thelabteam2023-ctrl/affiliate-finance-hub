@@ -488,16 +488,16 @@ function PernaItem({
           {/* Odd e Stake */}
           <div className="flex items-center gap-2 shrink-0">
             <span className={cn("text-sm font-medium", oddClass)} title={layTitle}>{layPrefix}@{displayOdd.toFixed(2)}</span>
-            <span className="text-xs text-muted-foreground">
+            <span className={cn("text-xs", isLayPerna ? "text-red-300" : "text-muted-foreground")} title={stakeTitle}>
               {(() => {
                 // Check if entries have mixed currencies
                 const entryCurrencies = new Set(perna.entries?.map(e => e.moeda) || []);
                 if (entryCurrencies.size > 1 && convertToConsolidation) {
                   // Convert each entry's stake to consolidation currency
                   const consolidated = perna.entries!.reduce((sum, e) => sum + convertToConsolidation(e.stake, e.moeda), 0);
-                  return formatValue(consolidated);
+                  return `${stakeLabel}${formatValue(consolidated)}`;
                 }
-                return formatPernaValue(displayStake, perna.moeda);
+                return `${stakeLabel}${formatPernaValue(displayStake, perna.moeda)}`;
               })()}
             </span>
           </div>
