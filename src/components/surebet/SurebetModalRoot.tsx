@@ -872,6 +872,8 @@ export function SurebetModalRoot({
           isManuallyEdited: true,
           resultado: mainEntry.resultado || perna.resultado,
           fonteSaldo: (mainEntry.fonte_saldo as 'REAL' | 'FREEBET') || 'REAL',
+          tipo: ((perna.tipo ?? mainEntry.tipo ?? 'back') as 'back' | 'lay'),
+          comissao: Number(perna.comissao ?? mainEntry.comissao ?? 0) || 0,
           additionalEntries: additionalEntries.map((sub: any) => ({
             id: sub.id,
             bookmaker_id: sub.bookmaker_id || "",
@@ -881,6 +883,8 @@ export function SurebetModalRoot({
             selecaoLivre: sub.selecao_livre || "",
             fonteSaldo: (sub.fonte_saldo as 'REAL' | 'FREEBET') || 'REAL',
             pernaId: perna.id, // Referência à perna pai
+            tipo: ((sub.tipo ?? perna.tipo ?? 'back') as 'back' | 'lay'),
+            comissao: Number(sub.comissao ?? perna.comissao ?? 0) || 0,
           })),
         };
       });
