@@ -1948,8 +1948,15 @@ export function SurebetModalRoot({
       if (entry.bookmaker_id) {
         const mainStake = parseFloat(entry.stake) || 0;
         if (mainStake > 0) {
+          // Para lay, o que reserva saldo é a responsabilidade (liability),
+          // não o stake. liability = stake × (odd − 1)
+          const mainOdd = parseFloat(entry.odd) || 0;
+          const isLay = entry.tipo === 'lay';
+          const valorReservado = isLay && mainOdd > 1
+            ? mainStake * (mainOdd - 1)
+            : mainStake;
           const cur = alocadoPorBookmaker.get(entry.bookmaker_id) || { real: 0, freebet: 0 };
-          if (entry.fonteSaldo === 'FREEBET') cur.freebet += mainStake; else cur.real += mainStake;
+          if (entry.fonteSaldo === 'FREEBET') cur.freebet += valorReservado; else cur.real += valorReservado;
           alocadoPorBookmaker.set(entry.bookmaker_id, cur);
         }
       }
@@ -1958,8 +1965,14 @@ export function SurebetModalRoot({
         if (!subBk) return;
         const subStake = parseFloat(sub.stake) || 0;
         if (subStake > 0) {
+          // Sub-entradas herdam o tipo da perna principal
+          const subOdd = parseFloat(sub.odd) || parseFloat(entry.odd) || 0;
+          const isLay = entry.tipo === 'lay';
+          const valorReservado = isLay && subOdd > 1
+            ? subStake * (subOdd - 1)
+            : subStake;
           const cur = alocadoPorBookmaker.get(subBk) || { real: 0, freebet: 0 };
-          if (sub.fonteSaldo === 'FREEBET') cur.freebet += subStake; else cur.real += subStake;
+          if (sub.fonteSaldo === 'FREEBET') cur.freebet += valorReservado; else cur.real += valorReservado;
           alocadoPorBookmaker.set(subBk, cur);
         }
       });
