@@ -2,6 +2,7 @@ import { Badge, SelectionBadge } from "@/components/ui/badge";
 import { Building2 } from "lucide-react";
 import { cn, getFirstLastName } from "@/lib/utils";
 import { formatBookmakerDisplay } from "@/lib/bookmaker-display";
+import { isLay, exposureOf, labelExposicao } from "@/utils/pernaLayHelpers";
 
 export interface Perna {
   bookmaker_id?: string;
@@ -14,6 +15,10 @@ export interface Perna {
   resultado?: string | null;
   operador?: string | null;
   operador_nome?: string | null;
+  /** Lado da operação (default 'back' quando ausente). */
+  tipo?: "back" | "lay" | null;
+  /** Comissão da exchange (decimal, ex.: 0.028). Default 0. */
+  comissao?: number | null;
 }
 
 interface ApostaPernasResumoProps {
@@ -177,6 +182,7 @@ export function ApostaPernasResumo({
         {pernasValidas.map((perna, idx) => {
           const bookmakerNome = getBookmakerNome(perna);
           const bookmakerDisplay = formatBookmakerDisplay(bookmakerNome);
+          const lay = isLay(perna);
           
           return (
             <Badge
@@ -191,6 +197,9 @@ export function ApostaPernasResumo({
               <span className="uppercase truncate max-w-[80px]">
                 {bookmakerDisplay}
               </span>
+              {lay && (
+                <span className="text-red-400 font-semibold" title="Chance contra (Lay)">L</span>
+              )}
               <span className="text-muted-foreground">@</span>
               <span>{(perna.odd || 0).toFixed(2)}</span>
               {showResultado && perna.resultado && (
@@ -215,6 +224,8 @@ export function ApostaPernasResumo({
         {pernasValidas.map((perna, idx) => {
           const bookmakerNome = getBookmakerNome(perna);
           const bookmakerDisplay = formatBookmakerDisplay(bookmakerNome);
+          const lay = isLay(perna);
+          const exposicao = exposureOf(perna);
           
           return (
             <div
@@ -231,13 +242,24 @@ export function ApostaPernasResumo({
               <span className="font-medium uppercase truncate max-w-[100px] text-[11px]">
                 {bookmakerDisplay}
               </span>
+              {lay && (
+                <span
+                  className="text-[9px] font-bold text-red-400 border border-red-500/40 bg-red-500/10 rounded px-1 leading-none"
+                  title="Chance contra (Lay)"
+                >
+                  LAY
+                </span>
+              )}
               <span className="text-muted-foreground text-[10px]">@</span>
               <span className="text-[10px]">{(perna.odd || 0).toFixed(2)}</span>
               {showStake && perna.stake && (
                 <>
                   <span className="text-muted-foreground text-[10px]">•</span>
-                  <span className="text-[10px] font-medium">
-                    {formatCurrency(perna.stake)}
+                  <span
+                    className="text-[10px] font-medium"
+                    title={lay ? `Stake ${formatCurrency(perna.stake)} • Responsabilidade ${formatCurrency(exposicao)}` : undefined}
+                  >
+                    {lay ? `Resp ${formatCurrency(exposicao)}` : formatCurrency(perna.stake)}
                   </span>
                 </>
               )}
@@ -262,6 +284,8 @@ export function ApostaPernasResumo({
       {pernasValidas.map((perna, idx) => {
         const bookmakerNome = getBookmakerNome(perna);
         const bookmakerDisplay = formatBookmakerDisplay(bookmakerNome);
+        const lay = isLay(perna);
+        const exposicao = exposureOf(perna);
         
         return (
           <div
@@ -293,9 +317,22 @@ export function ApostaPernasResumo({
               
               {/* Odd e Stake à direita */}
               <div className="flex items-center gap-2 shrink-0">
+                {lay && (
+                  <span
+                    className="text-[10px] font-bold text-red-400 border border-red-500/40 bg-red-500/10 rounded px-1 leading-none"
+                    title="Chance contra (Lay)"
+                  >
+                    LAY
+                  </span>
+                )}
                 <span className="text-sm font-medium whitespace-nowrap">@{(perna.odd || 0).toFixed(2)}</span>
                 {showStake && perna.stake && (
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">{formatCurrency(perna.stake)}</span>
+                  <span
+                    className="text-xs text-muted-foreground whitespace-nowrap"
+                    title={lay ? `Stake ${formatCurrency(perna.stake)} • Responsabilidade ${formatCurrency(exposicao)}` : undefined}
+                  >
+                    {lay ? `Resp ${formatCurrency(exposicao)}` : formatCurrency(perna.stake)}
+                  </span>
                 )}
               </div>
               

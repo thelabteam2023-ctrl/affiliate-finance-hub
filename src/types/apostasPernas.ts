@@ -28,6 +28,21 @@ export interface ApostaPerna {
   odd: number;
   stake: number;
   moeda: SupportedCurrency;
+
+  /**
+   * Lado da operação:
+   *  - 'back': aposta a favor (padrão; legado e bookmakers tradicionais)
+   *  - 'lay': aposta contra (exchanges); exposição = stake*(odd-1) (liability)
+   * Default semântico para legado: 'back'.
+   */
+  tipo: "back" | "lay";
+
+  /**
+   * Comissão da exchange (apenas relevante para `tipo='lay'`).
+   * Valor decimal (0.028 = 2,8%). Default 0.
+   * Incide somente sobre o lucro do GREEN; nunca sobre liability/RED/VOID.
+   */
+  comissao: number;
   
   // Snapshot de conversão para BRL
   stake_brl_referencia: number | null;
@@ -66,6 +81,8 @@ export interface ApostaPernaInsert {
   odd: number;
   stake: number;
   moeda?: string;
+  tipo?: "back" | "lay";
+  comissao?: number;
   stake_brl_referencia?: number | null;
   cotacao_snapshot?: number | null;
   cotacao_snapshot_at?: string | null;
@@ -84,6 +101,8 @@ export interface ApostaPernaUpdate {
   odd?: number;
   stake?: number;
   moeda?: string;
+  tipo?: "back" | "lay";
+  comissao?: number;
   stake_brl_referencia?: number | null;
   cotacao_snapshot?: number | null;
   cotacao_snapshot_at?: string | null;
@@ -108,6 +127,8 @@ export function pernaArbitragemToInsert(
     selecao_livre?: string;
     odd: number;
     stake: number;
+    tipo?: "back" | "lay";
+    comissao?: number;
     stake_brl_referencia?: number | null;
     cotacao_snapshot?: number | null;
     cotacao_snapshot_at?: string | null;
@@ -128,6 +149,8 @@ export function pernaArbitragemToInsert(
     odd: perna.odd,
     stake: perna.stake,
     moeda: perna.moeda || "BRL",
+    tipo: perna.tipo || "back",
+    comissao: perna.comissao ?? 0,
     stake_brl_referencia: perna.stake_brl_referencia ?? null,
     cotacao_snapshot: perna.cotacao_snapshot ?? null,
     cotacao_snapshot_at: perna.cotacao_snapshot_at ?? null,
@@ -152,6 +175,8 @@ export function pernasToInserts(
     selecao_livre?: string;
     odd: number;
     stake: number;
+    tipo?: "back" | "lay";
+    comissao?: number;
     stake_brl_referencia?: number | null;
     cotacao_snapshot?: number | null;
     cotacao_snapshot_at?: string | null;
