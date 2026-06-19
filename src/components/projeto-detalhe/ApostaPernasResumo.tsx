@@ -197,11 +197,10 @@ export function ApostaPernasResumo({
               <span className="uppercase truncate max-w-[80px]">
                 {bookmakerDisplay}
               </span>
-              {lay && (
-                <span className="text-red-400 font-semibold" title="Chance contra (Lay)">L</span>
-              )}
-              <span className="text-muted-foreground">@</span>
-              <span>{(perna.odd || 0).toFixed(2)}</span>
+              <span className={lay ? "text-red-400 font-semibold" : "text-muted-foreground"} title={lay ? "Chance contra (Lay)" : undefined}>
+                {lay ? "Lay " : ""}@
+              </span>
+              <span className={lay ? "text-red-400" : undefined}>{(perna.odd || 0).toFixed(2)}</span>
               {showResultado && perna.resultado && (
                 <>
                   <span className="text-muted-foreground">•</span>
@@ -242,16 +241,13 @@ export function ApostaPernasResumo({
               <span className="font-medium uppercase truncate max-w-[100px] text-[11px]">
                 {bookmakerDisplay}
               </span>
-              {lay && (
-                <span
-                  className="text-[9px] font-bold text-red-400 border border-red-500/40 bg-red-500/10 rounded px-1 leading-none"
-                  title="Chance contra (Lay)"
-                >
-                  LAY
-                </span>
-              )}
-              <span className="text-muted-foreground text-[10px]">@</span>
-              <span className="text-[10px]">{(perna.odd || 0).toFixed(2)}</span>
+              <span
+                className={cn("text-[10px]", lay ? "text-red-400 font-semibold" : "text-muted-foreground")}
+                title={lay ? "Chance contra (Lay)" : undefined}
+              >
+                {lay ? "Lay " : ""}@
+              </span>
+              <span className={cn("text-[10px]", lay && "text-red-400 font-medium")}>{(perna.odd || 0).toFixed(2)}</span>
               {showStake && perna.stake && (
                 <>
                   <span className="text-muted-foreground text-[10px]">•</span>
@@ -317,15 +313,12 @@ export function ApostaPernasResumo({
               
               {/* Odd e Stake à direita */}
               <div className="flex items-center gap-2 shrink-0">
-                {lay && (
-                  <span
-                    className="text-[10px] font-bold text-red-400 border border-red-500/40 bg-red-500/10 rounded px-1 leading-none"
-                    title="Chance contra (Lay)"
-                  >
-                    LAY
-                  </span>
-                )}
-                <span className="text-sm font-medium whitespace-nowrap">@{(perna.odd || 0).toFixed(2)}</span>
+                <span
+                  className={cn("text-sm font-medium whitespace-nowrap", lay && "text-red-400")}
+                  title={lay ? "Chance contra (Lay)" : undefined}
+                >
+                  {lay ? "Lay " : ""}@{(perna.odd || 0).toFixed(2)}
+                </span>
                 {showStake && perna.stake && (
                   <span
                     className="text-xs text-muted-foreground whitespace-nowrap"
