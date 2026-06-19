@@ -1298,6 +1298,32 @@ export function SurebetModalRoot({
     const validOddsCount = odds.filter(o => getOddMediaPerna(o) > 1).length;
     if (validOddsCount < odds.length) return;
     
+    // ── Caminho LAY: delegar para o engine (closed-form back+lay) ──
+    // O cálculo inline abaixo assume todas as pernas back (stake = targetReturn / odd),
+    // o que sobrescreve incorretamente a stake de pernas lay com o valor back.
+    const hasLay = odds.some(o => (o.tipo ?? 'back') === 'lay');
+    if (hasLay) {
+      if (!calculatedStakes || calculatedStakes.length !== odds.length) return;
+      let needsUpdateLay = false;
+      const newOddsLay = odds.map((o, i) => {
+        if (i === refIndex) return o;
+        if (o.isManuallyEdited || o.stakeOrigem === "print" || o.stakeOrigem === "manual") return o;
+        const target = calculatedStakes[i];
+        if (!Number.isFinite(target) || target <= 0) return o;
+        const cur = parseFloat(o.stake) || 0;
+        if (Math.abs(target - cur) > 0.01) {
+          needsUpdateLay = true;
+          return { ...o, stake: target.toFixed(2), stakeOrigem: "referencia" as const };
+        }
+        return o;
+      });
+      if (needsUpdateLay) {
+        setEqualizedStakesSnapshot(newOddsLay.map(o => getStakeTotalPerna(o)));
+        setOdds(newOddsLay);
+      }
+      return;
+    }
+
     const { brlRates, consolidationCurrency } = engineConfig;
     const refMoeda = (bookmakerSaldos.find(b => b.id === refEntry.bookmaker_id)?.moeda || refEntry.moeda || "BRL") as SupportedCurrency;
     
@@ -1367,6 +1393,8 @@ export function SurebetModalRoot({
   }, [
     odds.map(o => `${o.odd}-${o.stake}-${o.isManuallyEdited}-${o.bookmaker_id}-${(o.additionalEntries || []).map(e => `${e.odd}:${e.stake}:${e.moeda}`).join('|')}`).join(','),
     odds.map(o => o.isReference).join(','),
+    odds.map(o => `${o.tipo ?? 'back'}:${o.comissao ?? 0}`).join(','),
+    calculatedStakes?.join(','),
     arredondarAtivado,
     arredondarValor,
     isEditing,
