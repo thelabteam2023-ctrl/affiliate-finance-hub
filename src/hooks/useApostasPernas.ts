@@ -51,6 +51,8 @@ function mapRowToPerna(row: Record<string, unknown>): PernaComBookmaker {
     odd: row.odd as number,
     stake: row.stake as number,
     moeda: (row.moeda || "BRL") as SupportedCurrency,
+    tipo: ((row.tipo as string) === "lay" ? "lay" : "back") as "back" | "lay",
+    comissao: typeof row.comissao === "number" ? (row.comissao as number) : Number(row.comissao || 0),
     stake_brl_referencia: row.stake_brl_referencia as number | null,
     cotacao_snapshot: row.cotacao_snapshot as number | null,
     cotacao_snapshot_at: row.cotacao_snapshot_at as string | null,
