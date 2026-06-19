@@ -200,7 +200,7 @@ const PartyIdentity = memo(function PartyIdentity({
   
   return (
     <div className={cn(
-      "flex flex-col min-w-0 flex-1 gap-0",
+      "flex flex-col min-w-0 gap-0 w-[180px] shrink-0",
       isRight ? "items-end text-right" : "items-start text-left"
     )}>
       {/* Label */}
@@ -321,11 +321,11 @@ export const CryptoTransactionCard = memo(function CryptoTransactionCard({
         </span>
       </div>
       
-      {/* Flow: Origem → Valor → Destino */}
-      <div className="flex items-center gap-3">
+      {/* Flow: Origem → Valor → Destino (packed left, consistent with Caixa Operacional) */}
+      <div className="flex items-center gap-3 flex-wrap">
         {/* Origem (From) */}
         <PartyIdentity party={from} align="left" label="Origem" />
-        
+
         {/* Arrow + Value */}
         <div className="flex items-center gap-1.5 shrink-0">
           <ArrowRight className="h-4 w-4 text-muted-foreground" />
@@ -341,9 +341,9 @@ export const CryptoTransactionCard = memo(function CryptoTransactionCard({
           </div>
           <ArrowRight className="h-4 w-4 text-muted-foreground" />
         </div>
-        
-        {/* Destino (To) */}
-        <PartyIdentity party={to} align="right" label="Destino" />
+
+        {/* Destino (To) — also left-aligned for consistent reading flow */}
+        <PartyIdentity party={to} align="left" label="Destino" />
       </div>
       
       {/* Footer: Status Badge */}
