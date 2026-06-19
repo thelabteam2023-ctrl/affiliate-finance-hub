@@ -16,7 +16,7 @@
 
 export interface PernaLayInput {
   odd: number;
-  stake: number;
+  stake?: number | null;
   tipo?: "back" | "lay" | null;
   comissao?: number | null;
 }
