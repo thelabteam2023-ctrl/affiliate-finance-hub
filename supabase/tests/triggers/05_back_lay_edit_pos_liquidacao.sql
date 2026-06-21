@@ -174,18 +174,16 @@ BEGIN
 
   SELECT * INTO v_rpc FROM public.editar_surebet_completa_v3(
     p_aposta_id    := v_aposta_id,
-    p_workspace_id := v_ws,
-    p_user_id      := v_user,
-    p_projeto_id   := v_proj,
+    p_pernas       := v_pernas,
+    p_entradas     := v_entradas,
     p_evento       := 'E2E_BACK_LAY_EDIT',
     p_esporte      := 'Futebol',
     p_mercado      := 'h2h',
     p_modelo       := 'BACK_LAY',
     p_estrategia   := 'SUREBET',
-    p_contexto_operacional := 'NORMAL',
-    p_data_aposta  := NOW()::text,
-    p_pernas       := v_pernas,
-    p_entradas     := v_entradas
+    p_contexto     := 'NORMAL',
+    p_data_aposta  := NOW(),
+    p_status_manual := NULL
   );
   IF NOT v_rpc.success THEN
     RAISE EXCEPTION '[FASE 3] EDIT falhou: %', v_rpc.message;
