@@ -141,6 +141,25 @@ export async function probeBookmakerLedgerParity(
         message: `${opts.label ?? "probeBookmakerLedgerParity"} — ${bkRes.data.nome}: saldo_atual=${saldo.toFixed(2)} vs Σledger=${somaLedger.toFixed(2)} (Δ=${delta.toFixed(2)})`,
         data: { bookmakerId, saldo, somaLedger, delta },
       });
+      // Persiste a anomalia no backend (best-effort, não bloqueia o caller)
+      try {
+        await sb.functions.invoke("record-parity-anomaly", {
+          body: {
+            bookmaker_id: bookmakerId,
+            saldo_atual: saldo,
+            soma_ledger: somaLedger,
+            delta,
+            contexto: opts.label ?? "manual",
+          },
+        });
+      } catch (persistErr) {
+        push({
+          ts: Date.now(),
+          kind: "PROBE_PERSIST_ERROR",
+          message: "falha ao persistir anomalia no backend",
+          data: persistErr,
+        });
+      }
       return { ok: false, saldo, somaLedger, delta };
     }
     return { ok: true, saldo, somaLedger, delta };

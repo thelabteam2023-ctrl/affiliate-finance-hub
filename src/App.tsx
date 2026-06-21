@@ -101,6 +101,7 @@ const SupplierPortal = lazyWithChunkRetry(() => import("./pages/SupplierPortal")
 const FornecedoresPortal = lazyWithChunkRetry(() => import("./pages/FornecedoresPortal"));
 const Solicitacoes = lazyWithChunkRetry(() => import("./pages/Solicitacoes"));
 const DevLedgerMonitor = lazyWithChunkRetry(() => import("./pages/DevLedgerMonitor"));
+const LedgerAnomalies = lazyWithChunkRetry(() => import("./pages/LedgerAnomalies"));
 const LaboratorioValueBet = lazyWithChunkRetry(() => import("./pages/LaboratorioValueBet"));
 const ApiExplorer = lazyWithChunkRetry(() => import("./pages/ApiExplorer"));
 
@@ -687,6 +688,16 @@ const App = () => (
                  </AuthenticatedLayout>
                </ProtectedRoute>
              } />
+
+            <Route path="/admin/ledger-anomalies" element={
+              <ProtectedRoute requiredRole={['owner', 'admin']} requireSystemOwner={false}>
+                <AuthenticatedLayout>
+                  <Suspense fallback={<PageLoader />}>
+                    <LedgerAnomalies />
+                  </Suspense>
+                </AuthenticatedLayout>
+              </ProtectedRoute>
+            } />
 
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />

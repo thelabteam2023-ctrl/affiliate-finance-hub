@@ -6103,6 +6103,135 @@ export type Database = {
         }
         Relationships: []
       }
+      ledger_parity_anomalies: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          acknowledged_note: string | null
+          bookmaker_id: string
+          contexto: string | null
+          created_at: string
+          delta: number
+          detected_by_user_id: string | null
+          dia: string
+          id: string
+          saldo_atual: number
+          soma_ledger: number
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          acknowledged_note?: string | null
+          bookmaker_id: string
+          contexto?: string | null
+          created_at?: string
+          delta: number
+          detected_by_user_id?: string | null
+          dia?: string
+          id?: string
+          saldo_atual: number
+          soma_ledger: number
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          acknowledged_note?: string | null
+          bookmaker_id?: string
+          contexto?: string | null
+          created_at?: string
+          delta?: number
+          detected_by_user_id?: string | null
+          dia?: string
+          id?: string
+          saldo_atual?: number
+          soma_ledger?: number
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ledger_parity_anomalies_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ledger_parity_anomalies_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_disponibilidade"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ledger_parity_anomalies_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_resultado_financeiro"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "ledger_parity_anomalies_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_resultado_operacional"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "ledger_parity_anomalies_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_audit"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "ledger_parity_anomalies_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_operavel"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ledger_parity_anomalies_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_status_operacional"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ledger_parity_anomalies_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_aguardando_saque"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "ledger_parity_anomalies_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ledger_parity_anomalies_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_financial_audit"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "ledger_parity_anomalies_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       limitation_events: {
         Row: {
           bookmaker_id: string
