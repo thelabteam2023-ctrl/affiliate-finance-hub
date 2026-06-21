@@ -231,10 +231,10 @@ export function SurebetColumnsView({
                   value={entry.bookmaker_id}
                   onValueChange={(v) => onUpdateOdd(pernaIndex, "bookmaker_id", v)}
                 >
-                  <SelectTrigger className="h-8 text-[10px] w-full">
+                  <SelectTrigger className="h-8 text-[10px] w-full justify-center [&>span]:flex-1">
                     <SelectValue placeholder="Selecione">
                       {selectedBookmaker?.nome && (
-                        <div className="flex items-center gap-2 min-w-0">
+                        <div className="flex items-center justify-center gap-2 min-w-0">
                           <BookmakerLogo
                             logoUrl={selectedBookmaker.logo_url}
                             alt={selectedBookmaker.nome}
@@ -431,10 +431,10 @@ export function SurebetColumnsView({
                         value={addEntry.bookmaker_id}
                         onValueChange={(v) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'bookmaker_id', v)}
                       >
-                        <SelectTrigger className="h-7 text-[10px] w-full">
+                         <SelectTrigger className="h-7 text-[10px] w-full justify-center [&>span]:flex-1">
                           <SelectValue placeholder="Casa...">
                             {addBookmaker?.nome && (
-                              <div className="flex items-center gap-1.5 min-w-0">
+                              <div className="flex items-center justify-center gap-1.5 min-w-0">
                                 <BookmakerLogo
                                   logoUrl={addBookmaker.logo_url}
                                   alt={addBookmaker.nome}
