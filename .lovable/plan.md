@@ -1,66 +1,43 @@
+## Objetivo
 
-# Enxugar formulário de Arbitragem (Surebet)
+Reduzir a poluição do rodapé do modal Surebet transformando "Limpar" e "Salvar Rascunho" em botões **icon-only**, com ícones mais elegantes e tooltip explicativo. "Registrar Operação" continua como botão principal com texto (CTA da ação).
 
-Três mudanças focadas em reduzir poluição visual, sem tocar em motor de cálculo, ledger ou RPCs.
+## Mudanças
 
----
+Arquivo: `src/components/surebet/SurebetModalRoot.tsx` (rodapé, linhas ~2570–2634).
 
-## 1. Explorador → ícone 📅 dentro do campo Evento
+### 1. Botão "Limpar" → ícone só
+- Troca `Eraser` por **`Brush`** (lucide) — visual mais limpo e moderno que a borracha atual.
+- `variant="ghost"`, `size="icon"`, classes: `h-9 w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted`.
+- Envolto em `<Tooltip>` com label "Limpar formulário".
+- Remove o texto "Limpar" e o `mr-1` do ícone.
 
-**Hoje:** botão "Explorador" no header, ao lado de "Estratégia".
-**Depois:** ícone de calendário discreto encostado à direita do input "Evento". Clica → abre o mesmo Popover atual.
+### 2. Botão "Salvar Rascunho" → ícone só
+- Troca `FileText` por **`BookmarkPlus`** (quando novo) e **`BookmarkCheck`** (quando `isAtualizandoRascunho`) — comunica melhor "salvar para depois" do que um documento genérico.
+- `variant="ghost"`, `size="icon"`, classes: `h-9 w-9 rounded-full text-blue-500 hover:text-blue-400 hover:bg-blue-500/10` (mantém a identidade azul atual).
+- Envolto em `<Tooltip>` com label dinâmico: "Atualizar rascunho" ou "Salvar rascunho".
+- Mantém `disabled={saving || !temDadosParciais}`.
 
-**Arquivos:**
-- `src/components/apostas/BetFormHeaderV2.tsx`
-  - Adicionar prop opcional `eventoAdornment?: React.ReactNode` (renderiza absolutamente posicionado dentro do wrapper do input Evento, com `pr-8` no input).
-  - Remover/limpar a prop `headerAction` da área do header (ou deixar opcional, mas não usar mais).
-- `src/components/surebet/SurebetModalRoot.tsx`
-  - Substituir `headerAction={<ExploradorEventoPicker .../>}` por `eventoAdornment={<ExploradorEventoPicker .../>}`.
-- `src/components/surebet/ExploradorEventoPicker.tsx`
-  - Aceitar prop `variant?: "button" | "icon"` (default `button`).
-  - No `variant="icon"`: trigger vira `<Button variant="ghost" size="icon" className="h-6 w-6">` com `<CalendarDays className="h-3.5 w-3.5"/>` e tooltip "Importar jogo do Explorador".
+### 3. Botão "Registrar Operação" inalterado
+- Continua com texto (é a ação principal e o usuário não pediu para mexer).
+- Opcional: trocar `Save` por **`CheckCircle2`** para reforçar "confirmar" — só aplico se você quiser.
 
----
+### 4. Ajustes de import
+- Em `lucide-react`: remover `Eraser` e `FileText` (se não usados em outro lugar — `FileText` ainda é usado na linha 2184, mantém); adicionar `Brush`, `BookmarkPlus`, `BookmarkCheck`.
 
-## 2. Toggles "Mostrar comissões" e "Arredondar" → menu ⚙
+### 5. Tooltip
+- Usar `Tooltip`, `TooltipTrigger`, `TooltipContent` de `@/components/ui/tooltip` (já presente no projeto). Se já houver um `TooltipProvider` em volta do modal, só envolvo cada botão; caso contrário, adiciono um `TooltipProvider` local no container dos botões.
 
-**Hoje:** dois toggles sempre visíveis no rodapé da tabela (`SurebetTableFooter`).
-**Depois:** ícone de engrenagem no canto direito do footer abre um Popover compacto com os mesmos controles.
+## Resultado visual
 
-**Arquivos:**
-- `src/components/surebet/SurebetTableFooter.tsx`
-  - Remover o bloco de toggles inline (linhas ~110-145).
-  - Substituir por `<Popover>` com trigger `<Button variant="ghost" size="icon"><Settings2 className="h-4 w-4"/></Button>`.
-  - `PopoverContent` (w-64, align="end") contém:
-    - Switch "Mostrar comissões" + label.
-    - Switch "Arredondar" + input numérico (mantém lógica atual `arredondarValor`).
-  - Manter exatamente as mesmas props e handlers (zero mudança de comportamento; só reposiciona UI).
+```text
+[ 🖌 ]   [ 🔖 ]   [ 💾 Registrar Operação ]
+ ghost    ghost    primary (CTA)
+```
 
----
+Rodapé mais leve, hierarquia clara (ações secundárias discretas, CTA dominante), sem perder descobribilidade graças ao tooltip.
 
-## 3. "Cancelar" → "Limpar"
+## Fora de escopo
 
-**Hoje:** botão "Cancelar" fecha a janela.
-**Depois:** botão "Limpar" reseta todos os campos do formulário sem fechar a janela. (Em modo edição, o botão é ocultado — não faz sentido limpar uma operação existente.)
-
-**Arquivos:**
-- `src/components/surebet/SurebetModalRoot.tsx` (linhas ~2572-2575)
-  - Trocar texto "Cancelar" → "Limpar".
-  - Ícone `<Eraser className="h-4 w-4 mr-1" />`.
-  - `onClick`: chamar um novo `handleLimparFormulario()` que reseta os state setters principais do form (esporte→"Futebol", evento→"", mercado→"", estrategia→null, modelo→"1-2", odds→estado inicial de 2 pernas vazias, observacoes→"", contexto_operacional→null, dataAposta→agora). Toast "Formulário limpo".
-  - Esconder se `isEditing` (já que limpar destruiria a edição em andamento por engano).
-  - Manter fechamento da janela apenas pelo X do header (já existe) e pelo onSuccess.
-
-**Não mexer:**
-- AlertDialog interno (linha 2565) mantém "Cancelar" — é o cancelar do dialog de confirmação de exclusão, comportamento padrão shadcn.
-
----
-
-## Validação
-- `tsc` limpo.
-- Abrir form de Arbitragem: header sem botão Explorador; campo Evento mostra 📅 à direita; clicar abre o picker; importar jogo preenche Esporte/Evento/Data.
-- Footer: toggles sumiram; engrenagem abre popover; alternar Mostrar comissões e Arredondar funcionam igual.
-- Botão "Limpar" reseta tudo sem fechar; em edição, botão não aparece.
-
-## Fora do escopo
-- Outras sugestões anteriores (badges RASCUNHO/COMPLETO, labels-as-placeholder, fundir colunas 🎯/D, KPIs do rodapé). Ficam para próxima rodada se você aprovar.
+- Não altero lógica de `handleSalvarRascunho`, `resetToNewForm`, validações ou estado.
+- Não toco no botão "Simples (N)" da operação parcial nem em "Registrar Operação".
