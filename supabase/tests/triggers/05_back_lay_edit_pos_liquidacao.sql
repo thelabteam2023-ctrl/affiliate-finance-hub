@@ -23,6 +23,10 @@ SELECT set_config('e2e.proj', :'proj', true);
 SELECT set_config('e2e.bk1',  :'bk1',  true);
 SELECT set_config('e2e.bk2',  :'bk2',  true);
 
+-- Simular auth.uid() no psql (sem JWT)
+SELECT set_config('request.jwt.claim.sub', :'uid', true);
+SELECT set_config('request.jwt.claims', json_build_object('sub', :'uid', 'role', 'authenticated')::text, true);
+
 DO $$
 DECLARE
   v_ws   UUID := current_setting('e2e.ws')::uuid;
@@ -59,6 +63,7 @@ DECLARE
   v_soma_conv NUMERIC;
   v_e1        UUID;
   v_e2        UUID;
+  v_edit_ret  JSONB;
 BEGIN
   -- Validação de pré-condições
   IF NOT EXISTS (SELECT 1 FROM bookmakers WHERE id=v_id_bk1 AND workspace_id=v_ws AND projeto_id=v_proj) THEN
@@ -194,7 +199,7 @@ BEGIN
                        'moeda','BRL','fonte_saldo','REAL','cotacao_snapshot',1,'stake_brl_referencia',100,'tipo','lay','comissao',0)
   );
 
-  PERFORM public.editar_surebet_completa_v3(
+  SELECT public.editar_surebet_completa_v3(
     p_aposta_id    := v_aposta_id,
     p_pernas       := v_pernas,
     p_entradas     := v_entradas,
@@ -206,7 +211,11 @@ BEGIN
     p_contexto     := 'NORMAL',
     p_data_aposta  := NOW(),
     p_status_manual := NULL
-  );
+  ) INTO v_edit_ret;
+  RAISE NOTICE '[FASE 3] editar_surebet_completa_v3 → %', v_edit_ret;
+  IF NOT COALESCE((v_edit_ret->>'success')::BOOLEAN, false) THEN
+    RAISE EXCEPTION '[FASE 3] edição falhou: %', v_edit_ret->>'error';
+  END IF;
 
   SELECT status, COALESCE(pl_consolidado, lucro_prejuizo, 0)
     INTO v_status, v_pl_pai FROM apostas_unificada WHERE id=v_aposta_id;
