@@ -611,39 +611,43 @@ export function SurebetColumnsView({
 
                   return (
                     <>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Odd ø</span>
-                        <span className="text-sm font-bold tabular-nums text-foreground">
-                          {hasOddData ? parseFloat(oddMedia.toFixed(5)) : "—"}
-                        </span>
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-baseline gap-1.5 min-w-0">
+                          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Odd ø</span>
+                          <span className="text-sm font-bold tabular-nums text-foreground truncate">
+                            {hasOddData ? parseFloat(oddMedia.toFixed(5)) : "—"}
+                          </span>
+                        </div>
+                        <div className="flex items-baseline gap-1.5 min-w-0">
+                          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Stake</span>
+                          <span className="text-sm font-bold tabular-nums text-foreground truncate">
+                            {hasStakeData
+                              ? moedas.length === 1
+                                ? formatCurrency(totalStake, moedas[0])
+                                : moedas.map(m => formatCurrency(stakeByMoeda[m], m)).join(" + ")
+                              : "—"}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Stake</span>
-                        <span className="text-sm font-bold tabular-nums text-foreground">
-                          {hasStakeData
-                            ? moedas.length === 1
-                              ? formatCurrency(totalStake, moedas[0])
-                              : moedas.map(m => formatCurrency(stakeByMoeda[m], m)).join(" + ")
-                            : "—"}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Lucro</span>
-                        <span className={cn(
-                          "text-sm font-bold tabular-nums",
-                          hasData && scenario ? (isPositive ? "text-emerald-600 dark:text-emerald-500" : "text-red-600 dark:text-red-500") : "text-muted-foreground"
-                        )}>
-                          {hasData && scenario ? formatCompactValue(lucro) : "—"}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-muted-foreground uppercase tracking-wide">ROI</span>
-                        <span className={cn(
-                          "text-[11px] tabular-nums",
-                          hasData && scenario ? (isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400") : "text-muted-foreground"
-                        )}>
-                          {hasData && scenario ? `${roi > 0 ? "+" : ""}${roi.toFixed(2)}%` : "—"}
-                        </span>
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-baseline gap-1.5 min-w-0">
+                          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Lucro</span>
+                          <span className={cn(
+                            "text-sm font-bold tabular-nums truncate",
+                            hasData && scenario ? (isPositive ? "text-emerald-600 dark:text-emerald-500" : "text-red-600 dark:text-red-500") : "text-muted-foreground"
+                          )}>
+                            {hasData && scenario ? formatCompactValue(lucro) : "—"}
+                          </span>
+                        </div>
+                        <div className="flex items-baseline gap-1.5 min-w-0">
+                          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">ROI</span>
+                          <span className={cn(
+                            "text-[11px] tabular-nums truncate",
+                            hasData && scenario ? (isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400") : "text-muted-foreground"
+                          )}>
+                            {hasData && scenario ? `${roi > 0 ? "+" : ""}${roi.toFixed(2)}%` : "—"}
+                          </span>
+                        </div>
                       </div>
                     </>
                   );
