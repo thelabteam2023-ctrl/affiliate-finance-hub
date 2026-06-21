@@ -6,14 +6,21 @@
 --   3) Resolve via `reliquidar_aposta_v6` (mesmo caminho do quick-resolve)
 --   4) Confere status=LIQUIDADA, paridade pai vs Σ pernas e paridade ledger vs saldo
 -- Tudo em transação — `ROLLBACK` no final garante zero resíduo.
+--
+-- Como rodar:
+--   psql -v ws=<workspace_uuid> -v uid=<user_uuid> -v proj=<projeto_uuid> \
+--        -v ON_ERROR_STOP=1 -f supabase/tests/triggers/04_arbitragem_form_e2e_all_tabs.sql
+--
+-- Usa workspace/usuário/projeto REAIS (FKs com auth.users impedem inserir fakes),
+-- mas TODA a operação é revertida no ROLLBACK final — zero resíduo no banco.
 
 BEGIN;
 
 DO $$
 DECLARE
-  v_ws        UUID := gen_random_uuid();
-  v_user      UUID := gen_random_uuid();
-  v_proj      UUID := gen_random_uuid();
+  v_ws        UUID := :'ws'::uuid;
+  v_user      UUID := :'uid'::uuid;
+  v_proj      UUID := :'proj'::uuid;
   v_bk1       UUID := gen_random_uuid();
   v_bk2       UUID := gen_random_uuid();
   v_saldo_ini NUMERIC := 10000;
@@ -40,16 +47,11 @@ DECLARE
 
   v_total     INT := 0;
 BEGIN
-  -- Setup mínimo (esquema real: workspaces.name, projetos/bookmakers.user_id)
-  INSERT INTO profiles (id, email, full_name) VALUES (v_user, 'e2e@test.local', 'E2E User')
-    ON CONFLICT (id) DO NOTHING;
-  INSERT INTO workspaces (id, name) VALUES (v_ws, 'E2E_WS');
-  INSERT INTO projetos   (id, workspace_id, user_id, nome, moeda_consolidacao, status)
-    VALUES (v_proj, v_ws, v_user, 'E2E_PROJ', 'BRL', 'EM_ANDAMENTO');
+  -- Setup: usa workspace/usuário/projeto reais, cria APENAS 2 bookmakers de teste
   INSERT INTO bookmakers (id, workspace_id, user_id, nome, moeda, saldo_atual, status, projeto_id,
                           login_username, login_password_encrypted)
-    VALUES (v_bk1, v_ws, v_user, 'BK_BACK', 'BRL', v_saldo_ini, 'ativo', v_proj, 'e2e_bk1', 'x'),
-           (v_bk2, v_ws, v_user, 'BK_LAY',  'BRL', v_saldo_ini, 'ativo', v_proj, 'e2e_bk2', 'x');
+    VALUES (v_bk1, v_ws, v_user, 'E2E_BK_BACK', 'BRL', v_saldo_ini, 'ativo', v_proj, 'e2e_bk1', 'x'),
+           (v_bk2, v_ws, v_user, 'E2E_BK_LAY',  'BRL', v_saldo_ini, 'ativo', v_proj, 'e2e_bk2', 'x');
 
   -- Combinações = TODAS as abas que podem abrir o formulário de arbitragem
   FOR v_cfg IN
