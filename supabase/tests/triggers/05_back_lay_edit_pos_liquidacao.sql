@@ -28,8 +28,8 @@ DECLARE
   v_ws   UUID := current_setting('e2e.ws')::uuid;
   v_user UUID := current_setting('e2e.uid')::uuid;
   v_proj UUID := current_setting('e2e.proj')::uuid;
-  v_s_bk1  UUID := current_setting('e2e.bk1')::uuid;
-  v_s_bk2  UUID := current_setting('e2e.bk2')::uuid;
+  v_id_bk1 UUID := current_setting('e2e.bk1')::uuid;
+  v_id_bk2 UUID := current_setting('e2e.bk2')::uuid;
 
   v_pre_bk1  NUMERIC;
   v_pre_bk2  NUMERIC;
@@ -55,28 +55,28 @@ DECLARE
   v_entradas  JSONB;
 BEGIN
   -- Validação de pré-condições
-  IF NOT EXISTS (SELECT 1 FROM bookmakers WHERE id=v_s_bk1 AND workspace_id=v_ws AND projeto_id=v_proj) THEN
-    RAISE EXCEPTION 'bk1=% não pertence ao projeto=%/ws=%', v_s_bk1, v_proj, v_ws;
+  IF NOT EXISTS (SELECT 1 FROM bookmakers WHERE id=v_id_bk1 AND workspace_id=v_ws AND projeto_id=v_proj) THEN
+    RAISE EXCEPTION 'bk1=% não pertence ao projeto=%/ws=%', v_id_bk1, v_proj, v_ws;
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM bookmakers WHERE id=v_s_bk2 AND workspace_id=v_ws AND projeto_id=v_proj) THEN
-    RAISE EXCEPTION 'bk2=% não pertence ao projeto=%/ws=%', v_s_bk2, v_proj, v_ws;
+  IF NOT EXISTS (SELECT 1 FROM bookmakers WHERE id=v_id_bk2 AND workspace_id=v_ws AND projeto_id=v_proj) THEN
+    RAISE EXCEPTION 'bk2=% não pertence ao projeto=%/ws=%', v_id_bk2, v_proj, v_ws;
   END IF;
 
-  SELECT saldo_atual INTO v_pre_bk1 FROM bookmakers WHERE id=v_s_bk1;
-  SELECT saldo_atual INTO v_pre_bk2 FROM bookmakers WHERE id=v_s_bk2;
+  SELECT saldo_atual INTO v_pre_bk1 FROM bookmakers WHERE id=v_id_bk1;
+  SELECT saldo_atual INTO v_pre_bk2 FROM bookmakers WHERE id=v_id_bk2;
   RAISE NOTICE '── PRÉ ── bk1=% bk2=%', v_pre_bk1, v_pre_bk2;
 
   ---------------------------------------------------------------------------
   -- FASE 1: CRIAÇÃO via criar_surebet_atomica_v3
   ---------------------------------------------------------------------------
   v_pernas := jsonb_build_array(
-    jsonb_build_object('ordem',1,'casa_id',v_s_bk1,'selecao','Time A','tipo','back'),
-    jsonb_build_object('ordem',2,'casa_id',v_s_bk2,'selecao','Time A','tipo','lay')
+    jsonb_build_object('ordem',1,'casa_id',v_id_bk1,'selecao','Time A','tipo','back'),
+    jsonb_build_object('ordem',2,'casa_id',v_id_bk2,'selecao','Time A','tipo','lay')
   );
   v_entradas := jsonb_build_array(
-    jsonb_build_object('perna_ordem',1,'bookmaker_id',v_s_bk1,'stake',100,'odd',2.00,
+    jsonb_build_object('perna_ordem',1,'bookmaker_id',v_id_bk1,'stake',100,'odd',2.00,
                        'moeda','BRL','fonte_saldo','REAL','cotacao_snapshot',1,'stake_brl_referencia',100,'tipo','back','comissao',0),
-    jsonb_build_object('perna_ordem',2,'bookmaker_id',v_s_bk2,'stake',100,'odd',2.00,
+    jsonb_build_object('perna_ordem',2,'bookmaker_id',v_id_bk2,'stake',100,'odd',2.00,
                        'moeda','BRL','fonte_saldo','REAL','cotacao_snapshot',1,'stake_brl_referencia',100,'tipo','lay','comissao',0)
   );
 
@@ -102,8 +102,8 @@ BEGIN
   SELECT id INTO v_p1 FROM apostas_pernas WHERE aposta_id=v_aposta_id AND ordem=1;
   SELECT id INTO v_p2 FROM apostas_pernas WHERE aposta_id=v_aposta_id AND ordem=2;
 
-  SELECT saldo_atual INTO v_s_bk1 FROM bookmakers WHERE id=v_s_bk1;
-  SELECT saldo_atual INTO v_s_bk2 FROM bookmakers WHERE id=v_s_bk2;
+  SELECT saldo_atual INTO v_s_bk1 FROM bookmakers WHERE id=v_id_bk1;
+  SELECT saldo_atual INTO v_s_bk2 FROM bookmakers WHERE id=v_id_bk2;
 
   -- BACK debita stake (100); LAY debita liability = stake×(odd−1) = 100×1 = 100
   IF ROUND(v_s_bk1,2) <> ROUND(v_pre_bk1 - 100,2) THEN
@@ -132,8 +132,8 @@ BEGIN
   SELECT lucro_prejuizo INTO v_pl_p2 FROM apostas_pernas WHERE id=v_p2;
   SELECT COALESCE(SUM(lucro_prejuizo),0) INTO v_soma_pn FROM apostas_pernas WHERE aposta_id=v_aposta_id;
 
-  SELECT saldo_atual INTO v_s_bk1 FROM bookmakers WHERE id=v_s_bk1;
-  SELECT saldo_atual INTO v_s_bk2 FROM bookmakers WHERE id=v_s_bk2;
+  SELECT saldo_atual INTO v_s_bk1 FROM bookmakers WHERE id=v_id_bk1;
+  SELECT saldo_atual INTO v_s_bk2 FROM bookmakers WHERE id=v_id_bk2;
 
   IF v_status <> 'LIQUIDADA' THEN
     RAISE EXCEPTION '[FASE 2] status esperado LIQUIDADA, obtido %', v_status;
@@ -162,13 +162,13 @@ BEGIN
     WHERE perna_id=v_p1 ORDER BY created_at LIMIT 1;
 
   v_pernas := jsonb_build_array(
-    jsonb_build_object('ordem',1,'casa_id',v_s_bk1,'selecao','Time A','tipo','back','resultado','GREEN'),
-    jsonb_build_object('ordem',2,'casa_id',v_s_bk2,'selecao','Time A','tipo','lay','resultado','RED')
+    jsonb_build_object('ordem',1,'casa_id',v_id_bk1,'selecao','Time A','tipo','back','resultado','GREEN'),
+    jsonb_build_object('ordem',2,'casa_id',v_id_bk2,'selecao','Time A','tipo','lay','resultado','RED')
   );
   v_entradas := jsonb_build_array(
-    jsonb_build_object('perna_ordem',1,'bookmaker_id',v_s_bk1,'stake',120,'odd',2.10,
+    jsonb_build_object('perna_ordem',1,'bookmaker_id',v_id_bk1,'stake',120,'odd',2.10,
                        'moeda','BRL','fonte_saldo','REAL','cotacao_snapshot',1,'stake_brl_referencia',120,'tipo','back','comissao',0),
-    jsonb_build_object('perna_ordem',2,'bookmaker_id',v_s_bk2,'stake',100,'odd',2.00,
+    jsonb_build_object('perna_ordem',2,'bookmaker_id',v_id_bk2,'stake',100,'odd',2.00,
                        'moeda','BRL','fonte_saldo','REAL','cotacao_snapshot',1,'stake_brl_referencia',100,'tipo','lay','comissao',0)
   );
 
@@ -197,8 +197,8 @@ BEGIN
   SELECT lucro_prejuizo INTO v_pl_p2 FROM apostas_pernas WHERE id=v_p2;
   SELECT COALESCE(SUM(lucro_prejuizo),0) INTO v_soma_pn FROM apostas_pernas WHERE aposta_id=v_aposta_id;
 
-  SELECT saldo_atual INTO v_s_bk1 FROM bookmakers WHERE id=v_s_bk1;
-  SELECT saldo_atual INTO v_s_bk2 FROM bookmakers WHERE id=v_s_bk2;
+  SELECT saldo_atual INTO v_s_bk1 FROM bookmakers WHERE id=v_id_bk1;
+  SELECT saldo_atual INTO v_s_bk2 FROM bookmakers WHERE id=v_id_bk2;
   SELECT COUNT(*) INTO v_audit_pos FROM aposta_edit_audit_logs WHERE aposta_id=v_aposta_id;
   SELECT cotacao_snapshot INTO v_snap_pos FROM apostas_perna_entradas
     WHERE perna_id=v_p1 ORDER BY created_at LIMIT 1;
