@@ -84,12 +84,12 @@ export function BookmakerSearchableSelectContent({
         className={cn(
           "relative z-[9999] max-h-96 overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
           "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
-          "min-w-[320px] w-[var(--radix-select-trigger-width)] max-w-[min(var(--radix-select-trigger-width),95vw)]",
+          "min-w-[380px] max-w-[min(440px,95vw)]",
           className,
         )}
         position="popper"
         side="bottom"
-        align="center"
+        align="start"
         sideOffset={4}
         avoidCollisions={true}
       >
@@ -126,7 +126,7 @@ export function BookmakerSearchableSelectContent({
                 ? { ...bk, saldo_freebet: freebetOverrides.get(bk.id)! }
                 : bk;
               return (
-                <SelectItem key={bk.id} value={bk.id} className={cn("py-2 pl-2 pr-2 justify-center", itemClassName)}>
+                <SelectItem key={bk.id} value={bk.id} className={cn("py-2.5 pl-2 pr-2", itemClassName)}>
                   <BookmakerSelectOption bookmaker={{ ...adjustedBk, parceiro_nome: adjustedBk.parceiro_nome ?? null }} />
                 </SelectItem>
               );
