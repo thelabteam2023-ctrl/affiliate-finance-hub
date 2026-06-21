@@ -2579,7 +2579,7 @@ export function SurebetModalRoot({
                     setEvento("");
                     setMercado("");
                     setContexto(CONTEXTO_OPERACIONAL.NORMAL);
-                    if (!lockedEstrategia) setEstrategia(ARBITRAGEM_ESTRATEGIA);
+                    setEstrategia(ARBITRAGEM_ESTRATEGIA);
                     setModeloTipo("2");
                     resetToNewForm(2);
                     const now = new Date();
