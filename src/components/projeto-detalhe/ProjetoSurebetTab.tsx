@@ -1539,6 +1539,11 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                      logo_url: p.logo_url || getLogoUrl((p.bookmaker_nome || "").split(" - ")[0] || ""),
                      selecao_livre: p.selecao_livre || null,
                    })),
+                   time_casa: (operacao as any).time_casa ?? null,
+                   time_fora: (operacao as any).time_fora ?? null,
+                   home_team_logo_url: (operacao as any).home_team_logo_url ?? null,
+                   away_team_logo_url: (operacao as any).away_team_logo_url ?? null,
+                   league_logo_url: (operacao as any).league_logo_url ?? null,
                 };
                 
                 return (
