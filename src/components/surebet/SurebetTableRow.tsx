@@ -268,6 +268,13 @@ export function SurebetTableRow({
                 <SelectValue placeholder="Selecione">
                   {selectedBookmaker?.nome && (
                     <div className="flex items-center justify-center gap-1 min-w-0 w-full">
+                      {selectedBookmaker.logo_url ? (
+                        <img
+                          src={selectedBookmaker.logo_url}
+                          alt=""
+                          className="h-4 w-4 rounded object-contain object-left shrink-0"
+                        />
+                      ) : null}
                       <span className="truncate uppercase text-[11px] font-medium">
                         {selectedBookmaker.nome}
                       </span>
