@@ -338,6 +338,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           odd, selecao, bookmaker_id, bonus_id,
           moeda_operacao, stake_consolidado, pl_consolidado, consolidation_currency, valor_brl_referencia, lucro_prejuizo_brl_referencia,
           fonte_saldo, usar_freebet, stake_real, stake_freebet, is_multicurrency,
+          time_casa, time_fora, home_team_logo_url, away_team_logo_url, league_logo_url, daily_event_id,
           bookmaker:bookmakers(nome, parceiro:parceiros(nome))
         `;
 
