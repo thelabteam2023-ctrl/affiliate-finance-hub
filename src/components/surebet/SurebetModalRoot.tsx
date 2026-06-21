@@ -40,7 +40,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Calculator, Save, Trash2, X, AlertTriangle, ArrowRight, Target, FileText, Eraser } from "lucide-react";
+import { Calculator, Save, Trash2, X, AlertTriangle, ArrowRight, Target, FileText, Brush, BookmarkPlus, BookmarkCheck } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { BetFormHeaderV2 } from "@/components/apostas/BetFormHeaderV2";
 import { ExploradorEventoPicker } from "@/components/surebet/ExploradorEventoPicker";
@@ -2567,11 +2568,16 @@ export function SurebetModalRoot({
                 </AlertDialog>
               )}
             </div>
-            <div className="flex flex-wrap gap-2">
+            <TooltipProvider delayDuration={200}>
+            <div className="flex flex-wrap items-center gap-2">
               {!isEditing && (
-                <Button
-                  variant="outline"
-                  onClick={() => {
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted"
+                      onClick={() => {
                     setEsporte("Futebol");
                     setEvento("");
                     setMercado("");
@@ -2588,22 +2594,35 @@ export function SurebetModalRoot({
                     setDataAposta(`${yyyy}-${mm}-${dd}T${hh}:${mi}`);
                     setErrosPorPerna({});
                     toast.success("Formulário limpo");
-                  }}
-                >
-                  <Eraser className="h-4 w-4 mr-1" />
-                  Limpar
-                </Button>
+                      }}
+                      aria-label="Limpar formulário"
+                    >
+                      <Brush className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Limpar formulário</TooltipContent>
+                </Tooltip>
               )}
                {!isEditing && (
-                 <Button 
-                   variant="outline"
-                   onClick={handleSalvarRascunho}
-                   disabled={saving || !temDadosParciais}
-                   className="border-blue-500/30 text-blue-500 hover:bg-blue-500/10"
-                 >
-                   <FileText className="h-4 w-4 mr-1" />
-                   {isAtualizandoRascunho ? 'Atualizar Rascunho' : 'Salvar Rascunho'}
-                 </Button>
+                 <Tooltip>
+                   <TooltipTrigger asChild>
+                     <Button
+                       variant="ghost"
+                       size="icon"
+                       onClick={handleSalvarRascunho}
+                       disabled={saving || !temDadosParciais}
+                       className="h-9 w-9 rounded-full text-blue-500 hover:text-blue-400 hover:bg-blue-500/10"
+                       aria-label={isAtualizandoRascunho ? 'Atualizar rascunho' : 'Salvar rascunho'}
+                     >
+                       {isAtualizandoRascunho
+                         ? <BookmarkCheck className="h-4 w-4" />
+                         : <BookmarkPlus className="h-4 w-4" />}
+                     </Button>
+                   </TooltipTrigger>
+                   <TooltipContent>
+                     {isAtualizandoRascunho ? 'Atualizar rascunho' : 'Salvar rascunho'}
+                   </TooltipContent>
+                 </Tooltip>
                )}
               {analysis.isOperacaoParcial && !isEditing && (
                 <Button 
@@ -2632,6 +2651,7 @@ export function SurebetModalRoot({
                  {isEditing ? "Salvar Alterações" : "Registrar Operação"}
                </Button>
             </div>
+            </TooltipProvider>
           </div>
 
           {/* Aviso de saldo insuficiente */}
