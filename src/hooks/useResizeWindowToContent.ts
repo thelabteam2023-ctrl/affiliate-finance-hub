@@ -32,9 +32,22 @@ export function useResizeWindowToContent(deps: any[] = []) {
     // Also try after a longer delay for async-rendered content
     const timer2 = setTimeout(resize, 500);
 
+    // Observe content size changes (e.g., user toggles 2/3/4+ pernas)
+    let observer: ResizeObserver | null = null;
+    let rafId: number | null = null;
+    if (ref.current && typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(() => {
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(resize);
+      });
+      observer.observe(ref.current);
+    }
+
     return () => {
       clearTimeout(timer);
       clearTimeout(timer2);
+      if (observer) observer.disconnect();
+      if (rafId) cancelAnimationFrame(rafId);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
