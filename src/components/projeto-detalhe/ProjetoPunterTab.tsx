@@ -537,7 +537,7 @@ export function ProjetoPunterTab({
   }, [projetoId]);
 
   const handleDuplicateSurebet = useCallback((surebetId: string) => {
-    openSurebetWindow({ projetoId, activeTab: 'punter', duplicateFrom: surebetId } as any);
+    openSurebetWindow({ projetoId, activeTab: 'punter', numPernas: 3, duplicateFrom: surebetId } as any);
   }, [projetoId]);
 
   // Liquidação de perna individual (multi-entry simples via SurebetCard)

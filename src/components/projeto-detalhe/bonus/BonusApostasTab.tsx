@@ -885,7 +885,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
   }, [projetoId]);
 
   const handleDuplicateSurebet = useCallback((surebetId: string) => {
-    openSurebetWindow({ projetoId, activeTab: 'bonus', duplicateFrom: surebetId } as any);
+    openSurebetWindow({ projetoId, activeTab: 'bonus', numPernas: 3, duplicateFrom: surebetId } as any);
   }, [projetoId]);
 
   // Abrir aposta simples em janela externa (mesmo comportamento do Surebet)
@@ -1128,7 +1128,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
                bookmakerNomeMap={bookmakerNomeMap}
                onEdit={(surebet) => {
                 // Abrir em janela externa
-                openSurebetWindow({ projetoId, id: surebet.id, activeTab: 'bonus' });
+                openSurebetWindow({ projetoId, id: surebet.id, activeTab: 'bonus', numPernas: 3 });
               }}
               onQuickResolve={(surebetId, result) => handleQuickResolveSurebet(surebetId, result)}
               onSimpleMenuQuickResolve={handleQuickResolve}
