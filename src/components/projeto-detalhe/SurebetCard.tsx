@@ -25,6 +25,8 @@ import { useAuth } from "@/hooks/useAuth";
 
 
 import { validateBalanceForOperation } from "@/utils/surebetBalanceValidator";
+import { LayBadge } from "@/components/surebet/LayBadge";
+import { exposureOf } from "@/utils/pernaLayHelpers";
 
 
 // Estrutura de entrada individual (para múltiplas entradas)
@@ -100,6 +102,10 @@ export interface SurebetData {
   lucro_esperado: number | null;
   lucro_real: number | null;
   roi_real: number | null;
+  /** Snapshot imutável do lucro consolidado congelado na transição para LIQUIDADA. */
+  lucro_realizado?: number | null;
+  /** Snapshot imutável do ROI realizado, congelado junto com lucro_realizado. */
+  roi_realizado?: number | null;
   /** Lucro consolidado na moeda de consolidação (pode diferir da moeda do projeto!) */
   pl_consolidado?: number | null;
   /** Stake consolidado na moeda de consolidação */
@@ -313,7 +319,11 @@ function PernaItem({
   const oddClass = isLayPerna ? "text-red-400" : "";
   const layTitle = isLayPerna ? "Chance contra (Lay)" : undefined;
   const stakeLabel = isLayPerna ? "Resp: " : "";
-  const stakeTitle = isLayPerna ? "Responsabilidade (liability)" : undefined;
+  const stakeTitle = isLayPerna
+    ? `Responsabilidade (liability) = stake × (odd − 1) — backers' stake: ${formatPernaValue(perna.stake, perna.moeda)}`
+    : undefined;
+  // Liability sempre derivada (stake × (odd-1)) — fonte única em pernaLayHelpers.
+  const respValor = isLayPerna ? exposureOf({ odd: perna.odd, stake: perna.stake, tipo: 'lay', comissao: perna.comissao ?? 0 }) : perna.stake;
   
   // formatBookmakerDisplay imported from @/lib/bookmaker-display
   
