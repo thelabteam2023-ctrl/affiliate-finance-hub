@@ -544,7 +544,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
     const estrategia = aposta.estrategia || undefined;
 
     if (aposta.forma_registro === "ARBITRAGEM" || aposta.estrategia === "SUREBET") {
-      openSurebetWindow({ projetoId, id: aposta.id, activeTab });
+      openSurebetWindow({ projetoId, id: aposta.id, activeTab, numPernas: 3 });
       return;
     }
 
