@@ -104,6 +104,7 @@ export interface ApostaCardData {
   mercado_display?: string | null;
 }
 
+
 interface ApostaCardProps {
   aposta: ApostaCardData;
   /**
