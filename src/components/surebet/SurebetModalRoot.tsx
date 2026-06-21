@@ -2244,6 +2244,20 @@ export function SurebetModalRoot({
             showCloseButton={!embedded}
             onClose={() => onOpenChange(false)}
             embedded={embedded}
+            headerAction={
+              <ExploradorEventoPicker
+                defaultDate={dataAposta}
+                onSelect={(ev) => {
+                  const mapped = mapDailyEventToFormFields(ev);
+                  setEsporte(mapped.esporte);
+                  setEvento(mapped.evento);
+                  setDataAposta(mapped.dataAposta);
+                  toast.success("Jogo importado do Explorador", {
+                    description: `${ev.home_team} x ${ev.away_team}`,
+                  });
+                }}
+              />
+            }
              extraBadge={
                <div className="flex items-center gap-1.5 ml-1">
                  {/* Badge de Intenção */}
