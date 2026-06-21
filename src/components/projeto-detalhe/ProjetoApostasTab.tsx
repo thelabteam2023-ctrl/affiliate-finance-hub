@@ -139,6 +139,10 @@ interface Aposta {
   time_casa?: string | null;
   time_fora?: string | null;
   fonte_entrada?: string | null;
+  // Snapshot de logos do evento importado
+  home_team_logo_url?: string | null;
+  away_team_logo_url?: string | null;
+  league_logo_url?: string | null;
   // Campos de consolidação multi-moeda
   moeda_operacao?: string | null;
   stake_consolidado?: number | null;
