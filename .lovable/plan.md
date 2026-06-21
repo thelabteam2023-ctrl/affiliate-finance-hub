@@ -1,128 +1,66 @@
 
-# Integração Explorador Esportivo → Formulário de Arbitragem
+# Enxugar formulário de Arbitragem (Surebet)
 
-## Objetivo
-Permitir que, ao registrar uma Arbitragem (Surebet), o usuário escolha um jogo já presente no Explorador de Dados Esportivos e tenha **Esporte**, **Evento** e **Data/Hora** do header preenchidos automaticamente — sem digitar nada.
-
-Sem mexer em qualquer regra financeira, motor de Surebet, RPCs, triggers ou tabelas existentes. A entrega é puramente UI + leitura da tabela `public.daily_events` (que já existe e já é consumida pelo `ApiExplorer`).
+Três mudanças focadas em reduzir poluição visual, sem tocar em motor de cálculo, ledger ou RPCs.
 
 ---
 
-## O que já existe (reaproveitar)
+## 1. Explorador → ícone 📅 dentro do campo Evento
 
-- **Tabela `public.daily_events`** (21 colunas): `sport`, `league_name`, `home_team`, `away_team`, `commence_time`, `event_date`, `status`, `home_team_logo`, `away_team_logo`, `league_logo`, `country`, `continent`, etc. É a mesma fonte usada pela aba "Calendário" do `ApiExplorer`.
-- **`src/pages/ApiExplorer.tsx`** já faz `supabase.from('daily_events').select(...)` por data — vamos espelhar o mesmo padrão de query.
-- **`src/components/apostas/BetFormHeaderV2.tsx`** — header unificado dos formulários (Arbitragem, Simples, Múltipla). Tem `gameFields` com `onEsporteChange`, `onEventoChange`, `onDataApostaChange`.
-- **`src/components/surebet/SurebetCompactForm.tsx`** — formulário que monta o header e detém o estado dos campos do jogo.
+**Hoje:** botão "Explorador" no header, ao lado de "Estratégia".
+**Depois:** ícone de calendário discreto encostado à direita do input "Evento". Clica → abre o mesmo Popover atual.
 
----
-
-## Entregáveis
-
-### 1. Hook `useDailyEventsByDate`
-`src/hooks/useDailyEventsByDate.ts`
-
-- Recebe uma `Date` (default = hoje) e retorna a lista de jogos do dia ordenados por `commence_time`.
-- Usa React Query: `queryKey: ['daily-events', dateKey]`, `staleTime: 5min`.
-- Select enxuto (só campos que o seletor precisa exibir/usar): `id, sport, league_name, league_logo, home_team, away_team, home_team_logo, away_team_logo, commence_time, status, country`.
-- Filtro por `event_date = dateKey` (e opcional: `status != 'finished'` por padrão, com toggle para mostrar encerrados).
-
-### 2. Componente `ExploradorEventoPicker`
-`src/components/surebet/ExploradorEventoPicker.tsx`
-
-Popover/Dialog acionado por um botão pequeno no header (ícone `CalendarDays` + label "Do Explorador").
-
-Conteúdo:
-- DatePicker compacto no topo (default = data do header da aposta; se vazio, hoje).
-- Campo de busca instantânea (filtra por time, liga ou país no lado cliente).
-- Filtros rápidos: Esporte (chips) e "Mostrar encerrados" (toggle).
-- Lista virtualizada de cards de partida no mesmo estilo visual do Explorador (logo dos times, "Time A x Time B", liga, hora, badge de status).
-- Estado vazio quando não há jogos do dia: CTA "Abrir Explorador" → navega para `/api-explorer`.
-- Skeletons enquanto carrega.
-
-Props: `{ onSelect: (event: DailyEvent) => void; defaultDate?: string }`.
-
-### 3. Mapeamento "jogo → campos do formulário"
-`src/components/surebet/utils/mapDailyEventToFormFields.ts`
-
-Função pura:
-```ts
-mapDailyEventToFormFields(ev) => {
-  esporte: normalizeEsporte(ev.sport),         // mapeia "soccer" → "Futebol", etc.
-  evento: `${ev.home_team} X ${ev.away_team}`, // padrão do form (uppercase)
-  dataAposta: ev.commence_time,                 // ISO já no formato do DateTimePicker
-  // mercado: NÃO preenche (depende da estratégia do usuário)
-}
-```
-
-`normalizeEsporte` usa a mesma lista `ESPORTES_BASE` do `BetFormHeaderV2`, com tabela de aliases (`soccer→Futebol`, `basketball→Basquete`, `tennis→Tênis`, etc.). Sport não reconhecido cai em "Outro".
-
-### 4. Wire-up no formulário de Arbitragem
-`src/components/surebet/SurebetCompactForm.tsx`
-
-- Importar o `ExploradorEventoPicker`.
-- Passar `extraBadge` (ou novo prop dedicado `headerAction`) ao `BetFormHeaderV2` com o botão de abrir o picker. Alternativa mais limpa: adicionar prop opcional `onPickFromExplorer` no `BetFormHeaderV2` que renderiza o botão entre o título e a Estratégia (à esquerda da Estratégia, que agora está à direita).
-- No callback `onSelect`, chamar os setters existentes: `setEsporte`, `setEvento`, `setDataAposta`. Disparar um `toast.success("Jogo importado do Explorador")`.
-- Guardar `daily_event_id` em estado local (sem persistir no banco nesta fase — ver "Fase 2" abaixo) só para exibir um chip "Vinculado: Liga" no header e permitir desvincular.
-
-### 5. UX/Detalhes visuais
-- Botão do picker: `variant="outline"`, altura 28px, ícone + texto curto "Explorador", visível apenas no formulário de Arbitragem (não em Simples/Múltipla nesta fase).
-- Quando um jogo está vinculado: badge discreta `[Liga · 19:00]` ao lado do botão, com `X` para desvincular (limpa só o badge, não os campos já preenchidos).
-- Atalho de teclado: `Ctrl+J` abre o picker quando o formulário está focado.
-- Sem alteração de altura/largura da janela popup do Surebet (1200x dinâmica) — picker é um Popover que se ancora ao botão.
-
-### 6. Permissões e segurança
-- A tabela `daily_events` já existe com 1 policy. **Não criar nem alterar policy nessa fase.** Antes de codar o hook, validar com `supabase--read_query` se `authenticated` consegue ler. Se não, plano se ajusta para criar uma `SELECT` policy permitindo `authenticated` (sem expor para `anon`). Nada de `GRANT` novo enquanto a leitura atual funcionar.
-- Sem RLS nova, sem migration nesta fase.
+**Arquivos:**
+- `src/components/apostas/BetFormHeaderV2.tsx`
+  - Adicionar prop opcional `eventoAdornment?: React.ReactNode` (renderiza absolutamente posicionado dentro do wrapper do input Evento, com `pr-8` no input).
+  - Remover/limpar a prop `headerAction` da área do header (ou deixar opcional, mas não usar mais).
+- `src/components/surebet/SurebetModalRoot.tsx`
+  - Substituir `headerAction={<ExploradorEventoPicker .../>}` por `eventoAdornment={<ExploradorEventoPicker .../>}`.
+- `src/components/surebet/ExploradorEventoPicker.tsx`
+  - Aceitar prop `variant?: "button" | "icon"` (default `button`).
+  - No `variant="icon"`: trigger vira `<Button variant="ghost" size="icon" className="h-6 w-6">` com `<CalendarDays className="h-3.5 w-3.5"/>` e tooltip "Importar jogo do Explorador".
 
 ---
 
-## Não inclui (fora de escopo desta fase)
+## 2. Toggles "Mostrar comissões" e "Arredondar" → menu ⚙
 
-- Persistir vínculo `aposta_unificada.daily_event_id` (precisaria migration + ajuste no motor de salvamento — fica para Fase 2 quando o usuário pedir).
-- Integração no formulário de Aposta Simples ou Múltipla (usuário pediu só Arbitragem).
-- Preenchimento de Mercado (depende de estratégia/mercados do jogo, que `daily_events` não tem hoje).
-- Sincronizar/criar novos eventos esportivos — usamos só o que já está sincronizado pelo `api-monitor`.
-- Alterações no `ApiExplorer.tsx`.
+**Hoje:** dois toggles sempre visíveis no rodapé da tabela (`SurebetTableFooter`).
+**Depois:** ícone de engrenagem no canto direito do footer abre um Popover compacto com os mesmos controles.
 
----
-
-## Detalhes técnicos (referência)
-
-```text
-┌─ src/hooks/
-│   └─ useDailyEventsByDate.ts          [novo]
-├─ src/components/surebet/
-│   ├─ ExploradorEventoPicker.tsx        [novo]
-│   ├─ SurebetCompactForm.tsx            [editar — adicionar botão+handler]
-│   └─ utils/mapDailyEventToFormFields.ts [novo]
-└─ src/components/apostas/
-    └─ BetFormHeaderV2.tsx               [editar — prop opcional headerAction OU extraBadge slot]
-```
-
-Fluxo:
-```text
-Header (Arbitragem)
-   └─ [Explorador ▾]  clique
-        ↓
-   Popover ExploradorEventoPicker
-        ├─ DatePicker (default = data do form)
-        ├─ Busca + filtros
-        └─ Lista de daily_events do dia
-              └─ clique no jogo
-                    ↓
-        mapDailyEventToFormFields(ev)
-                    ↓
-        setEsporte / setEvento / setDataAposta
-        toast "Jogo importado"
-        badge "Liga · hora" no header
-```
+**Arquivos:**
+- `src/components/surebet/SurebetTableFooter.tsx`
+  - Remover o bloco de toggles inline (linhas ~110-145).
+  - Substituir por `<Popover>` com trigger `<Button variant="ghost" size="icon"><Settings2 className="h-4 w-4"/></Button>`.
+  - `PopoverContent` (w-64, align="end") contém:
+    - Switch "Mostrar comissões" + label.
+    - Switch "Arredondar" + input numérico (mantém lógica atual `arredondarValor`).
+  - Manter exatamente as mesmas props e handlers (zero mudança de comportamento; só reposiciona UI).
 
 ---
 
-## Validação ao final
-1. Build limpo (`tsc` sem erros).
-2. Abrir Arbitragem em `/janela/surebet/novo?projetoId=...`, clicar "Explorador", selecionar um jogo do dia, conferir que `Esporte`, `Evento` e `Data/Hora` foram preenchidos.
-3. Trocar a data no picker e confirmar nova lista.
-4. Limpar busca + jogo encerrado escondido por padrão; toggle traz de volta.
-5. Sem mudanças em valores monetários, motor de cálculo, KPIs ou ledger.
+## 3. "Cancelar" → "Limpar"
+
+**Hoje:** botão "Cancelar" fecha a janela.
+**Depois:** botão "Limpar" reseta todos os campos do formulário sem fechar a janela. (Em modo edição, o botão é ocultado — não faz sentido limpar uma operação existente.)
+
+**Arquivos:**
+- `src/components/surebet/SurebetModalRoot.tsx` (linhas ~2572-2575)
+  - Trocar texto "Cancelar" → "Limpar".
+  - Ícone `<Eraser className="h-4 w-4 mr-1" />`.
+  - `onClick`: chamar um novo `handleLimparFormulario()` que reseta os state setters principais do form (esporte→"Futebol", evento→"", mercado→"", estrategia→null, modelo→"1-2", odds→estado inicial de 2 pernas vazias, observacoes→"", contexto_operacional→null, dataAposta→agora). Toast "Formulário limpo".
+  - Esconder se `isEditing` (já que limpar destruiria a edição em andamento por engano).
+  - Manter fechamento da janela apenas pelo X do header (já existe) e pelo onSuccess.
+
+**Não mexer:**
+- AlertDialog interno (linha 2565) mantém "Cancelar" — é o cancelar do dialog de confirmação de exclusão, comportamento padrão shadcn.
+
+---
+
+## Validação
+- `tsc` limpo.
+- Abrir form de Arbitragem: header sem botão Explorador; campo Evento mostra 📅 à direita; clicar abre o picker; importar jogo preenche Esporte/Evento/Data.
+- Footer: toggles sumiram; engrenagem abre popover; alternar Mostrar comissões e Arredondar funcionam igual.
+- Botão "Limpar" reseta tudo sem fechar; em edição, botão não aparece.
+
+## Fora do escopo
+- Outras sugestões anteriores (badges RASCUNHO/COMPLETO, labels-as-placeholder, fundir colunas 🎯/D, KPIs do rodapé). Ficam para próxima rodada se você aprovar.
