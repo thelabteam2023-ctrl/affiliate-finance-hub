@@ -258,7 +258,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
             stake_freebet, usar_freebet, fonte_saldo,
             is_novo_formulario, liga, fair_value, modelo_aposta, moeda_operacao,
             mercado_categoria, mercado_objeto, mercado_formato, mercado_direcao, mercado_linha, mercado_display,
-            time_casa, time_fora, fonte_entrada
+            time_casa, time_fora, home_team_logo_url, away_team_logo_url, league_logo_url, fonte_entrada
           `)
           .eq("projeto_id", projetoId)
           .or("contexto_operacional.eq.FREEBET,gerou_freebet.eq.true,tipo_freebet.not.is.null,stake_freebet.gt.0,usar_freebet.eq.true")
