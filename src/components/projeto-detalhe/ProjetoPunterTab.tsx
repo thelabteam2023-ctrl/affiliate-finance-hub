@@ -1270,6 +1270,11 @@ export function ProjetoPunterTab({
                 status: aposta.status,
                 resultado: aposta.resultado,
                 observacoes: aposta.observacoes,
+                time_casa: (aposta as any).time_casa ?? null,
+                time_fora: (aposta as any).time_fora ?? null,
+                home_team_logo_url: (aposta as any).home_team_logo_url ?? null,
+                away_team_logo_url: (aposta as any).away_team_logo_url ?? null,
+                league_logo_url: (aposta as any).league_logo_url ?? null,
                 pernas: groupPernasBySelecao(
                   subEntries.map((p: any) => ({
                     id: p.id,
@@ -1362,6 +1367,11 @@ export function ProjetoPunterTab({
                 status: aposta.status,
                 resultado: aposta.resultado,
                 observacoes: aposta.observacoes,
+                time_casa: (aposta as any).time_casa ?? null,
+                time_fora: (aposta as any).time_fora ?? null,
+                home_team_logo_url: (aposta as any).home_team_logo_url ?? null,
+                away_team_logo_url: (aposta as any).away_team_logo_url ?? null,
+                league_logo_url: (aposta as any).league_logo_url ?? null,
                 pernas: groupPernasBySelecao(
                   subEntries.map((p: any) => ({
                     id: p.id,
