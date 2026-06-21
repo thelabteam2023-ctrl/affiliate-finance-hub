@@ -9,10 +9,12 @@
 --
 -- Como rodar:
 --   psql -v ws=<workspace_uuid> -v uid=<user_uuid> -v proj=<projeto_uuid> \
+--        -v bk1=<bookmaker_uuid> -v bk2=<bookmaker_uuid> \
 --        -v ON_ERROR_STOP=1 -f supabase/tests/triggers/04_arbitragem_form_e2e_all_tabs.sql
 --
--- Usa workspace/usuário/projeto REAIS (FKs com auth.users impedem inserir fakes),
--- mas TODA a operação é revertida no ROLLBACK final — zero resíduo no banco.
+-- Usa workspace/usuário/projeto/bookmakers REAIS (FKs com auth.users impedem inserir
+-- fakes e triggers gerenciam saldo via ledger). TODA a operação é revertida no
+-- ROLLBACK final — zero resíduo no banco.
 
 BEGIN;
 
@@ -22,15 +24,16 @@ BEGIN;
 SELECT set_config('e2e.ws',   :'ws',   true);
 SELECT set_config('e2e.uid',  :'uid',  true);
 SELECT set_config('e2e.proj', :'proj', true);
+SELECT set_config('e2e.bk1',  :'bk1',  true);
+SELECT set_config('e2e.bk2',  :'bk2',  true);
 
 DO $$
 DECLARE
   v_ws        UUID := current_setting('e2e.ws')::uuid;
   v_user      UUID := current_setting('e2e.uid')::uuid;
   v_proj      UUID := current_setting('e2e.proj')::uuid;
-  v_bk1       UUID := gen_random_uuid();
-  v_bk2       UUID := gen_random_uuid();
-  v_saldo_ini NUMERIC := 10000;
+  v_bk1       UUID := current_setting('e2e.bk1')::uuid;
+  v_bk2       UUID := current_setting('e2e.bk2')::uuid;
 
   v_cfg       JSONB;
   v_tab       TEXT;
@@ -56,11 +59,13 @@ DECLARE
 
   v_total     INT := 0;
 BEGIN
-  -- Setup: usa workspace/usuário/projeto reais, cria APENAS 2 bookmakers de teste
-  INSERT INTO bookmakers (id, workspace_id, user_id, nome, moeda, saldo_atual, status, projeto_id,
-                          login_username, login_password_encrypted)
-    VALUES (v_bk1, v_ws, v_user, 'E2E_BK_BACK', 'BRL', v_saldo_ini, 'ativo', v_proj, 'e2e_bk1', 'x'),
-           (v_bk2, v_ws, v_user, 'E2E_BK_LAY',  'BRL', v_saldo_ini, 'ativo', v_proj, 'e2e_bk2', 'x');
+  -- Bookmakers reais (com saldo já gerenciado pelo ledger). Sem INSERT — ROLLBACK reverte tudo.
+  IF NOT EXISTS (SELECT 1 FROM bookmakers WHERE id=v_bk1 AND workspace_id=v_ws AND projeto_id=v_proj) THEN
+    RAISE EXCEPTION 'Bookmaker bk1=% não pertence ao projeto=%/ws=%', v_bk1, v_proj, v_ws;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM bookmakers WHERE id=v_bk2 AND workspace_id=v_ws AND projeto_id=v_proj) THEN
+    RAISE EXCEPTION 'Bookmaker bk2=% não pertence ao projeto=%/ws=%', v_bk2, v_proj, v_ws;
+  END IF;
 
   -- Combinações = TODAS as abas que podem abrir o formulário de arbitragem
   FOR v_cfg IN
