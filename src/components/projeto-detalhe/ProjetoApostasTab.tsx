@@ -1753,6 +1753,10 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                       bookmaker_id: p.bookmaker_id,
                       moeda: p.moeda || 'BRL',
                       fonte_saldo: p.fonte_saldo || null,
+                      tipo: p.tipo || 'back',
+                      comissao: p.comissao ?? 0,
+                      stake_real: p.stake_real ?? undefined,
+                      stake_freebet: p.stake_freebet ?? undefined,
                     }))
                   ),
                 };
