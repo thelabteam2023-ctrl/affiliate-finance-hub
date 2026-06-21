@@ -986,6 +986,21 @@ export function SurebetModalRoot({
     if (sharedContext.mercado && !mercado) setMercado(sharedContext.mercado);
   }, [legPrints]);
 
+  // Se o usuário editar o campo `evento` depois de importar, descartar o
+  // snapshot — não persistir logos que não correspondem mais ao texto.
+  useEffect(() => {
+    if (!importedHomeTeam || !importedAwayTeam) return;
+    const expected = `${importedHomeTeam} X ${importedAwayTeam}`.toUpperCase();
+    if (evento.trim().toUpperCase() !== expected) {
+      setImportedHomeTeam(null);
+      setImportedAwayTeam(null);
+      setImportedHomeLogo(null);
+      setImportedAwayLogo(null);
+      setImportedLeagueLogo(null);
+      setImportedDailyEventId(null);
+    }
+  }, [evento, importedHomeTeam, importedAwayTeam]);
+
   // Encontrar a próxima perna vazia para importação incremental
   const getNextEmptyLegIndex = useCallback((): number | null => {
     for (let i = 0; i < odds.length; i++) {
