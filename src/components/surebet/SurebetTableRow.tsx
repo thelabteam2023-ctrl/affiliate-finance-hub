@@ -267,20 +267,13 @@ export function SurebetTableRow({
               <SelectTrigger className="h-8 text-[10px] w-full">
                 <SelectValue placeholder="Selecione">
                   {selectedBookmaker?.nome && (
-                    <div className="flex flex-col items-start min-w-0">
-                      <div className="flex items-center gap-1 min-w-0">
-                        <span className="truncate uppercase text-[10px]">
-                          {selectedBookmaker.nome}
-                        </span>
-                        {selectedBookmaker.instance_identifier && (
-                          <span className="text-[9px] text-primary font-medium truncate normal-case">
-                            {selectedBookmaker.instance_identifier}
-                          </span>
-                        )}
-                      </div>
-                      {selectedBookmaker.parceiro_nome && (
-                        <span className="text-[9px] text-muted-foreground truncate normal-case">
-                          {getFirstLastName(selectedBookmaker.parceiro_nome)}
+                    <div className="flex items-center justify-center gap-1 min-w-0 w-full">
+                      <span className="truncate uppercase text-[11px] font-medium">
+                        {selectedBookmaker.nome}
+                      </span>
+                      {selectedBookmaker.instance_identifier && (
+                        <span className="text-[10px] text-primary font-medium truncate normal-case">
+                          {selectedBookmaker.instance_identifier}
                         </span>
                       )}
                     </div>
