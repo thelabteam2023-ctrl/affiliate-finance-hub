@@ -481,6 +481,7 @@ function PernaItem({
               {getSelecaoDisplay(perna)}
             </SelectionBadge>
           </div>
+          {isLayPerna && <LayBadge />}
           
           {/* Ícone de múltiplas entradas */}
           <div className="shrink-0">
