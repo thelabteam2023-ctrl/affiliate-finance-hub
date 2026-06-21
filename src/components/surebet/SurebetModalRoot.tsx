@@ -2479,7 +2479,7 @@ export function SurebetModalRoot({
                         hasInsufficientBalance={balanceValidation.insufficientLegs.includes(pernaIndex)}
                         insufficientEntries={balanceValidation.insufficientEntries}
                         error={errosPorPerna[pernaIndex]}
-                        showComissao={showComissao}
+                        showComissao={showComissao || odds.some(o => (o.tipo ?? 'back') === 'lay')}
                         onResultadoChange={handlePernaResultadoChange}
                         onUpdateOdd={updateOdd}
                         onSetReference={setReferenceIndex}
