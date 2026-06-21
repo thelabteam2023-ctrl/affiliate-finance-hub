@@ -1,4 +1,4 @@
-import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, Settings, LogOut, Star, Shield, Calculator, StickyNote, ShieldCheck, ChevronUp, ChevronDown, Sun, Moon, Target, Layers, ArrowLeftRight, Zap, Truck, ClipboardList, CalendarDays, Activity, X, ArrowDownToLine, ArrowUpFromLine, HandCoins, Clock, MessageCircle, Globe, Beaker } from "lucide-react";
+import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, Settings, LogOut, Star, Shield, Calculator, StickyNote, ShieldCheck, ChevronUp, ChevronDown, Sun, Moon, Target, Layers, ArrowLeftRight, Zap, Truck, ClipboardList, CalendarDays, Activity, X, ArrowDownToLine, ArrowUpFromLine, HandCoins, Clock, MessageCircle, Globe, Beaker, AlertTriangle } from "lucide-react";
 import { useSolicitacoesKpis } from "@/hooks/useSolicitacoes";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -9,6 +9,7 @@ import { useFavorites } from "@/hooks/useFavorites";
 import { useProjectFavorites } from "@/hooks/useProjectFavorites";
 import { useModuleAccess } from "@/hooks/useModuleAccess";
 import { useCentralAlertsCount } from "@/hooks/useCentralAlertsCount";
+import { useLedgerAnomaliesCount } from "@/hooks/useLedgerAnomaliesCount";
 import { useChatNotifications } from "@/hooks/useChatNotifications";
 import { useUserWorkspaces } from "@/hooks/useUserWorkspaces";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -265,6 +266,7 @@ export function AppSidebar() {
   const navigate = useNavigate();
    const { user, signOut, role, isSystemOwner, publicId, workspaceId } = useAuth();
   const { canManageWorkspace } = useRole();
+  const ledgerAnomaliesCount = useLedgerAnomaliesCount();
   const { favorites, removeFavorite } = useFavorites();
   const { favorites: projectFavorites, removeFavorite: removeProjectFavorite } = useProjectFavorites();
    const { workspace } = useWorkspace();
@@ -809,6 +811,17 @@ export function AppSidebar() {
                  Ledger Monitor
                </DropdownMenuItem>
              )}
+            {(isSystemOwner || role === 'owner' || role === 'admin') && (
+              <DropdownMenuItem onClick={() => navigate("/admin/ledger-anomalies")}>
+                <AlertTriangle className="mr-2 h-4 w-4" />
+                Anomalias do Ledger
+                {ledgerAnomaliesCount > 0 && (
+                  <Badge variant="destructive" className="ml-auto text-[8px] h-3 px-1">
+                    {ledgerAnomaliesCount}
+                  </Badge>
+                )}
+              </DropdownMenuItem>
+            )}
             {isSystemOwner && (
               <DropdownMenuItem onClick={() => navigate("/admin/api-explorer")}>
                 <Globe className="mr-2 h-4 w-4" />
