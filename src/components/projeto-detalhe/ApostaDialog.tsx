@@ -5068,6 +5068,52 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog
+        open={!!liquidadaConfirmResolve}
+        onOpenChange={(open) => {
+          if (!open && liquidadaConfirmResolve) {
+            liquidadaConfirmResolve(false);
+            setLiquidadaConfirmResolve(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Aposta já liquidada</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <span className="block">
+                Salvar alterações irá <strong>reverter</strong> os lançamentos financeiros atuais e
+                reemitir novos eventos no caixa.
+              </span>
+              <span className="block">
+                O saldo da bookmaker e o lucro serão recalculados a partir do zero.
+              </span>
+              <span className="block text-xs text-muted-foreground">
+                Uma verificação automática de paridade saldo × ledger roda logo após o salvamento.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                liquidadaConfirmResolve?.(false);
+                setLiquidadaConfirmResolve(null);
+              }}
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                liquidadaConfirmResolve?.(true);
+                setLiquidadaConfirmResolve(null);
+              }}
+            >
+              Reverter e salvar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
