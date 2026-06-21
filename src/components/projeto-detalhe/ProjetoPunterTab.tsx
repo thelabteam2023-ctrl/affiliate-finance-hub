@@ -1,3 +1,4 @@
+import { openSurebetWindow } from "@/lib/windowHelper";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { invalidateCanonicalCaches } from "@/lib/invalidateCanonicalCaches";
@@ -536,8 +537,7 @@ export function ProjetoPunterTab({
   }, [projetoId]);
 
   const handleDuplicateSurebet = useCallback((surebetId: string) => {
-    const url = `/janela/surebet/novo?projetoId=${encodeURIComponent(projetoId)}&tab=punter&duplicateFrom=${surebetId}`;
-    window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+    openSurebetWindow({ projetoId, activeTab: 'punter', duplicateFrom: surebetId } as any);
   }, [projetoId]);
 
   // Liquidação de perna individual (multi-entry simples via SurebetCard)

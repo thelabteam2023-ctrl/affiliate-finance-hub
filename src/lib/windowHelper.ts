@@ -33,9 +33,17 @@ const SUREBET_WINDOW_FEATURES = 'width=1200,menubar=no,toolbar=no,location=no,st
  * Abre o formulário de Surebet em uma nova janela.
  */
 export function openSurebetWindow(params: WindowOpenParams & { numPernas?: number }) {
-  const { projetoId, id, activeTab = 'surebet', numPernas = 2 } = params;
+  const { projetoId, id, activeTab = 'surebet', numPernas = 2 } = params as WindowOpenParams & {
+    numPernas?: number;
+    duplicateFrom?: string;
+    rascunhoId?: string;
+  };
+  const duplicateFrom = (params as any).duplicateFrom as string | undefined;
+  const rascunhoId = (params as any).rascunhoId as string | undefined;
   const surebetId = id || 'novo';
-  const url = `/janela/surebet/${surebetId}?projetoId=${encodeURIComponent(projetoId)}&tab=${encodeURIComponent(activeTab)}`;
+  let url = `/janela/surebet/${surebetId}?projetoId=${encodeURIComponent(projetoId)}&tab=${encodeURIComponent(activeTab)}`;
+  if (duplicateFrom) url += `&duplicateFrom=${encodeURIComponent(duplicateFrom)}`;
+  if (rascunhoId) url += `&rascunhoId=${encodeURIComponent(rascunhoId)}`;
   const height = calcSurebetWindowHeight(numPernas);
   window.open(url, '_blank', `${SUREBET_WINDOW_FEATURES},height=${height}`);
 }

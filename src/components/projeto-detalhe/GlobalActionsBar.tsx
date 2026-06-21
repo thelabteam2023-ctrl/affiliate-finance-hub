@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { calcSurebetWindowHeight } from "@/lib/windowHelper";
+import { calcSurebetWindowHeight, openSurebetWindow } from "@/lib/windowHelper";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -161,13 +161,12 @@ export function GlobalActionsBar({
   };
 
   const handleOpenSurebet = (rascunhoId?: string) => {
-    let url = `/janela/surebet/novo?projetoId=${encodeURIComponent(projetoId)}&tab=${encodeURIComponent(activeTab || 'surebet')}`;
-    if (rascunhoId) {
-      url += `&rascunhoId=${encodeURIComponent(rascunhoId)}`;
-    }
-    const height = calcSurebetWindowHeight(3); // Default 3 pernas, will resize dynamically
-    const windowFeatures = `width=780,height=${height},menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes`;
-    window.open(url, '_blank', windowFeatures);
+    openSurebetWindow({
+      projetoId,
+      activeTab: activeTab || 'surebet',
+      numPernas: 3,
+      ...(rascunhoId ? { rascunhoId } : {}),
+    } as any);
   };
 
   const handleOpenMultipla = (rascunhoId?: string) => {
