@@ -811,6 +811,17 @@ export function AppSidebar() {
                  Ledger Monitor
                </DropdownMenuItem>
              )}
+            {(isSystemOwner || role === 'owner' || role === 'admin') && (
+              <DropdownMenuItem onClick={() => navigate("/admin/ledger-anomalies")}>
+                <AlertTriangle className="mr-2 h-4 w-4" />
+                Anomalias do Ledger
+                {ledgerAnomaliesCount > 0 && (
+                  <Badge variant="destructive" className="ml-auto text-[8px] h-3 px-1">
+                    {ledgerAnomaliesCount}
+                  </Badge>
+                )}
+              </DropdownMenuItem>
+            )}
             {isSystemOwner && (
               <DropdownMenuItem onClick={() => navigate("/admin/api-explorer")}>
                 <Globe className="mr-2 h-4 w-4" />
