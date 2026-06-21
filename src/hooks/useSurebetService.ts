@@ -31,6 +31,10 @@ export interface SurebetPerna {
   selecaoLivre?: string;
   moeda?: string;
   fonteSaldo?: 'REAL' | 'FREEBET';
+  /** 'back' (padrão) ou 'lay'. LAY debita liability (stake×(odd−1)). */
+  tipo?: 'back' | 'lay';
+  /** Comissão da exchange em decimal (ex: 0.028 = 2,8%). Apenas LAY. */
+  comissao?: number;
   stakeBrlReferencia?: number;
   cotacaoSnapshot?: number;
   cotacaoSnapshotAt?: string;
@@ -110,6 +114,8 @@ export function useSurebetService(): UseSurebetServiceReturn {
         selecao_livre: p.selecaoLivre,
         moeda: p.moeda || 'BRL',
         fonte_saldo: (p.fonteSaldo || 'REAL') as 'REAL' | 'FREEBET',
+        tipo: p.tipo || 'back',
+        comissao: p.comissao ?? 0,
         stake_brl_referencia: p.stakeBrlReferencia,
         cotacao_snapshot: p.cotacaoSnapshot,
         cotacao_snapshot_at: p.cotacaoSnapshotAt,
