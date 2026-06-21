@@ -23,6 +23,11 @@ SELECT set_config('e2e.proj', :'proj', true);
 SELECT set_config('e2e.bk1',  :'bk1',  true);
 SELECT set_config('e2e.bk2',  :'bk2',  true);
 
+-- Simular auth.uid() no psql (sem JWT)
+SELECT set_config('request.jwt.claim.sub', :'uid', true);
+SELECT set_config('request.jwt.claims', json_build_object('sub', :'uid', 'role', 'authenticated')::text, true);
+SET LOCAL ROLE authenticated;
+
 DO $$
 DECLARE
   v_ws   UUID := current_setting('e2e.ws')::uuid;
