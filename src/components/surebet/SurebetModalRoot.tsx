@@ -43,6 +43,8 @@ import { toast } from "sonner";
 import { Calculator, Save, Trash2, X, AlertTriangle, ArrowRight, Target, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BetFormHeaderV2 } from "@/components/apostas/BetFormHeaderV2";
+import { ExploradorEventoPicker } from "@/components/surebet/ExploradorEventoPicker";
+import { mapDailyEventToFormFields } from "@/components/surebet/utils/mapDailyEventToFormFields";
 import { toLocalTimestamp, validarDataAposta } from "@/utils/dateUtils";
 import { calcSurebetWindowHeight } from "@/lib/windowHelper";
 
