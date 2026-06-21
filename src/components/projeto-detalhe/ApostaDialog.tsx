@@ -2803,9 +2803,15 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           probeBookmakerLedgerParity(bookmakerId, { label: "pós-edição LIQUIDADA" })
             .then((res) => {
               if (res && !res.ok) {
-                toast.warning("Divergência saldo × ledger detectada", {
-                  description: `Δ = R$ ${res.delta.toFixed(2)}. Verifique o console (__INTEGRITY_LOG__).`,
-                  duration: 10000,
+                toast.error("Divergência saldo × ledger detectada", {
+                  description: `Δ = R$ ${res.delta.toFixed(2)} na bookmaker. Anomalia registrada para auditoria.`,
+                  duration: Infinity,
+                  action: {
+                    label: "Ver anomalias",
+                    onClick: () => {
+                      window.location.href = "/admin/ledger-anomalies";
+                    },
+                  },
                 });
               }
             })
