@@ -40,7 +40,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Calculator, Save, Trash2, X, AlertTriangle, ArrowRight, Target, FileText } from "lucide-react";
+import { Calculator, Save, Trash2, X, AlertTriangle, ArrowRight, Target, FileText, Eraser } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BetFormHeaderV2 } from "@/components/apostas/BetFormHeaderV2";
 import { ExploradorEventoPicker } from "@/components/surebet/ExploradorEventoPicker";
@@ -2244,8 +2244,9 @@ export function SurebetModalRoot({
             showCloseButton={!embedded}
             onClose={() => onOpenChange(false)}
             embedded={embedded}
-            headerAction={
+            eventoAdornment={
               <ExploradorEventoPicker
+                variant="icon"
                 defaultDate={dataAposta}
                 onSelect={(ev) => {
                   const mapped = mapDailyEventToFormFields(ev);
@@ -2570,9 +2571,32 @@ export function SurebetModalRoot({
               )}
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancelar
-              </Button>
+              {!isEditing && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setEsporte("Futebol");
+                    setEvento("");
+                    setMercado("");
+                    setContexto(CONTEXTO_OPERACIONAL.NORMAL);
+                    setEstrategia(ARBITRAGEM_ESTRATEGIA);
+                    setModeloTipo("2");
+                    resetToNewForm(2);
+                    const now = new Date();
+                    const yyyy = now.getFullYear();
+                    const mm = String(now.getMonth() + 1).padStart(2, "0");
+                    const dd = String(now.getDate()).padStart(2, "0");
+                    const hh = String(now.getHours()).padStart(2, "0");
+                    const mi = String(now.getMinutes()).padStart(2, "0");
+                    setDataAposta(`${yyyy}-${mm}-${dd}T${hh}:${mi}`);
+                    setErrosPorPerna({});
+                    toast.success("Formulário limpo");
+                  }}
+                >
+                  <Eraser className="h-4 w-4 mr-1" />
+                  Limpar
+                </Button>
+              )}
                {!isEditing && (
                  <Button 
                    variant="outline"

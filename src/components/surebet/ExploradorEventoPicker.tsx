@@ -17,6 +17,8 @@ interface ExploradorEventoPickerProps {
   defaultDate?: string;
   /** Callback quando o usuário seleciona um jogo. */
   onSelect: (event: DailyEvent) => void;
+  /** Visual do gatilho. `button` (default) = botão com texto; `icon` = só ícone compacto. */
+  variant?: "button" | "icon";
 }
 
 function parseDefaultDate(s: string | undefined): Date {
@@ -43,7 +45,7 @@ function TeamLogo({ name, url }: { name: string; url: string | null }) {
   );
 }
 
-export function ExploradorEventoPicker({ defaultDate, onSelect }: ExploradorEventoPickerProps) {
+export function ExploradorEventoPicker({ defaultDate, onSelect, variant = "button" }: ExploradorEventoPickerProps) {
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState<Date>(() => parseDefaultDate(defaultDate));
   const [search, setSearch] = useState("");
@@ -75,16 +77,28 @@ export function ExploradorEventoPicker({ defaultDate, onSelect }: ExploradorEven
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-7 gap-1.5 text-xs"
-          title="Importar jogo do Explorador (Ctrl+J)"
-        >
-          <CalendarDays className="h-3.5 w-3.5" />
-          Explorador
-        </Button>
+        {variant === "icon" ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 text-muted-foreground hover:text-foreground"
+            title="Importar jogo do Explorador"
+          >
+            <CalendarDays className="h-3.5 w-3.5" />
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 gap-1.5 text-xs"
+            title="Importar jogo do Explorador (Ctrl+J)"
+          >
+            <CalendarDays className="h-3.5 w-3.5" />
+            Explorador
+          </Button>
+        )}
       </PopoverTrigger>
       <PopoverContent
         align="end"

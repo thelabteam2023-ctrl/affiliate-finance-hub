@@ -86,6 +86,8 @@ interface BetFormHeaderV2Props {
   extraBadge?: React.ReactNode;
   /** Slot opcional para uma ação no header (ex.: botão "Explorador" da Arbitragem). */
   headerAction?: React.ReactNode;
+  /** Slot opcional renderizado dentro do input "Evento" (lado direito). Ex.: ícone do Explorador. */
+  eventoAdornment?: React.ReactNode;
   showCloseButton?: boolean;
   onClose?: () => void;
   embedded?: boolean;
@@ -136,6 +138,7 @@ export function BetFormHeaderV2({
   onFileSelect,
   extraBadge,
   headerAction,
+  eventoAdornment,
   showCloseButton = false,
   onClose,
   embedded = false,
@@ -273,15 +276,23 @@ export function BetFormHeaderV2({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Input
-                    value={gameFields.evento}
-                    onChange={(e) => gameFields.onEventoChange(e.target.value.toUpperCase())}
-                    placeholder="TIME 1 X TIME 2"
-                    className={cn(
-                      "h-8 text-xs uppercase text-center",
-                      review.evento && "border-amber-500/50"
+                  <div className="relative">
+                    <Input
+                      value={gameFields.evento}
+                      onChange={(e) => gameFields.onEventoChange(e.target.value.toUpperCase())}
+                      placeholder="TIME 1 X TIME 2"
+                      className={cn(
+                        "h-8 text-xs uppercase text-center",
+                        eventoAdornment && "pr-8",
+                        review.evento && "border-amber-500/50"
+                      )}
+                    />
+                    {eventoAdornment && (
+                      <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center">
+                        {eventoAdornment}
+                      </div>
                     )}
-                  />
+                  </div>
                 </TooltipTrigger>
                 {gameFields.evento && (
                   <TooltipContent side="bottom" className="text-xs max-w-[300px]">
