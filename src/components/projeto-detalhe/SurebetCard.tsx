@@ -437,9 +437,16 @@ function PernaItem({
           </div>
           
           {/* Odd e Stake à direita - larguras fixas para alinhamento */}
-          <div className="flex items-center gap-2 shrink-0">
-            <span className={cn("text-sm sm:text-base font-medium whitespace-nowrap w-[70px] text-right tabular-nums", oddClass)} title={layTitle}>{layPrefix}@{perna.odd.toFixed(2)}</span>
-            <span className={cn("text-xs sm:text-sm whitespace-nowrap w-[110px] text-right tabular-nums", isLayPerna ? "text-red-300" : "text-muted-foreground")} title={stakeTitle}>{stakeLabel}{formatPernaValue(respValor, perna.moeda)}</span>
+          <div className="flex items-center gap-3 shrink-0">
+            <span className={cn("text-sm sm:text-base font-medium whitespace-nowrap w-[92px] text-right tabular-nums", oddClass)} title={layTitle}>{layPrefix}@{perna.odd.toFixed(2)}</span>
+            <div className={cn("flex flex-col items-end w-[120px]", isLayPerna ? "text-red-300" : "text-muted-foreground")} title={stakeTitle}>
+              <span className="text-xs sm:text-sm whitespace-nowrap tabular-nums">{formatPernaValue(perna.stake, perna.moeda)}</span>
+              {isLayPerna && (
+                <span className="text-[10px] sm:text-[11px] leading-tight text-muted-foreground/80 whitespace-nowrap tabular-nums">
+                  Resp {formatPernaValue(respValor, perna.moeda)}
+                </span>
+              )}
+            </div>
           </div>
           
           {/* Result pill per perna */}
