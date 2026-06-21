@@ -2253,9 +2253,6 @@ export function SurebetModalRoot({
                   setEsporte(mapped.esporte);
                   setEvento(mapped.evento);
                   setDataAposta(mapped.dataAposta);
-                  toast.success("Jogo importado do Explorador", {
-                    description: `${ev.home_team} x ${ev.away_team}`,
-                  });
                 }}
               />
             }
