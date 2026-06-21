@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.parse-ev-print]
 verify_jwt = false
+
+[functions.cron-ledger-parity-sweep]
+verify_jwt = false
