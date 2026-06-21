@@ -506,10 +506,14 @@ function PernaItem({
                 const entryCurrencies = new Set(perna.entries?.map(e => e.moeda) || []);
                 if (entryCurrencies.size > 1 && convertToConsolidation) {
                   // Convert each entry's stake to consolidation currency
-                  const consolidated = perna.entries!.reduce((sum, e) => sum + convertToConsolidation(e.stake, e.moeda), 0);
+                  const consolidated = perna.entries!.reduce((sum, e) => {
+                    const v = isLayPerna ? e.stake * Math.max(0, e.odd - 1) : e.stake;
+                    return sum + convertToConsolidation(v, e.moeda);
+                  }, 0);
                   return `${stakeLabel}${formatValue(consolidated)}`;
                 }
-                return `${stakeLabel}${formatPernaValue(displayStake, perna.moeda)}`;
+                const v = isLayPerna ? displayStake * Math.max(0, displayOdd - 1) : displayStake;
+                return `${stakeLabel}${formatPernaValue(v, perna.moeda)}`;
               })()}
             </span>
           </div>
