@@ -437,6 +437,14 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   const [loading, setLoading] = useState(false);
   const { favoriteSource } = useWorkspaceBetSources(workspaceId);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [liquidadaConfirmResolve, setLiquidadaConfirmResolve] = useState<
+    ((ok: boolean) => void) | null
+  >(null);
+
+  const requestLiquidadaConfirm = () =>
+    new Promise<boolean>((resolve) => {
+      setLiquidadaConfirmResolve(() => resolve);
+    });
 
   // ========== HOOK CANÔNICO DE SALDOS ==========
   // Esta é a ÚNICA fonte de verdade para saldos de bookmaker
