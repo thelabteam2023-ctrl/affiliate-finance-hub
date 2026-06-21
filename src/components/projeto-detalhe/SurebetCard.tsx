@@ -27,7 +27,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { validateBalanceForOperation } from "@/utils/surebetBalanceValidator";
 import { LayBadge } from "@/components/surebet/LayBadge";
 import { exposureOf } from "@/utils/pernaLayHelpers";
-import { publishTabRender } from "@/utils/integrityProbe";
+// publishTabRender é invocado pelos Tabs (ProjetoSurebetTab/ProjetoApostasTab)
+// onde a origem da renderização é conhecida — não dentro do card.
 
 
 // Estrutura de entrada individual (para múltiplas entradas)
