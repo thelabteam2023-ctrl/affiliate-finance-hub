@@ -670,6 +670,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       const selectFieldsSurebet = `
           id, evento, esporte, modelo, stake_total, spread_calculado,
           roi_esperado, roi_real, lucro_esperado, lucro_prejuizo,
+          lucro_realizado, roi_realizado,
           status, resultado, data_aposta, observacoes, created_at, pernas, estrategia,
           contexto_operacional,
           workspace_id, moeda_operacao, stake_consolidado, pl_consolidado, consolidation_currency,
