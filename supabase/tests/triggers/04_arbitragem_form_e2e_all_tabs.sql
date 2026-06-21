@@ -48,9 +48,11 @@ DECLARE
   v_soma_pn   NUMERIC;
 
   v_saldo_bk1 NUMERIC;
-  v_soma_led1 NUMERIC;
   v_saldo_bk2 NUMERIC;
-  v_soma_led2 NUMERIC;
+  v_saldo_pre_bk1  NUMERIC;
+  v_saldo_pre_bk2  NUMERIC;
+  v_pl_perna1      NUMERIC;
+  v_pl_perna2      NUMERIC;
 
   v_total     INT := 0;
 BEGIN
@@ -86,6 +88,10 @@ BEGIN
       jsonb_build_object('perna_ordem',2,'bookmaker_id',v_bk2,'stake', 95,'odd',2.20,
                         'moeda','BRL','fonte_saldo','REAL','cotacao_snapshot',1,'stake_brl_referencia', 95,'tipo','lay')
     );
+
+    -- Snapshot dos saldos ANTES da operação
+    SELECT saldo_atual INTO v_saldo_pre_bk1 FROM bookmakers WHERE id = v_bk1;
+    SELECT saldo_atual INTO v_saldo_pre_bk2 FROM bookmakers WHERE id = v_bk2;
 
     -- 1) CRIAÇÃO (mesma RPC chamada pelo SurebetModalRoot)
     SELECT * INTO v_rpc FROM public.criar_surebet_atomica_v3(
@@ -123,9 +129,9 @@ BEGIN
     -- Saldo deve ter sido debitado das duas casas (stake_real)
     SELECT saldo_atual INTO v_saldo_bk1 FROM bookmakers WHERE id = v_bk1;
     SELECT saldo_atual INTO v_saldo_bk2 FROM bookmakers WHERE id = v_bk2;
-    IF v_saldo_bk1 >= v_saldo_ini OR v_saldo_bk2 >= v_saldo_ini THEN
-      RAISE EXCEPTION '[%] DÉBITO falhou: saldo não diminuiu (bk1=%, bk2=%)',
-        v_tab, v_saldo_bk1, v_saldo_bk2;
+    IF v_saldo_bk1 >= v_saldo_pre_bk1 OR v_saldo_bk2 >= v_saldo_pre_bk2 THEN
+      RAISE EXCEPTION '[%] DÉBITO falhou: saldo não diminuiu (bk1: %→%, bk2: %→%)',
+        v_tab, v_saldo_pre_bk1, v_saldo_bk1, v_saldo_pre_bk2, v_saldo_bk2;
     END IF;
 
     -- 3) RESOLUÇÃO (quick-resolve: BACK RED + LAY GREEN ⇒ lucro = -100 + 95 = -5)
@@ -153,31 +159,27 @@ BEGIN
       RAISE EXCEPTION '[%] PARIDADE PAI/PERNAS falhou: pai=% Σ=%', v_tab, v_pl_pai, v_soma_pn;
     END IF;
 
-    -- Ledger parity (saldo == saldo_inicial + Σ ledger líquido) por bookmaker.
-    -- Para o bookmaker da perna, o evento entra como ENTRADA(destino) ou SAIDA(origem).
-    -- Convenção: SUM(valor onde destino=bk) - SUM(valor onde origem=bk) = movimentação líquida.
+    -- Paridade de saldo final por bookmaker:
+    --   saldo_after == saldo_before + lucro_prejuizo_da_perna_dessa_casa
+    -- (cobre: stake debitado na criação + payout creditado na liquidação)
     SELECT saldo_atual INTO v_saldo_bk1 FROM bookmakers WHERE id = v_bk1;
-    SELECT COALESCE(SUM(CASE WHEN destino_bookmaker_id = v_bk1 THEN valor ELSE 0 END),0)
-         - COALESCE(SUM(CASE WHEN origem_bookmaker_id  = v_bk1 THEN valor ELSE 0 END),0)
-      INTO v_soma_led1 FROM cash_ledger
-      WHERE destino_bookmaker_id = v_bk1 OR origem_bookmaker_id = v_bk1;
     SELECT saldo_atual INTO v_saldo_bk2 FROM bookmakers WHERE id = v_bk2;
-    SELECT COALESCE(SUM(CASE WHEN destino_bookmaker_id = v_bk2 THEN valor ELSE 0 END),0)
-         - COALESCE(SUM(CASE WHEN origem_bookmaker_id  = v_bk2 THEN valor ELSE 0 END),0)
-      INTO v_soma_led2 FROM cash_ledger
-      WHERE destino_bookmaker_id = v_bk2 OR origem_bookmaker_id = v_bk2;
+    SELECT lucro_prejuizo INTO v_pl_perna1 FROM apostas_pernas WHERE aposta_id=v_aposta_id AND ordem=1;
+    SELECT lucro_prejuizo INTO v_pl_perna2 FROM apostas_pernas WHERE aposta_id=v_aposta_id AND ordem=2;
 
-    IF ROUND(v_saldo_bk1,2) <> ROUND(v_saldo_ini + v_soma_led1,2) THEN
-      RAISE EXCEPTION '[%] LEDGER bk1 divergente: saldo=% inicial+ledger=%',
-        v_tab, v_saldo_bk1, v_saldo_ini + v_soma_led1;
+    IF ROUND(v_saldo_bk1,2) <> ROUND(v_saldo_pre_bk1 + COALESCE(v_pl_perna1,0),2) THEN
+      RAISE EXCEPTION '[%] PARIDADE SALDO bk1 falhou: pre=% após=% Δesperado=%',
+        v_tab, v_saldo_pre_bk1, v_saldo_bk1, v_pl_perna1;
     END IF;
-    IF ROUND(v_saldo_bk2,2) <> ROUND(v_saldo_ini + v_soma_led2,2) THEN
-      RAISE EXCEPTION '[%] LEDGER bk2 divergente: saldo=% inicial+ledger=%',
-        v_tab, v_saldo_bk2, v_saldo_ini + v_soma_led2;
+    IF ROUND(v_saldo_bk2,2) <> ROUND(v_saldo_pre_bk2 + COALESCE(v_pl_perna2,0),2) THEN
+      RAISE EXCEPTION '[%] PARIDADE SALDO bk2 falhou: pre=% após=% Δesperado=%',
+        v_tab, v_saldo_pre_bk2, v_saldo_bk2, v_pl_perna2;
     END IF;
 
-    RAISE NOTICE '✓ [%] OK — status=%, pl_pai=%, Σpernas=%, saldo_bk1=%, saldo_bk2=%',
-      v_tab, v_status, v_pl_pai, v_soma_pn, v_saldo_bk1, v_saldo_bk2;
+    RAISE NOTICE '✓ [%] OK — status=% pl_pai=% Σpernas=% bk1(% → %, Δ=%) bk2(% → %, Δ=%)',
+      v_tab, v_status, v_pl_pai, v_soma_pn,
+      v_saldo_pre_bk1, v_saldo_bk1, v_pl_perna1,
+      v_saldo_pre_bk2, v_saldo_bk2, v_pl_perna2;
 
     v_total := v_total + 1;
   END LOOP;
