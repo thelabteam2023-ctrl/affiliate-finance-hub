@@ -805,7 +805,17 @@ export function ApostaCard({
     >
       <CardContent className="p-5 sm:p-6">
         {/* LINHA 1: Evento (título destacado) */}
-        <p className="text-base sm:text-lg font-semibold truncate uppercase leading-tight mb-1.5">{displayEvento || 'Aposta'}</p>
+        {hasTeamLogos ? (
+          <div className="flex items-center gap-2 mb-1.5 text-base sm:text-lg font-semibold uppercase leading-tight min-w-0">
+            <TeamLogo logoUrl={aposta.home_team_logo_url} alt={aposta.time_casa ?? ''} size="h-6 w-6" iconSize="h-3.5 w-3.5" />
+            <span className="truncate">{aposta.time_casa}</span>
+            <span className="text-muted-foreground shrink-0">×</span>
+            <TeamLogo logoUrl={aposta.away_team_logo_url} alt={aposta.time_fora ?? ''} size="h-6 w-6" iconSize="h-3.5 w-3.5" />
+            <span className="truncate">{aposta.time_fora}</span>
+          </div>
+        ) : (
+          <p className="text-base sm:text-lg font-semibold truncate uppercase leading-tight mb-1.5">{displayEvento || 'Aposta'}</p>
+        )}
         
         {/* LINHA 1b: Esporte + Badges + Menu na mesma linha */}
         <div className="flex items-center gap-1.5 flex-wrap mb-4">
