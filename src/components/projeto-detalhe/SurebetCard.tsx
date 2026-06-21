@@ -25,7 +25,6 @@ import { useAuth } from "@/hooks/useAuth";
 
 
 import { validateBalanceForOperation } from "@/utils/surebetBalanceValidator";
-import { LayBadge } from "@/components/surebet/LayBadge";
 import { exposureOf } from "@/utils/pernaLayHelpers";
 // publishTabRender é invocado pelos Tabs (ProjetoSurebetTab/ProjetoApostasTab)
 // onde a origem da renderização é conhecida — não dentro do card.
@@ -349,7 +348,6 @@ function PernaItem({
             >
               {getSelecaoDisplay(perna)}
             </SelectionBadge>
-            {isLayPerna && <LayBadge />}
             {onResultChange && (
               <SurebetPernaResultPill
                 resultado={resultadoExibir}
@@ -413,7 +411,6 @@ function PernaItem({
             {getSelecaoDisplay(perna)}
           </SelectionBadge>
         </div>
-        {isLayPerna && <div className="hidden sm:block shrink-0"><LayBadge /></div>}
         
         {/* Row with Logo + Nome + Odd/Stake */}
         <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0 overflow-hidden">
@@ -474,7 +471,6 @@ function PernaItem({
           >
             {getSelecaoDisplay(perna)}
           </SelectionBadge>
-          {isLayPerna && <span className="ml-1.5 inline-block align-middle"><LayBadge /></span>}
         </div>
       </div>
     );
@@ -497,7 +493,6 @@ function PernaItem({
               {getSelecaoDisplay(perna)}
             </SelectionBadge>
           </div>
-          {isLayPerna && <LayBadge />}
           
           {/* Ícone de múltiplas entradas */}
           <div className="shrink-0">
