@@ -1596,6 +1596,19 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       return;
     }
 
+    // FASE 3 — Guard de edição de aposta LIQUIDADA.
+    // Pede confirmação explícita do usuário antes de reescrever uma aposta
+    // já resolvida (envolve REVERSAL no ledger e recálculo de snapshot).
+    if (aposta && aposta.status === "LIQUIDADA") {
+      const ok = window.confirm(
+        "⚠️ Esta aposta já está LIQUIDADA.\n\n" +
+        "Salvar alterações irá reverter os lançamentos financeiros atuais e " +
+        "reemitir novos eventos no caixa. O saldo da bookmaker e o lucro serão recalculados.\n\n" +
+        "Tem certeza que deseja continuar?"
+      );
+      if (!ok) return;
+    }
+
     // Validações básicas comuns a todos os modos
     if (!esporte || !mercado) {
       toast.error("Preencha Esporte e Mercado (obrigatórios)");
