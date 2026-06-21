@@ -1,69 +1,43 @@
-## Diagnóstico
+## Problema
 
-Hoje, a janela do formulário de Surebet abre com **largura fixa de 1200px**, definida em `src/lib/windowHelper.ts` na constante `SUREBET_WINDOW_FEATURES`. **Não existe nenhum breakpoint responsivo** que alterne o formulário entre "layout horizontal" e "layout vertical" — o layout é sempre o mesmo. O que muda com a largura é apenas se o conteúdo cabe sem aparecer scroll horizontal ou ficar visualmente apertado.
+No formulário de Arbitragem, ao abrir o popover **Explorador** (ícone de calendário ao lado do campo Evento), são listados todos os jogos do dia, misturando esportes (futebol, beisebol, tênis, etc.), mesmo quando o usuário já selecionou um esporte específico (ex.: Futebol) no campo "Esporte" do formulário.
 
-### Largura mínima real do conteúdo
+O esporte selecionado no formulário hoje **não é repassado** para o `ExploradorEventoPicker`, e o hook `useDailyEventsByDate` busca tudo da tabela `daily_events` sem filtro de `sport`.
 
-Somando as larguras fixas declaradas hoje:
+## Objetivo
 
-**Tabela de pernas (`SurebetExecutionTable.tsx`):**
-```text
-Perna      32px
-Casa      120px (min-w)
-Odd        68px
-Stake      90px
-🎯         24px
-Lucro      80px
-ROI        56px
-Ações      40px
-+ paddings  ~96px (px-1.5 por célula × 8)
----------------------
-total      ~606px
-```
+Quando o usuário tiver um esporte selecionado no formulário, o Explorador deve listar **apenas jogos daquele esporte** por padrão, com a opção de o usuário desmarcar/alargar o filtro caso queira ver todos.
 
-**Header (`BetFormHeaderV2.tsx`, linha 2 — `grid-cols-12`):**
-- Esporte (3) | Evento (3) | Mercado (3) | Data (3) — fixo, sem breakpoint
-- Para os 4 campos ficarem usáveis (Select + texto), precisa de ~**720–760px** de largura interna útil
+## Mudanças
 
-**Padding da janela + scrollbar:**
-- `p-3 md:p-4` lateral = ~32px
-- Scrollbar do navegador = ~16px
-- Bordas do popup nativo = ~16px
-- Total de "cromo" ≈ **64px**
+### 1. `src/components/surebet/ExploradorEventoPicker.tsx`
+- Adicionar prop opcional `esporte?: string` (label do form, ex.: `"Futebol"`, `"Basquete"`).
+- Adicionar estado local `filterBySport` (default `true` quando `esporte` válido e ≠ `"Outro"`).
+- Adicionar um toggle compacto no header do popover: **"Apenas {esporte}"** (visível só quando `esporte` está definido e ≠ `"Outro"`).
+- No `useMemo` de `filtered`, quando `filterBySport && esporte`, manter somente eventos cujo `normalizeEsporte(ev.sport) === esporte`.
+- Reutilizar `normalizeEsporte` já exportado de `src/components/surebet/utils/mapDailyEventToFormFields.ts` (exportar a função se ainda não estiver exposta — já está).
+- Mensagem de "nenhum jogo" deve refletir o filtro: "Nenhum jogo de {esporte} encontrado em {data}. Desative o filtro para ver todos."
 
-### Conclusão
+### 2. `src/components/surebet/SurebetModalRoot.tsx` (linha ~2324)
+- Passar `esporte={esporte}` para `<ExploradorEventoPicker ... />`.
+- Nenhuma outra alteração — o restante do fluxo (`onSelect` → `mapDailyEventToFormFields`) continua igual.
 
-| Largura | O que acontece |
-|---|---|
-| **1200px (atual)** | Folga grande, sobra ~400px |
-| **~960–1000px** | Confortável; header e tabela cabem com folga moderada |
-| **~820px** | Limite seguro — tabela ainda cabe, header começa a ficar apertado |
-| **<800px** | Header (Esporte/Evento/Mercado/Data) fica visualmente apertado; tabela com 4+ pernas pode precisar de scroll horizontal mínimo (já existe `overflow-x-auto`) |
-| **<640px** | Quebra visual real do header e estética da tabela |
+### 3. (Opcional, performance) `src/hooks/useDailyEventsByDate.ts`
+- Por ora, **manter a busca completa por data** e filtrar no client. Motivos:
+  - Volume diário é baixo (centenas de linhas).
+  - O usuário pode desligar o filtro sem refazer query.
+  - Evita complicar a queryKey/cache.
+- Se mais tarde virar gargalo, dá para aceitar um `sport?: string[]` e filtrar no servidor.
 
-## Plano de mudança
+## Detalhes técnicos
 
-### 1. Reduzir a largura padrão da janela Surebet
-- Arquivo: `src/lib/windowHelper.ts`
-- Alterar `SUREBET_WINDOW_FEATURES` de `width=1200` para `width=1000` (recomendado) ou `width=960` (mais compacto).
-- A altura continua dinâmica via `calcSurebetWindowHeight(numPernas)` — sem mudança.
+- `normalizeEsporte` já mapeia `soccer→Futebol`, `basketball→Basquete`, `baseball→Baseball`, `tennis→Tênis`, `americanfootball→Futebol Americano`, etc. — sport values atuais no banco confirmam compatibilidade (`soccer`, `americanfootball`, `tennis`, `baseball`, `basketball`, `icehockey`).
+- O toggle não deve aparecer quando o form está com `esporte = "Outro"` ou vazio (não há filtro útil).
+- O contador de jogos no header já é dinâmico (`filtered.length`), portanto reflete o filtro automaticamente.
+- Nenhuma mudança em backend, schema, RLS ou tipos.
 
-### 2. Garantir largura mínima de segurança
-- No container raiz da `SurebetModalRoot` (linha 2287, `<div className="relative w-full flex flex-col overflow-hidden">`), opcionalmente adicionar `min-w-[820px]` para que mesmo se o usuário redimensionar manualmente a janela do navegador abaixo disso, o conteúdo não se deforme — o `overflow-x-auto` da tabela já protege o resto.
+## Fora de escopo
 
-### 3. Validar visualmente
-- Abrir o formulário Surebet com 2, 3 e 4+ pernas após a mudança, conferindo:
-  - Header (Esporte/Evento/Mercado/Data) sem truncar labels;
-  - Tabela de pernas sem scroll horizontal em 2 e 3 pernas;
-  - Footer com totais (Lucro / Stake / ROI) sem quebra estranha.
-
-## Recomendação
-
-Ir direto para **1000px**. É o melhor equilíbrio: ~17% mais compacto que hoje, ainda confortável para 4+ pernas e mantém o header legível. Se quiser ser mais agressivo, **960px** também é seguro; abaixo disso só vale se decidirmos repensar o header.
-
-## Pergunta antes de implementar
-
-Qual largura deseja adotar?
-- **1000px** (recomendado — compacto e confortável)
-- **960px** (mais compacto, ainda seguro)
-- Outro valor (informe)
+- Mudanças visuais maiores no popover.
+- Filtros por liga/país.
+- Busca server-side por esporte.
