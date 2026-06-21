@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
 import { groupPernasBySelecao } from "@/utils/groupPernasBySelecao";
+import { publishTabRender } from "@/utils/integrityProbe";
 import { SurebetDialog } from "./SurebetDialog";
 import { apostaMatchesBookmakerFilter, apostaMatchesParceiroFilter } from "@/utils/apostaFilterHelpers";
 import { ApostaPernasResumo, ApostaPernasInline, Perna } from "./ApostaPernasResumo";
@@ -1682,9 +1683,16 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                     bookmaker_id: p.bookmaker_id,
                     moeda: p.moeda || 'BRL',
                     fonte_saldo: p.fonte_saldo || null,
+                    tipo: p.tipo || 'back',
+                    comissao: p.comissao ?? 0,
+                    stake_real: p.stake_real ?? undefined,
+                    stake_freebet: p.stake_freebet ?? undefined,
                   }))
                 ),
               };
+              publishTabRender("TodasApostas", sb.id, (sb.pernas || []).map((p: any) => ({
+                id: p.id, tipo: p.tipo, stake: p.stake, odd: p.odd, lucro_prejuizo: p.lucro_prejuizo,
+              })));
               
               return (
                 <SurebetCard
@@ -1749,6 +1757,10 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                       bookmaker_id: p.bookmaker_id,
                       moeda: p.moeda || 'BRL',
                       fonte_saldo: p.fonte_saldo || null,
+                      tipo: p.tipo || 'back',
+                      comissao: p.comissao ?? 0,
+                      stake_real: p.stake_real ?? undefined,
+                      stake_freebet: p.stake_freebet ?? undefined,
                     }))
                   ),
                 };

@@ -1,87 +1,106 @@
-## Fase 1 — Proposta arquitetural (LAY + Snapshot de Lucro Realizado)
 
-Antes de codar, abaixo está a verificação de runtime, as decisões de schema e o plano de UI para sua aprovação.
+# Plano — Observabilidade + Correção LAY + Unificação Surebet/Todas as Apostas
+
+## Diagnóstico preliminar (já levantado, sem fix ainda)
+
+A aba **Surebet** renderiza pernas via `SurebetCard` (alimentado por `groupPernasBySelecao`, que hoje propaga `tipo`/`comissao`).
+A aba **Todas as Apostas** (`ProjetoApostasTab`) usa **dois componentes diferentes**:
+- `SurebetCard` apenas quando a operação tem múltiplas pernas / multi-entrada;
+- `ApostaCard` para a maioria dos casos single-leg — e `ApostaCard` **não sabe o que é uma perna lay**: não lê `tipo`/`comissao`, não calcula liability, e calcula lucro/ROI tratando `stake` como exposição back (`stake × (odd-1)`).
+
+Esta é a hipótese forte que a Fase 0 vai confirmar/refutar com logs reais.
 
 ---
 
-### 1. Verificação de regressão — `tipo='lay'` chega no card?
+## Fase 0 — Observabilidade (entregue ANTES de qualquer fix)
 
-**Evidência DB (runtime, não teórica):**
+Objetivo: nunca mais "achar" que um fix de tipo entrou — provar com log estruturado.
 
-Query executada agora:
-```sql
-SELECT id, tipo, comissao, stake, odd, resultado FROM apostas_pernas WHERE tipo='lay';
--- → id=101143c6..., tipo='lay', comissao=0.028, stake=96.53, odd=2.1, resultado=NULL
+1. **Helper único** `src/utils/integrityProbe.ts`:
+   - `probePernaTipo(stage, pernaId, tipoIn, tipoOut)` → loga `[INTEGRITY] tipo divergente…` quando `tipoIn !== tipoOut`.
+   - `probeCardConsistency(stage, operacaoId, perna, lucroCalculado)` → se `perna.tipo === 'lay'` mas o lucro projetado corresponde a `stake*(odd-1)` (fórmula back), emite `[INTEGRITY] lay tratada como back`.
+   - `publishTabRender(tab, operacaoId, pernas)` → grava em `window.__TAB_DIFF__` snapshot por aba; ao registrar a segunda aba para o mesmo `operacaoId`, compara `tipo`/`stake`/`lucro` perna a perna e loga divergências (`[INTEGRITY] divergência entre abas…`).
+   - Tudo em `console.warn` + buffer global consultável (`window.__INTEGRITY_LOG__`).
+
+2. **Pontos de instrumentação**:
+   - **Loader**: dentro do `.select` de `ProjetoSurebetTab` e `ProjetoApostasTab`, logar `tipo` cru vindo do banco por perna.
+   - **`groupPernasBySelecao`**: chamar `probePernaTipo("group:in→out", …)` para cada perna (entrada vs `result.tipo`/`entries[].tipo`).
+   - **`SurebetCard`**: ao montar, `publishTabRender("Surebet"/"TodasApostas", op.id, pernas)` e `probeCardConsistency` após `calcularCenarios`.
+   - **`ApostaCard`**: idem `publishTabRender` para detectar a divergência entre abas mesmo quando o componente de Todas as Apostas é o `ApostaCard` (não o SurebetCard).
+
+3. **Reprodução**: rodar a app com a operação AXB (1 perna back BET365 + 1 perna lay BET365), abrir as duas abas e coletar os logs gerados. Anexar o output bruto ao relatório de Fase 1.
+
+Critério de saída da Fase 0: logs publicados e capturados — sem nenhuma alteração de comportamento de cálculo/UI ainda.
+
+---
+
+## Fase 1 — Causa raiz (escrita com base nos logs da Fase 0)
+
+Responder, com citação direta do log:
+1. Em qual estágio o `tipo` é perdido (se for) — esperado: **não é perdido** em `groupPernasBySelecao`, mas é perdido porque `ApostaCard` nunca lê o campo.
+2. Quais abas usam qual componente para a operação AXB.
+3. Se o `groupPernasBySelecao` é sequer invocado no caminho de `ProjetoApostasTab` para essa operação single-entry — esperado: **não é**, vai direto pra `ApostaCard` com a perna agregada.
+
+Saída: 1 parágrafo de causa raiz + tabela `aba → componente → trata lay?`.
+
+---
+
+## Fase 2 — Correção + unificação
+
+1. **Fonte única de verdade de lay** já existe (`src/utils/pernaLayHelpers.ts`: `isLay`, `exposureOf`, `lucroSeGanhar`, `lucroSePerder`, `labelExposicao`). Vamos forçar **ambos** os cards a passarem por ela.
+
+2. **`ApostaCard.tsx`** — passar a aceitar e respeitar `tipo`/`comissao` no payload `ApostaCardData`:
+   - Para apostas single-leg lay (pendentes): exibir `Resp: <liability>` no lugar de `Stake:` (rótulo via `labelExposicao`), e usar `exposureOf` como denominador de ROI projetado.
+   - Para apostas liquidadas: continuar usando `lucro_realizado` snapshot (fonte canônica já implementada em `apostas_unificada.lucro_realizado` na migration anterior); nenhum recálculo client.
+   - Lucro projetado em pendente: delegar à mesma função usada pelo `SurebetCard` (extrair `calcularPernaProjecao(perna)` para `src/utils/pernaLayHelpers.ts` reaproveitando `lucroSeGanhar`/`lucroSePerder`).
+
+3. **`ProjetoApostasTab.tsx`** — propagar `tipo` e `comissao` da perna até `ApostaCardData` (hoje já vêm do `select`, só não são repassados).
+
+4. **`SurebetCard.tsx`** — substituir todo cálculo manual de exposição/ROI de perna por chamadas a `exposureOf`/`labelExposicao`/`lucroSeGanhar`/`lucroSePerder`. Remover qualquer ramo que ainda use `stake` direto para liability.
+
+5. **Re-rodar Fase 0** com a mesma operação e anexar o log mostrando `[INTEGRITY]` zerado.
+
+---
+
+## Fase 3 — Reorganização visual (sem badge "LAY")
+
+Padronizar a linha de perna nos dois cards (a estrutura abaixo vale igual para `SurebetCard` e `ApostaCard`):
+
+```text
+[seleção]   [logo] Casa · subconta            @odd          R$ stake
+                                              (Lay)     Resp R$ liability
 ```
 
-- O DB **persiste corretamente** `tipo='lay'` e `comissao=0.028` na coluna dedicada de `apostas_pernas` (NOT NULL, default `'back'` / `0`).
-- O fix em `groupPernasBySelecao.ts` propaga `tipo: main.tipo ?? 'back'` e `comissao: main.comissao ?? 0` para `SurebetPerna`.
-- **Gap real:** as 5 abas que alimentam o card (`ProjetoSurebetTab`, `ProjetoApostasTab`, `ProjetoValueBetTab`, `ProjetoPunterTab` + Bonus) já passaram a incluir `tipo, comissao` no `select(...)`. Vou re-verificar com um `console.log` temporário no `SurebetCard` (mount) registrando `pernas.map(p => ({sel:p.selecao, tipo:p.tipo, com:p.comissao}))` para a operação AXB e anexar o output antes de prosseguir. Se `tipo` chegar `undefined`/`'back'`, isso indica que algum consumidor ainda não inclui o campo no select.
+Regras:
+- `@odd` é o token primário (mesmo `text-sm font-semibold` atual).
+- Para lay: prefixo `Lay ` em `text-red-400/80` colado no `@odd`, **sem badge**, sem espaço duplo (corrige o bug visual atual onde "Lay @2.20Resp:" fica grudado).
+- `Resp R$ …` aparece **abaixo** do stake em `text-[11px] text-muted-foreground`, alinhado à direita — peso secundário, sem competir com stake principal.
+- `Stake` principal (`stake = backers' liability` no caso lay, que é o valor digitado) permanece no mesmo lugar visual da perna back, mantendo grid alinhado.
+- Tipografia, espaçamentos e cores seguem o dark/premium já em uso (sem novas cores; usa `text-red-400`, `text-muted-foreground`, `text-foreground`).
 
-**Status:** dados no DB OK; propagação JS OK no caminho corrigido; falta confirmação visual em runtime (1 log, descartado depois).
-
----
-
-### 2. Onde a "liability" (responsabilidade) deve viver
-
-Decisão proposta: **(b) sempre derivada em runtime** — `liability = stake * (odd - 1)`. **Não criar coluna**.
-
-| Critério | Persistir `liability` | Derivar em runtime |
-|---|---|---|
-| Imutabilidade pós-resolução | Igual (snapshot de `stake` e `odd` já é imutável) | Igual |
-| Fonte da verdade | Duplica info já contida em `stake`+`odd` (risco de drift) | Única fonte: `stake`, `odd` |
-| Migração | Coluna nova + backfill | Zero |
-| Consistência c/ princípio "snapshot" | Snapshot já garantido por `stake`+`odd` congelados | Idem |
-
-Como `stake` e `odd` da perna **já são congelados** na criação (e nunca recalculados), `liability` derivado a partir deles é tão imutável quanto um campo persistido — sem custo de schema nem risco de divergência. A função utilitária `pernaLayHelpers.ts` (já existente) será o único ponto de cálculo.
+Entregar **antes/depois** com screenshot da operação AXB nas duas abas.
 
 ---
 
-### 3. Snapshot de Lucro Realizado em `apostas_unificada`
+## Detalhes técnicos
 
-**Schema atual relevante:** `lucro_esperado numeric`, `roi_esperado numeric` (ambos NULL hoje), `lucro_prejuizo numeric`, `roi_real numeric`, `status text`, `resultado text`.
-
-**Decisão:** **reaproveitar** `lucro_esperado` / `roi_esperado` (snapshot na **criação**, congelando o pior cenário projetado) **e** preencher `roi_real` + um novo campo `lucro_realizado numeric` no momento da **liquidação**. Não existe `lucro_realizado` hoje — proponho adicioná-lo (paralelo a `roi_real`).
-
-| Campo | Quando grava | Fonte do cálculo | Lido por |
-|---|---|---|---|
-| `lucro_esperado` | INSERT da aposta | `calcularCenarios()` → pior cenário | Card pendente (fallback) |
-| `roi_esperado` | INSERT da aposta | Idem | Card pendente (fallback) |
-| `lucro_realizado` (**novo**) | Transição `status → LIQUIDADA` | `calcularCenarios()` com `resultado` real de cada perna | Card resolvido (autoridade) |
-| `roi_real` | Transição `status → LIQUIDADA` | `lucro_realizado / stake_total` | Card resolvido |
-
-**Disparo do congelamento:** trigger SQL `AFTER UPDATE OF status ON apostas_unificada WHEN NEW.status='LIQUIDADA' AND OLD.status<>'LIQUIDADA'`, chamando uma função `fn_snapshot_lucro_realizado(aposta_id)` que lê `apostas_pernas` (com `tipo`, `comissao`, `resultado`, `stake`, `odd`) e aplica a **mesma fórmula** do `calcularCenarios` no client.
-
-**Solver: reaproveitar ou reescrever?** Reescrever em SQL/plpgsql é obrigatório (trigger ≠ JS). Mas a fórmula é simples e determinística — vou portar a função `calcularCenarios` (com suporte a LAY: `green = stake*(odd-1)*(1-comissao)`, `red = -stake*(odd-1)`) para plpgsql 1:1, e adicionar um **teste de paridade** comparando saída SQL × JS para 20 cenários (back puro, lay puro, misto, freebet, multi-entry) antes do merge.
-
-**Leitura do card (regra única):**
-```ts
-const isLiquidada = surebet.status === 'LIQUIDADA';
-const lucroExibir = isLiquidada
-  ? surebet.lucro_realizado            // snapshot imutável
-  : (piorCenarioRuntime?.lucro ?? surebet.lucro_esperado);
-```
-Isso preserva a regra documentada em `mem://finance/surebet-card-runtime-priority-standard` para pendentes e adiciona a regra de imutabilidade para liquidadas.
+- Arquivos tocados:
+  - novo: `src/utils/integrityProbe.ts`
+  - editar: `src/utils/groupPernasBySelecao.ts` (instrumentação)
+  - editar: `src/utils/pernaLayHelpers.ts` (adiciona `calcularPernaProjecao`)
+  - editar: `src/components/projeto-detalhe/SurebetCard.tsx` (usa helpers + reorg visual + probes)
+  - editar: `src/components/projeto-detalhe/ApostaCard.tsx` (aceita tipo/comissao, usa helpers, reorg visual, probes)
+  - editar: `src/components/projeto-detalhe/ProjetoApostasTab.tsx` (propaga tipo/comissao para ApostaCardData; probe no loader)
+  - editar: `src/components/projeto-detalhe/ProjetoSurebetTab.tsx` (probe no loader)
+- Sem mudanças de schema, RPC ou RLS. `lucro_realizado` snapshot (já criado na migration anterior) continua sendo a fonte para liquidadas.
+- `workspace_id` continua vindo do hook `useWorkspaceGuard` (token), nunca de input.
+- Nenhum `LayBadge` adicionado nesta etapa (o componente já existe mas não será renderizado nos cards de histórico).
 
 ---
 
-### 4. Plano de UI
+## Critérios de aceite
 
-| Item | Mudança | Arquivo |
-|---|---|---|
-| Badge "LAY" | Extrair badge usado no form (`SurebetModalRoot`/`PernaForm`) para `src/components/surebet/LayBadge.tsx` (chip vermelho-translúcido, `bg-red-500/15 text-red-300 border-red-500/30`, uppercase, dark-theme premium). Renderizar no `PernaItem` (3 variantes: column/list/multi-entry) quando `perna.tipo === 'lay'`. | `SurebetCard.tsx`, novo `LayBadge.tsx` |
-| Label "Resp:" | Substituir `perna.stake` por `calcLiability(perna)` (`stake*(odd-1)`) em todas as 3 variantes. Stake permanece visível em tooltip ("Backers' stake: X"). | `SurebetCard.tsx` |
-| Tooltip | Manter padrão estabelecido: `#1a1e2a`, sem seta, fade 120ms. | shared tooltip já existente |
-| Pendente vs Liquidada | Visualmente idênticos; diferença só na fonte do número (snapshot vs runtime), transparente ao usuário. | — |
-
----
-
-### Aguardo aprovação
-
-Confirmando antes da Fase 2:
-
-1. OK rodar o `console.log` temporário para fechar o item 1 antes de migrar?
-2. OK **não** criar coluna `liability` (derivação runtime)?
-3. OK criar **apenas** `lucro_realizado numeric` (reaproveitando `roi_real` existente e mantendo `lucro_esperado`/`roi_esperado` para pendentes)?
-4. OK trigger `AFTER UPDATE OF status` + função plpgsql portada de `calcularCenarios` + teste de paridade JS×SQL?
-5. OK extrair `LayBadge` como componente compartilhado entre form e card?
+1. Log `[INTEGRITY]` limpo (sem warnings) na operação AXB após Fase 2.
+2. Aba Surebet e aba Todas as Apostas mostram, para AXB, exatamente o mesmo `lucro`, `Resp`, `@odd` e `Stake` perna a perna.
+3. Card legível: `Lay @2.20` separado de `Resp R$ 110,50`, com hierarquia visual clara.
+4. Nenhuma regressão em apostas back puras (single, múltipla, multi-entrada).
