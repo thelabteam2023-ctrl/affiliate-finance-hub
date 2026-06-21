@@ -611,23 +611,21 @@ export function SurebetColumnsView({
 
                   return (
                     <>
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-baseline gap-1.5 min-w-0">
-                          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Odd ø</span>
-                          <span className="text-sm font-bold tabular-nums text-foreground truncate">
-                            {hasOddData ? parseFloat(oddMedia.toFixed(5)) : "—"}
-                          </span>
-                        </div>
-                        <div className="flex items-baseline gap-1.5 min-w-0">
-                          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Stake</span>
-                          <span className="text-sm font-bold tabular-nums text-foreground truncate">
-                            {hasStakeData
-                              ? moedas.length === 1
-                                ? formatCurrency(totalStake, moedas[0])
-                                : moedas.map(m => formatCurrency(stakeByMoeda[m], m)).join(" + ")
-                              : "—"}
-                          </span>
-                        </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Odd ø</span>
+                        <span className="text-sm font-bold tabular-nums text-foreground">
+                          {hasOddData ? parseFloat(oddMedia.toFixed(5)) : "—"}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Stake</span>
+                        <span className="text-sm font-bold tabular-nums text-foreground">
+                          {hasStakeData
+                            ? moedas.length === 1
+                              ? formatCurrency(totalStake, moedas[0])
+                              : moedas.map(m => formatCurrency(stakeByMoeda[m], m)).join(" + ")
+                            : "—"}
+                        </span>
                       </div>
                       <div className="flex items-baseline justify-between gap-3">
                         <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Lucro</span>
