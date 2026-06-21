@@ -25,9 +25,10 @@ export function calcSurebetWindowHeight(numPernas: number): number {
   return Math.min(calculated, maxHeight);
 }
 
-// width=1100: tabela de pernas cabe inteira sem scroll horizontal e fica bem
-// acima do breakpoint mobile (768) mesmo após bordas/scrollbar do navegador.
-const SUREBET_WINDOW_FEATURES = 'width=1200,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
+// width=1000: tabela de pernas cabe inteira sem scroll horizontal, header
+// (Esporte/Evento/Mercado/Data) permanece confortável e janela fica ~17%
+// mais compacta que o padrão antigo de 1200px.
+const SUREBET_WINDOW_FEATURES = 'width=1000,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
 
 /**
  * Abre o formulário de Surebet em uma nova janela.

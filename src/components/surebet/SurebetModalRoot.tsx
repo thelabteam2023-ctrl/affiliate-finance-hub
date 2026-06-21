@@ -2284,7 +2284,7 @@ export function SurebetModalRoot({
         data-calc-state={analysis.isValidArbitrage ? "valid" : "invalid"}
         data-edit-state={isEditing ? "editing" : "creating"}
       >
-        <div className="relative w-full flex flex-col overflow-hidden">
+        <div className="relative w-full min-w-[820px] flex flex-col overflow-hidden">
           {/* Hidden file input */}
           <input
             type="file"
