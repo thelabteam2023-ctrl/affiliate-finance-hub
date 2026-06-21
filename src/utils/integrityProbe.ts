@@ -115,9 +115,10 @@ export async function probeBookmakerLedgerParity(
     // Lazy import para evitar ciclo em ambientes sem cliente disponível.
     const { supabase } = await import("@/integrations/supabase/client");
 
+    const sb = supabase as any;
     const [bkRes, ledgerRes] = await Promise.all([
-      supabase.from("bookmakers").select("id,nome,saldo_atual").eq("id", bookmakerId).maybeSingle(),
-      supabase.from("cash_ledger").select("valor").eq("bookmaker_id", bookmakerId),
+      sb.from("bookmakers").select("id,nome,saldo_atual").eq("id", bookmakerId).maybeSingle(),
+      sb.from("cash_ledger").select("valor").eq("bookmaker_id", bookmakerId),
     ]);
 
     if (bkRes.error || !bkRes.data) {
