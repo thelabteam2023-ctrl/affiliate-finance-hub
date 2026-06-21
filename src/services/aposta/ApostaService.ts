@@ -392,6 +392,57 @@ export async function atualizarAposta(
   }
 
   try {
+    // ================================================================
+    // ROTEAMENTO POR STATUS: aposta LIQUIDADA com mudança financeira
+    // → vai para editar_aposta_liquidada_v4 (REVERSAL + relançamento +
+    //   recálculo de snapshots). Mantém UPDATE direto só para campos
+    //   não-financeiros (evento, esporte, mercado, observações).
+    // ================================================================
+    const inp: any = input;
+    const isArbitragem = !!inp.pernas && inp.pernas.length > 0;
+    const financialFields = ['bookmaker_id', 'stake', 'odd', 'odd_final', 'resultado', 'lucro_prejuizo', 'moeda_operacao'];
+    const hasFinancialChange = financialFields.some((f) => inp[f] !== undefined);
+
+    if (hasFinancialChange && !isArbitragem) {
+      const { data: current, error: fetchErr } = await supabase
+        .from('apostas_unificada')
+        .select('status')
+        .eq('id', apostaId)
+        .single();
+
+      if (fetchErr) {
+        return { success: false, error: { code: 'FETCH_FAILED', message: fetchErr.message } };
+      }
+
+      if (current?.status === 'LIQUIDADA') {
+        const { data: rpcData, error: rpcErr } = await supabase.rpc('editar_aposta_liquidada_v4', {
+          p_aposta_id: apostaId,
+          p_novo_bookmaker_id: inp.bookmaker_id ?? null,
+          p_novo_stake: inp.stake ?? null,
+          p_nova_odd: (inp.odd ?? inp.odd_final) ?? null,
+          p_novo_resultado: inp.resultado ?? null,
+          p_lucro_prejuizo: inp.lucro_prejuizo ?? null,
+          p_nova_moeda: inp.moeda_operacao ?? null,
+        });
+
+        if (rpcErr) {
+          return { success: false, error: { code: 'EDIT_LIQ_RPC_ERROR', message: rpcErr.message, details: { error: rpcErr } } };
+        }
+        if (!(rpcData as any)?.success) {
+          return { success: false, error: { code: 'EDIT_LIQ_FAILED', message: (rpcData as any)?.error || 'Falha ao editar aposta liquidada' } };
+        }
+
+        // Atualizar campos não-financeiros restantes via UPDATE direto
+        const { pernas: _p, stake: _s, odd: _o, odd_final: _of, bookmaker_id: _b, resultado: _r, lucro_prejuizo: _lp, moeda_operacao: _m, ...rest } = inp;
+        if (Object.keys(rest).length > 0) {
+          await supabase.from('apostas_unificada').update(rest).eq('id', apostaId);
+        }
+
+        console.log("[ApostaService] ✅ Aposta LIQUIDADA editada via RPC v5:", apostaId, rpcData);
+        return { success: true };
+      }
+    }
+
     // Remover pernas do input antes de atualizar (pernas são atualizadas separadamente)
     const { pernas, ...updateData } = input as any;
     
