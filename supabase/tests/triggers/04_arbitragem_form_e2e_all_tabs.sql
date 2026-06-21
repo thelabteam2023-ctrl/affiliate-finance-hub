@@ -153,11 +153,19 @@ BEGIN
       RAISE EXCEPTION '[%] PARIDADE PAI/PERNAS falhou: pai=% Σ=%', v_tab, v_pl_pai, v_soma_pn;
     END IF;
 
-    -- Ledger parity (saldo == Σ cash_ledger) por bookmaker
+    -- Ledger parity (saldo == saldo_inicial + Σ ledger líquido) por bookmaker.
+    -- Para o bookmaker da perna, o evento entra como ENTRADA(destino) ou SAIDA(origem).
+    -- Convenção: SUM(valor onde destino=bk) - SUM(valor onde origem=bk) = movimentação líquida.
     SELECT saldo_atual INTO v_saldo_bk1 FROM bookmakers WHERE id = v_bk1;
-    SELECT COALESCE(SUM(valor),0) INTO v_soma_led1 FROM cash_ledger WHERE bookmaker_id = v_bk1;
+    SELECT COALESCE(SUM(CASE WHEN destino_bookmaker_id = v_bk1 THEN valor ELSE 0 END),0)
+         - COALESCE(SUM(CASE WHEN origem_bookmaker_id  = v_bk1 THEN valor ELSE 0 END),0)
+      INTO v_soma_led1 FROM cash_ledger
+      WHERE destino_bookmaker_id = v_bk1 OR origem_bookmaker_id = v_bk1;
     SELECT saldo_atual INTO v_saldo_bk2 FROM bookmakers WHERE id = v_bk2;
-    SELECT COALESCE(SUM(valor),0) INTO v_soma_led2 FROM cash_ledger WHERE bookmaker_id = v_bk2;
+    SELECT COALESCE(SUM(CASE WHEN destino_bookmaker_id = v_bk2 THEN valor ELSE 0 END),0)
+         - COALESCE(SUM(CASE WHEN origem_bookmaker_id  = v_bk2 THEN valor ELSE 0 END),0)
+      INTO v_soma_led2 FROM cash_ledger
+      WHERE destino_bookmaker_id = v_bk2 OR origem_bookmaker_id = v_bk2;
 
     IF ROUND(v_saldo_bk1,2) <> ROUND(v_saldo_ini + v_soma_led1,2) THEN
       RAISE EXCEPTION '[%] LEDGER bk1 divergente: saldo=% inicial+ledger=%',
