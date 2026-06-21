@@ -41,6 +41,8 @@ DECLARE
   v_total     INT := 0;
 BEGIN
   -- Setup mínimo (esquema real: workspaces.name, projetos/bookmakers.user_id)
+  INSERT INTO profiles (id, email, full_name) VALUES (v_user, 'e2e@test.local', 'E2E User')
+    ON CONFLICT (id) DO NOTHING;
   INSERT INTO workspaces (id, name) VALUES (v_ws, 'E2E_WS');
   INSERT INTO projetos   (id, workspace_id, user_id, nome, moeda_consolidacao, status)
     VALUES (v_proj, v_ws, v_user, 'E2E_PROJ', 'BRL', 'EM_ANDAMENTO');
