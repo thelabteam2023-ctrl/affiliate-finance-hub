@@ -2299,27 +2299,6 @@ export function SurebetModalRoot({
               </div>
             )}
 
-            {/* Operação parcial warning */}
-            {analysis.isOperacaoParcial && !isEditing && (
-              <div className="flex items-center gap-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm">
-                <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
-                <div className="flex-1">
-                  <span className="font-medium text-amber-500">Operação parcial:</span>{" "}
-                  <span className="text-muted-foreground">
-                    {analysis.pernasCompletasCount}/{numPernas} pernas preenchidas.
-                  </span>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="shrink-0 h-7 text-xs border-amber-500/50 text-amber-500 hover:bg-amber-500/10"
-                  onClick={() => setShowConversionDialog(true)}
-                >
-                  Converter para simples
-                </Button>
-              </div>
-            )}
-
             {/* Modelo de Pernas */}
             <div className="flex flex-wrap items-center gap-4 pb-3 border-b border-border/50">
               <div className="flex items-center gap-2">
@@ -2340,6 +2319,27 @@ export function SurebetModalRoot({
                   ))}
                 </div>
               </div>
+
+              {/* Indicador discreto de operação parcial */}
+              {analysis.isOperacaoParcial && !isEditing && (
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => setShowConversionDialog(true)}
+                        className="inline-flex items-center gap-1.5 h-6 px-2 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/30 text-[11px] font-medium hover:bg-amber-500/15 transition-colors"
+                      >
+                        <AlertTriangle className="h-3 w-3" />
+                        Parcial {analysis.pernasCompletasCount}/{numPernas}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="text-xs">
+                      Converter para apostas simples
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
               
               {modeloTipo === "4+" && !isEditing && (
                 <div className="flex items-center gap-2">
