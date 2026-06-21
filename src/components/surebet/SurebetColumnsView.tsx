@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, Trash2, Check } from 'lucide-react';
 import { BookmakerSearchableSelectContent } from '@/components/bookmakers/BookmakerSearchableSelectContent';
 import { BookmakerMetaRow, formatCurrency } from '@/components/bookmakers/BookmakerSelectOption';
-import { getFirstLastName } from '@/lib/utils';
+import { BookmakerLogo } from '@/components/ui/bookmaker-logo';
 import { type OddEntry, type LegScenario, calcularOddMedia } from '@/hooks/useSurebetCalculator';
 import { type SupportedCurrency } from '@/hooks/useCurrencySnapshot';
 import { useExchangeRatesSafe } from '@/contexts/ExchangeRatesContext';
@@ -234,22 +234,16 @@ export function SurebetColumnsView({
                   <SelectTrigger className="h-8 text-[10px] w-full">
                     <SelectValue placeholder="Selecione">
                       {selectedBookmaker?.nome && (
-                        <div className="flex flex-col items-start min-w-0">
-                          <div className="flex items-center gap-1 min-w-0">
-                            <span className="truncate uppercase text-[10px]">
-                              {selectedBookmaker.nome}
-                            </span>
-                            {selectedBookmaker.instance_identifier && (
-                              <span className="text-[9px] text-primary font-medium truncate normal-case">
-                                {selectedBookmaker.instance_identifier}
-                              </span>
-                            )}
-                          </div>
-                          {selectedBookmaker.parceiro_nome && (
-                            <span className="text-[9px] text-muted-foreground truncate normal-case">
-                              {getFirstLastName(selectedBookmaker.parceiro_nome)}
-                            </span>
-                          )}
+                        <div className="flex items-center gap-2 min-w-0">
+                          <BookmakerLogo
+                            logoUrl={selectedBookmaker.logo_url}
+                            alt={selectedBookmaker.nome}
+                            size="h-4 w-4"
+                            iconSize="h-2.5 w-2.5"
+                          />
+                          <span className="truncate uppercase text-[11px] font-medium">
+                            {selectedBookmaker.nome}
+                          </span>
                         </div>
                       )}
                     </SelectValue>
@@ -440,7 +434,17 @@ export function SurebetColumnsView({
                         <SelectTrigger className="h-7 text-[10px] w-full">
                           <SelectValue placeholder="Casa...">
                             {addBookmaker?.nome && (
-                              <span className="truncate uppercase text-[9px]">{addBookmaker.nome}</span>
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <BookmakerLogo
+                                  logoUrl={addBookmaker.logo_url}
+                                  alt={addBookmaker.nome}
+                                  size="h-3.5 w-3.5"
+                                  iconSize="h-2 w-2"
+                                />
+                                <span className="truncate uppercase text-[10px] font-medium">
+                                  {addBookmaker.nome}
+                                </span>
+                              </div>
                             )}
                           </SelectValue>
                         </SelectTrigger>
