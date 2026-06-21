@@ -227,7 +227,7 @@ export function BetFormHeaderV2({
       <div className="px-4 py-2.5">
         <div className="grid grid-cols-12 gap-3">
           {/* Esporte */}
-          <div className="col-span-2 text-center">
+          <div className="col-span-3 text-center">
             <Label className={cn(
               "text-xs block mb-1",
               review.esporte ? "text-amber-500" : "text-muted-foreground"
@@ -266,7 +266,7 @@ export function BetFormHeaderV2({
           </div>
           
           {/* Evento */}
-          <div className="col-span-5 text-center">
+          <div className="col-span-4 text-center">
             <Label className={cn(
               "text-xs block mb-1",
               review.evento ? "text-amber-500" : "text-muted-foreground"
