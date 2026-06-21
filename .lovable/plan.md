@@ -1,125 +1,74 @@
-# Plano de Melhorias — Ledger LAY + Edição de Apostas Resolvidas
+# Plano de Melhorias — Rebalanceado (segurança proporcional)
 
-Dois problemas independentes foram diagnosticados. O plano os ataca em fases isoladas, cada uma com valor próprio. Cada fase é reversível e pode ser pausada entre elas.
+Contexto: app de gestão operacional de apostas — não é fintech regulada. Foco em **valor operacional** (observabilidade, testes, performance, UX) com segurança pragmática.
 
----
+## P0 — Observabilidade do Ledger (alto valor, baixo esforço)
 
-## Fase 1 — Ledger correto para pernas LAY (risco real = liability)
+Hoje o `probeBookmakerLedgerParity` só grava em `window.__INTEGRITY_LOG__` (some ao recarregar). Persistir traz auditoria histórica e alertas reais.
 
-### Objetivo
-Fazer o débito no `financial_events` refletir a **responsabilidade** (liability) da perna LAY, não o stake. Incluir comissão da exchange no payout do GREEN.
+- **[M] Tabela `ledger_parity_anomalies`** — `workspace_id`, `bookmaker_id`, `saldo_atual`, `soma_ledger`, `delta`, `contexto`, `acknowledged_at/by`. RLS por workspace.
+- **[M] Edge function `record-parity-anomaly`** — chamada pelo probe quando `|delta| > 0.01`. Idempotente por `(bookmaker_id, dia, contexto)`.
+- **[S] Página `/admin/ledger-anomalies`** — lista últimas 50, filtro por bookmaker, botão "reconhecer".
+- **[S] Cron probe diário** — edge function 1×/dia varre bookmakers ativas. Sem auto-correção.
+- **[S] Badge no header do projeto** — verde/amarelo/vermelho conforme última varredura.
 
-### O que muda no negócio
-- Perna BACK: continua debitando `stake` (sem mudança).
-- Perna LAY: passa a debitar `stake × (odd − 1)` (liability).
-- GREEN em LAY: payout = `stake × (1 − comissao)` (devolve a liability bloqueada + ganho líquido de comissão).
-- RED em LAY: nenhum payout (liability já foi consumida — comportamento atual já correto na ausência de payout).
-- VOID em LAY: devolve a liability inteira (`stake × (odd − 1)`).
+## P1 — Test Harness para Triggers Financeiros
 
-### Mudanças técnicas
-1. **Banco — `criar_surebet_atomica`**
-   - Ler `tipo` e `comissao` do JSON da perna.
-   - Calcular `v_valor_debito = CASE WHEN tipo='lay' THEN stake*(odd-1) ELSE stake END`.
-   - Persistir `tipo` e `comissao` em `apostas_pernas` e em `apostas_perna_entradas`.
-   - Idempotency key ganha sufixo `_lay` quando aplicável para evitar colisão com lançamentos antigos.
+Hoje validamos manualmente cada mudança em `fn_recalc_*`. Suite reproduzível protege regressões.
 
-2. **Banco — `liquidar_perna_surebet_v1` (e `liquidar_aposta_v4` no caminho LAY)**
-   - GREEN LAY: emitir `PAYOUT` = `liability + (stake × (1 − comissao))` (devolve risco + lucro líquido).
-   - VOID LAY: emitir `VOID_REFUND` = `liability`.
-   - RED LAY: sem evento (liability já consumida).
-   - `lucro_prejuizo` da perna recalculado conforme regras acima.
+- **[L] `supabase/tests/triggers/`** — SQL files em `BEGIN ... ROLLBACK`:
+  - LAY (GREEN/RED/MEIO/VOID)
+  - Surebet 2 pernas BACK+LAY (todas combinações)
+  - Edit LIQUIDADA → REVERSAL + reemissão
+  - Multi-currency BRL+USD
+  - Freebet SNR (tipo_uso=NORMAL)
+- **[M] Runner `scripts/run-db-tests.ts`** — aplica fixture, valida `pl_consolidado` × Σ pernas × Σ `financial_events`. Saída human-readable.
+- **[S] Workflow opcional no CI** — roda na branch antes de merge em main.
 
-3. **Frontend — `ApostaService.criarAposta` / `useSurebetService`**
-   - Propagar `tipo` e `comissao` no payload da RPC (`PernaInput` → JSON).
-   - `surebetBalanceValidator` passa a validar contra liability quando `tipo='lay'`.
+## P2 — Performance
 
-4. **Backfill — não fazer**
-   Política anti-retrofix vigente. Apostas LAY anteriores ficam com débito antigo; correção só para novos lançamentos. Documentar em memória.
+- **[M] `supabase--slow_queries` audit** — top 10, propor índices ou reescrita.
+- **[S] Índices prováveis** — `cash_ledger(bookmaker_id, created_at DESC)`, `financial_events(bookmaker_id, tipo_movimento)`, `apostas_unificada(projeto_id, status, data_evento)`.
+- **[M] React profiling** — `useProjetoCurrency` e `convertToConsolidation` em loops de cards. Garantir `useMemo` e estabilidade de referências.
+- **[S] Cache de Cotação de Trabalho** — `getEffectiveRate` por moeda+projeto via `useMemo` no Context.
 
-### Validação
-- Caso de teste: BACK R$ 100 odd 2,00 + LAY R$ 96,53 odd 2,10 comissão 2,8%.
-  - Ledger esperado: −100,00 (BACK) e −106,18 (LAY).
-- GREEN no LAY: payout esperado = 106,18 + (96,53 × 0,972) = **+200,00** (≈ devolução completa).
-- GREEN no BACK: payout segue a regra atual (stake × odd = 200).
-- Verificar `pl_consolidado` do pai pela RPC `fn_recalc_pai_surebet`.
+## P3 — UX / Qualidade de Vida
 
----
+- **[S] AlertDialog shadcn** substituindo `window.confirm` na edição de LIQUIDADA (explica REVERSAL).
+- **[S] Toast persistente** para `SALDO_LEDGER_DIVERGENTE` com link pro dashboard P0.
+- **[S] Tooltip "Liability = stake × (odd − 1)"** em cards LAY.
+- **[M] Filtro rápido "com divergência"** na lista de projetos (usa tabela P0).
 
-## Fase 2 — Edição segura de aposta LIQUIDADA
+## P4 — Segurança Pragmática (sem hardening exagerado)
 
-### Objetivo
-Eliminar saldo fantasma e dessincronização de snapshots quando o usuário edita uma aposta já resolvida.
+Apenas o essencial — descarta os 600+ warnings de `search_path` (cleanup cosmético).
 
-### Mudanças técnicas
+- **[S] Auditar as 5 Security Definer Views** — validar se cada uma precisa do flag; se for legacy, converter para `SECURITY INVOKER` com RLS. Se for necessária (ex: bypass para função admin), documentar em memória.
+- **[S] Habilitar Leaked Password Protection** nas configs de auth (1 toggle, sem código).
+- **Ignorar** o lote `Function Search Path Mutable` — risco real é baixo (apenas exploit teórico se schema malicioso for criado, e só admin pode fazer isso).
 
-1. **Plugar a RPC correta**
-   - `ApostaService.atualizarAposta` passa a detectar `status='LIQUIDADA'` e rotear para a RPC `editar_aposta_liquidada_v4` (que hoje está órfã) em vez de fazer `UPDATE` direto.
-   - `UPDATE` direto fica restrito a campos não-financeiros (evento, esporte, mercado, modelo, observações).
+## Sequenciamento
 
-2. **Refatorar `editar_aposta_liquidada_v4` para REVERSAL + relançamento**
-   - Trocar o `AJUSTE` líquido único por: **REVERSAL** de todos os eventos da aposta no(s) bookmaker(s) afetado(s), seguido de **STAKE + PAYOUT** novos com o estado pós-edição.
-   - Mantém auditoria 1:1 (cada evento antigo tem seu reverso explícito).
-   - Cobrir também o caminho LAY introduzido na Fase 1 (liability + comissão).
+```text
+Sprint 1 (P0 completo):
+  Tabela + edge fn + dashboard + cron + badge
 
-3. **Recalcular snapshots na edição**
-   - Atualizar `lucro_realizado`, `roi_realizado`, `pl_consolidado`, `valor_retorno`, `roi_real` na mesma transação.
-   - Disparar `fn_recalc_pai_surebet` quando for perna de surebet.
+Sprint 2 (P1 + P3):
+  Test harness 3 casos + UX upgrades
 
-4. **Guard na UI**
-   - Modal de edição passa a exibir aviso quando `status='LIQUIDADA'`:
-     "Esta aposta já foi resolvida. A edição irá reverter os lançamentos financeiros e gerar novos. Deseja continuar?"
-   - Confirmação dupla (segundo clique) antes do submit.
-   - Botão de edição em apostas resolvidas ganha ícone de alerta.
+Sprint 3 (P2 + P4):
+  Slow queries + índices + 5 views
 
-5. **Bloqueio explícito de campos perigosos**
-   - `bookmaker_id` em aposta resolvida só pode ser editado se não houver eventos derivados (cashback, freebet gerada, etc.). Caso contrário, exigir deleção + recriação.
+Sprint 4 (P1 expansão):
+  Runner CI + cobertura completa de triggers
+```
 
-### Validação
-- Editar odd de GREEN: ledger ganha 2 eventos (REVERSAL do PAYOUT antigo + PAYOUT novo). Saldo da bookmaker permanece coerente com `pl_consolidado` recalculado.
-- Editar stake de RED: REVERSAL do STAKE antigo + STAKE novo. Saldo bate.
-- Snapshots `lucro_realizado` / `roi_realizado` refletem novos valores imediatamente.
-- View `v_financial_audit` continua sem divergências após edição.
+## Escopo Protegido
 
----
+- Lógica de cálculo financeira (`fn_recalc_*`, `criar_surebet_atomica_v3`, `liquidar_perna_surebet_v1`) — congelada pós-Fase 4
+- Frontend Surebet/Calculadora — só mudanças cosméticas em P3
+- Zero retrofix em dados existentes
 
-## Fase 3 — Observabilidade e prevenção
+## Pergunta
 
-1. **Probe de integridade pós-edição**
-   - Estender `src/utils/integrityProbe.ts` para validar, após cada edição/liquidação, que `SUM(financial_events.valor) por bookmaker = bookmaker.saldo_atual`.
-   - Alerta no console (e no `__INTEGRITY_LOG__`) quando divergir.
-
-2. **Teste automatizado**
-   - `surebetLayEqualization.test.ts` ganha cenário com comissão e liability > stake.
-   - Novo `editarApostaLiquidada.test.ts`: cobre GREEN→RED, mudança de stake/odd, troca de bookmaker.
-
-3. **Memória do projeto**
-   - Registrar:
-     - `mem://finance/lay-liability-as-ledger-debit-standard` (Fase 1)
-     - `mem://architecture/editar-aposta-liquidada-reversal-standard` (Fase 2)
-     - `mem://finance/snapshot-recalc-on-edit-standard` (Fase 3)
-
----
-
-## Ordem de execução sugerida
-
-1. Fase 1 isolada → validar com novo trade real e log de integridade.
-2. Fase 2 isolada → validar editando uma aposta legada simples (BACK GREEN → RED).
-3. Fase 2 + LAY combinado → editar uma aposta LAY criada já na Fase 1.
-4. Fase 3 (observabilidade + testes + memória).
-
-Cada fase entra em uma migration separada para revisão independente.
-
----
-
-## Fora de escopo (explícito)
-
-- **Backfill de apostas LAY antigas**: política anti-retrofix.
-- **Mudança visual da perna LAY**: já resolvido (`Lay @odd` em vermelho + `Resp`).
-- **Recalcular `pl_consolidado` de surebets pai antigas**: só novos lançamentos.
-- **Adicionar comissão em perna BACK**: bookmakers tradicionais não cobram comissão sobre lucro; manter como está.
-
----
-
-## Pergunta antes de implementar
-
-Confirma esta ordem (Fase 1 → 2 → 3 em migrations separadas), ou prefere começar pela Fase 2 (edição segura) primeiro, já que afeta TODAS as apostas e não só LAY?
+Começo por **Sprint 1 (P0 — observabilidade)**? É o que entrega valor mais visível para você em uma sessão.
