@@ -40,13 +40,14 @@ DECLARE
 
   v_total     INT := 0;
 BEGIN
-  -- Setup mínimo
-  INSERT INTO workspaces (id, name, created_by) VALUES (v_ws, 'E2E_WS', v_user);
-  INSERT INTO projetos   (id, workspace_id, nome, moeda_consolidacao, status, created_by)
-    VALUES (v_proj, v_ws, 'E2E_PROJ', 'BRL', 'EM_ANDAMENTO', v_user);
-  INSERT INTO bookmakers (id, workspace_id, nome, moeda, saldo_atual, status, created_by, projeto_id)
-    VALUES (v_bk1, v_ws, 'BK_BACK', 'BRL', v_saldo_ini, 'ativo', v_user, v_proj),
-           (v_bk2, v_ws, 'BK_LAY',  'BRL', v_saldo_ini, 'ativo', v_user, v_proj);
+  -- Setup mínimo (esquema real: workspaces.name, projetos/bookmakers.user_id)
+  INSERT INTO workspaces (id, name) VALUES (v_ws, 'E2E_WS');
+  INSERT INTO projetos   (id, workspace_id, user_id, nome, moeda_consolidacao, status)
+    VALUES (v_proj, v_ws, v_user, 'E2E_PROJ', 'BRL', 'EM_ANDAMENTO');
+  INSERT INTO bookmakers (id, workspace_id, user_id, nome, moeda, saldo_atual, status, projeto_id,
+                          login_username, login_password_encrypted)
+    VALUES (v_bk1, v_ws, v_user, 'BK_BACK', 'BRL', v_saldo_ini, 'ativo', v_proj, 'e2e_bk1', 'x'),
+           (v_bk2, v_ws, v_user, 'BK_LAY',  'BRL', v_saldo_ini, 'ativo', v_proj, 'e2e_bk2', 'x');
 
   -- Combinações = TODAS as abas que podem abrir o formulário de arbitragem
   FOR v_cfg IN
