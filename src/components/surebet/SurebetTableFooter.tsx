@@ -6,6 +6,9 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Settings2 } from 'lucide-react';
 import { formatCurrency } from '@/components/bookmakers/BookmakerSelectOption';
 import { type SurebetAnalysis as SurebetAnalysisBase } from '@/hooks/useSurebetCalculator';
 
@@ -108,44 +111,62 @@ export function SurebetTableFooter({
       </div>
 
       {/* Controles */}
-      <div className="flex items-center gap-4">
-        {/* Mostrar comissões */}
-        {!isEditing && setShowComissao && (
-          <div className="flex items-center gap-2">
-            <Switch
-              id="show-comissao"
-              checked={showComissao}
-              onCheckedChange={setShowComissao}
-            />
-            <Label htmlFor="show-comissao" className="text-xs text-muted-foreground cursor-pointer">
-              Mostrar comissões
-            </Label>
-          </div>
-        )}
-        {/* Arredondamento */}
-        {!isEditing && (
-          <div className="flex items-center gap-2">
-            <Switch
-              id="arredondar"
-              checked={arredondarAtivado}
-              onCheckedChange={setArredondarAtivado}
-            />
-            <Label htmlFor="arredondar" className="text-xs text-muted-foreground cursor-pointer">
-              Arredondar
-            </Label>
-            {arredondarAtivado && (
-              <Input
-                type="number"
-                min="1"
-                step="1"
-                value={arredondarValor}
-                onChange={(e) => setArredondarValor(e.target.value)}
-                className="h-7 w-14 text-center text-xs"
-              />
+      {!isEditing && (
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              title="Opções da tabela"
+            >
+              <Settings2 className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-64 p-3 space-y-3">
+            <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">
+              Opções da tabela
+            </div>
+
+            {setShowComissao && (
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="opt-show-comissao" className="text-xs cursor-pointer">
+                  Mostrar comissões
+                </Label>
+                <Switch
+                  id="opt-show-comissao"
+                  checked={showComissao}
+                  onCheckedChange={setShowComissao}
+                />
+              </div>
             )}
-          </div>
-        )}
-      </div>
+
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="opt-arredondar" className="text-xs cursor-pointer">
+                Arredondar
+              </Label>
+              <div className="flex items-center gap-2">
+                {arredondarAtivado && (
+                  <Input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={arredondarValor}
+                    onChange={(e) => setArredondarValor(e.target.value)}
+                    className="h-7 w-14 text-center text-xs"
+                  />
+                )}
+                <Switch
+                  id="opt-arredondar"
+                  checked={arredondarAtivado}
+                  onCheckedChange={setArredondarAtivado}
+                />
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+      )}
     </div>
   );
 }
