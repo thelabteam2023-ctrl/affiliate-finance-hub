@@ -2437,7 +2437,7 @@ export function SurebetModalRoot({
                       <th className="py-2 px-2 text-left font-medium text-muted-foreground w-16">Perna</th>
                       <th className="py-2 px-2 text-center font-medium text-muted-foreground min-w-[160px]">Casa</th>
                       <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20">Odd</th>
-                      {showComissao && (
+                      {(showComissao || odds.some(o => (o.tipo ?? 'back') === 'lay')) && (
                         <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20" title="Comissão da exchange">Comissão</th>
                       )}
                       <th className="py-2 px-2 text-center font-medium text-muted-foreground w-24">Stake</th>
