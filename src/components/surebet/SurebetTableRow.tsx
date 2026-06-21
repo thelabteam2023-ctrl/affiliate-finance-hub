@@ -306,51 +306,49 @@ export function SurebetTableRow({
         
         {/* Odd */}
         <td className="px-1" style={{ height: '78px' }}>
-          {(() => {
-            const tipo = (entry.tipo ?? 'back') as 'back' | 'lay';
-            const isLay = tipo === 'lay';
-            const comissaoPct = ((entry.comissao ?? 0) * 100);
-            return (
-              <div className="flex flex-col items-center gap-1">
+          <Input
+            type="number"
+            step="0.00001"
+            placeholder="0.00"
+            value={entry.odd}
+            onChange={(e) => onUpdateOdd(pernaIndex, "odd", e.target.value)}
+            className="h-8 text-xs text-center px-0.5 w-[68px] tabular-nums"
+            onWheel={(e) => e.currentTarget.blur()}
+            data-field-type="odd"
+            onKeyDown={(e) => onFieldKeyDown(e, 'odd')}
+          />
+        </td>
+
+        {/* Comissão (coluna sob demanda) */}
+        {showComissao && (() => {
+          const comissaoPct = ((entry.comissao ?? 0) * 100);
+          return (
+            <td className="px-1" style={{ height: '78px' }}>
+              <div
+                className="flex items-center justify-center gap-1"
+                title="Comissão da exchange (% sobre lucro do lay)"
+              >
                 <Input
                   type="number"
-                  step="0.00001"
-                  placeholder="0.00"
-                  value={entry.odd}
-                  onChange={(e) => onUpdateOdd(pernaIndex, "odd", e.target.value)}
-                  className="h-8 text-xs text-center px-0.5 w-[68px] tabular-nums"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  value={Number.isFinite(comissaoPct) ? String(+comissaoPct.toFixed(4)) : ''}
+                  placeholder="0"
+                  onChange={(e) => {
+                    const v = parseFloat(e.target.value);
+                    const dec = Number.isFinite(v) ? Math.max(0, Math.min(100, v)) / 100 : 0;
+                    onUpdateOdd(pernaIndex, 'comissao' as any, dec);
+                  }}
+                  className="h-8 w-14 text-xs text-center px-1 tabular-nums"
                   onWheel={(e) => e.currentTarget.blur()}
-                  data-field-type="odd"
-                  onKeyDown={(e) => onFieldKeyDown(e, 'odd')}
                 />
-                {(isLay || showComissao) && (
-                  <div
-                    className="flex items-center gap-1"
-                    title="Comissão da exchange (% sobre lucro do lay)"
-                  >
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max="100"
-                      value={Number.isFinite(comissaoPct) ? String(+comissaoPct.toFixed(4)) : ''}
-                      placeholder="0"
-                      onChange={(e) => {
-                        const v = parseFloat(e.target.value);
-                        const dec = Number.isFinite(v) ? Math.max(0, Math.min(100, v)) / 100 : 0;
-                        onUpdateOdd(pernaIndex, 'comissao' as any, dec);
-                      }}
-                      className="h-6 w-12 text-[10px] text-center px-1 tabular-nums"
-                      onWheel={(e) => e.currentTarget.blur()}
-                    />
-                    <span className="text-[9px] text-muted-foreground">%</span>
-                  </div>
-                )}
+                <span className="text-[10px] text-muted-foreground">%</span>
               </div>
-            );
-          })()}
-        </td>
-        
+            </td>
+          );
+        })()}
+
         {/* Stake */}
         <td className="px-1" style={{ height: '78px' }}>
           {(() => {
@@ -589,7 +587,12 @@ export function SurebetTableRow({
                 onWheel={(e) => e.currentTarget.blur()}
               />
             </td>
-            
+
+            {/* Comissão (vazio para sub-entradas) */}
+            {showComissao && (
+              <td className="px-1" style={{ height: '52px' }} />
+            )}
+
             {/* Stake + FB toggle */}
             <td className="px-1" style={{ height: '52px' }}>
               {(() => {
