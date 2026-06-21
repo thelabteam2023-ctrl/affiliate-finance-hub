@@ -689,6 +689,16 @@ const App = () => (
                </ProtectedRoute>
              } />
 
+            <Route path="/admin/ledger-anomalies" element={
+              <ProtectedRoute requiredRole={['owner', 'admin']} requireSystemOwner={false}>
+                <AuthenticatedLayout>
+                  <Suspense fallback={<PageLoader />}>
+                    <LedgerAnomalies />
+                  </Suspense>
+                </AuthenticatedLayout>
+              </ProtectedRoute>
+            } />
+
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
             </Routes>
