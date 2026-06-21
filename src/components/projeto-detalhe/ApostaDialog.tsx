@@ -2793,6 +2793,21 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         // CRITICAL FIX: Aguardar invalidação completar ANTES de fechar o dialog
         // Isso garante que os novos saldos sejam buscados do servidor
         await invalidateSaldos(projetoId);
+
+        // FASE 3 — Probe de paridade saldo×ledger pós-edição de LIQUIDADA.
+        // Detecta saldo fantasma causado por REVERSAL incompleto. Não bloqueia o fluxo.
+        if (aposta?.status === "LIQUIDADA" && bookmakerId) {
+          probeBookmakerLedgerParity(bookmakerId, { label: "pós-edição LIQUIDADA" })
+            .then((res) => {
+              if (res && !res.ok) {
+                toast.warning("Divergência saldo × ledger detectada", {
+                  description: `Δ = R$ ${res.delta.toFixed(2)}. Verifique o console (__INTEGRITY_LOG__).`,
+                  duration: 10000,
+                });
+              }
+            })
+            .catch(() => {/* probe é best-effort */});
+        }
       } else {
         // ========== VALIDAÇÃO PRÉ-COMMIT (ANTI-CONCORRÊNCIA) ==========
         // Antes de inserir, validar server-side com lock para prevenir:
