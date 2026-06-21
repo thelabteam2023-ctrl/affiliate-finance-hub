@@ -719,7 +719,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
   }, [projetoId]);
 
   const handleDuplicateSurebet = useCallback((surebetId: string) => {
-    openSurebetWindow({ projetoId, activeTab: 'surebet', duplicateFrom: surebetId } as any);
+    openSurebetWindow({ projetoId, activeTab: 'surebet', numPernas: 3, duplicateFrom: surebetId } as any);
   }, [projetoId]);
 
   // Usa a formatação do projeto (moeda de consolidação)
@@ -1583,7 +1583,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                   key={operacao.id}
                   surebet={operacao}
                   onEdit={(sb) => {
-                    openSurebetWindow({ projetoId, id: sb.id, activeTab: 'surebet' });
+                    openSurebetWindow({ projetoId, id: sb.id, activeTab: 'surebet', numPernas: 3 });
                   }}
                   onQuickResolve={handleSurebetQuickResolve}
                   onPernaResultChange={handleSurebetPernaResolve}
