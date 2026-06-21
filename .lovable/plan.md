@@ -1,43 +1,38 @@
 ## Objetivo
 
-Reduzir a poluição do rodapé do modal Surebet transformando "Limpar" e "Salvar Rascunho" em botões **icon-only**, com ícones mais elegantes e tooltip explicativo. "Registrar Operação" continua como botão principal com texto (CTA da ação).
+Dar mais espaço ao campo **Evento** (nomes longos como "URUGUAY X CAPE VERDE" são truncados) e reduzir **Mercado** (textos costumam ser curtos: "Resultado Final", "Over 2.5"), sem quebrar o layout do header em outros formulários (ApostaDialog também usa o mesmo header).
 
-## Mudanças
+## Mudança
 
-Arquivo: `src/components/surebet/SurebetModalRoot.tsx` (rodapé, linhas ~2570–2634).
+Arquivo único: `src/components/apostas/BetFormHeaderV2.tsx` (linhas 226–353).
 
-### 1. Botão "Limpar" → ícone só
-- Troca `Eraser` por **`Brush`** (lucide) — visual mais limpo e moderno que a borracha atual.
-- `variant="ghost"`, `size="icon"`, classes: `h-9 w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted`.
-- Envolto em `<Tooltip>` com label "Limpar formulário".
-- Remove o texto "Limpar" e o `mr-1` do ícone.
+### 1. Trocar grid uniforme por grid de 12 colunas
+- Hoje: `grid grid-cols-4 gap-3` (cada campo = 25%).
+- Novo: `grid grid-cols-12 gap-3` com proporções:
+  - **Esporte** → `col-span-2` (~17%) — Select curto, "Futebol" cabe folgado.
+  - **Evento** → `col-span-5` (~42%) — quase dobra de tamanho; comporta nomes longos sem corte.
+  - **Mercado** → `col-span-3` (~25%) — encolhe levemente.
+  - **Data/Hora** → `col-span-2` (~17%) — DateTimePicker continua legível ("21/06 19:00" cabe).
 
-### 2. Botão "Salvar Rascunho" → ícone só
-- Troca `FileText` por **`BookmarkPlus`** (quando novo) e **`BookmarkCheck`** (quando `isAtualizandoRascunho`) — comunica melhor "salvar para depois" do que um documento genérico.
-- `variant="ghost"`, `size="icon"`, classes: `h-9 w-9 rounded-full text-blue-500 hover:text-blue-400 hover:bg-blue-500/10` (mantém a identidade azul atual).
-- Envolto em `<Tooltip>` com label dinâmico: "Atualizar rascunho" ou "Salvar rascunho".
-- Mantém `disabled={saving || !temDadosParciais}`.
+### 2. Ajuste fino de tipografia (defensivo)
+- No `<Input>` do **Evento**, manter `text-xs uppercase text-center`, mas remover `text-center` quando o texto não couber não ajuda — mantenho centralizado e adiciono `truncate` no input nativo já é automático; o tooltip on-hover já mostra o texto completo (linhas 297–301), então a descobribilidade está preservada.
+- No `<Input>` do **Mercado**, manter `text-xs text-center`; ele agora ocupa menos espaço, mas o placeholder "Ex: Resultado Final" continua visível em ~25% da largura.
 
-### 3. Botão "Registrar Operação" inalterado
-- Continua com texto (é a ação principal e o usuário não pediu para mexer).
-- Opcional: trocar `Save` por **`CheckCircle2`** para reforçar "confirmar" — só aplico se você quiser.
-
-### 4. Ajustes de import
-- Em `lucide-react`: remover `Eraser` e `FileText` (se não usados em outro lugar — `FileText` ainda é usado na linha 2184, mantém); adicionar `Brush`, `BookmarkPlus`, `BookmarkCheck`.
-
-### 5. Tooltip
-- Usar `Tooltip`, `TooltipTrigger`, `TooltipContent` de `@/components/ui/tooltip` (já presente no projeto). Se já houver um `TooltipProvider` em volta do modal, só envolvo cada botão; caso contrário, adiciono um `TooltipProvider` local no container dos botões.
+### 3. Sem alterações em
+- `SurebetModalRoot.tsx` — só consome o header.
+- `ApostaDialog.tsx` — herda a nova proporção automaticamente, o que é desejável (mesma queixa se aplica lá).
+- Lógica, validações, tooltips de overflow e badges de review.
 
 ## Resultado visual
 
 ```text
-[ 🖌 ]   [ 🔖 ]   [ 💾 Registrar Operação ]
- ghost    ghost    primary (CTA)
+Antes:  [ Esporte 25% ][ Evento 25% ][ Mercado 25% ][ Data 25% ]
+Depois: [ Esp 17% ][   Evento 42%    ][ Mercado 25% ][ Data 17% ]
 ```
 
-Rodapé mais leve, hierarquia clara (ações secundárias discretas, CTA dominante), sem perder descobribilidade graças ao tooltip.
+"URUGUAY X CAPE VERDE" passa a caber inteiro no campo Evento; Mercado segue confortável para os textos curtos típicos; Esporte e Data/Hora encolhem só o necessário sem perder legibilidade.
 
 ## Fora de escopo
 
-- Não altero lógica de `handleSalvarRascunho`, `resetToNewForm`, validações ou estado.
-- Não toco no botão "Simples (N)" da operação parcial nem em "Registrar Operação".
+- Não mexer no tamanho de fonte (o usuário ofereceu como alternativa; a redistribuição de largura já resolve sem perder legibilidade).
+- Não mexer no header em mobile/responsivo além do que o grid de 12 colunas já entrega.
