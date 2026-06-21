@@ -587,7 +587,12 @@ export function SurebetTableRow({
                 onWheel={(e) => e.currentTarget.blur()}
               />
             </td>
-            
+
+            {/* Comissão (vazio para sub-entradas) */}
+            {showComissao && (
+              <td className="px-1" style={{ height: '52px' }} />
+            )}
+
             {/* Stake + FB toggle */}
             <td className="px-1" style={{ height: '52px' }}>
               {(() => {
