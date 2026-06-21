@@ -84,6 +84,8 @@ interface BetFormHeaderV2Props {
   fileInputRef?: RefObject<HTMLInputElement>;
   onFileSelect?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   extraBadge?: React.ReactNode;
+  /** Slot opcional para uma ação no header (ex.: botão "Explorador" da Arbitragem). */
+  headerAction?: React.ReactNode;
   showCloseButton?: boolean;
   onClose?: () => void;
   embedded?: boolean;
@@ -133,6 +135,7 @@ export function BetFormHeaderV2({
   fileInputRef,
   onFileSelect,
   extraBadge,
+  headerAction,
   showCloseButton = false,
   onClose,
   embedded = false,
@@ -171,6 +174,8 @@ export function BetFormHeaderV2({
               )}
             </div>
           )}
+
+          {headerAction}
 
           {/* Estratégia à direita */}
           <div className="flex items-center gap-1.5">

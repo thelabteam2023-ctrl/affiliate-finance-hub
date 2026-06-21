@@ -1,0 +1,1 @@
+CREATE POLICY "Authenticated users can read daily_events" ON public.daily_events FOR SELECT TO authenticated USING (true); GRANT SELECT ON public.daily_events TO authenticated;
