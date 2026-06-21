@@ -2571,9 +2571,32 @@ export function SurebetModalRoot({
               )}
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancelar
-              </Button>
+              {!isEditing && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setEsporte("Futebol");
+                    setEvento("");
+                    setMercado("");
+                    setContexto(CONTEXTO_OPERACIONAL.NORMAL);
+                    if (!lockedEstrategia) setEstrategia(ARBITRAGEM_ESTRATEGIA);
+                    setModeloTipo("2");
+                    resetToNewForm(2);
+                    const now = new Date();
+                    const yyyy = now.getFullYear();
+                    const mm = String(now.getMonth() + 1).padStart(2, "0");
+                    const dd = String(now.getDate()).padStart(2, "0");
+                    const hh = String(now.getHours()).padStart(2, "0");
+                    const mi = String(now.getMinutes()).padStart(2, "0");
+                    setDataAposta(`${yyyy}-${mm}-${dd}T${hh}:${mi}`);
+                    setErrosPorPerna({});
+                    toast.success("Formulário limpo");
+                  }}
+                >
+                  <Eraser className="h-4 w-4 mr-1" />
+                  Limpar
+                </Button>
+              )}
                {!isEditing && (
                  <Button 
                    variant="outline"
