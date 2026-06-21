@@ -11,6 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { useDailyEventsByDate, type DailyEvent } from "@/hooks/useDailyEventsByDate";
+import { normalizeEsporte } from "@/components/surebet/utils/mapDailyEventToFormFields";
 
 interface ExploradorEventoPickerProps {
   /** Data inicial sugerida (ISO "YYYY-MM-DDTHH:mm" do form). */
@@ -19,6 +20,9 @@ interface ExploradorEventoPickerProps {
   onSelect: (event: DailyEvent) => void;
   /** Visual do gatilho. `button` (default) = botão com texto; `icon` = só ícone compacto. */
   variant?: "button" | "icon";
+  /** Esporte selecionado no formulário (label, ex.: "Futebol"). Quando definido e ≠ "Outro",
+   *  a lista é filtrada por esse esporte por padrão, com toggle para desligar. */
+  esporte?: string;
 }
 
 function parseDefaultDate(s: string | undefined): Date {
@@ -45,11 +49,13 @@ function TeamLogo({ name, url }: { name: string; url: string | null }) {
   );
 }
 
-export function ExploradorEventoPicker({ defaultDate, onSelect, variant = "button" }: ExploradorEventoPickerProps) {
+export function ExploradorEventoPicker({ defaultDate, onSelect, variant = "button", esporte }: ExploradorEventoPickerProps) {
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState<Date>(() => parseDefaultDate(defaultDate));
   const [search, setSearch] = useState("");
   const [showFinished, setShowFinished] = useState(false);
+  const hasSportFilter = !!esporte && esporte !== "Outro";
+  const [filterBySport, setFilterBySport] = useState<boolean>(hasSportFilter);
 
   const { data: events = [], isLoading, isError } = useDailyEventsByDate(date, open);
 
@@ -57,6 +63,9 @@ export function ExploradorEventoPicker({ defaultDate, onSelect, variant = "butto
     const term = search.trim().toLowerCase();
     return events.filter((ev) => {
       if (!showFinished && (ev.status === "finished" || ev.status === "FT" || ev.status === "ENCERRADO")) {
+        return false;
+      }
+      if (hasSportFilter && filterBySport && normalizeEsporte(ev.sport) !== esporte) {
         return false;
       }
       if (!term) return true;
@@ -67,7 +76,7 @@ export function ExploradorEventoPicker({ defaultDate, onSelect, variant = "butto
         ev.country?.toLowerCase().includes(term)
       );
     });
-  }, [events, search, showFinished]);
+  }, [events, search, showFinished, hasSportFilter, filterBySport, esporte]);
 
   function handlePick(ev: DailyEvent) {
     onSelect(ev);
@@ -141,14 +150,26 @@ export function ExploradorEventoPicker({ defaultDate, onSelect, variant = "butto
           <span className="text-[11px] text-muted-foreground">
             {filtered.length} {filtered.length === 1 ? "jogo" : "jogos"}
           </span>
-          <label className="flex items-center gap-2 text-[11px] text-muted-foreground cursor-pointer">
-            <Switch
-              checked={showFinished}
-              onCheckedChange={setShowFinished}
-              className="scale-75 origin-right"
-            />
-            Mostrar encerrados
-          </label>
+          <div className="flex items-center gap-3">
+            {hasSportFilter && (
+              <label className="flex items-center gap-2 text-[11px] text-muted-foreground cursor-pointer">
+                <Switch
+                  checked={filterBySport}
+                  onCheckedChange={setFilterBySport}
+                  className="scale-75 origin-right"
+                />
+                Apenas {esporte}
+              </label>
+            )}
+            <label className="flex items-center gap-2 text-[11px] text-muted-foreground cursor-pointer">
+              <Switch
+                checked={showFinished}
+                onCheckedChange={setShowFinished}
+                className="scale-75 origin-right"
+              />
+              Mostrar encerrados
+            </label>
+          </div>
         </div>
 
         {/* Lista */}
@@ -170,7 +191,9 @@ export function ExploradorEventoPicker({ defaultDate, onSelect, variant = "butto
           {!isLoading && !isError && filtered.length === 0 && (
             <div className="p-6 text-center space-y-3">
               <p className="text-xs text-muted-foreground">
-                Nenhum jogo encontrado para {format(date, "dd/MM/yyyy", { locale: ptBR })}.
+                {hasSportFilter && filterBySport
+                  ? `Nenhum jogo de ${esporte} em ${format(date, "dd/MM/yyyy", { locale: ptBR })}. Desative o filtro para ver todos.`
+                  : `Nenhum jogo encontrado para ${format(date, "dd/MM/yyyy", { locale: ptBR })}.`}
               </p>
               <Button
                 type="button"
