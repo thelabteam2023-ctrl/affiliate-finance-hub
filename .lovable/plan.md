@@ -1,38 +1,70 @@
 ## Objetivo
 
-Dar mais espaço ao campo **Evento** (nomes longos como "URUGUAY X CAPE VERDE" são truncados) e reduzir **Mercado** (textos costumam ser curtos: "Resultado Final", "Over 2.5"), sem quebrar o layout do header em outros formulários (ApostaDialog também usa o mesmo header).
+No layout **horizontal (colunas)** do modal de Arbitragem, o Select da casa hoje empilha 3 informações dentro do trigger:
 
-## Mudança
+1. `BET365` (nome)
+2. `CLAUDIVAN SILVA` (parceiro)
+3. abaixo, `BookmakerMetaRow` repete o parceiro + saldo
 
-Arquivo único: `src/components/apostas/BetFormHeaderV2.tsx` (linhas 226–353).
+Isso polui o card (que é estreito) e duplica o parceiro. Vamos enxugar o trigger para **logo + nome da casa apenas**, mantendo parceiro/saldo no `BookmakerMetaRow` logo abaixo (única fonte dessas infos).
 
-### 1. Trocar grid uniforme por grid de 12 colunas
-- Hoje: `grid grid-cols-4 gap-3` (cada campo = 25%).
-- Novo: `grid grid-cols-12 gap-3` com proporções:
-  - **Esporte** → `col-span-2` (~17%) — Select curto, "Futebol" cabe folgado.
-  - **Evento** → `col-span-5` (~42%) — quase dobra de tamanho; comporta nomes longos sem corte.
-  - **Mercado** → `col-span-3` (~25%) — encolhe levemente.
-  - **Data/Hora** → `col-span-2` (~17%) — DateTimePicker continua legível ("21/06 19:00" cabe).
+Aplicar o mesmo padrão tanto na **perna principal** quanto nas **sub-entradas (Sub 2, Sub 3…)**.
 
-### 2. Ajuste fino de tipografia (defensivo)
-- No `<Input>` do **Evento**, manter `text-xs uppercase text-center`, mas remover `text-center` quando o texto não couber não ajuda — mantenho centralizado e adiciono `truncate` no input nativo já é automático; o tooltip on-hover já mostra o texto completo (linhas 297–301), então a descobribilidade está preservada.
-- No `<Input>` do **Mercado**, manter `text-xs text-center`; ele agora ocupa menos espaço, mas o placeholder "Ex: Resultado Final" continua visível em ~25% da largura.
+---
 
-### 3. Sem alterações em
-- `SurebetModalRoot.tsx` — só consome o header.
-- `ApostaDialog.tsx` — herda a nova proporção automaticamente, o que é desejável (mesma queixa se aplica lá).
-- Lógica, validações, tooltips de overflow e badges de review.
+## Mudanças (escopo cirúrgico, só UI)
 
-## Resultado visual
+**Arquivo:** `src/components/surebet/SurebetColumnsView.tsx`
 
-```text
-Antes:  [ Esporte 25% ][ Evento 25% ][ Mercado 25% ][ Data 25% ]
-Depois: [ Esp 17% ][   Evento 42%    ][ Mercado 25% ][ Data 17% ]
+### 1. Trigger da perna principal (linhas ~234-255)
+
+Substituir o conteúdo do `<SelectValue>` por:
+
+- Logo da casa (16×16, fallback ícone) à esquerda — usar `BookmakerLogo` de `@/components/ui/bookmaker-logo` com `size="h-4 w-4"`.
+- Nome da casa em `uppercase text-[11px] font-medium truncate`.
+- **Remover** do trigger: bloco do `instance_identifier` e o bloco do `parceiro_nome` (`getFirstLastName(...)`).
+- Manter `h-8` no `SelectTrigger`.
+
+Layout: `flex items-center gap-2 min-w-0` com `<BookmakerLogo>` + `<span class="truncate">{nome}</span>`.
+
+### 2. Trigger das sub-entradas (linhas ~437-447)
+
+Mesmo tratamento, ainda mais compacto (já está em `text-[9px]`):
+- Logo `h-3.5 w-3.5` + nome `uppercase text-[10px] truncate`.
+- Remover qualquer texto extra do trigger.
+
+### 3. Saldo / parceiro / instance_identifier
+
+Continuam visíveis **apenas** via `BookmakerMetaRow` (já renderizado logo abaixo do Select em ambos os casos). Nenhuma mudança nesse componente.
+
+### 4. Limpeza
+
+- Remover import `getFirstLastName` se não houver mais usos no arquivo (verificar com grep antes).
+- Adicionar import do `BookmakerLogo`.
+
+---
+
+## Resultado visual esperado
+
+Antes (trigger):
 ```
+BET365
+CLAUDIVAN SILVA
+```
++ MetaRow abaixo com `CLAUDIVAN • R$ 2.832,48`
 
-"URUGUAY X CAPE VERDE" passa a caber inteiro no campo Evento; Mercado segue confortável para os textos curtos típicos; Esporte e Data/Hora encolhem só o necessário sem perder legibilidade.
+Depois (trigger):
+```
+[logo] BET365
+```
++ MetaRow abaixo com `CLAUDIVAN • R$ 2.832,48` (inalterado)
+
+Resultado: cards mais limpos, sem duplicação do parceiro, leitura mais rápida do nome da casa, e o `instance_identifier` (quando existe) passa a aparecer só dentro do dropdown / no MetaRow se aplicável — não mais comprimido no trigger.
+
+---
 
 ## Fora de escopo
 
-- Não mexer no tamanho de fonte (o usuário ofereceu como alternativa; a redistribuição de largura já resolve sem perder legibilidade).
-- Não mexer no header em mobile/responsivo além do que o grid de 12 colunas já entrega.
+- Layout vertical / `SurebetTableRow` (já tratado anteriormente).
+- Lógica de seleção, saldo, freebet, validações — nada muda.
+- Conteúdo do dropdown (`BookmakerSearchableSelectContent`) — permanece como está, já mostra logo + meta completa por opção.
