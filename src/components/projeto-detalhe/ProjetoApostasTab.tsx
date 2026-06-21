@@ -453,7 +453,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           usar_freebet, fonte_saldo,
           is_novo_formulario, mercado_categoria, mercado_objeto, mercado_formato,
           mercado_direcao, mercado_linha, mercado_display, liga, fair_value,
-          edge_percentual, modelo_aposta, time_casa, time_fora, fonte_entrada
+          edge_percentual, modelo_aposta, time_casa, time_fora, fonte_entrada,
+          home_team_logo_url, away_team_logo_url, league_logo_url
         `;
 
       let dateFilters: { startUTC?: string; endUTC?: string } = {};
