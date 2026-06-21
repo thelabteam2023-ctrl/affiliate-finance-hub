@@ -117,6 +117,11 @@ export interface SurebetData {
   resultado: string | null;
   observacoes: string | null;
   pernas?: SurebetPerna[];
+  time_casa?: string | null;
+  time_fora?: string | null;
+  home_team_logo_url?: string | null;
+  away_team_logo_url?: string | null;
+  league_logo_url?: string | null;
 }
 
 /** Callback para alterar resultado de uma perna individual */
