@@ -1,70 +1,137 @@
 ## Objetivo
 
-No layout **horizontal (colunas)** do modal de Arbitragem, o Select da casa hoje empilha 3 informações dentro do trigger:
+Quando o usuário usa **Importar Jogo** (ExploradorEventoPicker → `daily_events`), capturar e persistir as **logos de time mandante, visitante e liga**, e exibi-las no header do **card de aposta pós-registro** (ex.: `🇩🇪 ALEMANHA  ×  🇨🇮 COSTA DO MARFIM`).
 
-1. `BET365` (nome)
-2. `CLAUDIVAN SILVA` (parceiro)
-3. abaixo, `BookmakerMetaRow` repete o parceiro + saldo
-
-Isso polui o card (que é estreito) e duplica o parceiro. Vamos enxugar o trigger para **logo + nome da casa apenas**, mantendo parceiro/saldo no `BookmakerMetaRow` logo abaixo (única fonte dessas infos).
-
-Aplicar o mesmo padrão tanto na **perna principal** quanto nas **sub-entradas (Sub 2, Sub 3…)**.
+Quando o evento for digitado manualmente, os campos ficam `null` e o card cai no layout atual (sem logos) — zero regressão.
 
 ---
 
-## Mudanças (escopo cirúrgico, só UI)
+## 1. Schema — migration
 
-**Arquivo:** `src/components/surebet/SurebetColumnsView.tsx`
+`daily_events` já tem `home_team_logo`, `away_team_logo`, `league_logo`. `team_logos` (cache) também já existe. Precisamos só persistir o snapshot no momento do registro.
 
-### 1. Trigger da perna principal (linhas ~234-255)
+Adicionar à `public.apostas_unificada`:
 
-Substituir o conteúdo do `<SelectValue>` por:
+```sql
+ALTER TABLE public.apostas_unificada
+  ADD COLUMN IF NOT EXISTS home_team           text,
+  ADD COLUMN IF NOT EXISTS away_team           text,
+  ADD COLUMN IF NOT EXISTS home_team_logo_url  text,
+  ADD COLUMN IF NOT EXISTS away_team_logo_url  text,
+  ADD COLUMN IF NOT EXISTS league_logo_url     text,
+  ADD COLUMN IF NOT EXISTS daily_event_id      uuid REFERENCES public.daily_events(id) ON DELETE SET NULL;
+```
 
-- Logo da casa (16×16, fallback ícone) à esquerda — usar `BookmakerLogo` de `@/components/ui/bookmaker-logo` com `size="h-4 w-4"`.
-- Nome da casa em `uppercase text-[11px] font-medium truncate`.
-- **Remover** do trigger: bloco do `instance_identifier` e o bloco do `parceiro_nome` (`getFirstLastName(...)`).
-- Manter `h-8` no `SelectTrigger`.
+Todos `nullable`, sem default. Snapshot — não há FK obrigatória (se o evento for removido do catálogo, o card continua mostrando logos). `daily_event_id` é só para auditoria/futura re-sincronização opcional.
 
-Layout: `flex items-center gap-2 min-w-0` com `<BookmakerLogo>` + `<span class="truncate">{nome}</span>`.
-
-### 2. Trigger das sub-entradas (linhas ~437-447)
-
-Mesmo tratamento, ainda mais compacto (já está em `text-[9px]`):
-- Logo `h-3.5 w-3.5` + nome `uppercase text-[10px] truncate`.
-- Remover qualquer texto extra do trigger.
-
-### 3. Saldo / parceiro / instance_identifier
-
-Continuam visíveis **apenas** via `BookmakerMetaRow` (já renderizado logo abaixo do Select em ambos os casos). Nenhuma mudança nesse componente.
-
-### 4. Limpeza
-
-- Remover import `getFirstLastName` se não houver mais usos no arquivo (verificar com grep antes).
-- Adicionar import do `BookmakerLogo`.
+Sem mudanças em RLS, grants, triggers ou lógica financeira. Snapshot puro de apresentação.
 
 ---
 
-## Resultado visual esperado
+## 2. Captura — propagar do importador até o service
 
-Antes (trigger):
-```
-BET365
-CLAUDIVAN SILVA
-```
-+ MetaRow abaixo com `CLAUDIVAN • R$ 2.832,48`
+### 2.1. Estender `MappedEventFields`
+`src/components/surebet/utils/mapDailyEventToFormFields.ts`:
 
-Depois (trigger):
+```ts
+export interface MappedEventFields {
+  esporte: string;
+  evento: string;
+  dataAposta: string;
+  // novos
+  homeTeam: string | null;
+  awayTeam: string | null;
+  homeTeamLogoUrl: string | null;
+  awayTeamLogoUrl: string | null;
+  leagueLogoUrl: string | null;
+  dailyEventId: string | null;
+}
 ```
-[logo] BET365
-```
-+ MetaRow abaixo com `CLAUDIVAN • R$ 2.832,48` (inalterado)
 
-Resultado: cards mais limpos, sem duplicação do parceiro, leitura mais rápida do nome da casa, e o `instance_identifier` (quando existe) passa a aparecer só dentro do dropdown / no MetaRow se aplicável — não mais comprimido no trigger.
+Preencher a partir do `DailyEvent` (campos já existem). `evento` continua sendo `"HOME X AWAY"` (compat).
+
+### 2.2. Guardar no estado do modal
+`SurebetModalRoot.tsx` (linha ~2253): adicionar 6 `useState<string|null>` (`homeTeam`, `awayTeam`, `homeTeamLogoUrl`, `awayTeamLogoUrl`, `leagueLogoUrl`, `dailyEventId`) e atualizá-los no `onSelect`.
+
+**Reset:** se o usuário editar manualmente o campo `evento` depois de importar (texto fugir do padrão capturado), limpar os 6 campos — para não persistir snapshot que não corresponde mais ao que está escrito. Detecção simples: `useEffect` comparando `evento` atual vs `\`${homeTeam} X ${awayTeam}\`.toUpperCase()`.
+
+### 2.3. Passar ao service
+`CriarApostaInput` e `AtualizarApostaInput` em `src/services/aposta/types.ts`:
+
+```ts
+home_team?: string | null;
+away_team?: string | null;
+home_team_logo_url?: string | null;
+away_team_logo_url?: string | null;
+league_logo_url?: string | null;
+daily_event_id?: string | null;
+```
+
+`ApostaService.criarAposta` / `atualizarAposta`: incluir essas colunas no insert/update da `apostas_unificada` (passthrough — sem validação, sem invariante, sem tocar em ledger).
+
+### 2.4. Outros pontos de entrada
+- `NovaEntradaDialog`, `ApostaDialog`, `ProjetoDuploGreenTab`, `ProjetoValueBetTab`, `ProjetoPunterTab`, `ProjetoFreebetsTab` — onde houver o `ExploradorEventoPicker` (ou equivalente). Replicar o mesmo padrão de captura ou centralizar via hook `useDailyEventCapture()` para evitar duplicação (recomendado).
+- Verificação rápida: `rg "ExploradorEventoPicker"` antes da implementação para listar todos os call sites.
+
+---
+
+## 3. Render — card de aposta
+
+### 3.1. Tipo `Aposta`
+Adicionar os campos opcionais ao tipo consumido por `ApostaCard.tsx` (`src/types/apostasUnificada.ts` se existir, senão na interface local).
+
+### 3.2. Header do card
+`src/components/projeto-detalhe/ApostaCard.tsx`, ponto onde renderiza `displayEvento` (linha ~394):
+
+```tsx
+{hasTeamLogos ? (
+  <div className="flex items-center gap-2 min-w-0">
+    <TeamLogo url={aposta.home_team_logo_url} alt={aposta.home_team} />
+    <span className="truncate font-semibold uppercase">{aposta.home_team}</span>
+    <span className="text-muted-foreground">×</span>
+    <TeamLogo url={aposta.away_team_logo_url} alt={aposta.away_team} />
+    <span className="truncate font-semibold uppercase">{aposta.away_team}</span>
+  </div>
+) : (
+  <span className="truncate font-semibold uppercase">{displayEvento}</span>
+)}
+```
+
+`hasTeamLogos = !isMultipla && aposta.home_team && aposta.away_team && (aposta.home_team_logo_url || aposta.away_team_logo_url)`.
+
+### 3.3. Componente `TeamLogo`
+Novo `src/components/ui/team-logo.tsx`, espelho do `BookmakerLogo`:
+- `size="h-5 w-5"` default.
+- Fallback: ícone `Shield` (lucide) em container `bg-muted/30 rounded`.
+- `onError` esconde a imagem quebrada e mostra fallback (URLs da API morrem).
+
+### 3.4. Badge de liga (opcional, escopo dessa fase)
+Se `league_logo_url` existir, exibir miniatura `h-3.5 w-3.5` ao lado do badge "Futebol" no segundo nível do card. Não-bloqueante; podemos adiar.
+
+---
+
+## 4. Compatibilidade & retroatividade
+
+- **Apostas antigas**: ficam com os 6 campos `null` → caem no fallback `displayEvento` (string atual). Nenhuma migration de dados retroativa — inferir time só do texto `"ALEMANHA X COSTA DO MARFIM"` não é confiável (acentos, abreviações, "vs", etc.). Aceitar que só apostas novas terão logos.
+- **Edição de aposta liquidada**: passthrough também no `atualizarAposta` (sem lógica adicional — campos puramente cosméticos).
+- **Export**: incluir `home_team`/`away_team` no CSV/XLSX se `ExportMenu` listar colunas, opcional.
+
+---
+
+## 5. Validação
+
+1. Migration aplicada — confirmar via `\d apostas_unificada` que as 6 colunas existem.
+2. Importar jogo → registrar surebet/aposta simples → conferir no banco: `SELECT evento, home_team, away_team, home_team_logo_url FROM apostas_unificada ORDER BY created_at DESC LIMIT 1;`.
+3. Conferir card em `Todas Apostas` exibe `[logo] HOME × [logo] AWAY`.
+4. Quebrar URL de logo (substituir por inválida via devtools) → fallback `Shield` aparece, card não quebra.
+5. Aposta digitada manualmente → card mostra string como hoje.
+6. Aposta antiga (pré-migration) → mesmo fallback.
 
 ---
 
 ## Fora de escopo
 
-- Layout vertical / `SurebetTableRow` (já tratado anteriormente).
-- Lógica de seleção, saldo, freebet, validações — nada muda.
-- Conteúdo do dropdown (`BookmakerSearchableSelectContent`) — permanece como está, já mostra logo + meta completa por opção.
+- Backfill retroativo de logos para apostas antigas.
+- Cache local/CDN de logos (já existe `team_logos` no backend).
+- Exibir logos no modal de criação enquanto edita (só no card pós-registro, conforme pedido).
+- Mexer em qualquer cálculo, ledger, KPI, RPC ou trigger.
