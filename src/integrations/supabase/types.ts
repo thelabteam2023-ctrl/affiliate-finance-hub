@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      __phase3_evidence: {
+        Row: {
+          created_at: string | null
+          id: number
+          kind: string | null
+          payload: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          kind?: string | null
+          payload?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          kind?: string | null
+          payload?: Json | null
+        }
+        Relationships: []
+      }
       __phase3_test_report: {
         Row: {
           cenario: string | null
