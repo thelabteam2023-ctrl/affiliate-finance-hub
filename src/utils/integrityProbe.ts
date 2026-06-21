@@ -94,3 +94,57 @@ export function publishTabRender(
     });
   }
 }
+
+/**
+ * FASE 3 — Probe de paridade saldo × ledger.
+ *
+ * Para uma bookmaker, soma TODOS os eventos do `cash_ledger` (campo `valor`,
+ * que é assinado: débitos negativos, créditos positivos) e compara com
+ * `bookmakers.saldo_atual`. Se divergir além do epsilon (R$ 0,01), registra
+ * `SALDO_LEDGER_DIVERGENTE` em `window.__INTEGRITY_LOG__`.
+ *
+ * Uso recomendado: chamar logo após uma edição de aposta LIQUIDADA, para
+ * detectar saldo fantasma causado por REVERSAL incompleto.
+ */
+export async function probeBookmakerLedgerParity(
+  bookmakerId: string,
+  opts: { epsilon?: number; label?: string } = {},
+): Promise<{ ok: boolean; saldo: number; somaLedger: number; delta: number } | null> {
+  const epsilon = opts.epsilon ?? 0.01;
+  try {
+    // Lazy import para evitar ciclo em ambientes sem cliente disponível.
+    const { supabase } = await import("@/integrations/supabase/client");
+
+    const [bkRes, ledgerRes] = await Promise.all([
+      supabase.from("bookmakers").select("id,nome,saldo_atual").eq("id", bookmakerId).maybeSingle(),
+      supabase.from("cash_ledger").select("valor").eq("bookmaker_id", bookmakerId),
+    ]);
+
+    if (bkRes.error || !bkRes.data) {
+      push({ ts: Date.now(), kind: "PROBE_ERROR", message: `bookmaker ${bookmakerId} não encontrada`, data: bkRes.error });
+      return null;
+    }
+    if (ledgerRes.error) {
+      push({ ts: Date.now(), kind: "PROBE_ERROR", message: `falha ao ler cash_ledger`, data: ledgerRes.error });
+      return null;
+    }
+
+    const saldo = Number(bkRes.data.saldo_atual ?? 0);
+    const somaLedger = (ledgerRes.data ?? []).reduce((acc, r: any) => acc + Number(r.valor ?? 0), 0);
+    const delta = Number((saldo - somaLedger).toFixed(2));
+
+    if (Math.abs(delta) > epsilon) {
+      push({
+        ts: Date.now(),
+        kind: "SALDO_LEDGER_DIVERGENTE",
+        message: `${opts.label ?? "probeBookmakerLedgerParity"} — ${bkRes.data.nome}: saldo_atual=${saldo.toFixed(2)} vs Σledger=${somaLedger.toFixed(2)} (Δ=${delta.toFixed(2)})`,
+        data: { bookmakerId, saldo, somaLedger, delta },
+      });
+      return { ok: false, saldo, somaLedger, delta };
+    }
+    return { ok: true, saldo, somaLedger, delta };
+  } catch (err) {
+    push({ ts: Date.now(), kind: "PROBE_ERROR", message: "exceção em probeBookmakerLedgerParity", data: err });
+    return null;
+  }
+}
