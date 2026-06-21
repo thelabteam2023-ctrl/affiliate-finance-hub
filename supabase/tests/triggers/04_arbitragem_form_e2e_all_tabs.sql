@@ -16,11 +16,18 @@
 
 BEGIN;
 
+-- IDs reais (workspace/user/projeto) injetados via SET LOCAL.
+-- O DO $$ ... $$ não interpola :'var' por estar dentro de uma string,
+-- por isso usamos GUCs customizadas e current_setting().
+SELECT set_config('e2e.ws',   :'ws',   true);
+SELECT set_config('e2e.uid',  :'uid',  true);
+SELECT set_config('e2e.proj', :'proj', true);
+
 DO $$
 DECLARE
-  v_ws        UUID := :'ws'::uuid;
-  v_user      UUID := :'uid'::uuid;
-  v_proj      UUID := :'proj'::uuid;
+  v_ws        UUID := current_setting('e2e.ws')::uuid;
+  v_user      UUID := current_setting('e2e.uid')::uuid;
+  v_proj      UUID := current_setting('e2e.proj')::uuid;
   v_bk1       UUID := gen_random_uuid();
   v_bk2       UUID := gen_random_uuid();
   v_saldo_ini NUMERIC := 10000;
