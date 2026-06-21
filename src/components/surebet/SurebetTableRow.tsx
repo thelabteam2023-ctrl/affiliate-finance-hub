@@ -306,17 +306,49 @@ export function SurebetTableRow({
         
         {/* Odd */}
         <td className="px-1" style={{ height: '78px' }}>
-          <Input 
-            type="number"
-            step="0.00001"
-            placeholder="0.00"
-            value={entry.odd}
-            onChange={(e) => onUpdateOdd(pernaIndex, "odd", e.target.value)}
-            className="h-8 text-xs text-center px-0.5 w-[68px] tabular-nums"
-            onWheel={(e) => e.currentTarget.blur()}
-            data-field-type="odd"
-            onKeyDown={(e) => onFieldKeyDown(e, 'odd')}
-          />
+          {(() => {
+            const tipo = (entry.tipo ?? 'back') as 'back' | 'lay';
+            const isLay = tipo === 'lay';
+            const comissaoPct = ((entry.comissao ?? 0) * 100);
+            return (
+              <div className="flex flex-col items-center gap-1">
+                <Input
+                  type="number"
+                  step="0.00001"
+                  placeholder="0.00"
+                  value={entry.odd}
+                  onChange={(e) => onUpdateOdd(pernaIndex, "odd", e.target.value)}
+                  className="h-8 text-xs text-center px-0.5 w-[68px] tabular-nums"
+                  onWheel={(e) => e.currentTarget.blur()}
+                  data-field-type="odd"
+                  onKeyDown={(e) => onFieldKeyDown(e, 'odd')}
+                />
+                {(isLay || showComissao) && (
+                  <div
+                    className="flex items-center gap-1"
+                    title="Comissão da exchange (% sobre lucro do lay)"
+                  >
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      value={Number.isFinite(comissaoPct) ? String(+comissaoPct.toFixed(4)) : ''}
+                      placeholder="0"
+                      onChange={(e) => {
+                        const v = parseFloat(e.target.value);
+                        const dec = Number.isFinite(v) ? Math.max(0, Math.min(100, v)) / 100 : 0;
+                        onUpdateOdd(pernaIndex, 'comissao' as any, dec);
+                      }}
+                      className="h-6 w-12 text-[10px] text-center px-1 tabular-nums"
+                      onWheel={(e) => e.currentTarget.blur()}
+                    />
+                    <span className="text-[9px] text-muted-foreground">%</span>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </td>
         
         {/* Stake */}
@@ -367,26 +399,6 @@ export function SurebetTableRow({
                 {isLay && liability > 0 && (
                   <div className="text-[9px] text-red-500/90 font-medium leading-tight">
                     Resp: {formatCurrency(liability, entry.moeda)}
-                  </div>
-                )}
-                {(isLay || showComissao) && (
-                  <div className="flex items-center gap-1 mt-0.5" title="Comissão da exchange (% sobre lucro do lay)">
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max="100"
-                      value={Number.isFinite(comissaoPct) ? String(+comissaoPct.toFixed(4)) : ''}
-                      placeholder="0"
-                      onChange={(e) => {
-                        const v = parseFloat(e.target.value);
-                        const dec = Number.isFinite(v) ? Math.max(0, Math.min(100, v)) / 100 : 0;
-                        onUpdateOdd(pernaIndex, 'comissao' as any, dec);
-                      }}
-                      className="h-6 w-14 text-[10px] text-center px-1 tabular-nums"
-                      onWheel={(e) => e.currentTarget.blur()}
-                    />
-                    <span className="text-[9px] text-muted-foreground">% com.</span>
                   </div>
                 )}
                 {(error || (mainInsufficient && selectedBookmaker)) && (
