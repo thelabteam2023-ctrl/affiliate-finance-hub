@@ -1,103 +1,128 @@
-# Plano: Simulação BACK+LAY com resolução e edição pós-liquidação
+
+# Integração Explorador Esportivo → Formulário de Arbitragem
 
 ## Objetivo
-Rodar uma simulação determinística em SQL que reproduza, no mesmo caminho do formulário de Arbitragem:
-1. **Criação** de uma aposta de 2 pernas (BACK odd 2 R$100 + LAY odd 2 R$100, comissão 0%).
-2. **Resolução** quick-resolve (cenário a definir: BACK GREEN/LAY RED, BACK RED/LAY GREEN, ou VOID).
-3. **Edição pós-liquidação** alterando stake/odd e observando ledger, `pl_consolidado`, `saldo_atual` e snapshot da perna.
+Permitir que, ao registrar uma Arbitragem (Surebet), o usuário escolha um jogo já presente no Explorador de Dados Esportivos e tenha **Esporte**, **Evento** e **Data/Hora** do header preenchidos automaticamente — sem digitar nada.
 
-Tudo executado dentro de `BEGIN; ... ROLLBACK;` (zero resíduo no banco), espelhando o que o front faz via `criar_surebet_atomica_v3`, `liquidar_perna_surebet_v1` e `editar_surebet_completa_v3`.
+Sem mexer em qualquer regra financeira, motor de Surebet, RPCs, triggers ou tabelas existentes. A entrega é puramente UI + leitura da tabela `public.daily_events` (que já existe e já é consumida pelo `ApiExplorer`).
 
-## Decisões de cenário (precisam de confirmação)
+---
 
-### A) Qual resultado simular na resolução?
-Para um BACK 2.0 / LAY 2.0 comissão 0% com stakes iguais, os cenários canônicos são:
-- **BACK GREEN + LAY RED** → BACK paga +100, LAY perde liability 100 → P&L = 0.
-- **BACK RED + LAY GREEN** → BACK perde 100, LAY ganha 100 (×(1−comissão)) → P&L = 0.
-- **VOID/VOID** → ambas devolvem stake/liability → P&L = 0.
+## O que já existe (reaproveitar)
 
-Default sugerido: **BACK GREEN + LAY RED** (mais comum em hedge real).
+- **Tabela `public.daily_events`** (21 colunas): `sport`, `league_name`, `home_team`, `away_team`, `commence_time`, `event_date`, `status`, `home_team_logo`, `away_team_logo`, `league_logo`, `country`, `continent`, etc. É a mesma fonte usada pela aba "Calendário" do `ApiExplorer`.
+- **`src/pages/ApiExplorer.tsx`** já faz `supabase.from('daily_events').select(...)` por data — vamos espelhar o mesmo padrão de query.
+- **`src/components/apostas/BetFormHeaderV2.tsx`** — header unificado dos formulários (Arbitragem, Simples, Múltipla). Tem `gameFields` com `onEsporteChange`, `onEventoChange`, `onDataApostaChange`.
+- **`src/components/surebet/SurebetCompactForm.tsx`** — formulário que monta o header e detém o estado dos campos do jogo.
 
-### B) Que edição aplicar DEPOIS de liquidada?
-Opções (escolha uma, ou múltiplas em sequência):
-1. **Alterar stake** da perna BACK de 100 → 120 (mantendo resultado).
-2. **Alterar odd** da perna BACK de 2.0 → 2.10 (mantendo resultado).
-3. **Alterar resultado** da perna BACK de GREEN → RED (reliquidação real).
-4. **Trocar tipo** BACK ↔ LAY (caso de borda; raramente usado).
+---
 
-Default sugerido: **(1) + (2) juntos** — é o caso clássico "errei o valor digitado" pós-fechamento. A (3) já está coberta pelo teste `03_edit_liquidada_ledger_parity.sql`.
+## Entregáveis
 
-### C) Aba de origem da simulação
-Como `criar_surebet_atomica_v3` é a mesma RPC em todas as abas, qualquer aba (Surebet/Bonus/DuploGreen/ValueBet/Punter) produz o mesmo resultado financeiro — só muda `estrategia`/`contexto_operacional`. Default: **aba Surebet** (estrategia=SUREBET, contexto=NORMAL). Se quiser, replico nas 6 abas (como o `04_arbitragem_form_e2e_all_tabs.sql` já faz).
+### 1. Hook `useDailyEventsByDate`
+`src/hooks/useDailyEventsByDate.ts`
 
-## Entregável
+- Recebe uma `Date` (default = hoje) e retorna a lista de jogos do dia ordenados por `commence_time`.
+- Usa React Query: `queryKey: ['daily-events', dateKey]`, `staleTime: 5min`.
+- Select enxuto (só campos que o seletor precisa exibir/usar): `id, sport, league_name, league_logo, home_team, away_team, home_team_logo, away_team_logo, commence_time, status, country`.
+- Filtro por `event_date = dateKey` (e opcional: `status != 'finished'` por padrão, com toggle para mostrar encerrados).
 
-Arquivo novo: `supabase/tests/triggers/05_back_lay_edit_pos_liquidacao.sql`
+### 2. Componente `ExploradorEventoPicker`
+`src/components/surebet/ExploradorEventoPicker.tsx`
 
-Estrutura:
+Popover/Dialog acionado por um botão pequeno no header (ícone `CalendarDays` + label "Do Explorador").
+
+Conteúdo:
+- DatePicker compacto no topo (default = data do header da aposta; se vazio, hoje).
+- Campo de busca instantânea (filtra por time, liga ou país no lado cliente).
+- Filtros rápidos: Esporte (chips) e "Mostrar encerrados" (toggle).
+- Lista virtualizada de cards de partida no mesmo estilo visual do Explorador (logo dos times, "Time A x Time B", liga, hora, badge de status).
+- Estado vazio quando não há jogos do dia: CTA "Abrir Explorador" → navega para `/api-explorer`.
+- Skeletons enquanto carrega.
+
+Props: `{ onSelect: (event: DailyEvent) => void; defaultDate?: string }`.
+
+### 3. Mapeamento "jogo → campos do formulário"
+`src/components/surebet/utils/mapDailyEventToFormFields.ts`
+
+Função pura:
+```ts
+mapDailyEventToFormFields(ev) => {
+  esporte: normalizeEsporte(ev.sport),         // mapeia "soccer" → "Futebol", etc.
+  evento: `${ev.home_team} X ${ev.away_team}`, // padrão do form (uppercase)
+  dataAposta: ev.commence_time,                 // ISO já no formato do DateTimePicker
+  // mercado: NÃO preenche (depende da estratégia do usuário)
+}
+```
+
+`normalizeEsporte` usa a mesma lista `ESPORTES_BASE` do `BetFormHeaderV2`, com tabela de aliases (`soccer→Futebol`, `basketball→Basquete`, `tennis→Tênis`, etc.). Sport não reconhecido cai em "Outro".
+
+### 4. Wire-up no formulário de Arbitragem
+`src/components/surebet/SurebetCompactForm.tsx`
+
+- Importar o `ExploradorEventoPicker`.
+- Passar `extraBadge` (ou novo prop dedicado `headerAction`) ao `BetFormHeaderV2` com o botão de abrir o picker. Alternativa mais limpa: adicionar prop opcional `onPickFromExplorer` no `BetFormHeaderV2` que renderiza o botão entre o título e a Estratégia (à esquerda da Estratégia, que agora está à direita).
+- No callback `onSelect`, chamar os setters existentes: `setEsporte`, `setEvento`, `setDataAposta`. Disparar um `toast.success("Jogo importado do Explorador")`.
+- Guardar `daily_event_id` em estado local (sem persistir no banco nesta fase — ver "Fase 2" abaixo) só para exibir um chip "Vinculado: Liga" no header e permitir desvincular.
+
+### 5. UX/Detalhes visuais
+- Botão do picker: `variant="outline"`, altura 28px, ícone + texto curto "Explorador", visível apenas no formulário de Arbitragem (não em Simples/Múltipla nesta fase).
+- Quando um jogo está vinculado: badge discreta `[Liga · 19:00]` ao lado do botão, com `X` para desvincular (limpa só o badge, não os campos já preenchidos).
+- Atalho de teclado: `Ctrl+J` abre o picker quando o formulário está focado.
+- Sem alteração de altura/largura da janela popup do Surebet (1200x dinâmica) — picker é um Popover que se ancora ao botão.
+
+### 6. Permissões e segurança
+- A tabela `daily_events` já existe com 1 policy. **Não criar nem alterar policy nessa fase.** Antes de codar o hook, validar com `supabase--read_query` se `authenticated` consegue ler. Se não, plano se ajusta para criar uma `SELECT` policy permitindo `authenticated` (sem expor para `anon`). Nada de `GRANT` novo enquanto a leitura atual funcionar.
+- Sem RLS nova, sem migration nesta fase.
+
+---
+
+## Não inclui (fora de escopo desta fase)
+
+- Persistir vínculo `aposta_unificada.daily_event_id` (precisaria migration + ajuste no motor de salvamento — fica para Fase 2 quando o usuário pedir).
+- Integração no formulário de Aposta Simples ou Múltipla (usuário pediu só Arbitragem).
+- Preenchimento de Mercado (depende de estratégia/mercados do jogo, que `daily_events` não tem hoje).
+- Sincronizar/criar novos eventos esportivos — usamos só o que já está sincronizado pelo `api-monitor`.
+- Alterações no `ApiExplorer.tsx`.
+
+---
+
+## Detalhes técnicos (referência)
+
 ```text
-BEGIN;
-  -- params: workspace, user, projeto, bk1 (BACK), bk2 (LAY)
-  -- snapshot saldos pré
-
-  -- FASE 1: CRIAÇÃO
-  criar_surebet_atomica_v3(
-    pernas:    [{ordem:1, casa:bk1, tipo:'back'},
-                {ordem:2, casa:bk2, tipo:'lay'}],
-    entradas:  [{perna_ordem:1, stake:100, odd:2.00, moeda:BRL, fonte:REAL},
-                {perna_ordem:2, stake:100, odd:2.00, moeda:BRL, fonte:REAL, comissao:0}]
-  )
-  ASSERT:
-    - bk1.saldo  = pre_bk1 − 100              (stake BACK debitado)
-    - bk2.saldo  = pre_bk2 − 100              (liability LAY = stake×(odd−1) = 100)
-    - status = PENDENTE
-    - apostas_perna_entradas com cotacao_snapshot=1
-
-  -- FASE 2: RESOLUÇÃO (cenário escolhido: BACK GREEN, LAY RED)
-  liquidar_perna_surebet_v1(perna1, 'GREEN', ws)
-  liquidar_perna_surebet_v1(perna2, 'RED',   ws)
-  ASSERT:
-    - status = LIQUIDADA
-    - pl_perna1 = +100 ; pl_perna2 = −100   (já refletido na criação para LAY)
-    - pl_consolidado pai = Σ pernas = 0
-    - bk1.saldo = pre_bk1 + 100              (stake devolvido + lucro = +100 líquido)
-    - bk2.saldo = pre_bk2 − 100              (liability consumida)
-    - ledger: PAYOUT em bk1 (+200), nenhum payout em bk2 (RED LAY)
-
-  -- FASE 3: EDIÇÃO PÓS-LIQUIDAÇÃO (stake 100→120, odd 2.00→2.10 na BACK)
-  editar_surebet_completa_v3(
-    aposta_id,
-    nova_perna1: { stake:120, odd:2.10, resultado:'GREEN' },
-    nova_perna2: { inalterada }
-  )
-  ASSERT:
-    - reversão completa do PAYOUT anterior em bk1
-    - novo débito de stake (−120) e novo PAYOUT (+120×2.10 = +252)
-    - bk1.saldo final = pre_bk1 + 132        (lucro novo = 120)
-    - bk2.saldo inalterada vs FASE 2
-    - pl_perna1 = +120 ; pl_perna2 = −100 ; pl_consolidado = +20
-    - aposta_edit_audit_logs ganhou 1 linha com diff de stake/odd
-    - cotacao_snapshot da perna preservada (não recotada)
-
-ROLLBACK;
+┌─ src/hooks/
+│   └─ useDailyEventsByDate.ts          [novo]
+├─ src/components/surebet/
+│   ├─ ExploradorEventoPicker.tsx        [novo]
+│   ├─ SurebetCompactForm.tsx            [editar — adicionar botão+handler]
+│   └─ utils/mapDailyEventToFormFields.ts [novo]
+└─ src/components/apostas/
+    └─ BetFormHeaderV2.tsx               [editar — prop opcional headerAction OU extraBadge slot]
 ```
 
-## Como rodar
-```bash
-psql -v ws=<uuid> -v uid=<uuid> -v proj=<uuid> \
-     -v bk1=<uuid> -v bk2=<uuid> \
-     -v ON_ERROR_STOP=1 \
-     -f supabase/tests/triggers/05_back_lay_edit_pos_liquidacao.sql
+Fluxo:
+```text
+Header (Arbitragem)
+   └─ [Explorador ▾]  clique
+        ↓
+   Popover ExploradorEventoPicker
+        ├─ DatePicker (default = data do form)
+        ├─ Busca + filtros
+        └─ Lista de daily_events do dia
+              └─ clique no jogo
+                    ↓
+        mapDailyEventToFormFields(ev)
+                    ↓
+        setEsporte / setEvento / setDataAposta
+        toast "Jogo importado"
+        badge "Liga · hora" no header
 ```
-Saída: `RAISE NOTICE` por fase com saldos antes/depois e deltas; qualquer divergência aborta com `RAISE EXCEPTION` (e o `ROLLBACK` garante limpeza).
 
-## Fora de escopo
-- Não toca frontend.
-- Não cria migration (só arquivo de teste).
-- Não altera nenhum dado real (transação revertida).
-- Não cobre multimoeda, freebet ou multi-entry (cenários já cobertos por testes existentes — posso adicionar depois se quiser).
+---
 
-## Perguntas para confirmar antes de implementar
-1. Cenário de resolução: **BACK GREEN + LAY RED** (default) ou outro?
-2. Edição pós-liquidação: **stake 100→120 + odd 2.00→2.10** (default) ou outra mudança?
-3. Replicar nas 6 abas ou só **Surebet**?
+## Validação ao final
+1. Build limpo (`tsc` sem erros).
+2. Abrir Arbitragem em `/janela/surebet/novo?projetoId=...`, clicar "Explorador", selecionar um jogo do dia, conferir que `Esporte`, `Evento` e `Data/Hora` foram preenchidos.
+3. Trocar a data no picker e confirmar nova lista.
+4. Limpar busca + jogo encerrado escondido por padrão; toggle traz de volta.
+5. Sem mudanças em valores monetários, motor de cálculo, KPIs ou ledger.
