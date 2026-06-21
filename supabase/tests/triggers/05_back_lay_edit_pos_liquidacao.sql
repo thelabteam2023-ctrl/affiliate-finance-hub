@@ -33,8 +33,8 @@ DECLARE
 
   v_pre_bk1  NUMERIC;
   v_pre_bk2  NUMERIC;
-  v_bk1      NUMERIC;
-  v_bk2      NUMERIC;
+  v_s_bk1    NUMERIC;
+  v_s_bk2    NUMERIC;
 
   v_rpc       RECORD;
   v_aposta_id UUID;
