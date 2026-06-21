@@ -2263,6 +2263,12 @@ export function SurebetModalRoot({
                   setEsporte(mapped.esporte);
                   setEvento(mapped.evento);
                   setDataAposta(mapped.dataAposta);
+                  setImportedHomeTeam(mapped.homeTeam);
+                  setImportedAwayTeam(mapped.awayTeam);
+                  setImportedHomeLogo(mapped.homeTeamLogoUrl);
+                  setImportedAwayLogo(mapped.awayTeamLogoUrl);
+                  setImportedLeagueLogo(mapped.leagueLogoUrl);
+                  setImportedDailyEventId(mapped.dailyEventId);
                 }}
               />
             }
