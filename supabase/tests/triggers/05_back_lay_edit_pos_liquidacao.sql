@@ -54,6 +54,9 @@ DECLARE
   v_pernas    JSONB;
   v_entradas  JSONB;
   v_pai_lucro NUMERIC;
+  v_cot       NUMERIC;
+  v_moeda_c   TEXT;
+  v_soma_conv NUMERIC;
 BEGIN
   -- Validação de pré-condições
   IF NOT EXISTS (SELECT 1 FROM bookmakers WHERE id=v_id_bk1 AND workspace_id=v_ws AND projeto_id=v_proj) THEN
@@ -62,6 +65,14 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM bookmakers WHERE id=v_id_bk2 AND workspace_id=v_ws AND projeto_id=v_proj) THEN
     RAISE EXCEPTION 'bk2=% não pertence ao projeto=%/ws=%', v_id_bk2, v_proj, v_ws;
   END IF;
+
+  SELECT moeda_consolidacao, COALESCE(cotacao_trabalho,1)
+    INTO v_moeda_c, v_cot FROM projetos WHERE id=v_proj;
+  -- Pernas estão em BRL nativo; pai grava em moeda consolidada.
+  -- Fator de conversão BRL → consolidação:
+  --   USD: divide por cotacao_trabalho (BRL/USD)
+  --   BRL: 1
+  -- (outras moedas não cobertas neste teste)
 
   SELECT saldo_atual INTO v_pre_bk1 FROM bookmakers WHERE id=v_id_bk1;
   SELECT saldo_atual INTO v_pre_bk2 FROM bookmakers WHERE id=v_id_bk2;
@@ -133,6 +144,7 @@ BEGIN
   SELECT lucro_prejuizo INTO v_pl_p1 FROM apostas_pernas WHERE id=v_p1;
   SELECT lucro_prejuizo INTO v_pl_p2 FROM apostas_pernas WHERE id=v_p2;
   SELECT COALESCE(SUM(lucro_prejuizo),0) INTO v_soma_pn FROM apostas_pernas WHERE aposta_id=v_aposta_id;
+  v_soma_conv := CASE WHEN v_moeda_c='BRL' THEN v_soma_pn ELSE v_soma_pn / v_cot END;
 
   SELECT saldo_atual INTO v_s_bk1 FROM bookmakers WHERE id=v_id_bk1;
   SELECT saldo_atual INTO v_s_bk2 FROM bookmakers WHERE id=v_id_bk2;
@@ -140,11 +152,12 @@ BEGIN
   IF v_status <> 'LIQUIDADA' THEN
     RAISE EXCEPTION '[FASE 2] status esperado LIQUIDADA, obtido %', v_status;
   END IF;
-  -- Paridade na MESMA moeda (BRL nativo): pai.lucro_prejuizo == Σ pernas.lucro_prejuizo
-  IF ROUND(v_pai_lucro,2) <> ROUND(v_soma_pn,2) THEN
-    RAISE EXCEPTION '[FASE 2] paridade pai/pernas (BRL): pai=% Σ=%', v_pai_lucro, v_soma_pn;
+  -- Paridade em moeda consolidada: pai.lucro_prejuizo == Σ pernas convertido
+  IF ROUND(v_pai_lucro,2) <> ROUND(v_soma_conv,2) THEN
+    RAISE EXCEPTION '[FASE 2] paridade pai/pernas (% consol): pai=% Σ_conv=% (Σ_brl=%, cot=%)',
+      v_moeda_c, v_pai_lucro, v_soma_conv, v_soma_pn, v_cot;
   END IF;
-  IF ROUND(v_pai_lucro,2) <> 0.00 THEN
+  IF ROUND(v_soma_pn,2) <> 0.00 THEN
     RAISE EXCEPTION '[FASE 2] P&L esperado 0 (hedge perfeito), obtido %', v_pai_lucro;
   END IF;
   IF ROUND(v_s_bk1,2) <> ROUND(v_pre_bk1 + v_pl_p1,2) THEN
@@ -195,6 +208,7 @@ BEGIN
   SELECT lucro_prejuizo INTO v_pl_p1 FROM apostas_pernas WHERE id=v_p1;
   SELECT lucro_prejuizo INTO v_pl_p2 FROM apostas_pernas WHERE id=v_p2;
   SELECT COALESCE(SUM(lucro_prejuizo),0) INTO v_soma_pn FROM apostas_pernas WHERE aposta_id=v_aposta_id;
+  v_soma_conv := CASE WHEN v_moeda_c='BRL' THEN v_soma_pn ELSE v_soma_pn / v_cot END;
 
   SELECT saldo_atual INTO v_s_bk1 FROM bookmakers WHERE id=v_id_bk1;
   SELECT saldo_atual INTO v_s_bk2 FROM bookmakers WHERE id=v_id_bk2;
@@ -211,9 +225,10 @@ BEGIN
   IF v_status <> 'LIQUIDADA' THEN
     RAISE EXCEPTION '[FASE 3] status esperado LIQUIDADA, obtido %', v_status;
   END IF;
-  -- Paridade na MESMA moeda (BRL nativo): pai.lucro_prejuizo == Σ pernas.lucro_prejuizo
-  IF ROUND(v_pai_lucro,2) <> ROUND(v_soma_pn,2) THEN
-    RAISE EXCEPTION '[FASE 3] paridade pai/pernas (BRL): pai=% Σ=%', v_pai_lucro, v_soma_pn;
+  -- Paridade em moeda consolidada
+  IF ROUND(v_pai_lucro,2) <> ROUND(v_soma_conv,2) THEN
+    RAISE EXCEPTION '[FASE 3] paridade pai/pernas (% consol): pai=% Σ_conv=% (Σ_brl=%, cot=%)',
+      v_moeda_c, v_pai_lucro, v_soma_conv, v_soma_pn, v_cot;
   END IF;
 
   -- Paridade absoluta de saldo: bk = pre + pl_perna
