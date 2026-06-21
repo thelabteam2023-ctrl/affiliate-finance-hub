@@ -347,7 +347,7 @@ function PernaItem({
             >
               {getSelecaoDisplay(perna)}
             </SelectionBadge>
-            
+            {isLayPerna && <LayBadge />}
             {onResultChange && (
               <SurebetPernaResultPill
                 resultado={resultadoExibir}
@@ -384,7 +384,7 @@ function PernaItem({
           <div className="flex items-baseline justify-between mt-auto pt-1 border-t border-border/10">
             <span className={cn("text-sm font-bold tabular-nums", oddClass)} title={layTitle}>{layPrefix}@{perna.odd.toFixed(2)}</span>
             <span className={cn("text-xs tabular-nums font-medium", isLayPerna ? "text-red-300" : "text-muted-foreground")} title={stakeTitle}>
-              {stakeLabel}{formatPernaValue(perna.stake, perna.moeda)}
+              {stakeLabel}{formatPernaValue(respValor, perna.moeda)}
             </span>
           </div>
         </div>
@@ -404,6 +404,7 @@ function PernaItem({
             {getSelecaoDisplay(perna)}
           </SelectionBadge>
         </div>
+        {isLayPerna && <div className="hidden sm:block shrink-0"><LayBadge /></div>}
         
         {/* Row with Logo + Nome + Odd/Stake */}
         <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0 overflow-hidden">
@@ -436,7 +437,7 @@ function PernaItem({
           {/* Odd e Stake à direita - larguras fixas para alinhamento */}
           <div className="flex items-center gap-2 shrink-0">
             <span className={cn("text-sm sm:text-base font-medium whitespace-nowrap w-[70px] text-right tabular-nums", oddClass)} title={layTitle}>{layPrefix}@{perna.odd.toFixed(2)}</span>
-            <span className={cn("text-xs sm:text-sm whitespace-nowrap w-[110px] text-right tabular-nums", isLayPerna ? "text-red-300" : "text-muted-foreground")} title={stakeTitle}>{stakeLabel}{formatPernaValue(perna.stake, perna.moeda)}</span>
+            <span className={cn("text-xs sm:text-sm whitespace-nowrap w-[110px] text-right tabular-nums", isLayPerna ? "text-red-300" : "text-muted-foreground")} title={stakeTitle}>{stakeLabel}{formatPernaValue(respValor, perna.moeda)}</span>
           </div>
           
           {/* Result pill per perna */}
@@ -457,6 +458,7 @@ function PernaItem({
           >
             {getSelecaoDisplay(perna)}
           </SelectionBadge>
+          {isLayPerna && <span className="ml-1.5 inline-block align-middle"><LayBadge /></span>}
         </div>
       </div>
     );
