@@ -1821,6 +1821,21 @@ export function SurebetModalRoot({
         console.log("[SurebetModalRoot] ✅ Surebet criada via RPC v3:", {
           aposta_id: result.o_aposta_id,
         });
+
+        // Snapshot opcional de logos de time/liga (passthrough cosmético).
+        if (result.o_aposta_id && (importedHomeTeam || importedAwayTeam || importedHomeLogo || importedAwayLogo || importedLeagueLogo)) {
+          await supabase
+            .from('apostas_unificada')
+            .update({
+              time_casa: importedHomeTeam,
+              time_fora: importedAwayTeam,
+              home_team_logo_url: importedHomeLogo,
+              away_team_logo_url: importedAwayLogo,
+              league_logo_url: importedLeagueLogo,
+              daily_event_id: importedDailyEventId,
+            } as any)
+            .eq('id', result.o_aposta_id);
+        }
       }
 
       // Invalidar TODOS os caches (saldos + KPIs + calendário + dashboard)
