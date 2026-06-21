@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { probeBookmakerLedgerParity } from "@/utils/integrityProbe";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos, type BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
 import { useInvalidateAfterMutation } from "@/hooks/useInvalidateAfterMutation";
