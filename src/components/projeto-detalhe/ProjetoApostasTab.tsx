@@ -1,3 +1,4 @@
+import { openSurebetWindow } from "@/lib/windowHelper";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllPaginated } from "@/lib/fetchAllPaginated";
@@ -1504,8 +1505,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
   };
 
   const handleDuplicateSurebet = (surebetId: string) => {
-    const url = `/janela/surebet/novo?projetoId=${encodeURIComponent(projetoId)}&tab=apostas&duplicateFrom=${surebetId}`;
-    window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+    openSurebetWindow({ projetoId, activeTab: 'apostas', duplicateFrom: surebetId } as any);
   };
 
   if (loading) {
@@ -1706,8 +1706,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                   surebet={surebetData}
                   onEdit={(surebet) => {
                     // Abrir em janela externa
-                    const url = `/janela/surebet/${surebet.id}?projetoId=${encodeURIComponent(projetoId)}&tab=apostas`;
-                    window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+                    openSurebetWindow({ projetoId, id: surebet.id, activeTab: 'apostas' });
                   }}
                   onQuickResolve={handleQuickResolveSurebet}
                   onPernaResultChange={handleSurebetPernaResolve}

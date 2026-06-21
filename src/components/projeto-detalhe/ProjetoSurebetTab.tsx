@@ -1,3 +1,4 @@
+import { openSurebetWindow } from "@/lib/windowHelper";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useQueryClient, useQuery, keepPreviousData } from "@tanstack/react-query";
 import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
@@ -718,8 +719,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
   }, [projetoId]);
 
   const handleDuplicateSurebet = useCallback((surebetId: string) => {
-    const url = `/janela/surebet/novo?projetoId=${encodeURIComponent(projetoId)}&tab=surebet&duplicateFrom=${surebetId}`;
-    window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+    openSurebetWindow({ projetoId, activeTab: 'surebet', duplicateFrom: surebetId } as any);
   }, [projetoId]);
 
   // Usa a formatação do projeto (moeda de consolidação)
@@ -1583,8 +1583,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                   key={operacao.id}
                   surebet={operacao}
                   onEdit={(sb) => {
-                    const url = `/janela/surebet/${sb.id}?projetoId=${encodeURIComponent(projetoId)}&tab=surebet`;
-                    window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+                    openSurebetWindow({ projetoId, id: sb.id, activeTab: 'surebet' });
                   }}
                   onQuickResolve={handleSurebetQuickResolve}
                   onPernaResultChange={handleSurebetPernaResolve}

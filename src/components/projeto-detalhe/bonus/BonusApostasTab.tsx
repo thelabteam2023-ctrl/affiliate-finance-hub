@@ -1,3 +1,4 @@
+import { openSurebetWindow } from "@/lib/windowHelper";
 import { useState, useEffect, useMemo, useRef, useCallback, memo } from "react";
 import { SaldoOperavelCard } from "../SaldoOperavelCard";
 import { useQueryClient } from "@tanstack/react-query";
@@ -884,8 +885,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
   }, [projetoId]);
 
   const handleDuplicateSurebet = useCallback((surebetId: string) => {
-    const url = `/janela/surebet/novo?projetoId=${encodeURIComponent(projetoId)}&tab=bonus&duplicateFrom=${surebetId}`;
-    window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+    openSurebetWindow({ projetoId, activeTab: 'bonus', duplicateFrom: surebetId } as any);
   }, [projetoId]);
 
   // Abrir aposta simples em janela externa (mesmo comportamento do Surebet)
@@ -1128,8 +1128,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
                bookmakerNomeMap={bookmakerNomeMap}
                onEdit={(surebet) => {
                 // Abrir em janela externa
-                const url = `/janela/surebet/${surebet.id}?projetoId=${encodeURIComponent(projetoId)}&tab=bonus`;
-                window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+                openSurebetWindow({ projetoId, id: surebet.id, activeTab: 'bonus' });
               }}
               onQuickResolve={(surebetId, result) => handleQuickResolveSurebet(surebetId, result)}
               onSimpleMenuQuickResolve={handleQuickResolve}

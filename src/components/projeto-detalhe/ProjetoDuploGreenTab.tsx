@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { invalidateCanonicalCaches } from "@/lib/invalidateCanonicalCaches";
-import { calcSurebetWindowHeight } from "@/lib/windowHelper";
+import { calcSurebetWindowHeight, openSurebetWindow } from "@/lib/windowHelper";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllPaginated } from "@/lib/fetchAllPaginated";
@@ -720,8 +720,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
   }, [projetoId]);
 
   const handleDuplicateSurebet = useCallback((surebetId: string) => {
-    const url = `/janela/surebet/novo?projetoId=${encodeURIComponent(projetoId)}&tab=duplogreen&duplicateFrom=${surebetId}`;
-    window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+    openSurebetWindow({ projetoId, activeTab: 'duplogreen', duplicateFrom: surebetId } as any);
   }, [projetoId]);
 
   // Filtrar pendentes fora do período para KPIs
