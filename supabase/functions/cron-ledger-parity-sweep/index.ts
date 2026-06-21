@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
     const { data: bookmakers, error: bkErr } = await admin
       .from("bookmakers")
       .select("id, workspace_id, nome, saldo_atual")
-      .eq("status", "ATIVA");
+      .in("status", ["ativo", "limitada", "aguardando_saque"]);
 
     if (bkErr) {
       console.error("[cron-sweep] erro lendo bookmakers", bkErr);
