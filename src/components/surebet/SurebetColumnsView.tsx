@@ -629,23 +629,20 @@ export function SurebetColumnsView({
                           </span>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Lucro</span>
                         <div className="flex items-baseline gap-1.5 min-w-0">
-                          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Lucro</span>
                           <span className={cn(
                             "text-sm font-bold tabular-nums truncate",
                             hasData && scenario ? (isPositive ? "text-emerald-600 dark:text-emerald-500" : "text-red-600 dark:text-red-500") : "text-muted-foreground"
                           )}>
                             {hasData && scenario ? formatCompactValue(lucro) : "—"}
                           </span>
-                        </div>
-                        <div className="flex items-baseline gap-1.5 min-w-0">
-                          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">ROI</span>
                           <span className={cn(
-                            "text-[11px] tabular-nums truncate",
-                            hasData && scenario ? (isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400") : "text-muted-foreground"
+                            "text-[10px] tabular-nums truncate",
+                            hasData && scenario ? (isPositive ? "text-emerald-600/80 dark:text-emerald-400/80" : "text-red-600/80 dark:text-red-400/80") : "text-muted-foreground"
                           )}>
-                            {hasData && scenario ? `${roi > 0 ? "+" : ""}${roi.toFixed(2)}%` : "—"}
+                            {hasData && scenario ? `(${roi > 0 ? "+" : ""}${roi.toFixed(2)}%)` : ""}
                           </span>
                         </div>
                       </div>
