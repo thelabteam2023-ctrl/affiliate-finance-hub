@@ -681,6 +681,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           contexto_operacional,
           workspace_id, moeda_operacao, stake_consolidado, pl_consolidado, consolidation_currency,
           valor_brl_referencia, lucro_prejuizo_brl_referencia,
+          time_casa, time_fora, home_team_logo_url, away_team_logo_url, league_logo_url,
           apostas_pernas (
             id, selecao, selecao_livre, odd, stake, stake_real, stake_freebet, resultado, lucro_prejuizo, bookmaker_id, moeda, ordem, tipo, comissao, fonte_saldo
           )
