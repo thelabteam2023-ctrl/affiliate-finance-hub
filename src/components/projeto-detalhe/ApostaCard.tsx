@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Zap, TrendingUp, Target, ArrowLeftRight, Coins, Gift, CheckCircle2, Clock, Layers, X, CircleSlash, Loader2, ChevronDown, ChevronUp, Building2 } from "lucide-react";
 import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
+import { TeamLogo } from "@/components/ui/team-logo";
 import { DateAnomalyBadge } from "@/components/ui/date-anomaly-alert";
 import { detectDateAnomaly } from "@/lib/dateAnomalyDetection";
 import { ApostaPernasResumo, ApostaPernasInline, getModeloOperacao, Perna } from "./ApostaPernasResumo";
@@ -102,7 +103,14 @@ export interface ApostaCardData {
   mercado_direcao?: string | null;
   mercado_linha?: number | null;
   mercado_display?: string | null;
+  // Snapshot opcional do evento importado (Importar Jogo → daily_events)
+  time_casa?: string | null;
+  time_fora?: string | null;
+  home_team_logo_url?: string | null;
+  away_team_logo_url?: string | null;
+  league_logo_url?: string | null;
 }
+
 
 interface ApostaCardProps {
   aposta: ApostaCardData;
@@ -392,6 +400,13 @@ export function ApostaCard({
   
   // Para apostas múltiplas, exibir "MÚLTIPLA" como título
   const displayEvento = isMultipla ? 'MÚLTIPLA' : (aposta.evento || '');
+
+  // Snapshot do evento importado (logos de time). Só vale para apostas
+  // simples/surebets criadas via "Importar Jogo".
+  const hasTeamLogos = !isMultipla
+    && !!aposta.time_casa
+    && !!aposta.time_fora
+    && (!!aposta.home_team_logo_url || !!aposta.away_team_logo_url);
   
   // Multi-currency: usar valores consolidados para exibição de totais
   const stakeDisplay = (() => {
@@ -480,7 +495,17 @@ export function ApostaCard({
           {/* LINHA 1: Evento + Esporte + Badges - Responsivo */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
             <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-              <p className="text-sm font-medium truncate uppercase">{displayEvento || 'Aposta'}</p>
+              {hasTeamLogos ? (
+                <div className="flex items-center gap-1.5 min-w-0 text-sm font-medium uppercase">
+                  <TeamLogo logoUrl={aposta.home_team_logo_url} alt={aposta.time_casa ?? ''} size="h-4 w-4" iconSize="h-2.5 w-2.5" />
+                  <span className="truncate">{aposta.time_casa}</span>
+                  <span className="text-muted-foreground shrink-0">×</span>
+                  <TeamLogo logoUrl={aposta.away_team_logo_url} alt={aposta.time_fora ?? ''} size="h-4 w-4" iconSize="h-2.5 w-2.5" />
+                  <span className="truncate">{aposta.time_fora}</span>
+                </div>
+              ) : (
+                <p className="text-sm font-medium truncate uppercase">{displayEvento || 'Aposta'}</p>
+              )}
               {aposta.esporte && (
                 <span className="text-xs text-muted-foreground shrink-0 hidden sm:inline">• {aposta.esporte}</span>
               )}
@@ -780,7 +805,17 @@ export function ApostaCard({
     >
       <CardContent className="p-5 sm:p-6">
         {/* LINHA 1: Evento (título destacado) */}
-        <p className="text-base sm:text-lg font-semibold truncate uppercase leading-tight mb-1.5">{displayEvento || 'Aposta'}</p>
+        {hasTeamLogos ? (
+          <div className="flex items-center gap-2 mb-1.5 text-base sm:text-lg font-semibold uppercase leading-tight min-w-0">
+            <TeamLogo logoUrl={aposta.home_team_logo_url} alt={aposta.time_casa ?? ''} size="h-6 w-6" iconSize="h-3.5 w-3.5" />
+            <span className="truncate">{aposta.time_casa}</span>
+            <span className="text-muted-foreground shrink-0">×</span>
+            <TeamLogo logoUrl={aposta.away_team_logo_url} alt={aposta.time_fora ?? ''} size="h-6 w-6" iconSize="h-3.5 w-3.5" />
+            <span className="truncate">{aposta.time_fora}</span>
+          </div>
+        ) : (
+          <p className="text-base sm:text-lg font-semibold truncate uppercase leading-tight mb-1.5">{displayEvento || 'Aposta'}</p>
+        )}
         
         {/* LINHA 1b: Esporte + Badges + Menu na mesma linha */}
         <div className="flex items-center gap-1.5 flex-wrap mb-4">

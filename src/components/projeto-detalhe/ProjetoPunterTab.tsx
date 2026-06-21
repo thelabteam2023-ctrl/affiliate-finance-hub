@@ -335,7 +335,7 @@ export function ProjetoPunterTab({
           fonte_entrada, usar_freebet, fonte_saldo,
           is_novo_formulario, liga, fair_value, modelo_aposta,
           mercado_categoria, mercado_objeto, mercado_formato, mercado_direcao, mercado_linha, mercado_display,
-          time_casa, time_fora
+          time_casa, time_fora, home_team_logo_url, away_team_logo_url, league_logo_url
         `;
 
       let dateFilters: { startUTC?: string; endUTC?: string } = {};

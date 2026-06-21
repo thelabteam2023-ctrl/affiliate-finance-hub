@@ -681,6 +681,7 @@ export type Database = {
       apostas_unificada: {
         Row: {
           aposta_relacionada_id: string | null
+          away_team_logo_url: string | null
           back_comissao: number | null
           back_em_exchange: boolean | null
           bonus_id: string | null
@@ -697,6 +698,7 @@ export type Database = {
           cotacao_snapshot: number | null
           cotacao_snapshot_at: string | null
           created_at: string
+          daily_event_id: string | null
           data_aposta: string
           edge_percentual: number | null
           esporte: string | null
@@ -708,6 +710,7 @@ export type Database = {
           fonte_saldo: string | null
           forma_registro: string
           gerou_freebet: boolean | null
+          home_team_logo_url: string | null
           id: string
           is_bonus_bet: boolean | null
           is_manual_override: boolean | null
@@ -719,6 +722,7 @@ export type Database = {
           lay_liability: number | null
           lay_odd: number | null
           lay_stake: number | null
+          league_logo_url: string | null
           legacy_id: string | null
           legacy_table: string | null
           liga: string | null
@@ -784,6 +788,7 @@ export type Database = {
         }
         Insert: {
           aposta_relacionada_id?: string | null
+          away_team_logo_url?: string | null
           back_comissao?: number | null
           back_em_exchange?: boolean | null
           bonus_id?: string | null
@@ -800,6 +805,7 @@ export type Database = {
           cotacao_snapshot?: number | null
           cotacao_snapshot_at?: string | null
           created_at?: string
+          daily_event_id?: string | null
           data_aposta?: string
           edge_percentual?: number | null
           esporte?: string | null
@@ -811,6 +817,7 @@ export type Database = {
           fonte_saldo?: string | null
           forma_registro?: string
           gerou_freebet?: boolean | null
+          home_team_logo_url?: string | null
           id?: string
           is_bonus_bet?: boolean | null
           is_manual_override?: boolean | null
@@ -822,6 +829,7 @@ export type Database = {
           lay_liability?: number | null
           lay_odd?: number | null
           lay_stake?: number | null
+          league_logo_url?: string | null
           legacy_id?: string | null
           legacy_table?: string | null
           liga?: string | null
@@ -887,6 +895,7 @@ export type Database = {
         }
         Update: {
           aposta_relacionada_id?: string | null
+          away_team_logo_url?: string | null
           back_comissao?: number | null
           back_em_exchange?: boolean | null
           bonus_id?: string | null
@@ -903,6 +912,7 @@ export type Database = {
           cotacao_snapshot?: number | null
           cotacao_snapshot_at?: string | null
           created_at?: string
+          daily_event_id?: string | null
           data_aposta?: string
           edge_percentual?: number | null
           esporte?: string | null
@@ -914,6 +924,7 @@ export type Database = {
           fonte_saldo?: string | null
           forma_registro?: string
           gerou_freebet?: boolean | null
+          home_team_logo_url?: string | null
           id?: string
           is_bonus_bet?: boolean | null
           is_manual_override?: boolean | null
@@ -925,6 +936,7 @@ export type Database = {
           lay_liability?: number | null
           lay_odd?: number | null
           lay_stake?: number | null
+          league_logo_url?: string | null
           legacy_id?: string | null
           legacy_table?: string | null
           liga?: string | null
@@ -1086,6 +1098,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_financial_audit"
             referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_daily_event_id_fkey"
+            columns: ["daily_event_id"]
+            isOneToOne: false
+            referencedRelation: "daily_events"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "apostas_unificada_projeto_id_fkey"

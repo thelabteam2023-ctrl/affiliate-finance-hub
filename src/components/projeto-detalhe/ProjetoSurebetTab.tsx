@@ -135,6 +135,13 @@ interface Surebet {
   fonte_saldo?: string | null;
   stake_freebet?: number | null;
   raw_pernas?: any[];
+  // Snapshot opcional de evento importado (Importar Jogo)
+  time_casa?: string | null;
+  time_fora?: string | null;
+  home_team_logo_url?: string | null;
+  away_team_logo_url?: string | null;
+  league_logo_url?: string | null;
+  daily_event_id?: string | null;
 }
 
 // REMOVIDO: Interface Bookmaker - agora usa BookmakerSaldo do hook centralizado
@@ -338,6 +345,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           odd, selecao, bookmaker_id, bonus_id,
           moeda_operacao, stake_consolidado, pl_consolidado, consolidation_currency, valor_brl_referencia, lucro_prejuizo_brl_referencia,
           fonte_saldo, usar_freebet, stake_real, stake_freebet, is_multicurrency,
+          time_casa, time_fora, home_team_logo_url, away_team_logo_url, league_logo_url, daily_event_id,
           bookmaker:bookmakers(nome, parceiro:parceiros(nome))
         `;
 
@@ -469,6 +477,11 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           lucro_prejuizo: arb.lucro_prejuizo,
           fonte_saldo: arb.fonte_saldo || null,
           stake_freebet: arb.stake_freebet ?? null,
+          time_casa: (arb as any).time_casa ?? null,
+          time_fora: (arb as any).time_fora ?? null,
+          home_team_logo_url: (arb as any).home_team_logo_url ?? null,
+          away_team_logo_url: (arb as any).away_team_logo_url ?? null,
+          league_logo_url: (arb as any).league_logo_url ?? null,
         };
       });
     },
@@ -1526,6 +1539,11 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                      logo_url: p.logo_url || getLogoUrl((p.bookmaker_nome || "").split(" - ")[0] || ""),
                      selecao_livre: p.selecao_livre || null,
                    })),
+                   time_casa: (operacao as any).time_casa ?? null,
+                   time_fora: (operacao as any).time_fora ?? null,
+                   home_team_logo_url: (operacao as any).home_team_logo_url ?? null,
+                   away_team_logo_url: (operacao as any).away_team_logo_url ?? null,
+                   league_logo_url: (operacao as any).league_logo_url ?? null,
                 };
                 
                 return (

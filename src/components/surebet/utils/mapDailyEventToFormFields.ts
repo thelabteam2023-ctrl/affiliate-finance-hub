@@ -62,6 +62,12 @@ export interface MappedEventFields {
   esporte: string;
   evento: string;
   dataAposta: string;
+  homeTeam: string | null;
+  awayTeam: string | null;
+  homeTeamLogoUrl: string | null;
+  awayTeamLogoUrl: string | null;
+  leagueLogoUrl: string | null;
+  dailyEventId: string | null;
 }
 
 export function mapDailyEventToFormFields(ev: DailyEvent): MappedEventFields {
@@ -69,5 +75,11 @@ export function mapDailyEventToFormFields(ev: DailyEvent): MappedEventFields {
     esporte: normalizeEsporte(ev.sport),
     evento: `${ev.home_team} X ${ev.away_team}`.toUpperCase(),
     dataAposta: toLocalDateTimeInput(ev.commence_time),
+    homeTeam: ev.home_team ?? null,
+    awayTeam: ev.away_team ?? null,
+    homeTeamLogoUrl: ev.home_team_logo ?? null,
+    awayTeamLogoUrl: ev.away_team_logo ?? null,
+    leagueLogoUrl: ev.league_logo ?? null,
+    dailyEventId: (ev as any).id ?? null,
   };
 }

@@ -139,6 +139,10 @@ interface Aposta {
   time_casa?: string | null;
   time_fora?: string | null;
   fonte_entrada?: string | null;
+  // Snapshot de logos do evento importado
+  home_team_logo_url?: string | null;
+  away_team_logo_url?: string | null;
+  league_logo_url?: string | null;
   // Campos de consolidação multi-moeda
   moeda_operacao?: string | null;
   stake_consolidado?: number | null;
@@ -453,7 +457,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           usar_freebet, fonte_saldo,
           is_novo_formulario, mercado_categoria, mercado_objeto, mercado_formato,
           mercado_direcao, mercado_linha, mercado_display, liga, fair_value,
-          edge_percentual, modelo_aposta, time_casa, time_fora, fonte_entrada
+          edge_percentual, modelo_aposta, time_casa, time_fora, fonte_entrada,
+          home_team_logo_url, away_team_logo_url, league_logo_url
         `;
 
       let dateFilters: { startUTC?: string; endUTC?: string } = {};
@@ -1828,6 +1833,11 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                     mercado_direcao: aposta.mercado_direcao ?? null,
                     mercado_linha: aposta.mercado_linha ?? null,
                     mercado_display: aposta.mercado_display ?? null,
+                    time_casa: aposta.time_casa ?? null,
+                    time_fora: aposta.time_fora ?? null,
+                    home_team_logo_url: aposta.home_team_logo_url ?? null,
+                    away_team_logo_url: aposta.away_team_logo_url ?? null,
+                    league_logo_url: aposta.league_logo_url ?? null,
                  };
               
               return (

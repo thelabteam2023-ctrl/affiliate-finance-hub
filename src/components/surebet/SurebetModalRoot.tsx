@@ -80,6 +80,13 @@ interface Surebet {
   estrategia?: string | null;
   contexto_operacional?: string | null;
   __seedPernas?: any[];
+  // Snapshot opcional de logos importadas (Importar Jogo)
+  time_casa?: string | null;
+  time_fora?: string | null;
+  home_team_logo_url?: string | null;
+  away_team_logo_url?: string | null;
+  league_logo_url?: string | null;
+  daily_event_id?: string | null;
 }
 
 interface SurebetPerna {
@@ -243,6 +250,15 @@ export function SurebetModalRoot({
   const [contexto, setContexto] = useState<ContextoOperacional>(CONTEXTO_OPERACIONAL.NORMAL);
   const [esporte, setEsporte] = useState("Futebol");
   const [evento, setEvento] = useState("");
+  // Snapshot opcional do evento importado (Importar Jogo → daily_events).
+  // Quando preenchido, é persistido em apostas_unificada para o card exibir
+  // logos dos times. Limpado se o usuário editar manualmente o campo evento.
+  const [importedHomeTeam, setImportedHomeTeam] = useState<string | null>(null);
+  const [importedAwayTeam, setImportedAwayTeam] = useState<string | null>(null);
+  const [importedHomeLogo, setImportedHomeLogo] = useState<string | null>(null);
+  const [importedAwayLogo, setImportedAwayLogo] = useState<string | null>(null);
+  const [importedLeagueLogo, setImportedLeagueLogo] = useState<string | null>(null);
+  const [importedDailyEventId, setImportedDailyEventId] = useState<string | null>(null);
   const [mercado, setMercado] = useState("");
   const [dataAposta, setDataAposta] = useState("");
   
@@ -539,6 +555,13 @@ export function SurebetModalRoot({
       setEvento(surebet.evento);
       setEsporte(surebet.esporte);
       setMercado(surebet.mercado || "");
+      // Reidratar snapshot de evento importado (se existir)
+      setImportedHomeTeam(surebet.time_casa ?? null);
+      setImportedAwayTeam(surebet.time_fora ?? null);
+      setImportedHomeLogo(surebet.home_team_logo_url ?? null);
+      setImportedAwayLogo(surebet.away_team_logo_url ?? null);
+      setImportedLeagueLogo(surebet.league_logo_url ?? null);
+      setImportedDailyEventId(surebet.daily_event_id ?? null);
       setEstrategia((surebet.estrategia || ARBITRAGEM_ESTRATEGIA) as ApostaEstrategia);
       setContexto((surebet.contexto_operacional || CONTEXTO_OPERACIONAL.NORMAL) as ContextoOperacional);
       
@@ -637,6 +660,13 @@ export function SurebetModalRoot({
       setEsporte("Futebol");
       setEvento("");
       setMercado("");
+      // Limpar snapshot de evento importado
+      setImportedHomeTeam(null);
+      setImportedAwayTeam(null);
+      setImportedHomeLogo(null);
+      setImportedAwayLogo(null);
+      setImportedLeagueLogo(null);
+      setImportedDailyEventId(null);
       
       // Inicializar Data/Hora com momento atual (igual Aposta Simples)
       const now = new Date();
@@ -969,6 +999,21 @@ export function SurebetModalRoot({
     if (sharedContext.esporte) setEsporte(sharedContext.esporte);
     if (sharedContext.mercado && !mercado) setMercado(sharedContext.mercado);
   }, [legPrints]);
+
+  // Se o usuário editar o campo `evento` depois de importar, descartar o
+  // snapshot — não persistir logos que não correspondem mais ao texto.
+  useEffect(() => {
+    if (!importedHomeTeam || !importedAwayTeam) return;
+    const expected = `${importedHomeTeam} X ${importedAwayTeam}`.toUpperCase();
+    if (evento.trim().toUpperCase() !== expected) {
+      setImportedHomeTeam(null);
+      setImportedAwayTeam(null);
+      setImportedHomeLogo(null);
+      setImportedAwayLogo(null);
+      setImportedLeagueLogo(null);
+      setImportedDailyEventId(null);
+    }
+  }, [evento, importedHomeTeam, importedAwayTeam]);
 
   // Encontrar a próxima perna vazia para importação incremental
   const getNextEmptyLegIndex = useCallback((): number | null => {
@@ -1712,6 +1757,21 @@ export function SurebetModalRoot({
             resposta: rpcResult
           });
           console.log('[SurebetModalRoot] ✅ Edição 1:N concluída', rpcResult);
+
+          // Snapshot opcional de logos de time/liga (passthrough cosmético).
+          if (importedHomeTeam || importedAwayTeam || importedHomeLogo || importedAwayLogo || importedLeagueLogo) {
+            await supabase
+              .from('apostas_unificada')
+              .update({
+                time_casa: importedHomeTeam,
+                time_fora: importedAwayTeam,
+                home_team_logo_url: importedHomeLogo,
+                away_team_logo_url: importedAwayLogo,
+                league_logo_url: importedLeagueLogo,
+                daily_event_id: importedDailyEventId,
+              } as any)
+              .eq('id', surebet.id);
+          }
         };
 
         if (surebet.status === 'LIQUIDADA') {
@@ -1775,6 +1835,21 @@ export function SurebetModalRoot({
         console.log("[SurebetModalRoot] ✅ Surebet criada via RPC v3:", {
           aposta_id: result.o_aposta_id,
         });
+
+        // Snapshot opcional de logos de time/liga (passthrough cosmético).
+        if (result.o_aposta_id && (importedHomeTeam || importedAwayTeam || importedHomeLogo || importedAwayLogo || importedLeagueLogo)) {
+          await supabase
+            .from('apostas_unificada')
+            .update({
+              time_casa: importedHomeTeam,
+              time_fora: importedAwayTeam,
+              home_team_logo_url: importedHomeLogo,
+              away_team_logo_url: importedAwayLogo,
+              league_logo_url: importedLeagueLogo,
+              daily_event_id: importedDailyEventId,
+            } as any)
+            .eq('id', result.o_aposta_id);
+        }
       }
 
       // Invalidar TODOS os caches (saldos + KPIs + calendário + dashboard)
@@ -2254,6 +2329,12 @@ export function SurebetModalRoot({
                   setEsporte(mapped.esporte);
                   setEvento(mapped.evento);
                   setDataAposta(mapped.dataAposta);
+                  setImportedHomeTeam(mapped.homeTeam);
+                  setImportedAwayTeam(mapped.awayTeam);
+                  setImportedHomeLogo(mapped.homeTeamLogoUrl);
+                  setImportedAwayLogo(mapped.awayTeamLogoUrl);
+                  setImportedLeagueLogo(mapped.leagueLogoUrl);
+                  setImportedDailyEventId(mapped.dailyEventId);
                 }}
               />
             }
