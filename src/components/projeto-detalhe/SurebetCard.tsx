@@ -1015,18 +1015,23 @@ export function SurebetCard({
     : (typeof lucroConsolidadoFallback === "number" ? lucroConsolidadoFallback : null);
 
   // Para lucro exibido: FONTE ÚNICA DE VERDADE
-  // Liquidada: pl_consolidado (RPC atômica) > lucro_real > fallback
+  // Liquidada: lucro_realizado (snapshot imutável congelado pelo trigger
+  //   trg_snapshot_lucro_realizado) > pl_consolidado (RPC atômica) > lucro_real > fallback.
   // Pendente: PRIORIZAR cálculo runtime (que detecta freebet/multi-entrada corretamente).
   //   Só usa lucro_esperado do banco como fallback quando não há pernas para calcular.
   //   Motivo: lucro_esperado pode estar desatualizado em apostas legadas criadas antes
   //   das correções de detecção de freebet (mem://finance/surebet-freebet-detection-canonical).
-  const lucroExibir = isLiquidada 
-    ? (typeof lucroConsolidadoEfetivo === "number" ? lucroConsolidadoEfetivo : surebet.lucro_real)
+  const lucroExibir = isLiquidada
+    ? (typeof surebet.lucro_realizado === "number"
+        ? surebet.lucro_realizado
+        : (typeof lucroConsolidadoEfetivo === "number" ? lucroConsolidadoEfetivo : surebet.lucro_real))
     : (piorCenarioCalculado?.lucro ?? surebet.lucro_esperado ?? null);
 
   const roiExibir = (() => {
     if (isLiquidada) {
-      // Priorizar ROI derivado do pl_consolidado (fonte de verdade)
+      // Snapshot imutável tem precedência absoluta para liquidadas.
+      if (typeof surebet.roi_realizado === "number") return surebet.roi_realizado;
+      // Fallback: ROI derivado do pl_consolidado (fonte de verdade da RPC).
       if (typeof lucroConsolidadoEfetivo === "number" && stakeRealTotal > 0) {
         return (lucroConsolidadoEfetivo / stakeRealTotal) * 100;
       }
