@@ -332,6 +332,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       const selectFields = `
           id, workspace_id, created_at, data_aposta, evento, esporte, modelo, mercado, stake, stake_total, stake_bonus,
           spread_calculado, roi_esperado, lucro_esperado, lucro_prejuizo, roi_real,
+          lucro_realizado, roi_realizado,
           status, resultado, observacoes, forma_registro, estrategia, contexto_operacional,
           odd, selecao, bookmaker_id, bonus_id,
           moeda_operacao, stake_consolidado, pl_consolidado, consolidation_currency, valor_brl_referencia, lucro_prejuizo_brl_referencia,
@@ -444,6 +445,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           // KPIs consolidados usam getConsolidatedLucro(), que já prioriza pl_consolidado
           // quando a moeda de consolidação corresponde ao projeto.
           lucro_real: arb.lucro_prejuizo, roi_real: arb.roi_real,
+          lucro_realizado: (arb as any).lucro_realizado ?? null, roi_realizado: (arb as any).roi_realizado ?? null,
           status: arb.status, resultado: arb.resultado, observacoes: arb.observacoes,
           pernas: isSimples ? pernasSurebetCard : pernasSurebetCard,
           raw_pernas: pernasRaw,
