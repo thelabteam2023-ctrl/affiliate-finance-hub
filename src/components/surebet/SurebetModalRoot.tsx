@@ -2437,7 +2437,7 @@ export function SurebetModalRoot({
                       data-edit-state={isEditing ? "dirty" : "pristine"}
                     >
                       <th className="py-2 px-2 text-left font-medium text-muted-foreground w-16">Perna</th>
-                      <th className="py-2 px-2 text-left font-medium text-muted-foreground min-w-[160px]">Casa</th>
+                      <th className="py-2 px-2 text-center font-medium text-muted-foreground min-w-[160px]">Casa</th>
                       <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20">Odd</th>
                       {showComissao && (
                         <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20" title="Comissão da exchange">Comissão</th>
