@@ -1833,6 +1833,11 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                     mercado_direcao: aposta.mercado_direcao ?? null,
                     mercado_linha: aposta.mercado_linha ?? null,
                     mercado_display: aposta.mercado_display ?? null,
+                    time_casa: aposta.time_casa ?? null,
+                    time_fora: aposta.time_fora ?? null,
+                    home_team_logo_url: aposta.home_team_logo_url ?? null,
+                    away_team_logo_url: aposta.away_team_logo_url ?? null,
+                    league_logo_url: aposta.league_logo_url ?? null,
                  };
               
               return (
