@@ -172,7 +172,7 @@ BEGIN
                        'moeda','BRL','fonte_saldo','REAL','cotacao_snapshot',1,'stake_brl_referencia',100,'tipo','lay','comissao',0)
   );
 
-  SELECT * INTO v_rpc FROM public.editar_surebet_completa_v3(
+  PERFORM public.editar_surebet_completa_v3(
     p_aposta_id    := v_aposta_id,
     p_pernas       := v_pernas,
     p_entradas     := v_entradas,
@@ -185,9 +185,6 @@ BEGIN
     p_data_aposta  := NOW(),
     p_status_manual := NULL
   );
-  IF NOT v_rpc.success THEN
-    RAISE EXCEPTION '[FASE 3] EDIT falhou: %', v_rpc.message;
-  END IF;
 
   SELECT status, COALESCE(pl_consolidado, lucro_prejuizo, 0)
     INTO v_status, v_pl_pai FROM apostas_unificada WHERE id=v_aposta_id;
