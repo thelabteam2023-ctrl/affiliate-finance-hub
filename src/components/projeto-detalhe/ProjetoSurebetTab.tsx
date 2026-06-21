@@ -470,6 +470,11 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           lucro_prejuizo: arb.lucro_prejuizo,
           fonte_saldo: arb.fonte_saldo || null,
           stake_freebet: arb.stake_freebet ?? null,
+          time_casa: (arb as any).time_casa ?? null,
+          time_fora: (arb as any).time_fora ?? null,
+          home_team_logo_url: (arb as any).home_team_logo_url ?? null,
+          away_team_logo_url: (arb as any).away_team_logo_url ?? null,
+          league_logo_url: (arb as any).league_logo_url ?? null,
         };
       });
     },
