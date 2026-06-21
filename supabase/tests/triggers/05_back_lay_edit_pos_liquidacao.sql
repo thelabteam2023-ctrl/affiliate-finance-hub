@@ -57,6 +57,8 @@ DECLARE
   v_cot       NUMERIC;
   v_moeda_c   TEXT;
   v_soma_conv NUMERIC;
+  v_e1        UUID;
+  v_e2        UUID;
 BEGIN
   -- Validação de pré-condições
   IF NOT EXISTS (SELECT 1 FROM bookmakers WHERE id=v_id_bk1 AND workspace_id=v_ws AND projeto_id=v_proj) THEN
@@ -172,19 +174,23 @@ BEGIN
 
   ---------------------------------------------------------------------------
   -- FASE 3: EDIÇÃO PÓS-LIQUIDAÇÃO — BACK stake 100→120, odd 2.00→2.10
+  -- (caminho UPDATE in-place: payload inclui ids de pernas e entradas,
+  --  como o frontend faz)
   ---------------------------------------------------------------------------
   SELECT COUNT(*) INTO v_audit_pre FROM aposta_edit_audit_logs WHERE aposta_id=v_aposta_id;
   SELECT cotacao_snapshot INTO v_snap_pre FROM apostas_perna_entradas
     WHERE perna_id=v_p1 ORDER BY created_at LIMIT 1;
+  SELECT id INTO v_e1 FROM apostas_perna_entradas WHERE perna_id=v_p1 ORDER BY created_at LIMIT 1;
+  SELECT id INTO v_e2 FROM apostas_perna_entradas WHERE perna_id=v_p2 ORDER BY created_at LIMIT 1;
 
   v_pernas := jsonb_build_array(
-    jsonb_build_object('ordem',1,'casa_id',v_id_bk1,'selecao','Time A','tipo','back','resultado','GREEN'),
-    jsonb_build_object('ordem',2,'casa_id',v_id_bk2,'selecao','Time A','tipo','lay','resultado','RED')
+    jsonb_build_object('id',v_p1,'ordem',1,'casa_id',v_id_bk1,'selecao','Time A','tipo','back','resultado','GREEN'),
+    jsonb_build_object('id',v_p2,'ordem',2,'casa_id',v_id_bk2,'selecao','Time A','tipo','lay','resultado','RED')
   );
   v_entradas := jsonb_build_array(
-    jsonb_build_object('perna_ordem',1,'bookmaker_id',v_id_bk1,'stake',120,'odd',2.10,
+    jsonb_build_object('id',v_e1,'perna_id',v_p1,'bookmaker_id',v_id_bk1,'stake',120,'odd',2.10,
                        'moeda','BRL','fonte_saldo','REAL','cotacao_snapshot',1,'stake_brl_referencia',120,'tipo','back','comissao',0),
-    jsonb_build_object('perna_ordem',2,'bookmaker_id',v_id_bk2,'stake',100,'odd',2.00,
+    jsonb_build_object('id',v_e2,'perna_id',v_p2,'bookmaker_id',v_id_bk2,'stake',100,'odd',2.00,
                        'moeda','BRL','fonte_saldo','REAL','cotacao_snapshot',1,'stake_brl_referencia',100,'tipo','lay','comissao',0)
   );
 
