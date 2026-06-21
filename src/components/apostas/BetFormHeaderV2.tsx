@@ -152,33 +152,47 @@ export function BetFormHeaderV2({
     <div className="border-b border-border/50 bg-muted/20 shrink-0" translate="no">
       {/* ========== LINHA 1: Título + Estratégia inline + Importar ========== */}
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/30">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
+        <div className="flex items-center gap-3 min-w-0">
           <Icon className={cn("h-5 w-5 shrink-0", config.iconColor)} />
           <h2 className="font-semibold text-base whitespace-nowrap">{title}</h2>
           {extraBadge}
         </div>
-          
-        {/* Estratégia centralizada */}
-        <div className="flex items-center gap-1.5 justify-center flex-1">
-          <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-            Estratégia<span className="text-destructive ml-0.5">*</span>
-          </span>
-            
+
+        <div className="flex items-center gap-2 justify-end ml-auto">
+          {!isEditing && legPrintStatuses && legPrintStatuses.some(s => s.isProcessing) && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              {legPrintStatuses.map((status, i) => 
+                status.isProcessing ? (
+                  <span key={i} className="flex items-center gap-1 text-primary animate-pulse">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Perna {i + 1}
+                  </span>
+                ) : null
+              )}
+            </div>
+          )}
+
+          {/* Estratégia à direita */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+              Estratégia<span className="text-destructive ml-0.5">*</span>
+            </span>
+
             {isEstrategiaFixed && lockedEstrategia ? (
-              <Badge 
-                variant="secondary" 
+              <Badge
+                variant="secondary"
                 className="text-xs font-medium bg-primary/10 text-primary border-primary/20"
               >
                 {ESTRATEGIA_LABELS[lockedEstrategia]}
               </Badge>
             ) : (
-              <Select 
-                value={displayEstrategia || ""} 
+              <Select
+                value={displayEstrategia || ""}
                 onValueChange={(v) => onEstrategiaChange(v as ApostaEstrategia)}
                 disabled={isEstrategiaFixed}
               >
                 <SelectTrigger className={cn(
-                  "h-7 text-xs w-[160px]", 
+                  "h-7 text-xs w-[160px]",
                   !displayEstrategia && "border-destructive/50",
                   isEstrategiaFixed && "opacity-70 cursor-not-allowed"
                 )}>
@@ -192,21 +206,7 @@ export function BetFormHeaderV2({
               </Select>
             )}
           </div>
-        
-        <div className="flex items-center gap-2 flex-1 justify-end">
-          {!isEditing && legPrintStatuses && legPrintStatuses.some(s => s.isProcessing) && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              {legPrintStatuses.map((status, i) => 
-                status.isProcessing ? (
-                  <span key={i} className="flex items-center gap-1 text-primary animate-pulse">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Perna {i + 1}
-                  </span>
-                ) : null
-              )}
-            </div>
-          )}
-          
+
           {showCloseButton && !embedded && onClose && (
             <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
               <X className="h-4 w-4" />
