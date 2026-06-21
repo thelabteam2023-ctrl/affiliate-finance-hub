@@ -2324,6 +2324,7 @@ export function SurebetModalRoot({
               <ExploradorEventoPicker
                 variant="icon"
                 defaultDate={dataAposta}
+                esporte={esporte}
                 onSelect={(ev) => {
                   const mapped = mapDailyEventToFormFields(ev);
                   setEsporte(mapped.esporte);
