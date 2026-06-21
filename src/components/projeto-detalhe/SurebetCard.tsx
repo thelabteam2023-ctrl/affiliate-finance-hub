@@ -22,6 +22,7 @@ import { useProjetoWorkingRates } from "@/hooks/useProjetoWorkingRates";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { getSafeWorkingRate } from "@/utils/exchangeRateGuard";
 import { useAuth } from "@/hooks/useAuth";
+import { TeamLogo } from "@/components/ui/team-logo";
 
 
 import { validateBalanceForOperation } from "@/utils/surebetBalanceValidator";
@@ -1113,7 +1114,17 @@ export function SurebetCard({
         <TooltipProvider delayDuration={300}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <p className="text-base sm:text-lg font-semibold truncate uppercase leading-tight mb-1.5 cursor-default">{surebet.evento || 'Operação'}</p>
+              {surebet.time_casa && surebet.time_fora && (surebet.home_team_logo_url || surebet.away_team_logo_url) ? (
+                <div className="flex items-center gap-2 min-w-0 mb-1.5 cursor-default">
+                  <TeamLogo logoUrl={surebet.home_team_logo_url} alt={surebet.time_casa} size="h-6 w-6" iconSize="h-3.5 w-3.5" />
+                  <span className="text-base sm:text-lg font-semibold truncate uppercase leading-tight">{surebet.time_casa}</span>
+                  <span className="text-muted-foreground shrink-0">×</span>
+                  <TeamLogo logoUrl={surebet.away_team_logo_url} alt={surebet.time_fora} size="h-6 w-6" iconSize="h-3.5 w-3.5" />
+                  <span className="text-base sm:text-lg font-semibold truncate uppercase leading-tight">{surebet.time_fora}</span>
+                </div>
+              ) : (
+                <p className="text-base sm:text-lg font-semibold truncate uppercase leading-tight mb-1.5 cursor-default">{surebet.evento || 'Operação'}</p>
+              )}
             </TooltipTrigger>
             <TooltipContent side="top" className="max-w-[400px]">
               <p className="uppercase">{surebet.evento || 'Operação'}</p>
