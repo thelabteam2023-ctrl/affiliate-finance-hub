@@ -243,6 +243,15 @@ export function SurebetModalRoot({
   const [contexto, setContexto] = useState<ContextoOperacional>(CONTEXTO_OPERACIONAL.NORMAL);
   const [esporte, setEsporte] = useState("Futebol");
   const [evento, setEvento] = useState("");
+  // Snapshot opcional do evento importado (Importar Jogo → daily_events).
+  // Quando preenchido, é persistido em apostas_unificada para o card exibir
+  // logos dos times. Limpado se o usuário editar manualmente o campo evento.
+  const [importedHomeTeam, setImportedHomeTeam] = useState<string | null>(null);
+  const [importedAwayTeam, setImportedAwayTeam] = useState<string | null>(null);
+  const [importedHomeLogo, setImportedHomeLogo] = useState<string | null>(null);
+  const [importedAwayLogo, setImportedAwayLogo] = useState<string | null>(null);
+  const [importedLeagueLogo, setImportedLeagueLogo] = useState<string | null>(null);
+  const [importedDailyEventId, setImportedDailyEventId] = useState<string | null>(null);
   const [mercado, setMercado] = useState("");
   const [dataAposta, setDataAposta] = useState("");
   
