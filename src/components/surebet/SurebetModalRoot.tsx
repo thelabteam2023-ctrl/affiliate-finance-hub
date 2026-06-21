@@ -80,6 +80,13 @@ interface Surebet {
   estrategia?: string | null;
   contexto_operacional?: string | null;
   __seedPernas?: any[];
+  // Snapshot opcional de logos importadas (Importar Jogo)
+  time_casa?: string | null;
+  time_fora?: string | null;
+  home_team_logo_url?: string | null;
+  away_team_logo_url?: string | null;
+  league_logo_url?: string | null;
+  daily_event_id?: string | null;
 }
 
 interface SurebetPerna {
@@ -548,6 +555,13 @@ export function SurebetModalRoot({
       setEvento(surebet.evento);
       setEsporte(surebet.esporte);
       setMercado(surebet.mercado || "");
+      // Reidratar snapshot de evento importado (se existir)
+      setImportedHomeTeam(surebet.time_casa ?? null);
+      setImportedAwayTeam(surebet.time_fora ?? null);
+      setImportedHomeLogo(surebet.home_team_logo_url ?? null);
+      setImportedAwayLogo(surebet.away_team_logo_url ?? null);
+      setImportedLeagueLogo(surebet.league_logo_url ?? null);
+      setImportedDailyEventId(surebet.daily_event_id ?? null);
       setEstrategia((surebet.estrategia || ARBITRAGEM_ESTRATEGIA) as ApostaEstrategia);
       setContexto((surebet.contexto_operacional || CONTEXTO_OPERACIONAL.NORMAL) as ContextoOperacional);
       
