@@ -1690,6 +1690,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                   }))
                 ),
               };
+              publishTabRender("TodasApostas", sb.id, (sb.pernas || []).map((p: any) => ({
+                id: p.id, tipo: p.tipo, stake: p.stake, odd: p.odd, lucro_prejuizo: p.lucro_prejuizo,
+              })));
               
               return (
                 <SurebetCard
