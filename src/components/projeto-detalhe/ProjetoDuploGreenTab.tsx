@@ -720,7 +720,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
   }, [projetoId]);
 
   const handleDuplicateSurebet = useCallback((surebetId: string) => {
-    openSurebetWindow({ projetoId, activeTab: 'duplogreen', duplicateFrom: surebetId } as any);
+    openSurebetWindow({ projetoId, activeTab: 'duplogreen', numPernas: 3, duplicateFrom: surebetId } as any);
   }, [projetoId]);
 
   // Filtrar pendentes fora do período para KPIs
@@ -1011,7 +1011,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
     console.log("[DuploGreen] handleOpenAposta chamado:", { id: aposta.id, forma_registro: aposta.forma_registro });
 
     if (aposta.forma_registro === "ARBITRAGEM") {
-      openSurebetWindow({ projetoId, id: aposta.id, activeTab: 'duplogreen' });
+      openSurebetWindow({ projetoId, id: aposta.id, activeTab: 'duplogreen', numPernas: 3 });
       return;
     }
 
