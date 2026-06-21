@@ -53,6 +53,7 @@ DECLARE
 
   v_pernas    JSONB;
   v_entradas  JSONB;
+  v_pai_lucro NUMERIC;
 BEGIN
   -- Validação de pré-condições
   IF NOT EXISTS (SELECT 1 FROM bookmakers WHERE id=v_id_bk1 AND workspace_id=v_ws AND projeto_id=v_proj) THEN
@@ -128,6 +129,7 @@ BEGIN
 
   SELECT status, COALESCE(pl_consolidado, lucro_prejuizo, 0)
     INTO v_status, v_pl_pai FROM apostas_unificada WHERE id=v_aposta_id;
+  SELECT lucro_prejuizo INTO v_pai_lucro FROM apostas_unificada WHERE id=v_aposta_id;
   SELECT lucro_prejuizo INTO v_pl_p1 FROM apostas_pernas WHERE id=v_p1;
   SELECT lucro_prejuizo INTO v_pl_p2 FROM apostas_pernas WHERE id=v_p2;
   SELECT COALESCE(SUM(lucro_prejuizo),0) INTO v_soma_pn FROM apostas_pernas WHERE aposta_id=v_aposta_id;
@@ -138,11 +140,12 @@ BEGIN
   IF v_status <> 'LIQUIDADA' THEN
     RAISE EXCEPTION '[FASE 2] status esperado LIQUIDADA, obtido %', v_status;
   END IF;
-  IF ROUND(v_pl_pai,2) <> ROUND(v_soma_pn,2) THEN
-    RAISE EXCEPTION '[FASE 2] paridade pai/pernas: pai=% Σ=%', v_pl_pai, v_soma_pn;
+  -- Paridade na MESMA moeda (BRL nativo): pai.lucro_prejuizo == Σ pernas.lucro_prejuizo
+  IF ROUND(v_pai_lucro,2) <> ROUND(v_soma_pn,2) THEN
+    RAISE EXCEPTION '[FASE 2] paridade pai/pernas (BRL): pai=% Σ=%', v_pai_lucro, v_soma_pn;
   END IF;
-  IF ROUND(v_pl_pai,2) <> 0.00 THEN
-    RAISE EXCEPTION '[FASE 2] P&L esperado 0 (hedge perfeito), obtido %', v_pl_pai;
+  IF ROUND(v_pai_lucro,2) <> 0.00 THEN
+    RAISE EXCEPTION '[FASE 2] P&L esperado 0 (hedge perfeito), obtido %', v_pai_lucro;
   END IF;
   IF ROUND(v_s_bk1,2) <> ROUND(v_pre_bk1 + v_pl_p1,2) THEN
     RAISE EXCEPTION '[FASE 2] bk1 paridade: pre=% após=% Δesperado=%', v_pre_bk1, v_s_bk1, v_pl_p1;
@@ -188,6 +191,7 @@ BEGIN
 
   SELECT status, COALESCE(pl_consolidado, lucro_prejuizo, 0)
     INTO v_status, v_pl_pai FROM apostas_unificada WHERE id=v_aposta_id;
+  SELECT lucro_prejuizo INTO v_pai_lucro FROM apostas_unificada WHERE id=v_aposta_id;
   SELECT lucro_prejuizo INTO v_pl_p1 FROM apostas_pernas WHERE id=v_p1;
   SELECT lucro_prejuizo INTO v_pl_p2 FROM apostas_pernas WHERE id=v_p2;
   SELECT COALESCE(SUM(lucro_prejuizo),0) INTO v_soma_pn FROM apostas_pernas WHERE aposta_id=v_aposta_id;
@@ -207,8 +211,9 @@ BEGIN
   IF v_status <> 'LIQUIDADA' THEN
     RAISE EXCEPTION '[FASE 3] status esperado LIQUIDADA, obtido %', v_status;
   END IF;
-  IF ROUND(v_pl_pai,2) <> ROUND(v_soma_pn,2) THEN
-    RAISE EXCEPTION '[FASE 3] paridade pai/pernas: pai=% Σ=%', v_pl_pai, v_soma_pn;
+  -- Paridade na MESMA moeda (BRL nativo): pai.lucro_prejuizo == Σ pernas.lucro_prejuizo
+  IF ROUND(v_pai_lucro,2) <> ROUND(v_soma_pn,2) THEN
+    RAISE EXCEPTION '[FASE 3] paridade pai/pernas (BRL): pai=% Σ=%', v_pai_lucro, v_soma_pn;
   END IF;
 
   -- Paridade absoluta de saldo: bk = pre + pl_perna
