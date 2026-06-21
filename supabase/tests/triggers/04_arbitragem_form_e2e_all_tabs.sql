@@ -129,10 +129,16 @@ BEGIN
     END IF;
 
     -- 3) RESOLUÇÃO (quick-resolve: BACK RED + LAY GREEN ⇒ lucro = -100 + 95 = -5)
-    UPDATE apostas_pernas SET resultado='RED'   WHERE aposta_id=v_aposta_id AND ordem=1;
-    UPDATE apostas_pernas SET resultado='GREEN' WHERE aposta_id=v_aposta_id AND ordem=2;
-
-    PERFORM public.reliquidar_aposta_v6(v_aposta_id, NULL, NULL);
+    --    Usa a MESMA RPC chamada pelo botão de quick-resolve no front:
+    --    `liquidar_perna_surebet_v1` (orquestrador por perna)
+    DECLARE
+      v_p1 UUID; v_p2 UUID;
+    BEGIN
+      SELECT id INTO v_p1 FROM apostas_pernas WHERE aposta_id=v_aposta_id AND ordem=1;
+      SELECT id INTO v_p2 FROM apostas_pernas WHERE aposta_id=v_aposta_id AND ordem=2;
+      PERFORM public.liquidar_perna_surebet_v1(v_p1, 'RED',   v_ws);
+      PERFORM public.liquidar_perna_surebet_v1(v_p2, 'GREEN', v_ws);
+    END;
 
     -- 4) ASSERTS finais
     SELECT status, COALESCE(pl_consolidado, lucro_prejuizo, 0)
