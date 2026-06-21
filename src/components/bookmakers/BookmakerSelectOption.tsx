@@ -66,7 +66,7 @@ export function BookmakerSelectOption({
   
   return (
     <div className={cn(
-      "grid grid-cols-[20px_1fr_auto] items-center w-full gap-1.5 min-w-0 overflow-hidden",
+      "grid grid-cols-[24px_1fr_auto] items-center w-full gap-1.5 min-w-0 overflow-hidden",
       disabled && "opacity-50",
       className
     )}>
@@ -76,10 +76,10 @@ export function BookmakerSelectOption({
           <img
             src={logo_url}
             alt=""
-            className="h-5 w-5 rounded object-contain"
+            className="h-6 w-6 rounded object-contain object-left"
           />
         ) : (
-          <div className="h-5 w-5" aria-hidden="true" />
+          <div className="h-6 w-6" aria-hidden="true" />
         )}
       </div>
 
