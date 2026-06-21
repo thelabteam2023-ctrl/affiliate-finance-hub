@@ -51,6 +51,7 @@ import { toast } from "sonner";
 import { SurebetDialog } from "./SurebetDialog";
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
 import { groupPernasBySelecao } from "@/utils/groupPernasBySelecao";
+import { publishTabRender } from "@/utils/integrityProbe";
 import type { SurebetQuickResult } from "@/components/apostas/SurebetRowActionsMenu";
 import { ApostaDialog } from "./ApostaDialog";
 import { ApostaCard, ApostaCardData, type EstrategiaType } from "./ApostaCard";
@@ -434,6 +435,9 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       return allData.map((arb: any) => {
         const pernasRaw = pernasMap[arb.id] || parsePernaFromJson(arb.pernas);
         const pernasSurebetCard = groupPernasBySelecao(pernasRaw);
+        publishTabRender("Surebet", arb.id, pernasRaw.map((p: any) => ({
+          id: p.id, tipo: p.tipo, stake: p.stake, odd: p.odd, lucro_prejuizo: p.lucro_prejuizo,
+        })));
         const hasValidPernas = pernasSurebetCard.length > 0;
         const isSimples = arb.forma_registro === "SIMPLES";
         return {
