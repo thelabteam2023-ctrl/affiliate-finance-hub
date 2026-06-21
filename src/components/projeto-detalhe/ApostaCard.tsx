@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Zap, TrendingUp, Target, ArrowLeftRight, Coins, Gift, CheckCircle2, Clock, Layers, X, CircleSlash, Loader2, ChevronDown, ChevronUp, Building2 } from "lucide-react";
 import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
+import { TeamLogo } from "@/components/ui/team-logo";
 import { DateAnomalyBadge } from "@/components/ui/date-anomaly-alert";
 import { detectDateAnomaly } from "@/lib/dateAnomalyDetection";
 import { ApostaPernasResumo, ApostaPernasInline, getModeloOperacao, Perna } from "./ApostaPernasResumo";
@@ -399,6 +400,13 @@ export function ApostaCard({
   
   // Para apostas múltiplas, exibir "MÚLTIPLA" como título
   const displayEvento = isMultipla ? 'MÚLTIPLA' : (aposta.evento || '');
+
+  // Snapshot do evento importado (logos de time). Só vale para apostas
+  // simples/surebets criadas via "Importar Jogo".
+  const hasTeamLogos = !isMultipla
+    && !!aposta.time_casa
+    && !!aposta.time_fora
+    && (!!aposta.home_team_logo_url || !!aposta.away_team_logo_url);
   
   // Multi-currency: usar valores consolidados para exibição de totais
   const stakeDisplay = (() => {
