@@ -437,6 +437,14 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   const [loading, setLoading] = useState(false);
   const { favoriteSource } = useWorkspaceBetSources(workspaceId);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [liquidadaConfirmResolve, setLiquidadaConfirmResolve] = useState<
+    ((ok: boolean) => void) | null
+  >(null);
+
+  const requestLiquidadaConfirm = () =>
+    new Promise<boolean>((resolve) => {
+      setLiquidadaConfirmResolve(() => resolve);
+    });
 
   // ========== HOOK CANÔNICO DE SALDOS ==========
   // Esta é a ÚNICA fonte de verdade para saldos de bookmaker
@@ -1601,12 +1609,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     // Pede confirmação explícita do usuário antes de reescrever uma aposta
     // já resolvida (envolve REVERSAL no ledger e recálculo de snapshot).
     if (aposta && aposta.status === "LIQUIDADA") {
-      const ok = window.confirm(
-        "⚠️ Esta aposta já está LIQUIDADA.\n\n" +
-        "Salvar alterações irá reverter os lançamentos financeiros atuais e " +
-        "reemitir novos eventos no caixa. O saldo da bookmaker e o lucro serão recalculados.\n\n" +
-        "Tem certeza que deseja continuar?"
-      );
+      const ok = await requestLiquidadaConfirm();
       if (!ok) return;
     }
 
@@ -2800,9 +2803,15 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           probeBookmakerLedgerParity(bookmakerId, { label: "pós-edição LIQUIDADA" })
             .then((res) => {
               if (res && !res.ok) {
-                toast.warning("Divergência saldo × ledger detectada", {
-                  description: `Δ = R$ ${res.delta.toFixed(2)}. Verifique o console (__INTEGRITY_LOG__).`,
-                  duration: 10000,
+                toast.error("Divergência saldo × ledger detectada", {
+                  description: `Δ = R$ ${res.delta.toFixed(2)} na bookmaker. Anomalia registrada para auditoria.`,
+                  duration: Infinity,
+                  action: {
+                    label: "Ver anomalias",
+                    onClick: () => {
+                      window.location.href = "/admin/ledger-anomalies";
+                    },
+                  },
                 });
               }
             })
@@ -5061,6 +5070,52 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={!!liquidadaConfirmResolve}
+        onOpenChange={(open) => {
+          if (!open && liquidadaConfirmResolve) {
+            liquidadaConfirmResolve(false);
+            setLiquidadaConfirmResolve(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Aposta já liquidada</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <span className="block">
+                Salvar alterações irá <strong>reverter</strong> os lançamentos financeiros atuais e
+                reemitir novos eventos no caixa.
+              </span>
+              <span className="block">
+                O saldo da bookmaker e o lucro serão recalculados a partir do zero.
+              </span>
+              <span className="block text-xs text-muted-foreground">
+                Uma verificação automática de paridade saldo × ledger roda logo após o salvamento.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                liquidadaConfirmResolve?.(false);
+                setLiquidadaConfirmResolve(null);
+              }}
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                liquidadaConfirmResolve?.(true);
+                setLiquidadaConfirmResolve(null);
+              }}
+            >
+              Reverter e salvar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
