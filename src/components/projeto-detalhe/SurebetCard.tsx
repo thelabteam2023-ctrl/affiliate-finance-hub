@@ -27,6 +27,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { validateBalanceForOperation } from "@/utils/surebetBalanceValidator";
 import { LayBadge } from "@/components/surebet/LayBadge";
 import { exposureOf } from "@/utils/pernaLayHelpers";
+import { publishTabRender } from "@/utils/integrityProbe";
 
 
 // Estrutura de entrada individual (para múltiplas entradas)
