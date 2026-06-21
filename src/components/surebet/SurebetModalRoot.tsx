@@ -646,6 +646,13 @@ export function SurebetModalRoot({
       setEsporte("Futebol");
       setEvento("");
       setMercado("");
+      // Limpar snapshot de evento importado
+      setImportedHomeTeam(null);
+      setImportedAwayTeam(null);
+      setImportedHomeLogo(null);
+      setImportedAwayLogo(null);
+      setImportedLeagueLogo(null);
+      setImportedDailyEventId(null);
       
       // Inicializar Data/Hora com momento atual (igual Aposta Simples)
       const now = new Date();
