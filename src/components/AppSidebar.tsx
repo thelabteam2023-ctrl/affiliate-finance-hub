@@ -265,6 +265,7 @@ export function AppSidebar() {
   const navigate = useNavigate();
    const { user, signOut, role, isSystemOwner, publicId, workspaceId } = useAuth();
   const { canManageWorkspace } = useRole();
+  const ledgerAnomaliesCount = useLedgerAnomaliesCount();
   const { favorites, removeFavorite } = useFavorites();
   const { favorites: projectFavorites, removeFavorite: removeProjectFavorite } = useProjectFavorites();
    const { workspace } = useWorkspace();
