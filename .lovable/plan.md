@@ -1,74 +1,103 @@
-# Plano de Melhorias — Rebalanceado (segurança proporcional)
+# Plano: Simulação BACK+LAY com resolução e edição pós-liquidação
 
-Contexto: app de gestão operacional de apostas — não é fintech regulada. Foco em **valor operacional** (observabilidade, testes, performance, UX) com segurança pragmática.
+## Objetivo
+Rodar uma simulação determinística em SQL que reproduza, no mesmo caminho do formulário de Arbitragem:
+1. **Criação** de uma aposta de 2 pernas (BACK odd 2 R$100 + LAY odd 2 R$100, comissão 0%).
+2. **Resolução** quick-resolve (cenário a definir: BACK GREEN/LAY RED, BACK RED/LAY GREEN, ou VOID).
+3. **Edição pós-liquidação** alterando stake/odd e observando ledger, `pl_consolidado`, `saldo_atual` e snapshot da perna.
 
-## P0 — Observabilidade do Ledger (alto valor, baixo esforço)
+Tudo executado dentro de `BEGIN; ... ROLLBACK;` (zero resíduo no banco), espelhando o que o front faz via `criar_surebet_atomica_v3`, `liquidar_perna_surebet_v1` e `editar_surebet_completa_v3`.
 
-Hoje o `probeBookmakerLedgerParity` só grava em `window.__INTEGRITY_LOG__` (some ao recarregar). Persistir traz auditoria histórica e alertas reais.
+## Decisões de cenário (precisam de confirmação)
 
-- **[M] Tabela `ledger_parity_anomalies`** — `workspace_id`, `bookmaker_id`, `saldo_atual`, `soma_ledger`, `delta`, `contexto`, `acknowledged_at/by`. RLS por workspace.
-- **[M] Edge function `record-parity-anomaly`** — chamada pelo probe quando `|delta| > 0.01`. Idempotente por `(bookmaker_id, dia, contexto)`.
-- **[S] Página `/admin/ledger-anomalies`** — lista últimas 50, filtro por bookmaker, botão "reconhecer".
-- **[S] Cron probe diário** — edge function 1×/dia varre bookmakers ativas. Sem auto-correção.
-- **[S] Badge no header do projeto** — verde/amarelo/vermelho conforme última varredura.
+### A) Qual resultado simular na resolução?
+Para um BACK 2.0 / LAY 2.0 comissão 0% com stakes iguais, os cenários canônicos são:
+- **BACK GREEN + LAY RED** → BACK paga +100, LAY perde liability 100 → P&L = 0.
+- **BACK RED + LAY GREEN** → BACK perde 100, LAY ganha 100 (×(1−comissão)) → P&L = 0.
+- **VOID/VOID** → ambas devolvem stake/liability → P&L = 0.
 
-## P1 — Test Harness para Triggers Financeiros
+Default sugerido: **BACK GREEN + LAY RED** (mais comum em hedge real).
 
-Hoje validamos manualmente cada mudança em `fn_recalc_*`. Suite reproduzível protege regressões.
+### B) Que edição aplicar DEPOIS de liquidada?
+Opções (escolha uma, ou múltiplas em sequência):
+1. **Alterar stake** da perna BACK de 100 → 120 (mantendo resultado).
+2. **Alterar odd** da perna BACK de 2.0 → 2.10 (mantendo resultado).
+3. **Alterar resultado** da perna BACK de GREEN → RED (reliquidação real).
+4. **Trocar tipo** BACK ↔ LAY (caso de borda; raramente usado).
 
-- **[L] `supabase/tests/triggers/`** — SQL files em `BEGIN ... ROLLBACK`:
-  - LAY (GREEN/RED/MEIO/VOID)
-  - Surebet 2 pernas BACK+LAY (todas combinações)
-  - Edit LIQUIDADA → REVERSAL + reemissão
-  - Multi-currency BRL+USD
-  - Freebet SNR (tipo_uso=NORMAL)
-- **[M] Runner `scripts/run-db-tests.ts`** — aplica fixture, valida `pl_consolidado` × Σ pernas × Σ `financial_events`. Saída human-readable.
-- **[S] Workflow opcional no CI** — roda na branch antes de merge em main.
+Default sugerido: **(1) + (2) juntos** — é o caso clássico "errei o valor digitado" pós-fechamento. A (3) já está coberta pelo teste `03_edit_liquidada_ledger_parity.sql`.
 
-## P2 — Performance
+### C) Aba de origem da simulação
+Como `criar_surebet_atomica_v3` é a mesma RPC em todas as abas, qualquer aba (Surebet/Bonus/DuploGreen/ValueBet/Punter) produz o mesmo resultado financeiro — só muda `estrategia`/`contexto_operacional`. Default: **aba Surebet** (estrategia=SUREBET, contexto=NORMAL). Se quiser, replico nas 6 abas (como o `04_arbitragem_form_e2e_all_tabs.sql` já faz).
 
-- **[M] `supabase--slow_queries` audit** — top 10, propor índices ou reescrita.
-- **[S] Índices prováveis** — `cash_ledger(bookmaker_id, created_at DESC)`, `financial_events(bookmaker_id, tipo_movimento)`, `apostas_unificada(projeto_id, status, data_evento)`.
-- **[M] React profiling** — `useProjetoCurrency` e `convertToConsolidation` em loops de cards. Garantir `useMemo` e estabilidade de referências.
-- **[S] Cache de Cotação de Trabalho** — `getEffectiveRate` por moeda+projeto via `useMemo` no Context.
+## Entregável
 
-## P3 — UX / Qualidade de Vida
+Arquivo novo: `supabase/tests/triggers/05_back_lay_edit_pos_liquidacao.sql`
 
-- **[S] AlertDialog shadcn** substituindo `window.confirm` na edição de LIQUIDADA (explica REVERSAL).
-- **[S] Toast persistente** para `SALDO_LEDGER_DIVERGENTE` com link pro dashboard P0.
-- **[S] Tooltip "Liability = stake × (odd − 1)"** em cards LAY.
-- **[M] Filtro rápido "com divergência"** na lista de projetos (usa tabela P0).
-
-## P4 — Segurança Pragmática (sem hardening exagerado)
-
-Apenas o essencial — descarta os 600+ warnings de `search_path` (cleanup cosmético).
-
-- **[S] Auditar as 5 Security Definer Views** — validar se cada uma precisa do flag; se for legacy, converter para `SECURITY INVOKER` com RLS. Se for necessária (ex: bypass para função admin), documentar em memória.
-- **[S] Habilitar Leaked Password Protection** nas configs de auth (1 toggle, sem código).
-- **Ignorar** o lote `Function Search Path Mutable` — risco real é baixo (apenas exploit teórico se schema malicioso for criado, e só admin pode fazer isso).
-
-## Sequenciamento
-
+Estrutura:
 ```text
-Sprint 1 (P0 completo):
-  Tabela + edge fn + dashboard + cron + badge
+BEGIN;
+  -- params: workspace, user, projeto, bk1 (BACK), bk2 (LAY)
+  -- snapshot saldos pré
 
-Sprint 2 (P1 + P3):
-  Test harness 3 casos + UX upgrades
+  -- FASE 1: CRIAÇÃO
+  criar_surebet_atomica_v3(
+    pernas:    [{ordem:1, casa:bk1, tipo:'back'},
+                {ordem:2, casa:bk2, tipo:'lay'}],
+    entradas:  [{perna_ordem:1, stake:100, odd:2.00, moeda:BRL, fonte:REAL},
+                {perna_ordem:2, stake:100, odd:2.00, moeda:BRL, fonte:REAL, comissao:0}]
+  )
+  ASSERT:
+    - bk1.saldo  = pre_bk1 − 100              (stake BACK debitado)
+    - bk2.saldo  = pre_bk2 − 100              (liability LAY = stake×(odd−1) = 100)
+    - status = PENDENTE
+    - apostas_perna_entradas com cotacao_snapshot=1
 
-Sprint 3 (P2 + P4):
-  Slow queries + índices + 5 views
+  -- FASE 2: RESOLUÇÃO (cenário escolhido: BACK GREEN, LAY RED)
+  liquidar_perna_surebet_v1(perna1, 'GREEN', ws)
+  liquidar_perna_surebet_v1(perna2, 'RED',   ws)
+  ASSERT:
+    - status = LIQUIDADA
+    - pl_perna1 = +100 ; pl_perna2 = −100   (já refletido na criação para LAY)
+    - pl_consolidado pai = Σ pernas = 0
+    - bk1.saldo = pre_bk1 + 100              (stake devolvido + lucro = +100 líquido)
+    - bk2.saldo = pre_bk2 − 100              (liability consumida)
+    - ledger: PAYOUT em bk1 (+200), nenhum payout em bk2 (RED LAY)
 
-Sprint 4 (P1 expansão):
-  Runner CI + cobertura completa de triggers
+  -- FASE 3: EDIÇÃO PÓS-LIQUIDAÇÃO (stake 100→120, odd 2.00→2.10 na BACK)
+  editar_surebet_completa_v3(
+    aposta_id,
+    nova_perna1: { stake:120, odd:2.10, resultado:'GREEN' },
+    nova_perna2: { inalterada }
+  )
+  ASSERT:
+    - reversão completa do PAYOUT anterior em bk1
+    - novo débito de stake (−120) e novo PAYOUT (+120×2.10 = +252)
+    - bk1.saldo final = pre_bk1 + 132        (lucro novo = 120)
+    - bk2.saldo inalterada vs FASE 2
+    - pl_perna1 = +120 ; pl_perna2 = −100 ; pl_consolidado = +20
+    - aposta_edit_audit_logs ganhou 1 linha com diff de stake/odd
+    - cotacao_snapshot da perna preservada (não recotada)
+
+ROLLBACK;
 ```
 
-## Escopo Protegido
+## Como rodar
+```bash
+psql -v ws=<uuid> -v uid=<uuid> -v proj=<uuid> \
+     -v bk1=<uuid> -v bk2=<uuid> \
+     -v ON_ERROR_STOP=1 \
+     -f supabase/tests/triggers/05_back_lay_edit_pos_liquidacao.sql
+```
+Saída: `RAISE NOTICE` por fase com saldos antes/depois e deltas; qualquer divergência aborta com `RAISE EXCEPTION` (e o `ROLLBACK` garante limpeza).
 
-- Lógica de cálculo financeira (`fn_recalc_*`, `criar_surebet_atomica_v3`, `liquidar_perna_surebet_v1`) — congelada pós-Fase 4
-- Frontend Surebet/Calculadora — só mudanças cosméticas em P3
-- Zero retrofix em dados existentes
+## Fora de escopo
+- Não toca frontend.
+- Não cria migration (só arquivo de teste).
+- Não altera nenhum dado real (transação revertida).
+- Não cobre multimoeda, freebet ou multi-entry (cenários já cobertos por testes existentes — posso adicionar depois se quiser).
 
-## Pergunta
-
-Começo por **Sprint 1 (P0 — observabilidade)**? É o que entrega valor mais visível para você em uma sessão.
+## Perguntas para confirmar antes de implementar
+1. Cenário de resolução: **BACK GREEN + LAY RED** (default) ou outro?
+2. Edição pós-liquidação: **stake 100→120 + odd 2.00→2.10** (default) ou outra mudança?
+3. Replicar nas 6 abas ou só **Surebet**?
