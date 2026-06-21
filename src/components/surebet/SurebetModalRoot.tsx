@@ -40,7 +40,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Calculator, Save, Trash2, X, AlertTriangle, ArrowRight, Target, FileText } from "lucide-react";
+import { Calculator, Save, Trash2, X, AlertTriangle, ArrowRight, Target, FileText, Eraser } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BetFormHeaderV2 } from "@/components/apostas/BetFormHeaderV2";
 import { ExploradorEventoPicker } from "@/components/surebet/ExploradorEventoPicker";
@@ -2244,8 +2244,9 @@ export function SurebetModalRoot({
             showCloseButton={!embedded}
             onClose={() => onOpenChange(false)}
             embedded={embedded}
-            headerAction={
+            eventoAdornment={
               <ExploradorEventoPicker
+                variant="icon"
                 defaultDate={dataAposta}
                 onSelect={(ev) => {
                   const mapped = mapDailyEventToFormFields(ev);
