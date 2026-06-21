@@ -385,9 +385,16 @@ function PernaItem({
           
           <div className="flex items-baseline justify-between mt-auto pt-1 border-t border-border/10">
             <span className={cn("text-sm font-bold tabular-nums", oddClass)} title={layTitle}>{layPrefix}@{perna.odd.toFixed(2)}</span>
-            <span className={cn("text-xs tabular-nums font-medium", isLayPerna ? "text-red-300" : "text-muted-foreground")} title={stakeTitle}>
-              {stakeLabel}{formatPernaValue(respValor, perna.moeda)}
-            </span>
+            <div className={cn("flex flex-col items-end", isLayPerna ? "text-red-300" : "text-muted-foreground")} title={stakeTitle}>
+              <span className="text-xs tabular-nums font-medium">
+                {formatPernaValue(perna.stake, perna.moeda)}
+              </span>
+              {isLayPerna && (
+                <span className="text-[10px] leading-tight text-muted-foreground/80 tabular-nums">
+                  Resp {formatPernaValue(respValor, perna.moeda)}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       );
