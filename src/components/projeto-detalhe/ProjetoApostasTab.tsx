@@ -1505,7 +1505,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
   };
 
   const handleDuplicateSurebet = (surebetId: string) => {
-    openSurebetWindow({ projetoId, activeTab: 'apostas', duplicateFrom: surebetId } as any);
+    openSurebetWindow({ projetoId, activeTab: 'apostas', numPernas: 3, duplicateFrom: surebetId } as any);
   };
 
   if (loading) {
@@ -1706,7 +1706,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                   surebet={surebetData}
                   onEdit={(surebet) => {
                     // Abrir em janela externa
-                    openSurebetWindow({ projetoId, id: surebet.id, activeTab: 'apostas' });
+                    openSurebetWindow({ projetoId, id: surebet.id, activeTab: 'apostas', numPernas: 3 });
                   }}
                   onQuickResolve={handleQuickResolveSurebet}
                   onPernaResultChange={handleSurebetPernaResolve}
