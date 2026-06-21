@@ -8,6 +8,7 @@
  */
 
 import type { SurebetPerna, SurebetPernaEntry } from "@/components/projeto-detalhe/SurebetCard";
+import { probePernaTipo } from "@/utils/integrityProbe";
 
 interface RawPerna {
   id?: string;
@@ -64,6 +65,12 @@ export function groupPernasBySelecao(
     const main = group[0];
     const subs = group.slice(1);
     const hasEntries = subs.length > 0;
+
+    // Probe: garante que `tipo` da principal não some no agrupamento.
+    probePernaTipo("groupPernasBySelecao:main", main.id, main.tipo, main.tipo ?? "back");
+    for (const s of subs) {
+      probePernaTipo("groupPernasBySelecao:entry", s.id, s.tipo, s.tipo ?? "back");
+    }
 
     // Calcular odd média ponderada e stake total
     const allEntries = group.map(p => ({ odd: p.odd, stake: p.stake }));
