@@ -49,6 +49,16 @@ export interface PernaInput {
   selecao_livre?: string | null;
   odd: number;
   stake: number;
+  /**
+   * Lado da operação: 'back' (a favor — padrão) ou 'lay' (contra, exchange).
+   * Em LAY, o risco real é a liability (stake×(odd−1)) — não o stake.
+   */
+  tipo?: 'back' | 'lay';
+  /**
+   * Comissão da exchange (decimal, ex: 0.028 = 2,8%). Aplica-se apenas
+   * em pernas LAY, sobre o lucro do GREEN. Default 0.
+   */
+  comissao?: number;
   stake_brl_referencia?: number | null;
   cotacao_snapshot?: number | null;
   cotacao_snapshot_at?: string | null;
