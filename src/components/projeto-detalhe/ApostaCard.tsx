@@ -102,6 +102,12 @@ export interface ApostaCardData {
   mercado_direcao?: string | null;
   mercado_linha?: number | null;
   mercado_display?: string | null;
+  // Snapshot opcional do evento importado (Importar Jogo → daily_events)
+  time_casa?: string | null;
+  time_fora?: string | null;
+  home_team_logo_url?: string | null;
+  away_team_logo_url?: string | null;
+  league_logo_url?: string | null;
 }
 
 
