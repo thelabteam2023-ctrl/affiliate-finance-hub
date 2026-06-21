@@ -725,6 +725,8 @@ export type Database = {
           lucro_esperado: number | null
           lucro_prejuizo: number | null
           lucro_prejuizo_brl_referencia: number | null
+          lucro_realizado: number | null
+          lucro_realizado_at: string | null
           manual_override_at: string | null
           manual_override_by: string | null
           manual_override_reason: string | null
@@ -752,6 +754,7 @@ export type Database = {
           retorno_potencial: number | null
           roi_esperado: number | null
           roi_real: number | null
+          roi_realizado: number | null
           selecao: string | null
           selecoes: Json | null
           spread_calculado: number | null
@@ -825,6 +828,8 @@ export type Database = {
           lucro_esperado?: number | null
           lucro_prejuizo?: number | null
           lucro_prejuizo_brl_referencia?: number | null
+          lucro_realizado?: number | null
+          lucro_realizado_at?: string | null
           manual_override_at?: string | null
           manual_override_by?: string | null
           manual_override_reason?: string | null
@@ -852,6 +857,7 @@ export type Database = {
           retorno_potencial?: number | null
           roi_esperado?: number | null
           roi_real?: number | null
+          roi_realizado?: number | null
           selecao?: string | null
           selecoes?: Json | null
           spread_calculado?: number | null
@@ -925,6 +931,8 @@ export type Database = {
           lucro_esperado?: number | null
           lucro_prejuizo?: number | null
           lucro_prejuizo_brl_referencia?: number | null
+          lucro_realizado?: number | null
+          lucro_realizado_at?: string | null
           manual_override_at?: string | null
           manual_override_by?: string | null
           manual_override_reason?: string | null
@@ -952,6 +960,7 @@ export type Database = {
           retorno_potencial?: number | null
           roi_esperado?: number | null
           roi_real?: number | null
+          roi_realizado?: number | null
           selecao?: string | null
           selecoes?: Json | null
           spread_calculado?: number | null

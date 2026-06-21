@@ -25,6 +25,8 @@ import { useAuth } from "@/hooks/useAuth";
 
 
 import { validateBalanceForOperation } from "@/utils/surebetBalanceValidator";
+import { LayBadge } from "@/components/surebet/LayBadge";
+import { exposureOf } from "@/utils/pernaLayHelpers";
 
 
 // Estrutura de entrada individual (para múltiplas entradas)
@@ -100,6 +102,10 @@ export interface SurebetData {
   lucro_esperado: number | null;
   lucro_real: number | null;
   roi_real: number | null;
+  /** Snapshot imutável do lucro consolidado congelado na transição para LIQUIDADA. */
+  lucro_realizado?: number | null;
+  /** Snapshot imutável do ROI realizado, congelado junto com lucro_realizado. */
+  roi_realizado?: number | null;
   /** Lucro consolidado na moeda de consolidação (pode diferir da moeda do projeto!) */
   pl_consolidado?: number | null;
   /** Stake consolidado na moeda de consolidação */
@@ -313,7 +319,11 @@ function PernaItem({
   const oddClass = isLayPerna ? "text-red-400" : "";
   const layTitle = isLayPerna ? "Chance contra (Lay)" : undefined;
   const stakeLabel = isLayPerna ? "Resp: " : "";
-  const stakeTitle = isLayPerna ? "Responsabilidade (liability)" : undefined;
+  const stakeTitle = isLayPerna
+    ? `Responsabilidade (liability) = stake × (odd − 1) — backers' stake: ${formatPernaValue(perna.stake, perna.moeda)}`
+    : undefined;
+  // Liability sempre derivada (stake × (odd-1)) — fonte única em pernaLayHelpers.
+  const respValor = isLayPerna ? exposureOf({ odd: perna.odd, stake: perna.stake, tipo: 'lay', comissao: perna.comissao ?? 0 }) : perna.stake;
   
   // formatBookmakerDisplay imported from @/lib/bookmaker-display
   
@@ -337,7 +347,7 @@ function PernaItem({
             >
               {getSelecaoDisplay(perna)}
             </SelectionBadge>
-            
+            {isLayPerna && <LayBadge />}
             {onResultChange && (
               <SurebetPernaResultPill
                 resultado={resultadoExibir}
@@ -374,7 +384,7 @@ function PernaItem({
           <div className="flex items-baseline justify-between mt-auto pt-1 border-t border-border/10">
             <span className={cn("text-sm font-bold tabular-nums", oddClass)} title={layTitle}>{layPrefix}@{perna.odd.toFixed(2)}</span>
             <span className={cn("text-xs tabular-nums font-medium", isLayPerna ? "text-red-300" : "text-muted-foreground")} title={stakeTitle}>
-              {stakeLabel}{formatPernaValue(perna.stake, perna.moeda)}
+              {stakeLabel}{formatPernaValue(respValor, perna.moeda)}
             </span>
           </div>
         </div>
@@ -394,6 +404,7 @@ function PernaItem({
             {getSelecaoDisplay(perna)}
           </SelectionBadge>
         </div>
+        {isLayPerna && <div className="hidden sm:block shrink-0"><LayBadge /></div>}
         
         {/* Row with Logo + Nome + Odd/Stake */}
         <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0 overflow-hidden">
@@ -426,7 +437,7 @@ function PernaItem({
           {/* Odd e Stake à direita - larguras fixas para alinhamento */}
           <div className="flex items-center gap-2 shrink-0">
             <span className={cn("text-sm sm:text-base font-medium whitespace-nowrap w-[70px] text-right tabular-nums", oddClass)} title={layTitle}>{layPrefix}@{perna.odd.toFixed(2)}</span>
-            <span className={cn("text-xs sm:text-sm whitespace-nowrap w-[110px] text-right tabular-nums", isLayPerna ? "text-red-300" : "text-muted-foreground")} title={stakeTitle}>{stakeLabel}{formatPernaValue(perna.stake, perna.moeda)}</span>
+            <span className={cn("text-xs sm:text-sm whitespace-nowrap w-[110px] text-right tabular-nums", isLayPerna ? "text-red-300" : "text-muted-foreground")} title={stakeTitle}>{stakeLabel}{formatPernaValue(respValor, perna.moeda)}</span>
           </div>
           
           {/* Result pill per perna */}
@@ -447,6 +458,7 @@ function PernaItem({
           >
             {getSelecaoDisplay(perna)}
           </SelectionBadge>
+          {isLayPerna && <span className="ml-1.5 inline-block align-middle"><LayBadge /></span>}
         </div>
       </div>
     );
@@ -469,6 +481,7 @@ function PernaItem({
               {getSelecaoDisplay(perna)}
             </SelectionBadge>
           </div>
+          {isLayPerna && <LayBadge />}
           
           {/* Ícone de múltiplas entradas */}
           <div className="shrink-0">
@@ -494,10 +507,14 @@ function PernaItem({
                 const entryCurrencies = new Set(perna.entries?.map(e => e.moeda) || []);
                 if (entryCurrencies.size > 1 && convertToConsolidation) {
                   // Convert each entry's stake to consolidation currency
-                  const consolidated = perna.entries!.reduce((sum, e) => sum + convertToConsolidation(e.stake, e.moeda), 0);
+                  const consolidated = perna.entries!.reduce((sum, e) => {
+                    const v = isLayPerna ? e.stake * Math.max(0, e.odd - 1) : e.stake;
+                    return sum + convertToConsolidation(v, e.moeda);
+                  }, 0);
                   return `${stakeLabel}${formatValue(consolidated)}`;
                 }
-                return `${stakeLabel}${formatPernaValue(displayStake, perna.moeda)}`;
+                const v = isLayPerna ? displayStake * Math.max(0, displayOdd - 1) : displayStake;
+                return `${stakeLabel}${formatPernaValue(v, perna.moeda)}`;
               })()}
             </span>
           </div>
@@ -998,18 +1015,23 @@ export function SurebetCard({
     : (typeof lucroConsolidadoFallback === "number" ? lucroConsolidadoFallback : null);
 
   // Para lucro exibido: FONTE ÚNICA DE VERDADE
-  // Liquidada: pl_consolidado (RPC atômica) > lucro_real > fallback
+  // Liquidada: lucro_realizado (snapshot imutável congelado pelo trigger
+  //   trg_snapshot_lucro_realizado) > pl_consolidado (RPC atômica) > lucro_real > fallback.
   // Pendente: PRIORIZAR cálculo runtime (que detecta freebet/multi-entrada corretamente).
   //   Só usa lucro_esperado do banco como fallback quando não há pernas para calcular.
   //   Motivo: lucro_esperado pode estar desatualizado em apostas legadas criadas antes
   //   das correções de detecção de freebet (mem://finance/surebet-freebet-detection-canonical).
-  const lucroExibir = isLiquidada 
-    ? (typeof lucroConsolidadoEfetivo === "number" ? lucroConsolidadoEfetivo : surebet.lucro_real)
+  const lucroExibir = isLiquidada
+    ? (typeof surebet.lucro_realizado === "number"
+        ? surebet.lucro_realizado
+        : (typeof lucroConsolidadoEfetivo === "number" ? lucroConsolidadoEfetivo : surebet.lucro_real))
     : (piorCenarioCalculado?.lucro ?? surebet.lucro_esperado ?? null);
 
   const roiExibir = (() => {
     if (isLiquidada) {
-      // Priorizar ROI derivado do pl_consolidado (fonte de verdade)
+      // Snapshot imutável tem precedência absoluta para liquidadas.
+      if (typeof surebet.roi_realizado === "number") return surebet.roi_realizado;
+      // Fallback: ROI derivado do pl_consolidado (fonte de verdade da RPC).
       if (typeof lucroConsolidadoEfetivo === "number" && stakeRealTotal > 0) {
         return (lucroConsolidadoEfetivo / stakeRealTotal) * 100;
       }

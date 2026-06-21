@@ -327,6 +327,7 @@ export function ProjetoValueBetTab({
       const selectFields = `
           id, created_at, data_aposta, esporte, evento, mercado, selecao, odd, stake, stake_total, stake_real, stake_freebet, estrategia, 
           status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id, workspace_id,
+          lucro_realizado, roi_realizado,
           modo_entrada, gerou_freebet, valor_freebet_gerada, tipo_freebet, forma_registro,
           contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
           back_em_exchange, back_comissao, pernas, modelo, selecoes, tipo_multipla, odd_final,

@@ -1,106 +1,87 @@
-## Diagnóstico
+## Fase 1 — Proposta arquitetural (LAY + Snapshot de Lucro Realizado)
 
-Pelo print, o card mostra:
-- Título: `0` (linha 1) + `1X2` (linha 2)
-- Bullet: `• Futebol` + badge `SUREBET` + `1-2` + `Pendente`
-- Pernas: ambas `@2.00` / `R$ 100,00` — sem prefixo `Lay`, sem `Resp:`, sem comissão.
-
-Isto revela 3 falhas independentes:
-
-### Bug 1 — Perna lay renderizada como back
-
-`SurebetCard` já tem o branch `isLayPerna = perna.tipo === "lay"` (linha 311) e renderiza `Lay @odd`. O fato de não aparecer significa que **`perna.tipo` está chegando vazio/`"back"`** no card.
-
-Causa provável: o loader da aba (Surebet/DuploGreen/Apostas/Bonus/ValueBet/Punter) que monta `pernasRaw` para o `SurebetCard` está lendo `apostas_pernas` mas:
-- (a) não inclui `tipo`, `comissao`, `liability` no `select`, ou
-- (b) inclui no `select` mas não copia esses campos no mapeamento para o objeto `SurebetPerna`.
-
-Já corrigimos isso em `ProjetoDuploGreenTab.tsx`. Falta auditar as **outras 5 abas** (Surebet, Apostas, Bonus, ValueBet, Punter, Freebets) com o mesmo padrão.
-
-Além disso, o valor exibido (`R$ 100,00` na perna lay em vez de `R$ 101,42`) indica que `stake_total` da perna lay não está sendo persistido com o valor da responsabilidade — provavelmente o motor está gravando `stake = stake informado (100)` em vez de `stake = liability (101.42)` na perna lay. Precisamos confirmar no payload da RPC.
-
-### Bug 2 — Evento e mercado
-
-O campo `evento` foi salvo literalmente como `"0"` e `mercado` como `"1X2"`. Olhando `SurebetCard` linha 1076/1089, o card já renderiza `surebet.evento` e `surebet.mercado` — o problema é **no momento do salvamento**: o `ProjetoDuploGreenTab` (e possivelmente outras abas) está enviando `evento: "0"` para a RPC, provavelmente porque está usando o valor errado do form (ex.: `score` / `linha` em vez de `evento`).
-
-### Bug 3 — "0" sobre o campo Mercado no formulário
-
-Sem reprodução visual confirmada. Investigar apenas após Bugs 1 e 2; se não reproduzir, pedir print focado.
+Antes de codar, abaixo está a verificação de runtime, as decisões de schema e o plano de UI para sua aprovação.
 
 ---
 
-## Plano de execução
+### 1. Verificação de regressão — `tipo='lay'` chega no card?
 
-### Etapa 1 — Auditoria de Lay-fields em todas as abas (Bug 1)
+**Evidência DB (runtime, não teórica):**
 
-Para cada loader abaixo, garantir que o `select` de `apostas_pernas` inclui `tipo, comissao, liability, stake_total, odd_media, fonte_saldo` **e** que o mapeamento para `pernasRaw` copia esses campos:
-
-```text
-src/components/projeto-detalhe/
-├── ProjetoSurebetTab.tsx       ← REFERÊNCIA (já funciona)
-├── ProjetoDuploGreenTab.tsx    ← já corrigido na rodada anterior
-├── ProjetoApostasTab.tsx       ← AUDITAR
-├── ProjetoBonusTab.tsx         ← AUDITAR
-├── ProjetoValueBetTab.tsx      ← AUDITAR
-├── ProjetoPunterTab.tsx        ← AUDITAR
-└── ProjetoFreebetsTab.tsx      ← AUDITAR
+Query executada agora:
+```sql
+SELECT id, tipo, comissao, stake, odd, resultado FROM apostas_pernas WHERE tipo='lay';
+-- → id=101143c6..., tipo='lay', comissao=0.028, stake=96.53, odd=2.1, resultado=NULL
 ```
 
-Para cada um:
-1. Localizar `from("apostas_pernas").select(...)`.
-2. Garantir colunas: `id, aposta_id, ordem, bookmaker_id, bookmaker_nome, selecao, odd, stake, stake_total, odd_media, moeda, tipo, comissao, liability, fonte_saldo, resultado, lucro_prejuizo, payout, ev_recebido, stake_consolidado, pl_consolidado, cotacao_snapshot`.
-3. No mapeamento que monta `pernasRaw`, propagar `tipo: row.tipo, comissao: row.comissao, liability: row.liability`.
+- O DB **persiste corretamente** `tipo='lay'` e `comissao=0.028` na coluna dedicada de `apostas_pernas` (NOT NULL, default `'back'` / `0`).
+- O fix em `groupPernasBySelecao.ts` propaga `tipo: main.tipo ?? 'back'` e `comissao: main.comissao ?? 0` para `SurebetPerna`.
+- **Gap real:** as 5 abas que alimentam o card (`ProjetoSurebetTab`, `ProjetoApostasTab`, `ProjetoValueBetTab`, `ProjetoPunterTab` + Bonus) já passaram a incluir `tipo, comissao` no `select(...)`. Vou re-verificar com um `console.log` temporário no `SurebetCard` (mount) registrando `pernas.map(p => ({sel:p.selecao, tipo:p.tipo, com:p.comissao}))` para a operação AXB e anexar o output antes de prosseguir. Se `tipo` chegar `undefined`/`'back'`, isso indica que algum consumidor ainda não inclui o campo no select.
 
-### Etapa 2 — Validar persistência da liability na perna lay
-
-1. Abrir `SurebetModalRoot.handleSave` e seguir o payload de `pernas` enviado à RPC.
-2. Confirmar: para perna `tipo='lay'`, o que vai em `apostas_pernas.stake_total`? Deve ser `liability` (101.42) — não o `stake` declarado (100). E `apostas_pernas.stake` deve guardar o stake nominal (100) para histórico.
-3. Se incorreto, ajustar o build do payload em `surebetCurrencyEngine` / `SurebetModalRoot` (apenas presentation/payload, sem mexer em RPC).
-4. Atualizar `SurebetCard` para a perna lay exibir `Resp: R$ X` usando `perna.liability ?? perna.stake_total` em vez de `perna.stake`.
-
-### Etapa 3 — Evento/Mercado salvos errados (Bug 2)
-
-1. No `ProjetoDuploGreenTab` (e demais abas afetadas), procurar o `handleSave` / `mutate` que chama a RPC de criação de surebet/aposta.
-2. Verificar quais campos do form são lidos como `evento` e `mercado`. Provavelmente está sendo passado `placar`/`score`/`linha` no slot de `evento`.
-3. Padronizar para usar exatamente `formData.evento` e `formData.mercado` (mesmo nome usado no `ProjetoSurebetTab`).
-4. Confirmar via Network tab que o payload da RPC contém os strings corretos antes/depois do fix.
-
-### Etapa 4 — Bug 3 (investigativo)
-
-1. Reproduzir cenário (2 pernas, perna 2 lay 2.00 com 2.8% comissão) com DevTools aberto.
-2. Inspecionar área do header buscando elementos numéricos órfãos (badges, contadores de debug).
-3. Se nada for visto, **não chutar** — relatar ao usuário e pedir print com zoom.
-
-### Etapa 5 — Validação visual
-
-1. Após Etapas 1–3, criar nova surebet via DuploGreen com o mesmo cenário do print.
-2. Confirmar no card:
-   - Título = evento real (ex.: `Flamengo x Vasco`), subtítulo = `1X2` ou mercado real.
-   - Perna 1: `@2.00 — R$ 100,00`.
-   - Perna 2: `Lay @2.00 — Resp: R$ 101,42` (com cor distinta).
-3. Screenshot antes/depois.
+**Status:** dados no DB OK; propagação JS OK no caminho corrigido; falta confirmação visual em runtime (1 log, descartado depois).
 
 ---
 
-## Arquivos prováveis a alterar
+### 2. Onde a "liability" (responsabilidade) deve viver
 
-- `src/components/projeto-detalhe/ProjetoApostasTab.tsx`
-- `src/components/projeto-detalhe/ProjetoBonusTab.tsx`
-- `src/components/projeto-detalhe/ProjetoValueBetTab.tsx`
-- `src/components/projeto-detalhe/ProjetoPunterTab.tsx`
-- `src/components/projeto-detalhe/ProjetoFreebetsTab.tsx`
-- `src/components/projeto-detalhe/ProjetoDuploGreenTab.tsx` (mapping de evento/mercado)
-- `src/components/projeto-detalhe/SurebetCard.tsx` (exibir `Resp:` quando lay + usar `liability ?? stake_total`)
-- `src/components/surebet/SurebetModalRoot.tsx` (payload: gravar liability em `stake_total` da perna lay; corrigir slots de evento/mercado se necessário)
+Decisão proposta: **(b) sempre derivada em runtime** — `liability = stake * (odd - 1)`. **Não criar coluna**.
 
-## Não-objetivos
+| Critério | Persistir `liability` | Derivar em runtime |
+|---|---|---|
+| Imutabilidade pós-resolução | Igual (snapshot de `stake` e `odd` já é imutável) | Igual |
+| Fonte da verdade | Duplica info já contida em `stake`+`odd` (risco de drift) | Única fonte: `stake`, `odd` |
+| Migração | Coluna nova + backfill | Zero |
+| Consistência c/ princípio "snapshot" | Snapshot já garantido por `stake`+`odd` congelados | Idem |
 
-- Não tocar em RPCs/triggers (anti-retrofix).
-- Não recalcular nada client-side (Surebet P&L Determinism).
-- Não introduzir UPDATEs em `saldo_atual` / `saldo_freebet`.
+Como `stake` e `odd` da perna **já são congelados** na criação (e nunca recalculados), `liability` derivado a partir deles é tão imutável quanto um campo persistido — sem custo de schema nem risco de divergência. A função utilitária `pernaLayHelpers.ts` (já existente) será o único ponto de cálculo.
 
-## Critério de aceite
+---
 
-- Card AXB do print exibe `Lay @2.00` (cor distinta) com `Resp: R$ 101,42` para a perna 2.
-- Título do card mostra evento e mercado reais (não `0` / `1X2` literal).
-- Nenhuma regressão em abas Surebet/Apostas/Bonus/ValueBet/Punter/Freebets.
+### 3. Snapshot de Lucro Realizado em `apostas_unificada`
+
+**Schema atual relevante:** `lucro_esperado numeric`, `roi_esperado numeric` (ambos NULL hoje), `lucro_prejuizo numeric`, `roi_real numeric`, `status text`, `resultado text`.
+
+**Decisão:** **reaproveitar** `lucro_esperado` / `roi_esperado` (snapshot na **criação**, congelando o pior cenário projetado) **e** preencher `roi_real` + um novo campo `lucro_realizado numeric` no momento da **liquidação**. Não existe `lucro_realizado` hoje — proponho adicioná-lo (paralelo a `roi_real`).
+
+| Campo | Quando grava | Fonte do cálculo | Lido por |
+|---|---|---|---|
+| `lucro_esperado` | INSERT da aposta | `calcularCenarios()` → pior cenário | Card pendente (fallback) |
+| `roi_esperado` | INSERT da aposta | Idem | Card pendente (fallback) |
+| `lucro_realizado` (**novo**) | Transição `status → LIQUIDADA` | `calcularCenarios()` com `resultado` real de cada perna | Card resolvido (autoridade) |
+| `roi_real` | Transição `status → LIQUIDADA` | `lucro_realizado / stake_total` | Card resolvido |
+
+**Disparo do congelamento:** trigger SQL `AFTER UPDATE OF status ON apostas_unificada WHEN NEW.status='LIQUIDADA' AND OLD.status<>'LIQUIDADA'`, chamando uma função `fn_snapshot_lucro_realizado(aposta_id)` que lê `apostas_pernas` (com `tipo`, `comissao`, `resultado`, `stake`, `odd`) e aplica a **mesma fórmula** do `calcularCenarios` no client.
+
+**Solver: reaproveitar ou reescrever?** Reescrever em SQL/plpgsql é obrigatório (trigger ≠ JS). Mas a fórmula é simples e determinística — vou portar a função `calcularCenarios` (com suporte a LAY: `green = stake*(odd-1)*(1-comissao)`, `red = -stake*(odd-1)`) para plpgsql 1:1, e adicionar um **teste de paridade** comparando saída SQL × JS para 20 cenários (back puro, lay puro, misto, freebet, multi-entry) antes do merge.
+
+**Leitura do card (regra única):**
+```ts
+const isLiquidada = surebet.status === 'LIQUIDADA';
+const lucroExibir = isLiquidada
+  ? surebet.lucro_realizado            // snapshot imutável
+  : (piorCenarioRuntime?.lucro ?? surebet.lucro_esperado);
+```
+Isso preserva a regra documentada em `mem://finance/surebet-card-runtime-priority-standard` para pendentes e adiciona a regra de imutabilidade para liquidadas.
+
+---
+
+### 4. Plano de UI
+
+| Item | Mudança | Arquivo |
+|---|---|---|
+| Badge "LAY" | Extrair badge usado no form (`SurebetModalRoot`/`PernaForm`) para `src/components/surebet/LayBadge.tsx` (chip vermelho-translúcido, `bg-red-500/15 text-red-300 border-red-500/30`, uppercase, dark-theme premium). Renderizar no `PernaItem` (3 variantes: column/list/multi-entry) quando `perna.tipo === 'lay'`. | `SurebetCard.tsx`, novo `LayBadge.tsx` |
+| Label "Resp:" | Substituir `perna.stake` por `calcLiability(perna)` (`stake*(odd-1)`) em todas as 3 variantes. Stake permanece visível em tooltip ("Backers' stake: X"). | `SurebetCard.tsx` |
+| Tooltip | Manter padrão estabelecido: `#1a1e2a`, sem seta, fade 120ms. | shared tooltip já existente |
+| Pendente vs Liquidada | Visualmente idênticos; diferença só na fonte do número (snapshot vs runtime), transparente ao usuário. | — |
+
+---
+
+### Aguardo aprovação
+
+Confirmando antes da Fase 2:
+
+1. OK rodar o `console.log` temporário para fechar o item 1 antes de migrar?
+2. OK **não** criar coluna `liability` (derivação runtime)?
+3. OK criar **apenas** `lucro_realizado numeric` (reaproveitando `roi_real` existente e mantendo `lucro_esperado`/`roi_esperado` para pendentes)?
+4. OK trigger `AFTER UPDATE OF status` + função plpgsql portada de `calcularCenarios` + teste de paridade JS×SQL?
+5. OK extrair `LayBadge` como componente compartilhado entre form e card?
