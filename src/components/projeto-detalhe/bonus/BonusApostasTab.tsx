@@ -472,7 +472,13 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
               lucro_prejuizo,
               moeda,
               fonte_saldo,
-              bookmakers (nome, moeda, parceiro:parceiros(nome))
+              bookmakers (nome, moeda, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo(logo_url)),
+              apostas_perna_entradas (
+                id, bookmaker_id, stake, odd, moeda, fonte_saldo, resultado,
+                selecao_livre, stake_brl_referencia, lucro_prejuizo_brl_referencia,
+                cotacao_snapshot, lucro_prejuizo,
+                bookmakers (nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo(logo_url))
+              )
             `)
             .in("aposta_id", idsChunk)
             .order("ordem", { ascending: true }),
@@ -499,6 +505,9 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
             lucro_prejuizo: p.lucro_prejuizo,
             moeda: p.moeda || bookmaker?.moeda || 'BRL',
             fonte_saldo: p.fonte_saldo || null,
+            entries: Array.isArray(p.apostas_perna_entradas) && p.apostas_perna_entradas.length > 1
+              ? formatPernaEntradas(p.apostas_perna_entradas, bookmaker?.nome)
+              : undefined,
           });
         });
       }
