@@ -1736,6 +1736,11 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                     comissao: p.comissao ?? 0,
                     stake_real: p.stake_real ?? undefined,
                     stake_freebet: p.stake_freebet ?? undefined,
+                    // Multi-bookmaker (perna composta): propagar entries/odd_media/stake_total
+                    // construídos no mapper de fetchSurebets para o SurebetCard renderizar todas as casas.
+                    entries: p.entries,
+                    odd_media: p.odd_media,
+                    stake_total: p.stake_total,
                   }))
                 ),
               };
