@@ -1,5 +1,6 @@
 import { openSurebetWindow } from "@/lib/windowHelper";
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { formatPernaEntradas } from "@/utils/formatPernaEntradas";
 import { useQueryClient, useQuery, keepPreviousData } from "@tanstack/react-query";
 import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
 import { supabase } from "@/integrations/supabase/client";
