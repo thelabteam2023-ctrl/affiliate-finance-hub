@@ -472,19 +472,81 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
               lucro_prejuizo,
               moeda,
               fonte_saldo,
-              bookmakers (nome, moeda, parceiro:parceiros(nome))
+              bookmakers (nome, instance_identifier, moeda, parceiro:parceiros(nome)),
+              apostas_perna_entradas (
+                id, perna_id, bookmaker_id, moeda, odd, stake, stake_real, stake_freebet,
+                fonte_saldo, tipo, comissao, resultado, lucro_prejuizo, selecao_livre,
+                stake_brl_referencia, lucro_prejuizo_brl_referencia, cotacao_snapshot, created_at
+              )
             `)
             .in("aposta_id", idsChunk)
             .order("ordem", { ascending: true }),
           surebetIds
         );
         
+        // Pré-resolve bookmakers das sub-entradas (podem diferir da casa
+        // principal — caso multi-casa por perna). Sem isto sub-linha sai "—".
+        const extraBkIds = new Set<string>();
+        (pernasData || []).forEach((p: any) => {
+          (p.apostas_perna_entradas || []).forEach((e: any) => {
+            if (e.bookmaker_id) extraBkIds.add(e.bookmaker_id);
+          });
+        });
+        const extraBkMap = new Map<string, any>();
+        if (extraBkIds.size > 0) {
+          const { data: extraBks } = await supabase
+            .from("bookmakers")
+            .select("id, nome, instance_identifier, moeda, parceiro:parceiros(nome)")
+            .in("id", Array.from(extraBkIds));
+          (extraBks || []).forEach((b: any) => {
+            extraBkMap.set(b.id, {
+              nome: b.nome,
+              instance_identifier: b.instance_identifier || null,
+              moeda: b.moeda,
+              parceiro_nome: b.parceiro?.nome || null,
+            });
+          });
+        }
         pernasData.forEach((p: any) => {
           if (!pernasMap[p.aposta_id]) {
             pernasMap[p.aposta_id] = [];
           }
           const bookmaker = p.bookmakers as any;
           const parceiroNome = bookmaker?.parceiro?.nome;
+          const rawEntries = Array.isArray(p.apostas_perna_entradas) ? p.apostas_perna_entradas : [];
+          const entriesBuilt = [...rawEntries]
+            .sort((x: any, y: any) => {
+              const ta = x?.created_at ? Date.parse(x.created_at) : 0;
+              const tb = y?.created_at ? Date.parse(y.created_at) : 0;
+              return ta - tb;
+            })
+            .map((e: any) => {
+              const eb = extraBkMap.get(e.bookmaker_id);
+              const ePar = eb?.parceiro_nome ?? null;
+              const eDisplay = eb
+                ? (ePar
+                    ? `${eb.nome}${eb.instance_identifier ? ` (${eb.instance_identifier})` : ''} - ${ePar}`
+                    : `${eb.nome}${eb.instance_identifier ? ` (${eb.instance_identifier})` : ''}`)
+                : "—";
+              return {
+                id: e.id,
+                bookmaker_id: e.bookmaker_id,
+                bookmaker_nome: eDisplay,
+                parceiro_nome: ePar,
+                instance_identifier: eb?.instance_identifier ?? null,
+                logo_url: null,
+                moeda: e.moeda || 'BRL',
+                odd: Number(e.odd) || 0,
+                stake: Number(e.stake) || 0,
+                selecao_livre: e.selecao_livre ?? undefined,
+                fonte_saldo: e.fonte_saldo ?? 'REAL',
+                resultado: e.resultado ?? null,
+                lucro_prejuizo: e.lucro_prejuizo ?? null,
+                stake_brl_referencia: e.stake_brl_referencia ?? null,
+                lucro_prejuizo_brl_referencia: e.lucro_prejuizo_brl_referencia ?? null,
+                cotacao_snapshot: e.cotacao_snapshot ?? null,
+              };
+            });
           pernasMap[p.aposta_id].push({
             id: p.id,
             bookmaker_id: p.bookmaker_id,
@@ -498,6 +560,8 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
             resultado: p.resultado,
             lucro_prejuizo: p.lucro_prejuizo,
             moeda: p.moeda || bookmaker?.moeda || 'BRL',
+            // ⬇️ NOVO: 1:N — surebets de bônus também podem ter múltiplas casas por perna
+            entries: entriesBuilt,
             fonte_saldo: p.fonte_saldo || null,
           });
         });

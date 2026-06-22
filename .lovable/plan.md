@@ -1,97 +1,62 @@
-## Resposta direta à dúvida
+## TL;DR (correção do relato)
 
-> "Por que 4,80? Quem definiu? PTAX é do caixa; Cotação de Trabalho é por projeto."
-
-Você está certo, e o exemplo do plano anterior estava **mal rotulado** da minha parte. Olhando o código que está rodando:
-
-- `Financeiro.tsx` constrói `convertUnified` a partir de `useMultiCurrencyConversion`, que por sua vez consome `useCotacoes`. Essa fonte é **a cotação live do workspace** — FastForex como primária e **PTAX como fallback** (mesma cadeia usada pelo Caixa Operacional). Não é Cotação de Trabalho.
-- `usePosicaoCapital` recebe esse `convertUnified` e converte **tudo** (aportes, liquidações, patrimônio) na **taxa de agora**.
-- **Cotação de Trabalho é de projeto** (`ProjectCurrencyContext` / `useProjetoCurrency`) e não tem por que aparecer numa tela workspace-level como o card de Posição de Capital. O plano anterior misturou os dois conceitos — desconsidere essa parte.
-
-Então o "4,80" do meu exemplo era genérico. Na prática quem está mandando é a **PTAX/FastForex de hoje**, aplicada igualmente aos dois lados da conta — e é justamente isso que zera artificialmente a variação cambial.
-
----
-
-## Regra correta de cotação por camada (oficializar)
-
-| Camada | Onde vive | Cotação que manda | Por quê |
-|---|---|---|---|
-| Operação dentro de um **projeto** (apostas, P&L de surebet, bônus consolidado) | `ProjectCurrencyContext` | **Cotação de Trabalho do projeto** (snapshot por operação) | Já é padrão (`cotacao-snapshot-per-operation-standard`, `volume-snapshot-cotacao-trabalho-standard`). Isola o projeto do ruído de mercado. |
-| **Caixa Operacional / Financeiro / Posição de Capital** (visão workspace) | `useCotacoes` → FastForex + **PTAX** fallback | **PTAX** (live) para marcação a mercado **+ snapshot do evento** para valores históricos | É dinheiro real, fora de projeto. PTAX é a referência oficial e neutra do workspace. |
-
-Cotação de Trabalho **não** entra no card de Posição de Capital. Vou deixar isso explícito no código e em memória.
-
----
-
-## Plano corrigido para o card "Posição de Capital"
-
-### Problema real
-Hoje aportes e patrimônio são marcados na **mesma taxa de hoje** → variação cambial passiva some, e o "Resultado Operacional Acumulado" engole esse ruído.
-
-### Solução em 3 linhas honestas
+Você está certo — eu rotulei errado no plano anterior. A segunda entrada da perna X **não é Vave de novo**, é **HUGEWIN – WALLYSON AUGUSTO ALVES DE LIMA**. Confirmado no banco:
 
 ```text
-Patrimônio Atual (PTAX hoje)
-  ├─ Capital próprio investido (PTAX da data de cada aporte/liquidação)
-  ├─ Resultado operacional realizado (fonte canônica, sem FX)
-  └─ Variação cambial não realizada (saldo em moeda estrangeira × ΔPTAX)
+ordem | selecao | entrada                                      | stake | odd  | moeda
+  1   | Casa    | SPORTMARKET — Reginaldo Santos               | 181   | 2.24 | EUR
+  2   | Empate  | VAVE — Juliana Costa de Oliveira             |  50   | 3.50 | USD   ← já aparece
+  2   | Empate  | HUGEWIN — Wallyson Augusto Alves de Lima     |  84   | 3.45 | USD   ← SUMIDA
+  3   | Fora    | PARIMATCH — Juliana Costa de Oliveira        | 731   | 3.28 | BRL
 ```
 
-Identidade: `Capital_histórico + Resultado_realizado + FX_não_realizada = Patrimônio_PTAX_hoje`.
+Ou seja: a perna X tem **duas casas, parceiros diferentes (Juliana + Wallyson), mesmo selecao "Empate", mesma moeda USD**. A HUGEWIN do Wallyson foi gravada corretamente em `apostas_perna_entradas` e simplesmente não é lida pelo card.
 
-### Onde cada número vem
-
-1. **Capital próprio investido (histórico)**
-   - Fonte: `cash_ledger` (APORTE / APORTE_FINANCEIRO / APORTE_DIRETO / LIQUIDACAO), CONFIRMADO.
-   - Conversão: usar o **valor consolidado já gravado** no evento (snapshot do dia). Fallback: PTAX da `data_transacao` via `exchange_rate_history`. Último recurso: PTAX de hoje (marcar como aproximado no tooltip).
-   - **Não usar `convertUnified` (taxa de hoje) para esse valor.**
-
-2. **Resultado operacional realizado**
-   - Reusar a fonte canônica que já alimenta a Visão Geral (`fetchProjetosLucroCanonico` / RPC equivalente) agregada no nível workspace.
-   - Já exclui GANHO/PERDA_CAMBIAL (memória `canonical-operational-profit-standard`).
-   - Sempre acumulado.
-
-3. **Variação cambial não realizada**
-   - Calculada por diferença: `Patrimônio_PTAX_hoje − Capital_histórico − Resultado_realizado`.
-   - Tooltip: "Efeito de reavaliar saldos em moeda estrangeira pela PTAX de hoje. Só vira ganho/prejuízo de verdade quando a moeda volta para BRL."
-   - Se o workspace é 100% BRL nativo, fica ~0 e pode ser ocultada por threshold (ex.: > 0,1% do patrimônio).
-
-4. **Freebet em estoque** — segue como linha informativa, fora da soma (já corrigido o label).
-
-### ROI do rodapé
-Passa a usar a base histórica:
-`ROI = Resultado Operacional Realizado / Capital Próprio Investido (histórico)` — para de oscilar quando a PTAX muda.
+Isso reforça o diagnóstico — e tem uma implicação extra que eu ainda não tinha levantado: **exposure por parceiro está sendo subestimada** enquanto a sub-entrada não aparece, porque o cálculo no front se baseia no que ele consegue ler. Wallyson "some" das telas de exposição/risco até o fix entrar.
 
 ---
 
-## Detalhes técnicos
+## O que muda no plano (delta sobre a versão anterior)
 
-**Arquivos**
-- `src/hooks/usePosicaoCapital.ts`
-  - Ler também `valor_consolidado` / `cotacao_snapshot` (ou equivalente PTAX-no-dia) do `cash_ledger`.
-  - Retornar duas séries de capital: `capitalHistorico` (snapshot) e `capitalMarkToMarket` (PTAX hoje — para diagnóstico).
-  - Remover dependência de `convertUnified` para o número exibido; manter só como fallback.
-- Novo `src/hooks/useResultadoOperacionalWorkspace.ts` (ou reuso direto de `fetchProjetosLucroCanonico` agregando todos os projetos do workspace).
-- `src/components/financeiro/PosicaoCapitalCard.tsx`
-  - 3 linhas no bloco "Composição do Patrimônio Atual": Capital (histórico) / Resultado realizado / FX não realizada.
-  - Atualizar tooltips deixando claro: "valores históricos = PTAX da data; patrimônio = PTAX de hoje; a diferença é FX não realizada".
-  - Recalcular ROI com as novas bases.
-  - Manter o toggle Acumulado/Período do bloco superior intocado.
-- `src/pages/Financeiro.tsx`: passar `cotacaoUSD` (PTAX live) e o agregador de resultado operacional ao hook; não passar mais `convertUnified` como cotação primária.
+Todo o resto do plano técnico continua igual (o fix é frontend, helper `mapPernaWithEntries.ts`, 7 consumidores, etc.). Adiciono e/ou reforço os pontos abaixo:
 
-**Não muda**
-- Engine de bookmakers, ledger, RPCs.
-- Cotação de Trabalho continua isolada nos projetos.
-- Caixa Operacional, KPIs da Visão Geral.
+### 1. Renderização da sub-entrada deve mostrar a casa + parceiro corretos
 
-**Memórias a registrar depois de aprovado**
-- `mem://finance/workspace-financial-fx-rate-standard` — "Telas workspace-level usam PTAX (live para marcação a mercado, PTAX-no-dia para histórico). Cotação de Trabalho é exclusiva de projeto."
-- `mem://finance/posicao-capital-fx-decomposition-standard` — "Patrimônio = Capital histórico + Resultado realizado + FX não realizada."
+No `SurebetCard`, cada item de `entries[]` precisa montar o label exatamente igual ao da linha principal:
+
+```
+{bookmaker.nome}{instance_identifier ? ` (${instance_identifier})` : ''} — {parceiro.nome}
+```
+
+No exemplo: a sub-linha da perna X tem que sair como `HUGEWIN — WALLYSON AUGUSTO ALVES DE LIMA`, **não** repetir o nome do parceiro/casa da entrada principal. O `bookmakerMap` (já carregado em todos os tabs) tem `parceiro:parceiros(nome)` — só precisa ser usado também nas sub-entradas.
+
+### 2. Validação extra durante QA — checklist específico do caso real
+
+Subir o fix em preview e confirmar visualmente, na ordem:
+
+1. Abrir `NORUEGA X SENEGAL` na aba Apostas do projeto.
+2. Perna X deve renderizar **duas linhas**:
+   - VAVE — Juliana Oliveira · US$ 50,00 · @3.50
+   - HUGEWIN — Wallyson Augusto · US$ 84,00 · @3.45
+3. Stake total da perna X = US$ 134,00 (50 + 84). Odd média ponderada ≈ 3.4814.
+4. Stake total da operação deve permanecer **R$ 399,24** (igual antes do fix, pois a stake já era contabilizada no agregado pai pela RPC). Se mudar, é bug.
+5. Reabrir o modal de edição: as duas casas precisam vir preenchidas (já vinham, o `fetchLinkedPernas` está correto).
+6. Salvar sem alterar nada e voltar para o card → continua mostrando as duas linhas.
+
+### 3. Exposição por parceiro (P1, separado deste fix)
+
+Como Wallyson estava invisível em todas as telas, vale uma auditoria curta:
+- Verificar se `usePernasBookmakerPendentes` / dashboards de bookmaker / cards de exposição usam o mesmo path quebrado.
+- Se sim, eles também passam a contemplar a HUGEWIN do Wallyson após o fix — mas precisamos **conferir KPIs antes/depois** para garantir que não estávamos compensando o erro em outro lugar (memória de anti-retrofix: nada de mass update; só leitura).
+
+### 4. Memória de projeto (nome ajustado)
+
+Salvar em `mem://architecture/surebet-perna-read-with-entradas-standard` com exemplo concreto:
+
+> "Cada perna pode ter N entradas em `apostas_perna_entradas`, cada uma com **bookmaker + parceiro próprios** (ex.: NORUEGA X SENEGAL, perna X = VAVE/Juliana + HUGEWIN/Wallyson). Toda leitura de perna para renderização DEVE trazer essas entradas + join com bookmakers/parceiros. A 'entrada principal' denormalizada em `apostas_pernas` é só conveniência de saldo; nunca substitui a leitura das entradas."
 
 ---
 
-## Confirmações antes de implementar
+## Pergunta de gate (mesma de antes)
 
-1. PTAX como referência oficial do workspace está OK? (alternativa: usar FastForex primário e PTAX só como fallback, igual hoje — mas com snapshot por data para o histórico).
-2. Para o capital histórico, posso assumir que o `cash_ledger` já tem `valor_consolidado`/`cotacao_snapshot` confiáveis para aportes/liquidações antigos? Se não tiver para registros legados, faço fallback para PTAX da `data_transacao` via `exchange_rate_history`.
-3. Ocultar a linha de "Variação cambial" quando estiver ~0 (workspace 100% BRL), ou sempre exibir mesmo zerada?
+Confirma seguir com o fix em **um lote para todos os 7 consumidores** (Apostas, Surebet, Bônus, Freebets, Punter, DuploGreen, ValueBet) ou prefere que eu comece só pelos dois que cobrem o card do print (`ProjetoApostasTab` + `ProjetoSurebetTab`) e valide com você antes de propagar?
