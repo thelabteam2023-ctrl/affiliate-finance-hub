@@ -216,18 +216,29 @@ export function useLogoFallback(sport: string | null | undefined) {
       //         sem token em comum → não casa.
       const queryTokens = tokenize(teamName);
       if (queryTokens.length > 0) {
-        let best: { logo: string; matched: number; ratio: number } | null = null;
+        let best: { logo: string; matched: number; ratio: number; matchedChars: number } | null = null;
         for (const t of teamsGlobalTokens) {
           const qSet = new Set(queryTokens);
           let matched = 0;
-          for (const tk of t.tokens) if (qSet.has(tk)) matched += 1;
+          let matchedChars = 0;
+          for (const tk of t.tokens) {
+            if (qSet.has(tk)) {
+              matched += 1;
+              matchedChars += tk.length;
+            }
+          }
           if (matched === 0) continue;
           // Exige que TODOS os tokens do lado menor sejam casados.
           const minSide = Math.min(t.tokenCount, queryTokens.length);
           if (matched < minSide) continue;
           const ratio = matched / Math.max(t.tokenCount, queryTokens.length);
-          if (!best || ratio > best.ratio || (ratio === best.ratio && matched > best.matched)) {
-            best = { logo: t.logo, matched, ratio };
+          if (
+            !best ||
+            ratio > best.ratio ||
+            (ratio === best.ratio && matched > best.matched) ||
+            (ratio === best.ratio && matched === best.matched && matchedChars > best.matchedChars)
+          ) {
+            best = { logo: t.logo, matched, ratio, matchedChars };
           }
         }
         if (best) return best.logo;
