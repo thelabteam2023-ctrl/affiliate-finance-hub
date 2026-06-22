@@ -314,6 +314,79 @@ Deno.serve(async (req: Request) => {
     upserted += count ?? slice.length;
   }
 
+  // ---- Atualizar caches de logos (league_logos / team_logos) ----
+  function normTeam(s: string): string {
+    return s
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase().replace(/[^a-z0-9]+/g, "").trim();
+  }
+
+  const leagueLogoMap = new Map<string, any>();
+  const teamLogoMap = new Map<string, any>();
+
+  for (const ev of items) {
+    const sport = TSD_TO_INTERNAL[ev.strSport];
+    if (!sport) continue;
+    const leagueId = ev.idLeague ?? null;
+    const leagueName: string = ev.strLeague ?? "—";
+    const leagueKey = `thesportsdb_${leagueId ?? `${sport}_${leagueName}`}`;
+
+    if (ev.strLeagueBadge) {
+      const k = `${sport}::${leagueKey}`;
+      if (!leagueLogoMap.has(k)) {
+        leagueLogoMap.set(k, {
+          sport,
+          league_key: leagueKey,
+          league_name: leagueName,
+          logo_url: ev.strLeagueBadge,
+          found: true,
+          searched_at: new Date().toISOString(),
+        });
+      }
+    }
+
+    for (const side of ["Home", "Away"] as const) {
+      const teamName = ev[`str${side}Team`];
+      const badge = ev[`str${side}TeamBadge`];
+      if (!teamName || !badge) continue;
+      const normalized = normTeam(teamName);
+      if (!normalized) continue;
+      const k = `${leagueKey}::${normalized}`;
+      if (!teamLogoMap.has(k)) {
+        teamLogoMap.set(k, {
+          sport,
+          team_name_normalized: normalized,
+          team_name_original: teamName,
+          league_key: leagueKey,
+          logo_url: badge,
+          found: true,
+          searched_at: new Date().toISOString(),
+        });
+      }
+    }
+  }
+
+  const leagueLogoRows = Array.from(leagueLogoMap.values());
+  const teamLogoRows = Array.from(teamLogoMap.values());
+  let leagueLogosUpserted = 0;
+  let teamLogosUpserted = 0;
+
+  for (let i = 0; i < leagueLogoRows.length; i += 500) {
+    const slice = leagueLogoRows.slice(i, i + 500);
+    const { error, count } = await supabase
+      .from("league_logos")
+      .upsert(slice, { onConflict: "sport,league_key", count: "exact" });
+    if (!error) leagueLogosUpserted += count ?? slice.length;
+  }
+
+  for (let i = 0; i < teamLogoRows.length; i += 500) {
+    const slice = teamLogoRows.slice(i, i + 500);
+    const { error, count } = await supabase
+      .from("team_logos")
+      .upsert(slice, { onConflict: "league_key,team_name_normalized", count: "exact" });
+    if (!error) teamLogosUpserted += count ?? slice.length;
+  }
+
   await supabase.from("sofascore_sync_runs").update({
     status: fetchErrors.length === results.length ? "error" : "success",
     items_fetched: items.length,
@@ -333,6 +406,8 @@ Deno.serve(async (req: Request) => {
     items_fetched: items.length,
     items_upserted: upserted,
     by_sport: bySport,
+    league_logos_upserted: leagueLogosUpserted,
+    team_logos_upserted: teamLogosUpserted,
     fetch_errors: fetchErrors,
     cost_usd: 0,
   }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
