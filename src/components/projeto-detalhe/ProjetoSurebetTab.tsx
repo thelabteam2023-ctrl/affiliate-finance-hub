@@ -404,7 +404,12 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                 id, aposta_id, bookmaker_id, moeda, selecao, selecao_livre, odd, stake, stake_real, stake_freebet, ordem, tipo, comissao,
                 resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada,
                 stake_brl_referencia, lucro_prejuizo_brl_referencia, cotacao_snapshot, fonte_saldo,
-                bookmakers (nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo(logo_url))
+                bookmakers (nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo(logo_url)),
+                apostas_perna_entradas (
+                  id, perna_id, bookmaker_id, moeda, odd, stake, stake_real, stake_freebet,
+                  fonte_saldo, tipo, comissao, resultado, lucro_prejuizo, selecao_livre,
+                  stake_brl_referencia, lucro_prejuizo_brl_referencia, cotacao_snapshot, created_at
+                )
               `)
               .in("aposta_id", idsChunk)
               .order("ordem", { ascending: true }),
@@ -414,10 +419,92 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
         const pernasOrdenadas = [...(pernasData || [])].sort(
           (a: any, b: any) => (a.ordem ?? 0) - (b.ordem ?? 0)
         );
+        // Pré-carrega bookmakers de TODAS as entradas (sub-casas podem ser
+        // diferentes da casa principal — ex.: VAVE/Juliana + HUGEWIN/Wallyson
+        // na mesma perna). Sem isso a sub-linha sai como "—".
+        const allEntryBkIds = new Set<string>();
+        pernasOrdenadas.forEach((p: any) => {
+          if (p.bookmaker_id) allEntryBkIds.add(p.bookmaker_id);
+          (p.apostas_perna_entradas || []).forEach((e: any) => {
+            if (e.bookmaker_id) allEntryBkIds.add(e.bookmaker_id);
+          });
+        });
+        const entryBkMap = new Map<string, { nome: string; instance_identifier: string | null; parceiro_nome: string | null; logo_url: string | null }>();
+        if (allEntryBkIds.size > 0) {
+          const { data: extraBks } = await supabase
+            .from("bookmakers")
+            .select("id, nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo(logo_url)")
+            .in("id", Array.from(allEntryBkIds));
+          (extraBks || []).forEach((b: any) => {
+            entryBkMap.set(b.id, {
+              nome: b.nome,
+              instance_identifier: b.instance_identifier || null,
+              parceiro_nome: b.parceiro?.nome || null,
+              logo_url: b.bookmakers_catalogo?.logo_url || null,
+            });
+          });
+        }
         pernasOrdenadas.forEach((p: any) => {
           if (!pernasMap[p.aposta_id]) pernasMap[p.aposta_id] = [];
           const bookmaker = p.bookmakers as any;
           const parceiroNome = bookmaker?.parceiro?.nome;
+          // Constrói entries[] a partir de apostas_perna_entradas (1:N).
+          // Fallback: se vier vazio, sintetiza 1 entrada a partir da perna principal
+          // para preservar comportamento das pernas single-entry legadas.
+          const rawEntries = Array.isArray(p.apostas_perna_entradas) ? p.apostas_perna_entradas : [];
+          const sortedEntries = [...rawEntries].sort((a: any, b: any) => {
+            const ta = a?.created_at ? Date.parse(a.created_at) : 0;
+            const tb = b?.created_at ? Date.parse(b.created_at) : 0;
+            return ta - tb;
+          });
+          const entries = (sortedEntries.length > 0 ? sortedEntries : [{
+            id: undefined,
+            bookmaker_id: p.bookmaker_id,
+            moeda: p.moeda,
+            odd: p.odd,
+            stake: p.stake,
+            stake_real: p.stake_real,
+            stake_freebet: p.stake_freebet,
+            fonte_saldo: p.fonte_saldo,
+            tipo: p.tipo,
+            comissao: p.comissao,
+            resultado: p.resultado,
+            lucro_prejuizo: p.lucro_prejuizo,
+            selecao_livre: p.selecao_livre,
+            stake_brl_referencia: p.stake_brl_referencia,
+            lucro_prejuizo_brl_referencia: p.lucro_prejuizo_brl_referencia,
+            cotacao_snapshot: p.cotacao_snapshot,
+          }]).map((e: any) => {
+            const eb = entryBkMap.get(e.bookmaker_id);
+            const ePar = eb?.parceiro_nome ?? null;
+            const eDisplay = eb
+              ? (ePar
+                  ? `${eb.nome}${eb.instance_identifier ? ` (${eb.instance_identifier})` : ''} - ${ePar}`
+                  : `${eb.nome}${eb.instance_identifier ? ` (${eb.instance_identifier})` : ''}`)
+              : "—";
+            return {
+              id: e.id,
+              bookmaker_id: e.bookmaker_id,
+              bookmaker_nome: eDisplay,
+              parceiro_nome: ePar,
+              instance_identifier: eb?.instance_identifier ?? null,
+              logo_url: eb?.logo_url ?? null,
+              moeda: e.moeda || 'BRL',
+              odd: Number(e.odd) || 0,
+              stake: Number(e.stake) || 0,
+              selecao_livre: e.selecao_livre ?? undefined,
+              fonte_saldo: e.fonte_saldo ?? 'REAL',
+              resultado: e.resultado ?? null,
+              lucro_prejuizo: e.lucro_prejuizo ?? null,
+              stake_brl_referencia: e.stake_brl_referencia ?? null,
+              lucro_prejuizo_brl_referencia: e.lucro_prejuizo_brl_referencia ?? null,
+              cotacao_snapshot: e.cotacao_snapshot ?? null,
+            };
+          });
+          const totalStakeEntries = entries.reduce((s: number, e: any) => s + (Number(e.stake) || 0), 0);
+          const oddMediaPond = totalStakeEntries > 0
+            ? entries.reduce((s: number, e: any) => s + (Number(e.odd) || 0) * (Number(e.stake) || 0), 0) / totalStakeEntries
+            : 0;
           pernasMap[p.aposta_id].push({
             id: p.id,
             bookmaker_id: p.bookmaker_id,
@@ -437,6 +524,11 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
             comissao: p.comissao ?? 0,
             stake_real: p.stake_real ?? undefined,
             stake_freebet: p.stake_freebet ?? undefined,
+            // ⬇️ NOVO: entradas 1:N. SurebetCard usa entries.length > 1 para
+            // renderizar as sub-linhas de casas adicionais.
+            entries,
+            odd_media: oddMediaPond,
+            stake_total: totalStakeEntries,
           });
         });
       }
