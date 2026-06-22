@@ -80,6 +80,7 @@ import { FonteEntradaSelector } from "@/components/apostas/FonteEntradaSelector"
 import { useWorkspaceBetSources } from "@/hooks/useWorkspaceBetSources";
 import { deriveStakeSplit, derivePersistedStakeSplit } from "@/lib/freebetStake";
 import { useProjetoWorkingRates } from "@/hooks/useProjetoWorkingRates";
+import { ConfirmLayCollapseDialog, type LayCollapseEntryPreview } from "@/components/projeto-detalhe/ConfirmLayCollapseDialog";
 
 // Multi-entry para aposta simples (mesma seleção, múltiplas bookmakers)
 interface AdditionalEntry {
@@ -660,6 +661,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   // Multi-entry: entradas adicionais (a primeira é bookmakerId/odd/stake/selecao)
   const [additionalEntries, setAdditionalEntries] = useState<AdditionalEntry[]>([]);
   const multiEntryTableRef = useRef<HTMLDivElement>(null);
+
+  // Camada A — modal de confirmação para colapso automático ao mudar para LAY.
+  // Regra de produto: LAY não admite multi-casa. Quando o usuário tenta marcar
+  // LAY com additionalEntries pendentes, exigimos confirmação explícita
+  // listando exatamente o que será removido (nunca remoção silenciosa).
+  const [layCollapseDialogOpen, setLayCollapseDialogOpen] = useState(false);
 
   const handleMultiEntryFieldKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>, fieldType: 'odd' | 'stake') => {
     const key = e.key.toLowerCase();
@@ -4114,7 +4121,15 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                   </button>
                   <button
                     type="button"
-                    onClick={() => setTipoOperacaoExchange("lay")}
+                    onClick={() => {
+                      // Camada A: se há multi-entry pendente, pedir confirmação
+                      // antes de colapsar para 1 casa.
+                      if (additionalEntries.length > 0 && tipoOperacaoExchange !== "lay") {
+                        setLayCollapseDialogOpen(true);
+                      } else {
+                        setTipoOperacaoExchange("lay");
+                      }
+                    }}
                     className={`relative px-5 py-2.5 text-sm font-medium transition-colors ${
                       tipoOperacaoExchange === "lay"
                         ? "text-foreground"
@@ -5120,6 +5135,32 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Camada A: confirmação de colapso multi-casa → LAY */}
+      <ConfirmLayCollapseDialog
+        open={layCollapseDialogOpen}
+        entriesToRemove={additionalEntries.map<LayCollapseEntryPreview>((e) => {
+          const bk = bookmakers.find((b: any) => b.id === e.bookmaker_id);
+          const stakeNum = parseFloat(e.stake) || 0;
+          const moeda = (bk?.moeda as string) || "BRL";
+          const symbols: Record<string, string> = { BRL: "R$", USD: "$", EUR: "€", GBP: "£" };
+          return {
+            id: e.id,
+            bookmaker_nome: bk?.nome || "(casa não selecionada)",
+            odd: e.odd || null,
+            stake_formatado: stakeNum > 0
+              ? `${symbols[moeda] || moeda} ${stakeNum.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              : undefined,
+          };
+        })}
+        remainingBookmakerNome={bookmakers.find((b: any) => b.id === bookmakerId)?.nome}
+        onCancel={() => setLayCollapseDialogOpen(false)}
+        onConfirm={() => {
+          setAdditionalEntries([]);
+          setTipoOperacaoExchange("lay");
+          setLayCollapseDialogOpen(false);
+        }}
+      />
     </>
   );
 }
