@@ -80,6 +80,7 @@ import { FonteEntradaSelector } from "@/components/apostas/FonteEntradaSelector"
 import { useWorkspaceBetSources } from "@/hooks/useWorkspaceBetSources";
 import { deriveStakeSplit, derivePersistedStakeSplit } from "@/lib/freebetStake";
 import { useProjetoWorkingRates } from "@/hooks/useProjetoWorkingRates";
+import { ConfirmLayCollapseDialog, type LayCollapseEntryPreview } from "@/components/projeto-detalhe/ConfirmLayCollapseDialog";
 
 // Multi-entry para aposta simples (mesma seleção, múltiplas bookmakers)
 interface AdditionalEntry {
