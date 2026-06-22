@@ -402,6 +402,12 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                   nome, parceiro_id, instance_identifier,
                   parceiro:parceiros (nome),
                   bookmakers_catalogo (logo_url)
+                ),
+                apostas_perna_entradas (
+                  id, bookmaker_id, stake, odd, moeda, fonte_saldo, resultado,
+                  selecao_livre, stake_brl_referencia, lucro_prejuizo_brl_referencia,
+                  cotacao_snapshot, lucro_prejuizo,
+                  bookmakers (nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo(logo_url))
                 )
               `)
               .in("aposta_id", idsChunk)
@@ -448,6 +454,9 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                 fonte_saldo: p.fonte_saldo || null,
                 tipo: p.tipo || 'back',
                 comissao: p.comissao ?? 0,
+                entries: Array.isArray(p.apostas_perna_entradas) && p.apostas_perna_entradas.length > 1
+                  ? formatPernaEntradas(p.apostas_perna_entradas, p.bookmaker?.nome)
+                  : undefined,
               }));
             } else if (pernas.length > 1) {
               // SIMPLES multi-entry: store as sub_entries
