@@ -684,7 +684,11 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           valor_brl_referencia, lucro_prejuizo_brl_referencia,
           time_casa, time_fora, home_team_logo_url, away_team_logo_url, league_logo_url,
           apostas_pernas (
-            id, selecao, selecao_livre, odd, stake, stake_real, stake_freebet, resultado, lucro_prejuizo, bookmaker_id, moeda, ordem, tipo, comissao, fonte_saldo
+            id, selecao, selecao_livre, odd, stake, stake_real, stake_freebet, resultado, lucro_prejuizo, bookmaker_id, moeda, ordem, tipo, comissao, fonte_saldo,
+            apostas_perna_entradas (
+              id, bookmaker_id, moeda, odd, stake, stake_real, stake_freebet,
+              stake_brl_referencia, cotacao_snapshot, fonte_saldo, tipo, comissao
+            )
           )
         `;
 
@@ -735,6 +739,10 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         const pernasEfetivas = pernasRelacionais.length > 0 ? pernasRelacionais : pernasJson;
         pernasEfetivas.forEach((p: any) => {
           if (p.bookmaker_id) allBookmakerIds.add(p.bookmaker_id);
+          const entradas = Array.isArray(p.apostas_perna_entradas) ? p.apostas_perna_entradas : [];
+          entradas.forEach((e: any) => {
+            if (e.bookmaker_id) allBookmakerIds.add(e.bookmaker_id);
+          });
         });
       });
       
@@ -761,11 +769,46 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           data_operacao: sb.data_aposta,
           stake_total: sb.stake_total ?? 0,
           workspace_id: sb.workspace_id,
-          pernas: pernasEfetivas.map((p: any) => ({
-            ...p,
-            bookmaker: bookmakerMap.get(p.bookmaker_id) || { nome: "Desconhecida" },
-            bookmaker_nome: bookmakerMap.get(p.bookmaker_id)?.nome || p.bookmaker_nome || "Desconhecida",
-          }))
+          pernas: pernasEfetivas.map((p: any) => {
+            const entradas: any[] = Array.isArray(p.apostas_perna_entradas) ? p.apostas_perna_entradas : [];
+            const base = {
+              ...p,
+              bookmaker: bookmakerMap.get(p.bookmaker_id) || { nome: "Desconhecida" },
+              bookmaker_nome: bookmakerMap.get(p.bookmaker_id)?.nome || p.bookmaker_nome || "Desconhecida",
+            };
+            // Multi-bookmaker split: anexar entries[] consumido pelo SurebetCard
+            if (entradas.length > 1) {
+              const stakeTotal = entradas.reduce((s, e) => s + (Number(e.stake) || 0), 0);
+              const oddMedia = stakeTotal > 0
+                ? entradas.reduce((s, e) => s + (Number(e.odd) || 0) * (Number(e.stake) || 0), 0) / stakeTotal
+                : Number(p.odd) || 0;
+              return {
+                ...base,
+                odd_media: oddMedia,
+                stake_total: stakeTotal,
+                entries: entradas.map((e: any) => {
+                  const bm = bookmakerMap.get(e.bookmaker_id);
+                  return {
+                    id: e.id,
+                    bookmaker_id: e.bookmaker_id,
+                    bookmaker_nome: bm?.nome || "Desconhecida",
+                    parceiro_nome: (bm as any)?.parceiro?.nome ?? null,
+                    instance_identifier: (bm as any)?.instance_identifier ?? null,
+                    logo_url: null,
+                    moeda: e.moeda || p.moeda || 'BRL',
+                    odd: Number(e.odd) || 0,
+                    stake: Number(e.stake) || 0,
+                    resultado: null,
+                    lucro_prejuizo: null,
+                    stake_brl_referencia: e.stake_brl_referencia ?? null,
+                    cotacao_snapshot: e.cotacao_snapshot ?? null,
+                    fonte_saldo: e.fonte_saldo || p.fonte_saldo || undefined,
+                  };
+                }),
+              };
+            }
+            return base;
+          })
         };
       });
       
