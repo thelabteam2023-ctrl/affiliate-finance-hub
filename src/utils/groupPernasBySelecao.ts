@@ -36,6 +36,7 @@ interface RawPerna {
   stake_freebet?: number;
   // Bookmaker join
   bookmaker?: { nome: string; parceiro?: { nome: string } };
+  entries?: SurebetPernaEntry[];
 }
 
 export function groupPernasBySelecao(
@@ -64,7 +65,13 @@ export function groupPernasBySelecao(
     const group = groups.get(key)!;
     const main = group[0];
     const subs = group.slice(1);
-    const hasEntries = subs.length > 0;
+    const explicitEntries = group.flatMap(p =>
+      Array.isArray(p.entries) && p.entries.length > 0
+        ? p.entries
+        : []
+    );
+    const hasExplicitEntries = explicitEntries.length > 0;
+    const hasEntries = hasExplicitEntries || subs.length > 0;
 
     // Probe: garante que `tipo` da principal não some no agrupamento.
     probePernaTipo("groupPernasBySelecao:main", main.id, main.tipo, main.tipo ?? "back");
@@ -73,7 +80,9 @@ export function groupPernasBySelecao(
     }
 
     // Calcular odd média ponderada e stake total
-    const allEntries = group.map(p => ({ odd: p.odd, stake: p.stake }));
+    const allEntries = hasExplicitEntries
+      ? explicitEntries.map(e => ({ odd: e.odd, stake: e.stake }))
+      : group.map(p => ({ odd: p.odd, stake: p.stake }));
     const stakeTotal = allEntries.reduce((s, e) => s + (e.stake || 0), 0);
     const oddMedia = stakeTotal > 0
       ? allEntries.reduce((s, e) => s + (e.odd * e.stake), 0) / stakeTotal
@@ -108,24 +117,26 @@ export function groupPernasBySelecao(
     if (hasEntries) {
       result.odd_media = oddMedia;
       result.stake_total = stakeTotal;
-      result.entries = group.map(p => ({
-        id: p.id,
-        bookmaker_id: p.bookmaker_id || '',
-        bookmaker_nome: resolve(p),
-        parceiro_nome: p.parceiro_nome ?? p.bookmaker?.parceiro?.nome ?? null,
-        instance_identifier: p.instance_identifier ?? null,
-        logo_url: p.logo_url ?? null,
-        moeda: p.moeda || 'BRL',
-        odd: p.odd,
-        stake: p.stake,
-        resultado: p.resultado ?? null,
-        lucro_prejuizo: p.lucro_prejuizo ?? null,
-        stake_brl_referencia: p.stake_brl_referencia ?? null,
-        lucro_prejuizo_brl_referencia: p.lucro_prejuizo_brl_referencia ?? null,
-        cotacao_snapshot: p.cotacao_snapshot ?? null,
-        selecao_livre: p.selecao_livre || undefined,
-        fonte_saldo: p.fonte_saldo || undefined,
-      }));
+      result.entries = hasExplicitEntries
+        ? explicitEntries
+        : group.map(p => ({
+            id: p.id,
+            bookmaker_id: p.bookmaker_id || '',
+            bookmaker_nome: resolve(p),
+            parceiro_nome: p.parceiro_nome ?? p.bookmaker?.parceiro?.nome ?? null,
+            instance_identifier: p.instance_identifier ?? null,
+            logo_url: p.logo_url ?? null,
+            moeda: p.moeda || 'BRL',
+            odd: p.odd,
+            stake: p.stake,
+            resultado: p.resultado ?? null,
+            lucro_prejuizo: p.lucro_prejuizo ?? null,
+            stake_brl_referencia: p.stake_brl_referencia ?? null,
+            lucro_prejuizo_brl_referencia: p.lucro_prejuizo_brl_referencia ?? null,
+            cotacao_snapshot: p.cotacao_snapshot ?? null,
+            selecao_livre: p.selecao_livre || undefined,
+            fonte_saldo: p.fonte_saldo || undefined,
+          }));
     }
 
     return result;

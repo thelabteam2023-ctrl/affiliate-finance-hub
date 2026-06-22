@@ -48,12 +48,14 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
 import { filterForKpis } from "@/utils/filterPendingByPeriod";
+import { ARBITRAGEM_FORMA_REGISTRO } from "@/utils/surebetVisibility";
 import { toast } from "sonner";
 import { SurebetDialog } from "./SurebetDialog";
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
 import { groupPernasBySelecao } from "@/utils/groupPernasBySelecao";
 import { publishTabRender } from "@/utils/integrityProbe";
 import { probeReadByTab } from "@/utils/surebetLifecycleProbe";
+import { apostaMatchesBookmakerFilter, apostaMatchesParceiroFilter } from "@/utils/apostaFilterHelpers";
 import type { SurebetQuickResult } from "@/components/apostas/SurebetRowActionsMenu";
 import { ApostaDialog } from "./ApostaDialog";
 import { ApostaCard, ApostaCardData, type EstrategiaType } from "./ApostaCard";
@@ -65,9 +67,7 @@ import { cn, getFirstLastName } from "@/lib/utils";
 import { buildBookmakerNomeMap, collectMissingBookmakerIds, mergeBookmakerNomeMaps } from "@/lib/bookmaker-display";
 import { useUnlinkedBookmakerNames } from "@/hooks/useUnlinkedBookmakerNames";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
-import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
-import { useCotacoes } from "@/hooks/useCotacoes";
 import { VolumeKPI } from "@/components/kpis/VolumeKPI";
 import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
 import { getConsolidatedStake, getConsolidatedLucro } from "@/utils/consolidatedValues";
@@ -75,14 +75,13 @@ import { reliquidarAposta, liquidarPernaSurebet, deletarAposta } from "@/service
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { useInvalidateBookmakerSaldos, useBookmakerSaldosQuery, BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
-import { useTabFilters, type EstrategiaFilter } from "@/hooks/useTabFilters";
+import { useTabFilters } from "@/hooks/useTabFilters";
 import { TabFiltersBar } from "./TabFiltersBar";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
 import { OperationsSubTabHeader, type HistorySubTab, SuspiciousDateFilterButton, useSuspiciousDateFilter } from "./operations";
 import { ExportMenu, transformSurebetToExport, transformApostaToExport } from "./ExportMenu";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
 // FinancialSummaryCompact removed — now integrated into Lucro KPI popover
-import { useCalendarApostasRpc, transformRpcDailyForCharts } from "@/hooks/useCalendarApostasRpc";
 import { ChartEmptyState } from "@/components/ui/chart-empty-state";
 import { useInvalidateAfterMutation } from "@/hooks/useInvalidateAfterMutation";
 import { aggregateBookmakerUsage } from "@/utils/bookmakerUsageAnalytics";
@@ -239,23 +238,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
 
   // Hook de formatação de moeda do projeto
   const { formatCurrency: projectFormatCurrency, moedaConsolidacao, getSymbol, convertToConsolidation: convertFn, convertToConsolidationOficial: convertFnOficial } = useProjetoCurrency(projetoId);
-  const { getRate, lastUpdate: rateLastUpdate } = useCotacoes();
   const currencySymbol = getSymbol();
-  
-  // DESACOPLAMENTO CALENDÁRIO: Dados via RPC (sem truncamento, timezone correto)
-  const { daily: calendarDaily, refetch: refetchCalendar } = useCalendarApostasRpc({
-    projetoId,
-    estrategia: "SUREBET",
-    cotacaoUSD: convertFnOficial(1, "USD"),
-    cotacoes: {
-      EUR: getRate("EUR"),
-      GBP: getRate("GBP"),
-      MYR: getRate("MYR"),
-      MXN: getRate("MXN"),
-      ARS: getRate("ARS"),
-      COP: getRate("COP"),
-    },
-  });
   
    // Buscar a data da primeiríssima aposta do projeto para evitar distorção no Lucro/Dia
    const { data: absoluteFirstBetDate } = useQuery({
@@ -361,7 +344,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           .from("apostas_unificada")
           .select(selectFields)
           .eq("projeto_id", projetoId)
-          .eq("estrategia", "SUREBET")
+          .eq("forma_registro", ARBITRAGEM_FORMA_REGISTRO)
           .is("cancelled_at", null)
           .order("data_aposta", { ascending: false });
         if (dateFilters.startUTC) q = q.gte("data_aposta", dateFilters.startUTC);
@@ -377,7 +360,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
             .from("apostas_unificada")
             .select(selectFields)
             .eq("projeto_id", projetoId)
-            .eq("estrategia", "SUREBET")
+              .eq("forma_registro", ARBITRAGEM_FORMA_REGISTRO)
             .eq("status", "PENDENTE")
             .is("cancelled_at", null)
             .order("data_aposta", { ascending: false })
@@ -594,7 +577,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
   // Count of open operations for badge - uses the canonical hook
   const { count: openOperationsCount } = useOpenOperationsCount({
     projetoId,
-    estrategia: APOSTA_ESTRATEGIA.SUREBET,
+    formaRegistro: ARBITRAGEM_FORMA_REGISTRO,
     refreshTrigger,
   });
 
@@ -864,27 +847,10 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
     
     return surebets.filter(surebet => {
       // Filtro por bookmaker
-      if (bookmakerIds.length > 0) {
-        const surebetBookmakerIds = (surebet.pernas || []).map(p => p.bookmaker_id).filter(Boolean);
-        if (surebet.bookmaker_id) surebetBookmakerIds.push(surebet.bookmaker_id);
-        
-        const hasMatchingBookmaker = surebetBookmakerIds.some(id => bookmakerIds.includes(id!));
-        if (!hasMatchingBookmaker) return false;
-      }
+      if (!apostaMatchesBookmakerFilter(surebet as any, bookmakerIds)) return false;
       
       // Filtro por parceiro (verificar via bookmakers)
-      if (parceiroIds.length > 0) {
-        const surebetBookmakerIds = (surebet.pernas || []).map(p => p.bookmaker_id).filter(Boolean);
-        if (surebet.bookmaker_id) surebetBookmakerIds.push(surebet.bookmaker_id);
-        
-        const matchingBookmakers = bookmakers.filter(bk => 
-          surebetBookmakerIds.includes(bk.id) && 
-          bk.parceiro_id && 
-          parceiroIds.includes(bk.parceiro_id)
-        );
-        
-        if (matchingBookmakers.length === 0) return false;
-      }
+      if (!apostaMatchesParceiroFilter(surebet as any, parceiroIds, bookmakers as any)) return false;
 
       // Filtro por resultado
       if (resultados.length > 0) {
@@ -1437,7 +1403,6 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           <div className="lg:col-span-2 space-y-4">
             <VisaoGeralCharts 
               apostas={surebetsForCharts}
-              apostasCalendario={transformRpcDailyForCharts(calendarDaily)}
               accentColor="hsl(var(--primary))"
               logoMap={logoMap}
               showCasasCard={false}
