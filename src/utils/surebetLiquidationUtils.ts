@@ -216,5 +216,7 @@ function calculateDoubleGreenPnl(
 ): number {
   const return1 = leg1.totalNormalizedStake * leg1.odd;
   const return2 = leg2.totalNormalizedStake * leg2.odd;
-  return ((return1 + return2) / 2) - totalNormalized;
+  // Duplo Green: as duas pernas vencem e ambos os retornos são recebidos integralmente.
+  // P&L = soma dos retornos − total apostado. (Antes dividia por 2 incorretamente.)
+  return (return1 + return2) - totalNormalized;
 }
