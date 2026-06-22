@@ -3741,6 +3741,7 @@ export type Database = {
           created_at: string | null
           event_date: string
           external_ids: Json
+          fixture_key: string
           home_team: string
           home_team_logo: string | null
           id: string
@@ -3748,6 +3749,7 @@ export type Database = {
           league_key: string
           league_logo: string | null
           league_name: string
+          league_name_raw: string | null
           result_away: string | null
           result_home: string | null
           source: string
@@ -3766,6 +3768,7 @@ export type Database = {
           created_at?: string | null
           event_date: string
           external_ids?: Json
+          fixture_key: string
           home_team: string
           home_team_logo?: string | null
           id?: string
@@ -3773,6 +3776,7 @@ export type Database = {
           league_key: string
           league_logo?: string | null
           league_name: string
+          league_name_raw?: string | null
           result_away?: string | null
           result_home?: string | null
           source?: string
@@ -3791,6 +3795,7 @@ export type Database = {
           created_at?: string | null
           event_date?: string
           external_ids?: Json
+          fixture_key?: string
           home_team?: string
           home_team_logo?: string | null
           id?: string
@@ -3798,6 +3803,7 @@ export type Database = {
           league_key?: string
           league_logo?: string | null
           league_name?: string
+          league_name_raw?: string | null
           result_away?: string | null
           result_home?: string | null
           source?: string
@@ -6094,6 +6100,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      league_aliases: {
+        Row: {
+          canonical_name: string
+          created_at: string
+          raw_name: string
+          sport: string | null
+        }
+        Insert: {
+          canonical_name: string
+          created_at?: string
+          raw_name: string
+          sport?: string | null
+        }
+        Update: {
+          canonical_name?: string
+          created_at?: string
+          raw_name?: string
+          sport?: string | null
+        }
+        Relationships: []
       }
       league_logos: {
         Row: {
