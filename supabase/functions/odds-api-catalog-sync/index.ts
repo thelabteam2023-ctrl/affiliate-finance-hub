@@ -186,12 +186,13 @@ Deno.serve(async (req: Request) => {
   }
 
   const { data: teamLogoCache } = await supabase
-    .from("team_logos").select("sport,team_name_normalized,logo_url");
-  const teamLogoByName = new Map<string, string>();
+    .from("team_logos").select("sport,league_key,team_name_normalized,logo_url,found");
+  const teamLogoByLeagueAndName = new Map<string, string>();
   for (const row of teamLogoCache ?? []) {
-    if (!row.logo_url) continue;
-    // Mesma normalização para qualquer liga
-    teamLogoByName.set(`${row.sport}::${row.team_name_normalized}`, row.logo_url);
+    if (!row.logo_url || !row.found || !row.league_key) continue;
+    // Logo só é herdada quando o nome exato pertence à mesma liga.
+    // Sem fallback global: evita Athletic Club (MG) herdar Athletic Club/Bilbao.
+    teamLogoByLeagueAndName.set(`${row.league_key}::${row.team_name_normalized}`, row.logo_url);
   }
 
   // Normaliza
@@ -225,8 +226,8 @@ Deno.serve(async (req: Request) => {
 
       const homeNorm = normTeam(home);
       const awayNorm = normTeam(away);
-      const homeLogo = teamLogoByName.get(`${sport}::${homeNorm}`) ?? null;
-      const awayLogo = teamLogoByName.get(`${sport}::${awayNorm}`) ?? null;
+      const homeLogo = teamLogoByLeagueAndName.get(`${sportKey}::${homeNorm}`) ?? null;
+      const awayLogo = teamLogoByLeagueAndName.get(`${sportKey}::${awayNorm}`) ?? null;
       const leagueLogo = leagueLogoByName.get(`${sport}::${meta.league_name.toLowerCase()}`) ?? null;
 
       bySport[sport] = (bySport[sport] ?? 0) + 1;

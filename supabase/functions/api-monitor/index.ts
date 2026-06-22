@@ -49,6 +49,37 @@ function normalizeTeamMatchKey(name: string): string {
     .join('');
 }
 
+function tokenizeTeamName(name: string): string[] {
+  const stopWords = new Set(['fc', 'cf', 'cd', 'sc', 'ac', 'club', 'clube', 'de', 'da', 'do', 'del', 'di', 'du', 'la', 'le', 'el', 'the']);
+  return (name || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token.length >= 6 && !stopWords.has(token));
+}
+
+const GENERIC_LOGO_MATCH_TOKENS = new Set([
+  'athletic', 'atletico', 'sporting', 'racing', 'central', 'united',
+  'city', 'real', 'deportivo', 'nacional', 'independiente', 'wanderers',
+  'rangers', 'rovers', 'county', 'town',
+]);
+
+function isSafeTokenLogoMatch(queryName: string, candidateName: string): boolean {
+  const queryTokens = tokenizeTeamName(queryName);
+  const candidateTokens = tokenizeTeamName(candidateName);
+  if (!queryTokens.length || !candidateTokens.length) return false;
+  const qSet = new Set(queryTokens);
+  const matchedTokens = candidateTokens.filter((token) => qSet.has(token));
+  const minSide = Math.min(queryTokens.length, candidateTokens.length);
+  if (matchedTokens.length < minSide) return false;
+  if (minSide === 1) {
+    const onlyToken = matchedTokens[0];
+    if (!onlyToken || onlyToken.length < 7 || GENERIC_LOGO_MATCH_TOKENS.has(onlyToken)) return false;
+  }
+  return true;
+}
+
 // Lista de ligas para o Odds API (configuração estática básica)
 const ALL_LEAGUES = [
   { sport: 'soccer', key: 'soccer_brazil_campeonato', name: 'Brasileirão Série A', flag: '🇧🇷', continent: 'América do Sul', country: 'Brasil', type: 'league' },
@@ -121,19 +152,17 @@ async function lookupTeamLogo(supabase: any, teamName: string, leagueKey: string
   const aliasLogo = (alias as any)?.team_logos;
   if (aliasLogo?.found && aliasLogo.logo_url) return aliasLogo.logo_url;
 
-  // Fallback resiliente: nomes parciais (ex: "Wolves" vs "Wolverhampton Wanderers")
+  // Fallback conservador dentro da liga: só por tokens inteiros e distintivos.
   if (normalized.length >= 4) {
     const { data: rows } = await supabase
       .from('team_logos')
-      .select('logo_url, team_name_normalized, found')
+      .select('logo_url, team_name_original, found')
       .eq('league_key', leagueKey)
       .eq('found', true);
     if (rows?.length) {
-      const match = rows.find((r: any) =>
-        r.team_name_normalized.includes(normalized) ||
-        normalized.includes(r.team_name_normalized)
-      );
-      if (match) return match.logo_url;
+      const matches = rows.filter((r: any) => isSafeTokenLogoMatch(teamName, r.team_name_original || ''));
+      const uniqueLogos = Array.from(new Set(matches.map((r: any) => r.logo_url).filter(Boolean)));
+      if (uniqueLogos.length === 1) return uniqueLogos[0] as string;
     }
   }
 
@@ -149,11 +178,7 @@ async function lookupTeamLogo(supabase: any, teamName: string, leagueKey: string
       .eq('found', true);
     const matches = (globalRows || []).filter((r: any) => {
       const candidateKey = normalizeTeamMatchKey(r.team_name_original || '');
-      return candidateKey && (
-        candidateKey === matchKey ||
-        candidateKey.includes(matchKey) ||
-        matchKey.includes(candidateKey)
-      );
+      return candidateKey === matchKey || isSafeTokenLogoMatch(teamName, r.team_name_original || '');
     });
     const uniqueLogos = Array.from(new Set(matches.map((r: any) => r.logo_url).filter(Boolean)));
     if (uniqueLogos.length === 1) return uniqueLogos[0] as string;

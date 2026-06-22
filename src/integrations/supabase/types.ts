@@ -17299,6 +17299,10 @@ export type Database = {
         Args: { _user_id: string; _workspace_id?: string }
         Returns: boolean
       }
+      is_safe_team_logo_match: {
+        Args: { candidate_name: string; query_name: string }
+        Returns: boolean
+      }
       is_system_owner: { Args: { _user_id: string }; Returns: boolean }
       is_workspace_member_active: {
         Args: { _user_id: string; _workspace_id: string }
@@ -17685,6 +17689,7 @@ export type Database = {
         Args: { p_aposta_id: string }
         Returns: Json
       }
+      team_logo_tokens: { Args: { name: string }; Returns: string[] }
       try_cast_uuid: { Args: { p_text: string }; Returns: string }
       unaccent: { Args: { "": string }; Returns: string }
       unlock_wallet_balance: {
