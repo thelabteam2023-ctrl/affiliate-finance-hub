@@ -441,6 +441,7 @@ export function SurebetColumnsView({
                                   alt={addBookmaker.nome}
                                   size="h-3.5 w-3.5"
                                   iconSize="h-2 w-2"
+                                  className="p-0"
                                 />
                                 <span className="truncate uppercase text-[10px] font-medium">
                                   {addBookmaker.nome}
