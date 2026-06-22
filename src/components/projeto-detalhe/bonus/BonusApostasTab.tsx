@@ -36,8 +36,7 @@ import { liquidarSurebet, deletarAposta, reliquidarAposta, liquidarPernaSurebet,
 import { ExportMenu, transformSurebetToExport, transformApostaToExport } from "../ExportMenu";
 import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
 import { getConsolidatedStake, getConsolidatedLucro } from "@/utils/consolidatedValues";
- import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
- import { formatCurrency } from "@/components/bookmakers/BookmakerSelectOption";
+  import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { type SurebetQuickResult } from "@/components/apostas/SurebetRowActionsMenu";
@@ -192,7 +191,7 @@ type ApostaUnificada = {
 export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApostasTabProps) {
   const queryClient = useQueryClient();
   const { getBookmakersWithActiveBonus, bonuses } = useProjectBonuses({ projectId: projetoId });
-   const { convertToConsolidation, moedaConsolidacao } = useProjetoCurrency(projetoId);
+   const { convertToConsolidation, moedaConsolidacao, formatCurrency } = useProjetoCurrency(projetoId);
   
   // Use refs to track previous values and prevent infinite loops
   const prevBonusIdsRef = useRef<string>("");
@@ -578,6 +577,11 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
           estrategia: surebet.estrategia,
           contexto_operacional: surebet.contexto_operacional,
           workspace_id: surebet.workspace_id,
+          time_casa: surebet.time_casa ?? null,
+          time_fora: surebet.time_fora ?? null,
+          home_team_logo_url: surebet.home_team_logo_url ?? null,
+          away_team_logo_url: surebet.away_team_logo_url ?? null,
+          league_logo_url: surebet.league_logo_url ?? null,
           pernas: pernas
         };
       });
@@ -623,6 +627,11 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
                 estrategia: surebet.estrategia,
                 contexto_operacional: surebet.contexto_operacional,
                 workspace_id: surebet.workspace_id,
+                time_casa: surebet.time_casa ?? null,
+                time_fora: surebet.time_fora ?? null,
+                home_team_logo_url: surebet.home_team_logo_url ?? null,
+                away_team_logo_url: surebet.away_team_logo_url ?? null,
+                league_logo_url: surebet.league_logo_url ?? null,
                 pernas: pernas
               };
             });
@@ -832,13 +841,6 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
     }
   }, [loading, apostasAbertas.length, apostasHistorico.length]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
-  
   const formatCurrencyWithMoeda = (value: number, moeda: string = 'BRL') => {
     const symbols: Record<string, string> = { BRL: 'R$', USD: '$', EUR: '€', GBP: '£' };
     const symbol = symbols[moeda] || moeda;
