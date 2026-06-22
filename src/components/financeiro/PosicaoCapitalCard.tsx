@@ -220,14 +220,14 @@ export function PosicaoCapitalCard({
               value={resultadoOperacionalAcumulado}
               formatCurrency={formatCurrency}
               tone={resultadoOperacionalAcumulado >= 0 ? "positive" : "negative"}
-              hint="Patrimônio − Capital Próprio − Saldo Freebet"
+              hint="Tudo que a operação gerou acima do capital próprio investido: lucro de apostas, bônus convertidos, cashback, ajustes cambiais etc. Calculado por diferença (patrimônio atual menos capital próprio menos freebet em estoque)."
             />
             <BreakdownRow
-              label="Saldo freebet (não é capital)"
+              label="Freebet em estoque (não é capital)"
               value={saldoFreebet}
               formatCurrency={formatCurrency}
               tone="muted"
-              hint="Soma de saldo_freebet dos bookmakers ativos"
+              hint="Crédito promocional ainda não consumido nas casas. Não é dinheiro sacável e por isso é isolado da composição do capital."
             />
 
             {roi !== null && (
