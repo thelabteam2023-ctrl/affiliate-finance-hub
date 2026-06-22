@@ -221,7 +221,6 @@ export function useLogoFallback(sport: string | null | undefined) {
     (teamName: string, leagueKey?: string | null): string | null => {
       const norm = normalize(teamName);
       if (!norm) return null;
-      const normStripped = stripStopwordsAndDigits(norm);
 
       if (leagueKey) {
         // 1. Match exato por liga
