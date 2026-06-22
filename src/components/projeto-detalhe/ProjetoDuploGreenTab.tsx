@@ -1366,6 +1366,10 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                 fonte_saldo: p.fonte_saldo || null,
                 tipo: p.tipo || 'back',
                 comissao: p.comissao ?? 0,
+                // Propagar perna composta (multi-bookmaker) montada no mapper
+                entries: p.entries,
+                odd_media: p.odd_media,
+                stake_total: p.stake_total,
               }));
               const pernasOrdenadas = [...pernasRaw].sort((a, b) => {
                 const order: Record<string, number> = { "Casa": 1, "1": 1, "Empate": 2, "X": 2, "Fora": 3, "2": 3 };
