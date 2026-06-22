@@ -13,6 +13,7 @@ export interface DailyEvent {
   commence_time: string;
   status: string | null;
   country: string | null;
+  fixture_key?: string | null;
 }
 
 function toDateKey(d: Date): string {
@@ -34,12 +35,29 @@ export function useDailyEventsByDate(date: Date | undefined, enabled = true) {
       const { data, error } = await supabase
         .from("daily_events")
         .select(
-          "id, sport, league_name, league_logo, home_team, away_team, home_team_logo, away_team_logo, commence_time, status, country"
+          "id, sport, league_name, league_logo, home_team, away_team, home_team_logo, away_team_logo, commence_time, status, country, fixture_key"
         )
         .eq("event_date", dateKey)
         .order("commence_time", { ascending: true });
       if (error) throw error;
-      return (data ?? []) as DailyEvent[];
+      // Defesa client-side: deduplica por fixture_key (ou trio sport+commence+times)
+      // mantendo a primeira ocorrência (com mais logos preenchidas, depois mais antiga).
+      const rows = (data ?? []) as DailyEvent[];
+      const seen = new Map<string, DailyEvent>();
+      for (const r of rows) {
+        const key =
+          r.fixture_key ??
+          `${(r.sport ?? "").toLowerCase()}|${r.commence_time}|${r.home_team?.toLowerCase()}|${r.away_team?.toLowerCase()}`;
+        const prev = seen.get(key);
+        if (!prev) {
+          seen.set(key, r);
+          continue;
+        }
+        const score = (x: DailyEvent) =>
+          (x.home_team_logo ? 1 : 0) + (x.away_team_logo ? 1 : 0) + (x.league_logo ? 1 : 0);
+        if (score(r) > score(prev)) seen.set(key, r);
+      }
+      return Array.from(seen.values());
     },
   });
 }

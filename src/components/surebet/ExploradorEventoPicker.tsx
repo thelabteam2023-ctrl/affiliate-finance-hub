@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { useDailyEventsByDate, type DailyEvent } from "@/hooks/useDailyEventsByDate";
 import { normalizeEsporte } from "@/components/surebet/utils/mapDailyEventToFormFields";
 import { ExploradorFilterPanel } from "@/components/surebet/ExploradorFilterPanel";
+import { LeagueBadgeRow } from "@/components/surebet/LeagueBadgeRow";
 import {
   applyExploradorFilters,
   computeFilterOptions,
@@ -155,7 +156,7 @@ export function ExploradorEventoPicker({ defaultDate, onSelect, variant = "butto
       </PopoverTrigger>
       <PopoverContent
         align="end"
-        className="w-[460px] p-0 pointer-events-auto"
+        className="w-[540px] max-w-[95vw] p-0 pointer-events-auto"
         sideOffset={6}
       >
         {/* Toolbar */}
@@ -194,6 +195,13 @@ export function ExploradorEventoPicker({ defaultDate, onSelect, variant = "butto
             onChange={setFilters}
           />
         </div>
+
+        {/* Faixa de campeonatos (badges) — filtro rápido por liga */}
+        <LeagueBadgeRow
+          events={baseEvents}
+          selected={filters.leagues}
+          onChange={(leagues) => setFilters((prev) => ({ ...prev, leagues }))}
+        />
 
         {/* Chips de filtros ativos */}
         {activeFilterCount > 0 && (
