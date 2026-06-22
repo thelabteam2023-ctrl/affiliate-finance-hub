@@ -247,14 +247,6 @@ export function PosicaoCapitalCard({
                 hint="Efeito de reavaliar saldos em moeda estrangeira pela PTAX de hoje. Só vira ganho ou prejuízo de verdade quando o dinheiro volta para BRL."
               />
             )}
-            <BreakdownRow
-              label="Freebet em estoque (informativo)"
-              value={saldoFreebet}
-              formatCurrency={formatCurrency}
-              tone="muted"
-              hint="Crédito promocional ainda não consumido. É contabilizado em campo separado do saldo da bookmaker e não entra no Patrimônio Atual — só vira capital quando convertido em saldo real."
-            />
-
             {roi !== null && (
               <div className="mt-2 pt-2 border-t border-border/50 flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">
