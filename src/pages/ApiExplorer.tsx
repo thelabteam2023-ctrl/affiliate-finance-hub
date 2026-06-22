@@ -438,31 +438,22 @@ export default function ApiExplorer() {
           )}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button 
-            variant="outline"
-            onClick={handleSyncLogos} 
-            disabled={syncingLogos || syncing}
-            className="rounded-full h-11 px-6 font-bold border-primary/20 hover:bg-primary/5 text-primary"
-          >
-            {syncingLogos ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Globe className="h-4 w-4 mr-2" />}
-            {syncingLogos ? 'Sincronizando...' : 'Sincronizar Todos os Times'}
-          </Button>
           <Button
             variant="outline"
-            onClick={handleSyncSofascore}
-            disabled={syncingSofa || syncing || syncingLogos}
-            className="rounded-full h-11 px-6 font-bold border-emerald-500/30 hover:bg-emerald-500/5 text-emerald-500"
+            onClick={handleFillLogos}
+            disabled={fillingLogos || syncingSofa}
+            className="rounded-full h-11 px-6 font-bold border-primary/20 hover:bg-primary/5 text-primary"
           >
-            {syncingSofa ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Database className="h-4 w-4 mr-2" />}
-            {syncingSofa ? 'Sincronizando...' : 'Sincronizar TheSportsDB'}
+            {fillingLogos ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Globe className="h-4 w-4 mr-2" />}
+            {fillingLogos ? 'Preenchendo...' : 'Preencher Logos Faltantes'}
           </Button>
-          <Button 
-            onClick={handleManualSync} 
-            disabled={syncing || syncingLogos}
+          <Button
+            onClick={handleSyncSofascore}
+            disabled={syncingSofa || fillingLogos}
             className="rounded-full shadow-lg shadow-primary/20 h-11 px-6 font-bold"
           >
-            {syncing ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-            {syncing ? 'Sincronizando...' : 'Sincronizar Jogos'}
+            {syncingSofa ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Database className="h-4 w-4 mr-2" />}
+            {syncingSofa ? 'Atualizando catálogo...' : 'Atualizar Catálogo'}
           </Button>
         </div>
 
