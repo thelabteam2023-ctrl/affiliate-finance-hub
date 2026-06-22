@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Minus } from 'lucide-react';
 import { BookmakerSelectOption, formatCurrency } from '@/components/bookmakers/BookmakerSelectOption';
 import { BookmakerSearchableSelectContent } from '@/components/bookmakers/BookmakerSearchableSelectContent';
+import { BookmakerLogo } from '@/components/ui/bookmaker-logo';
 import { type SupportedCurrency } from '@/hooks/useCurrencySnapshot';
 
 interface BookmakerOption {
@@ -77,6 +78,12 @@ export function SurebetAdditionalRow({
                 {selectedBookmaker?.nome && (
                   <div className="flex flex-col items-start min-w-0">
                     <div className="flex items-center gap-1 min-w-0">
+                      <BookmakerLogo
+                        logoUrl={selectedBookmaker.logo_url}
+                        alt={selectedBookmaker.nome}
+                        size="h-4 w-4"
+                        iconSize="h-2.5 w-2.5"
+                      />
                       <span className="truncate uppercase text-[10px]">
                         {selectedBookmaker.nome}
                       </span>
