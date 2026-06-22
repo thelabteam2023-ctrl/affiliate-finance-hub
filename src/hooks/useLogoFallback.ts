@@ -227,34 +227,15 @@ export function useLogoFallback(sport: string | null | undefined) {
         // 1. Match exato por liga
         const exact = teamByLeagueName.get(`${leagueKey}|${norm}`);
         if (exact) return exact;
-        // 2. Match stripped por liga
-        if (normStripped && normStripped.length >= 3) {
-          const stripped = teamByLeagueName.get(`${leagueKey}|@stripped|${normStripped}`);
-          if (stripped) return stripped;
-        }
-        // 3. Contains dentro da liga (ex: API="Paderborn" vs DB="scpaderborn07")
+        // 2. Match por tokens dentro da liga, sem substring/fuzzy perigoso.
         const arr = teamsByLeague.get(leagueKey);
-        if (arr && normStripped && normStripped.length >= 4) {
-          for (const t of arr) {
-            if (
-              t.norm.includes(normStripped) ||
-              normStripped.includes(t.stripped && t.stripped.length >= 4 ? t.stripped : '____nope____') ||
-              (t.stripped && t.stripped.length >= 4 && t.stripped.includes(normStripped))
-            ) {
-              return t.logo;
-            }
-          }
-        }
+        const leagueTokenLogo = arr ? pickSafeTokenLogo(tokenize(teamName), arr) : null;
+        if (leagueTokenLogo) return leagueTokenLogo;
       }
-      // 4. Fallback global exato
+      // 3. Fallback global exato, apenas se o mesmo nome aponta para um único logo.
       const globalExact = teamByName.get(norm);
       if (globalExact) return globalExact;
-      // 5. Fallback global stripped
-      if (normStripped && normStripped.length >= 3) {
-        const globalStripped = teamByName.get(`@stripped|${normStripped}`);
-        if (globalStripped) return globalStripped;
-      }
-      // 6. Fallback global por TOKEN COMPLETO. Só casa se TODOS os tokens do
+      // 4. Fallback global por TOKEN COMPLETO. Só casa se TODOS os tokens do
       //    lado mais curto aparecem como palavras inteiras no outro lado.
       //    Ex.: "Grêmio Novorizontino" → ["gremio","novorizontino"]
       //         cache "Novorizontino"   → ["novorizontino"]
@@ -262,34 +243,8 @@ export function useLogoFallback(sport: string | null | undefined) {
       //    Mas "Internacional" → ["internacional"] vs "Inter Miami" → ["miami"]
       //         sem token em comum → não casa.
       const queryTokens = tokenize(teamName);
-      if (queryTokens.length > 0) {
-        let best: { logo: string; matched: number; ratio: number; matchedChars: number } | null = null;
-        for (const t of teamsGlobalTokens) {
-          const qSet = new Set(queryTokens);
-          let matched = 0;
-          let matchedChars = 0;
-          for (const tk of t.tokens) {
-            if (qSet.has(tk)) {
-              matched += 1;
-              matchedChars += tk.length;
-            }
-          }
-          if (matched === 0) continue;
-          // Exige que TODOS os tokens do lado menor sejam casados.
-          const minSide = Math.min(t.tokenCount, queryTokens.length);
-          if (matched < minSide) continue;
-          const ratio = matched / Math.max(t.tokenCount, queryTokens.length);
-          if (
-            !best ||
-            ratio > best.ratio ||
-            (ratio === best.ratio && matched > best.matched) ||
-            (ratio === best.ratio && matched === best.matched && matchedChars > best.matchedChars)
-          ) {
-            best = { logo: t.logo, matched, ratio, matchedChars };
-          }
-        }
-        if (best) return best.logo;
-      }
+      const globalTokenLogo = pickSafeTokenLogo(queryTokens, teamsGlobalTokens);
+      if (globalTokenLogo) return globalTokenLogo;
       return null;
     },
     [teamByLeagueName, teamByName, teamsByLeague, teamsGlobalTokens],
