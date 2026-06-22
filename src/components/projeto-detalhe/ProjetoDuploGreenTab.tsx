@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { formatPernaEntradas } from "@/utils/formatPernaEntradas";
 import { invalidateCanonicalCaches } from "@/lib/invalidateCanonicalCaches";
 import { calcSurebetWindowHeight, openSurebetWindow } from "@/lib/windowHelper";
 import { toast } from "sonner";
