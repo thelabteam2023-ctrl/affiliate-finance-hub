@@ -158,22 +158,78 @@ Deno.serve(async (req: Request) => {
   }
   const runId = runIns!.id as string;
 
-  // Fetch /events paralelo (não consome quota)
-  const tasks = requestedKeys.map(async (sportKey) => {
-    const url = `${ODDS_BASE}/sports/${sportKey}/events?apiKey=${ODDS_API_KEY}`;
+  // ---- Background work: a função responde 202 imediatamente e segue trabalhando.
+  // Evita o erro "Failed to send a request to the Edge Function" quando o trabalho
+  // demora perto do limite de 60s do edge runtime (Odds API lenta, muitos esportes).
+  const runWork = async () => {
     try {
-      const r = await fetch(url, { headers: { "Accept": "application/json" } });
-      if (!r.ok) {
-        const t = await r.text();
-        return { sportKey, events: [] as any[], error: `HTTP ${r.status}: ${t.slice(0, 200)}` };
-      }
-      const j = await r.json();
-      return { sportKey, events: Array.isArray(j) ? j : [], error: undefined };
+      await doSyncWork(supabase, ODDS_API_KEY, requestedKeys, runId);
     } catch (e: any) {
-      return { sportKey, events: [] as any[], error: e?.message ?? String(e) };
+      await supabase.from("sports_sync_runs").update({
+        status: "error",
+        error: (e?.message ?? String(e)).slice(0, 1000),
+        finished_at: new Date().toISOString(),
+      }).eq("id", runId);
     }
-  });
-  const results = await Promise.all(tasks);
+  };
+  // @ts-ignore EdgeRuntime é provido pelo runtime do Supabase
+  if (typeof EdgeRuntime !== "undefined" && EdgeRuntime?.waitUntil) {
+    // @ts-ignore
+    EdgeRuntime.waitUntil(runWork());
+  } else {
+    // Fallback (dev local): dispara sem await mas não bloqueia a resposta.
+    runWork();
+  }
+
+  return new Response(JSON.stringify({
+    run_id: runId,
+    status: "running",
+    sport_keys: requestedKeys.length,
+    message: "Sync iniciado em background. Acompanhe via sports_sync_runs.",
+  }), { status: 202, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+});
+
+/**
+ * Trabalho pesado movido para fora do handler — chamado via EdgeRuntime.waitUntil
+ * para permitir resposta imediata ao cliente.
+ */
+async function doSyncWork(
+  supabase: any,
+  ODDS_API_KEY: string,
+  requestedKeys: string[],
+  runId: string,
+) {
+  // Fetch /events com pool de concorrência limitada (Odds API às vezes responde
+  // 403 "challenge" quando recebe muitos requests simultâneos).
+  const POOL = 8;
+  const FETCH_TIMEOUT_MS = 12_000;
+  const results: { sportKey: string; events: any[]; error?: string }[] = [];
+  let cursor = 0;
+  async function worker() {
+    while (true) {
+      const idx = cursor++;
+      if (idx >= requestedKeys.length) return;
+      const sportKey = requestedKeys[idx];
+      const url = `${ODDS_BASE}/sports/${sportKey}/events?apiKey=${ODDS_API_KEY}`;
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+      try {
+        const r = await fetch(url, { headers: { "Accept": "application/json" }, signal: ctrl.signal });
+        if (!r.ok) {
+          const txt = await r.text();
+          results.push({ sportKey, events: [], error: `HTTP ${r.status}: ${txt.slice(0, 200)}` });
+        } else {
+          const j = await r.json();
+          results.push({ sportKey, events: Array.isArray(j) ? j : [] });
+        }
+      } catch (e: any) {
+        results.push({ sportKey, events: [], error: e?.message ?? String(e) });
+      } finally {
+        clearTimeout(t);
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: POOL }, () => worker()));
   const fetchErrors = results.filter((r) => r.error).map((r) => ({ sport_key: r.sportKey, error: r.error }));
 
   // Pré-carrega caches de logos
@@ -262,9 +318,7 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  // ---- UPSERT manual com merge inteligente ----
-  // Se já existe (vindo do TheSportsDB), só faz merge em sources + last_synced_at.
-  // Se não existe, insere com primary_source='odds_api'.
+  // ---- UPSERT em lote (merge inteligente para não sobrescrever logos já existentes) ----
   let inserted = 0;
   let updated = 0;
   const keys = normRows.map((r) => r.canonical_key);
@@ -274,53 +328,45 @@ Deno.serve(async (req: Request) => {
     if (!chunk.length) continue;
     const { data: existing } = await supabase
       .from("sports_events")
-      .select("canonical_key, primary_source, sources, home_team_logo, away_team_logo, league_logo")
+      .select("canonical_key, sources, home_team_logo, away_team_logo, league_logo")
       .in("canonical_key", chunk);
     for (const row of existing ?? []) existingMap.set(row.canonical_key, row);
   }
 
-  const toInsert: any[] = [];
-  const toUpdate: { canonical_key: string; patch: any }[] = [];
-  for (const r of normRows) {
+  const upsertRows = normRows.map((r) => {
     const ex = existingMap.get(r.canonical_key);
-    if (!ex) { toInsert.push(r); continue; }
-    const mergedSources = { ...(ex.sources ?? {}), ...r.sources };
-    // Não sobrescreve dados do TheSportsDB. Só preenche logos vazias.
-    toUpdate.push({
-      canonical_key: r.canonical_key,
-      patch: {
-        sources: mergedSources,
-        last_synced_at: r.last_synced_at,
-        home_team_logo: ex.home_team_logo ?? r.home_team_logo,
-        away_team_logo: ex.away_team_logo ?? r.away_team_logo,
-        league_logo: ex.league_logo ?? r.league_logo,
-      },
-    });
-  }
+    if (!ex) return r;
+    return {
+      ...r,
+      sources: { ...(ex.sources ?? {}), ...r.sources },
+      home_team_logo: ex.home_team_logo ?? r.home_team_logo,
+      away_team_logo: ex.away_team_logo ?? r.away_team_logo,
+      league_logo: ex.league_logo ?? r.league_logo,
+    };
+  });
 
-  for (let i = 0; i < toInsert.length; i += 500) {
-    const slice = toInsert.slice(i, i + 500);
-    const { error } = await supabase.from("sports_events").insert(slice);
+  // Chunked upsert — muito mais rápido que UPDATE linha-a-linha.
+  for (let i = 0; i < upsertRows.length; i += 500) {
+    const slice = upsertRows.slice(i, i + 500);
+    const { error } = await supabase
+      .from("sports_events")
+      .upsert(slice, { onConflict: "canonical_key", ignoreDuplicates: false });
     if (error) {
       await supabase.from("sports_sync_runs").update({
         status: "error",
-        error: `insert failed: ${error.message}`,
+        error: `upsert failed: ${error.message}`,
         items_fetched: normRows.length,
         items_upserted: inserted + updated,
         by_sport: bySport,
         cost_usd: 0,
         finished_at: new Date().toISOString(),
       }).eq("id", runId);
-      return new Response(JSON.stringify({ run_id: runId, error: error.message }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return;
     }
-    inserted += slice.length;
-  }
-  for (const u of toUpdate) {
-    const { error } = await supabase
-      .from("sports_events").update(u.patch).eq("canonical_key", u.canonical_key);
-    if (!error) updated += 1;
+    // Heurística: linhas sem existing prévio contam como inserted; resto como updated.
+    for (const r of slice) {
+      if (existingMap.has(r.canonical_key)) updated += 1; else inserted += 1;
+    }
   }
 
   await supabase.from("sports_sync_runs").update({
@@ -332,13 +378,4 @@ Deno.serve(async (req: Request) => {
     error: fetchErrors.length ? JSON.stringify(fetchErrors).slice(0, 1000) : null,
     finished_at: new Date().toISOString(),
   }).eq("id", runId);
-
-  return new Response(JSON.stringify({
-    run_id: runId,
-    sport_keys: requestedKeys.length,
-    items_fetched: normRows.length,
-    inserted, updated,
-    by_sport: bySport,
-    fetch_errors: fetchErrors,
-  }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-});
+}
