@@ -1,5 +1,6 @@
 import { openSurebetWindow } from "@/lib/windowHelper";
 import { useState, useEffect, useMemo, useRef, useCallback, memo } from "react";
+import { formatPernaEntradas } from "@/utils/formatPernaEntradas";
 import { SaldoOperavelCard } from "../SaldoOperavelCard";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
