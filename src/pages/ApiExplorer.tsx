@@ -460,7 +460,7 @@ export default function ApiExplorer() {
             className="rounded-full h-11 px-6 font-bold border-emerald-500/30 hover:bg-emerald-500/5 text-emerald-500"
           >
             {syncingSofa ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Database className="h-4 w-4 mr-2" />}
-            {syncingSofa ? 'Sincronizando...' : 'Sincronizar Sofascore'}
+            {syncingSofa ? 'Sincronizando...' : 'Sincronizar TheSportsDB'}
           </Button>
           <Button 
             onClick={handleManualSync} 
