@@ -392,11 +392,8 @@ export default function Financeiro() {
 
         <TabsContent value="overview" className="space-y-0">
           {(() => {
-            const patrimonioTotal =
-              calc.saldos.capitalOperacional +
-              calc.saldos.saldoBookmakers +
-              calc.saldos.totalContasParceiros +
-              calc.saldos.totalWalletsParceiros;
+            // Fonte única: mesma soma + mesma conversão do donut Posição de Capital
+            const patrimonioTotal = patrimonioDonutBRL;
             const custoSust = calc.costs.custoSustentacao;
             const resultadoLiquido = calcResultadoLiquido(lucroRealizado, custoSust);
             const margemOp = calcMargemOperacional(lucroRealizado, custoSust);
