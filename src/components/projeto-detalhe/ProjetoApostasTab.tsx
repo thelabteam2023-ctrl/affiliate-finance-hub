@@ -826,6 +826,12 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       });
       
       setSurebets(surebetsFormatadas);
+      probeReadByTab({
+        tab: "ProjetoApostasTab.fetchSurebets",
+        projetoId,
+        apostaIdsRaw: (allSurebetData || []).map((a: any) => a.id),
+        apostaIdsMapped: surebetsFormatadas.map((a: any) => a.id),
+      });
     } catch (error: any) {
       console.error("Erro ao carregar surebets:", error.message);
     }
