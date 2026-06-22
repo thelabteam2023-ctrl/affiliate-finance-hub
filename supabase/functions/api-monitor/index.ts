@@ -49,6 +49,37 @@ function normalizeTeamMatchKey(name: string): string {
     .join('');
 }
 
+function tokenizeTeamName(name: string): string[] {
+  const stopWords = new Set(['fc', 'cf', 'cd', 'sc', 'ac', 'club', 'clube', 'de', 'da', 'do', 'del', 'di', 'du', 'la', 'le', 'el', 'the']);
+  return (name || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token.length >= 6 && !stopWords.has(token));
+}
+
+const GENERIC_LOGO_MATCH_TOKENS = new Set([
+  'athletic', 'atletico', 'sporting', 'racing', 'central', 'united',
+  'city', 'real', 'deportivo', 'nacional', 'independiente', 'wanderers',
+  'rangers', 'rovers', 'county', 'town',
+]);
+
+function isSafeTokenLogoMatch(queryName: string, candidateName: string): boolean {
+  const queryTokens = tokenizeTeamName(queryName);
+  const candidateTokens = tokenizeTeamName(candidateName);
+  if (!queryTokens.length || !candidateTokens.length) return false;
+  const qSet = new Set(queryTokens);
+  const matchedTokens = candidateTokens.filter((token) => qSet.has(token));
+  const minSide = Math.min(queryTokens.length, candidateTokens.length);
+  if (matchedTokens.length < minSide) return false;
+  if (minSide === 1) {
+    const onlyToken = matchedTokens[0];
+    if (!onlyToken || onlyToken.length < 7 || GENERIC_LOGO_MATCH_TOKENS.has(onlyToken)) return false;
+  }
+  return true;
+}
+
 // Lista de ligas para o Odds API (configuração estática básica)
 const ALL_LEAGUES = [
   { sport: 'soccer', key: 'soccer_brazil_campeonato', name: 'Brasileirão Série A', flag: '🇧🇷', continent: 'América do Sul', country: 'Brasil', type: 'league' },
