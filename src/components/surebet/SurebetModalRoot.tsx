@@ -1203,7 +1203,31 @@ export function SurebetModalRoot({
 
       return newOdds;
     });
-  }, [targetPayoutsLocal, arredondarStake]);
+  }, [targetPayoutsLocal, arredondarStake, odds]);
+
+  // ── Confirmação do colapso LAY (Camada A) ──────────────────────────────
+  const cancelLayCollapse = useCallback(() => setLayCollapseRequest(null), []);
+  const confirmLayCollapse = useCallback(() => {
+    setLayCollapseRequest(req => {
+      if (!req) return null;
+      setOdds(prev => {
+        const next = [...prev];
+        const target = { ...next[req.pernaIndex] } as OddEntry;
+        target.additionalEntries = [];
+        (target as any).tipo = 'lay';
+        if (!target.isReference) {
+          target.isManuallyEdited = false;
+          target.stakeOrigem = undefined;
+        }
+        if ((target as any).fonteSaldo === 'FREEBET') {
+          (target as any).fonteSaldo = 'REAL';
+        }
+        next[req.pernaIndex] = target;
+        return next;
+      });
+      return null;
+    });
+  }, []);
 
   const updateAdditionalEntry = useCallback((pernaIndex: number, entryIndex: number, field: string, value: string) => {
     setOdds(prev => {
