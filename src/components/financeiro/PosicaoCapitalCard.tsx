@@ -83,8 +83,11 @@ export function PosicaoCapitalCard({
 
   // Para a quebra, sempre usamos o ACUMULADO — é a única base coerente
   // para responder "do que é feito meu patrimônio hoje".
+  // Importante: patrimônio usa apenas saldo_atual (real) dos bookmakers, NÃO
+  // inclui saldo_freebet. Por isso freebet entra apenas como linha
+  // informativa e NÃO é subtraído daqui.
   const resultadoOperacionalAcumulado =
-    patrimonioAtual - capitalLiquidoAcumulado - saldoFreebet;
+    patrimonioAtual - capitalLiquidoAcumulado;
 
   const roi =
     capitalLiquidoAcumulado > 0
@@ -220,14 +223,14 @@ export function PosicaoCapitalCard({
               value={resultadoOperacionalAcumulado}
               formatCurrency={formatCurrency}
               tone={resultadoOperacionalAcumulado >= 0 ? "positive" : "negative"}
-              hint="Tudo que a operação gerou acima do capital próprio investido: lucro de apostas, bônus convertidos, cashback, ajustes cambiais etc. Calculado por diferença (patrimônio atual menos capital próprio menos freebet em estoque)."
+              hint="Tudo que a operação gerou acima do capital próprio investido: lucro de apostas, bônus convertidos, cashback, ajustes cambiais etc."
             />
             <BreakdownRow
-              label="Freebet em estoque (não é capital)"
+              label="Freebet em estoque (informativo)"
               value={saldoFreebet}
               formatCurrency={formatCurrency}
               tone="muted"
-              hint="Crédito promocional ainda não consumido nas casas. Não é dinheiro sacável e por isso é isolado da composição do capital."
+              hint="Crédito promocional ainda não consumido. É contabilizado em campo separado do saldo da bookmaker e não entra no Patrimônio Atual — só vira capital quando convertido em saldo real."
             />
 
             {roi !== null && (
