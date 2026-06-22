@@ -190,9 +190,10 @@ export default function ApiExplorer() {
   const [monitoredLeagues, setMonitoredLeagues] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [syncingLogos, setSyncingLogos] = useState(false);
   const [syncingSofa, setSyncingSofa] = useState(false);
+  const [fillingLogos, setFillingLogos] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(null);
+  const [stats, setStats] = useState({ total: 0, withLogos: 0, withoutLogos: 0 });
 
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'matches' | 'coverage' | 'teams'>('matches');
@@ -228,7 +229,7 @@ export default function ApiExplorer() {
     try {
       const [eventsRes, leaguesRes] = await Promise.all([
         supabase
-          .from('daily_events')
+          .from('sports_events')
           .select('*')
           .eq('sport', selectedSport)
           .order('commence_time', { ascending: true }),
@@ -242,12 +243,42 @@ export default function ApiExplorer() {
       if (eventsRes.error) throw eventsRes.error;
       if (leaguesRes.error) throw leaguesRes.error;
 
-      setEvents(eventsRes.data || []);
+      // Adapta sports_events para o shape Event esperado pela UI
+      const mapped: Event[] = (eventsRes.data || []).map((e: any) => ({
+        api_id: e.canonical_key,
+        sport: e.sport,
+        league_key: e.league_id ? `thesportsdb_${e.league_id}` : 'unknown',
+        league_name: e.league_name ?? '—',
+        league_flag: null,
+        continent: e.continent,
+        country: e.country,
+        competition_type: e.competition_type,
+        home_team: e.home_team,
+        away_team: e.away_team,
+        commence_time: e.commence_time,
+        result_home: e.home_score != null ? String(e.home_score) : null,
+        result_away: e.away_score != null ? String(e.away_score) : null,
+        home_team_logo: e.home_team_logo,
+        away_team_logo: e.away_team_logo,
+        league_logo: e.league_logo,
+        synced_at: e.last_synced_at,
+      }));
+      setEvents(mapped);
       setMonitoredLeagues(leaguesRes.data || []);
-      
-      if (eventsRes.data && eventsRes.data.length > 0) {
-        setLastSync(eventsRes.data[0].synced_at);
-      }
+
+      // Indicadores de qualidade
+      const total = mapped.length;
+      const withLogos = mapped.filter((e) => e.home_team_logo && e.away_team_logo).length;
+      setStats({ total, withLogos, withoutLogos: total - withLogos });
+
+      // Última sincronização vinda de sports_sync_runs
+      const { data: lastRun } = await supabase
+        .from('sports_sync_runs')
+        .select('finished_at, started_at')
+        .order('started_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      setLastSync(lastRun?.finished_at ?? lastRun?.started_at ?? null);
     } catch (err: any) {
       toast.error('Erro ao carregar dados locais');
     } finally {
@@ -257,62 +288,7 @@ export default function ApiExplorer() {
 
   useEffect(() => { loadData(); }, [selectedSport]);
 
-  const handleManualSync = async () => {
-    if (!window.confirm('Sincronizar agora consumirá créditos da API. Continuar?')) return;
-    setSyncing(true);
-    try {
-      const session = (await supabase.auth.getSession()).data.session;
-      const res = await fetch(`https://kxfkmritrhpkgmwlxcft.supabase.co/functions/v1/api-monitor/run-job`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session?.access_token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ job: 'fetch_events' })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      if (data.result?.queued) {
-        toast.success(data.result.message || 'Sincronização iniciada em background.');
-        setTimeout(() => loadData(), 8000);
-      } else {
-        toast.success(`Sincronização concluída: ${data.result.totalSaved} eventos.`);
-        loadData();
-      }
-    } catch (err: any) {
-      toast.error(err.message);
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  const handleSyncLogos = async () => {
-    if (!window.confirm('Sincronização completa de escudos: ~30 créditos da API-Sports (1 por liga monitorada). Continuar?')) return;
-    setSyncingLogos(true);
-    try {
-      const session = (await supabase.auth.getSession()).data.session;
-      const res = await fetch(`https://kxfkmritrhpkgmwlxcft.supabase.co/functions/v1/api-monitor/run-job`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session?.access_token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ job: 'sync_all_teams' })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      
-      toast.success(data.result.message || 'Sincronização completa iniciada em background.');
-      setTimeout(() => loadData(), 15000);
-    } catch (err: any) {
-      toast.error(err.message);
-    } finally {
-      setSyncingLogos(false);
-    }
-  };
-
   const handleSyncSofascore = async () => {
-    if (!window.confirm('Sincronizar via TheSportsDB (gratuito, sem custo). Continuar?')) return;
     setSyncingSofa(true);
     try {
       const { data, error } = await supabase.functions.invoke('thesportsdb-sync', {
@@ -327,13 +303,31 @@ export default function ApiExplorer() {
         .join(' · ') || 'sem itens';
       const errs = Array.isArray(data?.fetch_errors) ? data.fetch_errors.length : 0;
       toast.success(
-        `TheSportsDB: ${data?.items_upserted ?? 0} eventos (${breakdown})${errs ? ` · ${errs} erro(s) de fetch` : ''}.`,
+        `Catálogo atualizado: ${data?.inserted ?? 0} novos, ${data?.updated ?? 0} atualizados (${breakdown})${errs ? ` · ${errs} erro(s) de fetch` : ''}.`,
       );
       loadData();
     } catch (err: any) {
-      toast.error(`TheSportsDB sync falhou: ${err?.message ?? err}`);
+      toast.error(`Sync falhou: ${err?.message ?? err}`);
     } finally {
       setSyncingSofa(false);
+    }
+  };
+
+  const handleFillLogos = async () => {
+    setFillingLogos(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('fill-missing-logos', {
+        body: { maxRows: 300 },
+      });
+      if (error) throw error;
+      toast.success(
+        `Logos: ${data?.updated_events ?? 0} jogos atualizados · cache:${data?.cache_hits ?? 0} · API:${data?.api_hits ?? 0}`,
+      );
+      loadData();
+    } catch (err: any) {
+      toast.error(`Preenchimento falhou: ${err?.message ?? err}`);
+    } finally {
+      setFillingLogos(false);
     }
   };
 
