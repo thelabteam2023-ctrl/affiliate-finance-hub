@@ -4121,7 +4121,15 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                   </button>
                   <button
                     type="button"
-                    onClick={() => setTipoOperacaoExchange("lay")}
+                    onClick={() => {
+                      // Camada A: se há multi-entry pendente, pedir confirmação
+                      // antes de colapsar para 1 casa.
+                      if (additionalEntries.length > 0 && tipoOperacaoExchange !== "lay") {
+                        setLayCollapseDialogOpen(true);
+                      } else {
+                        setTipoOperacaoExchange("lay");
+                      }
+                    }}
                     className={`relative px-5 py-2.5 text-sm font-medium transition-colors ${
                       tipoOperacaoExchange === "lay"
                         ? "text-foreground"
