@@ -54,6 +54,10 @@ import { SurebetTableFooter } from "./SurebetTableFooter";
 import { SurebetColumnsView } from "./SurebetColumnsView";
 import { SurebetMobileCard } from "./SurebetMobileCard";
 import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  ConfirmLayCollapseDialog,
+  type LayCollapseEntryPreview,
+} from "@/components/projeto-detalhe/ConfirmLayCollapseDialog";
 
 // ============================================
 // TIPOS
