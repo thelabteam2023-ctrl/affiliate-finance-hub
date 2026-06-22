@@ -16,6 +16,8 @@ import {
   HelpCircle,
   PiggyBank,
   AlertTriangle,
+  Infinity as InfinityIcon,
+  CalendarRange,
 } from "lucide-react";
 
 interface Props {
@@ -129,18 +131,22 @@ export function PosicaoCapitalCard({
               <Button
                 size="sm"
                 variant={modo === "acumulado" ? "secondary" : "ghost"}
-                className="h-7 px-2.5 text-xs"
+                className="h-7 px-2.5 text-xs gap-1.5"
                 onClick={() => setModo("acumulado")}
+                title="Soma todo o histórico, ignora o filtro de período"
               >
+                <InfinityIcon className="h-3 w-3" />
                 Acumulado
               </Button>
               <Button
                 size="sm"
                 variant={modo === "periodo" ? "secondary" : "ghost"}
-                className="h-7 px-2.5 text-xs"
+                className="h-7 px-2.5 text-xs gap-1.5"
                 onClick={() => setModo("periodo")}
+                title="Respeita o filtro de período do dashboard"
               >
-                No período
+                <CalendarRange className="h-3 w-3" />
+                {periodLabel}
               </Button>
             </div>
           </div>
@@ -148,7 +154,14 @@ export function PosicaoCapitalCard({
         <CardContent className="space-y-4">
           {/* Bloco principal */}
           <div>
-            <div className="text-xs text-muted-foreground">{view.titulo}</div>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              {modo === "acumulado" ? (
+                <InfinityIcon className="h-3 w-3" />
+              ) : (
+                <CalendarRange className="h-3 w-3" />
+              )}
+              <span>{view.titulo}</span>
+            </div>
             <div className="text-2xl md:text-3xl font-bold font-mono mt-0.5">
               {formatCurrency(view.liquido)}
             </div>
@@ -185,9 +198,9 @@ export function PosicaoCapitalCard({
                     <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs">
-                    Separa o capital que você de fato investiu, do resultado
-                    gerado pela operação, e do saldo de freebets — que não é
-                    capital sacável.
+                    Snapshot do agora — sempre acumulado, não muda com o
+                    filtro de período nem com o toggle acima. Separa capital
+                    próprio, resultado da operação e freebet (não sacável).
                   </TooltipContent>
                 </Tooltip>
               </div>
