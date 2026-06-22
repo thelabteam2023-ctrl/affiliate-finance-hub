@@ -28,6 +28,10 @@ interface Props {
   aportesAcumulado: number;
   liquidacoesAcumulado: number;
   capitalLiquidoAcumulado: number;
+  /** Capital próprio investido avaliado à PTAX do dia de cada aporte/liquidação. */
+  capitalLiquidoHistoricoBRL: number;
+  /** Resultado operacional realizado (workspace, lifetime, fonte canônica, sem FX). */
+  resultadoOperacionalRealizado: number;
   patrimonioAtual: number;
   saldoFreebet: number;
   formatCurrency: (v: number) => string;
@@ -48,6 +52,8 @@ export function PosicaoCapitalCard({
   aportesAcumulado,
   liquidacoesAcumulado,
   capitalLiquidoAcumulado,
+  capitalLiquidoHistoricoBRL,
+  resultadoOperacionalRealizado,
   patrimonioAtual,
   saldoFreebet,
   formatCurrency,
@@ -81,20 +87,26 @@ export function PosicaoCapitalCard({
     periodLabel,
   ]);
 
-  // Para a quebra, sempre usamos o ACUMULADO — é a única base coerente
-  // para responder "do que é feito meu patrimônio hoje".
-  // Importante: patrimônio usa apenas saldo_atual (real) dos bookmakers, NÃO
-  // inclui saldo_freebet. Por isso freebet entra apenas como linha
-  // informativa e NÃO é subtraído daqui.
-  const resultadoOperacionalAcumulado =
-    patrimonioAtual - capitalLiquidoAcumulado;
+  // Decomposição honesta do Patrimônio Atual:
+  //   Patrimônio (PTAX hoje)
+  //     = Capital histórico (PTAX da data do aporte)
+  //     + Resultado operacional realizado (canônico, sem FX)
+  //     + Variação cambial não realizada (plug)
+  //
+  // Patrimônio usa apenas saldo_atual (real) dos bookmakers, NÃO inclui
+  // saldo_freebet. Freebet entra só como linha informativa, fora da soma.
+  const variacaoCambialNaoRealizada =
+    patrimonioAtual - capitalLiquidoHistoricoBRL - resultadoOperacionalRealizado;
+
+  const fxThreshold = Math.max(50, Math.abs(patrimonioAtual) * 0.001);
+  const mostraFx = Math.abs(variacaoCambialNaoRealizada) >= fxThreshold;
 
   const roi =
-    capitalLiquidoAcumulado > 0
-      ? (resultadoOperacionalAcumulado / capitalLiquidoAcumulado) * 100
+    capitalLiquidoHistoricoBRL > 0
+      ? (resultadoOperacionalRealizado / capitalLiquidoHistoricoBRL) * 100
       : null;
 
-  const semAportes = capitalLiquidoAcumulado <= 0 && patrimonioAtual > 0;
+  const semAportes = capitalLiquidoHistoricoBRL <= 0 && patrimonioAtual > 0;
 
   if (loading) {
     return (
@@ -201,9 +213,10 @@ export function PosicaoCapitalCard({
                     <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs">
-                    Snapshot do agora — sempre acumulado, não muda com o
-                    filtro de período nem com o toggle acima. Separa capital
-                    próprio, resultado da operação e freebet (não sacável).
+                    Snapshot do agora. Capital é avaliado pela PTAX do DIA de
+                    cada aporte; saldos atuais são avaliados pela PTAX de hoje.
+                    A diferença que não veio de operação é Variação Cambial não
+                    realizada.
                   </TooltipContent>
                 </Tooltip>
               </div>
@@ -214,17 +227,26 @@ export function PosicaoCapitalCard({
 
             <BreakdownRow
               label="Capital próprio investido"
-              value={capitalLiquidoAcumulado}
+              value={capitalLiquidoHistoricoBRL}
               formatCurrency={formatCurrency}
-              hint="Aportes − Liquidações (acumulado)"
+              hint="Aportes − Liquidações, cada um avaliado pela PTAX do dia da transação. Não oscila quando a cotação atual sobe ou desce."
             />
             <BreakdownRow
-              label="Resultado operacional acumulado"
-              value={resultadoOperacionalAcumulado}
+              label="Resultado operacional realizado"
+              value={resultadoOperacionalRealizado}
               formatCurrency={formatCurrency}
-              tone={resultadoOperacionalAcumulado >= 0 ? "positive" : "negative"}
-              hint="Tudo que a operação gerou acima do capital próprio investido: lucro de apostas, bônus convertidos, cashback, ajustes cambiais etc."
+              tone={resultadoOperacionalRealizado >= 0 ? "positive" : "negative"}
+              hint="Fonte canônica do Lucro Operacional do workspace (mesma engine da Visão Geral). Inclui apostas liquidadas, bônus, cashback, perdas e ajustes — exclui efeito cambial."
             />
+            {mostraFx && (
+              <BreakdownRow
+                label="Variação cambial não realizada"
+                value={variacaoCambialNaoRealizada}
+                formatCurrency={formatCurrency}
+                tone={variacaoCambialNaoRealizada >= 0 ? "positive" : "negative"}
+                hint="Efeito de reavaliar saldos em moeda estrangeira pela PTAX de hoje. Só vira ganho ou prejuízo de verdade quando o dinheiro volta para BRL."
+              />
+            )}
             <BreakdownRow
               label="Freebet em estoque (informativo)"
               value={saldoFreebet}
