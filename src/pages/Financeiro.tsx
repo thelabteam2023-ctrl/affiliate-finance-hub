@@ -306,6 +306,28 @@ export default function Financeiro() {
     };
   }, [finData, getCryptoUSDValue]);
 
+  // PATRIMÔNIO ATUAL — FONTE ÚNICA
+  // Mesma matemática e MESMA função de conversão usadas pelo donut
+  // <PosicaoCapital /> (ver src/components/caixa/PosicaoCapital.tsx).
+  // Convertendo aqui via convertUnified (que é a função compartilhada com
+  // o donut), garantimos que o KPI "Patrimônio", o donut e o card de
+  // composição mostrem EXATAMENTE o mesmo número em BRL.
+  const patrimonioDonutBRL = useMemo(() => {
+    let total = 0;
+    posicaoCapitalProps.saldosFiat.forEach((s) => {
+      total += convertUnified(s.saldo, (s.moeda || "BRL").toUpperCase(), "BRL");
+    });
+    posicaoCapitalProps.saldosBookmakers.forEach((s) => {
+      total += convertUnified(s.saldo, (s.moeda || "BRL").toUpperCase(), "BRL");
+    });
+    posicaoCapitalProps.saldosContasParceiros.forEach((s) => {
+      total += convertUnified(s.saldo, (s.moeda || "BRL").toUpperCase(), "BRL");
+    });
+    total += convertUnified(posicaoCapitalProps.saldoCaixaCrypto, "USD", "BRL");
+    total += convertUnified(posicaoCapitalProps.saldoWalletsParceiros, "USD", "BRL");
+    return total;
+  }, [posicaoCapitalProps, convertUnified]);
+
   // Inject title into global TopBar
   useEffect(() => {
     setTopBarContent(
@@ -370,11 +392,8 @@ export default function Financeiro() {
 
         <TabsContent value="overview" className="space-y-0">
           {(() => {
-            const patrimonioTotal =
-              calc.saldos.capitalOperacional +
-              calc.saldos.saldoBookmakers +
-              calc.saldos.totalContasParceiros +
-              calc.saldos.totalWalletsParceiros;
+            // Fonte única: mesma soma + mesma conversão do donut Posição de Capital
+            const patrimonioTotal = patrimonioDonutBRL;
             const custoSust = calc.costs.custoSustentacao;
             const resultadoLiquido = calcResultadoLiquido(lucroRealizado, custoSust);
             const margemOp = calcMargemOperacional(lucroRealizado, custoSust);

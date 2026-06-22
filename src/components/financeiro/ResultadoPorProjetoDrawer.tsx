@@ -35,6 +35,14 @@ interface Props {
   };
   loading: boolean;
   formatBRL: (v: number) => string;
+  /**
+   * Resultado da operação calculado por subtração no card
+   * (Patrimônio Atual − Capital Próprio). Quando informado, o drawer
+   * exibe um bloco de reconciliação no rodapé comparando esse valor
+   * com a soma do Lucro Operacional dos projetos (engine canônica) e
+   * expõe a divergência (drift cambial, eventos sem projeto, etc.).
+   */
+  resultadoOperacaoBRL?: number;
 }
 
 function formatMoeda(valor: number, moeda: string) {
@@ -84,6 +92,7 @@ export function ResultadoPorProjetoDrawer({
   totaisBRL,
   loading,
   formatBRL,
+  resultadoOperacaoBRL,
 }: Props) {
   const navigate = useNavigate();
   const [sortKey, setSortKey] = useState<SortKey>(
@@ -217,6 +226,13 @@ export function ResultadoPorProjetoDrawer({
               highlight={focus === "exposto"}
             />
           </div>
+          {typeof resultadoOperacaoBRL === "number" && (
+            <ReconciliacaoBlock
+              resultadoOperacaoBRL={resultadoOperacaoBRL}
+              lucroOperacionalProjetosBRL={totaisBRL.lucroOperacional}
+              formatBRL={formatBRL}
+            />
+          )}
         </div>
       </SheetContent>
     </Sheet>
@@ -373,6 +389,80 @@ function TotalCell({
       <div className={`font-mono text-sm font-bold ${colorClass}`}>
         {formatBRL(value)}
       </div>
+    </div>
+  );
+}
+
+function ReconciliacaoBlock({
+  resultadoOperacaoBRL,
+  lucroOperacionalProjetosBRL,
+  formatBRL,
+}: {
+  resultadoOperacaoBRL: number;
+  lucroOperacionalProjetosBRL: number;
+  formatBRL: (v: number) => string;
+}) {
+  const divergencia = resultadoOperacaoBRL - lucroOperacionalProjetosBRL;
+  const absDiv = Math.abs(divergencia);
+  const tone =
+    absDiv < 1
+      ? "ok"
+      : absDiv < Math.max(50, Math.abs(resultadoOperacaoBRL) * 0.02)
+        ? "warn"
+        : "alert";
+  const toneClass =
+    tone === "ok"
+      ? "text-emerald-500"
+      : tone === "warn"
+        ? "text-amber-500"
+        : "text-red-500";
+  const toneLabel =
+    tone === "ok"
+      ? "Modelo bate com a engine canônica."
+      : tone === "warn"
+        ? "Pequena divergência (esperada por drift cambial)."
+        : "Divergência relevante — vale auditar atribuições.";
+
+  return (
+    <div className="mt-3 pt-3 border-t border-border/40">
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">
+        Reconciliação com o Patrimônio
+      </div>
+      <div className="space-y-1 text-xs font-mono">
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">
+            Resultado da operação (Patrimônio − Capital)
+          </span>
+          <span className="font-semibold">
+            {formatBRL(resultadoOperacaoBRL)}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">
+            Soma do Lucro Operacional dos projetos
+          </span>
+          <span className="font-semibold">
+            {formatBRL(lucroOperacionalProjetosBRL)}
+          </span>
+        </div>
+        <div className="flex items-center justify-between pt-1 border-t border-border/30">
+          <span className="text-muted-foreground">Divergência</span>
+          <span className={`font-semibold ${toneClass}`}>
+            {divergencia >= 0 ? "+" : ""}
+            {formatBRL(divergencia)}
+          </span>
+        </div>
+      </div>
+      <p className={`mt-2 text-[10px] leading-relaxed ${toneClass}`}>
+        {toneLabel}
+      </p>
+      {tone !== "ok" && (
+        <ul className="mt-1 text-[10px] text-muted-foreground space-y-0.5 list-disc list-inside">
+          <li>Drift cambial (cotação atual vs snapshot por operação)</li>
+          <li>Saldos sem projeto_id_snapshot (caixa, parceiros)</li>
+          <li>Projetos arquivados com saldo residual</li>
+        </ul>
+      )}
     </div>
   );
 }
