@@ -34,7 +34,6 @@ import {
 } from "lucide-react";
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
 import { groupPernasBySelecao } from "@/utils/groupPernasBySelecao";
-import { formatPernaEntradas } from "@/utils/formatPernaEntradas";
 import { publishTabRender } from "@/utils/integrityProbe";
 import { SurebetDialog } from "./SurebetDialog";
 import { apostaMatchesBookmakerFilter, apostaMatchesParceiroFilter } from "@/utils/apostaFilterHelpers";
@@ -685,13 +684,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           valor_brl_referencia, lucro_prejuizo_brl_referencia,
           time_casa, time_fora, home_team_logo_url, away_team_logo_url, league_logo_url,
           apostas_pernas (
-            id, selecao, selecao_livre, odd, stake, stake_real, stake_freebet, resultado, lucro_prejuizo, bookmaker_id, moeda, ordem, tipo, comissao, fonte_saldo,
-            apostas_perna_entradas (
-              id, bookmaker_id, stake, odd, moeda, fonte_saldo, resultado,
-              selecao_livre, stake_brl_referencia, lucro_prejuizo_brl_referencia,
-              cotacao_snapshot, lucro_prejuizo,
-              bookmakers (nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo(logo_url))
-            )
+            id, selecao, selecao_livre, odd, stake, stake_real, stake_freebet, resultado, lucro_prejuizo, bookmaker_id, moeda, ordem, tipo, comissao, fonte_saldo
           )
         `;
 
@@ -772,9 +765,6 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
             ...p,
             bookmaker: bookmakerMap.get(p.bookmaker_id) || { nome: "Desconhecida" },
             bookmaker_nome: bookmakerMap.get(p.bookmaker_id)?.nome || p.bookmaker_nome || "Desconhecida",
-            entries: Array.isArray(p.apostas_perna_entradas) && p.apostas_perna_entradas.length > 1
-              ? formatPernaEntradas(p.apostas_perna_entradas, bookmakerMap.get(p.bookmaker_id)?.nome)
-              : undefined,
           }))
         };
       });

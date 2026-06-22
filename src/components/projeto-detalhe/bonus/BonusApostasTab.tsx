@@ -1,6 +1,5 @@
 import { openSurebetWindow } from "@/lib/windowHelper";
 import { useState, useEffect, useMemo, useRef, useCallback, memo } from "react";
-import { formatPernaEntradas } from "@/utils/formatPernaEntradas";
 import { SaldoOperavelCard } from "../SaldoOperavelCard";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -473,13 +472,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
               lucro_prejuizo,
               moeda,
               fonte_saldo,
-              bookmakers (nome, moeda, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo(logo_url)),
-              apostas_perna_entradas (
-                id, bookmaker_id, stake, odd, moeda, fonte_saldo, resultado,
-                selecao_livre, stake_brl_referencia, lucro_prejuizo_brl_referencia,
-                cotacao_snapshot, lucro_prejuizo,
-                bookmakers (nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo(logo_url))
-              )
+              bookmakers (nome, moeda, parceiro:parceiros(nome))
             `)
             .in("aposta_id", idsChunk)
             .order("ordem", { ascending: true }),
@@ -506,9 +499,6 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
             lucro_prejuizo: p.lucro_prejuizo,
             moeda: p.moeda || bookmaker?.moeda || 'BRL',
             fonte_saldo: p.fonte_saldo || null,
-            entries: Array.isArray(p.apostas_perna_entradas) && p.apostas_perna_entradas.length > 1
-              ? formatPernaEntradas(p.apostas_perna_entradas, bookmaker?.nome)
-              : undefined,
           });
         });
       }

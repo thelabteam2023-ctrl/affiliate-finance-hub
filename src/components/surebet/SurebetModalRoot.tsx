@@ -1733,7 +1733,7 @@ export function SurebetModalRoot({
         await logDebug({
           modulo: 'Surebet',
           evento: 'UPDATE_START',
-          payload: payloadEdit,
+          payload: { ...payloadEdit, oddsState: odds.map(o => ({ odd: o.odd, stake: o.stake, bk: o.bookmaker_id, pernaId: o.pernaId })), entradasEnviadas: entradasRPC }
         });
 
         const handleActualSave = async () => {
