@@ -740,6 +740,10 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         const pernasEfetivas = pernasRelacionais.length > 0 ? pernasRelacionais : pernasJson;
         pernasEfetivas.forEach((p: any) => {
           if (p.bookmaker_id) allBookmakerIds.add(p.bookmaker_id);
+          // Casas adicionais (apostas_perna_entradas) podem ser diferentes da principal
+          (p.apostas_perna_entradas || []).forEach((e: any) => {
+            if (e.bookmaker_id) allBookmakerIds.add(e.bookmaker_id);
+          });
         });
       });
       
@@ -766,11 +770,57 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           data_operacao: sb.data_aposta,
           stake_total: sb.stake_total ?? 0,
           workspace_id: sb.workspace_id,
-          pernas: pernasEfetivas.map((p: any) => ({
-            ...p,
-            bookmaker: bookmakerMap.get(p.bookmaker_id) || { nome: "Desconhecida" },
-            bookmaker_nome: bookmakerMap.get(p.bookmaker_id)?.nome || p.bookmaker_nome || "Desconhecida",
-          }))
+          pernas: pernasEfetivas.map((p: any) => {
+            // Constrói entries[] a partir de apostas_perna_entradas (1:N).
+            // Sem fallback aqui: pernas sem entradas (legado) simplesmente ficam
+            // com entries=[], e o card cai para o caminho single-entry usando os
+            // campos denormalizados da própria perna.
+            const rawEntries = Array.isArray(p.apostas_perna_entradas) ? p.apostas_perna_entradas : [];
+            const sortedEntries = [...rawEntries].sort((a: any, b: any) => {
+              const ta = a?.created_at ? Date.parse(a.created_at) : 0;
+              const tb = b?.created_at ? Date.parse(b.created_at) : 0;
+              return ta - tb;
+            });
+            const entries = sortedEntries.map((e: any) => {
+              const eb = bookmakerMap.get(e.bookmaker_id) as any;
+              const ePar = eb?.parceiro?.nome ?? null;
+              const eDisplay = eb
+                ? (ePar
+                    ? `${eb.nome}${eb.instance_identifier ? ` (${eb.instance_identifier})` : ''} - ${ePar}`
+                    : `${eb.nome}${eb.instance_identifier ? ` (${eb.instance_identifier})` : ''}`)
+                : "—";
+              return {
+                id: e.id,
+                bookmaker_id: e.bookmaker_id,
+                bookmaker_nome: eDisplay,
+                parceiro_nome: ePar,
+                instance_identifier: eb?.instance_identifier ?? null,
+                logo_url: null,
+                moeda: e.moeda || 'BRL',
+                odd: Number(e.odd) || 0,
+                stake: Number(e.stake) || 0,
+                selecao_livre: e.selecao_livre ?? undefined,
+                fonte_saldo: e.fonte_saldo ?? 'REAL',
+                resultado: e.resultado ?? null,
+                lucro_prejuizo: e.lucro_prejuizo ?? null,
+                stake_brl_referencia: e.stake_brl_referencia ?? null,
+                lucro_prejuizo_brl_referencia: e.lucro_prejuizo_brl_referencia ?? null,
+                cotacao_snapshot: e.cotacao_snapshot ?? null,
+              };
+            });
+            const totalStakeEntries = entries.reduce((s: number, e: any) => s + (Number(e.stake) || 0), 0);
+            const oddMediaPond = totalStakeEntries > 0
+              ? entries.reduce((s: number, e: any) => s + (Number(e.odd) || 0) * (Number(e.stake) || 0), 0) / totalStakeEntries
+              : 0;
+            return {
+              ...p,
+              bookmaker: bookmakerMap.get(p.bookmaker_id) || { nome: "Desconhecida" },
+              bookmaker_nome: bookmakerMap.get(p.bookmaker_id)?.nome || p.bookmaker_nome || "Desconhecida",
+              entries,
+              odd_media: oddMediaPond,
+              stake_total: totalStakeEntries,
+            };
+          })
         };
       });
       
