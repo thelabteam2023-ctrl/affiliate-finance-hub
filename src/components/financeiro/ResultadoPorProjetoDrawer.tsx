@@ -92,6 +92,7 @@ export function ResultadoPorProjetoDrawer({
   totaisBRL,
   loading,
   formatBRL,
+  resultadoOperacaoBRL,
 }: Props) {
   const navigate = useNavigate();
   const [sortKey, setSortKey] = useState<SortKey>(
