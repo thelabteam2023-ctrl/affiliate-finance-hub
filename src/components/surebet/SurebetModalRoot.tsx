@@ -1735,6 +1735,28 @@ export function SurebetModalRoot({
         });
       });
 
+      // TEMP-DEBUG perna-composta: comparar estado vs payload no momento do submit
+      try {
+        console.log("[TEMP-DEBUG perna-composta] SUBMIT start", {
+          isEditing,
+          aposta_id: surebet?.id ?? null,
+          odds_state: odds.map((o, i) => ({
+            ordem: i + 1,
+            pernaId: o.pernaId,
+            main_bk: o.bookmaker_id,
+            main_stake: o.stake,
+            main_odd: o.odd,
+            sub_count: o.additionalEntries?.length || 0,
+            sub: (o.additionalEntries || []).map((s: any) => ({
+              id: s.id, bk: s.bookmaker_id, stake: s.stake, odd: s.odd, moeda: s.moeda,
+            })),
+          })),
+          pernasPreenchidas_count: pernasPreenchidas.length,
+          entradasRPC_count: entradasRPC.length,
+          entradasRPC,
+        });
+      } catch (e) { /* noop */ }
+
       const modelo = numPernas === 2 ? "1-2" : numPernas === 3 ? "1-X-2" : `${numPernas}-way`;
 
       if (isEditing && surebet) {
