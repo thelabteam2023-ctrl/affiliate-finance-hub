@@ -3740,6 +3740,7 @@ export type Database = {
           country: string | null
           created_at: string | null
           event_date: string
+          external_ids: Json
           home_team: string
           home_team_logo: string | null
           id: string
@@ -3749,6 +3750,7 @@ export type Database = {
           league_name: string
           result_away: string | null
           result_home: string | null
+          source: string
           sport: string
           status: string | null
           synced_at: string | null
@@ -3763,6 +3765,7 @@ export type Database = {
           country?: string | null
           created_at?: string | null
           event_date: string
+          external_ids?: Json
           home_team: string
           home_team_logo?: string | null
           id?: string
@@ -3772,6 +3775,7 @@ export type Database = {
           league_name: string
           result_away?: string | null
           result_home?: string | null
+          source?: string
           sport: string
           status?: string | null
           synced_at?: string | null
@@ -3786,6 +3790,7 @@ export type Database = {
           country?: string | null
           created_at?: string | null
           event_date?: string
+          external_ids?: Json
           home_team?: string
           home_team_logo?: string | null
           id?: string
@@ -3795,6 +3800,7 @@ export type Database = {
           league_name?: string
           result_away?: string | null
           result_home?: string | null
+          source?: string
           sport?: string
           status?: string | null
           synced_at?: string | null
@@ -10698,6 +10704,108 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sofascore_events_raw: {
+        Row: {
+          actor_id: string
+          event_id: number | null
+          fetched_at: string
+          id: number
+          payload: Json
+          source_run_id: string | null
+          sport: string | null
+          unique_tournament_id: number | null
+        }
+        Insert: {
+          actor_id?: string
+          event_id?: number | null
+          fetched_at?: string
+          id?: number
+          payload: Json
+          source_run_id?: string | null
+          sport?: string | null
+          unique_tournament_id?: number | null
+        }
+        Update: {
+          actor_id?: string
+          event_id?: number | null
+          fetched_at?: string
+          id?: number
+          payload?: Json
+          source_run_id?: string | null
+          sport?: string | null
+          unique_tournament_id?: number | null
+        }
+        Relationships: []
+      }
+      sofascore_seeds: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          label: string
+          sport: string
+          start_url: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          label: string
+          sport: string
+          start_url: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          label?: string
+          sport?: string
+          start_url?: string
+        }
+        Relationships: []
+      }
+      sofascore_sync_runs: {
+        Row: {
+          by_sport: Json
+          cost_usd: number
+          error: string | null
+          finished_at: string | null
+          id: string
+          items_fetched: number
+          items_upserted: number
+          params: Json
+          started_at: string
+          status: string
+          triggered_by: string | null
+        }
+        Insert: {
+          by_sport?: Json
+          cost_usd?: number
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          items_fetched?: number
+          items_upserted?: number
+          params?: Json
+          started_at?: string
+          status?: string
+          triggered_by?: string | null
+        }
+        Update: {
+          by_sport?: Json
+          cost_usd?: number
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          items_fetched?: number
+          items_upserted?: number
+          params?: Json
+          started_at?: string
+          status?: string
+          triggered_by?: string | null
+        }
+        Relationships: []
       }
       solicitacoes: {
         Row: {
