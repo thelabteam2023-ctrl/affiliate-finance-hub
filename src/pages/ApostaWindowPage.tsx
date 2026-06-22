@@ -98,8 +98,10 @@ export default function ApostaWindowPage() {
 
           const seedPernas = (pernas || []).map(({ id, aposta_id, created_at, updated_at, ...perna }) => perna);
 
-          // Strip identity fields for duplication — keep all operational data including data_aposta
-          const { id: _id, created_at, updated_at, status, resultado, lucro_prejuizo, lucro_prejuizo_brl_referencia, pl_consolidado, retorno_consolidado, roi_real, valor_retorno, ...rest } = data;
+          // Strip identity/resultado/agregados-mortos para duplicação — preservar data_aposta original
+          // liquidado_em, lucro_esperado, stake_consolidado são recalculados no save (ApostaDialog),
+          // então removemos do seed para evitar carry-over confuso
+          const { id: _id, created_at, updated_at, status, resultado, lucro_prejuizo, lucro_prejuizo_brl_referencia, pl_consolidado, retorno_consolidado, roi_real, valor_retorno, lucro_esperado, stake_consolidado, ...rest } = data;
           setAposta({
             ...rest,
             // Preservar data_aposta original (clone fiel)
