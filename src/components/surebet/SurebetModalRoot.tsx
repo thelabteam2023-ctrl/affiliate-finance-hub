@@ -2923,6 +2923,13 @@ export function SurebetModalRoot({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <ConfirmLayCollapseDialog
+        open={layCollapseRequest !== null}
+        entriesToRemove={layCollapseRequest?.entriesPreview ?? []}
+        remainingBookmakerNome={layCollapseRequest?.remainingBookmakerNome}
+        onCancel={cancelLayCollapse}
+        onConfirm={confirmLayCollapse}
+      />
     </>
   );
 }
