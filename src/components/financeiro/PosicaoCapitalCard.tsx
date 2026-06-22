@@ -113,8 +113,6 @@ export function PosicaoCapitalCard({
   // com bloco de reconciliação que expõe a divergência quando existir
   // (drift cambial, eventos sem projeto_id_snapshot, etc.).
   const resultadoOperacao = patrimonioAtual - capitalLiquidoAcumulado;
-  const lucroOperacionalProjetos =
-    resultadoPorProjeto?.totaisBRL.lucroOperacional ?? 0;
 
   const roi =
     capitalLiquidoAcumulado > 0
