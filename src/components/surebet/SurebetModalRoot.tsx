@@ -1778,7 +1778,21 @@ export function SurebetModalRoot({
         await logDebug({
           modulo: 'Surebet',
           evento: 'UPDATE_START',
-          payload: { ...payloadEdit, oddsState: odds.map(o => ({ odd: o.odd, stake: o.stake, bk: o.bookmaker_id, pernaId: o.pernaId })), entradasEnviadas: entradasRPC }
+          payload: {
+            ...payloadEdit,
+            // TEMP-DEBUG perna-composta: snapshot completo do estado odds
+            oddsState: odds.map(o => ({
+              odd: o.odd,
+              stake: o.stake,
+              bk: o.bookmaker_id,
+              pernaId: o.pernaId,
+              sub_count: o.additionalEntries?.length || 0,
+              sub: (o.additionalEntries || []).map((s: any) => ({
+                id: s.id, bk: s.bookmaker_id, stake: s.stake, odd: s.odd, moeda: s.moeda,
+              })),
+            })),
+            entradasEnviadas: entradasRPC,
+          }
         });
 
         const handleActualSave = async () => {
