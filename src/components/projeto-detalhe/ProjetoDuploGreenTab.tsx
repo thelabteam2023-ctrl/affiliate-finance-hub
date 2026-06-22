@@ -404,9 +404,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                   bookmakers_catalogo (logo_url)
                 ),
                 apostas_perna_entradas (
-                  id, perna_id, bookmaker_id, moeda, odd, stake, stake_real, stake_freebet,
-                  fonte_saldo, tipo, comissao, resultado, lucro_prejuizo, selecao_livre,
-                  stake_brl_referencia, lucro_prejuizo_brl_referencia, cotacao_snapshot, created_at
+                  id, perna_id, bookmaker_id, moeda, odd, stake, stake_real, stake_freebet, fonte_saldo, tipo, comissao, stake_brl_referencia, cotacao_snapshot, created_at
                 )
               `)
               .in("aposta_id", idsChunk)
