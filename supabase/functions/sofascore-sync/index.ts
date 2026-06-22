@@ -124,6 +124,7 @@ interface NormalizedEvent {
 function normalize(item: any): NormalizedEvent | null {
   // Sport
   const rawSport = pick<string>(item, [
+    "__sport",
     "sport",
     "tournament.sport.slug",
     "tournament.category.sport.slug",
