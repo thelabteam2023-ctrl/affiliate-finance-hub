@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, Check, Trash2 } from 'lucide-react';
 import { BookmakerSelectOption, BookmakerMetaRow, formatCurrency } from '@/components/bookmakers/BookmakerSelectOption';
 import { BookmakerSearchableSelectContent } from '@/components/bookmakers/BookmakerSearchableSelectContent';
+import { BookmakerLogo } from '@/components/ui/bookmaker-logo';
 import { type OddEntry, type LegScenario } from '@/hooks/useSurebetCalculator';
 import { type SupportedCurrency } from '@/hooks/useCurrencySnapshot';
 import { getFirstLastName } from '@/lib/utils';
@@ -560,7 +561,15 @@ export function SurebetTableRow({
                   <SelectTrigger className="h-7 text-[10px] w-full">
                     <SelectValue placeholder="Casa...">
                       {addBookmaker?.nome && (
-                        <span className="truncate uppercase text-[9px]">{addBookmaker.nome}</span>
+                        <span className="flex items-center gap-1 min-w-0">
+                          <BookmakerLogo
+                            logoUrl={addBookmaker.logo_url}
+                            alt={addBookmaker.nome}
+                            size="h-4 w-4"
+                            iconSize="h-2.5 w-2.5"
+                          />
+                          <span className="truncate uppercase text-[9px]">{addBookmaker.nome}</span>
+                        </span>
                       )}
                     </SelectValue>
                   </SelectTrigger>
