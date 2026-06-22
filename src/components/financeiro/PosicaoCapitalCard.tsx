@@ -301,6 +301,7 @@ export function PosicaoCapitalCard({
           totaisBRL={resultadoPorProjeto.totaisBRL}
           loading={resultadoPorProjeto.loading}
           formatBRL={formatCurrency}
+          resultadoOperacaoBRL={resultadoOperacao}
         />
       )}
     </TooltipProvider>
