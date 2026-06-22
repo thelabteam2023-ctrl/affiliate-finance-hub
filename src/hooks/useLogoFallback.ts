@@ -26,6 +26,12 @@ const STOPWORDS = [
   'ec', 'ce', 'se', 'aa', 'aac',
 ];
 
+const GENERIC_MATCH_TOKENS = new Set([
+  'athletic', 'atletico', 'sporting', 'racing', 'central', 'united',
+  'city', 'real', 'deportivo', 'nacional', 'independiente', 'wanderers',
+  'rangers', 'rovers', 'county', 'town',
+]);
+
 const stripStopwordsAndDigits = (norm: string): string => {
   // Remove dígitos (anos como "07", "1900") e stopwords
   let s = norm.replace(/[0-9]/g, '');
@@ -48,6 +54,49 @@ interface LeagueRow {
   league_name: string;
   logo_url: string | null;
 }
+
+const pickSafeTokenLogo = (
+  queryTokens: string[],
+  candidates: Array<{ tokens: string[]; logo: string; tokenCount: number }>,
+): string | null => {
+  if (queryTokens.length === 0) return null;
+  const qSet = new Set(queryTokens);
+  const valid = candidates
+    .map((candidate) => {
+      const matchedTokens = candidate.tokens.filter((token) => qSet.has(token));
+      const matched = matchedTokens.length;
+      if (matched === 0) return null;
+      const minSide = Math.min(candidate.tokenCount, queryTokens.length);
+      if (matched < minSide) return null;
+
+      // Se o match depende de uma única palavra, ela precisa ser distintiva.
+      // Evita Athletic Club (MG) herdar Athletic Club/Bilbao apenas por "athletic".
+      if (minSide === 1) {
+        const onlyToken = matchedTokens[0];
+        if (!onlyToken || onlyToken.length < 7 || GENERIC_MATCH_TOKENS.has(onlyToken)) return null;
+      }
+
+      const ratio = matched / Math.max(candidate.tokenCount, queryTokens.length);
+      const matchedChars = matchedTokens.reduce((sum, token) => sum + token.length, 0);
+      return { logo: candidate.logo, matched, ratio, matchedChars };
+    })
+    .filter((item): item is { logo: string; matched: number; ratio: number; matchedChars: number } => !!item)
+    .sort((a, b) =>
+      b.ratio - a.ratio ||
+      b.matched - a.matched ||
+      b.matchedChars - a.matchedChars
+    );
+
+  if (valid.length === 0) return null;
+  const best = valid[0];
+  const tied = valid.filter((item) =>
+    item.ratio === best.ratio &&
+    item.matched === best.matched &&
+    item.matchedChars === best.matchedChars
+  );
+  const uniqueLogos = new Set(tied.map((item) => item.logo));
+  return uniqueLogos.size === 1 ? best.logo : null;
+};
 
 /**
  * Carrega logos cacheados (team_logos + league_logos) para um esporte
@@ -105,39 +154,37 @@ export function useLogoFallback(sport: string | null | undefined) {
     for (const t of teams) {
       if (!t.logo_url) continue;
       m.set(`${t.league_key}|${t.team_name_normalized}`, t.logo_url);
-      // Variante sem stopwords/dígitos para matching parcial
-      const stripped = stripStopwordsAndDigits(t.team_name_normalized);
-      if (stripped && stripped.length >= 3) {
-        const altKey = `${t.league_key}|@stripped|${stripped}`;
-        if (!m.has(altKey)) m.set(altKey, t.logo_url);
-      }
     }
     return m;
   }, [teams]);
 
   const teamByName = useMemo(() => {
-    const m = new Map<string, string>();
+    const grouped = new Map<string, Set<string>>();
     for (const t of teams) {
       if (!t.logo_url) continue;
-      if (!m.has(t.team_name_normalized)) m.set(t.team_name_normalized, t.logo_url);
-      const stripped = stripStopwordsAndDigits(t.team_name_normalized);
-      if (stripped && stripped.length >= 3 && !m.has(`@stripped|${stripped}`)) {
-        m.set(`@stripped|${stripped}`, t.logo_url);
-      }
+      const logos = grouped.get(t.team_name_normalized) || new Set<string>();
+      logos.add(t.logo_url);
+      grouped.set(t.team_name_normalized, logos);
+    }
+    const m = new Map<string, string>();
+    for (const [name, logos] of grouped.entries()) {
+      if (logos.size === 1) m.set(name, Array.from(logos)[0]);
     }
     return m;
   }, [teams]);
 
-  // Index por liga: lista de [normalized, stripped, logo] para fallback contains
+  // Index por liga: fallback conservador por tokens distintivos e únicos.
   const teamsByLeague = useMemo(() => {
-    const m = new Map<string, Array<{ norm: string; stripped: string; logo: string }>>();
+    const m = new Map<string, Array<{ tokens: string[]; logo: string; tokenCount: number }>>();
     for (const t of teams) {
       if (!t.logo_url) continue;
+      const tokens = tokenize(t.team_name_original || '');
+      if (tokens.length === 0) continue;
       const arr = m.get(t.league_key) || [];
       arr.push({
-        norm: t.team_name_normalized,
-        stripped: stripStopwordsAndDigits(t.team_name_normalized),
+        tokens,
         logo: t.logo_url,
+        tokenCount: tokens.length,
       });
       m.set(t.league_key, arr);
     }
