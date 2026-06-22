@@ -1,97 +1,76 @@
-## Resposta direta à dúvida
+## Objetivo
 
-> "Por que 4,80? Quem definiu? PTAX é do caixa; Cotação de Trabalho é por projeto."
+Diagnosticar (sem corrigir ainda) por que pernas Surebet compostas por 2+ casas estão renderizando apenas 1 linha no card, mesmo com o formulário salvando normalmente. Caso teste: Ponte Preta x Grêmio Novorizontino, 22/06, perna do Empate com 2 itens (Vave + outra).
 
-Você está certo, e o exemplo do plano anterior estava **mal rotulado** da minha parte. Olhando o código que está rodando:
+## Fase 0 — Reconhecimento (read-only)
 
-- `Financeiro.tsx` constrói `convertUnified` a partir de `useMultiCurrencyConversion`, que por sua vez consome `useCotacoes`. Essa fonte é **a cotação live do workspace** — FastForex como primária e **PTAX como fallback** (mesma cadeia usada pelo Caixa Operacional). Não é Cotação de Trabalho.
-- `usePosicaoCapital` recebe esse `convertUnified` e converte **tudo** (aportes, liquidações, patrimônio) na **taxa de agora**.
-- **Cotação de Trabalho é de projeto** (`ProjectCurrencyContext` / `useProjetoCurrency`) e não tem por que aparecer numa tela workspace-level como o card de Posição de Capital. O plano anterior misturou os dois conceitos — desconsidere essa parte.
+Mapear, sem editar, a topologia real do dado:
 
-Então o "4,80" do meu exemplo era genérico. Na prática quem está mandando é a **PTAX/FastForex de hoje**, aplicada igualmente aos dois lados da conta — e é justamente isso que zera artificialmente a variação cambial.
+1. **Schema (DB)**
+   - `apostas_unificada` (aposta pai) → `apostas_pernas` (1 linha por perna lógica) → `apostas_perna_entradas` (1 linha por sub-casa dentro da perna). Confirmar via `information_schema.columns` as FKs `perna_id` e a unicidade/multiplicidade.
+   - Verificar se existem registros recentes do jogo Ponte Preta x Grêmio Novorizontino e contar quantas linhas em `apostas_perna_entradas` existem para a perna do Empate.
 
----
+2. **Gravação**
+   - `src/services/aposta/ApostaService.ts` e `src/hooks/useSurebetService.ts`: caminho do "Registrar Operação" do `SurebetCompactForm` / `SurebetModalRoot`. Documentar como `entries[]` do form vira `apostas_perna_entradas`.
 
-## Regra correta de cotação por camada (oficializar)
+3. **Leitura**
+   - `src/hooks/useApostasPernas.ts`, `src/hooks/useApostasUnificada.ts`, `src/hooks/useProjetoDashboardData.ts`: identificar a query que alimenta o card (provavelmente um `select` com `apostas_pernas(*, apostas_perna_entradas(*))`). Conferir se o embed está correto e se há `.limit()` / `.single()` indevidos.
 
-| Camada | Onde vive | Cotação que manda | Por quê |
-|---|---|---|---|
-| Operação dentro de um **projeto** (apostas, P&L de surebet, bônus consolidado) | `ProjectCurrencyContext` | **Cotação de Trabalho do projeto** (snapshot por operação) | Já é padrão (`cotacao-snapshot-per-operation-standard`, `volume-snapshot-cotacao-trabalho-standard`). Isola o projeto do ruído de mercado. |
-| **Caixa Operacional / Financeiro / Posição de Capital** (visão workspace) | `useCotacoes` → FastForex + **PTAX** fallback | **PTAX** (live) para marcação a mercado **+ snapshot do evento** para valores históricos | É dinheiro real, fora de projeto. PTAX é a referência oficial e neutra do workspace. |
+4. **Mapeamento**
+   - Procurar transformações que convertem `apostas_perna_entradas` em `perna.entries` consumido pelo `SurebetCard` (referências a `entries` no hook/serviço, não apenas no componente).
 
-Cotação de Trabalho **não** entra no card de Posição de Capital. Vou deixar isso explícito no código e em memória.
+5. **Renderização**
+   - `src/components/projeto-detalhe/SurebetCard.tsx` (linhas 309, 515, 559, 774…): já itera `perna.entries?.map(...)`. Confirmar que o nome do campo bate com o produzido pelo mapeamento.
 
----
+Saída desta fase: um pequeno mapa textual "form → service → DB → query → mapper → card" com nomes exatos das funções/arquivos e shape esperado.
 
-## Plano corrigido para o card "Posição de Capital"
+## Fase 1 — Instrumentação temporária
 
-### Problema real
-Hoje aportes e patrimônio são marcados na **mesma taxa de hoje** → variação cambial passiva some, e o "Resultado Operacional Acumulado" engole esse ruído.
+Adicionar logs marcados `// TEMP-DEBUG perna-composta` (fáceis de remover via `rg`):
 
-### Solução em 3 linhas honestas
+- **Gravação** (`ApostaService`/`useSurebetService` no ramo Surebet): logar `payload.pernas` recebido e o resultado de `insert` em `apostas_pernas` + `apostas_perna_entradas` (contagem por perna).
+- **Leitura** (hook de fetch do card): logar o objeto bruto retornado pelo Supabase para a aposta-alvo, antes de qualquer transformação. Filtrar por `id` da aposta para não poluir.
+- **Mapeamento** (se houver): logar `perna.id`, `entries.length` e ids dos entries de cada perna após o reshape.
+- **Render** (`SurebetCard.tsx`, dentro do loop de pernas): logar `perna.id`, `perna.entries?.length`, e cada `entry.id`/`bookmaker`/`stake`.
 
-```text
-Patrimônio Atual (PTAX hoje)
-  ├─ Capital próprio investido (PTAX da data de cada aporte/liquidação)
-  ├─ Resultado operacional realizado (fonte canônica, sem FX)
-  └─ Variação cambial não realizada (saldo em moeda estrangeira × ΔPTAX)
-```
+Nenhuma lógica é alterada nesta fase.
 
-Identidade: `Capital_histórico + Resultado_realizado + FX_não_realizada = Patrimônio_PTAX_hoje`.
+## Fase 2 — Reprodução automatizada
 
-### Onde cada número vem
+Sem pedir input manual:
 
-1. **Capital próprio investido (histórico)**
-   - Fonte: `cash_ledger` (APORTE / APORTE_FINANCEIRO / APORTE_DIRETO / LIQUIDACAO), CONFIRMADO.
-   - Conversão: usar o **valor consolidado já gravado** no evento (snapshot do dia). Fallback: PTAX da `data_transacao` via `exchange_rate_history`. Último recurso: PTAX de hoje (marcar como aproximado no tooltip).
-   - **Não usar `convertUnified` (taxa de hoje) para esse valor.**
+1. **Reprodução por API**: usando o mesmo `ApostaService` (não SQL direto), criar via script Node/Playwright uma operação Surebet 3 pernas onde a perna 2 tem 2 entries em casas diferentes — espelhando o caso real (mesma estrutura de mercado 1-X-2, valores plausíveis).
+2. Ler de volta pelo mesmo hook que o card usa.
+3. Capturar todos os logs da Fase 1 ponta a ponta.
+4. **Comparação com dado legado**: rodar a mesma leitura contra a aposta real Ponte Preta x Novorizontino (id já existente em produção/preview) e contra qualquer surebet antiga com perna composta encontrada via `SELECT perna_id, count(*) FROM apostas_perna_entradas GROUP BY perna_id HAVING count(*) > 1`. Isso isola se a regressão é de gravação (só novas) ou de leitura/render (todas).
 
-2. **Resultado operacional realizado**
-   - Reusar a fonte canônica que já alimenta a Visão Geral (`fetchProjetosLucroCanonico` / RPC equivalente) agregada no nível workspace.
-   - Já exclui GANHO/PERDA_CAMBIAL (memória `canonical-operational-profit-standard`).
-   - Sempre acumulado.
+## Fase 3 — Análise comparativa
 
-3. **Variação cambial não realizada**
-   - Calculada por diferença: `Patrimônio_PTAX_hoje − Capital_histórico − Resultado_realizado`.
-   - Tooltip: "Efeito de reavaliar saldos em moeda estrangeira pela PTAX de hoje. Só vira ganho/prejuízo de verdade quando a moeda volta para BRL."
-   - Se o workspace é 100% BRL nativo, fica ~0 e pode ser ocultada por threshold (ex.: > 0,1% do patrimônio).
+Comparar, etapa por etapa, em qual ponto o segundo entry desaparece. Hipóteses prioritárias:
 
-4. **Freebet em estoque** — segue como linha informativa, fora da soma (já corrigido o label).
+- Query Supabase com embed errado (ex.: `apostas_perna_entradas` faltando, ou aliasado num nome que o mapper não lê).
+- Mapper sobrescrevendo `entries` em loop (`obj[key] = e` em vez de `array.push`) ou agrupando por `bookmaker_id` e colapsando duplicatas.
+- `.single()`/`.maybeSingle()` no relacionamento, ou RLS escondendo a segunda linha (ex.: política em `apostas_perna_entradas` filtrando por workspace de forma incompleta).
+- Migração recente que renomeou coluna/relacionamento sem atualizar a query.
+- Cache do React Query servindo shape antigo (`invalidateCanonicalCaches`).
 
-### ROI do rodapé
-Passa a usar a base histórica:
-`ROI = Resultado Operacional Realizado / Capital Próprio Investido (histórico)` — para de oscilar quando a PTAX muda.
+Apoiar cada hipótese com `git log -p` / `git blame` nos arquivos identificados na Fase 0 (queries de `apostas_perna_entradas`, `useApostasPernas`, `SurebetCard.tsx`).
 
----
+## Fase 4 — Diagnóstico (checkpoint — sem corrigir)
 
-## Detalhes técnicos
+Entregar relatório com:
 
-**Arquivos**
-- `src/hooks/usePosicaoCapital.ts`
-  - Ler também `valor_consolidado` / `cotacao_snapshot` (ou equivalente PTAX-no-dia) do `cash_ledger`.
-  - Retornar duas séries de capital: `capitalHistorico` (snapshot) e `capitalMarkToMarket` (PTAX hoje — para diagnóstico).
-  - Remover dependência de `convertUnified` para o número exibido; manter só como fallback.
-- Novo `src/hooks/useResultadoOperacionalWorkspace.ts` (ou reuso direto de `fetchProjetosLucroCanonico` agregando todos os projetos do workspace).
-- `src/components/financeiro/PosicaoCapitalCard.tsx`
-  - 3 linhas no bloco "Composição do Patrimônio Atual": Capital (histórico) / Resultado realizado / FX não realizada.
-  - Atualizar tooltips deixando claro: "valores históricos = PTAX da data; patrimônio = PTAX de hoje; a diferença é FX não realizada".
-  - Recalcular ROI com as novas bases.
-  - Manter o toggle Acumulado/Período do bloco superior intocado.
-- `src/pages/Financeiro.tsx`: passar `cotacaoUSD` (PTAX live) e o agregador de resultado operacional ao hook; não passar mais `convertUnified` como cotação primária.
+1. Camada exata onde os entries somem (gravação | leitura | mapper | render).
+2. Logs concretos comprovando (números: entries persistidos vs entries retornados vs entries renderizados).
+3. Commit/PR suspeito identificado por `git blame`.
+4. Proposta de correção e se exige backfill de dados já gravados de forma incorreta.
+5. Lista exata dos `// TEMP-DEBUG perna-composta` a remover quando aprovado.
 
-**Não muda**
-- Engine de bookmakers, ledger, RPCs.
-- Cotação de Trabalho continua isolada nos projetos.
-- Caixa Operacional, KPIs da Visão Geral.
+**Aguardar aprovação antes de qualquer alteração de lógica de gravação/leitura.**
 
-**Memórias a registrar depois de aprovado**
-- `mem://finance/workspace-financial-fx-rate-standard` — "Telas workspace-level usam PTAX (live para marcação a mercado, PTAX-no-dia para histórico). Cotação de Trabalho é exclusiva de projeto."
-- `mem://finance/posicao-capital-fx-decomposition-standard` — "Patrimônio = Capital histórico + Resultado realizado + FX não realizada."
+## Regras
 
----
-
-## Confirmações antes de implementar
-
-1. PTAX como referência oficial do workspace está OK? (alternativa: usar FastForex primário e PTAX só como fallback, igual hoje — mas com snapshot por data para o histórico).
-2. Para o capital histórico, posso assumir que o `cash_ledger` já tem `valor_consolidado`/`cotacao_snapshot` confiáveis para aportes/liquidações antigos? Se não tiver para registros legados, faço fallback para PTAX da `data_transacao` via `exchange_rate_history`.
-3. Ocultar a linha de "Variação cambial" quando estiver ~0 (workspace 100% BRL), ou sempre exibir mesmo zerada?
+- Nenhuma escrita em `apostas_pernas`/`apostas_perna_entradas` fora do `ApostaService` real.
+- Reprodução 100% automatizada (script + Playwright se necessário).
+- Não avançar para correção sem o checkpoint da Fase 4 aprovado.
+- Logs temporários todos marcados `// TEMP-DEBUG perna-composta` para remoção via `rg -l`.
