@@ -40,6 +40,7 @@ import { useCapitalEmDisputa } from "@/hooks/useCapitalEmDisputa";
 import { PosicaoCapitalCard } from "@/components/financeiro/PosicaoCapitalCard";
 import { usePosicaoCapital } from "@/hooks/usePosicaoCapital";
 import { PosicaoCapitalCarousel } from "@/components/financeiro/PosicaoCapitalCarousel";
+import { useResultadoPorProjeto } from "@/hooks/useResultadoPorProjeto";
 import { Wallet, TrendingUp, Percent, Coins } from "lucide-react";
 import { ParticipacaoInvestidoresTab } from "@/components/financeiro/ParticipacaoInvestidoresTab";
 import { MultiCurrencyWarningBanner } from "@/components/financeiro/MultiCurrencyIndicator";
@@ -240,6 +241,20 @@ export default function Financeiro() {
       ),
     [finData.bookmakersSaldos, convertUnified]
   );
+
+  // Resultado por projeto (origem do Lucro Operacional + Realizado + Exposto)
+  const resultadoPorProjeto = useResultadoPorProjeto({
+    workspaceId: workspaceId || null,
+    cotacoesOficiais: {
+      USD: cotacaoUSD,
+      EUR: cotacaoEUR,
+      GBP: cotacaoGBP,
+      MYR: cotacaoMYR,
+      MXN: cotacaoMXN,
+      ARS: cotacaoARS,
+      COP: cotacaoCOP,
+    },
+  });
 
   // Label de período para o KpiRail
   const periodLabel = useMemo(() => {
@@ -518,6 +533,11 @@ export default function Financeiro() {
                                 saldoFreebet={saldoFreebetTotal}
                                 formatCurrency={calc.formatCurrency}
                                 periodLabel={periodLabel}
+                                resultadoPorProjeto={{
+                                  items: resultadoPorProjeto.items,
+                                  totaisBRL: resultadoPorProjeto.totaisBRL,
+                                  loading: resultadoPorProjeto.loading,
+                                }}
                               />
                             ),
                           },
