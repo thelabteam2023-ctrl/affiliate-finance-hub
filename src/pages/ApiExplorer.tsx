@@ -312,10 +312,10 @@ export default function ApiExplorer() {
   };
 
   const handleSyncSofascore = async () => {
-    if (!window.confirm('Sincronizar via Sofascore (API direta, sem custo). Continuar?')) return;
+    if (!window.confirm('Sincronizar via TheSportsDB (gratuito, sem custo). Continuar?')) return;
     setSyncingSofa(true);
     try {
-      const { data, error } = await supabase.functions.invoke('sofascore-sync', {
+      const { data, error } = await supabase.functions.invoke('thesportsdb-sync', {
         body: {
           sports: ['soccer', 'basketball', 'tennis', 'baseball', 'americanfootball', 'icehockey'],
         },
@@ -327,11 +327,11 @@ export default function ApiExplorer() {
         .join(' · ') || 'sem itens';
       const errs = Array.isArray(data?.fetch_errors) ? data.fetch_errors.length : 0;
       toast.success(
-        `Sofascore: ${data?.items_upserted ?? 0} eventos (${breakdown})${errs ? ` · ${errs} erro(s) de fetch` : ''}.`,
+        `TheSportsDB: ${data?.items_upserted ?? 0} eventos (${breakdown})${errs ? ` · ${errs} erro(s) de fetch` : ''}.`,
       );
       loadData();
     } catch (err: any) {
-      toast.error(`Sofascore sync falhou: ${err?.message ?? err}`);
+      toast.error(`TheSportsDB sync falhou: ${err?.message ?? err}`);
     } finally {
       setSyncingSofa(false);
     }
