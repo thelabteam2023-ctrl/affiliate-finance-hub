@@ -5135,6 +5135,32 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Camada A: confirmação de colapso multi-casa → LAY */}
+      <ConfirmLayCollapseDialog
+        open={layCollapseDialogOpen}
+        entriesToRemove={additionalEntries.map<LayCollapseEntryPreview>((e) => {
+          const bk = bookmakers.find((b: any) => b.id === e.bookmaker_id);
+          const stakeNum = parseFloat(e.stake) || 0;
+          const moeda = (bk?.moeda as string) || "BRL";
+          const symbols: Record<string, string> = { BRL: "R$", USD: "$", EUR: "€", GBP: "£" };
+          return {
+            id: e.id,
+            bookmaker_nome: bk?.nome || "(casa não selecionada)",
+            odd: e.odd || null,
+            stake_formatado: stakeNum > 0
+              ? `${symbols[moeda] || moeda} ${stakeNum.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              : undefined,
+          };
+        })}
+        remainingBookmakerNome={bookmakers.find((b: any) => b.id === bookmakerId)?.nome}
+        onCancel={() => setLayCollapseDialogOpen(false)}
+        onConfirm={() => {
+          setAdditionalEntries([]);
+          setTipoOperacaoExchange("lay");
+          setLayCollapseDialogOpen(false);
+        }}
+      />
     </>
   );
 }
