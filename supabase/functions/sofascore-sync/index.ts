@@ -8,10 +8,20 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const ACTOR = "azzouzana~sofascore-scraper-pro";
-const COST_PER_ITEM_USD = 0.0005; // estimativa conservadora (placeholder)
-const HARD_RUN_CAP_USD = 0.5;
-const DAILY_CAP_USD = 1.0;
+// Direct call to Sofascore internal API (no Apify, no per-item cost).
+// Endpoint: https://api.sofascore.com/api/v1/sport/{slug}/scheduled-events/{YYYY-MM-DD}
+const SOFA_BASE = "https://api.sofascore.com/api/v1";
+const MAX_REQUESTS_PER_RUN = 60; // safety cap (sports x dates)
+
+// Our internal sport id  ->  Sofascore URL slug
+const SOFA_SLUG: Record<string, string> = {
+  soccer: "football",
+  basketball: "basketball",
+  tennis: "tennis",
+  baseball: "baseball",
+  americanfootball: "american-football",
+  icehockey: "ice-hockey",
+};
 
 const SPORT_MAP: Record<string, string> = {
   football: "soccer",
@@ -114,6 +124,7 @@ interface NormalizedEvent {
 function normalize(item: any): NormalizedEvent | null {
   // Sport
   const rawSport = pick<string>(item, [
+    "__sport",
     "sport",
     "tournament.sport.slug",
     "tournament.category.sport.slug",
@@ -261,14 +272,6 @@ Deno.serve(async (req: Request) => {
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const APIFY_TOKEN = Deno.env.get("APIFY_TOKEN");
-
-  if (!APIFY_TOKEN) {
-    return new Response(
-      JSON.stringify({ error: "APIFY_TOKEN não configurado" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
-  }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false },
@@ -292,45 +295,36 @@ Deno.serve(async (req: Request) => {
   const sports: string[] = Array.isArray(body?.sports) && body.sports.length
     ? body.sports
     : ["soccer", "basketball", "tennis", "baseball", "americanfootball", "icehockey"];
-  const rawMax = Number(body?.maxItems ?? 200);
-  const maxItems = Math.max(10, Math.min(500, isNaN(rawMax) ? 200 : rawMax));
 
-  // Cap diário acumulado
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { data: recent } = await supabase
-    .from("sofascore_sync_runs")
-    .select("cost_usd")
-    .gte("started_at", since);
-  const spent = (recent ?? []).reduce(
-    (s: number, r: any) => s + Number(r.cost_usd || 0), 0,
-  );
-  if (spent >= DAILY_CAP_USD) {
+  // Datas alvo (default: hoje e amanhã em America/Sao_Paulo)
+  function brtDate(offsetDays = 0): string {
+    const d = new Date(Date.now() + offsetDays * 86400000);
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Sao_Paulo",
+      year: "numeric", month: "2-digit", day: "2-digit",
+    }).format(d);
+  }
+  const dates: string[] = Array.isArray(body?.dates) && body.dates.length
+    ? body.dates.filter((d: any) => typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d))
+    : [brtDate(0), brtDate(1)];
+
+  // Resolver slugs Sofascore
+  const sofaPairs: { sport: string; slug: string }[] = [];
+  for (const sp of sports) {
+    const slug = SOFA_SLUG[sp];
+    if (slug) sofaPairs.push({ sport: sp, slug });
+  }
+  if (sofaPairs.length === 0) {
     return new Response(JSON.stringify({
-      error: "Daily cap atingido",
-      spent_usd: spent,
-      cap_usd: DAILY_CAP_USD,
-    }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      error: "Nenhum esporte válido",
+      supported: Object.keys(SOFA_SLUG),
+    }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
-  // Carregar seeds habilitadas
-  const { data: seedsRows, error: seedsErr } = await supabase
-    .from("sofascore_seeds")
-    .select("sport, start_url")
-    .eq("enabled", true)
-    .in("sport", sports);
-  if (seedsErr) {
-    return new Response(JSON.stringify({ error: seedsErr.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
-  // O actor exige array de STRINGS (editor: stringList)
-  const startUrls = (seedsRows ?? []).map((s: any) => s.start_url);
-  if (startUrls.length === 0) {
+  const totalRequests = sofaPairs.length * dates.length;
+  if (totalRequests > MAX_REQUESTS_PER_RUN) {
     return new Response(JSON.stringify({
-      error: "Nenhuma seed habilitada para os esportes solicitados",
-      requested_sports: sports,
+      error: `Limite de ${MAX_REQUESTS_PER_RUN} requisições por run excedido (${totalRequests}). Reduza dates ou sports.`,
     }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
@@ -340,7 +334,7 @@ Deno.serve(async (req: Request) => {
     .insert({
       status: "running",
       triggered_by: triggeredBy,
-      params: { sports, maxItems, seedsCount: startUrls.length },
+      params: { sports, dates, requests: totalRequests, mode: "direct-api" },
     })
     .select("id")
     .single();
@@ -352,60 +346,56 @@ Deno.serve(async (req: Request) => {
   }
   const runId = runIns!.id as string;
 
-  // Chamar Apify (run-sync-get-dataset-items)
-  const apifyUrl =
-    `https://api.apify.com/v2/acts/${ACTOR}/run-sync-get-dataset-items?token=${APIFY_TOKEN}&clean=1`;
+  // Buscar Sofascore (paralelo, com headers de browser)
+  const sofaHeaders = {
+    "User-Agent":
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
+    "Referer": "https://www.sofascore.com/",
+    "Origin": "https://www.sofascore.com",
+  };
 
-  let items: any[] = [];
-  try {
-    const resp = await fetch(apifyUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ startUrls, maxItems }),
-    });
-    if (!resp.ok) {
-      const text = await resp.text();
-      await supabase.from("sofascore_sync_runs").update({
-        status: "error",
-        error: `Apify HTTP ${resp.status}: ${text.slice(0, 500)}`,
-        finished_at: new Date().toISOString(),
-      }).eq("id", runId);
-      return new Response(JSON.stringify({
-        run_id: runId,
-        error: `Apify HTTP ${resp.status}`,
-        details: text.slice(0, 500),
-      }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  const tasks: Promise<{ sport: string; date: string; events: any[]; error?: string }>[] = [];
+  for (const { sport, slug } of sofaPairs) {
+    for (const date of dates) {
+      tasks.push((async () => {
+        const url = `${SOFA_BASE}/sport/${slug}/scheduled-events/${date}`;
+        try {
+          const r = await fetch(url, { headers: sofaHeaders });
+          if (!r.ok) {
+            const t = await r.text();
+            return { sport, date, events: [], error: `HTTP ${r.status}: ${t.slice(0, 200)}` };
+          }
+          const j = await r.json();
+          const events: any[] = Array.isArray(j?.events) ? j.events : [];
+          // injeta sport para a normalização
+          for (const ev of events) ev.__sport = sport;
+          return { sport, date, events };
+        } catch (e: any) {
+          return { sport, date, events: [], error: e?.message ?? String(e) };
+        }
+      })());
     }
-    items = await resp.json();
-    if (!Array.isArray(items)) items = [];
-  } catch (e: any) {
-    await supabase.from("sofascore_sync_runs").update({
-      status: "error",
-      error: `fetch failed: ${e?.message ?? String(e)}`,
-      finished_at: new Date().toISOString(),
-    }).eq("id", runId);
-    return new Response(JSON.stringify({ run_id: runId, error: String(e?.message ?? e) }), {
-      status: 502,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
   }
 
-  const costEstimate = Math.min(
-    items.length * COST_PER_ITEM_USD,
-    HARD_RUN_CAP_USD,
-  );
+  const results = await Promise.all(tasks);
+  const fetchErrors = results.filter((r) => r.error).map((r) => ({
+    sport: r.sport, date: r.date, error: r.error,
+  }));
+  const items: any[] = results.flatMap((r) => r.events);
 
   // Persistir raw (batched)
   if (items.length) {
     const rawRows = items.map((it) => ({
       source_run_id: runId,
-      sport: normalizeSport(pick<string>(it, [
-        "sport", "tournament.sport.slug", "category.sport.slug",
+      sport: normalizeSport(it.__sport ?? pick<string>(it, [
+        "tournament.category.sport.slug", "tournament.sport.slug",
       ])),
       unique_tournament_id: pick<number>(it, [
-        "uniqueTournament.id", "tournament.uniqueTournament.id",
+        "tournament.uniqueTournament.id", "uniqueTournament.id",
       ]) ?? null,
-      event_id: pick<number>(it, ["event.id", "id", "eventId"]) ?? null,
+      event_id: pick<number>(it, ["id", "event.id"]) ?? null,
       payload: it,
     }));
     // chunk de 500
@@ -438,7 +428,7 @@ Deno.serve(async (req: Request) => {
         items_fetched: items.length,
         items_upserted: upserted,
         by_sport: bySport,
-        cost_usd: costEstimate,
+        cost_usd: 0,
         finished_at: new Date().toISOString(),
       }).eq("id", runId);
       return new Response(JSON.stringify({
@@ -450,21 +440,25 @@ Deno.serve(async (req: Request) => {
   }
 
   await supabase.from("sofascore_sync_runs").update({
-    status: "success",
+    status: fetchErrors.length === results.length ? "error" : "success",
     items_fetched: items.length,
     items_upserted: upserted,
     by_sport: bySport,
-    cost_usd: costEstimate,
+    cost_usd: 0,
+    error: fetchErrors.length ? JSON.stringify(fetchErrors).slice(0, 1000) : null,
     finished_at: new Date().toISOString(),
   }).eq("id", runId);
 
   return new Response(JSON.stringify({
     run_id: runId,
+    mode: "direct-api",
+    dates,
+    sports: sofaPairs.map((p) => p.sport),
+    requests: totalRequests,
     items_fetched: items.length,
     items_upserted: upserted,
     by_sport: bySport,
-    cost_estimate_usd: costEstimate,
-    daily_spent_usd: spent + costEstimate,
-    daily_cap_usd: DAILY_CAP_USD,
+    fetch_errors: fetchErrors,
+    cost_usd: 0,
   }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 });
