@@ -35,6 +35,7 @@ import {
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
 import { groupPernasBySelecao } from "@/utils/groupPernasBySelecao";
 import { publishTabRender } from "@/utils/integrityProbe";
+import { probeReadByTab } from "@/utils/surebetLifecycleProbe";
 import { SurebetDialog } from "./SurebetDialog";
 import { apostaMatchesBookmakerFilter, apostaMatchesParceiroFilter } from "@/utils/apostaFilterHelpers";
 import { ApostaPernasResumo, ApostaPernasInline, Perna } from "./ApostaPernasResumo";
@@ -825,6 +826,12 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       });
       
       setSurebets(surebetsFormatadas);
+      probeReadByTab({
+        tab: "ProjetoApostasTab.fetchSurebets",
+        projetoId,
+        apostaIdsRaw: (allSurebetData || []).map((a: any) => a.id),
+        apostaIdsMapped: surebetsFormatadas.map((a: any) => a.id),
+      });
     } catch (error: any) {
       console.error("Erro ao carregar surebets:", error.message);
     }
