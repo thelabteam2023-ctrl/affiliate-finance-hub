@@ -459,6 +459,22 @@ export default function ApiExplorer() {
 
       </div>
 
+      {/* QUALITY KPIs */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="rounded-xl border border-border/40 bg-card px-4 py-3">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Partidas no catálogo</div>
+          <div className="text-2xl font-black tabular-nums mt-1">{stats.total}</div>
+        </div>
+        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3">
+          <div className="text-[10px] uppercase tracking-wider text-emerald-500/80 font-bold">Com logos completos</div>
+          <div className="text-2xl font-black tabular-nums mt-1 text-emerald-500">{stats.withLogos}</div>
+        </div>
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+          <div className="text-[10px] uppercase tracking-wider text-amber-500/80 font-bold">Logos faltando</div>
+          <div className="text-2xl font-black tabular-nums mt-1 text-amber-500">{stats.withoutLogos}</div>
+        </div>
+      </div>
+
       {/* NAVIGATION TABS */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-center gap-1 bg-muted/30 p-1.5 rounded-2xl w-fit border border-border/10 backdrop-blur-sm">
