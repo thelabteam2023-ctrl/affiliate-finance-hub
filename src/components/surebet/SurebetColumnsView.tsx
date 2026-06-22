@@ -135,7 +135,8 @@ export function SurebetColumnsView({
           const hasInsufficientBalance = insufficientLegs.includes(pernaIndex);
           const additionalEntries = entry.additionalEntries || [];
           const totalEntries = 1 + additionalEntries.length;
-          const canAddMore = totalEntries < 5;
+          const isLayLeg = ((entry as any).tipo ?? 'back') === 'lay';
+          const canAddMore = totalEntries < 5 && !isLayLeg;
 
           return (
             <div 
