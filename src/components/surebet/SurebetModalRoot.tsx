@@ -309,6 +309,11 @@ export function SurebetModalRoot({
   
   const [arredondarAtivado, setArredondarAtivado] = useState(true);
   const [arredondarValor, setArredondarValor] = useState("1");
+  const [layCollapseRequest, setLayCollapseRequest] = useState<{
+    pernaIndex: number;
+    entriesPreview: LayCollapseEntryPreview[];
+    remainingBookmakerNome?: string;
+  } | null>(null);
   const [showComissao, setShowComissao] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return window.localStorage?.getItem('surebet_show_comissao') === '1';
