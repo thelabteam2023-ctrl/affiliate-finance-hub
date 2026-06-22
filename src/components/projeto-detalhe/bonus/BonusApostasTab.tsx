@@ -1163,6 +1163,10 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
                 bookmaker_id: p.bookmaker_id,
                 moeda: p.moeda || 'BRL',
                 fonte_saldo: p.fonte_saldo || null,
+                // Multi-bookmaker (perna composta): propagar entries/odd_media/stake_total
+                entries: p.entries,
+                odd_media: p.odd_media,
+                stake_total: p.stake_total,
               }))
             ),
           };
