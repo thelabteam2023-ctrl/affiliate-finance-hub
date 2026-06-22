@@ -127,7 +127,17 @@ function normalize(ev: any): NormalizedEvent | null {
 
   const leagueName: string = ev.strLeague ?? "—";
   const leagueId: string | null = ev.idLeague ?? null;
-  const country: string | null = ev.strCountry ?? null;
+  const rawCountry: string | null = ev.strCountry ?? null;
+  const competition_type = inferCompetitionType(leagueName);
+
+  // Competições continentais/mundiais não pertencem ao país-sede.
+  // Forçamos continente "Internacional" e país nulo para evitar
+  // mostrar a Copa do Mundo dentro de "América do Norte".
+  const isContinental = competition_type === "continental";
+  const country = isContinental ? null : rawCountry;
+  const continent = isContinental
+    ? "Internacional"
+    : (rawCountry ? COUNTRY_TO_CONTINENT[rawCountry] ?? null : null);
 
   return {
     api_id: `thesportsdb_${eventId}`,
@@ -135,9 +145,9 @@ function normalize(ev: any): NormalizedEvent | null {
     league_key: `thesportsdb_${leagueId ?? `${sport}_${leagueName}`}`,
     league_name: leagueName,
     league_flag: null,
-    continent: country ? COUNTRY_TO_CONTINENT[country] ?? null : null,
+    continent,
     country,
-    competition_type: inferCompetitionType(leagueName),
+    competition_type,
     home_team: home,
     away_team: away,
     home_team_logo: ev.strHomeTeamBadge ?? null,
