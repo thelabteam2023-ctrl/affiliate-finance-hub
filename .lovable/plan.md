@@ -1,84 +1,107 @@
 
-# Plano de Investigação — Actor `azzouzana/sofascore-scraper-pro`
+# Plano — Sofascore como fonte interna do Explorador de Dados
 
-Objetivo: produzir um relatório técnico factual sobre o que esse actor entrega para tênis, sem escrever código de produção e gastando o mínimo possível de itens (pay-per-result).
+## Diagnóstico atual (confirmado no banco)
 
-## 0. Pré-requisitos e guardrails
+- Página: `src/pages/ApiExplorer.tsx` ("Explorador de Dados Esportivos v2"). Ela já **lê apenas da nossa tabela** `public.daily_events` — não bate na API durante a navegação. O princípio "API → tabela nossa → UI" já está correto na leitura.
+- Ingestor atual: edge function `supabase/functions/api-monitor` usando **The Odds API + API-Sports** (não o Sofascore/Apify novo). Lista hard-coded de ~15 ligas.
+- Estado da tabela `daily_events` (499 linhas no total):
+  - Hoje (22/06/2026): apenas **4 soccer + 9 baseball**. Zero tênis, basquete, hóquei, F. Americano.
+  - Distribuição histórica: soccer 229, americanfootball 139, tennis 74 (só 25–27/05), baseball 51, basketball 4, icehockey 2.
+- Causa raiz do "nada carrega": o ingestor antigo só popula as ligas que ele conhece, com janela curta, e não cobre os esportes da tela. Não é bug de filtro — é **gap de ingestão**.
 
-- Token: ler exclusivamente de `APIFY_API_TOKEN` já configurado nos secrets do projeto. Validar com `fetch_secrets`. Se ausente, parar e pedir ao usuário para adicionar via `add_secret` (sem expor valor).
-- Nunca logar, ecoar ou incluir o token em arquivos, outputs, prints ou no relatório final. Em qualquer `curl`, usar `-H "Authorization: Bearer $APIFY_API_TOKEN"` direto no shell, sem interpolar em strings que serão exibidas.
-- Tudo roda em script local descartável (`/tmp/apify-investigacao.ts` via bun). Nada é commitado no projeto.
-- Hard cap de custo: máximo ~40 itens consumidos no total da investigação (3 runs × ~10–15 itens). Antes de cada chamada, confirmar `maxItems`/`maxResults`/`maxRequestsPerCrawl` no menor valor que o schema permitir.
-- Modo síncrono (`run-sync-get-dataset-items`) para cada chamada, para inspecionar resultado imediatamente sem deixar runs órfãos.
+## Objetivo
 
-## 1. Descobrir schema e contrato do actor
+1. Trazer eventos do **Sofascore (actor `azzouzana/sofascore-scraper-pro` no Apify)** para uma tabela nossa (staging), com escopo amplo (futebol + tênis + basquete + NFL + MLB + NHL).
+2. Materializar em `daily_events` (já consumida pelo Explorador) via UPSERT idempotente, sem quebrar nada que hoje lê dela.
+3. Manter os filtros (Esporte/País/Liga) lendo da nossa tabela, com cobertura real de todos os esportes.
+4. Controle de custo: cap por chamada, sem polling automático nesta fase.
 
-Chamadas read-only à Apify API (custo zero — não disparam runs):
+## Arquitetura proposta
 
-1. `GET /v2/acts/azzouzana~sofascore-scraper-pro` — metadados gerais, pricing model, default run options.
-2. `GET /v2/acts/azzouzana~sofascore-scraper-pro/builds/default` — extrair:
-   - `data.actorDefinition.input` (inputSchema completo: campos, tipos, enums, defaults, required).
-   - `data.actorDefinition.storages.dataset` (schema de saída, se declarado).
-   - `data.actorDefinition.readme` (texto integral).
-3. Salvar respostas cruas em `/tmp/apify-schema.json` e `/tmp/apify-readme.md` para citação literal no relatório.
+```text
+Apify (Sofascore actor)
+        │  run sync (com maxItems)
+        ▼
+edge fn  sofascore-sync   ── chama Apify, normaliza, faz UPSERT
+        │
+        ├─► public.sofascore_events_raw    (staging cru, auditável)
+        └─► public.daily_events            (consumida pelo Explorador)
+                       │
+                       ▼
+              ApiExplorer.tsx (já existente)
+              ExploradorEventoPicker (formulário Surebet)
+```
 
-Critérios a marcar já nesta etapa:
-- Existe enum de `sport` com valor `tennis`?
-- Existe campo `tour` / `category` / `tier` / `circuit` / `level` no input?
-- O actor aceita URLs do Sofascore como entrada (modo "startUrls")?
-- Pricing por item (USD/1000 results) e limite default.
+Nada na UI consulta a API externa. A UI só lê das tabelas locais.
 
-## 2. Três runs de teste mínimos
+## Etapas
 
-Ordem deliberada: do mais barato/específico ao mais amplo. Parar cedo se uma run já responder todas as perguntas.
+### 1. Tabelas (migration)
+- Nova `public.sofascore_events_raw`: payload bruto (jsonb) + `source_run_id`, `actor_id`, `fetched_at`, `sport`, `unique_tournament_id`, `event_id`. Serve como auditoria e fonte de reprocessamento sem refazer chamadas pagas.
+- Nova `public.sofascore_sync_runs`: id, status, cost_usd, items_fetched, started_at, finished_at, params (jsonb), error. Visível no header do Explorador.
+- Em `public.daily_events`: adicionar colunas opcionais `source` ('odds_api' | 'api_sports' | 'sofascore') e `external_ids jsonb` (para guardar `uniqueTournament.id`, `event.id`, etc.). Sem mexer no shape lido hoje.
+- GRANTs e RLS: leitura para `authenticated`, escrita só `service_role` (ingestor roda no edge function).
+- Índices: `(sport, event_date)`, `(unique_tournament_id)`, `(source, fetched_at desc)`.
 
-| # | Objetivo | Entrada provável (ajustar ao schema real) | Cap |
-|---|---|---|---|
-| A | Torneio ATP Grand Slam conhecido | `startUrls`: URL Sofascore de Wimbledon ATP (temporada atual) | `maxItems: 10` |
-| B | Torneio WTA Grand Slam conhecido | `startUrls`: URL Sofascore de US Open WTA | `maxItems: 10` |
-| C | Tênis genérico sem filtro | `sport: "tennis"` (ou modo de listagem do dia) | `maxItems: 15` |
+### 2. Edge function `sofascore-sync`
+- Input: `{ sports: string[], days: number (1..3), maxItems: number (cap, default 200) }`.
+- Lê secret `APIFY_TOKEN` (a ser cadastrado).
+- Monta `startUrls` a partir de uma tabela de seeds por esporte (próximo item).
+- Chama o actor com `maxItems` sempre presente; aborta e reporta se acumulado da run estimado > USD 0.50.
+- Salva payload em `sofascore_events_raw`, normaliza para `daily_events` com UPSERT por `(source, external_ids->>'event_id')`.
+- Resposta: `{ run_id, items, cost_estimate_usd, by_sport: {...} }`.
 
-Endpoint: `POST /v2/acts/azzouzana~sofascore-scraper-pro/run-sync-get-dataset-items?token=...&timeout=120`. Salvar cada response em `/tmp/apify-run-{A,B,C}.json`.
+### 3. Seeds de cobertura (tabela `sofascore_seeds`)
+- Linhas configuráveis: `sport`, `label`, `start_url`, `enabled`. Bootstrap inicial:
+  - Futebol: agenda global de hoje/amanhã + top ligas (BR, EPL, LaLiga, Serie A, Bundesliga, Ligue 1, Champions, Libertadores).
+  - Tênis: ATP, WTA, Challenger, ITF (agenda do dia).
+  - Basquete: NBA + EuroLeague.
+  - NFL, MLB, NHL (quando em temporada).
+- Permite ligar/desligar cada seed sem deploy.
 
-Se o schema do passo 1 já expuser `tour`/`category` como enum (`ATP`/`WTA`/`ITF`/`Challenger`), reduzir run C para 5 itens — não precisa de amostra grande.
+### 4. Normalização Sofascore → `daily_events`
+Mapeamento determinístico:
+- `sport` ← mapa do actor (football→soccer, american-football→americanfootball, etc).
+- `event_date` ← `startTimestamp` → data em America/Sao_Paulo.
+- `commence_time` ← `startTimestamp` (UTC).
+- `home_team`, `away_team`, `home_team_logo`, `away_team_logo`.
+- `league_name` ← `uniqueTournament.name`.
+- `league_key` ← `sofascore_<uniqueTournament.id>`.
+- `league_logo`, `league_flag`.
+- `country` ← `category.name` (com normalização que já existe em `exploradorFilters.ts`).
+- `continent` ← derivado por mapa país→continente (utilitário pequeno).
+- `competition_type` ← heurística por nome ('cup'|'continental'|'league').
+- `status` ← mapa Sofascore → {scheduled, live, finished}.
+- `external_ids` ← `{ sofascore_event_id, unique_tournament_id, category_id }`.
+- `source = 'sofascore'`.
 
-## 3. Perguntas a responder com evidência do JSON real
+### 5. UI no Explorador (mínima, opcional nesta fase)
+- Botão **"Sincronizar Jogos (Sofascore)"** ao lado do botão atual, chamando `sofascore-sync` com `{ sports: [...selecionados], days: 2, maxItems: 200 }`.
+- Card de "Última sincronização Sofascore" com `cost_usd`, `items`, `by_sport` da última run.
+- Filtros laterais continuam como estão — passam a ter dados de todos os esportes porque a tabela estará populada.
+- Nada de chamada direta à Apify a partir do browser (sempre via edge function).
 
-Para cada uma, citar o caminho do campo (`a.b.c`) e exemplo de valor:
+### 6. Segurança e custo
+- `APIFY_TOKEN` cadastrado via Lovable Cloud (nunca exposto ao client). Vou solicitar o secret antes da implementação.
+- Toda chamada do actor passa `maxItems`. Hard cap por run: 500 itens.
+- Hard cap acumulado por dia (controle simples em `sofascore_sync_runs`): USD 1,00. Acima disso, função retorna erro.
+- Sem cron automático nesta fase — disparo manual pelo botão. Cron entra em fase seguinte, depois de validarmos custo real.
 
-1. Campo explícito de tour/categoria (`category` / `tournament.category` / `uniqueTournament.category` etc.) com valores `ATP`/`WTA`? Ou implícito no nome?
-2. Campo que distingue Grand Slam (`tier`, `tournament_type`, `level`, `groundType`)?
-3. ID estável de torneio (provável `uniqueTournament.id` do Sofascore) utilizável como whitelist?
-4. Run C inclui ITF / Challenger / juniores misturados? Listar o que apareceu.
-5. Algum input nativo filtra por tour/circuito (mesmo não documentado no README, visível no enum do inputSchema)?
-6. Logos/imagens de jogador e de torneio presentes em tênis (`homeTeam.logo`, `tournament.image`, `uniqueTournament.logo`)? Ou só em outros esportes?
+### 7. Validação
+- Após primeira sync manual: conferir `SELECT sport, count(*) FROM daily_events WHERE source='sofascore' AND event_date=CURRENT_DATE GROUP BY 1`.
+- Conferir UI: Explorador deve mostrar partidas em basquete/tênis/etc. no dia.
+- Conferir filtros Esporte/País/Liga com contagens facetadas refletindo a nova base.
 
-## 4. Entregável (markdown único)
+## Fora de escopo (próximas fases)
 
-Estrutura fixa do relatório `/mnt/documents/sofascore-actor-investigacao.md`:
+- Liquidação automática de apostas via Sofascore (placares).
+- Cron horário/diário.
+- Backfill histórico amplo.
+- Substituir The Odds API / API-Sports (por ora, convivem; `source` permite comparar).
 
-1. Resumo executivo (5 linhas: serve ou não para cobrir ATP+WTA+Grand Slams, principal risco).
-2. Trecho relevante do `inputSchema` (campos e enums envolvidos em tênis/tour/sport).
-3. 1 item de output real de tênis, JSON completo, anonimizado se houver nomes de usuários.
-4. Respostas objetivas às 6 perguntas, cada uma com caminho de campo + exemplo.
-5. Tabela de torneios ATP/WTA/Grand Slam observados: `nome | tour | tier | uniqueTournament.id`.
-6. Custo total: itens consumidos por run × pricing pay-per-result do actor = USD estimado.
-7. Recomendação técnica curta: viável / viável com filtro client-side / inviável — e por quê.
+## O que preciso do seu lado antes de codar
 
-## 5. Restrições e não-fazer
-
-- Não criar edge function, não adicionar dependência ao projeto, não alterar `monitored_leagues` nem nenhum arquivo de `src/`.
-- Não rodar o actor em modo async sem `maxItems`. Nunca chamar `/run` sem cap.
-- Não publicar o relatório no preview; entregar apenas como arquivo em `/mnt/documents/`.
-- Se qualquer run retornar > cap esperado ou custo projetado > ~USD 0,50, abortar e reportar antes de continuar.
-
-## Detalhes técnicos
-
-- Stack do script: `bun` standalone em `/tmp`, `fetch` nativo, sem libs.
-- Apify base URL: `https://api.apify.com/v2`.
-- Pricing real do actor é lido do passo 1 (`pricingInfos[]` no metadata do act), não chutado.
-- Para descobrir URLs Sofascore atuais de Wimbledon/US Open sem gastar item do actor, usar `websearch--web_search` (gratuito) antes das runs A/B.
-- Caminhos esperados (a confirmar contra JSON real, não assumir):
-  - `tournament.uniqueTournament.id` — ID estável de torneio Sofascore.
-  - `tournament.uniqueTournament.category.name` — costuma ser `ATP`/`WTA`/`ITF` no Sofascore público.
-  - `tournament.uniqueTournament.tier` ou `groundType` — diferencia Grand Slam.
+- Confirmar o nome do secret a cadastrar: sugiro `APIFY_TOKEN`.
+- Confirmar os esportes do bootstrap (sugestão: soccer, basketball, tennis, baseball, americanfootball, icehockey).
+- Confirmar o cap diário de USD 1,00 da fase de validação.
