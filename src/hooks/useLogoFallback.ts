@@ -32,17 +32,6 @@ const GENERIC_MATCH_TOKENS = new Set([
   'rangers', 'rovers', 'county', 'town',
 ]);
 
-const stripStopwordsAndDigits = (norm: string): string => {
-  // Remove dígitos (anos como "07", "1900") e stopwords
-  let s = norm.replace(/[0-9]/g, '');
-  for (const w of STOPWORDS) {
-    // remove ocorrências do stopword como prefixo/sufixo/standalone
-    const re = new RegExp(`(^${w}|${w}$)`, 'g');
-    s = s.replace(re, '');
-  }
-  return s;
-};
-
 interface TeamRow {
   league_key: string;
   team_name_normalized: string;
