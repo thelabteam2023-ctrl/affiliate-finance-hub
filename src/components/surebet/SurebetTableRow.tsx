@@ -139,7 +139,10 @@ export function SurebetTableRow({
   
   const additionalEntries = entry.additionalEntries || [];
   const totalEntries = 1 + additionalEntries.length;
-  const canAddMore = totalEntries < 5;
+  // Regra de produto: perna LAY não admite composição multi-casa (ver
+  // ConfirmLayCollapseDialog + trigger enforce_lay_leg_single_entry).
+  const isLayLeg = ((entry as any).tipo ?? 'back') === 'lay';
+  const canAddMore = totalEntries < 5 && !isLayLeg;
 
   // Cores por posição da perna
   const getPernaColor = () => {

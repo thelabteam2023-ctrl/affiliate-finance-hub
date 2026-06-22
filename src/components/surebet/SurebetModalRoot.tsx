@@ -54,6 +54,10 @@ import { SurebetTableFooter } from "./SurebetTableFooter";
 import { SurebetColumnsView } from "./SurebetColumnsView";
 import { SurebetMobileCard } from "./SurebetMobileCard";
 import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  ConfirmLayCollapseDialog,
+  type LayCollapseEntryPreview,
+} from "@/components/projeto-detalhe/ConfirmLayCollapseDialog";
 
 // ============================================
 // TIPOS
@@ -305,6 +309,11 @@ export function SurebetModalRoot({
   
   const [arredondarAtivado, setArredondarAtivado] = useState(true);
   const [arredondarValor, setArredondarValor] = useState("1");
+  const [layCollapseRequest, setLayCollapseRequest] = useState<{
+    pernaIndex: number;
+    entriesPreview: LayCollapseEntryPreview[];
+    remainingBookmakerNome?: string;
+  } | null>(null);
   const [showComissao, setShowComissao] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return window.localStorage?.getItem('surebet_show_comissao') === '1';
@@ -1057,6 +1066,34 @@ export function SurebetModalRoot({
   // ============================================
 
   const updateOdd = useCallback((index: number, field: keyof OddEntry, value: string | boolean | number) => {
+    // ── Camada A: regra de produto — perna LAY não admite multi-casa ──
+    // Se o usuário tentar marcar como LAY uma perna que já tem
+    // additionalEntries, NÃO aplicamos a mudança aqui. Disparamos o
+    // ConfirmLayCollapseDialog (reutilizado do ApostaDialog) para confirmar
+    // a remoção explícita das entradas extras. A aplicação real do
+    // tipo='lay' acontece em `confirmLayCollapse` abaixo.
+    if (field === 'tipo' && value === 'lay') {
+      const current = odds[index];
+      const extras = current?.additionalEntries || [];
+      if (extras.length > 0) {
+        const remaining = bookmakerSaldos.find(b => b.id === current.bookmaker_id)?.nome;
+        const preview: LayCollapseEntryPreview[] = extras.map((e) => {
+          const bk = bookmakerSaldos.find(b => b.id === e.bookmaker_id);
+          const stakeNum = parseFloat(e.stake) || 0;
+          return {
+            id: (e as any).id,
+            bookmaker_nome: bk?.nome || 'Casa não selecionada',
+            stake_formatado: stakeNum > 0
+              ? stakeNum.toLocaleString('pt-BR', { style: 'currency', currency: e.moeda || 'BRL' })
+              : undefined,
+            odd: e.odd || null,
+          };
+        });
+        setLayCollapseRequest({ pernaIndex: index, entriesPreview: preview, remainingBookmakerNome: remaining });
+        return; // não aplica tipo='lay' agora — espera confirmação
+      }
+    }
+
     setOdds(prev => {
       const newOdds = [...prev];
       newOdds[index] = { ...newOdds[index], [field]: value };
@@ -1097,7 +1134,7 @@ export function SurebetModalRoot({
  
       return newOdds;
     });
-  }, [bookmakerSaldos, isEditing]);
+  }, [bookmakerSaldos, isEditing, odds]);
 
   const setReferenceIndex = useCallback((index: number) => {
     setOdds(prev => prev.map((o, i) => ({
@@ -1119,6 +1156,16 @@ export function SurebetModalRoot({
   }, []);
 
    const addAdditionalEntry = useCallback((pernaIndex: number) => {
+    // Camada A: bloqueio defensivo. UI já oculta o botão "+" quando a
+    // perna é LAY (canAddMore && !isLayLeg), mas mantemos este early-return
+    // como segundo guard caso algum atalho/keyboard dispare o handler.
+    const currentTipo = (odds[pernaIndex] as any)?.tipo ?? 'back';
+    if (currentTipo === 'lay') {
+      toast.error('Perna LAY não admite multi-casa', {
+        description: 'Mude a perna para BACK antes de adicionar outra casa.',
+      });
+      return;
+    }
     setOdds(prev => {
       const newOdds = [...prev];
       const currentEntries = newOdds[pernaIndex].additionalEntries || [];
@@ -1156,7 +1203,31 @@ export function SurebetModalRoot({
 
       return newOdds;
     });
-  }, [targetPayoutsLocal, arredondarStake]);
+  }, [targetPayoutsLocal, arredondarStake, odds]);
+
+  // ── Confirmação do colapso LAY (Camada A) ──────────────────────────────
+  const cancelLayCollapse = useCallback(() => setLayCollapseRequest(null), []);
+  const confirmLayCollapse = useCallback(() => {
+    setLayCollapseRequest(req => {
+      if (!req) return null;
+      setOdds(prev => {
+        const next = [...prev];
+        const target = { ...next[req.pernaIndex] } as OddEntry;
+        target.additionalEntries = [];
+        (target as any).tipo = 'lay';
+        if (!target.isReference) {
+          target.isManuallyEdited = false;
+          target.stakeOrigem = undefined;
+        }
+        if ((target as any).fonteSaldo === 'FREEBET') {
+          (target as any).fonteSaldo = 'REAL';
+        }
+        next[req.pernaIndex] = target;
+        return next;
+      });
+      return null;
+    });
+  }, []);
 
   const updateAdditionalEntry = useCallback((pernaIndex: number, entryIndex: number, field: string, value: string) => {
     setOdds(prev => {
@@ -1626,6 +1697,37 @@ export function SurebetModalRoot({
         });
         toast.error('Operação inválida', {
           description: `Apenas ${pernasPreenchidas.length}/${numPernas} pernas têm casa + odd + stake válidos.`,
+        });
+        setSaving(false);
+        return;
+      }
+
+      // ================================================================
+      // Camada B: INVARIANT_007 — perna LAY não pode ter sub-entradas
+      // ================================================================
+      // Espelha `validateInvariants` (usado pelo ApostaService). Aqui o
+      // caminho de surebet vai direto pela RPC criar_/editar_surebet_*,
+      // sem passar por validateInvariants. Mantemos esta guard ANTES da
+      // RPC para: (1) mensagem de UX consistente com o ApostaDialog;
+      // (2) defense-in-depth: se o trigger DB
+      // `enforce_lay_leg_single_entry` for um dia desabilitado por engano,
+      // este guard ainda bloqueia.
+      const layViolation = pernasPreenchidas.find((p) => {
+        const tipo = (p as any).tipo ?? 'back';
+        const subs = (p.additionalEntries || []).filter(
+          s => s.bookmaker_id && parseFloat(s.odd) > 1 && parseFloat(s.stake) > 0
+        );
+        // total = principal (1) + extras válidas
+        return tipo === 'lay' && subs.length > 0;
+      });
+      if (layViolation) {
+        const bkNome = bookmakerSaldos.find(b => b.id === layViolation.bookmaker_id)?.nome || 'casa';
+        console.error('[SurebetModalRoot] ABORT save — LAY_LEG_MULTI_ENTRY_NOT_SUPPORTED', {
+          bookmaker: bkNome,
+          extras: (layViolation.additionalEntries || []).length,
+        });
+        toast.error('Perna LAY não admite multi-casa', {
+          description: `A perna LAY (${bkNome}) tem casas adicionais. Remova-as ou mude a perna para BACK antes de registrar.`,
         });
         setSaving(false);
         return;
@@ -2821,6 +2923,13 @@ export function SurebetModalRoot({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <ConfirmLayCollapseDialog
+        open={layCollapseRequest !== null}
+        entriesToRemove={layCollapseRequest?.entriesPreview ?? []}
+        remainingBookmakerNome={layCollapseRequest?.remainingBookmakerNome}
+        onCancel={cancelLayCollapse}
+        onConfirm={confirmLayCollapse}
+      />
     </>
   );
 }
