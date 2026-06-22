@@ -115,6 +115,13 @@ const getInitials = (name: string) => {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
+const resolveEventLeagueKey = (e: any): string => {
+  const oddsSportKey = e.sources?.odds_api?.sport_key;
+  if (typeof oddsSportKey === 'string' && oddsSportKey) return oddsSportKey;
+  if (typeof e.league_id === 'string' && e.league_id.includes('_')) return e.league_id;
+  return e.league_id ? `thesportsdb_${e.league_id}` : 'unknown';
+};
+
 const TeamLogo = ({
   name,
   url,
@@ -248,7 +255,7 @@ export default function ApiExplorer() {
       const mapped: Event[] = (eventsRes.data || []).map((e: any) => ({
         api_id: e.canonical_key,
         sport: e.sport,
-        league_key: e.league_id ? `thesportsdb_${e.league_id}` : 'unknown',
+        league_key: resolveEventLeagueKey(e),
         league_name: e.league_name ?? '—',
         league_flag: null,
         continent: e.continent,
