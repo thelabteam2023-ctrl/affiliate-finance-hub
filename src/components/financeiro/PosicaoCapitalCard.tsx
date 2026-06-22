@@ -105,16 +105,24 @@ export function PosicaoCapitalCard({
     periodLabel,
   ]);
 
-  // Para a quebra, sempre usamos o ACUMULADO — é a única base coerente
-  // para responder "do que é feito meu patrimônio hoje".
-  // Importante: patrimônio usa apenas saldo_atual (real) dos bookmakers, NÃO
-  // inclui saldo_freebet. Por isso freebet entra apenas como linha
-  // informativa e NÃO é subtraído daqui.
-  const resultadoTeorico = patrimonioAtual - capitalLiquidoAcumulado;
-  // Realizado vem do serviço canônico por projeto (saques − depósitos).
+  // FONTE ÚNICA: todos os números abaixo vêm da engine canônica POR PROJETO
+  // (`fetchProjetosLucroCanonico`), que é o mesmo motor usado pelos cards de
+  // cada projeto e pelo KPI "Lucro Operacional" do dashboard. Antes o
+  // Resultado Teórico era calculado por subtração (Patrimônio − Capital
+  // Próprio) e divergia da soma dos projetos porque o Patrimônio inclui
+  // saldos de bookmakers/parceiros não atribuídos a projeto, freebet que
+  // virou saldo, diferenças de cotação, etc. Agora as três linhas
+  // (Realizado / Teórico / Exposto) somam exatamente o que aparece no
+  // drawer.
+  const resultadoTeorico = resultadoPorProjeto?.totaisBRL.lucroOperacional ?? 0;
   const resultadoRealizado = resultadoPorProjeto?.totaisBRL.lucroRealizado ?? 0;
-  // Capital exposto = parte do teórico que ainda não virou dinheiro real.
-  const capitalExposto = resultadoTeorico - resultadoRealizado;
+  const capitalExposto = resultadoPorProjeto?.totaisBRL.capitalExposto ?? (resultadoTeorico - resultadoRealizado);
+  // Diferença entre o teórico (soma dos projetos) e o que sobra do
+  // Patrimônio depois de tirar o capital próprio. Reflete saldos que NÃO
+  // pertencem a projetos: bookmakers órfãos, parceiros, conversão cambial,
+  // freebet convertido, etc.
+  const fundosForaDeProjetos =
+    patrimonioAtual - capitalLiquidoAcumulado - resultadoTeorico;
 
   const roi =
     capitalLiquidoAcumulado > 0
@@ -259,7 +267,7 @@ export function PosicaoCapitalCard({
               formatCurrency={formatCurrency}
               tone={resultadoTeorico >= 0 ? "positive" : "negative"}
               badge="teórico"
-              hint="Inclui o saldo ainda dentro das casas. Pode não se realizar integralmente se houver limitação, conta fechada ou scam. Clique para ver origem por projeto."
+              hint="Soma do Lucro Operacional canônico de TODOS os projetos (mesma engine dos cards de projeto). Inclui o saldo ainda dentro das casas — pode não se realizar integralmente se houver limitação, conta fechada ou scam. Clique para ver origem por projeto."
               onClick={() => openDrawer("teorico")}
             />
             <BreakdownRow
@@ -271,6 +279,15 @@ export function PosicaoCapitalCard({
               onClick={() => openDrawer("exposto")}
               indent
             />
+            {Math.abs(fundosForaDeProjetos) > 1 && (
+              <BreakdownRow
+                label="Fundos fora de projetos"
+                value={fundosForaDeProjetos}
+                formatCurrency={formatCurrency}
+                tone="muted"
+                hint="Diferença entre o Patrimônio Atual e (Capital Próprio + Resultado Teórico dos projetos). Representa saldo em bookmakers/parceiros não atribuídos a nenhum projeto, freebet já convertido em saldo real ou variação cambial não distribuída. Não é lucro — é só capital sem projeto associado."
+              />
+            )}
             <BreakdownRow
               label="Freebet em estoque (informativo)"
               value={saldoFreebet}
