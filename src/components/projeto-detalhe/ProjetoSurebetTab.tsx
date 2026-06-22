@@ -534,7 +534,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
         });
       }
 
-      return allData.map((arb: any) => {
+      const mapped = allData.map((arb: any) => {
         const pernasRaw = pernasMap[arb.id] || parsePernaFromJson(arb.pernas);
         const pernasSurebetCard = groupPernasBySelecao(pernasRaw);
         publishTabRender("Surebet", arb.id, pernasRaw.map((p: any) => ({
@@ -578,6 +578,13 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           league_logo_url: (arb as any).league_logo_url ?? null,
         };
       });
+      probeReadByTab({
+        tab: "ProjetoSurebetTab",
+        projetoId,
+        apostaIdsRaw: allData.map((a: any) => a.id),
+        apostaIdsMapped: mapped.map((a: any) => a.id),
+      });
+      return mapped;
     },
     staleTime: PERIOD_STALE_TIME,
     gcTime: PERIOD_GC_TIME,
