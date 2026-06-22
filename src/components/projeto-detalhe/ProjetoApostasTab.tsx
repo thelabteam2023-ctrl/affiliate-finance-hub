@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
 import { groupPernasBySelecao } from "@/utils/groupPernasBySelecao";
+import { formatPernaEntradas } from "@/utils/formatPernaEntradas";
 import { publishTabRender } from "@/utils/integrityProbe";
 import { SurebetDialog } from "./SurebetDialog";
 import { apostaMatchesBookmakerFilter, apostaMatchesParceiroFilter } from "@/utils/apostaFilterHelpers";
