@@ -36,6 +36,11 @@ interface RawPerna {
   stake_freebet?: number;
   // Bookmaker join
   bookmaker?: { nome: string; parceiro?: { nome: string } };
+  // Quando a perna já vem com entries pré-construídos (ARBITRAGEM com
+  // perna composta via apostas_perna_entradas), passamos direto sem regrupar.
+  entries?: SurebetPernaEntry[];
+  odd_media?: number;
+  stake_total?: number;
 }
 
 export function groupPernasBySelecao(
@@ -64,7 +69,11 @@ export function groupPernasBySelecao(
     const group = groups.get(key)!;
     const main = group[0];
     const subs = group.slice(1);
-    const hasEntries = subs.length > 0;
+    // Caso especial: 1 perna no grupo que já traz entries[] pré-construídos
+    // (multi-bookmaker via apostas_perna_entradas). Preservar como veio.
+    const hasPrebuiltEntries =
+      subs.length === 0 && Array.isArray(main.entries) && main.entries.length > 1;
+    const hasEntries = subs.length > 0 || hasPrebuiltEntries;
 
     // Probe: garante que `tipo` da principal não some no agrupamento.
     probePernaTipo("groupPernasBySelecao:main", main.id, main.tipo, main.tipo ?? "back");
@@ -106,9 +115,14 @@ export function groupPernasBySelecao(
     };
 
     if (hasEntries) {
-      result.odd_media = oddMedia;
-      result.stake_total = stakeTotal;
-      result.entries = group.map(p => ({
+      if (hasPrebuiltEntries) {
+        result.odd_media = main.odd_media ?? oddMedia;
+        result.stake_total = main.stake_total ?? stakeTotal;
+        result.entries = main.entries!;
+      } else {
+        result.odd_media = oddMedia;
+        result.stake_total = stakeTotal;
+        result.entries = group.map(p => ({
         id: p.id,
         bookmaker_id: p.bookmaker_id || '',
         bookmaker_nome: resolve(p),
@@ -125,7 +139,8 @@ export function groupPernasBySelecao(
         cotacao_snapshot: p.cotacao_snapshot ?? null,
         selecao_livre: p.selecao_livre || undefined,
         fonte_saldo: p.fonte_saldo || undefined,
-      }));
+        }));
+      }
     }
 
     return result;
