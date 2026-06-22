@@ -105,28 +105,20 @@ export function PosicaoCapitalCard({
     periodLabel,
   ]);
 
-  // FONTE ÚNICA: todos os números abaixo vêm da engine canônica POR PROJETO
-  // (`fetchProjetosLucroCanonico`), que é o mesmo motor usado pelos cards de
-  // cada projeto e pelo KPI "Lucro Operacional" do dashboard. Antes o
-  // Resultado Teórico era calculado por subtração (Patrimônio − Capital
-  // Próprio) e divergia da soma dos projetos porque o Patrimônio inclui
-  // saldos de bookmakers/parceiros não atribuídos a projeto, freebet que
-  // virou saldo, diferenças de cotação, etc. Agora as três linhas
-  // (Realizado / Teórico / Exposto) somam exatamente o que aparece no
-  // drawer.
-  const resultadoTeorico = resultadoPorProjeto?.totaisBRL.lucroOperacional ?? 0;
-  const resultadoRealizado = resultadoPorProjeto?.totaisBRL.lucroRealizado ?? 0;
-  const capitalExposto = resultadoPorProjeto?.totaisBRL.capitalExposto ?? (resultadoTeorico - resultadoRealizado);
-  // Diferença entre o teórico (soma dos projetos) e o que sobra do
-  // Patrimônio depois de tirar o capital próprio. Reflete saldos que NÃO
-  // pertencem a projetos: bookmakers órfãos, parceiros, conversão cambial,
-  // freebet convertido, etc.
-  const fundosForaDeProjetos =
-    patrimonioAtual - capitalLiquidoAcumulado - resultadoTeorico;
+  // MODELO FECHADO POR CONSTRUÇÃO
+  // Patrimônio Atual vem da MESMA fonte (e MESMA conversão) usada pelo
+  // donut Posição de Capital. Resultado da Operação é calculado por
+  // subtração — assim Capital Próprio + Resultado = Patrimônio SEMPRE.
+  // A composição por projeto (engine canônica) fica disponível no drawer,
+  // com bloco de reconciliação que expõe a divergência quando existir
+  // (drift cambial, eventos sem projeto_id_snapshot, etc.).
+  const resultadoOperacao = patrimonioAtual - capitalLiquidoAcumulado;
+  const lucroOperacionalProjetos =
+    resultadoPorProjeto?.totaisBRL.lucroOperacional ?? 0;
 
   const roi =
     capitalLiquidoAcumulado > 0
-      ? (resultadoRealizado / capitalLiquidoAcumulado) * 100
+      ? (resultadoOperacao / capitalLiquidoAcumulado) * 100
       : null;
 
   const semAportes = capitalLiquidoAcumulado <= 0 && patrimonioAtual > 0;
