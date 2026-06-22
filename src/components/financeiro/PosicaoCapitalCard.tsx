@@ -246,40 +246,13 @@ export function PosicaoCapitalCard({
               hint="Aportes − Liquidações (acumulado)"
             />
             <BreakdownRow
-              label="Resultado realizado"
-              value={resultadoRealizado}
+              label="Resultado da operação (acumulado)"
+              value={resultadoOperacao}
               formatCurrency={formatCurrency}
-              tone={resultadoRealizado >= 0 ? "positive" : "negative"}
-              hint="Dinheiro que já voltou ao caixa: (Saques + Saques Virtuais) − (Depósitos + Depósitos Virtuais), somado de todos os projetos. Clique para ver origem por projeto."
-              onClick={() => openDrawer("realizado")}
-            />
-            <BreakdownRow
-              label="Resultado teórico (atual)"
-              value={resultadoTeorico}
-              formatCurrency={formatCurrency}
-              tone={resultadoTeorico >= 0 ? "positive" : "negative"}
-              badge="teórico"
-              hint="Soma do Lucro Operacional canônico de TODOS os projetos (mesma engine dos cards de projeto). Inclui o saldo ainda dentro das casas — pode não se realizar integralmente se houver limitação, conta fechada ou scam. Clique para ver origem por projeto."
+              tone={resultadoOperacao >= 0 ? "positive" : "negative"}
+              hint="Calculado como Patrimônio Atual − Capital Próprio Investido. É todo o ganho ou perda implícito no patrimônio que não veio do bolso do investidor. Clique para ver a origem por projeto (engine canônica) e a reconciliação."
               onClick={() => openDrawer("teorico")}
             />
-            <BreakdownRow
-              label="↳ Capital exposto nas casas"
-              value={capitalExposto}
-              formatCurrency={formatCurrency}
-              tone={Math.abs(capitalExposto) > 0.01 ? "warning" : "muted"}
-              hint="Teórico − Realizado. Quanto do lucro contábil ainda depende de saque para virar dinheiro real. Clique para ver por projeto."
-              onClick={() => openDrawer("exposto")}
-              indent
-            />
-            {Math.abs(fundosForaDeProjetos) > 1 && (
-              <BreakdownRow
-                label="Fundos fora de projetos"
-                value={fundosForaDeProjetos}
-                formatCurrency={formatCurrency}
-                tone="muted"
-                hint="Diferença entre o Patrimônio Atual e (Capital Próprio + Resultado Teórico dos projetos). Representa saldo em bookmakers/parceiros não atribuídos a nenhum projeto, freebet já convertido em saldo real ou variação cambial não distribuída. Não é lucro — é só capital sem projeto associado."
-              />
-            )}
             <BreakdownRow
               label="Freebet em estoque (informativo)"
               value={saldoFreebet}
@@ -291,7 +264,7 @@ export function PosicaoCapitalCard({
             {roi !== null && (
               <div className="mt-2 pt-2 border-t border-border/50 flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">
-                  Resultado realizado sobre capital próprio
+                  Resultado da operação sobre capital próprio
                 </span>
                 <Badge
                   variant="outline"
