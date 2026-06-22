@@ -841,13 +841,6 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
     }
   }, [loading, apostasAbertas.length, apostasHistorico.length]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
-  
   const formatCurrencyWithMoeda = (value: number, moeda: string = 'BRL') => {
     const symbols: Record<string, string> = { BRL: 'R$', USD: '$', EUR: '€', GBP: '£' };
     const symbol = symbols[moeda] || moeda;
