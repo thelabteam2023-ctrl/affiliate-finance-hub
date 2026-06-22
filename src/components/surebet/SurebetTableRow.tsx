@@ -567,6 +567,7 @@ export function SurebetTableRow({
                             alt={addBookmaker.nome}
                             size="h-4 w-4"
                             iconSize="h-2.5 w-2.5"
+                            className="p-0"
                           />
                           <span className="truncate uppercase text-[9px]">{addBookmaker.nome}</span>
                         </span>
