@@ -929,6 +929,29 @@ export function SurebetModalRoot({
         total_pernas: pernasData.length,
         com_sub_entradas: pernasOdds.filter(o => (o.additionalEntries?.length || 0) > 0).length,
       });
+      // TEMP-DEBUG perna-composta: snapshot detalhado de hidratação
+      try {
+        console.log("[TEMP-DEBUG perna-composta] HYDRATE end", {
+          aposta_id: surebetId,
+          per_perna: pernasOdds.map((o, i) => ({
+            ordem: i + 1,
+            pernaId: o.pernaId,
+            mainEntryId: o.mainEntryId,
+            main_bk: o.bookmaker_id,
+            main_stake: o.stake,
+            main_odd: o.odd,
+            sub_count: o.additionalEntries?.length || 0,
+            sub: (o.additionalEntries || []).map((s: any) => ({
+              id: s.id, bk: s.bookmaker_id, stake: s.stake, odd: s.odd, moeda: s.moeda,
+            })),
+          })),
+        });
+        (window as any).__SUREBET_LAST_HYDRATE__ = {
+          at: Date.now(),
+          aposta_id: surebetId,
+          odds: JSON.parse(JSON.stringify(pernasOdds)),
+        };
+      } catch (e) { /* noop */ }
     } catch (err) {
       console.error("[SurebetModalRoot] Exceção ao buscar pernas:", err);
       
