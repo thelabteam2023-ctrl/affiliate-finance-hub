@@ -662,6 +662,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   const [additionalEntries, setAdditionalEntries] = useState<AdditionalEntry[]>([]);
   const multiEntryTableRef = useRef<HTMLDivElement>(null);
 
+  // Camada A — modal de confirmação para colapso automático ao mudar para LAY.
+  // Regra de produto: LAY não admite multi-casa. Quando o usuário tenta marcar
+  // LAY com additionalEntries pendentes, exigimos confirmação explícita
+  // listando exatamente o que será removido (nunca remoção silenciosa).
+  const [layCollapseDialogOpen, setLayCollapseDialogOpen] = useState(false);
+
   const handleMultiEntryFieldKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>, fieldType: 'odd' | 'stake') => {
     const key = e.key.toLowerCase();
     if (key !== 'q' && key !== 's') return;
