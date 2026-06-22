@@ -152,6 +152,31 @@ export async function validateInvariants(
   }
 
   // ================================================================
+  // INVARIANT_007: Perna LAY não pode ter sub-entradas (multi-casa)
+  // ================================================================
+  // Regra de produto: LAY opera por liability — soma de stake e odd média
+  // ponderada (a forma como BACK agrega multi-entry) não é matematicamente
+  // válida em LAY. Bloqueio espelhado pelo trigger DB
+  // `enforce_lay_leg_single_entry`. Esta checagem antecipa o erro no
+  // service para mensagens de UI mais limpas, mas a verdade final é o DB.
+  if (input.pernas) {
+    for (const perna of input.pernas) {
+      const entriesCount = (perna as any).entries?.length ?? 0;
+      if (perna.tipo === 'lay' && entriesCount > 1) {
+        violations.push({
+          invariant: 'LAY_LEG_MULTI_ENTRY_NOT_SUPPORTED',
+          message: `Perna LAY (bookmaker ${perna.bookmaker_nome || perna.bookmaker_id}) recebeu ${entriesCount} sub-entradas. LAY suporta apenas 1 casa por perna.`,
+          context: {
+            bookmaker_id: perna.bookmaker_id,
+            tipo: perna.tipo,
+            entries_count: entriesCount,
+          },
+        });
+      }
+    }
+  }
+
+  // ================================================================
   // WARNINGS (não bloqueantes)
   // ================================================================
   if (input.estrategia === 'EXTRACAO_FREEBET' && input.contexto_operacional !== 'FREEBET') {
@@ -197,6 +222,22 @@ export async function validateUpdateInvariants(
 
   // Se atualizando pernas, validar bookmakers
   if (updates.pernas && updates.pernas.length > 0) {
+    // INVARIANT_007 também em update
+    for (const perna of updates.pernas) {
+      const entriesCount = (perna as any).entries?.length ?? 0;
+      if (perna.tipo === 'lay' && entriesCount > 1) {
+        violations.push({
+          invariant: 'LAY_LEG_MULTI_ENTRY_NOT_SUPPORTED',
+          message: `Perna LAY (bookmaker ${perna.bookmaker_nome || perna.bookmaker_id}) recebeu ${entriesCount} sub-entradas. LAY suporta apenas 1 casa por perna.`,
+          context: {
+            bookmaker_id: perna.bookmaker_id,
+            tipo: perna.tipo,
+            entries_count: entriesCount,
+          },
+        });
+      }
+    }
+
     const bookmakerIds = updates.pernas.map(p => p.bookmaker_id);
     
     const { data: bookmakers } = await supabase
