@@ -69,6 +69,19 @@ export function ExploradorEventoPicker({ defaultDate, onSelect, variant = "butto
   const hasSportFilter = !!esporte && esporte !== "Outro";
   const [filterBySport, setFilterBySport] = useState<boolean>(hasSportFilter);
 
+  // Quando a data selecionada está no passado (ex.: usuário registrando uma aposta
+  // antiga), todos os jogos estarão "encerrados" — mostrar por padrão, senão a
+  // lista aparece vazia e parece bug. O usuário pode desligar manualmente.
+  useEffect(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const picked = new Date(date);
+    picked.setHours(0, 0, 0, 0);
+    if (picked.getTime() < today.getTime()) {
+      setShowFinished(true);
+    }
+  }, [date]);
+
   const { data: events = [], isLoading, isError } = useDailyEventsByDate(date, open);
 
   // Filtros avançados (esporte / país / liga) — persistidos em localStorage.

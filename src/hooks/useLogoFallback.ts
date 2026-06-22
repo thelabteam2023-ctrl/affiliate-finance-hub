@@ -8,6 +8,69 @@ const normalize = (s: string) =>
     .toLowerCase()
     .replace(/[^a-z0-9]/g, '');
 
+// Aliases PT-BR → forma usada no cache (em geral em inglês), para seleções
+// nacionais e países cujos jogos são salvos em português pelo usuário.
+// O cache `team_logos` guarda "newzealand"/"egypt", mas a aposta vem como
+// "NOVA ZELANDIA"/"EGITO" — sem esse mapa o logo nunca casa.
+const PT_EN_TEAM_ALIASES: Record<string, string> = {
+  novazelandia: 'newzealand',
+  egito: 'egypt',
+  alemanha: 'germany',
+  franca: 'france',
+  inglaterra: 'england',
+  espanha: 'spain',
+  italia: 'italy',
+  belgica: 'belgium',
+  holanda: 'netherlands',
+  paisesbaixos: 'netherlands',
+  suica: 'switzerland',
+  suecia: 'sweden',
+  dinamarca: 'denmark',
+  noruega: 'norway',
+  polonia: 'poland',
+  republicacheca: 'czechrepublic',
+  croacia: 'croatia',
+  servia: 'serbia',
+  turquia: 'turkey',
+  grecia: 'greece',
+  marrocos: 'morocco',
+  argelia: 'algeria',
+  tunisia: 'tunisia',
+  senegal: 'senegal',
+  africadosul: 'southafrica',
+  costadomarfim: 'ivorycoast',
+  camaroes: 'cameroon',
+  estadosunidos: 'usa',
+  mexico: 'mexico',
+  canada: 'canada',
+  argentina: 'argentina',
+  brasil: 'brazil',
+  uruguai: 'uruguay',
+  paraguai: 'paraguay',
+  colombia: 'colombia',
+  equador: 'ecuador',
+  peru: 'peru',
+  chile: 'chile',
+  bolivia: 'bolivia',
+  venezuela: 'venezuela',
+  japao: 'japan',
+  coreiadosul: 'southkorea',
+  australia: 'australia',
+  arabiasaudita: 'saudiarabia',
+  catar: 'qatar',
+  ira: 'iran',
+  iraque: 'iraq',
+  russia: 'russia',
+  ucrania: 'ukraine',
+  portugal: 'portugal',
+  escocia: 'scotland',
+  paisdegales: 'wales',
+  irlanda: 'ireland',
+  irlandadonorte: 'northernireland',
+};
+
+const applyPtAlias = (norm: string): string => PT_EN_TEAM_ALIASES[norm] ?? norm;
+
 // Tokenização preservando palavras (para matching token-a-token sem risco
 // de substring "encaixar" em outro nome — ex.: "inter" dentro de "internacional").
 const tokenize = (s: string): string[] =>
@@ -208,7 +271,7 @@ export function useLogoFallback(sport: string | null | undefined) {
 
   const getTeamLogo = useCallback(
     (teamName: string, leagueKey?: string | null): string | null => {
-      const norm = normalize(teamName);
+      const norm = applyPtAlias(normalize(teamName));
       if (!norm) return null;
 
       if (leagueKey) {
