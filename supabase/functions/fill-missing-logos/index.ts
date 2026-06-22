@@ -106,8 +106,9 @@ Deno.serve(async (req: Request) => {
       if (!r.ok) { apiMisses++; teamSearches.set(name, null); return null; }
       const j = await r.json();
       const teams: any[] = Array.isArray(j?.teams) ? j.teams : [];
-      // Match por normalização
-      const hit = teams.find((t) => normTeam(t.strTeam ?? "") === normalized) ?? teams[0];
+      // Só aceita correspondência exata. Nunca usa o primeiro resultado da busca,
+      // pois nomes genéricos (ex.: Athletic Club) podem retornar outro clube.
+      const hit = teams.find((t) => normTeam(t.strTeam ?? "") === normalized);
       const url: string | null = hit?.strBadge ?? hit?.strTeamBadge ?? null;
       if (url) {
         apiHits++;
