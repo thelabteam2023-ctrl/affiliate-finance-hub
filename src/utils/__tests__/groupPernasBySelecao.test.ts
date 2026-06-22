@@ -208,6 +208,32 @@ describe("groupPernasBySelecao", () => {
     expect(result[0].stake_total).toBe(150);
   });
 
+  it("preserva entries explícitas vindas de apostas_perna_entradas", () => {
+    const pernas = [
+      {
+        id: "perna-empate",
+        bookmaker_id: "bk-vave",
+        bookmaker_nome: "VAVE - Juliana",
+        selecao: "Empate",
+        odd: 3.45,
+        stake: 134,
+        resultado: null,
+        moeda: "USD",
+        entries: [
+          { id: "entry-vave", bookmaker_id: "bk-vave", bookmaker_nome: "VAVE - Juliana", odd: 3.45, stake: 50, moeda: "USD" },
+          { id: "entry-hugewin", bookmaker_id: "bk-hugewin", bookmaker_nome: "HUGEWIN - Wallyson", odd: 3.45, stake: 84, moeda: "USD" },
+        ],
+      },
+    ];
+
+    const result = groupPernasBySelecao(pernas);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].entries).toHaveLength(2);
+    expect(result[0].entries?.map(e => e.bookmaker_nome)).toEqual(["VAVE - Juliana", "HUGEWIN - Wallyson"]);
+    expect(result[0].stake_total).toBe(134);
+  });
+
   // ============================================================
   // EDGE CASE: Lucro agregado de sub-entries
   // ============================================================

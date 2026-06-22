@@ -36,6 +36,7 @@ import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
 import { groupPernasBySelecao } from "@/utils/groupPernasBySelecao";
 import { publishTabRender } from "@/utils/integrityProbe";
 import { probeReadByTab } from "@/utils/surebetLifecycleProbe";
+import { surebetMatchesEstrategiaFilter } from "@/utils/surebetVisibility";
 import { SurebetDialog } from "./SurebetDialog";
 import { apostaMatchesBookmakerFilter, apostaMatchesParceiroFilter } from "@/utils/apostaFilterHelpers";
 import { ApostaPernasResumo, ApostaPernasInline, Perna } from "./ApostaPernasResumo";
@@ -1200,14 +1201,12 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       const matchesBookmaker = selectedBookmakerIds.length === 0 || 
         sb.pernas?.some(p => selectedBookmakerIds.includes(p.bookmaker_id));
       
-      // Filtro de parceiro: verificar se alguma perna tem o parceiro selecionado
-      const matchesParceiro = selectedParceiroIds.length === 0 || 
-        sb.pernas?.some(p => p.bookmaker?.parceiro && selectedParceiroIds.includes((p.bookmaker.parceiro as any).id));
+      // Filtro de parceiro: considerar bookmaker principal, pernas e entries.
+      const matchesParceiro = apostaMatchesParceiroFilter(sb as any, selectedParceiroIds, bookmakers as any);
       
-      // Filtro de estratégia - usar valor real do banco
-      const surebetEstrategia = sb.estrategia || "SUREBET";
-      const matchesEstrategia = selectedEstrategias.includes("all") || 
-        selectedEstrategias.includes(surebetEstrategia as any);
+      // Filtro de estratégia: arbitragens também devem aparecer quando o usuário
+      // escolhe "Surebet", mesmo que a estratégia analítica salva seja bônus/punter/etc.
+      const matchesEstrategia = surebetMatchesEstrategiaFilter(sb, selectedEstrategias);
       
       const matchesStatus = statusFilter === "all" || sb.status === statusFilter;
       const matchesResultado = tabFilters.resultados.length === 0 || tabFilters.resultados.includes(sb.resultado as any);

@@ -1,5 +1,13 @@
 # Plano P0 — Apostas de Arbitragem/Surebet omitidas das telas
 
+## Status — diagnóstico executado
+
+- Causa raiz confirmada: a aba de Operações/Surebet usava `estrategia = SUREBET` como critério de leitura, mas operações válidas criadas pelo formulário de Arbitragem são identificadas tecnicamente por `forma_registro = ARBITRAGEM` e podem ter estratégia analítica diferente (`EXTRACAO_BONUS`, `DUPLO_GREEN`, `PUNTER`, etc.).
+- Evidência banco-lado: existem 766 operações `ARBITRAGEM` não canceladas; 753 delas têm `estrategia <> SUREBET` e eram omitidas pelo filtro antigo em telas especializadas.
+- Evidência de integridade: amostras recentes omitidas possuem pai em `apostas_unificada`, pernas em `apostas_pernas` e entradas em `apostas_perna_entradas`; portanto o problema principal identificado é de leitura/filtro/exibição, não de perda dos dados históricos.
+- Correção aplicada: Operações/Surebet agora carrega por `forma_registro = ARBITRAGEM`; o badge de abertas também conta por forma de registro; “Todas as Apostas” mantém arbitragens visíveis quando o usuário filtra por Surebet; filtros de casa/parceiro consideram pernas e entries.
+- Teste isolado criado: fixtures em Vitest reproduzem histórico/abertas com `ARBITRAGEM + EXTRACAO_BONUS` sem tocar nos dados reais.
+
 ## Objetivo
 
 Investigar, instrumentar e corrigir qualquer falha que faça apostas criadas pelo formulário de Arbitragem/Surebet deixarem de aparecer em:

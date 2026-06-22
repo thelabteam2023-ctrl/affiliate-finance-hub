@@ -206,7 +206,6 @@ export function probeCreatePayload(payload: {
   if (!payload.projetoId) anomalies.push("MISSING_PROJETO_ID");
   if (!payload.workspaceId) anomalies.push("MISSING_WORKSPACE_ID");
   if (payload.formaRegistro !== "ARBITRAGEM") anomalies.push("FORMA_REGISTRO_NOT_ARBITRAGEM");
-  if (payload.estrategia !== "SUREBET") anomalies.push("ESTRATEGIA_NOT_SUREBET");
   if (pernas.length < 2) anomalies.push("PERNAS_LT_2");
   pernas.forEach((p, i) => {
     if (!p.bookmaker_id) anomalies.push(`PERNA_${i + 1}_SEM_BOOKMAKER`);
