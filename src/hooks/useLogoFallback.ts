@@ -8,6 +8,16 @@ const normalize = (s: string) =>
     .toLowerCase()
     .replace(/[^a-z0-9]/g, '');
 
+// Tokenização preservando palavras (para matching token-a-token sem risco
+// de substring "encaixar" em outro nome — ex.: "inter" dentro de "internacional").
+const tokenize = (s: string): string[] =>
+  (s || '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t.length >= 6 && !STOPWORDS.includes(t));
+
 // Stop-words / sufixos comuns em nomes de clubes que atrapalham matching parcial
 const STOPWORDS = [
   'fc', 'cf', 'sc', 'ac', 'afc', 'cfc', 'sk', 'rc', 'as',
@@ -134,18 +144,20 @@ export function useLogoFallback(sport: string | null | undefined) {
     return m;
   }, [teams]);
 
-  // Lista global para fallback de contains entre ligas (ex.: API="Grêmio Novorizontino"
-  // vs cache="Novorizontino" sob outra league_key vinda de fonte distinta).
-  const teamsGlobal = useMemo(() => {
-    const arr: Array<{ norm: string; stripped: string; logo: string }> = [];
+  // Lista global para fallback por TOKEN COMPLETO (palavra inteira, mín 6 chars).
+  // Evita falsos positivos do substring (ex.: "inter" casando "internacional").
+  // Requer que o nome original esteja disponível para tokenizar com fronteira.
+  const teamsGlobalTokens = useMemo(() => {
+    const arr: Array<{ tokens: string[]; logo: string; tokenCount: number }> = [];
     const seen = new Set<string>();
     for (const t of teams) {
       if (!t.logo_url) continue;
-      const stripped = stripStopwordsAndDigits(t.team_name_normalized);
-      const k = `${t.team_name_normalized}|${stripped}`;
-      if (seen.has(k)) continue;
-      seen.add(k);
-      arr.push({ norm: t.team_name_normalized, stripped, logo: t.logo_url });
+      const tokens = tokenize(t.team_name_original || '');
+      if (tokens.length === 0) continue;
+      const k = tokens.sort().join('|');
+      if (seen.has(k + '|' + t.logo_url)) continue;
+      seen.add(k + '|' + t.logo_url);
+      arr.push({ tokens, logo: t.logo_url, tokenCount: tokens.length });
     }
     return arr;
   }, [teams]);
@@ -195,21 +207,34 @@ export function useLogoFallback(sport: string | null | undefined) {
         const globalStripped = teamByName.get(`@stripped|${normStripped}`);
         if (globalStripped) return globalStripped;
       }
-      // 6. Fallback global contains — última tentativa quando o nome do explorer
-      //    é uma forma estendida (ex.: "Grêmio Novorizontino") e o cache só tem
-      //    o radical curto ("Novorizontino"), ou vice-versa.
-      if (normStripped && normStripped.length >= 5) {
-        for (const t of teamsGlobal) {
-          if (t.norm.length < 5) continue;
-          if (norm.includes(t.norm) || t.norm.includes(norm)) return t.logo;
-          if (t.stripped && t.stripped.length >= 5) {
-            if (normStripped.includes(t.stripped) || t.stripped.includes(normStripped)) return t.logo;
+      // 6. Fallback global por TOKEN COMPLETO. Só casa se TODOS os tokens do
+      //    lado mais curto aparecem como palavras inteiras no outro lado.
+      //    Ex.: "Grêmio Novorizontino" → ["gremio","novorizontino"]
+      //         cache "Novorizontino"   → ["novorizontino"]
+      //         intersecção = ["novorizontino"] == cache inteiro → match.
+      //    Mas "Internacional" → ["internacional"] vs "Inter Miami" → ["miami"]
+      //         sem token em comum → não casa.
+      const queryTokens = tokenize(teamName);
+      if (queryTokens.length > 0) {
+        let best: { logo: string; matched: number; ratio: number } | null = null;
+        for (const t of teamsGlobalTokens) {
+          const qSet = new Set(queryTokens);
+          let matched = 0;
+          for (const tk of t.tokens) if (qSet.has(tk)) matched += 1;
+          if (matched === 0) continue;
+          // Exige que TODOS os tokens do lado menor sejam casados.
+          const minSide = Math.min(t.tokenCount, queryTokens.length);
+          if (matched < minSide) continue;
+          const ratio = matched / Math.max(t.tokenCount, queryTokens.length);
+          if (!best || ratio > best.ratio || (ratio === best.ratio && matched > best.matched)) {
+            best = { logo: t.logo, matched, ratio };
           }
         }
+        if (best) return best.logo;
       }
       return null;
     },
-    [teamByLeagueName, teamByName, teamsByLeague, teamsGlobal],
+    [teamByLeagueName, teamByName, teamsByLeague, teamsGlobalTokens],
   );
 
   const getLeagueLogo = useCallback(
