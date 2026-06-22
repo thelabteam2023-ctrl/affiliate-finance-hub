@@ -35,6 +35,14 @@ interface Props {
   };
   loading: boolean;
   formatBRL: (v: number) => string;
+  /**
+   * Resultado da operação calculado por subtração no card
+   * (Patrimônio Atual − Capital Próprio). Quando informado, o drawer
+   * exibe um bloco de reconciliação no rodapé comparando esse valor
+   * com a soma do Lucro Operacional dos projetos (engine canônica) e
+   * expõe a divergência (drift cambial, eventos sem projeto, etc.).
+   */
+  resultadoOperacaoBRL?: number;
 }
 
 function formatMoeda(valor: number, moeda: string) {
