@@ -1061,6 +1061,34 @@ export function SurebetModalRoot({
   // ============================================
 
   const updateOdd = useCallback((index: number, field: keyof OddEntry, value: string | boolean | number) => {
+    // ── Camada A: regra de produto — perna LAY não admite multi-casa ──
+    // Se o usuário tentar marcar como LAY uma perna que já tem
+    // additionalEntries, NÃO aplicamos a mudança aqui. Disparamos o
+    // ConfirmLayCollapseDialog (reutilizado do ApostaDialog) para confirmar
+    // a remoção explícita das entradas extras. A aplicação real do
+    // tipo='lay' acontece em `confirmLayCollapse` abaixo.
+    if (field === 'tipo' && value === 'lay') {
+      const current = odds[index];
+      const extras = current?.additionalEntries || [];
+      if (extras.length > 0) {
+        const remaining = bookmakerSaldos.find(b => b.id === current.bookmaker_id)?.nome;
+        const preview: LayCollapseEntryPreview[] = extras.map((e) => {
+          const bk = bookmakerSaldos.find(b => b.id === e.bookmaker_id);
+          const stakeNum = parseFloat(e.stake) || 0;
+          return {
+            id: (e as any).id,
+            bookmaker_nome: bk?.nome || 'Casa não selecionada',
+            stake_formatado: stakeNum > 0
+              ? stakeNum.toLocaleString('pt-BR', { style: 'currency', currency: e.moeda || 'BRL' })
+              : undefined,
+            odd: e.odd || null,
+          };
+        });
+        setLayCollapseRequest({ pernaIndex: index, entriesPreview: preview, remainingBookmakerNome: remaining });
+        return; // não aplica tipo='lay' agora — espera confirmação
+      }
+    }
+
     setOdds(prev => {
       const newOdds = [...prev];
       newOdds[index] = { ...newOdds[index], [field]: value };
@@ -1101,7 +1129,7 @@ export function SurebetModalRoot({
  
       return newOdds;
     });
-  }, [bookmakerSaldos, isEditing]);
+  }, [bookmakerSaldos, isEditing, odds]);
 
   const setReferenceIndex = useCallback((index: number) => {
     setOdds(prev => prev.map((o, i) => ({
