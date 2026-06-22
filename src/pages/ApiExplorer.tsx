@@ -192,6 +192,7 @@ export default function ApiExplorer() {
   const [syncing, setSyncing] = useState(false);
   const [syncingSofa, setSyncingSofa] = useState(false);
   const [fillingLogos, setFillingLogos] = useState(false);
+  const [syncingOdds, setSyncingOdds] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [stats, setStats] = useState({ total: 0, withLogos: 0, withoutLogos: 0 });
 
@@ -331,6 +332,27 @@ export default function ApiExplorer() {
     }
   };
 
+  const handleSyncOddsApi = async () => {
+    setSyncingOdds(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('odds-api-catalog-sync', {
+        body: {},
+      });
+      if (error) throw error;
+      const bySport = (data?.by_sport ?? {}) as Record<string, number>;
+      const breakdown = Object.entries(bySport).map(([k, v]) => `${k}:${v}`).join(' · ') || 'sem itens';
+      const errs = Array.isArray(data?.fetch_errors) ? data.fetch_errors.length : 0;
+      toast.success(
+        `Odds API: ${data?.inserted ?? 0} novos, ${data?.updated ?? 0} atualizados (${breakdown})${errs ? ` · ${errs} erro(s)` : ''}.`,
+      );
+      loadData();
+    } catch (err: any) {
+      toast.error(`Sync Odds API falhou: ${err?.message ?? err}`);
+    } finally {
+      setSyncingOdds(false);
+    }
+  };
+
 
   // Derived Data
   const continents = useMemo(() => Array.from(new Set(events.map(e => e.continent).filter(Boolean))), [events]);
@@ -441,15 +463,24 @@ export default function ApiExplorer() {
           <Button
             variant="outline"
             onClick={handleFillLogos}
-            disabled={fillingLogos || syncingSofa}
+            disabled={fillingLogos || syncingSofa || syncingOdds}
             className="rounded-full h-11 px-6 font-bold border-primary/20 hover:bg-primary/5 text-primary"
           >
             {fillingLogos ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Globe className="h-4 w-4 mr-2" />}
             {fillingLogos ? 'Preenchendo...' : 'Preencher Logos Faltantes'}
           </Button>
           <Button
+            variant="outline"
+            onClick={handleSyncOddsApi}
+            disabled={syncingSofa || fillingLogos || syncingOdds}
+            className="rounded-full h-11 px-6 font-bold border-primary/20 hover:bg-primary/5 text-primary"
+          >
+            {syncingOdds ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Database className="h-4 w-4 mr-2" />}
+            {syncingOdds ? 'Atualizando (Odds API)...' : 'Atualizar Catálogo (Odds API)'}
+          </Button>
+          <Button
             onClick={handleSyncSofascore}
-            disabled={syncingSofa || fillingLogos}
+            disabled={syncingSofa || fillingLogos || syncingOdds}
             className="rounded-full shadow-lg shadow-primary/20 h-11 px-6 font-bold"
           >
             {syncingSofa ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Database className="h-4 w-4 mr-2" />}
