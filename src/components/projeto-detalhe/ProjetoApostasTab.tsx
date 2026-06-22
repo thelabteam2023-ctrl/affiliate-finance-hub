@@ -35,6 +35,7 @@ import {
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
 import { groupPernasBySelecao } from "@/utils/groupPernasBySelecao";
 import { publishTabRender } from "@/utils/integrityProbe";
+import { probeReadByTab } from "@/utils/surebetLifecycleProbe";
 import { SurebetDialog } from "./SurebetDialog";
 import { apostaMatchesBookmakerFilter, apostaMatchesParceiroFilter } from "@/utils/apostaFilterHelpers";
 import { ApostaPernasResumo, ApostaPernasInline, Perna } from "./ApostaPernasResumo";
