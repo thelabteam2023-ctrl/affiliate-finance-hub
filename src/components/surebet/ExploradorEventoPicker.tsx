@@ -14,6 +14,7 @@ import { useDailyEventsByDate, type DailyEvent } from "@/hooks/useDailyEventsByD
 import { normalizeEsporte } from "@/components/surebet/utils/mapDailyEventToFormFields";
 import { ExploradorFilterPanel } from "@/components/surebet/ExploradorFilterPanel";
 import { LeagueBadgeRow } from "@/components/surebet/LeagueBadgeRow";
+import { computeMatchPhase } from "@/utils/matchPhase";
 import {
   applyExploradorFilters,
   computeFilterOptions,
@@ -81,8 +82,14 @@ export function ExploradorEventoPicker({ defaultDate, onSelect, variant = "butto
   // exatamente o universo que o usuário está vendo.
   const baseEvents = useMemo(() => {
     return events.filter((ev) => {
-      if (!showFinished && (ev.status === "finished" || ev.status === "FT" || ev.status === "ENCERRADO")) {
-        return false;
+      // Esconde apenas jogos efetivamente encerrados (não esconde "ao vivo").
+      if (!showFinished) {
+        const { phase } = computeMatchPhase({
+          commence_time: ev.commence_time,
+          sport: ev.sport ?? undefined,
+          status: ev.status ?? undefined,
+        });
+        if (phase === "finished") return false;
       }
       if (hasSportFilter && filterBySport && normalizeEsporte(ev.sport) !== esporte) {
         return false;
@@ -314,7 +321,13 @@ export function ExploradorEventoPicker({ defaultDate, onSelect, variant = "butto
           {!isLoading && !isError && filtered.length > 0 && (
             <div className="p-2 space-y-1">
               {filtered.map((ev) => {
-                const isFinished = ev.status === "finished" || ev.status === "FT" || ev.status === "ENCERRADO";
+                const phaseInfo = computeMatchPhase({
+                  commence_time: ev.commence_time,
+                  sport: ev.sport ?? undefined,
+                  status: ev.status ?? undefined,
+                });
+                const isFinished = phaseInfo.phase === "finished";
+                const isLive = phaseInfo.phase === "live";
                 const hora = format(new Date(ev.commence_time), "HH:mm");
                 return (
                   <button
@@ -342,6 +355,12 @@ export function ExploradorEventoPicker({ defaultDate, onSelect, variant = "butto
                       </div>
                       <div className="flex flex-col items-end gap-1 shrink-0">
                         <span className="text-xs font-bold tabular-nums">{hora}</span>
+                        {isLive && (
+                          <Badge variant="outline" className="text-[9px] h-4 px-1 border-red-500/50 text-red-500 gap-1">
+                            <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+                            ao vivo{phaseInfo.minutesIn != null ? ` · ${phaseInfo.minutesIn}'` : ""}
+                          </Badge>
+                        )}
                         {isFinished && (
                           <Badge variant="outline" className="text-[9px] h-4 px-1 border-amber-500/40 text-amber-500">
                             encerrado
