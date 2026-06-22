@@ -325,7 +325,8 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  const startUrls = (seedsRows ?? []).map((s: any) => ({ url: s.start_url }));
+  // O actor exige array de STRINGS (editor: stringList)
+  const startUrls = (seedsRows ?? []).map((s: any) => s.start_url);
   if (startUrls.length === 0) {
     return new Response(JSON.stringify({
       error: "Nenhuma seed habilitada para os esportes solicitados",
