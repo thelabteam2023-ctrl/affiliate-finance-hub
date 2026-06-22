@@ -18,7 +18,13 @@ import {
   AlertTriangle,
   Infinity as InfinityIcon,
   CalendarRange,
+  ChevronRight,
 } from "lucide-react";
+import {
+  ResultadoPorProjetoDrawer,
+  type DrawerFocus,
+} from "./ResultadoPorProjetoDrawer";
+import type { ResultadoPorProjetoItem } from "@/hooks/useResultadoPorProjeto";
 
 interface Props {
   loading: boolean;
@@ -32,6 +38,16 @@ interface Props {
   saldoFreebet: number;
   formatCurrency: (v: number) => string;
   periodLabel: string;
+  /** Itens por projeto para o drawer (Lucro Operacional / Realizado / Exposto). */
+  resultadoPorProjeto?: {
+    items: ResultadoPorProjetoItem[];
+    totaisBRL: {
+      lucroOperacional: number;
+      lucroRealizado: number;
+      capitalExposto: number;
+    };
+    loading: boolean;
+  };
 }
 
 /**
@@ -52,8 +68,16 @@ export function PosicaoCapitalCard({
   saldoFreebet,
   formatCurrency,
   periodLabel,
+  resultadoPorProjeto,
 }: Props) {
   const [modo, setModo] = useState<"acumulado" | "periodo">("acumulado");
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerFocus, setDrawerFocus] = useState<DrawerFocus>("realizado");
+
+  const openDrawer = (focus: DrawerFocus) => {
+    setDrawerFocus(focus);
+    setDrawerOpen(true);
+  };
 
   const view = useMemo(() => {
     if (modo === "periodo") {
@@ -86,12 +110,15 @@ export function PosicaoCapitalCard({
   // Importante: patrimônio usa apenas saldo_atual (real) dos bookmakers, NÃO
   // inclui saldo_freebet. Por isso freebet entra apenas como linha
   // informativa e NÃO é subtraído daqui.
-  const resultadoOperacionalAcumulado =
-    patrimonioAtual - capitalLiquidoAcumulado;
+  const resultadoTeorico = patrimonioAtual - capitalLiquidoAcumulado;
+  // Realizado vem do serviço canônico por projeto (saques − depósitos).
+  const resultadoRealizado = resultadoPorProjeto?.totaisBRL.lucroRealizado ?? 0;
+  // Capital exposto = parte do teórico que ainda não virou dinheiro real.
+  const capitalExposto = resultadoTeorico - resultadoRealizado;
 
   const roi =
     capitalLiquidoAcumulado > 0
-      ? (resultadoOperacionalAcumulado / capitalLiquidoAcumulado) * 100
+      ? (resultadoRealizado / capitalLiquidoAcumulado) * 100
       : null;
 
   const semAportes = capitalLiquidoAcumulado <= 0 && patrimonioAtual > 0;
@@ -219,11 +246,30 @@ export function PosicaoCapitalCard({
               hint="Aportes − Liquidações (acumulado)"
             />
             <BreakdownRow
-              label="Resultado operacional acumulado"
-              value={resultadoOperacionalAcumulado}
+              label="Resultado realizado"
+              value={resultadoRealizado}
               formatCurrency={formatCurrency}
-              tone={resultadoOperacionalAcumulado >= 0 ? "positive" : "negative"}
-              hint="Tudo que a operação gerou acima do capital próprio investido: lucro de apostas, bônus convertidos, cashback, ajustes cambiais etc."
+              tone={resultadoRealizado >= 0 ? "positive" : "negative"}
+              hint="Dinheiro que já voltou ao caixa: (Saques + Saques Virtuais) − (Depósitos + Depósitos Virtuais), somado de todos os projetos. Clique para ver origem por projeto."
+              onClick={() => openDrawer("realizado")}
+            />
+            <BreakdownRow
+              label="Resultado teórico (atual)"
+              value={resultadoTeorico}
+              formatCurrency={formatCurrency}
+              tone={resultadoTeorico >= 0 ? "positive" : "negative"}
+              badge="teórico"
+              hint="Inclui o saldo ainda dentro das casas. Pode não se realizar integralmente se houver limitação, conta fechada ou scam. Clique para ver origem por projeto."
+              onClick={() => openDrawer("teorico")}
+            />
+            <BreakdownRow
+              label="↳ Capital exposto nas casas"
+              value={capitalExposto}
+              formatCurrency={formatCurrency}
+              tone={Math.abs(capitalExposto) > 0.01 ? "warning" : "muted"}
+              hint="Teórico − Realizado. Quanto do lucro contábil ainda depende de saque para virar dinheiro real. Clique para ver por projeto."
+              onClick={() => openDrawer("exposto")}
+              indent
             />
             <BreakdownRow
               label="Freebet em estoque (informativo)"
@@ -236,7 +282,7 @@ export function PosicaoCapitalCard({
             {roi !== null && (
               <div className="mt-2 pt-2 border-t border-border/50 flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">
-                  Resultado sobre capital próprio
+                  Resultado realizado sobre capital próprio
                 </span>
                 <Badge
                   variant="outline"
@@ -264,6 +310,17 @@ export function PosicaoCapitalCard({
           )}
         </CardContent>
       </Card>
+      {resultadoPorProjeto && (
+        <ResultadoPorProjetoDrawer
+          open={drawerOpen}
+          onOpenChange={setDrawerOpen}
+          focus={drawerFocus}
+          items={resultadoPorProjeto.items}
+          totaisBRL={resultadoPorProjeto.totaisBRL}
+          loading={resultadoPorProjeto.loading}
+          formatBRL={formatCurrency}
+        />
+      )}
     </TooltipProvider>
   );
 }
@@ -274,25 +331,61 @@ function BreakdownRow({
   formatCurrency,
   tone = "default",
   hint,
+  onClick,
+  badge,
+  indent = false,
 }: {
   label: string;
   value: number;
   formatCurrency: (v: number) => string;
-  tone?: "default" | "positive" | "negative" | "muted";
+  tone?: "default" | "positive" | "negative" | "muted" | "warning";
   hint?: string;
+  onClick?: () => void;
+  badge?: string;
+  indent?: boolean;
 }) {
   const colorClass =
     tone === "positive"
       ? "text-emerald-500"
       : tone === "negative"
         ? "text-red-500"
-        : tone === "muted"
-          ? "text-muted-foreground"
-          : "text-foreground";
+        : tone === "warning"
+          ? "text-amber-500"
+          : tone === "muted"
+            ? "text-muted-foreground"
+            : "text-foreground";
+  const clickable = !!onClick;
   return (
-    <div className="flex items-center justify-between py-1 text-xs">
+    <div
+      className={`flex items-center justify-between py-1 text-xs ${
+        clickable
+          ? "cursor-pointer rounded-md -mx-1 px-1 hover:bg-foreground/[0.04] transition-colors"
+          : ""
+      } ${indent ? "pl-3" : ""}`}
+      onClick={onClick}
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onKeyDown={
+        clickable
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onClick?.();
+              }
+            }
+          : undefined
+      }
+    >
       <span className="text-muted-foreground flex items-center gap-1.5">
         {label}
+        {badge && (
+          <Badge
+            variant="outline"
+            className="text-[9px] h-3.5 px-1 py-0 border-border/60 text-muted-foreground"
+          >
+            {badge}
+          </Badge>
+        )}
         {hint && (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -302,9 +395,11 @@ function BreakdownRow({
           </Tooltip>
         )}
       </span>
-      <span className={`font-mono font-semibold ${colorClass}`}>
-        {value >= 0 ? "" : ""}
+      <span className={`font-mono font-semibold flex items-center gap-1 ${colorClass}`}>
         {formatCurrency(value)}
+        {clickable && (
+          <ChevronRight className="h-3 w-3 opacity-40" />
+        )}
       </span>
     </div>
   );
