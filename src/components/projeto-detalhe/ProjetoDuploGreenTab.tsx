@@ -431,29 +431,64 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
             if (a.forma_registro === "ARBITRAGEM") {
               // ARBITRAGEM/Surebet: populate pernas with full data for SurebetCard
               const parceiroNome = (p: any) => p.bookmaker?.parceiro?.nome;
-              a.pernas = pernas.map((p: any) => ({
-                id: p.id,
-                bookmaker_id: p.bookmaker_id,
-                bookmaker_nome: parceiroNome(p) 
-                  ? `${p.bookmaker?.nome || "—"} - ${parceiroNome(p)}` 
-                  : (p.bookmaker?.nome || "—"),
-                parceiro_nome: parceiroNome(p) || null,
-                moeda: p.moeda || 'BRL',
-                selecao: p.selecao,
-                selecao_livre: p.selecao_livre,
-                odd: p.odd,
-                stake: p.stake,
-                resultado: p.resultado,
-                lucro_prejuizo: p.lucro_prejuizo,
-                gerou_freebet: p.gerou_freebet,
-                valor_freebet_gerada: p.valor_freebet_gerada,
-                stake_brl_referencia: p.stake_brl_referencia,
-                lucro_prejuizo_brl_referencia: p.lucro_prejuizo_brl_referencia,
-                cotacao_snapshot: p.cotacao_snapshot,
-                fonte_saldo: p.fonte_saldo || null,
-                tipo: p.tipo || 'back',
-                comissao: p.comissao ?? 0,
-              }));
+              a.pernas = pernas.map((p: any) => {
+                const entradas: any[] = Array.isArray(p.apostas_perna_entradas) ? p.apostas_perna_entradas : [];
+                const base: any = {
+                  id: p.id,
+                  bookmaker_id: p.bookmaker_id,
+                  bookmaker_nome: parceiroNome(p)
+                    ? `${p.bookmaker?.nome || "—"} - ${parceiroNome(p)}`
+                    : (p.bookmaker?.nome || "—"),
+                  parceiro_nome: parceiroNome(p) || null,
+                  moeda: p.moeda || 'BRL',
+                  selecao: p.selecao,
+                  selecao_livre: p.selecao_livre,
+                  odd: p.odd,
+                  stake: p.stake,
+                  resultado: p.resultado,
+                  lucro_prejuizo: p.lucro_prejuizo,
+                  gerou_freebet: p.gerou_freebet,
+                  valor_freebet_gerada: p.valor_freebet_gerada,
+                  stake_brl_referencia: p.stake_brl_referencia,
+                  lucro_prejuizo_brl_referencia: p.lucro_prejuizo_brl_referencia,
+                  cotacao_snapshot: p.cotacao_snapshot,
+                  fonte_saldo: p.fonte_saldo || null,
+                  tipo: p.tipo || 'back',
+                  comissao: p.comissao ?? 0,
+                };
+                // Multi-bookmaker (perna composta): anexar entries[] para o SurebetCard
+                if (entradas.length > 1) {
+                  const stakeTotal = entradas.reduce((s: number, e: any) => s + (Number(e.stake) || 0), 0);
+                  const oddMedia = stakeTotal > 0
+                    ? entradas.reduce((s: number, e: any) => s + (Number(e.odd) || 0) * (Number(e.stake) || 0), 0) / stakeTotal
+                    : Number(p.odd) || 0;
+                  base.odd_media = oddMedia;
+                  base.stake_total = stakeTotal;
+                  base.entries = entradas.map((e: any) => {
+                    const bm = e.bookmakers as any;
+                    const parc = bm?.parceiro?.nome;
+                    return {
+                      id: e.id,
+                      bookmaker_id: e.bookmaker_id,
+                      bookmaker_nome: parc ? `${bm?.nome || "—"} - ${parc}` : (bm?.nome || "—"),
+                      parceiro_nome: parc || null,
+                      instance_identifier: bm?.instance_identifier ?? null,
+                      logo_url: bm?.bookmakers_catalogo?.logo_url ?? null,
+                      moeda: e.moeda || p.moeda || 'BRL',
+                      odd: Number(e.odd) || 0,
+                      stake: Number(e.stake) || 0,
+                      resultado: null,
+                      lucro_prejuizo: null,
+                      stake_brl_referencia: e.stake_brl_referencia ?? null,
+                      cotacao_snapshot: e.cotacao_snapshot ?? null,
+                      fonte_saldo: e.fonte_saldo || p.fonte_saldo || undefined,
+                      stake_real: e.stake_real ?? undefined,
+                      stake_freebet: e.stake_freebet ?? undefined,
+                    };
+                  });
+                }
+                return base;
+              });
             } else if (pernas.length > 1) {
               // SIMPLES multi-entry: store as sub_entries
               (a as any)._sub_entries = pernas;
