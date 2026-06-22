@@ -551,6 +551,15 @@ export default function ApiExplorer() {
             {syncingOdds ? 'Atualizando (Odds API)...' : 'Atualizar Catálogo (Odds API)'}
           </Button>
           <Button
+            variant="outline"
+            onClick={handlePollResults}
+            disabled={pollingResults || syncingSofa || fillingLogos || syncingOdds}
+            className="rounded-full h-11 px-6 font-bold border-primary/20 hover:bg-primary/5 text-primary"
+          >
+            {pollingResults ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
+            {pollingResults ? 'Atualizando resultados...' : 'Atualizar Resultados'}
+          </Button>
+          <Button
             onClick={handleSyncSofascore}
             disabled={syncingSofa || fillingLogos || syncingOdds}
             className="rounded-full shadow-lg shadow-primary/20 h-11 px-6 font-bold"
