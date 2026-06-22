@@ -422,11 +422,11 @@ export default function ApiExplorer() {
       <div className="grid md:grid-cols-[1fr_auto] items-center gap-6 bg-card border p-6 rounded-2xl shadow-sm">
         <div className="space-y-1">
           <h1 className="text-2xl font-black tracking-tight flex items-center gap-2">
-            Explorador de Dados Esportivos
-            <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">V2 REAL-TIME</Badge>
+            Catálogo de Partidas
+            <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">TheSportsDB</Badge>
           </h1>
           <p className="text-muted-foreground text-sm">
-            Auditoria de cobertura de ligas e monitoramento de calendário esportivo.
+            Catálogo unificado de jogos de todos os esportes (sem odds). Atualizado automaticamente 3× ao dia.
           </p>
           {lastSync && (
             <div className="flex items-center gap-2 pt-2">
