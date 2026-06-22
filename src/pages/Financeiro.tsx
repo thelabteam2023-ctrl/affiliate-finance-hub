@@ -524,6 +524,8 @@ export default function Financeiro() {
                                 aportesAcumulado={posicaoCapital.aportesAcumulado}
                                 liquidacoesAcumulado={posicaoCapital.liquidacoesAcumulado}
                                 capitalLiquidoAcumulado={posicaoCapital.capitalLiquidoAcumulado}
+                                capitalLiquidoHistoricoBRL={posicaoCapital.capitalLiquidoHistoricoBRL}
+                                resultadoOperacionalRealizado={resultadoOperacionalRealizadoAcumulado}
                                 patrimonioAtual={patrimonioTotal}
                                 saldoFreebet={saldoFreebetTotal}
                                 formatCurrency={calc.formatCurrency}
