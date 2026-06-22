@@ -771,6 +771,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
             ...p,
             bookmaker: bookmakerMap.get(p.bookmaker_id) || { nome: "Desconhecida" },
             bookmaker_nome: bookmakerMap.get(p.bookmaker_id)?.nome || p.bookmaker_nome || "Desconhecida",
+            entries: Array.isArray(p.apostas_perna_entradas) && p.apostas_perna_entradas.length > 1
+              ? formatPernaEntradas(p.apostas_perna_entradas, bookmakerMap.get(p.bookmaker_id)?.nome)
+              : undefined,
           }))
         };
       });
