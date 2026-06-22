@@ -312,13 +312,12 @@ export default function ApiExplorer() {
   };
 
   const handleSyncSofascore = async () => {
-    if (!window.confirm('Sincronizar via Sofascore (Apify). Custo estimado por execução: <USD 0,10. Continuar?')) return;
+    if (!window.confirm('Sincronizar via Sofascore (API direta, sem custo). Continuar?')) return;
     setSyncingSofa(true);
     try {
       const { data, error } = await supabase.functions.invoke('sofascore-sync', {
         body: {
           sports: ['soccer', 'basketball', 'tennis', 'baseball', 'americanfootball', 'icehockey'],
-          maxItems: 200,
         },
       });
       if (error) throw error;
@@ -326,8 +325,9 @@ export default function ApiExplorer() {
       const breakdown = Object.entries(bySport)
         .map(([k, v]) => `${k}:${v}`)
         .join(' · ') || 'sem itens';
+      const errs = Array.isArray(data?.fetch_errors) ? data.fetch_errors.length : 0;
       toast.success(
-        `Sofascore: ${data?.items_upserted ?? 0} eventos (${breakdown}). Custo ~USD ${Number(data?.cost_estimate_usd ?? 0).toFixed(4)}.`,
+        `Sofascore: ${data?.items_upserted ?? 0} eventos (${breakdown})${errs ? ` · ${errs} erro(s) de fetch` : ''}.`,
       );
       loadData();
     } catch (err: any) {
