@@ -402,9 +402,6 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                   nome, parceiro_id, instance_identifier,
                   parceiro:parceiros (nome),
                   bookmakers_catalogo (logo_url)
-                ),
-                apostas_perna_entradas (
-                  id, perna_id, bookmaker_id, moeda, odd, stake, stake_real, stake_freebet, fonte_saldo, tipo, comissao, stake_brl_referencia, cotacao_snapshot, created_at
                 )
               `)
               .in("aposta_id", idsChunk)
@@ -421,29 +418,6 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
             const arr = pernasMap.get(p.aposta_id) || [];
             arr.push(p);
             pernasMap.set(p.aposta_id, arr);
-          }
-          // Pré-carrega bookmakers de TODAS as sub-entradas (podem ser
-          // diferentes da casa principal — caso multi-casa por perna).
-          const subEntryBkIds = new Set<string>();
-          pernasOrdenadas.forEach((p: any) => {
-            (p.apostas_perna_entradas || []).forEach((e: any) => {
-              if (e.bookmaker_id) subEntryBkIds.add(e.bookmaker_id);
-            });
-          });
-          const subEntryBkMap = new Map<string, any>();
-          if (subEntryBkIds.size > 0) {
-            const { data: extraBks } = await supabase
-              .from("bookmakers")
-              .select("id, nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo(logo_url)")
-              .in("id", Array.from(subEntryBkIds));
-            (extraBks || []).forEach((b: any) => {
-              subEntryBkMap.set(b.id, {
-                nome: b.nome,
-                instance_identifier: b.instance_identifier || null,
-                parceiro_nome: b.parceiro?.nome || null,
-                logo_url: b.bookmakers_catalogo?.logo_url || null,
-              });
-            });
           }
           for (const a of mapped) {
             const pernas = pernasMap.get(a.id);
@@ -474,44 +448,6 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                 fonte_saldo: p.fonte_saldo || null,
                 tipo: p.tipo || 'back',
                 comissao: p.comissao ?? 0,
-                // ⬇️ NOVO: 1:N entradas. Sem isto o card oculta casas adicionais
-                // dentro da mesma perna (ex.: VAVE + HUGEWIN no mesmo "Empate").
-                entries: (() => {
-                  const raw = Array.isArray(p.apostas_perna_entradas) ? p.apostas_perna_entradas : [];
-                  return [...raw]
-                    .sort((x: any, y: any) => {
-                      const ta = x?.created_at ? Date.parse(x.created_at) : 0;
-                      const tb = y?.created_at ? Date.parse(y.created_at) : 0;
-                      return ta - tb;
-                    })
-                    .map((e: any) => {
-                      const eb = subEntryBkMap.get(e.bookmaker_id);
-                      const ePar = eb?.parceiro_nome ?? null;
-                      const eDisplay = eb
-                        ? (ePar
-                            ? `${eb.nome}${eb.instance_identifier ? ` (${eb.instance_identifier})` : ''} - ${ePar}`
-                            : `${eb.nome}${eb.instance_identifier ? ` (${eb.instance_identifier})` : ''}`)
-                        : "—";
-                      return {
-                        id: e.id,
-                        bookmaker_id: e.bookmaker_id,
-                        bookmaker_nome: eDisplay,
-                        parceiro_nome: ePar,
-                        instance_identifier: eb?.instance_identifier ?? null,
-                        logo_url: eb?.logo_url ?? null,
-                        moeda: e.moeda || 'BRL',
-                        odd: Number(e.odd) || 0,
-                        stake: Number(e.stake) || 0,
-                        selecao_livre: e.selecao_livre ?? undefined,
-                        fonte_saldo: e.fonte_saldo ?? 'REAL',
-                        resultado: e.resultado ?? null,
-                        lucro_prejuizo: e.lucro_prejuizo ?? null,
-                        stake_brl_referencia: e.stake_brl_referencia ?? null,
-                        lucro_prejuizo_brl_referencia: e.lucro_prejuizo_brl_referencia ?? null,
-                        cotacao_snapshot: e.cotacao_snapshot ?? null,
-                      };
-                    });
-                })(),
               }));
             } else if (pernas.length > 1) {
               // SIMPLES multi-entry: store as sub_entries

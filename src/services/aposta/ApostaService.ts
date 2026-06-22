@@ -21,11 +21,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { pernasToInserts } from "@/types/apostasPernas";
 import { deriveStakeSplit } from "@/lib/freebetStake";
 import { validateInvariants, validateUpdateInvariants, formatViolations } from "./invariants";
-import {
-  probeCreatePayload,
-  probeCreateResult,
-  probeCheckpoint,
-} from "@/utils/surebetLifecycleProbe";
 import type {
   CriarApostaInput,
   AtualizarApostaInput,
@@ -137,20 +132,6 @@ export async function criarAposta(
   // deixaria a operação sem débito de stake e inflaria saldos ao liquidar.
   if (isArbitragem) {
     try {
-      probeCreatePayload(
-        {
-          projetoId: input.projeto_id,
-          workspaceId: input.workspace_id,
-          formaRegistro: input.forma_registro,
-          estrategia: input.estrategia,
-          pernas: input.pernas as any,
-        },
-        "ApostaService.criarAposta",
-      );
-      probeCheckpoint("RPC_CREATE_SENT", {
-        source: "ApostaService.criarAposta",
-        data: { rpc: "criar_surebet_atomica", pernasCount: (input.pernas || []).length },
-      });
       const { data, error } = await supabase.rpc('criar_surebet_atomica', {
         p_workspace_id: input.workspace_id,
         p_user_id: input.user_id,
@@ -166,7 +147,6 @@ export async function criarAposta(
       });
 
       if (error) {
-        probeCreateResult({ apostaId: null, success: false, source: "ApostaService.criarAposta", error });
         return {
           success: false,
           error: { code: 'RPC_ERROR', message: error.message, details: { error } },
@@ -175,17 +155,14 @@ export async function criarAposta(
 
       const result = data?.[0];
       if (!result?.success) {
-        probeCreateResult({ apostaId: null, success: false, source: "ApostaService.criarAposta", error: result?.message });
         return {
           success: false,
           error: { code: 'CREATE_FAILED', message: result?.message || 'Falha ao criar arbitragem' },
         };
       }
 
-      probeCreateResult({ apostaId: result.o_aposta_id, success: true, source: "ApostaService.criarAposta" });
       return { success: true, data: { id: result.o_aposta_id } };
     } catch (err: any) {
-      probeCreateResult({ apostaId: null, success: false, source: "ApostaService.criarAposta", error: err });
       return {
         success: false,
         error: { code: 'UNEXPECTED_ERROR', message: err.message || 'Erro inesperado ao criar arbitragem', details: { error: err } },

@@ -35,8 +35,6 @@ import {
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
 import { groupPernasBySelecao } from "@/utils/groupPernasBySelecao";
 import { publishTabRender } from "@/utils/integrityProbe";
-import { probeReadByTab } from "@/utils/surebetLifecycleProbe";
-import { surebetMatchesEstrategiaFilter } from "@/utils/surebetVisibility";
 import { SurebetDialog } from "./SurebetDialog";
 import { apostaMatchesBookmakerFilter, apostaMatchesParceiroFilter } from "@/utils/apostaFilterHelpers";
 import { ApostaPernasResumo, ApostaPernasInline, Perna } from "./ApostaPernasResumo";
@@ -686,10 +684,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           valor_brl_referencia, lucro_prejuizo_brl_referencia,
           time_casa, time_fora, home_team_logo_url, away_team_logo_url, league_logo_url,
           apostas_pernas (
-            id, selecao, selecao_livre, odd, stake, stake_real, stake_freebet, resultado, lucro_prejuizo, bookmaker_id, moeda, ordem, tipo, comissao, fonte_saldo,
-            apostas_perna_entradas (
-              id, perna_id, bookmaker_id, moeda, odd, stake, stake_real, stake_freebet, fonte_saldo, tipo, comissao, stake_brl_referencia, cotacao_snapshot, created_at
-            )
+            id, selecao, selecao_livre, odd, stake, stake_real, stake_freebet, resultado, lucro_prejuizo, bookmaker_id, moeda, ordem, tipo, comissao, fonte_saldo
           )
         `;
 
@@ -740,10 +735,6 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         const pernasEfetivas = pernasRelacionais.length > 0 ? pernasRelacionais : pernasJson;
         pernasEfetivas.forEach((p: any) => {
           if (p.bookmaker_id) allBookmakerIds.add(p.bookmaker_id);
-          // Casas adicionais (apostas_perna_entradas) podem ser diferentes da principal
-          (p.apostas_perna_entradas || []).forEach((e: any) => {
-            if (e.bookmaker_id) allBookmakerIds.add(e.bookmaker_id);
-          });
         });
       });
       
@@ -770,67 +761,15 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           data_operacao: sb.data_aposta,
           stake_total: sb.stake_total ?? 0,
           workspace_id: sb.workspace_id,
-          pernas: pernasEfetivas.map((p: any) => {
-            // Constrói entries[] a partir de apostas_perna_entradas (1:N).
-            // Sem fallback aqui: pernas sem entradas (legado) simplesmente ficam
-            // com entries=[], e o card cai para o caminho single-entry usando os
-            // campos denormalizados da própria perna.
-            const rawEntries = Array.isArray(p.apostas_perna_entradas) ? p.apostas_perna_entradas : [];
-            const sortedEntries = [...rawEntries].sort((a: any, b: any) => {
-              const ta = a?.created_at ? Date.parse(a.created_at) : 0;
-              const tb = b?.created_at ? Date.parse(b.created_at) : 0;
-              return ta - tb;
-            });
-            const entries = sortedEntries.map((e: any) => {
-              const eb = bookmakerMap.get(e.bookmaker_id) as any;
-              const ePar = eb?.parceiro?.nome ?? null;
-              const eDisplay = eb
-                ? (ePar
-                    ? `${eb.nome}${eb.instance_identifier ? ` (${eb.instance_identifier})` : ''} - ${ePar}`
-                    : `${eb.nome}${eb.instance_identifier ? ` (${eb.instance_identifier})` : ''}`)
-                : "—";
-              return {
-                id: e.id,
-                bookmaker_id: e.bookmaker_id,
-                bookmaker_nome: eDisplay,
-                parceiro_nome: ePar,
-                instance_identifier: eb?.instance_identifier ?? null,
-                logo_url: null,
-                moeda: e.moeda || 'BRL',
-                odd: Number(e.odd) || 0,
-                stake: Number(e.stake) || 0,
-                selecao_livre: e.selecao_livre ?? undefined,
-                fonte_saldo: e.fonte_saldo ?? 'REAL',
-                resultado: e.resultado ?? null,
-                lucro_prejuizo: e.lucro_prejuizo ?? null,
-                stake_brl_referencia: e.stake_brl_referencia ?? null,
-                lucro_prejuizo_brl_referencia: e.lucro_prejuizo_brl_referencia ?? null,
-                cotacao_snapshot: e.cotacao_snapshot ?? null,
-              };
-            });
-            const totalStakeEntries = entries.reduce((s: number, e: any) => s + (Number(e.stake) || 0), 0);
-            const oddMediaPond = totalStakeEntries > 0
-              ? entries.reduce((s: number, e: any) => s + (Number(e.odd) || 0) * (Number(e.stake) || 0), 0) / totalStakeEntries
-              : 0;
-            return {
-              ...p,
-              bookmaker: bookmakerMap.get(p.bookmaker_id) || { nome: "Desconhecida" },
-              bookmaker_nome: bookmakerMap.get(p.bookmaker_id)?.nome || p.bookmaker_nome || "Desconhecida",
-              entries,
-              odd_media: oddMediaPond,
-              stake_total: totalStakeEntries,
-            };
-          })
+          pernas: pernasEfetivas.map((p: any) => ({
+            ...p,
+            bookmaker: bookmakerMap.get(p.bookmaker_id) || { nome: "Desconhecida" },
+            bookmaker_nome: bookmakerMap.get(p.bookmaker_id)?.nome || p.bookmaker_nome || "Desconhecida",
+          }))
         };
       });
       
       setSurebets(surebetsFormatadas);
-      probeReadByTab({
-        tab: "ProjetoApostasTab.fetchSurebets",
-        projetoId,
-        apostaIdsRaw: (allSurebetData || []).map((a: any) => a.id),
-        apostaIdsMapped: surebetsFormatadas.map((a: any) => a.id),
-      });
     } catch (error: any) {
       console.error("Erro ao carregar surebets:", error.message);
     }
@@ -1199,12 +1138,14 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       const matchesBookmaker = selectedBookmakerIds.length === 0 || 
         sb.pernas?.some(p => selectedBookmakerIds.includes(p.bookmaker_id));
       
-      // Filtro de parceiro: considerar bookmaker principal, pernas e entries.
-      const matchesParceiro = apostaMatchesParceiroFilter(sb as any, selectedParceiroIds, bookmakers as any);
+      // Filtro de parceiro: verificar se alguma perna tem o parceiro selecionado
+      const matchesParceiro = selectedParceiroIds.length === 0 || 
+        sb.pernas?.some(p => p.bookmaker?.parceiro && selectedParceiroIds.includes((p.bookmaker.parceiro as any).id));
       
-      // Filtro de estratégia: arbitragens também devem aparecer quando o usuário
-      // escolhe "Surebet", mesmo que a estratégia analítica salva seja bônus/punter/etc.
-      const matchesEstrategia = surebetMatchesEstrategiaFilter(sb, selectedEstrategias);
+      // Filtro de estratégia - usar valor real do banco
+      const surebetEstrategia = sb.estrategia || "SUREBET";
+      const matchesEstrategia = selectedEstrategias.includes("all") || 
+        selectedEstrategias.includes(surebetEstrategia as any);
       
       const matchesStatus = statusFilter === "all" || sb.status === statusFilter;
       const matchesResultado = tabFilters.resultados.length === 0 || tabFilters.resultados.includes(sb.resultado as any);
