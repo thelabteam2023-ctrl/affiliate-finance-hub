@@ -29,6 +29,8 @@ export const DOMAIN_INVARIANTS = {
   SUREBET_REQUIRES_ARBITRAGEM: 'SUREBET_REQUIRES_ARBITRAGEM',
   /** Stake total não pode exceder saldo operável */
   STAKE_WITHIN_BALANCE: 'STAKE_WITHIN_BALANCE',
+  /** Perna LAY não pode ter mais de 1 sub-entrada (composição multi-casa) */
+  LAY_LEG_MULTI_ENTRY_NOT_SUPPORTED: 'LAY_LEG_MULTI_ENTRY_NOT_SUPPORTED',
 } as const;
 
 export type DomainInvariant = typeof DOMAIN_INVARIANTS[keyof typeof DOMAIN_INVARIANTS];
@@ -68,6 +70,14 @@ export interface PernaInput {
   gerou_freebet?: boolean;
   valor_freebet_gerada?: number | null;
   is_freebet?: boolean;
+  /**
+   * Sub-entradas (composição multi-casa) desta perna. Quando presentes,
+   * cada item representa uma casa diferente apostando no mesmo lado.
+   * REGRA DE PRODUTO: pernas LAY NÃO admitem composição — se
+   * `tipo === 'lay'` e `entries.length > 1`, o invariante
+   * LAY_LEG_MULTI_ENTRY_NOT_SUPPORTED é violado.
+   */
+  entries?: Array<{ bookmaker_id?: string; odd?: number; stake?: number }>;
 }
 
 /**
