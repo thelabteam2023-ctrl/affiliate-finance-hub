@@ -1085,13 +1085,21 @@ export default function ApiExplorer() {
                                 <div className="divide-y divide-border/20">
                                   {matches.map((ev: Event) => {
                                     const startsAt = parseISO(ev.commence_time);
-                                    const isPast = startsAt.getTime() < Date.now();
+                                    const phaseInfo = computeMatchPhase({
+                                      commence_time: ev.commence_time,
+                                      sport: ev.sport,
+                                      has_result: !!(ev.result_home || ev.result_away),
+                                    });
+                                    const isLive = phaseInfo.phase === 'live';
+                                    const isFinished = phaseInfo.phase === 'finished';
                                     return (
                                     <div
                                       key={ev.api_id}
                                       className={cn(
                                         "grid grid-cols-[80px_1fr_100px] items-center p-4 transition-colors group",
-                                        isPast
+                                        isLive
+                                          ? "bg-red-500/5 hover:bg-red-500/10"
+                                          : isFinished
                                           ? "bg-amber-500/10 hover:bg-amber-500/15"
                                           : "hover:bg-primary/5"
                                       )}
@@ -1100,7 +1108,7 @@ export default function ApiExplorer() {
                                       <div className="flex flex-col items-center justify-center border-r pr-4">
                                         <span className={cn(
                                           "text-sm font-black",
-                                          isPast ? "text-amber-700 dark:text-amber-500 line-through decoration-amber-700/40" : "text-foreground"
+                                          isFinished ? "text-amber-700 dark:text-amber-500 line-through decoration-amber-700/40" : isLive ? "text-red-600 dark:text-red-400" : "text-foreground"
                                         )}>
                                           {format(startsAt, 'HH:mm')}
                                         </span>
@@ -1129,7 +1137,16 @@ export default function ApiExplorer() {
 
                                       {/* STATUS / INFO */}
                                       <div className="flex justify-end pr-2">
-                                        {isPast && (
+                                        {isLive && (
+                                          <Badge
+                                            variant="outline"
+                                            className="mr-1 h-5 px-1.5 text-[9px] font-black uppercase tracking-wider border-red-500/50 bg-red-500/15 text-red-600 dark:text-red-400 gap-1"
+                                          >
+                                            <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+                                            Ao vivo{phaseInfo.minutesIn != null ? ` · ${phaseInfo.minutesIn}'` : ''}
+                                          </Badge>
+                                        )}
+                                        {isFinished && (
                                           <Badge
                                             variant="outline"
                                             className="mr-1 h-5 px-1.5 text-[9px] font-black uppercase tracking-wider border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-400"
