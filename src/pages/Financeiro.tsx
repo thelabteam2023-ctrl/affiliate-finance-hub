@@ -105,6 +105,16 @@ export default function Financeiro() {
   const lucroOperacionalApostas = lucroOperacionalData?.lucroTotal ?? 0;
   const hasMultiCurrencyApostas = lucroOperacionalData?.hasMultiCurrency ?? false;
 
+  // Lucro operacional ACUMULADO (lifetime) — usado pela decomposição
+  // Patrimônio = Capital histórico + Resultado realizado + FX não realizada
+  const { resultado: lucroOperacionalLifetime } = useWorkspaceLucroOperacional({
+    dataInicio: null,
+    dataFim: null,
+    cotacaoUSD,
+    cotacoes: cotacoesMap,
+  });
+  const resultadoOperacionalRealizadoAcumulado = lucroOperacionalLifetime?.lucroTotal ?? 0;
+
   // Lucro Realizado (métrica primária — Saques − Depósitos efetivos)
   const { lucroRealizado } = useWorkspaceLucroRealizado({
     cotacaoUSD,
