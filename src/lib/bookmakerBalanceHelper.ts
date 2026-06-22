@@ -20,16 +20,45 @@ import { processFinancialEvent } from "./financialEngine";
 /**
  * Calcula o impacto financeiro de um resultado de aposta.
  * Função pura - NÃO modifica saldo, apenas calcula.
+ *
+ * @param layOpts Opcional. Quando fornecido com isLay=true e liability>0, aplica
+ *   a fórmula de LAY (exchange). Caso contrário, mantém comportamento BACK original
+ *   — chamadas existentes sem este parâmetro permanecem ESTRITAMENTE inalteradas.
  */
 export function calcularImpactoResultado(
   stake: number,
   odd: number,
-  resultado: string | null
+  resultado: string | null,
+  layOpts?: { isLay?: boolean; liability?: number; comissao?: number }
 ): number {
   if (!resultado || resultado === 'PENDENTE') return 0;
-  
+
+  // Ramo LAY (aditivo): só ativa quando explicitamente sinalizado E liability válida.
+  // Liability NULL/0 → cai no ramo BACK abaixo (mesma política de borda da Fase 1).
+  const isLay =
+    layOpts?.isLay === true &&
+    typeof layOpts.liability === 'number' &&
+    layOpts.liability > 0;
+
+  if (isLay) {
+    const liability = layOpts!.liability as number;
+    const comissao = Math.max(0, Math.min(1, layOpts!.comissao ?? 0));
+    switch (resultado) {
+      case 'GREEN':
+        return stake * (1 - comissao); // lucro líquido do lay
+      case 'RED':
+        return -liability;             // perde a margem retida
+      case 'VOID':
+      case 'CANCELADA':
+        return 0;
+      // MEIO_GREEN/MEIO_RED não são padrão em LAY simples — cai no fallback BACK
+      default:
+        break;
+    }
+  }
+
   const retornoPotencial = stake * odd;
-  
+
   switch (resultado) {
     case 'GREEN':
       return retornoPotencial - stake; // Lucro líquido
