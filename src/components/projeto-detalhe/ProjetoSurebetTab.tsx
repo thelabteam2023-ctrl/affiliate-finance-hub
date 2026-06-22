@@ -1,5 +1,6 @@
 import { openSurebetWindow } from "@/lib/windowHelper";
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { formatPernaEntradas } from "@/utils/formatPernaEntradas";
 import { useQueryClient, useQuery, keepPreviousData } from "@tanstack/react-query";
 import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
 import { supabase } from "@/integrations/supabase/client";
@@ -404,7 +405,13 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                 id, aposta_id, bookmaker_id, moeda, selecao, selecao_livre, odd, stake, stake_real, stake_freebet, ordem, tipo, comissao,
                 resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada,
                 stake_brl_referencia, lucro_prejuizo_brl_referencia, cotacao_snapshot, fonte_saldo,
-                bookmakers (nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo(logo_url))
+                bookmakers (nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo(logo_url)),
+                apostas_perna_entradas (
+                  id, bookmaker_id, stake, odd, moeda, fonte_saldo, resultado,
+                  selecao_livre, stake_brl_referencia, lucro_prejuizo_brl_referencia,
+                  cotacao_snapshot, lucro_prejuizo,
+                  bookmakers (nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo(logo_url))
+                )
               `)
               .in("aposta_id", idsChunk)
               .order("ordem", { ascending: true }),
@@ -418,10 +425,17 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           if (!pernasMap[p.aposta_id]) pernasMap[p.aposta_id] = [];
           const bookmaker = p.bookmakers as any;
           const parceiroNome = bookmaker?.parceiro?.nome;
+          const bookmakerNomeFmt = parceiroNome
+            ? `${bookmaker?.nome || "—"} - ${parceiroNome}${bookmaker?.instance_identifier ? ` (${bookmaker.instance_identifier})` : ''}`
+            : `${bookmaker?.nome || "—"}${bookmaker?.instance_identifier ? ` (${bookmaker.instance_identifier})` : ''}`;
+          const entradas = Array.isArray(p.apostas_perna_entradas) ? p.apostas_perna_entradas : [];
+          const entriesFormatted = entradas.length > 1
+            ? formatPernaEntradas(entradas, bookmaker?.nome)
+            : undefined;
           pernasMap[p.aposta_id].push({
             id: p.id,
             bookmaker_id: p.bookmaker_id,
-            bookmaker_nome: parceiroNome ? `${bookmaker?.nome || "—"} - ${parceiroNome}${bookmaker?.instance_identifier ? ` (${bookmaker.instance_identifier})` : ''}` : `${bookmaker?.nome || "—"}${bookmaker?.instance_identifier ? ` (${bookmaker.instance_identifier})` : ''}`,
+            bookmaker_nome: bookmakerNomeFmt,
             parceiro_nome: parceiroNome || null,
             instance_identifier: bookmaker?.instance_identifier || null,
             logo_url: bookmaker?.bookmakers_catalogo?.logo_url || null,
@@ -437,6 +451,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
             comissao: p.comissao ?? 0,
             stake_real: p.stake_real ?? undefined,
             stake_freebet: p.stake_freebet ?? undefined,
+            entries: entriesFormatted,
           });
         });
       }

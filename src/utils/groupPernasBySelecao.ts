@@ -36,6 +36,12 @@ interface RawPerna {
   stake_freebet?: number;
   // Bookmaker join
   bookmaker?: { nome: string; parceiro?: { nome: string } };
+  /**
+   * Entradas relacionais (`apostas_perna_entradas`) já formatadas no shape
+   * SurebetPernaEntry. Quando presente com 2+ itens, indica perna composta
+   * (multi-casa) e tem precedência sobre o agrupamento legado por seleção.
+   */
+  entries?: SurebetPernaEntry[];
 }
 
 export function groupPernasBySelecao(
@@ -64,7 +70,14 @@ export function groupPernasBySelecao(
     const group = groups.get(key)!;
     const main = group[0];
     const subs = group.slice(1);
-    const hasEntries = subs.length > 0;
+    // Modelo 1:N (relacional): se a perna principal já trouxe `entries` do
+    // fetcher (embed `apostas_perna_entradas`), respeitamos como fonte
+    // primária. Modelo legado (várias linhas em `apostas_pernas` com mesma
+    // seleção) continua válido como fallback.
+    const relationalEntries = (main.entries && main.entries.length > 1)
+      ? main.entries
+      : null;
+    const hasEntries = relationalEntries !== null || subs.length > 0;
 
     // Probe: garante que `tipo` da principal não some no agrupamento.
     probePernaTipo("groupPernasBySelecao:main", main.id, main.tipo, main.tipo ?? "back");
@@ -73,7 +86,9 @@ export function groupPernasBySelecao(
     }
 
     // Calcular odd média ponderada e stake total
-    const allEntries = group.map(p => ({ odd: p.odd, stake: p.stake }));
+    const allEntries = relationalEntries
+      ? relationalEntries.map(e => ({ odd: e.odd, stake: e.stake }))
+      : group.map(p => ({ odd: p.odd, stake: p.stake }));
     const stakeTotal = allEntries.reduce((s, e) => s + (e.stake || 0), 0);
     const oddMedia = stakeTotal > 0
       ? allEntries.reduce((s, e) => s + (e.odd * e.stake), 0) / stakeTotal
@@ -87,7 +102,9 @@ export function groupPernasBySelecao(
       stake: main.stake,
       resultado: main.resultado || null,
       lucro_prejuizo: hasEntries
-        ? group.reduce((s, p) => s + (p.lucro_prejuizo || 0), 0)
+        ? (relationalEntries
+            ? (main.lucro_prejuizo ?? null)
+            : group.reduce((s, p) => s + (p.lucro_prejuizo || 0), 0))
         : (main.lucro_prejuizo ?? null),
       bookmaker_nome: resolve(main),
       bookmaker_id: main.bookmaker_id,
@@ -108,7 +125,7 @@ export function groupPernasBySelecao(
     if (hasEntries) {
       result.odd_media = oddMedia;
       result.stake_total = stakeTotal;
-      result.entries = group.map(p => ({
+      result.entries = relationalEntries ?? group.map(p => ({
         id: p.id,
         bookmaker_id: p.bookmaker_id || '',
         bookmaker_nome: resolve(p),
