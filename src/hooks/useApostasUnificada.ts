@@ -28,6 +28,11 @@ import { useCurrencySnapshot } from "./useCurrencySnapshot";
  } from "@/services/aposta/ApostaService";
 import { useCotacoes } from "./useCotacoes";
 import { resolveEffectiveProjectRate } from "./useProjetoWorkingRates";
+import {
+  probeCreatePayload,
+  probeCreateResult,
+  probeCheckpoint,
+} from "@/utils/surebetLifecycleProbe";
 
 export interface UseApostasUnificadaReturn {
   loading: boolean;
@@ -158,11 +163,31 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
         p_pernas: pernasComSnapshot as any,
       });
 
-      if (error) throw error;
+      probeCreatePayload(
+        {
+          projetoId: params.projeto_id,
+          workspaceId,
+          formaRegistro: "ARBITRAGEM",
+          estrategia: params.estrategia || 'SUREBET',
+          pernas: pernasComSnapshot as any,
+        },
+        "useApostasUnificada.criarArbitragem",
+      );
+      probeCheckpoint("RPC_CREATE_SENT", {
+        source: "useApostasUnificada.criarArbitragem",
+        data: { rpc: "criar_surebet_atomica", pernasCount: pernasComSnapshot.length },
+      });
+
+      if (error) {
+        probeCreateResult({ apostaId: null, success: false, source: "useApostasUnificada.criarArbitragem", error });
+        throw error;
+      }
       const result = data?.[0];
       if (!result?.success || !result.o_aposta_id) {
+        probeCreateResult({ apostaId: result?.o_aposta_id ?? null, success: false, source: "useApostasUnificada.criarArbitragem", error: result?.message });
         throw new Error(result?.message || 'Falha ao criar arbitragem');
       }
+      probeCreateResult({ apostaId: result.o_aposta_id, success: true, source: "useApostasUnificada.criarArbitragem" });
       
        toast.success("Operação registrada com sucesso!");
        invalidateFinancialState(params.projeto_id, { operation: "aposta" });
