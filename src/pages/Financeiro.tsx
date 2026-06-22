@@ -37,6 +37,8 @@ import { ExposicaoFinanceiraCard } from "@/components/financeiro/ExposicaoFinanc
 import { useExposicaoFinanceira } from "@/hooks/useExposicaoFinanceira";
 import { PosicaoCapital } from "@/components/caixa/PosicaoCapital";
 import { useCapitalEmDisputa } from "@/hooks/useCapitalEmDisputa";
+import { PosicaoCapitalCard } from "@/components/financeiro/PosicaoCapitalCard";
+import { usePosicaoCapital } from "@/hooks/usePosicaoCapital";
 import { Wallet, TrendingUp, Percent, Coins } from "lucide-react";
 import { ParticipacaoInvestidoresTab } from "@/components/financeiro/ParticipacaoInvestidoresTab";
 import { MultiCurrencyWarningBanner } from "@/components/financeiro/MultiCurrencyIndicator";
@@ -214,6 +216,29 @@ export default function Financeiro() {
 
   // Capital em disputa (para sobreposição no donut da Posição de Capital)
   const { bySegment: capitalEmDisputa } = useCapitalEmDisputa();
+
+  // Posição de Capital (Aportes vs Liquidações vs Patrimônio)
+  const posicaoCapital = usePosicaoCapital({
+    workspaceId: workspaceId || null,
+    dataInicio: dataInicio || null,
+    dataFim: dataFim || null,
+    convert: convertUnified,
+    moedaConsolidacao: "BRL",
+  });
+  const saldoFreebetTotal = useMemo(
+    () =>
+      (finData.bookmakersSaldos || []).reduce(
+        (acc: number, b: any) =>
+          acc +
+          convertUnified(
+            Math.max(0, Number(b.saldo_freebet) || 0),
+            (b.moeda || "BRL").toUpperCase(),
+            "BRL"
+          ),
+        0
+      ),
+    [finData.bookmakersSaldos, convertUnified]
+  );
 
   // Label de período para o KpiRail
   const periodLabel = useMemo(() => {
@@ -455,6 +480,21 @@ export default function Financeiro() {
                 />
 
                 <div className="flex-1 min-w-0 flex flex-col">
+                  <div className="p-4 md:p-5 pb-0">
+                    <PosicaoCapitalCard
+                      loading={posicaoCapital.loading}
+                      aportesPeriodo={posicaoCapital.aportesPeriodo}
+                      liquidacoesPeriodo={posicaoCapital.liquidacoesPeriodo}
+                      capitalLiquidoPeriodo={posicaoCapital.capitalLiquidoPeriodo}
+                      aportesAcumulado={posicaoCapital.aportesAcumulado}
+                      liquidacoesAcumulado={posicaoCapital.liquidacoesAcumulado}
+                      capitalLiquidoAcumulado={posicaoCapital.capitalLiquidoAcumulado}
+                      patrimonioAtual={patrimonioTotal}
+                      saldoFreebet={saldoFreebetTotal}
+                      formatCurrency={calc.formatCurrency}
+                      periodLabel={periodLabel}
+                    />
+                  </div>
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 p-4 md:p-5">
                     <div className="lg:col-span-2">
                       <PosicaoCapital
