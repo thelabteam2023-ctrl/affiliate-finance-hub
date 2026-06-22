@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarDays, Search, ExternalLink, Trophy } from "lucide-react";
+import { CalendarDays, Search, ExternalLink, Trophy, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,16 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { useDailyEventsByDate, type DailyEvent } from "@/hooks/useDailyEventsByDate";
 import { normalizeEsporte } from "@/components/surebet/utils/mapDailyEventToFormFields";
+import { ExploradorFilterPanel } from "@/components/surebet/ExploradorFilterPanel";
+import {
+  applyExploradorFilters,
+  computeFilterOptions,
+  countActiveFilters,
+  EMPTY_FILTERS,
+  loadStoredFilters,
+  saveStoredFilters,
+  type ExploradorFilterState,
+} from "@/components/surebet/utils/exploradorFilters";
 
 interface ExploradorEventoPickerProps {
   /** Data inicial sugerida (ISO "YYYY-MM-DDTHH:mm" do form). */
@@ -59,8 +69,16 @@ export function ExploradorEventoPicker({ defaultDate, onSelect, variant = "butto
 
   const { data: events = [], isLoading, isError } = useDailyEventsByDate(date, open);
 
-  const filtered = useMemo(() => {
-    const term = search.trim().toLowerCase();
+  // Filtros avançados (esporte / país / liga) — persistidos em localStorage.
+  const [filters, setFilters] = useState<ExploradorFilterState>(() => loadStoredFilters());
+  useEffect(() => {
+    saveStoredFilters(filters);
+  }, [filters]);
+
+  // Pré-filtra eventos pelas regras "rápidas" (toggle de esporte do form, encerrados)
+  // antes de derivar as opções dos filtros avançados — assim os contadores refletem
+  // exatamente o universo que o usuário está vendo.
+  const baseEvents = useMemo(() => {
     return events.filter((ev) => {
       if (!showFinished && (ev.status === "finished" || ev.status === "FT" || ev.status === "ENCERRADO")) {
         return false;
@@ -68,6 +86,19 @@ export function ExploradorEventoPicker({ defaultDate, onSelect, variant = "butto
       if (hasSportFilter && filterBySport && normalizeEsporte(ev.sport) !== esporte) {
         return false;
       }
+      return true;
+    });
+  }, [events, showFinished, hasSportFilter, filterBySport, esporte]);
+
+  const filterOptions = useMemo(
+    () => computeFilterOptions(baseEvents, filters),
+    [baseEvents, filters]
+  );
+
+  const filtered = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    const afterFilters = applyExploradorFilters(baseEvents, filters);
+    return afterFilters.filter((ev) => {
       if (!term) return true;
       return (
         ev.home_team?.toLowerCase().includes(term) ||
@@ -76,7 +107,20 @@ export function ExploradorEventoPicker({ defaultDate, onSelect, variant = "butto
         ev.country?.toLowerCase().includes(term)
       );
     });
-  }, [events, search, showFinished, hasSportFilter, filterBySport, esporte]);
+  }, [baseEvents, filters, search]);
+
+  const activeFilterCount = countActiveFilters(filters);
+  const activeChips = useMemo(() => {
+    const chips: Array<{ key: keyof ExploradorFilterState; value: string; label: string }> = [];
+    filters.sports.forEach((v) => chips.push({ key: "sports", value: v, label: v }));
+    filters.countries.forEach((v) => chips.push({ key: "countries", value: v, label: v }));
+    filters.leagues.forEach((v) => chips.push({ key: "leagues", value: v, label: v }));
+    return chips;
+  }, [filters]);
+
+  function removeChip(key: keyof ExploradorFilterState, value: string) {
+    setFilters((prev) => ({ ...prev, [key]: prev[key].filter((v) => v !== value) }));
+  }
 
   function handlePick(ev: DailyEvent) {
     onSelect(ev);
@@ -143,7 +187,45 @@ export function ExploradorEventoPicker({ defaultDate, onSelect, variant = "butto
               className="h-8 text-xs pl-7"
             />
           </div>
+
+          <ExploradorFilterPanel
+            filters={filters}
+            options={filterOptions}
+            onChange={setFilters}
+          />
         </div>
+
+        {/* Chips de filtros ativos */}
+        {activeFilterCount > 0 && (
+          <div className="flex flex-wrap items-center gap-1 px-3 py-2 border-b border-border/40 bg-muted/10">
+            {activeChips.map((chip) => (
+              <Badge
+                key={`${chip.key}-${chip.value}`}
+                variant="secondary"
+                className="h-5 px-1.5 text-[10px] gap-1 font-normal"
+              >
+                <span className="truncate max-w-[140px]">{chip.label}</span>
+                <button
+                  type="button"
+                  onClick={() => removeChip(chip.key, chip.value)}
+                  className="hover:text-destructive"
+                  aria-label={`Remover filtro ${chip.label}`}
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </Badge>
+            ))}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-5 px-1.5 text-[10px] ml-auto"
+              onClick={() => setFilters(EMPTY_FILTERS)}
+            >
+              Limpar
+            </Button>
+          </div>
+        )}
 
         {/* Filtros */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-border/40 bg-muted/20">
@@ -191,10 +273,23 @@ export function ExploradorEventoPicker({ defaultDate, onSelect, variant = "butto
           {!isLoading && !isError && filtered.length === 0 && (
             <div className="p-6 text-center space-y-3">
               <p className="text-xs text-muted-foreground">
-                {hasSportFilter && filterBySport
+                {activeFilterCount > 0
+                  ? `Nenhum jogo corresponde aos filtros avançados em ${format(date, "dd/MM/yyyy", { locale: ptBR })}.`
+                  : hasSportFilter && filterBySport
                   ? `Nenhum jogo de ${esporte} em ${format(date, "dd/MM/yyyy", { locale: ptBR })}. Desative o filtro para ver todos.`
                   : `Nenhum jogo encontrado para ${format(date, "dd/MM/yyyy", { locale: ptBR })}.`}
               </p>
+              {activeFilterCount > 0 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => setFilters(EMPTY_FILTERS)}
+                >
+                  Limpar filtros avançados
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="link"
