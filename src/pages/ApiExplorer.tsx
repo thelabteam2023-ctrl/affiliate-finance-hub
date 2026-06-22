@@ -191,6 +191,7 @@ export default function ApiExplorer() {
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncingLogos, setSyncingLogos] = useState(false);
+  const [syncingSofa, setSyncingSofa] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -310,6 +311,32 @@ export default function ApiExplorer() {
     }
   };
 
+  const handleSyncSofascore = async () => {
+    if (!window.confirm('Sincronizar via Sofascore (Apify). Custo estimado por execução: <USD 0,10. Continuar?')) return;
+    setSyncingSofa(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('sofascore-sync', {
+        body: {
+          sports: ['soccer', 'basketball', 'tennis', 'baseball', 'americanfootball', 'icehockey'],
+          maxItems: 200,
+        },
+      });
+      if (error) throw error;
+      const bySport = (data?.by_sport ?? {}) as Record<string, number>;
+      const breakdown = Object.entries(bySport)
+        .map(([k, v]) => `${k}:${v}`)
+        .join(' · ') || 'sem itens';
+      toast.success(
+        `Sofascore: ${data?.items_upserted ?? 0} eventos (${breakdown}). Custo ~USD ${Number(data?.cost_estimate_usd ?? 0).toFixed(4)}.`,
+      );
+      loadData();
+    } catch (err: any) {
+      toast.error(`Sofascore sync falhou: ${err?.message ?? err}`);
+    } finally {
+      setSyncingSofa(false);
+    }
+  };
+
 
   // Derived Data
   const continents = useMemo(() => Array.from(new Set(events.map(e => e.continent).filter(Boolean))), [events]);
@@ -425,6 +452,15 @@ export default function ApiExplorer() {
           >
             {syncingLogos ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Globe className="h-4 w-4 mr-2" />}
             {syncingLogos ? 'Sincronizando...' : 'Sincronizar Todos os Times'}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleSyncSofascore}
+            disabled={syncingSofa || syncing || syncingLogos}
+            className="rounded-full h-11 px-6 font-bold border-emerald-500/30 hover:bg-emerald-500/5 text-emerald-500"
+          >
+            {syncingSofa ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Database className="h-4 w-4 mr-2" />}
+            {syncingSofa ? 'Sincronizando...' : 'Sincronizar Sofascore'}
           </Button>
           <Button 
             onClick={handleManualSync} 
