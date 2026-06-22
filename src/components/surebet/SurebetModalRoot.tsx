@@ -1703,6 +1703,37 @@ export function SurebetModalRoot({
       }
 
       // ================================================================
+      // Camada B: INVARIANT_007 — perna LAY não pode ter sub-entradas
+      // ================================================================
+      // Espelha `validateInvariants` (usado pelo ApostaService). Aqui o
+      // caminho de surebet vai direto pela RPC criar_/editar_surebet_*,
+      // sem passar por validateInvariants. Mantemos esta guard ANTES da
+      // RPC para: (1) mensagem de UX consistente com o ApostaDialog;
+      // (2) defense-in-depth: se o trigger DB
+      // `enforce_lay_leg_single_entry` for um dia desabilitado por engano,
+      // este guard ainda bloqueia.
+      const layViolation = pernasPreenchidas.find((p) => {
+        const tipo = (p as any).tipo ?? 'back';
+        const subs = (p.additionalEntries || []).filter(
+          s => s.bookmaker_id && parseFloat(s.odd) > 1 && parseFloat(s.stake) > 0
+        );
+        // total = principal (1) + extras válidas
+        return tipo === 'lay' && subs.length > 0;
+      });
+      if (layViolation) {
+        const bkNome = bookmakerSaldos.find(b => b.id === layViolation.bookmaker_id)?.nome || 'casa';
+        console.error('[SurebetModalRoot] ABORT save — LAY_LEG_MULTI_ENTRY_NOT_SUPPORTED', {
+          bookmaker: bkNome,
+          extras: (layViolation.additionalEntries || []).length,
+        });
+        toast.error('Perna LAY não admite multi-casa', {
+          description: `A perna LAY (${bkNome}) tem casas adicionais. Remova-as ou mude a perna para BACK antes de registrar.`,
+        });
+        setSaving(false);
+        return;
+      }
+
+      // ================================================================
       // FLATTEN: Expandir additionalEntries em pernas individuais
       // Cada sub-entrada herda selecao da perna pai mas tem seu próprio
       // bookmaker_id, odd, stake e moeda
