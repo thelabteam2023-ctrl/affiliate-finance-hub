@@ -226,6 +226,13 @@ export function ResultadoPorProjetoDrawer({
               highlight={focus === "exposto"}
             />
           </div>
+          {typeof resultadoOperacaoBRL === "number" && (
+            <ReconciliacaoBlock
+              resultadoOperacaoBRL={resultadoOperacaoBRL}
+              lucroOperacionalProjetosBRL={totaisBRL.lucroOperacional}
+              formatBRL={formatBRL}
+            />
+          )}
         </div>
       </SheetContent>
     </Sheet>
