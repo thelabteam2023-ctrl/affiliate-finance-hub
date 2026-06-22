@@ -1156,6 +1156,16 @@ export function SurebetModalRoot({
   }, []);
 
    const addAdditionalEntry = useCallback((pernaIndex: number) => {
+    // Camada A: bloqueio defensivo. UI já oculta o botão "+" quando a
+    // perna é LAY (canAddMore && !isLayLeg), mas mantemos este early-return
+    // como segundo guard caso algum atalho/keyboard dispare o handler.
+    const currentTipo = (odds[pernaIndex] as any)?.tipo ?? 'back';
+    if (currentTipo === 'lay') {
+      toast.error('Perna LAY não admite multi-casa', {
+        description: 'Mude a perna para BACK antes de adicionar outra casa.',
+      });
+      return;
+    }
     setOdds(prev => {
       const newOdds = [...prev];
       const currentEntries = newOdds[pernaIndex].additionalEntries || [];
