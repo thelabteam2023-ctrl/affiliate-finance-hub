@@ -134,6 +134,22 @@ export function useLogoFallback(sport: string | null | undefined) {
     return m;
   }, [teams]);
 
+  // Lista global para fallback de contains entre ligas (ex.: API="Grêmio Novorizontino"
+  // vs cache="Novorizontino" sob outra league_key vinda de fonte distinta).
+  const teamsGlobal = useMemo(() => {
+    const arr: Array<{ norm: string; stripped: string; logo: string }> = [];
+    const seen = new Set<string>();
+    for (const t of teams) {
+      if (!t.logo_url) continue;
+      const stripped = stripStopwordsAndDigits(t.team_name_normalized);
+      const k = `${t.team_name_normalized}|${stripped}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      arr.push({ norm: t.team_name_normalized, stripped, logo: t.logo_url });
+    }
+    return arr;
+  }, [teams]);
+
   const leagueByKey = useMemo(() => {
     const m = new Map<string, string>();
     for (const l of leagues) {
@@ -179,9 +195,21 @@ export function useLogoFallback(sport: string | null | undefined) {
         const globalStripped = teamByName.get(`@stripped|${normStripped}`);
         if (globalStripped) return globalStripped;
       }
+      // 6. Fallback global contains — última tentativa quando o nome do explorer
+      //    é uma forma estendida (ex.: "Grêmio Novorizontino") e o cache só tem
+      //    o radical curto ("Novorizontino"), ou vice-versa.
+      if (normStripped && normStripped.length >= 5) {
+        for (const t of teamsGlobal) {
+          if (t.norm.length < 5) continue;
+          if (norm.includes(t.norm) || t.norm.includes(norm)) return t.logo;
+          if (t.stripped && t.stripped.length >= 5) {
+            if (normStripped.includes(t.stripped) || t.stripped.includes(normStripped)) return t.logo;
+          }
+        }
+      }
       return null;
     },
-    [teamByLeagueName, teamByName, teamsByLeague],
+    [teamByLeagueName, teamByName, teamsByLeague, teamsGlobal],
   );
 
   const getLeagueLogo = useCallback(
