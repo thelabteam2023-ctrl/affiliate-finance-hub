@@ -1,4 +1,8 @@
 // deno-lint-ignore-file no-explicit-any
+// TheSportsDB sync — catálogo de jogos (sem odds).
+// Idempotente via canonical_key. Faz UPSERT em sports_events,
+// merge em sources, atualiza só logos vazias, e popula caches
+// team_logos/league_logos.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -8,13 +12,10 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// TheSportsDB free public API (key "3"). No cost, no auth.
-// GET /api/v1/json/3/eventsday.php?d=YYYY-MM-DD&s=<SportName>
-const TSD_KEY = "3";
+const TSD_KEY = "3"; // chave pública gratuita
 const TSD_BASE = `https://www.thesportsdb.com/api/v1/json/${TSD_KEY}`;
 const MAX_REQUESTS_PER_RUN = 60;
 
-// Our internal sport id -> TheSportsDB sport name
 const TSD_SPORT_NAME: Record<string, string> = {
   soccer: "Soccer",
   basketball: "Basketball",
@@ -23,7 +24,6 @@ const TSD_SPORT_NAME: Record<string, string> = {
   americanfootball: "American Football",
   icehockey: "Ice Hockey",
 };
-
 const TSD_TO_INTERNAL: Record<string, string> = {
   Soccer: "soccer",
   Basketball: "basketball",
@@ -57,35 +57,30 @@ const COUNTRY_TO_CONTINENT: Record<string, string> = {
 function inferCompetitionType(name?: string | null): string {
   if (!name) return "league";
   const n = name.toLowerCase();
-  if (/(world cup|mundial|euro|copa am[eé]rica|nations league|olympics)/.test(n)) return "continental";
-  if (/(champions|libertadores|sudamericana|europa league|conference league)/.test(n)) return "continental";
+  if (/(world cup|mundial|euro\b|copa am[eé]rica|nations league|olympics|olimp)/.test(n)) return "continental";
+  if (/(champions|libertadores|sudamericana|europa league|conference league|afc cup|caf cup|concacaf)/.test(n)) return "continental";
   if (/(copa|cup|coupe|pokal|taça|trophy)/.test(n)) return "cup";
   return "league";
 }
 
-interface NormalizedEvent {
-  api_id: string;
-  sport: string;
-  league_key: string;
-  league_name: string;
-  league_flag: string | null;
-  continent: string | null;
-  country: string | null;
-  competition_type: string | null;
-  home_team: string;
-  away_team: string;
-  home_team_logo: string | null;
-  away_team_logo: string | null;
-  league_logo: string | null;
-  commence_time: string;
-  event_date: string;
-  status: string | null;
-  source: "thesportsdb";
-  external_ids: Record<string, any>;
+function normTeam(s: string): string {
+  return s
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\b(fc|cf|sc|ac|cd|sk|if|bk|hc|club|football|futbol|futebol|soccer)\b/g, "")
+    .replace(/[^a-z0-9]+/g, "")
+    .trim();
+}
+
+function brtDate(offsetDays = 0): string {
+  const d = new Date(Date.now() + offsetDays * 86400000);
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(d);
 }
 
 function parseCommence(ev: any): Date | null {
-  // Preferir strTimestamp (UTC ISO sem Z). Fallback dateEvent + strTime.
   const ts: string | null = ev.strTimestamp ?? null;
   if (ts) {
     const iso = /Z|[+-]\d{2}:?\d{2}$/.test(ts) ? ts : `${ts}Z`;
@@ -104,9 +99,47 @@ function parseCommence(ev: any): Date | null {
 function mapStatus(raw?: string | null): string {
   if (!raw) return "scheduled";
   const s = String(raw).toUpperCase();
-  if (["NS", "TBD", "POSTP", "CANC", ""].includes(s)) return "scheduled";
+  if (["NS", "TBD", ""].includes(s)) return "scheduled";
+  if (["POSTP"].includes(s)) return "postponed";
+  if (["CANC"].includes(s)) return "cancelled";
   if (["FT", "AET", "PEN", "AWD", "WO"].includes(s)) return "finished";
   return "live";
+}
+
+function buildCanonicalKey(sport: string, commenceUtc: Date, home: string, away: string): string {
+  const ts = commenceUtc.toISOString().replace(/[-:T]/g, "").slice(0, 12); // YYYYMMDDHHmm
+  const a = normTeam(home);
+  const b = normTeam(away);
+  // Ordenar para tolerar inversão de mando
+  const [t1, t2] = [a, b].sort();
+  return `${sport}|${ts}|${t1}_${t2}`;
+}
+
+interface NormalizedEvent {
+  canonical_key: string;
+  sport: string;
+  home_team: string;
+  away_team: string;
+  home_team_normalized: string;
+  away_team_normalized: string;
+  home_team_logo: string | null;
+  away_team_logo: string | null;
+  league_id: string | null;
+  league_name: string | null;
+  league_logo: string | null;
+  country: string | null;
+  continent: string | null;
+  competition_type: string;
+  commence_time: string;
+  event_date_brt: string;
+  status: string;
+  home_score: number | null;
+  away_score: number | null;
+  venue: string | null;
+  city: string | null;
+  primary_source: "thesportsdb";
+  sources: Record<string, any>;
+  last_synced_at: string;
 }
 
 function normalize(ev: any): NormalizedEvent | null {
@@ -120,58 +153,58 @@ function normalize(ev: any): NormalizedEvent | null {
   const commence = parseCommence(ev);
   if (!commence) return null;
 
-  const event_date = new Intl.DateTimeFormat("en-CA", {
+  const event_date_brt = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Sao_Paulo",
     year: "numeric", month: "2-digit", day: "2-digit",
   }).format(commence);
 
-  const leagueName: string = ev.strLeague ?? "—";
+  const leagueName: string = ev.strLeague ?? null;
   const leagueId: string | null = ev.idLeague ?? null;
   const rawCountry: string | null = ev.strCountry ?? null;
   const competition_type = inferCompetitionType(leagueName);
-
-  // Competições continentais/mundiais não pertencem ao país-sede.
-  // Forçamos continente "Internacional" e país nulo para evitar
-  // mostrar a Copa do Mundo dentro de "América do Norte".
   const isContinental = competition_type === "continental";
+
   const country = isContinental ? null : rawCountry;
   const continent = isContinental
     ? "Internacional"
     : (rawCountry ? COUNTRY_TO_CONTINENT[rawCountry] ?? null : null);
 
+  const nowIso = new Date().toISOString();
+
   return {
-    api_id: `thesportsdb_${eventId}`,
+    canonical_key: buildCanonicalKey(sport, commence, home, away),
     sport,
-    league_key: `thesportsdb_${leagueId ?? `${sport}_${leagueName}`}`,
-    league_name: leagueName,
-    league_flag: null,
-    continent,
-    country,
-    competition_type,
     home_team: home,
     away_team: away,
+    home_team_normalized: normTeam(home),
+    away_team_normalized: normTeam(away),
     home_team_logo: ev.strHomeTeamBadge ?? null,
     away_team_logo: ev.strAwayTeamBadge ?? null,
+    league_id: leagueId,
+    league_name: leagueName,
     league_logo: ev.strLeagueBadge ?? null,
+    country,
+    continent,
+    competition_type,
     commence_time: commence.toISOString(),
-    event_date,
+    event_date_brt,
     status: mapStatus(ev.strStatus),
-    source: "thesportsdb",
-    external_ids: {
-      thesportsdb_event_id: eventId,
-      thesportsdb_league_id: leagueId,
-      thesportsdb_home_team_id: ev.idHomeTeam ?? null,
-      thesportsdb_away_team_id: ev.idAwayTeam ?? null,
+    home_score: ev.intHomeScore != null ? Number(ev.intHomeScore) : null,
+    away_score: ev.intAwayScore != null ? Number(ev.intAwayScore) : null,
+    venue: ev.strVenue ?? null,
+    city: ev.strCity ?? null,
+    primary_source: "thesportsdb",
+    sources: {
+      thesportsdb: {
+        event_id: eventId,
+        league_id: leagueId,
+        home_team_id: ev.idHomeTeam ?? null,
+        away_team_id: ev.idAwayTeam ?? null,
+        updated_at: nowIso,
+      },
     },
+    last_synced_at: nowIso,
   };
-}
-
-function brtDate(offsetDays = 0): string {
-  const d = new Date(Date.now() + offsetDays * 86400000);
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Sao_Paulo",
-    year: "numeric", month: "2-digit", day: "2-digit",
-  }).format(d);
 }
 
 Deno.serve(async (req: Request) => {
@@ -209,20 +242,21 @@ Deno.serve(async (req: Request) => {
     }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
+  // Default: ontem + hoje + amanhã + depois (4 dias rolling)
   const dates: string[] = Array.isArray(body?.dates) && body.dates.length
     ? body.dates.filter((d: any) => typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d))
-    : [brtDate(0), brtDate(1)];
+    : [brtDate(-1), brtDate(0), brtDate(1), brtDate(2)];
 
   const totalRequests = sportPairs.length * dates.length;
   if (totalRequests > MAX_REQUESTS_PER_RUN) {
     return new Response(JSON.stringify({
-      error: `Excede limite de ${MAX_REQUESTS_PER_RUN} requisições por execução (${totalRequests}).`,
+      error: `Excede limite de ${MAX_REQUESTS_PER_RUN} requisições (${totalRequests}).`,
     }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
-  // Cria run
+  // Cria run em sports_sync_runs
   const { data: runIns, error: runErr } = await supabase
-    .from("sofascore_sync_runs")
+    .from("sports_sync_runs")
     .insert({
       status: "running",
       triggered_by: triggeredBy,
@@ -238,7 +272,7 @@ Deno.serve(async (req: Request) => {
   }
   const runId = runIns!.id as string;
 
-  // Buscar TheSportsDB em paralelo
+  // Fetch paralelo
   const tasks: Promise<{ sport: string; date: string; events: any[]; error?: string }>[] = [];
   for (const { sport, name } of sportPairs) {
     for (const date of dates) {
@@ -261,12 +295,11 @@ Deno.serve(async (req: Request) => {
   }
 
   const results = await Promise.all(tasks);
-  const fetchErrors = results.filter((r) => r.error).map((r) => ({
-    sport: r.sport, date: r.date, error: r.error,
-  }));
+  const fetchErrors = results.filter((r) => r.error)
+    .map((r) => ({ sport: r.sport, date: r.date, error: r.error }));
   const items: any[] = results.flatMap((r) => r.events);
 
-  // Persistir raw
+  // Raw payload (auditoria)
   if (items.length) {
     const rawRows = items.map((it) => ({
       source_run_id: runId,
@@ -276,54 +309,117 @@ Deno.serve(async (req: Request) => {
       payload: it,
     }));
     for (let i = 0; i < rawRows.length; i += 500) {
-      await supabase.from("sofascore_events_raw").insert(rawRows.slice(i, i + 500));
+      await supabase.from("sports_events_raw").insert(rawRows.slice(i, i + 500));
     }
   }
 
-  // Normalizar e UPSERT
+  // Normaliza
   const bySport: Record<string, number> = {};
   const normRows: NormalizedEvent[] = [];
+  const seenKeys = new Set<string>();
   for (const it of items) {
     const n = normalize(it);
     if (!n) continue;
+    if (seenKeys.has(n.canonical_key)) continue; // dedup dentro do mesmo run
+    seenKeys.add(n.canonical_key);
     bySport[n.sport] = (bySport[n.sport] ?? 0) + 1;
     normRows.push(n);
   }
 
-  let upserted = 0;
-  for (let i = 0; i < normRows.length; i += 500) {
-    const slice = normRows.slice(i, i + 500);
-    const { error: upErr, count } = await supabase
-      .from("daily_events")
-      .upsert(slice, { onConflict: "source,api_id", count: "exact" });
-    if (upErr) {
-      await supabase.from("sofascore_sync_runs").update({
+  // ---- UPSERT manual com merge inteligente em sports_events ----
+  // Estratégia: SELECT existentes pelos canonical_keys -> calcula delta:
+  //   - novos: INSERT
+  //   - existentes: UPDATE com COALESCE em logos (não sobrescreve com null/empty)
+  //                 e merge de sources jsonb.
+  let inserted = 0;
+  let updated = 0;
+
+  const keys = normRows.map((r) => r.canonical_key);
+  let existingMap = new Map<string, any>();
+  if (keys.length) {
+    // chunk para evitar URL gigante
+    for (let i = 0; i < keys.length; i += 200) {
+      const chunk = keys.slice(i, i + 200);
+      const { data: existing } = await supabase
+        .from("sports_events")
+        .select("canonical_key, home_team_logo, away_team_logo, league_logo, sources, first_seen_at")
+        .in("canonical_key", chunk);
+      for (const row of existing ?? []) existingMap.set(row.canonical_key, row);
+    }
+  }
+
+  const toInsert: any[] = [];
+  const toUpdate: { canonical_key: string; patch: any }[] = [];
+
+  for (const r of normRows) {
+    const ex = existingMap.get(r.canonical_key);
+    if (!ex) {
+      toInsert.push(r);
+    } else {
+      const mergedSources = { ...(ex.sources ?? {}), ...r.sources };
+      const patch: any = {
+        // sempre atualiza dados voláteis
+        status: r.status,
+        home_score: r.home_score,
+        away_score: r.away_score,
+        commence_time: r.commence_time,
+        event_date_brt: r.event_date_brt,
+        venue: r.venue,
+        city: r.city,
+        league_id: r.league_id,
+        league_name: r.league_name,
+        country: r.country,
+        continent: r.continent,
+        competition_type: r.competition_type,
+        home_team: r.home_team,
+        away_team: r.away_team,
+        home_team_normalized: r.home_team_normalized,
+        away_team_normalized: r.away_team_normalized,
+        sources: mergedSources,
+        last_synced_at: r.last_synced_at,
+        // logos: só atualiza se a nova tem valor E a antiga está vazia
+        home_team_logo: ex.home_team_logo ?? r.home_team_logo,
+        away_team_logo: ex.away_team_logo ?? r.away_team_logo,
+        league_logo: ex.league_logo ?? r.league_logo,
+      };
+      toUpdate.push({ canonical_key: r.canonical_key, patch });
+    }
+  }
+
+  // INSERT em chunks
+  for (let i = 0; i < toInsert.length; i += 500) {
+    const slice = toInsert.slice(i, i + 500);
+    const { error } = await supabase.from("sports_events").insert(slice);
+    if (error) {
+      await supabase.from("sports_sync_runs").update({
         status: "error",
-        error: `upsert failed: ${upErr.message}`,
+        error: `insert failed: ${error.message}`,
         items_fetched: items.length,
-        items_upserted: upserted,
+        items_upserted: inserted + updated,
         by_sport: bySport,
         cost_usd: 0,
         finished_at: new Date().toISOString(),
       }).eq("id", runId);
-      return new Response(JSON.stringify({ run_id: runId, error: upErr.message }), {
+      return new Response(JSON.stringify({ run_id: runId, error: error.message }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    upserted += count ?? slice.length;
+    inserted += slice.length;
   }
 
-  // ---- Atualizar caches de logos (league_logos / team_logos) ----
-  function normTeam(s: string): string {
-    return s
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase().replace(/[^a-z0-9]+/g, "").trim();
+  // UPDATE um por um (Supabase JS não tem update em lote por chaves diferentes)
+  for (const u of toUpdate) {
+    const { error } = await supabase
+      .from("sports_events")
+      .update(u.patch)
+      .eq("canonical_key", u.canonical_key);
+    if (!error) updated += 1;
   }
 
+  // ---- Cache de logos ----
   const leagueLogoMap = new Map<string, any>();
   const teamLogoMap = new Map<string, any>();
-
   for (const ev of items) {
     const sport = TSD_TO_INTERNAL[ev.strSport];
     if (!sport) continue;
@@ -335,16 +431,12 @@ Deno.serve(async (req: Request) => {
       const k = `${sport}::${leagueKey}`;
       if (!leagueLogoMap.has(k)) {
         leagueLogoMap.set(k, {
-          sport,
-          league_key: leagueKey,
-          league_name: leagueName,
-          logo_url: ev.strLeagueBadge,
-          found: true,
+          sport, league_key: leagueKey, league_name: leagueName,
+          logo_url: ev.strLeagueBadge, found: true,
           searched_at: new Date().toISOString(),
         });
       }
     }
-
     for (const side of ["Home", "Away"] as const) {
       const teamName = ev[`str${side}Team`];
       const badge = ev[`str${side}TeamBadge`];
@@ -354,22 +446,19 @@ Deno.serve(async (req: Request) => {
       const k = `${leagueKey}::${normalized}`;
       if (!teamLogoMap.has(k)) {
         teamLogoMap.set(k, {
-          sport,
-          team_name_normalized: normalized,
-          team_name_original: teamName,
-          league_key: leagueKey,
-          logo_url: badge,
-          found: true,
+          sport, team_name_normalized: normalized,
+          team_name_original: teamName, league_key: leagueKey,
+          logo_url: badge, found: true,
           searched_at: new Date().toISOString(),
         });
       }
     }
   }
 
-  const leagueLogoRows = Array.from(leagueLogoMap.values());
-  const teamLogoRows = Array.from(teamLogoMap.values());
   let leagueLogosUpserted = 0;
   let teamLogosUpserted = 0;
+  const leagueLogoRows = Array.from(leagueLogoMap.values());
+  const teamLogoRows = Array.from(teamLogoMap.values());
 
   for (let i = 0; i < leagueLogoRows.length; i += 500) {
     const slice = leagueLogoRows.slice(i, i + 500);
@@ -378,7 +467,6 @@ Deno.serve(async (req: Request) => {
       .upsert(slice, { onConflict: "sport,league_key", count: "exact" });
     if (!error) leagueLogosUpserted += count ?? slice.length;
   }
-
   for (let i = 0; i < teamLogoRows.length; i += 500) {
     const slice = teamLogoRows.slice(i, i + 500);
     const { error, count } = await supabase
@@ -387,10 +475,10 @@ Deno.serve(async (req: Request) => {
     if (!error) teamLogosUpserted += count ?? slice.length;
   }
 
-  await supabase.from("sofascore_sync_runs").update({
+  await supabase.from("sports_sync_runs").update({
     status: fetchErrors.length === results.length ? "error" : "success",
     items_fetched: items.length,
-    items_upserted: upserted,
+    items_upserted: inserted + updated,
     by_sport: bySport,
     cost_usd: 0,
     error: fetchErrors.length ? JSON.stringify(fetchErrors).slice(0, 1000) : null,
@@ -404,7 +492,8 @@ Deno.serve(async (req: Request) => {
     sports: sportPairs.map((p) => p.sport),
     requests: totalRequests,
     items_fetched: items.length,
-    items_upserted: upserted,
+    inserted,
+    updated,
     by_sport: bySport,
     league_logos_upserted: leagueLogosUpserted,
     team_logos_upserted: teamLogosUpserted,
