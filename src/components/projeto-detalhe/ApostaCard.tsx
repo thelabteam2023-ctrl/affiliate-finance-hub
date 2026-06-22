@@ -20,6 +20,8 @@ import {
 } from "@/components/ui/popover";
 import { useState } from "react";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
+import { useLogoFallback } from "@/hooks/useLogoFallback";
+import { esporteToSportKey } from "@/utils/esporteToSportKey";
 import { BetRowActionsMenu, type BetResultado } from "@/components/apostas/BetRowActionsMenu";
 import { formatCurrency as formatCurrencyUtil } from "@/utils/formatCurrency";
 import { getStrategyDisplay } from "@/lib/strategyDisplay";
@@ -401,12 +403,19 @@ export function ApostaCard({
   // Para apostas múltiplas, exibir "MÚLTIPLA" como título
   const displayEvento = isMultipla ? 'MÚLTIPLA' : (aposta.evento || '');
 
-  // Snapshot do evento importado (logos de time). Só vale para apostas
-  // simples/surebets criadas via "Importar Jogo".
+  // Snapshot do evento importado (logos de time). Quando o jogo veio do
+  // catálogo mas a API não devolveu logo, tentamos o cache local
+  // (team_logos) via useLogoFallback como rede de segurança.
+  const { getTeamLogo: __fallbackTeamLogo } = useLogoFallback(
+    !isMultipla && aposta.time_casa && aposta.time_fora ? esporteToSportKey(aposta.esporte) : null,
+  );
+  const homeLogoUrl = aposta.home_team_logo_url
+    || (!isMultipla && aposta.time_casa ? __fallbackTeamLogo(aposta.time_casa) : null);
+  const awayLogoUrl = aposta.away_team_logo_url
+    || (!isMultipla && aposta.time_fora ? __fallbackTeamLogo(aposta.time_fora) : null);
   const hasTeamLogos = !isMultipla
     && !!aposta.time_casa
-    && !!aposta.time_fora
-    && (!!aposta.home_team_logo_url || !!aposta.away_team_logo_url);
+    && !!aposta.time_fora;
   
   // Multi-currency: usar valores consolidados para exibição de totais
   const stakeDisplay = (() => {
@@ -497,10 +506,10 @@ export function ApostaCard({
             <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
               {hasTeamLogos ? (
                 <div className="flex items-center gap-1.5 min-w-0 text-sm font-medium uppercase">
-                  <TeamLogo logoUrl={aposta.home_team_logo_url} alt={aposta.time_casa ?? ''} size="h-4 w-4" iconSize="h-2.5 w-2.5" />
+                  <TeamLogo logoUrl={homeLogoUrl} alt={aposta.time_casa ?? ''} size="h-4 w-4" iconSize="h-2.5 w-2.5" />
                   <span className="truncate">{aposta.time_casa}</span>
                   <span className="text-muted-foreground shrink-0">×</span>
-                  <TeamLogo logoUrl={aposta.away_team_logo_url} alt={aposta.time_fora ?? ''} size="h-4 w-4" iconSize="h-2.5 w-2.5" />
+                  <TeamLogo logoUrl={awayLogoUrl} alt={aposta.time_fora ?? ''} size="h-4 w-4" iconSize="h-2.5 w-2.5" />
                   <span className="truncate">{aposta.time_fora}</span>
                 </div>
               ) : (
@@ -807,10 +816,10 @@ export function ApostaCard({
         {/* LINHA 1: Evento (título destacado) */}
         {hasTeamLogos ? (
           <div className="flex items-center gap-2 mb-1.5 text-base sm:text-lg font-semibold uppercase leading-tight min-w-0">
-            <TeamLogo logoUrl={aposta.home_team_logo_url} alt={aposta.time_casa ?? ''} size="h-6 w-6" iconSize="h-3.5 w-3.5" />
+            <TeamLogo logoUrl={homeLogoUrl} alt={aposta.time_casa ?? ''} size="h-6 w-6" iconSize="h-3.5 w-3.5" />
             <span className="truncate">{aposta.time_casa}</span>
             <span className="text-muted-foreground shrink-0">×</span>
-            <TeamLogo logoUrl={aposta.away_team_logo_url} alt={aposta.time_fora ?? ''} size="h-6 w-6" iconSize="h-3.5 w-3.5" />
+            <TeamLogo logoUrl={awayLogoUrl} alt={aposta.time_fora ?? ''} size="h-6 w-6" iconSize="h-3.5 w-3.5" />
             <span className="truncate">{aposta.time_fora}</span>
           </div>
         ) : (

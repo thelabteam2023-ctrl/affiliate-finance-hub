@@ -23,6 +23,8 @@ import { useCotacoes } from "@/hooks/useCotacoes";
 import { getSafeWorkingRate } from "@/utils/exchangeRateGuard";
 import { useAuth } from "@/hooks/useAuth";
 import { TeamLogo } from "@/components/ui/team-logo";
+import { useLogoFallback } from "@/hooks/useLogoFallback";
+import { esporteToSportKey } from "@/utils/esporteToSportKey";
 
 
 import { validateBalanceForOperation } from "@/utils/surebetBalanceValidator";
@@ -619,6 +621,16 @@ export function SurebetCard({
   const { getLogoUrl } = useBookmakerLogoMap();
   const { isSystemOwner } = useAuth();
 
+  // Fallback de logos via cache local quando o evento foi importado sem
+  // home_team_logo_url/away_team_logo_url.
+  const { getTeamLogo: __fallbackTeamLogo } = useLogoFallback(
+    surebet.time_casa && surebet.time_fora ? esporteToSportKey(surebet.esporte) : null,
+  );
+  const __homeLogoUrl = surebet.home_team_logo_url
+    || (surebet.time_casa ? __fallbackTeamLogo(surebet.time_casa) : null);
+  const __awayLogoUrl = surebet.away_team_logo_url
+    || (surebet.time_fora ? __fallbackTeamLogo(surebet.time_fora) : null);
+
   // Expôr para debug e automação
   const { workingRates: projectRatesRaw, refetch: refetchProjectRates } = useProjetoWorkingRates(surebet.workspace_id);
 
@@ -1114,12 +1126,12 @@ export function SurebetCard({
         <TooltipProvider delayDuration={300}>
           <Tooltip>
             <TooltipTrigger asChild>
-              {surebet.time_casa && surebet.time_fora && (surebet.home_team_logo_url || surebet.away_team_logo_url) ? (
+              {surebet.time_casa && surebet.time_fora ? (
                 <div className="flex items-center gap-2 min-w-0 mb-1.5 cursor-default">
-                  <TeamLogo logoUrl={surebet.home_team_logo_url} alt={surebet.time_casa} size="h-6 w-6" iconSize="h-3.5 w-3.5" />
+                  <TeamLogo logoUrl={__homeLogoUrl} alt={surebet.time_casa} size="h-6 w-6" iconSize="h-3.5 w-3.5" />
                   <span className="text-base sm:text-lg font-semibold truncate uppercase leading-tight">{surebet.time_casa}</span>
                   <span className="text-muted-foreground shrink-0">×</span>
-                  <TeamLogo logoUrl={surebet.away_team_logo_url} alt={surebet.time_fora} size="h-6 w-6" iconSize="h-3.5 w-3.5" />
+                  <TeamLogo logoUrl={__awayLogoUrl} alt={surebet.time_fora} size="h-6 w-6" iconSize="h-3.5 w-3.5" />
                   <span className="text-base sm:text-lg font-semibold truncate uppercase leading-tight">{surebet.time_fora}</span>
                 </div>
               ) : (
