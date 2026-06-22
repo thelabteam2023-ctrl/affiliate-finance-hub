@@ -40,7 +40,6 @@ import { useCapitalEmDisputa } from "@/hooks/useCapitalEmDisputa";
 import { PosicaoCapitalCard } from "@/components/financeiro/PosicaoCapitalCard";
 import { usePosicaoCapital } from "@/hooks/usePosicaoCapital";
 import { PosicaoCapitalCarousel } from "@/components/financeiro/PosicaoCapitalCarousel";
-import { useResultadoPorProjeto } from "@/hooks/useResultadoPorProjeto";
 import { Wallet, TrendingUp, Percent, Coins } from "lucide-react";
 import { ParticipacaoInvestidoresTab } from "@/components/financeiro/ParticipacaoInvestidoresTab";
 import { MultiCurrencyWarningBanner } from "@/components/financeiro/MultiCurrencyIndicator";
@@ -242,20 +241,6 @@ export default function Financeiro() {
     [finData.bookmakersSaldos, convertUnified]
   );
 
-  // Resultado por projeto (origem do Lucro Operacional + Realizado + Exposto)
-  const resultadoPorProjeto = useResultadoPorProjeto({
-    workspaceId: workspaceId || null,
-    cotacoesOficiais: {
-      USD: cotacaoUSD,
-      EUR: cotacaoEUR,
-      GBP: cotacaoGBP,
-      MYR: cotacaoMYR,
-      MXN: cotacaoMXN,
-      ARS: cotacaoARS,
-      COP: cotacaoCOP,
-    },
-  });
-
   // Label de período para o KpiRail
   const periodLabel = useMemo(() => {
     const d = getDashboardPeriodDescription(periodoPreset, customRange);
@@ -305,28 +290,6 @@ export default function Financeiro() {
       saldoWalletsParceiros,
     };
   }, [finData, getCryptoUSDValue]);
-
-  // PATRIMÔNIO ATUAL — FONTE ÚNICA
-  // Mesma matemática e MESMA função de conversão usadas pelo donut
-  // <PosicaoCapital /> (ver src/components/caixa/PosicaoCapital.tsx).
-  // Convertendo aqui via convertUnified (que é a função compartilhada com
-  // o donut), garantimos que o KPI "Patrimônio", o donut e o card de
-  // composição mostrem EXATAMENTE o mesmo número em BRL.
-  const patrimonioDonutBRL = useMemo(() => {
-    let total = 0;
-    posicaoCapitalProps.saldosFiat.forEach((s) => {
-      total += convertUnified(s.saldo, (s.moeda || "BRL").toUpperCase(), "BRL");
-    });
-    posicaoCapitalProps.saldosBookmakers.forEach((s) => {
-      total += convertUnified(s.saldo, (s.moeda || "BRL").toUpperCase(), "BRL");
-    });
-    posicaoCapitalProps.saldosContasParceiros.forEach((s) => {
-      total += convertUnified(s.saldo, (s.moeda || "BRL").toUpperCase(), "BRL");
-    });
-    total += convertUnified(posicaoCapitalProps.saldoCaixaCrypto, "USD", "BRL");
-    total += convertUnified(posicaoCapitalProps.saldoWalletsParceiros, "USD", "BRL");
-    return total;
-  }, [posicaoCapitalProps, convertUnified]);
 
   // Inject title into global TopBar
   useEffect(() => {
@@ -392,8 +355,11 @@ export default function Financeiro() {
 
         <TabsContent value="overview" className="space-y-0">
           {(() => {
-            // Fonte única: mesma soma + mesma conversão do donut Posição de Capital
-            const patrimonioTotal = patrimonioDonutBRL;
+            const patrimonioTotal =
+              calc.saldos.capitalOperacional +
+              calc.saldos.saldoBookmakers +
+              calc.saldos.totalContasParceiros +
+              calc.saldos.totalWalletsParceiros;
             const custoSust = calc.costs.custoSustentacao;
             const resultadoLiquido = calcResultadoLiquido(lucroRealizado, custoSust);
             const margemOp = calcMargemOperacional(lucroRealizado, custoSust);
@@ -552,11 +518,6 @@ export default function Financeiro() {
                                 saldoFreebet={saldoFreebetTotal}
                                 formatCurrency={calc.formatCurrency}
                                 periodLabel={periodLabel}
-                                resultadoPorProjeto={{
-                                  items: resultadoPorProjeto.items,
-                                  totaisBRL: resultadoPorProjeto.totaisBRL,
-                                  loading: resultadoPorProjeto.loading,
-                                }}
                               />
                             ),
                           },

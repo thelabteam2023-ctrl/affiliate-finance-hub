@@ -22,12 +22,6 @@ import type { ProjetoDashboardRawData } from "@/hooks/useProjetoDashboardData";
 export interface LucroCanonicoResultado {
   /** Lucro consolidado na MOEDA do projeto (ex: BRL para projeto BRL, USD para projeto USD) */
   consolidado: number;
-  /**
-   * Lucro consolidado convertido para BRL via Cotação de Trabalho do projeto.
-   * Útil para somatórios a nível de workspace multi-moeda mantendo paridade
-   * com o número exibido no card do projeto.
-   */
-  consolidadoBRL: number;
   /** Lucro por moeda de origem (não consolidado) */
   porMoeda: Record<string, number>;
   /** Moeda em que `consolidado` está expresso */
@@ -212,14 +206,7 @@ export async function fetchProjetosLucroCanonico({
   for (const { id, raw } of dashboards) {
     const cfg = configs.get(id);
     if (!raw || !cfg) {
-      result[id] = {
-        consolidado: 0,
-        consolidadoBRL: 0,
-        porMoeda: {},
-        moedaConsolidacao: cfg?.moeda_consolidacao || "BRL",
-        lucroRealizado: 0,
-        lucroRealizadoBRL: 0,
-      };
+      result[id] = { consolidado: 0, porMoeda: {}, moedaConsolidacao: cfg?.moeda_consolidacao || "BRL", lucroRealizado: 0, lucroRealizadoBRL: 0 };
       continue;
     }
 
@@ -246,13 +233,8 @@ export async function fetchProjetosLucroCanonico({
       convertOficial
     );
 
-    // Converte consolidado (na moeda do projeto) para BRL via Cotação de Trabalho.
-    const convertToBRLTrabalho = buildConverter("BRL", workRates);
-    const consolidadoBRL = convertToBRLTrabalho(consolidado, moedaConsolidacao);
-
     result[id] = {
       consolidado,
-      consolidadoBRL,
       porMoeda,
       moedaConsolidacao,
       lucroRealizado: 0,
