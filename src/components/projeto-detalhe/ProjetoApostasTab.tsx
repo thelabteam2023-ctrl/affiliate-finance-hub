@@ -684,7 +684,12 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           valor_brl_referencia, lucro_prejuizo_brl_referencia,
           time_casa, time_fora, home_team_logo_url, away_team_logo_url, league_logo_url,
           apostas_pernas (
-            id, selecao, selecao_livre, odd, stake, stake_real, stake_freebet, resultado, lucro_prejuizo, bookmaker_id, moeda, ordem, tipo, comissao, fonte_saldo
+            id, selecao, selecao_livre, odd, stake, stake_real, stake_freebet, resultado, lucro_prejuizo, bookmaker_id, moeda, ordem, tipo, comissao, fonte_saldo,
+            apostas_perna_entradas (
+              id, perna_id, bookmaker_id, moeda, odd, stake, stake_real, stake_freebet,
+              fonte_saldo, tipo, comissao, resultado, lucro_prejuizo, selecao_livre,
+              stake_brl_referencia, lucro_prejuizo_brl_referencia, cotacao_snapshot, created_at
+            )
           )
         `;
 
