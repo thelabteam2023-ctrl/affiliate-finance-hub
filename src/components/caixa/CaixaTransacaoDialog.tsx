@@ -4967,7 +4967,7 @@ export function CaixaTransacaoDialog({
                 <h3 className="text-[10px] font-semibold mb-4 text-center uppercase tracking-widest text-muted-foreground">
                   Fluxo da Transação
                 </h3>
-                <div className="relative grid grid-cols-2 gap-4">
+                <div className="relative grid grid-cols-2 gap-4 items-stretch">
                   {/* Seta central animada */}
                   <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
                     <div className="w-8 h-8 rounded-full bg-card border border-border shadow-lg flex items-center justify-center">
@@ -4977,14 +4977,14 @@ export function CaixaTransacaoDialog({
                   {/* Destino - aparece primeiro no SAQUE */}
                   {tipoTransacao === "SAQUE" ? (
                     <>
-                      <div className="space-y-4 pr-4 border-r border-border/50">
+                      <div className="flex flex-col gap-4 pr-4 border-r border-border/50 h-full">
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="text-xs font-medium text-muted-foreground uppercase">
                             Destino
                           </h4>
                         </div>
                         {renderDestinoFields()}
-                        <div className="rounded-md bg-muted/20 border border-border/40 px-3 py-2 text-center text-xs space-y-1">
+                        <div className="mt-auto rounded-md bg-muted/20 border border-border/40 px-3 py-2 text-center text-xs space-y-1 min-h-[68px] flex flex-col justify-center">
                             <div className="text-[10px] font-medium uppercase text-muted-foreground tracking-wide truncate">{getDestinoLabel()}</div>
                             {/* FIAT: Conta Bancária */}
                             {tipoMoeda === "FIAT" && destinoContaId && (
@@ -5026,14 +5026,14 @@ export function CaixaTransacaoDialog({
                         </div>
                       </div>
 
-                      <div className="space-y-4 pl-4">
+                      <div className="flex flex-col gap-4 pl-4 h-full">
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="text-xs font-medium text-muted-foreground uppercase">
                             Origem
                           </h4>
                         </div>
                         {renderOrigemFields()}
-                        <div className="rounded-md bg-muted/20 border border-border/40 px-3 py-2 text-center text-xs space-y-1">
+                        <div className="mt-auto rounded-md bg-muted/20 border border-border/40 px-3 py-2 text-center text-xs space-y-1 min-h-[68px] flex flex-col justify-center">
                             <div className="text-[10px] font-medium uppercase text-muted-foreground tracking-wide truncate">{getOrigemLabel()}</div>
                             {origemBookmakerId && (
                               <div className="mt-3 space-y-1">
@@ -5102,14 +5102,14 @@ export function CaixaTransacaoDialog({
                   ) : (
                     <>
                       {/* Origem - ordem normal para outros tipos */}
-                      <div className="space-y-4 pr-4 border-r border-border/50">
+                      <div className="flex flex-col gap-4 pr-4 border-r border-border/50 h-full">
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="text-xs font-medium text-muted-foreground uppercase">
                             Origem
                           </h4>
                         </div>
                         {renderOrigemFields()}
-                        <div className="rounded-md bg-muted/20 border border-border/40 px-3 py-2 text-center text-xs space-y-1">
+                        <div className="mt-auto rounded-md bg-muted/20 border border-border/40 px-3 py-2 text-center text-xs space-y-1 min-h-[68px] flex flex-col justify-center">
                             <div className="text-[10px] font-medium uppercase text-muted-foreground tracking-wide truncate">{getOrigemLabel()}</div>
                             {(origemTipo === "CAIXA_OPERACIONAL" || 
                               (tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "LIQUIDACAO") ||
@@ -5237,14 +5237,14 @@ export function CaixaTransacaoDialog({
                       </div>
 
                       {/* Destino */}
-                      <div className="space-y-4 pl-4">
+                      <div className="flex flex-col gap-4 pl-4 h-full">
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="text-xs font-medium text-muted-foreground uppercase">
                             Destino
                           </h4>
                         </div>
                         {renderDestinoFields()}
-                        <div className="rounded-md bg-muted/20 border border-border/40 px-3 py-2 text-center text-xs space-y-1">
+                        <div className="mt-auto rounded-md bg-muted/20 border border-border/40 px-3 py-2 text-center text-xs space-y-1 min-h-[68px] flex flex-col justify-center">
                             <div className="text-[10px] font-medium uppercase text-muted-foreground tracking-wide truncate">{getDestinoLabel()}</div>
                             {(destinoTipo === "CAIXA_OPERACIONAL" || 
                               (tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "APORTE")) && parseFloat(String(valor)) > 0 && (
