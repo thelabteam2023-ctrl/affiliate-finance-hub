@@ -65,6 +65,7 @@ import {
 } from "@/components/ui/context-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
+import { FilterToolbar, FilterField, FilterToolbarSpacer } from "@/components/central-operacoes/filter-bar/FilterToolbar";
 
 interface ContaDisponivel {
   id: string;
@@ -458,59 +459,70 @@ export function ContasDisponiveisModule() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative w-[220px] shrink-0">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar casa ou parceiro..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-9 text-sm"
-          />
-        </div>
-        <Select value={minSaldo} onValueChange={setMinSaldo}>
-          <SelectTrigger className="w-[175px] h-9 text-sm" icon={<Filter className="h-3.5 w-3.5" />}>
-            <SelectValue placeholder="Saldo mín." />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="0">Todos os saldos</SelectItem>
-            <SelectItem value="1">≥ 1</SelectItem>
-            <SelectItem value="10">≥ 10</SelectItem>
-            <SelectItem value="50">≥ 50</SelectItem>
-            <SelectItem value="100">≥ 100</SelectItem>
-            <SelectItem value="500">≥ 500</SelectItem>
-          </SelectContent>
-        </Select>
-        {moedasUnicas.length > 1 && (
-          <Select value={moedaFilter} onValueChange={setMoedaFilter}>
-            <SelectTrigger className="w-[175px] h-9 text-sm">
-              <SelectValue placeholder="Moeda" />
+      <FilterToolbar>
+        <FilterField label="Buscar">
+          <div className="relative w-[220px] shrink-0">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Casa ou parceiro..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 h-9 text-sm"
+            />
+          </div>
+        </FilterField>
+        <FilterField label="Saldo mínimo">
+          <Select value={minSaldo} onValueChange={setMinSaldo}>
+            <SelectTrigger className="w-[175px] h-9 text-sm" icon={<Filter className="h-3.5 w-3.5" />}>
+              <SelectValue placeholder="Saldo mín." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="todas">Todas moedas</SelectItem>
-              {moedasUnicas.map((m) => (
-                <SelectItem key={m} value={m}>{m}</SelectItem>
-              ))}
+              <SelectItem value="0">Todos os saldos</SelectItem>
+              <SelectItem value="1">≥ 1</SelectItem>
+              <SelectItem value="10">≥ 10</SelectItem>
+              <SelectItem value="50">≥ 50</SelectItem>
+              <SelectItem value="100">≥ 100</SelectItem>
+              <SelectItem value="500">≥ 500</SelectItem>
             </SelectContent>
           </Select>
+        </FilterField>
+        {moedasUnicas.length > 1 && (
+          <FilterField label="Moeda">
+            <Select value={moedaFilter} onValueChange={setMoedaFilter}>
+              <SelectTrigger className="w-[175px] h-9 text-sm">
+                <SelectValue placeholder="Moeda" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">Todas moedas</SelectItem>
+                {moedasUnicas.map((m) => (
+                  <SelectItem key={m} value={m}>{m}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FilterField>
         )}
         {parceirosUnicos.length > 1 && (
-          <Select value={parceiroFilter} onValueChange={setParceiroFilter}>
-            <SelectTrigger className="w-[190px] h-9 text-sm" icon={<User className="h-3.5 w-3.5" />}>
-              <SelectValue placeholder="Parceiro" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos parceiros</SelectItem>
-              {parceirosUnicos.map(([id, nome]) => (
-                <SelectItem key={id} value={id}>{getFirstLastName(nome)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <FilterField label="Parceiro">
+            <Select value={parceiroFilter} onValueChange={setParceiroFilter}>
+              <SelectTrigger className="w-[190px] h-9 text-sm" icon={<User className="h-3.5 w-3.5" />}>
+                <SelectValue placeholder="Parceiro" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos parceiros</SelectItem>
+                {parceirosUnicos.map(([id, nome]) => (
+                  <SelectItem key={id} value={id}>{getFirstLastName(nome)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FilterField>
         )}
-        <Badge variant="outline" className="h-9 px-3 text-sm">
-          {filtered.length} / {contas?.length || 0}
-        </Badge>
-      </div>
+        <FilterToolbarSpacer />
+        <FilterField label="Resultados">
+          <Badge variant="outline" className="h-9 px-3 text-sm font-mono">
+            {filtered.length} / {contas?.length || 0}
+          </Badge>
+        </FilterField>
+      </FilterToolbar>
 
       {/* Bulk Action Bar */}
       {selectedIds.size > 0 && (
