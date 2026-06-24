@@ -52,6 +52,7 @@ import BookmakerSelect, { BookmakerSelectRef } from "@/components/bookmakers/Boo
 import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
  import { Loader2, ArrowLeftRight, ArrowRightLeft, AlertTriangle, TrendingDown, TrendingUp, Info, Wallet } from "lucide-react";
  import { WalletCryptoSelect } from "@/components/wallets/WalletCryptoSelect";
+import { DestinoConfirmadoCard } from "@/components/caixa/DestinoConfirmadoCard";
 
 // Constantes de moedas disponíveis (todas as 8 moedas FIAT suportadas)
 const MOEDAS_FIAT = [
