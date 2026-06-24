@@ -7,7 +7,8 @@ import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
 import { Wallet, Building2, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getFirstLastName } from "@/lib/utils";
-import type { SaquePendenteItem } from "./SaquesSmartFilter";
+import type { SaquePendenteItem } from "./filter-bar/types";
+export type { SaquePendenteItem };
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
   BRL: "R$", USD: "US$", EUR: "€", GBP: "£", USDT: "US$", USDC: "US$", MXN: "MX$",

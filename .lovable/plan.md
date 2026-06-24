@@ -1,65 +1,132 @@
-# Plano: Atualização automática de saldos em Transferência Caixa Operacional → Parceiro
+# Plano — Faceted Filter Bar (Proposta B)
 
-## Causa raiz identificada
+Substituir os 3 SmartFilters atuais (`SaquesSmartFilter`, `SaqueProcessamentoSmartFilter`, `CasasLimitadasSmartFilter`) por **um único componente reutilizável** no padrão Linear/Stripe, com facetas multi-seleção, saved views e persistência por usuário.
 
-O fluxo de gravação da transferência já funciona no backend (trigger `tr_cash_ledger_update_bookmaker_balance_v2` e views `v_saldo_parceiro_contas` / `v_saldo_parceiro_wallets` são atualizadas em tempo real). O problema está **100% no front-end**, na camada de invalidação de cache:
+## Escopo
 
-`src/hooks/useInvalidateCaixaData.ts` declara as constantes:
+**Dentro:** Central de Operações → cards Financeiros (Aguardando Confirmação, Pendentes de Processamento, Casas Limitadas).
+**Fora desta entrega:** outras telas (Financeiro, Apostas, etc.). A base fica pronta para reuso em uma fase 2.
 
-```
-saldosFiat: "caixa-saldos-fiat"
-saldosCrypto: "caixa-saldos-crypto"
-saldosBookmakers: "caixa-saldos-bookmakers"
-saldoContasParceiros: "caixa-saldos-contas-parceiros"
-saldoWalletsParceiros: "caixa-saldos-wallets-parceiros"
-```
+## Arquitetura
 
-Mas **nenhum hook consumidor usa esses queryKeys**. Os hooks reais que renderizam saldos do Caixa e dos Parceiros usam outras chaves:
-
-| Hook | queryKey real | Telas afetadas |
-|---|---|---|
-| `useFinanceiroData` | `["financeiro-data", workspaceId]` | Financeiro, Caixa Operacional, saldos por moeda |
-| `useParceirosData` | `["parceiros-data", workspaceId]` | Gestão de Parceiros, saldo do Lolisa |
-| `useExposicaoFinanceira` | `["exposicao-financeira", workspaceId, ...]` | KPIs financeiros |
-
-Como o `invalidateCaixa()` chamado em `CaixaTransacaoDialog.tsx` (linhas 3098 e 3219) invalida apenas chaves órfãs, o React Query nunca refaz o fetch dos saldos de parceiro. Resultado: o usuário precisa dar F5 para ver o débito no Caixa e o crédito no Lolisa.
-
-## Correção (escopo mínimo)
-
-### 1. `src/hooks/useInvalidateCaixaData.ts`
-Adicionar invalidação das chaves reais ao bloco de `saldosFiat`, `saldosCrypto`, `saldoContasParceiros` e `saldoWalletsParceiros`:
-
-- `["financeiro-data"]` (cobre fiat, crypto e contas/wallets de parceiros do módulo Caixa)
-- `["parceiros-data"]` (cobre saldo agregado do parceiro destino — Lolisa)
-- `["exposicao-financeira"]` (KPIs financeiros que dependem de saldos)
-
-Manter as chaves antigas como alias para não quebrar nada.
-
-### 2. Verificação rápida nos outros pontos de gravação
-Auditar se `ConciliacaoSaldos.tsx`, `ReverterMovimentacaoDialog.tsx` e `ContasEmpresaSection.tsx` também chamam `invalidateCaixa()` após mutar. Onde faltar, adicionar.
-
-### 3. Rotina automatizada de validação (anti-regressão)
-Criar `src/hooks/__tests__/useInvalidateCaixaData.test.ts` (Vitest) com três asserts:
-
-1. Após `invalidateCaixa({ only: ["saldoContasParceiros"] })`, o queryClient marca `["financeiro-data"]` e `["parceiros-data"]` como stale.
-2. Sem `only`, todas as chaves abaixo entram em invalidação:
-   `financeiro-data`, `parceiros-data`, `exposicao-financeira`, `bookmaker-saldos`, `central-operacoes-data`, `caixa-transacoes`.
-3. Smoke test garantindo que toda string declarada em `CAIXA_QUERY_KEYS` corresponde a um queryKey realmente usado em `src/hooks/**` (varre o repo com `import.meta.glob` ou `fs.readdirSync`). Esse teste **falha** se alguém declarar uma chave fantasma de novo — exatamente o defeito que originou o bug.
-
-## Detalhes técnicos (para devs)
+Novo módulo em `src/components/central-operacoes/filter-bar/`:
 
 ```text
-Trigger DB          OK  → atualiza v_saldo_parceiro_*
-Insert cash_ledger  OK  → CaixaTransacaoDialog
-invalidateCaixa()   BUG → invalida queryKeys que ninguém escuta
-useFinanceiroData   ←  consome ["financeiro-data"]  (não invalidado)
-useParceirosData    ←  consome ["parceiros-data"]   (não invalidado)
+filter-bar/
+├── OperacoesFilterBar.tsx       ← shell visual (totalizador + facetas + busca + ordenação)
+├── FacetPopover.tsx             ← popover pesquisável com multi-select + soma por valor
+├── SavedViewsBar.tsx            ← chips de views salvas + "Nova view"
+├── useOperacoesFilter.ts        ← hook genérico (estado, persistência, derivação)
+├── useSavedViews.ts             ← CRUD de views salvas (localStorage por usuário)
+└── types.ts                     ← FacetConfig, FilterState, SavedView, ItemAdapter
 ```
 
-Sem alteração de dados em produção. Nenhuma migração SQL. Apenas três arquivos tocados: o hook de invalidação, o teste novo e (se necessário) os diálogos auxiliares.
+## Modelo genérico
 
-## Entregáveis
+```ts
+type FacetKey = "parceiro" | "casa" | "moeda" | "projeto" | "idade";
 
-1. Patch em `useInvalidateCaixaData.ts` adicionando `financeiro-data`, `parceiros-data` e `exposicao-financeira` aos grupos `saldosFiat`, `saldosCrypto`, `saldoContasParceiros`, `saldoWalletsParceiros`.
-2. Teste Vitest `useInvalidateCaixaData.test.ts` com os três asserts acima.
-3. (Opcional) Atualizar memory `architecture/cache-invalidation-consistency-standard` reforçando a regra: **toda chave declarada em hook de invalidação deve ter consumidor real — proibido queryKey fantasma**.
+interface ItemAdapter<T> {
+  getParceiro: (item: T) => string | null;
+  getCasa: (item: T) => string | null;
+  getMoeda: (item: T) => string;
+  getProjeto: (item: T) => string | null;
+  getValor: (item: T) => number;
+  getCreatedAt: (item: T) => string;
+  getSearchText: (item: T) => string;
+}
+```
+
+Cada card passa seu adapter — `SaqueCardGrid`, `SaqueProcessamentoCardGrid`, `CasasLimitadasCardGrid` continuam recebendo a lista já filtrada e não mudam.
+
+## Layout final
+
+```text
+┌─ Saques Aguardando Confirmação ─────────────────────────────────────┐
+│ Pendente:  R$ 2.340,51 BRL    US$ 559,51 USD                       │
+│                                                                     │
+│ [ Meus saques ] [ Atrasados >30d ] [ +Nova view ]                  │
+│                                                                     │
+│ [+ Filtro ▾] [Parceiro: 2 ×] [Casa: Bet365 ×]   ⌕ buscar…  ↕ valor│
+│                                                                     │
+│ ... cards ...                                                       │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Facetas:** Parceiro, Casa, Moeda, Projeto, Idade (Hoje / 7d / 30d / >30d).
+Cada chip mostra **label + count** e abre popover com lista pesquisável (multi-seleção, contagem por item, total por moeda no rodapé).
+
+**Ordenação:** toggle de 2 estados (data ↑↓ / valor ↑↓) em vez de Select de 4 opções.
+
+**Busca textual:** colapsada, secundária. Atalho `/` foca, `Esc` limpa.
+
+## Persistência
+
+- `localStorage` chave `central-ops:filter:<cardId>:<userId>` → último estado.
+- `localStorage` chave `central-ops:views:<userId>` → array de saved views.
+- Defaults: nenhum filtro, ordenação "mais antigo primeiro".
+
+## Saved Views (v1 simples)
+
+- Botão "Salvar view atual" no menu da barra → pede nome → grava em localStorage.
+- Click no chip da view → aplica todos os filtros + ordenação.
+- Long-press / menu de contexto → renomear / remover.
+- Sem sincronização com backend nesta fase (decisão: começar local, migrar depois se houver demanda multi-device).
+
+## Migração dos cards existentes
+
+`src/pages/CentralOperacoes.tsx`:
+
+```tsx
+<OperacoesFilterBar
+  cardId="saques-aguardando"
+  items={saquesPendentes}
+  adapter={saqueAdapter}
+  facets={["parceiro","casa","moeda","projeto","idade"]}
+>
+  {(filtered) => <SaqueCardGrid saques={filtered} onConfirmar={...} />}
+</OperacoesFilterBar>
+```
+
+Os 3 SmartFilters antigos ficam deprecated no commit e são removidos após confirmação visual.
+
+## Componentes shadcn aproveitados
+
+`Popover`, `Command` (cmdk — já no projeto), `Badge`, `Button`, `Input`, `Tooltip`. Sem novas dependências.
+
+## Animações
+
+- Framer Motion já no projeto: chip aplicado → `layout` transition no totalizador (números animam).
+- Faceta abrindo: fade + slide 4px (já default do Popover).
+
+## Testes
+
+- `useOperacoesFilter.test.ts`: aplicar/remover faceta, combinação AND entre facetas, OR dentro da mesma faceta, ordenação, persistência.
+- `useSavedViews.test.ts`: CRUD, isolamento por usuário.
+- Smoke test visual: render dos 3 cards com a barra nova.
+
+## Entrega faseada (ordem dos commits)
+
+1. **Hook + tipos + adapter** (`useOperacoesFilter`, `types.ts`) com testes.
+2. **`FacetPopover`** isolado (componente puro, testável).
+3. **`OperacoesFilterBar`** sem saved views — substitui os 3 SmartFilters.
+4. **`SavedViewsBar`** + `useSavedViews` (camada opcional por cima).
+5. Limpeza: remover `SaquesSmartFilter`, `SaqueProcessamentoSmartFilter`, `CasasLimitadasSmartFilter`.
+
+## Riscos & mitigações
+
+| Risco | Mitigação |
+|---|---|
+| Quebrar ordenação atual usada por operadores | Default = "mais antigo primeiro" (igual hoje) |
+| Saved views poluindo localStorage entre usuários | Chave inclui `userId` do `useAuth` |
+| Faceta "Casa" gera lista enorme | Popover já tem busca interna (cmdk) |
+| Operador acostumado com input no topo | Busca textual continua, só fica à direita |
+
+## Critérios de aceite
+
+- Os 3 cards usam o mesmo componente.
+- Totalizador reage a qualquer filtro aplicado.
+- Filtros persistem ao recarregar a página.
+- Ao menos 1 saved view padrão sugerida ("Atrasados >30d") aparece na primeira visita.
+- Atalho `/` foca busca em qualquer um dos 3 cards focados.
+- Nenhuma regressão nos handlers `onConfirmar`, `onProcessar`, `onCancelar`, `onSacar`.
