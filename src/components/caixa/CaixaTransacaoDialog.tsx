@@ -4877,6 +4877,7 @@ export function CaixaTransacaoDialog({
                       value={valorDisplay}
                       onChange={handleValorChange}
                       placeholder="0,00"
+                      className="h-14 text-3xl text-center font-medium tabular-nums tracking-tight"
                     />
                   </>
                 ) : (
@@ -4888,6 +4889,7 @@ export function CaixaTransacaoDialog({
                       value={valorDisplay}
                       onChange={handleValorChange}
                       placeholder="0,00"
+                      className="h-14 text-3xl text-center font-medium tabular-nums tracking-tight"
                     />
                   </>
                 )}
@@ -5019,6 +5021,7 @@ export function CaixaTransacaoDialog({
                       value={valorDisplay}
                       onChange={handleValorChange}
                       placeholder="0,00"
+                      className="h-14 text-3xl text-center font-medium tabular-nums tracking-tight"
                     />
                   </div>
                 ) : (
@@ -5031,7 +5034,7 @@ export function CaixaTransacaoDialog({
                       placeholder="0,00"
                       readOnly={tipoTransacao !== "SAQUE"}
                       disabled={tipoTransacao !== "SAQUE"}
-                      className={tipoTransacao !== "SAQUE" ? "bg-muted/50" : ""}
+                      className={`h-14 text-3xl text-center font-medium tabular-nums tracking-tight ${tipoTransacao !== "SAQUE" ? "bg-muted/50" : ""}`}
                     />
                   </div>
                 )}
