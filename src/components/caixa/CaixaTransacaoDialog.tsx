@@ -50,7 +50,7 @@ import ParceiroSelect, { ParceiroSelectRef } from "@/components/parceiros/Parcei
 import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
 import BookmakerSelect, { BookmakerSelectRef } from "@/components/bookmakers/BookmakerSelect";
 import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
- import { Loader2, ArrowLeftRight, ArrowRightLeft, AlertTriangle, TrendingDown, TrendingUp, Info, Wallet, ChevronDown } from "lucide-react";
+import { Loader2, ArrowLeftRight, ArrowRightLeft, AlertTriangle, TrendingDown, TrendingUp, Info, Wallet, ChevronDown, PiggyBank, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -4701,7 +4701,31 @@ export function CaixaTransacaoDialog({
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Nova Transação</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <span>Nova Transação</span>
+            {tipoTransacao && (() => {
+              const meta = {
+                APORTE_FINANCEIRO: { label: "Aporte Financeiro", Icon: PiggyBank, color: "violet" },
+                DEPOSITO: { label: "Depósito", Icon: ArrowDownToLine, color: "emerald" },
+                SAQUE: { label: "Saque", Icon: ArrowUpFromLine, color: "amber" },
+                TRANSFERENCIA: { label: "Transferência", Icon: ArrowLeftRight, color: "sky" },
+              }[tipoTransacao as "APORTE_FINANCEIRO" | "DEPOSITO" | "SAQUE" | "TRANSFERENCIA"];
+              if (!meta) return null;
+              const { Icon, label, color } = meta;
+              const cls = {
+                violet: "bg-violet-500/10 text-violet-400 border-violet-500/30",
+                emerald: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
+                amber: "bg-amber-500/10 text-amber-400 border-amber-500/30",
+                sky: "bg-sky-500/10 text-sky-400 border-sky-500/30",
+              }[color];
+              return (
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-semibold uppercase tracking-wider ${cls}`}>
+                  <Icon className="h-3 w-3" />
+                  {label}
+                </span>
+              );
+            })()}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
@@ -4720,6 +4744,12 @@ export function CaixaTransacaoDialog({
                 .filter((t) => !allowedTipoTransacao || allowedTipoTransacao.includes(t.value))
                 .map((t) => {
                   const active = tipoTransacao === t.value;
+                  const activeCls = {
+                    APORTE_FINANCEIRO: "bg-violet-500/15 text-violet-300 ring-1 ring-violet-500/30",
+                    DEPOSITO: "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30",
+                    SAQUE: "bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30",
+                    TRANSFERENCIA: "bg-sky-500/15 text-sky-300 ring-1 ring-sky-500/30",
+                  }[t.value];
                   return (
                     <button
                       key={t.value}
@@ -4727,7 +4757,7 @@ export function CaixaTransacaoDialog({
                       onClick={() => setTipoTransacao(t.value)}
                       className={`flex-1 py-2 text-[11px] font-semibold rounded-md transition-all ${
                         active
-                          ? "bg-card text-foreground shadow-sm"
+                          ? `${activeCls} shadow-sm`
                           : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
