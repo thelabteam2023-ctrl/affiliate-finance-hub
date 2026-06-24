@@ -289,15 +289,16 @@ function ViewPorParceiro() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-4">
-        <BookmakerGrupoFilter
-          value={grupoFilter}
-          onChange={(v) => { setGrupoFilter(v); resetSelection(); }}
-          className="w-[200px]"
-        />
+      <FilterToolbar>
+        <FilterField label="Grupo">
+          <BookmakerGrupoFilter
+            value={grupoFilter}
+            onChange={(v) => { setGrupoFilter(v); resetSelection(); }}
+            className="w-[200px]"
+          />
+        </FilterField>
 
-        <div className="flex flex-col gap-1">
-          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Regulamentação</span>
+        <FilterField label="Regulamentação">
           <div className="flex items-center gap-1 h-9">
             <button
               onClick={() => { setRegulamentacaoFilter(regulamentacaoFilter === "REGULAMENTADA" ? "todas" : "REGULAMENTADA"); resetSelection(); }}
@@ -322,25 +323,24 @@ function ViewPorParceiro() {
               Não Regulamentada
             </button>
           </div>
-        </div>
+        </FilterField>
 
-        <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium uppercase tracking-wide">
-          <User className="h-4 w-4" />
-          Parceiro
-        </div>
-
-        <Popover open={parceiroPopoverOpen} onOpenChange={(open) => { setParceiroPopoverOpen(open); if (!open) setParceiroSearch(""); }}>
+        <FilterField label="Parceiro">
+          <Popover open={parceiroPopoverOpen} onOpenChange={(open) => { setParceiroPopoverOpen(open); if (!open) setParceiroSearch(""); }}>
           <PopoverTrigger asChild>
-            <Button variant="outline" role="combobox" className="w-[280px] justify-center font-normal">
-              {selectedParceiro ? (
-                <span className="truncate">{getFirstLastName(selectedParceiro.nome)}</span>
+            <Button variant="outline" role="combobox" className="w-[260px] justify-between font-normal">
+              <span className="flex items-center gap-2 truncate">
+                <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                {selectedParceiro ? (
+                  <span className="truncate">{getFirstLastName(selectedParceiro.nome)}</span>
               ) : (
                 <span className="text-muted-foreground">Selecionar parceiro</span>
-              )}
+                )}
+              </span>
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-[280px] p-0" align="start">
+          <PopoverContent className="w-[260px] p-0" align="start">
             <div className="flex items-center border-b border-border px-3 py-2">
               <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
               <input
@@ -378,15 +378,21 @@ function ViewPorParceiro() {
               )}
             </div>
           </PopoverContent>
-        </Popover>
+          </Popover>
+        </FilterField>
 
         {selectedParceiroId && !isLoading && (
-          <Badge variant="outline" className="text-xs font-mono gap-1">
-            <Building2 className="h-3 w-3" />
-            {disponiveis.length} casa{disponiveis.length !== 1 ? "s" : ""} não criada{disponiveis.length !== 1 ? "s" : ""}
-          </Badge>
+          <>
+            <FilterToolbarSpacer />
+            <FilterField label="Resultados">
+              <Badge variant="outline" className="h-9 px-3 text-xs font-mono gap-1">
+                <Building2 className="h-3 w-3" />
+                {disponiveis.length} casa{disponiveis.length !== 1 ? "s" : ""} não criada{disponiveis.length !== 1 ? "s" : ""}
+              </Badge>
+            </FilterField>
+          </>
         )}
-      </div>
+      </FilterToolbar>
 
       {!selectedParceiroId && (
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
