@@ -1275,11 +1275,7 @@ export function CaixaTransacaoDialog({
     if (!temBookmakerComSaldoUsd) return;
     
     // Abrir BookmakerSelect para o usuário selecionar a origem
-    if (bookmakerSelectRef.current) {
-      setTimeout(() => {
-        bookmakerSelectRef.current?.open();
-      }, 100);
-    }
+    tryActivateRef(() => bookmakerSelectRef.current, "open");
   }, [tipoMoeda, tipoTransacao, bookmakers]);
   
   // SAQUE CRYPTO: quando bookmaker é selecionada, buscar moeda do último depósito crypto
@@ -1304,16 +1300,10 @@ export function CaixaTransacaoDialog({
         // Pré-seleciona a moeda do último depósito
         setCoin(data.coin);
         // Abre o select de moeda com foco para o usuário confirmar ou alterar
-        setTimeout(() => {
-          coinSelectRef.current?.focus();
-          coinSelectRef.current?.click();
-        }, 150);
+        tryActivateRef(() => coinSelectRef.current, "focus-click");
       } else {
         // Sem histórico de depósito, abre o select para o usuário escolher
-        setTimeout(() => {
-          coinSelectRef.current?.focus();
-          coinSelectRef.current?.click();
-        }, 150);
+        tryActivateRef(() => coinSelectRef.current, "focus-click");
       }
     };
     
