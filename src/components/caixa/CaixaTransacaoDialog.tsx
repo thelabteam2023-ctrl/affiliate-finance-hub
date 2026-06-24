@@ -786,6 +786,9 @@ export function CaixaTransacaoDialog({
    const [saldosParceirosWallets, setSaldosParceirosWallets] = useState<SaldoParceiroWallets[]>([]);
    const [investidores, setInvestidores] = useState<Array<{ id: string; nome: string }>>([]);
   const [saquesPendentes, setSaquesPendentes] = useState<Record<string, number>>({});
+
+  // Ack para rede divergente origem→destino na transferência crypto entre parceiros
+  const [ackNetworkMismatch, setAckNetworkMismatch] = useState(false);
   
   // Caixa Operacional company account (optional physical destination/origin)
   const [caixaParceiroId, setCaixaParceiroId] = useState<string>("");
