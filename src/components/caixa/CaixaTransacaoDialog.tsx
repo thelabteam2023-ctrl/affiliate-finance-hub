@@ -263,6 +263,25 @@ export function CaixaTransacaoDialog({
   const destinoContaBancariaSelectRef = useRef<HTMLButtonElement>(null);
   const destinoWalletSelectRef = useRef<HTMLButtonElement>(null);
 
+  // Helper: abre o ParceiroSelect com retry (resiliente a remounts/render condicional)
+  const tryOpenParceiroSelect = () => {
+    let tries = 0;
+    const MAX_TRIES = 15;
+    const TRY_EVERY_MS = 60;
+    const attempt = () => {
+      tries += 1;
+      const ref = parceiroSelectRef.current;
+      if (ref) {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => ref.open());
+        });
+        return;
+      }
+      if (tries < MAX_TRIES) setTimeout(attempt, TRY_EVERY_MS);
+    };
+    setTimeout(attempt, 80);
+  };
+
   // Guided focus sequence state for affiliate deposit flow
   const affiliateFocusActiveRef = useRef<boolean>(false);
   const affiliateFocusStepRef = useRef<number>(0);
@@ -624,10 +643,8 @@ export function CaixaTransacaoDialog({
     
     // Auto-focus para próximo passo (se não estiver no fluxo de SAQUE CRYPTO que já tem bookmaker)
     // Não abrir parceiro durante fluxo guiado de affiliate_deposit (o fluxo cuida da sequência)
-    if (tipoTransacao === "DEPOSITO" && coin && parceiroSelectRef.current && !affiliateFocusActiveRef.current) {
-      setTimeout(() => {
-        parceiroSelectRef.current?.open();
-      }, 100);
+    if (tipoTransacao === "DEPOSITO" && coin && !affiliateFocusActiveRef.current) {
+      tryOpenParceiroSelect();
     }
   }, [coin, tipoMoeda, tipoTransacao]);
 
@@ -646,10 +663,8 @@ export function CaixaTransacaoDialog({
     
     // Auto-focus para próximo passo (apenas se parceiro não está preenchido)
     // Não abrir parceiro durante fluxo guiado de affiliate_deposit
-    if ((tipoTransacao === "DEPOSITO" || tipoTransacao === "SAQUE") && moeda && parceiroSelectRef.current && !affiliateFocusActiveRef.current) {
-      setTimeout(() => {
-        parceiroSelectRef.current?.open();
-      }, 100);
+    if ((tipoTransacao === "DEPOSITO" || tipoTransacao === "SAQUE") && moeda && !affiliateFocusActiveRef.current) {
+      tryOpenParceiroSelect();
     }
     // TRANSFERENCIA CAIXA_PARCEIRO: handled in separate effect after fluxoTransferencia declaration
   }, [moeda, tipoMoeda, tipoTransacao]);
