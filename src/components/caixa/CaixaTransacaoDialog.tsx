@@ -50,7 +50,12 @@ import ParceiroSelect, { ParceiroSelectRef } from "@/components/parceiros/Parcei
 import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
 import BookmakerSelect, { BookmakerSelectRef } from "@/components/bookmakers/BookmakerSelect";
 import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
- import { Loader2, ArrowLeftRight, ArrowRightLeft, AlertTriangle, TrendingDown, TrendingUp, Info, Wallet } from "lucide-react";
+ import { Loader2, ArrowLeftRight, ArrowRightLeft, AlertTriangle, TrendingDown, TrendingUp, Info, Wallet, ChevronDown } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
  import { WalletCryptoSelect } from "@/components/wallets/WalletCryptoSelect";
 import { DestinoConfirmadoCard } from "@/components/caixa/DestinoConfirmadoCard";
 
