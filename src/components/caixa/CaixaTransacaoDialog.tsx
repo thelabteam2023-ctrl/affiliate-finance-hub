@@ -4691,49 +4691,64 @@ export function CaixaTransacaoDialog({
         <div className="space-y-4 py-4">
           {/* Tipo de Transação */}
           <div className="space-y-2">
-            <Label>Tipo de Transação</Label>
-            <Select value={tipoTransacao} onValueChange={setTipoTransacao}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o tipo de transação" />
-              </SelectTrigger>
-              <SelectContent>
-                {(!allowedTipoTransacao || allowedTipoTransacao.includes("TRANSFERENCIA")) && (
-                  <SelectItem value="TRANSFERENCIA">TRANSFERÊNCIA</SelectItem>
-                )}
-                {(!allowedTipoTransacao || allowedTipoTransacao.includes("DEPOSITO")) && (
-                  <SelectItem value="DEPOSITO">DEPÓSITO</SelectItem>
-                )}
-                {(!allowedTipoTransacao || allowedTipoTransacao.includes("SAQUE")) && (
-                  <SelectItem value="SAQUE">SAQUE</SelectItem>
-                )}
-                {(!allowedTipoTransacao || allowedTipoTransacao.includes("APORTE_FINANCEIRO")) && (
-                  <SelectItem value="APORTE_FINANCEIRO">APORTE & LIQUIDAÇÃO</SelectItem>
-                )}
-              </SelectContent>
-            </Select>
+            <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Tipo de Transação
+            </Label>
+            <div className="flex p-1 bg-muted/40 rounded-lg border border-border">
+              {([
+                { value: "APORTE_FINANCEIRO", label: "APORTE FINANCEIRO" },
+                { value: "DEPOSITO", label: "DEPÓSITO" },
+                { value: "SAQUE", label: "SAQUE" },
+                { value: "TRANSFERENCIA", label: "TRANSFERÊNCIA" },
+              ] as const)
+                .filter((t) => !allowedTipoTransacao || allowedTipoTransacao.includes(t.value))
+                .map((t) => {
+                  const active = tipoTransacao === t.value;
+                  return (
+                    <button
+                      key={t.value}
+                      type="button"
+                      onClick={() => setTipoTransacao(t.value)}
+                      className={`flex-1 py-2 text-[11px] font-semibold rounded-md transition-all ${
+                        active
+                          ? "bg-card text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  );
+                })}
+            </div>
           </div>
 
           {/* Aporte Flow Toggle */}
           {tipoTransacao === "APORTE_FINANCEIRO" && (
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant={fluxoAporte === "APORTE" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFluxoAporte("APORTE")}
-                className="flex-1"
-              >
-                Investidor → Caixa
-              </Button>
-              <Button
-                type="button"
-                variant={fluxoAporte === "LIQUIDACAO" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFluxoAporte("LIQUIDACAO")}
-                className="flex-1"
-              >
-                Caixa → Investidor
-              </Button>
+            <div className="flex justify-center">
+              <div className="inline-flex p-1 bg-muted/40 rounded-full border border-border">
+                <button
+                  type="button"
+                  onClick={() => setFluxoAporte("APORTE")}
+                  className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all ${
+                    fluxoAporte === "APORTE"
+                      ? "bg-primary/15 text-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Investidor → Caixa
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFluxoAporte("LIQUIDACAO")}
+                  className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all ${
+                    fluxoAporte === "LIQUIDACAO"
+                      ? "bg-primary/15 text-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Caixa → Investidor
+                </button>
+              </div>
             </div>
           )}
 
