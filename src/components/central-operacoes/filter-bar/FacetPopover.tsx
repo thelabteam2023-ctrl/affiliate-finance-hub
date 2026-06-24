@@ -11,6 +11,8 @@ interface FacetPopoverProps {
   selected: string[];
   onToggle: (value: string) => void;
   onClear: () => void;
+  /** Sobrescreve o rótulo padrão da faceta (ex.: "Indicador" no card de Comissões). */
+  labelOverride?: string;
   /** Quando true, renderiza como chip "ativo" (cor primária) em vez de neutro. */
   asChip?: boolean;
 }
@@ -21,12 +23,13 @@ export function FacetPopover({
   selected,
   onToggle,
   onClear,
+  labelOverride,
   asChip = false,
 }: FacetPopoverProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
-  const label = FACET_LABELS[facetKey];
+  const label = labelOverride || FACET_LABELS[facetKey];
   const isActive = selected.length > 0;
   const filtered = options.filter((o) =>
     o.label.toLowerCase().includes(query.toLowerCase()),
