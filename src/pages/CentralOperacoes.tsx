@@ -210,7 +210,6 @@ import {
   type ParticipacaoPendente,
   type BookmakerDesvinculado,
   type BonusPendente,
-  type ComissaoPendente,
 } from "@/hooks/useCentralOperacoesData";
 
 // Mapeamento de cards para domínios
