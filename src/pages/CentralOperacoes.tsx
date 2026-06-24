@@ -156,7 +156,6 @@ import { PagamentosFornecedoresCardGrid } from "@/components/central-operacoes/P
 import { BonusPendentesCardGrid } from "@/components/central-operacoes/BonusPendentesCardGrid";
 import { ComissoesPendentesCardGrid } from "@/components/central-operacoes/ComissoesPendentesCardGrid";
 import { AlertasCriticosCardGrid } from "@/components/central-operacoes/AlertasCriticosCardGrid";
-import { ParticipacoesSmartFilter } from "@/components/central-operacoes/ParticipacoesSmartFilter";
 import { PropostasPagamentoCard } from "@/components/operadores/PropostasPagamentoCard";
 import { ContasDisponiveisModule } from "@/components/central-operacoes/ContasDisponiveisModule";
 import { BookmakersLivresModule } from "@/components/central-operacoes/BookmakersLivresModule";
