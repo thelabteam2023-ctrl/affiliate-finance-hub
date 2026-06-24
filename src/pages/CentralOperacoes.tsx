@@ -786,10 +786,20 @@ export default function CentralOperacoes() {
         component: (
           <OperationCard key="entregas-pendentes" title="Entregas Pendentes" icon={<Package className="h-4 w-4" />} color="purple" count={entregasPendentes.length}
             tooltip={{ title: "Entregas Pendentes", description: "Entregas prontas para conciliação e pagamento.", flow: "Quando uma entrega atinge a meta, ela fica disponível para conciliação." }}>
-            <EntregasPendentesCardGrid
-              entregas={entregasPendentes}
-              onConciliar={handleConciliarEntrega}
-            />
+            <OperacoesFilterBar
+              cardId="entregas-pendentes"
+              items={entregasPendentes}
+              adapter={entregaAdapter}
+              facets={["parceiro", "projeto", "casa", "idade"]}
+              facetLabels={{ parceiro: "Operador", casa: "Gatilho" }}
+            >
+              {(filtered) => (
+                <EntregasPendentesCardGrid
+                  entregas={filtered}
+                  onConciliar={handleConciliarEntrega}
+                />
+              )}
+            </OperacoesFilterBar>
           </OperationCard>
         ),
       });
@@ -886,10 +896,20 @@ export default function CentralOperacoes() {
         component: (
           <OperationCard key="bonus-pendentes" title="Bônus de Indicadores" icon={<Gift className="h-4 w-4" />} color="pink" count={bonusPendentes.reduce((acc, b) => acc + b.ciclosPendentes, 0)}
             tooltip={{ title: "Bônus de Indicadores", description: "Bônus devidos a indicadores que atingiram metas.", flow: "Quando um indicador atinge a meta de parceiros indicados, um bônus é gerado." }}>
-            <BonusPendentesCardGrid
-              bonus={bonusPendentes}
-              onPagar={() => navigate("/programa-indicacao", { state: { tab: "financeiro" } })}
-            />
+            <OperacoesFilterBar
+              cardId="bonus-pendentes"
+              items={bonusPendentes}
+              adapter={bonusAdapter}
+              facets={["parceiro"]}
+              facetLabels={{ parceiro: "Indicador" }}
+            >
+              {(filtered) => (
+                <BonusPendentesCardGrid
+                  bonus={filtered}
+                  onPagar={() => navigate("/programa-indicacao", { state: { tab: "financeiro" } })}
+                />
+              )}
+            </OperacoesFilterBar>
           </OperationCard>
         ),
       });
