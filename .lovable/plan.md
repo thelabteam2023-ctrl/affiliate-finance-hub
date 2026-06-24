@@ -1,72 +1,66 @@
-## Objetivo
+# Plano — Auto-foco do fluxo de SAQUE
 
-Aplicar a direção visual selecionada (**Valor hero centralizado** — v2) ao modal Nova Transação, **sem alterar nenhuma regra de negócio, hook, validação, handler de submit ou fluxo dos 4 tipos × 6 sub-fluxos** já implementados nas 5.787 linhas do `CaixaTransacaoDialog.tsx`.
+## Diagnóstico
 
-O trabalho é **puramente de camada de apresentação**: substituir componentes de entrada e reorganizar a hierarquia visual, mantendo os mesmos estados, setters, refs, useEffects, queries e RPCs.
+O auto-foco do SAQUE depende de uma **cadeia de 3+ `useEffect`** (linhas 1183–1394 de `CaixaTransacaoDialog.tsx`) — cada passo abre o próximo:
 
-## Princípio diretor
+**SAQUE FIAT:**
+```text
+ParceiroDestino → ContaBancáriaDestino → BookmakerOrigem → Valor
+   (1185)            (1214)                  (1234)
+```
 
-> Toda decisão visual nova é um **wrapper** sobre o estado existente. Nenhum `useState`, `useEffect`, `useQuery`, função de validação, fluxo de auto-focus ou handler de submissão é tocado.
+**SAQUE CRYPTO (fluxo invertido):**
+```text
+TipoMoeda=CRYPTO → BookmakerOrigem → Coin → ParceiroDestino → WalletDestino → Valor
+   (1257)            (auto)            (1316)    (1356)            (1381)
+```
 
-## Escopo das mudanças (somente JSX, dentro do `return (...)` a partir da linha 4684)
+Cada um desses efeitos usa o **mesmo padrão frágil**: `setTimeout(150) → ref.current?.open()`. Se o ref ainda não estiver montado (porque o JSX que o contém é condicional ao passo anterior e React ainda não fez commit), a chamada vira no-op silencioso e a corrente **quebra para sempre** — nenhum retry.
 
-### 1. Header e tipo de transação
-- Título "Nova Transação" + botão fechar (já existem).
-- **Substituir** o `<Select>` de `tipoTransacao` por **segmented control de 4 botões** (`APORTE FINANCEIRO | DEPÓSITO | SAQUE | TRANSFERÊNCIA`), ligados ao mesmo setter `setTipoTransacao`. Visual: pill container `bg-muted/30 border border-border rounded-lg p-1`, botão ativo com `bg-card text-foreground shadow-sm`.
+A reordenação recente do JSX (Proposta A/B) aumentou a probabilidade de remount/atraso de commit, expondo o problema que antes era apenas intermitente.
 
-### 2. Linha de sub-fluxo + moeda
-- Para `APORTE_FINANCEIRO`: manter o toggle `Investidor → Caixa | Caixa → Investidor` (já existe `fluxoAporte`) — apenas redesenhar como **pill control redondo** com seta entre as palavras.
-- Para `TRANSFERENCIA`: manter o segmented dos 3 sub-fluxos (já existe) — redesenhar como pill control consistente.
-- **Substituir** o `<Select>` de `tipoMoeda` (FIAT/CRYPTO) por **toggle segmentado de 2 botões** no canto direito da mesma linha, ligado ao setter atual.
+Já corrigi o efeito `moeda → parceiro` com retry+rAF (`tryOpenParceiroSelect`). Os 5 efeitos restantes do SAQUE ainda usam o padrão frágil.
 
-### 3. Bloco hero do valor
-- Reorganizar `Moeda` + `Valor em` numa única zona centralizada:
-  - Input de valor com fonte **mono tabular**, `text-5xl`, centralizado, símbolo da moeda à esquerda do número.
-  - Label inferior `text-[10px] uppercase tracking-widest text-muted-foreground` com nome completo da moeda selecionada.
-- O `<Select>` de moeda específica (USD/BRL/EUR/USDT/BTC...) continua existindo, mas vira um **chip compacto acima do input** (ou abaixo, como sub-label clicável).
+## Mudanças propostas
 
-### 4. Fluxo da Transação (Origem → Destino)
-- Manter exatamente os mesmos componentes que já renderizam Origem/Destino para cada combinação (`InvestidorSelect`, `renderCaixaAccountSelector`, `ParceiroSelect`, `BookmakerSelect`, `WalletCryptoSelect`, `DestinoConfirmadoCard`, etc.).
-- Envolvê-los em **dois cards `bg-muted/20 border border-border rounded-xl p-4`** lado a lado, com label `ORIGEM` / `DESTINO` em `text-[10px] uppercase tracking-tight text-muted-foreground`.
-- **Seta central animada**: círculo absoluto `w-8 h-8 rounded-full bg-card border border-border` com ícone `ArrowRight text-primary animate-pulse` entre os dois cards.
-- Avisos existentes ("Nenhuma conta da empresa na moeda", "Saldo insuficiente", network mismatch) continuam aparecendo dentro do card de destino com o mesmo texto e a mesma lógica condicional — apenas estilizados como `bg-destructive/5 border border-destructive/20 rounded-lg p-3 text-[11px] text-destructive`.
+### 1. Centralizar o helper de retry
+Generalizar `tryOpenParceiroSelect` em uma função utilitária dentro do componente:
+```text
+tryOpenRef(refGetter, mode: 'open' | 'focus' | 'click')
+```
+- até 15 tentativas, 60ms cada
+- double-rAF antes da ação
+- aceita ref de `ParceiroSelectRef`, `BookmakerSelectRef` ou `HTMLButtonElement`
 
-### 5. Detalhes colapsáveis
-- Agrupar os atuais campos **Data da Transação**, **Tags (opcional)** e **Descrição (opcional)** dentro de um `<Collapsible>` com trigger "Adicionar detalhes (Data, Tags, Descrição)" fechado por padrão.
-- Comportamento idêntico, apenas escondidos atrás de um toggle.
+### 2. Substituir 5 pontos do SAQUE pelo helper
 
-### 6. Footer
-- Pill de status à esquerda (`bg-amber-500/10 border border-amber-500/20`) refletindo o estado atual da validação ("Aguardando dados", "Pronto para registrar", etc.) — derivada do mesmo `disabled` que já calculamos.
-- Botões Cancelar (ghost) + Registrar Transação (primary) à direita — handlers inalterados.
+| Linha | Efeito | Ref alvo | Mudança |
+|---|---|---|---|
+| 1204–1208 | SAQUE FIAT: parceiro → conta | `contaBancariaSelectRef` | retry com `focus+click` |
+| 1225–1229 | SAQUE FIAT: conta → bookmaker | `bookmakerSelectRef` | retry com `open` |
+| 1356–1361 | SAQUE CRYPTO: parceiro → wallet | `walletCryptoSelectRef` | retry com `focus+click` |
+| 1386–1391 | SAQUE CRYPTO: wallet → bookmaker | `bookmakerSelectRef` | retry com `open` |
+| 1257+    | SAQUE CRYPTO: tipoMoeda=CRYPTO → bookmaker | `bookmakerSelectRef` | retry com `open` |
 
-## O que **NÃO** muda
+### 3. Garantia anti-quebra
+- Manter os `prev*.current` guards (evita re-disparo em loops).
+- Manter os early returns por fluxo de defaults/affiliate (não interferir em pré-preenchimento).
+- Não alterar a lógica de quais campos abrem qual — só a **forma** de chamar.
 
-- Nenhum `useState` / `useEffect` / `useRef` / `useMemo` / `useCallback`.
-- Nenhuma query ou mutation Supabase.
-- Nenhuma função de validação, conversão cambial, snapshot de cotação, lógica de saldo, auto-focus chain, anti-double-submit.
-- Nenhum handler (`handleSubmit`, `handleTipoTransacaoChange`, `handleMoedaChange`, etc.).
-- Nenhuma prop, nenhum tipo, nenhuma interface.
-- Nenhuma regra dos 4 tipos × 6 sub-fluxos × FIAT/CRYPTO.
+### 4. Validação
+1. SAQUE FIAT manual: selecionar tipo→moeda→parceiro destino → conta deve abrir sozinha → bookmaker deve abrir sozinha → foco no Valor.
+2. SAQUE CRYPTO manual: selecionar tipo→CRYPTO → bookmaker abre → escolher coin → parceiro abre → wallet abre → foco no Quantidade.
+3. SAQUE com bookmaker pré-setado (entryPoint affiliate): cadeia deve respeitar early returns e ir direto ao Valor.
+4. SAQUE com 1 conta/wallet única do parceiro: auto-seleção continua funcionando + cadeia segue.
 
-## Estratégia de execução (3 patches incrementais)
+## Detalhes técnicos
 
-1. **Patch 1** — Header + segmented de tipo + linha sub-fluxo/moeda como toggles. Smoke test: abrir modal, alternar entre os 4 tipos, alternar FIAT↔CRYPTO, confirmar que cada sub-fluxo renderiza os mesmos campos de antes.
-2. **Patch 2** — Hero do valor + cards Origem/Destino + seta central. Smoke test: cada um dos 6 sub-fluxos renderiza os seletores corretos dentro dos novos cards; avisos vermelhos aparecem; toggle APORTE↔LIQUIDAÇÃO inverte as colunas.
-3. **Patch 3** — Collapsible de detalhes + footer com pill de status. Smoke test: submit funciona em pelo menos um caso por tipo.
-
-Após cada patch, build TypeScript e visual check no preview.
-
-## Tokens semânticos usados (zero hardcoded)
-
-`bg-background`, `bg-card`, `bg-muted`, `border-border`, `text-foreground`, `text-muted-foreground`, `text-primary`, `bg-primary`, `text-destructive`, `bg-destructive/10`, `border-destructive/20`. Verde do "Aporte" usa `text-primary` / `bg-primary/10` (já é o verde do design system).
+- Sem alteração de assinaturas de componente, sem alteração de schema.
+- Sem alteração na estrutura visual (Proposta B mantém intocada).
+- Toda mudança fica em `src/components/caixa/CaixaTransacaoDialog.tsx`, no bloco de efeitos de auto-foco (linhas 1183–1394).
+- O helper substitui apenas o trecho que chama `.focus/.click/.open` — todo o resto do efeito (guards, side-effects de estado, atualização de `prev*.current`) permanece igual.
 
 ## Risco
 
-Médio. O arquivo é gigante (5.787 linhas) e o `return (...)` único contém ramificações condicionais densas por tipo×sub-fluxo. Mitigação: 3 patches pequenos com verificação visual entre eles, em vez de uma reescrita única.
-
-## Critério de aceitação
-
-- Os 6 sub-fluxos seguem registrando transações idênticas às de hoje (mesmos campos no INSERT, mesmos eventos no ledger).
-- Visual idêntico ao protótipo v2 selecionado.
-- Zero regressão em validações, avisos e bloqueios de submit.
-- TypeScript build limpo.
+Baixo. A mudança torna a sequência **mais resiliente**, nunca menos. Se o ref nunca aparecer (caso impossível em fluxo normal), o helper desiste após ~900ms sem efeitos colaterais.

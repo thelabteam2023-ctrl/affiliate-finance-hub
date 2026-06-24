@@ -263,17 +263,30 @@ export function CaixaTransacaoDialog({
   const destinoContaBancariaSelectRef = useRef<HTMLButtonElement>(null);
   const destinoWalletSelectRef = useRef<HTMLButtonElement>(null);
 
-  // Helper: abre o ParceiroSelect com retry (resiliente a remounts/render condicional)
-  const tryOpenParceiroSelect = () => {
+  // Helper genérico: aciona um ref (open | focus | focus+click) com retry resiliente
+  // a remounts e a render condicional. Resolve a cadeia de auto-foco do SAQUE.
+  const tryActivateRef = (
+    refGetter: () => { open?: () => void; focus?: () => void; click?: () => void } | null,
+    mode: "open" | "focus" | "focus-click" = "open"
+  ) => {
     let tries = 0;
     const MAX_TRIES = 15;
     const TRY_EVERY_MS = 60;
     const attempt = () => {
       tries += 1;
-      const ref = parceiroSelectRef.current;
+      const ref = refGetter();
       if (ref) {
         requestAnimationFrame(() => {
-          requestAnimationFrame(() => ref.open());
+          requestAnimationFrame(() => {
+            if (mode === "open" && typeof ref.open === "function") {
+              ref.open();
+            } else if (mode === "focus" && typeof ref.focus === "function") {
+              ref.focus();
+            } else if (mode === "focus-click") {
+              ref.focus?.();
+              ref.click?.();
+            }
+          });
         });
         return;
       }
@@ -281,6 +294,10 @@ export function CaixaTransacaoDialog({
     };
     setTimeout(attempt, 80);
   };
+
+  // Atalho legado mantido para os efeitos que abrem o ParceiroSelect
+  const tryOpenParceiroSelect = () =>
+    tryActivateRef(() => parceiroSelectRef.current, "open");
 
   // Guided focus sequence state for affiliate deposit flow
   const affiliateFocusActiveRef = useRef<boolean>(false);
@@ -1201,11 +1218,8 @@ export function CaixaTransacaoDialog({
     if (contasDoParceiro.length === 1) {
       setDestinoContaId(contasDoParceiro[0].id);
       // O próximo useEffect (destinoContaId) vai cuidar de abrir o BookmakerSelect
-    } else if (contaBancariaSelectRef.current) {
-      setTimeout(() => {
-        contaBancariaSelectRef.current?.focus();
-        contaBancariaSelectRef.current?.click();
-      }, 150);
+    } else {
+      tryActivateRef(() => contaBancariaSelectRef.current, "focus-click");
     }
     
     prevDestinoParceiroId.current = destinoParceiroId;
@@ -1222,11 +1236,7 @@ export function CaixaTransacaoDialog({
       return;
     }
     
-    if (bookmakerSelectRef.current) {
-      setTimeout(() => {
-        bookmakerSelectRef.current?.open();
-      }, 150);
-    }
+    tryActivateRef(() => bookmakerSelectRef.current, "open");
     
     prevDestinoContaId.current = destinoContaId;
   }, [destinoContaId, tipoTransacao, tipoMoeda, origemBookmakerId]);
@@ -1265,11 +1275,7 @@ export function CaixaTransacaoDialog({
     if (!temBookmakerComSaldoUsd) return;
     
     // Abrir BookmakerSelect para o usuário selecionar a origem
-    if (bookmakerSelectRef.current) {
-      setTimeout(() => {
-        bookmakerSelectRef.current?.open();
-      }, 100);
-    }
+    tryActivateRef(() => bookmakerSelectRef.current, "open");
   }, [tipoMoeda, tipoTransacao, bookmakers]);
   
   // SAQUE CRYPTO: quando bookmaker é selecionada, buscar moeda do último depósito crypto
@@ -1294,16 +1300,10 @@ export function CaixaTransacaoDialog({
         // Pré-seleciona a moeda do último depósito
         setCoin(data.coin);
         // Abre o select de moeda com foco para o usuário confirmar ou alterar
-        setTimeout(() => {
-          coinSelectRef.current?.focus();
-          coinSelectRef.current?.click();
-        }, 150);
+        tryActivateRef(() => coinSelectRef.current, "focus-click");
       } else {
         // Sem histórico de depósito, abre o select para o usuário escolher
-        setTimeout(() => {
-          coinSelectRef.current?.focus();
-          coinSelectRef.current?.click();
-        }, 150);
+        tryActivateRef(() => coinSelectRef.current, "focus-click");
       }
     };
     
@@ -1368,11 +1368,8 @@ export function CaixaTransacaoDialog({
     if (walletsDoParceiro.length === 1) {
       setDestinoWalletId(walletsDoParceiro[0].id);
       // O próximo useEffect (destinoWalletId) vai cuidar de abrir o BookmakerSelect
-    } else if (walletCryptoSelectRef.current) {
-      setTimeout(() => {
-        walletCryptoSelectRef.current?.focus();
-        walletCryptoSelectRef.current?.click();
-      }, 150);
+    } else {
+      tryActivateRef(() => walletCryptoSelectRef.current, "focus-click");
     }
     
     prevDestinoParceiroId.current = destinoParceiroId;
@@ -1399,11 +1396,7 @@ export function CaixaTransacaoDialog({
     }
     
     // Abrir BookmakerSelect para selecionar a origem
-    if (bookmakerSelectRef.current) {
-      setTimeout(() => {
-        bookmakerSelectRef.current?.open();
-      }, 150);
-    }
+    tryActivateRef(() => bookmakerSelectRef.current, "open");
     
     prevDestinoWalletId.current = destinoWalletId;
   }, [destinoWalletId, tipoTransacao, tipoMoeda, entryPoint, origemBookmakerId]);
