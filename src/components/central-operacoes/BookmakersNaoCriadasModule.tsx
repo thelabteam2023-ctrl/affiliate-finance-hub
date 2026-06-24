@@ -857,17 +857,18 @@ function ViewPorBookmaker() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-4">
+      <FilterToolbar>
         {!isOperator && (
-          <BookmakerGrupoFilter
-            value={grupoFilter}
-            onChange={(v) => { setGrupoFilter(v); setSelectedCatalogoId(""); resetSelection(); }}
-            className="w-[200px]"
-          />
+          <FilterField label="Grupo">
+            <BookmakerGrupoFilter
+              value={grupoFilter}
+              onChange={(v) => { setGrupoFilter(v); setSelectedCatalogoId(""); resetSelection(); }}
+              className="w-[200px]"
+            />
+          </FilterField>
         )}
 
-        <div className="flex flex-col gap-1">
-          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Regulamentação</span>
+        <FilterField label="Regulamentação">
           <div className="flex items-center gap-1 h-9">
             <button
               onClick={() => { setRegulamentacaoFilter(regulamentacaoFilter === "REGULAMENTADA" ? "todas" : "REGULAMENTADA"); setSelectedCatalogoId(""); resetSelection(); }}
@@ -892,29 +893,28 @@ function ViewPorBookmaker() {
               Não Regulamentada
             </button>
           </div>
-        </div>
+        </FilterField>
 
-        <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium uppercase tracking-wide">
-          <Building2 className="h-4 w-4" />
-          Bookmaker
-        </div>
-        <Popover open={bkPopoverOpen} onOpenChange={(open) => { setBkPopoverOpen(open); if (!open) setBkSearch(""); }}>
+        <FilterField label="Bookmaker">
+          <Popover open={bkPopoverOpen} onOpenChange={(open) => { setBkPopoverOpen(open); if (!open) setBkSearch(""); }}>
           <PopoverTrigger asChild>
-            <Button variant="outline" role="combobox" className="w-[280px] justify-center font-normal">
-              {selectedBookmaker ? (
-                <span className="flex items-center gap-2 truncate">
-                  {selectedBookmaker.logo_url && (
-                    <img src={selectedBookmaker.logo_url} alt="" className="h-5 w-5 rounded object-contain flex-shrink-0" />
-                  )}
-                  {selectedBookmaker.nome}
-                </span>
-              ) : (
-                <span className="text-muted-foreground">Selecionar</span>
-              )}
+            <Button variant="outline" role="combobox" className="w-[260px] justify-between font-normal">
+              <span className="flex items-center gap-2 truncate">
+                {selectedBookmaker?.logo_url ? (
+                  <img src={selectedBookmaker.logo_url} alt="" className="h-5 w-5 rounded object-contain flex-shrink-0" />
+                ) : (
+                  <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                )}
+                {selectedBookmaker ? (
+                  <span className="truncate">{selectedBookmaker.nome}</span>
+                ) : (
+                  <span className="text-muted-foreground">Selecionar</span>
+                )}
+              </span>
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-[280px] p-0" align="start">
+          <PopoverContent className="w-[260px] p-0" align="start">
             <div className="flex items-center border-b border-border px-3 py-2">
               <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
               <input
@@ -955,38 +955,44 @@ function ViewPorBookmaker() {
               )}
             </div>
           </PopoverContent>
-        </Popover>
+          </Popover>
+        </FilterField>
 
         {selectedCatalogoId && !loadingParceiros && (
           <>
-            <Badge variant="outline" className="text-xs font-mono gap-1">
-              <Users className="h-3 w-3" />
-              {showDescartados
-                ? `${filtered.length} descartado${filtered.length !== 1 ? "s" : ""}`
-                : `${filtered.length} / ${disponiveis.length}`}
-            </Badge>
+            <FilterToolbarSpacer />
+            <FilterField label="Resultados">
+              <Badge variant="outline" className="h-9 px-3 text-xs font-mono gap-1">
+                <Users className="h-3 w-3" />
+                {showDescartados
+                  ? `${filtered.length} descartado${filtered.length !== 1 ? "s" : ""}`
+                  : `${filtered.length} / ${disponiveis.length}`}
+              </Badge>
+            </FilterField>
 
             {descartados.length > 0 && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant={showDescartados ? "secondary" : "ghost"}
-                    size="sm"
-                    className="gap-1.5 text-xs"
-                    onClick={() => { setShowDescartados(!showDescartados); resetSelection(); }}
-                  >
-                    {showDescartados ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                    {showDescartados ? "Ocultar descartados" : `Descartados (${descartados.length})`}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {showDescartados ? "Voltar à lista de disponíveis" : "Ver parceiros marcados como indisponíveis"}
-                </TooltipContent>
-              </Tooltip>
+              <FilterField label="Visualização">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={showDescartados ? "secondary" : "outline"}
+                      size="sm"
+                      className="h-9 gap-1.5 text-xs"
+                      onClick={() => { setShowDescartados(!showDescartados); resetSelection(); }}
+                    >
+                      {showDescartados ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                      {showDescartados ? "Ocultar descartados" : `Descartados (${descartados.length})`}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {showDescartados ? "Voltar à lista de disponíveis" : "Ver parceiros marcados como indisponíveis"}
+                  </TooltipContent>
+                </Tooltip>
+              </FilterField>
             )}
           </>
         )}
-      </div>
+      </FilterToolbar>
 
       {selectedIds.size > 0 && (
         <div className="flex items-center gap-3 rounded-md border border-border bg-muted/40 px-4 py-2">
