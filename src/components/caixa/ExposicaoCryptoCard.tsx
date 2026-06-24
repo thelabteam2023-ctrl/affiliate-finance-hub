@@ -6,6 +6,7 @@ import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
 import { CurrencyBreakdownModal } from "./CurrencyBreakdownModal";
 import { useTabWorkspace } from "@/hooks/useTabWorkspace";
 import { RefreshCw, Plus, TrendingUp, Info } from "lucide-react";
+import { useCaixaDataChangedListener } from "@/hooks/useInvalidateCaixaData";
 
 interface WalletInfo {
   wallet_id: string;
@@ -73,6 +74,9 @@ export function ExposicaoCryptoCard({
   };
 
   useEffect(() => { fetchWallets(); }, [fetchWallets]);
+
+  // Reativo: refetch wallets quando o Caixa muda (aporte, liquidação, transferência, swap)
+  useCaixaDataChangedListener(fetchWallets);
 
   // Aggregate coins
   const coinMap: Record<string, { saldo_coin: number; saldo_usd: number }> = {};

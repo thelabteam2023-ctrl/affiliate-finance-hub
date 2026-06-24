@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
 import { Plus, Calendar } from "lucide-react";
+import { useCaixaDataChangedListener } from "@/hooks/useInvalidateCaixaData";
 
 interface ContaFiat {
   id: string;
@@ -48,6 +49,9 @@ export function SaldosFiatCard({ caixaParceiroId, formatCurrency, onDataChanged 
   };
 
   useEffect(() => { fetchContas(); }, [fetchContas]);
+
+  // Reativo: refetch quando qualquer mutação do Caixa dispara o evento global
+  useCaixaDataChangedListener(fetchContas);
 
   // Aggregate totals by currency
   const saldosPorMoeda = contas.reduce<Record<string, number>>((acc, c) => {
