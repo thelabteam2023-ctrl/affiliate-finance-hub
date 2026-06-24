@@ -1133,11 +1133,13 @@ export function CaixaTransacaoDialog({
       }
     }
     // Auto-focus CRYPTO: quando parceiro é selecionado, abre o select Wallet Crypto
-    if (tipoMoeda === "CRYPTO" && origemParceiroId && origemParceiroId !== prevOrigemParceiroId.current && walletCryptoSelectRef.current) {
+    // OBS: o ref pode estar null no momento do effect (Wallet só monta após parceiro);
+    // por isso esperamos o próximo paint antes de validar o ref.
+    if (tipoMoeda === "CRYPTO" && origemParceiroId && origemParceiroId !== prevOrigemParceiroId.current) {
       setTimeout(() => {
         walletCryptoSelectRef.current?.focus();
         walletCryptoSelectRef.current?.click();
-      }, 150);
+      }, 200);
     }
     // Só atualizar prevRef quando realmente processamos (não quando aguardando dados)
     if (origemParceiroId && (entryPoint !== "affiliate_deposit" || contasBancarias.length > 0)) {
@@ -3432,6 +3434,7 @@ export function CaixaTransacaoDialog({
              <div className="space-y-2">
                <Label>Wallet Crypto</Label>
                <WalletCryptoSelect
+                 triggerRef={walletCryptoSelectRef}
                  wallets={walletsCrypto
                    .filter((w) => {
                      if (w.parceiro_id !== origemParceiroId) return false;

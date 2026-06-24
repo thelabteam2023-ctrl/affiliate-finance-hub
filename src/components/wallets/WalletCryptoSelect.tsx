@@ -35,6 +35,7 @@ interface WalletCryptoSelectProps {
   className?: string;
   showBalance?: boolean;
   coinFilter?: string; // If provided, only shows balance for this coin
+  triggerRef?: React.Ref<HTMLButtonElement>;
 }
 
 export function WalletCryptoSelect({
@@ -46,6 +47,7 @@ export function WalletCryptoSelect({
   className,
   showBalance = false,
   coinFilter,
+  triggerRef,
 }: WalletCryptoSelectProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -75,7 +77,7 @@ export function WalletCryptoSelect({
 
   return (
     <Select value={value} onValueChange={onValueChange} disabled={disabled}>
-      <SelectTrigger className={cn("h-auto py-2", className)}>
+      <SelectTrigger ref={triggerRef} className={cn("h-auto py-2", className)}>
         <SelectValue placeholder={placeholder}>
           {selectedWallet ? (
             <WalletDisplayItem
