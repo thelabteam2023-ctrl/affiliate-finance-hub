@@ -375,7 +375,7 @@ export function ReconciliacaoDialog({
     return false;
   }, [tipoEntidade, entidadeId, subTipoCaixa, contaId, walletId]);
 
-  const minDiferenca = isCryptoMoedaSelected ? 0.00000001 : 0.01;
+  const minDiferenca = isCryptoMoedaSelected ? 0.00000001 : 0.0001;
 
   const canSubmit = (): boolean => {
     if (!entidadeSelecionada) return false;
