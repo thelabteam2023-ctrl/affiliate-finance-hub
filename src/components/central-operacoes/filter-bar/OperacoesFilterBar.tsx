@@ -15,6 +15,8 @@ interface OperacoesFilterBarProps<T> {
   facets?: FacetKey[];
   /** Texto do totalizador (padrão: "Pendente"). */
   totalLabel?: string;
+  /** Rótulos customizados por faceta (sobrescreve o padrão). */
+  facetLabels?: Partial<Record<FacetKey, string>>;
   children: (filtered: T[]) => ReactNode;
 }
 
@@ -26,6 +28,7 @@ export function OperacoesFilterBar<T>({
   adapter,
   facets = DEFAULT_FACETS,
   totalLabel = "Pendente",
+  facetLabels,
   children,
 }: OperacoesFilterBarProps<T>) {
   const { user } = useAuth();
@@ -120,6 +123,7 @@ export function OperacoesFilterBar<T>({
               selected={f.state.facets[key] || []}
               onToggle={(v) => f.toggleFacet(key, v)}
               onClear={() => f.clearFacet(key)}
+              labelOverride={facetLabels?.[key]}
             />
           );
         })}

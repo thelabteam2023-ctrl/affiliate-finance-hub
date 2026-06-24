@@ -52,7 +52,7 @@ import { SaqueCardGrid } from "@/components/central-operacoes/SaqueCardGrid";
 import { SaqueProcessamentoCardGrid } from "@/components/central-operacoes/SaqueProcessamentoCardGrid";
 import { OperacoesFilterBar } from "@/components/central-operacoes/filter-bar/OperacoesFilterBar";
 import type { ItemAdapter, SaquePendenteItem } from "@/components/central-operacoes/filter-bar/types";
-import type { Alerta } from "@/hooks/useCentralOperacoesData";
+import type { Alerta, ComissaoPendente } from "@/hooks/useCentralOperacoesData";
 
 const saqueAdapter: ItemAdapter<SaquePendenteItem> = {
   getId: (s) => s.id,
@@ -79,6 +79,67 @@ const alertaAdapter: ItemAdapter<Alerta> = {
   getSearchText: (a) =>
     [a.titulo, a.parceiro_nome, a.projeto_nome, a.descricao].filter(Boolean).join(" "),
 };
+
+const NOW_ISO = new Date().toISOString();
+
+const pagamentoParceiroAdapter: ItemAdapter<PagamentoParceiroPendente> = {
+  getId: (p) => p.parceriaId,
+  getParceiro: (p) => p.parceiroNome,
+  getCasa: (p) => p.origemTipo || null,
+  getMoeda: () => "BRL",
+  getProjeto: () => null,
+  getValor: (p) => p.valorParceiro || 0,
+  getCreatedAt: () => NOW_ISO,
+  getSearchText: (p) => [p.parceiroNome, p.origemTipo].filter(Boolean).join(" "),
+};
+
+const pagamentoFornecedorAdapter: ItemAdapter<PagamentoFornecedorPendente> = {
+  getId: (p) => p.parceriaId,
+  getParceiro: (p) => p.parceiroNome,
+  getCasa: (p) => p.fornecedorNome,
+  getMoeda: () => "BRL",
+  getProjeto: () => null,
+  getValor: (p) => p.valorRestante || 0,
+  getCreatedAt: () => NOW_ISO,
+  getSearchText: (p) => [p.fornecedorNome, p.parceiroNome].filter(Boolean).join(" "),
+};
+
+const pagamentoOperadorAdapter: ItemAdapter<PagamentoOperadorPendente> = {
+  getId: (p) => p.id,
+  getParceiro: (p) => p.operador_nome,
+  getCasa: (p) => p.tipo_pagamento || null,
+  getMoeda: () => "BRL",
+  getProjeto: (p) => p.projeto_nome || null,
+  getValor: (p) => p.valor || 0,
+  getCreatedAt: (p) => p.data_pagamento || NOW_ISO,
+  getSearchText: (p) =>
+    [p.operador_nome, p.projeto_nome, p.tipo_pagamento].filter(Boolean).join(" "),
+};
+
+const participacaoAdapter: ItemAdapter<ParticipacaoPendente> = {
+  getId: (p) => p.id,
+  getParceiro: (p) => p.investidor_nome || null,
+  getCasa: () => null,
+  getMoeda: () => "BRL",
+  getProjeto: (p) => p.projeto_nome || null,
+  getValor: (p) => p.valor_participacao || 0,
+  getCreatedAt: (p) => p.data_apuracao || NOW_ISO,
+  getSearchText: (p) =>
+    [p.investidor_nome, p.projeto_nome, p.ciclo_numero?.toString()]
+      .filter(Boolean)
+      .join(" "),
+};
+
+const comissaoAdapter: ItemAdapter<ComissaoPendente> = {
+  getId: (c) => c.parceriaId,
+  getParceiro: (c) => c.indicadorNome,
+  getCasa: (c) => c.parceiroNome,
+  getMoeda: () => "BRL",
+  getProjeto: () => null,
+  getValor: (c) => c.valorComissao || 0,
+  getCreatedAt: () => NOW_ISO,
+  getSearchText: (c) => [c.indicadorNome, c.parceiroNome].filter(Boolean).join(" "),
+};
 import { ParceriaEncerramentoCardGrid } from "@/components/central-operacoes/ParceriaEncerramentoCardGrid";
 import { ConciliacaoPendenteCardGrid } from "@/components/central-operacoes/ConciliacaoPendenteCardGrid";
 import { ConciliacaoDirectModal } from "@/components/caixa/ConciliacaoDirectModal";
@@ -95,7 +156,6 @@ import { PagamentosFornecedoresCardGrid } from "@/components/central-operacoes/P
 import { BonusPendentesCardGrid } from "@/components/central-operacoes/BonusPendentesCardGrid";
 import { ComissoesPendentesCardGrid } from "@/components/central-operacoes/ComissoesPendentesCardGrid";
 import { AlertasCriticosCardGrid } from "@/components/central-operacoes/AlertasCriticosCardGrid";
-import { ParticipacoesSmartFilter } from "@/components/central-operacoes/ParticipacoesSmartFilter";
 import { PropostasPagamentoCard } from "@/components/operadores/PropostasPagamentoCard";
 import { ContasDisponiveisModule } from "@/components/central-operacoes/ContasDisponiveisModule";
 import { BookmakersLivresModule } from "@/components/central-operacoes/BookmakersLivresModule";
@@ -608,14 +668,20 @@ export default function CentralOperacoes() {
         component: (
           <OperationCard key="participacoes-investidores" title="Participações de Investidores" icon={<Banknote className="h-4 w-4" />} color="indigo" count={participacoesPendentes.length}
             tooltip={{ title: "Participações de Investidores", description: "Pagamentos de participação nos lucros devidos aos investidores.", flow: "Quando um ciclo é fechado com lucro, a participação de cada investidor é calculada." }}>
-            <ParticipacoesSmartFilter participacoes={participacoesPendentes}>
+            <OperacoesFilterBar
+              cardId="participacoes-investidores"
+              items={participacoesPendentes}
+              adapter={participacaoAdapter}
+              facets={["parceiro", "projeto", "idade"]}
+              facetLabels={{ parceiro: "Investidor" }}
+            >
               {(filtered) => (
                 <ParticipacoesCardGrid
                   participacoes={filtered}
                   onPagar={(part) => { setSelectedParticipacao(part); setPagamentoParticipacaoOpen(true); }}
                 />
               )}
-            </ParticipacoesSmartFilter>
+            </OperacoesFilterBar>
           </OperationCard>
         ),
       });
@@ -628,10 +694,20 @@ export default function CentralOperacoes() {
         component: (
           <OperationCard key="pagamentos-operador" title="Pagamentos de Operador" icon={<Users className="h-4 w-4" />} color="orange" count={pagamentosOperadorPendentes.length}
             tooltip={{ title: "Pagamentos de Operador", description: "Pagamentos pendentes aos operadores de projetos.", flow: "Quando um operador atinge meta ou tem pagamento agendado, o valor é gerado e aguarda processamento." }}>
-            <PagamentosOperadorCardGrid
-              pagamentos={pagamentosOperadorPendentes}
-              onPagar={(pag) => { setSelectedPagamentoOperador(pag); setPagamentoOperadorOpen(true); }}
-            />
+            <OperacoesFilterBar
+              cardId="pagamentos-operador"
+              items={pagamentosOperadorPendentes}
+              adapter={pagamentoOperadorAdapter}
+              facets={["parceiro", "projeto", "casa"]}
+              facetLabels={{ parceiro: "Operador", casa: "Tipo" }}
+            >
+              {(filtered) => (
+                <PagamentosOperadorCardGrid
+                  pagamentos={filtered}
+                  onPagar={(pag) => { setSelectedPagamentoOperador(pag); setPagamentoOperadorOpen(true); }}
+                />
+              )}
+            </OperacoesFilterBar>
           </OperationCard>
         ),
       });
@@ -717,10 +793,18 @@ export default function CentralOperacoes() {
         component: (
           <OperationCard key="pagamentos-parceiros" title="Pagamentos a Parceiros" icon={<DollarSign className="h-4 w-4" />} color="cyan" count={pagamentosParceiros.length}
             tooltip={{ title: "Pagamentos a Parceiros", description: "Valores devidos aos parceiros conforme acordado na parceria.", flow: "Quando uma parceria possui valor acordado para o parceiro, ele aparece aqui." }}>
-            <PagamentosParceirosCardGrid
-              pagamentos={pagamentosParceiros}
-              onPagar={(pag) => { setSelectedPagamentoParceiro(pag); setPagamentoParceiroDialogOpen(true); }}
-              onDispensar={async (pag) => {
+            <OperacoesFilterBar
+              cardId="pagamentos-parceiros"
+              items={pagamentosParceiros}
+              adapter={pagamentoParceiroAdapter}
+              facets={["parceiro", "casa"]}
+              facetLabels={{ casa: "Origem" }}
+            >
+              {(filtered) => (
+                <PagamentosParceirosCardGrid
+                  pagamentos={filtered}
+                  onPagar={(pag) => { setSelectedPagamentoParceiro(pag); setPagamentoParceiroDialogOpen(true); }}
+                  onDispensar={async (pag) => {
                 setDispensaParceriaId(pag.parceriaId);
                 setDispensaParceiroNome(pag.parceiroNome);
                 setDispensaMotivo('');
@@ -734,8 +818,10 @@ export default function CentralOperacoes() {
                   if (ind?.indicador_id) { const { data: indRef } = await supabase.from("indicadores_referral").select("nome").eq("id", ind.indicador_id).maybeSingle(); setDispensaIndicadorNome(indRef?.nome || "Indicador"); } else { setDispensaIndicadorNome("Indicador"); }
                 } else { setDispensaIndicadorNome(""); }
                 setDispensaOpen(true);
-              }}
-            />
+                  }}
+                />
+              )}
+            </OperacoesFilterBar>
           </OperationCard>
         ),
       });
@@ -748,10 +834,20 @@ export default function CentralOperacoes() {
         component: (
           <OperationCard key="pagamentos-fornecedores" title="Pagamentos a Fornecedores" icon={<Truck className="h-4 w-4" />} color="orange" count={pagamentosFornecedores.length}
             tooltip={{ title: "Pagamentos a Fornecedores", description: "Valores devidos aos fornecedores conforme acordado na parceria.", flow: "Quando uma parceria é vinculada a um fornecedor com valor contratado, ele aparece aqui." }}>
-            <PagamentosFornecedoresCardGrid
-              pagamentos={pagamentosFornecedores}
-              onPagar={(pag) => { setSelectedPagamentoFornecedor(pag); setPagamentoFornecedorOpen(true); }}
-            />
+            <OperacoesFilterBar
+              cardId="pagamentos-fornecedores"
+              items={pagamentosFornecedores}
+              adapter={pagamentoFornecedorAdapter}
+              facets={["casa", "parceiro"]}
+              facetLabels={{ casa: "Fornecedor" }}
+            >
+              {(filtered) => (
+                <PagamentosFornecedoresCardGrid
+                  pagamentos={filtered}
+                  onPagar={(pag) => { setSelectedPagamentoFornecedor(pag); setPagamentoFornecedorOpen(true); }}
+                />
+              )}
+            </OperacoesFilterBar>
           </OperationCard>
         ),
       });
@@ -780,10 +876,20 @@ export default function CentralOperacoes() {
         component: (
           <OperationCard key="comissoes-pendentes" title="Comissões Pendentes" icon={<Banknote className="h-4 w-4" />} color="teal" count={comissoesPendentes.length}
             tooltip={{ title: "Comissões Pendentes", description: "Comissões devidas a indicadores por parceiros que eles indicaram.", flow: "Quando uma parceria indicada gera receita, uma comissão é calculada para o indicador." }}>
-            <ComissoesPendentesCardGrid
-              comissoes={comissoesPendentes}
-              onPagar={() => navigate("/programa-indicacao", { state: { tab: "financeiro" } })}
-            />
+            <OperacoesFilterBar
+              cardId="comissoes-pendentes"
+              items={comissoesPendentes}
+              adapter={comissaoAdapter}
+              facets={["parceiro", "casa"]}
+              facetLabels={{ parceiro: "Indicador", casa: "Parceiro" }}
+            >
+              {(filtered) => (
+                <ComissoesPendentesCardGrid
+                  comissoes={filtered}
+                  onPagar={() => navigate("/programa-indicacao", { state: { tab: "financeiro" } })}
+                />
+              )}
+            </OperacoesFilterBar>
           </OperationCard>
         ),
       });
