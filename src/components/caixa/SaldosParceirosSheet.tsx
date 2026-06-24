@@ -1118,22 +1118,61 @@ const formatTime = (date: Date) => {
                     </div>
                   ) : (
                     <div className="flex flex-col gap-1.5 pb-8 border border-border/20 rounded-lg bg-card/20 overflow-hidden">
-                      <div className="grid grid-cols-[1fr,80px,80px,80px,100px] gap-2 px-4 py-2 border-b border-border/30 bg-muted/20 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                        <div>Nome</div>
-                        <div className="text-right">Fiat</div>
-                        <div className="text-right">Crypto</div>
-                        <div className="text-right">Casas</div>
-                        <div className="text-right">Total</div>
-                      </div>
-                      {filteredAndSortedParceiros.map((parceiro) => {
-                        const fiatEntries = Object.entries(parceiro.total_fiat_por_moeda).filter(([_, v]) => v > 0).sort(([, a], [, b]) => b - a);
-                        const primaryFiat = fiatEntries[0];
-                        const bookmakerEntries = Object.entries(parceiro.total_bookmakers_por_moeda).filter(([_, v]) => v > 0).sort(([, a], [, b]) => b - a);
-                        const fiatTotalBRL = fiatEntries.reduce((sum, [m, v]) => sum + convertToBRL(v, m), 0);
-                        const cryptoTotalUSD = parceiro.total_crypto_usd - parceiro.total_crypto_locked_usd;
-                        const casasTotalBRL = bookmakerEntries.reduce((sum, [m, v]) => sum + convertToBRL(v, m), 0);
-
+                      {(() => {
+                        const renderSortIcon = (col: ListSortColumn) => {
+                          if (listSort.column !== col) {
+                            return <ArrowUpDown className="h-3 w-3 opacity-30 group-hover/th:opacity-60 transition-opacity" />;
+                          }
+                          return listSort.dir === "asc"
+                            ? <ArrowUp className="h-3 w-3 text-primary" />
+                            : <ArrowDown className="h-3 w-3 text-primary" />;
+                        };
+                        const headerCls = (col: ListSortColumn, align: "left" | "right") =>
+                          `group/th flex items-center gap-1 cursor-pointer select-none hover:text-foreground transition-colors ${align === "right" ? "justify-end" : ""} ${listSort.column === col ? "text-primary" : ""}`;
+                        const enriched = filteredAndSortedParceiros.map((parceiro) => {
+                          const fiatEntries = Object.entries(parceiro.total_fiat_por_moeda).filter(([_, v]) => v > 0).sort(([, a], [, b]) => b - a);
+                          const bookmakerEntries = Object.entries(parceiro.total_bookmakers_por_moeda).filter(([_, v]) => v > 0).sort(([, a], [, b]) => b - a);
+                          const fiatTotalBRL = fiatEntries.reduce((sum, [m, v]) => sum + convertToBRL(v, m), 0);
+                          const cryptoTotalUSD = parceiro.total_crypto_usd - parceiro.total_crypto_locked_usd;
+                          const casasTotalBRL = bookmakerEntries.reduce((sum, [m, v]) => sum + convertToBRL(v, m), 0);
+                          return { parceiro, fiatEntries, bookmakerEntries, fiatTotalBRL, cryptoTotalUSD, casasTotalBRL };
+                        });
+                        const sortedRows = [...enriched].sort((a, b) => {
+                          const dir = listSort.dir === "asc" ? 1 : -1;
+                          switch (listSort.column) {
+                            case "nome":
+                              return a.parceiro.parceiro_nome.localeCompare(b.parceiro.parceiro_nome, "pt-BR") * dir;
+                            case "fiat":
+                              return (a.fiatTotalBRL - b.fiatTotalBRL) * dir;
+                            case "crypto":
+                              return (a.cryptoTotalUSD - b.cryptoTotalUSD) * dir;
+                            case "casas":
+                              return (a.casasTotalBRL - b.casasTotalBRL) * dir;
+                            case "total":
+                            default:
+                              return (a.parceiro.total_brl - b.parceiro.total_brl) * dir;
+                          }
+                        });
                         return (
+                          <>
+                            <div className="grid grid-cols-[1fr,80px,80px,80px,100px] gap-2 px-4 py-2 border-b border-border/30 bg-muted/20 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                              <div className={headerCls("nome", "left")} onClick={() => handleListSort("nome")}>
+                                Nome {renderSortIcon("nome")}
+                              </div>
+                              <div className={headerCls("fiat", "right")} onClick={() => handleListSort("fiat")}>
+                                Fiat {renderSortIcon("fiat")}
+                              </div>
+                              <div className={headerCls("crypto", "right")} onClick={() => handleListSort("crypto")}>
+                                Crypto {renderSortIcon("crypto")}
+                              </div>
+                              <div className={headerCls("casas", "right")} onClick={() => handleListSort("casas")}>
+                                Casas {renderSortIcon("casas")}
+                              </div>
+                              <div className={headerCls("total", "right")} onClick={() => handleListSort("total")}>
+                                Total {renderSortIcon("total")}
+                              </div>
+                            </div>
+                            {sortedRows.map(({ parceiro, fiatTotalBRL, cryptoTotalUSD, casasTotalBRL }) => (
                           <div key={parceiro.parceiro_id} className="grid grid-cols-[1fr,80px,80px,80px,100px] gap-2 px-4 py-2.5 hover:bg-muted/30 transition-colors items-center border-b border-border/10 last:border-0 group">
                             <div className="text-[12px] font-semibold text-foreground truncate group-hover:text-primary transition-colors">{parceiro.parceiro_nome}</div>
                              <div className="text-[11px] font-mono text-chart-1 text-right">
@@ -1155,8 +1194,10 @@ const formatTime = (date: Date) => {
                              </div>
                             <div className="text-[11px] font-mono font-bold text-foreground text-right">{formatCurrency(parceiro.total_brl, "BRL")}</div>
                           </div>
+                            ))}
+                          </>
                         );
-                      })}
+                      })()}
                     </div>
                   )}
                    </div>
