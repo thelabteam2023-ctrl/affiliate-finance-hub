@@ -52,14 +52,7 @@ import { SaqueCardGrid } from "@/components/central-operacoes/SaqueCardGrid";
 import { SaqueProcessamentoCardGrid } from "@/components/central-operacoes/SaqueProcessamentoCardGrid";
 import { OperacoesFilterBar } from "@/components/central-operacoes/filter-bar/OperacoesFilterBar";
 import type { ItemAdapter, SaquePendenteItem } from "@/components/central-operacoes/filter-bar/types";
-import type {
-  Alerta,
-  PagamentoParceiroPendente,
-  PagamentoFornecedorPendente,
-  PagamentoOperadorPendente,
-  ParticipacaoPendente,
-  ComissaoPendente,
-} from "@/hooks/useCentralOperacoesData";
+import type { Alerta, ComissaoPendente } from "@/hooks/useCentralOperacoesData";
 
 const saqueAdapter: ItemAdapter<SaquePendenteItem> = {
   getId: (s) => s.id,
