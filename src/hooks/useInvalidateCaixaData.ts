@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { PENDING_TRANSACTIONS_QUERY_KEY } from "./usePendingTransactions";
 
 /**
@@ -195,13 +195,12 @@ export function dispatchCaixaDataChanged() {
  * Útil para componentes que ainda usam estado local.
  */
 export function useCaixaDataChangedListener(callback: () => void) {
-  const callbackRef = useCallback(callback, [callback]);
-
-  // Usar useEffect com cleanup adequado
-  if (typeof window !== "undefined") {
-    window.addEventListener(CAIXA_DATA_CHANGED_EVENT, callbackRef as any);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handler = () => callback();
+    window.addEventListener(CAIXA_DATA_CHANGED_EVENT, handler);
     return () => {
-      window.removeEventListener(CAIXA_DATA_CHANGED_EVENT, callbackRef as any);
+      window.removeEventListener(CAIXA_DATA_CHANGED_EVENT, handler);
     };
-  }
+  }, [callback]);
 }
