@@ -140,6 +140,31 @@ const comissaoAdapter: ItemAdapter<ComissaoPendente> = {
   getCreatedAt: () => NOW_ISO,
   getSearchText: (c) => [c.indicadorNome, c.parceiroNome].filter(Boolean).join(" "),
 };
+
+const entregaAdapter: ItemAdapter<EntregaPendente> = {
+  getId: (e) => e.id,
+  getParceiro: (e) => e.operador_nome || null,
+  getCasa: (e) => e.tipo_gatilho || null,
+  getMoeda: () => "BRL",
+  getProjeto: (e) => e.projeto_nome || null,
+  getValor: (e) => e.resultado_nominal || 0,
+  getCreatedAt: (e) => e.data_inicio || NOW_ISO,
+  getSearchText: (e) =>
+    [e.operador_nome, e.projeto_nome, e.tipo_gatilho, `#${e.numero_entrega}`]
+      .filter(Boolean)
+      .join(" "),
+};
+
+const bonusAdapter: ItemAdapter<BonusPendente> = {
+  getId: (b) => b.indicadorId,
+  getParceiro: (b) => b.indicadorNome,
+  getCasa: () => null,
+  getMoeda: () => "BRL",
+  getProjeto: () => null,
+  getValor: (b) => b.totalBonusPendente || 0,
+  getCreatedAt: () => NOW_ISO,
+  getSearchText: (b) => b.indicadorNome || "",
+};
 import { ParceriaEncerramentoCardGrid } from "@/components/central-operacoes/ParceriaEncerramentoCardGrid";
 import { ConciliacaoPendenteCardGrid } from "@/components/central-operacoes/ConciliacaoPendenteCardGrid";
 import { ConciliacaoDirectModal } from "@/components/caixa/ConciliacaoDirectModal";
