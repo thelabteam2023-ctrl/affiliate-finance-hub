@@ -4283,6 +4283,7 @@ export function CaixaTransacaoDialog({
                    value={destinoWalletId}
                    onValueChange={(value) => {
                      setDestinoWalletId(value);
+                     setAckNetworkMismatch(false);
                      if (tipoTransacao === "TRANSFERENCIA" && fluxoTransferencia === "PARCEIRO_PARCEIRO" && tipoMoeda === "CRYPTO") {
                        setTimeout(() => {
                          valorFiatInputRef.current?.focus();
@@ -4292,6 +4293,26 @@ export function CaixaTransacaoDialog({
                    disabled={!origemEstaCompleta}
                    placeholder="Selecione a wallet de destino"
                  />
+                 {(() => {
+                   const dWallet = walletsCrypto.find((w) => w.id === destinoWalletId);
+                   if (!dWallet) return null;
+                   const oWallet = walletsCrypto.find((w) => w.id === origemWalletId);
+                   const sameWallet = !!origemWalletId && origemWalletId === destinoWalletId;
+                   return (
+                     <DestinoConfirmadoCard
+                       wallet={{
+                         label: (dWallet as any).label,
+                         exchange: (dWallet as any).exchange,
+                         network: (dWallet as any).network,
+                         endereco: (dWallet as any).endereco,
+                       }}
+                       origemNetwork={(oWallet as any)?.network}
+                       ackMismatch={ackNetworkMismatch}
+                       onAckMismatchChange={setAckNetworkMismatch}
+                       sameWalletWarning={sameWallet}
+                     />
+                   );
+                 })()}
                </div>
              )}
             {destinoParceiroId && getWalletsDisponiveisDestino(destinoParceiroId).length === 0 && (
