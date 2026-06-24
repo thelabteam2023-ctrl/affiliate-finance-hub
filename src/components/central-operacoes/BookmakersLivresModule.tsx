@@ -51,6 +51,7 @@ import {
 } from "@/components/ui/context-menu";
 import { BookmakerGrupoFilter } from "@/components/bookmakers/BookmakerGrupoFilter";
 import { useBookmakerGrupos } from "@/hooks/useBookmakerGrupos";
+import { FilterToolbar, FilterField, FilterToolbarSpacer } from "@/components/central-operacoes/filter-bar/FilterToolbar";
 interface BookmakerLivre {
   id: string;
   nome: string;
@@ -360,9 +361,8 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <div className="flex flex-wrap items-end gap-4">
-        <div className="flex flex-col gap-1">
-          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Bookmaker</span>
+      <FilterToolbar>
+        <FilterField label="Bookmaker">
           <SearchableSelectPopover
             value={casaFilter}
             onValueChange={setCasaFilter}
@@ -371,10 +371,9 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
             allLabel="Todas as casas"
             icon={<Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
           />
-        </div>
+        </FilterField>
 
-        <div className="flex flex-col gap-1">
-          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Parceiro</span>
+        <FilterField label="Parceiro">
           <SearchableSelectPopover
             value={parceiroFilter}
             onValueChange={setParceiroFilter}
@@ -383,10 +382,9 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
             allLabel="Todos parceiros"
             icon={<User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
           />
-        </div>
+        </FilterField>
 
-        <div className="flex flex-col gap-1">
-          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Estado Conta</span>
+        <FilterField label="Estado Conta">
           <Select value={estadoContaFilter} onValueChange={setEstadoContaFilter}>
             <SelectTrigger className="w-auto min-w-[160px] h-9 text-sm" icon={<Filter className="h-3.5 w-3.5" />}>
               <SelectValue />
@@ -396,10 +394,9 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
               <SelectItem value="limitada">Limitada / Encerrada</SelectItem>
             </SelectContent>
           </Select>
-        </div>
+        </FilterField>
 
-        <div className="flex flex-col gap-1">
-          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Histórico</span>
+        <FilterField label="Histórico">
           <Select value={usoFilter} onValueChange={setUsoFilter}>
             <SelectTrigger className="w-auto min-w-[150px] h-9 text-sm">
               <SelectValue />
@@ -410,10 +407,9 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
               <SelectItem value="utilizada">Já utilizada</SelectItem>
             </SelectContent>
           </Select>
-        </div>
+        </FilterField>
 
-        <div className="flex flex-col gap-1">
-          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Regulamentação</span>
+        <FilterField label="Regulamentação">
           <div className="flex items-center gap-1 h-9">
             <button
               onClick={() => setRegulamentacaoFilter(regulamentacaoFilter === "REGULAMENTADA" ? "todas" : "REGULAMENTADA")}
@@ -438,17 +434,19 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
               Não Regulamentada
             </button>
           </div>
-        </div>
+        </FilterField>
 
-        <div className="flex flex-col gap-1">
-          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Grupo</span>
+        <FilterField label="Grupo">
           <BookmakerGrupoFilter value={grupoFilter} onChange={setGrupoFilter} className="w-[180px] h-9" />
-        </div>
+        </FilterField>
 
-        <Badge variant="outline" className="h-9 px-3 text-sm font-mono self-end">
-          {sorted.length} / {contas?.length || 0}
-        </Badge>
-      </div>
+        <FilterToolbarSpacer />
+        <FilterField label="Resultados">
+          <Badge variant="outline" className="h-9 px-3 text-sm font-mono">
+            {sorted.length} / {contas?.length || 0}
+          </Badge>
+        </FilterField>
+      </FilterToolbar>
 
       {/* Table */}
       <Card>
