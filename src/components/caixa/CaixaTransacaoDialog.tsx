@@ -52,6 +52,7 @@ import BookmakerSelect, { BookmakerSelectRef } from "@/components/bookmakers/Boo
 import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
  import { Loader2, ArrowLeftRight, ArrowRightLeft, AlertTriangle, TrendingDown, TrendingUp, Info, Wallet } from "lucide-react";
  import { WalletCryptoSelect } from "@/components/wallets/WalletCryptoSelect";
+import { DestinoConfirmadoCard } from "@/components/caixa/DestinoConfirmadoCard";
 
 // Constantes de moedas disponíveis (todas as 8 moedas FIAT suportadas)
 const MOEDAS_FIAT = [
@@ -785,6 +786,9 @@ export function CaixaTransacaoDialog({
    const [saldosParceirosWallets, setSaldosParceirosWallets] = useState<SaldoParceiroWallets[]>([]);
    const [investidores, setInvestidores] = useState<Array<{ id: string; nome: string }>>([]);
   const [saquesPendentes, setSaquesPendentes] = useState<Record<string, number>>({});
+
+  // Ack para rede divergente origem→destino na transferência crypto entre parceiros
+  const [ackNetworkMismatch, setAckNetworkMismatch] = useState(false);
   
   // Caixa Operacional company account (optional physical destination/origin)
   const [caixaParceiroId, setCaixaParceiroId] = useState<string>("");
@@ -4279,6 +4283,7 @@ export function CaixaTransacaoDialog({
                    value={destinoWalletId}
                    onValueChange={(value) => {
                      setDestinoWalletId(value);
+                     setAckNetworkMismatch(false);
                      if (tipoTransacao === "TRANSFERENCIA" && fluxoTransferencia === "PARCEIRO_PARCEIRO" && tipoMoeda === "CRYPTO") {
                        setTimeout(() => {
                          valorFiatInputRef.current?.focus();
@@ -4288,6 +4293,26 @@ export function CaixaTransacaoDialog({
                    disabled={!origemEstaCompleta}
                    placeholder="Selecione a wallet de destino"
                  />
+                 {(() => {
+                   const dWallet = walletsCrypto.find((w) => w.id === destinoWalletId);
+                   if (!dWallet) return null;
+                   const oWallet = walletsCrypto.find((w) => w.id === origemWalletId);
+                   const sameWallet = !!origemWalletId && origemWalletId === destinoWalletId;
+                   return (
+                     <DestinoConfirmadoCard
+                       wallet={{
+                         label: (dWallet as any).label,
+                         exchange: (dWallet as any).exchange,
+                         network: (dWallet as any).network,
+                         endereco: (dWallet as any).endereco,
+                       }}
+                       origemNetwork={(oWallet as any)?.network}
+                       ackMismatch={ackNetworkMismatch}
+                       onAckMismatchChange={setAckNetworkMismatch}
+                       sameWalletWarning={sameWallet}
+                     />
+                   );
+                 })()}
                </div>
              )}
             {destinoParceiroId && getWalletsDisponiveisDestino(destinoParceiroId).length === 0 && (
@@ -5560,7 +5585,29 @@ export function CaixaTransacaoDialog({
           <Button variant="outline" onClick={onClose}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={loading || saldoInsuficiente}>
+          <Button
+            onClick={handleSubmit}
+            disabled={(() => {
+              if (loading || saldoInsuficiente) return true;
+              if (
+                tipoTransacao === "TRANSFERENCIA" &&
+                fluxoTransferencia === "PARCEIRO_PARCEIRO" &&
+                tipoMoeda === "CRYPTO" &&
+                origemWalletId &&
+                destinoWalletId
+              ) {
+                if (origemWalletId === destinoWalletId) return true;
+                const o = walletsCrypto.find((w) => w.id === origemWalletId) as any;
+                const d = walletsCrypto.find((w) => w.id === destinoWalletId) as any;
+                const norm = (n?: string | null) =>
+                  (n || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+                const a = norm(o?.network);
+                const b = norm(d?.network);
+                if (a && b && a !== b && !ackNetworkMismatch) return true;
+              }
+              return false;
+            })()}
+          >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Registrar Transação
           </Button>

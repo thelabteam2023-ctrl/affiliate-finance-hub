@@ -1,132 +1,112 @@
-# Plano — Faceted Filter Bar (Proposta B)
+# Plano: Melhorias UX/UI — Transferência Cripto Parceiro → Parceiro
 
-Substituir os 3 SmartFilters atuais (`SaquesSmartFilter`, `SaqueProcessamentoSmartFilter`, `CasasLimitadasSmartFilter`) por **um único componente reutilizável** no padrão Linear/Stripe, com facetas multi-seleção, saved views e persistência por usuário.
+## Contexto
 
-## Escopo
+No fluxo `Nova Transação → Transferência → Parceiro → Parceiro` com moeda CRYPTO, após selecionar o parceiro de destino e sua wallet, o operador não tem como copiar o endereço diretamente do diálogo. Hoje precisa sair do fluxo, abrir outra área e copiar manualmente — lento e propenso a erro (rede errada, endereço errado, parceiro errado).
 
-**Dentro:** Central de Operações → cards Financeiros (Aguardando Confirmação, Pendentes de Processamento, Casas Limitadas).
-**Fora desta entrega:** outras telas (Financeiro, Apostas, etc.). A base fica pronta para reuso em uma fase 2.
+Objetivo: tornar a wallet de destino totalmente visível, copiável e auditável dentro do próprio modal, além de eliminar gargalos correlatos (matching de rede, confirmação visual, prevenção de auto-transferência).
 
-## Arquitetura
+## Escopo (apenas frontend / UX)
 
-Novo módulo em `src/components/central-operacoes/filter-bar/`:
+Arquivos-alvo principais:
+- `src/components/caixa/CaixaTransacaoDialog.tsx` (modal Nova Transação — bloco DESTINO crypto)
+- `src/components/caixa/WalletSearchSelect.tsx` (visualização do item selecionado)
+- Reaproveitar `CopyableAddress` já existente (padrão `CryptoTransactionCard`)
 
-```text
-filter-bar/
-├── OperacoesFilterBar.tsx       ← shell visual (totalizador + facetas + busca + ordenação)
-├── FacetPopover.tsx             ← popover pesquisável com multi-select + soma por valor
-├── SavedViewsBar.tsx            ← chips de views salvas + "Nova view"
-├── useOperacoesFilter.ts        ← hook genérico (estado, persistência, derivação)
-├── useSavedViews.ts             ← CRUD de views salvas (localStorage por usuário)
-└── types.ts                     ← FacetConfig, FilterState, SavedView, ItemAdapter
+Fora de escopo: regras de saldo, RPC, ledger, conversões.
+
+---
+
+## 1. Painel "Destino confirmado" (substitui o select colapsado)
+
+Depois que o parceiro + wallet de destino estiverem selecionados, renderizar abaixo do select um card compacto fixo com:
+
+```
+┌─────────────────────────────────────────────┐
+│  DESTINO CONFIRMADO                  ✓      │
+│  JULIANA COSTA DE OLIVEIRA                  │
+│  PRINCIPAL JULIANA · Ethereum (ERC20)       │
+│  0xE350a1...c93607        [ Copiar ] [QR]   │
+│  Rede compatível com origem ✓               │
+└─────────────────────────────────────────────┘
 ```
 
-## Modelo genérico
+Elementos:
+- Pessoa (parceiro) — Nível 1
+- Wallet name + rede formatada (`formatNetworkName`) — Nível 2
+- Endereço truncado (`truncateAddress`) com tooltip exibindo o endereço completo — Nível 3
+- Botão "Copiar" (ícone `Copy`) que copia o endereço **completo** via `navigator.clipboard.writeText`
+- Feedback: troca para ícone `Check` verde + toast "Wallet copiada" por 2s
+- Botão secundário "QR" abre popover com QR code do endereço (usar `qrcode.react` se já presente, senão deixar como follow-up opcional)
 
-```ts
-type FacetKey = "parceiro" | "casa" | "moeda" | "projeto" | "idade";
+Componente reaproveitável: `CopyableAddress` já existe no padrão crypto institucional — usar ele.
 
-interface ItemAdapter<T> {
-  getParceiro: (item: T) => string | null;
-  getCasa: (item: T) => string | null;
-  getMoeda: (item: T) => string;
-  getProjeto: (item: T) => string | null;
-  getValor: (item: T) => number;
-  getCreatedAt: (item: T) => string;
-  getSearchText: (item: T) => string;
-}
-```
+## 2. Validação visual de rede (prevenção de erro)
 
-Cada card passa seu adapter — `SaqueCardGrid`, `SaqueProcessamentoCardGrid`, `CasasLimitadasCardGrid` continuam recebendo a lista já filtrada e não mudam.
+- Comparar `network` da wallet de origem com a de destino.
+- Match → badge verde "Rede compatível ✓".
+- Mismatch → badge âmbar "⚠ Redes diferentes: ERC20 → TRC20. Confirme antes de prosseguir" e desabilitar `Registrar Transação` até o usuário marcar checkbox "Estou ciente do risco".
 
-## Layout final
+## 3. Bloqueio de auto-transferência
 
-```text
-┌─ Saques Aguardando Confirmação ─────────────────────────────────────┐
-│ Pendente:  R$ 2.340,51 BRL    US$ 559,51 USD                       │
-│                                                                     │
-│ [ Meus saques ] [ Atrasados >30d ] [ +Nova view ]                  │
-│                                                                     │
-│ [+ Filtro ▾] [Parceiro: 2 ×] [Casa: Bet365 ×]   ⌕ buscar…  ↕ valor│
-│                                                                     │
-│ ... cards ...                                                       │
-└─────────────────────────────────────────────────────────────────────┘
-```
+Se `origem.parceiro_id === destino.parceiro_id` E `origem.wallet_id === destino.wallet_id`:
+- Mostrar mensagem inline vermelha: "Origem e destino não podem ser a mesma wallet."
+- Desabilitar submit.
 
-**Facetas:** Parceiro, Casa, Moeda, Projeto, Idade (Hoje / 7d / 30d / >30d).
-Cada chip mostra **label + count** e abre popover com lista pesquisável (multi-seleção, contagem por item, total por moeda no rodapé).
+## 4. Melhorias no `WalletSearchSelect` (destino)
 
-**Ordenação:** toggle de 2 estados (data ↑↓ / valor ↑↓) em vez de Select de 4 opções.
+- Mostrar o endereço truncado **dentro do trigger** já selecionado (hoje só aparece na lista).
+- Adicionar mini-ícone `Copy` no trigger ao lado direito (clique stopPropagation → copia sem abrir o popover).
+- Na lista, destacar wallets cuja `network` casa com a origem (ordem: compatíveis primeiro, demais abaixo de divisor).
 
-**Busca textual:** colapsada, secundária. Atalho `/` foca, `Esc` limpa.
+## 5. Atalhos operacionais
 
-## Persistência
+- Botão "Usar mesma wallet usada na última transferência para este parceiro" (busca rápida no histórico recente) — opcional, atrás de feature flag se complicar.
+- `Cmd/Ctrl + C` com o painel "Destino confirmado" focado copia o endereço.
 
-- `localStorage` chave `central-ops:filter:<cardId>:<userId>` → último estado.
-- `localStorage` chave `central-ops:views:<userId>` → array de saved views.
-- Defaults: nenhum filtro, ordenação "mais antigo primeiro".
+## 6. Feedback e acessibilidade
 
-## Saved Views (v1 simples)
+- Toast via hook `useToast` já existente.
+- `aria-live="polite"` no painel para anunciar "Wallet copiada".
+- Foco visível em botão Copiar (ring primary).
 
-- Botão "Salvar view atual" no menu da barra → pede nome → grava em localStorage.
-- Click no chip da view → aplica todos os filtros + ordenação.
-- Long-press / menu de contexto → renomear / remover.
-- Sem sincronização com backend nesta fase (decisão: começar local, migrar depois se houver demanda multi-device).
+---
 
-## Migração dos cards existentes
+## Detalhes técnicos
 
-`src/pages/CentralOperacoes.tsx`:
+**`CaixaTransacaoDialog.tsx`** — localizar o bloco do destino CRYPTO em `Parceiro → Parceiro` e, após `<WalletSearchSelect ... value={walletDestinoId}>`, inserir condicional:
 
 ```tsx
-<OperacoesFilterBar
-  cardId="saques-aguardando"
-  items={saquesPendentes}
-  adapter={saqueAdapter}
-  facets={["parceiro","casa","moeda","projeto","idade"]}
->
-  {(filtered) => <SaqueCardGrid saques={filtered} onConfirmar={...} />}
-</OperacoesFilterBar>
+{walletDestinoSelecionada && (
+  <DestinoConfirmadoCard
+    parceiroNome={parceiroDestino?.nome}
+    wallet={walletDestinoSelecionada}
+    origemNetwork={walletOrigemSelecionada?.network}
+  />
+)}
 ```
 
-Os 3 SmartFilters antigos ficam deprecated no commit e são removidos após confirmação visual.
+**Novo componente** `src/components/caixa/DestinoConfirmadoCard.tsx`:
+- Props: `parceiroNome`, `wallet { label, exchange, network, endereco }`, `origemNetwork`.
+- Usa `CopyableAddress`, `formatNetworkName`, `truncateAddress` de `@/utils/cryptoUtils`.
+- Sem lógica de negócio; só apresentação + clipboard.
 
-## Componentes shadcn aproveitados
+**Sem mudanças** em RPC, hooks de dados, ledger ou cache (invalidações continuam como estão).
 
-`Popover`, `Command` (cmdk — já no projeto), `Badge`, `Button`, `Input`, `Tooltip`. Sem novas dependências.
+---
 
-## Animações
+## Critérios de aceitação
 
-- Framer Motion já no projeto: chip aplicado → `layout` transition no totalizador (números animam).
-- Faceta abrindo: fade + slide 4px (já default do Popover).
+1. Após selecionar wallet de destino, o endereço completo é copiável em 1 clique com feedback visual.
+2. Endereço exibido truncado mas tooltip/cópia entrega valor completo.
+3. Redes incompatíveis bloqueiam submit até confirmação explícita.
+4. Mesma wallet origem=destino bloqueia submit.
+5. Nenhuma regressão em FIAT (painel só aparece quando `tipoMoeda === 'CRYPTO'` e ambos lados preenchidos).
 
-## Testes
+## Entregáveis
 
-- `useOperacoesFilter.test.ts`: aplicar/remover faceta, combinação AND entre facetas, OR dentro da mesma faceta, ordenação, persistência.
-- `useSavedViews.test.ts`: CRUD, isolamento por usuário.
-- Smoke test visual: render dos 3 cards com a barra nova.
+- `src/components/caixa/DestinoConfirmadoCard.tsx` (novo)
+- Edits em `src/components/caixa/CaixaTransacaoDialog.tsx`
+- Edits leves em `src/components/caixa/WalletSearchSelect.tsx` (cópia inline no trigger + ordenação por compatibilidade de rede)
 
-## Entrega faseada (ordem dos commits)
-
-1. **Hook + tipos + adapter** (`useOperacoesFilter`, `types.ts`) com testes.
-2. **`FacetPopover`** isolado (componente puro, testável).
-3. **`OperacoesFilterBar`** sem saved views — substitui os 3 SmartFilters.
-4. **`SavedViewsBar`** + `useSavedViews` (camada opcional por cima).
-5. Limpeza: remover `SaquesSmartFilter`, `SaqueProcessamentoSmartFilter`, `CasasLimitadasSmartFilter`.
-
-## Riscos & mitigações
-
-| Risco | Mitigação |
-|---|---|
-| Quebrar ordenação atual usada por operadores | Default = "mais antigo primeiro" (igual hoje) |
-| Saved views poluindo localStorage entre usuários | Chave inclui `userId` do `useAuth` |
-| Faceta "Casa" gera lista enorme | Popover já tem busca interna (cmdk) |
-| Operador acostumado com input no topo | Busca textual continua, só fica à direita |
-
-## Critérios de aceite
-
-- Os 3 cards usam o mesmo componente.
-- Totalizador reage a qualquer filtro aplicado.
-- Filtros persistem ao recarregar a página.
-- Ao menos 1 saved view padrão sugerida ("Atrasados >30d") aparece na primeira visita.
-- Atalho `/` foca busca em qualquer um dos 3 cards focados.
-- Nenhuma regressão nos handlers `onConfirmar`, `onProcessar`, `onCancelar`, `onSacar`.
+QR code fica como follow-up opcional para não inflar o escopo.
