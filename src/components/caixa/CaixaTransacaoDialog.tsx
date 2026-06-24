@@ -4830,7 +4830,7 @@ export function CaixaTransacaoDialog({
                     onClick={() => setTipoMoeda("FIAT")}
                     className={`flex-1 text-[11px] font-bold tracking-wider rounded-sm transition-all ${
                       tipoMoeda === "FIAT"
-                        ? "bg-card text-foreground shadow-sm"
+                        ? "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/40 shadow-[0_0_12px_-2px_hsl(160_84%_39%/0.35)]"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -4841,7 +4841,7 @@ export function CaixaTransacaoDialog({
                     onClick={() => setTipoMoeda("CRYPTO")}
                     className={`flex-1 text-[11px] font-bold tracking-wider rounded-sm transition-all ${
                       (tipoMoeda as string) === "CRYPTO"
-                        ? "bg-card text-foreground shadow-sm"
+                        ? "bg-cyan-500/15 text-cyan-400 ring-1 ring-cyan-500/40 shadow-[0_0_12px_-2px_hsl(189_94%_43%/0.35)]"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -4888,7 +4888,7 @@ export function CaixaTransacaoDialog({
                       onClick={() => setTipoMoeda("FIAT")}
                       className={`flex-1 text-[11px] font-bold tracking-wider rounded-sm transition-all ${
                         (tipoMoeda as string) === "FIAT"
-                          ? "bg-card text-foreground shadow-sm"
+                          ? "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/40 shadow-[0_0_12px_-2px_hsl(160_84%_39%/0.35)]"
                           : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
@@ -4899,7 +4899,7 @@ export function CaixaTransacaoDialog({
                       onClick={() => setTipoMoeda("CRYPTO")}
                       className={`flex-1 text-[11px] font-bold tracking-wider rounded-sm transition-all ${
                         tipoMoeda === "CRYPTO"
-                          ? "bg-card text-foreground shadow-sm"
+                          ? "bg-cyan-500/15 text-cyan-400 ring-1 ring-cyan-500/40 shadow-[0_0_12px_-2px_hsl(189_94%_43%/0.35)]"
                           : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
