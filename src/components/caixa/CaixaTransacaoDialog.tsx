@@ -198,6 +198,7 @@ export function CaixaTransacaoDialog({
   const { toast } = useToast();
   const { workspaceId } = useWorkspace();
   const queryClient = useQueryClient();
+  const invalidateCaixa = useInvalidateCaixaData();
   const { 
     cotacaoUSD, cotacaoEUR, cotacaoGBP, 
     cotacaoMXN, cotacaoMYR, cotacaoARS, cotacaoCOP,
