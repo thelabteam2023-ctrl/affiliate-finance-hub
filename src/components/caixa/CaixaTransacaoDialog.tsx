@@ -4142,6 +4142,20 @@ export function CaixaTransacaoDialog({
                       })}
                   </SelectContent>
                   </Select>
+                  {(() => {
+                    const dWallet = walletsCrypto.find((w) => w.id === destinoWalletId) as any;
+                    if (!dWallet) return null;
+                    return (
+                      <DestinoConfirmadoCard
+                        wallet={{
+                          label: dWallet.label,
+                          exchange: dWallet.exchange,
+                          network: dWallet.network,
+                          endereco: dWallet.endereco,
+                        }}
+                      />
+                    );
+                  })()}
                 </div>
               )}
               {destinoParceiroId && getWalletsDisponiveisDestino(destinoParceiroId).length === 0 && (
