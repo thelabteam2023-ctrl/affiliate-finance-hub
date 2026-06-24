@@ -52,6 +52,7 @@ import { SaquesSmartFilter } from "@/components/central-operacoes/SaquesSmartFil
 import { SaqueCardGrid } from "@/components/central-operacoes/SaqueCardGrid";
 import { CasasLimitadasSmartFilter } from "@/components/central-operacoes/CasasLimitadasSmartFilter";
 import { SaqueProcessamentoCardGrid } from "@/components/central-operacoes/SaqueProcessamentoCardGrid";
+import { SaqueProcessamentoSmartFilter } from "@/components/central-operacoes/SaqueProcessamentoSmartFilter";
 import { ParceriaEncerramentoCardGrid } from "@/components/central-operacoes/ParceriaEncerramentoCardGrid";
 import { ConciliacaoPendenteCardGrid } from "@/components/central-operacoes/ConciliacaoPendenteCardGrid";
 import { ConciliacaoDirectModal } from "@/components/caixa/ConciliacaoDirectModal";
@@ -483,11 +484,15 @@ export default function CentralOperacoes() {
         component: (
           <OperationCard key="saques-processamento" title="Saques Pendentes de Processamento" icon={<DollarSign className="h-4 w-4" />} color="emerald" count={alertasSaques.length}
             tooltip={{ title: "Saques Pendentes de Processamento", description: "Bookmakers marcados para saque que aguardam processamento.", flow: "Casa chega aqui quando desvinculada como 'limitada' (saque automático) ou quando gestor escolhe 'Marcar para Saque'." }}>
-            <SaqueProcessamentoCardGrid
-              alertas={alertasSaques}
-              onProcessar={(alerta) => mutations.handleSaqueAction(alerta)}
-              onCancelar={(alerta) => mutations.handleCancelarLiberacao(alerta)}
-            />
+            <SaqueProcessamentoSmartFilter alertas={alertasSaques}>
+              {(filtered) => (
+                <SaqueProcessamentoCardGrid
+                  alertas={filtered}
+                  onProcessar={(alerta) => mutations.handleSaqueAction(alerta)}
+                  onCancelar={(alerta) => mutations.handleCancelarLiberacao(alerta)}
+                />
+              )}
+            </SaqueProcessamentoSmartFilter>
           </OperationCard>
         ),
       });
