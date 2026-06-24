@@ -533,7 +533,10 @@ export function CaixaTransacaoDialog({
        setDataTransacao("");
        setTags([]);
        setFluxoAporte("APORTE");
-       setInvestidorId("");
+        // NÃO resetar investidorId aqui: investidor é identidade da transação,
+        // não tem dependência com moeda/coin. Trocar moeda após escolher o
+        // investidor não deve apagar essa seleção. Reset de investidor fica
+        // restrito a resetForm() e troca de tipoTransacao.
        
        // Reset de alertas e estados de UI
        setTaxaBancariaInfo(null);
