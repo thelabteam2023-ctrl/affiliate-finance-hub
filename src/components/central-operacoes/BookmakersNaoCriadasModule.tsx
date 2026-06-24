@@ -372,7 +372,6 @@ function ViewPorParceiro() {
                   >
                     <Check className={cn("h-4 w-4 shrink-0", selectedParceiroId === p.id ? "opacity-100" : "opacity-0")} />
                     <span className="truncate">{getFirstLastName(p.nome)}</span>
-                    {p.cpf && <span className="text-xs text-muted-foreground ml-auto font-mono">{p.cpf.slice(-4)}</span>}
                   </button>
                 ))
               )}
