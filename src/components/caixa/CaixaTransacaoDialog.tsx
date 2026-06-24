@@ -5466,7 +5466,7 @@ export function CaixaTransacaoDialog({
               </div>
 
               {/* Painel de Estimativa de Conversão para Saque Multi-Moeda */}
-              {tipoTransacao === "SAQUE" && origemBookmakerId && (() => {
+              {tipoTransacao === "SAQUE" && origemBookmakerId && destinoContaId && (() => {
                 const valorNum = parseFloat(valor) || 0;
                 const bm = bookmakers.find(b => b.id === origemBookmakerId);
                 const moedaCasa = bm?.moeda || "USD";
