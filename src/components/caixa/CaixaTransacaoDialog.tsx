@@ -4983,9 +4983,9 @@ export function CaixaTransacaoDialog({
                             Destino
                           </h4>
                         </div>
-                        <Card className="bg-card/30 border-border/50">
-                          <CardContent className="pt-6 text-center">
-                            <div className="text-sm font-medium uppercase">{getDestinoLabel()}</div>
+                        {renderDestinoFields()}
+                        <div className="rounded-md bg-muted/20 border border-border/40 px-3 py-2 text-center text-xs space-y-1">
+                            <div className="text-[10px] font-medium uppercase text-muted-foreground tracking-wide truncate">{getDestinoLabel()}</div>
                             {/* FIAT: Conta Bancária */}
                             {tipoMoeda === "FIAT" && destinoContaId && (
                               <div className="mt-3 space-y-1">
@@ -5023,9 +5023,7 @@ export function CaixaTransacaoDialog({
                                 )}
                               </div>
                             )}
-                          </CardContent>
-                        </Card>
-                        {renderDestinoFields()}
+                        </div>
                       </div>
 
                       <div className="space-y-4 pl-4">
@@ -5034,9 +5032,9 @@ export function CaixaTransacaoDialog({
                             Origem
                           </h4>
                         </div>
-                        <Card className="bg-card/30 border-border/50">
-                          <CardContent className="pt-6 text-center">
-                            <div className="text-sm font-medium uppercase">{getOrigemLabel()}</div>
+                        {renderOrigemFields()}
+                        <div className="rounded-md bg-muted/20 border border-border/40 px-3 py-2 text-center text-xs space-y-1">
+                            <div className="text-[10px] font-medium uppercase text-muted-foreground tracking-wide truncate">{getOrigemLabel()}</div>
                             {origemBookmakerId && (
                               <div className="mt-3 space-y-1">
                                 {getSaquesPendentesBookmaker(origemBookmakerId) > 0 && (
