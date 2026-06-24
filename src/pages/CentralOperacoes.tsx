@@ -140,6 +140,31 @@ const comissaoAdapter: ItemAdapter<ComissaoPendente> = {
   getCreatedAt: () => NOW_ISO,
   getSearchText: (c) => [c.indicadorNome, c.parceiroNome].filter(Boolean).join(" "),
 };
+
+const entregaAdapter: ItemAdapter<EntregaPendente> = {
+  getId: (e) => e.id,
+  getParceiro: (e) => e.operador_nome || null,
+  getCasa: (e) => e.tipo_gatilho || null,
+  getMoeda: () => "BRL",
+  getProjeto: (e) => e.projeto_nome || null,
+  getValor: (e) => e.resultado_nominal || 0,
+  getCreatedAt: (e) => e.data_inicio || NOW_ISO,
+  getSearchText: (e) =>
+    [e.operador_nome, e.projeto_nome, e.tipo_gatilho, `#${e.numero_entrega}`]
+      .filter(Boolean)
+      .join(" "),
+};
+
+const bonusAdapter: ItemAdapter<BonusPendente> = {
+  getId: (b) => b.indicadorId,
+  getParceiro: (b) => b.indicadorNome,
+  getCasa: () => null,
+  getMoeda: () => "BRL",
+  getProjeto: () => null,
+  getValor: (b) => b.totalBonusPendente || 0,
+  getCreatedAt: () => NOW_ISO,
+  getSearchText: (b) => b.indicadorNome || "",
+};
 import { ParceriaEncerramentoCardGrid } from "@/components/central-operacoes/ParceriaEncerramentoCardGrid";
 import { ConciliacaoPendenteCardGrid } from "@/components/central-operacoes/ConciliacaoPendenteCardGrid";
 import { ConciliacaoDirectModal } from "@/components/caixa/ConciliacaoDirectModal";
@@ -184,6 +209,7 @@ import {
   type AlertaLucroParceiro,
   type ParticipacaoPendente,
   type BookmakerDesvinculado,
+  type BonusPendente,
 } from "@/hooks/useCentralOperacoesData";
 
 // Mapeamento de cards para domínios
@@ -760,10 +786,20 @@ export default function CentralOperacoes() {
         component: (
           <OperationCard key="entregas-pendentes" title="Entregas Pendentes" icon={<Package className="h-4 w-4" />} color="purple" count={entregasPendentes.length}
             tooltip={{ title: "Entregas Pendentes", description: "Entregas prontas para conciliação e pagamento.", flow: "Quando uma entrega atinge a meta, ela fica disponível para conciliação." }}>
-            <EntregasPendentesCardGrid
-              entregas={entregasPendentes}
-              onConciliar={handleConciliarEntrega}
-            />
+            <OperacoesFilterBar
+              cardId="entregas-pendentes"
+              items={entregasPendentes}
+              adapter={entregaAdapter}
+              facets={["parceiro", "projeto", "casa", "idade"]}
+              facetLabels={{ parceiro: "Operador", casa: "Gatilho" }}
+            >
+              {(filtered) => (
+                <EntregasPendentesCardGrid
+                  entregas={filtered}
+                  onConciliar={handleConciliarEntrega}
+                />
+              )}
+            </OperacoesFilterBar>
           </OperationCard>
         ),
       });
@@ -860,10 +896,20 @@ export default function CentralOperacoes() {
         component: (
           <OperationCard key="bonus-pendentes" title="Bônus de Indicadores" icon={<Gift className="h-4 w-4" />} color="pink" count={bonusPendentes.reduce((acc, b) => acc + b.ciclosPendentes, 0)}
             tooltip={{ title: "Bônus de Indicadores", description: "Bônus devidos a indicadores que atingiram metas.", flow: "Quando um indicador atinge a meta de parceiros indicados, um bônus é gerado." }}>
-            <BonusPendentesCardGrid
-              bonus={bonusPendentes}
-              onPagar={() => navigate("/programa-indicacao", { state: { tab: "financeiro" } })}
-            />
+            <OperacoesFilterBar
+              cardId="bonus-pendentes"
+              items={bonusPendentes}
+              adapter={bonusAdapter}
+              facets={["parceiro"]}
+              facetLabels={{ parceiro: "Indicador" }}
+            >
+              {(filtered) => (
+                <BonusPendentesCardGrid
+                  bonus={filtered}
+                  onPagar={() => navigate("/programa-indicacao", { state: { tab: "financeiro" } })}
+                />
+              )}
+            </OperacoesFilterBar>
           </OperationCard>
         ),
       });
