@@ -4691,94 +4691,106 @@ export function CaixaTransacaoDialog({
         <div className="space-y-4 py-4">
           {/* Tipo de Transação */}
           <div className="space-y-2">
-            <Label>Tipo de Transação</Label>
-            <Select value={tipoTransacao} onValueChange={setTipoTransacao}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o tipo de transação" />
-              </SelectTrigger>
-              <SelectContent>
-                {(!allowedTipoTransacao || allowedTipoTransacao.includes("TRANSFERENCIA")) && (
-                  <SelectItem value="TRANSFERENCIA">TRANSFERÊNCIA</SelectItem>
-                )}
-                {(!allowedTipoTransacao || allowedTipoTransacao.includes("DEPOSITO")) && (
-                  <SelectItem value="DEPOSITO">DEPÓSITO</SelectItem>
-                )}
-                {(!allowedTipoTransacao || allowedTipoTransacao.includes("SAQUE")) && (
-                  <SelectItem value="SAQUE">SAQUE</SelectItem>
-                )}
-                {(!allowedTipoTransacao || allowedTipoTransacao.includes("APORTE_FINANCEIRO")) && (
-                  <SelectItem value="APORTE_FINANCEIRO">APORTE & LIQUIDAÇÃO</SelectItem>
-                )}
-              </SelectContent>
-            </Select>
+            <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Tipo de Transação
+            </Label>
+            <div className="flex p-1 bg-muted/40 rounded-lg border border-border">
+              {([
+                { value: "APORTE_FINANCEIRO", label: "APORTE FINANCEIRO" },
+                { value: "DEPOSITO", label: "DEPÓSITO" },
+                { value: "SAQUE", label: "SAQUE" },
+                { value: "TRANSFERENCIA", label: "TRANSFERÊNCIA" },
+              ] as const)
+                .filter((t) => !allowedTipoTransacao || allowedTipoTransacao.includes(t.value))
+                .map((t) => {
+                  const active = tipoTransacao === t.value;
+                  return (
+                    <button
+                      key={t.value}
+                      type="button"
+                      onClick={() => setTipoTransacao(t.value)}
+                      className={`flex-1 py-2 text-[11px] font-semibold rounded-md transition-all ${
+                        active
+                          ? "bg-card text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  );
+                })}
+            </div>
           </div>
 
           {/* Aporte Flow Toggle */}
           {tipoTransacao === "APORTE_FINANCEIRO" && (
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant={fluxoAporte === "APORTE" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFluxoAporte("APORTE")}
-                className="flex-1"
-              >
-                Investidor → Caixa
-              </Button>
-              <Button
-                type="button"
-                variant={fluxoAporte === "LIQUIDACAO" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFluxoAporte("LIQUIDACAO")}
-                className="flex-1"
-              >
-                Caixa → Investidor
-              </Button>
+            <div className="flex justify-center">
+              <div className="inline-flex p-1 bg-muted/40 rounded-full border border-border">
+                <button
+                  type="button"
+                  onClick={() => setFluxoAporte("APORTE")}
+                  className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all ${
+                    fluxoAporte === "APORTE"
+                      ? "bg-primary/15 text-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Investidor → Caixa
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFluxoAporte("LIQUIDACAO")}
+                  className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all ${
+                    fluxoAporte === "LIQUIDACAO"
+                      ? "bg-primary/15 text-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Caixa → Investidor
+                </button>
+              </div>
             </div>
           )}
 
           {/* Transfer Flow Toggle */}
           {tipoTransacao === "TRANSFERENCIA" && (
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant={fluxoTransferencia === "CAIXA_PARCEIRO" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFluxoTransferencia("CAIXA_PARCEIRO")}
-                className="flex-1"
-              >
-                Caixa → Parceiro
-              </Button>
-              <Button
-                type="button"
-                variant={fluxoTransferencia === "PARCEIRO_CAIXA" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFluxoTransferencia("PARCEIRO_CAIXA")}
-                className="flex-1"
-              >
-                Parceiro → Caixa
-              </Button>
-              <Button
-                type="button"
-                variant={fluxoTransferencia === "PARCEIRO_PARCEIRO" ? "default" : "outline"}
-                size="sm"
-                onClick={() => {
-                  setFluxoTransferencia("PARCEIRO_PARCEIRO");
-                  // Garantir foco no seletor de moeda ao entrar no fluxo (primeira abertura em FIAT)
-                  setTimeout(() => {
-                    if (tipoMoeda === "FIAT") {
-                      moedaFiatSelectRef.current?.focus();
-                      moedaFiatSelectRef.current?.click();
-                    } else {
-                      coinSelectRef.current?.focus();
-                      coinSelectRef.current?.click();
-                    }
-                  }, 260);
-                }}
-                className="flex-1"
-              >
-                Parceiro → Parceiro
-              </Button>
+            <div className="flex justify-center">
+              <div className="inline-flex p-1 bg-muted/40 rounded-full border border-border">
+                {([
+                  { value: "CAIXA_PARCEIRO", label: "Caixa → Parceiro" },
+                  { value: "PARCEIRO_CAIXA", label: "Parceiro → Caixa" },
+                  { value: "PARCEIRO_PARCEIRO", label: "Parceiro → Parceiro" },
+                ] as const).map((f) => {
+                  const active = fluxoTransferencia === f.value;
+                  return (
+                    <button
+                      key={f.value}
+                      type="button"
+                      onClick={() => {
+                        setFluxoTransferencia(f.value);
+                        if (f.value === "PARCEIRO_PARCEIRO") {
+                          setTimeout(() => {
+                            if (tipoMoeda === "FIAT") {
+                              moedaFiatSelectRef.current?.focus();
+                              moedaFiatSelectRef.current?.click();
+                            } else {
+                              coinSelectRef.current?.focus();
+                              coinSelectRef.current?.click();
+                            }
+                          }, 260);
+                        }
+                      }}
+                      className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all ${
+                        active
+                          ? "bg-primary/15 text-primary"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 
@@ -4801,15 +4813,33 @@ export function CaixaTransacaoDialog({
             <div className="grid grid-cols-[200px_1fr_1fr] gap-3">
               <div className="space-y-2">
                 <Label className="text-center block">Tipo de Moeda</Label>
-                <Select value={tipoMoeda} onValueChange={setTipoMoeda}>
-                  <SelectTrigger ref={tipoMoedaSelectRef}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="FIAT">FIAT</SelectItem>
-                    <SelectItem value="CRYPTO">CRYPTO</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div
+                  ref={tipoMoedaSelectRef as any}
+                  className="flex p-1 bg-muted/40 rounded-md border border-border h-10"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setTipoMoeda("FIAT")}
+                    className={`flex-1 text-[11px] font-bold tracking-wider rounded-sm transition-all ${
+                      tipoMoeda === "FIAT"
+                        ? "bg-card text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    FIAT
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTipoMoeda("CRYPTO")}
+                    className={`flex-1 text-[11px] font-bold tracking-wider rounded-sm transition-all ${
+                      (tipoMoeda as string) === "CRYPTO"
+                        ? "bg-card text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    CRYPTO
+                  </button>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label className="text-center block">Moeda</Label>
@@ -4923,15 +4953,33 @@ export function CaixaTransacaoDialog({
               <div className="grid grid-cols-[200px_1fr_1fr] gap-3">
                 <div className="space-y-2">
                   <Label className="text-center block">Tipo de Moeda</Label>
-                  <Select value={tipoMoeda} onValueChange={setTipoMoeda}>
-                    <SelectTrigger ref={tipoMoedaSelectRef}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="FIAT">FIAT</SelectItem>
-                      <SelectItem value="CRYPTO">CRYPTO</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div
+                    ref={tipoMoedaSelectRef as any}
+                    className="flex p-1 bg-muted/40 rounded-md border border-border h-10"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setTipoMoeda("FIAT")}
+                      className={`flex-1 text-[11px] font-bold tracking-wider rounded-sm transition-all ${
+                        (tipoMoeda as string) === "FIAT"
+                          ? "bg-card text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      FIAT
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTipoMoeda("CRYPTO")}
+                      className={`flex-1 text-[11px] font-bold tracking-wider rounded-sm transition-all ${
+                        tipoMoeda === "CRYPTO"
+                          ? "bg-card text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      CRYPTO
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-center block">Moeda Crypto</Label>
