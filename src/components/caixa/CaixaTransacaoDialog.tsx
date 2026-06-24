@@ -4701,7 +4701,31 @@ export function CaixaTransacaoDialog({
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Nova Transação</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <span>Nova Transação</span>
+            {tipoTransacao && (() => {
+              const meta = {
+                APORTE_FINANCEIRO: { label: "Aporte Financeiro", Icon: PiggyBank, color: "violet" },
+                DEPOSITO: { label: "Depósito", Icon: ArrowDownToLine, color: "emerald" },
+                SAQUE: { label: "Saque", Icon: ArrowUpFromLine, color: "amber" },
+                TRANSFERENCIA: { label: "Transferência", Icon: ArrowLeftRight, color: "sky" },
+              }[tipoTransacao as "APORTE_FINANCEIRO" | "DEPOSITO" | "SAQUE" | "TRANSFERENCIA"];
+              if (!meta) return null;
+              const { Icon, label, color } = meta;
+              const cls = {
+                violet: "bg-violet-500/10 text-violet-400 border-violet-500/30",
+                emerald: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
+                amber: "bg-amber-500/10 text-amber-400 border-amber-500/30",
+                sky: "bg-sky-500/10 text-sky-400 border-sky-500/30",
+              }[color];
+              return (
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-semibold uppercase tracking-wider ${cls}`}>
+                  <Icon className="h-3 w-3" />
+                  {label}
+                </span>
+              );
+            })()}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
