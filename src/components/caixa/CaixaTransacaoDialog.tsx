@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { useToast } from "@/hooks/use-toast";
-import { dispatchCaixaDataChanged } from "@/hooks/useInvalidateCaixaData";
+import { dispatchCaixaDataChanged, useInvalidateCaixaData } from "@/hooks/useInvalidateCaixaData";
 import { DatePicker } from "@/components/ui/date-picker";
  import { Calendar, Info as InfoIcon, Tag as TagIcon } from "lucide-react";
  import { TagInput } from "@/components/ui/tag-input";
@@ -198,6 +198,7 @@ export function CaixaTransacaoDialog({
   const { toast } = useToast();
   const { workspaceId } = useWorkspace();
   const queryClient = useQueryClient();
+  const invalidateCaixa = useInvalidateCaixaData();
   const { 
     cotacaoUSD, cotacaoEUR, cotacaoGBP, 
     cotacaoMXN, cotacaoMYR, cotacaoARS, cotacaoCOP,
@@ -3093,6 +3094,8 @@ export function CaixaTransacaoDialog({
       queryClient.invalidateQueries({ queryKey: ["central-operacoes-data"] });
       queryClient.invalidateQueries({ queryKey: ["pending-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["contas-disponiveis-count"] });
+      // Invalidação ampla do Caixa Operacional (saldos fiat/crypto/bookmakers/parceiros)
+      await invalidateCaixa();
 
       onSuccess();
       onClose();
@@ -3213,6 +3216,7 @@ export function CaixaTransacaoDialog({
       queryClient.invalidateQueries({ queryKey: ["central-operacoes-data"] });
       queryClient.invalidateQueries({ queryKey: ["pending-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["contas-disponiveis-count"] });
+      await invalidateCaixa();
       onSuccess();
       onClose();
     } catch (error: any) {
