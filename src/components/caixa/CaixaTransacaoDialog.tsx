@@ -263,17 +263,30 @@ export function CaixaTransacaoDialog({
   const destinoContaBancariaSelectRef = useRef<HTMLButtonElement>(null);
   const destinoWalletSelectRef = useRef<HTMLButtonElement>(null);
 
-  // Helper: abre o ParceiroSelect com retry (resiliente a remounts/render condicional)
-  const tryOpenParceiroSelect = () => {
+  // Helper genérico: aciona um ref (open | focus | focus+click) com retry resiliente
+  // a remounts e a render condicional. Resolve a cadeia de auto-foco do SAQUE.
+  const tryActivateRef = (
+    refGetter: () => { open?: () => void; focus?: () => void; click?: () => void } | null,
+    mode: "open" | "focus" | "focus-click" = "open"
+  ) => {
     let tries = 0;
     const MAX_TRIES = 15;
     const TRY_EVERY_MS = 60;
     const attempt = () => {
       tries += 1;
-      const ref = parceiroSelectRef.current;
+      const ref = refGetter();
       if (ref) {
         requestAnimationFrame(() => {
-          requestAnimationFrame(() => ref.open());
+          requestAnimationFrame(() => {
+            if (mode === "open" && typeof ref.open === "function") {
+              ref.open();
+            } else if (mode === "focus" && typeof ref.focus === "function") {
+              ref.focus();
+            } else if (mode === "focus-click") {
+              ref.focus?.();
+              ref.click?.();
+            }
+          });
         });
         return;
       }
@@ -281,6 +294,10 @@ export function CaixaTransacaoDialog({
     };
     setTimeout(attempt, 80);
   };
+
+  // Atalho legado mantido para os efeitos que abrem o ParceiroSelect
+  const tryOpenParceiroSelect = () =>
+    tryActivateRef(() => parceiroSelectRef.current, "open");
 
   // Guided focus sequence state for affiliate deposit flow
   const affiliateFocusActiveRef = useRef<boolean>(false);
