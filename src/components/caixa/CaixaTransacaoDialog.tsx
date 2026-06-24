@@ -4812,10 +4812,10 @@ export function CaixaTransacaoDialog({
             </div>
           )}
 
-          {/* Tipo de Moeda, Moeda e Valor - Compactados */}
+          {/* Tipo de Moeda e Moeda - Compactados (Valor renderizado após Fluxo) */}
           {tipoTransacao && tipoMoeda === "FIAT" && (
             <>
-            <div className="grid grid-cols-[200px_1fr_1fr] gap-3">
+            <div className="grid grid-cols-[200px_1fr] gap-3">
               <div className="space-y-2">
                 <Label className="text-center block">Tipo de Moeda</Label>
                 <div
@@ -4866,91 +4866,7 @@ export function CaixaTransacaoDialog({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                {/* SAQUE FIAT: Valor na moeda da casa (fonte de verdade do débito) */}
-                {tipoTransacao === "SAQUE" && origemBookmakerId ? (
-                  <>
-                    <Label className="text-center block">
-                      Valor a debitar ({(() => {
-                        const bm = bookmakers.find(b => b.id === origemBookmakerId);
-                        return bm?.moeda || moeda;
-                      })()})
-                    </Label>
-                    <Input
-                      ref={valorFiatInputRef}
-                      type="text"
-                      value={valorDisplay}
-                      onChange={handleValorChange}
-                      placeholder="0,00"
-                      className="h-14 text-3xl text-center font-medium tabular-nums tracking-tight"
-                    />
-                  </>
-                ) : (
-                  <>
-                    <Label className="text-center block">Valor em {moeda}</Label>
-                    <Input
-                      ref={valorFiatInputRef}
-                      type="text"
-                      value={valorDisplay}
-                      onChange={handleValorChange}
-                      placeholder="0,00"
-                      className="h-14 text-3xl text-center font-medium tabular-nums tracking-tight"
-                    />
-                  </>
-                )}
-              </div>
             </div>
-            
-            {/* Painel de Estimativa de Conversão para Saque Multi-Moeda */}
-            {tipoTransacao === "SAQUE" && origemBookmakerId && (() => {
-              const valorNum = parseFloat(valor) || 0;
-              const bm = bookmakers.find(b => b.id === origemBookmakerId);
-              const moedaCasa = bm?.moeda || "USD";
-              const moedaDestino = moeda; // Moeda da conta de destino
-              const precisaConversao = moedaCasa !== moedaDestino;
-              
-              if (!precisaConversao || valorNum <= 0) return null;
-              
-              // Calcular estimativa genérica: Casa → BRL (pivot) → Destino
-              const taxaCasa = getRate(moedaCasa);     // BRL por 1 unidade moeda casa
-              const taxaDestino = getRate(moedaDestino); // BRL por 1 unidade moeda destino
-              
-              // Conversão: valorOrigem * taxaCasa = BRL; BRL / taxaDestino = destino
-              const valorBRLFromCasa = valorNum * taxaCasa;
-              const valorDestinoEstimado = valorBRLFromCasa / taxaDestino;
-              
-              const currencySymbols: Record<string, string> = {
-                BRL: "R$", USD: "$", EUR: "€", GBP: "£", 
-                MXN: "$", MYR: "RM", ARS: "$", COP: "$"
-              };
-              const symbolCasa = currencySymbols[moedaCasa] || moedaCasa;
-              const symbolDestino = currencySymbols[moedaDestino] || moedaDestino;
-              
-              return (
-                <Alert className="border-primary/30 bg-primary/5">
-                  <Info className="h-4 w-4 text-primary" />
-                  <AlertDescription className="text-primary">
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">Débito na casa:</span>
-                        <span className="font-semibold">{symbolCasa} {valorNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm opacity-80">
-                        <span>Cotação {moedaCasa}/{moedaDestino}:</span>
-                        <span className="font-mono">{(taxaCasa / taxaDestino).toFixed(4)} <span className="text-[10px] opacity-60">({isUsingFallback ? "fallback" : "oficial"})</span></span>
-                      </div>
-                      <div className="flex items-center justify-between border-t border-primary/20 pt-1 mt-1">
-                        <span className="font-medium">Valor estimado a receber:</span>
-                        <span className="font-semibold text-green-400">{symbolDestino} {valorDestinoEstimado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      </div>
-                      <div className="text-[10px] text-muted-foreground text-center mt-1">
-                        O valor final será confirmado na Conciliação
-                      </div>
-                    </div>
-                  </AlertDescription>
-                </Alert>
-              );
-            })()}
             </>
           )}
 
