@@ -4700,40 +4700,32 @@ export function CaixaTransacaoDialog({
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <span>Nova Transação</span>
+        <DialogHeader className="space-y-0">
+          <DialogTitle className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <span>Tipo de Transação</span>
             {tipoTransacao && (() => {
               const meta = {
-                APORTE_FINANCEIRO: { label: "Aporte Financeiro", Icon: PiggyBank, color: "violet" },
-                DEPOSITO: { label: "Depósito", Icon: ArrowDownToLine, color: "emerald" },
-                SAQUE: { label: "Saque", Icon: ArrowUpFromLine, color: "amber" },
-                TRANSFERENCIA: { label: "Transferência", Icon: ArrowLeftRight, color: "sky" },
+                APORTE_FINANCEIRO: { Icon: PiggyBank, color: "violet" },
+                DEPOSITO: { Icon: ArrowDownToLine, color: "emerald" },
+                SAQUE: { Icon: ArrowUpFromLine, color: "amber" },
+                TRANSFERENCIA: { Icon: ArrowLeftRight, color: "sky" },
               }[tipoTransacao as "APORTE_FINANCEIRO" | "DEPOSITO" | "SAQUE" | "TRANSFERENCIA"];
               if (!meta) return null;
-              const { Icon, label, color } = meta;
+              const { Icon, color } = meta;
               const cls = {
-                violet: "bg-violet-500/10 text-violet-400 border-violet-500/30",
-                emerald: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
-                amber: "bg-amber-500/10 text-amber-400 border-amber-500/30",
-                sky: "bg-sky-500/10 text-sky-400 border-sky-500/30",
+                violet: "text-violet-400",
+                emerald: "text-emerald-400",
+                amber: "text-amber-400",
+                sky: "text-sky-400",
               }[color];
-              return (
-                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-semibold uppercase tracking-wider ${cls}`}>
-                  <Icon className="h-3 w-3" />
-                  {label}
-                </span>
-              );
+              return <Icon className={`h-3 w-3 ${cls}`} />;
             })()}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 pt-2 pb-4">
           {/* Tipo de Transação */}
           <div className="space-y-2">
-            <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Tipo de Transação
-            </Label>
             <div className="flex p-1 bg-muted/40 rounded-lg border border-border">
               {([
                 { value: "APORTE_FINANCEIRO", label: "APORTE FINANCEIRO" },
