@@ -50,7 +50,12 @@ import ParceiroSelect, { ParceiroSelectRef } from "@/components/parceiros/Parcei
 import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
 import BookmakerSelect, { BookmakerSelectRef } from "@/components/bookmakers/BookmakerSelect";
 import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
- import { Loader2, ArrowLeftRight, ArrowRightLeft, AlertTriangle, TrendingDown, TrendingUp, Info, Wallet } from "lucide-react";
+ import { Loader2, ArrowLeftRight, ArrowRightLeft, AlertTriangle, TrendingDown, TrendingUp, Info, Wallet, ChevronDown } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
  import { WalletCryptoSelect } from "@/components/wallets/WalletCryptoSelect";
 import { DestinoConfirmadoCard } from "@/components/caixa/DestinoConfirmadoCard";
 
@@ -5595,8 +5600,14 @@ export function CaixaTransacaoDialog({
             </>
           )}
 
-          {/* Data da Transação (retroativa) */}
+          {/* Detalhes adicionais (Data, Tags, Descrição) — colapsado por padrão */}
           {tipoTransacao && (
+            <Collapsible className="border-t border-border pt-3">
+              <CollapsibleTrigger className="group flex w-full items-center justify-between text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
+                <span className="uppercase tracking-wider">Adicionar detalhes (Data, Tags, Descrição)</span>
+                <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-4 pt-4">
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -5626,10 +5637,6 @@ export function CaixaTransacaoDialog({
                 Deixe em branco para usar a data de hoje
               </p>
             </div>
-          )}
-
-           {/* Tags */}
-           {tipoTransacao && (
              <div className="space-y-2">
                <Label className="flex items-center gap-2">
                  <TagIcon className="h-4 w-4 text-muted-foreground" />
@@ -5644,10 +5651,6 @@ export function CaixaTransacaoDialog({
                  Use tags para categorizar fluxos específicos (Ex: Aporte Extra, Investimento Inicial)
                </p>
              </div>
-           )}
- 
-           {/* Descrição */}
-           {tipoTransacao && (
              <div className="space-y-2">
                <Label>Descrição (opcional)</Label>
                <Textarea
@@ -5657,40 +5660,68 @@ export function CaixaTransacaoDialog({
                  rows={3}
                />
              </div>
-           )}
+              </CollapsibleContent>
+            </Collapsible>
+          )}
         </div>
 
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={(() => {
-              if (loading || saldoInsuficiente) return true;
-              if (
-                tipoTransacao === "TRANSFERENCIA" &&
-                fluxoTransferencia === "PARCEIRO_PARCEIRO" &&
-                tipoMoeda === "CRYPTO" &&
-                origemWalletId &&
-                destinoWalletId
-              ) {
-                if (origemWalletId === destinoWalletId) return true;
-                const o = walletsCrypto.find((w) => w.id === origemWalletId) as any;
-                const d = walletsCrypto.find((w) => w.id === destinoWalletId) as any;
-                const norm = (n?: string | null) =>
-                  (n || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-                const a = norm(o?.network);
-                const b = norm(d?.network);
-                if (a && b && a !== b && !ackNetworkMismatch) return true;
-              }
-              return false;
-            })()}
-          >
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Registrar Transação
-          </Button>
-        </div>
+        {(() => {
+          const isDisabled = (() => {
+            if (loading || saldoInsuficiente) return true;
+            if (
+              tipoTransacao === "TRANSFERENCIA" &&
+              fluxoTransferencia === "PARCEIRO_PARCEIRO" &&
+              tipoMoeda === "CRYPTO" &&
+              origemWalletId &&
+              destinoWalletId
+            ) {
+              if (origemWalletId === destinoWalletId) return true;
+              const o = walletsCrypto.find((w) => w.id === origemWalletId) as any;
+              const d = walletsCrypto.find((w) => w.id === destinoWalletId) as any;
+              const norm = (n?: string | null) =>
+                (n || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+              const a = norm(o?.network);
+              const b = norm(d?.network);
+              if (a && b && a !== b && !ackNetworkMismatch) return true;
+            }
+            return false;
+          })();
+          const statusLabel = !tipoTransacao
+            ? "Selecione o tipo"
+            : loading
+            ? "Registrando..."
+            : saldoInsuficiente
+            ? "Saldo insuficiente"
+            : isDisabled
+            ? "Aguardando dados"
+            : "Pronto para registrar";
+          const isReady = !isDisabled && !!tipoTransacao;
+          return (
+            <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
+              <div
+                className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border ${
+                  isReady
+                    ? "bg-primary/10 border-primary/20 text-primary"
+                    : saldoInsuficiente
+                    ? "bg-destructive/10 border-destructive/20 text-destructive"
+                    : "bg-amber-500/10 border-amber-500/20 text-amber-500"
+                }`}
+              >
+                <span className={`h-1.5 w-1.5 rounded-full ${isReady ? "bg-primary" : saldoInsuficiente ? "bg-destructive" : "bg-amber-500"} ${!isReady ? "animate-pulse" : ""}`} />
+                <span className="text-[10px] font-semibold uppercase tracking-wider">{statusLabel}</span>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={onClose}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleSubmit} disabled={isDisabled}>
+                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Registrar Transação
+                </Button>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* AlertDialog for missing bank account */}
         <AlertDialog open={showNoBankAlert} onOpenChange={setShowNoBankAlert}>
