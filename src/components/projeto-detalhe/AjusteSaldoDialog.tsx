@@ -56,7 +56,7 @@ export function AjusteSaldoDialog({
   const saldoSistema = vinculo?.saldo_atual || 0;
   const saldoRealNum = parseFloat(saldoReal.replace(",", ".")) || 0;
   const diferenca = saldoRealNum - saldoSistema;
-  const temDiferenca = saldoReal !== "" && Math.abs(diferenca) > 0.01;
+  const temDiferenca = saldoReal !== "" && Math.abs(diferenca) >= 0.0001;
 
   const moedaNativa = (vinculo?.moeda || "BRL") as SupportedCurrency;
   const simboloMoeda = getCurrencySymbol(moedaNativa);
