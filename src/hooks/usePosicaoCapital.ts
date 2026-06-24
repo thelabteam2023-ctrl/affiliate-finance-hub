@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCaixaDataChangedListener } from "@/hooks/useInvalidateCaixaData";
 
 const APORTE_TIPOS = ["APORTE", "APORTE_FINANCEIRO", "APORTE_DIRETO"];
 const LIQUIDACAO_TIPOS = ["LIQUIDACAO"];
@@ -123,6 +124,12 @@ export function usePosicaoCapital({
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Reatividade: qualquer mutação no Caixa Operacional (Aporte, Liquidação,
+  // Transferência, etc.) dispara CAIXA_DATA_CHANGED_EVENT via
+  // dispatchCaixaDataChanged(). Re-fetch imediato para manter a Posição de
+  // Capital sincronizada sem precisar de F5.
+  useCaixaDataChangedListener(fetchData);
 
   const inPeriodo = (date: string) => {
     if (!dataInicio && !dataFim) return true;
