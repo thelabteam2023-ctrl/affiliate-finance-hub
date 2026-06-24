@@ -96,7 +96,7 @@ function ViewPorParceiro() {
         .select("id, nome, cpf, status")
         .eq("workspace_id", workspaceId)
         .eq("status", "ativo")
-        .neq("nome", "CAIXA OPERACIONAL")
+        .neq("is_caixa_operacional", true)
         .order("nome");
       if (error) throw error;
       return data ?? [];
@@ -637,7 +637,7 @@ function ViewPorBookmaker() {
           .select("id, nome, cpf, status")
           .eq("workspace_id", workspaceId)
           .eq("status", "ativo")
-          .neq("nome", "CAIXA OPERACIONAL")
+          .neq("is_caixa_operacional", true)
           .order("nome"),
         supabase
           .from("bookmakers")
