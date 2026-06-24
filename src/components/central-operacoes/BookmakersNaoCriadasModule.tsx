@@ -39,6 +39,7 @@ import type { VinculoCriadoContext } from "@/components/bookmakers/BookmakerDial
 import { toast } from "sonner";
 import { BookmakerGrupoFilter } from "@/components/bookmakers/BookmakerGrupoFilter";
 import { useBookmakerGrupos } from "@/hooks/useBookmakerGrupos";
+import { FilterToolbar, FilterField, FilterToolbarSpacer } from "@/components/central-operacoes/filter-bar/FilterToolbar";
 
 interface ParceiroSemConta {
   id: string;
