@@ -48,11 +48,12 @@ import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { CardInfoTooltip } from "@/components/ui/card-info-tooltip";
-import { SaquesSmartFilter } from "@/components/central-operacoes/SaquesSmartFilter";
 import { SaqueCardGrid } from "@/components/central-operacoes/SaqueCardGrid";
-import { CasasLimitadasSmartFilter } from "@/components/central-operacoes/CasasLimitadasSmartFilter";
 import { SaqueProcessamentoCardGrid } from "@/components/central-operacoes/SaqueProcessamentoCardGrid";
-import { SaqueProcessamentoSmartFilter } from "@/components/central-operacoes/SaqueProcessamentoSmartFilter";
+import { OperacoesFilterBar } from "@/components/central-operacoes/filter-bar/OperacoesFilterBar";
+import type { ItemAdapter } from "@/components/central-operacoes/filter-bar/types";
+import type { SaquePendenteItem } from "@/components/central-operacoes/filter-bar/types";
+import type { Alerta } from "@/hooks/useCentralOperacoesData";
 import { ParceriaEncerramentoCardGrid } from "@/components/central-operacoes/ParceriaEncerramentoCardGrid";
 import { ConciliacaoPendenteCardGrid } from "@/components/central-operacoes/ConciliacaoPendenteCardGrid";
 import { ConciliacaoDirectModal } from "@/components/caixa/ConciliacaoDirectModal";
