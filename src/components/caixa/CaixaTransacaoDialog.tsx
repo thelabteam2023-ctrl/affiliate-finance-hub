@@ -3094,6 +3094,8 @@ export function CaixaTransacaoDialog({
       queryClient.invalidateQueries({ queryKey: ["central-operacoes-data"] });
       queryClient.invalidateQueries({ queryKey: ["pending-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["contas-disponiveis-count"] });
+      // Invalidação ampla do Caixa Operacional (saldos fiat/crypto/bookmakers/parceiros)
+      await invalidateCaixa();
 
       onSuccess();
       onClose();
@@ -3214,6 +3216,7 @@ export function CaixaTransacaoDialog({
       queryClient.invalidateQueries({ queryKey: ["central-operacoes-data"] });
       queryClient.invalidateQueries({ queryKey: ["pending-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["contas-disponiveis-count"] });
+      await invalidateCaixa();
       onSuccess();
       onClose();
     } catch (error: any) {
