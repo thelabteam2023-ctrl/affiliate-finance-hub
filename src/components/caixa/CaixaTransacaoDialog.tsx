@@ -263,6 +263,25 @@ export function CaixaTransacaoDialog({
   const destinoContaBancariaSelectRef = useRef<HTMLButtonElement>(null);
   const destinoWalletSelectRef = useRef<HTMLButtonElement>(null);
 
+  // Helper: abre o ParceiroSelect com retry (resiliente a remounts/render condicional)
+  const tryOpenParceiroSelect = () => {
+    let tries = 0;
+    const MAX_TRIES = 15;
+    const TRY_EVERY_MS = 60;
+    const attempt = () => {
+      tries += 1;
+      const ref = parceiroSelectRef.current;
+      if (ref) {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => ref.open());
+        });
+        return;
+      }
+      if (tries < MAX_TRIES) setTimeout(attempt, TRY_EVERY_MS);
+    };
+    setTimeout(attempt, 80);
+  };
+
   // Guided focus sequence state for affiliate deposit flow
   const affiliateFocusActiveRef = useRef<boolean>(false);
   const affiliateFocusStepRef = useRef<number>(0);
