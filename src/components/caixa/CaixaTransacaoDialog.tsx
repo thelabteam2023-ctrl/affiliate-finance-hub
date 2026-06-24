@@ -1218,11 +1218,8 @@ export function CaixaTransacaoDialog({
     if (contasDoParceiro.length === 1) {
       setDestinoContaId(contasDoParceiro[0].id);
       // O próximo useEffect (destinoContaId) vai cuidar de abrir o BookmakerSelect
-    } else if (contaBancariaSelectRef.current) {
-      setTimeout(() => {
-        contaBancariaSelectRef.current?.focus();
-        contaBancariaSelectRef.current?.click();
-      }, 150);
+    } else {
+      tryActivateRef(() => contaBancariaSelectRef.current, "focus-click");
     }
     
     prevDestinoParceiroId.current = destinoParceiroId;
@@ -1239,11 +1236,7 @@ export function CaixaTransacaoDialog({
       return;
     }
     
-    if (bookmakerSelectRef.current) {
-      setTimeout(() => {
-        bookmakerSelectRef.current?.open();
-      }, 150);
-    }
+    tryActivateRef(() => bookmakerSelectRef.current, "open");
     
     prevDestinoContaId.current = destinoContaId;
   }, [destinoContaId, tipoTransacao, tipoMoeda, origemBookmakerId]);
@@ -1385,11 +1378,8 @@ export function CaixaTransacaoDialog({
     if (walletsDoParceiro.length === 1) {
       setDestinoWalletId(walletsDoParceiro[0].id);
       // O próximo useEffect (destinoWalletId) vai cuidar de abrir o BookmakerSelect
-    } else if (walletCryptoSelectRef.current) {
-      setTimeout(() => {
-        walletCryptoSelectRef.current?.focus();
-        walletCryptoSelectRef.current?.click();
-      }, 150);
+    } else {
+      tryActivateRef(() => walletCryptoSelectRef.current, "focus-click");
     }
     
     prevDestinoParceiroId.current = destinoParceiroId;
@@ -1416,11 +1406,7 @@ export function CaixaTransacaoDialog({
     }
     
     // Abrir BookmakerSelect para selecionar a origem
-    if (bookmakerSelectRef.current) {
-      setTimeout(() => {
-        bookmakerSelectRef.current?.open();
-      }, 150);
-    }
+    tryActivateRef(() => bookmakerSelectRef.current, "open");
     
     prevDestinoWalletId.current = destinoWalletId;
   }, [destinoWalletId, tipoTransacao, tipoMoeda, entryPoint, origemBookmakerId]);
