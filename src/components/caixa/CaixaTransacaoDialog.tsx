@@ -4813,15 +4813,33 @@ export function CaixaTransacaoDialog({
             <div className="grid grid-cols-[200px_1fr_1fr] gap-3">
               <div className="space-y-2">
                 <Label className="text-center block">Tipo de Moeda</Label>
-                <Select value={tipoMoeda} onValueChange={setTipoMoeda}>
-                  <SelectTrigger ref={tipoMoedaSelectRef}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="FIAT">FIAT</SelectItem>
-                    <SelectItem value="CRYPTO">CRYPTO</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div
+                  ref={tipoMoedaSelectRef as any}
+                  className="flex p-1 bg-muted/40 rounded-md border border-border h-10"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setTipoMoeda("FIAT")}
+                    className={`flex-1 text-[11px] font-bold tracking-wider rounded-sm transition-all ${
+                      tipoMoeda === "FIAT"
+                        ? "bg-card text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    FIAT
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTipoMoeda("CRYPTO")}
+                    className={`flex-1 text-[11px] font-bold tracking-wider rounded-sm transition-all ${
+                      (tipoMoeda as string) === "CRYPTO"
+                        ? "bg-card text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    CRYPTO
+                  </button>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label className="text-center block">Moeda</Label>
@@ -4935,15 +4953,33 @@ export function CaixaTransacaoDialog({
               <div className="grid grid-cols-[200px_1fr_1fr] gap-3">
                 <div className="space-y-2">
                   <Label className="text-center block">Tipo de Moeda</Label>
-                  <Select value={tipoMoeda} onValueChange={setTipoMoeda}>
-                    <SelectTrigger ref={tipoMoedaSelectRef}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="FIAT">FIAT</SelectItem>
-                      <SelectItem value="CRYPTO">CRYPTO</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div
+                    ref={tipoMoedaSelectRef as any}
+                    className="flex p-1 bg-muted/40 rounded-md border border-border h-10"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setTipoMoeda("FIAT")}
+                      className={`flex-1 text-[11px] font-bold tracking-wider rounded-sm transition-all ${
+                        (tipoMoeda as string) === "FIAT"
+                          ? "bg-card text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      FIAT
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTipoMoeda("CRYPTO")}
+                      className={`flex-1 text-[11px] font-bold tracking-wider rounded-sm transition-all ${
+                        tipoMoeda === "CRYPTO"
+                          ? "bg-card text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      CRYPTO
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-center block">Moeda Crypto</Label>
