@@ -4812,10 +4812,10 @@ export function CaixaTransacaoDialog({
             </div>
           )}
 
-          {/* Tipo de Moeda, Moeda e Valor - Compactados */}
+          {/* Tipo de Moeda e Moeda - Compactados (Valor renderizado após Fluxo) */}
           {tipoTransacao && tipoMoeda === "FIAT" && (
             <>
-            <div className="grid grid-cols-[200px_1fr_1fr] gap-3">
+            <div className="grid grid-cols-[200px_1fr] gap-3">
               <div className="space-y-2">
                 <Label className="text-center block">Tipo de Moeda</Label>
                 <div
@@ -4866,98 +4866,14 @@ export function CaixaTransacaoDialog({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                {/* SAQUE FIAT: Valor na moeda da casa (fonte de verdade do débito) */}
-                {tipoTransacao === "SAQUE" && origemBookmakerId ? (
-                  <>
-                    <Label className="text-center block">
-                      Valor a debitar ({(() => {
-                        const bm = bookmakers.find(b => b.id === origemBookmakerId);
-                        return bm?.moeda || moeda;
-                      })()})
-                    </Label>
-                    <Input
-                      ref={valorFiatInputRef}
-                      type="text"
-                      value={valorDisplay}
-                      onChange={handleValorChange}
-                      placeholder="0,00"
-                      className="h-14 text-3xl text-center font-medium tabular-nums tracking-tight"
-                    />
-                  </>
-                ) : (
-                  <>
-                    <Label className="text-center block">Valor em {moeda}</Label>
-                    <Input
-                      ref={valorFiatInputRef}
-                      type="text"
-                      value={valorDisplay}
-                      onChange={handleValorChange}
-                      placeholder="0,00"
-                      className="h-14 text-3xl text-center font-medium tabular-nums tracking-tight"
-                    />
-                  </>
-                )}
-              </div>
             </div>
-            
-            {/* Painel de Estimativa de Conversão para Saque Multi-Moeda */}
-            {tipoTransacao === "SAQUE" && origemBookmakerId && (() => {
-              const valorNum = parseFloat(valor) || 0;
-              const bm = bookmakers.find(b => b.id === origemBookmakerId);
-              const moedaCasa = bm?.moeda || "USD";
-              const moedaDestino = moeda; // Moeda da conta de destino
-              const precisaConversao = moedaCasa !== moedaDestino;
-              
-              if (!precisaConversao || valorNum <= 0) return null;
-              
-              // Calcular estimativa genérica: Casa → BRL (pivot) → Destino
-              const taxaCasa = getRate(moedaCasa);     // BRL por 1 unidade moeda casa
-              const taxaDestino = getRate(moedaDestino); // BRL por 1 unidade moeda destino
-              
-              // Conversão: valorOrigem * taxaCasa = BRL; BRL / taxaDestino = destino
-              const valorBRLFromCasa = valorNum * taxaCasa;
-              const valorDestinoEstimado = valorBRLFromCasa / taxaDestino;
-              
-              const currencySymbols: Record<string, string> = {
-                BRL: "R$", USD: "$", EUR: "€", GBP: "£", 
-                MXN: "$", MYR: "RM", ARS: "$", COP: "$"
-              };
-              const symbolCasa = currencySymbols[moedaCasa] || moedaCasa;
-              const symbolDestino = currencySymbols[moedaDestino] || moedaDestino;
-              
-              return (
-                <Alert className="border-primary/30 bg-primary/5">
-                  <Info className="h-4 w-4 text-primary" />
-                  <AlertDescription className="text-primary">
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">Débito na casa:</span>
-                        <span className="font-semibold">{symbolCasa} {valorNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm opacity-80">
-                        <span>Cotação {moedaCasa}/{moedaDestino}:</span>
-                        <span className="font-mono">{(taxaCasa / taxaDestino).toFixed(4)} <span className="text-[10px] opacity-60">({isUsingFallback ? "fallback" : "oficial"})</span></span>
-                      </div>
-                      <div className="flex items-center justify-between border-t border-primary/20 pt-1 mt-1">
-                        <span className="font-medium">Valor estimado a receber:</span>
-                        <span className="font-semibold text-green-400">{symbolDestino} {valorDestinoEstimado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      </div>
-                      <div className="text-[10px] text-muted-foreground text-center mt-1">
-                        O valor final será confirmado na Conciliação
-                      </div>
-                    </div>
-                  </AlertDescription>
-                </Alert>
-              );
-            })()}
             </>
           )}
 
-          {/* Crypto fields - Compactados */}
+          {/* Crypto fields - Compactados (Valor renderizado após Fluxo) */}
           {tipoTransacao && tipoMoeda === "CRYPTO" && (
             <>
-              <div className="grid grid-cols-[200px_1fr_1fr] gap-3">
+              <div className="grid grid-cols-[200px_1fr] gap-3">
                 <div className="space-y-2">
                   <Label className="text-center block">Tipo de Moeda</Label>
                   <div
@@ -5011,108 +4927,7 @@ export function CaixaTransacaoDialog({
                     </SelectContent>
                   </Select>
                 </div>
-                {/* SAQUE CRYPTO: Valor na moeda da casa (inverted flow) */}
-                {tipoTransacao === "SAQUE" && origemBookmakerId ? (
-                  <div className="space-y-2">
-                    <Label className="text-center block">
-                      Valor a debitar ({(() => {
-                        const bm = bookmakers.find(b => b.id === origemBookmakerId);
-                        return bm?.moeda || "USD";
-                      })()})
-                    </Label>
-                    <Input
-                      ref={valorFiatInputRef}
-                      type="text"
-                      value={valorDisplay}
-                      onChange={handleValorChange}
-                      placeholder="0,00"
-                      className="h-14 text-3xl text-center font-medium tabular-nums tracking-tight"
-                    />
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Label className="text-center block">Valor em USD (calculado)</Label>
-                    <Input
-                      type="text"
-                      value={valorDisplay}
-                      onChange={handleValorChange}
-                      placeholder="0,00"
-                      readOnly={tipoTransacao !== "SAQUE"}
-                      disabled={tipoTransacao !== "SAQUE"}
-                      className={`h-14 text-3xl text-center font-medium tabular-nums tracking-tight ${tipoTransacao !== "SAQUE" ? "bg-muted/50" : ""}`}
-                    />
-                  </div>
-                )}
               </div>
-              
-              {/* SAQUE CRYPTO: Mostrar estimativa de coins a receber */}
-              {tipoTransacao === "SAQUE" && origemBookmakerId && parseFloat(String(valor)) > 0 && (
-                <div className="bg-muted/30 rounded-lg p-3 border border-border/50">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Info className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">Estimativa de {coin} a receber:</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-lg font-semibold text-cyan-400">
-                        {(() => {
-                          const valorNum = parseFloat(String(valor)) || 0;
-                          const bm = bookmakers.find(b => b.id === origemBookmakerId);
-                          const moedaCasa = bm?.moeda || "USD";
-                          
-                          // Converter valor da casa para USD
-                          let valorEmUSD = valorNum;
-                          if (moedaCasa !== "USD") {
-                            const taxaCasa = getRate(moedaCasa);
-                            const valorBRL = valorNum * taxaCasa;
-                            valorEmUSD = valorBRL / cotacaoUSD;
-                          }
-                          
-                          // Converter USD para coins usando cotação do coin
-                          const cotacaoCoin = cryptoPrices[coin] || 1;
-                          const qtdEstimada = valorEmUSD / cotacaoCoin;
-                          
-                          return `~${qtdEstimada.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })} ${coin}`;
-                        })()}
-                      </span>
-                      <div className="text-[10px] text-muted-foreground">
-                        Cotação: {(cryptoPrices[coin] || 1).toFixed(4)} USD/{coin}
-                        <span className="ml-1 opacity-60">({isUsingFallback ? "fallback" : "oficial"})</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {/* Outros fluxos CRYPTO: Quantidade de coins */}
-              {tipoTransacao !== "SAQUE" && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label className="text-center block">Quantidade de Coins</Label>
-                    <Input
-                      ref={qtdCoinInputRef}
-                      type="number"
-                      step="0.00000001"
-                      value={qtdCoin}
-                      onChange={(e) => setQtdCoin(e.target.value)}
-                      onBlur={handleQtdCoinBlurTransferFocus}
-                      placeholder="0.00000000"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-center block">Cotação USD (calculada)</Label>
-                    <Input
-                      type="number"
-                      step="0.00000001"
-                      value={cotacao}
-                      readOnly
-                      disabled
-                      placeholder="0.00"
-                      className="bg-muted/50"
-                    />
-                  </div>
-                </div>
-              )}
             </>
           )}
 
@@ -5606,6 +5421,182 @@ export function CaixaTransacaoDialog({
                 </div>
               </div>
             </>
+          )}
+
+          {/* ====== VALOR (movido para após Origem/Destino — sequência natural de UX) ====== */}
+          {tipoTransacao && tipoMoeda === "FIAT" && (
+            <div className="pt-4 border-t border-border space-y-3">
+              <h3 className="text-[10px] font-semibold text-center uppercase tracking-widest text-muted-foreground">
+                Valor da Transação
+              </h3>
+              <div className="max-w-md mx-auto space-y-2">
+                {tipoTransacao === "SAQUE" && origemBookmakerId ? (
+                  <>
+                    <Label className="text-center block">
+                      Valor a debitar ({(() => {
+                        const bm = bookmakers.find(b => b.id === origemBookmakerId);
+                        return bm?.moeda || moeda;
+                      })()})
+                    </Label>
+                    <Input
+                      ref={valorFiatInputRef}
+                      type="text"
+                      value={valorDisplay}
+                      onChange={handleValorChange}
+                      placeholder="0,00"
+                      className="h-14 text-3xl text-center font-medium tabular-nums tracking-tight"
+                    />
+                  </>
+                ) : (
+                  <>
+                    <Label className="text-center block">Valor em {moeda}</Label>
+                    <Input
+                      ref={valorFiatInputRef}
+                      type="text"
+                      value={valorDisplay}
+                      onChange={handleValorChange}
+                      placeholder="0,00"
+                      className="h-14 text-3xl text-center font-medium tabular-nums tracking-tight"
+                    />
+                  </>
+                )}
+              </div>
+
+              {/* Painel de Estimativa de Conversão para Saque Multi-Moeda */}
+              {tipoTransacao === "SAQUE" && origemBookmakerId && (() => {
+                const valorNum = parseFloat(valor) || 0;
+                const bm = bookmakers.find(b => b.id === origemBookmakerId);
+                const moedaCasa = bm?.moeda || "USD";
+                const moedaDestino = moeda;
+                const precisaConversao = moedaCasa !== moedaDestino;
+                if (!precisaConversao || valorNum <= 0) return null;
+                const taxaCasa = getRate(moedaCasa);
+                const taxaDestino = getRate(moedaDestino);
+                const valorBRLFromCasa = valorNum * taxaCasa;
+                const valorDestinoEstimado = valorBRLFromCasa / taxaDestino;
+                const currencySymbols: Record<string, string> = {
+                  BRL: "R$", USD: "$", EUR: "€", GBP: "£",
+                  MXN: "$", MYR: "RM", ARS: "$", COP: "$"
+                };
+                const symbolCasa = currencySymbols[moedaCasa] || moedaCasa;
+                const symbolDestino = currencySymbols[moedaDestino] || moedaDestino;
+                return (
+                  <Alert className="border-primary/30 bg-primary/5">
+                    <Info className="h-4 w-4 text-primary" />
+                    <AlertDescription className="text-primary">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">Débito na casa:</span>
+                          <span className="font-semibold">{symbolCasa} {valorNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm opacity-80">
+                          <span>Cotação {moedaCasa}/{moedaDestino}:</span>
+                          <span className="font-mono">{(taxaCasa / taxaDestino).toFixed(4)} <span className="text-[10px] opacity-60">({isUsingFallback ? "fallback" : "oficial"})</span></span>
+                        </div>
+                        <div className="flex items-center justify-between border-t border-primary/20 pt-1 mt-1">
+                          <span className="font-medium">Valor estimado a receber:</span>
+                          <span className="font-semibold text-green-400">{symbolDestino} {valorDestinoEstimado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                        <div className="text-[10px] text-muted-foreground text-center mt-1">
+                          O valor final será confirmado na Conciliação
+                        </div>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                );
+              })()}
+            </div>
+          )}
+
+          {tipoTransacao && tipoMoeda === "CRYPTO" && (
+            <div className="pt-4 border-t border-border space-y-3">
+              <h3 className="text-[10px] font-semibold text-center uppercase tracking-widest text-muted-foreground">
+                Valor da Transação
+              </h3>
+              {tipoTransacao === "SAQUE" && origemBookmakerId ? (
+                <>
+                  <div className="max-w-md mx-auto space-y-2">
+                    <Label className="text-center block">
+                      Valor a debitar ({(() => {
+                        const bm = bookmakers.find(b => b.id === origemBookmakerId);
+                        return bm?.moeda || "USD";
+                      })()})
+                    </Label>
+                    <Input
+                      ref={valorFiatInputRef}
+                      type="text"
+                      value={valorDisplay}
+                      onChange={handleValorChange}
+                      placeholder="0,00"
+                      className="h-14 text-3xl text-center font-medium tabular-nums tracking-tight"
+                    />
+                  </div>
+                  {parseFloat(String(valor)) > 0 && (
+                    <div className="bg-muted/30 rounded-lg p-3 border border-border/50">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Info className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">Estimativa de {coin} a receber:</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-lg font-semibold text-cyan-400">
+                            {(() => {
+                              const valorNum = parseFloat(String(valor)) || 0;
+                              const bm = bookmakers.find(b => b.id === origemBookmakerId);
+                              const moedaCasa = bm?.moeda || "USD";
+                              let valorEmUSD = valorNum;
+                              if (moedaCasa !== "USD") {
+                                const taxaCasa = getRate(moedaCasa);
+                                const valorBRL = valorNum * taxaCasa;
+                                valorEmUSD = valorBRL / cotacaoUSD;
+                              }
+                              const cotacaoCoin = cryptoPrices[coin] || 1;
+                              const qtdEstimada = valorEmUSD / cotacaoCoin;
+                              return `~${qtdEstimada.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })} ${coin}`;
+                            })()}
+                          </span>
+                          <div className="text-[10px] text-muted-foreground">
+                            Cotação: {(cryptoPrices[coin] || 1).toFixed(4)} USD/{coin}
+                            <span className="ml-1 opacity-60">({isUsingFallback ? "fallback" : "oficial"})</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="grid grid-cols-2 gap-3 max-w-2xl mx-auto">
+                  <div className="space-y-2">
+                    <Label className="text-center block">Quantidade de Coins</Label>
+                    <Input
+                      ref={qtdCoinInputRef}
+                      type="number"
+                      step="0.00000001"
+                      value={qtdCoin}
+                      onChange={(e) => setQtdCoin(e.target.value)}
+                      onBlur={handleQtdCoinBlurTransferFocus}
+                      placeholder="0.00000000"
+                      className="h-14 text-3xl text-center font-medium tabular-nums tracking-tight"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-center block">Valor em USD (calculado)</Label>
+                    <Input
+                      type="text"
+                      value={valorDisplay}
+                      onChange={handleValorChange}
+                      placeholder="0,00"
+                      readOnly
+                      disabled
+                      className="h-14 text-3xl text-center font-medium tabular-nums tracking-tight bg-muted/50"
+                    />
+                    <p className="text-[10px] text-muted-foreground text-center">
+                      Cotação: {(cryptoPrices[coin] || 1).toFixed(4)} USD/{coin}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Detalhes adicionais (Data, Tags, Descrição) — colapsado por padrão */}
