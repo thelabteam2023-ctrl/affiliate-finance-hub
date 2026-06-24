@@ -414,6 +414,16 @@ import { useRef, MouseEvent as ReactMouseEvent } from "react";
     const [searchTerm, setSearchTerm] = useState("");
     const [sortBy, setSortBy] = useState<"balance" | "alphabetical">("balance");
     const [showAll, setShowAll] = useState(false);
+    type ListSortColumn = "nome" | "fiat" | "crypto" | "casas" | "total";
+    const [listSort, setListSort] = useState<{ column: ListSortColumn; dir: "asc" | "desc" }>({ column: "total", dir: "desc" });
+    const handleListSort = (column: ListSortColumn) => {
+      setListSort((prev) => {
+        if (prev.column === column) {
+          return { column, dir: prev.dir === "asc" ? "desc" : "asc" };
+        }
+        return { column, dir: column === "nome" ? "asc" : "desc" };
+      });
+    };
     const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
       const saved = localStorage.getItem("parceiros-view-mode");
       return (saved as "grid" | "list") || "grid";
