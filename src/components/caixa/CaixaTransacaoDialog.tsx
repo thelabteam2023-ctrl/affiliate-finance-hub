@@ -3434,6 +3434,7 @@ export function CaixaTransacaoDialog({
              <div className="space-y-2">
                <Label>Wallet Crypto</Label>
                <WalletCryptoSelect
+                 triggerRef={walletCryptoSelectRef}
                  wallets={walletsCrypto
                    .filter((w) => {
                      if (w.parceiro_id !== origemParceiroId) return false;
