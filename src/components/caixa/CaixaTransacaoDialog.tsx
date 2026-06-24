@@ -4754,46 +4754,43 @@ export function CaixaTransacaoDialog({
 
           {/* Transfer Flow Toggle */}
           {tipoTransacao === "TRANSFERENCIA" && (
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant={fluxoTransferencia === "CAIXA_PARCEIRO" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFluxoTransferencia("CAIXA_PARCEIRO")}
-                className="flex-1"
-              >
-                Caixa → Parceiro
-              </Button>
-              <Button
-                type="button"
-                variant={fluxoTransferencia === "PARCEIRO_CAIXA" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFluxoTransferencia("PARCEIRO_CAIXA")}
-                className="flex-1"
-              >
-                Parceiro → Caixa
-              </Button>
-              <Button
-                type="button"
-                variant={fluxoTransferencia === "PARCEIRO_PARCEIRO" ? "default" : "outline"}
-                size="sm"
-                onClick={() => {
-                  setFluxoTransferencia("PARCEIRO_PARCEIRO");
-                  // Garantir foco no seletor de moeda ao entrar no fluxo (primeira abertura em FIAT)
-                  setTimeout(() => {
-                    if (tipoMoeda === "FIAT") {
-                      moedaFiatSelectRef.current?.focus();
-                      moedaFiatSelectRef.current?.click();
-                    } else {
-                      coinSelectRef.current?.focus();
-                      coinSelectRef.current?.click();
-                    }
-                  }, 260);
-                }}
-                className="flex-1"
-              >
-                Parceiro → Parceiro
-              </Button>
+            <div className="flex justify-center">
+              <div className="inline-flex p-1 bg-muted/40 rounded-full border border-border">
+                {([
+                  { value: "CAIXA_PARCEIRO", label: "Caixa → Parceiro" },
+                  { value: "PARCEIRO_CAIXA", label: "Parceiro → Caixa" },
+                  { value: "PARCEIRO_PARCEIRO", label: "Parceiro → Parceiro" },
+                ] as const).map((f) => {
+                  const active = fluxoTransferencia === f.value;
+                  return (
+                    <button
+                      key={f.value}
+                      type="button"
+                      onClick={() => {
+                        setFluxoTransferencia(f.value);
+                        if (f.value === "PARCEIRO_PARCEIRO") {
+                          setTimeout(() => {
+                            if (tipoMoeda === "FIAT") {
+                              moedaFiatSelectRef.current?.focus();
+                              moedaFiatSelectRef.current?.click();
+                            } else {
+                              coinSelectRef.current?.focus();
+                              coinSelectRef.current?.click();
+                            }
+                          }, 260);
+                        }
+                      }}
+                      className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all ${
+                        active
+                          ? "bg-primary/15 text-primary"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 
