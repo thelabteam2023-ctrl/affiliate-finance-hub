@@ -1,115 +1,65 @@
-# Investigação — Perna composta não renderiza nos cards de listagem
+# Plano: Atualização automática de saldos em Transferência Caixa Operacional → Parceiro
 
-**Objetivo:** identificar, com evidência de log, por que uma perna composta por múltiplas casas (ex: Empate = VAVE + HUGEWIN em Norway × Senegal) aparece completa no modo edição mas incompleta nos cards de "Todas as Apostas", Surebet e Bônus — com rodapé (Lucro Garantido / Total Apostado / ROI) e moeda de conciliação errados.
+## Causa raiz identificada
 
-**Regra-mestre:** nenhuma correção nesta rodada. Entrega é o diagnóstico da Fase 4.
+O fluxo de gravação da transferência já funciona no backend (trigger `tr_cash_ledger_update_bookmaker_balance_v2` e views `v_saldo_parceiro_contas` / `v_saldo_parceiro_wallets` são atualizadas em tempo real). O problema está **100% no front-end**, na camada de invalidação de cache:
 
----
+`src/hooks/useInvalidateCaixaData.ts` declara as constantes:
 
-## Fase 0 — Reconhecimento (read-only)
+```
+saldosFiat: "caixa-saldos-fiat"
+saldosCrypto: "caixa-saldos-crypto"
+saldosBookmakers: "caixa-saldos-bookmakers"
+saldoContasParceiros: "caixa-saldos-contas-parceiros"
+saldoWalletsParceiros: "caixa-saldos-wallets-parceiros"
+```
 
-Mapear, sem alterar nada:
+Mas **nenhum hook consumidor usa esses queryKeys**. Os hooks reais que renderizam saldos do Caixa e dos Parceiros usam outras chaves:
 
-1. **Modelo de dados da perna composta**
-   - Confirmar relação `apostas_unificada` → `apostas_pernas` (1:N) → `apostas_perna_entradas` (1:N) e quais colunas carregam moeda/odd/stake/bookmaker por entrada vs. por perna vs. pai.
-   - Validar onde mora `cotacao_snapshot`, `moeda_operacao`, `consolidation_currency`, `stake_consolidado`, `pl_consolidado`.
-
-2. **Tela de edição (referência correta)**
-   - Localizar a query usada por `SurebetWindowPage` / `ApostaWindowPage` para hidratar a operação. Confirmar que ela faz eager-load de `apostas_pernas → apostas_perna_entradas` (já se sabe que funciona).
-
-3. **Telas de listagem (suspeitas)**
-   - `ProjetoApostasTab` ("Todas as Apostas") — query e mapeamento para `SurebetCard`.
-   - Aba **Surebet** do projeto — qual componente/hook, qual query.
-   - Aba **Bônus**, **DuploGreen**, **ValueBet**, **Punter** — idem, conferir se cada uma tem sua própria query (padrão conhecido neste projeto).
-   - Para cada uma: verificar se o `select` inclui `apostas_perna_entradas` e se o mapper monta `entries[]` em cada `SurebetPerna`.
-
-4. **Cálculo do rodapé do card**
-   - Localizar onde `SurebetCard` (ou wrapper) calcula Stake Total / Lucro Garantido / ROI. Confirmar se itera `perna.entries[]` ou apenas `perna.stake/odd`.
-   - Confronto com o cálculo do formulário (engine de surebet) para ver se é compartilhado ou duplicado.
-
-5. **Moeda de conciliação**
-   - Identificar de onde vem na renderização (campo persistido `consolidation_currency` / `moeda_operacao='MULTI'` vs. inferência client-side). Verificar fallback quando perna tem múltiplas moedas.
-
-**Saída da fase:** tabela "tela × hook × query × inclui entradas? × usa entries no cálculo? × fonte da moeda".
-
----
-
-## Fase 1 — Instrumentação (logs temporários `// TEMP-DEBUG`)
-
-Adicionar logs marcados, fáceis de remover, em:
-
-- Query da **edição**: dump cru da operação Norway × Senegal incluindo `apostas_pernas[*].apostas_perna_entradas[*]`.
-- Query de **cada listagem** afetada (Todas as Apostas, Surebet, Bônus, etc.): mesmo dump, no mesmo ponto (antes do mapper).
-- **Mapper** de cada listagem: input cru → output (`SurebetPerna` com/sem `entries[]`).
-- **`SurebetCard`**: ao montar, logar `pernas.map(p => ({ id, entriesLen: p.entries?.length, moedas, stakes }))`.
-- **Cálculo do rodapé**: input (todas as entries com moeda) e output (Stake Total, Lucro Garantido, ROI, moeda exibida).
-
-Cada log deve incluir um `tag` único (`TEMP-DEBUG:edit-query`, `TEMP-DEBUG:list-query:apostas`, etc.) para grep/remoção em massa.
-
----
-
-## Fase 2 — Reprodução controlada
-
-Sem inserir dados novos:
-
-1. Abrir, no preview autenticado via Playwright, o projeto **ITALO**:
-   - Norway × Senegal → abrir edição → coletar logs.
-   - Mesma operação → ver em "Todas as Apostas" → coletar logs.
-   - Mesma operação → aba Surebet → coletar logs.
-   - Mesma operação → aba Bônus (se aplicável à estratégia "Extração de Bônus") → coletar logs.
-2. Repetir tudo para **Ponte Preta × Grêmio Novorizontino**.
-3. Consolidar logs em `/tmp/browser/perna-composta/` (arquivos por tela).
-
----
-
-## Fase 3 — Análise comparativa
-
-Para cada um dos 3 sintomas, comparar lado a lado edição × listagem:
-
-| Sintoma | Pergunta-chave | Evidência decisiva |
+| Hook | queryKey real | Telas afetadas |
 |---|---|---|
-| Perna incompleta (só Vave) | A 2ª entrada chega no payload do card? | Diff dos dumps crus de query |
-| Rodapé errado | O cálculo recebe a 2ª entrada e ignora, ou nem recebe? | Log do input do cálculo |
-| Moeda de conciliação perdida | Campo ausente na query, default no componente, ou inferência que assume 1 moeda? | Log da fonte da moeda no render |
+| `useFinanceiroData` | `["financeiro-data", workspaceId]` | Financeiro, Caixa Operacional, saldos por moeda |
+| `useParceirosData` | `["parceiros-data", workspaceId]` | Gestão de Parceiros, saldo do Lolisa |
+| `useExposicaoFinanceira` | `["exposicao-financeira", workspaceId, ...]` | KPIs financeiros |
 
-Determinar se é **uma causa única** (query da listagem não traz `apostas_perna_entradas` → tudo cai em cascata) ou **causas distintas** (ex: query ok, mas cálculo do rodapé é função separada com bug próprio).
+Como o `invalidateCaixa()` chamado em `CaixaTransacaoDialog.tsx` (linhas 3098 e 3219) invalida apenas chaves órfãs, o React Query nunca refaz o fetch dos saldos de parceiro. Resultado: o usuário precisa dar F5 para ver o débito no Caixa e o crédito no Lolisa.
 
-Rodar `git log -p` nos arquivos de query/mapper das listagens para identificar regressão (commit suspeito que removeu `apostas_perna_entradas` do select ou alterou o mapper).
+## Correção (escopo mínimo)
 
----
+### 1. `src/hooks/useInvalidateCaixaData.ts`
+Adicionar invalidação das chaves reais ao bloco de `saldosFiat`, `saldosCrypto`, `saldoContasParceiros` e `saldoWalletsParceiros`:
 
-## Fase 4 — Diagnóstico (checkpoint, sem corrigir)
+- `["financeiro-data"]` (cobre fiat, crypto e contas/wallets de parceiros do módulo Caixa)
+- `["parceiros-data"]` (cobre saldo agregado do parceiro destino — Lolisa)
+- `["exposicao-financeira"]` (KPIs financeiros que dependem de saldos)
 
-Entregar relatório com:
+Manter as chaves antigas como alias para não quebrar nada.
 
-1. **Causa raiz** de cada sintoma (mesma ou distintas), com trecho de log que prova.
-2. **Diferença exata** entre query/mapper da edição vs. listagem.
-3. **Commit/PR suspeito** da regressão (se identificável).
-4. **Escopo do impacto**: lista exata de telas afetadas (Todas as Apostas, Surebet, Bônus, DuploGreen, ValueBet, Punter — confirmar uma a uma).
-5. **Proposta de correção** e decisão arquitetural:
-   - Centralizar em um hook único compartilhado com a edição, **ou**
-   - Replicar o fix (select + mapper de `entries[]`) em cada listagem, seguindo o padrão já aplicado em `ProjetoApostasTab` na rodada anterior.
-6. Necessidade ou não de invalidação de cache (`invalidateCanonicalCaches`).
-7. Plano de remoção dos `// TEMP-DEBUG`.
+### 2. Verificação rápida nos outros pontos de gravação
+Auditar se `ConciliacaoSaldos.tsx`, `ReverterMovimentacaoDialog.tsx` e `ContasEmpresaSection.tsx` também chamam `invalidateCaixa()` após mutar. Onde faltar, adicionar.
 
-**Aguardar aprovação antes da Fase 5 (implementação).**
+### 3. Rotina automatizada de validação (anti-regressão)
+Criar `src/hooks/__tests__/useInvalidateCaixaData.test.ts` (Vitest) com três asserts:
 
----
+1. Após `invalidateCaixa({ only: ["saldoContasParceiros"] })`, o queryClient marca `["financeiro-data"]` e `["parceiros-data"]` como stale.
+2. Sem `only`, todas as chaves abaixo entram em invalidação:
+   `financeiro-data`, `parceiros-data`, `exposicao-financeira`, `bookmaker-saldos`, `central-operacoes-data`, `caixa-transacoes`.
+3. Smoke test garantindo que toda string declarada em `CAIXA_QUERY_KEYS` corresponde a um queryKey realmente usado em `src/hooks/**` (varre o repo com `import.meta.glob` ou `fs.readdirSync`). Esse teste **falha** se alguém declarar uma chave fantasma de novo — exatamente o defeito que originou o bug.
 
-## Regras de execução
+## Detalhes técnicos (para devs)
 
-- Zero alteração em lógica de leitura/cálculo/render financeira nesta rodada — apenas logs temporários.
-- Reprodução automatizada via Playwright contra o preview; nenhum dado novo inserido.
-- Tratar os 3 sintomas como hipóteses independentes até a evidência unificar (ou não).
-- Respeitar memórias do projeto: snapshot por operação, proibição de recálculo client-side em surebet P&L, paridade com Cotação de Trabalho.
+```text
+Trigger DB          OK  → atualiza v_saldo_parceiro_*
+Insert cash_ledger  OK  → CaixaTransacaoDialog
+invalidateCaixa()   BUG → invalida queryKeys que ninguém escuta
+useFinanceiroData   ←  consome ["financeiro-data"]  (não invalidado)
+useParceirosData    ←  consome ["parceiros-data"]   (não invalidado)
+```
 
-## Detalhes técnicos (referência)
+Sem alteração de dados em produção. Nenhuma migração SQL. Apenas três arquivos tocados: o hook de invalidação, o teste novo e (se necessário) os diálogos auxiliares.
 
-- Arquivos prováveis a instrumentar:
-  - `src/pages/SurebetWindowPage.tsx`, `src/pages/ApostaWindowPage.tsx` (edição)
-  - `src/components/projeto-detalhe/ProjetoApostasTab.tsx` (já parcialmente corrigido — revalidar)
-  - Tabs Surebet/Bônus/DuploGreen/ValueBet/Punter em `src/components/projeto-detalhe/`
-  - `SurebetCard` e seu hook de cálculo de rodapé
-  - `useApostasPernas` / hooks equivalentes
-- Tabelas: `apostas_unificada`, `apostas_pernas`, `apostas_perna_entradas`.
-- Chaves a observar no select: `apostas_perna_entradas(id, bookmaker_id, moeda, odd, stake, stake_real, stake_freebet, stake_brl_referencia, cotacao_snapshot, fonte_saldo, tipo, comissao)`.
+## Entregáveis
+
+1. Patch em `useInvalidateCaixaData.ts` adicionando `financeiro-data`, `parceiros-data` e `exposicao-financeira` aos grupos `saldosFiat`, `saldosCrypto`, `saldoContasParceiros`, `saldoWalletsParceiros`.
+2. Teste Vitest `useInvalidateCaixaData.test.ts` com os três asserts acima.
+3. (Opcional) Atualizar memory `architecture/cache-invalidation-consistency-standard` reforçando a regra: **toda chave declarada em hook de invalidação deve ter consumidor real — proibido queryKey fantasma**.

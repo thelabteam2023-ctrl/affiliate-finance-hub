@@ -62,7 +62,10 @@ export function useInvalidateCaixaData() {
         invalidations.push(
           queryClient.invalidateQueries({
             queryKey: [CAIXA_QUERY_KEYS.saldosFiat],
-          })
+          }),
+          // Consumers reais — useFinanceiroData, useExposicaoFinanceira
+          queryClient.invalidateQueries({ queryKey: ["financeiro-data"] }),
+          queryClient.invalidateQueries({ queryKey: ["exposicao-financeira"] })
         );
       }
 
@@ -71,7 +74,9 @@ export function useInvalidateCaixaData() {
         invalidations.push(
           queryClient.invalidateQueries({
             queryKey: [CAIXA_QUERY_KEYS.saldosCrypto],
-          })
+          }),
+          queryClient.invalidateQueries({ queryKey: ["financeiro-data"] }),
+          queryClient.invalidateQueries({ queryKey: ["exposicao-financeira"] })
         );
       }
 
@@ -130,7 +135,13 @@ export function useInvalidateCaixaData() {
         invalidations.push(
           queryClient.invalidateQueries({
             queryKey: [CAIXA_QUERY_KEYS.saldoContasParceiros],
-          })
+          }),
+          // Consumers reais — useFinanceiroData (Caixa Operacional) e
+          // useParceirosData (Gestão de Parceiros). Sem isso, transferências
+          // Caixa→Parceiro não refletem na UI até F5.
+          queryClient.invalidateQueries({ queryKey: ["financeiro-data"] }),
+          queryClient.invalidateQueries({ queryKey: ["parceiros-data"] }),
+          queryClient.invalidateQueries({ queryKey: ["exposicao-financeira"] })
         );
       }
 
@@ -139,7 +150,10 @@ export function useInvalidateCaixaData() {
         invalidations.push(
           queryClient.invalidateQueries({
             queryKey: [CAIXA_QUERY_KEYS.saldoWalletsParceiros],
-          })
+          }),
+          queryClient.invalidateQueries({ queryKey: ["financeiro-data"] }),
+          queryClient.invalidateQueries({ queryKey: ["parceiros-data"] }),
+          queryClient.invalidateQueries({ queryKey: ["exposicao-financeira"] })
         );
       }
 
