@@ -52,7 +52,14 @@ import { SaqueCardGrid } from "@/components/central-operacoes/SaqueCardGrid";
 import { SaqueProcessamentoCardGrid } from "@/components/central-operacoes/SaqueProcessamentoCardGrid";
 import { OperacoesFilterBar } from "@/components/central-operacoes/filter-bar/OperacoesFilterBar";
 import type { ItemAdapter, SaquePendenteItem } from "@/components/central-operacoes/filter-bar/types";
-import type { Alerta } from "@/hooks/useCentralOperacoesData";
+import type {
+  Alerta,
+  PagamentoParceiroPendente,
+  PagamentoFornecedorPendente,
+  PagamentoOperadorPendente,
+  ParticipacaoPendente,
+  ComissaoPendente,
+} from "@/hooks/useCentralOperacoesData";
 
 const saqueAdapter: ItemAdapter<SaquePendenteItem> = {
   getId: (s) => s.id,
@@ -78,6 +85,67 @@ const alertaAdapter: ItemAdapter<Alerta> = {
   getCreatedAt: (a) => a.created_at,
   getSearchText: (a) =>
     [a.titulo, a.parceiro_nome, a.projeto_nome, a.descricao].filter(Boolean).join(" "),
+};
+
+const NOW_ISO = new Date().toISOString();
+
+const pagamentoParceiroAdapter: ItemAdapter<PagamentoParceiroPendente> = {
+  getId: (p) => p.parceriaId,
+  getParceiro: (p) => p.parceiroNome,
+  getCasa: (p) => p.origemTipo || null,
+  getMoeda: () => "BRL",
+  getProjeto: () => null,
+  getValor: (p) => p.valorParceiro || 0,
+  getCreatedAt: () => NOW_ISO,
+  getSearchText: (p) => [p.parceiroNome, p.origemTipo].filter(Boolean).join(" "),
+};
+
+const pagamentoFornecedorAdapter: ItemAdapter<PagamentoFornecedorPendente> = {
+  getId: (p) => p.parceriaId,
+  getParceiro: (p) => p.parceiroNome,
+  getCasa: (p) => p.fornecedorNome,
+  getMoeda: () => "BRL",
+  getProjeto: () => null,
+  getValor: (p) => p.valorRestante || 0,
+  getCreatedAt: () => NOW_ISO,
+  getSearchText: (p) => [p.fornecedorNome, p.parceiroNome].filter(Boolean).join(" "),
+};
+
+const pagamentoOperadorAdapter: ItemAdapter<PagamentoOperadorPendente> = {
+  getId: (p) => p.id,
+  getParceiro: (p) => p.operador_nome,
+  getCasa: (p) => p.tipo_pagamento || null,
+  getMoeda: () => "BRL",
+  getProjeto: (p) => p.projeto_nome || null,
+  getValor: (p) => p.valor || 0,
+  getCreatedAt: (p) => p.data_pagamento || NOW_ISO,
+  getSearchText: (p) =>
+    [p.operador_nome, p.projeto_nome, p.tipo_pagamento].filter(Boolean).join(" "),
+};
+
+const participacaoAdapter: ItemAdapter<ParticipacaoPendente> = {
+  getId: (p) => p.id,
+  getParceiro: (p) => p.investidor_nome || null,
+  getCasa: () => null,
+  getMoeda: () => "BRL",
+  getProjeto: (p) => p.projeto_nome || null,
+  getValor: (p) => p.valor_participacao || 0,
+  getCreatedAt: (p) => p.data_apuracao || NOW_ISO,
+  getSearchText: (p) =>
+    [p.investidor_nome, p.projeto_nome, p.ciclo_numero?.toString()]
+      .filter(Boolean)
+      .join(" "),
+};
+
+const comissaoAdapter: ItemAdapter<ComissaoPendente> = {
+  getId: (c) => c.parceriaId,
+  getParceiro: (c) => c.indicadorNome,
+  getCasa: (c) => c.parceiroNome,
+  getMoeda: () => "BRL",
+  getProjeto: () => null,
+  getValor: (c) => c.valorComissao || 0,
+  getCreatedAt: () => NOW_ISO,
+  getSearchText: (c) => [c.indicadorNome, c.parceiroNome].filter(Boolean).join(" "),
 };
 import { ParceriaEncerramentoCardGrid } from "@/components/central-operacoes/ParceriaEncerramentoCardGrid";
 import { ConciliacaoPendenteCardGrid } from "@/components/central-operacoes/ConciliacaoPendenteCardGrid";
