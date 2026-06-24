@@ -3914,6 +3914,20 @@ export function CaixaTransacaoDialog({
                  onValueChange={setDestinoWalletId}
                  placeholder="Selecione a wallet de destino"
                />
+                {(() => {
+                  const dWallet = walletsCrypto.find((w) => w.id === destinoWalletId) as any;
+                  if (!dWallet) return null;
+                  return (
+                    <DestinoConfirmadoCard
+                      wallet={{
+                        label: dWallet.label,
+                        exchange: dWallet.exchange,
+                        network: dWallet.network,
+                        endereco: dWallet.endereco,
+                      }}
+                    />
+                  );
+                })()}
              </div>
            )}
           {destinoParceiroId && walletsCrypto.filter((w) => w.parceiro_id === destinoParceiroId && isWalletCompatibleWithCoin(w, coin)).length === 0 && (
