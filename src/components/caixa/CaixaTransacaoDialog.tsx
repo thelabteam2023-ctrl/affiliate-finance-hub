@@ -5466,7 +5466,7 @@ export function CaixaTransacaoDialog({
               </div>
 
               {/* Painel de Estimativa de Conversão para Saque Multi-Moeda */}
-              {tipoTransacao === "SAQUE" && origemBookmakerId && (() => {
+              {tipoTransacao === "SAQUE" && origemBookmakerId && destinoContaId && (() => {
                 const valorNum = parseFloat(valor) || 0;
                 const bm = bookmakers.find(b => b.id === origemBookmakerId);
                 const moedaCasa = bm?.moeda || "USD";
@@ -5668,8 +5668,28 @@ export function CaixaTransacaoDialog({
         </div>
 
         {(() => {
+          // Validação crítica: SAQUE precisa ter destino compatível com a moeda
+          const saqueDestinoInvalido = (() => {
+            if (tipoTransacao !== "SAQUE") return false;
+            if (!destinoParceiroId) return false; // ainda preenchendo
+            if (tipoMoeda === "FIAT") {
+              const temConta = contasBancarias.some(
+                (c) => c.parceiro_id === destinoParceiroId && c.moeda === moeda
+              );
+              return !temConta || !destinoContaId;
+            }
+            if (tipoMoeda === "CRYPTO") {
+              if (!coin) return true;
+              const temWallet = walletsCrypto.some(
+                (w) => w.parceiro_id === destinoParceiroId && isWalletCompatibleWithCoin(w, coin)
+              );
+              return !temWallet || !destinoWalletId;
+            }
+            return false;
+          })();
           const isDisabled = (() => {
             if (loading || saldoInsuficiente) return true;
+            if (saqueDestinoInvalido) return true;
             if (
               tipoTransacao === "TRANSFERENCIA" &&
               fluxoTransferencia === "PARCEIRO_PARCEIRO" &&
@@ -5694,6 +5714,8 @@ export function CaixaTransacaoDialog({
             ? "Registrando..."
             : saldoInsuficiente
             ? "Saldo insuficiente"
+            : saqueDestinoInvalido
+            ? "Destino indisponível"
             : isDisabled
             ? "Aguardando dados"
             : "Pronto para registrar";
