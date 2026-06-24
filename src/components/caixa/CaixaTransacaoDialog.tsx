@@ -5145,9 +5145,17 @@ export function CaixaTransacaoDialog({
           {/* Origem e Destino */}
           {tipoTransacao && (
             <>
-              <div className="pt-4">
-                <h3 className="text-sm font-medium mb-4 text-center uppercase">Fluxo da Transação</h3>
-                <div className="grid grid-cols-2 gap-4">
+              <div className="pt-4 border-t border-border">
+                <h3 className="text-[10px] font-semibold mb-4 text-center uppercase tracking-widest text-muted-foreground">
+                  Fluxo da Transação
+                </h3>
+                <div className="relative grid grid-cols-2 gap-4">
+                  {/* Seta central animada */}
+                  <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+                    <div className="w-8 h-8 rounded-full bg-card border border-border shadow-lg flex items-center justify-center">
+                      <ArrowRightLeft className="w-4 h-4 text-primary animate-pulse" />
+                    </div>
+                  </div>
                   {/* Destino - aparece primeiro no SAQUE */}
                   {tipoTransacao === "SAQUE" ? (
                     <>
