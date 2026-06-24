@@ -51,9 +51,34 @@ import { CardInfoTooltip } from "@/components/ui/card-info-tooltip";
 import { SaqueCardGrid } from "@/components/central-operacoes/SaqueCardGrid";
 import { SaqueProcessamentoCardGrid } from "@/components/central-operacoes/SaqueProcessamentoCardGrid";
 import { OperacoesFilterBar } from "@/components/central-operacoes/filter-bar/OperacoesFilterBar";
-import type { ItemAdapter } from "@/components/central-operacoes/filter-bar/types";
-import type { SaquePendenteItem } from "@/components/central-operacoes/filter-bar/types";
+import type { ItemAdapter, SaquePendenteItem } from "@/components/central-operacoes/filter-bar/types";
 import type { Alerta } from "@/hooks/useCentralOperacoesData";
+
+const saqueAdapter: ItemAdapter<SaquePendenteItem> = {
+  getId: (s) => s.id,
+  getParceiro: (s) => s.parceiro_nome || null,
+  getCasa: (s) => s.bookmaker_nome || null,
+  getMoeda: (s) => s.moeda_origem || s.moeda || "BRL",
+  getProjeto: (s) => s.projeto_nome || null,
+  getValor: (s) => s.valor_origem || s.valor || 0,
+  getCreatedAt: (s) => s.data_transacao,
+  getSearchText: (s) =>
+    [s.bookmaker_nome, s.parceiro_nome, s.wallet_nome, s.wallet_exchange, s.banco_nome, s.projeto_nome, s.coin, s.descricao]
+      .filter(Boolean)
+      .join(" "),
+};
+
+const alertaAdapter: ItemAdapter<Alerta> = {
+  getId: (a) => a.entidade_id,
+  getParceiro: (a) => a.parceiro_nome,
+  getCasa: (a) => a.titulo,
+  getMoeda: (a) => a.moeda || "BRL",
+  getProjeto: (a) => a.projeto_nome,
+  getValor: (a) => a.valor || 0,
+  getCreatedAt: (a) => a.created_at,
+  getSearchText: (a) =>
+    [a.titulo, a.parceiro_nome, a.projeto_nome, a.descricao].filter(Boolean).join(" "),
+};
 import { ParceriaEncerramentoCardGrid } from "@/components/central-operacoes/ParceriaEncerramentoCardGrid";
 import { ConciliacaoPendenteCardGrid } from "@/components/central-operacoes/ConciliacaoPendenteCardGrid";
 import { ConciliacaoDirectModal } from "@/components/caixa/ConciliacaoDirectModal";
@@ -468,11 +493,15 @@ export default function CentralOperacoes() {
         component: (
           <OperationCard key="saques-aguardando" title="Saques Aguardando Confirmação" icon={<Clock className="h-4 w-4" />} color="yellow" count={saquesPendentes.length}
             tooltip={{ title: "Saques Aguardando Confirmação", description: "Saques que foram iniciados e precisam de confirmação de recebimento.", flow: "Quando um saque é registrado no Caixa, ele fica pendente até que a tesouraria confirme o recebimento." }}>
-            <SaquesSmartFilter saques={saquesPendentes}>
+            <OperacoesFilterBar
+              cardId="saques-aguardando"
+              items={saquesPendentes as SaquePendenteItem[]}
+              adapter={saqueAdapter}
+            >
               {(filtered) => (
                 <SaqueCardGrid saques={filtered} onConfirmar={handleConfirmarSaque} />
               )}
-            </SaquesSmartFilter>
+            </OperacoesFilterBar>
           </OperationCard>
         ),
       });
@@ -485,7 +514,11 @@ export default function CentralOperacoes() {
         component: (
           <OperationCard key="saques-processamento" title="Saques Pendentes de Processamento" icon={<DollarSign className="h-4 w-4" />} color="emerald" count={alertasSaques.length}
             tooltip={{ title: "Saques Pendentes de Processamento", description: "Bookmakers marcados para saque que aguardam processamento.", flow: "Casa chega aqui quando desvinculada como 'limitada' (saque automático) ou quando gestor escolhe 'Marcar para Saque'." }}>
-            <SaqueProcessamentoSmartFilter alertas={alertasSaques}>
+            <OperacoesFilterBar
+              cardId="saques-processamento"
+              items={alertasSaques}
+              adapter={alertaAdapter}
+            >
               {(filtered) => (
                 <SaqueProcessamentoCardGrid
                   alertas={filtered}
@@ -493,7 +526,7 @@ export default function CentralOperacoes() {
                   onCancelar={(alerta) => mutations.handleCancelarLiberacao(alerta)}
                 />
               )}
-            </SaqueProcessamentoSmartFilter>
+            </OperacoesFilterBar>
           </OperationCard>
         ),
       });
@@ -508,7 +541,12 @@ export default function CentralOperacoes() {
           <OperationCard key="casas-limitadas" title="Casas Limitadas" icon={<ShieldAlert className="h-4 w-4" />} color="orange" count={alertasLimitadas.length}
             description="Casas devolvidas/limitadas com saldo pendente"
             tooltip={{ title: "Casas Limitadas", description: "Bookmakers marcadas como limitadas e ainda vinculadas a projetos.", flow: "Quando uma bookmaker é marcada como 'Limitada', ela aparece aqui para processamento de saque." }}>
-            <CasasLimitadasSmartFilter casas={alertasLimitadas}>
+            <OperacoesFilterBar
+              cardId="casas-limitadas"
+              items={alertasLimitadas}
+              adapter={alertaAdapter}
+              totalLabel="Saldo"
+            >
               {(filtered) => (
                 <CasasLimitadasCardGrid
                   alertas={filtered}
@@ -516,7 +554,7 @@ export default function CentralOperacoes() {
                   onFantasma={(alerta) => setPerdaLimitadaDialog({ open: true, bookmakerId: alerta.entidade_id, bookmakerNome: alerta.titulo, moeda: alerta.moeda || "BRL", saldoAtual: alerta.valor || 0 })}
                 />
               )}
-            </CasasLimitadasSmartFilter>
+            </OperacoesFilterBar>
           </OperationCard>
         ),
       });
