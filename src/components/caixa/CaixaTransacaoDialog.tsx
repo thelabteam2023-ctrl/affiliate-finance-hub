@@ -4744,6 +4744,12 @@ export function CaixaTransacaoDialog({
                 .filter((t) => !allowedTipoTransacao || allowedTipoTransacao.includes(t.value))
                 .map((t) => {
                   const active = tipoTransacao === t.value;
+                  const activeCls = {
+                    APORTE_FINANCEIRO: "bg-violet-500/15 text-violet-300 ring-1 ring-violet-500/30",
+                    DEPOSITO: "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30",
+                    SAQUE: "bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30",
+                    TRANSFERENCIA: "bg-sky-500/15 text-sky-300 ring-1 ring-sky-500/30",
+                  }[t.value];
                   return (
                     <button
                       key={t.value}
@@ -4751,7 +4757,7 @@ export function CaixaTransacaoDialog({
                       onClick={() => setTipoTransacao(t.value)}
                       className={`flex-1 py-2 text-[11px] font-semibold rounded-md transition-all ${
                         active
-                          ? "bg-card text-foreground shadow-sm"
+                          ? `${activeCls} shadow-sm`
                           : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
