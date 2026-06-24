@@ -5585,7 +5585,29 @@ export function CaixaTransacaoDialog({
           <Button variant="outline" onClick={onClose}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={loading || saldoInsuficiente}>
+          <Button
+            onClick={handleSubmit}
+            disabled={(() => {
+              if (loading || saldoInsuficiente) return true;
+              if (
+                tipoTransacao === "TRANSFERENCIA" &&
+                fluxoTransferencia === "PARCEIRO_PARCEIRO" &&
+                tipoMoeda === "CRYPTO" &&
+                origemWalletId &&
+                destinoWalletId
+              ) {
+                if (origemWalletId === destinoWalletId) return true;
+                const o = walletsCrypto.find((w) => w.id === origemWalletId) as any;
+                const d = walletsCrypto.find((w) => w.id === destinoWalletId) as any;
+                const norm = (n?: string | null) =>
+                  (n || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+                const a = norm(o?.network);
+                const b = norm(d?.network);
+                if (a && b && a !== b && !ackNetworkMismatch) return true;
+              }
+              return false;
+            })()}
+          >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Registrar Transação
           </Button>
