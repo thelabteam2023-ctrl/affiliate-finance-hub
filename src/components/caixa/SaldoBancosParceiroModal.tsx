@@ -62,7 +62,8 @@ export function SaldoBancosParceiroModal({ open, onOpenChange, caixaParceiroId }
 
         rows.forEach((r) => {
           const saldo = Math.max(0, r.saldo || 0);
-          if (saldo === 0) return;
+          // Esconde resíduos sub-centavo (dust) que aparecem como R$ 0,00 ao arredondar
+          if (saldo < 0.005) return;
 
           sum += saldo;
           const key = r.parceiro_id;

@@ -395,7 +395,9 @@ export function ReconciliacaoDialog({
       if (!workspaceId) throw new Error("Workspace não encontrado");
 
       const isCryptoMoeda = CRYPTO_CURRENCIES.some(c => c.value === moeda);
-      const precision = isCryptoMoeda ? 8 : 2;
+      // Fiat usa 4 casas (centésimo de centavo) para permitir varrer resíduos sub-cent
+      // que aparecem como R$ 0,00 mas bloqueiam o ledger por `valor > 0`.
+      const precision = isCryptoMoeda ? 8 : 4;
       const factor = Math.pow(10, precision);
       const valorAjuste = Math.round(Math.abs(diferenca) * factor) / factor;
       const direcao = diferenca > 0 ? "ENTRADA" : "SAIDA";
