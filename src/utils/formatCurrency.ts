@@ -58,6 +58,32 @@ export function getSafeISOCode(moeda: string): string {
   return "USD";
 }
 
+/**
+ * Precisão padrão por moeda (Causa A - normalização anti-drift).
+ * FIAT: 2 casas decimais. Crypto: 8 casas decimais.
+ */
+export function getCurrencyPrecision(moeda: string): number {
+  return isCryptoToken((moeda || "").toUpperCase()) ? 8 : 2;
+}
+
+/**
+ * Arredonda um valor para a precisão da moeda informada.
+ * Usar SEMPRE que comparar stake vs saldo, para evitar drift de precisão.
+ */
+export function roundForCurrency(value: number, moeda: string = "BRL"): number {
+  const precision = getCurrencyPrecision(moeda);
+  const factor = Math.pow(10, precision);
+  return Math.round((Number(value) || 0) * factor) / factor;
+}
+
+/**
+ * Epsilon de tolerância para comparações stake vs saldo,
+ * absorvendo drifts residuais de 1 unidade da menor casa decimal.
+ */
+export function getCurrencyEpsilon(moeda: string): number {
+  return isCryptoToken((moeda || "").toUpperCase()) ? 1e-8 : 0.005;
+}
+
 interface FormatOptions {
   minimumFractionDigits?: number;
   maximumFractionDigits?: number;
