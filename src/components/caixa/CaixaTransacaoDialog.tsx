@@ -630,10 +630,10 @@ export function CaixaTransacaoDialog({
       // Auto-focus baseado no novo contexto
       setTimeout(() => {
         if (tipoMoeda === "CRYPTO") {
-          if (tipoTransacao !== "SAQUE") {
-            coinSelectRef.current?.focus();
-            coinSelectRef.current?.click();
-          }
+          // Para SAQUE CRYPTO o fluxo agora começa pela moeda (coin) também,
+          // depois segue para Parceiro → Wallet → Bookmaker.
+          coinSelectRef.current?.focus();
+          coinSelectRef.current?.click();
         } else {
           moedaFiatSelectRef.current?.focus();
           moedaFiatSelectRef.current?.click();
@@ -658,9 +658,14 @@ export function CaixaTransacaoDialog({
     
     prevCoin.current = coin;
     
-    // Auto-focus para próximo passo (se não estiver no fluxo de SAQUE CRYPTO que já tem bookmaker)
-    // Não abrir parceiro durante fluxo guiado de affiliate_deposit (o fluxo cuida da sequência)
-    if (tipoTransacao === "DEPOSITO" && coin && !affiliateFocusActiveRef.current) {
+    // Auto-focus para próximo passo: após escolher a coin, abrir Parceiro (destino).
+    // Vale para DEPÓSITO e SAQUE CRYPTO (novo fluxo natural: moeda → parceiro → wallet → bookmaker).
+    // Não abrir parceiro durante fluxo guiado de affiliate_deposit (o fluxo cuida da sequência).
+    if (
+      (tipoTransacao === "DEPOSITO" || tipoTransacao === "SAQUE") &&
+      coin &&
+      !affiliateFocusActiveRef.current
+    ) {
       tryOpenParceiroSelect();
     }
   }, [coin, tipoMoeda, tipoTransacao]);
