@@ -9,6 +9,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { FORMA_REGISTRO } from "@/lib/apostaConstants";
+import { roundForCurrency, getCurrencyEpsilon } from "@/utils/formatCurrency";
 import type {
   ValidationContext,
   ValidationResult,
@@ -134,15 +135,18 @@ export async function validateInvariants(
 
         const saldo = saldosMap.get(perna.bookmaker_id) as any;
         if (saldo) {
-          const saldoOperavel = saldo.saldo_operavel || 0;
-          if (perna.stake > saldoOperavel) {
+          const moeda = (saldo.moeda as string) || (perna as any).moeda_operacao || "BRL";
+          const stakeR = roundForCurrency(perna.stake, moeda);
+          const saldoR = roundForCurrency(saldo.saldo_operavel || 0, moeda);
+          const epsilon = getCurrencyEpsilon(moeda);
+          if (stakeR > saldoR + epsilon) {
             violations.push({
               invariant: 'STAKE_WITHIN_BALANCE',
-              message: `Stake R$ ${perna.stake.toFixed(2)} excede saldo operável R$ ${saldoOperavel.toFixed(2)} da bookmaker ${perna.bookmaker_nome || perna.bookmaker_id}`,
+              message: `Stake ${stakeR.toFixed(2)} excede saldo operável ${saldoR.toFixed(2)} da bookmaker ${perna.bookmaker_nome || perna.bookmaker_id}`,
               context: {
                 bookmaker_id: perna.bookmaker_id,
-                stake: perna.stake,
-                saldo_operavel: saldoOperavel,
+                stake: stakeR,
+                saldo_operavel: saldoR,
               },
             });
           }
