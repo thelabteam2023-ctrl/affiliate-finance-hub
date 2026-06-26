@@ -1,0 +1,1 @@
+ALTER VIEW public.vw_bookmakers_orfaos_com_saldo SET (security_invoker = on);
