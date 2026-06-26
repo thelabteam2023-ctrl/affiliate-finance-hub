@@ -1001,7 +1001,8 @@ export function CaixaTransacaoDialog({
         // Aplicar parceiro destino
         if (pendingDefaults.destinoParceiroId) {
           setDestinoParceiroId(pendingDefaults.destinoParceiroId);
-          prevDestinoParceiroId.current = pendingDefaults.destinoParceiroId;
+          // NÃO pre-setar prevDestinoParceiroId aqui: deixar a auto-focus chain
+          // do SAQUE (FIAT → Conta Bancária / CRYPTO → Wallet) disparar naturalmente.
         }
         
         // Aplicar parceiro origem (ex: depósito contextual)
@@ -1014,12 +1015,12 @@ export function CaixaTransacaoDialog({
           }
         }
         
-        // Aplicar bookmaker origem com delay adicional para garantir que o parceiro foi processado
+        // Aplicar bookmaker origem imediatamente (sem delay extra) para que, quando a
+        // auto-seleção de Conta/Wallet de destino disparar logo em seguida, o
+        // origemBookmakerId já esteja preenchido e o foco salte direto para Valor.
         if (pendingDefaults.origemBookmakerId) {
-          setTimeout(() => {
-            setOrigemBookmakerId(pendingDefaults.origemBookmakerId!);
-            prevOrigemBookmakerId.current = pendingDefaults.origemBookmakerId!;
-          }, 100);
+          setOrigemBookmakerId(pendingDefaults.origemBookmakerId);
+          prevOrigemBookmakerId.current = pendingDefaults.origemBookmakerId;
         }
         
         // Aplicar bookmaker destino (ex: depósito contextual)
