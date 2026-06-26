@@ -4964,16 +4964,6 @@ export function CaixaTransacaoDialog({
             </>
           )}
 
-          {/* Alerta de Saldo Insuficiente */}
-          {saldoInsuficiente && (
-            <Alert variant="destructive" className="border-destructive/50 bg-destructive/10">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription className="text-center">
-                Saldo insuficiente! O saldo disponível é menor que o valor da transação.
-              </AlertDescription>
-            </Alert>
-          )}
-
           {/* Only show Tipo selector when no transaction type selected yet */}
           {tipoTransacao && !tipoMoeda && (
             <div className="space-y-2">
