@@ -1149,11 +1149,14 @@ export async function reliquidarAposta(
    
     if (reliqError) {
       console.error("[ApostaService] Erro ao reliquidar:", reliqError);
+      const isInsufficient = /Saldo insuficiente para re-liquidar/i.test(reliqError.message || '');
       return {
         success: false,
         error: {
-          code: 'RELIQUIDATION_RPC_ERROR',
-      message: `Falha ao reliquidar aposta (v6): ${reliqError.message}`,
+          code: isInsufficient ? 'RELIQUIDATION_INSUFFICIENT_BALANCE' : 'RELIQUIDATION_RPC_ERROR',
+          message: isInsufficient
+            ? 'Saldo insuficiente para re-liquidar — ajuste manual requerido.'
+            : `Falha ao reliquidar aposta (v6): ${reliqError.message}`,
           details: { error: reliqError },
         },
       };
