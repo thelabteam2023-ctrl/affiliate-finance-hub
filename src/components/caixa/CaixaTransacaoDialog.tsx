@@ -1274,21 +1274,35 @@ export function CaixaTransacaoDialog({
   // Também auto-seleciona se houver apenas uma wallet disponível
   useEffect(() => {
     if (tipoTransacao !== "SAQUE" || tipoMoeda !== "CRYPTO") return;
-    if (!destinoParceiroId || destinoParceiroId === prevDestinoParceiroId.current) return;
-    
-    // Verificar quantas wallets o parceiro tem para a moeda selecionada
+    if (!destinoParceiroId) return;
+    // Não disparar se já há wallet selecionada (evita reabrir após escolha manual)
+    if (destinoWalletId) {
+      prevDestinoParceiroId.current = destinoParceiroId;
+      return;
+    }
+    // Aguarda walletsCrypto carregar antes de avaliar opções
+    if (!walletsCrypto || walletsCrypto.length === 0) {
+      console.debug("[SAQUE CRYPTO] aguardando walletsCrypto carregar...");
+      return;
+    }
+
     const walletsDoParceiro = walletsCrypto.filter(
       (w) => w.parceiro_id === destinoParceiroId && isWalletCompatibleWithCoin(w, coin)
     );
-    
-    // Se houver exatamente uma wallet, auto-selecionar
+
+    console.debug("[SAQUE CRYPTO] auto-wallet chain:", {
+      destinoParceiroId,
+      coin,
+      walletsTotal: walletsCrypto.length,
+      walletsDoParceiro: walletsDoParceiro.length,
+    });
+
     if (walletsDoParceiro.length === 1) {
       setDestinoWalletId(walletsDoParceiro[0].id);
-      // O próximo useEffect (destinoWalletId) vai cuidar de abrir o BookmakerSelect
-    } else {
+    } else if (walletsDoParceiro.length > 1) {
       tryActivateRef(() => walletCryptoSelectRef.current, "focus-click");
     }
-    
+
     prevDestinoParceiroId.current = destinoParceiroId;
   }, [destinoParceiroId, tipoTransacao, tipoMoeda, walletsCrypto, coin]);
 
