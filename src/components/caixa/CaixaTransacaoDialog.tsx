@@ -1210,12 +1210,6 @@ export function CaixaTransacaoDialog({
     if (tipoTransacao !== "SAQUE" || tipoMoeda !== "FIAT") return;
     if (!destinoParceiroId || destinoParceiroId === prevDestinoParceiroId.current) return;
     
-    // Se estamos no fluxo de defaults (bookmaker já pré-setado), não fazer auto-select/focus
-    if (pendingDefaultsRef.current?.origemBookmakerId) {
-      prevDestinoParceiroId.current = destinoParceiroId;
-      return;
-    }
-    
     // Verificar quantas contas o parceiro tem
     const contasDoParceiro = contasBancarias.filter((c) => c.parceiro_id === destinoParceiroId);
     
@@ -1235,12 +1229,14 @@ export function CaixaTransacaoDialog({
     if (tipoTransacao !== "SAQUE" || tipoMoeda !== "FIAT") return;
     if (!destinoContaId || destinoContaId === prevDestinoContaId.current) return;
     
-    // Se o bookmaker já está pré-setado (fluxo de defaults), não abrir o select
+    // Se o bookmaker já está pré-setado (fluxo Parceiros → Saque), pular o select
+    // e focar diretamente no campo Valor a Debitar.
     if (origemBookmakerId) {
       prevDestinoContaId.current = destinoContaId;
+      setTimeout(() => valorFiatInputRef.current?.focus(), 200);
       return;
     }
-    
+
     tryActivateRef(() => bookmakerSelectRef.current, "open");
     
     prevDestinoContaId.current = destinoContaId;
@@ -1301,9 +1297,9 @@ export function CaixaTransacaoDialog({
     if (tipoTransacao !== "SAQUE" || tipoMoeda !== "CRYPTO") return;
     if (!destinoWalletId || destinoWalletId === prevDestinoWalletId.current) return;
     
-    // Se o fluxo guiado de afiliado está ativo ou já completou, o bookmaker já está pré-preenchido
-    // Pular BookmakerSelect e focar direto no campo Valor
-    if (entryPoint === "affiliate_deposit" && origemBookmakerId) {
+    // Se o bookmaker já está pré-preenchido (fluxo Parceiros → Saque ou affiliate),
+    // pular o BookmakerSelect e focar direto no campo Valor / Quantidade.
+    if (origemBookmakerId) {
       prevDestinoWalletId.current = destinoWalletId;
       setTimeout(() => {
         if (qtdCoinInputRef.current) {
