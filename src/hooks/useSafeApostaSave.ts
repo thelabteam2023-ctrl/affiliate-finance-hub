@@ -17,6 +17,7 @@ import { useCallback, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useInvalidateBookmakerSaldos } from "./useBookmakerSaldosQuery";
+import { roundForCurrency, getCurrencyEpsilon } from "@/utils/formatCurrency";
 
 export interface SaveApostaParams {
   projetoId: string;
@@ -222,8 +223,11 @@ export function useSafeApostaSave() {
           continue;
         }
         
-        if (saldo.saldo_operavel < bs.stake) {
-          errors.push(`Saldo insuficiente: disponível ${saldo.saldo_operavel?.toFixed(2)}, necessário ${bs.stake?.toFixed(2)}`);
+        const moeda = (saldo.moeda as string) || "BRL";
+        const stakeR = roundForCurrency(bs.stake, moeda);
+        const saldoR = roundForCurrency(saldo.saldo_operavel || 0, moeda);
+        if (stakeR > saldoR + getCurrencyEpsilon(moeda)) {
+          errors.push(`Saldo insuficiente: disponível ${saldoR.toFixed(2)}, necessário ${stakeR.toFixed(2)}`);
         }
       }
 
