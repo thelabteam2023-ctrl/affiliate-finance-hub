@@ -4994,59 +4994,10 @@ export function CaixaTransacaoDialog({
                       <ArrowRightLeft className="w-4 h-4 text-primary animate-pulse" />
                     </div>
                   </div>
-                  {/* Destino - aparece primeiro no SAQUE */}
+                  {/* SAQUE: mantém Origem à esquerda e Destino à direita (padrão dos demais fluxos) */}
                   {tipoTransacao === "SAQUE" ? (
                     <>
                       <div className="flex flex-col gap-4 pr-4 border-r border-border/50 h-full">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="text-xs font-medium text-muted-foreground uppercase">
-                            Destino
-                          </h4>
-                        </div>
-                        {renderDestinoFields()}
-                        <div className="mt-auto rounded-md bg-muted/20 border border-border/40 px-3 py-2 text-center text-xs space-y-1 min-h-[68px] flex flex-col justify-center">
-                            <div className="text-[10px] font-medium uppercase text-muted-foreground tracking-wide truncate">{getDestinoLabel()}</div>
-                            {/* FIAT: Conta Bancária */}
-                            {tipoMoeda === "FIAT" && destinoContaId && (
-                              <div className="mt-3 space-y-1">
-                                {parseFloat(String(valor)) > 0 ? (
-                                  <>
-                                    <div className="mt-2 flex items-center justify-center gap-2">
-                                      <TrendingUp className="h-4 w-4 text-emerald-500" />
-                                      <span className="text-sm font-semibold text-foreground">
-                                        {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", destinoContaId) + parseFloat(String(valor)))}
-                                      </span>
-                                    </div>
-                                    {renderCotacaoInfo(parseFloat(String(valor)), moeda)}
-                                  </>
-                                ) : (
-                                  <div className="text-xs text-muted-foreground mt-2">
-                                    Saldo atual: {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", destinoContaId))}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                            {/* CRYPTO: Wallet Crypto */}
-                            {tipoMoeda === "CRYPTO" && destinoWalletId && (
-                              <div className="mt-3 space-y-1">
-                                {parseFloat(String(valor)) > 0 ? (
-                                  <div className="mt-2 flex items-center justify-center gap-2">
-                                    <TrendingUp className="h-4 w-4 text-emerald-500" />
-                                    <span className="text-sm font-semibold text-cyan-400">
-                                      {formatCurrency(getSaldoAtual("PARCEIRO_WALLET", destinoWalletId) + parseFloat(String(valor)), "USD")}
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <div className="text-xs text-muted-foreground text-cyan-400 mt-2">
-                                    Saldo atual: {formatCurrency(getSaldoAtual("PARCEIRO_WALLET", destinoWalletId), "USD")}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col gap-4 pl-4 h-full">
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="text-xs font-medium text-muted-foreground uppercase">
                             Origem
@@ -5112,6 +5063,55 @@ export function CaixaTransacaoDialog({
                                   <div className="text-xs text-muted-foreground">
                                     {/* Mostrar ambos os saldos se existirem */}
                                     {formatBookmakerFullBalance(origemBookmakerId)}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-4 pl-4 h-full">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-xs font-medium text-muted-foreground uppercase">
+                            Destino
+                          </h4>
+                        </div>
+                        {renderDestinoFields()}
+                        <div className="mt-auto rounded-md bg-muted/20 border border-border/40 px-3 py-2 text-center text-xs space-y-1 min-h-[68px] flex flex-col justify-center">
+                            <div className="text-[10px] font-medium uppercase text-muted-foreground tracking-wide truncate">{getDestinoLabel()}</div>
+                            {/* FIAT: Conta Bancária */}
+                            {tipoMoeda === "FIAT" && destinoContaId && (
+                              <div className="mt-3 space-y-1">
+                                {parseFloat(String(valor)) > 0 ? (
+                                  <>
+                                    <div className="mt-2 flex items-center justify-center gap-2">
+                                      <TrendingUp className="h-4 w-4 text-emerald-500" />
+                                      <span className="text-sm font-semibold text-foreground">
+                                        {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", destinoContaId) + parseFloat(String(valor)))}
+                                      </span>
+                                    </div>
+                                    {renderCotacaoInfo(parseFloat(String(valor)), moeda)}
+                                  </>
+                                ) : (
+                                  <div className="text-xs text-muted-foreground mt-2">
+                                    Saldo atual: {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", destinoContaId))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            {/* CRYPTO: Wallet Crypto */}
+                            {tipoMoeda === "CRYPTO" && destinoWalletId && (
+                              <div className="mt-3 space-y-1">
+                                {parseFloat(String(valor)) > 0 ? (
+                                  <div className="mt-2 flex items-center justify-center gap-2">
+                                    <TrendingUp className="h-4 w-4 text-emerald-500" />
+                                    <span className="text-sm font-semibold text-cyan-400">
+                                      {formatCurrency(getSaldoAtual("PARCEIRO_WALLET", destinoWalletId) + parseFloat(String(valor)), "USD")}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <div className="text-xs text-muted-foreground text-cyan-400 mt-2">
+                                    Saldo atual: {formatCurrency(getSaldoAtual("PARCEIRO_WALLET", destinoWalletId), "USD")}
                                   </div>
                                 )}
                               </div>
