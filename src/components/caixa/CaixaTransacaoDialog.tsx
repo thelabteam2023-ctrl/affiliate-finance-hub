@@ -630,10 +630,10 @@ export function CaixaTransacaoDialog({
       // Auto-focus baseado no novo contexto
       setTimeout(() => {
         if (tipoMoeda === "CRYPTO") {
-          if (tipoTransacao !== "SAQUE") {
-            coinSelectRef.current?.focus();
-            coinSelectRef.current?.click();
-          }
+          // Para SAQUE CRYPTO o fluxo agora começa pela moeda (coin) também,
+          // depois segue para Parceiro → Wallet → Bookmaker.
+          coinSelectRef.current?.focus();
+          coinSelectRef.current?.click();
         } else {
           moedaFiatSelectRef.current?.focus();
           moedaFiatSelectRef.current?.click();
@@ -658,9 +658,14 @@ export function CaixaTransacaoDialog({
     
     prevCoin.current = coin;
     
-    // Auto-focus para próximo passo (se não estiver no fluxo de SAQUE CRYPTO que já tem bookmaker)
-    // Não abrir parceiro durante fluxo guiado de affiliate_deposit (o fluxo cuida da sequência)
-    if (tipoTransacao === "DEPOSITO" && coin && !affiliateFocusActiveRef.current) {
+    // Auto-focus para próximo passo: após escolher a coin, abrir Parceiro (destino).
+    // Vale para DEPÓSITO e SAQUE CRYPTO (novo fluxo natural: moeda → parceiro → wallet → bookmaker).
+    // Não abrir parceiro durante fluxo guiado de affiliate_deposit (o fluxo cuida da sequência).
+    if (
+      (tipoTransacao === "DEPOSITO" || tipoTransacao === "SAQUE") &&
+      coin &&
+      !affiliateFocusActiveRef.current
+    ) {
       tryOpenParceiroSelect();
     }
   }, [coin, tipoMoeda, tipoTransacao]);
@@ -1264,94 +1269,9 @@ export function CaixaTransacaoDialog({
 
   // ====== AUTO-FOCUS CHAIN FOR SAQUE CRYPTO FLOW ======
   
-  // SAQUE CRYPTO: quando tipo de moeda muda para CRYPTO, abre o BookmakerSelect primeiro (fluxo invertido)
-  useEffect(() => {
-    if (tipoTransacao !== "SAQUE") return;
-    if (tipoMoeda !== "CRYPTO") return;
-    if (prevTipoMoeda.current === "CRYPTO") return; // Não re-executar se já estava em CRYPTO
-    
-    // Verificar se há bookmakers com saldo USD
-    const temBookmakerComSaldoUsd = bookmakers.some(b => b.saldo_usd > 0);
-    if (!temBookmakerComSaldoUsd) return;
-    
-    // Abrir BookmakerSelect para o usuário selecionar a origem
-    tryActivateRef(() => bookmakerSelectRef.current, "open");
-  }, [tipoMoeda, tipoTransacao, bookmakers]);
-  
-  // SAQUE CRYPTO: quando bookmaker é selecionada, buscar moeda do último depósito crypto
-  useEffect(() => {
-    if (tipoTransacao !== "SAQUE" || tipoMoeda !== "CRYPTO") return;
-    if (!origemBookmakerId) return;
-    if (origemBookmakerId === prevOrigemBookmakerId.current) return;
-    
-    const fetchUltimoDepositoCoin = async () => {
-      const { data } = await supabase
-        .from("cash_ledger")
-        .select("coin")
-        .eq("destino_bookmaker_id", origemBookmakerId)
-        .eq("tipo_transacao", "DEPOSITO")
-        .eq("tipo_moeda", "CRYPTO")
-        .not("coin", "is", null)
-        .order("data_transacao", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      
-      if (data?.coin) {
-        // Pré-seleciona a moeda do último depósito
-        setCoin(data.coin);
-        // Abre o select de moeda com foco para o usuário confirmar ou alterar
-        tryActivateRef(() => coinSelectRef.current, "focus-click");
-      } else {
-        // Sem histórico de depósito, abre o select para o usuário escolher
-        tryActivateRef(() => coinSelectRef.current, "focus-click");
-      }
-    };
-    
-    fetchUltimoDepositoCoin();
-    
-    // Atualizar ref após buscar (não antes, para permitir re-execução se bookmaker mudar)
-    prevOrigemBookmakerId.current = origemBookmakerId;
-  }, [origemBookmakerId, tipoTransacao, tipoMoeda]);
-  
-  // SAQUE CRYPTO: quando coin é confirmado/selecionado (após bookmaker), abre o ParceiroSelect
-  useEffect(() => {
-    if (tipoTransacao !== "SAQUE" || tipoMoeda !== "CRYPTO") return;
-    if (!coin || !origemBookmakerId) return; // Precisa ter bookmaker E coin selecionados
-
-    const coinMudou = coin !== prevCoin.current;
-    prevCoin.current = coin;
-    if (!coinMudou) return;
-
-    // Radix Select pode ignorar o click se outro Select acabou de fechar.
-    // Além disso, o ParceiroSelect é renderizado condicionalmente, então o ref pode não estar pronto ainda.
-    const OPEN_DELAY_MS = 320;
-    const MAX_TRIES = 12;
-    const TRY_EVERY_MS = 60;
-
-    let tries = 0;
-    const tryOpen = () => {
-      tries += 1;
-      const ref = parceiroSelectRef.current;
-
-      if (ref) {
-        ref.focus();
-        // double-rAF ajuda quando o DOM acabou de renderizar
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            ref.open();
-          });
-        });
-        return;
-      }
-
-      if (tries < MAX_TRIES) {
-        setTimeout(tryOpen, TRY_EVERY_MS);
-      }
-    };
-
-    const id = window.setTimeout(tryOpen, OPEN_DELAY_MS);
-    return () => window.clearTimeout(id);
-  }, [coin, tipoTransacao, tipoMoeda, origemBookmakerId]);
+  // SAQUE CRYPTO: o fluxo agora segue a ordem natural Moeda → Parceiro → Wallet → Bookmaker.
+  // O auto-focus para Parceiro após escolher a coin é tratado no useEffect de mudança de coin
+  // (mesmo caminho do DEPOSITO). Bookmaker é aberta no final, após a wallet ser selecionada.
 
   // SAQUE CRYPTO: quando parceiro é selecionado, abre o select Wallet (DESTINO)
   // Também auto-seleciona se houver apenas uma wallet disponível
