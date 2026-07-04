@@ -117,6 +117,8 @@ interface ProjetoFlowMetrics {
   saquesTotal: number;
   ajustesTotal: number;
   saldoCasasTotal: number;
+  /** Saques solicitados ainda não pagos (status=PENDENTE) — em trânsito */
+  saquesPendentesTotal: number;
   resultadoCaixa: number;
   /** Quantidade de DEPOSITO_VIRTUAL classificados como BASELINE (excluídos do KPI) */
   baselineExcluidoCount: number;
@@ -624,19 +626,23 @@ function useProjetoExtrato(
         ajustesConsolidadoSnap += sinal * consolidadoEv;
       });
 
-      // Saldo REAL atual das casas vinculadas (somente saldo_atual; freebet à parte)
+      // Saldo REAL atual de TODAS as bookmakers vinculadas ao projeto.
+      // Alinhado com FinancialMetricsPopover (Visão Geral): incluir também
+      // bookmakers encerradas/arquivadas com saldo residual — se tem saldo,
+      // é dinheiro do projeto e conta no patrimônio.
       const { data: balances } = await supabase
         .from("bookmakers")
         .select("saldo_atual, moeda")
-        .eq("projeto_id", projetoId)
-        .in("status", [
-          "ativo",
-          "ATIVO",
-          "EM_USO",
-          "limitada",
-          "LIMITADA",
-          "AGUARDANDO_SAQUE",
-        ]);
+        .eq("projeto_id", projetoId);
+
+      // Saques em trânsito (PENDENTES) — dinheiro que já saiu da casa mas
+      // ainda não foi confirmado no destino. Compõe patrimônio total.
+      const { data: pendentes } = await supabase
+        .from("cash_ledger")
+        .select("valor, valor_usd_referencia, moeda")
+        .eq("projeto_id_snapshot", projetoId)
+        .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
+        .eq("status", "PENDENTE");
 
       // Saldo Casas convertido p/ moeda de consolidação
       let saldoCasasTotal = 0;
@@ -645,6 +651,21 @@ function useProjetoExtrato(
           Number(b.saldo_atual || 0),
           b.moeda || "BRL"
         );
+      });
+
+      // Saques pendentes: usa snapshot congelado quando disponível (paridade
+      // com depósitos/saques confirmados); fallback = Cotação de Trabalho.
+      let saquesPendentesTotal = 0;
+      (pendentes || []).forEach((p: any) => {
+        const snap = Number(p.valor_usd_referencia ?? 0);
+        if (snap > 0) {
+          saquesPendentesTotal += snapshotToConsolidacao(snap);
+        } else {
+          saquesPendentesTotal += convertToConsolidation(
+            Number(p.valor || 0),
+            p.moeda || "BRL"
+          );
+        }
       });
 
       const byCurrency = Array.from(currencyMap.values());
@@ -665,15 +686,19 @@ function useProjetoExtrato(
       const variacaoCambialDepositos = depositosLiveEquivalente - depositosConsolidadoSnap;
 
       // Lucro se sacar tudo (NÃO é Lucro Operacional canônico — é o patrimônio líquido do projeto):
-      //   saques + saldo casas − depósitos
+      //   saques confirmados + saques pendentes + saldo casas − depósitos
       //
       // ⚠️ ANTI-DOUBLE-COUNTING: NÃO somar `ajustesTotal` aqui. Bônus, cashback,
       // ajustes manuais e variações cambiais já estão refletidos no `saldo_atual`
       // das bookmakers via triggers do ledger (BONUS_CREDITADO, CASHBACK_MANUAL,
       // AJUSTE_SALDO, etc. atualizam saldo_atual). Somar ajustesTotal de novo
       // duplicaria o lucro. O card "Extras" permanece como informativo.
+      //
+      // Paridade "Lucro se sacar tudo hoje" (Visão Geral / FinancialMetricsPopover):
+      // patrimônio inclui `saquesPendentes` (dinheiro em trânsito) — se você "sacasse
+      // tudo hoje" já contaria com o que está a caminho.
       const resultadoCaixa =
-        saquesTotal + saldoCasasTotal - depositosTotal;
+        saquesTotal + saquesPendentesTotal + saldoCasasTotal - depositosTotal;
 
       return {
         byCurrency,
@@ -681,6 +706,7 @@ function useProjetoExtrato(
         saquesTotal,
         ajustesTotal,
         saldoCasasTotal,
+        saquesPendentesTotal,
         resultadoCaixa,
         baselineExcluidoCount,
         baselineExcluidoTotalConvertido,
