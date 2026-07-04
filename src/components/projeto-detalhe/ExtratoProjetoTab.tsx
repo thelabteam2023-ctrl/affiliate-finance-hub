@@ -940,6 +940,14 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                 ))}
               </div>
             )}
+            {(metrics?.saquesPendentesTotal || 0) > 0.01 && (
+              <div className="mt-1.5 flex items-center gap-1.5 rounded-md bg-amber-400/10 border border-amber-400/20 px-2 py-1">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+                <span className="text-[10px] text-amber-300/90">
+                  + {formatConsolidated(metrics!.saquesPendentesTotal)} em trânsito (pendente)
+                </span>
+              </div>
+            )}
           </CardContent>
         </Card>
 
