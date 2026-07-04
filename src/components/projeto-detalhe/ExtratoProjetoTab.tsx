@@ -1024,10 +1024,6 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                   <>
                     <p><strong>Fórmula:</strong> Saques + Saldo Casas − Depósitos.</p>
                     <p>Responde à pergunta: <em>"Quanto eu teria de lucro se sacasse tudo das casas hoje?"</em> Equivale ao <strong>Patrimônio Líquido</strong> exibido na Visão Geral.</p>
-                    <div className="mt-2 p-2 rounded bg-blue-500/10 border border-blue-500/30 text-[11px]">
-                      <p className="font-semibold text-blue-300">Por que Extras NÃO entra na conta?</p>
-                      <p className="text-blue-100/90">Bônus, cashback e ajustes <strong>já mexeram no <code>saldo_atual</code></strong> das bookmakers via triggers do ledger. Logo, esses valores já estão dentro de "Saldo Casas". Somar "Extras" de novo causaria <strong>dupla contagem</strong> e inflaria o lucro.</p>
-                    </div>
                     <p>Pode divergir do Patrimônio Líquido (Visão Geral) por dois motivos:</p>
                     <ul className="list-disc pl-4 space-y-0.5">
                       <li><strong>Variação cambial:</strong> Saldo Casas usa cotação de hoje (mark-to-market) e Depósitos usam a cotação do dia em que foram feitos (snapshot histórico).</li>
