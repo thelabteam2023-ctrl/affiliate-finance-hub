@@ -2577,8 +2577,16 @@ export function CaixaTransacaoDialog({
       let valorUsdReferencia = valorOrigem; // Para crypto, valor já está em USD
       
       // Calcular cotação da moeda de origem para USD
-      if (tipoMoeda === "CRYPTO") {
-        // Crypto: calcular valor em USD a partir da quantidade de coins × preço
+      // ⚠️ Um SAQUE fiat→crypto (ex: EUR bookmaker → USDT wallet) chega aqui com
+      // tipoMoeda='CRYPTO' porém moedaOrigem='EUR'. Se cair no fallback bruto
+      // (`|| valorOrigem`) sem qtdCoin preenchido, `valor_usd_referencia` fica
+      // com o valor em EUR tratado como USD, o que quebra "Lucro se sacar tudo"
+      // e Recuperação de Capital. Detectamos moedaOrigem FIAT e usamos o mesmo
+      // caminho FIAT (getRate/cotacaoUSD) para o snapshot USD.
+      const FIAT_SET = new Set(["BRL","USD","EUR","GBP","MXN","ARS","CLP","COP","PEN","UYU","CAD","AUD","CHF","JPY"]);
+      const moedaOrigemEhFiat = FIAT_SET.has((moedaOrigem || "").toUpperCase());
+      if (tipoMoeda === "CRYPTO" && !moedaOrigemEhFiat) {
+        // Crypto puro: calcular valor em USD a partir da quantidade de coins × preço
         const cryptoPrice = cryptoPrices[coin] || 1;
         cotacaoOrigemUsd = cryptoPrice; // 1 BTC = 89000 USD
         // Para crypto, valor_usd = qtd_coin × preço da coin (NÃO valorOrigem que pode estar em BRL/EUR)
