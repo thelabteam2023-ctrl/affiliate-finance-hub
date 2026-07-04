@@ -103,7 +103,7 @@ export function ConfirmarSaqueDialog({
 }: ConfirmarSaqueDialogProps) {
   const [loading, setLoading] = useState(false);
    const [observacoes, setObservacoes] = useState("");
-   const [ignorarDuplicidade, setIgnorarDuplicidade] = useState(false);
+  // Duplicidade agora é apenas informativa (trigger fn_detect_duplicate_withdrawal) — não bloqueia mais.
   const [showRecusaConfirm, setShowRecusaConfirm] = useState(false);
   const [parceiroInativo, setParceiroInativo] = useState<string | null>(null);
   
@@ -123,7 +123,6 @@ export function ConfirmarSaqueDialog({
   useEffect(() => {
     if (open && saque) {
        setObservacoes("");
-       setIgnorarDuplicidade(false);
       setParceiroInativo(null);
       // Data de confirmação padrão = hoje
       setDataConfirmacao(getTodayCivilDate());
@@ -262,7 +261,7 @@ export function ConfirmarSaqueDialog({
             descricao: descricaoFinal || null,
             transit_status: "CONFIRMED",
             data_confirmacao: dataConfirmacao ? new Date(dataConfirmacao + "T12:00:00").toISOString() : new Date().toISOString(),
-            auditoria_metadata: { ignore_duplicate: ignorarDuplicidade }
+            auditoria_metadata: { ignore_duplicate: true }
           })
           .eq("id", saque.id)
           .eq("status", "PENDENTE")
@@ -327,7 +326,7 @@ export function ConfirmarSaqueDialog({
              valor_confirmado: valorRecebidoNum,
              descricao: descricaoFinal || null,
              data_confirmacao: dataConfirmacao ? new Date(dataConfirmacao + "T12:00:00").toISOString() : new Date().toISOString(),
-             auditoria_metadata: { ignore_duplicate: ignorarDuplicidade }
+             auditoria_metadata: { ignore_duplicate: true }
            })
           .eq("id", saque.id)
           .eq("status", "PENDENTE")
@@ -479,7 +478,6 @@ export function ConfirmarSaqueDialog({
 
    const resetForm = () => {
      setObservacoes("");
-     setIgnorarDuplicidade(false);
     setValorRecebido("");
     setQtdCoinRecebida("");
     setDataConfirmacao("");
@@ -770,26 +768,6 @@ export function ConfirmarSaqueDialog({
               </p>
             </div>
 
-             {/* Opção de Ignorar Duplicidade */}
-             <div className="flex items-center space-x-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-3">
-               <Checkbox 
-                 id="ignore-duplicate" 
-                 checked={ignorarDuplicidade}
-                 onCheckedChange={(checked) => setIgnorarDuplicidade(checked === true)}
-               />
-               <div className="grid gap-1.5 leading-none">
-                 <label
-                   htmlFor="ignore-duplicate"
-                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                 >
-                   Confirmar mesmo se houver suspeita de duplicidade
-                 </label>
-                 <p className="text-xs text-muted-foreground">
-                   Marque esta opção se este saque for legítimo, mesmo que já exista outro saque de mesmo valor para este destino recentemente.
-                 </p>
-               </div>
-             </div>
- 
              {/* Observações */}
              <div className="space-y-2">
               <Label htmlFor="observacoes">Observações (opcional)</Label>
