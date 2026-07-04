@@ -15950,8 +15950,10 @@ export type Database = {
           moeda: string | null
           moeda_origem: string | null
           origem_tipo: string | null
+          status: string | null
           tipo_moeda: string | null
           tipo_transacao: string | null
+          transit_status: string | null
           valor: number | null
           valor_confirmado: number | null
           valor_usd: number | null
@@ -15968,8 +15970,10 @@ export type Database = {
           moeda?: string | null
           moeda_origem?: string | null
           origem_tipo?: string | null
+          status?: string | null
           tipo_moeda?: string | null
           tipo_transacao?: string | null
+          transit_status?: string | null
           valor?: number | null
           valor_confirmado?: number | null
           valor_usd?: number | null
@@ -15986,8 +15990,10 @@ export type Database = {
           moeda?: string | null
           moeda_origem?: string | null
           origem_tipo?: string | null
+          status?: string | null
           tipo_moeda?: string | null
           tipo_transacao?: string | null
+          transit_status?: string | null
           valor?: number | null
           valor_confirmado?: number | null
           valor_usd?: number | null
