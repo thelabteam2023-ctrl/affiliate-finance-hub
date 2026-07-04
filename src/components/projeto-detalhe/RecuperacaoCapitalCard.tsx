@@ -1,8 +1,8 @@
-import { TrendingUp, CheckCircle2, Sparkles } from "lucide-react";
+import { TrendingUp, CheckCircle2, Sparkles, Clock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useProjetoRecuperacaoCapital } from "@/hooks/useProjetoRecuperacaoCapital";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
@@ -38,7 +38,19 @@ export function RecuperacaoCapitalCard({ projetoId }: RecuperacaoCapitalCardProp
 
   if (!data) return null;
 
-  const { investido, recuperado, percentual, percentualBruto, pendente, excedente, status } = data;
+  const {
+    investido,
+    recuperado,
+    emTransito,
+    emTransitoCount,
+    percentual,
+    percentualBruto,
+    pendente,
+    pendenteEmTransito,
+    pendenteRestante,
+    excedente,
+    status,
+  } = data;
 
   // Estado vazio: sem aportes
   if (status === "vazio") {
@@ -67,7 +79,12 @@ export function RecuperacaoCapitalCard({ projetoId }: RecuperacaoCapitalCardProp
     ? `Projeto operando acima do capital investido. Lucro Realizado: +${formatCurrency(excedente)}.`
     : isRecuperado
       ? "Capital totalmente recuperado."
-      : `Faltam ${formatCurrency(pendente)} para recuperar integralmente o capital.`;
+      : pendenteEmTransito > 0.005
+        ? `Faltam ${formatCurrency(pendente)} para recuperar o capital — ${formatCurrency(pendenteEmTransito)} já em trânsito (saque solicitado) e ${formatCurrency(pendenteRestante)} ainda no saldo das casas.`
+        : `Faltam ${formatCurrency(pendente)} para recuperar integralmente o capital.`;
+
+  // Percentuais para a barra empilhada (verde = recuperado, amarelo = em trânsito)
+  const pctTransito = investido > 0 ? Math.min(100 - percentual, (pendenteEmTransito / investido) * 100) : 0;
 
   return (
     <Card className="border-border/50">
@@ -105,15 +122,72 @@ export function RecuperacaoCapitalCard({ projetoId }: RecuperacaoCapitalCardProp
           )}
         </div>
 
-        {/* Barra de progresso */}
-        <Progress
-          value={percentual}
-          className="h-2 mb-3"
-          aria-label="Progresso da recuperação de capital"
-        />
+        {/* Barra de progresso empilhada: recuperado (verde) + em trânsito (amarelo) */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div
+              className="relative h-2 w-full overflow-hidden rounded-full bg-secondary mb-1.5 cursor-help"
+              role="progressbar"
+              aria-valuenow={percentual + pctTransito}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Recuperação de capital (recuperado + em trânsito)"
+            >
+              <div
+                className="absolute inset-y-0 left-0 bg-emerald-500 transition-all"
+                style={{ width: `${percentual}%` }}
+              />
+              {pctTransito > 0 && (
+                <div
+                  className="absolute inset-y-0 bg-amber-400 transition-all"
+                  style={{ left: `${percentual}%`, width: `${pctTransito}%` }}
+                />
+              )}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="text-xs max-w-[280px]">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
+                <span>Recuperado: {formatCurrency(recuperado)} ({percentual.toFixed(1)}%)</span>
+              </div>
+              {pendenteEmTransito > 0.005 && (
+                <div className="flex items-center gap-2">
+                  <span className="inline-block h-2 w-2 rounded-full bg-amber-400" />
+                  <span>Em trânsito: {formatCurrency(pendenteEmTransito)} ({pctTransito.toFixed(1)}%)</span>
+                </div>
+              )}
+              {pendenteRestante > 0.005 && (
+                <div className="flex items-center gap-2">
+                  <span className="inline-block h-2 w-2 rounded-full bg-muted-foreground/50" />
+                  <span>A recuperar: {formatCurrency(pendenteRestante)}</span>
+                </div>
+              )}
+            </div>
+          </TooltipContent>
+        </Tooltip>
+
+        {/* Legenda inline compacta */}
+        {pendenteEmTransito > 0.005 && !isRecuperado && (
+          <div className="flex items-center gap-3 text-[10px] text-muted-foreground mb-2">
+            <span className="flex items-center gap-1">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              Recuperado
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400" />
+              Em trânsito
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-muted-foreground/50" />
+              A recuperar
+            </span>
+          </div>
+        )}
+        {(!pendenteEmTransito || pendenteEmTransito <= 0.005) && <div className="mb-1.5" />}
 
         {/* KPIs */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+        <div className={cn("grid grid-cols-1 gap-3 mb-3", pendenteEmTransito > 0.005 ? "sm:grid-cols-4" : "sm:grid-cols-3")}>
           <div className="flex flex-col">
             <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
               Capital Aportado
@@ -130,6 +204,20 @@ export function RecuperacaoCapitalCard({ projetoId }: RecuperacaoCapitalCardProp
               {formatCurrency(recuperado)}
             </span>
           </div>
+          {pendenteEmTransito > 0.005 && (
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                <Clock className="h-2.5 w-2.5" />
+                Em Trânsito
+              </span>
+              <span className="text-sm font-semibold font-mono tabular-nums text-amber-400">
+                {formatCurrency(emTransito)}
+              </span>
+              <span className="text-[9px] text-muted-foreground">
+                {emTransitoCount} saque{emTransitoCount === 1 ? "" : "s"} solicitado{emTransitoCount === 1 ? "" : "s"}
+              </span>
+            </div>
+          )}
           <div className="flex flex-col">
             <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
               {isAcima ? "Lucro Realizado" : "Pendente"}
@@ -142,6 +230,11 @@ export function RecuperacaoCapitalCard({ projetoId }: RecuperacaoCapitalCardProp
             >
               {isAcima ? `+${formatCurrency(excedente)}` : formatCurrency(pendente)}
             </span>
+            {!isAcima && pendenteEmTransito > 0.005 && (
+              <span className="text-[9px] text-muted-foreground">
+                = aportado − recuperado
+              </span>
+            )}
           </div>
         </div>
 
