@@ -123,7 +123,6 @@ export function ConfirmarSaqueDialog({
   useEffect(() => {
     if (open && saque) {
        setObservacoes("");
-       setIgnorarDuplicidade(false);
       setParceiroInativo(null);
       // Data de confirmação padrão = hoje
       setDataConfirmacao(getTodayCivilDate());
@@ -479,7 +478,6 @@ export function ConfirmarSaqueDialog({
 
    const resetForm = () => {
      setObservacoes("");
-     setIgnorarDuplicidade(false);
     setValorRecebido("");
     setQtdCoinRecebida("");
     setDataConfirmacao("");
