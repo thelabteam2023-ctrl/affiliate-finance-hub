@@ -117,6 +117,8 @@ interface ProjetoFlowMetrics {
   saquesTotal: number;
   ajustesTotal: number;
   saldoCasasTotal: number;
+  /** Saques solicitados ainda não pagos (status=PENDENTE) — em trânsito */
+  saquesPendentesTotal: number;
   resultadoCaixa: number;
   /** Quantidade de DEPOSITO_VIRTUAL classificados como BASELINE (excluídos do KPI) */
   baselineExcluidoCount: number;
