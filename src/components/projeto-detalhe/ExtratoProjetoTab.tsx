@@ -686,19 +686,19 @@ function useProjetoExtrato(
       const variacaoCambialDepositos = depositosLiveEquivalente - depositosConsolidadoSnap;
 
       // Lucro se sacar tudo (NÃO é Lucro Operacional canônico — é o patrimônio líquido do projeto):
-      //   saques confirmados + saques pendentes + saldo casas − depósitos
+      //   saques confirmados + saldo casas − depósitos
       //
-      // ⚠️ ANTI-DOUBLE-COUNTING: NÃO somar `ajustesTotal` aqui. Bônus, cashback,
-      // ajustes manuais e variações cambiais já estão refletidos no `saldo_atual`
-      // das bookmakers via triggers do ledger (BONUS_CREDITADO, CASHBACK_MANUAL,
-      // AJUSTE_SALDO, etc. atualizam saldo_atual). Somar ajustesTotal de novo
-      // duplicaria o lucro. O card "Extras" permanece como informativo.
+      // ⚠️ ANTI-DOUBLE-COUNTING #1 (ajustesTotal): Bônus, cashback, ajustes manuais e
+      // variações cambiais já estão refletidos no `saldo_atual` das bookmakers via
+      // triggers do ledger. Somar `ajustesTotal` duplicaria o lucro.
       //
-      // Paridade "Lucro se sacar tudo hoje" (Visão Geral / FinancialMetricsPopover):
-      // patrimônio inclui `saquesPendentes` (dinheiro em trânsito) — se você "sacasse
-      // tudo hoje" já contaria com o que está a caminho.
+      // ⚠️ ANTI-DOUBLE-COUNTING #2 (saquesPendentesTotal): PENDENTE não debita
+      // `saldo_atual` (só CONFIRMADO debita). O dinheiro do saque pendente ainda
+      // está fisicamente em `saldoCasasTotal`; somar de novo é contagem dupla.
+      // `saquesPendentesTotal` permanece apenas como decomposição informativa na UI.
+      // Ver: mem://finance/lucro-se-sacar-tudo-formula-standard.md
       const resultadoCaixa =
-        saquesTotal + saquesPendentesTotal + saldoCasasTotal - depositosTotal;
+        saquesTotal + saldoCasasTotal - depositosTotal;
 
       return {
         byCurrency,
