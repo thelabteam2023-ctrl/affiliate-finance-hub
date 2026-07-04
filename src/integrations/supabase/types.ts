@@ -2617,6 +2617,13 @@ export type Database = {
             referencedColumns: ["saque_id"]
           },
           {
+            foreignKeyName: "cash_ledger_conversao_referencia_id_fkey"
+            columns: ["conversao_referencia_id"]
+            isOneToOne: false
+            referencedRelation: "v_snapshot_anomalias"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "cash_ledger_destino_bookmaker_id_fkey"
             columns: ["destino_bookmaker_id"]
             isOneToOne: false
@@ -3051,6 +3058,13 @@ export type Database = {
             referencedColumns: ["saque_id"]
           },
           {
+            foreignKeyName: "cash_ledger_referencia_transacao_id_fkey"
+            columns: ["referencia_transacao_id"]
+            isOneToOne: false
+            referencedRelation: "v_snapshot_anomalias"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "cash_ledger_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -3219,6 +3233,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_saques_duplicidade_audit"
             referencedColumns: ["saque_id"]
+          },
+          {
+            foreignKeyName: "cashback_manual_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_snapshot_anomalias"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "cashback_manual_projeto_id_fkey"
@@ -4718,6 +4739,13 @@ export type Database = {
             referencedColumns: ["saque_id"]
           },
           {
+            foreignKeyName: "exchange_adjustments_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_snapshot_anomalias"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "exchange_adjustments_wallet_id_fkey"
             columns: ["wallet_id"]
             isOneToOne: false
@@ -5665,6 +5693,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_saques_duplicidade_audit"
             referencedColumns: ["saque_id"]
+          },
+          {
+            foreignKeyName: "giros_gratis_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_snapshot_anomalias"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "giros_gratis_giro_disponivel_id_fkey"
@@ -7756,6 +7791,13 @@ export type Database = {
             referencedColumns: ["saque_id"]
           },
           {
+            foreignKeyName: "pagamentos_operador_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_snapshot_anomalias"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "pagamentos_operador_operador_id_fkey"
             columns: ["operador_id"]
             isOneToOne: false
@@ -8487,6 +8529,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_saques_duplicidade_audit"
             referencedColumns: ["saque_id"]
+          },
+          {
+            foreignKeyName: "participacao_ciclos_pagamento_ledger_id_fkey"
+            columns: ["pagamento_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_snapshot_anomalias"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "participacao_ciclos_participacao_referencia_id_fkey"
@@ -11406,6 +11455,13 @@ export type Database = {
             referencedRelation: "v_saques_duplicidade_audit"
             referencedColumns: ["saque_id"]
           },
+          {
+            foreignKeyName: "stablecoin_correction_log_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_snapshot_anomalias"
+            referencedColumns: ["id"]
+          },
         ]
       }
       subscription_changes: {
@@ -12718,6 +12774,13 @@ export type Database = {
             referencedColumns: ["saque_id"]
           },
           {
+            foreignKeyName: "wallet_transit_log_ledger_id_fkey"
+            columns: ["ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_snapshot_anomalias"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "wallet_transit_log_wallet_id_fkey"
             columns: ["wallet_id"]
             isOneToOne: false
@@ -13254,6 +13317,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_saques_duplicidade_audit"
             referencedColumns: ["saque_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_referencia_transacao_id_fkey"
+            columns: ["referencia_transacao_id"]
+            isOneToOne: false
+            referencedRelation: "v_snapshot_anomalias"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "cash_ledger_workspace_id_fkey"
@@ -15868,6 +15938,71 @@ export type Database = {
           valor: number | null
         }
         Relationships: []
+      }
+      v_snapshot_anomalias: {
+        Row: {
+          cotacao_origem_usd: number | null
+          created_at: string | null
+          data_transacao: string | null
+          descricao: string | null
+          destino_tipo: string | null
+          id: string | null
+          moeda: string | null
+          moeda_origem: string | null
+          origem_tipo: string | null
+          tipo_moeda: string | null
+          tipo_transacao: string | null
+          valor: number | null
+          valor_confirmado: number | null
+          valor_usd: number | null
+          valor_usd_referencia: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          cotacao_origem_usd?: number | null
+          created_at?: string | null
+          data_transacao?: string | null
+          descricao?: string | null
+          destino_tipo?: string | null
+          id?: string | null
+          moeda?: string | null
+          moeda_origem?: string | null
+          origem_tipo?: string | null
+          tipo_moeda?: string | null
+          tipo_transacao?: string | null
+          valor?: number | null
+          valor_confirmado?: number | null
+          valor_usd?: number | null
+          valor_usd_referencia?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          cotacao_origem_usd?: number | null
+          created_at?: string | null
+          data_transacao?: string | null
+          descricao?: string | null
+          destino_tipo?: string | null
+          id?: string | null
+          moeda?: string | null
+          moeda_origem?: string | null
+          origem_tipo?: string | null
+          tipo_moeda?: string | null
+          tipo_transacao?: string | null
+          valor?: number | null
+          valor_confirmado?: number | null
+          valor_usd?: number | null
+          valor_usd_referencia?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_ledger_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_supplier_pnl: {
         Row: {
