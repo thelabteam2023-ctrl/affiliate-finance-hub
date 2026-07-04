@@ -103,7 +103,7 @@ export function ConfirmarSaqueDialog({
 }: ConfirmarSaqueDialogProps) {
   const [loading, setLoading] = useState(false);
    const [observacoes, setObservacoes] = useState("");
-   const [ignorarDuplicidade, setIgnorarDuplicidade] = useState(false);
+  // Duplicidade agora é apenas informativa (trigger fn_detect_duplicate_withdrawal) — não bloqueia mais.
   const [showRecusaConfirm, setShowRecusaConfirm] = useState(false);
   const [parceiroInativo, setParceiroInativo] = useState<string | null>(null);
   
@@ -262,7 +262,7 @@ export function ConfirmarSaqueDialog({
             descricao: descricaoFinal || null,
             transit_status: "CONFIRMED",
             data_confirmacao: dataConfirmacao ? new Date(dataConfirmacao + "T12:00:00").toISOString() : new Date().toISOString(),
-            auditoria_metadata: { ignore_duplicate: ignorarDuplicidade }
+            auditoria_metadata: { ignore_duplicate: true }
           })
           .eq("id", saque.id)
           .eq("status", "PENDENTE")
@@ -327,7 +327,7 @@ export function ConfirmarSaqueDialog({
              valor_confirmado: valorRecebidoNum,
              descricao: descricaoFinal || null,
              data_confirmacao: dataConfirmacao ? new Date(dataConfirmacao + "T12:00:00").toISOString() : new Date().toISOString(),
-             auditoria_metadata: { ignore_duplicate: ignorarDuplicidade }
+             auditoria_metadata: { ignore_duplicate: true }
            })
           .eq("id", saque.id)
           .eq("status", "PENDENTE")
