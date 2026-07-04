@@ -786,7 +786,12 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     const extrasPositivos = creditosPerformance + ajustes + ganhoConfirmacao + (ganhoFx - perdaFx) - perdaOp;
     const capitalTotal = depositosEfetivos + extrasPositivos;
     const fluxoLiquidoAjustado = fluxoCaixaLiquido;
-    const patrimonio = saldoCasas + saquesRecebidos + saquesPendentes;
+    // ⚠️ NÃO somar `saquesPendentes` aqui: PENDENTE não debita `saldo_atual`
+    // (só CONFIRMADO debita via trigger atualizar_saldo_bookmaker_v6). O dinheiro
+    // do saque pendente ainda está fisicamente dentro de `saldoCasas`; somar de novo
+    // é contagem dupla. Ponto de equilíbrio = recuperação 100% do capital investido.
+    // Ver: mem://finance/lucro-se-sacar-tudo-formula-standard.md
+    const patrimonio = saldoCasas + saquesRecebidos;
     const lucroFinanceiro = patrimonio - depositosEfetivos;
 
     // ─── Fluxo INTERNO (sem investidor) ───
