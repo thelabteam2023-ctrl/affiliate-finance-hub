@@ -13,13 +13,13 @@ DECLARE
   v_ap   UUID := gen_random_uuid();
   v_blocked BOOLEAN := false;
 BEGIN
-  INSERT INTO workspaces (id, name, created_by) VALUES (v_ws, 'TEST_WS_FB', v_user);
-  INSERT INTO bookmakers (id, workspace_id, nome, moeda, saldo_atual, status, created_by)
-    VALUES (v_bk, v_ws, 'TEST_BK_FB', 'BRL', 0, 'ativo', v_user);
+  INSERT INTO workspaces (id, name) VALUES (v_ws, 'TEST_WS_FB');
+  INSERT INTO bookmakers (id, workspace_id, nome, moeda, saldo_atual, status)
+    VALUES (v_bk, v_ws, 'TEST_BK_FB', 'BRL', 0, 'ativo');
 
   -- (1) FREEBET_PAYOUT com tipo_uso='NORMAL' deve ser aceito
   INSERT INTO financial_events (
-    workspace_id, bookmaker_id, aposta_id, user_id, tipo_evento, tipo_uso, valor,
+    workspace_id, bookmaker_id, aposta_id, created_by, tipo_evento, tipo_uso, valor,
     moeda, idempotency_key, descricao
   ) VALUES (
     v_ws, v_bk, v_ap, v_user, 'FREEBET_PAYOUT', 'NORMAL', 560,
@@ -29,7 +29,7 @@ BEGIN
   -- (2) FREEBET_PAYOUT com tipo_uso='FREEBET' deve ser BLOQUEADO pelo guardrail
   BEGIN
     INSERT INTO financial_events (
-      workspace_id, bookmaker_id, aposta_id, user_id, tipo_evento, tipo_uso, valor,
+      workspace_id, bookmaker_id, aposta_id, created_by, tipo_evento, tipo_uso, valor,
       moeda, idempotency_key, descricao
     ) VALUES (
       v_ws, v_bk, v_ap, v_user, 'FREEBET_PAYOUT', 'FREEBET', 560,
