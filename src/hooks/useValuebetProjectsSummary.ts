@@ -16,7 +16,9 @@ export function useValuebetProjectsSummary() {
   return useQuery({
     queryKey: ["valuebet-projects-summary", workspaceId],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_valuebet_projects_summary");
+      const { data, error } = await (supabase.rpc as any)("get_valuebet_projects_summary", {
+        p_workspace_id: workspaceId,
+      });
 
       if (error) {
         console.error("[useValuebetProjectsSummary] Error:", error);
