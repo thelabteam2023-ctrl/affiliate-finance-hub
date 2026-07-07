@@ -14,8 +14,8 @@ DECLARE
   v_blocked BOOLEAN := false;
 BEGIN
   INSERT INTO workspaces (id, name) VALUES (v_ws, 'TEST_WS_FB');
-  INSERT INTO bookmakers (id, workspace_id, nome, moeda, saldo_atual, status)
-    VALUES (v_bk, v_ws, 'TEST_BK_FB', 'BRL', 0, 'ativo');
+  INSERT INTO bookmakers (id, workspace_id, nome, moeda, saldo_atual, status, user_id)
+    VALUES (v_bk, v_ws, 'TEST_BK_FB', 'BRL', 0, 'ativo', v_user);
 
   -- (1) FREEBET_PAYOUT com tipo_uso='NORMAL' deve ser aceito
   INSERT INTO financial_events (
