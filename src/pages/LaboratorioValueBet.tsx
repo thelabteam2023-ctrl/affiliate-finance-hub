@@ -137,7 +137,7 @@ export default function LaboratorioValueBet() {
       });
       return aggregated;
     }
-    return stats.sports[selectedSport].markets;
+    return stats.sports[selectedSport]?.markets ?? {};
   }, [stats, selectedSport]);
 
   if (isLoading && !stats) {
