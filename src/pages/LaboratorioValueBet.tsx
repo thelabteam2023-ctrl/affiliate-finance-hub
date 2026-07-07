@@ -51,9 +51,6 @@ export default function LaboratorioValueBet() {
     }
   }, [selectedSport]);
 
-  // Auto-limpa esporte selecionado se ele não existir no dataset atual
-  // (evita "tela vazia" quando o filtro persistido não bate com os dados carregados).
-  const { stats: _statsForReset } = { stats: undefined as any };
 
 
   const startDateStr = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : null;
