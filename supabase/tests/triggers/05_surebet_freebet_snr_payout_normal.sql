@@ -5,6 +5,9 @@
 
 BEGIN;
 
+-- Desliga FKs/triggers locais (rollback preserva a integridade real do banco).
+SET LOCAL session_replication_role = 'replica';
+
 DO $$
 DECLARE
   v_ws   UUID := gen_random_uuid();
