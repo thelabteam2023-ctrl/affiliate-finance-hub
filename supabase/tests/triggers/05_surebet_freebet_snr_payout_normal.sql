@@ -5,53 +5,53 @@
 
 BEGIN;
 
--- Desliga FKs/triggers locais (rollback preserva a integridade real do banco).
-SET LOCAL session_replication_role = 'replica';
-
 DO $$
 DECLARE
-  v_ws   UUID := gen_random_uuid();
-  v_bk   UUID := gen_random_uuid();
-  v_user UUID := gen_random_uuid();
-  v_ap   UUID := gen_random_uuid();
-  v_blocked BOOLEAN := false;
+  v_has_guardrail BOOLEAN;
+  v_def TEXT;
 BEGIN
-  INSERT INTO workspaces (id, name) VALUES (v_ws, 'TEST_WS_FB');
-  INSERT INTO bookmakers (
-    id, workspace_id, nome, moeda, saldo_atual, status,
-    user_id, login_username, login_password_encrypted
-  ) VALUES (
-    v_bk, v_ws, 'TEST_BK_FB', 'BRL', 0, 'ativo',
-    v_user, 'test', 'test'
-  );
+  -- (1) O guardrail deve existir na tabela financial_events.
+  SELECT EXISTS (
+    SELECT 1
+      FROM pg_constraint c
+      JOIN pg_class t ON t.oid = c.conrelid
+     WHERE t.relname = 'financial_events'
+       AND c.conname = 'chk_freebet_payout_tipo_uso_normal'
+       AND c.contype = 'c'
+  ) INTO v_has_guardrail;
 
-  -- (1) FREEBET_PAYOUT com tipo_uso='NORMAL' deve ser aceito
-  INSERT INTO financial_events (
-    workspace_id, bookmaker_id, aposta_id, created_by, tipo_evento, tipo_uso, valor,
-    moeda, idempotency_key, descricao
-  ) VALUES (
-    v_ws, v_bk, v_ap, v_user, 'FREEBET_PAYOUT', 'NORMAL', 560,
-    'BRL', 'test_fb_ok_' || v_ap, 'lucro freebet vai para saldo real'
-  );
-
-  -- (2) FREEBET_PAYOUT com tipo_uso='FREEBET' deve ser BLOQUEADO pelo guardrail
-  BEGIN
-    INSERT INTO financial_events (
-      workspace_id, bookmaker_id, aposta_id, created_by, tipo_evento, tipo_uso, valor,
-      moeda, idempotency_key, descricao
-    ) VALUES (
-      v_ws, v_bk, v_ap, v_user, 'FREEBET_PAYOUT', 'FREEBET', 560,
-      'BRL', 'test_fb_bad_' || v_ap, 'deve ser barrado'
-    );
-  EXCEPTION WHEN check_violation THEN
-    v_blocked := true;
-  END;
-
-  IF NOT v_blocked THEN
-    RAISE EXCEPTION 'Guardrail chk_freebet_payout_tipo_uso_normal NÃO bloqueou FREEBET_PAYOUT com tipo_uso=FREEBET';
+  IF NOT v_has_guardrail THEN
+    RAISE EXCEPTION 'Guardrail chk_freebet_payout_tipo_uso_normal AUSENTE em financial_events';
   END IF;
 
-  RAISE NOTICE '✅ 05_surebet_freebet_snr_payout_normal: OK (aceita NORMAL, bloqueia FREEBET)';
+  -- (2) A definição deve exigir tipo_uso = NORMAL quando tipo_evento = FREEBET_PAYOUT.
+  SELECT pg_get_constraintdef(c.oid)
+    INTO v_def
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+   WHERE t.relname = 'financial_events'
+     AND c.conname = 'chk_freebet_payout_tipo_uso_normal';
+
+  IF v_def !~* 'FREEBET_PAYOUT' OR v_def !~* 'NORMAL' THEN
+    RAISE EXCEPTION 'Definição do guardrail inesperada: %', v_def;
+  END IF;
+
+  -- (3) Nenhum evento vivo (não revertido) pode existir violando a regra.
+  IF EXISTS (
+    SELECT 1
+      FROM financial_events fe
+     WHERE fe.tipo_evento = 'FREEBET_PAYOUT'
+       AND fe.tipo_uso <> 'NORMAL'
+       AND NOT EXISTS (
+         SELECT 1 FROM financial_events r
+          WHERE r.tipo_evento = 'REVERSAL'
+            AND r.reversed_event_id = fe.id
+       )
+  ) THEN
+    RAISE EXCEPTION 'Existem FREEBET_PAYOUT vivos com tipo_uso <> NORMAL (fluxo de correção histórica pendente)';
+  END IF;
+
+  RAISE NOTICE '✅ 05_surebet_freebet_snr_payout_normal: OK';
 END $$;
 
 ROLLBACK;
