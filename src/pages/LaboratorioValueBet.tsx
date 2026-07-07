@@ -69,6 +69,16 @@ export default function LaboratorioValueBet() {
     // We removed the auto-select logic to start with no projects as requested
   }, [projectsSummary]);
 
+  // Auto-limpa `selectedSport` persistido quando ele não existe mais no dataset
+  // carregado (ex.: filtro antigo em localStorage sem correspondência nos projetos
+  // selecionados). Sem isso, a UI ficaria "vazia" silenciosamente.
+  useEffect(() => {
+    if (!stats || !selectedSport) return;
+    if (!stats.sports[selectedSport]) {
+      setSelectedSport(null);
+    }
+  }, [stats, selectedSport]);
+
   const activeMetrics = useMemo(() => {
     if (!stats) return null;
     if (selectedSport && stats.sports[selectedSport]) {
