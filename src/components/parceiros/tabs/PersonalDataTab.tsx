@@ -4,7 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Copy, Check, AlertTriangle, Truck, ExternalLink, Link as LinkIcon } from "lucide-react";
+import { Copy, Check, AlertTriangle, ExternalLink, Link as LinkIcon } from "lucide-react";
 import { PhoneInput } from "../PhoneInput";
 import { DatePickerInput } from "@/components/ui/date-picker-input";
 import { StarRating } from "../StarRating";
@@ -33,9 +33,6 @@ interface PersonalDataTabProps {
   setObservacoes: (val: string) => void;
   documentacaoUrl: string;
   setDocumentacaoUrl: (val: string) => void;
-  fornecedorOrigemId: string | null;
-  setFornecedorOrigemId: (val: string | null) => void;
-  fornecedores: any[];
   qualidade: number | null;
   setQualidade: (val: number | null) => void;
   loading: boolean;
@@ -53,7 +50,6 @@ export function PersonalDataTab({
   dataNascimento, setDataNascimento, endereco, setEndereco, cidade, setCidade,
   cep, setCep, status, setStatus, observacoes, setObservacoes,
   documentacaoUrl, setDocumentacaoUrl,
-  fornecedorOrigemId, setFornecedorOrigemId, fornecedores,
   qualidade, setQualidade, loading, viewMode,
   cpfError, telefoneError, checkingCpf, planLimitError,
   copyToClipboard, copiedField
@@ -186,32 +182,6 @@ export function PersonalDataTab({
         )}
       </div>
       <div className="md:col-span-2 space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="fornecedor_origem">
-            Fornecedor Gerenciador
-            <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-          </Label>
-          <div className="flex items-center gap-2">
-            <Truck className="h-4 w-4 text-muted-foreground shrink-0" />
-            <Select
-              value={fornecedorOrigemId || "none"}
-              onValueChange={(val) => setFornecedorOrigemId(val === "none" ? null : val)}
-              disabled={loading || viewMode}
-            >
-              <SelectTrigger className="flex-1">
-                <SelectValue placeholder="Sem fornecedor (gestão interna)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Sem fornecedor (gestão interna)</SelectItem>
-                {fornecedores.map((f) => (
-                  <SelectItem key={f.id} value={f.id}>
-                    {f.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
         <div className="space-y-2">
           <Label>Qualidade do parceiro <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span></Label>
           <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2">
