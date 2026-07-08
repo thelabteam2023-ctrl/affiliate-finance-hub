@@ -50,7 +50,8 @@ const formatCurrency = (value: number, currency: string = "BRL") => {
   }).format(value);
 };
 
-const formatCPF = (cpf: string) => {
+const formatCPF = (cpf: string | null | undefined) => {
+  if (!cpf) return "—";
   const cleanCPF = cpf.replace(/\D/g, "");
   if (cleanCPF.length === 11) {
     return cleanCPF.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
