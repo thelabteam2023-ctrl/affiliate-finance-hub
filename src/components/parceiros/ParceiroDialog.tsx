@@ -77,6 +77,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   const [cep, setCep] = useState("");
   const [status, setStatus] = useState("ativo");
   const [observacoes, setObservacoes] = useState("");
+  const [documentacaoUrl, setDocumentacaoUrl] = useState("");
   const [fornecedorOrigemId, setFornecedorOrigemId] = useState<string | null>(null);
   const [fornecedores, setFornecedores] = useState<any[]>([]);
   const [qualidade, setQualidade] = useState<number | null>(null);
@@ -160,6 +161,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         cep: formatCEP(parceiro.cep || ""),
          status: parceiro.status || "ativo",
          observacoes: parceiro.observacoes || "",
+        documentacaoUrl: (parceiro as any).documentacao_url || "",
          fornecedorOrigemId: (parceiro as any).fornecedor_origem_id || null,
          qualidade: parceiro.qualidade ?? null,
         bankAccounts: JSON.stringify(mappedBankAccounts),
@@ -196,6 +198,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       cep,
        status,
        observacoes,
+      documentacaoUrl,
        fornecedorOrigemId,
        qualidade,
       bankAccounts: JSON.stringify(bankAccounts),
@@ -204,7 +207,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
 
     const changed = JSON.stringify(currentState) !== JSON.stringify(initialState);
     setHasChanges(changed);
-  }, [nome, cpf, email, telefone, dataNascimento, endereco, cidade, cep, status, observacoes, qualidade, bankAccounts, cryptoWallets, initialState, parceiro, parceiroId]);
+  }, [nome, cpf, email, telefone, dataNascimento, endereco, cidade, cep, status, observacoes, documentacaoUrl, qualidade, bankAccounts, cryptoWallets, initialState, parceiro, parceiroId]);
 
   useEffect(() => {
     fetchBancos();
@@ -242,6 +245,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       setCep(formatCEP(parceiro.cep || "")); // Apply mask when loading
        setStatus(parceiro.status || "ativo");
        setObservacoes(parceiro.observacoes || "");
+       setDocumentacaoUrl((parceiro as any).documentacao_url || "");
        setFornecedorOrigemId((parceiro as any).fornecedor_origem_id || null);
        setQualidade((parceiro as any).qualidade ?? null);
       
@@ -495,6 +499,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     setCep("");
     setStatus("ativo");
     setObservacoes("");
+    setDocumentacaoUrl("");
     setQualidade(null);
     setBankAccounts([]);
     setCryptoWallets([]);
@@ -679,6 +684,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         cep: cep.replace(/\D/g, "") || null,
         status,
         observacoes: observacoes || null,
+        documentacao_url: documentacaoUrl.trim() || null,
         fornecedor_origem_id: sanitizeUuid(fornecedorOrigemId),
         qualidade: (qualidade === null || isNaN(Number(qualidade))) ? null : Number(qualidade),
       };
@@ -1392,6 +1398,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   setStatus={setStatus}
                   observacoes={observacoes}
                   setObservacoes={setObservacoes}
+                  documentacaoUrl={documentacaoUrl}
+                  setDocumentacaoUrl={setDocumentacaoUrl}
                   fornecedorOrigemId={fornecedorOrigemId}
                   setFornecedorOrigemId={setFornecedorOrigemId}
                   fornecedores={fornecedores}
