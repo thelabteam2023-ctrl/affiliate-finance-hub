@@ -1142,13 +1142,13 @@ export function SurebetCard({
         <TooltipProvider delayDuration={300}>
           <Tooltip>
             <TooltipTrigger asChild>
-              {surebet.time_casa && surebet.time_fora ? (
+              {__displayHome && __displayAway ? (
                 <div className="flex items-center gap-2 min-w-0 mb-1.5 cursor-default">
-                  <TeamLogo logoUrl={__homeLogoUrl} alt={surebet.time_casa} size="h-6 w-6" iconSize="h-3.5 w-3.5" />
-                  <span className="text-base sm:text-lg font-semibold truncate uppercase leading-tight">{surebet.time_casa}</span>
+                  <TeamLogo logoUrl={__homeLogoUrl} alt={__displayHome} size="h-6 w-6" iconSize="h-3.5 w-3.5" />
+                  <span className="text-base sm:text-lg font-semibold truncate uppercase leading-tight">{__displayHome}</span>
                   <span className="text-muted-foreground shrink-0">×</span>
-                  <TeamLogo logoUrl={__awayLogoUrl} alt={surebet.time_fora} size="h-6 w-6" iconSize="h-3.5 w-3.5" />
-                  <span className="text-base sm:text-lg font-semibold truncate uppercase leading-tight">{surebet.time_fora}</span>
+                  <TeamLogo logoUrl={__awayLogoUrl} alt={__displayAway} size="h-6 w-6" iconSize="h-3.5 w-3.5" />
+                  <span className="text-base sm:text-lg font-semibold truncate uppercase leading-tight">{__displayAway}</span>
                 </div>
               ) : (
                 <p className="text-base sm:text-lg font-semibold truncate uppercase leading-tight mb-1.5 cursor-default">{surebet.evento || 'Operação'}</p>
