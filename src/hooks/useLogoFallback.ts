@@ -218,9 +218,17 @@ export function useLogoFallback(sport: string | null | undefined) {
       logos.add(t.logo_url);
       grouped.set(t.team_name_normalized, logos);
     }
+    // Quando o mesmo nome normalizado (ex.: "switzerland", "argentina")
+    // tem múltiplas URLs de logo em provedores diferentes (api-sports
+    // + thesportsdb), preferimos api-sports.io — é a fonte canônica que
+    // o picker usa. Antes retornávamos null e o card ficava sem escudo.
+    const pickPreferred = (urls: string[]): string => {
+      const apiSports = urls.find((u) => u.includes('api-sports.io'));
+      return apiSports ?? urls[0];
+    };
     const m = new Map<string, string>();
     for (const [name, logos] of grouped.entries()) {
-      if (logos.size === 1) m.set(name, Array.from(logos)[0]);
+      m.set(name, pickPreferred(Array.from(logos)));
     }
     return m;
   }, [teams]);
