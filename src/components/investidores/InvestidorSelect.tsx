@@ -49,11 +49,12 @@ export function InvestidorSelect({ value, onValueChange, disabled }: InvestidorS
     const searchLower = searchTerm.toLowerCase();
     return (
       inv.nome.toLowerCase().includes(searchLower) ||
-      inv.cpf.includes(searchTerm.replace(/\D/g, ""))
+      (inv.cpf ?? "").includes(searchTerm.replace(/\D/g, ""))
     );
   });
 
-  const formatCPF = (cpf: string) => {
+  const formatCPF = (cpf: string | null | undefined) => {
+    if (!cpf) return "";
     return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
   };
 
@@ -70,7 +71,8 @@ export function InvestidorSelect({ value, onValueChange, disabled }: InvestidorS
         <SelectValue placeholder={loading ? "Carregando..." : "Selecione um investidor"}>
           {selectedInvestidor ? (
             <span>
-              {selectedInvestidor.nome} - {formatCPF(selectedInvestidor.cpf)}
+              {selectedInvestidor.nome}
+              {selectedInvestidor.cpf ? ` - ${formatCPF(selectedInvestidor.cpf)}` : ""}
             </span>
           ) : (
             <span className="text-muted-foreground">Nenhum investidor</span>
@@ -109,7 +111,9 @@ export function InvestidorSelect({ value, onValueChange, disabled }: InvestidorS
                     </span>
                   )}
                 </span>
-                <span className="text-xs text-muted-foreground">{formatCPF(investidor.cpf)}</span>
+                {investidor.cpf && (
+                  <span className="text-xs text-muted-foreground">{formatCPF(investidor.cpf)}</span>
+                )}
               </div>
             </SelectItem>
           ))
