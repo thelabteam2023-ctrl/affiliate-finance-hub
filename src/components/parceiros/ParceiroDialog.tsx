@@ -78,8 +78,6 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   const [status, setStatus] = useState("ativo");
   const [observacoes, setObservacoes] = useState("");
   const [documentacaoUrl, setDocumentacaoUrl] = useState("");
-  const [fornecedorOrigemId, setFornecedorOrigemId] = useState<string | null>(null);
-  const [fornecedores, setFornecedores] = useState<any[]>([]);
   const [qualidade, setQualidade] = useState<number | null>(null);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [cryptoWallets, setCryptoWallets] = useState<CryptoWallet[]>([]);
@@ -162,7 +160,6 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
          status: parceiro.status || "ativo",
          observacoes: parceiro.observacoes || "",
         documentacaoUrl: (parceiro as any).documentacao_url || "",
-         fornecedorOrigemId: (parceiro as any).fornecedor_origem_id || null,
          qualidade: parceiro.qualidade ?? null,
         bankAccounts: JSON.stringify(mappedBankAccounts),
         cryptoWallets: JSON.stringify(mappedWallets),
@@ -199,7 +196,6 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
        status,
        observacoes,
       documentacaoUrl,
-       fornecedorOrigemId,
        qualidade,
       bankAccounts: JSON.stringify(bankAccounts),
       cryptoWallets: JSON.stringify(cryptoWallets)
@@ -212,17 +208,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   useEffect(() => {
     fetchBancos();
     fetchRedes();
-    fetchFornecedores();
   }, []);
-
-  const fetchFornecedores = async () => {
-    const { data } = await supabase
-      .from("fornecedores")
-      .select("id, nome")
-      .eq("status", "ATIVO")
-      .order("nome");
-    if (data) setFornecedores(data);
-  };
 
   useEffect(() => {
     if (open) {
@@ -246,7 +232,6 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
        setStatus(parceiro.status || "ativo");
        setObservacoes(parceiro.observacoes || "");
        setDocumentacaoUrl((parceiro as any).documentacao_url || "");
-       setFornecedorOrigemId((parceiro as any).fornecedor_origem_id || null);
        setQualidade((parceiro as any).qualidade ?? null);
       
       // Map bank accounts data using pix_keys JSONB column
@@ -685,7 +670,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         status,
         observacoes: observacoes || null,
         documentacao_url: documentacaoUrl.trim() || null,
-        fornecedor_origem_id: sanitizeUuid(fornecedorOrigemId),
+        fornecedor_origem_id: sanitizeUuid((parceiro as any)?.fornecedor_origem_id ?? null),
         qualidade: (qualidade === null || isNaN(Number(qualidade))) ? null : Number(qualidade),
       };
 
@@ -1401,9 +1386,6 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   setObservacoes={setObservacoes}
                   documentacaoUrl={documentacaoUrl}
                   setDocumentacaoUrl={setDocumentacaoUrl}
-                  fornecedorOrigemId={fornecedorOrigemId}
-                  setFornecedorOrigemId={setFornecedorOrigemId}
-                  fornecedores={fornecedores}
                   qualidade={qualidade}
                   setQualidade={setQualidade}
                   loading={loading}
