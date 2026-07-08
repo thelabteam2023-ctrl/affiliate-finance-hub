@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Save, UserPlus } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -28,9 +28,6 @@ const NovoParceiro = () => {
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Pre-select fornecedor from query param
-  const fornecedorIdParam = searchParams.get("fornecedor_id") || "";
-
   const [formData, setFormData] = useState({
     nome: "",
     cpf: "",
@@ -44,23 +41,6 @@ const NovoParceiro = () => {
     senha: "",
     status: "ATIVO",
     notas: "",
-    fornecedorOrigemId: fornecedorIdParam,
-  });
-
-  // Fetch fornecedores for the dropdown
-  const { data: fornecedores = [] } = useQuery({
-    queryKey: ["fornecedores-lista", workspaceId],
-    queryFn: async () => {
-      if (!workspaceId) return [];
-      const { data } = await supabase
-        .from("fornecedores")
-        .select("id, nome")
-        .eq("workspace_id", workspaceId)
-        .eq("status", "ATIVO")
-        .order("nome");
-      return data || [];
-    },
-    enabled: !!workspaceId,
   });
 
   const handleChange = (field: string, value: string) => {
@@ -140,7 +120,6 @@ const NovoParceiro = () => {
         status: formData.status,
         user_id: user.id,
         workspace_id: workspaceId,
-        fornecedor_origem_id: formData.fornecedorOrigemId || null,
       });
 
       if (error) {
@@ -338,8 +317,7 @@ const NovoParceiro = () => {
             <Card className="border-border bg-gradient-surface p-6 shadow-soft">
               <h2 className="mb-6 text-xl font-semibold">Configurações</h2>
               <div className="space-y-6">
-                <div className="grid gap-6 sm:grid-cols-2">
-                  <div className="space-y-2">
+                <div className="space-y-2">
                     <Label htmlFor="status">Status</Label>
                     <Select
                       value={formData.status}
@@ -354,24 +332,6 @@ const NovoParceiro = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="fornecedorOrigem">Fornecedor de Origem</Label>
-                    <Select
-                      value={formData.fornecedorOrigemId || "none"}
-                      onValueChange={(value) => handleChange("fornecedorOrigemId", value === "none" ? "" : value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Nenhum (captação direta)" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Nenhum (captação direta)</SelectItem>
-                        {fornecedores.map((f) => (
-                          <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
                 <div className="space-y-2">
                   <Label htmlFor="notas">Observações</Label>
                   <Textarea
