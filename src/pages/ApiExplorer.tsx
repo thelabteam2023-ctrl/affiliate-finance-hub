@@ -1179,6 +1179,17 @@ export default function ApiExplorer() {
                   <CardTitle className="text-lg font-black tracking-tight">Mapeamento de Cobertura</CardTitle>
                   <CardDescription>Lista completa de campeonatos integrados e volume de dados encontrados.</CardDescription>
                 </CardHeader>
+                <div className="px-6 pb-4 -mt-2">
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-[11px] leading-relaxed">
+                    <p className="font-black uppercase text-amber-500 tracking-wider mb-1">Cobertura UEFA por fase</p>
+                    <ul className="space-y-0.5 text-muted-foreground">
+                      <li>✅ <span className="font-semibold">UEFA Champions League</span> — fase principal + <span className="font-semibold">Qualification</span> (Odds API)</li>
+                      <li>✅ <span className="font-semibold">UEFA Europa League</span> — fase principal (Odds API)</li>
+                      <li>✅ <span className="font-semibold">UEFA Conference League</span> — fase principal (Odds API)</li>
+                      <li>⚠️ <span className="font-semibold">Europa League Qualifying</span> e <span className="font-semibold">Conference League Qualifying</span> — não disponíveis nas APIs conectadas hoje (Odds API não expõe estas fases).</li>
+                    </ul>
+                  </div>
+                </div>
                 <CardContent className="p-0">
                   <div className="overflow-hidden rounded-b-2xl">
                     <table className="w-full text-left">
