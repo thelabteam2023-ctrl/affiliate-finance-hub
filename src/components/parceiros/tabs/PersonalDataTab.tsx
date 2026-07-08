@@ -4,11 +4,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Copy, Check, AlertTriangle, ExternalLink, Link as LinkIcon } from "lucide-react";
+import { Copy, Check, AlertTriangle, ExternalLink, Link as LinkIcon, Eye, EyeOff } from "lucide-react";
 import { PhoneInput } from "../PhoneInput";
 import { DatePickerInput } from "@/components/ui/date-picker-input";
 import { StarRating } from "../StarRating";
 import { formatCPF, formatCEP } from "@/lib/validators";
+import { useState } from "react";
 
 interface PersonalDataTabProps {
   nome: string;
@@ -54,6 +55,8 @@ export function PersonalDataTab({
   cpfError, telefoneError, checkingCpf, planLimitError,
   copyToClipboard, copiedField
 }: PersonalDataTabProps) {
+  const [revealDoc, setRevealDoc] = useState(false);
+
   const isValidUrl = (() => {
     if (!documentacaoUrl?.trim()) return true;
     try {
@@ -224,13 +227,29 @@ export function PersonalDataTab({
             <LinkIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               id="documentacao_url"
-              type="url"
+              type={revealDoc ? "url" : "password"}
+              autoComplete="off"
+              spellCheck={false}
               value={documentacaoUrl}
               onChange={(e) => setDocumentacaoUrl(e.target.value)}
               placeholder="https://drive.google.com/..."
               disabled={loading || viewMode}
-              className={`pl-8 ${!isValidUrl ? "border-red-500" : ""}`}
+              className={`pl-8 pr-10 ${!isValidUrl ? "border-red-500" : ""}`}
             />
+            {documentacaoUrl?.trim() && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setRevealDoc((v) => !v)}
+                className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                title={revealDoc ? "Ocultar URL" : "Revelar URL"}
+                aria-label={revealDoc ? "Ocultar URL" : "Revelar URL"}
+                tabIndex={-1}
+              >
+                {revealDoc ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+              </Button>
+            )}
           </div>
           {documentacaoUrl?.trim() && isValidUrl && (
             <Button
@@ -244,8 +263,14 @@ export function PersonalDataTab({
             </Button>
           )}
         </div>
-        {!isValidUrl && (
+        {!isValidUrl ? (
           <p className="text-xs text-red-500 mt-1">URL inválida. Use http(s)://...</p>
+        ) : (
+          documentacaoUrl?.trim() && !revealDoc && (
+            <p className="text-xs text-muted-foreground mt-1">
+              URL oculta por segurança · clique no olho para revelar
+            </p>
+          )
         )}
       </div>
     </div>
