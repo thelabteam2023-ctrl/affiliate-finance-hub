@@ -1,6 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import {
   User,
@@ -16,7 +22,7 @@ import {
   Check,
   Cake,
   ExternalLink,
-  Link as LinkIcon,
+  FileSearch,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -195,6 +201,32 @@ export function ParceiroProfileView({
     <div className="space-y-6">
       {/* ── HERO HEADER ─────────────────────────────────────── */}
       <div className="relative overflow-hidden rounded-xl border border-border bg-gradient-to-br from-primary/5 via-background to-background p-5">
+        {documentacaoUrl && documentacaoUrl.trim() !== "" && (
+          <TooltipProvider delayDuration={150}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Abrir documentação do parceiro"
+                  onClick={() =>
+                    window.open(
+                      documentacaoUrl.trim(),
+                      "_blank",
+                      "noopener,noreferrer"
+                    )
+                  }
+                  className="group/doc absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-xl border border-border/60 bg-background/40 text-muted-foreground shadow-sm backdrop-blur transition-all duration-300 hover:border-primary/50 hover:bg-primary/10 hover:text-primary"
+                >
+                  <FileSearch className="h-4 w-4 transition-transform duration-300 group-hover/doc:-translate-y-0.5 group-hover/doc:translate-x-0.5" />
+                  <ExternalLink className="pointer-events-none absolute -right-0.5 -top-0.5 h-2.5 w-2.5 opacity-0 transition-opacity duration-200 group-hover/doc:opacity-80" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="left" className="text-xs font-semibold uppercase tracking-wider">
+                Documentação
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
         <div className="flex items-start gap-4">
           {/* Avatar */}
           <div
@@ -241,21 +273,6 @@ export function ParceiroProfileView({
             {qualidade != null && qualidade > 0 && (
               <div className="mt-2">
                 <StarRating value={qualidade} readOnly size="sm" showLabel />
-              </div>
-            )}
-            {documentacaoUrl && documentacaoUrl.trim() !== "" && (
-              <div className="mt-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1.5"
-                  onClick={() => window.open(documentacaoUrl.trim(), "_blank", "noopener,noreferrer")}
-                >
-                  <LinkIcon className="h-3.5 w-3.5" />
-                  Abrir Documentação
-                  <ExternalLink className="h-3 w-3 opacity-60" />
-                </Button>
               </div>
             )}
           </div>
