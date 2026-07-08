@@ -32,17 +32,40 @@ export function useDailyEventsByDate(date: Date | undefined, enabled = true) {
     enabled,
     staleTime: 5 * 60 * 1000,
     queryFn: async (): Promise<DailyEvent[]> => {
+      // Fonte oficial de jogos = public.sports_events (mesma tabela do /admin/api-explorer).
+      // A antiga public.daily_events está estagnada; migramos o picker para a fonte viva
+      // mantendo o shape DailyEvent para não impactar consumidores.
+      const startISO = `${dateKey}T00:00:00`;
+      const nextDay = new Date(`${dateKey}T00:00:00`);
+      nextDay.setDate(nextDay.getDate() + 1);
+      const endISO = `${toDateKey(nextDay)}T00:00:00`;
+
       const { data, error } = await supabase
-        .from("daily_events")
+        .from("sports_events")
         .select(
-          "id, sport, league_name, league_logo, home_team, away_team, home_team_logo, away_team_logo, commence_time, status, country, fixture_key"
+          "id, canonical_key, sport, league_name, league_logo, home_team, away_team, home_team_logo, away_team_logo, commence_time, country, home_score, away_score"
         )
-        .eq("event_date", dateKey)
+        .gte("commence_time", startISO)
+        .lt("commence_time", endISO)
         .order("commence_time", { ascending: true });
       if (error) throw error;
+      const mapped: DailyEvent[] = (data ?? []).map((e: any) => ({
+        id: e.id,
+        sport: e.sport ?? null,
+        league_name: e.league_name ?? null,
+        league_logo: e.league_logo ?? null,
+        home_team: e.home_team,
+        away_team: e.away_team,
+        home_team_logo: e.home_team_logo ?? null,
+        away_team_logo: e.away_team_logo ?? null,
+        commence_time: e.commence_time,
+        status: e.home_score != null && e.away_score != null ? "finished" : null,
+        country: e.country ?? null,
+        fixture_key: e.canonical_key ?? null,
+      }));
       // Defesa client-side: deduplica por fixture_key (ou trio sport+commence+times)
       // mantendo a primeira ocorrência (com mais logos preenchidas, depois mais antiga).
-      const rows = (data ?? []) as DailyEvent[];
+      const rows = mapped;
       const seen = new Map<string, DailyEvent>();
       for (const r of rows) {
         const key =
