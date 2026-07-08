@@ -15,6 +15,8 @@ import {
   Copy,
   Check,
   Cake,
+  ExternalLink,
+  Link as LinkIcon,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -31,6 +33,7 @@ interface ParceiroProfileViewProps {
   cep: string;
   status: string;
   observacoes: string;
+  documentacaoUrl?: string;
   qualidade?: number | null;
 }
 
@@ -147,6 +150,7 @@ export function ParceiroProfileView({
   cep,
   status,
   observacoes,
+  documentacaoUrl,
   qualidade,
 }: ParceiroProfileViewProps) {
   const [copiedField, setCopiedField] = useState("");
@@ -237,6 +241,21 @@ export function ParceiroProfileView({
             {qualidade != null && qualidade > 0 && (
               <div className="mt-2">
                 <StarRating value={qualidade} readOnly size="sm" showLabel />
+              </div>
+            )}
+            {documentacaoUrl && documentacaoUrl.trim() !== "" && (
+              <div className="mt-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5"
+                  onClick={() => window.open(documentacaoUrl.trim(), "_blank", "noopener,noreferrer")}
+                >
+                  <LinkIcon className="h-3.5 w-3.5" />
+                  Abrir Documentação
+                  <ExternalLink className="h-3 w-3 opacity-60" />
+                </Button>
               </div>
             )}
           </div>
