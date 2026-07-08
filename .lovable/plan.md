@@ -1,41 +1,71 @@
-# Causa raiz identificada
 
-O Explorador dentro do formulário de Nova Aposta (componente `ExploradorEventoPicker`) usa o hook `useDailyEventsByDate`, que consulta a tabela `public.daily_events`.
+## Diagnóstico
 
-- `daily_events` está **estagnada** desde 2026-11-28 (nenhum registro para 08/07/2026 e para praticamente nenhuma data recente).
-- A página `/admin/api-explorer` — a versão "isolada" do Explorador — consulta outra tabela: `public.sports_events`, que **tem dados atuais** (25 eventos em 08/07/2026, 40 em 07/07, etc.).
-- Portanto o Explorador em si funciona; o picker está lendo de uma tabela legada que deixou de ser alimentada. Isso explica exatamente o print anexado ("0 jogos · Nenhum jogo de Futebol em 08/07/2026").
+Fizemos consultas nas duas APIs que hoje alimentam `sports_events` (a tabela que o Explorador de Dados lê):
 
-Não há erro de rede, permissão ou RLS — a query retorna 0 linhas legitimamente porque a fonte de dados foi trocada e o hook não acompanhou.
+**1. Odds API (fonte primária/curada em `supabase/functions/odds-api-catalog-sync/index.ts`)**
+Nosso `SPORT_KEY_MAP` cobre só os torneios "principais":
+- `soccer_uefa_champs_league` → UEFA Champions League
+- `soccer_uefa_europa_league` → UEFA Europa League
+- `soccer_uefa_europa_conference_league` → UEFA Conference League
 
-# Correção
+Consultando o catálogo oficial (https://the-odds-api.com/sports-odds-data/sports-apis.html) descobrimos:
 
-Alterar `src/hooks/useDailyEventsByDate.ts` para consumir `sports_events` (mesma fonte que o Explorador oficial), mantendo a assinatura pública do hook para não impactar `ExploradorEventoPicker`.
+| Torneio | Existe sport_key na Odds API? |
+|---|---|
+| UEFA Champions League **Qualification** | **Sim** — `soccer_uefa_champs_league_qualification` |
+| UEFA Europa League **Qualification** | **Não** (não há key) |
+| UEFA Conference League **Qualification** | **Não** (não há key) |
 
-Mudanças pontuais no hook:
+Ou seja: a Odds API só publica a Qualificação da Champions. As qualificatórias de Europa/Conference **não existem como produto** na Odds API.
 
-1. Trocar `.from("daily_events")` por `.from("sports_events")`.
-2. Como `sports_events` não tem coluna `event_date`, filtrar por range de `commence_time`:
-   - `gte(commence_time, <YYYY-MM-DD>T00:00:00)`
-   - `lt(commence_time, <YYYY-MM-DD+1>T00:00:00)`
-   - (usar dia local, igual ao `ApiExplorer.tsx`).
-3. Mapear campos para o shape `DailyEvent` já esperado:
-   - `id` ← `canonical_key` (ou `id` da linha)
-   - `sport`, `league_name`, `league_logo`, `home_team`, `away_team`, `home_team_logo`, `away_team_logo`, `commence_time`, `country` → mesmos nomes já existem em `sports_events`
-   - `status` ← derivado (ex.: `home_score/away_score` presentes ⇒ `"finished"`, senão `null`) — mantém `computeMatchPhase` funcionando
-   - `fixture_key` ← `canonical_key` para preservar a deduplicação já implementada
-4. Manter a deduplicação existente no client (sem alterações).
-5. Nenhuma mudança de UI, sem novos componentes, sem migração de banco.
+**2. TheSportsDB (fonte secundária em `supabase/functions/thesportsdb-sync/index.ts`)**
+O sync usa `/eventsday.php?d=DATA&s=Soccer`. Testamos em 5 datas (08–15/07/26). Resultado: o endpoint gratuito retorna apenas **3 jogos de futebol por dia no mundo inteiro** (nenhum jogo europeu). O catálogo `all_leagues.php` também não expõe as ligas de qualificação — só existem `4480 UEFA Champions League`, `5071 UEFA Conference League` e `4524 UEFA Cup` (sem separar as fases eliminatórias).
 
-# Fora de escopo
+Confirmação em `sports_events`: nenhum jogo com `league_name ilike '%uefa%'` ou `'%qualif%'` foi persistido nos últimos dias.
 
-- Não vamos migrar/backfillar `daily_events` (tabela legada, sem dono claro).
-- Não vamos remover `daily_events` neste passo (evita quebrar qualquer consumidor residual).
-- Nenhuma mudança em RLS, edge functions ou no `ApiExplorer.tsx`.
+## Conclusão
 
-# Verificação
+- Podemos **ganhar imediatamente** a UEFA Champions League Qualification agregando o sport_key que a Odds API já expõe.
+- Podemos **melhorar parcialmente** garantindo que a fase de qualificação da Champions apareça como categoria própria no explorador (evita cair em "UEFA Champions League" e confundir com fase de grupos).
+- **NÃO conseguimos** hoje trazer Europa League Qualifying e Conference League Qualifying pelas APIs conectadas. Para isso é preciso uma terceira fonte (opções listadas no fim).
 
-Após o patch:
-1. Abrir Nova Aposta → botão Explorador na data 08/07/2026 → esperar lista com ~25 jogos de Futebol.
-2. Selecionar um jogo e confirmar que o form preenche evento/mercado/hora como antes (o callback `onSelect(DailyEvent)` recebe os mesmos campos).
-3. Trocar data para 07/07 e 09/07 e conferir contagens compatíveis com o Explorador oficial.
+## Escopo desta entrega
+
+### 1. Adicionar UCL Qualifying ao catálogo Odds API
+Arquivo: `supabase/functions/odds-api-catalog-sync/index.ts`
+- Acrescentar no `SPORT_KEY_MAP`:
+  - `soccer_uefa_champs_league_qualification: { internal: "soccer", country: null, league_name: "UEFA Champions League — Qualification" }`
+- Bônus (mesma família, mesmo custo zero de quota — endpoint `/events`):
+  - `soccer_uefa_euro_qualification` → `"UEFA Euro Qualification"`
+  - `soccer_uefa_nations_league` → `"UEFA Nations League"`
+
+`inferCompetitionType` em `_shared/catalogNormalize.ts` já casa com `/champions/` e `/qualif/` (a regex atual pega Champions; vamos incluir `qualif` explicitamente na branch `continental` para as três ficarem classificadas como internacionais).
+
+### 2. Disparar o sync retroativo
+Uma execução manual da edge `odds-api-catalog-sync` (via botão do `/admin/api-explorer` ou `curl`) faz o upsert idempotente em `sports_events`. Nenhuma migração é necessária — a tabela já aceita esses league_names via `canonical_key`.
+
+### 3. Reportar transparência ao usuário
+No `/admin/api-explorer`, adicionar uma linha na aba **Diagnóstico** informando quais ligas UEFA estão cobertas por fonte, para que o operador saiba que Europa/Conference Qualifying **não estão cobertas** hoje.
+
+## Fora do escopo (precisa decisão)
+
+Para cobrir **Europa League Qualifying** e **Conference League Qualifying** é preciso plugar uma fonte adicional. Opções em ordem de custo/benefício:
+
+| Fonte | Cobertura | Custo | Esforço |
+|---|---|---|---|
+| **API-Football (RapidAPI)** | Cobre todas as fases de todas as competições UEFA por `league.id` + `season` | Free tier: 100 req/dia; pago a partir de US$19/mês | Novo connector + novo edge function (~1 dia) |
+| **TheSportsDB Patreon key** | Desbloqueia `/eventsround.php` e `/eventsseason.php` sem cap de 3/dia | US$5/mês | Trocar `TSD_KEY="3"` por env `THESPORTSDB_KEY` e adicionar sync por league_id (4480, 5071 + Europa) |
+| **Firecrawl scraping de FlashScore/Sofascore** | Cobre 100% | Já temos conector Firecrawl; custa créditos | Novo edge function de scraping — frágil a mudanças de HTML |
+
+Recomendação: **TheSportsDB Patreon** (US$5/mês) é o melhor custo/benefício — reutiliza o sync existente e resolve as três qualificatórias de uma vez. Aguardo confirmação antes de implementar.
+
+## Arquivos que serão alterados (etapa 1–3)
+
+```text
+supabase/functions/odds-api-catalog-sync/index.ts   ← 3 entradas novas em SPORT_KEY_MAP
+supabase/functions/_shared/catalogNormalize.ts      ← regex "qualif" em inferCompetitionType
+src/components/api-explorer/…DiagnosticoTab.tsx     ← linha "Cobertura UEFA por fase"
+```
+
+Sem migração de banco. Sem alteração de RLS. Sem impacto em custo da Odds API (endpoint `/events` é gratuito no plano atual).
