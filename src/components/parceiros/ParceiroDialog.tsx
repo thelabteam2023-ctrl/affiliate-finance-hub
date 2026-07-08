@@ -1374,6 +1374,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   cep={cep}
                   status={status}
                   observacoes={observacoes}
+                  documentacaoUrl={documentacaoUrl}
                   qualidade={qualidade}
                 />
               ) : (
