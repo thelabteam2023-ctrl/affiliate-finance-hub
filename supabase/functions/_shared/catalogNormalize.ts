@@ -26,7 +26,7 @@ export function inferCompetitionType(name?: string | null): string {
   if (!name) return "league";
   const n = name.toLowerCase();
   if (/(world cup|mundial|euro\b|copa am[eé]rica|nations league|olympics|olimp)/.test(n)) return "continental";
-  if (/(champions|libertadores|sudamericana|europa league|conference league|afc cup|caf cup|concacaf)/.test(n)) return "continental";
+  if (/(champions|libertadores|sudamericana|europa league|conference league|afc cup|caf cup|concacaf|qualif)/.test(n)) return "continental";
   if (/(copa|cup|coupe|pokal|taça|trophy)/.test(n)) return "cup";
   return "league";
 }
