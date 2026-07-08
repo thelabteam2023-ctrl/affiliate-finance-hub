@@ -239,11 +239,12 @@ export default function GestaoInvestidores() {
     const searchLower = searchTerm.toLowerCase();
     return (
       inv.nome.toLowerCase().includes(searchLower) ||
-      inv.cpf.includes(searchTerm)
+      (inv.cpf ?? "").includes(searchTerm)
     );
   });
 
-  const formatCPF = (cpf: string) => {
+  const formatCPF = (cpf: string | null | undefined) => {
+    if (!cpf) return "—";
     return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
   };
 

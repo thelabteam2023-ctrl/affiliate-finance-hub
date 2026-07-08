@@ -239,12 +239,12 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
   };
 
   const handleSubmit = async () => {
-    if (!nome.trim() || !documento.trim()) {
-      toast.error("Preencha todos os campos obrigatórios");
+    if (!nome.trim()) {
+      toast.error("Preencha o nome do investidor");
       return;
     }
 
-    if (documentoValidation && !documentoValidation.valid) {
+    if (documento.trim() && documentoValidation && !documentoValidation.valid) {
       toast.error(tipoDocumento === "CPF" ? "CPF inválido ou já cadastrado" : "CNPJ inválido ou já cadastrado");
       return;
     }
@@ -260,7 +260,7 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
         user_id: user.id,
         workspace_id: workspaceId,
         nome: nome.trim(),
-        cpf: cleanDoc,
+        cpf: cleanDoc || null,
         status,
         observacoes: observacoes.trim() || null,
       };
@@ -328,27 +328,24 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
       toast.error("Preencha o nome do investidor");
       return false;
     }
-    
-    if (!documento.trim()) {
-      toast.error(`Preencha o ${tipoDocumento}`);
-      return false;
+
+    // CPF/CNPJ opcional: valida apenas se preenchido
+    if (documento.trim()) {
+      const cleanDoc = documento.replace(/\D/g, "");
+      if (tipoDocumento === "CPF" && cleanDoc.length !== 11) {
+        toast.error("CPF incompleto");
+        return false;
+      }
+      if (tipoDocumento === "CNPJ" && cleanDoc.length !== 14) {
+        toast.error("CNPJ incompleto");
+        return false;
+      }
+      if (documentoValidation && !documentoValidation.valid) {
+        toast.error(documentoValidation.message);
+        return false;
+      }
     }
-    
-    const cleanDoc = documento.replace(/\D/g, "");
-    if (tipoDocumento === "CPF" && cleanDoc.length !== 11) {
-      toast.error("CPF incompleto");
-      return false;
-    }
-    if (tipoDocumento === "CNPJ" && cleanDoc.length !== 14) {
-      toast.error("CNPJ incompleto");
-      return false;
-    }
-    
-    if (documentoValidation && !documentoValidation.valid) {
-      toast.error(documentoValidation.message);
-      return false;
-    }
-    
+
     return true;
   };
 
@@ -400,7 +397,9 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="documento">CPF / CNPJ *</Label>
+                <Label htmlFor="documento">
+                  CPF / CNPJ <span className="text-xs text-muted-foreground font-normal">(opcional)</span>
+                </Label>
                 <div className="flex gap-2">
                   <div className="flex gap-1">
                     <Button

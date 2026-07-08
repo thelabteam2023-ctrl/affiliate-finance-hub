@@ -6189,7 +6189,7 @@ export type Database = {
       }
       investidores: {
         Row: {
-          cpf: string
+          cpf: string | null
           created_at: string
           id: string
           nome: string
@@ -6201,7 +6201,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
-          cpf: string
+          cpf?: string | null
           created_at?: string
           id?: string
           nome: string
@@ -6213,7 +6213,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
-          cpf?: string
+          cpf?: string | null
           created_at?: string
           id?: string
           nome?: string

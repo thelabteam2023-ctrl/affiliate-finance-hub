@@ -1,0 +1,1 @@
+ALTER TABLE public.investidores ALTER COLUMN cpf DROP NOT NULL;
