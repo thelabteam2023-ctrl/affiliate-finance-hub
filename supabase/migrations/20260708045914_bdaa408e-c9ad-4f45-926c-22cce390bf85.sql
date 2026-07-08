@@ -1,0 +1,1 @@
+ALTER TABLE public.parceiros ADD COLUMN IF NOT EXISTS documentacao_url text;

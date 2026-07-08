@@ -4,7 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Copy, Check, AlertTriangle, Truck } from "lucide-react";
+import { Copy, Check, AlertTriangle, Truck, ExternalLink, Link as LinkIcon } from "lucide-react";
 import { PhoneInput } from "../PhoneInput";
 import { DatePickerInput } from "@/components/ui/date-picker-input";
 import { StarRating } from "../StarRating";
@@ -31,6 +31,8 @@ interface PersonalDataTabProps {
   setStatus: (val: string) => void;
   observacoes: string;
   setObservacoes: (val: string) => void;
+  documentacaoUrl: string;
+  setDocumentacaoUrl: (val: string) => void;
   fornecedorOrigemId: string | null;
   setFornecedorOrigemId: (val: string | null) => void;
   fornecedores: any[];
@@ -50,11 +52,21 @@ export function PersonalDataTab({
   nome, setNome, cpf, setCpf, email, setEmail, telefone, setTelefone,
   dataNascimento, setDataNascimento, endereco, setEndereco, cidade, setCidade,
   cep, setCep, status, setStatus, observacoes, setObservacoes,
+  documentacaoUrl, setDocumentacaoUrl,
   fornecedorOrigemId, setFornecedorOrigemId, fornecedores,
   qualidade, setQualidade, loading, viewMode,
   cpfError, telefoneError, checkingCpf, planLimitError,
   copyToClipboard, copiedField
 }: PersonalDataTabProps) {
+  const isValidUrl = (() => {
+    if (!documentacaoUrl?.trim()) return true;
+    try {
+      const u = new URL(documentacaoUrl.trim());
+      return u.protocol === "http:" || u.protocol === "https:";
+    } catch {
+      return false;
+    }
+  })();
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div className="md:col-span-2">
@@ -232,6 +244,39 @@ export function PersonalDataTab({
           rows={3}
           disabled={loading || viewMode}
         />
+      </div>
+      <div className="md:col-span-2">
+        <Label htmlFor="documentacao_url">
+          Documentação <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
+        </Label>
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <LinkIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              id="documentacao_url"
+              type="url"
+              value={documentacaoUrl}
+              onChange={(e) => setDocumentacaoUrl(e.target.value)}
+              placeholder="https://drive.google.com/..."
+              disabled={loading || viewMode}
+              className={`pl-8 ${!isValidUrl ? "border-red-500" : ""}`}
+            />
+          </div>
+          {documentacaoUrl?.trim() && isValidUrl && (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => window.open(documentacaoUrl.trim(), "_blank", "noopener,noreferrer")}
+              title="Abrir documentação em nova aba"
+            >
+              <ExternalLink className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+        {!isValidUrl && (
+          <p className="text-xs text-red-500 mt-1">URL inválida. Use http(s)://...</p>
+        )}
       </div>
     </div>
   );

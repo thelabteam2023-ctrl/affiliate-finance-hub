@@ -8116,6 +8116,7 @@ export type Database = {
           cpf: string | null
           created_at: string
           data_nascimento: string | null
+          documentacao_url: string | null
           email: string | null
           endereco: string | null
           fornecedor_origem_id: string | null
@@ -8138,6 +8139,7 @@ export type Database = {
           cpf?: string | null
           created_at?: string
           data_nascimento?: string | null
+          documentacao_url?: string | null
           email?: string | null
           endereco?: string | null
           fornecedor_origem_id?: string | null
@@ -8160,6 +8162,7 @@ export type Database = {
           cpf?: string | null
           created_at?: string
           data_nascimento?: string | null
+          documentacao_url?: string | null
           email?: string | null
           endereco?: string | null
           fornecedor_origem_id?: string | null
