@@ -404,18 +404,35 @@ export function ApostaCard({
   const displayEvento = isMultipla ? 'MÚLTIPLA' : (aposta.evento || '');
 
   // Snapshot do evento importado (logos de time). Quando o jogo veio do
-  // catálogo mas a API não devolveu logo, tentamos o cache local
-  // (team_logos) via useLogoFallback como rede de segurança.
+  // catálogo mas a API não devolveu logo — OU quando a aposta antiga não
+  // tem time_casa/time_fora salvos — tentamos derivar os nomes do próprio
+  // `evento` (formato "HOME X AWAY") e usamos o cache local (team_logos)
+  // como rede de segurança. Antes, apostas sem snapshot ficavam sem logo.
+  const parsedTeams = (() => {
+    if (isMultipla) return { home: null as string | null, away: null as string | null };
+    if (aposta.time_casa && aposta.time_fora) {
+      return { home: aposta.time_casa, away: aposta.time_fora };
+    }
+    const raw = (aposta.evento || "").trim();
+    if (!raw) return { home: null, away: null };
+    const parts = raw.split(/\s+[xX×]\s+/);
+    if (parts.length !== 2) return { home: null, away: null };
+    const home = parts[0].trim();
+    const away = parts[1].trim();
+    if (!home || !away) return { home: null, away: null };
+    return { home, away };
+  })();
+
   const { getTeamLogo: __fallbackTeamLogo } = useLogoFallback(
-    !isMultipla && aposta.time_casa && aposta.time_fora ? esporteToSportKey(aposta.esporte) : null,
+    !isMultipla && parsedTeams.home && parsedTeams.away ? esporteToSportKey(aposta.esporte) : null,
   );
   const homeLogoUrl = aposta.home_team_logo_url
-    || (!isMultipla && aposta.time_casa ? __fallbackTeamLogo(aposta.time_casa) : null);
+    || (parsedTeams.home ? __fallbackTeamLogo(parsedTeams.home) : null);
   const awayLogoUrl = aposta.away_team_logo_url
-    || (!isMultipla && aposta.time_fora ? __fallbackTeamLogo(aposta.time_fora) : null);
-  const hasTeamLogos = !isMultipla
-    && !!aposta.time_casa
-    && !!aposta.time_fora;
+    || (parsedTeams.away ? __fallbackTeamLogo(parsedTeams.away) : null);
+  const hasTeamLogos = !isMultipla && !!parsedTeams.home && !!parsedTeams.away;
+  const displayHomeTeam = parsedTeams.home;
+  const displayAwayTeam = parsedTeams.away;
   
   // Multi-currency: usar valores consolidados para exibição de totais
   const stakeDisplay = (() => {
