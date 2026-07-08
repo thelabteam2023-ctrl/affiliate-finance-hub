@@ -526,8 +526,8 @@ export function ApostaCard({
                   <TeamLogo logoUrl={homeLogoUrl} alt={displayHomeTeam ?? ''} size="h-4 w-4" iconSize="h-2.5 w-2.5" />
                   <span className="truncate">{displayHomeTeam}</span>
                   <span className="text-muted-foreground shrink-0">×</span>
-                  <TeamLogo logoUrl={awayLogoUrl} alt={aposta.time_fora ?? ''} size="h-4 w-4" iconSize="h-2.5 w-2.5" />
-                  <span className="truncate">{aposta.time_fora}</span>
+                  <TeamLogo logoUrl={awayLogoUrl} alt={displayAwayTeam ?? ''} size="h-4 w-4" iconSize="h-2.5 w-2.5" />
+                  <span className="truncate">{displayAwayTeam}</span>
                 </div>
               ) : (
                 <p className="text-sm font-medium truncate uppercase">{displayEvento || 'Aposta'}</p>
@@ -833,11 +833,11 @@ export function ApostaCard({
         {/* LINHA 1: Evento (título destacado) */}
         {hasTeamLogos ? (
           <div className="flex items-center gap-2 mb-1.5 text-base sm:text-lg font-semibold uppercase leading-tight min-w-0">
-            <TeamLogo logoUrl={homeLogoUrl} alt={aposta.time_casa ?? ''} size="h-6 w-6" iconSize="h-3.5 w-3.5" />
-            <span className="truncate">{aposta.time_casa}</span>
+            <TeamLogo logoUrl={homeLogoUrl} alt={displayHomeTeam ?? ''} size="h-6 w-6" iconSize="h-3.5 w-3.5" />
+            <span className="truncate">{displayHomeTeam}</span>
             <span className="text-muted-foreground shrink-0">×</span>
-            <TeamLogo logoUrl={awayLogoUrl} alt={aposta.time_fora ?? ''} size="h-6 w-6" iconSize="h-3.5 w-3.5" />
-            <span className="truncate">{aposta.time_fora}</span>
+            <TeamLogo logoUrl={awayLogoUrl} alt={displayAwayTeam ?? ''} size="h-6 w-6" iconSize="h-3.5 w-3.5" />
+            <span className="truncate">{displayAwayTeam}</span>
           </div>
         ) : (
           <p className="text-base sm:text-lg font-semibold truncate uppercase leading-tight mb-1.5">{displayEvento || 'Aposta'}</p>
