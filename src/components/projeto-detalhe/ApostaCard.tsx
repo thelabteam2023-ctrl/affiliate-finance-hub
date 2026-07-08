@@ -523,8 +523,8 @@ export function ApostaCard({
             <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
               {hasTeamLogos ? (
                 <div className="flex items-center gap-1.5 min-w-0 text-sm font-medium uppercase">
-                  <TeamLogo logoUrl={homeLogoUrl} alt={aposta.time_casa ?? ''} size="h-4 w-4" iconSize="h-2.5 w-2.5" />
-                  <span className="truncate">{aposta.time_casa}</span>
+                  <TeamLogo logoUrl={homeLogoUrl} alt={displayHomeTeam ?? ''} size="h-4 w-4" iconSize="h-2.5 w-2.5" />
+                  <span className="truncate">{displayHomeTeam}</span>
                   <span className="text-muted-foreground shrink-0">×</span>
                   <TeamLogo logoUrl={awayLogoUrl} alt={aposta.time_fora ?? ''} size="h-4 w-4" iconSize="h-2.5 w-2.5" />
                   <span className="truncate">{aposta.time_fora}</span>
