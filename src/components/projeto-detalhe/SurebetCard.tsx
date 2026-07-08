@@ -622,14 +622,30 @@ export function SurebetCard({
   const { isSystemOwner } = useAuth();
 
   // Fallback de logos via cache local quando o evento foi importado sem
-  // home_team_logo_url/away_team_logo_url.
+  // home_team_logo_url/away_team_logo_url — OU quando a surebet antiga
+  // não teve time_casa/time_fora persistidos (derivamos do próprio evento).
+  const __parsedTeams = (() => {
+    if (surebet.time_casa && surebet.time_fora) {
+      return { home: surebet.time_casa, away: surebet.time_fora };
+    }
+    const raw = (surebet.evento || "").trim();
+    if (!raw) return { home: null as string | null, away: null as string | null };
+    const parts = raw.split(/\s+[xX×]\s+/);
+    if (parts.length !== 2) return { home: null, away: null };
+    const home = parts[0].trim();
+    const away = parts[1].trim();
+    if (!home || !away) return { home: null, away: null };
+    return { home, away };
+  })();
   const { getTeamLogo: __fallbackTeamLogo } = useLogoFallback(
-    surebet.time_casa && surebet.time_fora ? esporteToSportKey(surebet.esporte) : null,
+    __parsedTeams.home && __parsedTeams.away ? esporteToSportKey(surebet.esporte) : null,
   );
   const __homeLogoUrl = surebet.home_team_logo_url
-    || (surebet.time_casa ? __fallbackTeamLogo(surebet.time_casa) : null);
+    || (__parsedTeams.home ? __fallbackTeamLogo(__parsedTeams.home) : null);
   const __awayLogoUrl = surebet.away_team_logo_url
-    || (surebet.time_fora ? __fallbackTeamLogo(surebet.time_fora) : null);
+    || (__parsedTeams.away ? __fallbackTeamLogo(__parsedTeams.away) : null);
+  const __displayHome = __parsedTeams.home;
+  const __displayAway = __parsedTeams.away;
 
   // Expôr para debug e automação
   const { workingRates: projectRatesRaw, refetch: refetchProjectRates } = useProjetoWorkingRates(surebet.workspace_id);
@@ -1126,13 +1142,13 @@ export function SurebetCard({
         <TooltipProvider delayDuration={300}>
           <Tooltip>
             <TooltipTrigger asChild>
-              {surebet.time_casa && surebet.time_fora ? (
+              {__displayHome && __displayAway ? (
                 <div className="flex items-center gap-2 min-w-0 mb-1.5 cursor-default">
-                  <TeamLogo logoUrl={__homeLogoUrl} alt={surebet.time_casa} size="h-6 w-6" iconSize="h-3.5 w-3.5" />
-                  <span className="text-base sm:text-lg font-semibold truncate uppercase leading-tight">{surebet.time_casa}</span>
+                  <TeamLogo logoUrl={__homeLogoUrl} alt={__displayHome} size="h-6 w-6" iconSize="h-3.5 w-3.5" />
+                  <span className="text-base sm:text-lg font-semibold truncate uppercase leading-tight">{__displayHome}</span>
                   <span className="text-muted-foreground shrink-0">×</span>
-                  <TeamLogo logoUrl={__awayLogoUrl} alt={surebet.time_fora} size="h-6 w-6" iconSize="h-3.5 w-3.5" />
-                  <span className="text-base sm:text-lg font-semibold truncate uppercase leading-tight">{surebet.time_fora}</span>
+                  <TeamLogo logoUrl={__awayLogoUrl} alt={__displayAway} size="h-6 w-6" iconSize="h-3.5 w-3.5" />
+                  <span className="text-base sm:text-lg font-semibold truncate uppercase leading-tight">{__displayAway}</span>
                 </div>
               ) : (
                 <p className="text-base sm:text-lg font-semibold truncate uppercase leading-tight mb-1.5 cursor-default">{surebet.evento || 'Operação'}</p>

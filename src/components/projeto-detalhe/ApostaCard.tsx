@@ -404,18 +404,35 @@ export function ApostaCard({
   const displayEvento = isMultipla ? 'MÚLTIPLA' : (aposta.evento || '');
 
   // Snapshot do evento importado (logos de time). Quando o jogo veio do
-  // catálogo mas a API não devolveu logo, tentamos o cache local
-  // (team_logos) via useLogoFallback como rede de segurança.
+  // catálogo mas a API não devolveu logo — OU quando a aposta antiga não
+  // tem time_casa/time_fora salvos — tentamos derivar os nomes do próprio
+  // `evento` (formato "HOME X AWAY") e usamos o cache local (team_logos)
+  // como rede de segurança. Antes, apostas sem snapshot ficavam sem logo.
+  const parsedTeams = (() => {
+    if (isMultipla) return { home: null as string | null, away: null as string | null };
+    if (aposta.time_casa && aposta.time_fora) {
+      return { home: aposta.time_casa, away: aposta.time_fora };
+    }
+    const raw = (aposta.evento || "").trim();
+    if (!raw) return { home: null, away: null };
+    const parts = raw.split(/\s+[xX×]\s+/);
+    if (parts.length !== 2) return { home: null, away: null };
+    const home = parts[0].trim();
+    const away = parts[1].trim();
+    if (!home || !away) return { home: null, away: null };
+    return { home, away };
+  })();
+
   const { getTeamLogo: __fallbackTeamLogo } = useLogoFallback(
-    !isMultipla && aposta.time_casa && aposta.time_fora ? esporteToSportKey(aposta.esporte) : null,
+    !isMultipla && parsedTeams.home && parsedTeams.away ? esporteToSportKey(aposta.esporte) : null,
   );
   const homeLogoUrl = aposta.home_team_logo_url
-    || (!isMultipla && aposta.time_casa ? __fallbackTeamLogo(aposta.time_casa) : null);
+    || (parsedTeams.home ? __fallbackTeamLogo(parsedTeams.home) : null);
   const awayLogoUrl = aposta.away_team_logo_url
-    || (!isMultipla && aposta.time_fora ? __fallbackTeamLogo(aposta.time_fora) : null);
-  const hasTeamLogos = !isMultipla
-    && !!aposta.time_casa
-    && !!aposta.time_fora;
+    || (parsedTeams.away ? __fallbackTeamLogo(parsedTeams.away) : null);
+  const hasTeamLogos = !isMultipla && !!parsedTeams.home && !!parsedTeams.away;
+  const displayHomeTeam = parsedTeams.home;
+  const displayAwayTeam = parsedTeams.away;
   
   // Multi-currency: usar valores consolidados para exibição de totais
   const stakeDisplay = (() => {
@@ -506,11 +523,11 @@ export function ApostaCard({
             <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
               {hasTeamLogos ? (
                 <div className="flex items-center gap-1.5 min-w-0 text-sm font-medium uppercase">
-                  <TeamLogo logoUrl={homeLogoUrl} alt={aposta.time_casa ?? ''} size="h-4 w-4" iconSize="h-2.5 w-2.5" />
-                  <span className="truncate">{aposta.time_casa}</span>
+                  <TeamLogo logoUrl={homeLogoUrl} alt={displayHomeTeam ?? ''} size="h-4 w-4" iconSize="h-2.5 w-2.5" />
+                  <span className="truncate">{displayHomeTeam}</span>
                   <span className="text-muted-foreground shrink-0">×</span>
-                  <TeamLogo logoUrl={awayLogoUrl} alt={aposta.time_fora ?? ''} size="h-4 w-4" iconSize="h-2.5 w-2.5" />
-                  <span className="truncate">{aposta.time_fora}</span>
+                  <TeamLogo logoUrl={awayLogoUrl} alt={displayAwayTeam ?? ''} size="h-4 w-4" iconSize="h-2.5 w-2.5" />
+                  <span className="truncate">{displayAwayTeam}</span>
                 </div>
               ) : (
                 <p className="text-sm font-medium truncate uppercase">{displayEvento || 'Aposta'}</p>
@@ -816,11 +833,11 @@ export function ApostaCard({
         {/* LINHA 1: Evento (título destacado) */}
         {hasTeamLogos ? (
           <div className="flex items-center gap-2 mb-1.5 text-base sm:text-lg font-semibold uppercase leading-tight min-w-0">
-            <TeamLogo logoUrl={homeLogoUrl} alt={aposta.time_casa ?? ''} size="h-6 w-6" iconSize="h-3.5 w-3.5" />
-            <span className="truncate">{aposta.time_casa}</span>
+            <TeamLogo logoUrl={homeLogoUrl} alt={displayHomeTeam ?? ''} size="h-6 w-6" iconSize="h-3.5 w-3.5" />
+            <span className="truncate">{displayHomeTeam}</span>
             <span className="text-muted-foreground shrink-0">×</span>
-            <TeamLogo logoUrl={awayLogoUrl} alt={aposta.time_fora ?? ''} size="h-6 w-6" iconSize="h-3.5 w-3.5" />
-            <span className="truncate">{aposta.time_fora}</span>
+            <TeamLogo logoUrl={awayLogoUrl} alt={displayAwayTeam ?? ''} size="h-6 w-6" iconSize="h-3.5 w-3.5" />
+            <span className="truncate">{displayAwayTeam}</span>
           </div>
         ) : (
           <p className="text-base sm:text-lg font-semibold truncate uppercase leading-tight mb-1.5">{displayEvento || 'Aposta'}</p>
