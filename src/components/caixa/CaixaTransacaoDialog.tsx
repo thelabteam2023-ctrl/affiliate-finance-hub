@@ -5034,7 +5034,7 @@ export function CaixaTransacaoDialog({
                                     {renderCotacaoInfo(parseFloat(String(valor)), moeda)}
                                   </>
                                 ) : (
-                                  <div className="text-xs text-muted-foreground mt-2">
+                                  <div className="mt-2 text-sm font-semibold text-emerald-400 tabular-nums">
                                     Saldo atual: {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", destinoContaId))}
                                   </div>
                                 )}
@@ -5097,7 +5097,7 @@ export function CaixaTransacaoDialog({
                             {(origemTipo === "CAIXA_OPERACIONAL" || 
                               (tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "LIQUIDACAO") ||
                               (tipoTransacao === "TRANSFERENCIA" && origemTipo === "CAIXA_OPERACIONAL")) && (!valor || parseFloat(String(valor)) === 0) && (
-                              <div className="text-xs text-muted-foreground mt-2">
+                              <div className="mt-2 text-sm font-semibold text-emerald-400 tabular-nums">
                                 Saldo disponível: {tipoMoeda === "CRYPTO" ? (
                                   formatCryptoBalance(
                                     getSaldoCoin("CAIXA_OPERACIONAL"),
@@ -5123,7 +5123,7 @@ export function CaixaTransacaoDialog({
                                     {renderCotacaoInfo(parseFloat(String(valor)), moeda)}
                                   </>
                                 ) : (
-                                  <div className="text-xs text-muted-foreground mt-2">
+                                  <div className="mt-2 text-sm font-semibold text-emerald-400 tabular-nums">
                                     Saldo atual: {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", origemContaId))}
                                   </div>
                                 )}
@@ -5144,7 +5144,7 @@ export function CaixaTransacaoDialog({
                                     </span>
                                   </div>
                                 ) : (
-                                  <div className="text-xs text-muted-foreground mt-2">
+                                  <div className="mt-2 text-sm font-semibold text-emerald-400 tabular-nums">
                                     Saldo disponível: {formatCryptoBalance(
                                       getSaldoCoin("PARCEIRO_WALLET", origemWalletId),
                                       getSaldoAtual("PARCEIRO_WALLET", origemWalletId),
@@ -5180,7 +5180,7 @@ export function CaixaTransacaoDialog({
                                     {tipoMoeda === "FIAT" && renderCotacaoInfo(parseFloat(String(valor)), moeda)}
                                   </>
                                 ) : (
-                                  <div className="text-xs text-muted-foreground mt-2">
+                                  <div className="mt-2 text-sm font-semibold text-emerald-400 tabular-nums">
                                     Saldo disponível: {tipoMoeda === "CRYPTO" && origemTipo === "PARCEIRO_WALLET" ? (
                                       formatCryptoBalance(
                                         getSaldoCoin(origemTipo, origemWalletId),
@@ -5230,7 +5230,7 @@ export function CaixaTransacaoDialog({
                             )}
                             {(destinoTipo === "CAIXA_OPERACIONAL" || 
                               (tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "APORTE")) && (!valor || parseFloat(String(valor)) === 0) && (
-                              <div className="text-xs text-muted-foreground mt-2">
+                              <div className="mt-2 text-sm font-semibold text-emerald-400 tabular-nums">
                                 Saldo atual: {tipoMoeda === "CRYPTO" ? (
                                   formatCryptoBalance(
                                     getSaldoCoin("CAIXA_OPERACIONAL"),
@@ -5284,7 +5284,7 @@ export function CaixaTransacaoDialog({
                                     })()}
                                   </>
                                 ) : (
-                                  <div className="text-xs text-muted-foreground mt-2">
+                                  <div className="mt-2 text-sm font-semibold text-emerald-400 tabular-nums">
                                     {formatBookmakerFullBalance(destinoBookmakerId)}
                                   </div>
                                 )}
@@ -5320,7 +5320,7 @@ export function CaixaTransacaoDialog({
                                     </span>
                                   </div>
                                 ) : (
-                                  <div className="text-xs text-muted-foreground mt-2">
+                                  <div className="mt-2 text-sm font-semibold text-emerald-400 tabular-nums">
                                     Saldo atual: {tipoMoeda === "CRYPTO" && destinoTipo === "PARCEIRO_WALLET" ? (
                                       formatCryptoBalance(
                                         getSaldoCoin(destinoTipo, destinoWalletId),
@@ -5356,7 +5356,7 @@ export function CaixaTransacaoDialog({
                                     </span>
                                   </div>
                                 ) : (
-                                  <div className="text-xs text-muted-foreground mt-2">
+                                  <div className="mt-2 text-sm font-semibold text-emerald-400 tabular-nums">
                                     Saldo atual: {tipoMoeda === "CRYPTO" && destinoTipo === "PARCEIRO_WALLET" ? (
                                       formatCryptoBalance(
                                         getSaldoCoin(destinoTipo, destinoWalletId),
