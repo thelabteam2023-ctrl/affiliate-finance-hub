@@ -309,7 +309,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
 
   // Fetch bank account balances when viewing profile
   useEffect(() => {
-    if (!viewMode || !open || !parceiroId) {
+    if (!viewMode || !open || !parceiroId || !workspaceId) {
       setContaSaldos({});
       return;
     }
@@ -318,7 +318,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       const { data, error } = await supabase
         .from("v_saldo_parceiro_contas")
         .select("conta_id, saldo")
-        .eq("parceiro_id", parceiroId);
+        .eq("parceiro_id", parceiroId)
+        .eq("workspace_id", workspaceId);
       if (cancelled || error || !data) return;
       const map: Record<string, number> = {};
       data.forEach((r: any) => {
@@ -329,11 +330,11 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     return () => {
       cancelled = true;
     };
-  }, [viewMode, open, parceiroId, bankAccounts.length]);
+  }, [viewMode, open, parceiroId, bankAccounts.length, workspaceId]);
 
   // Fetch crypto wallet balances when viewing profile
   useEffect(() => {
-    if (!viewMode || !open || !parceiroId) {
+    if (!viewMode || !open || !parceiroId || !workspaceId) {
       setWalletSaldos({});
       return;
     }
@@ -342,7 +343,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       const { data, error } = await supabase
         .from("v_wallet_crypto_balances")
         .select("wallet_id, balance_total_coin, primary_coin")
-        .eq("parceiro_id", parceiroId);
+        .eq("parceiro_id", parceiroId)
+        .eq("workspace_id", workspaceId);
       if (cancelled || error || !data) return;
       const map: Record<string, { saldo: number; coin: string }> = {};
       data.forEach((r: any) => {
