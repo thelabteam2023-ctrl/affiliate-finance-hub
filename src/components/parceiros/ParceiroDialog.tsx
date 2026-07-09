@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -66,9 +66,6 @@ interface ParceiroDialogProps {
 
 export default function ParceiroDialog({ open, onClose, parceiro, viewMode = false, initialTab = "dados" }: ParceiroDialogProps) {
   const { workspaceId } = useWorkspace();
-  // Blindagem multi-workspace: se o workspace ativo mudar enquanto o dialog está aberto,
-  // fechar imediatamente para evitar que o snapshot em `useState` exiba dados de outro workspace.
-  const initialWorkspaceRef = (function useRefInit(){ /* placeholder */ })();
   const [loading, setLoading] = useState(false);
   const [nome, setNome] = useState("");
   const [cpf, setCpf] = useState("");
