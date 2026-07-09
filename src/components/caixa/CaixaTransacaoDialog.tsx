@@ -58,6 +58,7 @@ import {
 } from "@/components/ui/collapsible";
  import { WalletCryptoSelect } from "@/components/wallets/WalletCryptoSelect";
 import { DestinoConfirmadoCard } from "@/components/caixa/DestinoConfirmadoCard";
+import { PixKeysDisplay } from "@/components/caixa/PixKeysDisplay";
 
 // Constantes de moedas disponíveis (todas as 8 moedas FIAT suportadas)
 const MOEDAS_FIAT = [
