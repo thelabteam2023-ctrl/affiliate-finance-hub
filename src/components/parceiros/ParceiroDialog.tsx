@@ -343,9 +343,14 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       const { data, error } = await (supabase
         .from("v_wallet_crypto_balances")
         .select("wallet_id, balance_total_coin, primary_coin")
-        .eq("parceiro_id", parceiroId) as any)
-        .eq("workspace_id", workspaceId);
-      if (cancelled || error || !data) return;
+        .eq("parceiro_id", parceiroId) as any);
+      // NOTA: v_wallet_crypto_balances NÃO possui coluna workspace_id.
+      // Isolamento garantido por parceiro_id (UUID único por workspace) + RLS nas tabelas base.
+      if (cancelled || error || !data) {
+        if (error) console.error("[ParceiroDialog] wallet balances error:", error);
+        return;
+      }
+      console.debug("[ParceiroDialog] wallet balances loaded", { parceiroId, workspaceId, rows: data.length });
       const map: Record<string, { saldo: number; coin: string }> = {};
       data.forEach((r: any) => {
         if (r.wallet_id) {
