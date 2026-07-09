@@ -509,7 +509,7 @@ export default function Caixa() {
       if (parceirosDoWorkspace.length > 0) {
         const walletsQuery = supabase
           .from("v_saldo_parceiro_wallets")
-          .select("saldo_usd")
+          .select("coin, saldo_coin, saldo_usd")
           .in("parceiro_id", parceirosDoWorkspace);
         if (caixaParceiro?.id) {
           walletsQuery.neq("parceiro_id", caixaParceiro.id);
