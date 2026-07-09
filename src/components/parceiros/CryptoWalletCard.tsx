@@ -16,8 +16,7 @@ interface CryptoWalletCardProps {
     network: string;
     endereco: string;
     exchange?: string;
-    saldo?: number;
-    saldoCoin?: string;
+    balances?: Array<{ coin: string; saldo: number; saldoUsd: number }>;
   };
   parceiroId?: string | null;
 }
@@ -85,11 +84,19 @@ export function CryptoWalletCard({ wallet, parceiroId }: CryptoWalletCardProps) 
           <div className="grid grid-cols-2 gap-4 py-2">
             <div className="space-y-1">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Saldo Atual</p>
-              <div className="flex flex-col">
-                <span className="text-lg font-bold text-primary tabular-nums">
-                  {(wallet.saldo || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
-                  <span className="ml-1 text-xs font-medium text-muted-foreground">{wallet.saldoCoin || "USDT"}</span>
-                </span>
+              <div className="flex flex-col gap-0.5">
+                {(wallet.balances && wallet.balances.length > 0) ? (
+                  wallet.balances.map((b) => (
+                    <span key={b.coin} className="text-lg font-bold text-primary tabular-nums leading-tight">
+                      {b.saldo.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
+                      <span className="ml-1 text-xs font-medium text-muted-foreground">{b.coin}</span>
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-lg font-bold text-muted-foreground tabular-nums">
+                    0,00
+                  </span>
+                )}
               </div>
             </div>
             <div className="space-y-1">
