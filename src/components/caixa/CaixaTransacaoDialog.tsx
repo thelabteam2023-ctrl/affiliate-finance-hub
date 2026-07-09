@@ -3358,6 +3358,10 @@ export function CaixaTransacaoDialog({
                     })}
                 </SelectContent>
               </Select>
+              {origemContaId && (() => {
+                const c = contasBancarias.find((x) => x.id === origemContaId);
+                return c ? <PixKeysDisplay keys={c.pix_keys} legacyKey={c.pix_key} /> : null;
+              })()}
             </div>
           )}
           {origemParceiroId && tipoMoeda === "FIAT" && contasBancarias.filter((c) => {
@@ -3788,6 +3792,10 @@ export function CaixaTransacaoDialog({
                       ))}
                   </SelectContent>
                 </Select>
+                {destinoContaId && (() => {
+                  const c = contasBancarias.find((x) => x.id === destinoContaId);
+                  return c ? <PixKeysDisplay keys={c.pix_keys} legacyKey={c.pix_key} /> : null;
+                })()}
               </div>
             )}
             {destinoParceiroId && contasBancarias.filter((c) => c.parceiro_id === destinoParceiroId && c.moeda === moeda).length === 0 && (
