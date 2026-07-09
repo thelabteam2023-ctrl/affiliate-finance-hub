@@ -119,7 +119,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     }
   }, [workspaceId, open, onClose]);
   const [contaSaldos, setContaSaldos] = useState<Record<string, number>>({});
-  const [walletSaldos, setWalletSaldos] = useState<Record<string, { saldo: number; coin: string }>>({});
+  const [walletSaldos, setWalletSaldos] = useState<Record<string, Array<{ coin: string; saldo: number; saldoUsd: number }>>>({});
   const { toast } = useToast();
 
    // Debug logging to help identify "Invalid input syntax" errors
@@ -340,32 +340,37 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     }
     let cancelled = false;
     (async () => {
+      // Usa v_saldo_parceiro_wallets: 1 linha por (wallet, coin) — a wallet pode ter múltiplos ativos.
+      // v_wallet_crypto_balances retorna apenas primary_coin, escondendo saldos em outras moedas.
       const { data, error } = await (supabase
-        .from("v_wallet_crypto_balances")
-        .select("wallet_id, balance_total_coin, primary_coin")
-        .eq("parceiro_id", parceiroId) as any);
-      // NOTA: v_wallet_crypto_balances NÃO possui coluna workspace_id.
-      // Isolamento garantido por parceiro_id (UUID único por workspace) + RLS nas tabelas base.
+        .from("v_saldo_parceiro_wallets")
+        .select("wallet_id, coin, saldo_coin, saldo_usd")
+        .eq("parceiro_id", parceiroId)
+        .eq("workspace_id", workspaceId) as any);
       if (cancelled || error || !data) {
         if (error) console.error("[ParceiroDialog] wallet balances error:", error);
         return;
       }
       console.debug("[ParceiroDialog] wallet balances loaded", { parceiroId, workspaceId, rows: data.length });
-      const map: Record<string, { saldo: number; coin: string }> = {};
+      const map: Record<string, Array<{ coin: string; saldo: number; saldoUsd: number }>> = {};
       data.forEach((r: any) => {
-        if (r.wallet_id) {
-          map[r.wallet_id] = {
-            saldo: Number(r.balance_total_coin) || 0,
-            coin: r.primary_coin || "USDT",
-          };
-        }
+        if (!r.wallet_id || !r.coin) return;
+        const saldo = Number(r.saldo_coin) || 0;
+        if (saldo === 0) return;
+        (map[r.wallet_id] ||= []).push({
+          coin: r.coin,
+          saldo,
+          saldoUsd: Number(r.saldo_usd) || 0,
+        });
       });
+      // Ordena por USD desc para exibir a moeda de maior valor primeiro
+      Object.keys(map).forEach((k) => map[k].sort((a, b) => Math.abs(b.saldoUsd) - Math.abs(a.saldoUsd)));
       setWalletSaldos(map);
     })();
     return () => {
       cancelled = true;
     };
-  }, [viewMode, open, parceiroId, cryptoWallets.length]);
+  }, [viewMode, open, parceiroId, cryptoWallets.length, workspaceId]);
 
   // Real-time CPF validation
   useEffect(() => {

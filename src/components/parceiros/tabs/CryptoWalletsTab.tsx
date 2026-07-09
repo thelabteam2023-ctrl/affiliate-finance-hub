@@ -20,7 +20,7 @@ interface CryptoWalletsTabProps {
   redes: any[];
   loading: boolean;
   viewMode: boolean;
-  walletSaldos: Record<string, { saldo: number; coin: string }>;
+  walletSaldos: Record<string, Array<{ coin: string; saldo: number; saldoUsd: number }>>;
   parceiroId: string | null;
   validateWalletEndereco: (endereco: string, index: number, walletId?: string) => void;
   enderecoErrors: Record<number, string>;
@@ -46,15 +46,14 @@ export function CryptoWalletsTab({
         <div className="grid gap-4">
           {cryptoWallets.map((wallet, index) => {
             const rede = redes.find(r => r.id === wallet.rede_id);
-            const saldoInfo = wallet.id ? walletSaldos[wallet.id] : undefined;
+            const balances = (wallet.id ? walletSaldos[wallet.id] : undefined) || [];
             return (
               <CryptoWalletCard
                 key={index}
                 wallet={{
                   ...wallet,
                   network: rede?.nome || "",
-                  saldo: saldoInfo?.saldo,
-                  saldoCoin: saldoInfo?.coin,
+                  balances,
                 }}
                 parceiroId={parceiroId}
               />
