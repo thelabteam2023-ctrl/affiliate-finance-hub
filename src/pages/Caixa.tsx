@@ -174,8 +174,28 @@ export default function Caixa() {
   } | null>(null);
 
   // Hook centralizado de cotações
-  const cryptoSymbols = useMemo(() => saldosCrypto.map(s => s.coin), [saldosCrypto]);
+  // Une coins do Caixa Operacional + coins das wallets de parceiros para que
+  // TODOS os preços live necessários (Posição de Capital + Sheet) sejam
+  // pré-carregados no ExchangeRatesContext.
+  const cryptoSymbols = useMemo(() => {
+    const set = new Set<string>();
+    saldosCrypto.forEach(s => s.coin && set.add(s.coin.toUpperCase()));
+    walletsParceirosRows.forEach(w => w.coin && set.add(w.coin.toUpperCase()));
+    return Array.from(set);
+  }, [saldosCrypto, walletsParceirosRows]);
   const { cotacaoUSD, cryptoPrices, getCryptoUSDValue, lastUpdate } = useCotacoes(cryptoSymbols);
+
+  // Total USD das wallets de parceiros revalorizado com preço live.
+  // Fonte única da verdade: v_saldo_parceiro_wallets (saldo_coin) × preço live
+  // (fallback para saldo_usd gravado se o preço da coin ainda não carregou).
+  // Mesma engine que SaldosParceirosSheet usa para exibir cada wallet.
+  const saldoWalletsParceiros = useMemo(
+    () => walletsParceirosRows.reduce(
+      (sum, w) => sum + getCryptoUSDValue(w.coin, w.saldo_coin, w.saldo_usd),
+      0
+    ),
+    [walletsParceirosRows, getCryptoUSDValue, cryptoPrices]
+  );
 
   // Hook para transações pendentes - busca GLOBAL sem filtro de data
   const { data: pendingTransactions = [], refetch: refetchPending } = usePendingTransactions();
