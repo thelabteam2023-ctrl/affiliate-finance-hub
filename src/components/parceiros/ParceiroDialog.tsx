@@ -340,10 +340,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     }
     let cancelled = false;
     (async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase
         .from("v_wallet_crypto_balances")
         .select("wallet_id, balance_total_coin, primary_coin")
-        .eq("parceiro_id", parceiroId)
+        .eq("parceiro_id", parceiroId) as any)
         .eq("workspace_id", workspaceId);
       if (cancelled || error || !data) return;
       const map: Record<string, { saldo: number; coin: string }> = {};
