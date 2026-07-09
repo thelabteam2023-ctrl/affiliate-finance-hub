@@ -4220,6 +4220,10 @@ export function CaixaTransacaoDialog({
                     ))}
                   </SelectContent>
                 </Select>
+                {destinoContaId && (() => {
+                  const c = contasBancarias.find((x) => x.id === destinoContaId);
+                  return c ? <PixKeysDisplay keys={c.pix_keys} legacyKey={c.pix_key} /> : null;
+                })()}
               </div>
             )}
             {destinoParceiroId && getContasDisponiveisDestino(destinoParceiroId).length === 0 && (
