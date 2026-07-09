@@ -58,6 +58,7 @@ import {
 } from "@/components/ui/collapsible";
  import { WalletCryptoSelect } from "@/components/wallets/WalletCryptoSelect";
 import { DestinoConfirmadoCard } from "@/components/caixa/DestinoConfirmadoCard";
+import { PixKeysDisplay } from "@/components/caixa/PixKeysDisplay";
 
 // Constantes de moedas disponíveis (todas as 8 moedas FIAT suportadas)
 const MOEDAS_FIAT = [
@@ -134,6 +135,8 @@ interface ContaBancaria {
   moeda: string;
   banco_id: string | null;
   bancoTaxa?: BancoTaxa | null;
+  pix_key?: string | null;
+  pix_keys?: Array<{ tipo: string; chave: string }> | null;
 }
 
 interface WalletCrypto {
@@ -1735,6 +1738,8 @@ export function CaixaTransacaoDialog({
           parceiro_id, 
           moeda,
           banco_id,
+          pix_key,
+          pix_keys,
           parceiros!inner(workspace_id),
           bancos(taxa_deposito_tipo, taxa_deposito_valor, taxa_saque_tipo, taxa_saque_valor, taxa_moeda)
         `)
@@ -1765,6 +1770,8 @@ export function CaixaTransacaoDialog({
         parceiro_id: c.parceiro_id,
         moeda: c.moeda,
         banco_id: c.banco_id ?? null,
+        pix_key: c.pix_key ?? null,
+        pix_keys: Array.isArray(c.pix_keys) ? c.pix_keys : null,
         bancoTaxa: c.bancos ? {
           taxa_deposito_tipo: c.bancos.taxa_deposito_tipo ?? null,
           taxa_deposito_valor: c.bancos.taxa_deposito_valor ?? null,
@@ -3612,6 +3619,10 @@ export function CaixaTransacaoDialog({
                         })}
                     </SelectContent>
                   </Select>
+                  {origemContaId && (() => {
+                    const c = contasBancarias.find((x) => x.id === origemContaId);
+                    return c ? <PixKeysDisplay keys={c.pix_keys} legacyKey={c.pix_key} /> : null;
+                  })()}
                 </div>
               )}
               {origemParceiroId && contasBancarias.filter((c) => {
@@ -4032,6 +4043,10 @@ export function CaixaTransacaoDialog({
                         ))}
                     </SelectContent>
                   </Select>
+                  {destinoContaId && (() => {
+                    const c = contasBancarias.find((x) => x.id === destinoContaId);
+                    return c ? <PixKeysDisplay keys={c.pix_keys} legacyKey={c.pix_key} /> : null;
+                  })()}
                 </div>
               )}
               {destinoParceiroId && getContasDisponiveisDestino(destinoParceiroId).length === 0 && (
@@ -4205,6 +4220,10 @@ export function CaixaTransacaoDialog({
                     ))}
                   </SelectContent>
                 </Select>
+                {destinoContaId && (() => {
+                  const c = contasBancarias.find((x) => x.id === destinoContaId);
+                  return c ? <PixKeysDisplay keys={c.pix_keys} legacyKey={c.pix_key} /> : null;
+                })()}
               </div>
             )}
             {destinoParceiroId && getContasDisponiveisDestino(destinoParceiroId).length === 0 && (
