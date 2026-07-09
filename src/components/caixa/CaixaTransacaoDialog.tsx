@@ -134,6 +134,8 @@ interface ContaBancaria {
   moeda: string;
   banco_id: string | null;
   bancoTaxa?: BancoTaxa | null;
+  pix_key?: string | null;
+  pix_keys?: Array<{ tipo: string; chave: string }> | null;
 }
 
 interface WalletCrypto {
