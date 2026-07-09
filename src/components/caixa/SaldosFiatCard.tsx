@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
 import { Plus, Calendar } from "lucide-react";
 import { useCaixaDataChangedListener } from "@/hooks/useInvalidateCaixaData";
+import { useTabWorkspace } from "@/hooks/useTabWorkspace";
 
 interface ContaFiat {
   id: string;
@@ -20,6 +21,7 @@ interface SaldosFiatCardProps {
 }
 
 export function SaldosFiatCard({ caixaParceiroId, formatCurrency, onDataChanged }: SaldosFiatCardProps) {
+  const { workspaceId } = useTabWorkspace();
   const [contas, setContas] = useState<ContaFiat[]>([]);
   const [isParceiroDialogOpen, setIsParceiroDialogOpen] = useState(false);
   const [parceiroCompleto, setParceiroCompleto] = useState<any>(null);
@@ -107,6 +109,7 @@ export function SaldosFiatCard({ caixaParceiroId, formatCurrency, onDataChanged 
       </Card>
 
       <ParceiroDialog
+        key={`caixa-parceiro-dialog-${workspaceId ?? "none"}-${parceiroCompleto?.id ?? "none"}`}
         open={isParceiroDialogOpen}
         onClose={() => {
           setIsParceiroDialogOpen(false);

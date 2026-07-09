@@ -626,6 +626,7 @@ export default function GestaoParceiros() {
         {/* Dialogs */}
         {dialogOpen && (
           <ParceiroDialog
+            key={`parceiro-dialog-${workspaceId ?? "none"}-${editingParceiro?.id ?? "new"}`}
             open={dialogOpen}
             onClose={handleDialogClose}
             parceiro={editingParceiro}

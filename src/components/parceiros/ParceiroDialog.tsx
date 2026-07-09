@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -98,6 +98,26 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   const [hasSavedDuringSession, setHasSavedDuringSession] = useState(false);
   const [expandedBankIndex, setExpandedBankIndex] = useState<number | null>(null);
   const [expandedWalletIndex, setExpandedWalletIndex] = useState<number | null>(null);
+
+  // Blindagem multi-workspace: fecha o dialog se o workspace ativo mudar após ele ter sido aberto.
+  // Isso evita que os snapshots em useState (bankAccounts, cryptoWallets, parceiroId) exibam
+  // dados de um workspace anterior. As RLS do backend já bloqueiam o vazamento real de dados;
+  // este guard cobre o "vazamento visual" causado por estado local persistente.
+  const openedWorkspaceRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!open) {
+      openedWorkspaceRef.current = null;
+      return;
+    }
+    if (openedWorkspaceRef.current === null) {
+      openedWorkspaceRef.current = workspaceId ?? null;
+      return;
+    }
+    if (workspaceId && openedWorkspaceRef.current !== workspaceId) {
+      console.warn("[ParceiroDialog] Workspace mudou com dialog aberto — fechando para evitar estado stale.");
+      onClose();
+    }
+  }, [workspaceId, open, onClose]);
   const [contaSaldos, setContaSaldos] = useState<Record<string, number>>({});
   const [walletSaldos, setWalletSaldos] = useState<Record<string, { saldo: number; coin: string }>>({});
   const { toast } = useToast();
@@ -289,7 +309,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
 
   // Fetch bank account balances when viewing profile
   useEffect(() => {
-    if (!viewMode || !open || !parceiroId) {
+    if (!viewMode || !open || !parceiroId || !workspaceId) {
       setContaSaldos({});
       return;
     }
@@ -298,7 +318,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       const { data, error } = await supabase
         .from("v_saldo_parceiro_contas")
         .select("conta_id, saldo")
-        .eq("parceiro_id", parceiroId);
+        .eq("parceiro_id", parceiroId)
+        .eq("workspace_id", workspaceId);
       if (cancelled || error || !data) return;
       const map: Record<string, number> = {};
       data.forEach((r: any) => {
@@ -309,20 +330,21 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     return () => {
       cancelled = true;
     };
-  }, [viewMode, open, parceiroId, bankAccounts.length]);
+  }, [viewMode, open, parceiroId, bankAccounts.length, workspaceId]);
 
   // Fetch crypto wallet balances when viewing profile
   useEffect(() => {
-    if (!viewMode || !open || !parceiroId) {
+    if (!viewMode || !open || !parceiroId || !workspaceId) {
       setWalletSaldos({});
       return;
     }
     let cancelled = false;
     (async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase
         .from("v_wallet_crypto_balances")
         .select("wallet_id, balance_total_coin, primary_coin")
-        .eq("parceiro_id", parceiroId);
+        .eq("parceiro_id", parceiroId) as any)
+        .eq("workspace_id", workspaceId);
       if (cancelled || error || !data) return;
       const map: Record<string, { saldo: number; coin: string }> = {};
       data.forEach((r: any) => {
