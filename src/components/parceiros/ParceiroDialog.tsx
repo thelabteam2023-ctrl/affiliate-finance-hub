@@ -120,6 +120,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   }, [workspaceId, open, onClose]);
   const [contaSaldos, setContaSaldos] = useState<Record<string, number>>({});
   const [walletSaldos, setWalletSaldos] = useState<Record<string, Array<{ coin: string; saldo: number; saldoUsd: number }>>>({});
+  const [walletReloadKey, setWalletReloadKey] = useState(0);
   const { toast } = useToast();
 
    // Debug logging to help identify "Invalid input syntax" errors
@@ -370,7 +371,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     return () => {
       cancelled = true;
     };
-  }, [viewMode, open, parceiroId, cryptoWallets.length, workspaceId]);
+  }, [viewMode, open, parceiroId, cryptoWallets.length, workspaceId, walletReloadKey]);
 
   // Real-time CPF validation
   useEffect(() => {
@@ -1492,6 +1493,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                 validateWalletEndereco={validateWalletEndereco}
                 enderecoErrors={enderecoErrors}
                 checkingEnderecos={checkingEnderecos}
+                onSwapSuccess={() => setWalletReloadKey((k) => k + 1)}
               />
             </TabsContent>
           </Tabs>

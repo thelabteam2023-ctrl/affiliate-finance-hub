@@ -25,13 +25,15 @@ interface CryptoWalletsTabProps {
   validateWalletEndereco: (endereco: string, index: number, walletId?: string) => void;
   enderecoErrors: Record<number, string>;
   checkingEnderecos: Record<number, boolean>;
+  onSwapSuccess?: () => void;
 }
 
 export function CryptoWalletsTab({
   cryptoWallets, addCryptoWallet, removeCryptoWallet, updateCryptoWallet,
   expandedWalletIndex, setExpandedWalletIndex, redes,
   loading, viewMode, walletSaldos, parceiroId,
-  validateWalletEndereco, enderecoErrors, checkingEnderecos
+  validateWalletEndereco, enderecoErrors, checkingEnderecos,
+  onSwapSuccess,
 }: CryptoWalletsTabProps) {
   return (
     <div className="space-y-4">
@@ -56,6 +58,7 @@ export function CryptoWalletsTab({
                   balances,
                 }}
                 parceiroId={parceiroId}
+                onSwapSuccess={onSwapSuccess}
               />
             );
           })}

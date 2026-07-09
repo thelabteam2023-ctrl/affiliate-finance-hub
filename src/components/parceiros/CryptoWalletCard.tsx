@@ -19,9 +19,10 @@ interface CryptoWalletCardProps {
     balances?: Array<{ coin: string; saldo: number; saldoUsd: number }>;
   };
   parceiroId?: string | null;
+  onSwapSuccess?: () => void;
 }
 
-export function CryptoWalletCard({ wallet, parceiroId }: CryptoWalletCardProps) {
+export function CryptoWalletCard({ wallet, parceiroId, onSwapSuccess }: CryptoWalletCardProps) {
   const [copied, setCopied] = useState(false);
   const [swapOpen, setSwapOpen] = useState(false);
   const { toast } = useToast();
@@ -150,7 +151,10 @@ export function CryptoWalletCard({ wallet, parceiroId }: CryptoWalletCardProps) 
         <SwapCryptoDialog
           open={swapOpen}
           onClose={() => setSwapOpen(false)}
-          onSuccess={() => setSwapOpen(false)}
+          onSuccess={() => {
+            setSwapOpen(false);
+            onSwapSuccess?.();
+          }}
           caixaParceiroId={parceiroId}
         />
       )}
