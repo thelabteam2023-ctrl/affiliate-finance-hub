@@ -1737,6 +1737,8 @@ export function CaixaTransacaoDialog({
           parceiro_id, 
           moeda,
           banco_id,
+          pix_key,
+          pix_keys,
           parceiros!inner(workspace_id),
           bancos(taxa_deposito_tipo, taxa_deposito_valor, taxa_saque_tipo, taxa_saque_valor, taxa_moeda)
         `)
@@ -1767,6 +1769,8 @@ export function CaixaTransacaoDialog({
         parceiro_id: c.parceiro_id,
         moeda: c.moeda,
         banco_id: c.banco_id ?? null,
+        pix_key: c.pix_key ?? null,
+        pix_keys: Array.isArray(c.pix_keys) ? c.pix_keys : null,
         bancoTaxa: c.bancos ? {
           taxa_deposito_tipo: c.bancos.taxa_deposito_tipo ?? null,
           taxa_deposito_valor: c.bancos.taxa_deposito_valor ?? null,
