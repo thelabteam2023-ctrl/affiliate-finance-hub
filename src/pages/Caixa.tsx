@@ -136,7 +136,15 @@ export default function Caixa() {
   const [saldosBrokerPorMoeda, setSaldosBrokerPorMoeda] = useState<Array<{ moeda: string; saldo: number }>>([]);
   const [saldoBookmakers, setSaldoBookmakers] = useState(0); // Legacy: BRL total (para CaixaTabsContainer)
   const [saldosContasParceiros, setSaldosContasParceiros] = useState<Array<{ moeda: string; saldo: number }>>([]);
-  const [saldoWalletsParceiros, setSaldoWalletsParceiros] = useState(0);
+  // Rows crus das wallets de parceiros (exclui Caixa Operacional).
+  // Guardamos coin + saldo_coin + saldo_usd (fallback) para revalorizar SEMPRE
+  // com o preço live via getCryptoUSDValue — mesma engine usada pelo painel
+  // "Saldos por Parceiro" (SaldosParceirosSheet). Isso garante paridade entre
+  // Posição de Capital (segmento Wallets Parceiros) e o sheet: os dois passam
+  // a ser derivados da mesma fonte (v_saldo_parceiro_wallets) e do mesmo
+  // conjunto de preços live (useCotacoes/Binance), eliminando divergências
+  // causadas por `saldo_usd` gravado desatualizado no banco.
+  const [walletsParceirosRows, setWalletsParceirosRows] = useState<Array<{ coin: string; saldo_coin: number; saldo_usd: number }>>([]);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const { canCreate } = useActionAccess();
@@ -510,8 +518,13 @@ export default function Caixa() {
         walletsSaldoData = result.data || [];
       }
       
-      const totalWallets = walletsSaldoData?.reduce((sum, w) => sum + Math.max(0, w.saldo_usd || 0), 0) || 0;
-      setSaldoWalletsParceiros(totalWallets);
+      setWalletsParceirosRows(
+        (walletsSaldoData || []).map((w: any) => ({
+          coin: (w.coin || "USDT").toUpperCase(),
+          saldo_coin: Math.max(0, Number(w.saldo_coin) || 0),
+          saldo_usd: Math.max(0, Number(w.saldo_usd) || 0),
+        }))
+      );
 
     } catch (error: any) {
       console.error("Erro ao carregar dados:", error);
