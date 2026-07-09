@@ -98,6 +98,26 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   const [hasSavedDuringSession, setHasSavedDuringSession] = useState(false);
   const [expandedBankIndex, setExpandedBankIndex] = useState<number | null>(null);
   const [expandedWalletIndex, setExpandedWalletIndex] = useState<number | null>(null);
+
+  // Blindagem multi-workspace: fecha o dialog se o workspace ativo mudar após ele ter sido aberto.
+  // Isso evita que os snapshots em useState (bankAccounts, cryptoWallets, parceiroId) exibam
+  // dados de um workspace anterior. As RLS do backend já bloqueiam o vazamento real de dados;
+  // este guard cobre o "vazamento visual" causado por estado local persistente.
+  const openedWorkspaceRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!open) {
+      openedWorkspaceRef.current = null;
+      return;
+    }
+    if (openedWorkspaceRef.current === null) {
+      openedWorkspaceRef.current = workspaceId ?? null;
+      return;
+    }
+    if (workspaceId && openedWorkspaceRef.current !== workspaceId) {
+      console.warn("[ParceiroDialog] Workspace mudou com dialog aberto — fechando para evitar estado stale.");
+      onClose();
+    }
+  }, [workspaceId, open, onClose]);
   const [contaSaldos, setContaSaldos] = useState<Record<string, number>>({});
   const [walletSaldos, setWalletSaldos] = useState<Record<string, { saldo: number; coin: string }>>({});
   const { toast } = useToast();
