@@ -474,7 +474,7 @@ export default function GestaoBookmakers() {
       <div className="container mx-auto px-4 pt-4 pb-8 flex flex-col flex-1 min-h-0">
 
         <Tabs defaultValue="contas" className="flex flex-col flex-1 min-h-0">
-          <TabsList className={`grid w-full max-w-lg shrink-0 ${isSystemOwner ? 'grid-cols-4' : 'grid-cols-3'}`}>
+          <TabsList className={`grid w-full max-w-xl shrink-0 ${isSystemOwner ? 'grid-cols-5' : 'grid-cols-3'}`}>
             <TabsTrigger value="contas" className="flex items-center gap-2">
               <Wallet className="h-4 w-4 shrink-0 stroke-current" />
               Vínculos
@@ -493,6 +493,12 @@ export default function GestaoBookmakers() {
                 Grupos
               </TabsTrigger>
             )}
+            {isSystemOwner && (
+              <TabsTrigger value="familias" className="flex items-center gap-2">
+                <Network className="h-4 w-4 shrink-0 stroke-current" />
+                Famílias
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="catalogo" className="flex-1 min-h-0 overflow-y-auto mt-6">
@@ -506,6 +512,12 @@ export default function GestaoBookmakers() {
           {isSystemOwner && (
             <TabsContent value="grupos" className="flex-1 min-h-0 overflow-y-auto mt-6">
               <AccessGroupsManager />
+            </TabsContent>
+          )}
+
+          {isSystemOwner && (
+            <TabsContent value="familias" className="flex-1 min-h-0 overflow-hidden mt-6">
+              <FamiliasManager />
             </TabsContent>
           )}
 
