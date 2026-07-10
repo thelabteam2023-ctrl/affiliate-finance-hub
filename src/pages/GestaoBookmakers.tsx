@@ -21,6 +21,8 @@ import TransacaoDialog from "@/components/bookmakers/TransacaoDialog";
 import HistoricoTransacoes from "@/components/bookmakers/HistoricoTransacoes";
 import CatalogoBookmakers from "@/components/bookmakers/CatalogoBookmakers";
 import AccessGroupsManager from "@/components/bookmakers/AccessGroupsManager";
+import { FamiliasManager } from "@/components/bookmakers/FamiliasManager";
+import { Network } from "lucide-react";
 // AjustePostLimitacaoDialog removed — now lives in ProjetoVinculosTab
 import { useAuth } from "@/hooks/useAuth";
 import { useBookmakerUsageStatus, canDeleteBookmaker } from "@/hooks/useBookmakerUsageStatus";
