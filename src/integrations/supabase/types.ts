@@ -1503,6 +1503,85 @@ export type Database = {
           },
         ]
       }
+      bookmaker_familia_membros: {
+        Row: {
+          bookmaker_catalogo_id: string
+          created_at: string
+          created_by: string | null
+          familia_id: string
+          id: string
+          is_referencia: boolean
+        }
+        Insert: {
+          bookmaker_catalogo_id: string
+          created_at?: string
+          created_by?: string | null
+          familia_id: string
+          id?: string
+          is_referencia?: boolean
+        }
+        Update: {
+          bookmaker_catalogo_id?: string
+          created_at?: string
+          created_by?: string | null
+          familia_id?: string
+          id?: string
+          is_referencia?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookmaker_familia_membros_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: true
+            referencedRelation: "bookmakers_catalogo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmaker_familia_membros_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: true
+            referencedRelation: "v_community_bookmaker_stats"
+            referencedColumns: ["bookmaker_catalogo_id"]
+          },
+          {
+            foreignKeyName: "bookmaker_familia_membros_familia_id_fkey"
+            columns: ["familia_id"]
+            isOneToOne: false
+            referencedRelation: "bookmaker_familias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bookmaker_familias: {
+        Row: {
+          cor: string
+          created_at: string
+          created_by: string | null
+          descricao: string | null
+          id: string
+          nome: string
+          updated_at: string
+        }
+        Insert: {
+          cor?: string
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          id?: string
+          nome: string
+          updated_at?: string
+        }
+        Update: {
+          cor?: string
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          id?: string
+          nome?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       bookmaker_grupo_membros: {
         Row: {
           added_at: string
