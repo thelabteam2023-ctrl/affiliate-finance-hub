@@ -1107,7 +1107,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                         <TrendingUp className="h-4 w-4 text-muted-foreground" />
                       )
                     }
-                    label="Resultado Financeiro"
+                    label="Resultado Realizado"
                     entries={kpisFiltrados.resultado}
                     consolidadoBRL={kpisFiltrados.resultadoBRL}
                     showBreakdown={kpisFiltrados.isConsolidado}
