@@ -1,76 +1,69 @@
-# Investigação — Isolamento de Workspaces (Gestão de Parceiros)
+# Ocorrências × Reconciliação/Ajuste Manual — Análise e Plano
 
-## 1. Diagnóstico técnico
+## 1. Situação atual (o que existe hoje)
 
-### 1.1 Como o isolamento é aplicado hoje
+- **Ocorrências Operacionais** (`ocorrencias`): rastreiam eventos que geram risco/perda em uma casa — tipos: `kyc`, `bloqueio_contas`, `bloqueio_bancario`, `saques`, `depositos`, `financeiro`, `movimentacao_financeira`. Guardam `valor_risco` (exposição) e, ao serem resolvidas, podem gerar `valor_perda` no ledger via `registrarPerdaOperacionalViaLedger`.
+- **Reconciliação Forçada** (`ReconciliacaoDialog`) e **Ajuste Manual** (`AjusteManualDialog`): ambos gravam `cash_ledger.tipo_transacao = 'AJUSTE_RECONCILIACAO'`, ajustando o saldo da casa para bater com o extrato real. Nenhum dos dois consulta ou toca em `ocorrencias`.
 
-**Frontend (cache/estado):**
-- `useTabWorkspace` mantém `workspaceId` isolado por aba (sessionStorage). Ao detectar mudança, executa `queryClient.clear()` (limpa TODAS as queries).
-- `useUserWorkspaces.switchWorkspace` também chama `queryClient.clear()` + `refreshWorkspace()`.
-- `useParceirosData` usa `queryKey: ["parceiros-data", workspaceId]` e filtra `.eq("workspace_id", workspaceId)` na query dos `parceiros`. Refetch automático quando a chave muda.
+**Conclusão da análise:** hoje os dois fluxos são independentes. Uma reconciliação/ajuste pode zerar/corrigir o saldo de uma casa que ainda tem ocorrência aberta sinalizando risco — resultando exatamente no cenário "órfão" descrito.
 
-**Backend (RLS):**
-- `parceiros`: coluna `workspace_id` presente, RLS por `get_current_workspace()`.
-- `contas_bancarias` e `wallets_crypto`: **não têm coluna `workspace_id`**, mas as policies fazem `EXISTS (SELECT 1 FROM parceiros WHERE parceiros.id = <tabela>.parceiro_id AND parceiros.workspace_id = get_current_workspace())`. Isso significa que só é acessível se o `parceiro_id` pertencer ao workspace corrente.
-- `get_current_workspace()` é resolvida via header `x-workspace-id`, que é injetado por `src/lib/workspaceRequestScope.ts` em TODO `fetch` para `/rest/v1` e `/functions/v1`, lendo o `workspaceId` do sessionStorage da aba.
+## 2. Cenários de risco identificados
 
-**Modelo de dados relevante:**
-- `parceiros.id` é UUID **único por workspace**. Um mesmo CPF cadastrado em dois workspaces = dois `parceiros.id` distintos.
-- Logo, `contas_bancarias.parceiro_id` e `wallets_crypto.parceiro_id` são naturalmente escopados a um único workspace via FK.
+1. **Ocorrência órfã por resolução externa** — usuário reconcilia a casa (ex.: recuperou o saldo, casa devolveu valor bloqueado). A ocorrência continua "Aberto" apontando `valor_risco` inexistente. Central de Operações mostra alerta falso.
+2. **Dupla contabilização de perda** — usuário faz Ajuste Manual debitando o saldo perdido e depois resolve a ocorrência como "perda_confirmada", o que dispara `registrarPerdaOperacionalViaLedger` e debita de novo. Resultado: perda dobrada no P&L do projeto.
+3. **Divergência de auditoria** — `projeto_perdas` só é populado quando a ocorrência é resolvida. Se a perda foi lançada via ajuste manual, ela nunca aparece no relatório de perdas por ocorrência.
+4. **Reconciliação sem contexto** — reconciliar uma casa com ocorrência aberta sem que o operador saiba que existe uma pendência relacionada pode mascarar problemas reais (ex.: saldo veio de outra fonte que não a resolução do incidente).
 
-### 1.2 Resposta às hipóteses do usuário
+## 3. Regras de negócio propostas
 
-| Hipótese | Veredito |
-|---|---|
-| Frontend usa só `partner_id`, ignorando `workspace_id` | **Verdadeiro no código do dialog** (`ParceiroDialog.tsx` linhas 298-301, 322-325, 710, 797, 1178). Mas **não gera vazamento** porque `parceiro_id` é único por workspace (rows separadas). |
-| RLS mistura workspaces | **Falso.** RLS em `contas_bancarias`/`wallets_crypto` já valida `parceiros.workspace_id = get_current_workspace()`. |
-| Query key sem workspace | **Correto em `useParceirosData`** (inclui `workspaceId`). O carregamento em `ParceiroDialog` (saldos) usa `useEffect` com `parceiroId`, sem React Query — mas os `parceiro_id`s são distintos entre workspaces, então não há colisão. |
-| Cache não invalidado ao trocar workspace | **Está invalidado**: dois pontos (`useTabWorkspace` effect e `switchWorkspace`) chamam `queryClient.clear()`. |
-| Componente montado reutiliza estado antigo | **Risco real e único cenário plausível de "vazamento visual"**. Ver 1.3. |
+Princípio: **reconciliação/ajuste NÃO fecha ocorrência automaticamente** (são decisões operacionais distintas), mas o sistema precisa **alertar, vincular e prevenir dupla contagem**.
 
-### 1.3 Causa raiz plausível do sintoma reportado
+**R1 — Aviso pré-ajuste.** Ao abrir Reconciliação ou Ajuste Manual em uma casa com ocorrência(s) aberta(s), exibir banner:
+> "Esta casa possui N ocorrência(s) em aberto (R$ X de risco). O ajuste pode estar relacionado. Confira antes de prosseguir."
+Com CTA "Ver ocorrências".
 
-**Não é vazamento de dados do backend.** RLS + `x-workspace-id` header garantem que a API só devolve dados do workspace ativo. O que pode acontecer:
+**R2 — Vinculação opcional.** No formulário de ajuste, quando há ocorrência aberta na casa, oferecer combobox "Vincular a ocorrência (opcional)". Se vinculada:
+- Grava `cash_ledger.ocorrencia_id` (nova coluna nullable).
+- Marca a ocorrência com `resolucao_via_ajuste = true` e `ajuste_ledger_id`.
+- Bloqueia o path de "registrar perda pelo ledger" ao resolver aquela ocorrência (evita R2/dupla contagem).
 
-1. **Estado do dialog persiste após troca de workspace na mesma aba.** `ParceiroDialog` mantém `bankAccounts`, `cryptoWallets`, `parceiroId` em `useState`. Se o dialog estiver aberto e o usuário trocar de workspace pela sidebar, o `queryClient.clear()` roda mas o dialog não desmonta — ele continua exibindo o snapshot do parceiro carregado antes. O `useEffect([parceiro])` só re-hidrata quando `parceiro` muda.
-2. **Prop `parceiro` reutilizada por referência.** A página lista faz filtro por nome; se o mesmo nome existe em dois workspaces, ao abrir "Visualizar" logo depois da troca, a lista pode ainda não ter completado o refetch e passar o objeto antigo por 1 render, antes do react-query devolver a nova lista.
-3. **`v_saldo_parceiro_contas` / `v_wallet_crypto_balances`** são consultadas por `parceiro_id` puro. Não há vazamento (parceiro_id é único), mas se `parceiroId` do state estiver defasado durante uma troca de contexto, o saldo mostrado é do parceiro anterior — parece "vazamento", mas é estado stale.
+**R3 — Aviso pré-resolução.** Ao resolver uma ocorrência, se existir `cash_ledger` com `AJUSTE_RECONCILIACAO` na mesma casa entre `ocorrencia.created_at` e agora e SEM `ocorrencia_id`, exibir aviso:
+> "Detectamos um ajuste manual de R$ Y neste período. Deseja vincular como resolução em vez de registrar nova perda?" — opções: **Vincular** / **Registrar perda mesmo assim** / **Cancelar**.
 
-## 2. Correções
+**R4 — Job de detecção diária ("órfãos").** Query que lista ocorrências abertas há > 7 dias cuja casa teve ajuste de reconciliação após a abertura sem vínculo. Exposta em `CentralOperacoes` como alerta "Ocorrências possivelmente resolvidas por reconciliação".
 
-### 2.1 Forçar unmount do dialog e das telas de parceiros ao trocar de workspace
+**R5 — Nenhum fechamento automático.** Manter decisão humana. Motivo: reconciliação pode representar aporte extra, ganho, transferência — não necessariamente a resolução do incidente.
 
-Chave `key={workspaceId}` no `<Routes>` da rota `/parceiros` e no `<ParceiroDialog>` para garantir remontagem limpa e descarte de `useState` local.
+## 4. Implementação
 
-### 2.2 Fechar dialog automaticamente ao mudar `workspaceId`
+**Schema (migration)**
+- `ALTER TABLE cash_ledger ADD COLUMN ocorrencia_id UUID REFERENCES ocorrencias(id)` (index).
+- `ALTER TABLE ocorrencias ADD COLUMN resolucao_via_ajuste BOOLEAN DEFAULT false`, `ADD COLUMN ajuste_ledger_id UUID REFERENCES cash_ledger(id)`.
 
-Em `ParceiroDialog.tsx`, adicionar `useEffect` que observa `workspaceId` do `useTabWorkspace` e chama `onOpenChange(false)` + `resetForm()` sempre que mudar. Isso elimina o cenário do dialog aberto com dados de outro workspace.
+**Frontend**
+- `src/hooks/useOcorrenciasAbertasPorCasa.ts` (novo): retorna ocorrências abertas por `bookmaker_id`.
+- `ReconciliacaoDialog.tsx` e `AjusteManualDialog.tsx`:
+  - Banner com contagem/valor de ocorrências abertas (R1).
+  - Combobox `ocorrencia_id` opcional (R2).
+  - Ao submeter, gravar `ocorrencia_id` no ledger e — se vinculado — atualizar a ocorrência.
+- `ResolucaoFinanceiraDialog.tsx`:
+  - Consulta ajustes recentes sem vínculo (R3) e exibe modal de conciliação.
+  - Se o operador escolher "Vincular", pular `registrarPerdaOperacionalViaLedger` e apenas registrar `projeto_perdas` (auditoria) referenciando o `ledger_id` do ajuste.
+- `CentralOperacoes` — nova seção "Possíveis órfãos" (R4) usando view/RPC `v_ocorrencias_possivelmente_resolvidas`.
 
-### 2.3 Blindar as consultas do dialog com filtro explícito
+**Backend (RPC/view)**
+- View `v_ocorrencias_possivelmente_resolvidas`: join `ocorrencias` abertas × `cash_ledger AJUSTE_RECONCILIACAO` sem `ocorrencia_id` no mesmo `bookmaker_id` posterior a `ocorrencias.created_at`.
 
-Nas queries `v_saldo_parceiro_contas` e `v_wallet_crypto_balances` (ParceiroDialog linhas 298-311, 320-340), adicionar `.eq("workspace_id", workspaceId)` (as views expõem essa coluna — confirmado em `useParceirosData`). Defesa em profundidade: se um `parceiro_id` obsoleto for consultado, ainda assim não devolve nada de outro workspace.
+## 5. O que este plano NÃO faz
 
-### 2.4 Garantir refetch antes de renderizar o dialog
+- Não altera `saldo_atual` diretamente (segue via ledger).
+- Não fecha ocorrências sozinho.
+- Não retroage vínculos em ajustes já feitos — apenas surfaça na tela de "possíveis órfãos" para tratamento manual.
 
-No wrapper que abre o dialog (página Parceiros), só permitir abrir depois que `useParceirosData().loading === false` E `workspaceId` corresponder ao esperado.
+## 6. Entregáveis
 
-### 2.5 Teste manual documentado
-
-Cenário reproduzível:
-1. Cadastrar mesmo CPF em Workspace A e B com dados bancários/wallets distintos.
-2. Em uma aba, abrir Visualizar Parceiro no A, deixar aberto, trocar para B pela sidebar.
-3. Após correção 2.2: dialog fecha automaticamente.
-4. Reabrir o parceiro no B: dados devem ser os do B.
-
-## 3. Escopo dos arquivos
-
-- `src/components/parceiros/ParceiroDialog.tsx` — auto-close on workspace change; filtro workspace nas 2 views.
-- `src/pages/Parceiros.tsx` (ou wrapper equivalente) — `key={workspaceId}` no dialog.
-- Nenhuma mudança de RLS ou schema — a segurança do backend já está correta.
-
-## 4. Critério de aceite
-
-- Trocar workspace com dialog aberto fecha o dialog.
-- Consulta às views devolve `[]` mesmo se `parceiroId` obsoleto for passado (verificável no Network).
-- CPF idêntico em dois workspaces exibe conjuntos disjuntos de contas bancárias e wallets.
-- Nenhuma requisição de `/rest/v1/contas_bancarias` ou `/rest/v1/wallets_crypto` retorna linhas cujo `parceiro_id` pertença a outro workspace (validável cruzando com `parceiros.workspace_id` no banco).
+1. Migration com colunas e view.
+2. Hook `useOcorrenciasAbertasPorCasa`.
+3. Ajustes em `ReconciliacaoDialog`, `AjusteManualDialog`, `ResolucaoFinanceiraDialog`.
+4. Card "Possíveis órfãos" em Central de Operações.
+5. Memória: `mem://architecture/ocorrencias-reconciliacao-sync-standard.md` documentando as regras R1–R5.
