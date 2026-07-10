@@ -32,6 +32,7 @@ import { Loader2, AlertTriangle, Scale, TrendingUp, TrendingDown, Minus, Info } 
 import { WalletSearchSelect, type WalletCoinBalance } from "./WalletSearchSelect";
 import { ContaBancariaSearchSelect, type ContaBancariaOption } from "./ContaBancariaSearchSelect";
 import { BookmakerSearchSelect } from "./BookmakerSearchSelect";
+import { OcorrenciasVinculoSection } from "./OcorrenciasVinculoSection";
 
 interface ReconciliacaoDialogProps {
   open: boolean;
@@ -96,6 +97,7 @@ export function ReconciliacaoDialog({
   const [saldoReal, setSaldoReal] = useState<string>("");
   const [saldoRealDisplay, setSaldoRealDisplay] = useState<string>("");
   const [motivo, setMotivo] = useState<string>("Reconciliação Desenvolvimento");
+  const [ocorrenciaVinculadaId, setOcorrenciaVinculadaId] = useState<string>("");
 
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
   const [contas, setContas] = useState<ContaBancaria[]>([]);
@@ -241,7 +243,12 @@ export function ReconciliacaoDialog({
     setSaldoReal("");
     setSaldoRealDisplay("");
     setMoeda("BRL");
+    setOcorrenciaVinculadaId("");
   }, [tipoEntidade]);
+
+  useEffect(() => {
+    setOcorrenciaVinculadaId("");
+  }, [entidadeId]);
 
   useEffect(() => {
     setSaldoReal("");
@@ -515,8 +522,30 @@ export function ReconciliacaoDialog({
         }
       }
 
-      const { error } = await supabase.from("cash_ledger").insert([transactionData] as any);
+      if (tipoEntidade === "BOOKMAKER" && ocorrenciaVinculadaId) {
+        transactionData.ocorrencia_id = ocorrenciaVinculadaId;
+      }
+
+      const { data: inserted, error } = await supabase
+        .from("cash_ledger")
+        .insert([transactionData] as any)
+        .select("id")
+        .single();
       if (error) throw error;
+
+      if (ocorrenciaVinculadaId && (inserted as any)?.id) {
+        try {
+          await (supabase as any)
+            .from("ocorrencias")
+            .update({
+              resolucao_via_ajuste: true,
+              ajuste_ledger_id: (inserted as any).id,
+            })
+            .eq("id", ocorrenciaVinculadaId);
+        } catch (e) {
+          console.warn("[Reconciliacao] Falha ao vincular ocorrência:", e);
+        }
+      }
 
       // Update reconciled_at on the target entity
       const now = new Date().toISOString();
@@ -715,6 +744,14 @@ export function ReconciliacaoDialog({
                   placeholder="Selecione o bookmaker"
                 />
               </div>
+            )}
+
+            {tipoEntidade === "BOOKMAKER" && (
+              <OcorrenciasVinculoSection
+                bookmakerId={entidadeId}
+                value={ocorrenciaVinculadaId}
+                onChange={setOcorrenciaVinculadaId}
+              />
             )}
 
             {/* Seleção: Conta Bancária */}
