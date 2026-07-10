@@ -81,25 +81,10 @@ export function useBookmakerLogoMap() {
       }
     }
     
-    // 3. Match parcial (um contém o outro)
-    for (const [key, value] of logoMap.entries()) {
-      const simplifiedKey = key.replace(/\s+/g, "");
-      if (simplifiedInput.includes(simplifiedKey) || simplifiedKey.includes(simplifiedInput)) {
-        return value ?? null;
-      }
-    }
-    
-    // 4. Match por palavras principais (primeira palavra significativa)
-    const inputFirstWord = normalizedInput.split(/\s+/)[0];
-    if (inputFirstWord && inputFirstWord.length >= 3) {
-      for (const [key, value] of logoMap.entries()) {
-        const keyFirstWord = key.split(/\s+/)[0];
-        if (keyFirstWord === inputFirstWord) {
-          return value ?? null;
-        }
-      }
-    }
-    
+    // NÃO fazer match parcial (includes/startsWith) nem por primeira palavra:
+    // "XBET" ⊂ "1XBET" causava colisões (aposta na 1xBet renderizava logo da XBet).
+    // A fonte de verdade é o `logo_url` persistido na perna via `bookmaker_id` →
+    // catálogo. Este mapa é só um fallback quando o nome bate exatamente.
     return null;
   };
 
