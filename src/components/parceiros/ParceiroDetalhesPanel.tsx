@@ -36,6 +36,7 @@ import { ParceiroKpiCard } from "./ParceiroKpiCard";
 import { RegistrarPerdaRapidaDialog } from "./RegistrarPerdaRapidaDialog";
 import { usePasswordDecryption } from "@/hooks/usePasswordDecryption";
 import { LazyPasswordField } from "./LazyPasswordField";
+import { useExposicaoPendentePorCasa } from "@/hooks/useExposicaoPendentePorCasa";
 
 interface ParceiroCache {
   resumoData: ParceiroFinanceiroConsolidado | null;
@@ -342,6 +343,24 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
   );
   const { usageMap, refetch: refetchUsageMap } = useBookmakerUsageStatus(bookmakerIdsForUsage);
 
+  // Exposição pendente por casa (stake_real de pernas com resultado NULL).
+  // Usado para calcular "Resultado Realizado" = lucro_prejuizo + exposicao_real,
+  // neutralizando o efeito de apostas pendentes no saldo_atual.
+  const { data: expMap } = useExposicaoPendentePorCasa(bookmakerIdsForUsage);
+  const getExpReal = useCallback(
+    (bookmakerId: string) => expMap[bookmakerId]?.exposicaoReal ?? 0,
+    [expMap]
+  );
+  const getExpQtd = useCallback(
+    (bookmakerId: string) => expMap[bookmakerId]?.qtdPendentes ?? 0,
+    [expMap]
+  );
+  const getResultadoRealizado = useCallback(
+    (bm: { bookmaker_id: string; lucro_prejuizo: number | null | undefined }) =>
+      Number(bm.lucro_prejuizo ?? 0) + getExpReal(bm.bookmaker_id),
+    [getExpReal]
+  );
+
   // Fetch projects for "Vincular a projeto" submenu
   const { data: projetos } = useQuery({
     queryKey: ["projetos-list-for-link", workspaceId],
@@ -489,10 +508,28 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
       .filter(([, value]) => value !== 0)
       .map(([currency, value]) => ({ currency, value }));
   }, [data?.bookmakers]);
-  const resultadoEntries = useMemo(() => 
-    data ? saldosToEntries(data.resultado_por_moeda) : [], 
-    [data?.resultado_por_moeda]
-  );
+  // Resultado REALIZADO por moeda: parte do lucro_prejuizo original e soma
+  // a exposição pendente (stake_real) por casa, agrupando pela moeda da casa.
+  // Assim, apostas ainda em aberto não impactam o KPI.
+  const resultadoEntries = useMemo(() => {
+    if (!data) return [] as { currency: string; value: number }[];
+    const base = saldosToEntries(data.resultado_por_moeda);
+    if (!data.bookmakers?.length) return base;
+    const ajustePorMoeda: Record<string, number> = {};
+    for (const bm of data.bookmakers) {
+      const exp = getExpReal(bm.bookmaker_id);
+      if (exp === 0) continue;
+      const moeda = bm.moeda || "BRL";
+      ajustePorMoeda[moeda] = (ajustePorMoeda[moeda] || 0) + exp;
+    }
+    const map = new Map(base.map((e) => [e.currency, e.value]));
+    for (const [moeda, ajuste] of Object.entries(ajustePorMoeda)) {
+      map.set(moeda, (map.get(moeda) ?? 0) + ajuste);
+    }
+    return Array.from(map.entries())
+      .filter(([, v]) => v !== 0)
+      .map(([currency, value]) => ({ currency, value }));
+  }, [data, getExpReal]);
   
   const hasLucro = useMemo(() => resultadoEntries.some(e => e.value > 0), [resultadoEntries]);
   const hasPrejuizo = useMemo(() => resultadoEntries.some(e => e.value < 0), [resultadoEntries]);
@@ -572,11 +609,19 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     const keyMap = { dep: "total_depositado", saq: "total_sacado", saldo: "saldo_atual", resultado: "lucro_prejuizo", apostas: "qtd_apostas" } as const;
     const key = keyMap[sortColumn];
     return [...bookmakersFiltrados].sort((a, b) => {
-      const va = sortColumn === "saldo" ? clampSaldoVisual((a as any)[key]) : ((a as any)[key] ?? 0);
-      const vb = sortColumn === "saldo" ? clampSaldoVisual((b as any)[key]) : ((b as any)[key] ?? 0);
+      const va = sortColumn === "saldo"
+        ? clampSaldoVisual((a as any)[key])
+        : sortColumn === "resultado"
+          ? getResultadoRealizado(a as any)
+          : ((a as any)[key] ?? 0);
+      const vb = sortColumn === "saldo"
+        ? clampSaldoVisual((b as any)[key])
+        : sortColumn === "resultado"
+          ? getResultadoRealizado(b as any)
+          : ((b as any)[key] ?? 0);
       return sortDirection === "desc" ? vb - va : va - vb;
     });
-  }, [bookmakersFiltrados, sortColumn, sortDirection]);
+  }, [bookmakersFiltrados, sortColumn, sortDirection, getResultadoRealizado]);
 
   // Determina se há algum filtro dimensional ativo (status ou regulamentação)
   const hasActiveFilter = !!filtroStatus || filtroRegulamentacao !== "todas";
@@ -627,16 +672,18 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     
     bookmakersFiltradosMoeda.forEach(bm => {
       const moeda = bm.moeda || "BRL";
+      const expReal = getExpReal(bm.bookmaker_id);
+      const resultadoRealizadoBm = Number(bm.lucro_prejuizo ?? 0) + expReal;
       depositadoTotal += bm.total_depositado ?? 0;
       sacadoTotal += bm.total_sacado ?? 0;
       saldoTotal += clampSaldoVisual(bm.saldo_atual);
-      resultadoTotal += bm.lucro_prejuizo ?? 0;
+      resultadoTotal += resultadoRealizadoBm;
       apostasTotal += bm.qtd_apostas ?? 0;
       
       depPorMoeda[moeda] = (depPorMoeda[moeda] || 0) + (bm.total_depositado ?? 0);
       saqPorMoeda[moeda] = (saqPorMoeda[moeda] || 0) + (bm.total_sacado ?? 0);
       salPorMoeda[moeda] = (salPorMoeda[moeda] || 0) + clampSaldoVisual(bm.saldo_atual);
-      resPorMoeda[moeda] = (resPorMoeda[moeda] || 0) + (bm.lucro_prejuizo ?? 0);
+      resPorMoeda[moeda] = (resPorMoeda[moeda] || 0) + resultadoRealizadoBm;
     });
     
     const toEntries = (map: Record<string, number>) => 
@@ -676,7 +723,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
       apostas: apostasTotal,
       isConsolidado: true,
     };
-  }, [filtroMoeda, hasActiveFilter, bookmakersFiltradosMoeda, depositadoEntries, sacadoEntries, saldoEntriesVisual, resultadoEntries, data?.qtd_apostas_total, convertToBRL]);
+  }, [filtroMoeda, hasActiveFilter, bookmakersFiltradosMoeda, depositadoEntries, sacadoEntries, saldoEntriesVisual, resultadoEntries, data?.qtd_apostas_total, convertToBRL, getExpReal]);
 
   // Determinar lucro/prejuízo baseado nos KPIs filtrados
   const hasLucroFiltrado = useMemo(() => kpisFiltrados.resultado.some(e => e.value > 0), [kpisFiltrados.resultado]);
@@ -1060,7 +1107,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                         <TrendingUp className="h-4 w-4 text-muted-foreground" />
                       )
                     }
-                    label="Resultado Financeiro"
+                    label="Resultado Realizado"
                     entries={kpisFiltrados.resultado}
                     consolidadoBRL={kpisFiltrados.resultadoBRL}
                     showBreakdown={kpisFiltrados.isConsolidado}
@@ -1447,16 +1494,31 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                                   <Tooltip><TooltipTrigger asChild><div className="text-right"><MoneyDisplay value={clampSaldoVisual(bm.saldo_atual)} currency={bm.moeda || "BRL"} size="sm" masked={!showSensitiveData} /></div></TooltipTrigger>{showSensitiveData && <TooltipContent side="top" className="text-xs space-y-1"><p className="font-medium">Saldo atual na casa</p><p>{formatMoneyValue(clampSaldoVisual(bm.saldo_atual), bm.moeda || "BRL")}</p></TooltipContent>}</Tooltip>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <div className="text-right"><MoneyDisplay value={bm.lucro_prejuizo} currency={bm.moeda || "BRL"} size="sm" variant="auto" masked={!showSensitiveData} /></div>
+                                      <div className="text-right">
+                                        <MoneyDisplay value={getResultadoRealizado(bm)} currency={bm.moeda || "BRL"} size="sm" variant="auto" masked={!showSensitiveData} />
+                                        {showSensitiveData && getExpReal(bm.bookmaker_id) > 0 && (
+                                          <p className="text-[9px] text-warning/90 leading-tight mt-0.5">
+                                            ⚠ {formatMoneyValue(getExpReal(bm.bookmaker_id), bm.moeda || "BRL")} em risco
+                                          </p>
+                                        )}
+                                      </div>
                                     </TooltipTrigger>
                                     {showSensitiveData && (
                                       <TooltipContent side="top" className="text-xs">
-                                        <p className="font-semibold mb-1.5">Resultado Financeiro Real</p>
+                                        <p className="font-semibold mb-1.5">Resultado Realizado</p>
                                         <div className="space-y-1 min-w-[200px]">
                                           <div className="flex justify-between gap-4"><span className="text-muted-foreground">Saques</span><span className="text-success">{formatMoneyValue(bm.total_sacado, bm.moeda || "BRL")}</span></div>
                                           <div className="flex justify-between gap-4"><span className="text-muted-foreground">+ Saldo Atual</span><span>{formatMoneyValue(clampSaldoVisual(bm.saldo_atual), bm.moeda || "BRL")}</span></div>
+                                          {getExpReal(bm.bookmaker_id) > 0 && (
+                                            <div className="flex justify-between gap-4"><span className="text-muted-foreground">+ Exposição pendente</span><span className="text-warning">{formatMoneyValue(getExpReal(bm.bookmaker_id), bm.moeda || "BRL")}</span></div>
+                                          )}
                                           <div className="flex justify-between gap-4"><span className="text-muted-foreground">− Depósitos</span><span className="text-destructive">{formatMoneyValue(bm.total_depositado, bm.moeda || "BRL")}</span></div>
-                                          <div className="border-t border-border pt-1 flex justify-between gap-4 font-medium"><span>= Resultado</span><span className={bm.lucro_prejuizo >= 0 ? "text-success" : "text-destructive"}>{formatMoneyValue(bm.lucro_prejuizo, bm.moeda || "BRL")}</span></div>
+                                          <div className="border-t border-border pt-1 flex justify-between gap-4 font-medium"><span>= Realizado</span><span className={getResultadoRealizado(bm) >= 0 ? "text-success" : "text-destructive"}>{formatMoneyValue(getResultadoRealizado(bm), bm.moeda || "BRL")}</span></div>
+                                          {getExpReal(bm.bookmaker_id) > 0 && (
+                                            <p className="text-[10px] text-muted-foreground italic pt-1">
+                                              {getExpQtd(bm.bookmaker_id)} aposta(s) pendente(s) — capital comprometido, ainda não realizado.
+                                            </p>
+                                          )}
                                         </div>
                                         {bm.resultado_operacional !== 0 && (
                                           <div className="mt-2 pt-1.5 border-t border-border/50 space-y-0.5 text-muted-foreground">
