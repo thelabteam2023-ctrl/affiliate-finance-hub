@@ -609,11 +609,19 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     const keyMap = { dep: "total_depositado", saq: "total_sacado", saldo: "saldo_atual", resultado: "lucro_prejuizo", apostas: "qtd_apostas" } as const;
     const key = keyMap[sortColumn];
     return [...bookmakersFiltrados].sort((a, b) => {
-      const va = sortColumn === "saldo" ? clampSaldoVisual((a as any)[key]) : ((a as any)[key] ?? 0);
-      const vb = sortColumn === "saldo" ? clampSaldoVisual((b as any)[key]) : ((b as any)[key] ?? 0);
+      const va = sortColumn === "saldo"
+        ? clampSaldoVisual((a as any)[key])
+        : sortColumn === "resultado"
+          ? getResultadoRealizado(a as any)
+          : ((a as any)[key] ?? 0);
+      const vb = sortColumn === "saldo"
+        ? clampSaldoVisual((b as any)[key])
+        : sortColumn === "resultado"
+          ? getResultadoRealizado(b as any)
+          : ((b as any)[key] ?? 0);
       return sortDirection === "desc" ? vb - va : va - vb;
     });
-  }, [bookmakersFiltrados, sortColumn, sortDirection]);
+  }, [bookmakersFiltrados, sortColumn, sortDirection, getResultadoRealizado]);
 
   // Determina se há algum filtro dimensional ativo (status ou regulamentação)
   const hasActiveFilter = !!filtroStatus || filtroRegulamentacao !== "todas";
