@@ -339,9 +339,42 @@ export function useCentralAlertsCount() {
         if (propostasPagamentoResult.count) totalCount += propostasPagamentoResult.count;
 
         // Count casas pendentes de conciliação (financial_event)
+        let conciliacaoCount = 0;
         if (conciliacaoPendenteResult.data && Array.isArray(conciliacaoPendenteResult.data)) {
-          totalCount += conciliacaoPendenteResult.data.length;
+          conciliacaoCount = conciliacaoPendenteResult.data.length;
+          totalCount += conciliacaoCount;
         }
+
+        // 🔍 DEBUG TEMPORÁRIO – breakdown do badge da Central
+        // Remover após diagnóstico do "7" no sino.
+        // eslint-disable-next-line no-console
+        console.groupCollapsed(
+          `[CentralAlerts] breakdown = ${totalCount} (financialCount) + ${
+            kpisOcorrencias?.abertas_total ?? 0
+          } (ocorrências) + ${kpisSolicitacoes?.total_abertas ?? 0} (solicitações)`
+        );
+        // eslint-disable-next-line no-console
+        console.table({
+          "1. v_painel_operacional": alertasResult.count ?? 0,
+          "2. entregas PRONTA": entregasResult.data?.length ?? 0,
+          "3. cash_ledger SAQUE PENDENTE": saquesPendentesResult.count ?? 0,
+          "4. parceiro_lucro_alertas": alertasLucroResult.count ?? 0,
+          "5. pagamentos_operador PENDENTE": pagamentosOperadorResult.data?.length ?? 0,
+          "6. participacao_ciclos A_PAGAR (ext)": participacoesResult.count ?? 0,
+          "7. parcerias c/ pagto pendente": parceriasResult.data?.length ?? 0,
+          "8. parcerias próximas encerramento": encerResult.data?.length ?? 0,
+          "9. todos_parceiros ativos (base)": todosParceirosResult.data?.length ?? 0,
+          "10. bonus (via custos+acordos)": acordosResult.data?.length ?? 0,
+          "11. comissoes pendentes (base)": comissoesResult.data?.length ?? 0,
+          "12. v_bookmakers_desvinculados >0.01": casasDesvinculadasResult.count ?? 0,
+          "13. pagamentos_propostos PENDENTE": propostasPagamentoResult.count ?? 0,
+          "14. bookmakers pendentes conciliação": conciliacaoCount,
+          "── financialCount total ──": totalCount,
+          "── ocorrências abertas ──": kpisOcorrencias?.abertas_total ?? 0,
+          "── solicitações abertas ──": kpisSolicitacoes?.total_abertas ?? 0,
+        });
+        // eslint-disable-next-line no-console
+        console.groupEnd();
 
         setFinancialCount(totalCount);
       } catch (error) {
