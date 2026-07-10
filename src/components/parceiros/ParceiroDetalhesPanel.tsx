@@ -672,16 +672,18 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     
     bookmakersFiltradosMoeda.forEach(bm => {
       const moeda = bm.moeda || "BRL";
+      const expReal = getExpReal(bm.bookmaker_id);
+      const resultadoRealizadoBm = Number(bm.lucro_prejuizo ?? 0) + expReal;
       depositadoTotal += bm.total_depositado ?? 0;
       sacadoTotal += bm.total_sacado ?? 0;
       saldoTotal += clampSaldoVisual(bm.saldo_atual);
-      resultadoTotal += bm.lucro_prejuizo ?? 0;
+      resultadoTotal += resultadoRealizadoBm;
       apostasTotal += bm.qtd_apostas ?? 0;
       
       depPorMoeda[moeda] = (depPorMoeda[moeda] || 0) + (bm.total_depositado ?? 0);
       saqPorMoeda[moeda] = (saqPorMoeda[moeda] || 0) + (bm.total_sacado ?? 0);
       salPorMoeda[moeda] = (salPorMoeda[moeda] || 0) + clampSaldoVisual(bm.saldo_atual);
-      resPorMoeda[moeda] = (resPorMoeda[moeda] || 0) + (bm.lucro_prejuizo ?? 0);
+      resPorMoeda[moeda] = (resPorMoeda[moeda] || 0) + resultadoRealizadoBm;
     });
     
     const toEntries = (map: Record<string, number>) => 
@@ -721,7 +723,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
       apostas: apostasTotal,
       isConsolidado: true,
     };
-  }, [filtroMoeda, hasActiveFilter, bookmakersFiltradosMoeda, depositadoEntries, sacadoEntries, saldoEntriesVisual, resultadoEntries, data?.qtd_apostas_total, convertToBRL]);
+  }, [filtroMoeda, hasActiveFilter, bookmakersFiltradosMoeda, depositadoEntries, sacadoEntries, saldoEntriesVisual, resultadoEntries, data?.qtd_apostas_total, convertToBRL, getExpReal]);
 
   // Determinar lucro/prejuízo baseado nos KPIs filtrados
   const hasLucroFiltrado = useMemo(() => kpisFiltrados.resultado.some(e => e.value > 0), [kpisFiltrados.resultado]);
