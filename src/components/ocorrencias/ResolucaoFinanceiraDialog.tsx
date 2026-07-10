@@ -52,6 +52,8 @@ export function ResolucaoFinanceiraDialog({
   const [saldoBookmaker, setSaldoBookmaker] = useState<number | null>(null);
   const [perdasJaRegistradas, setPerdasJaRegistradas] = useState<number>(0);
   const [bookmakerDesvinculada, setBookmakerDesvinculada] = useState(false);
+  const [ajusteOrfao, setAjusteOrfao] = useState<{ id: string; valor: number; moeda: string; data: string } | null>(null);
+  const [jaVinculadoAjuste, setJaVinculadoAjuste] = useState(false);
 
   // Carregar saldo da bookmaker e perdas já registradas ao abrir
   useEffect(() => {
@@ -83,10 +85,62 @@ export function ResolucaoFinanceiraDialog({
         const total = (outrasOcorrencias || []).reduce((acc: number, o: any) => acc + (o.valor_perda || 0), 0);
         setPerdasJaRegistradas(total);
       }
+
+      // 3. Já existe ajuste vinculado a esta ocorrência? (evita dupla contagem)
+      if (ocorrencia_id) {
+        const { data: thisOc } = await (supabase as any)
+          .from('ocorrencias')
+          .select('resolucao_via_ajuste, ajuste_ledger_id, created_at')
+          .eq('id', ocorrencia_id)
+          .maybeSingle();
+        setJaVinculadoAjuste(!!thisOc?.resolucao_via_ajuste && !!thisOc?.ajuste_ledger_id);
+
+        // 4. Detectar ajustes órfãos: AJUSTE_RECONCILIACAO na mesma casa após
+        // a abertura da ocorrência e SEM ocorrencia_id vinculado.
+        if (!thisOc?.ajuste_ledger_id && thisOc?.created_at) {
+          const { data: ajustes } = await (supabase as any)
+            .from('cash_ledger')
+            .select('id, valor, moeda, data_transacao, created_at')
+            .eq('tipo_transacao', 'AJUSTE_RECONCILIACAO')
+            .is('ocorrencia_id', null)
+            .or(`origem_bookmaker_id.eq.${bookmaker_id},destino_bookmaker_id.eq.${bookmaker_id}`)
+            .gte('created_at', thisOc.created_at)
+            .order('created_at', { ascending: false })
+            .limit(1);
+          const first = ajustes?.[0];
+          if (first) {
+            setAjusteOrfao({
+              id: first.id,
+              valor: Number(first.valor || 0),
+              moeda: first.moeda,
+              data: first.data_transacao,
+            });
+          }
+        }
+      }
     };
 
     loadBalanceInfo();
   }, [open, bookmaker_id, projeto_id, ocorrencia_id]);
+
+  const vincularAjusteOrfao = async () => {
+    if (!ajusteOrfao || !ocorrencia_id) return;
+    setLoading(true);
+    try {
+      await (supabase as any)
+        .from('cash_ledger')
+        .update({ ocorrencia_id })
+        .eq('id', ajusteOrfao.id);
+      await (supabase as any)
+        .from('ocorrencias')
+        .update({ resolucao_via_ajuste: true, ajuste_ledger_id: ajusteOrfao.id })
+        .eq('id', ocorrencia_id);
+      setJaVinculadoAjuste(true);
+      setAjusteOrfao(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleConfirmar = async () => {
     setLoading(true);
@@ -158,6 +212,39 @@ export function ResolucaoFinanceiraDialog({
             <p className="text-amber-200">
               A bookmaker foi desvinculada do projeto. A perda será registrada no lucro do projeto, 
               mas <strong>não debitará o saldo</strong> da casa (já saiu via Saque Virtual).
+            </p>
+          </div>
+        )}
+
+        {/* Ajuste manual órfão detectado */}
+        {ajusteOrfao && !jaVinculadoAjuste && (
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/30 text-sm">
+            <Info className="h-4 w-4 mt-0.5 text-blue-400 flex-shrink-0" />
+            <div className="flex-1 space-y-2">
+              <p className="text-blue-200">
+                Detectamos um ajuste manual de <strong>{formatCurrency(ajusteOrfao.valor, ajusteOrfao.moeda)}</strong> nesta casa em {ajusteOrfao.data} sem vínculo.
+                Se este ajuste já cobriu a perda, vincule para evitar dupla contagem.
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={vincularAjusteOrfao}
+                disabled={loading}
+              >
+                Vincular a esta ocorrência
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {jaVinculadoAjuste && (
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-sm">
+            <CheckCircle className="h-4 w-4 mt-0.5 text-emerald-500 flex-shrink-0" />
+            <p className="text-emerald-200">
+              Esta ocorrência já tem um ajuste manual vinculado. Ao resolver como perda,
+              o saldo <strong>não será debitado novamente</strong> — apenas o registro contábil
+              da perda será feito.
             </p>
           </div>
         )}
