@@ -343,6 +343,24 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
   );
   const { usageMap, refetch: refetchUsageMap } = useBookmakerUsageStatus(bookmakerIdsForUsage);
 
+  // Exposição pendente por casa (stake_real de pernas com resultado NULL).
+  // Usado para calcular "Resultado Realizado" = lucro_prejuizo + exposicao_real,
+  // neutralizando o efeito de apostas pendentes no saldo_atual.
+  const { data: expMap } = useExposicaoPendentePorCasa(bookmakerIdsForUsage);
+  const getExpReal = useCallback(
+    (bookmakerId: string) => expMap[bookmakerId]?.exposicaoReal ?? 0,
+    [expMap]
+  );
+  const getExpQtd = useCallback(
+    (bookmakerId: string) => expMap[bookmakerId]?.qtdPendentes ?? 0,
+    [expMap]
+  );
+  const getResultadoRealizado = useCallback(
+    (bm: { bookmaker_id: string; lucro_prejuizo: number | null | undefined }) =>
+      Number(bm.lucro_prejuizo ?? 0) + getExpReal(bm.bookmaker_id),
+    [getExpReal]
+  );
+
   // Fetch projects for "Vincular a projeto" submenu
   const { data: projetos } = useQuery({
     queryKey: ["projetos-list-for-link", workspaceId],
