@@ -1494,16 +1494,31 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                                   <Tooltip><TooltipTrigger asChild><div className="text-right"><MoneyDisplay value={clampSaldoVisual(bm.saldo_atual)} currency={bm.moeda || "BRL"} size="sm" masked={!showSensitiveData} /></div></TooltipTrigger>{showSensitiveData && <TooltipContent side="top" className="text-xs space-y-1"><p className="font-medium">Saldo atual na casa</p><p>{formatMoneyValue(clampSaldoVisual(bm.saldo_atual), bm.moeda || "BRL")}</p></TooltipContent>}</Tooltip>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <div className="text-right"><MoneyDisplay value={bm.lucro_prejuizo} currency={bm.moeda || "BRL"} size="sm" variant="auto" masked={!showSensitiveData} /></div>
+                                      <div className="text-right">
+                                        <MoneyDisplay value={getResultadoRealizado(bm)} currency={bm.moeda || "BRL"} size="sm" variant="auto" masked={!showSensitiveData} />
+                                        {showSensitiveData && getExpReal(bm.bookmaker_id) > 0 && (
+                                          <p className="text-[9px] text-warning/90 leading-tight mt-0.5">
+                                            ⚠ {formatMoneyValue(getExpReal(bm.bookmaker_id), bm.moeda || "BRL")} em risco
+                                          </p>
+                                        )}
+                                      </div>
                                     </TooltipTrigger>
                                     {showSensitiveData && (
                                       <TooltipContent side="top" className="text-xs">
-                                        <p className="font-semibold mb-1.5">Resultado Financeiro Real</p>
+                                        <p className="font-semibold mb-1.5">Resultado Realizado</p>
                                         <div className="space-y-1 min-w-[200px]">
                                           <div className="flex justify-between gap-4"><span className="text-muted-foreground">Saques</span><span className="text-success">{formatMoneyValue(bm.total_sacado, bm.moeda || "BRL")}</span></div>
                                           <div className="flex justify-between gap-4"><span className="text-muted-foreground">+ Saldo Atual</span><span>{formatMoneyValue(clampSaldoVisual(bm.saldo_atual), bm.moeda || "BRL")}</span></div>
+                                          {getExpReal(bm.bookmaker_id) > 0 && (
+                                            <div className="flex justify-between gap-4"><span className="text-muted-foreground">+ Exposição pendente</span><span className="text-warning">{formatMoneyValue(getExpReal(bm.bookmaker_id), bm.moeda || "BRL")}</span></div>
+                                          )}
                                           <div className="flex justify-between gap-4"><span className="text-muted-foreground">− Depósitos</span><span className="text-destructive">{formatMoneyValue(bm.total_depositado, bm.moeda || "BRL")}</span></div>
-                                          <div className="border-t border-border pt-1 flex justify-between gap-4 font-medium"><span>= Resultado</span><span className={bm.lucro_prejuizo >= 0 ? "text-success" : "text-destructive"}>{formatMoneyValue(bm.lucro_prejuizo, bm.moeda || "BRL")}</span></div>
+                                          <div className="border-t border-border pt-1 flex justify-between gap-4 font-medium"><span>= Realizado</span><span className={getResultadoRealizado(bm) >= 0 ? "text-success" : "text-destructive"}>{formatMoneyValue(getResultadoRealizado(bm), bm.moeda || "BRL")}</span></div>
+                                          {getExpReal(bm.bookmaker_id) > 0 && (
+                                            <p className="text-[10px] text-muted-foreground italic pt-1">
+                                              {getExpQtd(bm.bookmaker_id)} aposta(s) pendente(s) — capital comprometido, ainda não realizado.
+                                            </p>
+                                          )}
                                         </div>
                                         {bm.resultado_operacional !== 0 && (
                                           <div className="mt-2 pt-1.5 border-t border-border/50 space-y-0.5 text-muted-foreground">
