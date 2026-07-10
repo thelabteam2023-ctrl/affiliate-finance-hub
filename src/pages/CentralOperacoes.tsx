@@ -181,6 +181,7 @@ import { PagamentosFornecedoresCardGrid } from "@/components/central-operacoes/P
 import { BonusPendentesCardGrid } from "@/components/central-operacoes/BonusPendentesCardGrid";
 import { ComissoesPendentesCardGrid } from "@/components/central-operacoes/ComissoesPendentesCardGrid";
 import { AlertasCriticosCardGrid } from "@/components/central-operacoes/AlertasCriticosCardGrid";
+import { OcorrenciasPossivelmenteResolvidasCard } from "@/components/central-operacoes/OcorrenciasPossivelmenteResolvidasCard";
 import { PropostasPagamentoCard } from "@/components/operadores/PropostasPagamentoCard";
 import { ContasDisponiveisModule } from "@/components/central-operacoes/ContasDisponiveisModule";
 import { BookmakersLivresModule } from "@/components/central-operacoes/BookmakersLivresModule";
@@ -552,6 +553,16 @@ export default function CentralOperacoes() {
     // 2. Propostas de Pagamento
     if (allowedDomains.includes('project_event') && propostasPagamentoCount > 0) {
       cards.push({ id: "propostas-pagamento", priority: PRIORITY.HIGH, domain: 'project_event', component: <PropostasPagamentoCard key="propostas-pagamento" /> });
+    }
+
+    // 2.1 Ocorrências possivelmente resolvidas por reconciliação (auto-contido)
+    if (allowedDomains.includes('financial_event')) {
+      cards.push({
+        id: "ocorrencias-orfaos",
+        priority: PRIORITY.HIGH,
+        domain: 'financial_event',
+        component: <OcorrenciasPossivelmenteResolvidasCard key="ocorrencias-orfaos" />,
+      });
     }
 
     // 2.5. Casas Pendentes de Conciliação
