@@ -2429,6 +2429,7 @@ export type Database = {
           moeda_destino: string | null
           moeda_origem: string | null
           nome_investidor: string | null
+          ocorrencia_id: string | null
           operador_id: string | null
           origem_bookmaker_id: string | null
           origem_conta_bancaria_id: string | null
@@ -2494,6 +2495,7 @@ export type Database = {
           moeda_destino?: string | null
           moeda_origem?: string | null
           nome_investidor?: string | null
+          ocorrencia_id?: string | null
           operador_id?: string | null
           origem_bookmaker_id?: string | null
           origem_conta_bancaria_id?: string | null
@@ -2559,6 +2561,7 @@ export type Database = {
           moeda_destino?: string | null
           moeda_origem?: string | null
           nome_investidor?: string | null
+          ocorrencia_id?: string | null
           operador_id?: string | null
           origem_bookmaker_id?: string | null
           origem_conta_bancaria_id?: string | null
@@ -2608,6 +2611,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_eventos_promocionais"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_conversao_referencia_id_fkey"
+            columns: ["conversao_referencia_id"]
+            isOneToOne: false
+            referencedRelation: "v_ocorrencias_possivelmente_resolvidas"
+            referencedColumns: ["ajuste_ledger_id"]
           },
           {
             foreignKeyName: "cash_ledger_conversao_referencia_id_fkey"
@@ -2818,6 +2828,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_roi_investidores_multimoeda"
             referencedColumns: ["investidor_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_ocorrencia_id_fkey"
+            columns: ["ocorrencia_id"]
+            isOneToOne: false
+            referencedRelation: "ocorrencias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_ocorrencia_id_fkey"
+            columns: ["ocorrencia_id"]
+            isOneToOne: false
+            referencedRelation: "v_ocorrencias_possivelmente_resolvidas"
+            referencedColumns: ["ocorrencia_id"]
           },
           {
             foreignKeyName: "cash_ledger_operador_id_fkey"
@@ -3054,6 +3078,13 @@ export type Database = {
             foreignKeyName: "cash_ledger_referencia_transacao_id_fkey"
             columns: ["referencia_transacao_id"]
             isOneToOne: false
+            referencedRelation: "v_ocorrencias_possivelmente_resolvidas"
+            referencedColumns: ["ajuste_ledger_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_referencia_transacao_id_fkey"
+            columns: ["referencia_transacao_id"]
+            isOneToOne: false
             referencedRelation: "v_saques_duplicidade_audit"
             referencedColumns: ["saque_id"]
           },
@@ -3226,6 +3257,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_eventos_promocionais"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashback_manual_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_ocorrencias_possivelmente_resolvidas"
+            referencedColumns: ["ajuste_ledger_id"]
           },
           {
             foreignKeyName: "cashback_manual_cash_ledger_id_fkey"
@@ -4735,6 +4773,13 @@ export type Database = {
             foreignKeyName: "exchange_adjustments_cash_ledger_id_fkey"
             columns: ["cash_ledger_id"]
             isOneToOne: false
+            referencedRelation: "v_ocorrencias_possivelmente_resolvidas"
+            referencedColumns: ["ajuste_ledger_id"]
+          },
+          {
+            foreignKeyName: "exchange_adjustments_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
             referencedRelation: "v_saques_duplicidade_audit"
             referencedColumns: ["saque_id"]
           },
@@ -5686,6 +5731,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_eventos_promocionais"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "giros_gratis_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_ocorrencias_possivelmente_resolvidas"
+            referencedColumns: ["ajuste_ledger_id"]
           },
           {
             foreignKeyName: "giros_gratis_cash_ledger_id_fkey"
@@ -7053,6 +7105,7 @@ export type Database = {
       }
       ocorrencias: {
         Row: {
+          ajuste_ledger_id: string | null
           aposta_id: string | null
           bookmaker_id: string | null
           cancelled_at: string | null
@@ -7069,6 +7122,7 @@ export type Database = {
           prioridade: Database["public"]["Enums"]["ocorrencia_prioridade"]
           projeto_id: string | null
           requerente_id: string
+          resolucao_via_ajuste: boolean
           resolved_at: string | null
           resultado_financeiro:
             | Database["public"]["Enums"]["ocorrencia_resultado_financeiro"]
@@ -7087,6 +7141,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          ajuste_ledger_id?: string | null
           aposta_id?: string | null
           bookmaker_id?: string | null
           cancelled_at?: string | null
@@ -7103,6 +7158,7 @@ export type Database = {
           prioridade?: Database["public"]["Enums"]["ocorrencia_prioridade"]
           projeto_id?: string | null
           requerente_id: string
+          resolucao_via_ajuste?: boolean
           resolved_at?: string | null
           resultado_financeiro?:
             | Database["public"]["Enums"]["ocorrencia_resultado_financeiro"]
@@ -7121,6 +7177,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          ajuste_ledger_id?: string | null
           aposta_id?: string | null
           bookmaker_id?: string | null
           cancelled_at?: string | null
@@ -7137,6 +7194,7 @@ export type Database = {
           prioridade?: Database["public"]["Enums"]["ocorrencia_prioridade"]
           projeto_id?: string | null
           requerente_id?: string
+          resolucao_via_ajuste?: boolean
           resolved_at?: string | null
           resultado_financeiro?:
             | Database["public"]["Enums"]["ocorrencia_resultado_financeiro"]
@@ -7155,6 +7213,48 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ocorrencias_ajuste_ledger_id_fkey"
+            columns: ["ajuste_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "cash_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_ajuste_ledger_id_fkey"
+            columns: ["ajuste_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_ajustes_auditoria"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_ajuste_ledger_id_fkey"
+            columns: ["ajuste_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_eventos_promocionais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_ajuste_ledger_id_fkey"
+            columns: ["ajuste_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_ocorrencias_possivelmente_resolvidas"
+            referencedColumns: ["ajuste_ledger_id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_ajuste_ledger_id_fkey"
+            columns: ["ajuste_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_saques_duplicidade_audit"
+            referencedColumns: ["saque_id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_ajuste_ledger_id_fkey"
+            columns: ["ajuste_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_snapshot_anomalias"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ocorrencias_aposta_id_fkey"
             columns: ["aposta_id"]
@@ -7370,6 +7470,13 @@ export type Database = {
             referencedRelation: "ocorrencias"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "ocorrencias_eventos_ocorrencia_id_fkey"
+            columns: ["ocorrencia_id"]
+            isOneToOne: false
+            referencedRelation: "v_ocorrencias_possivelmente_resolvidas"
+            referencedColumns: ["ocorrencia_id"]
+          },
         ]
       }
       ocorrencias_observadores: {
@@ -7404,6 +7511,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "ocorrencias"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_observadores_ocorrencia_id_fkey"
+            columns: ["ocorrencia_id"]
+            isOneToOne: false
+            referencedRelation: "v_ocorrencias_possivelmente_resolvidas"
+            referencedColumns: ["ocorrencia_id"]
           },
         ]
       }
@@ -7782,6 +7896,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_eventos_promocionais"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagamentos_operador_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_ocorrencias_possivelmente_resolvidas"
+            referencedColumns: ["ajuste_ledger_id"]
           },
           {
             foreignKeyName: "pagamentos_operador_cash_ledger_id_fkey"
@@ -8525,6 +8646,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_eventos_promocionais"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participacao_ciclos_pagamento_ledger_id_fkey"
+            columns: ["pagamento_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_ocorrencias_possivelmente_resolvidas"
+            referencedColumns: ["ajuste_ledger_id"]
           },
           {
             foreignKeyName: "participacao_ciclos_pagamento_ledger_id_fkey"
@@ -11455,6 +11583,13 @@ export type Database = {
             foreignKeyName: "stablecoin_correction_log_cash_ledger_id_fkey"
             columns: ["cash_ledger_id"]
             isOneToOne: false
+            referencedRelation: "v_ocorrencias_possivelmente_resolvidas"
+            referencedColumns: ["ajuste_ledger_id"]
+          },
+          {
+            foreignKeyName: "stablecoin_correction_log_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
             referencedRelation: "v_saques_duplicidade_audit"
             referencedColumns: ["saque_id"]
           },
@@ -12773,6 +12908,13 @@ export type Database = {
             foreignKeyName: "wallet_transit_log_ledger_id_fkey"
             columns: ["ledger_id"]
             isOneToOne: false
+            referencedRelation: "v_ocorrencias_possivelmente_resolvidas"
+            referencedColumns: ["ajuste_ledger_id"]
+          },
+          {
+            foreignKeyName: "wallet_transit_log_ledger_id_fkey"
+            columns: ["ledger_id"]
+            isOneToOne: false
             referencedRelation: "v_saques_duplicidade_audit"
             referencedColumns: ["saque_id"]
           },
@@ -13313,6 +13455,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_eventos_promocionais"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_referencia_transacao_id_fkey"
+            columns: ["referencia_transacao_id"]
+            isOneToOne: false
+            referencedRelation: "v_ocorrencias_possivelmente_resolvidas"
+            referencedColumns: ["ajuste_ledger_id"]
           },
           {
             foreignKeyName: "cash_ledger_referencia_transacao_id_fkey"
@@ -15306,6 +15455,112 @@ export type Database = {
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_ocorrencias_possivelmente_resolvidas: {
+        Row: {
+          ajuste_data: string | null
+          ajuste_descricao: string | null
+          ajuste_ledger_id: string | null
+          ajuste_moeda: string | null
+          ajuste_valor: number | null
+          bookmaker_id: string | null
+          moeda: string | null
+          ocorrencia_criada_em: string | null
+          ocorrencia_id: string | null
+          projeto_id: string | null
+          status: Database["public"]["Enums"]["ocorrencia_status"] | null
+          sub_motivo: string | null
+          tipo: Database["public"]["Enums"]["ocorrencia_tipo"] | null
+          titulo: string | null
+          valor_risco: number | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ocorrencias_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_disponibilidade"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_resultado_financeiro"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_resultado_operacional"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_audit"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_operavel"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_status_operacional"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_aguardando_saque"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_financial_audit"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "vw_bookmakers_orfaos_com_saldo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
             referencedColumns: ["id"]
           },
         ]

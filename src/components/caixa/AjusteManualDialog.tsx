@@ -32,6 +32,7 @@ import { Loader2, AlertTriangle, TrendingDown, TrendingUp, Wrench, Info, Minus }
 import { WalletSearchSelect, type WalletCoinBalance } from "./WalletSearchSelect";
 import { ContaBancariaSearchSelect, type ContaBancariaOption } from "./ContaBancariaSearchSelect";
 import { BookmakerSearchSelect } from "./BookmakerSearchSelect";
+import { OcorrenciasVinculoSection } from "./OcorrenciasVinculoSection";
 
 interface AjusteManualDialogProps {
   open: boolean;
@@ -97,6 +98,7 @@ export function AjusteManualDialog({
   const [bookmakerId, setBookmakerId] = useState<string>("");
   const [contaId, setContaId] = useState<string>("");
   const [walletId, setWalletId] = useState<string>("");
+  const [ocorrenciaVinculadaId, setOcorrenciaVinculadaId] = useState<string>("");
 
   // Data
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
@@ -291,7 +293,12 @@ export function AjusteManualDialog({
     setMoeda("BRL");
     setValor("");
     setValorDisplay("");
+    setOcorrenciaVinculadaId("");
   }, [tipoDestino]);
+  // Limpa vínculo se trocar a casa
+  useEffect(() => {
+    setOcorrenciaVinculadaId("");
+  }, [bookmakerId]);
 
   const fetchData = async () => {
     setFetchingData(true);
@@ -630,8 +637,33 @@ export function AjusteManualDialog({
         transactionData.origem_tipo === "CAIXA_OPERACIONAL" ||
         transactionData.destino_tipo === "CAIXA_OPERACIONAL";
 
-      const { error } = await supabase.from("cash_ledger").insert([transactionData] as any);
+      if (tipoDestino === "BOOKMAKER" && ocorrenciaVinculadaId) {
+        transactionData.ocorrencia_id = ocorrenciaVinculadaId;
+      }
+
+      const { data: inserted, error } = await supabase
+        .from("cash_ledger")
+        .insert([transactionData] as any)
+        .select("id")
+        .single();
       if (error) throw error;
+
+      // Se vinculado a uma ocorrência, marca a ocorrência para evitar dupla
+      // contagem quando ela for resolvida como perda (a resolução vai pular
+      // o débito de saldo, apenas registrando em projeto_perdas).
+      if (ocorrenciaVinculadaId && (inserted as any)?.id) {
+        try {
+          await (supabase as any)
+            .from("ocorrencias")
+            .update({
+              resolucao_via_ajuste: true,
+              ajuste_ledger_id: (inserted as any).id,
+            })
+            .eq("id", ocorrenciaVinculadaId);
+        } catch (e) {
+          console.warn("[AjusteManual] Falha ao vincular ocorrência:", e);
+        }
+      }
 
       toast({
         title: "Ajuste registrado",
@@ -802,6 +834,15 @@ export function AjusteManualDialog({
                   placeholder="Selecione o bookmaker"
                 />
               </div>
+            )}
+
+            {/* Vinculação com ocorrências abertas da casa */}
+            {tipoDestino === "BOOKMAKER" && (
+              <OcorrenciasVinculoSection
+                bookmakerId={bookmakerId}
+                value={ocorrenciaVinculadaId}
+                onChange={setOcorrenciaVinculadaId}
+              />
             )}
 
             {/* Seleção específica: Conta Bancária */}
