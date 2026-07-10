@@ -1,69 +1,113 @@
-# Ocorrências × Reconciliação/Ajuste Manual — Análise e Plano
 
-## 1. Situação atual (o que existe hoje)
+# Grupos de Bookmakers Clones — Plano Consolidado
 
-- **Ocorrências Operacionais** (`ocorrencias`): rastreiam eventos que geram risco/perda em uma casa — tipos: `kyc`, `bloqueio_contas`, `bloqueio_bancario`, `saques`, `depositos`, `financeiro`, `movimentacao_financeira`. Guardam `valor_risco` (exposição) e, ao serem resolvidas, podem gerar `valor_perda` no ledger via `registrarPerdaOperacionalViaLedger`.
-- **Reconciliação Forçada** (`ReconciliacaoDialog`) e **Ajuste Manual** (`AjusteManualDialog`): ambos gravam `cash_ledger.tipo_transacao = 'AJUSTE_RECONCILIACAO'`, ajustando o saldo da casa para bater com o extrato real. Nenhum dos dois consulta ou toca em `ocorrencias`.
+## Decisões confirmadas
 
-**Conclusão da análise:** hoje os dois fluxos são independentes. Uma reconciliação/ajuste pode zerar/corrigir o saldo de uma casa que ainda tem ocorrência aberta sinalizando risco — resultando exatamente no cenário "órfão" descrito.
+- **Governança:** grupos são **globais**, criados e mantidos apenas por **admin**. Leitura para todos os usuários autenticados.
+- **Cardinalidade:** cada bookmaker pertence a **no máximo 1 provedor** (constraint `UNIQUE` no `bookmaker_catalogo_id`).
+- **Isolamento de casas restritas:** o próprio catálogo já respeita a visibilidade via `bookmaker_workspace_access` (GLOBAL_RESTRICTED). O front vai renderizar apenas as casas que a RLS de `bookmakers_catalogo` liberar para o workspace atual — casas restritas simplesmente **desaparecem** do pool e dos grupos para quem não tem acesso, mesmo estando classificadas globalmente.
 
-## 2. Cenários de risco identificados
+## Nome da aba — propostas
 
-1. **Ocorrência órfã por resolução externa** — usuário reconcilia a casa (ex.: recuperou o saldo, casa devolveu valor bloqueado). A ocorrência continua "Aberto" apontando `valor_risco` inexistente. Central de Operações mostra alerta falso.
-2. **Dupla contabilização de perda** — usuário faz Ajuste Manual debitando o saldo perdido e depois resolve a ocorrência como "perda_confirmada", o que dispara `registrarPerdaOperacionalViaLedger` e debita de novo. Resultado: perda dobrada no P&L do projeto.
-3. **Divergência de auditoria** — `projeto_perdas` só é populado quando a ocorrência é resolvida. Se a perda foi lançada via ajuste manual, ela nunca aparece no relatório de perdas por ocorrência.
-4. **Reconciliação sem contexto** — reconciliar uma casa com ocorrência aberta sem que o operador saiba que existe uma pendência relacionada pode mascarar problemas reais (ex.: saldo veio de outra fonte que não a resolução do incidente).
+Descartando "Provedores de Odds" (técnico demais). Opções melhores:
 
-## 3. Regras de negócio propostas
+1. **"Famílias de Casas"** — intuitivo, sugere parentesco.
+2. **"Casas Irmãs"** — direto, expressa clone/mesma origem.
+3. **"Origem de Odds"** — enfatiza o que compartilham.
+4. **"Rede de Provedores"** — mais corporativo.
 
-Princípio: **reconciliação/ajuste NÃO fecha ocorrência automaticamente** (são decisões operacionais distintas), mas o sistema precisa **alertar, vincular e prevenir dupla contagem**.
+**Sugestão:** **"Famílias de Casas"** (label) com subtítulo *"Casas que compartilham o mesmo provedor de odds"*. Confirma antes de eu aplicar.
 
-**R1 — Aviso pré-ajuste.** Ao abrir Reconciliação ou Ajuste Manual em uma casa com ocorrência(s) aberta(s), exibir banner:
-> "Esta casa possui N ocorrência(s) em aberto (R$ X de risco). O ajuste pode estar relacionado. Confira antes de prosseguir."
-Com CTA "Ver ocorrências".
+## Modelagem de dados
 
-**R2 — Vinculação opcional.** No formulário de ajuste, quando há ocorrência aberta na casa, oferecer combobox "Vincular a ocorrência (opcional)". Se vinculada:
-- Grava `cash_ledger.ocorrencia_id` (nova coluna nullable).
-- Marca a ocorrência com `resolucao_via_ajuste = true` e `ajuste_ledger_id`.
-- Bloqueia o path de "registrar perda pelo ledger" ao resolver aquela ocorrência (evita R2/dupla contagem).
+```sql
+-- Famílias (globais, admin-only para escrita)
+create table public.bookmaker_familias (
+  id uuid pk default gen_random_uuid(),
+  nome text not null unique,
+  descricao text,
+  cor text default '#6366f1',
+  bookmaker_referencia_id uuid references bookmakers_catalogo(id),
+  created_at, updated_at, created_by uuid
+);
 
-**R3 — Aviso pré-resolução.** Ao resolver uma ocorrência, se existir `cash_ledger` com `AJUSTE_RECONCILIACAO` na mesma casa entre `ocorrencia.created_at` e agora e SEM `ocorrencia_id`, exibir aviso:
-> "Detectamos um ajuste manual de R$ Y neste período. Deseja vincular como resolução em vez de registrar nova perda?" — opções: **Vincular** / **Registrar perda mesmo assim** / **Cancelar**.
+-- Membros (1 casa = 1 família, garantido por UNIQUE)
+create table public.bookmaker_familia_membros (
+  id uuid pk default gen_random_uuid(),
+  familia_id uuid not null references bookmaker_familias on delete cascade,
+  bookmaker_catalogo_id uuid not null references bookmakers_catalogo on delete cascade unique,
+  is_referencia boolean default false,
+  created_at, created_by
+);
+```
 
-**R4 — Job de detecção diária ("órfãos").** Query que lista ocorrências abertas há > 7 dias cuja casa teve ajuste de reconciliação após a abertura sem vínculo. Exposta em `CentralOperacoes` como alerta "Ocorrências possivelmente resolvidas por reconciliação".
+**GRANTs + RLS:**
+- `GRANT SELECT ... TO authenticated` em ambas.
+- `GRANT ALL ... TO service_role`.
+- Policies:
+    - `SELECT` livre para `authenticated` (dado global de mercado).
+    - `INSERT/UPDATE/DELETE` apenas se `has_role(auth.uid(),'admin')`.
+- Trigger para garantir que só exista **uma** `is_referencia = true` por família.
 
-**R5 — Nenhum fechamento automático.** Manter decisão humana. Motivo: reconciliação pode representar aporte extra, ganho, transferência — não necessariamente a resolução do incidente.
+## Isolamento de casas restritas — como o front garante
 
-## 4. Implementação
+O pool e as famílias renderizam via **JOIN com `bookmakers_catalogo`** (que já tem RLS ativa e considera `bookmaker_workspace_access`). Como a política de leitura do catálogo filtra por workspace, qualquer casa restrita não autorizada:
 
-**Schema (migration)**
-- `ALTER TABLE cash_ledger ADD COLUMN ocorrencia_id UUID REFERENCES ocorrencias(id)` (index).
-- `ALTER TABLE ocorrencias ADD COLUMN resolucao_via_ajuste BOOLEAN DEFAULT false`, `ADD COLUMN ajuste_ledger_id UUID REFERENCES cash_ledger(id)`.
+- não aparece no pool,
+- não aparece dentro da família (fica "invisível" na lista, mesmo que o vínculo exista no banco).
 
-**Frontend**
-- `src/hooks/useOcorrenciasAbertasPorCasa.ts` (novo): retorna ocorrências abertas por `bookmaker_id`.
-- `ReconciliacaoDialog.tsx` e `AjusteManualDialog.tsx`:
-  - Banner com contagem/valor de ocorrências abertas (R1).
-  - Combobox `ocorrencia_id` opcional (R2).
-  - Ao submeter, gravar `ocorrencia_id` no ledger e — se vinculado — atualizar a ocorrência.
-- `ResolucaoFinanceiraDialog.tsx`:
-  - Consulta ajustes recentes sem vínculo (R3) e exibe modal de conciliação.
-  - Se o operador escolher "Vincular", pular `registrarPerdaOperacionalViaLedger` e apenas registrar `projeto_perdas` (auditoria) referenciando o `ledger_id` do ajuste.
-- `CentralOperacoes` — nova seção "Possíveis órfãos" (R4) usando view/RPC `v_ocorrencias_possivelmente_resolvidas`.
+O admin, ao editar em workspace-admin, enxerga tudo. Assim não vazamos nome/logo de casa restrita para workspaces sem acesso. Nenhum código de UI adicional é necessário — a fonte de verdade continua sendo o RLS do catálogo.
 
-**Backend (RPC/view)**
-- View `v_ocorrencias_possivelmente_resolvidas`: join `ocorrencias` abertas × `cash_ledger AJUSTE_RECONCILIACAO` sem `ocorrencia_id` no mesmo `bookmaker_id` posterior a `ocorrencias.created_at`.
+## UI — Layout "Famílias + Pool"
 
-## 5. O que este plano NÃO faz
+Mantido do plano anterior. Duas regiões, com dnd-kit:
 
-- Não altera `saldo_atual` diretamente (segue via ledger).
-- Não fecha ocorrências sozinho.
-- Não retroage vínculos em ajustes já feitos — apenas surfaça na tela de "possíveis órfãos" para tratamento manual.
+```text
+┌────────────────────────────────────────────────────────────┐
+│ [🔍 Buscar]        [+ Nova família]      [Filtro ▾]        │
+├───────────────────────────┬────────────────────────────────┤
+│ FAMÍLIAS (esquerda)       │ POOL — casas sem família (dir) │
+│ ▾ 🟣 Kambi (12)           │ ┌────┐ ┌────┐ ┌────┐ ┌────┐    │
+│   ★ Unibet (referência)   │ │Bet9│ │Pina│ │... │ │... │    │
+│   · LeoVegas              │ └────┘ └────┘ └────┘ └────┘    │
+│   · 32Red                 │  87 casas sem família          │
+│ ▸ 🟢 SBTech (8)           │                                │
+│ ▸ 🔵 BetConstruct (5)     │                                │
+└───────────────────────────┴────────────────────────────────┘
+```
 
-## 6. Entregáveis
+Interações:
+- DnD do pool → família, e entre famílias (move o vínculo — UNIQUE garante 1:1).
+- Seleção múltipla (Shift/Ctrl+click) → "Adicionar N casas à família…".
+- Menu ⋯ no card dentro da família: "Definir como referência", "Remover da família".
+- Referência sempre no topo com ⭐, borda destacada e nome em negrito.
+- Famílias colapsáveis; virtualização no pool acima de 200 casas.
+- Cor da família como faixa lateral fina no card.
+- Empty state por família.
+- **Badge de admin-only:** usuários sem `admin` veem a tela em modo **leitura** (sem DnD, sem botões de edição) — útil para consultar sem risco de mexer.
 
-1. Migration com colunas e view.
-2. Hook `useOcorrenciasAbertasPorCasa`.
-3. Ajustes em `ReconciliacaoDialog`, `AjusteManualDialog`, `ResolucaoFinanceiraDialog`.
-4. Card "Possíveis órfãos" em Central de Operações.
-5. Memória: `mem://architecture/ocorrencias-reconciliacao-sync-standard.md` documentando as regras R1–R5.
+## Localização
+
+Nova aba no módulo **Bookmakers**, ao lado de "Catálogo" e "Grupos Operacionais".
+
+## Escopo desta entrega
+
+1. Migração das duas tabelas + trigger de referência única + policies + grants.
+2. Hook `useBookmakerFamilias` (list + CRUD, invalida cache).
+3. Rota/aba "Famílias de Casas" no módulo Bookmakers.
+4. Componentes: `FamiliaColumn`, `CasaCard`, `PoolCasas`, `NovaFamiliaDialog`.
+5. DnD com dnd-kit + seleção múltipla.
+6. Marcar referência.
+7. Busca no pool + filtros básicos (todas / sem família).
+8. Modo leitura para não-admins.
+
+## Fora de escopo (fases futuras)
+
+- Recomendação inteligente ("outras casas da mesma família") na criação de arbitragem/surebet.
+- Deduplicação automática de odds clones no mesmo evento.
+- Marcação em relatórios.
+
+## Perguntas antes de codar
+
+1. Confirma o nome **"Famílias de Casas"**? Prefere outro da lista?
+2. Ok criar a aba dentro do módulo Bookmakers existente (rota nova tipo `/bookmakers/familias`)?
