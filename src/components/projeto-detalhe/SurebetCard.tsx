@@ -216,12 +216,16 @@ const LOGO_SIZE = "h-10 w-10";
 // Componente helper para exibir logo da casa com tamanho padronizado
 function SurebetBookmakerLogo({ 
   nome, 
-  getLogoUrl 
+  getLogoUrl,
+  logoUrl: logoUrlProp,
 }: { 
   nome: string; 
   getLogoUrl: (name: string) => string | null;
+  logoUrl?: string | null;
 }) {
-  const logoUrl = getLogoUrl(nome);
+  // Fonte de verdade: logo_url vindo da própria perna (join com bookmakers_catalogo via bookmaker_id).
+  // Fallback por nome apenas quando a perna não tem logo persistido (dados legados).
+  const logoUrl = logoUrlProp ?? getLogoUrl(nome);
   const [hasError, setHasError] = useState(false);
   
   if (logoUrl && !hasError) {
@@ -366,7 +370,7 @@ function PernaItem({
           
           <div className="flex items-center gap-2 min-w-0">
             <div className="shrink-0 scale-75 origin-left">
-              <SurebetBookmakerLogo nome={perna.bookmaker_nome} getLogoUrl={getLogoUrl} />
+              <SurebetBookmakerLogo nome={perna.bookmaker_nome} logoUrl={perna.logo_url} getLogoUrl={getLogoUrl} />
             </div>
             <div className="flex-1 min-w-0">
               <TooltipProvider delayDuration={300}>
@@ -424,7 +428,7 @@ function PernaItem({
         <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0 overflow-hidden">
           {/* Logo */}
           <div className="shrink-0">
-            <SurebetBookmakerLogo nome={perna.bookmaker_nome} getLogoUrl={getLogoUrl} />
+            <SurebetBookmakerLogo nome={perna.bookmaker_nome} logoUrl={perna.logo_url} getLogoUrl={getLogoUrl} />
           </div>
           
           {/* Nome da casa + vínculo abreviado + FB badge - com tooltip */}
@@ -569,7 +573,7 @@ function PernaItem({
 
               {/* Logo menor */}
               <div className="h-8 w-8 shrink-0">
-                <SurebetBookmakerLogo nome={entry.bookmaker_nome} getLogoUrl={getLogoUrl} />
+                <SurebetBookmakerLogo nome={entry.bookmaker_nome} logoUrl={entry.logo_url} getLogoUrl={getLogoUrl} />
               </div>
               
               {/* Nome + FB badge - com vínculo abreviado */}
