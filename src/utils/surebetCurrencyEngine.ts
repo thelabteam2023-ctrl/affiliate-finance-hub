@@ -543,10 +543,12 @@ export function analisarArbitragem(
   const isValidArbitrage = pernasCompletasCount >= numPernasEsperado && minLucro >= 0;
   const isOperacaoParcial = pernasCompletasCount >= 2 && pernasCompletasCount < numPernasEsperado;
 
-  const moedasPresentes = [...new Set(legs.filter((_, i) => stakesLocaisEfetivos[i] > 0).map(l => l.moeda))];
-  const moedaDominante: SupportedCurrency = isMultiCurrency
-    ? consolidationCurrency
-    : (moedasPresentes[0] || consolidationCurrency);
+  // Todos os agregados exibidos (stakeTotal, exposicaoTotal, minLucro/maxLucro e scenarios[].lucro)
+  // já estão na moeda de consolidação do projeto. Portanto a moeda para EXIBIÇÃO desses
+  // agregados deve ser SEMPRE a de consolidação, independentemente das moedas locais das
+  // pernas ou de nenhuma casa estar selecionada. Isso corrige o preview mostrando "R$"
+  // enquanto o valor numérico já está em USD (moeda do projeto).
+  const moedaDominante: SupportedCurrency = consolidationCurrency;
 
   return {
     calculatedStakesLocal: stakesLocaisEfetivos,
