@@ -216,12 +216,16 @@ const LOGO_SIZE = "h-10 w-10";
 // Componente helper para exibir logo da casa com tamanho padronizado
 function SurebetBookmakerLogo({ 
   nome, 
-  getLogoUrl 
+  getLogoUrl,
+  logoUrl: logoUrlProp,
 }: { 
   nome: string; 
   getLogoUrl: (name: string) => string | null;
+  logoUrl?: string | null;
 }) {
-  const logoUrl = getLogoUrl(nome);
+  // Fonte de verdade: logo_url vindo da própria perna (join com bookmakers_catalogo via bookmaker_id).
+  // Fallback por nome apenas quando a perna não tem logo persistido (dados legados).
+  const logoUrl = logoUrlProp ?? getLogoUrl(nome);
   const [hasError, setHasError] = useState(false);
   
   if (logoUrl && !hasError) {
