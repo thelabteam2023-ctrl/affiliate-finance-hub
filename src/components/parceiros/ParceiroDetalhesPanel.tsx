@@ -36,6 +36,7 @@ import { ParceiroKpiCard } from "./ParceiroKpiCard";
 import { RegistrarPerdaRapidaDialog } from "./RegistrarPerdaRapidaDialog";
 import { usePasswordDecryption } from "@/hooks/usePasswordDecryption";
 import { LazyPasswordField } from "./LazyPasswordField";
+import { useExposicaoPendentePorCasa } from "@/hooks/useExposicaoPendentePorCasa";
 
 interface ParceiroCache {
   resumoData: ParceiroFinanceiroConsolidado | null;
