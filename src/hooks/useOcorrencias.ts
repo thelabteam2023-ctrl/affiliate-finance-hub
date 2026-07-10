@@ -573,7 +573,7 @@ export function useResolverOcorrenciaComFinanceiro() {
       if (valorPerda > 0) {
         // Buscar dados da ocorrência para o ledger (incluindo projeto_id da ocorrência)
         const { data: ocorrencia } = await ocorrenciasTable()
-          .select('bookmaker_id, moeda, titulo, tipo, projeto_id, sub_motivo')
+          .select('bookmaker_id, moeda, titulo, tipo, projeto_id, sub_motivo, resolucao_via_ajuste, ajuste_ledger_id')
           .eq('id', id)
           .single();
 
@@ -611,7 +611,20 @@ export function useResolverOcorrenciaComFinanceiro() {
           // o saldo já saiu via SAQUE_VIRTUAL. Registramos a perda apenas
           // na tabela projeto_perdas (para impactar lucro) mas NÃO debitamos
           // o saldo da bookmaker novamente (evita dupla contagem).
-          if (bookmakerStillLinked || !ocorrencia.bookmaker_id) {
+          const jaAjustadoManualmente = !!(ocorrencia as any).resolucao_via_ajuste
+            && !!(ocorrencia as any).ajuste_ledger_id;
+
+          if (jaAjustadoManualmente) {
+            // CENÁRIO OCORRÊNCIA×AJUSTE: usuário já reconciliou/ajustou o saldo
+            // via AJUSTE_RECONCILIACAO e vinculou o lançamento a esta ocorrência.
+            // O saldo já foi movido no ledger — pular novo débito para evitar
+            // dupla contagem. Registramos apenas em projeto_perdas para auditoria.
+            console.warn(
+              `[resolverOcorrencia] Ocorrência ${id} já resolvida via ajuste manual ` +
+              `(ledger_id=${(ocorrencia as any).ajuste_ledger_id}). ` +
+              `Perda de ${valorPerda} registrada apenas em projeto_perdas.`
+            );
+          } else if (bookmakerStillLinked || !ocorrencia.bookmaker_id) {
             // Bookmaker ainda no projeto: fluxo normal — debita saldo via ledger
             await registrarPerdaOperacionalViaLedger({
               bookmakerId: ocorrencia.bookmaker_id || '',
