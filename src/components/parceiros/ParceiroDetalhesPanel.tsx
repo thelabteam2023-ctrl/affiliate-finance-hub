@@ -508,10 +508,28 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
       .filter(([, value]) => value !== 0)
       .map(([currency, value]) => ({ currency, value }));
   }, [data?.bookmakers]);
-  const resultadoEntries = useMemo(() => 
-    data ? saldosToEntries(data.resultado_por_moeda) : [], 
-    [data?.resultado_por_moeda]
-  );
+  // Resultado REALIZADO por moeda: parte do lucro_prejuizo original e soma
+  // a exposição pendente (stake_real) por casa, agrupando pela moeda da casa.
+  // Assim, apostas ainda em aberto não impactam o KPI.
+  const resultadoEntries = useMemo(() => {
+    if (!data) return [] as { currency: string; value: number }[];
+    const base = saldosToEntries(data.resultado_por_moeda);
+    if (!data.bookmakers?.length) return base;
+    const ajustePorMoeda: Record<string, number> = {};
+    for (const bm of data.bookmakers) {
+      const exp = getExpReal(bm.bookmaker_id);
+      if (exp === 0) continue;
+      const moeda = bm.moeda || "BRL";
+      ajustePorMoeda[moeda] = (ajustePorMoeda[moeda] || 0) + exp;
+    }
+    const map = new Map(base.map((e) => [e.currency, e.value]));
+    for (const [moeda, ajuste] of Object.entries(ajustePorMoeda)) {
+      map.set(moeda, (map.get(moeda) ?? 0) + ajuste);
+    }
+    return Array.from(map.entries())
+      .filter(([, v]) => v !== 0)
+      .map(([currency, value]) => ({ currency, value }));
+  }, [data, getExpReal]);
   
   const hasLucro = useMemo(() => resultadoEntries.some(e => e.value > 0), [resultadoEntries]);
   const hasPrejuizo = useMemo(() => resultadoEntries.some(e => e.value < 0), [resultadoEntries]);
