@@ -770,6 +770,61 @@ export function SurebetModalRoot({
   const [pernasLoading, setPernasLoading] = useState(false);
 
   const hydratePernasIntoForm = (pernasData: any[], preserveIds: boolean) => {
+    // Modo 1:N — quando as pernas vêm com apostas_perna_entradas embutidas
+    // (fluxo de duplicação de surebet), mapear cada perna com seu array de
+    // entradas para preservar as subentradas (múltiplas casas por seleção).
+    const hasEntries = pernasData.some((p: any) => Array.isArray(p?.apostas_perna_entradas) && p.apostas_perna_entradas.length > 0);
+    if (hasEntries) {
+      const source: any = preserveIds ? "db" : "print";
+      const pernasOdds: OddEntry[] = pernasData.map((perna: any, groupIdx: number) => {
+        const entradas = (perna.apostas_perna_entradas || []).slice().sort((a: any, b: any) => (a.ordem ?? 0) - (b.ordem ?? 0));
+        const mainEntry = entradas[0] || {
+          bookmaker_id: perna.bookmaker_id || "",
+          moeda: perna.moeda || "BRL",
+          odd: perna.odd || "",
+          stake: perna.stake || "",
+          fonte_saldo: perna.fonte_saldo || "REAL",
+        };
+        const additionalEntries = entradas.slice(1);
+        const entry: OddEntry = {
+          bookmaker_id: mainEntry.bookmaker_id || "",
+          moeda: (mainEntry.moeda || "BRL") as SupportedCurrency,
+          odd: mainEntry.odd?.toString() || "",
+          stake: mainEntry.stake?.toString() || "",
+          selecao: perna.selecao,
+          selecaoLivre: perna.selecao_livre || "",
+          isReference: groupIdx === 0,
+          isManuallyEdited: true,
+          resultado: preserveIds ? (mainEntry.resultado || perna.resultado) : null,
+          lucro_prejuizo: preserveIds ? perna.lucro_prejuizo : null,
+          gerouFreebet: preserveIds ? (perna.gerou_freebet || false) : false,
+          valorFreebetGerada: preserveIds ? (perna.valor_freebet_gerada?.toString() || "") : "",
+          fonteSaldo: (mainEntry.fonte_saldo as 'REAL' | 'FREEBET') || 'REAL',
+          pernaId: preserveIds ? perna.id : undefined,
+          mainEntryId: preserveIds ? mainEntry.id : undefined,
+          tipo: ((perna.tipo ?? mainEntry.tipo ?? 'back') as 'back' | 'lay'),
+          comissao: Number(perna.comissao ?? mainEntry.comissao ?? 0) || 0,
+          additionalEntries: additionalEntries.map((sub: any) => ({
+            id: preserveIds ? sub.id : undefined,
+            bookmaker_id: sub.bookmaker_id || "",
+            moeda: (sub.moeda || "BRL") as SupportedCurrency,
+            odd: sub.odd?.toString() || "",
+            stake: sub.stake?.toString() || "",
+            selecaoLivre: sub.selecao_livre || "",
+            fonteSaldo: (sub.fonte_saldo as 'REAL' | 'FREEBET') || 'REAL',
+            pernaId: preserveIds ? perna.id : undefined,
+            tipo: ((sub.tipo ?? perna.tipo ?? 'back') as 'back' | 'lay'),
+            comissao: Number(sub.comissao ?? perna.comissao ?? 0) || 0,
+          })),
+        };
+        HydrationAudit.mark(entry, source, { originalValue: parseFloat(mainEntry.stake?.toString() || "0") });
+        return entry;
+      });
+      setOdds(pernasOdds);
+      setDirectedProfitLegs(Array.from({ length: pernasOdds.length }, (_, i) => i));
+      return;
+    }
+
     const groups = new Map<string, any[]>();
     const groupOrder: string[] = [];
     for (const perna of pernasData) {
