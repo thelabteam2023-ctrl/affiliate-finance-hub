@@ -382,7 +382,12 @@ export function ApostaCard({
   const stake = hasPernas ? (aposta.stake_total ?? aposta.stake) : aposta.stake;
   const displayOdd = aposta.odd_final ?? aposta.odd ?? 0;
   const moeda = aposta.moeda || "BRL";
-  const displayCurrency = isMultiCurrency ? (moedaConsolidacao || "BRL") : moeda;
+  // Consolidação obrigatória quando (a) multi-moeda entre pernas/entries OU
+  // (b) moeda da aposta diverge da moeda oficial do projeto.
+  // Nos dois casos, totais devem ser exibidos e calculados na moeda do projeto.
+  const needsConsolidation = isMultiCurrency
+    || (!!moedaConsolidacao && moeda !== moedaConsolidacao);
+  const displayCurrency = needsConsolidation ? (moedaConsolidacao || "BRL") : moeda;
   const isForeignCurrency = moeda !== "BRL";
   
   // Detectar freebet: fonte_saldo OU stake_freebet > 0 OU pernas com freebet
@@ -436,8 +441,8 @@ export function ApostaCard({
   
   // Multi-currency: usar valores consolidados para exibição de totais
   const stakeDisplay = (() => {
-    if (isMultiCurrency && typeof aposta.stake_consolidado === "number") return aposta.stake_consolidado;
-    if (isMultiCurrency && convertToConsolidation) {
+    if (needsConsolidation && typeof aposta.stake_consolidado === "number") return aposta.stake_consolidado;
+    if (needsConsolidation && convertToConsolidation) {
       // Somar primary + sub_entries convertidos
       const primaryConverted = convertToConsolidation(aposta.stake, aposta.moeda || "BRL");
       const subsConverted = (aposta.sub_entries || []).reduce((s, e) => s + convertToConsolidation(e.stake, e.moeda || "BRL"), 0);
@@ -447,8 +452,8 @@ export function ApostaCard({
   })();
   
   const lucroDisplay = (() => {
-    if (isMultiCurrency && typeof aposta.pl_consolidado === "number") return aposta.pl_consolidado;
-    if (isMultiCurrency && convertToConsolidation && aposta.lucro_prejuizo != null) {
+    if (needsConsolidation && typeof aposta.pl_consolidado === "number") return aposta.pl_consolidado;
+    if (needsConsolidation && convertToConsolidation && aposta.lucro_prejuizo != null) {
       // Runtime: converter lucro por perna para consolidação
       // O lucro armazenado no parent mistura moedas, recalcular seria necessário
       // mas sem dados de pernas aqui, usamos conversão simples como fallback
@@ -463,8 +468,8 @@ export function ApostaCard({
   
   // Formatter para totais: usa consolidação para multi-moeda, moeda local para single
   const formatTotal = (value: number) => {
-    if (isMultiCurrency && formatCurrencyProp) return formatCurrencyProp(value);
-    return defaultFormatCurrency(value, isMultiCurrency ? (moedaConsolidacao || "BRL") : moeda);
+    if (needsConsolidation && formatCurrencyProp) return formatCurrencyProp(value);
+    return defaultFormatCurrency(value, needsConsolidation ? (moedaConsolidacao || "BRL") : moeda);
   };
 
   // Exibição dual de moeda: quando aposta single-currency está em moeda
@@ -472,7 +477,7 @@ export function ApostaCard({
   // Usa convertToConsolidation (Cotação de Trabalho), garantindo paridade com ledger.
   const isLiquidada = aposta.status === "LIQUIDADA" || (aposta.resultado != null && aposta.resultado !== "PENDENTE");
   const showDualCurrency =
-    !isMultiCurrency &&
+    !needsConsolidation &&
     !!moedaConsolidacao &&
     moeda !== moedaConsolidacao &&
     isLiquidada &&
