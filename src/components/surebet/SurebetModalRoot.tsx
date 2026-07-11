@@ -1298,51 +1298,19 @@ export function SurebetModalRoot({
       if (field === 'odd') {
         const oddVal = parseFloat(value);
         if (oddVal > 1) {
-          // Todos os cálculos ocorrem na MOEDA DA PERNA (moeda da entrada principal).
-          // Sub-entradas em outra moeda são convertidas via convertViaBRL antes de somar,
-          // e o valor final é convertido de volta para a moeda da sub-entrada alvo.
-          const { brlRates } = engineConfig;
-          const legMoeda = (newOdds[pernaIndex].moeda || "BRL") as SupportedCurrency;
-          const targetMoeda = (entries[entryIndex].moeda || legMoeda) as SupportedCurrency;
-
+          const targetPayout = targetPayoutsLocal?.[pernaIndex] || 0;
           const mainStake = parseFloat(newOdds[pernaIndex].stake) || 0;
           const mainOdd = parseFloat(newOdds[pernaIndex].odd) || 0;
-
-          const otherSubStakeInLeg = entries.reduce((sum, e, idx) => {
+          const currentPayout = mainStake * (mainOdd > 1 ? mainOdd : 0);
+          const otherSubPayout = entries.reduce((sum, e, idx) => {
             if (idx === entryIndex) return sum;
             const s = parseFloat(e.stake) || 0;
-            if (s <= 0) return sum;
-            const eMoeda = (e.moeda || legMoeda) as SupportedCurrency;
-            return sum + convertViaBRL(s, eMoeda, legMoeda, brlRates);
+            const o = parseFloat(e.odd) || 0;
+            return sum + s * (o > 1 ? o : 0);
           }, 0);
-
-          const snapshotStake = equalizedStakesSnapshot?.[pernaIndex] || 0; // já em moeda da perna
-          let filledInLeg = 0;
-          if (snapshotStake > 0) {
-            filledInLeg = Math.max(0, snapshotStake - mainStake - otherSubStakeInLeg);
-          } else {
-            const targetPayout = targetPayoutsLocal?.[pernaIndex] || 0; // moeda da perna
-            const currentPayout = mainStake * (mainOdd > 1 ? mainOdd : 0);
-            const otherSubPayoutInLeg = entries.reduce((sum, e, idx) => {
-              if (idx === entryIndex) return sum;
-              const s = parseFloat(e.stake) || 0;
-              const o = parseFloat(e.odd) || 0;
-              if (s <= 0 || o <= 1) return sum;
-              const eMoeda = (e.moeda || legMoeda) as SupportedCurrency;
-              const payoutInE = s * o;
-              return sum + convertViaBRL(payoutInE, eMoeda, legMoeda, brlRates);
-            }, 0);
-            const remainingPayout = Math.max(0, targetPayout - currentPayout - otherSubPayoutInLeg);
-            filledInLeg = remainingPayout / oddVal; // odd é adimensional
-          }
-
-          // Converter da moeda da perna para a moeda da sub-entrada alvo
-          const filledInTarget = filledInLeg > 0
-            ? convertViaBRL(filledInLeg, legMoeda, targetMoeda, brlRates)
-            : 0;
-          const filled = filledInTarget > 0 ? arredondarStake(filledInTarget) : 0;
-          if (filled > 0) {
-            entries[entryIndex] = { ...entries[entryIndex], stake: filled.toFixed(2) };
+          const remainingPayout = Math.max(0, targetPayout - currentPayout - otherSubPayout);
+          if (remainingPayout > 0) {
+            entries[entryIndex] = { ...entries[entryIndex], stake: arredondarStake(remainingPayout / oddVal).toFixed(2) };
           }
         }
       }
@@ -1353,7 +1321,7 @@ export function SurebetModalRoot({
 
       return newOdds;
     });
-  }, [bookmakerSaldos, isEditing, targetPayoutsLocal, equalizedStakesSnapshot, arredondarStake, engineConfig]);
+  }, [bookmakerSaldos, isEditing, targetPayoutsLocal, arredondarStake]);
 
   const removeAdditionalEntry = useCallback((pernaIndex: number, entryIndex: number) => {
     setOdds(prev => {
@@ -1367,9 +1335,7 @@ export function SurebetModalRoot({
 
   // ── Auto-fill reativo: quando main stake muda e sub-entradas têm stake vazia ──
   useEffect(() => {
-    const hasSnapshot = equalizedStakesSnapshot && equalizedStakesSnapshot.length > 0;
-    const hasPayout = targetPayoutsLocal && targetPayoutsLocal.length > 0;
-    if (!hasSnapshot && !hasPayout) return;
+    if (!targetPayoutsLocal || targetPayoutsLocal.length === 0) return;
 
     let needsUpdate = false;
     const newOdds = odds.map((o, i) => {
@@ -1384,45 +1350,27 @@ export function SurebetModalRoot({
       });
       if (!hasEmptyStakeSub) return o;
 
+      const targetPayout = targetPayoutsLocal[i] || 0;
+      if (targetPayout <= 0) return o;
+
+      // Calcular payout já coberto
       const mainStake = parseFloat(o.stake) || 0;
       const mainOdd = parseFloat(o.odd) || 0;
-      const snapshotStake = hasSnapshot ? (equalizedStakesSnapshot![i] || 0) : 0;
-      const targetPayout = hasPayout ? (targetPayoutsLocal![i] || 0) : 0;
-
-      if (snapshotStake <= 0 && targetPayout <= 0) return o;
-
-      // Tudo acumulado em MOEDA DA PERNA (moeda da entrada principal).
-      const { brlRates } = engineConfig;
-      const legMoeda = (o.moeda || "BRL") as SupportedCurrency;
-      let usedStake = mainStake;
       let usedPayout = mainStake * (mainOdd > 1 ? mainOdd : 0);
 
       const updatedEntries = entries.map(e => {
         const oddVal = parseFloat(e.odd) || 0;
         const stakeVal = parseFloat(e.stake) || 0;
-        const eMoeda = (e.moeda || legMoeda) as SupportedCurrency;
         if (stakeVal > 0 || oddVal <= 1) {
-          const stakeInLeg = stakeVal > 0 ? convertViaBRL(stakeVal, eMoeda, legMoeda, brlRates) : 0;
-          usedStake += stakeInLeg;
-          usedPayout += stakeInLeg * (oddVal > 1 ? oddVal : 0);
+          usedPayout += stakeVal * (oddVal > 1 ? oddVal : 0);
           return e;
         }
-        // Preferir snapshot de stake total; fallback para distribuição por payout (moeda da perna)
-        let filledInLeg = 0;
-        if (snapshotStake > 0) {
-          filledInLeg = Math.max(0, snapshotStake - usedStake);
-        } else {
-          const remainingPayout = Math.max(0, targetPayout - usedPayout);
-          filledInLeg = remainingPayout / oddVal;
-        }
-        const filledInTarget = filledInLeg > 0
-          ? convertViaBRL(filledInLeg, legMoeda, eMoeda, brlRates)
-          : 0;
-        const filled = filledInTarget > 0 ? arredondarStake(filledInTarget) : 0;
-        if (filled > 0) {
+        // Calcular payout restante e derivar stake
+        const remainingPayout = Math.max(0, targetPayout - usedPayout);
+        if (remainingPayout > 0 && oddVal > 1) {
           needsUpdate = true;
-          usedStake += filledInLeg;
-          usedPayout += filledInLeg * oddVal;
+          const filled = arredondarStake(remainingPayout / oddVal);
+          usedPayout += filled * oddVal;
           return { ...e, stake: filled.toFixed(2) };
         }
         return e;
@@ -1437,7 +1385,6 @@ export function SurebetModalRoot({
   }, [
     odds.map(o => `${o.stake}-${o.odd}-${(o.additionalEntries || []).map(e => `${e.odd}:${e.stake}`).join('|')}`).join(','),
     targetPayoutsLocal?.join(','),
-    equalizedStakesSnapshot?.join(','),
   ]);
 
   const handlePernaResultadoChange = useCallback((index: number, resultado: 'GREEN' | 'RED' | 'VOID' | null) => {
