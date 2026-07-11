@@ -801,12 +801,23 @@ export function SurebetCard({
   })();
   
   const isMulticurrency = !moedaPernas && surebet.pernas && surebet.pernas.length > 0;
-  
-  // Formatter para totais do card: usa moeda das pernas se uniforme, senão projeto
-  // Para multicurrency, SEMPRE usar formatValue do projeto (valores já convertidos)
-  const formatTotal = moedaPernas 
-    ? (v: number) => formatPernaValue(v, moedaPernas)
-    : formatValue;
+
+  // Consolidação obrigatória quando:
+  //  (a) há mistura de moedas entre as pernas (multicurrency puro), OU
+  //  (b) todas as pernas usam UMA moeda, mas ela difere da moeda oficial do projeto.
+  // Nos dois casos, TOTAIS do card (stake/lucro/ROI) devem ser exibidos e calculados
+  // na moeda de consolidação do projeto — nunca na moeda nativa das pernas.
+  const needsConsolidation = Boolean(
+    isMulticurrency ||
+    (moedaPernas && moedaConsolidacao && moedaPernas !== moedaConsolidacao)
+  );
+
+  // Formatter para totais do card:
+  //  - se precisa consolidar (multicurrency OU moeda ≠ projeto) → formatValue do projeto
+  //  - senão (moeda uniforme e igual à do projeto) → formatter na moeda nativa
+  const formatTotal = needsConsolidation
+    ? formatValue
+    : (moedaPernas ? (v: number) => formatPernaValue(v, moedaPernas) : formatValue);
   
   // Para multicurrency, priorizar consolidação runtime (source-of-truth por perna).
   // Quando uma perna tem entries[] com moedas diferentes (multi-entry agrupado),
