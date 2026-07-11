@@ -1391,30 +1391,38 @@ export function SurebetModalRoot({
 
       if (snapshotStake <= 0 && targetPayout <= 0) return o;
 
+      // Tudo acumulado em MOEDA DA PERNA (moeda da entrada principal).
+      const { brlRates } = engineConfig;
+      const legMoeda = (o.moeda || "BRL") as SupportedCurrency;
       let usedStake = mainStake;
       let usedPayout = mainStake * (mainOdd > 1 ? mainOdd : 0);
 
       const updatedEntries = entries.map(e => {
         const oddVal = parseFloat(e.odd) || 0;
         const stakeVal = parseFloat(e.stake) || 0;
+        const eMoeda = (e.moeda || legMoeda) as SupportedCurrency;
         if (stakeVal > 0 || oddVal <= 1) {
-          usedStake += stakeVal;
-          usedPayout += stakeVal * (oddVal > 1 ? oddVal : 0);
+          const stakeInLeg = stakeVal > 0 ? convertViaBRL(stakeVal, eMoeda, legMoeda, brlRates) : 0;
+          usedStake += stakeInLeg;
+          usedPayout += stakeInLeg * (oddVal > 1 ? oddVal : 0);
           return e;
         }
-        // Preferir snapshot de stake total; fallback para distribuição por payout
-        let filled = 0;
+        // Preferir snapshot de stake total; fallback para distribuição por payout (moeda da perna)
+        let filledInLeg = 0;
         if (snapshotStake > 0) {
-          const remainingStake = Math.max(0, snapshotStake - usedStake);
-          if (remainingStake > 0) filled = arredondarStake(remainingStake);
+          filledInLeg = Math.max(0, snapshotStake - usedStake);
         } else {
           const remainingPayout = Math.max(0, targetPayout - usedPayout);
-          if (remainingPayout > 0) filled = arredondarStake(remainingPayout / oddVal);
+          filledInLeg = remainingPayout / oddVal;
         }
+        const filledInTarget = filledInLeg > 0
+          ? convertViaBRL(filledInLeg, legMoeda, eMoeda, brlRates)
+          : 0;
+        const filled = filledInTarget > 0 ? arredondarStake(filledInTarget) : 0;
         if (filled > 0) {
           needsUpdate = true;
-          usedStake += filled;
-          usedPayout += filled * oddVal;
+          usedStake += filledInLeg;
+          usedPayout += filledInLeg * oddVal;
           return { ...e, stake: filled.toFixed(2) };
         }
         return e;
