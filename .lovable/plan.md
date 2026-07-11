@@ -1,113 +1,61 @@
+## Viabilidade
 
-# Grupos de Bookmakers Clones — Plano Consolidado
+Sim, é totalmente viável — a arquitetura já expõe as duas peças que precisamos:
 
-## Decisões confirmadas
+1. **`equalizedStakesSnapshot[pernaIndex]`** (state em `SurebetModalRoot`) — congela a **stake total da perna** (main + subs) no momento em que a arbitragem é equalizada. É o "alvo" original que o usuário quer respeitar.
+2. **`targetPayoutsLocal[pernaIndex]`** (do `useSurebetCalculator`) — payout-alvo dinâmico. Hoje é o que o handler `updateAdditionalEntry` usa, mas ele se recalcula quando o usuário edita a stake principal, o que corrompe o "resto" no cenário descrito pelo usuário (main 100 → 70 já derruba o alvo).
 
-- **Governança:** grupos são **globais**, criados e mantidos apenas por **admin**. Leitura para todos os usuários autenticados.
-- **Cardinalidade:** cada bookmaker pertence a **no máximo 1 provedor** (constraint `UNIQUE` no `bookmaker_catalogo_id`).
-- **Isolamento de casas restritas:** o próprio catálogo já respeita a visibilidade via `bookmaker_workspace_access` (GLOBAL_RESTRICTED). O front vai renderizar apenas as casas que a RLS de `bookmakers_catalogo` liberar para o workspace atual — casas restritas simplesmente **desaparecem** do pool e dos grupos para quem não tem acesso, mesmo estando classificadas globalmente.
+Ou seja: já existe auto-preenchimento parcial em `SurebetModalRoot.tsx:1297-1316`, mas ele usa a **referência errada** (payout dinâmico) e por isso não cobre o caso "reduzi a main de 100 para 70, agora quero completar 30 em outra casa".
 
-## Nome da aba — propostas
+## Solução proposta
 
-Descartando "Provedores de Odds" (técnico demais). Opções melhores:
+Trocar a fonte de verdade do cálculo de "stake restante" de `targetPayoutsLocal` para o **snapshot imutável** `equalizedStakesSnapshot`, com fallback para o payout dinâmico quando o snapshot não existir (ex.: usuário ainda não equalizou nada).
 
-1. **"Famílias de Casas"** — intuitivo, sugere parentesco.
-2. **"Casas Irmãs"** — direto, expressa clone/mesma origem.
-3. **"Origem de Odds"** — enfatiza o que compartilham.
-4. **"Rede de Provedores"** — mais corporativo.
-
-**Sugestão:** **"Famílias de Casas"** (label) com subtítulo *"Casas que compartilham o mesmo provedor de odds"*. Confirma antes de eu aplicar.
-
-## Modelagem de dados
-
-```sql
--- Famílias (globais, admin-only para escrita)
-create table public.bookmaker_familias (
-  id uuid pk default gen_random_uuid(),
-  nome text not null unique,
-  descricao text,
-  cor text default '#6366f1',
-  bookmaker_referencia_id uuid references bookmakers_catalogo(id),
-  created_at, updated_at, created_by uuid
-);
-
--- Membros (1 casa = 1 família, garantido por UNIQUE)
-create table public.bookmaker_familia_membros (
-  id uuid pk default gen_random_uuid(),
-  familia_id uuid not null references bookmaker_familias on delete cascade,
-  bookmaker_catalogo_id uuid not null references bookmakers_catalogo on delete cascade unique,
-  is_referencia boolean default false,
-  created_at, created_by
-);
-```
-
-**GRANTs + RLS:**
-- `GRANT SELECT ... TO authenticated` em ambas.
-- `GRANT ALL ... TO service_role`.
-- Policies:
-    - `SELECT` livre para `authenticated` (dado global de mercado).
-    - `INSERT/UPDATE/DELETE` apenas se `has_role(auth.uid(),'admin')`.
-- Trigger para garantir que só exista **uma** `is_referencia = true` por família.
-
-## Isolamento de casas restritas — como o front garante
-
-O pool e as famílias renderizam via **JOIN com `bookmakers_catalogo`** (que já tem RLS ativa e considera `bookmaker_workspace_access`). Como a política de leitura do catálogo filtra por workspace, qualquer casa restrita não autorizada:
-
-- não aparece no pool,
-- não aparece dentro da família (fica "invisível" na lista, mesmo que o vínculo exista no banco).
-
-O admin, ao editar em workspace-admin, enxerga tudo. Assim não vazamos nome/logo de casa restrita para workspaces sem acesso. Nenhum código de UI adicional é necessário — a fonte de verdade continua sendo o RLS do catálogo.
-
-## UI — Layout "Famílias + Pool"
-
-Mantido do plano anterior. Duas regiões, com dnd-kit:
+### Fórmula unificada
 
 ```text
-┌────────────────────────────────────────────────────────────┐
-│ [🔍 Buscar]        [+ Nova família]      [Filtro ▾]        │
-├───────────────────────────┬────────────────────────────────┤
-│ FAMÍLIAS (esquerda)       │ POOL — casas sem família (dir) │
-│ ▾ 🟣 Kambi (12)           │ ┌────┐ ┌────┐ ┌────┐ ┌────┐    │
-│   ★ Unibet (referência)   │ │Bet9│ │Pina│ │... │ │... │    │
-│   · LeoVegas              │ └────┘ └────┘ └────┘ └────┘    │
-│   · 32Red                 │  87 casas sem família          │
-│ ▸ 🟢 SBTech (8)           │                                │
-│ ▸ 🔵 BetConstruct (5)     │                                │
-└───────────────────────────┴────────────────────────────────┘
+stakeAlvo   = equalizedStakesSnapshot[pernaIndex]        // ex.: 100
+stakeUsada  = mainStake + Σ stakes das outras subentradas preenchidas
+stakeRestante = max(0, stakeAlvo − stakeUsada)
 ```
 
-Interações:
-- DnD do pool → família, e entre famílias (move o vínculo — UNIQUE garante 1:1).
-- Seleção múltipla (Shift/Ctrl+click) → "Adicionar N casas à família…".
-- Menu ⋯ no card dentro da família: "Definir como referência", "Remover da família".
-- Referência sempre no topo com ⭐, borda destacada e nome em negrito.
-- Famílias colapsáveis; virtualização no pool acima de 200 casas.
-- Cor da família como faixa lateral fina no card.
-- Empty state por família.
-- **Badge de admin-only:** usuários sem `admin` veem a tela em modo **leitura** (sem DnD, sem botões de edição) — útil para consultar sem risco de mexer.
+Regras de disparo:
+- Só preenche automaticamente quando `stakeRestante > 0` **e** a subentrada em questão está com `stake` vazia/zerada (nunca sobrescreve valor manual).
+- Dispara em dois momentos:
+  1. Ao digitar a **odd** da nova subentrada (mesmo hook atual em `updateAdditionalEntry`).
+  2. No `useEffect` reativo já existente (linhas 1336-1387) que hoje faz auto-fill quando a main muda.
+- Se `equalizedStakesSnapshot` estiver vazio para aquela perna, mantém o comportamento atual (fallback payout-based), preservando a lógica que já funciona em cenários sem equalização prévia.
 
-## Localização
+### Mudanças pontuais
 
-Nova aba no módulo **Bookmakers**, ao lado de "Catálogo" e "Grupos Operacionais".
+Arquivo único: `src/components/surebet/SurebetModalRoot.tsx`
 
-## Escopo desta entrega
+1. **`updateAdditionalEntry` (linhas 1287-1324)**  
+   - Substituir o cálculo baseado em `targetPayout`/`remainingPayout/oddVal` por:  
+     `stakeRestante = snapshot − mainStake − outrasSubs` (soma de stakes, não payouts).  
+   - Só sobrescreve se a subentrada estiver com stake vazia ou o usuário estiver informando a odd pela primeira vez (proteger `isManuallyEdited` como já é feito na main).  
+   - Fallback: se `snapshot[pernaIndex]` for 0/indefinido, usar a lógica atual por payout.
 
-1. Migração das duas tabelas + trigger de referência única + policies + grants.
-2. Hook `useBookmakerFamilias` (list + CRUD, invalida cache).
-3. Rota/aba "Famílias de Casas" no módulo Bookmakers.
-4. Componentes: `FamiliaColumn`, `CasaCard`, `PoolCasas`, `NovaFamiliaDialog`.
-5. DnD com dnd-kit + seleção múltipla.
-6. Marcar referência.
-7. Busca no pool + filtros básicos (todas / sem família).
-8. Modo leitura para não-admins.
+2. **`useEffect` de auto-fill reativo (linhas 1336-1387)**  
+   - Mesmo swap: preferir snapshot sobre payout dinâmico.  
+   - Mantém a checagem "só preenche subs com `stake` vazia" para não sobrescrever nada digitado.
 
-## Fora de escopo (fases futuras)
+3. **Não alterar** `SurebetTableRow`, engine, RPCs, snapshot capture ou fluxo de gravação. É só troca de referência dentro do handler já existente.
 
-- Recomendação inteligente ("outras casas da mesma família") na criação de arbitragem/surebet.
-- Deduplicação automática de odds clones no mesmo evento.
-- Marcação em relatórios.
+## Cobertura de cenários
 
-## Perguntas antes de codar
+| Cenário | Comportamento |
+|---|---|
+| Arbitragem equalizada, usuário divide perna em N subs | Snapshot preserva 100, distribui restante corretamente conforme user preenche |
+| Usuário reduz main de 100→70 e digita odd da sub | Preenche 30 (hoje preenche errado) |
+| 3 subentradas na mesma perna | Cada nova sub recebe `restante` = snapshot − todas as outras |
+| Usuário digita stake manual na sub | Nunca é sobrescrito (respeita `isManuallyEdited` / stake > 0) |
+| Sem snapshot (rascunho novo) | Fallback preserva comportamento atual por payout |
+| Edição de aposta já registrada | `equalizedStakesSnapshot` é populado no hydrate; funciona igual |
+| Multi-moeda | Snapshot é em stake local por perna — cada perna usa sua própria moeda, sem cross-conversion |
 
-1. Confirma o nome **"Famílias de Casas"**? Prefere outro da lista?
-2. Ok criar a aba dentro do módulo Bookmakers existente (rota nova tipo `/bookmakers/familias`)?
+## Fora de escopo
+
+- Não mexe em business logic (engine, RPCs, ledger).  
+- Não altera UI/UX visual — apenas o valor auto-preenchido no `Input` de stake da sub.  
+- Não altera fluxo de exclusão/edição de aposta (o snapshot já é reconstruído no hydrate; cobertura preservada).
