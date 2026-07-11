@@ -50,3 +50,23 @@ export const formatNetworkName = (network: string | null | undefined): string =>
   
   return network;
 };
+
+/**
+ * Compact one-line label for wallet selects: "APELIDO • 0xabc...def".
+ * Falls back to exchange/network when no nickname is set.
+ */
+export const getWalletShortDisplay = (
+  wallet: WalletIdentifier & { endereco?: string | null; exchange?: string | null; network?: string | null },
+): string => {
+  const name =
+    wallet.nickname?.trim() ||
+    wallet.identificacao_wallet?.trim() ||
+    wallet.label?.trim() ||
+    wallet.exchangeWallet?.trim() ||
+    wallet.exchange?.trim() ||
+    wallet.name?.trim() ||
+    wallet.network?.trim() ||
+    "Wallet";
+  const addr = wallet.endereco ? truncateAddress(wallet.endereco, 6, 4) : "";
+  return addr ? `${name} • ${addr}` : name;
+};
