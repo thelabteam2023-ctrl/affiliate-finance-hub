@@ -4106,13 +4106,13 @@ export function CaixaTransacaoDialog({
                   <SelectContent>
                     {getWalletsDisponiveisDestino(destinoParceiroId)
                       .map((wallet) => {
-                        const walletName = wallet.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET';
-                        const shortenedAddress = wallet.endereco 
-                          ? `${wallet.endereco.slice(0, 5)}....${wallet.endereco.slice(-5)}`
+                        const apelido = (wallet as any).label?.trim() || wallet.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET';
+                        const shortenedAddress = wallet.endereco
+                          ? `${wallet.endereco.slice(0, 6)}...${wallet.endereco.slice(-4)}`
                           : '';
                         return (
                           <SelectItem key={wallet.id} value={wallet.id}>
-                            <span className="font-mono">{walletName} - {shortenedAddress}</span>
+                            <span className="truncate">{apelido} <span className="font-mono text-muted-foreground">• {shortenedAddress}</span></span>
                           </SelectItem>
                         );
                       })}
