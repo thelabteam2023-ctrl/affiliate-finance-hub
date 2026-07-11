@@ -1298,32 +1298,49 @@ export function SurebetModalRoot({
       if (field === 'odd') {
         const oddVal = parseFloat(value);
         if (oddVal > 1) {
+          // Todos os cálculos ocorrem na MOEDA DA PERNA (moeda da entrada principal).
+          // Sub-entradas em outra moeda são convertidas via convertViaBRL antes de somar,
+          // e o valor final é convertido de volta para a moeda da sub-entrada alvo.
+          const { brlRates } = engineConfig;
+          const legMoeda = (newOdds[pernaIndex].moeda || "BRL") as SupportedCurrency;
+          const targetMoeda = (entries[entryIndex].moeda || legMoeda) as SupportedCurrency;
+
           const mainStake = parseFloat(newOdds[pernaIndex].stake) || 0;
           const mainOdd = parseFloat(newOdds[pernaIndex].odd) || 0;
-          const otherSubStake = entries.reduce((sum, e, idx) => {
+
+          const otherSubStakeInLeg = entries.reduce((sum, e, idx) => {
             if (idx === entryIndex) return sum;
-            return sum + (parseFloat(e.stake) || 0);
+            const s = parseFloat(e.stake) || 0;
+            if (s <= 0) return sum;
+            const eMoeda = (e.moeda || legMoeda) as SupportedCurrency;
+            return sum + convertViaBRL(s, eMoeda, legMoeda, brlRates);
           }, 0);
 
-          // Preferir snapshot imutável da stake TOTAL da perna (equalização inicial).
-          // Fallback: distribuição por PAYOUT (comportamento antigo) quando não há snapshot.
-          const snapshotStake = equalizedStakesSnapshot?.[pernaIndex] || 0;
-          let filled = 0;
+          const snapshotStake = equalizedStakesSnapshot?.[pernaIndex] || 0; // já em moeda da perna
+          let filledInLeg = 0;
           if (snapshotStake > 0) {
-            const remainingStake = Math.max(0, snapshotStake - mainStake - otherSubStake);
-            if (remainingStake > 0) filled = arredondarStake(remainingStake);
+            filledInLeg = Math.max(0, snapshotStake - mainStake - otherSubStakeInLeg);
           } else {
-            const targetPayout = targetPayoutsLocal?.[pernaIndex] || 0;
+            const targetPayout = targetPayoutsLocal?.[pernaIndex] || 0; // moeda da perna
             const currentPayout = mainStake * (mainOdd > 1 ? mainOdd : 0);
-            const otherSubPayout = entries.reduce((sum, e, idx) => {
+            const otherSubPayoutInLeg = entries.reduce((sum, e, idx) => {
               if (idx === entryIndex) return sum;
               const s = parseFloat(e.stake) || 0;
               const o = parseFloat(e.odd) || 0;
-              return sum + s * (o > 1 ? o : 0);
+              if (s <= 0 || o <= 1) return sum;
+              const eMoeda = (e.moeda || legMoeda) as SupportedCurrency;
+              const payoutInE = s * o;
+              return sum + convertViaBRL(payoutInE, eMoeda, legMoeda, brlRates);
             }, 0);
-            const remainingPayout = Math.max(0, targetPayout - currentPayout - otherSubPayout);
-            if (remainingPayout > 0) filled = arredondarStake(remainingPayout / oddVal);
+            const remainingPayout = Math.max(0, targetPayout - currentPayout - otherSubPayoutInLeg);
+            filledInLeg = remainingPayout / oddVal; // odd é adimensional
           }
+
+          // Converter da moeda da perna para a moeda da sub-entrada alvo
+          const filledInTarget = filledInLeg > 0
+            ? convertViaBRL(filledInLeg, legMoeda, targetMoeda, brlRates)
+            : 0;
+          const filled = filledInTarget > 0 ? arredondarStake(filledInTarget) : 0;
           if (filled > 0) {
             entries[entryIndex] = { ...entries[entryIndex], stake: filled.toFixed(2) };
           }
@@ -1336,7 +1353,7 @@ export function SurebetModalRoot({
 
       return newOdds;
     });
-  }, [bookmakerSaldos, isEditing, targetPayoutsLocal, equalizedStakesSnapshot, arredondarStake]);
+  }, [bookmakerSaldos, isEditing, targetPayoutsLocal, equalizedStakesSnapshot, arredondarStake, engineConfig]);
 
   const removeAdditionalEntry = useCallback((pernaIndex: number, entryIndex: number) => {
     setOdds(prev => {
