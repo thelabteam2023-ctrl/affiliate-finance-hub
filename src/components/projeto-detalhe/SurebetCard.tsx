@@ -823,7 +823,7 @@ export function SurebetCard({
   // Quando uma perna tem entries[] com moedas diferentes (multi-entry agrupado),
   // somar cada entry individualmente convertida — JAMAIS usar stake_total bruto.
   const stakeConsolidadoFallback = (() => {
-    if (!isMulticurrency || !surebet.pernas || surebet.pernas.length === 0 || !convertToConsolidation) {
+    if (!needsConsolidation || !surebet.pernas || surebet.pernas.length === 0 || !convertToConsolidation) {
       return null;
     }
 
@@ -839,7 +839,7 @@ export function SurebetCard({
   })();
 
   const stakeRealTotal = (() => {
-    if (isMulticurrency) {
+    if (needsConsolidation) {
       if (typeof stakeConsolidadoFallback === "number") return stakeConsolidadoFallback;
       if (typeof surebet.stake_consolidado === "number") return surebet.stake_consolidado;
       return surebet.stake_total;
@@ -886,7 +886,7 @@ export function SurebetCard({
         sConv = p.entries.reduce((sum, e) => sum + convertToConsolidation(e.stake || 0, e.moeda || "BRL"), 0);
       } else {
         const s = p.stake_total || p.stake || 0;
-        sConv = (isMulticurrency && convertToConsolidation)
+        sConv = (needsConsolidation && convertToConsolidation)
           ? convertToConsolidation(s, p.moeda || "BRL")
           : s;
       }
@@ -922,7 +922,7 @@ export function SurebetCard({
               ? -(stake * Math.max(0, odd - 1))
               : (isFB ? 0 : -stake);
           }
-          const plConv = (isMulticurrency && convertToConsolidation)
+          const plConv = (needsConsolidation && convertToConsolidation)
             ? convertToConsolidation(plLocal, p.moeda || "BRL")
             : plLocal;
           lucroCenario += plConv;
@@ -939,7 +939,7 @@ export function SurebetCard({
         const stake = p.stake_total || p.stake || 0;
         const odd = p.odd_media || p.odd || 0;
         const exp = p.tipo === "lay" ? stake * Math.max(0, odd - 1) : stake;
-        exposicaoTotal += (isMulticurrency && convertToConsolidation)
+        exposicaoTotal += (needsConsolidation && convertToConsolidation)
           ? convertToConsolidation(exp, p.moeda || "BRL")
           : exp;
       });
@@ -963,7 +963,7 @@ export function SurebetCard({
         const oddEfetiva = perna.odd_media || perna.odd || 0;
         const stakeNessaPerna = perna.stake_total || perna.stake || 0;
         const retornoLocal = isFB ? stakeNessaPerna * (oddEfetiva - 1) : stakeNessaPerna * oddEfetiva;
-        retorno = (isMulticurrency && convertToConsolidation)
+        retorno = (needsConsolidation && convertToConsolidation)
           ? convertToConsolidation(retornoLocal, perna.moeda || "BRL")
           : retornoLocal;
       }
@@ -1033,7 +1033,7 @@ export function SurebetCard({
   };
 
   const lucroConsolidadoFallback = (() => {
-    if (!isLiquidada || !isMulticurrency || !surebet.pernas || surebet.pernas.length === 0 || !convertToConsolidation) {
+    if (!isLiquidada || !needsConsolidation || !surebet.pernas || surebet.pernas.length === 0 || !convertToConsolidation) {
       return null;
     }
 
