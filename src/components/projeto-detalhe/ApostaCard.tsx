@@ -789,7 +789,7 @@ export function ApostaCard({
                 anomaly={detectDateAnomaly(aposta.data_aposta, aposta.created_at ? new Date(aposta.created_at) : undefined)}
                 onClick={() => onEdit?.(aposta.id)}
               />
-              {(isForeignCurrency || isMultiCurrency) && (
+              {(isForeignCurrency || needsConsolidation) && (
                 <Badge variant="outline" className="text-[9px] px-1 py-0 bg-blue-500/10 text-blue-400 border-blue-500/30">
                   {displayCurrency}
                 </Badge>
@@ -1088,7 +1088,7 @@ export function ApostaCard({
               anomaly={detectDateAnomaly(aposta.data_aposta, aposta.created_at ? new Date(aposta.created_at) : undefined)}
               onClick={() => onEdit?.(aposta.id)}
             />
-            {(isForeignCurrency || isMultiCurrency) && (
+            {(isForeignCurrency || needsConsolidation) && (
               <Badge variant="outline" className="text-[9px] sm:text-[10px] px-1 py-0 bg-blue-500/10 text-blue-400 border-blue-500/30">
                 {displayCurrency}
               </Badge>
