@@ -1229,12 +1229,20 @@ export function OrigemPagamentoSelect({
                         const enderecoShort = wallet.endereco 
                           ? `${wallet.endereco.slice(0, 6)}...${wallet.endereco.slice(-4)}`
                           : "";
+                        const apelido = (wallet as any).label?.trim() || wallet.exchange || "Wallet";
+                        const exchangeSub = (wallet as any).label && wallet.exchange && (wallet as any).label !== wallet.exchange
+                          ? wallet.exchange
+                          : "";
                         return (
                           <SelectItem key={wallet.id} value={wallet.id}>
                             <div className="flex items-center justify-between w-full gap-4">
                               <div className="flex flex-col">
-                                <span className="font-medium text-sm">{wallet.exchange}</span>
-                                <span className="text-xs text-muted-foreground">{enderecoShort}</span>
+                                <span className="font-medium text-sm">
+                                  {apelido} <span className="font-mono text-muted-foreground">• {enderecoShort}</span>
+                                </span>
+                                {exchangeSub && (
+                                  <span className="text-[10px] text-muted-foreground">{exchangeSub}</span>
+                                )}
                               </div>
                               <span className={`text-xs font-medium ${insuficiente ? "text-destructive" : "text-muted-foreground"}`}>
                                 {formatCoin(wallet.saldo_coin, value.coin!)} ≈ {formatCurrency(saldoBRL)}
