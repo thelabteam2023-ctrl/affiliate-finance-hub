@@ -690,42 +690,45 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       if (!operacao?.pernas || !operacao.workspace_id) return;
 
       const pernas = operacao.pernas.filter(p => p.bookmaker_id && p.odd > 0);
-      
+
+      // Helper: uma perna pode ter sido expandida a partir de múltiplas
+      // apostas_perna_entradas (multi-bookmaker na mesma seleção). Nesse caso
+      // os `entry.id` são sintéticos no formato `${pernaId}__entrada_${entradaId}`.
+      // A RPC `liquidar_perna_surebet_v1` opera no NÍVEL da perna (apostas_pernas.id)
+      // e trata todas as entradas atomicamente — então precisamos deduplicar por
+      // perna_id real e chamar a RPC UMA vez por perna.
+      const extractRealPernaId = (rawId?: string | null): string | null => {
+        if (!rawId) return null;
+        const marker = "__entrada_";
+        const idx = rawId.indexOf(marker);
+        return idx > 0 ? rawId.slice(0, idx) : rawId;
+      };
+
       for (let i = 0; i < pernas.length; i++) {
         const perna = pernas[i];
         const isWinner = result.winners.includes(i);
         const resultado = result.type === "all_void" ? "VOID" : (isWinner ? "GREEN" : "RED");
 
-        // Se a perna tem sub-entries (múltiplas casas na mesma seleção),
-        // liquidar CADA sub-entry individualmente com o mesmo resultado
-        const hasEntries = perna.entries && perna.entries.length > 1;
-        
-        if (hasEntries) {
-          for (const entry of perna.entries!) {
-            const entryPernaId = entry.id;
-            if (!entryPernaId || !entry.bookmaker_id) continue;
-            
-            await handleSurebetPernaResolve({
-              pernaId: entryPernaId,
-              surebetId,
-              bookmarkerId: entry.bookmaker_id,
-              resultado,
-              stake: entry.stake,
-              odd: entry.odd,
-              moeda: entry.moeda || 'BRL',
-              resultadoAnterior: perna.resultado, // grouped result
-              workspaceId: operacao.workspace_id!,
-              silent: true,
-            });
+        // Coleta ids reais de perna (deduplicados) — cobre tanto o caso 1 entrada
+        // (perna.id direto) quanto multi-entrada (perna.entries com ids sintéticos).
+        const realPernaIds = new Set<string>();
+        const realPernaId = extractRealPernaId(perna.id);
+        if (realPernaId) realPernaIds.add(realPernaId);
+        if (perna.entries && perna.entries.length > 0) {
+          for (const entry of perna.entries) {
+            const pid = extractRealPernaId(entry.id);
+            if (pid) realPernaIds.add(pid);
           }
-        } else {
+        }
+
+        for (const pernaIdReal of realPernaIds) {
           await handleSurebetPernaResolve({
-            pernaId: perna.id,
+            pernaId: pernaIdReal,
             surebetId,
             bookmarkerId: perna.bookmaker_id!,
             resultado,
-            stake: perna.stake,
-            odd: perna.odd,
+            stake: perna.stake_total ?? perna.stake,
+            odd: perna.odd_media ?? perna.odd,
             moeda: perna.moeda || 'BRL',
             resultadoAnterior: perna.resultado,
             workspaceId: operacao.workspace_id!,
