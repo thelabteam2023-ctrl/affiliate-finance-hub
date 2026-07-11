@@ -3266,11 +3266,17 @@ export function CaixaTransacaoDialog({
             </SelectTrigger>
             <SelectContent>
               {walletsCompativeis.map(wallet => {
-                const walletName = wallet.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET';
-                const shortAddr = wallet.endereco ? `${wallet.endereco.slice(0, 5)}...${wallet.endereco.slice(-4)}` : '';
+                const apelido = (wallet as any).label?.trim() || wallet.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET';
+                const shortAddr = wallet.endereco ? `${wallet.endereco.slice(0, 6)}...${wallet.endereco.slice(-4)}` : '';
+                const exchangeSub = (wallet as any).label && wallet.exchange
+                  ? wallet.exchange.replace(/-/g, ' ').toUpperCase()
+                  : '';
                 return (
                   <SelectItem key={wallet.id} value={wallet.id}>
-                    {walletName} - {shortAddr}
+                    <div className="flex flex-col text-left">
+                      <span className="text-xs font-medium truncate">{apelido} <span className="font-mono text-muted-foreground">• {shortAddr}</span></span>
+                      {exchangeSub && <span className="text-[10px] text-muted-foreground truncate">{exchangeSub}</span>}
+                    </div>
                   </SelectItem>
                 );
               })}
