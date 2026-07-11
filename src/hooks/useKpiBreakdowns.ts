@@ -152,10 +152,28 @@ function deriveApostasModule(
   });
   const volumePorMoeda = agregarPorMoeda(volumeItems);
 
-  const lucroItems = apostas.filter(a => a.status === 'LIQUIDADA').map(a => ({
-    valor: Number(a.lucro_prejuizo || 0),
-    moeda: a.moeda_operacao || 'BRL'
-  }));
+  // Lucro por moeda ORIGINAL:
+  // - ARBITRAGEM: agrega P&L por perna na moeda nativa da perna (evita reutilizar
+  //   o `lucro_prejuizo` do pai, que já é consolidado na moeda do projeto).
+  // - Aposta simples: usa `lucro_prejuizo` do pai na moeda da operação.
+  const lucroItems: { valor: number; moeda: string }[] = [];
+  apostas.filter(a => a.status === 'LIQUIDADA').forEach(a => {
+    const pernas = pernasMap.get(a.id);
+    if (a.forma_registro === 'ARBITRAGEM' && pernas && pernas.length > 0) {
+      pernas.forEach(p => {
+        if (p.lucro_prejuizo == null) return;
+        lucroItems.push({
+          valor: Number(p.lucro_prejuizo || 0),
+          moeda: (p.moeda || a.moeda_operacao || 'BRL').toUpperCase(),
+        });
+      });
+    } else {
+      lucroItems.push({
+        valor: Number(a.lucro_prejuizo || 0),
+        moeda: (a.moeda_operacao || 'BRL').toUpperCase(),
+      });
+    }
+  });
   const lucroPorMoeda = agregarPorMoeda(lucroItems);
 
   return { count: apostas.length, volume, volumeLiquidado, lucro, countDetails, volumePorMoeda, lucroPorMoeda, lucroPorEstrategia };

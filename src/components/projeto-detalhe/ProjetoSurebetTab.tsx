@@ -879,12 +879,24 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       .map(([moeda, valor]) => ({ moeda, valor }))
       .filter(item => Math.abs(item.valor) > 0.01);
 
-    // Breakdown de LUCRO por moeda original
+    // Breakdown de LUCRO por moeda ORIGINAL:
+    // Para surebets/arbitragem, agrega P&L de cada perna na SUA moeda nativa
+    // (nunca reutiliza o `lucro_real` do pai — este já é o consolidado do projeto).
     const lucroPorMoedaMap = new Map<string, number>();
-    surebetsParaKpi.forEach(s => {
-      const moeda = s.moeda_operacao || "BRL";
-      const rawLucro = s.lucro_real || 0;
-      lucroPorMoedaMap.set(moeda, (lucroPorMoedaMap.get(moeda) || 0) + rawLucro);
+    surebetsLiquidadasArr.forEach(s => {
+      const pernasArr = (s.pernas || []) as any[];
+      if (pernasArr.length > 0) {
+        pernasArr.forEach((p: any) => {
+          const moedaPerna = (p.moeda || s.moeda_operacao || "BRL").toString().toUpperCase();
+          const lucroPerna = getLucroPerna(p);
+          if (!lucroPerna) return;
+          lucroPorMoedaMap.set(moedaPerna, (lucroPorMoedaMap.get(moedaPerna) || 0) + lucroPerna);
+        });
+      } else {
+        const moeda = (s.moeda_operacao || "BRL").toUpperCase();
+        const rawLucro = s.lucro_real || 0;
+        if (rawLucro) lucroPorMoedaMap.set(moeda, (lucroPorMoedaMap.get(moeda) || 0) + rawLucro);
+      }
     });
     const lucroPorMoeda = Array.from(lucroPorMoedaMap.entries())
       .map(([moeda, valor]) => ({ moeda, valor }))
