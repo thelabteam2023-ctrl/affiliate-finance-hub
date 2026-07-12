@@ -619,18 +619,18 @@ export function SurebetTableRow({
                   value={addEntry.bookmaker_id}
                   onValueChange={(v) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'bookmaker_id', v)}
                 >
-                   <SelectTrigger className="h-7 text-[10px] w-full justify-center [&>span]:flex-1">
+                    <SelectTrigger className="h-9 text-xs w-full justify-center [&>span]:flex-1">
                     <SelectValue placeholder="Casa...">
                       {addBookmaker?.nome && (
-                        <span className="flex items-center justify-center gap-1 min-w-0">
+                        <span className="flex items-center justify-center gap-2 min-w-0">
                           <BookmakerLogo
                             logoUrl={addBookmaker.logo_url}
                             alt={addBookmaker.nome}
-                            size="h-4 w-4"
-                            iconSize="h-2.5 w-2.5"
+                            size="h-5 w-5"
+                            iconSize="h-3 w-3"
                             className="p-0"
                           />
-                          <span className="truncate uppercase text-[9px]">{addBookmaker.nome}</span>
+                          <span className="truncate uppercase text-[12px] font-semibold">{addBookmaker.nome}</span>
                         </span>
                       )}
                     </SelectValue>
