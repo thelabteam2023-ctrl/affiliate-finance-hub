@@ -495,7 +495,7 @@ export function SurebetTableRow({
             value={entry.selecaoLivre}
             onChange={(e) => onUpdateOdd(pernaIndex, "selecaoLivre", e.target.value)}
             className={cn(
-              "h-8 text-xs px-1 border-dashed w-20",
+              "h-8 text-xs px-2 border-dashed w-full",
               !entry.selecaoLivre && "opacity-60"
             )}
           />
