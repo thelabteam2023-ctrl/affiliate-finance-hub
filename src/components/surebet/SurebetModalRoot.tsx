@@ -489,7 +489,9 @@ export function SurebetModalRoot({
         if (entry.bookmaker_id === bk.id) {
           // Se não é a entrada que estamos calculando
           if (i !== legIndex || subEntryIndex !== undefined) {
-            const s = parseFloat(entry.stake) || 0;
+            const rawS = parseFloat(entry.stake) || 0;
+            const oddN = parseFloat(entry.odd) || 0;
+            const s = capitalComprometido(entry.tipo ?? 'back', rawS, oddN);
             if (entry.fonteSaldo === 'FREEBET') alocadoOutrosFB += s; else alocadoOutros += s;
           }
         }
@@ -500,7 +502,10 @@ export function SurebetModalRoot({
           if (subBk === bk.id) {
             // Se não é a sub-entrada que estamos calculando
             if (i !== legIndex || si !== subEntryIndex) {
-              const s = parseFloat(sub.stake) || 0;
+              const rawS = parseFloat(sub.stake) || 0;
+              const oddN = parseFloat((sub.odd as any) ?? entry.odd) || 0;
+              const subTipo = (sub.tipo ?? entry.tipo ?? 'back') as 'back' | 'lay';
+              const s = capitalComprometido(subTipo, rawS, oddN);
               if (sub.fonteSaldo === 'FREEBET') alocadoOutrosFB += s; else alocadoOutros += s;
             }
           }
