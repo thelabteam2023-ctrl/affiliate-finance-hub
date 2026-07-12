@@ -2697,13 +2697,13 @@ export function SurebetModalRoot({
                       data-edit-state={isEditing ? "dirty" : "pristine"}
                     >
                       <th className="py-2 px-2 text-left font-medium text-muted-foreground w-16">Perna</th>
-                       <th className="py-2 px-2 text-center font-medium text-muted-foreground w-[200px]">Casa</th>
+                       <th className="py-2 px-2 text-center font-medium text-muted-foreground w-[230px]">Casa</th>
                       <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20">Odd</th>
                       {(showComissao || odds.some(o => (o.tipo ?? 'back') === 'lay')) && (
                         <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20" title="Comissão da exchange">Comissão</th>
                       )}
                       <th className="py-2 px-2 text-center font-medium text-muted-foreground w-24">Stake</th>
-                      <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20">Linha</th>
+                      <th className="py-2 px-2 text-center font-medium text-muted-foreground w-32">Linha</th>
                       {!isEditing && (
                         <th className="py-2 px-2 text-center font-medium text-muted-foreground w-10" title="Referência">
                           <Target className="h-3.5 w-3.5 mx-auto" />
