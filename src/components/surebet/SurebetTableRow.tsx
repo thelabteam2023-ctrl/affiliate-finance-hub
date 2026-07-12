@@ -369,7 +369,7 @@ export function SurebetTableRow({
                 {isLay ? (
                   <div
                     className={cn(
-                      "group/lay relative flex rounded-lg border bg-card/40 backdrop-blur-sm w-[168px] overflow-hidden shadow-sm transition-colors",
+                      "group/lay relative flex rounded-lg border bg-card/40 backdrop-blur-sm w-[210px] overflow-hidden shadow-sm transition-colors",
                       mainInsufficient
                         ? "border-destructive/70 ring-1 ring-destructive/30"
                         : "border-emerald-500/30 hover:border-emerald-500/60"
