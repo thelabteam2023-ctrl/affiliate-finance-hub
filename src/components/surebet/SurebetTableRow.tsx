@@ -366,58 +366,76 @@ export function SurebetTableRow({
             const comissaoPct = ((entry.comissao ?? 0) * 100);
             return (
               <div className="flex flex-col items-center gap-0.5">
-                <div className="flex items-center gap-1">
-                  <MoneyInput 
-                    value={entry.stake}
-                    onChange={(val) => onUpdateOdd(pernaIndex, "stake", val)}
-                    currency={entry.moeda}
-                    minDigits={6}
-                    className={cn(
-                      "h-8 text-xs text-center tabular-nums",
-                      entry.fonteSaldo === 'FREEBET' ? "w-[72px]" : "w-[90px]",
-                      mainInsufficient ? "border-destructive focus-visible:ring-destructive/50" : "",
-                      isLay ? "border-red-500/40" : ""
-                    )}
-                    data-field-type="stake"
-                    onKeyDown={(e) => onFieldKeyDown(e as any, 'stake')}
-                  />
-                  {/* FB Toggle — só aparece se a casa tem saldo de freebet */}
-                  {!isLay && (hasFBAvailable || entry.fonteSaldo === 'FREEBET') && (
-                    <button
-                      type="button"
-                      onClick={() => onUpdateOdd(pernaIndex, "fonteSaldo" as any, entry.fonteSaldo === 'FREEBET' ? 'REAL' : 'FREEBET')}
-                      className={cn(
-                        "shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold transition-colors border",
-                        entry.fonteSaldo === 'FREEBET'
-                          ? "bg-purple-500/20 text-purple-700 dark:text-purple-400 border-purple-500/40"
-                          : "text-muted-foreground/40 border-transparent hover:text-muted-foreground/60 hover:border-border/40"
-                      )}
-                      title={entry.fonteSaldo === 'FREEBET' ? "Usando Freebet (clique para desativar)" : "Usar Freebet nesta entrada"}
-                    >
-                      FB
-                    </button>
-                  )}
-                </div>
-                {isLay && (
+                {isLay ? (
                   <div
-                    className="flex items-center gap-1"
-                    title="Responsabilidade: valor efetivamente reservado no saldo (stake × (odd − 1)). Editar aqui recalcula a stake."
+                    className={cn(
+                      "flex flex-col rounded-md border overflow-hidden divide-y w-[110px]",
+                      mainInsufficient
+                        ? "border-destructive divide-destructive/40"
+                        : "border-red-500/40 divide-red-500/30"
+                    )}
+                    title="Stake × (odd − 1) = Responsabilidade. Editar qualquer campo recalcula o outro."
                   >
-                    <span className="text-[9px] text-red-500/90 font-medium leading-tight">Resp</span>
+                    <div className="flex items-center h-8">
+                      <span className="w-9 shrink-0 text-[9px] font-medium text-muted-foreground text-center">Stake</span>
+                      <MoneyInput
+                        value={entry.stake}
+                        onChange={(val) => onUpdateOdd(pernaIndex, "stake", val)}
+                        currency={entry.moeda}
+                        minDigits={6}
+                        className="h-8 flex-1 text-xs text-center tabular-nums border-0 rounded-none focus-visible:ring-0 px-1"
+                        data-field-type="stake"
+                        onKeyDown={(e) => onFieldKeyDown(e as any, 'stake')}
+                      />
+                    </div>
+                    <div className="flex items-center h-8">
+                      <span className="w-9 shrink-0 text-[9px] font-medium text-red-500/90 text-center">Resp</span>
+                      <MoneyInput
+                        value={liability > 0 ? liability.toFixed(2) : ""}
+                        onChange={(val) => {
+                          const respNum = parseFloat(String(val).replace(/[^0-9.]/g, "")) || 0;
+                          const denom = oddNum - 1;
+                          if (denom > 0 && respNum >= 0) {
+                            const newStake = respNum / denom;
+                            onUpdateOdd(pernaIndex, "stake", newStake ? newStake.toFixed(2) : "");
+                          }
+                        }}
+                        currency={entry.moeda}
+                        minDigits={6}
+                        className="h-8 flex-1 text-xs text-center tabular-nums border-0 rounded-none focus-visible:ring-0 px-1 text-red-600 dark:text-red-400"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1">
                     <MoneyInput
-                      value={liability > 0 ? liability.toFixed(2) : ""}
-                      onChange={(val) => {
-                        const respNum = parseFloat(String(val).replace(/[^0-9.]/g, "")) || 0;
-                        const denom = oddNum - 1;
-                        if (denom > 0 && respNum >= 0) {
-                          const newStake = respNum / denom;
-                          onUpdateOdd(pernaIndex, "stake", newStake ? newStake.toFixed(2) : "");
-                        }
-                      }}
+                      value={entry.stake}
+                      onChange={(val) => onUpdateOdd(pernaIndex, "stake", val)}
                       currency={entry.moeda}
                       minDigits={6}
-                      className="h-6 w-[86px] text-[10px] text-center tabular-nums border-red-500/40"
+                      className={cn(
+                        "h-8 text-xs text-center tabular-nums",
+                        entry.fonteSaldo === 'FREEBET' ? "w-[72px]" : "w-[90px]",
+                        mainInsufficient ? "border-destructive focus-visible:ring-destructive/50" : ""
+                      )}
+                      data-field-type="stake"
+                      onKeyDown={(e) => onFieldKeyDown(e as any, 'stake')}
                     />
+                    {(hasFBAvailable || entry.fonteSaldo === 'FREEBET') && (
+                      <button
+                        type="button"
+                        onClick={() => onUpdateOdd(pernaIndex, "fonteSaldo" as any, entry.fonteSaldo === 'FREEBET' ? 'REAL' : 'FREEBET')}
+                        className={cn(
+                          "shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold transition-colors border",
+                          entry.fonteSaldo === 'FREEBET'
+                            ? "bg-purple-500/20 text-purple-700 dark:text-purple-400 border-purple-500/40"
+                            : "text-muted-foreground/40 border-transparent hover:text-muted-foreground/60 hover:border-border/40"
+                        )}
+                        title={entry.fonteSaldo === 'FREEBET' ? "Usando Freebet (clique para desativar)" : "Usar Freebet nesta entrada"}
+                      >
+                        FB
+                      </button>
+                    )}
                   </div>
                 )}
                 {(error || (mainInsufficient && selectedBookmaker)) && (
