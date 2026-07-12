@@ -372,9 +372,8 @@ export function SurebetTableRow({
                       "group/lay relative flex rounded-lg border bg-card/40 backdrop-blur-sm w-[168px] overflow-hidden shadow-sm transition-colors",
                       mainInsufficient
                         ? "border-destructive/70 ring-1 ring-destructive/30"
-                        : "border-red-500/25 hover:border-red-500/50"
+                        : "border-emerald-500/30 hover:border-emerald-500/60"
                     )}
-                    title="Stake × (odd − 1) = Responsabilidade. Editar qualquer campo recalcula o outro."
                   >
                     {/* Coluna Stake */}
                     <div className="flex-1 min-w-0 flex flex-col">
@@ -392,11 +391,27 @@ export function SurebetTableRow({
                       />
                     </div>
                     {/* Divisória estrutural vertical */}
-                    <div className="w-px bg-gradient-to-b from-transparent via-red-500/30 to-transparent" aria-hidden />
+                    <div
+                      className={cn(
+                        "w-px bg-gradient-to-b from-transparent to-transparent",
+                        mainInsufficient ? "via-destructive/40" : "via-emerald-500/40"
+                      )}
+                      aria-hidden
+                    />
                     {/* Coluna Responsabilidade */}
-                    <div className="flex-1 min-w-0 flex flex-col bg-red-500/[0.04]">
-                      <span className="text-[8px] font-bold uppercase tracking-wider text-red-500/90 text-center pt-1 leading-none">
-                        Resp
+                    <div
+                      className={cn(
+                        "flex-1 min-w-0 flex flex-col",
+                        mainInsufficient ? "bg-destructive/[0.06]" : "bg-emerald-500/[0.06]"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "text-[8px] font-bold uppercase tracking-wider text-center pt-1 leading-none truncate px-1",
+                          mainInsufficient ? "text-destructive" : "text-emerald-600 dark:text-emerald-400"
+                        )}
+                      >
+                        Responsabilidade
                       </span>
                       <MoneyInput
                         value={liability > 0 ? liability.toFixed(2) : ""}
@@ -410,7 +425,10 @@ export function SurebetTableRow({
                         }}
                         currency={entry.moeda}
                         minDigits={6}
-                        className="h-7 w-full text-[11px] text-center tabular-nums font-semibold border-0 rounded-none focus-visible:ring-0 px-1 bg-transparent text-red-600 dark:text-red-400"
+                        className={cn(
+                          "h-7 w-full text-[11px] text-center tabular-nums font-semibold border-0 rounded-none focus-visible:ring-0 px-1 bg-transparent",
+                          mainInsufficient ? "text-destructive" : "text-emerald-600 dark:text-emerald-400"
+                        )}
                       />
                     </div>
                   </div>
