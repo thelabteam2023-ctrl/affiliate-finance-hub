@@ -938,7 +938,13 @@ export function SurebetModalRoot({
           if (entrada.bookmaker_id && entrada.stake) {
             const cur = stakeMap.get(entrada.bookmaker_id) || { real: 0, freebet: 0 };
             const val = parseFloat(entrada.stake) || 0;
-            if (entrada.fonte_saldo === 'FREEBET') cur.freebet += val; else cur.real += val;
+            // Crédito virtual em modo edição deve refletir o débito real no ledger:
+            // BACK debita stake; LAY debita liability (stake × (odd − 1)).
+            const tipoEntrada = (entrada.tipo ?? perna.tipo ?? 'back') as 'back' | 'lay';
+            const oddEntrada = parseFloat(entrada.odd ?? perna.odd) || 0;
+            const reservado = capitalComprometido(tipoEntrada, val, oddEntrada);
+            if (entrada.fonte_saldo === 'FREEBET') cur.freebet += val; // LAY não usa FREEBET
+            else cur.real += reservado;
             stakeMap.set(entrada.bookmaker_id, cur);
             
             flatSnapshot.push({
