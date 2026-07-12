@@ -38,6 +38,20 @@ export function exposureOf(perna: PernaLayInput): number {
   return Math.max(0, stake * Math.max(0, odd - 1));
 }
 
+/**
+ * Capital efetivamente comprometido/reservado no saldo pela perna.
+ * - BACK: stake.
+ * - LAY : liability (stake × (odd − 1)).
+ * Fonte única para validações de saldo pré-registro e reservas de UI.
+ */
+export function capitalComprometido(
+  tipo: "back" | "lay" | null | undefined,
+  stake: number,
+  odd: number,
+): number {
+  return exposureOf({ tipo: tipo ?? "back", stake, odd });
+}
+
 /** Rótulo curto para o campo de exposição exibido no card. */
 export function labelExposicao(perna: PernaLayInput): "Stake" | "Resp" {
   return isLay(perna) ? "Resp" : "Stake";
