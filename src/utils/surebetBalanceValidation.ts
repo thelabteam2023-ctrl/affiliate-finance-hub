@@ -3,6 +3,8 @@
  * Extracted from SurebetModalRoot for testability.
  */
 
+import { capitalComprometido } from "./pernaLayHelpers";
+
 export interface BookmakerBalance {
   id: string;
   saldo_operavel: number;
@@ -14,10 +16,16 @@ export interface OddEntry {
   bookmaker_id: string;
   stake: string;
   fonteSaldo?: string;
+  /** Tipo da perna: 'back' (default) ou 'lay'. Em LAY o capital reservado é a liability. */
+  tipo?: "back" | "lay";
+  /** Odd usada para calcular a liability de pernas LAY. */
+  odd?: string;
   additionalEntries?: Array<{
     bookmaker_id?: string;
     stake: string;
     fonteSaldo?: string;
+    tipo?: "back" | "lay";
+    odd?: string;
   }>;
 }
 
@@ -38,14 +46,23 @@ export interface BalanceValidationResult {
  * Build the original stakes map from pernas data (for edit mode credit).
  */
 export function buildOriginalStakesMap(
-  pernas: Array<{ bookmaker_id: string; stake: number; fonte_saldo: string | null }>
+  pernas: Array<{
+    bookmaker_id: string;
+    stake: number;
+    fonte_saldo: string | null;
+    tipo?: "back" | "lay" | null;
+    odd?: number | null;
+  }>
 ): Map<string, OriginalCredits> {
   const map = new Map<string, OriginalCredits>();
   pernas.forEach(p => {
     if (!p.bookmaker_id || !p.stake) return;
     const cur = map.get(p.bookmaker_id) || { real: 0, freebet: 0 };
-    if (p.fonte_saldo === 'FREEBET') cur.freebet += p.stake;
-    else cur.real += p.stake;
+    // Crédito virtual deve refletir o débito real no ledger:
+    // BACK debita stake; LAY debita liability (stake × (odd−1)).
+    const reservado = capitalComprometido(p.tipo ?? "back", p.stake, Number(p.odd ?? 0));
+    if (p.fonte_saldo === 'FREEBET') cur.freebet += p.stake; // LAY nunca usa FREEBET
+    else cur.real += reservado;
     map.set(p.bookmaker_id, cur);
   });
   return map;
@@ -89,7 +106,9 @@ export function validateBalance(
 
   odds.forEach((entry) => {
     if (entry.bookmaker_id) {
-      const mainStake = parseFloat(entry.stake) || 0;
+      const mainStakeRaw = parseFloat(entry.stake) || 0;
+      const mainOdd = parseFloat(entry.odd ?? "") || 0;
+      const mainStake = capitalComprometido(entry.tipo ?? "back", mainStakeRaw, mainOdd);
       if (mainStake > 0) {
         const cur = alocadoPorBookmaker.get(entry.bookmaker_id) || { real: 0, freebet: 0 };
         if (entry.fonteSaldo === 'FREEBET') cur.freebet += mainStake; else cur.real += mainStake;
@@ -99,7 +118,10 @@ export function validateBalance(
     (entry.additionalEntries || []).forEach(sub => {
       const subBk = sub.bookmaker_id || entry.bookmaker_id;
       if (!subBk) return;
-      const subStake = parseFloat(sub.stake) || 0;
+      const subStakeRaw = parseFloat(sub.stake) || 0;
+      const subOdd = parseFloat(sub.odd ?? entry.odd ?? "") || 0;
+      const subTipo = sub.tipo ?? entry.tipo ?? "back";
+      const subStake = capitalComprometido(subTipo, subStakeRaw, subOdd);
       if (subStake > 0) {
         const cur = alocadoPorBookmaker.get(subBk) || { real: 0, freebet: 0 };
         if (sub.fonteSaldo === 'FREEBET') cur.freebet += subStake; else cur.real += subStake;
