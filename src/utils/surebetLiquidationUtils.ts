@@ -16,6 +16,8 @@ export interface LiquidationEntry {
   subEntryIndex: number | null;
   isSubEntry: boolean;
   parentLegId: string | null;
+  /** 'back' (default) ou 'lay' — necessário para calcular liability em validações de saldo. */
+  tipo?: "back" | "lay";
 }
 
 export interface LiquidationLeg {
@@ -59,6 +61,7 @@ export function expandLegsWithSubEntries(legs: SurebetPerna[]): LiquidationEntry
           subEntryIndex: subIndex,
           isSubEntry: true,
           parentLegId: leg.id,
+          tipo: ((sub as any).tipo ?? (leg as any).tipo ?? "back") as "back" | "lay",
         });
       });
     } else {
@@ -74,6 +77,7 @@ export function expandLegsWithSubEntries(legs: SurebetPerna[]): LiquidationEntry
         subEntryIndex: null,
         isSubEntry: false,
         parentLegId: null,
+        tipo: ((leg as any).tipo ?? "back") as "back" | "lay",
       });
     }
   });
