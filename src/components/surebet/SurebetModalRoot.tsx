@@ -2687,7 +2687,7 @@ export function SurebetModalRoot({
               </div>
             ) : viewLayout === 'vertical' ? (
               <div className="overflow-x-auto" ref={tableContainerRef}>
-                <table className="w-full text-xs border-collapse">
+                 <table className="w-auto mx-auto text-xs border-collapse table-fixed">
                   <thead>
                     <tr 
                       className="border-b border-border/50"
@@ -2697,7 +2697,7 @@ export function SurebetModalRoot({
                       data-edit-state={isEditing ? "dirty" : "pristine"}
                     >
                       <th className="py-2 px-2 text-left font-medium text-muted-foreground w-16">Perna</th>
-                      <th className="py-2 px-2 text-center font-medium text-muted-foreground min-w-[160px]">Casa</th>
+                       <th className="py-2 px-2 text-center font-medium text-muted-foreground w-[200px]">Casa</th>
                       <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20">Odd</th>
                       {(showComissao || odds.some(o => (o.tipo ?? 'back') === 'lay')) && (
                         <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20" title="Comissão da exchange">Comissão</th>
