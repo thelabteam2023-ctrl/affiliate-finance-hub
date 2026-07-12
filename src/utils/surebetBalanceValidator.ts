@@ -4,6 +4,7 @@
 
 import { SurebetPerna } from "@/components/projeto-detalhe/SurebetCard";
 import { expandLegsWithSubEntries } from "./surebetLiquidationUtils";
+import { capitalComprometido } from "./pernaLayHelpers";
 
 export interface BalanceValidationResult {
   valid: boolean;
@@ -49,7 +50,12 @@ export function validateBalanceForOperation(
         isSub: entry.isSubEntry
       };
     }
-    requiredByBookmaker[entry.bookmaker_id].total += entry.stake;
+    // LAY reserva liability (stake × (odd−1)), não a stake bruta.
+    requiredByBookmaker[entry.bookmaker_id].total += capitalComprometido(
+      entry.tipo ?? "back",
+      entry.stake,
+      entry.odd,
+    );
   });
 
   // Validar cada casa
