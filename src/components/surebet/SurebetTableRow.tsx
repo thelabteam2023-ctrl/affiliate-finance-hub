@@ -369,27 +369,35 @@ export function SurebetTableRow({
                 {isLay ? (
                   <div
                     className={cn(
-                      "flex flex-col rounded-md border overflow-hidden divide-y w-[110px]",
+                      "group/lay relative flex rounded-lg border bg-card/40 backdrop-blur-sm w-[168px] overflow-hidden shadow-sm transition-colors",
                       mainInsufficient
-                        ? "border-destructive divide-destructive/40"
-                        : "border-red-500/40 divide-red-500/30"
+                        ? "border-destructive/70 ring-1 ring-destructive/30"
+                        : "border-red-500/25 hover:border-red-500/50"
                     )}
                     title="Stake × (odd − 1) = Responsabilidade. Editar qualquer campo recalcula o outro."
                   >
-                    <div className="flex items-center h-8">
-                      <span className="w-9 shrink-0 text-[9px] font-medium text-muted-foreground text-center">Stake</span>
+                    {/* Coluna Stake */}
+                    <div className="flex-1 min-w-0 flex flex-col">
+                      <span className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground/80 text-center pt-1 leading-none">
+                        Stake
+                      </span>
                       <MoneyInput
                         value={entry.stake}
                         onChange={(val) => onUpdateOdd(pernaIndex, "stake", val)}
                         currency={entry.moeda}
                         minDigits={6}
-                        className="h-8 flex-1 text-xs text-center tabular-nums border-0 rounded-none focus-visible:ring-0 px-1"
+                        className="h-7 w-full text-[11px] text-center tabular-nums font-semibold border-0 rounded-none focus-visible:ring-0 px-1 bg-transparent"
                         data-field-type="stake"
                         onKeyDown={(e) => onFieldKeyDown(e as any, 'stake')}
                       />
                     </div>
-                    <div className="flex items-center h-8">
-                      <span className="w-9 shrink-0 text-[9px] font-medium text-red-500/90 text-center">Resp</span>
+                    {/* Divisória estrutural vertical */}
+                    <div className="w-px bg-gradient-to-b from-transparent via-red-500/30 to-transparent" aria-hidden />
+                    {/* Coluna Responsabilidade */}
+                    <div className="flex-1 min-w-0 flex flex-col bg-red-500/[0.04]">
+                      <span className="text-[8px] font-bold uppercase tracking-wider text-red-500/90 text-center pt-1 leading-none">
+                        Resp
+                      </span>
                       <MoneyInput
                         value={liability > 0 ? liability.toFixed(2) : ""}
                         onChange={(val) => {
@@ -402,7 +410,7 @@ export function SurebetTableRow({
                         }}
                         currency={entry.moeda}
                         minDigits={6}
-                        className="h-8 flex-1 text-xs text-center tabular-nums border-0 rounded-none focus-visible:ring-0 px-1 text-red-600 dark:text-red-400"
+                        className="h-7 w-full text-[11px] text-center tabular-nums font-semibold border-0 rounded-none focus-visible:ring-0 px-1 bg-transparent text-red-600 dark:text-red-400"
                       />
                     </div>
                   </div>
