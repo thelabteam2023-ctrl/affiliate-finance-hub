@@ -58,6 +58,7 @@ import {
   ConfirmLayCollapseDialog,
   type LayCollapseEntryPreview,
 } from "@/components/projeto-detalhe/ConfirmLayCollapseDialog";
+import { capitalComprometido } from "@/utils/pernaLayHelpers";
 
 // ============================================
 // TIPOS
