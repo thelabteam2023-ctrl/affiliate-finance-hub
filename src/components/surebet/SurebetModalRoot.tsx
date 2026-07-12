@@ -58,6 +58,7 @@ import {
   ConfirmLayCollapseDialog,
   type LayCollapseEntryPreview,
 } from "@/components/projeto-detalhe/ConfirmLayCollapseDialog";
+import { capitalComprometido } from "@/utils/pernaLayHelpers";
 
 // ============================================
 // TIPOS
@@ -348,6 +349,13 @@ export function SurebetModalRoot({
  
    const isFB = entry.fonteSaldo === 'FREEBET';
    const parseStake = (s: any) => Number(String(s).replace(/[^0-9.]/g, '')) || 0;
+    // Helper: valor efetivamente reservado no saldo por uma perna/entrada.
+    // BACK = stake; LAY = liability (stake × (odd − 1)).
+    const reservadoDe = (
+      stakeStr: any,
+      oddStr: any,
+      tipo?: 'back' | 'lay',
+    ) => capitalComprometido(tipo ?? 'back', parseStake(stakeStr), parseFloat(String(oddStr ?? '')) || 0);
    
    // 1. Saldo base + Crédito de edição
    const credito = isEditing ? (originalStakes.get(entry.bookmaker_id) || { real: 0, freebet: 0 }) : { real: 0, freebet: 0 };
@@ -363,7 +371,7 @@ export function SurebetModalRoot({
          const subBk = sub.bookmaker_id || other.bookmaker_id;
          const subFB = sub.fonteSaldo === 'FREEBET';
          if (subBk === entry.bookmaker_id && subFB === isFB) {
-           alocadoOutras += parseStake(sub.stake);
+            alocadoOutras += reservadoDe(sub.stake, sub.odd ?? other.odd, (sub.tipo ?? other.tipo) as any);
          }
        });
        return;
@@ -372,25 +380,29 @@ export function SurebetModalRoot({
      // Outras pernas
      const otherFB = other.fonteSaldo === 'FREEBET';
      if (other.bookmaker_id === entry.bookmaker_id && otherFB === isFB) {
-       alocadoOutras += parseStake(other.stake);
+        alocadoOutras += reservadoDe(other.stake, other.odd, other.tipo);
      }
      (other.additionalEntries || []).forEach(sub => {
        const subBk = sub.bookmaker_id || other.bookmaker_id;
        const subFB = sub.fonteSaldo === 'FREEBET';
        if (subBk === entry.bookmaker_id && subFB === isFB) {
-         alocadoOutras += parseStake(sub.stake);
+          alocadoOutras += reservadoDe(sub.stake, sub.odd ?? other.odd, (sub.tipo ?? other.tipo) as any);
        }
      });
    });
  
    const disponivelFinal = Math.max(0, saldoDisponivelTotal - alocadoOutras);
-   const stakeAtual = parseStake(entry.stake);
-   const excedeu = stakeAtual > disponivelFinal + 0.01;
+    const reservadoAtual = reservadoDe(entry.stake, entry.odd, entry.tipo);
+    const excedeu = reservadoAtual > disponivelFinal + 0.01;
+    const isLay = (entry.tipo ?? 'back') === 'lay';
+    const rotulo = isLay ? 'Resp' : 'Saldo';
  
    return {
      disponivel: disponivelFinal,
      excedeu,
-     mensagem: excedeu ? `Saldo insuficiente. Disponível: ${new Intl.NumberFormat('en-US', { style: 'currency', currency: selectedBk.moeda || 'USD' }).format(disponivelFinal)}` : ""
+      mensagem: excedeu
+        ? `${rotulo} insuficiente. Disponível: ${new Intl.NumberFormat('en-US', { style: 'currency', currency: selectedBk.moeda || 'USD' }).format(disponivelFinal)}`
+        : ""
    };
  }
 
@@ -477,7 +489,9 @@ export function SurebetModalRoot({
         if (entry.bookmaker_id === bk.id) {
           // Se não é a entrada que estamos calculando
           if (i !== legIndex || subEntryIndex !== undefined) {
-            const s = parseFloat(entry.stake) || 0;
+            const rawS = parseFloat(entry.stake) || 0;
+            const oddN = parseFloat(entry.odd) || 0;
+            const s = capitalComprometido(entry.tipo ?? 'back', rawS, oddN);
             if (entry.fonteSaldo === 'FREEBET') alocadoOutrosFB += s; else alocadoOutros += s;
           }
         }
@@ -488,7 +502,10 @@ export function SurebetModalRoot({
           if (subBk === bk.id) {
             // Se não é a sub-entrada que estamos calculando
             if (i !== legIndex || si !== subEntryIndex) {
-              const s = parseFloat(sub.stake) || 0;
+              const rawS = parseFloat(sub.stake) || 0;
+              const oddN = parseFloat((sub.odd as any) ?? entry.odd) || 0;
+              const subTipo = (sub.tipo ?? entry.tipo ?? 'back') as 'back' | 'lay';
+              const s = capitalComprometido(subTipo, rawS, oddN);
               if (sub.fonteSaldo === 'FREEBET') alocadoOutrosFB += s; else alocadoOutros += s;
             }
           }
@@ -921,7 +938,13 @@ export function SurebetModalRoot({
           if (entrada.bookmaker_id && entrada.stake) {
             const cur = stakeMap.get(entrada.bookmaker_id) || { real: 0, freebet: 0 };
             const val = parseFloat(entrada.stake) || 0;
-            if (entrada.fonte_saldo === 'FREEBET') cur.freebet += val; else cur.real += val;
+            // Crédito virtual em modo edição deve refletir o débito real no ledger:
+            // BACK debita stake; LAY debita liability (stake × (odd − 1)).
+            const tipoEntrada = (entrada.tipo ?? perna.tipo ?? 'back') as 'back' | 'lay';
+            const oddEntrada = parseFloat(entrada.odd ?? perna.odd) || 0;
+            const reservado = capitalComprometido(tipoEntrada, val, oddEntrada);
+            if (entrada.fonte_saldo === 'FREEBET') cur.freebet += val; // LAY não usa FREEBET
+            else cur.real += reservado;
             stakeMap.set(entrada.bookmaker_id, cur);
             
             flatSnapshot.push({

@@ -398,9 +398,26 @@ export function SurebetTableRow({
                     </button>
                   )}
                 </div>
-                {isLay && liability > 0 && (
-                  <div className="text-[9px] text-red-500/90 font-medium leading-tight">
-                    Resp: {formatCurrency(liability, entry.moeda)}
+                {isLay && (
+                  <div
+                    className="flex items-center gap-1"
+                    title="Responsabilidade: valor efetivamente reservado no saldo (stake × (odd − 1)). Editar aqui recalcula a stake."
+                  >
+                    <span className="text-[9px] text-red-500/90 font-medium leading-tight">Resp</span>
+                    <MoneyInput
+                      value={liability > 0 ? liability.toFixed(2) : ""}
+                      onChange={(val) => {
+                        const respNum = parseFloat(String(val).replace(/[^0-9.]/g, "")) || 0;
+                        const denom = oddNum - 1;
+                        if (denom > 0 && respNum >= 0) {
+                          const newStake = respNum / denom;
+                          onUpdateOdd(pernaIndex, "stake", newStake ? newStake.toFixed(2) : "");
+                        }
+                      }}
+                      currency={entry.moeda}
+                      minDigits={6}
+                      className="h-6 w-[86px] text-[10px] text-center tabular-nums border-red-500/40"
+                    />
                   </div>
                 )}
                 {(error || (mainInsufficient && selectedBookmaker)) && (

@@ -1,113 +1,70 @@
 
-# Grupos de Bookmakers Clones — Plano Consolidado
+## Diagnóstico
 
-## Decisões confirmadas
+**Bug confirmado no print:** perna 2 é LAY @1.22 com stake 2000 → responsabilidade real = 2000 × 0,22 = **R$ 440**. O saldo BETBRA/LUIZ tem R$ 508,34 (suficiente para a liability), mas o sistema mostra "Saldo insuficiente. Disponível: R$508,34" comparando contra os R$ 2000 de stake.
 
-- **Governança:** grupos são **globais**, criados e mantidos apenas por **admin**. Leitura para todos os usuários autenticados.
-- **Cardinalidade:** cada bookmaker pertence a **no máximo 1 provedor** (constraint `UNIQUE` no `bookmaker_catalogo_id`).
-- **Isolamento de casas restritas:** o próprio catálogo já respeita a visibilidade via `bookmaker_workspace_access` (GLOBAL_RESTRICTED). O front vai renderizar apenas as casas que a RLS de `bookmakers_catalogo` liberar para o workspace atual — casas restritas simplesmente **desaparecem** do pool e dos grupos para quem não tem acesso, mesmo estando classificadas globalmente.
+### Como Lay é tratado hoje
+- **Backend/ledger (✅ correto)**: `fn_sync_stake_event_v1`, `criar_surebet_atomica_v3` e `liquidar_perna_surebet_v1` já debitam `stake × (odd−1)` como liability para pernas LAY (ver `mem/finance/lay-liability-as-ledger-debit-standard.md`).
+- **Motor de cálculo (✅ correto)**: `surebetCurrencyEngine.analisarArbitragem` e `pernaLayHelpers.exposureOf` retornam liability corretamente para LAY.
+- **Validação de saldo pré-registro (❌ bug)**: os validadores de UI comparam `stake` bruto ao saldo, ignorando `tipo=lay`.
 
-## Nome da aba — propostas
+### Pontos onde a validação usa stake em vez de liability
+1. `src/utils/surebetBalanceValidation.ts` — `validateBalance()` acumula `parseFloat(entry.stake)` sem checar `tipo`/`odd`.
+2. `src/utils/surebetBalanceValidator.ts` — `validateBalanceForOperation()` idem.
+3. `src/components/surebet/SurebetModalRoot.tsx` — função `calcularSaldoDisponivel` (linha ~387) e `getBookmakerSaldosParaEntry` (linha ~480/491) usam `parseFloat(entry.stake)` para alocar saldo por casa.
+4. `buildOriginalStakesMap` e `stakeMap` no submit (linha ~915) creditam stake bruta em modo edição, mas o débito original no ledger foi liability — o "crédito virtual" de edição também precisa ser liability para LAY.
 
-Descartando "Provedores de Odds" (técnico demais). Opções melhores:
+## Plano de implementação
 
-1. **"Famílias de Casas"** — intuitivo, sugere parentesco.
-2. **"Casas Irmãs"** — direto, expressa clone/mesma origem.
-3. **"Origem de Odds"** — enfatiza o que compartilham.
-4. **"Rede de Provedores"** — mais corporativo.
-
-**Sugestão:** **"Famílias de Casas"** (label) com subtítulo *"Casas que compartilham o mesmo provedor de odds"*. Confirma antes de eu aplicar.
-
-## Modelagem de dados
-
-```sql
--- Famílias (globais, admin-only para escrita)
-create table public.bookmaker_familias (
-  id uuid pk default gen_random_uuid(),
-  nome text not null unique,
-  descricao text,
-  cor text default '#6366f1',
-  bookmaker_referencia_id uuid references bookmakers_catalogo(id),
-  created_at, updated_at, created_by uuid
-);
-
--- Membros (1 casa = 1 família, garantido por UNIQUE)
-create table public.bookmaker_familia_membros (
-  id uuid pk default gen_random_uuid(),
-  familia_id uuid not null references bookmaker_familias on delete cascade,
-  bookmaker_catalogo_id uuid not null references bookmakers_catalogo on delete cascade unique,
-  is_referencia boolean default false,
-  created_at, created_by
-);
+### 1. Helper único de "capital comprometido"
+Adicionar em `src/utils/pernaLayHelpers.ts`:
+```ts
+export function capitalComprometido(tipo, stake, odd): number {
+  return tipo === "lay" ? stake * Math.max(0, odd - 1) : stake;
+}
 ```
+Reusar `exposureOf` internamente.
 
-**GRANTs + RLS:**
-- `GRANT SELECT ... TO authenticated` em ambas.
-- `GRANT ALL ... TO service_role`.
-- Policies:
-    - `SELECT` livre para `authenticated` (dado global de mercado).
-    - `INSERT/UPDATE/DELETE` apenas se `has_role(auth.uid(),'admin')`.
-- Trigger para garantir que só exista **uma** `is_referencia = true` por família.
+### 2. Corrigir validadores (foco do bug)
+- `surebetBalanceValidation.ts`: `OddEntry` ganha `tipo?`, `odd?`, `comissao?`. Trocar `parseFloat(entry.stake)` por `capitalComprometido(tipo, stake, odd)` em `validateBalance` e em `buildOriginalStakesMap`. LAY não aceita FREEBET (já validado em `surebetValidator`), então liability sempre vai para "real".
+- `surebetBalanceValidator.ts`: idem em `validateBalanceForOperation` e `originalStakes`.
+- `SurebetModalRoot.tsx`:
+  - `calcularSaldoDisponivel`: usar liability da perna corrente e de todas as outras pernas/sub-entradas quando `tipo==='lay'`.
+  - `getBookmakerSaldosParaEntry`: mesmo tratamento no desconto de "alocadoOutros".
+  - `stakeMap` do submit (modo edição): creditar liability ao invés de stake para pernas LAY originais.
+  - Mensagem de erro passa a mostrar "Resp: R$ X" quando LAY.
 
-## Isolamento de casas restritas — como o front garante
+### 3. UX Betfair-like: campo Responsabilidade interligado
+Em `PernaInput` (linha do form da perna LAY), quando `tipo === 'lay'`:
+- Renderizar **dois inputs lado a lado**: `Stake` (lucro potencial) e `Resp` (valor em risco).
+- Digitar em Stake → recalcula Resp = `stake × (odd−1)`.
+- Digitar em Resp → recalcula Stake = `resp ÷ (odd−1)`.
+- Mudar Odd → mantém o **último campo editado** e recalcula o outro (rastrear via `lastEditedField: 'stake' | 'resp'`).
+- Ambos usam mesmo estado subjacente `stake` (fonte única) — Resp é sempre derivado; input Resp apenas escreve `stake = resp/(odd-1)` de volta.
+- Rótulo dinâmico já existe (`labelExposicao`): reaproveitar.
 
-O pool e as famílias renderizam via **JOIN com `bookmakers_catalogo`** (que já tem RLS ativa e considera `bookmaker_workspace_access`). Como a política de leitura do catálogo filtra por workspace, qualquer casa restrita não autorizada:
+### 4. Modelo de dados — avaliação
+**Recomendação: NÃO adicionar colunas.** `stake + odd + tipo + comissao` já são suficientes; todos os derivados (liability, lucro potencial, perda máxima) são funções puras dessas 4 colunas — armazenar duplicaria estado e criaria risco de desincronia. As RPCs (`fn_sync_stake_event_v1`, `liquidar_perna_surebet_v1`, `fn_recalc_pai_surebet`) já derivam corretamente. Basta um único helper `pernaLayHelpers` no frontend como fonte única de derivação.
 
-- não aparece no pool,
-- não aparece dentro da família (fica "invisível" na lista, mesmo que o vínculo exista no banco).
+### 5. Módulos que **já estão corretos** (validado nas memórias)
+- Ledger/reservas: `lay-liability-as-ledger-debit-standard` ✅
+- Motor Surebet (lucro/ROI/exposição): `surebetCurrencyEngine` + testes `surebetLayEqualization.test.ts` ✅
+- Liquidação: `liquidar_perna_surebet_v1` trata GREEN/RED/VOID com comissão ✅
+- Cards (SurebetCard/ApostaCard): usam `exposureOf`/`labelExposicao` ✅
+- Reconciliação/relatórios: consomem eventos do ledger, que já refletem liability ✅
 
-O admin, ao editar em workspace-admin, enxerga tudo. Assim não vazamos nome/logo de casa restrita para workspaces sem acesso. Nenhum código de UI adicional é necessário — a fonte de verdade continua sendo o RLS do catálogo.
+Nada além dos validadores de UI e da UX do form precisa mudar.
 
-## UI — Layout "Famílias + Pool"
+## Arquivos a alterar
+1. `src/utils/pernaLayHelpers.ts` — expor `capitalComprometido` (wrapper de `exposureOf`).
+2. `src/utils/surebetBalanceValidation.ts` — usar liability.
+3. `src/utils/surebetBalanceValidator.ts` — usar liability.
+4. `src/components/surebet/SurebetModalRoot.tsx` — usar liability nos 4 pontos citados; propagar `tipo`/`odd` para validadores.
+5. `src/components/surebet/PernaInput.tsx` (ou equivalente) — campo Resp interligado quando LAY.
+6. `src/utils/__tests__/surebetBalanceValidation.test.ts` — nova cobertura: LAY @1.22, stake 2000, saldo 500 → válido (liability 440).
 
-Mantido do plano anterior. Duas regiões, com dnd-kit:
+## Fora de escopo
+- Reprocessar apostas antigas (respeita anti-retrofix).
+- Alterar schema de `apostas_pernas` (não necessário).
 
-```text
-┌────────────────────────────────────────────────────────────┐
-│ [🔍 Buscar]        [+ Nova família]      [Filtro ▾]        │
-├───────────────────────────┬────────────────────────────────┤
-│ FAMÍLIAS (esquerda)       │ POOL — casas sem família (dir) │
-│ ▾ 🟣 Kambi (12)           │ ┌────┐ ┌────┐ ┌────┐ ┌────┐    │
-│   ★ Unibet (referência)   │ │Bet9│ │Pina│ │... │ │... │    │
-│   · LeoVegas              │ └────┘ └────┘ └────┘ └────┘    │
-│   · 32Red                 │  87 casas sem família          │
-│ ▸ 🟢 SBTech (8)           │                                │
-│ ▸ 🔵 BetConstruct (5)     │                                │
-└───────────────────────────┴────────────────────────────────┘
-```
-
-Interações:
-- DnD do pool → família, e entre famílias (move o vínculo — UNIQUE garante 1:1).
-- Seleção múltipla (Shift/Ctrl+click) → "Adicionar N casas à família…".
-- Menu ⋯ no card dentro da família: "Definir como referência", "Remover da família".
-- Referência sempre no topo com ⭐, borda destacada e nome em negrito.
-- Famílias colapsáveis; virtualização no pool acima de 200 casas.
-- Cor da família como faixa lateral fina no card.
-- Empty state por família.
-- **Badge de admin-only:** usuários sem `admin` veem a tela em modo **leitura** (sem DnD, sem botões de edição) — útil para consultar sem risco de mexer.
-
-## Localização
-
-Nova aba no módulo **Bookmakers**, ao lado de "Catálogo" e "Grupos Operacionais".
-
-## Escopo desta entrega
-
-1. Migração das duas tabelas + trigger de referência única + policies + grants.
-2. Hook `useBookmakerFamilias` (list + CRUD, invalida cache).
-3. Rota/aba "Famílias de Casas" no módulo Bookmakers.
-4. Componentes: `FamiliaColumn`, `CasaCard`, `PoolCasas`, `NovaFamiliaDialog`.
-5. DnD com dnd-kit + seleção múltipla.
-6. Marcar referência.
-7. Busca no pool + filtros básicos (todas / sem família).
-8. Modo leitura para não-admins.
-
-## Fora de escopo (fases futuras)
-
-- Recomendação inteligente ("outras casas da mesma família") na criação de arbitragem/surebet.
-- Deduplicação automática de odds clones no mesmo evento.
-- Marcação em relatórios.
-
-## Perguntas antes de codar
-
-1. Confirma o nome **"Famílias de Casas"**? Prefere outro da lista?
-2. Ok criar a aba dentro do módulo Bookmakers existente (rota nova tipo `/bookmakers/familias`)?
+Confirma para eu implementar?
