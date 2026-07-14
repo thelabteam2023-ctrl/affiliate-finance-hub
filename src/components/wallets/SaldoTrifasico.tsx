@@ -1,4 +1,4 @@
-import { ArrowDownLeft, ArrowUpRight, Clock } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
 type Variant = "compact" | "stacked" | "detailed";
