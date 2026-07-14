@@ -122,6 +122,9 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   const [walletSaldos, setWalletSaldos] = useState<Record<string, Array<{ coin: string; saldo: number; saldoUsd: number }>>>({});
   // Saldo em trânsito (USD) por wallet — operações crypto pendentes de conciliação
   const [walletTransito, setWalletTransito] = useState<Record<string, number>>({});
+  // Segregação in/out (⬇ chegando / ⬆ saindo)
+  const [walletTransitoIn, setWalletTransitoIn] = useState<Record<string, number>>({});
+  const [walletTransitoOut, setWalletTransitoOut] = useState<Record<string, number>>({});
   const [walletReloadKey, setWalletReloadKey] = useState(0);
   const { toast } = useToast();
 
