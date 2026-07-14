@@ -6,6 +6,8 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { SwapCryptoDialog } from "@/components/caixa/SwapCryptoDialog";
 import { WalletDisplayItem } from "../wallets/WalletDisplayItem";
+import { Clock } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
 interface CryptoWalletCardProps {
   wallet: {
@@ -17,6 +19,7 @@ interface CryptoWalletCardProps {
     endereco: string;
     exchange?: string;
     balances?: Array<{ coin: string; saldo: number; saldoUsd: number }>;
+    emTransitoUsd?: number;
   };
   parceiroId?: string | null;
   onSwapSuccess?: () => void;
@@ -84,11 +87,11 @@ export function CryptoWalletCard({ wallet, parceiroId, onSwapSuccess }: CryptoWa
 
           <div className="grid grid-cols-2 gap-4 py-2">
             <div className="space-y-1">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Saldo Atual</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Disponível</p>
               <div className="flex flex-col gap-0.5">
                 {(wallet.balances && wallet.balances.length > 0) ? (
                   wallet.balances.map((b) => (
-                    <span key={b.coin} className="text-lg font-bold text-primary tabular-nums leading-tight">
+                    <span key={b.coin} className="text-lg font-bold text-emerald-500 tabular-nums leading-tight">
                       {b.saldo.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
                       <span className="ml-1 text-xs font-medium text-muted-foreground">{b.coin}</span>
                     </span>
@@ -99,6 +102,24 @@ export function CryptoWalletCard({ wallet, parceiroId, onSwapSuccess }: CryptoWa
                   </span>
                 )}
               </div>
+              {(wallet.emTransitoUsd ?? 0) > 0 && (
+                <TooltipProvider delayDuration={150}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 cursor-help">
+                        <Clock className="h-3 w-3 text-amber-500" />
+                        <span className="text-[10px] uppercase tracking-wider text-amber-600 dark:text-amber-400 font-medium">Em Trânsito</span>
+                        <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 tabular-nums">
+                          ≈ ${(wallet.emTransitoUsd || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs">
+                      Valor enviado aguardando conciliação. Pode não se concretizar (falha, cancelamento ou endereço incorreto) e não está disponível para operar.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
             <div className="space-y-1">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Moedas Suportadas</p>
