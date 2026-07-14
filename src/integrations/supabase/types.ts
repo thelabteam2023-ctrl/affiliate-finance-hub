@@ -16198,11 +16198,17 @@ export type Database = {
           parceiro_nome: string | null
           saldo_coin: number | null
           saldo_disponivel: number | null
+          saldo_disponivel_coin: number | null
           saldo_em_transito: number | null
           saldo_em_transito_coin: number | null
           saldo_locked: number | null
           saldo_total: number | null
+          saldo_total_coin: number | null
           saldo_usd: number | null
+          transit_in_coin: number | null
+          transit_in_usd: number | null
+          transit_out_coin: number | null
+          transit_out_usd: number | null
           user_id: string | null
           wallet_id: string | null
           workspace_id: string | null
