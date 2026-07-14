@@ -1,4 +1,4 @@
-import { Clock } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Clock } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
 type Variant = "compact" | "stacked" | "detailed";
@@ -11,8 +11,15 @@ interface Balance {
 interface SaldoTrifasicoProps {
   /** Saldos disponíveis (confirmados no ledger, prontos para operar) */
   disponivel: Balance[];
-  /** Valor em trânsito, em USD (ledger PENDING/STUCK/WRONG_ADDRESS/MANUAL_REVIEW) */
-  emTransitoUsd: number;
+  /**
+   * Valor em trânsito **líquido** em USD (entradas − saídas).
+   * Preferir `transitInUsd`/`transitOutUsd` para exibição segregada.
+   */
+  emTransitoUsd?: number;
+  /** Entradas pendentes em USD (⬇ chegando — não somam ao disponível) */
+  transitInUsd?: number;
+  /** Saídas pendentes em USD (⬆ saindo — já descontadas do disponível) */
+  transitOutUsd?: number;
   /** Total consolidado em USD (opcional; usado no detailed) */
   totalUsd?: number;
   variant?: Variant;
@@ -35,32 +42,73 @@ const fmtUsd = (n: number) =>
 export function SaldoTrifasico({
   disponivel,
   emTransitoUsd,
+  transitInUsd,
+  transitOutUsd,
   totalUsd,
   variant = "stacked",
   className,
 }: SaldoTrifasicoProps) {
-  const hasTransit = emTransitoUsd > 0;
+  // Retrocompat: se só recebemos o líquido antigo e ele é positivo,
+  // tratamos como "chegando"; se negativo, como "saindo".
+  const inUsd = typeof transitInUsd === "number"
+    ? transitInUsd
+    : (typeof emTransitoUsd === "number" && emTransitoUsd > 0 ? emTransitoUsd : 0);
+  const outUsd = typeof transitOutUsd === "number"
+    ? transitOutUsd
+    : (typeof emTransitoUsd === "number" && emTransitoUsd < 0 ? -emTransitoUsd : 0);
 
-  const transitChip = hasTransit && (
+  const hasOut = outUsd > 0;
+  const hasIn = inUsd > 0;
+
+  const outChip = hasOut && (
     <TooltipProvider delayDuration={150}>
       <Tooltip>
         <TooltipTrigger asChild>
           <div className="inline-flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 cursor-help">
-            <Clock className="h-3 w-3 text-amber-500" />
+            <ArrowUpRight className="h-3 w-3 text-amber-500" />
             <span className="text-[10px] uppercase tracking-wider text-amber-600 dark:text-amber-400 font-medium">
-              Em Trânsito
+              Saindo
             </span>
             <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 tabular-nums">
-              ≈ ${fmtUsd(emTransitoUsd)}
+              ≈ ${fmtUsd(outUsd)}
             </span>
           </div>
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-xs">
-          Valor enviado aguardando conciliação. Pode não se concretizar (falha, cancelamento ou endereço incorreto) e não está disponível para operar.
+          Valores em envio ficam bloqueados até conciliação — já foram descontados do Disponível.
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );
+
+  const inChip = hasIn && (
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="inline-flex items-center gap-1.5 rounded-md border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 cursor-help">
+            <ArrowDownLeft className="h-3 w-3 text-sky-500" />
+            <span className="text-[10px] uppercase tracking-wider text-sky-600 dark:text-sky-400 font-medium">
+              Chegando
+            </span>
+            <span className="text-xs font-semibold text-sky-600 dark:text-sky-400 tabular-nums">
+              ≈ ${fmtUsd(inUsd)}
+            </span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs">
+          Valores a caminho aguardando conciliação. Não estão disponíveis para operar até serem confirmados.
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+
+  const transitChips = (hasOut || hasIn) && (
+    <div className="flex flex-wrap gap-1.5">
+      {outChip}
+      {inChip}
+    </div>
+  );
+  const hasTransit = hasOut || hasIn;
 
   if (variant === "compact") {
     const primary = disponivel[0];
@@ -69,7 +117,7 @@ export function SaldoTrifasico({
         <span className="text-sm font-semibold text-emerald-500 tabular-nums">
           {primary ? `${fmt(primary.amount)} ${primary.coin}` : "0,00"}
         </span>
-        {transitChip}
+        {transitChips}
       </span>
     );
   }
@@ -91,7 +139,7 @@ export function SaldoTrifasico({
         {hasTransit && (
           <div className="space-y-0.5">
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Em Trânsito</p>
-            {transitChip}
+            {transitChips}
           </div>
         )}
         {typeof totalUsd === "number" && (
@@ -120,7 +168,7 @@ export function SaldoTrifasico({
           <span className="text-lg font-bold text-muted-foreground tabular-nums">0,00</span>
         )}
       </div>
-      {hasTransit && <div className="mt-2">{transitChip}</div>}
+      {hasTransit && <div className="mt-2">{transitChips}</div>}
     </div>
   );
 }
