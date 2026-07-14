@@ -347,7 +347,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       // v_wallet_crypto_balances retorna apenas primary_coin, escondendo saldos em outras moedas.
       const { data, error } = await (supabase
         .from("v_saldo_parceiro_wallets")
-        .select("wallet_id, coin, saldo_coin, saldo_usd, saldo_locked")
+        .select("wallet_id, coin, saldo_coin, saldo_usd, saldo_locked, saldo_em_transito")
         .eq("parceiro_id", parceiroId)
         .eq("workspace_id", workspaceId) as any);
       if (cancelled || error || !data) {
@@ -359,9 +359,13 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       const transitMap: Record<string, number> = {};
       data.forEach((r: any) => {
         if (!r.wallet_id || !r.coin) return;
-        // saldo_locked se repete por linha (é por wallet); pegar o maior/primeiro
+        // Trânsito derivado do ledger (PENDING/STUCK/WRONG_ADDRESS/MANUAL_REVIEW).
+        // Fallback para saldo_locked (materializado) se a view ainda não expuser a coluna.
         if (r.wallet_id && transitMap[r.wallet_id] === undefined) {
-          transitMap[r.wallet_id] = Number(r.saldo_locked) || 0;
+          const transit = r.saldo_em_transito !== undefined && r.saldo_em_transito !== null
+            ? Number(r.saldo_em_transito)
+            : Number(r.saldo_locked) || 0;
+          transitMap[r.wallet_id] = Number.isFinite(transit) ? transit : 0;
         }
         const saldo = Number(r.saldo_coin) || 0;
         if (saldo === 0) return;
