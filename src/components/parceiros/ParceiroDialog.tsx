@@ -350,7 +350,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       // v_wallet_crypto_balances retorna apenas primary_coin, escondendo saldos em outras moedas.
       const { data, error } = await (supabase
         .from("v_saldo_parceiro_wallets")
-        .select("wallet_id, coin, saldo_coin, saldo_usd, saldo_locked, saldo_em_transito")
+        .select("wallet_id, coin, saldo_coin, saldo_disponivel_coin, saldo_usd, saldo_locked, saldo_em_transito, transit_in_usd, transit_out_usd")
         .eq("parceiro_id", parceiroId)
         .eq("workspace_id", workspaceId) as any);
       if (cancelled || error || !data) {
@@ -360,17 +360,21 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       console.debug("[ParceiroDialog] wallet balances loaded", { parceiroId, workspaceId, rows: data.length });
       const map: Record<string, Array<{ coin: string; saldo: number; saldoUsd: number }>> = {};
       const transitMap: Record<string, number> = {};
+      const transitInMap: Record<string, number> = {};
+      const transitOutMap: Record<string, number> = {};
       data.forEach((r: any) => {
         if (!r.wallet_id || !r.coin) return;
-        // Trânsito derivado do ledger (PENDING/STUCK/WRONG_ADDRESS/MANUAL_REVIEW).
-        // Fallback para saldo_locked (materializado) se a view ainda não expuser a coluna.
-        if (r.wallet_id && transitMap[r.wallet_id] === undefined) {
-          const transit = r.saldo_em_transito !== undefined && r.saldo_em_transito !== null
-            ? Number(r.saldo_em_transito)
-            : Number(r.saldo_locked) || 0;
-          transitMap[r.wallet_id] = Number.isFinite(transit) ? transit : 0;
-        }
-        const saldo = Number(r.saldo_coin) || 0;
+        // Trânsito derivado do ledger (agregado por wallet somando todas as moedas).
+        const inUsd = Number(r.transit_in_usd) || 0;
+        const outUsd = Number(r.transit_out_usd) || 0;
+        transitInMap[r.wallet_id]  = (transitInMap[r.wallet_id]  ?? 0) + inUsd;
+        transitOutMap[r.wallet_id] = (transitOutMap[r.wallet_id] ?? 0) + outUsd;
+        transitMap[r.wallet_id]    = (transitInMap[r.wallet_id]  ?? 0) - (transitOutMap[r.wallet_id] ?? 0);
+        // Exibimos o DISPONÍVEL (confirmado − saídas pendentes), não o saldo bruto.
+        const disponivelCoin = r.saldo_disponivel_coin !== undefined && r.saldo_disponivel_coin !== null
+          ? Number(r.saldo_disponivel_coin)
+          : Number(r.saldo_coin) || 0;
+        const saldo = Number.isFinite(disponivelCoin) ? disponivelCoin : 0;
         if (saldo === 0) return;
         (map[r.wallet_id] ||= []).push({
           coin: r.coin,
@@ -382,6 +386,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       Object.keys(map).forEach((k) => map[k].sort((a, b) => Math.abs(b.saldoUsd) - Math.abs(a.saldoUsd)));
       setWalletSaldos(map);
       setWalletTransito(transitMap);
+      setWalletTransitoIn(transitInMap);
+      setWalletTransitoOut(transitOutMap);
     })();
     return () => {
       cancelled = true;
