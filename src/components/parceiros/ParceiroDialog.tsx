@@ -120,6 +120,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   }, [workspaceId, open, onClose]);
   const [contaSaldos, setContaSaldos] = useState<Record<string, number>>({});
   const [walletSaldos, setWalletSaldos] = useState<Record<string, Array<{ coin: string; saldo: number; saldoUsd: number }>>>({});
+  // Saldo em trânsito (USD) por wallet — operações crypto pendentes de conciliação
+  const [walletTransito, setWalletTransito] = useState<Record<string, number>>({});
   const [walletReloadKey, setWalletReloadKey] = useState(0);
   const { toast } = useToast();
 
@@ -345,7 +347,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       // v_wallet_crypto_balances retorna apenas primary_coin, escondendo saldos em outras moedas.
       const { data, error } = await (supabase
         .from("v_saldo_parceiro_wallets")
-        .select("wallet_id, coin, saldo_coin, saldo_usd")
+        .select("wallet_id, coin, saldo_coin, saldo_usd, saldo_locked")
         .eq("parceiro_id", parceiroId)
         .eq("workspace_id", workspaceId) as any);
       if (cancelled || error || !data) {
@@ -354,8 +356,13 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       }
       console.debug("[ParceiroDialog] wallet balances loaded", { parceiroId, workspaceId, rows: data.length });
       const map: Record<string, Array<{ coin: string; saldo: number; saldoUsd: number }>> = {};
+      const transitMap: Record<string, number> = {};
       data.forEach((r: any) => {
         if (!r.wallet_id || !r.coin) return;
+        // saldo_locked se repete por linha (é por wallet); pegar o maior/primeiro
+        if (r.wallet_id && transitMap[r.wallet_id] === undefined) {
+          transitMap[r.wallet_id] = Number(r.saldo_locked) || 0;
+        }
         const saldo = Number(r.saldo_coin) || 0;
         if (saldo === 0) return;
         (map[r.wallet_id] ||= []).push({
@@ -367,6 +374,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       // Ordena por USD desc para exibir a moeda de maior valor primeiro
       Object.keys(map).forEach((k) => map[k].sort((a, b) => Math.abs(b.saldoUsd) - Math.abs(a.saldoUsd)));
       setWalletSaldos(map);
+      setWalletTransito(transitMap);
     })();
     return () => {
       cancelled = true;
@@ -1489,6 +1497,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                 loading={loading}
                 viewMode={viewMode}
                 walletSaldos={walletSaldos}
+                walletTransito={walletTransito}
                 parceiroId={parceiroId || parceiro?.id}
                 validateWalletEndereco={validateWalletEndereco}
                 enderecoErrors={enderecoErrors}
