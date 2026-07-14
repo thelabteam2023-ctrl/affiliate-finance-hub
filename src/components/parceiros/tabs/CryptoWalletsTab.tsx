@@ -22,6 +22,8 @@ interface CryptoWalletsTabProps {
   viewMode: boolean;
   walletSaldos: Record<string, Array<{ coin: string; saldo: number; saldoUsd: number }>>;
   walletTransito?: Record<string, number>;
+  walletTransitoIn?: Record<string, number>;
+  walletTransitoOut?: Record<string, number>;
   parceiroId: string | null;
   validateWalletEndereco: (endereco: string, index: number, walletId?: string) => void;
   enderecoErrors: Record<number, string>;
@@ -32,7 +34,7 @@ interface CryptoWalletsTabProps {
 export function CryptoWalletsTab({
   cryptoWallets, addCryptoWallet, removeCryptoWallet, updateCryptoWallet,
   expandedWalletIndex, setExpandedWalletIndex, redes,
-  loading, viewMode, walletSaldos, walletTransito, parceiroId,
+  loading, viewMode, walletSaldos, walletTransito, walletTransitoIn, walletTransitoOut, parceiroId,
   validateWalletEndereco, enderecoErrors, checkingEnderecos,
   onSwapSuccess,
 }: CryptoWalletsTabProps) {
@@ -51,6 +53,8 @@ export function CryptoWalletsTab({
             const rede = redes.find(r => r.id === wallet.rede_id);
             const balances = (wallet.id ? walletSaldos[wallet.id] : undefined) || [];
             const emTransitoUsd = wallet.id ? (walletTransito?.[wallet.id] ?? 0) : 0;
+            const transitInUsd = wallet.id ? (walletTransitoIn?.[wallet.id] ?? 0) : 0;
+            const transitOutUsd = wallet.id ? (walletTransitoOut?.[wallet.id] ?? 0) : 0;
             return (
               <CryptoWalletCard
                 key={index}
@@ -59,6 +63,8 @@ export function CryptoWalletsTab({
                   network: rede?.nome || "",
                   balances,
                   emTransitoUsd,
+                  transitInUsd,
+                  transitOutUsd,
                 }}
                 parceiroId={parceiroId}
                 onSwapSuccess={onSwapSuccess}

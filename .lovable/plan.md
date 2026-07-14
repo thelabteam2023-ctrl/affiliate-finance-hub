@@ -1,129 +1,125 @@
-## Contexto
 
-Hoje o modelo de wallets crypto já suporta 3 camadas de saldo (`balance_total`, `balance_locked`, `balance_available`) e um `transit_status` (`PENDING`, `CONFIRMED`, `FAILED`, `REVERSED`) no `cash_ledger`. A view `v_saldo_parceiro_wallets` expõe `saldo_locked` e `saldo_disponivel`.
+# Saldo Tri-Fásico: correção do "Disponível" e unificação entre módulos
 
-O problema é de **consistência de leitura**: alguns módulos usam `saldo_disponivel`, outros somam ledger sem filtrar `transit_status`, e o dialog "Visualizar Parceiro → Cripto" mostra apenas o disponível — escondendo o capital em trânsito. Também faltam estados para operações "presas" (endereço incorreto, expiradas, intervenção manual).
+## Diagnóstico
 
-## Objetivo
+A view `v_saldo_parceiro_wallets` já expõe as 3 camadas corretas, **mas** o front consome de forma errada e desalinhada entre telas.
 
-Padronizar em todo o sistema a exibição de três blocos semânticos por wallet / parceiro / caixa:
+**O que a view devolve hoje (por wallet+coin):**
 
-- **Disponível** — já conciliado, pode ser usado em operações
-- **Em Trânsito** — pendente de conciliação (pode falhar, ser revertido, cancelado)
-- **Total Potencial** — Disponível + Em Trânsito, sempre com marcador visual de que parte é condicional
+| Campo                       | Fórmula                                                                  |
+|-----------------------------|--------------------------------------------------------------------------|
+| `saldo_coin`                | Soma de tx **CONFIRMED** (entradas − saídas). = "on-chain confirmado".   |
+| `saldo_em_transito_coin`    | Soma **líquida** de tx `PENDING/STUCK/WRONG_ADDRESS/MANUAL_REVIEW` (entradas − saídas). |
+| `saldo_disponivel` (USD)    | `max(0, saldo_usd − balance_locked)` — depende do `lock_wallet_balance` ter sido chamado. |
+| `saldo_total` (USD)         | `saldo_usd + transit_usd`.                                               |
 
-Nenhum módulo deve tratar "Em Trânsito" como disponível para operar.
+**O bug prático (cenário do usuário):**
+Wallet tem 121 USDT confirmados. Existe uma saída pendente de 45 USDT.
+- `saldo_coin` = 121, `transit_coin` = **−45** (saída), `balance_locked` pode ou não estar setado.
+- `CryptoWalletCard` mostra `saldo_coin` (121) como **Disponível** — errado.
+- Chip "Em Trânsito" só renderiza se `emTransitoUsd > 0`, então o **−45 fica invisível**.
+- Resultado: 121 exibido como disponível quando o real é 76.
 
-## 1. Modelo de dados — extensões
+Além disso a semântica "trânsito" mistura entradas (chegando, não usáveis) e saídas (saindo, também não usáveis) em um único número líquido, o que impede exibir corretamente cada caso.
 
-### 1.1 Ampliar `transit_status`
+**Divergência entre telas (mesma wallet, valores diferentes):**
+- `ParceiroDialog / CryptoWalletCard` → `saldo_coin` como Disponível.
+- `SaldosParceirosSheet`, `ExposicaoCryptoCard`, `Caixa.tsx` → usam revaluation live via `getCryptoUSDValue(saldo_coin)`, ignoram trânsito.
+- `useSaldoOperavel`, `useValidacaoFinanceira`, `OrigemPagamentoSelect` (validação pré-envio) → usam `balance_available` do RPC `get_wallet_balances` (baseado em `balance_locked`), que só bate se o `lock_wallet_balance` foi chamado.
+- `ConciliacaoSaldos` → mostra chip de status por transação, mas não reconcilia com o "Disponível" exibido nos cards.
 
-Estados atuais: `PENDING`, `CONFIRMED`, `FAILED`, `REVERSED`.
-Adicionar:
+## Modelo alvo (definição canônica)
 
-| Novo status | Uso |
-|---|---|
-| `STUCK` | Operação parada por tempo indeterminado (blockchain, exchange), sem decisão ainda |
-| `WRONG_ADDRESS` | Enviada para endereço incorreto — requer intervenção |
-| `EXPIRED` | Passou do SLA definido sem conciliação |
-| `MANUAL_REVIEW` | Sinalizada pelo operador para investigação |
-| `CANCELLED` | Cancelamento explícito antes de qualquer confirmação |
+Para toda wallet crypto, em toda tela, exibir/consumir estes 3 valores derivados **exclusivamente do `cash_ledger`** (sem depender de `balance_locked`):
 
-Regra: qualquer status ≠ `CONFIRMED` **mantém** o valor em `balance_locked`. Somente `CONFIRMED` efetiva o débito. `FAILED`, `REVERSED`, `CANCELLED` liberam o lock. `STUCK`, `WRONG_ADDRESS`, `EXPIRED`, `MANUAL_REVIEW` **continuam travando** o saldo (não some do patrimônio, mas também não está disponível).
+```text
+Saldo Total       = confirmados + entradas pendentes − saídas pendentes
+                  = saldo_coin + transit_in_coin − transit_out_coin
 
-### 1.2 Campos auxiliares em `cash_ledger`
+Saldo Disponível  = confirmados − saídas pendentes
+                  = saldo_coin − transit_out_coin
+                    (nunca menor que 0)
 
-- `transit_reason` (text, nullable) — motivo textual quando status ≠ CONFIRMED
-- `transit_expected_at` (timestamptz, nullable) — ETA para conciliação (usado por job de EXPIRED)
-- `transit_updated_at` (timestamptz) — última mudança de status
-- `transit_updated_by` (uuid) — quem alterou
-
-### 1.3 View unificada
-
-Criar/atualizar `v_saldo_parceiro_wallets` (e uma nova `v_saldo_parceiro_consolidado`) para expor **sempre 3 colunas**:
-
-```
-saldo_disponivel   -- CONFIRMED líquido
-saldo_em_transito  -- Σ locks com status ≠ CONFIRMED/FAILED/REVERSED/CANCELLED
-saldo_total        -- disponivel + em_transito
+Em Trânsito (⬆ saindo) = transit_out_coin   [reduz o disponível]
+Em Trânsito (⬇ chegando) = transit_in_coin  [não aumenta o disponível; informativo]
 ```
 
-Detalhamento opcional por sub-status em `saldo_transito_breakdown` (jsonb).
+Regras invioláveis (memory):
+- Nunca tratar entrada pendente como disponível.
+- Sempre respeitar `Floor(0)` no disponível.
+- Sempre filtrar por `workspace_id`.
+- Sem UPDATE direto em campos de saldo materializado — a verdade vem do ledger.
 
-### 1.4 Job de expiração
+## Mudanças planejadas
 
-Cron diário: transações `PENDING` com `transit_expected_at < now() - interval '48h'` → `EXPIRED` + notificação em Central de Ocorrências.
+### 1) Banco — recriar `v_saldo_parceiro_wallets` (schema)
 
-## 2. Camada de leitura no frontend
+Adicionar colunas explícitas para entradas e saídas pendentes, e recalcular `saldo_disponivel` a partir do ledger (não mais de `balance_locked`):
 
-### 2.1 Hook único
+- `transit_in_coin`, `transit_in_usd` → soma de destino=wallet em `PENDING/STUCK/WRONG_ADDRESS/MANUAL_REVIEW`.
+- `transit_out_coin`, `transit_out_usd` → soma de origem=wallet nos mesmos status.
+- `saldo_em_transito_coin`/`saldo_em_transito` → mantidos, mas passam a valer `transit_in − transit_out` explicitamente (para retrocompatibilidade).
+- `saldo_disponivel_coin` (novo) = `GREATEST(0, saldo_coin − transit_out_coin)`.
+- `saldo_disponivel` (USD, redefinido) = `GREATEST(0, saldo_usd − transit_out_usd)`.
+- `saldo_total_coin` (novo) e `saldo_total` (USD, redefinido) = `saldo_coin + transit_in − transit_out`.
 
-Estender `useWalletTransitBalance` (ou criar `useParceiroSaldoConsolidado`) para retornar sempre:
+Assinatura antiga preservada para não quebrar consumidores existentes.
 
-```ts
-{ disponivel, emTransito, total, breakdown: { pending, stuck, wrongAddress, expired, manualReview } }
+### 2) Componente unificado `SaldoTrifasico` — expansão
+
+Estender props para receber `transitInUsd` e `transitOutUsd` (em vez de um único `emTransitoUsd` líquido):
+
+```text
+Disponível (verde)     — sempre visível
+⬆ Saindo   (âmbar)     — só quando > 0
+⬇ Chegando (azul)      — só quando > 0
+Total consolidado      — opcional, variante detailed
 ```
 
-Todos os módulos passam a consumir este hook — proibido somar ledger direto para exibição de saldo.
+Tooltip explicativo: "Valores em envio ficam bloqueados até conciliação. Valores chegando não estão disponíveis para operar até serem confirmados."
 
-### 2.2 Componente `SaldoTrifasico`
+Variantes existentes (`compact | stacked | detailed`) preservadas; sem breaking change para quem já usa `emTransitoUsd`.
 
-Novo componente compartilhado em `src/components/wallets/SaldoTrifasico.tsx` com 3 variantes:
+### 3) Front — consumidores da view
 
-- **`compact`** — inline: `Disp $76 · Trânsito $45 · Total ≈$121` (usado em cards de listagem)
-- **`stacked`** — 3 linhas com ícones (Central de Ocorrências, Caixa Operacional)
-- **`detailed`** — bloco com breakdown por sub-status + tooltip explicando cada estado (dialog Visualizar Parceiro)
+Ajustar para hidratar `transit_in` e `transit_out` separadamente e passar para `SaldoTrifasico`:
 
-Cores semânticas: Disponível = `text-success`, Trânsito = `text-warning`, Total = `text-muted-foreground` com sufixo `≈` e ícone de alerta se `emTransito > 0`.
+- `src/components/parceiros/ParceiroDialog.tsx` — carregar as 4 novas colunas.
+- `src/components/parceiros/CryptoWalletCard.tsx` — usar `saldo_disponivel_coin` para "Disponível" (não `saldo_coin`).
+- `src/components/parceiros/tabs/CryptoWalletsTab.tsx` — propagar `transitIn/transitOut` no lugar do `walletTransito` único.
+- `src/components/caixa/SaldosParceirosSheet.tsx` — trocar cálculo live por `saldo_disponivel` da view; expor colunas Total / Em Trânsito / Disponível.
+- `src/components/caixa/ExposicaoCryptoCard.tsx` — idem.
+- `src/pages/Caixa.tsx` — o card "Saldos por Parceiro" (Posição de Capital vs Saldos) passa a somar `saldo_disponivel` da view, garantindo paridade.
 
-## 3. Pontos de integração
+### 4) Validação de saldo pré-operação
 
-| Módulo | Estado atual | Alvo |
-|---|---|---|
-| Caixa Operacional → Saldos por Parceiro | Mostra disponível + em trânsito separados | Migrar para `SaldoTrifasico` (padrão) |
-| Gestão de Parcerias → Visualizar Parceiro → Crypto | Mostra só `balance_available` como "SALDO ATUAL" | Substituir por `SaldoTrifasico` variante `detailed` |
-| Card da wallet em Parceiros | Só disponível | Trifásico compact |
-| Conciliação | Já lista PENDING | Adicionar filtros por sub-status (STUCK, WRONG_ADDRESS, EXPIRED) e ações "Marcar como travada", "Endereço incorreto", "Cancelar" |
-| Central de Ocorrências | Não avisa transito parado | Novo alerta "Transações em trânsito há +48h" |
-| Posição de Capital / Financial Map | Usa `balance_total` | Ajustar para `disponivel` + card informativo "US$ X em trânsito" |
-| Validação de saldo em operações (surebet, saques) | Já usa `balance_available` | Manter — proibir uso de total |
+Fonte única de verdade passa a ser `saldo_disponivel` da view (derivado do ledger), eliminando dependência de `balance_locked` materializado:
 
-## 4. UX — Regras de exibição
+- `src/hooks/useWalletTransitBalance.ts` (`canSendAmount`, `getWalletBalances`) — ler `saldo_disponivel_coin` da view.
+- `src/hooks/useSaldoOperavel.ts` — idem.
+- `src/hooks/useValidacaoFinanceira.ts` — idem.
+- `src/components/programa-indicacao/OrigemPagamentoSelect.tsx` — bloquear seleção quando `saldo_disponivel < valor`.
 
-1. Sempre que `emTransito > 0`, exibir badge/ícone `⏳` ao lado do total.
-2. Total Potencial sempre com prefixo `≈` e cor neutra — nunca em verde.
-3. Tooltip padrão: *"Inclui $X aguardando conciliação. Este valor pode não se concretizar (falha, cancelamento, endereço incorreto)."*
-4. Em modais de operação (saque, aposta): usar somente Disponível; se usuário tentar operar acima, mostrar mensagem *"Saldo insuficiente — $X está em trânsito e não pode ser usado até conciliação."*
-5. Breakdown detalhado só no dialog do parceiro e na Conciliação.
+O `lock_wallet_balance` continua sendo chamado como reserva otimista de curto prazo (TTL), mas deixa de ser condição necessária para o "Em Trânsito" aparecer — a view sempre reflete o ledger.
 
-## 5. Cenários cobertos
+### 5) Conciliação — alinhar UI
 
-| Cenário | Status | Efeito no saldo |
-|---|---|---|
-| Envio confirmado | CONFIRMED | Efetiva débito, remove do trânsito |
-| Falha na blockchain | FAILED | Libera lock, volta a disponível |
-| Reversão explícita | REVERSED | Libera lock |
-| Cancelamento pré-envio | CANCELLED | Libera lock |
-| Preso (>48h sem conciliar) | STUCK / EXPIRED | Continua em trânsito, alerta em Central |
-| Endereço incorreto | WRONG_ADDRESS | Continua em trânsito, requer decisão manual (recuperar / marcar como perda via AJUSTE_SALDO) |
-| Sob revisão | MANUAL_REVIEW | Continua em trânsito, bloqueia auto-expiração |
+`ConciliacaoSaldos.tsx`: no cabeçalho de cada wallet mostrar a mesma linha tri-fásica (`SaldoTrifasico` variante compact), para que o total dos chips PENDING/STUCK/... bata visualmente com "⬆ Saindo" e "⬇ Chegando".
 
-## 6. Entregáveis (ordem sugerida)
+## Testes de aceitação
 
-1. **Migração DB** — novos enums de `transit_status`, campos auxiliares, atualização de `v_saldo_parceiro_wallets`, RPC `get_parceiro_saldo_consolidado`.
-2. **Hook `useParceiroSaldoConsolidado`** + adaptação do `useWalletTransitBalance`.
-3. **Componente `SaldoTrifasico`** (3 variantes) + testes visuais.
-4. **Substituição por módulo**: ParceiroDialog (Crypto tab) → Caixa Operacional → Cards de wallet → Posição de Capital.
-5. **Conciliação**: novas ações (Marcar como travada / endereço incorreto / cancelar) + filtros por sub-status.
-6. **Job cron** de expiração + integração com Central de Ocorrências.
-7. **Memória**: atualizar `wallet-transit-balance-architecture.md` com os novos estados e regra "todo módulo lê via hook, nunca soma ledger direto para saldo".
+1. Wallet com 121 USDT confirmados + saída pendente 45 USDT:
+   - Card mostra **Disponível 76,00 USDT**, chip **⬆ Saindo ≈ $45,00**, Total 121,00.
+   - `OrigemPagamentoSelect` só permite enviar até 76.
+2. Wallet com 100 USDC + entrada pendente 30 USDC:
+   - Disponível **100,00 USDC**, chip **⬇ Chegando ≈ $30,00**, Total 130,00.
+3. Wallet zerada com saída pendente 10 (cenário inconsistente):
+   - Disponível **0,00** (Floor), chip **⬆ Saindo ≈ $10,00** em vermelho de alerta.
+4. Paridade cross-módulo: mesma wallet exibe o mesmo Disponível em `ParceiroDialog`, `SaldosParceirosSheet`, `ExposicaoCryptoCard`, `Caixa`.
 
-## Detalhes técnicos
+## Fora de escopo
 
-- Não alterar `balance_total` diretamente em nenhum ponto — continua sendo função exclusiva de `confirm_wallet_transit` / `lock_wallet_balance` / `unlock_wallet_balance`.
-- Adicionar RPC `mark_wallet_transit_status(ledger_id, new_status, reason)` para transições entre estados intermediários (PENDING↔STUCK↔WRONG_ADDRESS↔MANUAL_REVIEW) sem mexer no lock.
-- `FAILED`, `REVERSED`, `CANCELLED` continuam usando `revert_wallet_transit` (libera lock).
-- Filtro de trânsito na view: `WHERE transit_status NOT IN ('CONFIRMED','FAILED','REVERSED','CANCELLED')`.
-- Manter idempotência por `ledger_id` em toda transição.
-
-Confirma a direção antes de eu implementar? Posso começar pela migração (passo 1) e componente compartilhado (passo 3), que destravam os demais.
+- Correção retroativa de ledgers legados com `transit_status` incorreto (política anti-retrofix).
+- Mudança do modelo de reserva TTL (`bookmaker_stake_reservations`) — permanece igual.
+- Contas bancárias fiat (o modelo tri-fásico se aplica apenas a wallets crypto neste ciclo).
