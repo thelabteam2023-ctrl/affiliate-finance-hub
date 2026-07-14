@@ -552,24 +552,35 @@ export function ConciliacaoSaldos({
                           {isCrypto ? "CRYPTO" : "FIAT"}
                         </Badge>
 
-                        {/* Indicador de saldo em trânsito (crypto) */}
-                        {isCrypto && t.transit_status === "PENDING" && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Badge variant="secondary" className="gap-1 text-xs bg-warning/20 text-warning border-warning/30">
-                                  <Lock className="h-3 w-3" />
-                                  Em Trânsito
-                                </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p className="text-xs">
-                                  Saldo travado na wallet de origem até confirmação
-                                </p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
+                        {/* Indicador de saldo em trânsito (crypto) — vocabulário estendido */}
+                        {isCrypto && t.transit_status && t.transit_status !== "CONFIRMED" && (() => {
+                          const meta: Record<string, { label: string; cls: string; tip: string }> = {
+                            PENDING:        { label: "Em Trânsito",       cls: "bg-warning/20 text-warning border-warning/30",           tip: "Enviado, aguardando confirmação na wallet de destino." },
+                            STUCK:          { label: "Travada",            cls: "bg-orange-500/20 text-orange-500 border-orange-500/30", tip: "Transação sem confirmação há tempo excessivo — pode exigir intervenção." },
+                            WRONG_ADDRESS:  { label: "Endereço Errado",    cls: "bg-red-500/20 text-red-500 border-red-500/30",           tip: "Enviada para endereço incorreto — recuperação manual necessária." },
+                            MANUAL_REVIEW:  { label: "Em Análise",         cls: "bg-blue-500/20 text-blue-500 border-blue-500/30",         tip: "Aguardando revisão manual antes de conciliar." },
+                            EXPIRED:        { label: "Expirada",           cls: "bg-muted text-muted-foreground border-border",            tip: "Janela de conciliação expirou — reavalie a operação." },
+                            FAILED:         { label: "Falhou",             cls: "bg-red-500/20 text-red-500 border-red-500/30",           tip: "Provider reportou falha — valor não saiu ou foi devolvido." },
+                            CANCELLED:      { label: "Cancelada",          cls: "bg-muted text-muted-foreground border-border",            tip: "Operação cancelada pelo operador." },
+                          };
+                          const info = meta[t.transit_status as string];
+                          if (!info) return null;
+                          return (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant="secondary" className={`gap-1 text-xs ${info.cls}`}>
+                                    <Lock className="h-3 w-3" />
+                                    {info.label}
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-xs">{info.tip}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
+                        })()}
 
                         {/* Fluxo visual corrigido */}
                         <div className="flex items-center gap-3 text-sm">
