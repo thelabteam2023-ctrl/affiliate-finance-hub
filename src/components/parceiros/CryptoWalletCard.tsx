@@ -18,7 +18,10 @@ interface CryptoWalletCardProps {
     endereco: string;
     exchange?: string;
     balances?: Array<{ coin: string; saldo: number; saldoUsd: number }>;
+    /** @deprecated use transitInUsd / transitOutUsd */
     emTransitoUsd?: number;
+    transitInUsd?: number;
+    transitOutUsd?: number;
   };
   parceiroId?: string | null;
   onSwapSuccess?: () => void;
@@ -88,7 +91,9 @@ export function CryptoWalletCard({ wallet, parceiroId, onSwapSuccess }: CryptoWa
             <SaldoTrifasico
               variant="stacked"
               disponivel={(wallet.balances ?? []).map((b) => ({ coin: b.coin, amount: b.saldo }))}
-              emTransitoUsd={wallet.emTransitoUsd ?? 0}
+              transitInUsd={wallet.transitInUsd ?? 0}
+              transitOutUsd={wallet.transitOutUsd ?? 0}
+              emTransitoUsd={wallet.emTransitoUsd}
             />
             <div className="space-y-1">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Moedas Suportadas</p>
