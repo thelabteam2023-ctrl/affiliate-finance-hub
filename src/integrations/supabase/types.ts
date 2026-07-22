@@ -18347,6 +18347,10 @@ export type Database = {
         }
         Returns: Json
       }
+      recompute_capital_snapshot: {
+        Args: { p_from_date?: string; p_workspace_id: string }
+        Returns: number
+      }
       reconciliar_saldo_bookmaker: {
         Args: { p_bookmaker_id: string }
         Returns: Json

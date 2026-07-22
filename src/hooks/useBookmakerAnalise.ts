@@ -328,14 +328,16 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
         .select("destino_bookmaker_id, valor")
         .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
         .eq("status", "CONFIRMADO")
-        .in("destino_bookmaker_id", bookmakerIds);
+        .in("destino_bookmaker_id", bookmakerIds)
+        .is("reversed_at", null);
 
       const saquesQuery = supabase
         .from("cash_ledger")
         .select("origem_bookmaker_id, valor")
         .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
         .eq("status", "CONFIRMADO")
-        .in("origem_bookmaker_id", bookmakerIds);
+        .in("origem_bookmaker_id", bookmakerIds)
+        .is("reversed_at", null);
 
       // Buscar ciclos
       const ciclosQuery = supabase

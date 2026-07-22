@@ -59,5 +59,26 @@ export async function invalidateCanonicalCaches(queryClient: QueryClient, projet
     queryClient.invalidateQueries({ queryKey: ["saldo-operavel-rpc", projetoId], ...opts }),
     queryClient.invalidateQueries({ queryKey: ["projeto-vinculos", projetoId], ...opts }),
     queryClient.invalidateQueries({ queryKey: ["central-operacoes-data"], ...opts }),
+    // Auditoria de Reversão Financeira (docs/AUDITORIA_REVERSAO_FINANCEIRA.md):
+    // qualquer mutação em cash_ledger (inclusive espelho de estorno) precisa refletir
+    // em TODOS os consumidores canônicos, inclusive KPIs de projeto e consolidações.
+    queryClient.invalidateQueries({ queryKey: ["projeto-recuperacao-capital", projetoId], ...opts }),
+    queryClient.invalidateQueries({ queryKey: ["projeto-lucro-canonico"], ...opts }),
+    queryClient.invalidateQueries({ queryKey: ["projeto-lucro-operacional-kpi"], ...opts }),
+    queryClient.invalidateQueries({ queryKey: ["exposicao-financeira", projetoId], ...opts }),
+    queryClient.invalidateQueries({ queryKey: ["posicao-capital"], ...opts }),
+    queryClient.invalidateQueries({ queryKey: ["projeto-performance", projetoId], ...opts }),
+    queryClient.invalidateQueries({ queryKey: ["parceiro-financeiro-consolidado"], ...opts }),
+    queryClient.invalidateQueries({ queryKey: ["parceiro-financeiro-cache"], ...opts }),
+    queryClient.invalidateQueries({ queryKey: ["bookmaker-analise"], ...opts }),
+    queryClient.invalidateQueries({ queryKey: ["financeiro-data"], ...opts }),
+    queryClient.invalidateQueries({ queryKey: ["financeiro-mensal-fluxo-canonico"], ...opts }),
+    queryClient.invalidateQueries({ queryKey: ["workspace-lucro-realizado"], ...opts }),
+    queryClient.invalidateQueries({ queryKey: ["resumo-operacional"], ...opts }),
+    queryClient.invalidateQueries({ queryKey: ["capital-snapshots"], ...opts }),
+    queryClient.invalidateQueries({ queryKey: ["projeto-dashboard-rpc", projetoId], ...opts }),
+    queryClient.invalidateQueries({ queryKey: ["metricas-periodo", projetoId], ...opts }),
+    queryClient.invalidateQueries({ queryKey: ["central-alerts"], ...opts }),
+    queryClient.invalidateQueries({ queryKey: ["ledger-parity-anomalies"], ...opts }),
   ]);
 }

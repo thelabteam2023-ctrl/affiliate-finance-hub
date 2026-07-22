@@ -85,6 +85,7 @@ export function usePosicaoCapital({
         .eq("workspace_id", workspaceId)
         .eq("status", "CONFIRMADO")
         .in("tipo_transacao", [...APORTE_TIPOS, ...LIQUIDACAO_TIPOS])
+        .is("reversed_at", null)
         .limit(20000);
       if (error) throw error;
       const fetched = (data as Row[]) || [];

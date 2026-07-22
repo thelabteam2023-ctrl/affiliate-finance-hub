@@ -241,6 +241,7 @@ async function fetchEventosPromocionais(
     .from('cash_ledger')
     .select('data_transacao, valor, tipo_transacao, destino_bookmaker_id, moeda')
     .eq('status', 'CONFIRMADO')
+    .is('reversed_at', null)
     .in('tipo_transacao', ['FREEBET_CONVERTIDA', 'CREDITO_PROMOCIONAL', 'GIRO_GRATIS_GANHO']);
 
   return (eventos || [])
@@ -267,6 +268,7 @@ async function fetchPerdasCancelamentoBonuses(
     .select('valor, moeda, origem_bookmaker_id, data_transacao, auditoria_metadata')
     .eq('ajuste_motivo', 'BONUS_CANCELAMENTO')
     .eq('ajuste_direcao', 'SAIDA')
+    .is('reversed_at', null)
     .filter('projeto_id_snapshot', 'eq', projetoId);
 
   return (data || []).map((entry: any) => {
@@ -294,7 +296,8 @@ async function fetchAjustesSaldo(projetoId: string): Promise<ProjetoExtraEntry[]
     .select('data_transacao, valor, moeda, ajuste_direcao')
     .eq('status', 'CONFIRMADO')
     .eq('tipo_transacao', 'AJUSTE_SALDO')
-    .eq('projeto_id_snapshot', projetoId);
+    .eq('projeto_id_snapshot', projetoId)
+    .is('reversed_at', null);
 
   return (data || [])
     .filter(aj => Number(aj.valor || 0) !== 0)

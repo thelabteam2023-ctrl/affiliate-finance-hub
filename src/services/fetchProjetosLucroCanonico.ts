@@ -254,6 +254,7 @@ export async function fetchProjetosLucroCanonico({
     .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
     .eq("status", "CONFIRMADO")
     .in("projeto_id_snapshot", projetoIds)
+    .is("reversed_at", null)
     .limit(50000);
   let saquesQuery = supabase
     .from("cash_ledger")
@@ -261,6 +262,7 @@ export async function fetchProjetosLucroCanonico({
     .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
     .eq("status", "CONFIRMADO")
     .in("projeto_id_snapshot", projetoIds)
+    .is("reversed_at", null)
     .limit(50000);
 
   if (dataInicio) {
