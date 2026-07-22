@@ -463,7 +463,6 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
               id,
               aposta_id,
               bookmaker_id,
-              bookmaker_catalogo_id,
               selecao,
               selecao_livre,
               odd,
@@ -473,17 +472,16 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
               moeda,
               fonte_saldo,
               tipo,
-              responsabilidade,
               comissao,
               stake_real,
               stake_freebet,
               stake_brl_referencia,
               cotacao_snapshot,
-              bookmakers (nome, instance_identifier, moeda, parceiro:parceiros(nome), bookmakers_catalogo(logo_url)),
+              bookmakers (nome, instance_identifier, moeda, bookmaker_catalogo_id, parceiro:parceiros(nome), bookmakers_catalogo(logo_url)),
               apostas_perna_entradas (
                 id, bookmaker_id, moeda, odd, stake, stake_real, stake_freebet,
-                stake_brl_referencia, cotacao_snapshot, fonte_saldo, tipo, comissao, responsabilidade,
-                bookmakers (nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo(logo_url))
+                stake_brl_referencia, cotacao_snapshot, fonte_saldo, tipo, comissao,
+                bookmakers (nome, instance_identifier, bookmaker_catalogo_id, parceiro:parceiros(nome), bookmakers_catalogo(logo_url))
               )
             `)
             .in("aposta_id", idsChunk)
@@ -501,7 +499,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
           const baseObj: any = {
             id: p.id,
             bookmaker_id: p.bookmaker_id,
-            bookmaker_catalogo_id: p.bookmaker_catalogo_id ?? null,
+            bookmaker_catalogo_id: bookmaker?.bookmaker_catalogo_id ?? null,
             instance_identifier: bookmaker?.instance_identifier ?? null,
             logo_url: bookmaker?.bookmakers_catalogo?.logo_url ?? null,
             bookmaker_nome: parceiroNome
@@ -517,7 +515,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
             moeda: p.moeda || bookmaker?.moeda || 'BRL',
             fonte_saldo: p.fonte_saldo || null,
             tipo: p.tipo || 'BACK',
-            responsabilidade: p.responsabilidade ?? null,
+            responsabilidade: null,
             comissao: p.comissao ?? null,
             stake_real: p.stake_real ?? null,
             stake_freebet: p.stake_freebet ?? null,
@@ -541,6 +539,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
                 parceiro_nome: bmParceiro,
                 instance_identifier: bm?.instance_identifier ?? null,
                 logo_url: bm?.bookmakers_catalogo?.logo_url ?? null,
+                bookmaker_catalogo_id: bm?.bookmaker_catalogo_id ?? null,
                 moeda: e.moeda || p.moeda || 'BRL',
                 odd: Number(e.odd) || 0,
                 stake: Number(e.stake) || 0,
@@ -552,7 +551,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
                 cotacao_snapshot: e.cotacao_snapshot ?? null,
                 fonte_saldo: e.fonte_saldo || p.fonte_saldo || undefined,
                 tipo: e.tipo || p.tipo || 'BACK',
-                responsabilidade: e.responsabilidade ?? null,
+                responsabilidade: null,
                 comissao: e.comissao ?? null,
               };
             });
@@ -657,6 +656,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
       setSurebets(surebetsComPernas);
     } catch (error: any) {
       console.error("Erro ao carregar surebets:", error.message);
+      toast.error("Erro ao carregar surebets: " + error.message);
     }
   };
 
