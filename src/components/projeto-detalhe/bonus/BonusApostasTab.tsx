@@ -246,6 +246,22 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
   // Filtros dimensionais independentes para o histórico
   const { dimensionalFilter, setDimensionalFilter } = useHistoryDimensionalFilter();
 
+  // Debug trace ID por instância da aba (recriado por projetoId/subTab)
+  const traceIdRef = useRef<string>(bonusDebug.newTraceId());
+  useEffect(() => {
+    traceIdRef.current = bonusDebug.newTraceId();
+    bonusDebug.stage("TAB.mount", traceIdRef.current, projetoId, {
+      projetoId,
+      hasDateRange: !!dateRange,
+      dateRange: dateRange
+        ? { start: dateRange.start.toISOString(), end: dateRange.end.toISOString() }
+        : null,
+    });
+  }, [projetoId]);
+  useEffect(() => {
+    bonusDebug.stage("TAB.subTabChange", traceIdRef.current, projetoId, { subTab });
+  }, [subTab, projetoId]);
+
   // Hooks do motor financeiro unificado
   const invalidateSaldos = useInvalidateBookmakerSaldos();
   const { hasActiveRolloverBonus, atualizarProgressoRollover } = useBonusBalanceManager();
