@@ -493,12 +493,15 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
       };
       bonusDebug.stage("QUERY.surebets.request", traceIdRef.current, projId, surebetParams);
       // Buscar operações multi-leg (ARBITRAGEM ou SUREBET) com estratégia BONUS ou contexto BONUS
+      // IMPORTANTE: dois `.or()` encadeados geravam `or=(...)&or=(...)` que, dependendo do
+      // encoding no cliente, degradava para 0 resultados. Consolidamos em `.in()` + único `.or()`
+      // (ANDed pelo PostgREST) para restaurar a listagem do histórico da aba Bônus.
       const surebetsData = await fetchAllPaginated(() =>
         supabase
           .from("apostas_unificada")
           .select("*")
           .eq("projeto_id", projId)
-          .or(`forma_registro.eq.ARBITRAGEM,forma_registro.eq.SUREBET`)
+          .in("forma_registro", ["ARBITRAGEM", "SUREBET"])
           .or(`estrategia.eq.EXTRACAO_BONUS,contexto_operacional.eq.BONUS`)
           .order("data_aposta", { ascending: false })
       );
@@ -681,7 +684,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
           .from("apostas_unificada")
           .select("*")
           .eq("projeto_id", projId)
-          .or(`forma_registro.eq.ARBITRAGEM,forma_registro.eq.SUREBET`)
+          .in("forma_registro", ["ARBITRAGEM", "SUREBET"])
           .eq("estrategia", "SUREBET")
           .order("data_aposta", { ascending: false });
           
