@@ -356,6 +356,14 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
         ? `bookmaker_id.in.(${bonusIds.join(',')}),contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`
         : `contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`;
 
+      const _t0 = performance.now();
+      bonusDebug.stage("QUERY.apostas.request", traceIdRef.current, projId, {
+        projId,
+        bonusIdsCount: bonusIds.length,
+        forma_registro: "SIMPLES",
+        orFilter,
+      });
+
       const data = await fetchAllPaginated(() =>
         supabase
           .from("apostas_unificada")
@@ -366,6 +374,15 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
           .is("cancelled_at", null)
           .order("data_aposta", { ascending: false })
       );
+
+      bonusDebug.query("QUERY.apostas.response", traceIdRef.current, projId, {
+        rows: (data || []).length,
+        ms: Math.round(performance.now() - _t0),
+        sample: (data || []).slice(0, 3).map((r: any) => ({
+          id: r.id, status: r.status, resultado: r.resultado,
+          contexto: r.contexto_operacional, estrategia: r.estrategia, data_aposta: r.data_aposta,
+        })),
+      });
 
       
       
@@ -436,6 +453,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
       const orFilter = bonusIds.length > 0
         ? `bookmaker_id.in.(${bonusIds.join(',')}),contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`
         : `contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`;
+      const _t0 = performance.now();
 
       const data = await fetchAllPaginated(() =>
         supabase
@@ -446,6 +464,14 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
           .or(orFilter)
           .order("data_aposta", { ascending: false })
       );
+      bonusDebug.query("QUERY.multiplas.response", traceIdRef.current, projId, {
+        rows: (data || []).length,
+        ms: Math.round(performance.now() - _t0),
+        params: { orFilter },
+        sample: (data || []).slice(0, 3).map((r: any) => ({
+          id: r.id, status: r.status, resultado: r.resultado,
+        })),
+      });
       
       setApostasMultiplas((data || []).map((am: any) => ({
         ...am,
