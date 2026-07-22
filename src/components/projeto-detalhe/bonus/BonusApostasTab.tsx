@@ -484,6 +484,14 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
 
   const fetchSurebetsInternal = async (projId: string, bonusIds: string[]) => {
     try {
+      const _t0 = performance.now();
+      const surebetParams = {
+        projId,
+        bonusIdsCount: bonusIds.length,
+        forma_registro_in: ["ARBITRAGEM", "SUREBET"],
+        estrategiaOrContextoOr: "estrategia.eq.EXTRACAO_BONUS,contexto_operacional.eq.BONUS",
+      };
+      bonusDebug.stage("QUERY.surebets.request", traceIdRef.current, projId, surebetParams);
       // Buscar operações multi-leg (ARBITRAGEM ou SUREBET) com estratégia BONUS ou contexto BONUS
       const surebetsData = await fetchAllPaginated(() =>
         supabase
@@ -494,12 +502,26 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
           .or(`estrategia.eq.EXTRACAO_BONUS,contexto_operacional.eq.BONUS`)
           .order("data_aposta", { ascending: false })
       );
+      bonusDebug.query("QUERY.surebets.response", traceIdRef.current, projId, {
+        rows: (surebetsData || []).length,
+        ms: Math.round(performance.now() - _t0),
+        params: surebetParams,
+        sample: (surebetsData || []).slice(0, 5).map((r: any) => ({
+          id: r.id, status: r.status, resultado: r.resultado,
+          forma_registro: r.forma_registro, estrategia: r.estrategia,
+          contexto: r.contexto_operacional, data_aposta: r.data_aposta,
+        })),
+      });
       
       // Buscar pernas da tabela normalizada para operações multi-leg
       const surebetIds = surebetsData.map((s: any) => s.id);
       let pernasMap: Record<string, any[]> = {};
       
       if (surebetIds.length > 0) {
+        const _tp = performance.now();
+        bonusDebug.stage("QUERY.pernas.request", traceIdRef.current, projId, {
+          apostaIdsCount: surebetIds.length,
+        });
         const pernasData = await fetchChunkedIn(
           (idsChunk) => supabase
             .from("apostas_pernas")
@@ -532,6 +554,21 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
             .order("ordem", { ascending: true }),
           surebetIds
         );
+        const entradasTotal = (pernasData || []).reduce(
+          (n: number, p: any) => n + (Array.isArray(p.apostas_perna_entradas) ? p.apostas_perna_entradas.length : 0),
+          0
+        );
+        bonusDebug.query("QUERY.pernas.response", traceIdRef.current, projId, {
+          rows: (pernasData || []).length,
+          ms: Math.round(performance.now() - _tp),
+          params: { apostasWithPernas: new Set((pernasData || []).map((p: any) => p.aposta_id)).size },
+        });
+        bonusDebug.stage("QUERY.entradas.response", traceIdRef.current, projId, {
+          totalEntradas: entradasTotal,
+          pernasComMultiplasEntradas: (pernasData || []).filter(
+            (p: any) => Array.isArray(p.apostas_perna_entradas) && p.apostas_perna_entradas.length > 1
+          ).length,
+        });
 
         pernasData.forEach((p: any) => {
           if (!pernasMap[p.aposta_id]) {
