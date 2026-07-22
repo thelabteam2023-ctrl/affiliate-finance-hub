@@ -63,6 +63,8 @@ import {
   isSuspiciousDate,
 } from "../operations";
 import { parseLocalDateTime } from "@/utils/dateUtils";
+import { bonusDebug } from "@/lib/debug/bonusTabDebugger";
+import { BonusDebugPanel } from "./_debug/BonusDebugPanel";
 
 interface BonusApostasTabProps {
   projetoId: string;
