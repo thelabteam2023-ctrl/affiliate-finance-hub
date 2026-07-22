@@ -848,6 +848,19 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
     ...filteredSurebets.map(sb => ({ tipo: "surebet" as const, data: sb, data_aposta: sb.data_operacao })),
   ].sort((a, b) => parseLocalDateTime(b.data_aposta).getTime() - parseLocalDateTime(a.data_aposta).getTime());
 
+  // ── DEBUG: pipeline de filtros ──
+  if (bonusDebug.enabled) {
+    bonusDebug.filter("FILTER.dimensional", traceIdRef.current, projetoId, {
+      inputCount: apostas.length + apostasMultiplas.length + surebets.length,
+      outputCount: apostasUnificadasRaw.length,
+      rule: `search='${searchTerm}' status=${statusFilter} resultado=${resultadoFilter} tipo=${tipoFilter} dimBk=${dimensionalFilter.bookmakerIds.length} dimPa=${dimensionalFilter.parceiroIds.length} dimRes=${dimensionalFilter.resultados.length}`,
+      droppedSamples: [
+        ...apostas.filter((a) => !filteredApostas.includes(a)).slice(0, 3).map((a) => ({ tipo: "simples", id: a.id, status: a.status, resultado: a.resultado })),
+        ...surebets.filter((s) => !filteredSurebets.includes(s)).slice(0, 3).map((s: any) => ({ tipo: "surebet", id: s.id, status: s.status, resultado: s.resultado })),
+      ],
+    });
+  }
+
   // Abertas: NUNCA filtrar por dateRange — apostas pendentes (incl. eventos futuros)
   // devem aparecer independente do período selecionado. Status é o único critério.
   const apostasAbertas = apostasUnificadasRaw.filter(item => {
@@ -874,6 +887,31 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
       })
     : apostasUnificadasRaw;
 
+  if (bonusDebug.enabled) {
+    bonusDebug.filter("FILTER.date", traceIdRef.current, projetoId, {
+      inputCount: apostasUnificadasRaw.length,
+      outputCount: apostasHistoricoBase.length,
+      rule: dateRange
+        ? `data_aposta ∈ [${dateRange.start.toISOString()}, ${dateRange.end.toISOString()}]`
+        : "no dateRange",
+      droppedSamples: dateRange
+        ? apostasUnificadasRaw
+            .filter((item) => {
+              const d = parseLocalDateTime(item.data_aposta);
+              return !(d >= dateRange.start && d <= dateRange.end);
+            })
+            .slice(0, 5)
+            .map((it) => ({
+              tipo: it.tipo,
+              id: (it.data as any).id,
+              data_aposta: it.data_aposta,
+              status: (it.data as any).status,
+              resultado: (it.data as any).resultado,
+            }))
+        : [],
+    });
+  }
+
   const apostasHistorico = apostasHistoricoBase.filter(item => {
     if (item.tipo === "simples") {
       const a = item.data as Aposta;
@@ -889,6 +927,35 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
     }
     return false;
   });
+
+  if (bonusDebug.enabled) {
+    bonusDebug.filter("FILTER.subTab", traceIdRef.current, projetoId, {
+      inputCount: apostasHistoricoBase.length,
+      outputCount: apostasHistorico.length,
+      rule: "status !== 'PENDENTE' && !!resultado",
+      droppedSamples: apostasHistoricoBase
+        .filter((it) => {
+          const d = it.data as any;
+          return d.status === "PENDENTE" || !d.resultado;
+        })
+        .slice(0, 5)
+        .map((it) => ({
+          tipo: it.tipo,
+          id: (it.data as any).id,
+          status: (it.data as any).status,
+          resultado: (it.data as any).resultado,
+          data_aposta: it.data_aposta,
+        })),
+    });
+    bonusDebug.stage("RENDER.list", traceIdRef.current, projetoId, {
+      subTab,
+      abertas: apostasUnificadasRaw.filter((i) => {
+        const d = i.data as any;
+        return d.status === "PENDENTE" || !d.resultado;
+      }).length,
+      historico: apostasHistorico.length,
+    });
+  }
 
   // Total counts without dimensional filters (for badge comparison)
   const isItemPendenteFn = (item: ApostaUnificada) => {
