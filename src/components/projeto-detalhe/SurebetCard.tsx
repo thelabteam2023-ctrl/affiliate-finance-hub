@@ -225,7 +225,14 @@ function SurebetBookmakerLogo({
 }) {
   // Fonte de verdade: logo_url vindo da própria perna (join com bookmakers_catalogo via bookmaker_id).
   // Fallback por nome apenas quando a perna não tem logo persistido (dados legados).
-  const logoUrl = logoUrlProp ?? getLogoUrl(nome);
+  // Perna simples costuma trazer o nome com sufixo "- Parceiro" (ex.: "VAVE - ANDRÉA ARAÚJO"),
+  // enquanto sub-entradas trazem o nome puro. Tentamos primeiro o nome puro (antes do " - ")
+  // para unificar o matching no catálogo entre perna única e perna composta.
+  const rawName = (nome ?? "").split(" - ")[0].trim();
+  const logoUrl =
+    logoUrlProp
+    ?? (rawName ? getLogoUrl(rawName) : null)
+    ?? getLogoUrl(nome);
   const [hasError, setHasError] = useState(false);
   
   if (logoUrl && !hasError) {
