@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "../StandardTimeFilter";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
+import { bonusDebug } from "@/lib/debug/bonusTabDebugger";
 
 interface ProjetoBonusAreaProps {
   projetoId: string;
@@ -27,6 +28,22 @@ const STORAGE_KEY = "bonus-area-nav-mode";
 export function ProjetoBonusArea({ projetoId, refreshTrigger, actionsSlot, onDataChange }: ProjetoBonusAreaProps) {
   const { getBookmakersWithActiveBonus, fetchBonuses } = useProjectBonuses({ projectId: projetoId });
   const bookmakersInBonusMode = getBookmakersWithActiveBonus();
+
+  useEffect(() => {
+    if (!bonusDebug.enabled) return;
+    const tid = bonusDebug.newTraceId();
+    bonusDebug.stage("AREA.mount", tid, projetoId, {
+      projetoId,
+      bookmakersInBonusMode: bookmakersInBonusMode.length,
+    });
+  }, [projetoId]);
+
+  useEffect(() => {
+    if (!bonusDebug.enabled) return;
+    if (refreshTrigger !== undefined && refreshTrigger > 0) {
+      bonusDebug.stage("AREA.refreshTrigger", "n/a", projetoId, { refreshTrigger });
+    }
+  }, [refreshTrigger, projetoId]);
   
   const { count: openOperationsCount } = useOpenOperationsCount({
     projetoId,

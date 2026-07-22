@@ -63,6 +63,8 @@ import {
   isSuspiciousDate,
 } from "../operations";
 import { parseLocalDateTime } from "@/utils/dateUtils";
+import { bonusDebug } from "@/lib/debug/bonusTabDebugger";
+import { BonusDebugPanel } from "./_debug/BonusDebugPanel";
 
 interface BonusApostasTabProps {
   projetoId: string;
@@ -244,6 +246,22 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
   // Filtros dimensionais independentes para o histórico
   const { dimensionalFilter, setDimensionalFilter } = useHistoryDimensionalFilter();
 
+  // Debug trace ID por instância da aba (recriado por projetoId/subTab)
+  const traceIdRef = useRef<string>(bonusDebug.newTraceId());
+  useEffect(() => {
+    traceIdRef.current = bonusDebug.newTraceId();
+    bonusDebug.stage("TAB.mount", traceIdRef.current, projetoId, {
+      projetoId,
+      hasDateRange: !!dateRange,
+      dateRange: dateRange
+        ? { start: dateRange.start.toISOString(), end: dateRange.end.toISOString() }
+        : null,
+    });
+  }, [projetoId]);
+  useEffect(() => {
+    bonusDebug.stage("TAB.subTabChange", traceIdRef.current, projetoId, { subTab });
+  }, [subTab, projetoId]);
+
   // Hooks do motor financeiro unificado
   const invalidateSaldos = useInvalidateBookmakerSaldos();
   const { hasActiveRolloverBonus, atualizarProgressoRollover } = useBonusBalanceManager();
@@ -338,6 +356,14 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
         ? `bookmaker_id.in.(${bonusIds.join(',')}),contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`
         : `contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`;
 
+      const _t0 = performance.now();
+      bonusDebug.stage("QUERY.apostas.request", traceIdRef.current, projId, {
+        projId,
+        bonusIdsCount: bonusIds.length,
+        forma_registro: "SIMPLES",
+        orFilter,
+      });
+
       const data = await fetchAllPaginated(() =>
         supabase
           .from("apostas_unificada")
@@ -348,6 +374,15 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
           .is("cancelled_at", null)
           .order("data_aposta", { ascending: false })
       );
+
+      bonusDebug.query("QUERY.apostas.response", traceIdRef.current, projId, {
+        rows: (data || []).length,
+        ms: Math.round(performance.now() - _t0),
+        sample: (data || []).slice(0, 3).map((r: any) => ({
+          id: r.id, status: r.status, resultado: r.resultado,
+          contexto: r.contexto_operacional, estrategia: r.estrategia, data_aposta: r.data_aposta,
+        })),
+      });
 
       
       
@@ -418,6 +453,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
       const orFilter = bonusIds.length > 0
         ? `bookmaker_id.in.(${bonusIds.join(',')}),contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`
         : `contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`;
+      const _t0 = performance.now();
 
       const data = await fetchAllPaginated(() =>
         supabase
@@ -428,6 +464,14 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
           .or(orFilter)
           .order("data_aposta", { ascending: false })
       );
+      bonusDebug.query("QUERY.multiplas.response", traceIdRef.current, projId, {
+        rows: (data || []).length,
+        ms: Math.round(performance.now() - _t0),
+        params: { orFilter },
+        sample: (data || []).slice(0, 3).map((r: any) => ({
+          id: r.id, status: r.status, resultado: r.resultado,
+        })),
+      });
       
       setApostasMultiplas((data || []).map((am: any) => ({
         ...am,
@@ -440,6 +484,14 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
 
   const fetchSurebetsInternal = async (projId: string, bonusIds: string[]) => {
     try {
+      const _t0 = performance.now();
+      const surebetParams = {
+        projId,
+        bonusIdsCount: bonusIds.length,
+        forma_registro_in: ["ARBITRAGEM", "SUREBET"],
+        estrategiaOrContextoOr: "estrategia.eq.EXTRACAO_BONUS,contexto_operacional.eq.BONUS",
+      };
+      bonusDebug.stage("QUERY.surebets.request", traceIdRef.current, projId, surebetParams);
       // Buscar operações multi-leg (ARBITRAGEM ou SUREBET) com estratégia BONUS ou contexto BONUS
       const surebetsData = await fetchAllPaginated(() =>
         supabase
@@ -450,12 +502,26 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
           .or(`estrategia.eq.EXTRACAO_BONUS,contexto_operacional.eq.BONUS`)
           .order("data_aposta", { ascending: false })
       );
+      bonusDebug.query("QUERY.surebets.response", traceIdRef.current, projId, {
+        rows: (surebetsData || []).length,
+        ms: Math.round(performance.now() - _t0),
+        params: surebetParams,
+        sample: (surebetsData || []).slice(0, 5).map((r: any) => ({
+          id: r.id, status: r.status, resultado: r.resultado,
+          forma_registro: r.forma_registro, estrategia: r.estrategia,
+          contexto: r.contexto_operacional, data_aposta: r.data_aposta,
+        })),
+      });
       
       // Buscar pernas da tabela normalizada para operações multi-leg
       const surebetIds = surebetsData.map((s: any) => s.id);
       let pernasMap: Record<string, any[]> = {};
       
       if (surebetIds.length > 0) {
+        const _tp = performance.now();
+        bonusDebug.stage("QUERY.pernas.request", traceIdRef.current, projId, {
+          apostaIdsCount: surebetIds.length,
+        });
         const pernasData = await fetchChunkedIn(
           (idsChunk) => supabase
             .from("apostas_pernas")
@@ -488,6 +554,21 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
             .order("ordem", { ascending: true }),
           surebetIds
         );
+        const entradasTotal = (pernasData || []).reduce(
+          (n: number, p: any) => n + (Array.isArray(p.apostas_perna_entradas) ? p.apostas_perna_entradas.length : 0),
+          0
+        );
+        bonusDebug.query("QUERY.pernas.response", traceIdRef.current, projId, {
+          rows: (pernasData || []).length,
+          ms: Math.round(performance.now() - _tp),
+          params: { apostasWithPernas: new Set((pernasData || []).map((p: any) => p.aposta_id)).size },
+        });
+        bonusDebug.stage("QUERY.entradas.response", traceIdRef.current, projId, {
+          totalEntradas: entradasTotal,
+          pernasComMultiplasEntradas: (pernasData || []).filter(
+            (p: any) => Array.isArray(p.apostas_perna_entradas) && p.apostas_perna_entradas.length > 1
+          ).length,
+        });
 
         pernasData.forEach((p: any) => {
           if (!pernasMap[p.aposta_id]) {
@@ -767,6 +848,19 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
     ...filteredSurebets.map(sb => ({ tipo: "surebet" as const, data: sb, data_aposta: sb.data_operacao })),
   ].sort((a, b) => parseLocalDateTime(b.data_aposta).getTime() - parseLocalDateTime(a.data_aposta).getTime());
 
+  // ── DEBUG: pipeline de filtros ──
+  if (bonusDebug.enabled) {
+    bonusDebug.filter("FILTER.dimensional", traceIdRef.current, projetoId, {
+      inputCount: apostas.length + apostasMultiplas.length + surebets.length,
+      outputCount: apostasUnificadasRaw.length,
+      rule: `search='${searchTerm}' status=${statusFilter} resultado=${resultadoFilter} tipo=${tipoFilter} dimBk=${dimensionalFilter.bookmakerIds.length} dimPa=${dimensionalFilter.parceiroIds.length} dimRes=${dimensionalFilter.resultados.length}`,
+      droppedSamples: [
+        ...apostas.filter((a) => !filteredApostas.includes(a)).slice(0, 3).map((a) => ({ tipo: "simples", id: a.id, status: a.status, resultado: a.resultado })),
+        ...surebets.filter((s) => !filteredSurebets.includes(s)).slice(0, 3).map((s: any) => ({ tipo: "surebet", id: s.id, status: s.status, resultado: s.resultado })),
+      ],
+    });
+  }
+
   // Abertas: NUNCA filtrar por dateRange — apostas pendentes (incl. eventos futuros)
   // devem aparecer independente do período selecionado. Status é o único critério.
   const apostasAbertas = apostasUnificadasRaw.filter(item => {
@@ -793,6 +887,31 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
       })
     : apostasUnificadasRaw;
 
+  if (bonusDebug.enabled) {
+    bonusDebug.filter("FILTER.date", traceIdRef.current, projetoId, {
+      inputCount: apostasUnificadasRaw.length,
+      outputCount: apostasHistoricoBase.length,
+      rule: dateRange
+        ? `data_aposta ∈ [${dateRange.start.toISOString()}, ${dateRange.end.toISOString()}]`
+        : "no dateRange",
+      droppedSamples: dateRange
+        ? apostasUnificadasRaw
+            .filter((item) => {
+              const d = parseLocalDateTime(item.data_aposta);
+              return !(d >= dateRange.start && d <= dateRange.end);
+            })
+            .slice(0, 5)
+            .map((it) => ({
+              tipo: it.tipo,
+              id: (it.data as any).id,
+              data_aposta: it.data_aposta,
+              status: (it.data as any).status,
+              resultado: (it.data as any).resultado,
+            }))
+        : [],
+    });
+  }
+
   const apostasHistorico = apostasHistoricoBase.filter(item => {
     if (item.tipo === "simples") {
       const a = item.data as Aposta;
@@ -808,6 +927,35 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
     }
     return false;
   });
+
+  if (bonusDebug.enabled) {
+    bonusDebug.filter("FILTER.subTab", traceIdRef.current, projetoId, {
+      inputCount: apostasHistoricoBase.length,
+      outputCount: apostasHistorico.length,
+      rule: "status !== 'PENDENTE' && !!resultado",
+      droppedSamples: apostasHistoricoBase
+        .filter((it) => {
+          const d = it.data as any;
+          return d.status === "PENDENTE" || !d.resultado;
+        })
+        .slice(0, 5)
+        .map((it) => ({
+          tipo: it.tipo,
+          id: (it.data as any).id,
+          status: (it.data as any).status,
+          resultado: (it.data as any).resultado,
+          data_aposta: it.data_aposta,
+        })),
+    });
+    bonusDebug.stage("RENDER.list", traceIdRef.current, projetoId, {
+      subTab,
+      abertas: apostasUnificadasRaw.filter((i) => {
+        const d = i.data as any;
+        return d.status === "PENDENTE" || !d.resultado;
+      }).length,
+      historico: apostasHistorico.length,
+    });
+  }
 
   // Total counts without dimensional filters (for badge comparison)
   const isItemPendenteFn = (item: ApostaUnificada) => {
@@ -1537,6 +1685,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
       </Card>
 
       {/* Dialogs removidos - todos os formulários abrem em janela externa */}
+      <BonusDebugPanel />
     </div>
   );
 }
