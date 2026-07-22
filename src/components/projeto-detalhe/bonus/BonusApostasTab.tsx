@@ -463,6 +463,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
               id,
               aposta_id,
               bookmaker_id,
+              bookmaker_catalogo_id,
               selecao,
               selecao_livre,
               odd,
@@ -471,33 +472,24 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
               lucro_prejuizo,
               moeda,
               fonte_saldo,
-              bookmakers (nome, moeda, parceiro:parceiros(nome)),
+              tipo,
+              responsabilidade,
+              comissao,
+              stake_real,
+              stake_freebet,
+              stake_brl_referencia,
+              cotacao_snapshot,
+              bookmakers (nome, instance_identifier, moeda, parceiro:parceiros(nome), bookmakers_catalogo(logo_url)),
               apostas_perna_entradas (
                 id, bookmaker_id, moeda, odd, stake, stake_real, stake_freebet,
-                stake_brl_referencia, cotacao_snapshot, fonte_saldo, tipo, comissao
+                stake_brl_referencia, cotacao_snapshot, fonte_saldo, tipo, comissao, responsabilidade,
+                bookmakers (nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo(logo_url))
               )
             `)
             .in("aposta_id", idsChunk)
             .order("ordem", { ascending: true }),
           surebetIds
         );
-
-        // Coletar bookmaker_ids das entries (multi-bookmaker) para resolver nomes
-        const entryBookmakerIds = new Set<string>();
-        pernasData.forEach((p: any) => {
-          const entradas = Array.isArray(p.apostas_perna_entradas) ? p.apostas_perna_entradas : [];
-          entradas.forEach((e: any) => {
-            if (e.bookmaker_id) entryBookmakerIds.add(e.bookmaker_id);
-          });
-        });
-        let entryBookmakerMap = new Map<string, { nome: string; parceiro?: { nome: string } }>();
-        if (entryBookmakerIds.size > 0) {
-          const { data: bks } = await supabase
-            .from("bookmakers")
-            .select("id, nome, parceiro:parceiros(nome)")
-            .in("id", Array.from(entryBookmakerIds));
-          entryBookmakerMap = new Map((bks || []).map((b: any) => [b.id, { nome: b.nome, parceiro: b.parceiro }]));
-        }
 
         pernasData.forEach((p: any) => {
           if (!pernasMap[p.aposta_id]) {
@@ -509,9 +501,13 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
           const baseObj: any = {
             id: p.id,
             bookmaker_id: p.bookmaker_id,
+            bookmaker_catalogo_id: p.bookmaker_catalogo_id ?? null,
+            instance_identifier: bookmaker?.instance_identifier ?? null,
+            logo_url: bookmaker?.bookmakers_catalogo?.logo_url ?? null,
             bookmaker_nome: parceiroNome
               ? `${bookmaker?.nome || "—"} - ${parceiroNome}`
               : (bookmaker?.nome || "—"),
+            parceiro_nome: parceiroNome ?? null,
             selecao: p.selecao,
             selecao_livre: p.selecao_livre,
             odd: p.odd,
@@ -520,6 +516,13 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
             lucro_prejuizo: p.lucro_prejuizo,
             moeda: p.moeda || bookmaker?.moeda || 'BRL',
             fonte_saldo: p.fonte_saldo || null,
+            tipo: p.tipo || 'BACK',
+            responsabilidade: p.responsabilidade ?? null,
+            comissao: p.comissao ?? null,
+            stake_real: p.stake_real ?? null,
+            stake_freebet: p.stake_freebet ?? null,
+            stake_brl_referencia: p.stake_brl_referencia ?? null,
+            cotacao_snapshot: p.cotacao_snapshot ?? null,
           };
           if (entradas.length > 1) {
             const stakeTotal = entradas.reduce((s, e) => s + (Number(e.stake) || 0), 0);
@@ -529,22 +532,28 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
             baseObj.odd_media = oddMedia;
             baseObj.stake_total = stakeTotal;
             baseObj.entries = entradas.map((e: any) => {
-              const bm = entryBookmakerMap.get(e.bookmaker_id);
+              const bm = e.bookmakers as any;
+              const bmParceiro = bm?.parceiro?.nome ?? null;
               return {
                 id: e.id,
                 bookmaker_id: e.bookmaker_id,
                 bookmaker_nome: bm?.nome || "—",
-                parceiro_nome: bm?.parceiro?.nome ?? null,
-                instance_identifier: null,
-                logo_url: null,
+                parceiro_nome: bmParceiro,
+                instance_identifier: bm?.instance_identifier ?? null,
+                logo_url: bm?.bookmakers_catalogo?.logo_url ?? null,
                 moeda: e.moeda || p.moeda || 'BRL',
                 odd: Number(e.odd) || 0,
                 stake: Number(e.stake) || 0,
                 resultado: null,
                 lucro_prejuizo: null,
+                stake_real: e.stake_real ?? null,
+                stake_freebet: e.stake_freebet ?? null,
                 stake_brl_referencia: e.stake_brl_referencia ?? null,
                 cotacao_snapshot: e.cotacao_snapshot ?? null,
                 fonte_saldo: e.fonte_saldo || p.fonte_saldo || undefined,
+                tipo: e.tipo || p.tipo || 'BACK',
+                responsabilidade: e.responsabilidade ?? null,
+                comissao: e.comissao ?? null,
               };
             });
           }
