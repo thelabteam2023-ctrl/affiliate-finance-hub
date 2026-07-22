@@ -73,7 +73,7 @@ async function fetchFinanceiroData(workspaceId: string): Promise<FinanceiroData>
     // UNIFICADA: Uma única query com workspace_id (substitui Q1+Q2 que eram 2 full scans)
     supabase.from("movimentacoes_indicacao").select("tipo, valor, data_movimentacao, parceria_id, indicador_id, status, indicadores_referral(nome)").eq("workspace_id", workspaceId).limit(10000),
     supabase.from("v_custos_aquisicao").select("custo_total, valor_indicador, valor_parceiro, valor_fornecedor, data_inicio, indicador_id, indicador_nome").eq("workspace_id", workspaceId).limit(10000),
-    supabase.from("cash_ledger").select("tipo_transacao, valor, valor_confirmado, data_transacao, moeda, origem_tipo, projeto_id_snapshot, status").eq("workspace_id", workspaceId).eq("status", "CONFIRMADO").limit(10000),
+    supabase.from("cash_ledger").select("tipo_transacao, valor, valor_confirmado, data_transacao, moeda, origem_tipo, projeto_id_snapshot, status").eq("workspace_id", workspaceId).eq("status", "CONFIRMADO").is("reversed_at", null).limit(10000),
     supabase.from("despesas_administrativas").select("*, operadores(nome)").eq("workspace_id", workspaceId).eq("status", "CONFIRMADO").limit(10000),
     supabase.from("despesas_administrativas").select("*, operadores(nome)").eq("workspace_id", workspaceId).eq("status", "PENDENTE").limit(10000),
     supabase.from("pagamentos_operador").select("tipo_pagamento, valor, data_pagamento, status, operador_id, operadores(nome)").eq("workspace_id", workspaceId).eq("status", "CONFIRMADO").limit(10000),

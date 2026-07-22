@@ -44,6 +44,7 @@ async function fetchRecuperacaoRaw(projetoId: string) {
       .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
       .eq("status", "CONFIRMADO")
       .eq("projeto_id_snapshot", projetoId)
+      .is("reversed_at", null)
       .limit(10000),
     supabase
       .from("cash_ledger")
@@ -51,6 +52,7 @@ async function fetchRecuperacaoRaw(projetoId: string) {
       .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
       .eq("status", "CONFIRMADO")
       .eq("projeto_id_snapshot", projetoId)
+      .is("reversed_at", null)
       .limit(10000),
     supabase
       .from("cash_ledger")
@@ -58,6 +60,7 @@ async function fetchRecuperacaoRaw(projetoId: string) {
       .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
       .eq("status", "PENDENTE")
       .eq("projeto_id_snapshot", projetoId)
+      .is("reversed_at", null)
       .limit(10000),
   ]);
 

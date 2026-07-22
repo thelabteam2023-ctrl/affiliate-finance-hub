@@ -154,6 +154,7 @@ export async function calcularMetricasPeriodo({
       .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
       .eq("status", "CONFIRMADO")
       .eq("projeto_id_snapshot", projetoId)
+      .is("reversed_at", null)
       .gte("data_transacao", cashLedgerStart)
       .lte("data_transacao", cashLedgerEnd),
 
@@ -164,6 +165,7 @@ export async function calcularMetricasPeriodo({
       .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
       .eq("status", "CONFIRMADO")
       .eq("projeto_id_snapshot", projetoId)
+      .is("reversed_at", null)
       .gte("data_transacao", cashLedgerStart)
       .lte("data_transacao", cashLedgerEnd),
   ]);

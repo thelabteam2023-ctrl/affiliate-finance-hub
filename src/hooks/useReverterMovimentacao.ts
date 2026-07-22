@@ -23,6 +23,17 @@ function invalidateAll(qc: ReturnType<typeof useQueryClient>, projetoId?: string
   qc.invalidateQueries({ queryKey: ["saldo-contas-bancarias"] });
   qc.invalidateQueries({ queryKey: ["saldo-wallets-crypto"] });
   qc.invalidateQueries({ queryKey: ["bookmakers"] });
+  // Consumidores workspace-wide de cash_ledger (KPIs, dashboards, consolidações).
+  qc.invalidateQueries({ queryKey: ["financeiro-data"] });
+  qc.invalidateQueries({ queryKey: ["financeiro-mensal-fluxo-canonico"] });
+  qc.invalidateQueries({ queryKey: ["workspace-lucro-realizado"] });
+  qc.invalidateQueries({ queryKey: ["posicao-capital"] });
+  qc.invalidateQueries({ queryKey: ["parceiro-financeiro-consolidado"] });
+  qc.invalidateQueries({ queryKey: ["parceiro-financeiro-cache"] });
+  qc.invalidateQueries({ queryKey: ["bookmaker-analise"] });
+  qc.invalidateQueries({ queryKey: ["capital-snapshots"] });
+  qc.invalidateQueries({ queryKey: ["ledger-parity-anomalies"] });
+  qc.invalidateQueries({ queryKey: ["resumo-operacional"] });
   if (projetoId) invalidateCanonicalCaches(qc, projetoId);
   window.dispatchEvent(new CustomEvent("lovable:caixa-data-changed"));
 }
