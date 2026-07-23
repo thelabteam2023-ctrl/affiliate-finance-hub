@@ -360,6 +360,34 @@ export function CreateTopicDialog({
             </Select>
           </div>
 
+          {/* Subcategory (optional) */}
+          {availableSubcategories.length > 0 && (
+            <div className="space-y-2">
+              <Label>Subtópico (opcional)</Label>
+              <Select
+                value={subcategoriaSlug ?? '__none__'}
+                onValueChange={(v) => setSubcategoriaSlug(v === '__none__' ? null : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sem subtópico" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Sem subtópico</SelectItem>
+                  {availableSubcategories.map((sub) => (
+                    <SelectItem key={sub.slug} value={sub.slug}>
+                      {sub.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {kycHint && (
+                <p className="text-xs text-muted-foreground">
+                  💡 Se for sobre documentos ou aprovação de conta, escolha <strong>Verificação (KYC)</strong> — outros usuários vão te achar mais fácil.
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="titulo">Título *</Label>
