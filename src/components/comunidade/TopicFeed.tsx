@@ -2,13 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MessageSquare, User, Clock, ChevronDown, ChevronUp, Building2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { getCategoryByValue, getSubcategoryLabel, COMMUNITY_SUBCATEGORIES, type CommunityCategory } from '@/lib/communityCategories';
+import { getCategoryByValue, COMMUNITY_SUBCATEGORIES, type CommunityCategory } from '@/lib/communityCategories';
 
 interface FeedTopic {
   id: string;
