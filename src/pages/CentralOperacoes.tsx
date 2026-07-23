@@ -263,6 +263,22 @@ export default function CentralOperacoes() {
   } = centralData;
 
   // Mutable state for optimistic updates
+  // Contagem de "órfãos de reconciliação" para gatear o card auto-contido no alertCards.
+  // Sem isso, o card é sempre empurrado e infla o badge da aba Financeiro (aparece "1" fantasma).
+  const { data: orphanReconciliacoes = [] } = useQuery({
+    queryKey: ["ocorrencias-possiveis-orfaos", workspaceId],
+    enabled: !!workspaceId && allowedDomains.includes('financial_event'),
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("v_ocorrencias_possivelmente_resolvidas")
+        .select("ocorrencia_id")
+        .eq("workspace_id", workspaceId!)
+        .limit(20);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const [alertasLucro, setAlertasLucro] = useState<AlertaLucroParceiro[]>([]);
   const [parceriasEncerramento, setParceriasEncerramento] = useState<ParceriaAlertaEncerramento[]>([]);
   useEffect(() => { setAlertasLucro(alertasLucroData); }, [alertasLucroData]);
@@ -556,7 +572,7 @@ export default function CentralOperacoes() {
     }
 
     // 2.1 Ocorrências possivelmente resolvidas por reconciliação (auto-contido)
-    if (allowedDomains.includes('financial_event')) {
+    if (orphanReconciliacoes.length > 0 && allowedDomains.includes('financial_event')) {
       cards.push({
         id: "ocorrencias-orfaos",
         priority: PRIORITY.HIGH,
@@ -976,6 +992,7 @@ export default function CentralOperacoes() {
     entregasPendentes, parceirosSemParceria, pagamentosParceiros, pagamentosFornecedores, bonusPendentes, comissoesPendentes,
     parceriasEncerramento, allowedDomains, propostasPagamentoCount, casasPendentesConciliacao, navigate, mutations,
     ciclosDismissedCount, showDismissedCiclos, setShowDismissedCiclos, dismissCiclo, undismissCiclo,
+    orphanReconciliacoes,
   ]);
 
   const hasAnyAlerts = alertCards.length > 0;
