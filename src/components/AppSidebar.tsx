@@ -1,5 +1,6 @@
-import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, Settings, LogOut, Star, Shield, Calculator, StickyNote, ShieldCheck, ChevronUp, ChevronDown, Sun, Moon, Target, Layers, ArrowLeftRight, Zap, Truck, ClipboardList, CalendarDays, Activity, X, ArrowDownToLine, ArrowUpFromLine, HandCoins, Clock, MessageCircle, Globe, Beaker, AlertTriangle } from "lucide-react";
+import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, Settings, LogOut, Star, Shield, Calculator, StickyNote, ShieldCheck, ChevronUp, ChevronDown, Sun, Moon, Target, Layers, ArrowLeftRight, Zap, Truck, ClipboardList, CalendarDays, Activity, X, ArrowDownToLine, ArrowUpFromLine, HandCoins, Clock, MessageCircle, Globe, Beaker, AlertTriangle, Megaphone } from "lucide-react";
 import { useSolicitacoesKpis } from "@/hooks/useSolicitacoes";
+import { useUnreadAnnouncementsCount } from "@/hooks/useAnnouncements";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -178,6 +179,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { title: "Central", url: "/", icon: Bell, iconName: "Bell", moduleKey: "central" },
       { title: "Solicitações", url: "/solicitacoes", icon: ClipboardList, iconName: "ClipboardList", moduleKey: "central" },
+      { title: "Comunicados", url: "/comunicados", icon: Megaphone, iconName: "Megaphone", moduleKey: "central" },
       { title: "Comunidade", url: "/comunidade", icon: Users2, iconName: "Users2", moduleKey: "comunidade" },
     ],
   },
@@ -274,6 +276,7 @@ export function AppSidebar() {
   const { count: alertsCount } = useCentralAlertsCount();
   const { unreadCount: chatUnreadCount } = useChatNotifications();
   const { data: kpisSolicitacoes } = useSolicitacoesKpis();
+  const comunicadosUnread = useUnreadAnnouncementsCount();
   const { 
     workspaces: userWorkspaces, 
     pendingInvites, 
@@ -436,14 +439,17 @@ export function AppSidebar() {
     const isCentralPage = item.url === "/";
     const isSolicitacoesPage = item.url === "/solicitacoes";
     const isComunidadePage = item.url === "/comunidade";
+    const isComunicadosPage = item.url === "/comunicados";
     const solicitacoesPendentes = kpisSolicitacoes?.pendentes ?? 0;
     
     const showBadge = (isCentralPage && alertsCount > 0) || 
                      (isSolicitacoesPage && solicitacoesPendentes > 0) ||
-                     (isComunidadePage && chatUnreadCount > 0);
+                     (isComunidadePage && chatUnreadCount > 0) ||
+                     (isComunicadosPage && comunicadosUnread > 0);
                      
     const badgeCount = isSolicitacoesPage ? solicitacoesPendentes : 
-                      isComunidadePage ? chatUnreadCount : alertsCount;
+                      isComunidadePage ? chatUnreadCount :
+                      isComunicadosPage ? comunicadosUnread : alertsCount;
     const isToolLink = item.url.startsWith('#');
 
     // Estilos comuns para itens de menu
