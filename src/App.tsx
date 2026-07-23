@@ -100,6 +100,7 @@ const SharedProject = lazyWithChunkRetry(() => import("./pages/SharedProject"));
 const SupplierPortal = lazyWithChunkRetry(() => import("./pages/SupplierPortal"));
 const FornecedoresPortal = lazyWithChunkRetry(() => import("./pages/FornecedoresPortal"));
 const Solicitacoes = lazyWithChunkRetry(() => import("./pages/Solicitacoes"));
+const Comunicados = lazyWithChunkRetry(() => import("./pages/Comunicados"));
 const DevLedgerMonitor = lazyWithChunkRetry(() => import("./pages/DevLedgerMonitor"));
 const LedgerAnomalies = lazyWithChunkRetry(() => import("./pages/LedgerAnomalies"));
 const LaboratorioValueBet = lazyWithChunkRetry(() => import("./pages/LaboratorioValueBet"));
@@ -392,6 +393,15 @@ const App = () => (
               <ProtectedRoute>
                 <AuthenticatedLayout>
                   <Suspense fallback={<PageLoader />}><Solicitacoes /></Suspense>
+                </AuthenticatedLayout>
+              </ProtectedRoute>
+            } />
+
+            {/* Comunicados - Canal oficial do workspace */}
+            <Route path="/comunicados" element={
+              <ProtectedRoute>
+                <AuthenticatedLayout>
+                  <Suspense fallback={<PageLoader />}><Comunicados /></Suspense>
                 </AuthenticatedLayout>
               </ProtectedRoute>
             } />
