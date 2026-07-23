@@ -572,7 +572,7 @@ export default function CentralOperacoes() {
     }
 
     // 2.1 Ocorrências possivelmente resolvidas por reconciliação (auto-contido)
-    if (allowedDomains.includes('financial_event')) {
+    if (orphanReconciliacoes.length > 0 && allowedDomains.includes('financial_event')) {
       cards.push({
         id: "ocorrencias-orfaos",
         priority: PRIORITY.HIGH,
@@ -992,6 +992,7 @@ export default function CentralOperacoes() {
     entregasPendentes, parceirosSemParceria, pagamentosParceiros, pagamentosFornecedores, bonusPendentes, comissoesPendentes,
     parceriasEncerramento, allowedDomains, propostasPagamentoCount, casasPendentesConciliacao, navigate, mutations,
     ciclosDismissedCount, showDismissedCiclos, setShowDismissedCiclos, dismissCiclo, undismissCiclo,
+    orphanReconciliacoes,
   ]);
 
   const hasAnyAlerts = alertCards.length > 0;
