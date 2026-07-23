@@ -24,6 +24,7 @@ import { OcorrenciasModule } from "@/components/ocorrencias/OcorrenciasModule";
 import { useOcorrenciasKpis, useOcorrencias } from "@/hooks/useOcorrencias";
 import { ComunicadosPanel } from "@/components/comunicados/ComunicadosPanel";
 import { useUnreadAnnouncementsCount } from "@/hooks/useAnnouncements";
+import { AnnouncementHighlightCard } from "@/components/comunicados/AnnouncementHighlightCard";
 
 import { formatCurrency as formatCurrencyUtil } from "@/utils/formatCurrency";
 import { supabase } from "@/integrations/supabase/client";
@@ -1062,6 +1063,7 @@ export default function CentralOperacoes() {
         </TabsList>
 
         <TabsContent value="financeiro" className="mt-3 md:mt-4 space-y-3 md:space-y-4">
+          <AnnouncementHighlightCard onOpen={() => setMainTab('comunicados')} />
           {!hasAnyAlerts && (
             <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.03] backdrop-blur-sm">
               <div className="text-center py-12 md:py-16">

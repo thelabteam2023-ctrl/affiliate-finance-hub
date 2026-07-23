@@ -2,8 +2,13 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, Megaphone } from "lucide-react";
-import { useAnnouncements, type Announcement, type AnnouncementCategory } from "@/hooks/useAnnouncements";
+import { Plus, Search, Megaphone, CheckCheck } from "lucide-react";
+import {
+  useAnnouncements,
+  useMarkAllAnnouncementsRead,
+  type Announcement,
+  type AnnouncementCategory,
+} from "@/hooks/useAnnouncements";
 import { useRole } from "@/hooks/useRole";
 import { AnnouncementCard, EmptyAnnouncements } from "@/components/comunicados/AnnouncementCard";
 import { AnnouncementEditorDialog } from "@/components/comunicados/AnnouncementEditorDialog";
@@ -29,6 +34,7 @@ interface ComunicadosPanelProps {
 export function ComunicadosPanel({ showHeader = true, bare = false }: ComunicadosPanelProps) {
   const { data: announcements = [], isLoading } = useAnnouncements();
   const { canManageWorkspace } = useRole();
+  const markAll = useMarkAllAnnouncementsRead();
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<Announcement | null>(null);
   const [category, setCategory] = useState<string>("todos");
@@ -94,6 +100,17 @@ export function ComunicadosPanel({ showHeader = true, bare = false }: Comunicado
           <Button size="sm" variant={showUnread ? "default" : "outline"} onClick={() => setShowUnread((v) => !v)}>
             Não lidos {unreadCount > 0 && <span className="ml-1 rounded-full bg-primary-foreground/20 px-1.5 text-xs">{unreadCount}</span>}
           </Button>
+          {unreadCount > 0 && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => markAll.mutate()}
+              disabled={markAll.isPending}
+              title="Marcar todos como lidos"
+            >
+              <CheckCheck className="h-4 w-4 mr-1.5" /> Marcar todos como lidos
+            </Button>
+          )}
           <div className="relative flex-1 min-w-[220px]">
             <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input placeholder="Buscar comunicados…" value={q} onChange={(e) => setQ(e.target.value)} className="pl-8" />
