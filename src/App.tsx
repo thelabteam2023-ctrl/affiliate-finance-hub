@@ -5,6 +5,7 @@ import { TopBarProvider, useTopBar } from "@/contexts/TopBarContext";
 import { NotesDrawer } from "@/components/NotesDrawer";
 import { ChatDrawer } from "@/components/ChatDrawer";
 import { ChatNotificationManager } from "@/components/chat/ChatNotificationManager";
+import { AnnouncementsGlobalListener } from "@/components/comunicados/AnnouncementsGlobalListener";
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -168,6 +169,9 @@ function AuthenticatedLayoutInner({
     <SidebarProvider defaultOpen={false}>
       {/* Global Chat Notification Manager */}
       <ChatNotificationManager isChatOpen={isChatOpen} />
+
+      {/* Realtime + modal de acknowledge para Comunicados */}
+      <AnnouncementsGlobalListener />
 
       {/* Banner de aviso de inatividade */}
       {showingWarning && minutesUntilTimeout !== null && minutesUntilTimeout <= 5 && (
