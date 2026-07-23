@@ -50,13 +50,13 @@ export function FluxoTab() {
         onSelectColumn={(id) => {
           setFocusedColumnId(id);
           const el = document.getElementById(`fluxo-coluna-${id}`);
-          el?.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
+          el?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
         }}
       />
-      <div className="flex-1 min-h-0 overflow-hidden px-6 pb-6">
+      <div className="flex-1 min-h-0 overflow-x-auto no-scrollbar px-6 pb-6">
         <div className="flex gap-4 h-full w-full">
           {colunas.map(coluna => (
-            <div key={coluna.id} id={`fluxo-coluna-${coluna.id}`} className="flex flex-1 min-w-0">
+            <div key={coluna.id} id={`fluxo-coluna-${coluna.id}`} className="flex flex-1 min-w-[260px] min-w-0">
               <FluxoColuna
                 coluna={coluna}
                 cards={cards.filter(c => c.coluna_id === coluna.id)}
