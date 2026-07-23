@@ -8,13 +8,14 @@ import { Button } from '@/components/ui/button';
 import { MessageSquare, User, Clock, TrendingUp, Building2, ImageIcon } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { getCategoryByValue, type CommunityCategory } from '@/lib/communityCategories';
+import { getCategoryByValue, getSubcategoryLabel, type CommunityCategory } from '@/lib/communityCategories';
 
 interface FeedTopic {
   id: string;
   titulo: string;
   conteudo: string;
   categoria: string;
+  subcategoria_slug?: string | null;
   is_anonymous: boolean;
   created_at: string;
   user_id: string;
@@ -29,13 +30,14 @@ interface FeedTopic {
 
 interface TopicFeedProps {
   categoryFilter: CommunityCategory | null;
+  subcategoryFilter?: string | null;
   bookmakerFilter?: string | null;
   searchTerm?: string;
   sortBy: 'recent' | 'trending';
   refreshKey?: number;
 }
 
-export function TopicFeed({ categoryFilter, bookmakerFilter, searchTerm, sortBy, refreshKey = 0 }: TopicFeedProps) {
+export function TopicFeed({ categoryFilter, subcategoryFilter, bookmakerFilter, searchTerm, sortBy, refreshKey = 0 }: TopicFeedProps) {
   const navigate = useNavigate();
   const [topics, setTopics] = useState<FeedTopic[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,7 +49,7 @@ export function TopicFeed({ categoryFilter, bookmakerFilter, searchTerm, sortBy,
         .from('community_topics')
         .select(`
           id, titulo, conteudo, categoria, is_anonymous, created_at, user_id,
-          bookmaker_catalogo_id, image_urls,
+          bookmaker_catalogo_id, image_urls, subcategoria_slug,
           bookmakers_catalogo(nome, logo_url, visibility)
         `)
         .eq('status', 'ATIVO');
@@ -55,6 +57,11 @@ export function TopicFeed({ categoryFilter, bookmakerFilter, searchTerm, sortBy,
       // Category filter
       if (categoryFilter) {
         query = query.eq('categoria', categoryFilter);
+      }
+
+      // Subcategory filter
+      if (subcategoryFilter) {
+        query = (query as any).eq('subcategoria_slug', subcategoryFilter);
       }
 
       // Bookmaker filter
@@ -116,6 +123,7 @@ export function TopicFeed({ categoryFilter, bookmakerFilter, searchTerm, sortBy,
         titulo: t.titulo,
         conteudo: t.conteudo,
         categoria: t.categoria || 'casas_de_aposta',
+        subcategoria_slug: t.subcategoria_slug || null,
         is_anonymous: t.is_anonymous,
         created_at: t.created_at,
         user_id: t.user_id,
@@ -146,7 +154,7 @@ export function TopicFeed({ categoryFilter, bookmakerFilter, searchTerm, sortBy,
     } finally {
       setLoading(false);
     }
-  }, [categoryFilter, bookmakerFilter, searchTerm, sortBy]);
+  }, [categoryFilter, subcategoryFilter, bookmakerFilter, searchTerm, sortBy]);
 
   useEffect(() => {
     setLoading(true);
@@ -178,6 +186,7 @@ export function TopicFeed({ categoryFilter, bookmakerFilter, searchTerm, sortBy,
       {topics.map((topic) => {
         const cat = getCategoryByValue(topic.categoria);
         const CatIcon = cat.icon;
+        const subLabel = getSubcategoryLabel(topic.categoria, topic.subcategoria_slug);
 
         return (
           <Card
@@ -219,6 +228,12 @@ export function TopicFeed({ categoryFilter, bookmakerFilter, searchTerm, sortBy,
                     <Badge variant="outline" className="text-[10px]">
                       {cat.label}
                     </Badge>
+
+                    {subLabel && (
+                      <Badge variant="secondary" className="text-[10px]">
+                        {subLabel}
+                      </Badge>
+                    )}
 
                     {topic.bookmaker_nome && (
                       <Badge variant="secondary" className="text-[10px] gap-1">
