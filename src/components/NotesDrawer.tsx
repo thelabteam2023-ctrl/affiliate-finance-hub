@@ -317,25 +317,73 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
 
         {/* Tabs (only for Fluxo) */}
         {view === 'fluxo' && (
-          <div className="flex px-4 pt-4 gap-1 shrink-0 overflow-x-auto no-scrollbar">
-            {colunasFluxo.map((col) => (
-              <button
-                key={col.id}
-                onClick={() => setActiveTabId(col.id)}
-                className={cn(
-                  "flex-none py-2 px-3 text-xs font-medium rounded-t-md transition-all relative whitespace-nowrap",
-                  activeTabId === col.id 
-                    ? "text-white bg-[#1a1e26] border-x border-t border-[#2a2d35]" 
-                    : "text-gray-400 hover:text-gray-200"
-                )}
-              >
-                {col.nome}
-                {activeTabId === col.id && (
-                  <div className="absolute -bottom-[1px] left-0 w-full h-[1px] bg-[#1a1e26]" />
-                )}
-              </button>
-            ))}
-          </div>
+          <>
+            {/* Resumo Bar — paridade com a sidebar */}
+            <div className="px-2 pt-3">
+              <FluxoResumoBar
+                colunas={colunasFluxo}
+                cards={cards as any}
+                activeColumnId={activeTabId}
+                onSelectColumn={(id) => setActiveTabId(id)}
+              />
+            </div>
+            {/* Tabs enriquecidas com ícone + badge + dot */}
+            <div className="flex px-4 gap-1 shrink-0 overflow-x-auto no-scrollbar">
+              {colunasFluxo.map((col) => {
+                const meta = getColumnMeta(col.nome);
+                const Icon = meta.icon;
+                const colCards = cards.filter((c) => c.coluna_id === col.id);
+                const count = colCards.length;
+                const hasRecent = colCards.some(
+                  (c) => isRecent(c.updated_at) || isRecent(c.created_at)
+                );
+                const isMuted = meta.variant === 'muted';
+                const isActive = activeTabId === col.id;
+                return (
+                  <button
+                    key={col.id}
+                    onClick={() => setActiveTabId(col.id)}
+                    className={cn(
+                      "flex-none py-2 px-2.5 text-xs font-medium rounded-t-md transition-all relative whitespace-nowrap flex items-center gap-1.5",
+                      isActive
+                        ? "text-white bg-[#1a1e26] border-x border-t border-[#2a2d35]"
+                        : "text-gray-400 hover:text-gray-200",
+                      isMuted && !isActive && "opacity-70"
+                    )}
+                  >
+                    <Icon
+                      className={cn(
+                        "h-3.5 w-3.5",
+                        meta.variant === 'primary' && "text-[#00c853]",
+                        meta.variant === 'accent' && "text-amber-500",
+                        meta.variant === 'muted' && "text-gray-500",
+                        meta.variant === 'neutral' && "text-gray-400"
+                      )}
+                    />
+                    <span>{col.nome}</span>
+                    <span
+                      className={cn(
+                        "inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[9px] font-semibold border",
+                        meta.badgeClass,
+                        count === 0 && "opacity-40"
+                      )}
+                    >
+                      {count}
+                    </span>
+                    {hasRecent && !isMuted && (
+                      <span
+                        aria-label="Atividade recente"
+                        className={cn("h-1.5 w-1.5 rounded-full animate-pulse", meta.dotClass)}
+                      />
+                    )}
+                    {isActive && (
+                      <div className="absolute -bottom-[1px] left-0 w-full h-[1px] bg-[#1a1e26]" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </>
         )}
 
         {/* Categories Filter (only for Geral) */}
