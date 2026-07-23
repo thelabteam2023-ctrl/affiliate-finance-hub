@@ -53,10 +53,10 @@ export function FluxoTab() {
           el?.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
         }}
       />
-      <div className="flex-1 min-h-0 overflow-x-auto px-6 pb-6">
-        <div className="flex gap-4 h-full min-w-max">
+      <div className="flex-1 min-h-0 overflow-hidden px-6 pb-6">
+        <div className="flex gap-4 h-full w-full">
           {colunas.map(coluna => (
-            <div key={coluna.id} id={`fluxo-coluna-${coluna.id}`} className="flex">
+            <div key={coluna.id} id={`fluxo-coluna-${coluna.id}`} className="flex flex-1 min-w-0">
               <FluxoColuna
                 coluna={coluna}
                 cards={cards.filter(c => c.coluna_id === coluna.id)}
