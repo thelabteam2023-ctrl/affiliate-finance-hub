@@ -17,7 +17,6 @@ import { ptBR } from 'date-fns/locale';
 import { useNotesData } from '@/hooks/useNotesData';
 import { ContentRenderer } from '@/components/anotacoes/ContentRenderer';
 import { InsertCopyablePanel } from '@/components/anotacoes/InsertCopyablePanel';
-import { FluxoResumoBar } from '@/components/anotacoes/FluxoResumoBar';
 import { getColumnMeta, isBrandNew, isRecent, daysSince } from '@/components/anotacoes/fluxoColumnMeta';
 
 interface NotesDrawerProps {
