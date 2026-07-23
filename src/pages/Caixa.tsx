@@ -9,6 +9,7 @@ import { useTabWorkspace } from "@/hooks/useTabWorkspace";
 import { useWorkspaceChangeListener } from "@/hooks/useWorkspaceCacheClear";
 import { CAIXA_DATA_CHANGED_EVENT } from "@/hooks/useInvalidateCaixaData";
 import { CASH_REAL_TYPES } from "@/lib/cashOperationalTypes";
+import { fetchAllPaginated } from "@/lib/fetchAllPaginated";
 import { getGrupoFromCategoria, getGrupoInfo } from "@/lib/despesaGrupos";
 import { Button } from "@/components/ui/button";
 import { useTopBar } from "@/contexts/TopBarContext";
@@ -291,6 +292,13 @@ export default function Caixa() {
         .in("tipo_transacao", [...CASH_REAL_TYPES])
         .not("status", "in", "(DUPLICADO_CORRIGIDO,DUPLICADO_BLOQUEADO)");
 
+      // Push do filtro de projeto para o servidor (usa snapshot imutável)
+      if (filtroProjeto === "SEM_PROJETO") {
+        baseQuery = baseQuery.is("projeto_id_snapshot", null);
+      } else if (filtroProjeto && filtroProjeto !== "TODOS") {
+        baseQuery = baseQuery.eq("projeto_id_snapshot", filtroProjeto);
+      }
+
       if (dataInicio && dataFim) {
         const startStr = format(dataInicio, "yyyy-MM-dd");
         const endStr = format(dataFim, "yyyy-MM-dd");
@@ -304,12 +312,11 @@ export default function Caixa() {
         );
       }
 
-      const { data: allData, error: fetchError } = await baseQuery
-        .order("data_transacao", { ascending: false })
-        .range(0, 9999);
-
-      if (fetchError) throw fetchError;
-      setTransacoes(allData || []);
+      // Paginação completa: itera em batches de 1000 até esgotar (sem teto de 10k).
+      const orderedQueryFactory = () =>
+        baseQuery.order("data_transacao", { ascending: false });
+      const allData = await fetchAllPaginated<any>(orderedQueryFactory);
+      setTransacoes(allData);
 
       // Fetch reference data for names
       const { data: parceirosData } = await supabase
