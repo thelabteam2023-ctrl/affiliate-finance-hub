@@ -16,7 +16,7 @@ export function getCategoryByValue(value: string) {
   return COMMUNITY_CATEGORIES.find(c => c.value === value) || COMMUNITY_CATEGORIES[0];
 }
 
-import kycIcon from '@/assets/community/kyc-icon.jpg';
+import kycIcon from '@/assets/community/kyc-icon.png';
 
 export interface CommunitySubcategory {
   categoria: CommunityCategory;
