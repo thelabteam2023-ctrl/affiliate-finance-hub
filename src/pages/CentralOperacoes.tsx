@@ -263,6 +263,22 @@ export default function CentralOperacoes() {
   } = centralData;
 
   // Mutable state for optimistic updates
+  // Contagem de "órfãos de reconciliação" para gatear o card auto-contido no alertCards.
+  // Sem isso, o card é sempre empurrado e infla o badge da aba Financeiro (aparece "1" fantasma).
+  const { data: orphanReconciliacoes = [] } = useQuery({
+    queryKey: ["ocorrencias-possiveis-orfaos", workspaceId],
+    enabled: !!workspaceId && allowedDomains.includes('financial_event'),
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("v_ocorrencias_possivelmente_resolvidas")
+        .select("ocorrencia_id")
+        .eq("workspace_id", workspaceId!)
+        .limit(20);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const [alertasLucro, setAlertasLucro] = useState<AlertaLucroParceiro[]>([]);
   const [parceriasEncerramento, setParceriasEncerramento] = useState<ParceriaAlertaEncerramento[]>([]);
   useEffect(() => { setAlertasLucro(alertasLucroData); }, [alertasLucroData]);
