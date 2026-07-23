@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import type { Announcement, AnnouncementPriority, AnnouncementCategory } from "@/hooks/useAnnouncements";
 import { useTogglePin, useDeleteAnnouncement, useMarkAnnouncementRead } from "@/hooks/useAnnouncements";
 import { AnnouncementDrawer } from "./AnnouncementDrawer";
+import { useMarkAsReadOnView } from "@/hooks/useMarkAsReadOnView";
 
 const PRIORITY_STYLES: Record<AnnouncementPriority, { bar: string; label: string; badge: string }> = {
   critica: { bar: "bg-destructive", label: "Crítico", badge: "bg-destructive text-destructive-foreground" },
@@ -35,6 +36,10 @@ export function AnnouncementCard({ announcement, canManage, onEdit }: Props) {
   const del = useDeleteAnnouncement();
   const markRead = useMarkAnnouncementRead();
   const p = PRIORITY_STYLES[announcement.priority];
+  const viewRef = useMarkAsReadOnView<HTMLDivElement>(
+    announcement.id,
+    !!announcement.is_read,
+  );
 
   const handleOpen = () => {
     setOpen(true);
@@ -43,10 +48,14 @@ export function AnnouncementCard({ announcement, canManage, onEdit }: Props) {
 
   return (
     <>
-      <Card className={cn(
-        "relative overflow-hidden transition-all hover:shadow-md cursor-pointer",
-        !announcement.is_read && "ring-1 ring-primary/20"
-      )} onClick={handleOpen}>
+      <Card
+        ref={viewRef as any}
+        className={cn(
+          "relative overflow-hidden transition-all hover:shadow-md cursor-pointer",
+          !announcement.is_read && "ring-1 ring-primary/20 bg-primary/[0.02]"
+        )}
+        onClick={handleOpen}
+      >
         <div className={cn("absolute left-0 top-0 h-full w-1", p.bar)} />
         <div className="p-4 pl-6 space-y-3">
           <div className="flex items-start justify-between gap-3">

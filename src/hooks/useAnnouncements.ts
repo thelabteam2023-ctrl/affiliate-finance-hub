@@ -67,6 +67,44 @@ export function useUnreadAnnouncementsCount() {
   return (data ?? []).filter((a) => !a.is_read && a.status === "publicado").length;
 }
 
+/**
+ * Retorna comunicados de prioridade crítica que ainda não foram lidos
+ * pelo usuário atual — usado pelo modal de acknowledge.
+ */
+export function useCriticalUnreadAnnouncements() {
+  const { data } = useAnnouncements();
+  return (data ?? []).filter(
+    (a) => !a.is_read && a.status === "publicado" && a.priority === "critica",
+  );
+}
+
+/**
+ * Marca em lote todos os comunicados não lidos do workspace como lidos
+ * para o usuário atual.
+ */
+export function useMarkAllAnnouncementsRead() {
+  const qc = useQueryClient();
+  const { user, workspaceId } = useAuth();
+  const { data: announcements = [] } = useAnnouncements();
+  return useMutation({
+    mutationFn: async () => {
+      if (!user?.id) return;
+      const unread = announcements.filter((a) => !a.is_read);
+      if (unread.length === 0) return;
+      const rows = unread.map((a) => ({ announcement_id: a.id, user_id: user.id }));
+      const { error } = await supabase
+        .from("workspace_announcement_reads" as any)
+        .upsert(rows, { onConflict: "announcement_id,user_id" });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["announcements", workspaceId] });
+      toast.success("Comunicados marcados como lidos");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Erro ao marcar como lidos"),
+  });
+}
+
 export function useMarkAnnouncementRead() {
   const qc = useQueryClient();
   const { user, workspaceId } = useAuth();

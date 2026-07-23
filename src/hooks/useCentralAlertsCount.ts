@@ -12,6 +12,7 @@ import { useMemo } from "react";
 import { useOcorrenciasKpis } from "@/hooks/useOcorrencias";
 import { useSolicitacoesKpis } from "@/hooks/useSolicitacoes";
 import { useCentralOperacoesData } from "@/hooks/useCentralOperacoesData";
+import { useUnreadAnnouncementsCount } from "@/hooks/useAnnouncements";
 
 // Classificação de domínio dos eventos
 type EventDomain = 'project_event' | 'financial_event' | 'partner_event' | 'admin_event';
@@ -29,6 +30,7 @@ export function useCentralAlertsCount() {
   const { data, loading } = useCentralOperacoesData();
   const { data: kpisOcorrencias } = useOcorrenciasKpis();
   const { data: kpisSolicitacoes } = useSolicitacoesKpis();
+  const comunicadosUnread = useUnreadAnnouncementsCount();
 
   const financialCount = useMemo(() => {
     if (!data) return 0;
@@ -83,7 +85,8 @@ export function useCentralAlertsCount() {
   const count =
     financialCount +
     (kpisOcorrencias?.abertas_total ?? 0) +
-    (kpisSolicitacoes?.total_abertas ?? 0);
+    (kpisSolicitacoes?.total_abertas ?? 0) +
+    comunicadosUnread;
 
   return { count, loading };
 }
