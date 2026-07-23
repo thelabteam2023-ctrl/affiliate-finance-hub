@@ -42,6 +42,17 @@ export function TopicFeed({ categoryFilter, subcategoryFilter, bookmakerFilter, 
   const navigate = useNavigate();
   const [topics, setTopics] = useState<FeedTopic[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  const toggleExpand = useCallback((id: string, event?: React.MouseEvent) => {
+    event?.stopPropagation();
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
   const fetchTopics = useCallback(async () => {
     try {
