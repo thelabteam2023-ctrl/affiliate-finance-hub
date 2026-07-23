@@ -209,6 +209,26 @@ export function TopicFeed({ categoryFilter, subcategoryFilter, bookmakerFilter, 
                 </div>
 
                 <div className="flex-1 min-w-0">
+                  {/* Bookmaker header (prominent) */}
+                  {topic.bookmaker_nome && (
+                    <div className="flex items-center gap-2 mb-1.5">
+                      {topic.bookmaker_logo ? (
+                        <img
+                          src={topic.bookmaker_logo}
+                          alt={topic.bookmaker_nome}
+                          className="h-7 w-7 rounded object-contain bg-muted/30 border border-border p-0.5 shrink-0"
+                        />
+                      ) : (
+                        <div className="h-7 w-7 rounded bg-muted flex items-center justify-center shrink-0">
+                          <Building2 className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      )}
+                      <span className="font-bold text-sm text-foreground truncate">
+                        {topic.bookmaker_nome}
+                      </span>
+                    </div>
+                  )}
+
                   {/* Title */}
                   <h3 className="font-semibold text-sm leading-tight mb-1 line-clamp-2">
                     {topic.titulo}
@@ -239,17 +259,6 @@ export function TopicFeed({ categoryFilter, subcategoryFilter, bookmakerFilter, 
                     {subLabel && (
                       <Badge variant="secondary" className="text-[10px]">
                         {subLabel}
-                      </Badge>
-                    )}
-
-                    {topic.bookmaker_nome && (
-                      <Badge variant="secondary" className="text-[10px] gap-1">
-                        {topic.bookmaker_logo ? (
-                          <img src={topic.bookmaker_logo} alt="" className="h-3 w-3 object-contain" />
-                        ) : (
-                          <Building2 className="h-3 w-3" />
-                        )}
-                        {topic.bookmaker_nome}
                       </Badge>
                     )}
 
