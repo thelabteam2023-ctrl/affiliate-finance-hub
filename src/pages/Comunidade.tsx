@@ -24,6 +24,7 @@ export default function Comunidade() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'recent' | 'trending'>('recent');
   const [selectedCategory, setSelectedCategory] = useState<CommunityCategory | null>(null);
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const [bookmakerFilter, setBookmakerFilter] = useState<string | null>(null);
   const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -35,6 +36,10 @@ export default function Comunidade() {
     if (casa) {
       setBookmakerFilter(casa);
     }
+    const cat = searchParams.get('cat') as CommunityCategory | null;
+    const sub = searchParams.get('sub');
+    if (cat) setSelectedCategory(cat);
+    if (sub) setSelectedSubcategory(sub);
   }, [searchParams]);
 
   // Listen for chat drawer event
@@ -47,6 +52,14 @@ export default function Comunidade() {
   const clearBookmakerFilter = () => {
     setBookmakerFilter(null);
     searchParams.delete('casa');
+    setSearchParams(searchParams);
+  };
+
+  const handleSelectCategory = (cat: CommunityCategory | null, sub: string | null = null) => {
+    setSelectedCategory(cat);
+    setSelectedSubcategory(sub);
+    if (cat) searchParams.set('cat', cat); else searchParams.delete('cat');
+    if (sub) searchParams.set('sub', sub); else searchParams.delete('sub');
     setSearchParams(searchParams);
   };
 
@@ -116,7 +129,11 @@ export default function Comunidade() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Sidebar - Categories */}
         <div className="lg:col-span-3 space-y-6 order-2 lg:order-1">
-          <CategorySidebar selected={selectedCategory} onSelect={setSelectedCategory} />
+          <CategorySidebar
+            selected={selectedCategory}
+            selectedSub={selectedSubcategory}
+            onSelect={handleSelectCategory}
+          />
           <CommunityRadar />
         </div>
 
@@ -170,6 +187,7 @@ export default function Comunidade() {
           {/* Topic Feed */}
           <TopicFeed
             categoryFilter={selectedCategory}
+            subcategoryFilter={selectedSubcategory}
             bookmakerFilter={bookmakerFilter}
             searchTerm={searchTerm}
             sortBy={sortBy}

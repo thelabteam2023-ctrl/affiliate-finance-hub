@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useWorkspaceBookmakers } from '@/hooks/useWorkspaceBookmakers';
-import { COMMUNITY_CATEGORIES, type CommunityCategory } from '@/lib/communityCategories';
+import { COMMUNITY_CATEGORIES, getSubcategoriesFor, type CommunityCategory } from '@/lib/communityCategories';
 import {
   Dialog,
   DialogContent,
@@ -56,6 +56,7 @@ export function CreateTopicDialog({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [categoria, setCategoria] = useState<CommunityCategory>(defaultCategory || 'casas_de_aposta');
+  const [subcategoriaSlug, setSubcategoriaSlug] = useState<string | null>(null);
   const [titulo, setTitulo] = useState('');
   const [conteudo, setConteudo] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
@@ -82,6 +83,7 @@ export function CreateTopicDialog({
   useEffect(() => {
     if (open) {
       setCategoria(defaultCategory || 'casas_de_aposta');
+      setSubcategoriaSlug(null);
       setTitulo('');
       setConteudo('');
       setIsAnonymous(false);
@@ -99,6 +101,14 @@ export function CreateTopicDialog({
       imagePreviews.forEach(url => URL.revokeObjectURL(url));
     };
   }, [imagePreviews]);
+
+  // Reset subtopic when category changes
+  useEffect(() => {
+    setSubcategoriaSlug(null);
+  }, [categoria]);
+
+  const availableSubcategories = useMemo(() => getSubcategoriesFor(categoria), [categoria]);
+  const kycHint = categoria === 'casas_de_aposta' && !subcategoriaSlug;
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -205,6 +215,7 @@ export function CreateTopicDialog({
       const { error } = await supabase.from('community_topics').insert({
         user_id: user.id,
         categoria,
+        subcategoria_slug: subcategoriaSlug,
         titulo: titulo.trim(),
         conteudo: conteudo.trim(),
         is_anonymous: isAnonymous,
@@ -348,6 +359,34 @@ export function CreateTopicDialog({
               </SelectContent>
             </Select>
           </div>
+
+          {/* Subcategory (optional) */}
+          {availableSubcategories.length > 0 && (
+            <div className="space-y-2">
+              <Label>Subtópico (opcional)</Label>
+              <Select
+                value={subcategoriaSlug ?? '__none__'}
+                onValueChange={(v) => setSubcategoriaSlug(v === '__none__' ? null : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sem subtópico" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Sem subtópico</SelectItem>
+                  {availableSubcategories.map((sub) => (
+                    <SelectItem key={sub.slug} value={sub.slug}>
+                      {sub.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {kycHint && (
+                <p className="text-xs text-muted-foreground">
+                  💡 Se for sobre documentos ou aprovação de conta, escolha <strong>Verificação (KYC)</strong> — outros usuários vão te achar mais fácil.
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Title */}
           <div className="space-y-2">

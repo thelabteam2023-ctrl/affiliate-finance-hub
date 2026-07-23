@@ -3747,6 +3747,36 @@ export type Database = {
           },
         ]
       }
+      community_subcategories: {
+        Row: {
+          ativo: boolean
+          categoria: string
+          created_at: string
+          id: string
+          label: string
+          ordem: number
+          slug: string
+        }
+        Insert: {
+          ativo?: boolean
+          categoria: string
+          created_at?: string
+          id?: string
+          label: string
+          ordem?: number
+          slug: string
+        }
+        Update: {
+          ativo?: boolean
+          categoria?: string
+          created_at?: string
+          id?: string
+          label?: string
+          ordem?: number
+          slug?: string
+        }
+        Relationships: []
+      }
       community_topics: {
         Row: {
           bookmaker_catalogo_id: string | null
@@ -3762,6 +3792,7 @@ export type Database = {
           image_urls: string[] | null
           is_anonymous: boolean | null
           status: string
+          subcategoria_slug: string | null
           titulo: string
           updated_at: string
           user_id: string
@@ -3780,6 +3811,7 @@ export type Database = {
           image_urls?: string[] | null
           is_anonymous?: boolean | null
           status?: string
+          subcategoria_slug?: string | null
           titulo: string
           updated_at?: string
           user_id: string
@@ -3798,6 +3830,7 @@ export type Database = {
           image_urls?: string[] | null
           is_anonymous?: boolean | null
           status?: string
+          subcategoria_slug?: string | null
           titulo?: string
           updated_at?: string
           user_id?: string
