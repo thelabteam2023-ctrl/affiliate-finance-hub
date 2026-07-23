@@ -13142,6 +13142,132 @@ export type Database = {
           },
         ]
       }
+      workspace_announcement_reactions: {
+        Row: {
+          announcement_id: string
+          created_at: string
+          emoji: string
+          user_id: string
+        }
+        Insert: {
+          announcement_id: string
+          created_at?: string
+          emoji: string
+          user_id: string
+        }
+        Update: {
+          announcement_id?: string
+          created_at?: string
+          emoji?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_announcement_reactions_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_announcements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_announcement_reads: {
+        Row: {
+          announcement_id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          announcement_id: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          announcement_id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_announcement_reads_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_announcements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_announcements: {
+        Row: {
+          allow_comments: boolean
+          allow_reactions: boolean
+          archived_at: string | null
+          audience_roles: string[]
+          author_id: string
+          body: string
+          category: Database["public"]["Enums"]["announcement_category"]
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_pinned: boolean
+          priority: Database["public"]["Enums"]["announcement_priority"]
+          publish_at: string
+          require_read_receipt: boolean
+          status: Database["public"]["Enums"]["announcement_status"]
+          title: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          allow_comments?: boolean
+          allow_reactions?: boolean
+          archived_at?: string | null
+          audience_roles?: string[]
+          author_id: string
+          body?: string
+          category?: Database["public"]["Enums"]["announcement_category"]
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_pinned?: boolean
+          priority?: Database["public"]["Enums"]["announcement_priority"]
+          publish_at?: string
+          require_read_receipt?: boolean
+          status?: Database["public"]["Enums"]["announcement_status"]
+          title: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          allow_comments?: boolean
+          allow_reactions?: boolean
+          archived_at?: string | null
+          audience_roles?: string[]
+          author_id?: string
+          body?: string
+          category?: Database["public"]["Enums"]["announcement_category"]
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_pinned?: boolean
+          priority?: Database["public"]["Enums"]["announcement_priority"]
+          publish_at?: string
+          require_read_receipt?: boolean
+          status?: Database["public"]["Enums"]["announcement_status"]
+          title?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_announcements_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_bet_sources: {
         Row: {
           color: string | null
@@ -17088,6 +17214,10 @@ export type Database = {
         }
         Returns: number
       }
+      can_manage_announcements: {
+        Args: { _user_id: string; _workspace_id: string }
+        Returns: boolean
+      }
       can_manage_workspace: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
@@ -18122,6 +18252,10 @@ export type Database = {
         Returns: boolean
       }
       is_system_owner: { Args: { _user_id: string }; Returns: boolean }
+      is_workspace_member: {
+        Args: { _user_id: string; _workspace_id: string }
+        Returns: boolean
+      }
       is_workspace_member_active: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
@@ -18648,6 +18782,21 @@ export type Database = {
       }
     }
     Enums: {
+      announcement_category:
+        | "operacao"
+        | "regras"
+        | "produto"
+        | "manutencao"
+        | "programacao"
+        | "orientacao"
+        | "geral"
+      announcement_priority: "baixa" | "normal" | "alta" | "critica"
+      announcement_status:
+        | "rascunho"
+        | "agendado"
+        | "publicado"
+        | "expirado"
+        | "arquivado"
       app_role:
         | "master"
         | "user"
@@ -18881,6 +19030,23 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      announcement_category: [
+        "operacao",
+        "regras",
+        "produto",
+        "manutencao",
+        "programacao",
+        "orientacao",
+        "geral",
+      ],
+      announcement_priority: ["baixa", "normal", "alta", "critica"],
+      announcement_status: [
+        "rascunho",
+        "agendado",
+        "publicado",
+        "expirado",
+        "arquivado",
+      ],
       app_role: [
         "master",
         "user",
