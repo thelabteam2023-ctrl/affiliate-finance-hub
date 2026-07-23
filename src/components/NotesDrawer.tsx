@@ -17,6 +17,8 @@ import { ptBR } from 'date-fns/locale';
 import { useNotesData } from '@/hooks/useNotesData';
 import { ContentRenderer } from '@/components/anotacoes/ContentRenderer';
 import { InsertCopyablePanel } from '@/components/anotacoes/InsertCopyablePanel';
+import { FluxoResumoBar } from '@/components/anotacoes/FluxoResumoBar';
+import { getColumnMeta, isBrandNew, isRecent, daysSince } from '@/components/anotacoes/fluxoColumnMeta';
 
 interface NotesDrawerProps {
   isOpen: boolean;
@@ -139,6 +141,119 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
     })
     .sort((a, b) => a.ordem - b.ordem);
 
+  const activeColumnMeta = view === 'fluxo' && activeColumn ? getColumnMeta(activeColumn.nome) : null;
+  const isFinalizadoColumn = activeColumnMeta?.variant === 'muted';
+
+  const { recentesFluxo, arquivadosFluxo } = React.useMemo(() => {
+    if (view !== 'fluxo' || !isFinalizadoColumn) {
+      return { recentesFluxo: columnCards, arquivadosFluxo: [] as typeof columnCards };
+    }
+    const recentes: typeof columnCards = [];
+    const arquivados: typeof columnCards = [];
+    for (const c of columnCards) {
+      if (daysSince(c.updated_at || c.created_at) > 30) arquivados.push(c);
+      else recentes.push(c);
+    }
+    return { recentesFluxo: recentes, arquivadosFluxo: arquivados };
+  }, [columnCards, view, isFinalizadoColumn]);
+
+  const emptyMessageFor = (nome?: string) => {
+    const n = (nome || '').toLowerCase();
+    if (n.includes('ideia')) return 'Nenhuma ideia por aqui — capture a próxima.';
+    if (n.includes('andamento') || n.includes('progresso')) return 'Nada em execução no momento.';
+    if (n.includes('finaliz') || n.includes('concluí') || n.includes('feito')) return 'Nada finalizado ainda.';
+    return 'Nenhuma anotação aqui ainda.';
+  };
+
+  const renderNoteCard = (note: typeof columnCards[number]) => {
+    const brandNew = view === 'fluxo' && isBrandNew(note.created_at);
+    const recentlyUpdated = view === 'fluxo' && !brandNew && isRecent(note.updated_at);
+    return (
+      <div
+        key={note.id}
+        className={cn(
+          "group relative bg-[#1a1e26] border rounded-lg p-3 hover:border-white/10 transition-colors shadow-sm min-w-0 max-w-full overflow-hidden",
+          brandNew ? "border-[#00c853]/50" : "border-[#2a2d35]",
+          isFinalizadoColumn && "opacity-75"
+        )}
+      >
+        {recentlyUpdated && (
+          <span
+            aria-label="Editado recentemente"
+            className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"
+          />
+        )}
+        <div className="flex flex-wrap gap-2 mb-2">
+          {brandNew && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-[#00c853]/15 text-[#00c853] border border-[#00c853]/30 uppercase tracking-wide">
+              novo
+            </span>
+          )}
+          {note.categoria && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-[#00c853]/10 text-[#00c853] border border-[#00c853]/20">
+              <Tag className="w-2.5 h-2.5 mr-1" />
+              {note.categoria}
+            </span>
+          )}
+        </div>
+
+        {note.conteudo ? (
+          <ContentRenderer
+            content={note.conteudo}
+            compact
+            className="text-sm text-gray-200 leading-relaxed"
+          />
+        ) : (
+          <p className="text-sm italic text-gray-600">(Sem conteúdo)</p>
+        )}
+
+        <div className="flex items-center justify-between pt-3 mt-3 border-t border-[#2a2d35]">
+          <span className="text-[10px] text-gray-500">
+            {format(new Date(note.created_at), "dd MMM · HH:mm", { locale: ptBR })}
+          </span>
+
+          <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+            {view === 'fluxo' && getPrevColumnId(activeTabId) && (
+              <button
+                onClick={() => handleMoveCard(note.id, getPrevColumnId(activeTabId)!)}
+                title="Mover para coluna anterior"
+                className="p-1.5 text-gray-400 hover:text-white hover:bg-white/5 rounded transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            )}
+
+            <button
+              onClick={() => startEditing(note)}
+              title="Editar"
+              className="p-1.5 text-gray-400 hover:text-white hover:bg-white/5 rounded transition-colors"
+            >
+              <Pencil className="w-4 h-4" />
+            </button>
+
+            <button
+              onClick={() => handleDeleteCard(note.id)}
+              title="Deletar nota"
+              className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-400/10 rounded transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+
+            {view === 'fluxo' && getNextColumnId(activeTabId) && (
+              <button
+                onClick={() => handleMoveCard(note.id, getNextColumnId(activeTabId)!)}
+                title="Mover para próxima coluna"
+                className="p-1.5 text-gray-400 hover:text-white hover:bg-white/5 rounded transition-colors"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       {/* Overlay */}
@@ -202,25 +317,73 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
 
         {/* Tabs (only for Fluxo) */}
         {view === 'fluxo' && (
-          <div className="flex px-4 pt-4 gap-1 shrink-0 overflow-x-auto no-scrollbar">
-            {colunasFluxo.map((col) => (
-              <button
-                key={col.id}
-                onClick={() => setActiveTabId(col.id)}
-                className={cn(
-                  "flex-none py-2 px-3 text-xs font-medium rounded-t-md transition-all relative whitespace-nowrap",
-                  activeTabId === col.id 
-                    ? "text-white bg-[#1a1e26] border-x border-t border-[#2a2d35]" 
-                    : "text-gray-400 hover:text-gray-200"
-                )}
-              >
-                {col.nome}
-                {activeTabId === col.id && (
-                  <div className="absolute -bottom-[1px] left-0 w-full h-[1px] bg-[#1a1e26]" />
-                )}
-              </button>
-            ))}
-          </div>
+          <>
+            {/* Resumo Bar — paridade com a sidebar */}
+            <div className="px-2 pt-3">
+              <FluxoResumoBar
+                colunas={colunasFluxo}
+                cards={cards as any}
+                activeColumnId={activeTabId}
+                onSelectColumn={(id) => setActiveTabId(id)}
+              />
+            </div>
+            {/* Tabs enriquecidas com ícone + badge + dot */}
+            <div className="flex px-4 gap-1 shrink-0 overflow-x-auto no-scrollbar">
+              {colunasFluxo.map((col) => {
+                const meta = getColumnMeta(col.nome);
+                const Icon = meta.icon;
+                const colCards = cards.filter((c) => c.coluna_id === col.id);
+                const count = colCards.length;
+                const hasRecent = colCards.some(
+                  (c) => isRecent(c.updated_at) || isRecent(c.created_at)
+                );
+                const isMuted = meta.variant === 'muted';
+                const isActive = activeTabId === col.id;
+                return (
+                  <button
+                    key={col.id}
+                    onClick={() => setActiveTabId(col.id)}
+                    className={cn(
+                      "flex-none py-2 px-2.5 text-xs font-medium rounded-t-md transition-all relative whitespace-nowrap flex items-center gap-1.5",
+                      isActive
+                        ? "text-white bg-[#1a1e26] border-x border-t border-[#2a2d35]"
+                        : "text-gray-400 hover:text-gray-200",
+                      isMuted && !isActive && "opacity-70"
+                    )}
+                  >
+                    <Icon
+                      className={cn(
+                        "h-3.5 w-3.5",
+                        meta.variant === 'primary' && "text-[#00c853]",
+                        meta.variant === 'accent' && "text-amber-500",
+                        meta.variant === 'muted' && "text-gray-500",
+                        meta.variant === 'neutral' && "text-gray-400"
+                      )}
+                    />
+                    <span>{col.nome}</span>
+                    <span
+                      className={cn(
+                        "inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[9px] font-semibold border",
+                        meta.badgeClass,
+                        count === 0 && "opacity-40"
+                      )}
+                    >
+                      {count}
+                    </span>
+                    {hasRecent && !isMuted && (
+                      <span
+                        aria-label="Atividade recente"
+                        className={cn("h-1.5 w-1.5 rounded-full animate-pulse", meta.dotClass)}
+                      />
+                    )}
+                    {isActive && (
+                      <div className="absolute -bottom-[1px] left-0 w-full h-[1px] bg-[#1a1e26]" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </>
         )}
 
         {/* Categories Filter (only for Geral) */}
@@ -388,86 +551,43 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
               <div className="space-y-3">
                 {columnCards.length === 0 ? (
                   <div className="text-center py-16 bg-[#1a1e26]/30 rounded-xl border border-dashed border-[#2a2d35]">
-                    <p className="text-gray-500 text-sm italic">Nenhuma anotação aqui ainda.</p>
+                    {view === 'fluxo' && activeColumnMeta ? (() => {
+                      const EmptyIcon = activeColumnMeta.icon;
+                      return (
+                      <div className="flex flex-col items-center gap-2">
+                        <EmptyIcon
+                          className={cn(
+                            "w-6 h-6",
+                            activeColumnMeta.variant === 'primary' && "text-[#00c853]/70",
+                            activeColumnMeta.variant === 'accent' && "text-amber-500/70",
+                            activeColumnMeta.variant === 'muted' && "text-gray-500",
+                            activeColumnMeta.variant === 'neutral' && "text-gray-400"
+                          )}
+                        />
+                        <p className="text-gray-500 text-sm italic">{emptyMessageFor(activeColumn?.nome)}</p>
+                      </div>
+                    );
+                    })() : (
+                      <p className="text-gray-500 text-sm italic">Nenhuma anotação aqui ainda.</p>
+                    )}
                   </div>
                 ) : (
-                  columnCards.map((note) => (
-                    <div 
-                      key={note.id}
-                      className="group bg-[#1a1e26] border border-[#2a2d35] rounded-lg p-3 hover:border-white/10 transition-colors shadow-sm min-w-0 max-w-full overflow-hidden"
-                    >
-                      <div className="flex flex-wrap gap-2 mb-2">
-                        {note.categoria && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-[#00c853]/10 text-[#00c853] border border-[#00c853]/20">
-                            <Tag className="w-2.5 h-2.5 mr-1" />
-                            {note.categoria}
+                  <>
+                    {recentesFluxo.map(renderNoteCard)}
+                    {view === 'fluxo' && isFinalizadoColumn && arquivadosFluxo.length > 0 && (
+                      <details className="group rounded-lg border border-dashed border-[#2a2d35] bg-[#1a1e26]/30">
+                        <summary className="cursor-pointer select-none px-3 py-2 text-[11px] font-medium text-gray-400 hover:text-gray-200 flex items-center justify-between">
+                          <span>Ver arquivados (&gt; 30 dias)</span>
+                          <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[9px] font-semibold border bg-muted/40 text-gray-400 border-[#2a2d35]">
+                            {arquivadosFluxo.length}
                           </span>
-                        )}
-                      </div>
-
-                      {note.conteudo ? (
-                        <ContentRenderer
-                          content={note.conteudo}
-                          compact
-                          className="text-sm text-gray-200 leading-relaxed"
-                        />
-                      ) : (
-                        <p className="text-sm italic text-gray-600">(Sem conteúdo)</p>
-                      )}
-                      
-                      <div className="flex items-center justify-between pt-3 mt-3 border-t border-[#2a2d35]">
-                        <span className="text-[10px] text-gray-500">
-                          {format(new Date(note.created_at), "dd MMM · HH:mm", { locale: ptBR })}
-                        </span>
-                        
-                        <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                          {view === 'fluxo' && (
-                            <>
-                              {getPrevColumnId(activeTabId) && (
-                                <button 
-                                  onClick={() => handleMoveCard(note.id, getPrevColumnId(activeTabId)!)}
-                                  title="Mover para coluna anterior"
-                                  className="p-1.5 text-gray-400 hover:text-white hover:bg-white/5 rounded transition-colors"
-                                >
-                                  <ChevronLeft className="w-4 h-4" />
-                                </button>
-                              )}
-                            </>
-                          )}
-                          
-                          <button 
-                            onClick={() => startEditing(note)}
-                            title="Editar"
-                            className="p-1.5 text-gray-400 hover:text-white hover:bg-white/5 rounded transition-colors"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-
-                          <button 
-                            onClick={() => handleDeleteCard(note.id)}
-                            title="Deletar nota"
-                            className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-400/10 rounded transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                          
-                          {view === 'fluxo' && (
-                            <>
-                              {getNextColumnId(activeTabId) && (
-                                <button 
-                                  onClick={() => handleMoveCard(note.id, getNextColumnId(activeTabId)!)}
-                                  title="Mover para próxima coluna"
-                                  className="p-1.5 text-gray-400 hover:text-white hover:bg-white/5 rounded transition-colors"
-                                >
-                                  <ChevronRight className="w-4 h-4" />
-                                </button>
-                              )}
-                            </>
-                          )}
+                        </summary>
+                        <div className="p-2 space-y-3">
+                          {arquivadosFluxo.map(renderNoteCard)}
                         </div>
-                      </div>
-                    </div>
-                  ))
+                      </details>
+                    )}
+                  </>
                 )}
               </div>
             </>
