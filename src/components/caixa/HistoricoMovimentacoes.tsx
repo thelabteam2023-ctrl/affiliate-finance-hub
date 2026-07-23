@@ -518,6 +518,12 @@ export function HistoricoMovimentacoes({
   // Client-side pagination
   const pagination = usePagination(transacoesComBusca, { initialPageSize: PAGE_SIZE });
 
+  // Reset para a primeira página sempre que os filtros mudarem
+  useEffect(() => {
+    pagination.goToFirstPage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtroTipo, filtroProjeto, filtroParceiro, filtroBookmakerIds, filtroTags, termoBusca, dataInicio, dataFim]);
+
   // Period filter state
   const [periodFilter, setPeriodFilter] = useState<DashboardPeriodFilter>("tudo");
   
