@@ -551,86 +551,40 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
               <div className="space-y-3">
                 {columnCards.length === 0 ? (
                   <div className="text-center py-16 bg-[#1a1e26]/30 rounded-xl border border-dashed border-[#2a2d35]">
-                    <p className="text-gray-500 text-sm italic">Nenhuma anotação aqui ainda.</p>
+                    {view === 'fluxo' && activeColumnMeta ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <activeColumnMeta.icon
+                          className={cn(
+                            "w-6 h-6",
+                            activeColumnMeta.variant === 'primary' && "text-[#00c853]/70",
+                            activeColumnMeta.variant === 'accent' && "text-amber-500/70",
+                            activeColumnMeta.variant === 'muted' && "text-gray-500",
+                            activeColumnMeta.variant === 'neutral' && "text-gray-400"
+                          )}
+                        />
+                        <p className="text-gray-500 text-sm italic">{emptyMessageFor(activeColumn?.nome)}</p>
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 text-sm italic">Nenhuma anotação aqui ainda.</p>
+                    )}
                   </div>
                 ) : (
-                  columnCards.map((note) => (
-                    <div 
-                      key={note.id}
-                      className="group bg-[#1a1e26] border border-[#2a2d35] rounded-lg p-3 hover:border-white/10 transition-colors shadow-sm min-w-0 max-w-full overflow-hidden"
-                    >
-                      <div className="flex flex-wrap gap-2 mb-2">
-                        {note.categoria && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-[#00c853]/10 text-[#00c853] border border-[#00c853]/20">
-                            <Tag className="w-2.5 h-2.5 mr-1" />
-                            {note.categoria}
+                  <>
+                    {recentesFluxo.map(renderNoteCard)}
+                    {view === 'fluxo' && isFinalizadoColumn && arquivadosFluxo.length > 0 && (
+                      <details className="group rounded-lg border border-dashed border-[#2a2d35] bg-[#1a1e26]/30">
+                        <summary className="cursor-pointer select-none px-3 py-2 text-[11px] font-medium text-gray-400 hover:text-gray-200 flex items-center justify-between">
+                          <span>Ver arquivados (&gt; 30 dias)</span>
+                          <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[9px] font-semibold border bg-muted/40 text-gray-400 border-[#2a2d35]">
+                            {arquivadosFluxo.length}
                           </span>
-                        )}
-                      </div>
-
-                      {note.conteudo ? (
-                        <ContentRenderer
-                          content={note.conteudo}
-                          compact
-                          className="text-sm text-gray-200 leading-relaxed"
-                        />
-                      ) : (
-                        <p className="text-sm italic text-gray-600">(Sem conteúdo)</p>
-                      )}
-                      
-                      <div className="flex items-center justify-between pt-3 mt-3 border-t border-[#2a2d35]">
-                        <span className="text-[10px] text-gray-500">
-                          {format(new Date(note.created_at), "dd MMM · HH:mm", { locale: ptBR })}
-                        </span>
-                        
-                        <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                          {view === 'fluxo' && (
-                            <>
-                              {getPrevColumnId(activeTabId) && (
-                                <button 
-                                  onClick={() => handleMoveCard(note.id, getPrevColumnId(activeTabId)!)}
-                                  title="Mover para coluna anterior"
-                                  className="p-1.5 text-gray-400 hover:text-white hover:bg-white/5 rounded transition-colors"
-                                >
-                                  <ChevronLeft className="w-4 h-4" />
-                                </button>
-                              )}
-                            </>
-                          )}
-                          
-                          <button 
-                            onClick={() => startEditing(note)}
-                            title="Editar"
-                            className="p-1.5 text-gray-400 hover:text-white hover:bg-white/5 rounded transition-colors"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-
-                          <button 
-                            onClick={() => handleDeleteCard(note.id)}
-                            title="Deletar nota"
-                            className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-400/10 rounded transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                          
-                          {view === 'fluxo' && (
-                            <>
-                              {getNextColumnId(activeTabId) && (
-                                <button 
-                                  onClick={() => handleMoveCard(note.id, getNextColumnId(activeTabId)!)}
-                                  title="Mover para próxima coluna"
-                                  className="p-1.5 text-gray-400 hover:text-white hover:bg-white/5 rounded transition-colors"
-                                >
-                                  <ChevronRight className="w-4 h-4" />
-                                </button>
-                              )}
-                            </>
-                          )}
+                        </summary>
+                        <div className="p-2 space-y-3">
+                          {arquivadosFluxo.map(renderNoteCard)}
                         </div>
-                      </div>
-                    </div>
-                  ))
+                      </details>
+                    )}
+                  </>
                 )}
               </div>
             </>
