@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { FluxoColuna } from "./FluxoColuna";
+import { FluxoResumoBar } from "./FluxoResumoBar";
 import { useNotesData } from "@/hooks/useNotesData";
 
 /**
@@ -22,6 +23,7 @@ export function FluxoTab() {
   } = useNotesData();
   
   const [draggingCardId, setDraggingCardId] = useState<string | null>(null);
+  const [focusedColumnId, setFocusedColumnId] = useState<string | null>(null);
 
   if (loading) {
     return (
@@ -40,21 +42,34 @@ export function FluxoTab() {
   }
 
   return (
-    <div className="h-full overflow-x-auto px-6 pb-6">
-      <div className="flex gap-4 h-full min-w-max">
-        {colunas.map(coluna => (
-          <FluxoColuna
-            key={coluna.id}
-            coluna={coluna}
-            cards={cards.filter(c => c.coluna_id === coluna.id)}
-            onCreateCard={() => handleCreateCard(coluna.id, "")}
-            onUpdateCard={handleUpdateCard}
-            onMoveCard={handleMoveCard}
-            onDeleteCard={handleDeleteCard}
-            draggingCardId={draggingCardId}
-            setDraggingCardId={setDraggingCardId}
-          />
-        ))}
+    <div className="h-full flex flex-col min-h-0">
+      <FluxoResumoBar
+        colunas={colunas}
+        cards={cards}
+        activeColumnId={focusedColumnId}
+        onSelectColumn={(id) => {
+          setFocusedColumnId(id);
+          const el = document.getElementById(`fluxo-coluna-${id}`);
+          el?.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
+        }}
+      />
+      <div className="flex-1 min-h-0 overflow-x-auto px-6 pb-6">
+        <div className="flex gap-4 h-full min-w-max">
+          {colunas.map(coluna => (
+            <div key={coluna.id} id={`fluxo-coluna-${coluna.id}`} className="flex">
+              <FluxoColuna
+                coluna={coluna}
+                cards={cards.filter(c => c.coluna_id === coluna.id)}
+                onCreateCard={() => handleCreateCard(coluna.id, "")}
+                onUpdateCard={handleUpdateCard}
+                onMoveCard={handleMoveCard}
+                onDeleteCard={handleDeleteCard}
+                draggingCardId={draggingCardId}
+                setDraggingCardId={setDraggingCardId}
+              />
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

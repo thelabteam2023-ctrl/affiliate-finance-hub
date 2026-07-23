@@ -1,8 +1,9 @@
 import { useState, useRef } from "react";
-import { Plus } from "lucide-react";
+import { Plus, ChevronDown, ChevronRight } from "lucide-react";
 import { FluxoCardComponent } from "./FluxoCardComponent";
 import { FluxoCard } from "./types";
 import { cn } from "@/lib/utils";
+import { getColumnMeta, daysSince } from "./fluxoColumnMeta";
 
 interface FluxoColunaProps {
   coluna: { id: string; nome: string; ordem: number };
@@ -27,10 +28,25 @@ export function FluxoColuna({
 }: FluxoColunaProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [newCardId, setNewCardId] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
   const dropRef = useRef<HTMLDivElement>(null);
 
+  const meta = getColumnMeta(coluna.nome);
+  const Icon = meta.icon;
+  const isMuted = meta.variant === "muted";
+
+  // Para coluna "Finalizado" (muted): itens com >30 dias vão para arquivo colapsado
+  const ARCHIVE_THRESHOLD = 30;
+  const activeCards = isMuted
+    ? cards.filter((c) => daysSince(c.updated_at || c.created_at) < ARCHIVE_THRESHOLD)
+    : cards;
+  const archivedCards = isMuted
+    ? cards.filter((c) => daysSince(c.updated_at || c.created_at) >= ARCHIVE_THRESHOLD)
+    : [];
+
   // Ordenar cards por ordem
-  const sortedCards = [...cards].sort((a, b) => a.ordem - b.ordem);
+  const sortedCards = [...activeCards].sort((a, b) => a.ordem - b.ordem);
+  const sortedArchived = [...archivedCards].sort((a, b) => b.ordem - a.ordem);
 
   const handleAddCard = async () => {
     const cardId = await onCreateCard(coluna.id);
@@ -72,18 +88,45 @@ export function FluxoColuna({
       className={cn(
         "flex flex-col w-[420px] shrink-0 rounded-xl transition-all duration-200",
         "bg-muted/20 border border-border/30",
-        isDragOver && "ring-2 ring-primary/30 bg-muted/40"
+        isDragOver && "ring-2 ring-primary/30 bg-muted/40",
+        isMuted && "opacity-90"
       )}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {/* Header da coluna com botão adicionar */}
+      {/* Header da coluna com ícone, contador e botão adicionar */}
       <div className="shrink-0 px-3 py-3 border-b border-border/20">
-        <h3 className="text-sm font-medium text-foreground/80 tracking-tight uppercase text-center">
-          {coluna.nome}
-        </h3>
-        
+        <div className="flex items-center justify-center gap-2">
+          <Icon
+            className={cn(
+              "h-3.5 w-3.5",
+              meta.variant === "primary" && "text-primary",
+              meta.variant === "accent" && "text-amber-500",
+              meta.variant === "muted" && "text-muted-foreground",
+              meta.variant === "neutral" && "text-foreground/60"
+            )}
+          />
+          <h3
+            className={cn(
+              "text-sm font-medium tracking-tight uppercase",
+              meta.titleClass
+            )}
+          >
+            {coluna.nome}
+          </h3>
+          <span
+            className={cn(
+              "inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full",
+              "text-[10px] font-semibold border",
+              meta.badgeClass,
+              activeCards.length === 0 && "opacity-40"
+            )}
+          >
+            {activeCards.length}
+          </span>
+        </div>
+
         {/* Botão adicionar - no topo, discreto */}
         <button
           onClick={handleAddCard}
@@ -101,6 +144,14 @@ export function FluxoColuna({
 
       {/* Lista de cards */}
       <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-[200px]">
+        {sortedCards.length === 0 && (
+          <div className="text-center text-xs text-muted-foreground/50 py-8 px-2">
+            {meta.variant === "primary" && "Nenhuma ideia ainda. Capture pensamentos aqui."}
+            {meta.variant === "accent" && "Nada em execução no momento."}
+            {meta.variant === "muted" && "Nada concluído ainda."}
+            {meta.variant === "neutral" && "Vazio."}
+          </div>
+        )}
         {sortedCards.map(card => (
           <FluxoCardComponent
             key={card.id}
@@ -118,6 +169,39 @@ export function FluxoColuna({
         {/* Drop zone visual quando arrastando */}
         {isDragOver && draggingCardId && !cards.some(c => c.id === draggingCardId) && (
           <div className="h-24 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5" />
+        )}
+
+        {/* Arquivo silencioso para Finalizado */}
+        {sortedArchived.length > 0 && (
+          <div className="pt-2 border-t border-border/20">
+            <button
+              type="button"
+              onClick={() => setShowArchived((v) => !v)}
+              className="w-full flex items-center gap-1.5 py-1.5 text-[11px] text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+            >
+              {showArchived ? (
+                <ChevronDown className="h-3 w-3" />
+              ) : (
+                <ChevronRight className="h-3 w-3" />
+              )}
+              <span>Ver arquivados ({sortedArchived.length})</span>
+            </button>
+            {showArchived && (
+              <div className="space-y-3 mt-2 opacity-70">
+                {sortedArchived.map((card) => (
+                  <FluxoCardComponent
+                    key={card.id}
+                    card={card}
+                    onUpdate={onUpdateCard}
+                    onDelete={onDeleteCard}
+                    onDragStart={() => setDraggingCardId(card.id)}
+                    onDragEnd={() => setDraggingCardId(null)}
+                    isDragging={draggingCardId === card.id}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>
