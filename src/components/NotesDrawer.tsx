@@ -551,9 +551,11 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
               <div className="space-y-3">
                 {columnCards.length === 0 ? (
                   <div className="text-center py-16 bg-[#1a1e26]/30 rounded-xl border border-dashed border-[#2a2d35]">
-                    {view === 'fluxo' && activeColumnMeta ? (
+                    {view === 'fluxo' && activeColumnMeta ? (() => {
+                      const EmptyIcon = activeColumnMeta.icon;
+                      return (
                       <div className="flex flex-col items-center gap-2">
-                        <activeColumnMeta.icon
+                        <EmptyIcon
                           className={cn(
                             "w-6 h-6",
                             activeColumnMeta.variant === 'primary' && "text-[#00c853]/70",
@@ -564,7 +566,8 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({ isOpen, onClose }) => 
                         />
                         <p className="text-gray-500 text-sm italic">{emptyMessageFor(activeColumn?.nome)}</p>
                       </div>
-                    ) : (
+                    );
+                    })() : (
                       <p className="text-gray-500 text-sm italic">Nenhuma anotação aqui ainda.</p>
                     )}
                   </div>
