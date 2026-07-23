@@ -241,9 +241,6 @@ export default function ComunidadeTopico() {
     );
   }
 
-  const cat = getCategoryByValue(topic.categoria);
-  const CatIcon = cat.icon;
-
   return (
     <div className="container mx-auto p-6 max-w-3xl">
       <Button variant="ghost" onClick={() => navigate('/comunidade')} className="mb-4">
@@ -253,19 +250,6 @@ export default function ComunidadeTopico() {
       {/* Topic Header */}
       <Card className="mb-6">
         <CardContent className="p-6">
-          <div className="flex items-center gap-2 mb-3 flex-wrap">
-            <Badge variant="outline" className="gap-1 text-xs">
-              <CatIcon className={`h-3.5 w-3.5 ${cat.color}`} />
-              {cat.label}
-            </Badge>
-            {topic.bookmaker_nome && (
-              <Badge variant="secondary" className="gap-1 text-xs">
-                <Building2 className="h-3 w-3" />
-                {topic.bookmaker_nome}
-              </Badge>
-            )}
-          </div>
-
           <h1 className="text-xl font-bold mb-2">{topic.titulo}</h1>
 
           <div className="flex items-center gap-3 text-sm text-muted-foreground mb-4 flex-wrap">
