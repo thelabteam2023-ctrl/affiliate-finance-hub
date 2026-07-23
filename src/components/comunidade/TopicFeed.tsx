@@ -4,8 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import { MessageSquare, User, Clock, TrendingUp, Building2, ImageIcon } from 'lucide-react';
+import { MessageSquare, User, Clock, ChevronDown, ChevronUp, Building2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { getCategoryByValue, getSubcategoryLabel, COMMUNITY_SUBCATEGORIES, type CommunityCategory } from '@/lib/communityCategories';
@@ -41,6 +41,17 @@ export function TopicFeed({ categoryFilter, subcategoryFilter, bookmakerFilter, 
   const navigate = useNavigate();
   const [topics, setTopics] = useState<FeedTopic[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  const toggleExpand = useCallback((id: string, event?: React.MouseEvent) => {
+    event?.stopPropagation();
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
   const fetchTopics = useCallback(async () => {
     try {
@@ -190,6 +201,7 @@ export function TopicFeed({ categoryFilter, subcategoryFilter, bookmakerFilter, 
         const subInfo = topic.subcategoria_slug
           ? COMMUNITY_SUBCATEGORIES.find(s => s.categoria === topic.categoria && s.slug === topic.subcategoria_slug)
           : null;
+        const isExpanded = expandedIds.has(topic.id);
 
         return (
           <Card
@@ -200,7 +212,7 @@ export function TopicFeed({ categoryFilter, subcategoryFilter, bookmakerFilter, 
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
                 {/* Category icon */}
-                <div className="mt-0.5">
+                <div className="mt-0.5 shrink-0">
                   {subInfo?.iconUrl ? (
                     <img src={subInfo.iconUrl} alt={subInfo.label} className="h-6 w-6 object-contain" />
                   ) : (
@@ -208,74 +220,108 @@ export function TopicFeed({ categoryFilter, subcategoryFilter, bookmakerFilter, 
                   )}
                 </div>
 
+                {/* Main content */}
                 <div className="flex-1 min-w-0">
-                  {/* Bookmaker header (prominent) */}
-                  {topic.bookmaker_nome && (
-                    <div className="flex items-center gap-3 mb-2">
-                      {topic.bookmaker_logo ? (
-                        <img
-                          src={topic.bookmaker_logo}
-                          alt={topic.bookmaker_nome}
-                          className="h-10 w-10 rounded object-contain bg-muted/30 border border-border p-0.5 shrink-0"
-                        />
-                      ) : (
-                        <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0">
-                          <Building2 className="h-6 w-6 text-muted-foreground" />
+                  {/* Header: always visible */}
+                  <div className="flex items-start gap-2">
+                    <div className="flex-1 min-w-0">
+                      {/* Bookmaker header */}
+                      {topic.bookmaker_nome && (
+                        <div className="flex items-center gap-3 mb-1.5">
+                          {topic.bookmaker_logo ? (
+                            <img
+                              src={topic.bookmaker_logo}
+                              alt={topic.bookmaker_nome}
+                              className="h-10 w-10 rounded object-contain bg-muted/30 border border-border p-0.5 shrink-0"
+                            />
+                          ) : (
+                            <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0">
+                              <Building2 className="h-6 w-6 text-muted-foreground" />
+                            </div>
+                          )}
+                          <span className="font-bold text-lg text-foreground truncate">
+                            {topic.bookmaker_nome}
+                          </span>
                         </div>
                       )}
-                      <span className="font-bold text-lg text-foreground truncate">
-                        {topic.bookmaker_nome}
-                      </span>
+
+                      {/* Title */}
+                      <h3 className="font-semibold text-sm leading-tight line-clamp-2">
+                        {topic.titulo}
+                      </h3>
                     </div>
-                  )}
 
-                  {/* Title */}
-                  <h3 className="font-semibold text-sm leading-tight mb-1 line-clamp-2">
-                    {topic.titulo}
-                  </h3>
-
-                  {/* Preview */}
-                  <p className="text-xs text-muted-foreground line-clamp-1 mb-2">
-                    {topic.conteudo}
-                  </p>
-
-                  {/* Image thumbnails */}
-                  {topic.image_urls && topic.image_urls.length > 0 && (
-                    <div className="flex gap-1.5 mb-2">
-                      {topic.image_urls.slice(0, 4).map((url, i) => (
-                        <div key={i} className="h-10 w-10 rounded border border-border overflow-hidden shrink-0">
-                          <img src={url} alt="" className="w-full h-full object-cover" />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Meta row */}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant="outline" className="text-[10px]">
-                      {cat.label}
-                    </Badge>
-
-                    {subLabel && (
-                      <Badge variant="secondary" className="text-[10px]">
-                        {subLabel}
-                      </Badge>
-                    )}
-
-                    <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                      <User className="h-3 w-3" />
-                      {topic.author_name}
-                    </span>
-
-                    <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {formatDistanceToNow(new Date(topic.last_activity), { addSuffix: true, locale: ptBR })}
-                    </span>
+                    {/* Expand/collapse button */}
+                    <button
+                      type="button"
+                      onClick={(e) => toggleExpand(topic.id, e)}
+                      className="shrink-0 mt-0.5 p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      aria-expanded={isExpanded}
+                      aria-label={isExpanded ? 'Recolher tópico' : 'Expandir tópico'}
+                    >
+                      {isExpanded ? (
+                        <ChevronUp className="h-4 w-4" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" />
+                      )}
+                    </button>
                   </div>
+
+                  {/* Body: expanded only */}
+                  <AnimatePresence initial={false}>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2, ease: 'easeInOut' }}
+                        className="overflow-hidden"
+                      >
+                        {/* Preview */}
+                        <p className="text-xs text-muted-foreground mt-2 mb-2">
+                          {topic.conteudo}
+                        </p>
+
+                        {/* Image thumbnails */}
+                        {topic.image_urls && topic.image_urls.length > 0 && (
+                          <div className="flex gap-1.5 mb-2">
+                            {topic.image_urls.slice(0, 4).map((url, i) => (
+                              <div key={i} className="h-10 w-10 rounded border border-border overflow-hidden shrink-0">
+                                <img src={url} alt="" className="w-full h-full object-cover" />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Meta row */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant="outline" className="text-[10px]">
+                            {cat.label}
+                          </Badge>
+
+                          {subLabel && (
+                            <Badge variant="secondary" className="text-[10px]">
+                              {subLabel}
+                            </Badge>
+                          )}
+
+                          <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            {topic.author_name}
+                          </span>
+
+                          <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {formatDistanceToNow(new Date(topic.last_activity), { addSuffix: true, locale: ptBR })}
+                          </span>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 {/* Comment count */}
-                <div className="flex flex-col items-center shrink-0 text-muted-foreground">
+                <div className="flex flex-col items-center shrink-0 text-muted-foreground mt-0.5">
                   <MessageSquare className="h-4 w-4" />
                   <span className="text-xs font-medium">{topic.comment_count}</span>
                 </div>
