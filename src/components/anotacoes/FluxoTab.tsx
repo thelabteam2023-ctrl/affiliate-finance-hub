@@ -56,7 +56,7 @@ export function FluxoTab() {
       <div className="flex-1 min-h-0 overflow-x-auto no-scrollbar px-6 pb-6">
         <div className="flex gap-4 h-full w-full">
           {colunas.map(coluna => (
-            <div key={coluna.id} id={`fluxo-coluna-${coluna.id}`} className="flex flex-1 min-w-[260px] max-w-[400px]">
+            <div key={coluna.id} id={`fluxo-coluna-${coluna.id}`} className="flex flex-1 min-w-[260px]">
               <FluxoColuna
                 coluna={coluna}
                 cards={cards.filter(c => c.coluna_id === coluna.id)}
