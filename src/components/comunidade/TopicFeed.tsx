@@ -202,7 +202,7 @@ export function TopicFeed({ categoryFilter, subcategoryFilter, bookmakerFilter, 
                 {/* Category icon */}
                 <div className="mt-0.5">
                   {subInfo?.iconUrl ? (
-                    <img src={subInfo.iconUrl} alt={subInfo.label} className="h-6 w-6 rounded object-cover" />
+                    <img src={subInfo.iconUrl} alt={subInfo.label} className="h-6 w-6 object-contain" />
                   ) : (
                     <CatIcon className={`h-5 w-5 ${cat.color}`} />
                   )}
