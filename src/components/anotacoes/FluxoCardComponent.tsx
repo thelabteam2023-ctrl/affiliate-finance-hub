@@ -7,6 +7,7 @@ import { ContentRenderer } from "./ContentRenderer";
 import { useImageUpload } from "@/hooks/useImageUpload";
 import { useAuth } from "@/hooks/useAuth";
 import { InsertCopyablePanel } from "./InsertCopyablePanel";
+import { isBrandNew, isRecent } from "./fluxoColumnMeta";
 
 // Cores suaves estilo post-it para dark mode
 const CARD_COLORS = [
@@ -55,6 +56,8 @@ export function FluxoCardComponent({
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const cardColor = getCardColor(card.id);
+  const brandNew = isBrandNew(card.created_at);
+  const recentlyUpdated = !brandNew && isRecent(card.updated_at);
 
   // Debounced save
   const debouncedSave = useCallback(
@@ -198,9 +201,18 @@ export function FluxoCardComponent({
           "transition-all duration-200",
           "shadow-sm hover:shadow-md",
           cardColor,
-          isDragging && "opacity-50 scale-95"
+          isDragging && "opacity-50 scale-95",
+          brandNew && "ring-1 ring-primary/40 border-l-2 border-l-primary"
         )}
       >
+        {brandNew && (
+          <span className="absolute top-1 left-1 text-[9px] font-semibold uppercase tracking-wide text-primary/90 bg-primary/10 px-1.5 py-0.5 rounded">
+            novo
+          </span>
+        )}
+        {recentlyUpdated && !brandNew && (
+          <span className="absolute top-1 left-1 h-1.5 w-1.5 rounded-full bg-primary/60 animate-pulse" aria-label="Editado recentemente" />
+        )}
         {/* Botão deletar */}
         <button
           onClick={(e) => {
