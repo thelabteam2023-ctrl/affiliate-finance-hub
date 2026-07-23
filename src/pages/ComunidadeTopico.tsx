@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, MessageSquare, User, Clock, Send, Building2, Pencil, Trash2, Radio, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, MessageSquare, User, Clock, Send, Pencil, Trash2, Radio, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -18,7 +18,7 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { parseLocalDateTime } from '@/utils/dateUtils';
 import { useToast } from '@/hooks/use-toast';
-import { getCategoryByValue } from '@/lib/communityCategories';
+
 import { ModerationMenu } from '@/components/comunidade/ModerationMenu';
 import { CommunityEditDialog } from '@/components/comunidade/CommunityEditDialog';
 import { ReportButton } from '@/components/comunidade/ReportDialog';
