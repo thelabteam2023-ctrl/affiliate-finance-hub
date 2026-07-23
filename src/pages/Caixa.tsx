@@ -571,7 +571,7 @@ export default function Caixa() {
     if (workspaceId) {
       fetchData();
     }
-  }, [dataInicio, dataFim, workspaceId]);
+  }, [dataInicio, dataFim, workspaceId, filtroProjeto]);
 
   // Listener para evento global de troca de workspace
   // O refetch é garantido pelo useEffect com workspaceId como dependência.
