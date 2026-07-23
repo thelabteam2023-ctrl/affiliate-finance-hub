@@ -16,15 +16,18 @@ export function getCategoryByValue(value: string) {
   return COMMUNITY_CATEGORIES.find(c => c.value === value) || COMMUNITY_CATEGORIES[0];
 }
 
+import kycIcon from '@/assets/community/kyc-icon.jpg';
+
 export interface CommunitySubcategory {
   categoria: CommunityCategory;
   slug: string;
   label: string;
   ordem: number;
+  iconUrl?: string;
 }
 
 export const COMMUNITY_SUBCATEGORIES: CommunitySubcategory[] = [
-  { categoria: 'casas_de_aposta', slug: 'kyc', label: 'Verificação (KYC)', ordem: 1 },
+  { categoria: 'casas_de_aposta', slug: 'kyc', label: 'Verificação (KYC)', ordem: 1, iconUrl: kycIcon },
   { categoria: 'casas_de_aposta', slug: 'limitacoes', label: 'Limitações e Bloqueios', ordem: 2 },
   { categoria: 'casas_de_aposta', slug: 'suporte', label: 'Suporte / Atendimento', ordem: 3 },
   { categoria: 'casas_de_aposta', slug: 'odds', label: 'Odds e Mercados', ordem: 4 },

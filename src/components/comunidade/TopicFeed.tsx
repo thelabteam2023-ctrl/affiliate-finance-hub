@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { MessageSquare, User, Clock, TrendingUp, Building2, ImageIcon } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { getCategoryByValue, getSubcategoryLabel, type CommunityCategory } from '@/lib/communityCategories';
+import { getCategoryByValue, getSubcategoryLabel, COMMUNITY_SUBCATEGORIES, type CommunityCategory } from '@/lib/communityCategories';
 
 interface FeedTopic {
   id: string;
@@ -187,6 +187,9 @@ export function TopicFeed({ categoryFilter, subcategoryFilter, bookmakerFilter, 
         const cat = getCategoryByValue(topic.categoria);
         const CatIcon = cat.icon;
         const subLabel = getSubcategoryLabel(topic.categoria, topic.subcategoria_slug);
+        const subInfo = topic.subcategoria_slug
+          ? COMMUNITY_SUBCATEGORIES.find(s => s.categoria === topic.categoria && s.slug === topic.subcategoria_slug)
+          : null;
 
         return (
           <Card
@@ -198,7 +201,11 @@ export function TopicFeed({ categoryFilter, subcategoryFilter, bookmakerFilter, 
               <div className="flex items-start gap-3">
                 {/* Category icon */}
                 <div className="mt-0.5">
-                  <CatIcon className={`h-5 w-5 ${cat.color}`} />
+                  {subInfo?.iconUrl ? (
+                    <img src={subInfo.iconUrl} alt={subInfo.label} className="h-6 w-6 rounded object-cover" />
+                  ) : (
+                    <CatIcon className={`h-5 w-5 ${cat.color}`} />
+                  )}
                 </div>
 
                 <div className="flex-1 min-w-0">
@@ -237,7 +244,11 @@ export function TopicFeed({ categoryFilter, subcategoryFilter, bookmakerFilter, 
 
                     {topic.bookmaker_nome && (
                       <Badge variant="secondary" className="text-[10px] gap-1">
-                        <Building2 className="h-3 w-3" />
+                        {topic.bookmaker_logo ? (
+                          <img src={topic.bookmaker_logo} alt="" className="h-3 w-3 object-contain" />
+                        ) : (
+                          <Building2 className="h-3 w-3" />
+                        )}
                         {topic.bookmaker_nome}
                       </Badge>
                     )}
