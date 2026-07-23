@@ -197,7 +197,6 @@ export function TopicFeed({ categoryFilter, subcategoryFilter, bookmakerFilter, 
       {topics.map((topic) => {
         const cat = getCategoryByValue(topic.categoria);
         const CatIcon = cat.icon;
-        const subLabel = getSubcategoryLabel(topic.categoria, topic.subcategoria_slug);
         const subInfo = topic.subcategoria_slug
           ? COMMUNITY_SUBCATEGORIES.find(s => s.categoria === topic.categoria && s.slug === topic.subcategoria_slug)
           : null;
@@ -293,18 +292,8 @@ export function TopicFeed({ categoryFilter, subcategoryFilter, bookmakerFilter, 
                           </div>
                         )}
 
-                        {/* Meta row */}
+                        {/* Meta row: autor e tempo */}
                         <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant="outline" className="text-[10px]">
-                            {cat.label}
-                          </Badge>
-
-                          {subLabel && (
-                            <Badge variant="secondary" className="text-[10px]">
-                              {subLabel}
-                            </Badge>
-                          )}
-
                           <span className="text-[10px] text-muted-foreground flex items-center gap-1">
                             <User className="h-3 w-3" />
                             {topic.author_name}
