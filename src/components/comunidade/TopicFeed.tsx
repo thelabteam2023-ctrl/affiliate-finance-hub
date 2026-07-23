@@ -2,13 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MessageSquare, User, Clock, ChevronDown, ChevronUp, Building2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { getCategoryByValue, getSubcategoryLabel, COMMUNITY_SUBCATEGORIES, type CommunityCategory } from '@/lib/communityCategories';
+import { getCategoryByValue, COMMUNITY_SUBCATEGORIES, type CommunityCategory } from '@/lib/communityCategories';
 
 interface FeedTopic {
   id: string;
@@ -197,7 +196,6 @@ export function TopicFeed({ categoryFilter, subcategoryFilter, bookmakerFilter, 
       {topics.map((topic) => {
         const cat = getCategoryByValue(topic.categoria);
         const CatIcon = cat.icon;
-        const subLabel = getSubcategoryLabel(topic.categoria, topic.subcategoria_slug);
         const subInfo = topic.subcategoria_slug
           ? COMMUNITY_SUBCATEGORIES.find(s => s.categoria === topic.categoria && s.slug === topic.subcategoria_slug)
           : null;
@@ -293,18 +291,8 @@ export function TopicFeed({ categoryFilter, subcategoryFilter, bookmakerFilter, 
                           </div>
                         )}
 
-                        {/* Meta row */}
+                        {/* Meta row: autor e tempo */}
                         <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant="outline" className="text-[10px]">
-                            {cat.label}
-                          </Badge>
-
-                          {subLabel && (
-                            <Badge variant="secondary" className="text-[10px]">
-                              {subLabel}
-                            </Badge>
-                          )}
-
                           <span className="text-[10px] text-muted-foreground flex items-center gap-1">
                             <User className="h-3 w-3" />
                             {topic.author_name}
