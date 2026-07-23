@@ -22,6 +22,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { OcorrenciasModule } from "@/components/ocorrencias/OcorrenciasModule";
 import { useOcorrenciasKpis, useOcorrencias } from "@/hooks/useOcorrencias";
+import { ComunicadosPanel } from "@/components/comunicados/ComunicadosPanel";
+import { useUnreadAnnouncementsCount } from "@/hooks/useAnnouncements";
 
 import { formatCurrency as formatCurrencyUtil } from "@/utils/formatCurrency";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,7 +41,7 @@ import {
   AlertTriangle, Bell, Clock, DollarSign, Building2, User, Calendar,
   RefreshCw, Loader2, FolderKanban, Package, Target, Users, Banknote,
   CheckCircle2, TrendingUp, Gift, Zap, UserPlus, ShieldAlert, Unlink,
-  Wallet, Ghost, Truck, MoreVertical, Undo2, XCircle,
+  Wallet, Ghost, Truck, MoreVertical, Undo2, XCircle, Megaphone,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -248,6 +250,7 @@ export default function CentralOperacoes() {
   const { data: activeOcorrencias = [] } = useOcorrencias({
     status: ['aberto', 'em_andamento', 'aguardando_terceiro'],
   });
+  const comunicadosUnread = useUnreadAnnouncementsCount();
 
   
 
@@ -373,10 +376,10 @@ export default function CentralOperacoes() {
   // Conciliação direta modal
   const [conciliacaoDirectOpen, setConciliacaoDirectOpen] = useState(false);
   const [conciliacaoDirectBookmaker, setConciliacaoDirectBookmaker] = useState<{ id: string; nome: string }>({ id: "", nome: "" });
-  const [mainTab, setMainTabState] = useState<'financeiro' | 'contas' | 'ocorrencias'>(() => {
+  const [mainTab, setMainTabState] = useState<'financeiro' | 'contas' | 'ocorrencias' | 'comunicados'>(() => {
     const saved = localStorage.getItem('central-operacoes-main-tab');
     if (role === 'operator') return 'financeiro';
-    if (saved === 'financeiro' || saved === 'contas' || saved === 'ocorrencias') return saved;
+    if (saved === 'financeiro' || saved === 'contas' || saved === 'ocorrencias' || saved === 'comunicados') return saved;
     return 'financeiro';
   });
 
@@ -1048,6 +1051,11 @@ export default function CentralOperacoes() {
             Ocorrências
             {activeOcorrencias.length > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">{activeOcorrencias.length}</span>}
           </TabsTrigger>
+          <TabsTrigger value="comunicados" className="relative text-xs md:text-sm">
+            <Megaphone className="h-3.5 w-3.5 mr-1" />
+            Comunicados
+            {comunicadosUnread > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold leading-none">{comunicadosUnread}</span>}
+          </TabsTrigger>
 
           {/* Alertas tab removed */}
 
@@ -1108,6 +1116,9 @@ export default function CentralOperacoes() {
         </TabsContent>
 
         <TabsContent value="ocorrencias" className="mt-4"><OcorrenciasModule /></TabsContent>
+        <TabsContent value="comunicados" className="mt-4">
+          <ComunicadosPanel showHeader={false} bare />
+        </TabsContent>
         <TabsContent value="alertas" className="mt-4">
           <div className="flex flex-col items-center justify-center py-24 text-center"><p className="text-muted-foreground">Em breve: Alertas automáticos do sistema.</p></div>
         </TabsContent>

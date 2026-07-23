@@ -179,7 +179,6 @@ const menuGroups: MenuGroup[] = [
     items: [
       { title: "Central", url: "/", icon: Bell, iconName: "Bell", moduleKey: "central" },
       { title: "Solicitações", url: "/solicitacoes", icon: ClipboardList, iconName: "ClipboardList", moduleKey: "central" },
-      { title: "Comunicados", url: "/comunicados", icon: Megaphone, iconName: "Megaphone", moduleKey: "central" },
       { title: "Comunidade", url: "/comunidade", icon: Users2, iconName: "Users2", moduleKey: "comunidade" },
     ],
   },
