@@ -39,7 +39,7 @@ import { EditarTagsDialog } from "./EditarTagsDialog";
 import { canRevert, canDelete } from "@/lib/movimentacaoEligibility";
 import { useRole } from "@/hooks/useRole";
 import { BookmakerFilterCombobox, type BookmakerFilterOption } from "@/components/ui/bookmaker-filter-combobox";
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 20;
 
 const TX_TYPES: Record<string, { icon: string, color: string, bg: string, label: string, badgeBg?: string }> = {
   APORTE:        { icon: 'ti-building-bank',     color: '#22c55e', bg: 'transparent', badgeBg: '#0c2a1a', label: 'Aporte' },
