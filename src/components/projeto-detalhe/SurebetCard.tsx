@@ -15,6 +15,8 @@ import { SurebetPernaResultPill } from "@/components/apostas/SurebetPernaResultP
 import { formatCurrency as formatCurrencyUtil } from "@/utils/formatCurrency";
 import { CurrencyBadge } from "@/components/ui/currency-display";
 import { SurebetTracePanel } from "./SurebetTracePanel";
+import { convertPernaToConsolidacao } from "@/lib/currency-conversion-snapshot";
+import { stakeTraceLog } from "@/lib/debug/stakeTraceLogger";
 import { liquidationQueue } from "@/utils/surebetLiquidationQueue";
 import { expandLegsWithSubEntries, generateLiquidationOptions } from "@/utils/surebetLiquidationUtils";
 import { calculatePnlProjections } from "@/utils/surebetPnlProjection";
@@ -837,18 +839,53 @@ export function SurebetCard({
     return surebet.pernas.reduce((sum, p) => {
       if (p.entries && p.entries.length > 0) {
         return sum + p.entries.reduce(
-          (s, e) => s + convertToConsolidation(e.stake || 0, e.moeda || "BRL"),
+          (s, e) => s + convertPernaToConsolidacao(
+            {
+              valor: e.stake || 0,
+              moedaOrigem: e.moeda || "BRL",
+              cotacaoSnapshot: (e as any).cotacao_snapshot ?? null,
+              stakeBrlReferencia: (e as any).stake_brl_referencia ?? null,
+            },
+            { moedaConsolidacao: moedaConsolidacao || "BRL", convertToConsolidationFallback: convertToConsolidation },
+          ),
           0,
         );
       }
-      return sum + convertToConsolidation(p.stake_total || p.stake || 0, p.moeda || "BRL");
+      return sum + convertPernaToConsolidacao(
+        {
+          valor: p.stake_total || p.stake || 0,
+          moedaOrigem: p.moeda || "BRL",
+          cotacaoSnapshot: (p as any).cotacao_snapshot ?? null,
+          stakeBrlReferencia: (p as any).stake_brl_referencia ?? null,
+        },
+        { moedaConsolidacao: moedaConsolidacao || "BRL", convertToConsolidationFallback: convertToConsolidation },
+      );
     }, 0);
   })();
 
   const stakeRealTotal = (() => {
     if (needsConsolidation) {
+      // PRIORIDADE (fonte-única para stake consolidada em multicurrency):
+      //   1º  surebet.stake_consolidado  → snapshot congelado no banco (determinístico)
+      //   2º  stakeConsolidadoFallback   → recalculo por perna via convertPernaToConsolidacao
+      //   3º  surebet.stake_total        → soma nativa (última defesa)
+      // Motivo: usar o fallback antes do snapshot fazia o valor exibido derivar com a
+      // Cotação de Trabalho vigente, divergindo do stake_consolidado gravado no ledger
+      // e das telas Bônus / ApostaCard que já respeitam essa hierarquia.
+      if (typeof surebet.stake_consolidado === "number") {
+        if (typeof stakeConsolidadoFallback === "number" && Math.abs(surebet.stake_consolidado - stakeConsolidadoFallback) > 0.01) {
+          stakeTraceLog({
+            apostaId: surebet.id,
+            source: "SurebetCard",
+            snapshot: surebet.stake_consolidado,
+            recomputed: stakeConsolidadoFallback,
+            delta: surebet.stake_consolidado - stakeConsolidadoFallback,
+            moedaConsolidacao,
+          });
+        }
+        return surebet.stake_consolidado;
+      }
       if (typeof stakeConsolidadoFallback === "number") return stakeConsolidadoFallback;
-      if (typeof surebet.stake_consolidado === "number") return surebet.stake_consolidado;
       return surebet.stake_total;
     }
 
