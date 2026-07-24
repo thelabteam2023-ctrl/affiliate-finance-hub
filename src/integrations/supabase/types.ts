@@ -1254,6 +1254,81 @@ export type Database = {
           },
         ]
       }
+      audit_stake_reprocess_20260724: {
+        Row: {
+          consolidation_currency: string | null
+          delta_pl: number | null
+          delta_stake: number | null
+          evento: string | null
+          executed_at: string
+          id: string
+          is_multicurrency_antes: boolean | null
+          is_multicurrency_depois: boolean | null
+          lucro_realizado_antes: number | null
+          lucro_realizado_depois: number | null
+          pl_consolidado_antes: number | null
+          pl_consolidado_depois: number | null
+          projeto_id: string | null
+          projeto_nome: string | null
+          resultado: string | null
+          retorno_consolidado_antes: number | null
+          retorno_consolidado_depois: number | null
+          roi_realizado_antes: number | null
+          roi_realizado_depois: number | null
+          stake_consolidado_antes: number | null
+          stake_consolidado_depois: number | null
+          status: string | null
+        }
+        Insert: {
+          consolidation_currency?: string | null
+          delta_pl?: number | null
+          delta_stake?: number | null
+          evento?: string | null
+          executed_at?: string
+          id: string
+          is_multicurrency_antes?: boolean | null
+          is_multicurrency_depois?: boolean | null
+          lucro_realizado_antes?: number | null
+          lucro_realizado_depois?: number | null
+          pl_consolidado_antes?: number | null
+          pl_consolidado_depois?: number | null
+          projeto_id?: string | null
+          projeto_nome?: string | null
+          resultado?: string | null
+          retorno_consolidado_antes?: number | null
+          retorno_consolidado_depois?: number | null
+          roi_realizado_antes?: number | null
+          roi_realizado_depois?: number | null
+          stake_consolidado_antes?: number | null
+          stake_consolidado_depois?: number | null
+          status?: string | null
+        }
+        Update: {
+          consolidation_currency?: string | null
+          delta_pl?: number | null
+          delta_stake?: number | null
+          evento?: string | null
+          executed_at?: string
+          id?: string
+          is_multicurrency_antes?: boolean | null
+          is_multicurrency_depois?: boolean | null
+          lucro_realizado_antes?: number | null
+          lucro_realizado_depois?: number | null
+          pl_consolidado_antes?: number | null
+          pl_consolidado_depois?: number | null
+          projeto_id?: string | null
+          projeto_nome?: string | null
+          resultado?: string | null
+          retorno_consolidado_antes?: number | null
+          retorno_consolidado_depois?: number | null
+          roi_realizado_antes?: number | null
+          roi_realizado_depois?: number | null
+          stake_consolidado_antes?: number | null
+          stake_consolidado_depois?: number | null
+          status?: string | null
+        }
+        Relationships: []
+      }
       bancos: {
         Row: {
           codigo: string
