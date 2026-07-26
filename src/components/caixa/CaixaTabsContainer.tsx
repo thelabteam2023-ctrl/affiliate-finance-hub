@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { FluxoFinanceiroOperacional } from "./FluxoFinanceiroOperacional";
 import { HistoricoMovimentacoes } from "./HistoricoMovimentacoes";
 import { ConciliacaoSaldos } from "./ConciliacaoSaldos";
+import { PerdasOperacionaisCard } from "./PerdasOperacionaisCard";
 import type { PendingTransaction } from "@/hooks/usePendingTransactions";
 
 interface LabelInfo {
@@ -49,6 +50,9 @@ interface CaixaTabsContainerProps {
   saldoBookmakers: number;
   onRefresh: () => void;
   initialTab?: string;
+  workspaceId?: string | null;
+  cotacaoUsdBrl?: number;
+  onDrillDownPerda?: (tipoFilter: string) => void;
 }
 
 export function CaixaTabsContainer({
@@ -85,6 +89,9 @@ export function CaixaTabsContainer({
   saldoBookmakers,
   onRefresh,
   initialTab = "analise",
+  workspaceId,
+  cotacaoUsdBrl,
+  onDrillDownPerda,
 }: CaixaTabsContainerProps) {
   const [activeTab, setActiveTab] = useState(initialTab);
 
@@ -138,6 +145,22 @@ export function CaixaTabsContainer({
 
 
         <TabsContent value="analise" className="mt-0 p-4">
+          <div className="mb-4">
+            <PerdasOperacionaisCard
+              workspaceId={workspaceId}
+              dataInicio={dataInicio}
+              dataFim={dataFim}
+              cotacaoUsdBrl={cotacaoUsdBrl}
+              onDrillDown={(categoria) => {
+                const map: Record<string, string> = {
+                  PERDA_ATIVO: "PERDA_ATIVO",
+                  PERDA_SCAN: "PERDA_OPERACIONAL",
+                  PERDA_CAMBIAL: "PERDA_CAMBIAL",
+                };
+                onDrillDownPerda?.(map[categoria] ?? categoria);
+              }}
+            />
+          </div>
           <FluxoFinanceiroOperacional
             transacoes={transacoes}
             dataInicio={dataInicio}
