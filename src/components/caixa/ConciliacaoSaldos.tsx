@@ -787,15 +787,15 @@ export function ConciliacaoSaldos({
                           </TooltipProvider>
                         )}
 
-                        {/* Botão Reportar perda — discreto, pois é caso excepcional */}
+                        {/* Botão Reportar perda - crypto em trânsito (fundos NÃO voltam) */}
                         {isCrypto && t.transit_status === "PENDING" && t.origem_wallet_id && (
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-8 w-8 text-amber-500/70 hover:text-amber-500 hover:bg-amber-500/10"
+                                  size="sm"
+                                  variant="outline"
+                                  className="gap-2 text-destructive border-destructive/30 hover:bg-destructive/10"
                                   onClick={() => {
                                     setPerdaTransitTx({
                                       id: t.id,
@@ -807,7 +807,7 @@ export function ConciliacaoSaldos({
                                   }}
                                 >
                                   <AlertTriangle className="h-4 w-4" />
-                                  <span className="sr-only">Reportar perda em trânsito</span>
+                                  Reportar perda
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>

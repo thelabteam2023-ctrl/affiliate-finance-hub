@@ -442,12 +442,41 @@ export function ConciliacaoDirectModal({
           </div>
         </div>
 
-        <DialogFooter className="flex-col gap-4 sm:gap-5">
-          {/* Primary flow actions */}
-          <div className="flex flex-col-reverse sm:flex-row gap-2 w-full">
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <div className="flex flex-wrap gap-2 sm:mr-auto">
+            {/* Falhar button */}
             <Button
               variant="outline"
-              className="w-full sm:w-auto"
+              className="gap-2 text-destructive border-destructive/30 hover:bg-destructive/10"
+              onClick={() => handleFail(selectedTx)}
+              disabled={saving || failingId === selectedTx.id}
+            >
+              {failingId === selectedTx.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <XCircle className="h-4 w-4" />
+              )}
+              Falhar
+            </Button>
+
+            {/* Reportar perda em trânsito (apenas crypto com transit PENDING) */}
+            {isCrypto && selectedTx.transit_status === "PENDING" && (
+              <Button
+                variant="outline"
+                className="gap-2 text-amber-500 border-amber-500/30 hover:bg-amber-500/10"
+                onClick={() => setPerdaTx(selectedTx)}
+                disabled={saving}
+                title="Reportar perda em trânsito (rede/endereço incorreto)"
+              >
+                <AlertTriangle className="h-4 w-4" />
+                Reportar perda
+              </Button>
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
               onClick={() => {
                 if (transactions.length > 1) {
                   setStep("list");
@@ -460,51 +489,19 @@ export function ConciliacaoDirectModal({
             >
               {transactions.length > 1 ? "Voltar" : "Cancelar"}
             </Button>
-            <Button
-              className="w-full sm:w-auto gap-2"
-              onClick={handleConfirm}
-              disabled={saving || !valorConfirmado}
-            >
+            <Button onClick={handleConfirm} disabled={saving || !valorConfirmado}>
               {saving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Confirmando...
+                </>
               ) : (
-                <CheckCircle2 className="h-4 w-4" />
+                <>
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Confirmar
+                </>
               )}
-              {saving ? "Confirmando..." : "Confirmar"}
             </Button>
-          </div>
-
-          {/* Exception actions — separated visually */}
-          <div className="flex items-center justify-between sm:justify-start gap-2 w-full border-t border-border/50 pt-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-2 text-destructive hover:bg-destructive/10"
-              onClick={() => handleFail(selectedTx)}
-              disabled={saving || failingId === selectedTx.id}
-            >
-              {failingId === selectedTx.id ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <XCircle className="h-4 w-4" />
-              )}
-              Falhar
-            </Button>
-
-            {/* Reportar perda em trânsito — discreto, pois é caso excepcional */}
-            {isCrypto && selectedTx.transit_status === "PENDING" && (
-              <Button
-                variant="link"
-                size="sm"
-                className="gap-1.5 text-xs text-amber-500/70 hover:text-amber-500 px-0"
-                onClick={() => setPerdaTx(selectedTx)}
-                disabled={saving}
-                title="Reportar perda em trânsito (rede/endereço incorreto)"
-              >
-                <AlertTriangle className="h-3.5 w-3.5" />
-                Reportar perda
-              </Button>
-            )}
           </div>
         </DialogFooter>
       </>
