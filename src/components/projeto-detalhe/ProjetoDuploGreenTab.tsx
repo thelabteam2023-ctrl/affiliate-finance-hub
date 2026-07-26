@@ -19,6 +19,7 @@ import { reliquidarAposta, liquidarPernaSurebet } from "@/services/aposta/Aposta
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { useCrossWindowSync } from "@/hooks/useCrossWindowSync";
+import { useInvalidateAfterMutation } from "@/hooks/useInvalidateAfterMutation";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -1065,12 +1066,14 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
   }, [projetoId, novaEntradaEdit]);
 
   // Hook centralizado para sincronização cross-window
+  const invalidateAfterMutation = useInvalidateAfterMutation();
   useCrossWindowSync({
     projetoId,
-    onSync: useCallback(() => {
-      fetchData();
+    onSync: useCallback(async () => {
+      await fetchData();
+      await invalidateAfterMutation(projetoId);
       onDataChange?.();
-    }, [onDataChange]),
+    }, [onDataChange, invalidateAfterMutation, projetoId]),
   });
   const handleModeToggle = () => { setIsTransitioning(true); setTimeout(() => { setNavMode(p => p === "tabs" ? "sidebar" : "tabs"); setTimeout(() => setIsTransitioning(false), 50); }, 150); };
   const handleNavTabChange = (v: string) => { if (v !== activeNavTab) { setIsTransitioning(true); setActiveNavTab(v as NavTabValue); setTimeout(() => setIsTransitioning(false), 180); } };
