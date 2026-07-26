@@ -18,6 +18,7 @@ import { reliquidarAposta } from "@/services/aposta/ApostaService";
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { useCrossWindowSync } from "@/hooks/useCrossWindowSync";
+import { useInvalidateAfterMutation } from "@/hooks/useInvalidateAfterMutation";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -903,12 +904,14 @@ export function ProjetoPunterTab({
   }, [projetoId, novaEntradaEdit]);
 
   // Hook centralizado para sincronização cross-window
+  const invalidateAfterMutation = useInvalidateAfterMutation();
   useCrossWindowSync({
     projetoId,
-    onSync: useCallback(() => {
-      fetchData();
+    onSync: useCallback(async () => {
+      await fetchData();
+      await invalidateAfterMutation(projetoId);
       onDataChange?.();
-    }, [onDataChange]),
+    }, [onDataChange, invalidateAfterMutation, projetoId]),
   });
 
   const handleApostaUpdated = () => {
