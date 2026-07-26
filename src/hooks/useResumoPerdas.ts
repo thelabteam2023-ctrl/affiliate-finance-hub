@@ -45,7 +45,7 @@ export function useResumoPerdas(workspaceId: string | null | undefined, start?: 
         setError(err.message);
         setData(EMPTY);
       } else {
-        setData((res as ResumoPerdas) ?? EMPTY);
+        setData((res as unknown as ResumoPerdas) ?? EMPTY);
       }
       setLoading(false);
     })();
