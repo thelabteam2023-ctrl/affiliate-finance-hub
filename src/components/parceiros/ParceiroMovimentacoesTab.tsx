@@ -481,6 +481,16 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
       return { principal: "Despesa Externa", tipo: "despesa" };
     }
 
+    // PERDA_ATIVO: destino conceitual (ativo irrecuperável, sem contraparte)
+    if (transacao.tipo_transacao === "PERDA_ATIVO") {
+      return { principal: "Ativo Perdido", tipo: "despesa" };
+    }
+
+    // PERDA_OPERACIONAL (Scan): destino conceitual (perda de capital)
+    if (transacao.tipo_transacao === "PERDA_OPERACIONAL") {
+      return { principal: "Perda de Capital", tipo: "despesa" };
+    }
+
     // Caixa Operacional
     if (transacao.destino_tipo === "CAIXA_OPERACIONAL") {
       return { principal: "Caixa Operacional", tipo: "caixa" };
