@@ -121,6 +121,13 @@ export function ConciliacaoSaldos({
   const [saving, setSaving] = useState(false);
   const [failingId, setFailingId] = useState<string | null>(null);
   const [openingId, setOpeningId] = useState<string | null>(null); // Proteção contra duplo clique
+  const [perdaTransitOpen, setPerdaTransitOpen] = useState(false);
+  const [perdaTransitTx, setPerdaTransitTx] = useState<{
+    id: string;
+    valorUsd: number;
+    coin: string | null;
+    qtdCoin: number | null;
+  } | null>(null);
   
   // Paginação server-side para o histórico
   const pagination = useServerPagination({ initialPageSize: PAGE_SIZE });
