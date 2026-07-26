@@ -18617,6 +18617,16 @@ export type Database = {
         Args: { p_new_price_id?: string; p_workspace_id: string }
         Returns: string
       }
+      reportar_perda_transit_wallet: {
+        Args: {
+          p_hash?: string
+          p_ledger_id: string
+          p_motivo: string
+          p_observacao?: string
+          p_rede?: string
+        }
+        Returns: Json
+      }
       reprocessar_ledger_workspace: {
         Args: { p_workspace_id: string }
         Returns: Json
