@@ -776,6 +776,7 @@ export default function Caixa() {
       SWAP_OUT: "Swap Interno",
       SWAP_IN: "Swap Interno",
       PERDA_OPERACIONAL: "Scan",
+      PERDA_ATIVO: "Ativo Perdido",
     };
     const base = labels[tipo] || tipo;
     
