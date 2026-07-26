@@ -61,6 +61,7 @@ export const CASH_REAL_TYPES = [
   'SWAP_OUT',
   'SWAP_IN',
   'PERDA_OPERACIONAL',
+  'PERDA_ATIVO',
 ] as const;
 
 /**
