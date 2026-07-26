@@ -47,6 +47,7 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import TeamsLeaguesTab from '@/components/api-explorer/TeamsLeaguesTab';
 import { useLogoFallback } from '@/hooks/useLogoFallback';
+import { useCountryFlag } from '@/hooks/useCountryFlag';
 import { computeMatchPhase } from '@/utils/matchPhase';
 
 // Sports mapping
@@ -220,6 +221,7 @@ export default function ApiExplorer() {
 
   // Fallback de logos a partir do cache local (team_logos / league_logos)
   const { getTeamLogo, getLeagueLogo } = useLogoFallback(selectedSport);
+  const { getCountryFlag } = useCountryFlag();
 
   // Set TopBar
   useEffect(() => {
