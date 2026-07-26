@@ -1168,6 +1168,22 @@ export function ConciliacaoSaldos({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ReportarPerdaTransitDialog
+        open={perdaTransitOpen}
+        onOpenChange={(v) => {
+          setPerdaTransitOpen(v);
+          if (!v) setPerdaTransitTx(null);
+        }}
+        ledgerId={perdaTransitTx?.id ?? null}
+        valorUsd={perdaTransitTx?.valorUsd ?? 0}
+        coin={perdaTransitTx?.coin ?? null}
+        qtdCoin={perdaTransitTx?.qtdCoin ?? null}
+        onSuccess={() => {
+          dispatchCaixaDataChanged();
+          onRefresh();
+        }}
+      />
     </div>
   );
 }
