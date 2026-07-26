@@ -11,6 +11,7 @@ import { SaldoOperavelCard } from "./SaldoOperavelCard";
 import { getConsolidatedStake, getConsolidatedLucro } from "@/utils/consolidatedValues";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useCrossWindowSync } from "@/hooks/useCrossWindowSync";
+import { useInvalidateAfterMutation } from "@/hooks/useInvalidateAfterMutation";
 // useBookmakerLogoMap movido para ProjetoDashboardTab
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -401,12 +402,14 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
   }, [projetoId, tabFilters.period, tabFilters.customDateRange, refreshTrigger]);
 
   // Hook centralizado para sincronização cross-window
+  const invalidateAfterMutation = useInvalidateAfterMutation();
   useCrossWindowSync({
     projetoId,
-    onSync: useCallback(() => {
-      fetchAllApostas();
+    onSync: useCallback(async () => {
+      await fetchAllApostas();
+      await invalidateAfterMutation(projetoId);
       onDataChange?.();
-    }, [onDataChange]),
+    }, [onDataChange, invalidateAfterMutation, projetoId]),
   });
 
   const fetchAllApostas = async () => {
