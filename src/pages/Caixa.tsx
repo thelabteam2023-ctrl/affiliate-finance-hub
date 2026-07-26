@@ -13,7 +13,7 @@ import { fetchAllPaginated } from "@/lib/fetchAllPaginated";
 import { getGrupoFromCategoria, getGrupoInfo } from "@/lib/despesaGrupos";
 import { Button } from "@/components/ui/button";
 import { useTopBar } from "@/contexts/TopBarContext";
-import { Plus, TrendingUp, TrendingDown, Wallet, AlertCircle, ArrowRight, Calendar, Filter, Info, Wrench, MoreHorizontal, HelpCircle, Building2, ShieldAlert } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, Wallet, AlertCircle, ArrowRight, Calendar, Filter, Info, Wrench, MoreHorizontal, HelpCircle, Building2, ShieldAlert, AlertOctagon } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
@@ -960,6 +960,18 @@ export default function Caixa() {
         badgeLabel: "Scan",
         badgeColor: "bg-red-500/20 text-red-400 border-red-500/30",
         BadgeIcon: ShieldAlert,
+      };
+    }
+
+    // PERDA_ATIVO: Ativo perdido em trânsito (rede/endereço incorreto, hack, etc.)
+    // Destino é conceitual — ativo é irrecuperável, não há contraparte.
+    if (transacao.tipo_transacao === "PERDA_ATIVO") {
+      return {
+        primary: "Ativo Perdido",
+        secondary: "Envio irrecuperável",
+        badgeLabel: "Perda de Ativo",
+        badgeColor: "bg-red-500/20 text-red-400 border-red-500/30",
+        BadgeIcon: AlertOctagon,
       };
     }
 

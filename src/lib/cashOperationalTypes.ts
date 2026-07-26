@@ -60,6 +60,12 @@ export const CASH_REAL_TYPES = [
   // Swap Crypto (troca entre moedas na mesma wallet)
   'SWAP_OUT',
   'SWAP_IN',
+  // Perdas patrimoniais (saem definitivamente do caixa)
+  // PERDA_OPERACIONAL: limitação, scan, fraude dentro do jogo.
+  // PERDA_ATIVO:       ativo irrecuperável fora do jogo (rede/endereço incorreto,
+  //                    hack de wallet, envio para conta errada). NÃO é despesa
+  //                    operacional — não há contraparte legítima. Nunca deve
+  //                    ser exibida como "Despesa Externa".
   'PERDA_OPERACIONAL',
   'PERDA_ATIVO',
 ] as const;
