@@ -443,20 +443,36 @@ export function ConciliacaoDirectModal({
         </div>
 
         <DialogFooter className="flex-col sm:flex-row gap-2">
-          {/* Falhar button */}
-          <Button
-            variant="outline"
-            className="gap-2 text-destructive border-destructive/30 hover:bg-destructive/10 sm:mr-auto"
-            onClick={() => handleFail(selectedTx)}
-            disabled={saving || failingId === selectedTx.id}
-          >
-            {failingId === selectedTx.id ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <XCircle className="h-4 w-4" />
+          <div className="flex flex-wrap gap-2 sm:mr-auto">
+            {/* Falhar button */}
+            <Button
+              variant="outline"
+              className="gap-2 text-destructive border-destructive/30 hover:bg-destructive/10"
+              onClick={() => handleFail(selectedTx)}
+              disabled={saving || failingId === selectedTx.id}
+            >
+              {failingId === selectedTx.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <XCircle className="h-4 w-4" />
+              )}
+              Falhar
+            </Button>
+
+            {/* Reportar perda em trânsito (apenas crypto com transit PENDING) */}
+            {isCrypto && selectedTx.transit_status === "PENDING" && (
+              <Button
+                variant="outline"
+                className="gap-2 text-amber-500 border-amber-500/30 hover:bg-amber-500/10"
+                onClick={() => setPerdaTx(selectedTx)}
+                disabled={saving}
+                title="Reportar perda em trânsito (rede/endereço incorreto)"
+              >
+                <AlertTriangle className="h-4 w-4" />
+                Reportar perda
+              </Button>
             )}
-            Falhar
-          </Button>
+          </div>
 
           <div className="flex gap-2">
             <Button
