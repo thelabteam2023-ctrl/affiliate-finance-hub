@@ -654,9 +654,12 @@ export function SurebetCard({
   const { getTeamLogo: __fallbackTeamLogo } = useLogoFallback(
     __parsedTeams.home && __parsedTeams.away ? esporteToSportKey(surebet.esporte) : null,
   );
+  const { getCountryFlag: __getCountryFlag } = useCountryFlag();
   const __homeLogoUrl = surebet.home_team_logo_url
+    || (__parsedTeams.home ? __getCountryFlag(__parsedTeams.home) : null)
     || (__parsedTeams.home ? __fallbackTeamLogo(__parsedTeams.home) : null);
   const __awayLogoUrl = surebet.away_team_logo_url
+    || (__parsedTeams.away ? __getCountryFlag(__parsedTeams.away) : null)
     || (__parsedTeams.away ? __fallbackTeamLogo(__parsedTeams.away) : null);
   const __displayHome = __parsedTeams.home;
   const __displayAway = __parsedTeams.away;
