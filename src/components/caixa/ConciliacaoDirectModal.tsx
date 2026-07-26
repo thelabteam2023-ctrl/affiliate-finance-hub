@@ -542,6 +542,17 @@ export function ConciliacaoDirectModal({
                 </span>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
+                {tx.tipo_moeda === "CRYPTO" && tx.transit_status === "PENDING" && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    title="Reportar perda em trânsito (rede/endereço incorreto)"
+                    className="h-7 text-[10px] px-2 text-amber-500 border-amber-500/30 hover:bg-amber-500/10"
+                    onClick={() => setPerdaTx(tx)}
+                  >
+                    <AlertTriangle className="h-3 w-3" />
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   variant="outline"
@@ -600,6 +611,15 @@ export function ConciliacaoDirectModal({
           renderListStep()
         )}
       </DialogContent>
+      <ReportarPerdaTransitDialog
+        open={!!perdaTx}
+        onOpenChange={(v) => { if (!v) setPerdaTx(null); }}
+        ledgerId={perdaTx?.id ?? null}
+        valorUsd={Number(perdaTx?.valor_usd ?? 0)}
+        coin={perdaTx?.coin ?? null}
+        qtdCoin={perdaTx?.qtd_coin ?? null}
+        onSuccess={handlePostAction}
+      />
     </Dialog>
   );
 }
