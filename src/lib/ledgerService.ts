@@ -38,6 +38,7 @@ export type LedgerTransactionType =
   | 'CASHBACK_ESTORNO'
   | 'PERDA_OPERACIONAL'
   | 'PERDA_REVERSAO'
+  | 'PERDA_ATIVO'
   | 'AJUSTE_SALDO'
   | 'AJUSTE_MANUAL'
   | 'AJUSTE_POSITIVO'
