@@ -134,8 +134,9 @@ interface SurebetModalRootProps {
 
 const ESPORTES = [
   "Futebol", "Basquete", "Tênis", "Baseball", "Hockey", "Handebol",
-  "Futebol Americano", "Vôlei", "MMA/UFC", "Boxe", "Golfe", "Rugby",
-  "League of Legends", "Counter-Strike", "Dota 2", "Valorant", "eFootball"
+  "Futebol Americano", "Vôlei", "Rugby", "Cricket",
+  "MMA/UFC", "Boxe", "Golfe", "Sinuca", "Dardos", "Polo Aquático",
+  "Counter-Strike", "Valorant", "League of Legends", "Dota 2", "Call of Duty", "eFootball"
 ];
 
 // Importar constantes canônicas do sistema
