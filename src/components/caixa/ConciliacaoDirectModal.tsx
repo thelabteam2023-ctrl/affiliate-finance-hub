@@ -32,6 +32,7 @@ import {
   Loader2,
   Lock,
   XCircle,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -46,6 +47,7 @@ import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { getFirstLastName } from "@/lib/utils";
 import { extractCivilDateKey } from "@/utils/dateUtils";
 import { useCentralOperacoesCache } from "@/hooks/useCentralOperacoesCache";
+import { ReportarPerdaTransitDialog } from "./ReportarPerdaTransitDialog";
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
   USD: "$", BRL: "R$", EUR: "€", GBP: "£", MXN: "MX$", MYR: "RM", ARS: "AR$", COP: "COP$",
@@ -82,6 +84,8 @@ export function ConciliacaoDirectModal({
   const [observacoes, setObservacoes] = useState("");
   const [saving, setSaving] = useState(false);
   const [failingId, setFailingId] = useState<string | null>(null);
+  // Perda em trânsito (rede incorreta)
+  const [perdaTx, setPerdaTx] = useState<any | null>(null);
 
   // Step: "list" (when multiple) or "confirm" (single transaction detail)
   const [step, setStep] = useState<"list" | "confirm">("list");
