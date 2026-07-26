@@ -787,6 +787,39 @@ export function ConciliacaoSaldos({
                           </TooltipProvider>
                         )}
 
+                        {/* Botão Reportar perda - crypto em trânsito (fundos NÃO voltam) */}
+                        {isCrypto && t.transit_status === "PENDING" && t.origem_wallet_id && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="gap-2 text-destructive border-destructive/30 hover:bg-destructive/10"
+                                  onClick={() => {
+                                    setPerdaTransitTx({
+                                      id: t.id,
+                                      valorUsd: Number(t.valor_destino || t.valor || 0),
+                                      coin: t.coin ?? null,
+                                      qtdCoin: t.qtd_coin ?? null,
+                                    });
+                                    setPerdaTransitOpen(true);
+                                  }}
+                                >
+                                  <AlertTriangle className="h-4 w-4" />
+                                  Reportar perda
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="text-xs max-w-[240px]">
+                                  Fundos saíram fisicamente da wallet e <strong>não retornarão</strong>
+                                  {" "}(rede/endereço incorreto, fraude). Debita da origem e registra perda.
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+
                         <Button
                           size="sm"
                           className="gap-2"
