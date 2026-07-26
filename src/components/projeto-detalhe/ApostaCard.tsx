@@ -21,6 +21,7 @@ import {
 import { useState } from "react";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { useLogoFallback } from "@/hooks/useLogoFallback";
+import { useCountryFlag } from "@/hooks/useCountryFlag";
 import { esporteToSportKey } from "@/utils/esporteToSportKey";
 import { BetRowActionsMenu, type BetResultado } from "@/components/apostas/BetRowActionsMenu";
 import { formatCurrency as formatCurrencyUtil } from "@/utils/formatCurrency";
@@ -431,9 +432,12 @@ export function ApostaCard({
   const { getTeamLogo: __fallbackTeamLogo } = useLogoFallback(
     !isMultipla && parsedTeams.home && parsedTeams.away ? esporteToSportKey(aposta.esporte) : null,
   );
+  const { getCountryFlag: __getCountryFlag } = useCountryFlag();
   const homeLogoUrl = aposta.home_team_logo_url
+    || (parsedTeams.home ? __getCountryFlag(parsedTeams.home) : null)
     || (parsedTeams.home ? __fallbackTeamLogo(parsedTeams.home) : null);
   const awayLogoUrl = aposta.away_team_logo_url
+    || (parsedTeams.away ? __getCountryFlag(parsedTeams.away) : null)
     || (parsedTeams.away ? __fallbackTeamLogo(parsedTeams.away) : null);
   const hasTeamLogos = !isMultipla && !!parsedTeams.home && !!parsedTeams.away;
   const displayHomeTeam = parsedTeams.home;

@@ -1,18 +1,20 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-const normalize = (s: string) =>
+export const normalizeLogoName = (s: string) =>
   (s || '')
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]/g, '');
 
+const normalize = normalizeLogoName;
+
 // Aliases PT-BR → forma usada no cache (em geral em inglês), para seleções
 // nacionais e países cujos jogos são salvos em português pelo usuário.
 // O cache `team_logos` guarda "newzealand"/"egypt", mas a aposta vem como
 // "NOVA ZELANDIA"/"EGITO" — sem esse mapa o logo nunca casa.
-const PT_EN_TEAM_ALIASES: Record<string, string> = {
+export const PT_EN_TEAM_ALIASES: Record<string, string> = {
   novazelandia: 'newzealand',
   egito: 'egypt',
   alemanha: 'germany',
@@ -69,7 +71,7 @@ const PT_EN_TEAM_ALIASES: Record<string, string> = {
   irlandadonorte: 'northernireland',
 };
 
-const applyPtAlias = (norm: string): string => PT_EN_TEAM_ALIASES[norm] ?? norm;
+export const applyPtAlias = (norm: string): string => PT_EN_TEAM_ALIASES[norm] ?? norm;
 
 // Tokenização preservando palavras (para matching token-a-token sem risco
 // de substring "encaixar" em outro nome — ex.: "inter" dentro de "internacional").
