@@ -561,12 +561,10 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
   // Hook centralizado para sincronização cross-window
   useCrossWindowSync({
     projetoId,
-    onSync: useCallback(() => {
-      refetchSurebets();
-      queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
-      queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
-      queryClient.invalidateQueries({ queryKey: ["calendar-apostas-rpc", projetoId] });
-    }, [queryClient, projetoId, refetchSurebets]),
+    onSync: useCallback(async () => {
+      await refetchSurebets();
+      await invalidateAfterMutation(projetoId);
+    }, [projetoId, refetchSurebets, invalidateAfterMutation]),
   });
 
   // REMOVIDO: fetchBookmakers - agora usa useBookmakerSaldosQuery centralizado
