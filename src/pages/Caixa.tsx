@@ -963,6 +963,18 @@ export default function Caixa() {
       };
     }
 
+    // PERDA_ATIVO: Ativo perdido em trânsito (rede/endereço incorreto, hack, etc.)
+    // Destino é conceitual — ativo é irrecuperável, não há contraparte.
+    if (transacao.tipo_transacao === "PERDA_ATIVO") {
+      return {
+        primary: "Ativo Perdido",
+        secondary: "Envio irrecuperável",
+        badgeLabel: "Perda de Ativo",
+        badgeColor: "bg-red-500/20 text-red-400 border-red-500/30",
+        BadgeIcon: AlertOctagon,
+      };
+    }
+
     // Para APORTE_FINANCEIRO, verificamos o fluxo pela direção
     if (transacao.tipo_transacao === "APORTE_FINANCEIRO") {
       // Se destino é CAIXA_OPERACIONAL, é um aporte (Investidor → Caixa)
