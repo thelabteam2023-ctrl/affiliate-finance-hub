@@ -776,6 +776,7 @@ export default function Caixa() {
       SWAP_OUT: "Swap Interno",
       SWAP_IN: "Swap Interno",
       PERDA_OPERACIONAL: "Scan",
+      PERDA_ATIVO: "Ativo Perdido",
     };
     const base = labels[tipo] || tipo;
     
@@ -1341,6 +1342,14 @@ export default function Caixa() {
             onRefresh={async () => {
               await fetchData();
               refetchPending();
+            }}
+            workspaceId={workspaceId ?? null}
+            cotacaoUsdBrl={cotacaoUSD}
+            onDrillDownPerda={(tipo) => {
+              setFiltroTipo([tipo]);
+              const params = new URLSearchParams(window.location.search);
+              params.set("tab", "historico");
+              navigate({ search: params.toString() }, { replace: true });
             }}
             initialTab={initialTab}
           />
