@@ -36,6 +36,7 @@ import {
   History,
   Lock,
   XCircle,
+  AlertTriangle,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
@@ -55,6 +56,7 @@ import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { getFirstLastName } from "@/lib/utils";
 import { SimplePagination } from "@/components/ui/simple-pagination";
 import { useServerPagination } from "@/hooks/usePagination";
+import { ReportarPerdaTransitDialog } from "./ReportarPerdaTransitDialog";
 
 const PAGE_SIZE = 50;
 
