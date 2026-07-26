@@ -10658,12 +10658,15 @@ export type Database = {
           data_reversao: string | null
           descricao: string | null
           id: string
+          ledger_id_ref: string | null
+          moeda: string | null
           ocorrencia_id: string | null
-          projeto_id: string
+          projeto_id: string | null
           status: string
           updated_at: string
           user_id: string
           valor: number
+          valor_usd: number | null
           workspace_id: string
         }
         Insert: {
@@ -10675,12 +10678,15 @@ export type Database = {
           data_reversao?: string | null
           descricao?: string | null
           id?: string
+          ledger_id_ref?: string | null
+          moeda?: string | null
           ocorrencia_id?: string | null
-          projeto_id: string
+          projeto_id?: string | null
           status?: string
           updated_at?: string
           user_id: string
           valor: number
+          valor_usd?: number | null
           workspace_id: string
         }
         Update: {
@@ -10692,12 +10698,15 @@ export type Database = {
           data_reversao?: string | null
           descricao?: string | null
           id?: string
+          ledger_id_ref?: string | null
+          moeda?: string | null
           ocorrencia_id?: string | null
-          projeto_id?: string
+          projeto_id?: string | null
           status?: string
           updated_at?: string
           user_id?: string
           valor?: number
+          valor_usd?: number | null
           workspace_id?: string
         }
         Relationships: [
@@ -10776,6 +10785,48 @@ export type Database = {
             columns: ["bookmaker_id"]
             isOneToOne: false
             referencedRelation: "vw_bookmakers_orfaos_com_saldo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projeto_perdas_ledger_id_ref_fkey"
+            columns: ["ledger_id_ref"]
+            isOneToOne: false
+            referencedRelation: "cash_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projeto_perdas_ledger_id_ref_fkey"
+            columns: ["ledger_id_ref"]
+            isOneToOne: false
+            referencedRelation: "v_ajustes_auditoria"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projeto_perdas_ledger_id_ref_fkey"
+            columns: ["ledger_id_ref"]
+            isOneToOne: false
+            referencedRelation: "v_eventos_promocionais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projeto_perdas_ledger_id_ref_fkey"
+            columns: ["ledger_id_ref"]
+            isOneToOne: false
+            referencedRelation: "v_ocorrencias_possivelmente_resolvidas"
+            referencedColumns: ["ajuste_ledger_id"]
+          },
+          {
+            foreignKeyName: "projeto_perdas_ledger_id_ref_fkey"
+            columns: ["ledger_id_ref"]
+            isOneToOne: false
+            referencedRelation: "v_saques_duplicidade_audit"
+            referencedColumns: ["saque_id"]
+          },
+          {
+            foreignKeyName: "projeto_perdas_ledger_id_ref_fkey"
+            columns: ["ledger_id_ref"]
+            isOneToOne: false
+            referencedRelation: "v_snapshot_anomalias"
             referencedColumns: ["id"]
           },
           {
@@ -18148,6 +18199,10 @@ export type Database = {
           }
       get_public_plans: { Args: never; Returns: Json }
       get_remaining_days: { Args: { p_expires_at: string }; Returns: number }
+      get_resumo_perdas: {
+        Args: { p_end?: string; p_start?: string; p_workspace_id: string }
+        Returns: Json
+      }
       get_saldo_disponivel_com_reservas:
         | {
             Args: { p_bookmaker_id: string; p_exclude_session_id?: string }
