@@ -573,6 +573,8 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
                 <SelectItem value="DEPOSITO">Depósito</SelectItem>
                 <SelectItem value="SAQUE">Saque</SelectItem>
                 <SelectItem value="APORTE_FINANCEIRO">Aporte & Liquidação</SelectItem>
+                <SelectItem value="PERDA_OPERACIONAL">Scan</SelectItem>
+                <SelectItem value="PERDA_ATIVO">Ativo Perdido</SelectItem>
               </SelectContent>
             </Select>
 
