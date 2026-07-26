@@ -13,7 +13,7 @@ import { fetchAllPaginated } from "@/lib/fetchAllPaginated";
 import { getGrupoFromCategoria, getGrupoInfo } from "@/lib/despesaGrupos";
 import { Button } from "@/components/ui/button";
 import { useTopBar } from "@/contexts/TopBarContext";
-import { Plus, TrendingUp, TrendingDown, Wallet, AlertCircle, ArrowRight, Calendar, Filter, Info, Wrench, MoreHorizontal, HelpCircle, Building2, ShieldAlert } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, Wallet, AlertCircle, ArrowRight, Calendar, Filter, Info, Wrench, MoreHorizontal, HelpCircle, Building2, ShieldAlert, AlertOctagon } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
