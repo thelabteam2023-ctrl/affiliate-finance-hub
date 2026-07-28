@@ -2417,12 +2417,29 @@ export function CaixaTransacaoDialog({
         tipoTransacao === "APORTE_FINANCEIRO";
       
       if (caixaIsInvolved && caixaParceiroId) {
-        if (tipoMoeda === "FIAT" && (!caixaContaId || caixaContaId === "none")) {
+        if (tipoMoeda === "FIAT") {
           const contasEmpresa = contasBancarias.filter(c => c.parceiro_id === caixaParceiroId && c.moeda === moeda);
-          if (contasEmpresa.length > 0) {
+          if (contasEmpresa.length === 0) {
+            // 🔒 BLOQUEIO CRÍTICO: sem conta da empresa na moeda, o dinheiro ficaria sem destino financeiro
+            toast({
+              title: "Operação bloqueada",
+              description: `Nenhuma conta do Caixa Operacional cadastrada em ${moeda}. Cadastre uma conta nessa moeda antes de registrar a operação.`,
+              variant: "destructive",
+            });
+            return;
+          }
+          if (!caixaContaId || caixaContaId === "none") {
             toast({
               title: "Erro",
               description: "Selecione a conta bancária da empresa",
+              variant: "destructive",
+            });
+            return;
+          }
+          if (!contasEmpresa.some(c => c.id === caixaContaId)) {
+            toast({
+              title: "Operação bloqueada",
+              description: `A conta selecionada não é compatível com a moeda ${moeda}.`,
               variant: "destructive",
             });
             return;
