@@ -2416,6 +2416,15 @@ export function CaixaTransacaoDialog({
         destinoTipo === "CAIXA_OPERACIONAL" || 
         tipoTransacao === "APORTE_FINANCEIRO";
       
+      if (caixaIsInvolved && !caixaParceiroId) {
+        toast({
+          title: "Operação bloqueada",
+          description: "Caixa Operacional não configurado neste workspace. Cadastre as contas da empresa antes de registrar operações.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       if (caixaIsInvolved && caixaParceiroId) {
         if (tipoMoeda === "FIAT") {
           const contasEmpresa = contasBancarias.filter(c => c.parceiro_id === caixaParceiroId && c.moeda === moeda);
