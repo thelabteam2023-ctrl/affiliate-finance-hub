@@ -108,6 +108,7 @@ export default function BookmakerDialog({
   const [hasFinancialOperations, setHasFinancialOperations] = useState(false);
   const [checkingOperations, setCheckingOperations] = useState(false);
   const [moedaConfirmada, setMoedaConfirmada] = useState(false);
+  const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const { toast } = useToast();
   const { workspaceId } = useWorkspace();
 
