@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
-import { Plus, Calendar, Copy, Check, KeyRound, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Calendar, Copy, Check, KeyRound, ChevronDown, ChevronUp, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { useCaixaDataChangedListener } from "@/hooks/useInvalidateCaixaData";
 import { useTabWorkspace } from "@/hooks/useTabWorkspace";
@@ -42,12 +42,47 @@ function normalizePixKeys(raw: any, legacy: string | null): PixKey[] {
   return list;
 }
 
+/** Mascara parcialmente a chave PIX, preservando o suficiente para identificação. */
+function maskPixKey(chave: string): string {
+  const s = chave.trim();
+  if (!s) return "";
+
+  // E-mail: pri****@dominio.com
+  const emailMatch = s.match(/^([^\s@]+)@([^\s@]+)$/);
+  if (emailMatch) {
+    const [, user, domain] = emailMatch;
+    const visible = user.slice(0, Math.min(3, user.length));
+    return `${visible}${"•".repeat(Math.max(3, user.length - visible.length))}@${domain}`;
+  }
+
+  const digits = s.replace(/\D/g, "");
+  const isOnlyDigits = digits.length === s.replace(/[\s.\-/()+]/g, "").length;
+
+  // CPF: •••.456.789-••
+  if (isOnlyDigits && digits.length === 11) {
+    return `•••.${digits.slice(3, 6)}.${digits.slice(6, 9)}-••`;
+  }
+  // CNPJ: ••.345.678/0001-••
+  if (isOnlyDigits && digits.length === 14) {
+    return `••.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-••`;
+  }
+  // Telefone: (••) ••••-1234
+  if (isOnlyDigits && digits.length >= 10 && digits.length <= 13) {
+    return `(••) ••••-${digits.slice(-4)}`;
+  }
+
+  // Aleatória / demais: mantém início e fim
+  if (s.length <= 8) return `${s.slice(0, 2)}••••`;
+  return `${s.slice(0, 4)}••••${s.slice(-4)}`;
+}
+
 export function SaldosFiatCard({ caixaParceiroId, formatCurrency, onDataChanged }: SaldosFiatCardProps) {
   const { workspaceId } = useTabWorkspace();
   const [contas, setContas] = useState<ContaFiat[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [revealedKey, setRevealedKey] = useState<string | null>(null);
   const [isParceiroDialogOpen, setIsParceiroDialogOpen] = useState(false);
   const [parceiroCompleto, setParceiroCompleto] = useState<any>(null);
 
@@ -217,9 +252,26 @@ export function SaldosFiatCard({ caixaParceiroId, formatCurrency, onDataChanged 
                         {pix ? (
                           <>
                             <KeyRound className="w-2.5 h-2.5 text-[var(--text-faint)] shrink-0" />
-                            <span className="text-[10px] font-mono text-[var(--text-muted)] truncate max-w-[130px]">
-                              {pix.chave}
+                            <span
+                              className="text-[10px] font-mono text-[var(--text-muted)] truncate max-w-[130px]"
+                              title={revealedKey === pix.chave ? pix.chave : "Chave PIX parcialmente oculta"}
+                            >
+                              {revealedKey === pix.chave ? pix.chave : maskPixKey(pix.chave)}
                             </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setRevealedKey((v) => (v === pix.chave ? null : pix.chave))
+                              }
+                              title={revealedKey === pix.chave ? "Ocultar chave" : "Revelar chave"}
+                              className="p-0.5 rounded hover:bg-white/10 text-[var(--text-faint)] hover:text-[var(--accent-fiat)] transition-colors shrink-0"
+                            >
+                              {revealedKey === pix.chave ? (
+                                <EyeOff className="w-3 h-3" />
+                              ) : (
+                                <Eye className="w-3 h-3" />
+                              )}
+                            </button>
                             <button
                               type="button"
                               onClick={() => copyPix(pix.chave)}
