@@ -2445,20 +2445,29 @@ export function CaixaTransacaoDialog({
             return;
           }
         }
-        if (tipoMoeda === "CRYPTO" && (!caixaWalletId || caixaWalletId === "none")) {
+        if (tipoMoeda === "CRYPTO") {
           const walletsEmpresa = walletsCrypto.filter(w => w.parceiro_id === caixaParceiroId && isWalletCompatibleWithCoin(w, coin));
-          if (walletsEmpresa.length > 0) {
+          if (walletsEmpresa.length === 0) {
+            // 🔒 BLOQUEIO CRÍTICO: Nenhuma wallet compatível existe
+            toast({
+              title: "Operação bloqueada",
+              description: `Nenhuma wallet do Caixa Operacional compatível com ${coin}. Cadastre uma wallet na rede correta antes de prosseguir.`,
+              variant: "destructive",
+            });
+            return;
+          }
+          if (!caixaWalletId || caixaWalletId === "none") {
             toast({
               title: "Erro",
               description: "Selecione a wallet da empresa",
               variant: "destructive",
             });
             return;
-          } else {
-            // 🔒 BLOQUEIO CRÍTICO: Nenhuma wallet compatível existe
+          }
+          if (!walletsEmpresa.some(w => w.id === caixaWalletId)) {
             toast({
-              title: "Erro",
-              description: `Nenhuma wallet compatível com ${coin} encontrada. Cadastre uma wallet na rede correta antes de prosseguir.`,
+              title: "Operação bloqueada",
+              description: `A wallet selecionada não é compatível com ${coin}.`,
               variant: "destructive",
             });
             return;
