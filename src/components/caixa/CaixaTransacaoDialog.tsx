@@ -5698,9 +5698,37 @@ export function CaixaTransacaoDialog({
             }
             return false;
           })();
+          // Validação crítica: qualquer operação que envolva o Caixa Operacional
+          // exige uma conta/wallet da empresa compatível com a moeda da transação.
+          const caixaContaInvalida = (() => {
+            const caixaIsInvolved =
+              origemTipo === "CAIXA_OPERACIONAL" ||
+              destinoTipo === "CAIXA_OPERACIONAL" ||
+              tipoTransacao === "APORTE_FINANCEIRO";
+            if (!caixaIsInvolved) return false;
+            if (!caixaParceiroId) return true;
+            if (tipoMoeda === "FIAT") {
+              if (!moeda) return true;
+              const contas = contasBancarias.filter(
+                (c) => c.parceiro_id === caixaParceiroId && c.moeda === moeda
+              );
+              if (contas.length === 0) return true;
+              return !caixaContaId || caixaContaId === "none" || !contas.some((c) => c.id === caixaContaId);
+            }
+            if (tipoMoeda === "CRYPTO") {
+              if (!coin) return true;
+              const wallets = walletsCrypto.filter(
+                (w) => w.parceiro_id === caixaParceiroId && isWalletCompatibleWithCoin(w, coin)
+              );
+              if (wallets.length === 0) return true;
+              return !caixaWalletId || caixaWalletId === "none" || !wallets.some((w) => w.id === caixaWalletId);
+            }
+            return false;
+          })();
           const isDisabled = (() => {
             if (loading || saldoInsuficiente) return true;
             if (saqueDestinoInvalido) return true;
+            if (caixaContaInvalida) return true;
             if (
               tipoTransacao === "TRANSFERENCIA" &&
               fluxoTransferencia === "PARCEIRO_PARCEIRO" &&
@@ -5727,6 +5755,8 @@ export function CaixaTransacaoDialog({
             ? "Saldo insuficiente"
             : saqueDestinoInvalido
             ? "Destino indisponível"
+            : caixaContaInvalida
+            ? "Conta do Caixa indisponível"
             : isDisabled
             ? "Aguardando dados"
             : "Pronto para registrar";
