@@ -635,6 +635,24 @@ export default function BookmakerDialog({
                             </Badge>
                             <span className="text-[11px] text-muted-foreground truncate">{link.url}</span>
                           </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleCopyLink(link.url);
+                            }}
+                            className="h-7 w-7 p-0 shrink-0"
+                            aria-label="Copiar link de cadastro"
+                          >
+                            {copiedLink === link.url ? (
+                              <Check className="h-3.5 w-3.5 text-green-500" />
+                            ) : (
+                              <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                            )}
+                          </Button>
                         </label>
                       ))}
                     </div>
