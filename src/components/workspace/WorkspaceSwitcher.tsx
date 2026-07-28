@@ -125,6 +125,7 @@ export function WorkspaceSwitcher({
     if (result.success) {
       toast.success(`Convite aceito! Bem-vindo ao ${invite.workspace_name}`);
       setOpen(false);
+      navigate("/projetos", { replace: true });
     } else {
       toast.error(result.error || "Erro ao aceitar convite");
     }
