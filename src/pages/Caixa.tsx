@@ -870,7 +870,7 @@ export default function Caixa() {
       }
       // Se origem é CAIXA_OPERACIONAL, é uma liquidação (Caixa → Investidor)
       if (transacao.origem_tipo === "CAIXA_OPERACIONAL") {
-        return { primary: "Caixa Operacional" };
+        return getCaixaInfo(transacao.origem_conta_bancaria_id, transacao.origem_wallet_id);
       }
     }
     
@@ -879,7 +879,7 @@ export default function Caixa() {
     }
     
     if (transacao.tipo_transacao === "LIQUIDACAO") {
-      return { primary: "Caixa Operacional" };
+      return getCaixaInfo(transacao.origem_conta_bancaria_id, transacao.origem_wallet_id);
     }
     
     // AJUSTE_SALDO: origem é a bookmaker ajustada
@@ -893,7 +893,7 @@ export default function Caixa() {
     }
     
     if (transacao.origem_tipo === "CAIXA_OPERACIONAL") {
-      return { primary: "Caixa Operacional" };
+      return getCaixaInfo(transacao.origem_conta_bancaria_id, transacao.origem_wallet_id);
     }
     
     if (transacao.origem_tipo === "PARCEIRO_CONTA" && transacao.origem_conta_bancaria_id) {
