@@ -1003,7 +1003,7 @@ export default function Caixa() {
     if (transacao.tipo_transacao === "APORTE_FINANCEIRO") {
       // Se destino é CAIXA_OPERACIONAL, é um aporte (Investidor → Caixa)
       if (transacao.destino_tipo === "CAIXA_OPERACIONAL") {
-        return { primary: "Caixa Operacional" };
+        return getCaixaInfo(transacao.destino_conta_bancaria_id, transacao.destino_wallet_id);
       }
       // Se origem é CAIXA_OPERACIONAL, é uma liquidação (Caixa → Investidor)
       if (transacao.origem_tipo === "CAIXA_OPERACIONAL") {
@@ -1012,7 +1012,7 @@ export default function Caixa() {
     }
     
     if (transacao.tipo_transacao === "APORTE") {
-      return { primary: "Caixa Operacional" };
+      return getCaixaInfo(transacao.destino_conta_bancaria_id, transacao.destino_wallet_id);
     }
     
     if (transacao.tipo_transacao === "LIQUIDACAO") {
@@ -1020,7 +1020,7 @@ export default function Caixa() {
     }
     
     if (transacao.destino_tipo === "CAIXA_OPERACIONAL") {
-      return { primary: "Caixa Operacional" };
+      return getCaixaInfo(transacao.destino_conta_bancaria_id, transacao.destino_wallet_id);
     }
     
     if (transacao.destino_tipo === "PARCEIRO_CONTA" && transacao.destino_conta_bancaria_id) {
