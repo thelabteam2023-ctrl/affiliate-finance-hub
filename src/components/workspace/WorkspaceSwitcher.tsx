@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Check, ChevronsUpDown, Building2, UserPlus, Loader2, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -65,6 +66,7 @@ export function WorkspaceSwitcher({
 }: WorkspaceSwitcherProps) {
   const [open, setOpen] = useState(false);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const navigate = useNavigate();
   
   // Estado para modal de confirmação
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
@@ -106,6 +108,9 @@ export function WorkspaceSwitcher({
       toast.success(`Workspace alterado para ${targetWorkspace.workspace_name}`);
       setConfirmDialogOpen(false);
       setTargetWorkspace(null);
+      // Segurança de contexto: encerra qualquer tela do workspace anterior
+      // (ex.: página de um projeto) redirecionando para Projetos do novo workspace.
+      navigate("/projetos", { replace: true });
     } else {
       toast.error(result.error || "Erro ao trocar de workspace");
     }
