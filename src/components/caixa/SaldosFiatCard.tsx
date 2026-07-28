@@ -2,9 +2,15 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
-import { Plus, Calendar } from "lucide-react";
+import { Plus, Calendar, Copy, Check, KeyRound, ChevronDown, ChevronUp } from "lucide-react";
+import { toast } from "sonner";
 import { useCaixaDataChangedListener } from "@/hooks/useInvalidateCaixaData";
 import { useTabWorkspace } from "@/hooks/useTabWorkspace";
+
+interface PixKey {
+  tipo?: string;
+  chave: string;
+}
 
 interface ContaFiat {
   id: string;
@@ -12,6 +18,7 @@ interface ContaFiat {
   titular: string;
   moeda: string;
   saldo: number;
+  pixKeys: PixKey[];
 }
 
 interface SaldosFiatCardProps {
@@ -20,16 +27,77 @@ interface SaldosFiatCardProps {
   onDataChanged: () => void;
 }
 
+function normalizePixKeys(raw: any, legacy: string | null): PixKey[] {
+  const list: PixKey[] = [];
+  if (Array.isArray(raw)) {
+    for (const k of raw) {
+      if (k && typeof k.chave === "string" && k.chave.trim()) {
+        list.push({ tipo: k.tipo, chave: k.chave.trim() });
+      }
+    }
+  }
+  if (list.length === 0 && legacy && legacy.trim()) {
+    list.push({ chave: legacy.trim() });
+  }
+  return list;
+}
+
 export function SaldosFiatCard({ caixaParceiroId, formatCurrency, onDataChanged }: SaldosFiatCardProps) {
   const { workspaceId } = useTabWorkspace();
   const [contas, setContas] = useState<ContaFiat[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [isParceiroDialogOpen, setIsParceiroDialogOpen] = useState(false);
   const [parceiroCompleto, setParceiroCompleto] = useState<any>(null);
 
   const fetchContas = useCallback(async () => {
-    if (!caixaParceiroId) return;
-    const { data } = await supabase.from("v_saldo_parceiro_contas").select("*").eq("parceiro_id", caixaParceiroId);
-    setContas((data || []).map((c: any) => ({ ...c, id: c.conta_id })) as ContaFiat[]);
+    if (!caixaParceiroId) {
+      setContas([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const [saldosRes, contasRes] = await Promise.all([
+      supabase.from("v_saldo_parceiro_contas").select("*").eq("parceiro_id", caixaParceiroId),
+      supabase
+        .from("contas_bancarias")
+        .select("id, banco, titular, moeda, pix_key, pix_keys")
+        .eq("parceiro_id", caixaParceiroId),
+    ]);
+
+    const detalhes = new Map<string, any>();
+    for (const c of contasRes.data || []) detalhes.set(c.id, c);
+
+    const merged: ContaFiat[] = (saldosRes.data || []).map((c: any) => {
+      const det = detalhes.get(c.conta_id);
+      return {
+        id: c.conta_id,
+        banco: c.banco || det?.banco || "Conta bancária",
+        titular: c.titular || det?.titular || "",
+        moeda: c.moeda || det?.moeda || "BRL",
+        saldo: Number(c.saldo) || 0,
+        pixKeys: normalizePixKeys(det?.pix_keys, det?.pix_key ?? null),
+      };
+    });
+
+    // Contas cadastradas que ainda não aparecem na view (sem movimentação)
+    for (const det of contasRes.data || []) {
+      if (!merged.some((m) => m.id === det.id)) {
+        merged.push({
+          id: det.id,
+          banco: det.banco || "Conta bancária",
+          titular: det.titular || "",
+          moeda: det.moeda || "BRL",
+          saldo: 0,
+          pixKeys: normalizePixKeys(det.pix_keys, det.pix_key ?? null),
+        });
+      }
+    }
+
+    merged.sort((a, b) => (b.saldo || 0) - (a.saldo || 0));
+    setContas(merged);
+    setLoading(false);
   }, [caixaParceiroId]);
 
   const fetchParceiroCompleto = async () => {
@@ -55,6 +123,17 @@ export function SaldosFiatCard({ caixaParceiroId, formatCurrency, onDataChanged 
   // Reativo: refetch quando qualquer mutação do Caixa dispara o evento global
   useCaixaDataChangedListener(fetchContas);
 
+  const copyPix = async (chave: string) => {
+    try {
+      await navigator.clipboard.writeText(chave);
+      setCopiedKey(chave);
+      toast.success("Chave PIX copiada");
+      setTimeout(() => setCopiedKey((v) => (v === chave ? null : v)), 1500);
+    } catch {
+      toast.error("Não foi possível copiar");
+    }
+  };
+
   // Aggregate totals by currency
   const saldosPorMoeda = contas.reduce<Record<string, number>>((acc, c) => {
     const m = c.moeda || "BRL";
@@ -63,6 +142,8 @@ export function SaldosFiatCard({ caixaParceiroId, formatCurrency, onDataChanged 
   }, {});
 
   const primarySaldo = saldosPorMoeda["BRL"] || 0;
+  const outrasMoedas = Object.entries(saldosPorMoeda).filter(([m]) => m !== "BRL");
+  const contasVisiveis = expanded ? contas : contas.slice(0, 4);
 
   return (
     <>
@@ -98,8 +179,93 @@ export function SaldosFiatCard({ caixaParceiroId, formatCurrency, onDataChanged 
             {formatCurrency(primarySaldo, "BRL")}
           </p>
           <p className="text-[12px] text-[var(--text-muted)] mt-1">
-            BRL · Conta principal
+            BRL · {contas.length === 1 ? "1 conta" : `${contas.length} contas`}
+            {outrasMoedas.length > 0 && (
+              <span className="ml-1">
+                · {outrasMoedas.map(([m, v]) => `${formatCurrency(v, m)}`).join(" · ")}
+              </span>
+            )}
           </p>
+        </div>
+
+        {/* Detalhamento por banco */}
+        <div className="mt-3 pt-3 border-t border-[var(--border-default)] space-y-1.5 relative z-10">
+          {loading ? (
+            <div className="space-y-2">
+              {[0, 1].map((i) => (
+                <div key={i} className="h-8 rounded-md bg-white/5 animate-pulse" />
+              ))}
+            </div>
+          ) : contas.length === 0 ? (
+            <p className="text-[11px] text-[var(--text-faint)] italic">
+              Nenhuma conta bancária cadastrada. Use o botão + para adicionar.
+            </p>
+          ) : (
+            <>
+              {contasVisiveis.map((conta) => {
+                const pix = conta.pixKeys[0];
+                return (
+                  <div
+                    key={conta.id}
+                    className="flex items-center gap-2 rounded-md px-1.5 py-1 hover:bg-white/[0.03] transition-colors"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[12px] text-[var(--text-primary)] truncate leading-tight">
+                        {conta.banco}
+                      </p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        {pix ? (
+                          <>
+                            <KeyRound className="w-2.5 h-2.5 text-[var(--text-faint)] shrink-0" />
+                            <span className="text-[10px] font-mono text-[var(--text-muted)] truncate max-w-[130px]">
+                              {pix.chave}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => copyPix(pix.chave)}
+                              title="Copiar chave PIX"
+                              className="p-0.5 rounded hover:bg-white/10 text-[var(--text-faint)] hover:text-[var(--accent-fiat)] transition-colors shrink-0"
+                            >
+                              {copiedKey === pix.chave ? (
+                                <Check className="w-3 h-3 text-emerald-500" />
+                              ) : (
+                                <Copy className="w-3 h-3" />
+                              )}
+                            </button>
+                            {conta.pixKeys.length > 1 && (
+                              <span className="text-[9px] text-[var(--text-faint)]">
+                                +{conta.pixKeys.length - 1}
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-[10px] text-[var(--text-faint)] italic">
+                            Sem chave PIX
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <span className="text-[12px] tabular-nums text-[var(--text-primary)] shrink-0">
+                      {formatCurrency(conta.saldo, conta.moeda || "BRL")}
+                    </span>
+                  </div>
+                );
+              })}
+              {contas.length > 4 && (
+                <button
+                  type="button"
+                  onClick={() => setExpanded((v) => !v)}
+                  className="flex items-center gap-1 text-[10px] text-[var(--text-faint)] hover:text-[var(--text-muted)] transition-colors pl-1.5"
+                >
+                  {expanded ? (
+                    <><ChevronUp className="w-3 h-3" /> Mostrar menos</>
+                  ) : (
+                    <><ChevronDown className="w-3 h-3" /> Ver todas ({contas.length})</>
+                  )}
+                </button>
+              )}
+            </>
+          )}
         </div>
 
         {/* Watermark */}
