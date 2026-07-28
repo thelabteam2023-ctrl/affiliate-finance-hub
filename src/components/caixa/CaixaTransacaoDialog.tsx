@@ -2416,10 +2416,28 @@ export function CaixaTransacaoDialog({
         destinoTipo === "CAIXA_OPERACIONAL" || 
         tipoTransacao === "APORTE_FINANCEIRO";
       
+      if (caixaIsInvolved && !caixaParceiroId) {
+        toast({
+          title: "Operação bloqueada",
+          description: "Caixa Operacional não configurado neste workspace. Cadastre as contas da empresa antes de registrar operações.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       if (caixaIsInvolved && caixaParceiroId) {
-        if (tipoMoeda === "FIAT" && (!caixaContaId || caixaContaId === "none")) {
+        if (tipoMoeda === "FIAT") {
           const contasEmpresa = contasBancarias.filter(c => c.parceiro_id === caixaParceiroId && c.moeda === moeda);
-          if (contasEmpresa.length > 0) {
+          if (contasEmpresa.length === 0) {
+            // 🔒 BLOQUEIO CRÍTICO: sem conta da empresa na moeda, o dinheiro ficaria sem destino financeiro
+            toast({
+              title: "Operação bloqueada",
+              description: `Nenhuma conta do Caixa Operacional cadastrada em ${moeda}. Cadastre uma conta nessa moeda antes de registrar a operação.`,
+              variant: "destructive",
+            });
+            return;
+          }
+          if (!caixaContaId || caixaContaId === "none") {
             toast({
               title: "Erro",
               description: "Selecione a conta bancária da empresa",
@@ -2427,21 +2445,38 @@ export function CaixaTransacaoDialog({
             });
             return;
           }
+          if (!contasEmpresa.some(c => c.id === caixaContaId)) {
+            toast({
+              title: "Operação bloqueada",
+              description: `A conta selecionada não é compatível com a moeda ${moeda}.`,
+              variant: "destructive",
+            });
+            return;
+          }
         }
-        if (tipoMoeda === "CRYPTO" && (!caixaWalletId || caixaWalletId === "none")) {
+        if (tipoMoeda === "CRYPTO") {
           const walletsEmpresa = walletsCrypto.filter(w => w.parceiro_id === caixaParceiroId && isWalletCompatibleWithCoin(w, coin));
-          if (walletsEmpresa.length > 0) {
+          if (walletsEmpresa.length === 0) {
+            // 🔒 BLOQUEIO CRÍTICO: Nenhuma wallet compatível existe
+            toast({
+              title: "Operação bloqueada",
+              description: `Nenhuma wallet do Caixa Operacional compatível com ${coin}. Cadastre uma wallet na rede correta antes de prosseguir.`,
+              variant: "destructive",
+            });
+            return;
+          }
+          if (!caixaWalletId || caixaWalletId === "none") {
             toast({
               title: "Erro",
               description: "Selecione a wallet da empresa",
               variant: "destructive",
             });
             return;
-          } else {
-            // 🔒 BLOQUEIO CRÍTICO: Nenhuma wallet compatível existe
+          }
+          if (!walletsEmpresa.some(w => w.id === caixaWalletId)) {
             toast({
-              title: "Erro",
-              description: `Nenhuma wallet compatível com ${coin} encontrada. Cadastre uma wallet na rede correta antes de prosseguir.`,
+              title: "Operação bloqueada",
+              description: `A wallet selecionada não é compatível com ${coin}.`,
               variant: "destructive",
             });
             return;
@@ -5663,9 +5698,37 @@ export function CaixaTransacaoDialog({
             }
             return false;
           })();
+          // Validação crítica: qualquer operação que envolva o Caixa Operacional
+          // exige uma conta/wallet da empresa compatível com a moeda da transação.
+          const caixaContaInvalida = (() => {
+            const caixaIsInvolved =
+              origemTipo === "CAIXA_OPERACIONAL" ||
+              destinoTipo === "CAIXA_OPERACIONAL" ||
+              tipoTransacao === "APORTE_FINANCEIRO";
+            if (!caixaIsInvolved) return false;
+            if (!caixaParceiroId) return true;
+            if (tipoMoeda === "FIAT") {
+              if (!moeda) return true;
+              const contas = contasBancarias.filter(
+                (c) => c.parceiro_id === caixaParceiroId && c.moeda === moeda
+              );
+              if (contas.length === 0) return true;
+              return !caixaContaId || caixaContaId === "none" || !contas.some((c) => c.id === caixaContaId);
+            }
+            if (tipoMoeda === "CRYPTO") {
+              if (!coin) return true;
+              const wallets = walletsCrypto.filter(
+                (w) => w.parceiro_id === caixaParceiroId && isWalletCompatibleWithCoin(w, coin)
+              );
+              if (wallets.length === 0) return true;
+              return !caixaWalletId || caixaWalletId === "none" || !wallets.some((w) => w.id === caixaWalletId);
+            }
+            return false;
+          })();
           const isDisabled = (() => {
             if (loading || saldoInsuficiente) return true;
             if (saqueDestinoInvalido) return true;
+            if (caixaContaInvalida) return true;
             if (
               tipoTransacao === "TRANSFERENCIA" &&
               fluxoTransferencia === "PARCEIRO_PARCEIRO" &&
@@ -5692,6 +5755,8 @@ export function CaixaTransacaoDialog({
             ? "Saldo insuficiente"
             : saqueDestinoInvalido
             ? "Destino indisponível"
+            : caixaContaInvalida
+            ? "Conta do Caixa indisponível"
             : isDisabled
             ? "Aguardando dados"
             : "Pronto para registrar";
