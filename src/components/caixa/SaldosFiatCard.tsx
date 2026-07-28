@@ -252,9 +252,26 @@ export function SaldosFiatCard({ caixaParceiroId, formatCurrency, onDataChanged 
                         {pix ? (
                           <>
                             <KeyRound className="w-2.5 h-2.5 text-[var(--text-faint)] shrink-0" />
-                            <span className="text-[10px] font-mono text-[var(--text-muted)] truncate max-w-[130px]">
-                              {pix.chave}
+                            <span
+                              className="text-[10px] font-mono text-[var(--text-muted)] truncate max-w-[130px]"
+                              title={revealedKey === pix.chave ? pix.chave : "Chave PIX parcialmente oculta"}
+                            >
+                              {revealedKey === pix.chave ? pix.chave : maskPixKey(pix.chave)}
                             </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setRevealedKey((v) => (v === pix.chave ? null : pix.chave))
+                              }
+                              title={revealedKey === pix.chave ? "Ocultar chave" : "Revelar chave"}
+                              className="p-0.5 rounded hover:bg-white/10 text-[var(--text-faint)] hover:text-[var(--accent-fiat)] transition-colors shrink-0"
+                            >
+                              {revealedKey === pix.chave ? (
+                                <EyeOff className="w-3 h-3" />
+                              ) : (
+                                <Eye className="w-3 h-3" />
+                              )}
+                            </button>
                             <button
                               type="button"
                               onClick={() => copyPix(pix.chave)}
