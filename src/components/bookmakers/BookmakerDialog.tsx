@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertTriangle, User, ShieldAlert, Link2, KeyRound, Coins, StickyNote, ChevronDown, Check } from "lucide-react";
+import { Loader2, AlertTriangle, User, ShieldAlert, Link2, KeyRound, Coins, StickyNote, ChevronDown, Check, Copy } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import BookmakerSelect from "./BookmakerSelect";
 import ParceiroSelect from "@/components/parceiros/ParceiroSelect";
