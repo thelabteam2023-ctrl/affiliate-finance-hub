@@ -325,7 +325,27 @@ export default function BookmakerDialog({
     setBookmakerId(newBookmakerId);
     setSelectedBookmaker(null);
     setSelectedLink("");
+    setCopiedLink(null);
     if (newBookmakerId) fetchBookmakerDetails(newBookmakerId);
+  };
+
+  const handleCopyLink = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedLink(url);
+      toast({
+        title: "Link copiado!",
+        description: "O link de cadastro foi copiado para a área de transferência.",
+      });
+      setTimeout(() => setCopiedLink(null), 2000);
+    } catch (error) {
+      console.error("Erro ao copiar link:", error);
+      toast({
+        title: "Erro ao copiar",
+        description: "Não foi possível copiar o link. Tente manualmente.",
+        variant: "destructive",
+      });
+    }
   };
 
   useEffect(() => {
