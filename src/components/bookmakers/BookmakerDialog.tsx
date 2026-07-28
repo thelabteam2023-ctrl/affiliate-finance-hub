@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertTriangle, User, ShieldAlert, Link2, KeyRound, Coins, StickyNote, ChevronDown, Check } from "lucide-react";
+import { Loader2, AlertTriangle, User, ShieldAlert, Link2, KeyRound, Coins, StickyNote, ChevronDown, Check, Copy } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import BookmakerSelect from "./BookmakerSelect";
 import ParceiroSelect from "@/components/parceiros/ParceiroSelect";
@@ -108,6 +108,7 @@ export default function BookmakerDialog({
   const [hasFinancialOperations, setHasFinancialOperations] = useState(false);
   const [checkingOperations, setCheckingOperations] = useState(false);
   const [moedaConfirmada, setMoedaConfirmada] = useState(false);
+  const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const { toast } = useToast();
   const { workspaceId } = useWorkspace();
 
@@ -324,7 +325,27 @@ export default function BookmakerDialog({
     setBookmakerId(newBookmakerId);
     setSelectedBookmaker(null);
     setSelectedLink("");
+    setCopiedLink(null);
     if (newBookmakerId) fetchBookmakerDetails(newBookmakerId);
+  };
+
+  const handleCopyLink = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedLink(url);
+      toast({
+        title: "Link copiado!",
+        description: "O link de cadastro foi copiado para a área de transferência.",
+      });
+      setTimeout(() => setCopiedLink(null), 2000);
+    } catch (error) {
+      console.error("Erro ao copiar link:", error);
+      toast({
+        title: "Erro ao copiar",
+        description: "Não foi possível copiar o link. Tente manualmente.",
+        variant: "destructive",
+      });
+    }
   };
 
   useEffect(() => {
@@ -614,6 +635,24 @@ export default function BookmakerDialog({
                             </Badge>
                             <span className="text-[11px] text-muted-foreground truncate">{link.url}</span>
                           </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleCopyLink(link.url);
+                            }}
+                            className="h-7 w-7 p-0 shrink-0"
+                            aria-label="Copiar link de cadastro"
+                          >
+                            {copiedLink === link.url ? (
+                              <Check className="h-3.5 w-3.5 text-green-500" />
+                            ) : (
+                              <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                            )}
+                          </Button>
                         </label>
                       ))}
                     </div>
