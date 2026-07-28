@@ -843,6 +843,30 @@ export default function Caixa() {
     return info.primary;
   };
 
+  /**
+   * Resolve o rótulo de uma ponta que é o Caixa Operacional, detalhando
+   * qual conta bancária / wallet do caixa recebeu ou enviou o valor.
+   * Fallback para "Caixa Operacional" em lançamentos antigos sem vínculo.
+   */
+  const getCaixaInfo = (
+    contaBancariaId?: string | null,
+    walletId?: string | null
+  ): { primary: string; secondary?: string } => {
+    if (contaBancariaId) {
+      const conta = contasBancarias.find(c => c.id === contaBancariaId);
+      if (conta) {
+        return { primary: conta.banco, secondary: "Caixa Operacional" };
+      }
+    }
+    if (walletId) {
+      const wallet = walletsDetalhes.find(w => w.id === walletId);
+      if (wallet) {
+        return { primary: getWalletDisplayName(wallet), secondary: "Caixa Operacional" };
+      }
+    }
+    return { primary: "Caixa Operacional" };
+  };
+
   const getOrigemInfo = (transacao: Transacao): { primary: string; secondary?: string } => {
     // SWAP: Mostrar wallet de origem com nome do parceiro
     if (transacao.tipo_transacao === "SWAP_OUT" && transacao.origem_wallet_id) {
