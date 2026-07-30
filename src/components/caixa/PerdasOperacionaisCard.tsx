@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { AlertOctagon, ShieldX, RefreshCw } from "lucide-react";
 import { useResumoPerdas, type PerdaBreakdownItem } from "@/hooks/useResumoPerdas";
+import { PerdasDetalheDialog } from "./PerdasDetalheDialog";
 
 interface Props {
   workspaceId: string | null | undefined;
@@ -29,6 +30,14 @@ function fmtBrl(n: number) {
 
 export function PerdasOperacionaisCard({ workspaceId, dataInicio, dataFim, cotacaoUsdBrl, onDrillDown }: Props) {
   const { data, loading } = useResumoPerdas(workspaceId, dataInicio, dataFim);
+  const [currency, setCurrency] = useState<"BRL" | "USD">("BRL");
+  const [detalheCategoria, setDetalheCategoria] = useState<PerdaBreakdownItem["categoria"] | null>(null);
+
+  const rate = cotacaoUsdBrl && cotacaoUsdBrl > 0 ? cotacaoUsdBrl : null;
+  // Sem cotação disponível, força exibição em USD (fonte canônica da RPC)
+  const activeCurrency: "BRL" | "USD" = rate ? currency : "USD";
+  const fmt = (usdValue: number) =>
+    activeCurrency === "USD" ? fmtUsd(usdValue) : fmtBrl(usdValue * (rate ?? 1));
 
   const items = useMemo(() => {
     const map = new Map<string, PerdaBreakdownItem>();
@@ -40,9 +49,15 @@ export function PerdasOperacionaisCard({ workspaceId, dataInicio, dataFim, cotac
     }));
   }, [data]);
 
-  const totalBrl = cotacaoUsdBrl ? data.total_usd * cotacaoUsdBrl : null;
+  const secondary =
+    rate === null
+      ? null
+      : activeCurrency === "BRL"
+        ? fmtUsd(data.total_usd)
+        : fmtBrl(data.total_usd * rate);
 
   return (
+    <>
     <Card className="bg-card/50 border-border/50 p-4">
       <div className="flex items-start justify-between mb-3">
         <div>
@@ -50,14 +65,26 @@ export function PerdasOperacionaisCard({ workspaceId, dataInicio, dataFim, cotac
             Perdas Operacionais no Período
           </div>
           <div className="text-[22px] font-semibold text-red-500 mt-1">
-            {loading ? "..." : fmtUsd(data.total_usd)}
+            {loading ? "..." : fmt(data.total_usd)}
           </div>
-          {totalBrl !== null && !loading && (
-            <div className="text-[11px] text-[var(--text-faint)] mt-0.5">≈ {fmtBrl(totalBrl)}</div>
+          {secondary && !loading && (
+            <div className="text-[11px] text-[var(--text-faint)] mt-0.5">≈ {secondary}</div>
           )}
         </div>
-        <div className="text-[10px] text-[var(--text-faint)]">
-          {data.total_count} evento{data.total_count === 1 ? "" : "s"}
+        <div className="flex flex-col items-end gap-2">
+          {rate !== null && (
+            <button
+              type="button"
+              onClick={() => setCurrency((c) => (c === "BRL" ? "USD" : "BRL"))}
+              className="text-[10px] font-medium px-2 py-1 rounded-md border border-border/50 text-[var(--text-muted)] hover:bg-white/5 transition-colors"
+              title="Alternar entre Real e Dólar"
+            >
+              {activeCurrency === "BRL" ? "R$ · BRL" : "US$ · USD"}
+            </button>
+          )}
+          <div className="text-[10px] text-[var(--text-faint)]">
+            {data.total_count} evento{data.total_count === 1 ? "" : "s"}
+          </div>
         </div>
       </div>
 
@@ -65,13 +92,13 @@ export function PerdasOperacionaisCard({ workspaceId, dataInicio, dataFim, cotac
         {items.map((item) => {
           const meta = CATEGORY_META[item.categoria];
           const Icon = meta.icon;
-          const clickable = onDrillDown && item.count > 0;
+          const clickable = item.count > 0;
           return (
             <button
               key={item.categoria}
               type="button"
               disabled={!clickable}
-              onClick={clickable ? () => onDrillDown!(item.categoria) : undefined}
+              onClick={clickable ? () => setDetalheCategoria(item.categoria) : undefined}
               className={`flex items-center gap-2 rounded-md border border-border/40 p-2 text-left transition-colors ${
                 clickable ? "hover:bg-white/5 cursor-pointer" : "opacity-70 cursor-default"
               }`}
@@ -85,7 +112,7 @@ export function PerdasOperacionaisCard({ workspaceId, dataInicio, dataFim, cotac
               <div className="min-w-0 flex-1">
                 <div className="text-[10px] uppercase tracking-wider text-[var(--text-faint)]">{meta.label}</div>
                 <div className="text-[13px] font-medium" style={{ color: meta.color }}>
-                  {fmtUsd(item.total_usd)}
+                  {fmt(item.total_usd)}
                 </div>
                 <div className="text-[10px] text-[var(--text-faint)]">
                   {item.count} evento{item.count === 1 ? "" : "s"}
@@ -96,5 +123,21 @@ export function PerdasOperacionaisCard({ workspaceId, dataInicio, dataFim, cotac
         })}
       </div>
     </Card>
+
+    <PerdasDetalheDialog
+      open={detalheCategoria !== null}
+      onOpenChange={(o) => !o && setDetalheCategoria(null)}
+      categoria={detalheCategoria}
+      categoriaLabel={detalheCategoria ? CATEGORY_META[detalheCategoria].label : ""}
+      workspaceId={workspaceId}
+      dataInicio={dataInicio}
+      dataFim={dataFim}
+      cotacaoUsdBrl={cotacaoUsdBrl}
+      currency={activeCurrency}
+      onVerNoHistorico={
+        onDrillDown && detalheCategoria ? () => onDrillDown(detalheCategoria) : undefined
+      }
+    />
+    </>
   );
 }
