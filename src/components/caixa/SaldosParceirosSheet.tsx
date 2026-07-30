@@ -874,7 +874,7 @@ const formatTime = (date: Date) => {
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
-          ) : totalParceiros === 0 ? (
+          ) : parceirosAgrupados.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
               <p>Nenhum parceiro com saldo disponível</p>
@@ -942,10 +942,26 @@ const formatTime = (date: Date) => {
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="Buscar parceiro..."
-                      className="pl-9 h-9 bg-background/50 border-border/40 focus:ring-primary/20"
+                      className="pl-9 pr-9 h-9 bg-background/50 border-border/40 focus:ring-primary/20"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") {
+                          e.preventDefault();
+                          setSearchTerm("");
+                        }
+                      }}
                     />
+                    {searchTerm && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchTerm("")}
+                        aria-label="Limpar busca"
+                        className="absolute right-2 top-2.5 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-2">
@@ -1042,6 +1058,20 @@ const formatTime = (date: Date) => {
                  {loading ? (
                     <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 gap-3 pb-8" : "flex flex-col gap-1 pb-8"}>
                      {[1, 2, 3, 4].map((i) => <ParceiroSkeleton key={i} />)}
+                   </div>
+                 ) : filteredAndSortedParceiros.length === 0 ? (
+                   <div className="text-center py-10 text-muted-foreground">
+                     <Users className="h-10 w-10 mx-auto mb-2 opacity-40" />
+                     <p className="text-sm">
+                       {searchTerm
+                         ? `Nenhum parceiro encontrado para "${searchTerm}"`
+                         : "Nenhum parceiro com saldo disponível"}
+                     </p>
+                     {searchTerm && (
+                       <Button variant="ghost" size="sm" className="mt-2 text-xs" onClick={() => setSearchTerm("")}>
+                         Limpar busca
+                       </Button>
+                     )}
                    </div>
                  ) : viewMode === "grid" ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-8">
