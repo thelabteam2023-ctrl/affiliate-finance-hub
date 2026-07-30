@@ -1,26 +1,77 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { User, Building2, Wallet, Landmark, FolderKanban } from "lucide-react";
 
 export type PerdaCategoria = "PERDA_ATIVO" | "PERDA_SCAN" | "PERDA_CAMBIAL";
 
-const CATEGORIA_TO_TIPO: Record<PerdaCategoria, string> = {
-  PERDA_ATIVO: "PERDA_ATIVO",
-  PERDA_SCAN: "PERDA_OPERACIONAL",
-  PERDA_CAMBIAL: "PERDA_CAMBIAL",
-};
-
 interface PerdaRow {
   id: string;
-  data_transacao: string | null;
-  created_at: string;
-  descricao: string | null;
+  data_ref: string | null;
   valor: number | null;
   moeda: string | null;
-  valor_usd: number | null;
+  valor_usd_abs: number | null;
+  descricao: string | null;
+  ajuste_motivo: string | null;
+  auditoria_metadata: Record<string, any> | null;
+  parceiro_nome: string | null;
+  ativo_tipo: "BOOKMAKER" | "CONTA_BANCARIA" | "WALLET" | null;
+  ativo_nome: string | null;
+  projeto_nome: string | null;
+}
+
+const ATIVO_META: Record<
+  NonNullable<PerdaRow["ativo_tipo"]>,
+  { label: string; icon: any }
+> = {
+  BOOKMAKER: { label: "Casa de apostas", icon: Building2 },
+  CONTA_BANCARIA: { label: "Conta bancária", icon: Landmark },
+  WALLET: { label: "Carteira cripto", icon: Wallet },
+};
+
+const MOTIVO_LABELS: Record<string, string> = {
+  REDE_INCORRETA: "Envio em rede incorreta (irrecuperável)",
+  PERDA_TRANSIT_WALLET: "Saldo em trânsito perdido",
+  DIVERGENCIA: "Divergência de conciliação",
+  SCAN: "Conta limitada / scan",
+};
+
+/** Remove IDs internos, prefixos técnicos e códigos de conciliação da descrição. */
+function humanizeDescricao(row: PerdaRow): string {
+  const meta = row.auditoria_metadata || {};
+  const rawMotivo: string | undefined = meta.motivo || undefined;
+  const observacao: string | undefined = meta.observacao || undefined;
+
+  let base =
+    observacao ||
+    (row.ajuste_motivo && !MOTIVO_LABELS[row.ajuste_motivo] ? row.ajuste_motivo : null) ||
+    row.descricao ||
+    "";
+
+  base = base
+    .replace(/\[[^\]]+\]\s*/g, "")
+    .replace(/-?\s*concilia[çc][ãa]o\s*#\S+/gi, "")
+    .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, "")
+    .replace(/^SCAN:\s*/i, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+  if (!base && rawMotivo) base = MOTIVO_LABELS[rawMotivo] ?? rawMotivo.replace(/_/g, " ").toLowerCase();
+  return base || "Sem motivo informado";
+}
+
+function tipoPerdaLabel(row: PerdaRow, categoria: PerdaCategoria): string | null {
+  const meta = row.auditoria_metadata || {};
+  const key = meta.motivo || row.ajuste_motivo;
+  if (key && MOTIVO_LABELS[key]) return MOTIVO_LABELS[key];
+  if (categoria === "PERDA_SCAN") return "Limitação / scan de conta";
+  if (categoria === "PERDA_CAMBIAL") return "Variação cambial na conciliação";
+  if (categoria === "PERDA_ATIVO") return "Ativo perdido";
+  return null;
 }
 
 interface Props {
@@ -44,6 +95,10 @@ function fmt(value: number, currency: "BRL" | "USD") {
   });
 }
 
+function fmtOriginal(valor: number, moeda: string) {
+  return `${moeda} ${Math.abs(valor).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}`;
+}
+
 export function PerdasDetalheDialog({
   open,
   onOpenChange,
@@ -64,26 +119,18 @@ export function PerdasDetalheDialog({
     let cancelled = false;
     (async () => {
       setLoading(true);
-      let query = supabase
-        .from("cash_ledger")
-        .select("id, data_transacao, created_at, descricao, valor, moeda, valor_usd")
-        .eq("workspace_id", workspaceId)
-        .eq("tipo_transacao", CATEGORIA_TO_TIPO[categoria])
-        .eq("status", "CONFIRMADO")
-        .is("reversed_at", null)
-        .order("data_transacao", { ascending: false })
-        .limit(300);
-
-      if (dataInicio) query = query.gte("data_transacao", dataInicio.toISOString());
-      if (dataFim) query = query.lt("data_transacao", dataFim.toISOString());
-
-      const { data, error } = await query;
+      const { data, error } = await supabase.rpc("get_perdas_detalhe", {
+        p_workspace_id: workspaceId,
+        p_categoria: categoria,
+        p_start: dataInicio ? dataInicio.toISOString() : null,
+        p_end: dataFim ? dataFim.toISOString() : null,
+      });
       if (cancelled) return;
       if (error) {
         console.error("[PerdasDetalheDialog]", error.message);
         setRows([]);
       } else {
-        setRows((data ?? []) as PerdaRow[]);
+        setRows((Array.isArray(data) ? data : []) as unknown as PerdaRow[]);
       }
       setLoading(false);
     })();
@@ -95,11 +142,7 @@ export function PerdasDetalheDialog({
   const rate = cotacaoUsdBrl && cotacaoUsdBrl > 0 ? cotacaoUsdBrl : 5;
 
   const toDisplay = (row: PerdaRow) => {
-    const moeda = (row.moeda ?? "BRL").toUpperCase();
-    let usd: number;
-    if (row.valor_usd) usd = Math.abs(row.valor_usd);
-    else if (["USD", "USDT", "USDC"].includes(moeda)) usd = Math.abs(row.valor ?? 0);
-    else usd = Math.abs(row.valor ?? 0) / rate;
+    const usd = Math.abs(row.valor_usd_abs ?? 0);
     return currency === "USD" ? usd : usd * rate;
   };
 
@@ -126,16 +169,53 @@ export function PerdasDetalheDialog({
           )}
           {!loading &&
             rows.map((row) => {
-              const dataRef = row.data_transacao ?? row.created_at;
+              const dataRef = row.data_ref;
+              const ativoMeta = row.ativo_tipo ? ATIVO_META[row.ativo_tipo] : null;
+              const AtivoIcon = ativoMeta?.icon;
+              const tipo = tipoPerdaLabel(row, categoria!);
               return (
-                <div key={row.id} className="flex items-center justify-between gap-3 p-3">
-                  <div className="min-w-0">
-                    <div className="text-[12px] truncate">{row.descricao || "Sem descrição"}</div>
-                    <div className="text-[10px] text-muted-foreground">
-                      {dataRef ? format(new Date(dataRef), "dd MMM yyyy", { locale: ptBR }) : "—"} ·{" "}
-                      {(row.moeda ?? "BRL").toUpperCase()}{" "}
-                      {Math.abs(row.valor ?? 0).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}
+                <div key={row.id} className="flex items-start justify-between gap-3 p-3">
+                  <div className="min-w-0 space-y-1.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="inline-flex items-center gap-1 text-[12px] font-medium">
+                        <User className="w-3 h-3 text-muted-foreground" />
+                        {row.parceiro_nome || "Parceiro não identificado"}
+                      </span>
+                      {ativoMeta && AtivoIcon && row.ativo_nome && (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                          <AtivoIcon className="w-3 h-3" />
+                          {row.ativo_nome}
+                          <span className="opacity-60">· {ativoMeta.label}</span>
+                        </span>
+                      )}
                     </div>
+
+                    <div className="text-[11px] text-muted-foreground">{humanizeDescricao(row)}</div>
+
+                    <div className="flex items-center gap-2 flex-wrap text-[10px] text-muted-foreground">
+                      <span>
+                        {dataRef
+                          ? format(new Date(dataRef), "dd MMM yyyy 'às' HH:mm", { locale: ptBR })
+                          : "Data não informada"}
+                      </span>
+                      <span className="opacity-50">•</span>
+                      <span>Valor original: {fmtOriginal(row.valor ?? 0, (row.moeda ?? "BRL").toUpperCase())}</span>
+                      {row.projeto_nome && (
+                        <>
+                          <span className="opacity-50">•</span>
+                          <span className="inline-flex items-center gap-1">
+                            <FolderKanban className="w-3 h-3" />
+                            {row.projeto_nome}
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    {tipo && (
+                      <Badge variant="outline" className="text-[9px] font-normal px-1.5 py-0">
+                        {tipo}
+                      </Badge>
+                    )}
                   </div>
                   <div className="text-[13px] font-medium text-red-500 shrink-0">
                     {fmt(toDisplay(row), currency)}
