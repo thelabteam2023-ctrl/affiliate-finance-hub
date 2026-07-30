@@ -18130,6 +18130,15 @@ export type Database = {
           workspace_slug: string
         }[]
       }
+      get_perdas_detalhe: {
+        Args: {
+          p_categoria: string
+          p_end?: string
+          p_start?: string
+          p_workspace_id: string
+        }
+        Returns: Json
+      }
       get_plan_entitlements: { Args: { plan_name: string }; Returns: Json }
       get_project_active_modules: {
         Args: { p_projeto_id: string }
