@@ -42,6 +42,7 @@ export function useResumoPerdas(workspaceId: string | null | undefined, start?: 
       });
       if (cancelled) return;
       if (err) {
+        console.error("[useResumoPerdas] Falha ao consolidar perdas:", err.message);
         setError(err.message);
         setData(EMPTY);
       } else {
