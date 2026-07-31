@@ -4,6 +4,7 @@ import { useWorkspace } from "@/hooks/useWorkspace";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { useToast } from "@/hooks/use-toast";
 import { useInvalidateCaixaData, dispatchCaixaDataChanged } from "@/hooks/useInvalidateCaixaData";
+import { useCaixaFormSync } from "@/hooks/useCaixaFormSync";
 import {
   Dialog,
   DialogContent,

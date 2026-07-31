@@ -3,6 +3,7 @@ import { getTodayCivilDate } from "@/utils/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { dispatchCaixaDataChanged } from "@/hooks/useInvalidateCaixaData";
+import { useCaixaFormSync } from "@/hooks/useCaixaFormSync";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useExchangeRates } from "@/contexts/ExchangeRatesContext";
