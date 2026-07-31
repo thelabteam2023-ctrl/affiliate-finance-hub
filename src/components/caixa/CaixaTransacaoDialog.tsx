@@ -46,6 +46,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Switch } from "@/components/ui/switch";
 import ParceiroSelect, { ParceiroSelectRef } from "@/components/parceiros/ParceiroSelect";
 import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
 import BookmakerSelect, { BookmakerSelectRef } from "@/components/bookmakers/BookmakerSelect";
@@ -219,6 +220,8 @@ export function CaixaTransacaoDialog({
 
   // Form state
   const [tipoTransacao, setTipoTransacao] = useState<string>("");
+  // Mantém o formulário aberto após registrar, permitindo lançamentos em sequência
+  const [manterAberto, setManterAberto] = useState(true);
   const [fluxoAporte, setFluxoAporte] = useState<"APORTE" | "LIQUIDACAO">("APORTE");
    const [investidorId, setInvestidorId] = useState<string>("");
   const [tipoMoeda, setTipoMoeda] = useState<string>("FIAT");
@@ -1984,13 +1987,21 @@ export function CaixaTransacaoDialog({
     }
   };
 
-  const resetForm = () => {
-    setTipoTransacao("");
-    setFluxoAporte("APORTE");
-    setInvestidorId("");
-    setTipoMoeda("FIAT");
-    setMoeda("");
-    setCoin("");
+  /**
+   * Limpa o formulário.
+   * keepContext = true preserva tipo de transação, fluxo e moeda para
+   * permitir lançamentos em sequência sem reconfigurar tudo.
+   */
+  const resetForm = (opts?: { keepContext?: boolean }) => {
+    const keep = opts?.keepContext === true;
+    if (!keep) {
+      setTipoTransacao("");
+      setFluxoAporte("APORTE");
+      setInvestidorId("");
+      setTipoMoeda("FIAT");
+      setMoeda("");
+      setCoin("");
+    }
     setValor("");
     setValorDisplay("");
     setQtdCoin("");
@@ -2008,8 +2019,10 @@ export function CaixaTransacaoDialog({
     setDestinoContaId("");
     setDestinoWalletId("");
     setDestinoBookmakerId("");
-     setFluxoTransferencia("CAIXA_PARCEIRO");
-     prevFluxoTransferencia.current = "CAIXA_PARCEIRO";
+    if (!keep) {
+      setFluxoTransferencia("CAIXA_PARCEIRO");
+      prevFluxoTransferencia.current = "CAIXA_PARCEIRO";
+    }
      
      // Se houver filtro de fornecedor, garantir que o valor está sincronizado
     
@@ -3088,7 +3101,7 @@ export function CaixaTransacaoDialog({
         description: mensagemSucesso,
       });
 
-       resetForm();
+       resetForm({ keepContext: manterAberto });
        setTags([]);
        
        // Disparar evento para atualizar UI imediatamente
@@ -3103,7 +3116,7 @@ export function CaixaTransacaoDialog({
       await invalidateCaixa();
 
       onSuccess();
-      onClose();
+      if (!manterAberto) onClose();
     } catch (error: any) {
       console.error("Erro ao registrar transação:", error);
       toast({
@@ -3215,7 +3228,7 @@ export function CaixaTransacaoDialog({
 
       setPendingTransactionData(null);
       setTaxaBancariaInfo(null);
-      resetForm();
+      resetForm({ keepContext: manterAberto });
       dispatchCaixaDataChanged();
       // Invalidar queries de Central de Operações e conciliação
       queryClient.invalidateQueries({ queryKey: ["central-operacoes-data"] });
@@ -3223,7 +3236,7 @@ export function CaixaTransacaoDialog({
       queryClient.invalidateQueries({ queryKey: ["contas-disponiveis-count"] });
       await invalidateCaixa();
       onSuccess();
-      onClose();
+      if (!manterAberto) onClose();
     } catch (error: any) {
       console.error("Erro ao registrar transação com taxa:", error);
       toast({ title: "Erro ao registrar transação", description: error.message, variant: "destructive" });
@@ -5775,9 +5788,13 @@ export function CaixaTransacaoDialog({
                 <span className={`h-1.5 w-1.5 rounded-full ${isReady ? "bg-primary" : saldoInsuficiente ? "bg-destructive" : "bg-amber-500"} ${!isReady ? "animate-pulse" : ""}`} />
                 <span className="text-[10px] font-semibold uppercase tracking-wider">{statusLabel}</span>
               </div>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <Switch checked={manterAberto} onCheckedChange={setManterAberto} />
+                  <span className="text-[11px] text-muted-foreground">Manter aberto</span>
+                </label>
                 <Button variant="outline" onClick={onClose}>
-                  Cancelar
+                  {manterAberto ? "Fechar" : "Cancelar"}
                 </Button>
                 <Button onClick={handleSubmit} disabled={isDisabled}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
