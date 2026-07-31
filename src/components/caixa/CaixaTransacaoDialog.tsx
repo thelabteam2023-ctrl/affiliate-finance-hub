@@ -3146,10 +3146,14 @@ export function CaixaTransacaoDialog({
         description: mensagemSucesso,
       });
 
-       resetForm();
-       setTags([]);
-       
-       // Disparar evento para atualizar UI imediatamente
+      if (stayOpenAfterSuccess) {
+        resetFormAfterSuccess();
+      } else {
+        resetForm();
+      }
+      setTags([]);
+      
+      // Disparar evento para atualizar UI imediatamente
       dispatchCaixaDataChanged();
 
       // Invalidar queries de Central de Operações e conciliação para refletir
@@ -3161,6 +3165,7 @@ export function CaixaTransacaoDialog({
       await invalidateCaixa();
 
       onSuccess();
+
     } catch (error: any) {
       console.error("Erro ao registrar transação:", error);
       toast({
