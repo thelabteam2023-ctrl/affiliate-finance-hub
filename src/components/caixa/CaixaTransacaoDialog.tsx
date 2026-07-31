@@ -1987,13 +1987,21 @@ export function CaixaTransacaoDialog({
     }
   };
 
-  const resetForm = () => {
-    setTipoTransacao("");
-    setFluxoAporte("APORTE");
-    setInvestidorId("");
-    setTipoMoeda("FIAT");
-    setMoeda("");
-    setCoin("");
+  /**
+   * Limpa o formulário.
+   * keepContext = true preserva tipo de transação, fluxo e moeda para
+   * permitir lançamentos em sequência sem reconfigurar tudo.
+   */
+  const resetForm = (opts?: { keepContext?: boolean }) => {
+    const keep = opts?.keepContext === true;
+    if (!keep) {
+      setTipoTransacao("");
+      setFluxoAporte("APORTE");
+      setInvestidorId("");
+      setTipoMoeda("FIAT");
+      setMoeda("");
+      setCoin("");
+    }
     setValor("");
     setValorDisplay("");
     setQtdCoin("");
@@ -2011,8 +2019,10 @@ export function CaixaTransacaoDialog({
     setDestinoContaId("");
     setDestinoWalletId("");
     setDestinoBookmakerId("");
-     setFluxoTransferencia("CAIXA_PARCEIRO");
-     prevFluxoTransferencia.current = "CAIXA_PARCEIRO";
+    if (!keep) {
+      setFluxoTransferencia("CAIXA_PARCEIRO");
+      prevFluxoTransferencia.current = "CAIXA_PARCEIRO";
+    }
      
      // Se houver filtro de fornecedor, garantir que o valor está sincronizado
     
