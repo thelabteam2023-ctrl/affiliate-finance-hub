@@ -1400,11 +1400,12 @@ export default function Caixa() {
           setDialogDefaultData(null);
         }}
         onSuccess={async () => {
-          setDialogOpen(false);
-          setDialogDefaultData(null);
+          // Mantém o dialog aberto para lançamentos em sequência (padrão
+          // Depósito/Saque/Transferência). O fechamento ocorre via onClose.
           await new Promise(resolve => setTimeout(resolve, 600));
           await fetchData();
         }}
+        stayOpenAfterSuccess
         defaultTipoTransacao={dialogDefaultData?.tipoTransacao}
         defaultOrigemBookmakerId={dialogDefaultData?.origemBookmakerId}
         defaultDestinoParceiroId={dialogDefaultData?.destinoParceiroId}
@@ -1412,6 +1413,7 @@ export default function Caixa() {
         defaultMoeda={dialogDefaultData?.moeda}
         defaultCoin={dialogDefaultData?.coin}
       />
+
 
       {/* Dialog Confirmar Saque */}
       <ConfirmarSaqueDialog
