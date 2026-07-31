@@ -4,6 +4,7 @@ import { useWorkspace } from "@/hooks/useWorkspace";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { useToast } from "@/hooks/use-toast";
 import { useInvalidateCaixaData, dispatchCaixaDataChanged } from "@/hooks/useInvalidateCaixaData";
+import { useCaixaFormSync } from "@/hooks/useCaixaFormSync";
 import {
   Dialog,
   DialogContent,
@@ -141,6 +142,9 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
       resetForm();
     }
   }, [open, fetchWalletsAndBalances]);
+
+  // Mantém wallets/saldos sincronizados com qualquer mutação do Caixa enquanto aberto
+  useCaixaFormSync({ open, refresh: fetchWalletsAndBalances });
 
   const resetForm = () => {
     setWalletOrigemId("");

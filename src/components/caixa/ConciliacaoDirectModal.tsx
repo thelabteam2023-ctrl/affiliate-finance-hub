@@ -7,6 +7,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { dispatchCaixaDataChanged } from "@/hooks/useInvalidateCaixaData";
+import { useCaixaFormSync } from "@/hooks/useCaixaFormSync";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -128,6 +129,9 @@ export function ConciliacaoDirectModal({
       setStep("list");
     }
   }, [open, fetchPending]);
+
+  // Mantém a lista de pendências sincronizada com mutações do Caixa
+  useCaixaFormSync({ open, refresh: fetchPending });
 
   const openConfirmStep = (tx: any) => {
     setSelectedTx(tx);
