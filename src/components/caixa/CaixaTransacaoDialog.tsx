@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { isWalletCompatibleWithCoin } from "@/lib/cryptoNetworkCompat";
 import { getTodayCivilDate } from "@/utils/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchCryptoPricesResilient } from "@/lib/cryptoPricesClient";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { useToast } from "@/hooks/use-toast";
@@ -266,6 +267,8 @@ export function CaixaTransacaoDialog({
   // Estados para cotação em tempo real da Binance
   const [cryptoPrices, setCryptoPrices] = useState<Record<string, number>>({});
   const [loadingPrices, setLoadingPrices] = useState(false);
+  // Cotações servidas do último valor válido porque a API falhou
+  const [pricesStale, setPricesStale] = useState(false);
 
   // Refs para auto-focus
   const coinSelectRef = useRef<HTMLButtonElement>(null);
@@ -723,41 +726,60 @@ export function CaixaTransacaoDialog({
   // Buscar cotações em tempo real da Binance quando tipo_moeda for CRYPTO
   // e atualizar automaticamente a cada 30 segundos
   useEffect(() => {
-    const fetchCryptoPrices = async () => {
-      if (tipoMoeda !== "CRYPTO" || !open) return;
-      
-      setLoadingPrices(true);
-      try {
-        const { data, error } = await supabase.functions.invoke('get-crypto-prices', {
-          body: { symbols: MOEDAS_CRYPTO.map(m => m.value) }
-        });
+    if (tipoMoeda !== "CRYPTO" || !open) return;
 
-        if (error) {
-          console.error('Error fetching crypto prices:', error);
-          toast({
-            title: "Erro ao buscar cotações",
-            description: "Não foi possível obter as cotações em tempo real.",
-            variant: "destructive",
-          });
-        } else if (data?.prices) {
-          setCryptoPrices(data.prices);
-          console.log('Crypto prices loaded:', data.prices);
+    let cancelled = false;
+    // Alerta só uma vez por sessão do dialog, e apenas quando não há NENHUMA cotação
+    let alertedNoData = false;
+
+    const fetchCryptoPrices = async () => {
+      // Não gastar requisições (nem gerar falsos erros) com a aba em background
+      if (typeof document !== "undefined" && document.hidden) return;
+
+      setLoadingPrices(true);
+      const result = await fetchCryptoPricesResilient(MOEDAS_CRYPTO.map((m) => m.value));
+      if (cancelled) return;
+
+      if (Object.keys(result.prices).length > 0) {
+        setCryptoPrices(result.prices);
+        setPricesStale(result.stale);
+        if (result.stale) {
+          console.warn(
+            "[CaixaTransacaoDialog] cotações cripto em modo degradado (última válida):",
+            result.error
+          );
         }
-      } catch (err) {
-        console.error('Error fetching crypto prices:', err);
-      } finally {
-        setLoadingPrices(false);
+      } else if (result.failedWithoutCache && !alertedNoData) {
+        alertedNoData = true;
+        setPricesStale(true);
+        toast({
+          title: "Cotações indisponíveis",
+          description:
+            "Não foi possível obter as cotações de cripto após várias tentativas. Informe o valor manualmente ou tente novamente em instantes.",
+          variant: "destructive",
+        });
       }
+      setLoadingPrices(false);
     };
 
     // Busca inicial
-    fetchCryptoPrices();
+    void fetchCryptoPrices();
 
     // Refresh automático a cada 30 segundos
-    const intervalId = setInterval(fetchCryptoPrices, 30000);
+    const intervalId = setInterval(() => void fetchCryptoPrices(), 30000);
+
+    // Reatar imediatamente quando a aba volta ao foco
+    const onVisible = () => {
+      if (!document.hidden) void fetchCryptoPrices();
+    };
+    document.addEventListener("visibilitychange", onVisible);
 
     // Limpar intervalo quando componente desmontar ou condições mudarem
-    return () => clearInterval(intervalId);
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [tipoMoeda, open, toast]);
 
   // Calcular valor USD e cotação automaticamente baseado na quantidade de coins e preço em tempo real
@@ -5678,7 +5700,9 @@ export function CaixaTransacaoDialog({
                           </span>
                           <div className="text-[10px] text-muted-foreground">
                             Cotação: {(cryptoPrices[coin] || 1).toFixed(4)} USD/{coin}
-                            <span className="ml-1 opacity-60">({isUsingFallback ? "fallback" : "oficial"})</span>
+                            <span className="ml-1 opacity-60">
+                              ({pricesStale ? "última válida" : isUsingFallback ? "fallback" : "oficial"})
+                            </span>
                           </div>
                         </div>
                       </div>

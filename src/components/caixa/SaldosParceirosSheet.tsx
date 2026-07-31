@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchCryptoPricesResilient } from "@/lib/cryptoPricesClient";
 import { useTabWorkspace } from "@/hooks/useTabWorkspace";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -446,23 +447,17 @@ import { useRef, MouseEvent as ReactMouseEvent } from "react";
 
   const fetchCryptoPrices = async (coins: string[]) => {
     if (coins.length === 0) return {};
-    
+
     try {
       setPricesLoading(true);
-      const uniqueCoins = [...new Set(coins)];
-      
-      const { data, error } = await supabase.functions.invoke("get-crypto-prices", {
-        body: { symbols: uniqueCoins },
-      });
+      // Cliente resiliente: retry + reuso da última cotação válida
+      const result = await fetchCryptoPricesResilient(coins);
 
-      if (error) throw error;
-      
-      setCryptoPrices(data.prices || {});
-      setLastPriceUpdate(new Date());
-      return data.prices || {};
-    } catch (error) {
-      console.error("Erro ao buscar preços crypto:", error);
-      return {};
+      if (Object.keys(result.prices).length > 0) {
+        setCryptoPrices(result.prices);
+        if (!result.stale) setLastPriceUpdate(new Date());
+      }
+      return result.prices;
     } finally {
       setPricesLoading(false);
     }
