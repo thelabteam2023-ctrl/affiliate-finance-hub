@@ -423,20 +423,19 @@ export function ExchangeRatesProvider({ children }: ExchangeRatesProviderProps) 
   // Fetch crypto prices
   const fetchCrypto = useCallback(async (symbols: string[]) => {
     if (symbols.length === 0) return;
-    
-    try {
-      const { data, error } = await supabase.functions.invoke("get-crypto-prices", {
-        body: { symbols },
-      });
-      
-      if (error) throw error;
-      
-      if (data?.prices) {
-        setCryptoPrices(prev => ({ ...prev, ...data.prices }));
-        setSources(prev => ({ ...prev, crypto: "Binance" }));
-      }
-    } catch (error) {
-      console.error("[ExchangeRatesContext] Erro ao buscar crypto:", error);
+
+    // Cliente resiliente: retry com backoff + reuso da última cotação válida
+    const result = await fetchCryptoPricesResilient(symbols);
+
+    if (Object.keys(result.prices).length > 0) {
+      setCryptoPrices(prev => ({ ...prev, ...result.prices }));
+      setSources(prev => ({
+        ...prev,
+        crypto: result.stale ? "Binance (última válida)" : "Binance",
+      }));
+    } else if (result.failedWithoutCache) {
+      console.error("[ExchangeRatesContext] Cotações crypto indisponíveis:", result.error);
+      setSources(prev => ({ ...prev, crypto: "fallback" }));
     }
   }, []);
 
