@@ -1988,10 +1988,8 @@ export function CaixaTransacaoDialog({
 
   /**
    * Limpa o formulário.
-   * keepContext = true preserva tipo de transação, fluxo e moeda para
-   * permitir lançamentos em sequência sem reconfigurar tudo.
    */
-  const resetForm = (opts?: { keepContext?: boolean }) => {
+  const resetForm = () => {
     const keep = opts?.keepContext === true;
     if (!keep) {
       setTipoTransacao("");
