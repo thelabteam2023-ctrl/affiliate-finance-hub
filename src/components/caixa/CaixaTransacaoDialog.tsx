@@ -909,14 +909,12 @@ export function CaixaTransacaoDialog({
     }, 150);
   }, [moeda, tipoMoeda, tipoTransacao, fluxoTransferencia]);
 
+  // Carga inicial das fontes de dados ao abrir o dialog.
+  // O mesmo `refreshDataSources` é reutilizado após cada transação bem-sucedida
+  // e quando outro fluxo do Caixa dispara `dispatchCaixaDataChanged()`.
   useEffect(() => {
     if (open) {
-      fetchAccountsAndWallets();
-      fetchBookmakers();
-       fetchSaldosCaixa();
-       fetchSaldosParceiros();
-       fetchInvestidores();
-       fetchSaquesPendentes();
+      void refreshDataSources();
     }
   }, [open]);
 
