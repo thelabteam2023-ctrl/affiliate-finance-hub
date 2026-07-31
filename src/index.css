@@ -276,6 +276,24 @@ input[type="number"] {
 }
 
 @layer utilities {
+  /*
+   * Áreas seguras para conviver com os botões flutuantes globais (Chat/Anotações),
+   * ancorados no canto inferior direito do viewport.
+   * Ver docs/UI_LAYERS.md.
+   */
+  .safe-bottom-right {
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+    padding-right: 88px;
+  }
+
+  .safe-bottom {
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .safe-right {
+    padding-right: 88px;
+  }
+
   .text-gradient {
     @apply bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent;
   }

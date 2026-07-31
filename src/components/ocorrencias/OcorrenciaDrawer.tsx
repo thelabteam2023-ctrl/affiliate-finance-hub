@@ -417,21 +417,33 @@ export function OcorrenciaDrawer({ ocorrenciaId, open, onOpenChange }: Props) {
             {/* Footer with comment input */}
             {!['resolvido', 'cancelado'].includes(ocorrencia.status) && (
               <div className="p-4 border-t border-border/40 bg-muted/10 shrink-0">
-                <div className="relative">
+                <div className="space-y-2">
                   <Textarea
                     placeholder="Escreva uma atualização..."
                     value={comentario}
                     onChange={(e) => setComentario(e.target.value)}
-                    className="min-h-[100px] pr-12 resize-none bg-background border-border/60 focus-visible:ring-primary/20"
+                    onKeyDown={(e) => {
+                      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                        e.preventDefault();
+                        if (comentario.trim() && !addingComment) handleEnviarComentario();
+                      }
+                    }}
+                    className="min-h-[88px] resize-none bg-background border-border/60 focus-visible:ring-primary/20"
                   />
-                  <Button
-                    size="icon"
-                    className="absolute bottom-3 right-3 h-8 w-8"
-                    onClick={handleEnviarComentario}
-                    disabled={!comentario.trim() || addingComment}
-                  >
-                    {addingComment ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  </Button>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[10px] text-muted-foreground">
+                      Ctrl + Enter para enviar
+                    </span>
+                    <Button
+                      size="sm"
+                      className="gap-2"
+                      onClick={handleEnviarComentario}
+                      disabled={!comentario.trim() || addingComment}
+                    >
+                      {addingComment ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                      {addingComment ? 'Enviando...' : 'Enviar atualização'}
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
