@@ -9,7 +9,6 @@ import { useCotacoes } from "@/hooks/useCotacoes";
 import { useToast } from "@/hooks/use-toast";
 import { dispatchCaixaDataChanged, useInvalidateCaixaData } from "@/hooks/useInvalidateCaixaData";
 import { useCaixaFormSync } from "@/hooks/useCaixaFormSync";
-import { CaixaSuccessBanner } from "@/components/caixa/CaixaSuccessBanner";
 import { DatePicker } from "@/components/ui/date-picker";
  import { Calendar, Info as InfoIcon, Tag as TagIcon } from "lucide-react";
  import { TagInput } from "@/components/ui/tag-input";
@@ -3214,7 +3213,7 @@ export function CaixaTransacaoDialog({
       // wallets, bookmakers) e exibe a confirmação inline. Sem isso o dialog
       // continuaria exibindo o estado anterior à transação.
       if (stayOpenAfterSuccess) {
-        await formSync.notifySuccess(mensagemSucesso);
+        await formSync.notifySuccess(mensagemSucesso, { silent: true });
       }
 
       onSuccess();
@@ -3342,7 +3341,7 @@ export function CaixaTransacaoDialog({
       queryClient.invalidateQueries({ queryKey: ["contas-disponiveis-count"] });
       await invalidateCaixa();
       if (stayOpenAfterSuccess) {
-        await formSync.notifySuccess("Transação registrada — saldos atualizados");
+        await formSync.notifySuccess("Transação registrada — saldos atualizados", { silent: true });
       }
       onSuccess();
 
@@ -4845,13 +4844,6 @@ export function CaixaTransacaoDialog({
         </DialogHeader>
 
         <div className="space-y-4 pt-2 pb-4">
-          {/* Confirmação inline: feedback no próprio formulário + estado de refresh */}
-          <CaixaSuccessBanner
-            message={formSync.confirmation}
-            count={formSync.successCount}
-            isRefreshing={formSync.isRefreshing}
-            onDismiss={formSync.dismissConfirmation}
-          />
           {/* Tipo de Transação */}
           <div className="space-y-2">
             <div className="flex p-1 bg-muted/40 rounded-lg border border-border">

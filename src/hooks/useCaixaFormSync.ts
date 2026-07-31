@@ -40,8 +40,12 @@ export interface CaixaFormSync {
   dismissConfirmation: () => void;
   /** Força um refresh imediato das fontes de dados. */
   refresh: () => Promise<void>;
-  /** Chamar após sucesso: incrementa contador, mostra confirmação e recarrega dados. */
-  notifySuccess: (message?: string) => Promise<void>;
+  /**
+   * Chamar após sucesso: recarrega as fontes de dados do formulário.
+   * Com `silent: true` (padrão dos formulários que já exibem toast) NÃO
+   * popula a confirmação inline nem o contador de sessão.
+   */
+  notifySuccess: (message?: string, opts?: { silent?: boolean }) => Promise<void>;
 }
 
 const DEFAULT_MESSAGE = "Transação registrada — saldos atualizados";
@@ -86,9 +90,11 @@ export function useCaixaFormSync({ open, refresh }: UseCaixaFormSyncOptions): Ca
   );
 
   const notifySuccess = useCallback(
-    async (message: string = DEFAULT_MESSAGE) => {
-      setSuccessCount((c) => c + 1);
-      setConfirmation(message);
+    async (message: string = DEFAULT_MESSAGE, opts?: { silent?: boolean }) => {
+      if (!opts?.silent) {
+        setSuccessCount((c) => c + 1);
+        setConfirmation(message);
+      }
       await doRefresh();
     },
     [doRefresh]
