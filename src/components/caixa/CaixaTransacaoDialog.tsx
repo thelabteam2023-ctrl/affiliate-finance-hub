@@ -211,8 +211,10 @@ export function CaixaTransacaoDialog({
   entryPoint,
   allowedTipoTransacao,
   lockBookmakerDestino,
+  stayOpenAfterSuccess,
   limitDestinoToSupplierId,
 }: CaixaTransacaoDialogProps) {
+
   const { toast } = useToast();
   const { workspaceId } = useWorkspace();
   const queryClient = useQueryClient();
