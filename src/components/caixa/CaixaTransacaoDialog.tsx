@@ -1990,15 +1990,12 @@ export function CaixaTransacaoDialog({
    * Limpa o formulário.
    */
   const resetForm = () => {
-    const keep = opts?.keepContext === true;
-    if (!keep) {
-      setTipoTransacao("");
-      setFluxoAporte("APORTE");
-      setInvestidorId("");
-      setTipoMoeda("FIAT");
-      setMoeda("");
-      setCoin("");
-    }
+    setTipoTransacao("");
+    setFluxoAporte("APORTE");
+    setInvestidorId("");
+    setTipoMoeda("FIAT");
+    setMoeda("");
+    setCoin("");
     setValor("");
     setValorDisplay("");
     setQtdCoin("");
@@ -2016,10 +2013,8 @@ export function CaixaTransacaoDialog({
     setDestinoContaId("");
     setDestinoWalletId("");
     setDestinoBookmakerId("");
-    if (!keep) {
-      setFluxoTransferencia("CAIXA_PARCEIRO");
-      prevFluxoTransferencia.current = "CAIXA_PARCEIRO";
-    }
+    setFluxoTransferencia("CAIXA_PARCEIRO");
+    prevFluxoTransferencia.current = "CAIXA_PARCEIRO";
      
      // Se houver filtro de fornecedor, garantir que o valor está sincronizado
     
