@@ -113,11 +113,20 @@ interface CaixaTransacaoDialogProps {
    */
   lockBookmakerDestino?: boolean;
   /**
+   * When true, the dialog stays open after a successful transaction so the user
+   * can enter multiple operations in sequence (e.g., Aporte, Depósito, Saque).
+   * The parent onSuccess callback is still invoked to refresh data, but it must
+   * NOT close the dialog — the user does that via onClose (X, outside click, Esc).
+   */
+  stayOpenAfterSuccess?: boolean;
+  /**
    * Filter destination partners by supplier ID.
    * Used in the "Alocar Capital" flow from Supplier Admin Panel.
    */
   limitDestinoToSupplierId?: string;
 }
+
+
 
 interface BancoTaxa {
   taxa_deposito_tipo: "percentual" | "fixo" | null;
@@ -202,8 +211,10 @@ export function CaixaTransacaoDialog({
   entryPoint,
   allowedTipoTransacao,
   lockBookmakerDestino,
+  stayOpenAfterSuccess,
   limitDestinoToSupplierId,
 }: CaixaTransacaoDialogProps) {
+
   const { toast } = useToast();
   const { workspaceId } = useWorkspace();
   const queryClient = useQueryClient();
@@ -2033,7 +2044,49 @@ export function CaixaTransacaoDialog({
     transferFocusStepRef.current = 0;
   };
 
+  /**
+   * Limpa os campos da operação recém-registrada, mas mantém o contexto de
+   * tipo/moeda para permitir lançamentos em sequência no mesmo dialog.
+   */
+  const resetFormAfterSuccess = () => {
+    // Preservar contexto de tipo e moeda para lançamentos em sequência
+    // (tipoTransacao, tipoMoeda, moeda, coin, fluxoAporte e fluxoTransferencia)
+    setInvestidorId("");
+    setValor("");
+    setValorDisplay("");
+    setQtdCoin("");
+    setCotacao("");
+    setDescricao("");
+    setDataTransacao("");
+    // REMOVIDO: valorCreditado reset - agora é tratado na Conciliação
+    setOrigemTipo("");
+    setOrigemParceiroId("");
+    setOrigemContaId("");
+    setOrigemWalletId("");
+    setOrigemBookmakerId("");
+    setDestinoTipo("");
+    setDestinoParceiroId("");
+    setDestinoContaId("");
+    setDestinoWalletId("");
+    setDestinoBookmakerId("");
+
+    // Reset refs de tracking para auto-focus
+    prevCoin.current = "";
+    prevDestinoParceiroId.current = "";
+    prevDestinoWalletId.current = "";
+    prevDestinoContaId.current = "";
+    prevOrigemBookmakerId.current = "";
+
+    // Reset affiliate guided focus
+    affiliateFocusActiveRef.current = false;
+    affiliateFocusStepRef.current = 0;
+    // Reset transfer guided focus
+    transferFocusActiveRef.current = false;
+    transferFocusStepRef.current = 0;
+  };
+
   const getSaldoAtual = (tipo: string, id?: string): number => {
+
     if (tipo === "CAIXA_OPERACIONAL") {
       if (tipoMoeda === "FIAT") {
         const saldo = saldosCaixaFiat.find(s => s.moeda === moeda);
@@ -3093,10 +3146,14 @@ export function CaixaTransacaoDialog({
         description: mensagemSucesso,
       });
 
-       resetForm();
-       setTags([]);
-       
-       // Disparar evento para atualizar UI imediatamente
+      if (stayOpenAfterSuccess) {
+        resetFormAfterSuccess();
+      } else {
+        resetForm();
+      }
+      setTags([]);
+      
+      // Disparar evento para atualizar UI imediatamente
       dispatchCaixaDataChanged();
 
       // Invalidar queries de Central de Operações e conciliação para refletir
@@ -3108,6 +3165,7 @@ export function CaixaTransacaoDialog({
       await invalidateCaixa();
 
       onSuccess();
+
     } catch (error: any) {
       console.error("Erro ao registrar transação:", error);
       toast({
@@ -3219,7 +3277,11 @@ export function CaixaTransacaoDialog({
 
       setPendingTransactionData(null);
       setTaxaBancariaInfo(null);
-      resetForm();
+      if (stayOpenAfterSuccess) {
+        resetFormAfterSuccess();
+      } else {
+        resetForm();
+      }
       dispatchCaixaDataChanged();
       // Invalidar queries de Central de Operações e conciliação
       queryClient.invalidateQueries({ queryKey: ["central-operacoes-data"] });
@@ -3227,6 +3289,7 @@ export function CaixaTransacaoDialog({
       queryClient.invalidateQueries({ queryKey: ["contas-disponiveis-count"] });
       await invalidateCaixa();
       onSuccess();
+
     } catch (error: any) {
       console.error("Erro ao registrar transação com taxa:", error);
       toast({ title: "Erro ao registrar transação", description: error.message, variant: "destructive" });
