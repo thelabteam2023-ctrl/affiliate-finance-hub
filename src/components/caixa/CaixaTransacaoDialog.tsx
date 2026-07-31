@@ -113,11 +113,14 @@ interface CaixaTransacaoDialogProps {
    */
   lockBookmakerDestino?: boolean;
   /**
-   * Filter destination partners by supplier ID.
-   * Used in the "Alocar Capital" flow from Supplier Admin Panel.
+   * When true, the dialog stays open after a successful transaction so the user
+   * can enter multiple operations in sequence (e.g., Aporte, Depósito, Saque).
+   * The parent onSuccess callback is still invoked to refresh data, but it must
+   * NOT close the dialog — the user does that via onClose (X, outside click, Esc).
    */
-  limitDestinoToSupplierId?: string;
+  stayOpenAfterSuccess?: boolean;
 }
+
 
 interface BancoTaxa {
   taxa_deposito_tipo: "percentual" | "fixo" | null;
