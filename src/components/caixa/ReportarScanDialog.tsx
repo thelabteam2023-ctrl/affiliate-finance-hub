@@ -156,6 +156,9 @@ export function ReportarScanDialog({
     }
   };
 
+  // Mantém saldos/listas sincronizados com qualquer mutação do Caixa enquanto aberto
+  useCaixaFormSync({ open, refresh: fetchData });
+
   const formatCurrencyInput = (value: string): string => {
     const numericValue = value.replace(/[^\d]/g, "");
     if (!numericValue) return "";

@@ -416,6 +416,9 @@ export function AjusteManualDialog({
     }
   };
 
+  // Mantém saldos/listas sincronizados com qualquer mutação do Caixa enquanto aberto
+  useCaixaFormSync({ open, refresh: fetchData });
+
   const resetForm = () => {
     setDirecao("ENTRADA");
     setDirecao("ENTRADA");

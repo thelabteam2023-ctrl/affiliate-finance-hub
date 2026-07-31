@@ -315,6 +315,9 @@ export function ReconciliacaoDialog({
     }
   };
 
+  // Mantém saldos/listas sincronizados com qualquer mutação do Caixa enquanto aberto
+  useCaixaFormSync({ open, refresh: fetchData });
+
   const isCryptoMoedaSelected = CRYPTO_CURRENCIES.some(c => c.value === moeda);
 
   const formatCurrencyInput = (value: string, isCrypto: boolean): string => {
