@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { isWalletCompatibleWithCoin } from "@/lib/cryptoNetworkCompat";
 import { getTodayCivilDate } from "@/utils/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchCryptoPricesResilient } from "@/lib/cryptoPricesClient";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { useToast } from "@/hooks/use-toast";
