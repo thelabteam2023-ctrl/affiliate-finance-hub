@@ -1988,19 +1988,14 @@ export function CaixaTransacaoDialog({
 
   /**
    * Limpa o formulário.
-   * keepContext = true preserva tipo de transação, fluxo e moeda para
-   * permitir lançamentos em sequência sem reconfigurar tudo.
    */
-  const resetForm = (opts?: { keepContext?: boolean }) => {
-    const keep = opts?.keepContext === true;
-    if (!keep) {
-      setTipoTransacao("");
-      setFluxoAporte("APORTE");
-      setInvestidorId("");
-      setTipoMoeda("FIAT");
-      setMoeda("");
-      setCoin("");
-    }
+  const resetForm = () => {
+    setTipoTransacao("");
+    setFluxoAporte("APORTE");
+    setInvestidorId("");
+    setTipoMoeda("FIAT");
+    setMoeda("");
+    setCoin("");
     setValor("");
     setValorDisplay("");
     setQtdCoin("");
@@ -2018,10 +2013,8 @@ export function CaixaTransacaoDialog({
     setDestinoContaId("");
     setDestinoWalletId("");
     setDestinoBookmakerId("");
-    if (!keep) {
-      setFluxoTransferencia("CAIXA_PARCEIRO");
-      prevFluxoTransferencia.current = "CAIXA_PARCEIRO";
-    }
+    setFluxoTransferencia("CAIXA_PARCEIRO");
+    prevFluxoTransferencia.current = "CAIXA_PARCEIRO";
      
      // Se houver filtro de fornecedor, garantir que o valor está sincronizado
     
@@ -3100,7 +3093,7 @@ export function CaixaTransacaoDialog({
         description: mensagemSucesso,
       });
 
-       resetForm({ keepContext: true });
+       resetForm();
        setTags([]);
        
        // Disparar evento para atualizar UI imediatamente
@@ -3226,7 +3219,7 @@ export function CaixaTransacaoDialog({
 
       setPendingTransactionData(null);
       setTaxaBancariaInfo(null);
-      resetForm({ keepContext: true });
+      resetForm();
       dispatchCaixaDataChanged();
       // Invalidar queries de Central de Operações e conciliação
       queryClient.invalidateQueries({ queryKey: ["central-operacoes-data"] });
@@ -5786,9 +5779,6 @@ export function CaixaTransacaoDialog({
                 <span className="text-[10px] font-semibold uppercase tracking-wider">{statusLabel}</span>
               </div>
               <div className="flex items-center gap-3">
-                <Button variant="outline" onClick={onClose}>
-                  Fechar
-                </Button>
                 <Button onClick={handleSubmit} disabled={isDisabled}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Registrar Transação
