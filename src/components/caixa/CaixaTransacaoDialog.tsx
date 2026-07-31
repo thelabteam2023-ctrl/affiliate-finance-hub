@@ -3319,6 +3319,9 @@ export function CaixaTransacaoDialog({
       queryClient.invalidateQueries({ queryKey: ["pending-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["contas-disponiveis-count"] });
       await invalidateCaixa();
+      if (stayOpenAfterSuccess) {
+        await formSync.notifySuccess("Transação registrada — saldos atualizados");
+      }
       onSuccess();
 
     } catch (error: any) {
