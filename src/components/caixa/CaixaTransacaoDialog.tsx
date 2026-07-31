@@ -7,6 +7,8 @@ import { useWorkspace } from "@/hooks/useWorkspace";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { useToast } from "@/hooks/use-toast";
 import { dispatchCaixaDataChanged, useInvalidateCaixaData } from "@/hooks/useInvalidateCaixaData";
+import { useCaixaFormSync } from "@/hooks/useCaixaFormSync";
+import { CaixaSuccessBanner } from "@/components/caixa/CaixaSuccessBanner";
 import { DatePicker } from "@/components/ui/date-picker";
  import { Calendar, Info as InfoIcon, Tag as TagIcon } from "lucide-react";
  import { TagInput } from "@/components/ui/tag-input";
