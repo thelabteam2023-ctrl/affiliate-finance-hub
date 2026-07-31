@@ -17,6 +17,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { fetchCryptoPricesResilient } from "@/lib/cryptoPricesClient";
 import { 
   FALLBACK_RATES, 
   FRONTEND_REFRESH_INTERVAL_MS,
