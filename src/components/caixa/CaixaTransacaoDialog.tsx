@@ -3093,7 +3093,7 @@ export function CaixaTransacaoDialog({
         description: mensagemSucesso,
       });
 
-       resetForm({ keepContext: true });
+       resetForm();
        setTags([]);
        
        // Disparar evento para atualizar UI imediatamente
@@ -3219,7 +3219,7 @@ export function CaixaTransacaoDialog({
 
       setPendingTransactionData(null);
       setTaxaBancariaInfo(null);
-      resetForm({ keepContext: true });
+      resetForm();
       dispatchCaixaDataChanged();
       // Invalidar queries de Central de Operações e conciliação
       queryClient.invalidateQueries({ queryKey: ["central-operacoes-data"] });
