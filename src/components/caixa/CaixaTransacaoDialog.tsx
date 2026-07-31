@@ -5788,9 +5788,13 @@ export function CaixaTransacaoDialog({
                 <span className={`h-1.5 w-1.5 rounded-full ${isReady ? "bg-primary" : saldoInsuficiente ? "bg-destructive" : "bg-amber-500"} ${!isReady ? "animate-pulse" : ""}`} />
                 <span className="text-[10px] font-semibold uppercase tracking-wider">{statusLabel}</span>
               </div>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <Switch checked={manterAberto} onCheckedChange={setManterAberto} />
+                  <span className="text-[11px] text-muted-foreground">Manter aberto</span>
+                </label>
                 <Button variant="outline" onClick={onClose}>
-                  Cancelar
+                  {manterAberto ? "Fechar" : "Cancelar"}
                 </Button>
                 <Button onClick={handleSubmit} disabled={isDisabled}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
