@@ -220,8 +220,8 @@ export function CaixaTransacaoDialog({
 
   // Form state
   const [tipoTransacao, setTipoTransacao] = useState<string>("");
-  // Mantém o formulário aberto após registrar, permitindo lançamentos em sequência
-  const [manterAberto, setManterAberto] = useState(true);
+  // O formulário permanece sempre aberto após registrar (padrão Depósito/Saque/Transferência),
+  // fechando somente por ação explícita do usuário.
   const [fluxoAporte, setFluxoAporte] = useState<"APORTE" | "LIQUIDACAO">("APORTE");
    const [investidorId, setInvestidorId] = useState<string>("");
   const [tipoMoeda, setTipoMoeda] = useState<string>("FIAT");
@@ -3101,7 +3101,7 @@ export function CaixaTransacaoDialog({
         description: mensagemSucesso,
       });
 
-       resetForm({ keepContext: manterAberto });
+       resetForm({ keepContext: true });
        setTags([]);
        
        // Disparar evento para atualizar UI imediatamente
@@ -3116,7 +3116,6 @@ export function CaixaTransacaoDialog({
       await invalidateCaixa();
 
       onSuccess();
-      if (!manterAberto) onClose();
     } catch (error: any) {
       console.error("Erro ao registrar transação:", error);
       toast({
@@ -3228,7 +3227,7 @@ export function CaixaTransacaoDialog({
 
       setPendingTransactionData(null);
       setTaxaBancariaInfo(null);
-      resetForm({ keepContext: manterAberto });
+      resetForm({ keepContext: true });
       dispatchCaixaDataChanged();
       // Invalidar queries de Central de Operações e conciliação
       queryClient.invalidateQueries({ queryKey: ["central-operacoes-data"] });
@@ -3236,7 +3235,6 @@ export function CaixaTransacaoDialog({
       queryClient.invalidateQueries({ queryKey: ["contas-disponiveis-count"] });
       await invalidateCaixa();
       onSuccess();
-      if (!manterAberto) onClose();
     } catch (error: any) {
       console.error("Erro ao registrar transação com taxa:", error);
       toast({ title: "Erro ao registrar transação", description: error.message, variant: "destructive" });
@@ -5789,12 +5787,8 @@ export function CaixaTransacaoDialog({
                 <span className="text-[10px] font-semibold uppercase tracking-wider">{statusLabel}</span>
               </div>
               <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <Switch checked={manterAberto} onCheckedChange={setManterAberto} />
-                  <span className="text-[11px] text-muted-foreground">Manter aberto</span>
-                </label>
                 <Button variant="outline" onClick={onClose}>
-                  {manterAberto ? "Fechar" : "Cancelar"}
+                  Fechar
                 </Button>
                 <Button onClick={handleSubmit} disabled={isDisabled}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
