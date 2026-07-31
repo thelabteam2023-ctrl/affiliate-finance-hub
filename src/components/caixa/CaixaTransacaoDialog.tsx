@@ -4823,6 +4823,13 @@ export function CaixaTransacaoDialog({
         </DialogHeader>
 
         <div className="space-y-4 pt-2 pb-4">
+          {/* Confirmação inline: feedback no próprio formulário + estado de refresh */}
+          <CaixaSuccessBanner
+            message={formSync.confirmation}
+            count={formSync.successCount}
+            isRefreshing={formSync.isRefreshing}
+            onDismiss={formSync.dismissConfirmation}
+          />
           {/* Tipo de Transação */}
           <div className="space-y-2">
             <div className="flex p-1 bg-muted/40 rounded-lg border border-border">
