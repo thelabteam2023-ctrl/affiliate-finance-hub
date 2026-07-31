@@ -2044,7 +2044,49 @@ export function CaixaTransacaoDialog({
     transferFocusStepRef.current = 0;
   };
 
+  /**
+   * Limpa os campos da operação recém-registrada, mas mantém o contexto de
+   * tipo/moeda para permitir lançamentos em sequência no mesmo dialog.
+   */
+  const resetFormAfterSuccess = () => {
+    // Preservar contexto de tipo e moeda para lançamentos em sequência
+    // (tipoTransacao, tipoMoeda, moeda, coin, fluxoAporte e fluxoTransferencia)
+    setInvestidorId("");
+    setValor("");
+    setValorDisplay("");
+    setQtdCoin("");
+    setCotacao("");
+    setDescricao("");
+    setDataTransacao("");
+    // REMOVIDO: valorCreditado reset - agora é tratado na Conciliação
+    setOrigemTipo("");
+    setOrigemParceiroId("");
+    setOrigemContaId("");
+    setOrigemWalletId("");
+    setOrigemBookmakerId("");
+    setDestinoTipo("");
+    setDestinoParceiroId("");
+    setDestinoContaId("");
+    setDestinoWalletId("");
+    setDestinoBookmakerId("");
+
+    // Reset refs de tracking para auto-focus
+    prevCoin.current = "";
+    prevDestinoParceiroId.current = "";
+    prevDestinoWalletId.current = "";
+    prevDestinoContaId.current = "";
+    prevOrigemBookmakerId.current = "";
+
+    // Reset affiliate guided focus
+    affiliateFocusActiveRef.current = false;
+    affiliateFocusStepRef.current = 0;
+    // Reset transfer guided focus
+    transferFocusActiveRef.current = false;
+    transferFocusStepRef.current = 0;
+  };
+
   const getSaldoAtual = (tipo: string, id?: string): number => {
+
     if (tipo === "CAIXA_OPERACIONAL") {
       if (tipoMoeda === "FIAT") {
         const saldo = saldosCaixaFiat.find(s => s.moeda === moeda);
