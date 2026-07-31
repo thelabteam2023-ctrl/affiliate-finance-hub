@@ -3277,7 +3277,11 @@ export function CaixaTransacaoDialog({
 
       setPendingTransactionData(null);
       setTaxaBancariaInfo(null);
-      resetForm();
+      if (stayOpenAfterSuccess) {
+        resetFormAfterSuccess();
+      } else {
+        resetForm();
+      }
       dispatchCaixaDataChanged();
       // Invalidar queries de Central de Operações e conciliação
       queryClient.invalidateQueries({ queryKey: ["central-operacoes-data"] });
@@ -3285,6 +3289,7 @@ export function CaixaTransacaoDialog({
       queryClient.invalidateQueries({ queryKey: ["contas-disponiveis-count"] });
       await invalidateCaixa();
       onSuccess();
+
     } catch (error: any) {
       console.error("Erro ao registrar transação com taxa:", error);
       toast({ title: "Erro ao registrar transação", description: error.message, variant: "destructive" });
