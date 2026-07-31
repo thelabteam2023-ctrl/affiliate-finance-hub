@@ -3101,7 +3101,7 @@ export function CaixaTransacaoDialog({
         description: mensagemSucesso,
       });
 
-       resetForm();
+       resetForm({ keepContext: manterAberto });
        setTags([]);
        
        // Disparar evento para atualizar UI imediatamente
@@ -3116,7 +3116,7 @@ export function CaixaTransacaoDialog({
       await invalidateCaixa();
 
       onSuccess();
-      onClose();
+      if (!manterAberto) onClose();
     } catch (error: any) {
       console.error("Erro ao registrar transação:", error);
       toast({
@@ -3228,7 +3228,7 @@ export function CaixaTransacaoDialog({
 
       setPendingTransactionData(null);
       setTaxaBancariaInfo(null);
-      resetForm();
+      resetForm({ keepContext: manterAberto });
       dispatchCaixaDataChanged();
       // Invalidar queries de Central de Operações e conciliação
       queryClient.invalidateQueries({ queryKey: ["central-operacoes-data"] });
@@ -3236,7 +3236,7 @@ export function CaixaTransacaoDialog({
       queryClient.invalidateQueries({ queryKey: ["contas-disponiveis-count"] });
       await invalidateCaixa();
       onSuccess();
-      onClose();
+      if (!manterAberto) onClose();
     } catch (error: any) {
       console.error("Erro ao registrar transação com taxa:", error);
       toast({ title: "Erro ao registrar transação", description: error.message, variant: "destructive" });
