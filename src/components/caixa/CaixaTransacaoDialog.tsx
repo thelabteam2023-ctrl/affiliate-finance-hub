@@ -220,6 +220,8 @@ export function CaixaTransacaoDialog({
 
   // Form state
   const [tipoTransacao, setTipoTransacao] = useState<string>("");
+  // Mantém o formulário aberto após registrar, permitindo lançamentos em sequência
+  const [manterAberto, setManterAberto] = useState(true);
   const [fluxoAporte, setFluxoAporte] = useState<"APORTE" | "LIQUIDACAO">("APORTE");
    const [investidorId, setInvestidorId] = useState<string>("");
   const [tipoMoeda, setTipoMoeda] = useState<string>("FIAT");
